@@ -87,7 +87,6 @@ import {
   tapIntroBit,
   tapPoolBuffer,
   tickGame,
-  tickQueuedCapacityUpgrade,
 } from '../../../src/game/engine.js'
 import {
   COMPUTE_BOOST_PRESETS,
@@ -141,21 +140,13 @@ function totalDisksBuilt(intro) {
   return Object.values(intro?.disksBuiltTotal ?? {}).reduce((sum, n) => sum + (n ?? 0), 0)
 }
 
-// Upgrade Data Stream the way an attentive player uses it now that queueing it pauses every Data
-// Stream outflow (isDataStreamOutflowPaused — pool buffers, Data Lake overflow, tier01 auto-invest):
-// upgrade immediately on a full Buffer; otherwise queue it only once the Buffer has stalled (gained
-// < 0.1% of Capacity since the previous tick) at >= 99% full. Measured on the real engine (career 0/1):
-// queueing on any stall was ~3h slower per cycle (the pause starves tier01 auto-invest and pool
-// buffers); stalled-at-50% +1h; never queueing lost ~22m on cycle 1; the 99% gate was fastest.
-let lastIntroSample = null
+// Upgrade Data Stream the way an attentive player uses it now: a click starts it as soon as it is
+// armable (the byte is combined, Capacity isn't at its cap, none already running), and from then on
+// tickCapacityUpgradeDrain (inside tickGame) pulls from the Buffer at the base Speed ahead of every
+// other consumer and doubles Capacity when the bar fills — it pauses nothing and sits outside the
+// forced priority order, so there is nothing to time: just restart it every tick it is idle.
 function actCapacityUpgrade(s, canGrowCapacity) {
-  const { bits, capacity, capacityUpgradeQueued } = s.intro
-  const prev = lastIntroSample
-  lastIntroSample = { bits, capacity }
-  if (!canGrowCapacity || capacityUpgradeQueued) return s
-  if (bits >= capacity) return upgradePoolCapacity(s)
-  const stalled = prev && prev.capacity === capacity && bits - prev.bits < capacity * 0.001
-  return stalled && bits >= capacity * 0.99 ? queueIntroCapacityUpgrade(s) : s
+  return canGrowCapacity ? queueIntroCapacityUpgrade(s) : s
 }
 
 function actFoundry(state, { capacityCapBits = null } = {}) {
@@ -194,7 +185,6 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
       s = next
     }
     s = actCapacityUpgrade(s, canGrowCapacity)
-    s = tickQueuedCapacityUpgrade(s)
     for (let i = 0; i < 64; i += 1) {
       const next = convertIntroBitsToKilobytes(s)
       if (next === s) break
@@ -209,7 +199,6 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
   // once the cap is reached so Disk ladder size (and thus Data Lake deposit throughput) stays fixed
   // for the Storage vs Compute tradeoff sweep.
   s = actCapacityUpgrade(s, canGrowCapacity)
-  s = tickQueuedCapacityUpgrade(s)
 
   for (let i = 0; i < 64; i += 1) {
     const next = convertIntroBitsToKilobytes(s)
@@ -360,7 +349,6 @@ function countUnlockedAutobuyers(state) {
 }
 
 function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = null } = {}) {
-  lastIntroSample = null // actCapacityUpgrade's stall detection starts fresh each cycle
   let state = startingState
   let ticks = 0
   let foundryTicks = null

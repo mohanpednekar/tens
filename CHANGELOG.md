@@ -35,6 +35,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Compute Boosts: every funding tier now gives the same multiplier and duration as Cores; spending a higher tier instead boosts more Factory tiers (Node: the first two, Cluster: the first three, …). Memory is always boosted.
+- **Data Lake header.** Each lake's header now matches the pool/Data Stream tile layout: name with the Booster target price (also the buy control) under it, the amount filled big and centered, and the current fill speed on the right.
+- **Memory amounts show at most 5 significant digits.** Unit-scaled sizes/balances/speeds (e.g. the Data Stream
+  balance) now trim decimals as the integer part grows — "1,011.1 MiB" instead of "1,011.147 MiB".
+
+- **Foundry speed display.** The Data Stream and pool multiplier bars are gone; their Speed/Bandwidth
+  figures now show the actual resulting value (3 significant digits), colored red → blue → green with
+  the fill multiplier. Capacity now sits under each pool/Data Stream name (the balance shows no "/ capacity" and grows larger while no tap bonus is active), and the tap bonus reads "+x% 👆" under the speed beside a narrower bar (hidden when inactive). A collapsed pool card now also
+  shows its Data Lake heading and Booster action.
+- Boosters page: boost controls now live in one "Boost" card, the selected funding tier is marked with a filled dot and highlighted border, and a tier's Merge/Auto row only shows for the selected tier or when there is something to act on, so idle tiers are one line. The slot dots carry the count, so the "n/10" text is gone from the tier rows (still announced to screen readers).
+- Boosters page: clearer wording — the active boost reads "💥 Burst ×20 · 19m left", preset buttons show their duration, the funding line says what a boost spends, Auto-Boost unlock is a quiet neutral button, and each tier's Merge/Auto buttons name their target.
+
+- **Bytes and Bits are now one balance.** There is no separate Bytes pool any more: Kilobytes credit Bits (8 per Byte), and Latency is paid from that same balance (10 Bytes = 80 Bits at level 0), so its button can never be enabled above the balance shown. Older saves simply drop their stray Bytes counter.
+
 - **Buy button progress uses a plus sign throughout.** Every count on the tier Buy button's progress text is prefixed with `+` (`+3/8`, `+4`, `+4 +3/8`); zero parts stay hidden.
 - **Buy button no longer mixes bought and affordable counts.** The ordinary Buy button's progress text shows only the affordable count (`+3/8`) when anything is affordable, else the bought count (`3/8`); the old `3+3/8` was misleading.
 - **Buy button progress hides zeros.** The tier Buy button's progress text omits zero parts: no `0+`, and nothing at all at `0/8` (e.g. `3/8`, `+3/8`, `4`, `4+3/8`).

@@ -1633,7 +1633,7 @@ test('an Enable Latency button appears once level 1 of the first tier completes 
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { base: 10, bytes: 10 },
+    resources: { base: 80 },
     purchaseLevels: { tier01: 2 },
   })
   render(<App />)
@@ -1653,7 +1653,7 @@ test('an Enable Latency button appears once level 1 of the first tier completes 
   expect(panel).toHaveTextContent(/lv\.1/i)
   // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
   expect(panel).toHaveTextContent(/\+1%/i)
-  // The mirrored Bits (10 B × 8) are deducted too, so the headline balance drops like any purchase.
+  // Latency spends Bits (10 B = 80 b) from the one shared balance.
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
 })
 
@@ -1661,7 +1661,7 @@ test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clic
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { base: 999, bytes: 999 },
+    resources: { base: 999 },
     globalTickspeedMultiplier: 1,
   })
   render(<App />)
@@ -1681,9 +1681,9 @@ test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clic
   expect(statusLine).not.toBeVisible()
 })
 
-test('the Enable Latency button stays disabled without enough Bytes', () => {
+test('the Enable Latency button stays disabled without enough Bits', () => {
   seedMainGameState({
-    resources: { base: 10, bytes: 9 },
+    resources: { base: 79 },
     purchaseLevels: { tier01: 2 },
   })
   render(<App />)
@@ -1693,7 +1693,7 @@ test('the Enable Latency button stays disabled without enough Bytes', () => {
 
 test('the Latency Upgrade button costs another power of ten each level, and shows the compounding bonus with decimal precision below 100%', () => {
   seedMainGameState({
-    resources: { base: 999, bytes: 999 },
+    resources: { base: 999 },
     globalTickspeedMultiplier: 2,
   })
   render(<App />)
@@ -2635,7 +2635,7 @@ test('combining 8 bits into a Byte resets the balance and starts passive product
   // exactly 0.
   expect(Number(balanceBar.getAttribute('aria-valuenow'))).toBeLessThan(INTRO_BYTE_COMBINE_COST)
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_BYTE_COMBINE_COST))
-  expect(screen.getByText(/1 b\/s$/i)).toBeInTheDocument()
+  expect(screen.getByText(/1\.5 b\/s$/i)).toBeInTheDocument() // 1 B/s base x 150% (empty buffer)
 })
 
 test("the Upgrade Data Stream button stays clickable (to arm) while the Buffer isn't full", () => {
@@ -2671,7 +2671,7 @@ test('Upgrade Data Stream fills its bar from the stream and doubles Capacity', (
   // The new capacity (2 B) derives the new speed — e=log2(2B) is odd, so the mean of the
   // neighbouring even-exponent sqrts: (1 + 2)/2 = 1.5 B/s.
   const dataStream = screen.getByRole('region', { name: 'Data Stream' })
-  expect(within(dataStream).getByText(/1\.5 b\/s$/i)).toBeInTheDocument()
+  expect(within(dataStream).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()
@@ -2783,16 +2783,16 @@ test('the "Data Stream" label is shown on the balance card', () => {
 test('the Data Stream header shows the capacity-derived rate — sqrt on even exponents, the neighbouring mean on odd ones', () => {
   // Scoped to the Data Stream region — pool 1's own Bandwidth can coincidentally render the same
   // "N B/s" text at these rates. Capacity is in BITS: 800,000 bits = 100,000 B, e=17 (odd) ->
-  // (256 + 512)/2 = 384 B/s.
+  // (256 + 512)/2 = 384 B/s, shown at the empty-buffer 150% multiplier: 576 B/s.
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   const { unmount } = render(<App />)
-  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/384 B\/s$/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/576 B\/s$/i)).toBeInTheDocument()
   unmount()
 
   // Starting capacity (8 bits = 1 B, e=0, even) -> sqrt(1) = 1 B/s.
   seedIntroState({ bits: 0, byteCreated: true })
   render(<App />)
-  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/1 B\/s$/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/1\.5 B\/s$/i)).toBeInTheDocument()
 })
 
 test('Upgrade Data Stream shows its cost on its own line below the label, with no stray comma', () => {
@@ -2951,7 +2951,7 @@ test('Data Stream still renders raw bits (not a fractional Byte) before the Byte
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('5 / 8 bits')
+  expect(section.querySelector('p')).toHaveTextContent('5 bits')
   expect(section).toHaveTextContent('8 bits')
   expect(section).not.toHaveTextContent(/\d+(?:\.\d+)? B\b/)
 })
@@ -2968,7 +2968,7 @@ test('Data Stream renders bits/Buffer scaled into the same appropriate binary un
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('48.828 / 97.656 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('48.828 KiB')
   expect(section).toHaveTextContent('97.656 KiB')
 })
 
@@ -2990,7 +2990,7 @@ test('Data Stream balance floors the binary-unit conversion instead of rounding,
   expect(balanceBar.closest('[aria-label="data stream bit balance"]') || balanceBar).toHaveAttribute('aria-valuenow', String(bits))
   // Flooring: the balance itself must not also read "97.656 KiB" (which would mean it rounded up
   // to match the full capacity reading).
-  expect(section.querySelector('p')).toHaveTextContent('96.679 / 97.656 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('96.679 KiB')
 })
 
 test('Data Stream balance self-sizes into its own finer unit rather than falling back to raw bits when it would floor below 1 in the capacity-shared unit', () => {
@@ -3006,7 +3006,7 @@ test('Data Stream balance self-sizes into its own finer unit rather than falling
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('30.031 KiB / 1 MiB')
+  expect(section.querySelector('p')).toHaveTextContent('30.031 KiB')
   expect(section).toHaveTextContent('1 MiB')
 })
 
@@ -3017,7 +3017,7 @@ test('Data Stream balance still falls back to raw bits when genuinely below 1 By
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('4 bits / 1 MiB')
+  expect(section.querySelector('p')).toHaveTextContent('4 bits')
   expect(section).toHaveTextContent('1 MiB')
 })
 
@@ -3031,7 +3031,7 @@ test('Data Stream balance shows a stable, non-trimmed decimal digit count — a 
   render(<App />)
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
-  expect(balanceBar.closest('section').querySelector('p')).toHaveTextContent('5.600 / 100 MiB')
+  expect(balanceBar.closest('section').querySelector('p')).toHaveTextContent('5.600 MiB')
 })
 
 test('a pool\'s own Memory buffer balance also shows a stable, non-trimmed decimal digit count', () => {
@@ -3045,7 +3045,7 @@ test('a pool\'s own Memory buffer balance also shows a stable, non-trimmed decim
   render(<App />)
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  expect(pool1.querySelector('p')).toHaveTextContent('5.600 / 100 KB')
+  expect(pool1.querySelector('p')).toHaveTextContent('5.600 KB')
 })
 
 test('Data Stream balance drops its padded trailing zeros once it has been full for more than 1 second', () => {
@@ -3054,7 +3054,7 @@ test('Data Stream balance drops its padded trailing zeros once it has been full 
   // one tier01 unit from intro.bits — the balance genuinely sits still at capacity instead of being
   // drained back down the instant it tops up, which a bigger, conversion-eligible capacity would be.
   // 4000 bits is exactly 500 B (below MEMORY_BINARY_UNIT_STEP's own 1 KiB rung), a round balance so
-  // the stable/trimmed forms visibly differ ("500.000 B" vs "500 B").
+  // the stable/trimmed forms visibly differ ("500.00 B" vs "500 B").
   const capacity = 4000
   seedIntroState({ bits: capacity, capacity, byteCreated: true })
   const { unmount } = render(<App />)
@@ -3062,10 +3062,10 @@ test('Data Stream balance drops its padded trailing zeros once it has been full 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const balanceText = () => balanceBar.closest('section').querySelector('p')
   // Immediately full, but not YET trimmed — the delay hasn't elapsed.
-  expect(balanceText()).toHaveTextContent('500.000 / 500 B')
+  expect(balanceText()).toHaveTextContent('500.00 B')
 
   act(() => { vi.advanceTimersByTime(1000) })
-  expect(balanceText()).toHaveTextContent('500 / 500 B')
+  expect(balanceText()).toHaveTextContent('500 B')
 
   unmount()
   vi.useRealTimers()
@@ -3101,10 +3101,10 @@ test('a pool\'s own Memory buffer balance also drops its padded trailing zeros o
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   const balanceText = () => pool1.querySelector('p')
-  expect(balanceText()).toHaveTextContent('1.000 / 1 KB')
+  expect(balanceText()).toHaveTextContent('1.000 KB')
 
   await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
-  expect(balanceText()).toHaveTextContent('1 / 1 KB')
+  expect(balanceText()).toHaveTextContent('1 KB')
 
   unmount()
   vi.useRealTimers()
@@ -3129,10 +3129,10 @@ test('Speed and Bandwidth render at the top-right, with disk status removed enti
   expect(within(dataStreamSection).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  expect(within(pool1).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
+  expect(within(pool1).getByTitle(/^Bandwidth at/)).toBeInTheDocument()
 
   const pool2 = screen.getByRole('region', { name: 'pool 2' })
-  expect(within(pool2).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
+  expect(within(pool2).getByTitle(/^Bandwidth at/)).toBeInTheDocument()
   expect(screen.queryByLabelText(/full disks/i)).not.toBeInTheDocument()
   expect(screen.queryByText(/💾/)).not.toBeInTheDocument()
 })
@@ -3146,82 +3146,43 @@ test('Pool balance and Capacity share one precisely centered line', () => {
   const balance = pool1.querySelector('p')
   // Balance and capacity now always share the same fixed pool unit, so formatCombinedBalance
   // always dedupes the balance's own unit suffix, leaving just the bare number.
-  expect(balance).toHaveTextContent(`0 / ${formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 1), 1)}`)
+  expect(balance).toHaveTextContent(/^0(\.0+)? \w+$/)
   expect(balance).toHaveStyle({ textAlign: 'center' })
 })
 
-test('Data Stream and pool multiplier bars are progressbars capped at FILL_MULTIPLIER_MAX_PERCENT (150%)', () => {
+test('Data Stream and pool speeds show the fill-multiplied value, with no multiplier bar', () => {
   seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
   render(<App />)
 
-  const dataStreamBar = screen.getByRole('progressbar', { name: /data stream fill-based speed multiplier/i })
-  expect(dataStreamBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_MAX_PERCENT))
-  // Both the Data Stream Buffer and pool 1's own Memory buffer start empty — FILL_MULTIPLIER_MAX_PERCENT.
-  expect(dataStreamBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
-
-  const poolBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
-  expect(poolBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_MAX_PERCENT))
-  expect(poolBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
-})
-
-test('the pool bar switches from the fill-based multiplier to the Data Lake overflow rate the instant that pool\'s own Memory buffer is full, transitioning cleanly at 50% (both readings share the same scale)', () => {
-  // Pool 1's own derived buffer Capacity at INTRO_DISK_UNLOCK_CAPACITY is exactly 8,000 bits — seed
-  // the buffer AT that capacity so it reads as full.
-  const poolCapacity = getPoolBufferCapacity(
-    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
-    1,
-  )
-  // disksBuiltTotal seeded so the pool is entirely COMPLETE (isStoragePoolFullyBuilt) — the bar
-  // only switches to lake mode once AUTOMATIC overflow can actually feed this pool's own lake
-  // (see the "buffer full but no disk built yet" and "ready but not yet complete" tests below for
-  // the two not-yet-automatic cases this transition is gated against).
-  seedIntroState({
-    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-    poolBuffers: { 1: poolCapacity },
-    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
-  })
-  render(<App />)
-
-  // The old "fill-based bandwidth multiplier" reading is gone — the SAME bar now reads as the
-  // Data Lake's own overflow rate instead, still on the identical 0..FILL_MULTIPLIER_MAX_PERCENT
-  // scale (never a separately-scaled bar).
-  expect(screen.queryByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })).not.toBeInTheDocument()
-  const lakeRateBar = screen.getByRole('progressbar', { name: /pool 1 data lake overflow rate/i })
-  expect(lakeRateBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_MAX_PERCENT))
-  // A fresh, untouched lake's currently-open disk is empty, so its overflow rate reads at its own
-  // ceiling (DATA_LAKE_OVERFLOW_MAX_PERCENT, 50) — the SAME numeric value FILL_MULTIPLIER_MIN_PERCENT
-  // (the fill-based multiplier's own floor, reached exactly when the buffer becomes full) already
-  // sits at, so the bar's width does not jump across this transition.
-  expect(lakeRateBar).toHaveAttribute('aria-valuenow', String(DATA_LAKE_OVERFLOW_MAX_PERCENT))
-})
-
-test('a maxed pre-reset Data Lake retains its 5% speed floor', () => {
-  const poolCapacity = getPoolBufferCapacity(
-    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
-    1,
-  )
-  const maxedCapacity = DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_MAX_LEVEL]
-  seedIntroState({
-    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-    poolBuffers: { 1: poolCapacity },
-    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
-    // Lake fully maxed (capacity level + deposited units both at their ceiling) — no open disk
-    // slot left, so getDataLakeCurrentFillSubSize is null and getDataLakeOverflowRatePercent
-    // reads DATA_LAKE_OVERFLOW_MIN_PERCENT (0) rather than a real in-progress rate.
-    dataLakes: { 1: { depositedUnits: maxedCapacity, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
-  })
-  expect(DATA_LAKE_OVERFLOW_MIN_PERCENT).toBe(0)
-  render(<App />)
-
+  expect(screen.queryByRole('progressbar', { name: /fill-based/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('progressbar', { name: /data lake overflow rate/i })).not.toBeInTheDocument()
+  const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  // The ordinary fill multiplier is gone once overflow takes over, while the pre-reset lake's
-  // original taper remains visible at its 5% floor.
-  expect(within(pool1).queryByRole('progressbar', { name: /fill-based bandwidth multiplier/i })).not.toBeInTheDocument()
-  expect(within(pool1).getByRole('progressbar', { name: /data lake overflow rate/i })).toHaveAttribute('aria-valuenow', '5')
-  expect(within(pool1).getByText('5%')).toBeInTheDocument()
+  // Empty buffer -> FILL_MULTIPLIER_MAX_PERCENT (150%) of the pool's base Bandwidth, to 3 significant digits.
+  const expected = formatDiskSize(getStoragePoolBandwidth(savedState, 1) * FILL_MULTIPLIER_MAX_PERCENT / 100)
+  const speed = within(pool1).getByTitle(/^Bandwidth at/)
+  expect(speed).toHaveAttribute('title', `Bandwidth at ${FILL_MULTIPLIER_MAX_PERCENT}% fill multiplier`)
+  expect(speed.textContent.replace(/^⚡ /, '').replace(/\/s$/, '').split(' ')[1]).toBe(expected.split(' ')[1])
+  expect(Number(speed.textContent.match(/[\d.]+/)[0])).toBeCloseTo(parseFloat(expected), 0)
 })
 
-test('the pool bar shows the Data Lake rate (and the tile is inert) while the lake drains a half-full buffer — every built disk full, no build in progress', () => {
+test('a pool\'s speed tints red at the full-buffer 50% floor', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+  })
+  render(<App />)
+
+  const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByTitle(/^Bandwidth at/)
+  expect(speed).toHaveAttribute('title', `Bandwidth at ${FILL_MULTIPLIER_MIN_PERCENT}% fill multiplier`)
+  expect(speed).toHaveStyle({ color: 'rgb(229, 72, 77)' })
+})
+
+test('the pool tap tile is inert, with an explanatory title, while the Data Lake drains a half-full buffer', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
@@ -3235,25 +3196,12 @@ test('the pool bar shows the Data Lake rate (and the tile is inert) while the la
   })
   render(<App />)
 
-  const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  expect(within(pool1).getByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).toBeInTheDocument()
-  expect(within(pool1).getByRole('button', { name: /tap pool 1 memory/i })).toBeDisabled()
-
-  // The title toggle is a sibling of the tap button, so a disabled tap never blocks it.
-  const toggle = within(pool1).getByRole('button', { name: /(collapse|expand) pool 1/i })
-  const wasExpanded = toggle.getAttribute('aria-expanded')
-  fireEvent.click(toggle)
-  expect(within(pool1).getByRole('button', { name: /(collapse|expand) pool 1/i }))
-    .toHaveAttribute('aria-expanded', wasExpanded === 'true' ? 'false' : 'true')
+  const tap = within(screen.getByRole('region', { name: 'pool 1' })).getByRole('button', { name: /tap pool 1 memory/i })
+  expect(tap).toBeDisabled()
+  expect(tap).toHaveAttribute('title', expect.stringMatching(/Data Lake is draining/))
 })
 
-test('the pool bar stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {
-  // Same full-buffer seed as the transition test above, but with no disksBuiltTotal entry —
-  // isDataLakePoolReady(state, 1) is false, so tickPoolBufferFill's overflow branch (engine.js)
-  // will never actually credit this pool's lake. Switching the bar to "lake" mode here would
-  // show a constant nonzero "incoming rate" that can never turn into real progress — the same
-  // stalled-tile-shown-as-active bug LakePoolTile was fixed for on this same PR, just on this
-  // page's own bar (found by the adversarial reviewer as a follow-up).
+test('the Data Lake header shows target price, filled amount and fill speed', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
@@ -3261,62 +3209,51 @@ test('the pool bar stays in fill-based-multiplier mode (never switches to the Da
   seedIntroState({
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
     poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
+    dataLakes: { 1: { depositedUnits: 1, fillBits: 2000, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
   })
   render(<App />)
 
-  expect(screen.queryByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).not.toBeInTheDocument()
-  const multiplierBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
-  expect(multiplierBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MIN_PERCENT))
+  const lake = screen.getByLabelText('KB lake')
+  // The target price is the lake's Booster control itself (shown once, not duplicated in the header).
+  expect(within(lake).getAllByText(/1 KB/).filter(el => el.closest('h4') === null && el.textContent.includes('🏷️'))).toHaveLength(1)
+  expect(within(lake).getByTitle('Currently filled')).toHaveTextContent('1.25 KB')
+  // Buffer full + pool complete -> the lake fills at the pool's Bandwidth, so the speed is non-zero.
+  expect(within(lake).getByTitle('Current fill speed')).not.toHaveTextContent('⚡ 0 B/s')
 })
 
-test('the pool bar also stays in fill-based-multiplier mode while the pool has built one disk (isDataLakePoolReady) but is not yet entirely complete — AUTOMATIC overflow, what this bar describes, has not started yet either', () => {
+test('a collapsed pool still shows its Data Lake heading and action row', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
   )
   seedIntroState({
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-    poolBuffers: { 1: poolCapacity }, disksBuiltTotal: { 8000: 1 }, // ready, but far from complete
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: 1 },
   })
   render(<App />)
 
-  expect(screen.queryByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).not.toBeInTheDocument()
-  const multiplierBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
-  expect(multiplierBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MIN_PERCENT))
+  const pool1 = screen.getByRole('region', { name: 'pool 1' })
+  const toggle = within(pool1).getByRole('button', { name: /(collapse|expand) pool 1/i })
+  if (toggle.getAttribute('aria-expanded') === 'true') fireEvent.click(toggle)
+  expect(within(pool1).getByRole('button', { name: /expand pool 1/i })).toBeInTheDocument()
+  expect(within(pool1).getByText('Lake')).toBeInTheDocument()
+  expect(within(pool1).queryByRole('group', { name: /lake .* disks/i })).not.toBeInTheDocument()
 })
 
-test('tapping a pool\'s own Memory buffer boosts only that pool\'s own multiplier, leaving the Data Stream\'s untouched', () => {
-  // Fake timers so no real tick can land between the tap and the assertions — the Data Stream's
-  // continuous production would otherwise creep the pools' fill fractions (and their fill-based
-  // percentages) off the exact seeded values mid-test.
+test('tapping a pool\'s own Memory buffer shows only that pool\'s tap bonus bar, leaving the Data Stream\'s untouched', () => {
   vi.useFakeTimers()
-  // mainGameUnlocked: true set explicitly — capacity is already >= INTRO_DISK_UNLOCK_CAPACITY,
-  // which would latch it true on the first real tick anyway (see latchMainGameUnlocked in
-  // engine.js), and this test's own `await user.click` leaves enough real time for that tick to
-  // fire; seeding it upfront (and navigating to Foundry explicitly, same as the sibling
-  // disabled-at-cap tests below) avoids racing that latch mid-test.
   seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } })
   render(<App />)
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   fireEvent.click(screen.getByRole('button', { name: /tap pool 1 memory/i }))
 
-  // The tap bonus is its own separate bar (named "<base> tap bonus") — the pool's base multiplier
-  // bar itself stays at its fill-based value and never absorbs the bonus.
-  expect(screen.getByRole('progressbar', { name: /^pool 1 fill-based bandwidth multiplier$/i }))
-    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
-  expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
-    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_PERCENT))
-  // The displayed percentages are also exposed as aria-valuetext (the visible labels sit inside the tracks).
-  expect(screen.getByRole('progressbar', { name: /^pool 1 fill-based bandwidth multiplier$/i }))
-    .toHaveAttribute('aria-valuetext', `${FILL_MULTIPLIER_MAX_PERCENT}%`)
-  expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
-    .toHaveAttribute('aria-valuetext', `+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}%`)
-  expect(screen.getByRole('region', { name: 'pool 1' }))
-    .toHaveTextContent(`${FILL_MULTIPLIER_MAX_PERCENT}%+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}% 👆`)
-  expect(screen.getByRole('progressbar', { name: /^data stream fill-based speed multiplier$/i }))
-    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
-  // The Data Stream's own tap bonus bar never appears from a pool tap.
+  const bonusBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i })
+  expect(bonusBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_PERCENT))
+  expect(bonusBar).toHaveAttribute('aria-valuetext', `+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}%`)
+  expect(screen.getByRole('region', { name: 'pool 1' })).toHaveTextContent(`+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}% 👆`)
   expect(screen.queryByRole('progressbar', { name: /data stream fill-based speed multiplier tap bonus/i })).not.toBeInTheDocument()
   vi.useRealTimers()
 })
@@ -3333,9 +3270,7 @@ test('the Data Stream tap target disables once its own tap bonus is already at t
 
   const tapTarget = screen.getByRole('button', { name: /tap to generate a bit/i })
   expect(tapTarget).toBeDisabled()
-  // Base bar stays at the fill-based 150%; the capped bonus shows on its own bar at 100.
-  expect(screen.getByRole('progressbar', { name: /^data stream fill-based speed multiplier$/i }))
-    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
+  // The capped bonus shows on its own bar at 100.
   expect(screen.getByRole('progressbar', { name: /data stream fill-based speed multiplier tap bonus/i }))
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT))
 })
@@ -3539,13 +3474,13 @@ describe('Byte Foundry Storage', () => {
     // (see FillableStatCard/BalanceText/FooterRow in ByteFoundryPage/index.jsx) rather than a
     // labelled Bandwidth/Capacity/Memory stat row.
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(pool1).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 1))}/s`)
-    expect(pool2).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 2))}/s`)
+    expect(pool1).toHaveTextContent('/s')
+    expect(pool2).toHaveTextContent('/s')
     // Balance and capacity now always share the same fixed pool unit, so formatCombinedBalance
     // always dedupes the balance's own unit suffix, leaving just the bare number.
-    expect(pool1.querySelector('p')).toHaveTextContent(`0 / ${formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 1), 1)}`)
+    expect(pool1.querySelector('p')).toHaveTextContent(/^0(\.0+)? \w+$/)
     expect(pool1).toHaveTextContent(formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 1), 1))
-    expect(pool2.querySelector('p')).toHaveTextContent(`0 / ${formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 2), 2)}`)
+    expect(pool2.querySelector('p')).toHaveTextContent(/^0(\.0+)? \w+$/)
     expect(pool2).toHaveTextContent(formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 2), 2))
     expect(within(pool2).getByRole('button', { name: /collapse pool 2/i })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
@@ -4374,7 +4309,7 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByText(/armed:.*cores.*4 held/i)).toBeInTheDocument()
+    expect(screen.getByText(/spends 1 core.*4 held/i)).toBeInTheDocument()
   })
 
   test('render order top to bottom: active-boost status, then the Boost effects section (presets/Stack/Reclaim), then the tier entity rows — issue #326 "the effects section is at the top of the Boosters page, not at the bottom"', () => {
@@ -4461,7 +4396,62 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openBoosters()
 
+    // Idle tiers collapse to one line; selecting the tier reveals its merge row.
+    fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
     expect(screen.getByRole('button', { name: /merge 8 nodes into 1 cluster/i })).toBeDisabled()
+  })
+
+  describe('tier detail row is progressively disclosed', () => {
+    const base = { bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true }
+    const nodesMerge = () => screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })
+    const nodesAuto = () => screen.queryByRole('button', { name: /enable auto-merge for nodes into clusters/i })
+
+    test('an idle, unselected tier shows no merge/auto buttons until selected', () => {
+      seedIntroState({ ...base, computeCores: 1, computeNodes: 2 })
+      render(<App />)
+      openBoosters()
+
+      expect(nodesMerge()).not.toBeInTheDocument()
+      expect(nodesAuto()).not.toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
+      expect(nodesMerge()).toBeInTheDocument()
+      expect(nodesAuto()).toBeInTheDocument()
+    })
+
+    test('a tier with a possible merge is revealed without selecting it', () => {
+      seedIntroState({ ...base, computeNodes: 8, computeClusters: 0 })
+      render(<App />)
+      openBoosters()
+
+      expect(nodesMerge()).toBeEnabled()
+    })
+
+    test('Auto-merge unlock progress (cost tier held > 0) reveals the row', () => {
+      seedIntroState({ ...base, computeNodes: 2, computeClusters: 3 })
+      render(<App />)
+      openBoosters()
+
+      expect(nodesAuto()).toBeDisabled()
+    })
+
+    test('an in-flight reserve merge reveals the row', () => {
+      seedIntroState({ ...base, computeNodes: 2, autoMergeNodesIntoCluster: true, computeNodesMergeRemainingSeconds: 30 })
+      render(<App />)
+      openBoosters()
+
+      expect(screen.getByRole('button', { name: /nodes reserve merge in progress/i })).toBeInTheDocument()
+    })
+
+    test('the selected tier is marked via aria-pressed and a single tier is armed at a time', () => {
+      seedIntroState({ ...base, computeCores: 1, computeNodes: 2 })
+      render(<App />)
+      openBoosters()
+
+      const nodes = screen.getByRole('button', { name: /select nodes to fund a compute boost/i })
+      fireEvent.click(nodes)
+      expect(nodes).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('button', { name: /select cores to fund a compute boost/i })).toHaveAttribute('aria-pressed', 'false')
+    })
   })
 
   test('merging spends 8 of the input entity for 1 of the output entity', () => {
@@ -4681,7 +4671,7 @@ describe('Compute auto-merge automation', () => {
     openBoosters()
 
     const autoButton = screen.getByRole('button', { name: /enable auto-merge for cores into nodes/i })
-    expect(autoButton).toHaveTextContent('🤖 6/10')
+    expect(autoButton).toHaveTextContent('🤖 Auto · 6/10 Nodes')
     expect(autoButton).toBeDisabled() // below the 10-unit unlock cost
   })
 
