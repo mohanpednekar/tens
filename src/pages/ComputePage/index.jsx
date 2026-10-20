@@ -70,16 +70,6 @@ const BoostCard = styled.section`
   border: 1px solid ${props => props.theme.color.border};
 `
 
-const SectionLabel = styled.h2`
-  margin: 0;
-  align-self: flex-start;
-  font-size: ${props => props.theme.type.scale.xs.size};
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: ${props => props.theme.color.textMuted};
-`
-
 // Filled dot = the tier that powers boosts.
 const SelectMarker = styled.span`
   flex: 0 0 auto;
@@ -563,8 +553,7 @@ const ComputePage = ({ game }) => {
         <Title>⚡ Boosters</Title>
       </Header>
 
-      <BoostCard>
-      <SectionLabel>Boost</SectionLabel>
+      <BoostCard aria-label="boost">
       {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
         <ActiveBoostRow aria-label="active compute boost">
           <span
@@ -718,7 +707,6 @@ const ComputePage = ({ game }) => {
       {intro.computeMergePageUnlocked
         ? (
           <TierBlocksGroup aria-label="compute entities">
-            <SectionLabel>Boost with</SectionLabel>
             {ENTITY_ROWS.map((row, rowIndex) => {
               const tierIndex = rowIndex + 1
               const count = intro[row.countField] ?? 0
