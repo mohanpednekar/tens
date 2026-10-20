@@ -1113,7 +1113,7 @@ jobs:
           }
 
           if [ "$SKIP" = "true" ]; then
-            record_no_pr "Guard skipped this run: the open autonomous-PR ceiling is full and main CI is not red. No pull request was opened. The job stays green."
+            record_no_pr "Guard skipped this run: the open autonomous-PR ceiling is full and main CI is not red. No pull request was opened."
             exit 0
           fi
 
@@ -1138,8 +1138,8 @@ jobs:
           fi
 
           if [ "$CLAUDE_OUTCOME" = "failure" ]; then
-            record_no_pr "The maintenance task did not succeed and opened no pull request. A downgraded transient failure stays green; this warning is that run's visible record."
+            record_no_pr "The maintenance task did not succeed and opened no pull request."
           else
-            record_no_pr "This run opened no pull request (nothing runnable, an issue-only exit, or another stop that finished without a PR). The job stays green."
+            record_no_pr "This run opened no pull request (nothing runnable, an issue-only exit, or another stop that finished without a PR)."
           fi
           exit 0
