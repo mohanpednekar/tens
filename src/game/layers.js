@@ -437,9 +437,8 @@ export const COMPUTE_MERGE_BOUNDARIES = [
 // computeBoostRemainingSeconds in createInitialGameState. Activating a boost now spends exactly 1
 // token of whichever compute-ladder tier the player selects (see issue #326) — Core through
 // Megacomputer — rather than always a Compute Core: the values below are the BASE (tier 1 = Core)
-// preset strength/duration; multiplier scales via COMPUTE_BOOST_TIER_POWER_STEP and duration via
-// COMPUTE_BOOST_TIER_DURATION_STEP below (duration doubles each merge tier — restored after #363
-// had flattened it; see docs/DESIGN_HISTORY.md).
+// preset strength/duration, identical whichever tier funds it (a higher tier broadens which Factory
+// tiers it covers instead; see docs/DESIGN_HISTORY.md).
 // Grants a temporary production-speed multiplier applied to Memory's own passive production (Byte
 // Foundry) and tier01's/Kilobytes' production (the main game) simultaneously — "the base
 // production tier of each screen." Keyed by preset name; `multiplier` compounds nothing else in
@@ -454,14 +453,9 @@ export const COMPUTE_BOOST_PRESETS = {
   standard: { multiplier: 5, durationSeconds: 3600 },
   sustain: { multiplier: 2, durationSeconds: 36000 },
 }
-// Issue #326 / #363: each compute-ladder tier past the first multiplies a preset's own BASE
-// `multiplier` (above, tier 1 = Core) by this much per tier step — e.g. tier 5 (Grid) is
-// COMPUTE_BOOST_TIER_POWER_STEP^4 as powerful as tier 1's own base multiplier.
-export const COMPUTE_BOOST_TIER_POWER_STEP = 4
-// Duration scales independently: each tier past Core multiplies the preset's base durationSeconds
-// by this step (×2 per tier — "effect time doubles after merge"). Tier N lasts
-// `durationSeconds * COMPUTE_BOOST_TIER_DURATION_STEP^(N-1)`.
-export const COMPUTE_BOOST_TIER_DURATION_STEP = 2
+// A boost's multiplier and duration are the preset's own values whichever compute-ladder tier funds
+// it; the funding tier's index instead sets how many Factory tiers it applies to (engine.js's
+// getComputeBoostCoveredTierCount).
 // Plural labels for COMPUTE_BOOST_TIER_FIELDS (same order), for Foundry Bandwidth-via-compute copy.
 export const COMPUTE_TIER_LABELS = [
   'Cores', 'Nodes', 'Clusters', 'Networks', 'Grids',
@@ -541,7 +535,7 @@ export const DATA_LAKE_CAPACITY_BY_LEVEL = [1, 10, 100, 1000]
 // getDataLakeOverflowRatePercent (engine.js) now reports as a plain binary "receiving/not
 // receiving" indicator for ByteFoundryPage's own `mode="lake"` bar, chosen to match
 // FILL_MULTIPLIER_MIN_PERCENT so that bar's width still doesn't jump at the multiplier→lake
-// handoff (see MultiplierBar's own doc comment).
+// handoff (the UI bar that showed it was removed).
 export const DATA_LAKE_OVERFLOW_MAX_PERCENT = 50
 export const DATA_LAKE_OVERFLOW_MIN_PERCENT = 0
 

@@ -58,14 +58,11 @@ continuously for `FULL_BALANCE_TRIM_DELAY_MS`, 1 real second) — scaled into th
 exists, since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to
 denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extending
 `TIER_DEFINITIONS`' own tier symbols with an "i") — plus a hidden `role="progressbar"`
-(`aria-label="data stream bit balance"`). Its second line is the fill-based
-`MultiplierBar` (once `byteCreated` — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md) — a
-compact bar that grows/shrinks from the MIDDLE (FILL_MULTIPLIER_MAX_PERCENT, 150%, fills the full track width; the yellow tap bonus is a second bar below it, only while active), with each bar's own
-percent readout centered inside it (or just past the fill when it is too narrow to hold it) — replacing an earlier corner needle-speedometer that
-took too much vertical space. The production rate — `` `⚡ ${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "⚡ 4
+(`aria-label="data stream bit balance"`). Its second line is a `CapacityBonusRow` (📦 Capacity left, a narrow tap-bonus bar centered, "+x% 👆" right — bar and text only while a bonus is active; the fill multiplier itself is the tinted ⚡ Speed figure, see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), — replacing an earlier corner needle-speedometer that
+took too much vertical space. The production rate, shown as its EFFECTIVE value (base × fill multiplier, 3 significant digits, tinted red→blue→green) — `` `⚡ ${formatSpeedText(formatBitsInNearestUnit(rate × multiplier))}/s` `` (e.g. "⚡ 4
 bits/s" below 1 Byte/sec, "⚡ 1 B/s" at/above it, "⚡ 2 KiB/s" once the rate itself crosses the next
 binary-unit threshold — the SAME binary B/KiB/MiB/… ladder the balance line above it renders in) —
-appears in the title row rather than a footer; Capacity appears in the centered balance line. There
+appears in the title row rather than a footer; Capacity appears in the row below the title (the balance line shows the balance only). There
 is no segmented block-bar rate meter any more (an earlier 8-block segmented `role="progressbar"` version was replaced once the bar
 itself started carrying the fill-multiplier reading). There is no separate Cache tile — the same
 progress the old Cache tile showed (progress toward the next convertible Data Stream→Kilobyte unit) is
@@ -133,11 +130,7 @@ the `PoolTileContent` readouts (`pointer-events: none`) — a `TitleRow` is the 
 title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
 or tier name in the visible text) on the left, the
 Memory buffer balance and Capacity (`balance / capacity-unit`) in a centered `BalanceText` in the middle, and Bandwidth on the right
-(same as Data Stream's own tile above, including the narrow-phone wrap). Its second line is the pool's own `MultiplierBar` (switching to
-`mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to receive overflow, or
-whenever `isDataLakePoolDrainAvailable` — the lake then drains the buffer directly, so it rests below full and the tile's tap is disabled (`lakeDraining`) —
-see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), with its percent readout inside the
-bar (or just past a too-narrow fill). Only ONE pool is expanded at a time by default — the
+(same as Data Stream's own tile above, including the narrow-phone wrap). Its second line is the same `CapacityBonusRow` (pool Capacity, tap bonus). While `isDataLakePoolDrainAvailable` the lake drains the buffer directly and the tile's tap is disabled (`lakeDraining`; the tap button's title says so). The lake's title/action row also shows on a collapsed pool (`DataLakePanel section="header"`). Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
 pool, an explicit `0` means "all collapsed", any other value pins one specific pool) — toggled by a
 `PoolTitleToggle` — the "<symbol> Pool" title alone (`aria-expanded`,
@@ -528,8 +521,10 @@ not at the bottom"):
    control here any more — it moved to the Stack + Reclaim row below (see 2c).
 2. Right below that, the Boost EFFECTS section itself — always rendered, whether or not a boost is
    active or the merge chain has unlocked yet:
-   a. An `ArmedStatusText` line (`"Armed: <symbol> <Label> (<N> held)"`, or a prompt to click a tier
-      row if nothing's armed yet) naming whichever compute-ladder tier is currently armed —
+   The effects section, Stack/Reclaim/Forfeit row and Auto-Boost control all live in one `BoostCard`
+   (a `<section>` headed "Boost"); the tier list below it is headed "Power a boost with".
+   a. An `ArmedStatusText` line (`"Spends 1 <Singular> per boost · boosts <First>–<Last Factory tier> · <symbol> <N> held"`, or "Pick a
+      tier below to power a boost" if nothing's armed yet) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row below — see 3),
       falling back to the active boost's own tier (`intro.computeBoostTierIndex`) when nothing is
       clicked; always Cores (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
@@ -539,9 +534,9 @@ not at the bottom"):
       highlight (`aria-pressed`) tracks `armedTierIndex`.
    b. A `BoostRow` (`role="group"`, `aria-label="compute boost"`) of the 3 Compute Boost preset
       buttons, each a small `CompactButton` (`variant="prestige"`,
-      `aria-label="activate <type> compute boost"`, visible label `"<icon>×<multiplier>"` computed
+      `aria-label="activate <type> compute boost"`, visible label `"<icon> ×<multiplier> · <duration>"` computed
       for the CURRENTLY ARMED tier via `getComputeBoostTierMultiplier(boostType, armedTierIndex)` —
-      e.g. `"💥×2048"` for Burst at tier 3 (Clusters) — the preset name itself lives only in
+      e.g. `"💥 ×20 · 10m 0s"` for Burst — identical for every armed tier — the preset name itself lives only in
       `title`), calling `actions.activateComputeBoost(boostType, armedTierIndex)`.
       `disabled={!turnAvailable}` where `turnAvailable = armedTierIndex !== null &&
       isComputeBoostTurnAvailable(state, boostType, armedTierIndex)` — folds
@@ -583,8 +578,9 @@ not at the bottom"):
      Core-through-Megacomputer order `COMPUTE_BOOST_TIER_FIELDS` in `layers.js` uses, so a row's
      array index + 1 IS its Boost `tierIndex`).
      - **Row 1** (`TierHeaderRow`): a `TierSelectButton` (its own clickable `<button>`) wrapping the
-       tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label (`TierLabel`, e.g. `"Clusters
-       3/10"`) + a `SlotsRow` (`role="group"`, `aria-label="<Label> slots"`) of `COMPUTE_ENTITY_CAP`
+       tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label (`TierLabel`, e.g. `"Clusters"`; the
+       `n/10` count is a `VisuallyHidden` span, the dots carry it visually) + a leading `SelectMarker`
+       (filled dot while armed) + a `SlotsRow` (`role="group"`, `aria-label="<Label> slots"`) of `COMPUTE_ENTITY_CAP`
        (10) `NormalSlot` squares — both the label and the slots read off `primaryHeld =
        min(count, COMPUTE_ENTITY_CAP)`, not the raw entity count, so this row always reads
        `min(held, 10)/10` and never overflows past "10/10" once auto-merge is unlocked and the
@@ -594,14 +590,17 @@ not at the bottom"):
        toggles
        `selectedBoostTierIndex` (local component state) to arm/disarm that tier for the Boost
        effects section above (issue #326 — "click any tier row"), highlighted
-       (`$selected`/`aria-pressed`) while armed.
-     - **Row 2** (`TierMergeRow`), for every tier except the last (Megacomputer, no row 2 at all —
+       (`$selected`/`aria-pressed`, plus a highlighted `TierBlock` border) while armed.
+     - **Row 2** (`TierMergeRow`) is progressively disclosed (`showDetail`): rendered only for the
+       armed tier, or when that tier is merging, a merge is startable/possible, reserve slots hold
+       tokens, or (pre-auto) Auto-merge unlock progress is above 0 — otherwise the tier is one line.
+       For every tier except the last (Megacomputer, no row 2 at all —
        see issue #280's "Out of scope" — though its row 1 is still Boost-selectable, the only place
        a Megacomputer has any use at all):
        - **Before that boundary's auto-merge is unlocked:** an instant Merge button (`TierActionButton`,
          `flex: 1 1 0; width: 100%` — fills exactly half the row, the same "two equal-width buttons"
          look `MainPage`'s own tier-row Buy/Upgrade pair uses, rather than a small icon-only square —
-         `variant="prestige"`, visible content "⬆ Merge", `aria-label` spelling out the full action
+         `variant="prestige"`, visible content "⬆ Merge 8 → 1 <Output>", `aria-label` spelling out the full action
          e.g. "merge 8 nodes into 1 cluster") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
          tier is held and the produced tier is under its effective cap (`getComputeFieldEffectiveCap` — 18
          once that tier's own auto-merge is unlocked), calling the matching
