@@ -1098,7 +1098,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1988 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1992 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -1116,10 +1116,12 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
   `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) that's
-  12 of the 18 files; the other six are
+  12 of the 19 files; the other seven are
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
   `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`,
-  `scripts/classify-claude-failure.test.js`, and `scripts/lint-workflow-shell.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`
+  `scripts/classify-claude-failure.test.js`, `scripts/lint-workflow-shell.test.js`, and
+  `scripts/autonomous-maintenance-workflow.test.js` (checkout PAT, empty-run warning,
+  prompt `gh` rule) — Vitest's default glob picks these up since `vite.config.js`'s `test`
   block sets no custom `include`.
 
 ### End-to-end testing

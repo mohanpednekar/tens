@@ -26,6 +26,18 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          # PAT, not the job's GITHUB_TOKEN. actions/checkout@v7 persists this
+          # credential for every later git push, and claude-code-action does not
+          # reliably replace it (checkout v6+ stores the header via includeIf).
+          # The default token is a GitHub App token without `workflows`
+          # permission, so a push that creates or updates `.github/workflows/**`
+          # is rejected with "refusing to allow a GitHub App to create or update
+          # workflow … without `workflows` permission" even though the Claude
+          # step's github_token is already GH_AUTOMATION_PAT (Workflows: write,
+          # issue #62). Matches autonomous-pr-followup.yml and
+          # automation-self-heal.yml. Guard-step reads and the deploy-failure
+          # comment stay on GITHUB_TOKEN — they do not push workflow files.
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
 
       - name: Check open autonomous PRs and task backlog
         id: guard
@@ -55,6 +67,21 @@ jobs:
             echo "open_prs<<PR_EOF"
             echo "$summary"
             echo "PR_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          # Heads this run is allowed to open a PR on, snapshotted before the
+          # task. The no-PR step below diffs against this list. claude/heal-main-*
+          # is outside the 5-PR ceiling filter above, so it is listed separately
+          # and does not change that count.
+          heal_main_heads=$(gh pr list --state open --limit 100 --json headRefName \
+            --jq '.[] | select(.headRefName | startswith("claude/heal-main-")) | .headRefName')
+          {
+            echo "open_pr_heads<<HEADS_EOF"
+            jq -r '.[] | select(.headRefName | startswith("claude/auto-")) | .headRefName' <<<"$open_prs"
+            if [ -n "$heal_main_heads" ]; then
+              printf '%s\n' "$heal_main_heads"
+            fi
+            echo "HEADS_EOF"
           } >> "$GITHUB_OUTPUT"
 
           # Phase 0 check: is the latest push to main currently red? This is the top-priority
@@ -688,7 +715,9 @@ jobs:
             issue filed earlier — `priority:high` still jumps the queue outright; this
             only refines ordering *within* a tier. The feed above shows titles only, so
             actually read the Impact lines (`gh issue view <n>`) of the bug candidates
-            you're comparing before reordering on this basis. When you deviate from
+            you're comparing before reordering on this basis. Each `gh issue view` is
+            its own command — do not wrap it in a shell loop (see Hard constraints).
+            When you deviate from
             strict lowest-number ordering this way, say so explicitly in the PR body
             or an issue comment so the reasoning stays visible, never silent.
           - For each candidate in turn: first check its own comment history for a prior
@@ -879,10 +908,17 @@ jobs:
             CLAUDE.md in the same commit, per CLAUDE.md's own Documentation section.
           - Run `yarn test` (and `yarn build` if you touched dependencies) and confirm it is green
             before doing anything else.
+          - No shell loops over variables, and one `gh` invocation per command. A compound
+            command such as `for n in …; do gh issue view $n` is denied before it runs
+            ("A variable in this command can't be checked before it runs") and burns a turn.
+            Write the issue or PR number literally in that single `gh` command. To read
+            several issues, run a separate `gh issue view <number>` for each one.
 
           If, after all three phases, there is nothing safe and meaningful to do this run (no CI/CD
           failure, no eligible task issue, and no menu task worth doing), make no changes and end
           without creating a branch or PR — do not force a change just to have something to show.
+          Ending with no pull request is a normal outcome: the workflow records a warning and a
+          job summary for it and stays green. Do not open a token pull request to avoid that signal.
 
           If you do make a code change: create a branch named `claude/heal-main-<short-slug>` for a
           Phase 0(a) fix, `claude/auto-dep-alert-<number>-<short-slug>` for a Phase 0(c) direct
@@ -1054,3 +1090,56 @@ jobs:
           echo "$denied"
           echo "::error::If this was a task issue that needs a path an unattended run can't write (e.g. .claude/skills/), label the issue 'blocked' so future runs skip it, and handle it interactively."
           exit 1
+
+      - name: Surface a run that opens no pull request
+        # Empty green runs (open-PR ceiling, nothing runnable, issue-only exits,
+        # a transient failure downgraded to success) used to leave no signal
+        # outside the transcript. Warn and write the job summary; never fail
+        # the job just because there was nothing to open.
+        if: always() && steps.guard.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SKIP: ${{ steps.guard.outputs.skip }}
+          CLAUDE_OUTCOME: ${{ steps.claude.outcome }}
+          OPEN_PR_HEADS: ${{ steps.guard.outputs.open_pr_heads }}
+        run: |
+          record_no_pr() {
+            echo "::warning::$1"
+            {
+              echo "### Autonomous maintenance opened no pull request"
+              echo
+              echo "$1"
+            } >> "$GITHUB_STEP_SUMMARY"
+          }
+
+          if [ "$SKIP" = "true" ]; then
+            record_no_pr "Guard skipped this run: the open autonomous-PR ceiling is full and main CI is not red. No pull request was opened. The job stays green."
+            exit 0
+          fi
+
+          if [ "$CLAUDE_OUTCOME" = "skipped" ]; then
+            record_no_pr "The maintenance task step did not run, so no pull request was opened."
+            exit 0
+          fi
+
+          if ! after=$(gh pr list --state open --limit 100 --json headRefName \
+            --jq '.[] | select((.headRefName | startswith("claude/auto-")) or (.headRefName | startswith("claude/heal-main-"))) | .headRefName'); then
+            record_no_pr "Could not list open pull requests after the maintenance task, so this run cannot confirm it opened one."
+            exit 0
+          fi
+
+          new=$(comm -13 \
+            <(printf '%s\n' "$OPEN_PR_HEADS" | sed '/^[[:space:]]*$/d' | LC_ALL=C sort -u) \
+            <(printf '%s\n' "$after" | sed '/^[[:space:]]*$/d' | LC_ALL=C sort -u)) || true
+          if [ -n "$new" ]; then
+            echo "New autonomous pull request head(s):"
+            printf '%s\n' "$new"
+            exit 0
+          fi
+
+          if [ "$CLAUDE_OUTCOME" = "failure" ]; then
+            record_no_pr "The maintenance task did not succeed and opened no pull request. A downgraded transient failure stays green; this warning is that run's visible record."
+          else
+            record_no_pr "This run opened no pull request (nothing runnable, an issue-only exit, or another stop that finished without a PR). The job stays green."
+          fi
+          exit 0

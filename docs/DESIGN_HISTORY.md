@@ -1401,6 +1401,22 @@ structure so you can jump to the matching topic.
 
 ## Automation workflows
 
+### Workflow-file pushes rejected as a GitHub App, after Workflows: write was granted — 2026-10-20
+
+The 2026-08-20 note below is right about the mid-July PAT gap and about the scope later
+being granted. It does not explain the rejections that kept landing after that grant
+(#37 on 2026-08-26, #594/#592 on 2026-09-15, #74/#81 on 2026-10-11). Those `git push`
+errors say `refusing to allow a GitHub App to create or update workflow … without
+workflows permission`. That wording is the job `GITHUB_TOKEN` (a GitHub App installation
+token). A fine-grained PAT missing the scope is rejected as a Personal Access Token
+without `workflow` scope, which is not the text those runs recorded. `GH_AUTOMATION_PAT`
+was already on the Claude step's `github_token` / `GH_TOKEN`. `actions/checkout@v7` with
+no `token:` still persisted the App token via `includeIf`, and that credential wins for
+`git push`. Devin's maintenance workflow checks out with the PAT and could push workflow
+files (for example `release.yml` on the branch for #52) while this workflow could not.
+The fix is the checkout `token:`, not another PAT-scope toggle and not `workflows: write`
+on `GITHUB_TOKEN` (App-token pushes still would not trigger other workflows).
+
 ### Stale `blocked` labels after Workflows: write landed — 2026-08-20
 
 `GH_AUTOMATION_PAT` missing `Workflows: write` was a real Phase A killer through mid-July 2026:
