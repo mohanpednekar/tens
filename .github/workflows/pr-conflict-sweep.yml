@@ -33,6 +33,10 @@ jobs:
       - name: Check open PRs for merge conflicts
         env:
           GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+          # This job never checks out the repo — it only talks to the API — so
+          # gh cannot discover the repository from a local git remote. Without
+          # GH_REPO it shells out to git and exits "fatal: not a git repository".
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
@@ -72,9 +76,11 @@ jobs:
             marker="<!-- pr-conflict-sweep sha=$head -->"
             # Skip if we already flagged this exact head — a new head push
             # (e.g. a fix attempt) resets the dedupe.
+            # gh --jq takes one expression and does not forward jq's --arg,
+            # so the marker has to be bound by jq itself.
             already=$(gh pr view "$num" --json comments \
-              --jq --arg marker "$marker" \
-              '[.comments[].body | select(contains($marker))] | length')
+              | jq --arg marker "$marker" \
+                '[.comments[].body | select(contains($marker))] | length')
             if [ "$already" -gt 0 ]; then
               echo "  already flagged at this head — skipping"
               continue
