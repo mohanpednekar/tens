@@ -126,8 +126,8 @@ one-time-ever, on a save's very first cycle only.
 
 There are 10 tiers, ids `tier01`–`tier10` (display names `Kilobytes`–`Quettabytes`, a byte-scale
 theme). Every tier is bought with the base currency (`MONEY_ID = 'base'`, display "Bits") and
-produces the tier below it; `tier01` costs Bits but produces whole Bytes (`BYTES_ID = 'bytes'`),
-credited as `BITS_PER_BYTE` Bits each — Bytes and Bits are one pool (`resources.base`). Bytes are still
+produces the tier below it; `tier01` costs Bits but produces Factory Bytes (`BYTES_ID = 'bytes'`),
+mirroring each Byte × `BITS_PER_BYTE` into Bits so MoneyHero / Prestige keep moving. Bytes are still
 not a purchasable tier — the ladder starts at Kilobytes; a fresh
 save earns its first Kilobytes via the Byte Foundry below, not by buying a `tier00`/Bytes entry.
 **Do not guess at cost/production formulas, the purchase-level system, prestige, Era ascension,
@@ -141,7 +141,7 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 one-time-ever gate (`latchMainGameUnlocked` — see above) before `MainPage` (`tier01`/Kilobytes onward)
 is reachable. Tapping accumulates bits into the **Data Stream** (Buffer-capped, binary units —
 Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator grown via a single
-**Upgrade Data Stream** action (cost = current capacity, a click starts a progress bar fed at a constant 100% of base Speed from the Buffer, doubling `intro.capacity` when full; displayed Speed is
+**Upgrade Data Stream** action (cost = current capacity, doubles `intro.capacity`; displayed Speed is
 *derived* from capacity via `getDataStreamSpeedBytesPerSecond`, not purchased) — entirely OUTSIDE the
 forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a separate fill-based
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer

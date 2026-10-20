@@ -11,6 +11,7 @@ import {
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_BOOST_MAX_STACKS,
   COMPUTE_BOOST_PRESETS,
+  COMPUTE_BOOST_TIER_POWER_STEP,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
   COMPUTE_ENTITY_AUTO_MERGE_CAP,
@@ -203,11 +204,10 @@ const InfoPage = () => {
           </li>
           <li>
             <strong>Upgrade Data Stream</strong> is the single Data Stream upgrade: it costs your
-            current Capacity in bits and doubles Capacity each purchase. Pressing it starts the
-            upgrade: the button becomes its own progress bar while a constant 100% of the Data
-            Stream&apos;s base Speed is pulled from the Buffer into it, ahead of everything else
-            (nothing else is paused). When the bar fills, Capacity doubles and the button is
-            clickable again.
+            current Capacity in bits (draining a full Buffer) and doubles Capacity each purchase.
+            Pressing it before the Buffer is full arms it: everything drawing from the Data Stream
+            pauses until the Buffer fills and the upgrade completes (the Data Stream tile shows the
+            status); Cancel upgrade backs out.
             Speed is derived from Capacity — never upgraded separately — at{' '}
             √(Capacity in Bytes) per second on even doublings, alternating ×1.5 and ×4/3 growth
             (exactly ×2 every two upgrades).
@@ -435,13 +435,11 @@ const InfoPage = () => {
         <h3>Compute Boost</h3>
         <ul>
           <li>
-            Click any tier row to arm Burst / Standard / Sustain. Spend 1 token of the armed tier
-            to activate. The multiplier and duration are the same whichever tier you spend; a
-            higher tier boosts more Factory tiers instead (Core: Kilobytes only, Node: Kilobytes
-            and Megabytes, Cluster: the first three, …).
+            Click any tier row to arm Burst / Standard / Sustain at that tier’s scaled power
+            and duration. Spend 1 token of the armed tier to activate.
           </li>
           <li>
-            Presets (same for every funding tier):{' '}
+            Base (Core) presets:{' '}
             Burst ×{COMPUTE_BOOST_PRESETS.burst.multiplier} for{' '}
             {formatOfflineDuration(COMPUTE_BOOST_PRESETS.burst.durationSeconds)}; Standard ×
             {COMPUTE_BOOST_PRESETS.standard.multiplier} for{' '}
@@ -450,8 +448,9 @@ const InfoPage = () => {
             {formatOfflineDuration(COMPUTE_BOOST_PRESETS.sustain.durationSeconds)}.
           </li>
           <li>
-            A boost always multiplies Memory production too, plus as many Factory tiers (from{' '}
-            {firstTierName} up) as the funding tier’s number.
+            Higher tiers: multiplier ×{COMPUTE_BOOST_TIER_POWER_STEP} per step; duration ×2 per
+            step. Boost multiplies Memory production and {firstTierName} production at
+            once.
           </li>
           <li>
             Only one boost runs at a time. To switch to a different preset or funding tier, you

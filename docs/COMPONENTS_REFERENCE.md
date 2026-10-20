@@ -95,7 +95,11 @@ is Capacity-only" in CLAUDE.md, in ascending order, `aria-label="pool N"`),
 titled "`<symbol>` Pool" (e.g. "KB Pool" — no index number or tier name), all inside one
 `FillableStatCard` tap tile (the same component the Data Stream card's own tile uses): a `TitleRow`
 (title top-left, that pool's own current full-disk count top-right), then the Memory buffer balance
-alone in a bigger centered `BalanceText`, then a `CapacityBonusRow` (Capacity left, narrow tap-bonus bar, "+x% 👆" right; bar/text hidden at 0). The ⚡ Speed/Bandwidth figure is the effective value, tinted by the fill multiplier. Pool 1's own threshold — 1 KiB — is
+alone in a bigger centered `BalanceText`, then a full-width `MultiplierBar` below the balance
+(switching to that pool's own Data Lake overflow-rate reading once the Memory buffer is completely
+full — see CLAUDE.md's "Fill-based Speed/Bandwidth multiplier" — with its own percent readout on a
+row below the bar itself), then a `FooterRow` splitting a ⚡-prefixed Bandwidth figure (left half)
+and a 🪣-prefixed Capacity figure (right half) across the bottom. Pool 1's own threshold — 1 KiB — is
 deliberately set equal to `isStorageUnlocked`'s own reveal gate (`INTRO_DISK_UNLOCK_CAPACITY`), so
 the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already showing
 a clean "1 KB" Capacity rather than a value mid-decade. Only the largest unlocked pool is expanded
@@ -104,11 +108,11 @@ and reveal, when opened, their three `DiskArrayRow`s followed by that pool's own
 block (`bare`, `tierIndex={poolIndex}`) — each pool's Lake lives inside that pool's own card,
 directly below its disks, not in a separate panel after all the pool cards.
 
-`DataLakePanel` (`bare tierIndex={poolIndex}`; optional `section="header"`/`"body"` splits the title+stats rows from the fill tile/squares, a collapsed pool card renders `header`) renders one lake as a single self-contained block —
+`DataLakePanel` (`bare tierIndex={poolIndex}`) renders one lake as a single self-contained block —
 not a labelled table row: a header row pairing the lake's title ("`<symbol>` Lake", e.g. "KB Lake" —
 the size unit is always part of the visible name) with a single next-Booster-cost control in place of
 a lifetime-purchased-count readout (the cost figure alone is self-explanatory — see below for what
-this control does); laid out like a pool/Data Stream tile (`LakeHeader`): name top-left with the Booster target price + buy control (🏷️) under it, ⚡ current fill speed top-right (the pool's Bandwidth while the lake drains/overflows automatically, else 0), the filled amount (full disks plus the open slot, `formatPoolBalance`) big and centered, and Reset Pool / Scale Out under the speed when offered; then a dedicated `LakePoolTile` (own
+this control does); then a dedicated `LakePoolTile` (own
 `FillableStatCard`-style element, purely additive over the per-square fill overlay below — same
 `fillBits`/`getDataLakeCurrentFillSubSize` data, no separate mechanic) showing "`<fillBits>` /
 `<open slot size>`" — ALWAYS rendered whenever an open slot exists (`currentFillSubSize !== null`),

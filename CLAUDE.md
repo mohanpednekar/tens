@@ -654,7 +654,7 @@ Strict three-layer separation:
    (`docs/DESIGN_HISTORY.md`: "Pool titles simplified to `<symbol>` Pool; each pool's Data Lake moved
    inside its own card"). Disk Fill is fully automatic every tick (`DiskArrayRow` is a pure status
    display). Provision Disk is a single shared control (one disk ladder spans every pool) rendered in
-   its own standalone "Provision Disk" card directly below the Data Stream card (hidden while the offer's pool is
+   the Data Stream card's actions directly below Upgrade Data Stream (hidden while the offer's pool is
    rebuilding); Upgrade Data Stream previews the post-upgrade Capacity and Speed
    (`docs/DESIGN_HISTORY.md`: "Provision Disk moved into the Data Stream card"). Each disk
    array shows every size from `getDiskSizesToShow`, all `DISK_ARRAY_LADDER_CAP` (9) slots in one row.
@@ -685,7 +685,7 @@ Strict three-layer separation:
    this in the engine too), THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
    `COMPUTE_ENTITY_CAP` (10) normal-slot squares (never above 10/10, even once auto-merge is unlocked and
    the entity has grown into its reserve) plus a `TierSelectButton` arming the Boost presets at that
-   tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
+   tier's scaled power; row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
    Auto-merge `TierActionButton`s (the latter with a live progress fill toward its
    `COMPUTE_ENTITY_CAP`-unit cost), or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot
    squares (gradually filled, `getComputeReserveHeld`) as the manual-start trigger — Megacomputer has no
@@ -755,11 +755,11 @@ There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/ga
 display names `Kilobytes` through `Quettabytes`. Every tier is bought directly with the base currency
 (`MONEY_ID = 'base'`, display name "Bits") and, once owned, produces the tier immediately below it,
 cascading down the ladder; `tier01` (Kilobytes) is the special case where cost is still Bits but
-production is a whole-Byte amount (`BYTES_ID = 'bytes'`, displayed as `B`) credited to Bits at
-`BITS_PER_BYTE` (8) per Byte. **Bytes and Bits are ONE pool** (`resources.base`) — there is no separate
-Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Latency** (the global
-tickspeed multiplier on MainPage, formerly "Tickspeed"/"Clock Speed") is paid from that Bits balance —
-initial activation costs **10 Bytes (80 Bits)**. It unlocks once level 1 of tier01 is purchased; there
+production credits the separate Factory Bytes pool (`BYTES_ID = 'bytes'`, displayed as whole `B`) and
+mirrors the same amount × `BITS_PER_BYTE` into Bits so MoneyHero / Prestige / tier Buys keep moving
+(see `docs/DESIGN_HISTORY.md` for the #430 incident this mirror fixed). **Latency** (the global
+tickspeed multiplier on MainPage, formerly "Tickspeed"/"Clock Speed") is funded from that Bytes pool —
+initial activation costs **10 Bytes** — not Bits. It unlocks once level 1 of tier01 is purchased; there
 are no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
 Reaching Money ≥ `PRESTIGE_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
 since a Byte is 8 Bits) freezes the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)`
@@ -799,12 +799,14 @@ generator. Combine creates the generator without snapping Capacity; save load vi
 keeps the generator (`byteCreated`) and the `mainGameUnlocked` latch but resets Capacity to
 `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`) — Capacity is rebuilt each
 Era, Factory access never goes away again once earned. Production and storage grow via a single **Upgrade
-Data Stream** action: a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
-and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at a constant 100% of the base Speed
-(like a pool pulling at its Bandwidth, regardless of the fill multiplier) into `intro.capacityUpgradeProgress`, ahead of
-every other consumer — nothing is paused or raced; when the bar
-reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
-running, the same button becomes an inert progress bar (no cancel; the tile is unchanged). Displayed Speed is purely *derived* from Capacity
+Data Stream** action: it requires a full Buffer, drains it (cost = current capacity), and doubles
+`intro.capacity` — Capacity is the only purchased progression variable. The button is clickable at any
+fill (`isMemoryCapacityUpgradeArmable`): a click below 100% arms it (`intro.capacityUpgradeQueued`) and
+pauses every Data Stream outflow (`isDataStreamOutflowPaused` — `tickPoolBufferFill`/Data Lake overflow,
+`tickIntroAutoInvest`) until `tickQueuedCapacityUpgrade` fires it, so continuous pool/lake draw can't
+hold the Buffer below full indefinitely. The arm survives load and Prestige. While armed the button is
+hidden, the Data Stream tile shows the upgrade status, and a "Cancel upgrade" control disarms it
+(`clearIntroCapacityUpgradeQueue`). Displayed Speed is purely *derived* from Capacity
 (`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd powers
 the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3 growth, exactly
 ×2 per two upgrades. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,
@@ -833,11 +835,11 @@ each cycle. Nothing here ever fully freezes — every action stays live indefini
 `engine.js`) — the displayed Speed/Bandwidth never change; a separate fill-dependent multiplier (150%
 empty → 100% at 50% full → 50% at full buffer) scales only the real per-tick amount delivered into the
 buffer, boosted temporarily by tapping (+5%, decaying 1%/sec, hard-capped at 200% total).
-`ByteFoundryPage` no longer draws a multiplier bar: the Data Stream's Speed and each pool's Bandwidth
-show the EFFECTIVE value (base × multiplier, 3 significant digits, `formatSpeedText`), tinted
-red (50%) → blue (100%) → green (150%+) by `getSpeedColor`; each tile also gets a `CapacityBonusRow` (📦 Capacity under the name, a narrow tap-bonus bar, and "+x% 👆" under the speed; bar and bonus text auto-hide at 0).
-A collapsed pool card also shows its Data Lake title/action row (`DataLakePanel section="header"`; an
-expanded pool renders the full lake). Tap-bonus headroom clamping: `docs/ECONOMY_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`.
+`ByteFoundryPage` shows it via a `MultiplierBar`; for a pool whose buffer is full AND whose Data Lake can
+receive AUTOMATIC overflow (`isDataLakePoolReady` AND `isStoragePoolFullyBuilt`), or whenever
+`isDataLakePoolDrainAvailable`, it switches `mode="lake"` to show the lake's overflow RATE (tile tap
+disabled; `DataLakePanel`'s `LakePoolTile` tracks fill LEVEL). Bar rendering, tap-bonus headroom
+clamping, lake-mode handoff: `docs/ECONOMY_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`.
 
 **Data Stream Buffer / pool Memory Capacity** — **standing rule: non-binary (SI-clean or decade-power)
 transforms are for storage-pool-scoped values only; `intro.capacity` itself keeps doubling plainly in
@@ -909,8 +911,8 @@ from its pool's buffer at the pool's Bandwidth (`tickDataLakePoolDrain`, right a
 filling — only while every BUILT disk is full and no build is in progress in that pool, the lake has
 room, and the buffer holds more than the read cache's reservation (`isDataLakePoolDrainAvailable`; while
 it applies, full-buffer overflow yields to it so a tick isn't credited twice; unprovisioned slots don't
-block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while a running Upgrade Data Stream
-pulls from the Data Stream. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
+block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while an armed Upgrade Data Stream
+pauses Data Stream outflow. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
 directly from that pool's buffer up to what the next Booster still needs, outside the forced priority
 order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🏷️ `<cost>`" control that
 buys immediately (already affordable) or arms `intro.dataLakes[tier].autoConvertActive`;
@@ -996,9 +998,6 @@ prestige rules, purchase-batch behavior, or the skill's own bot strategy). Publi
 new file per run** onto the stable orphan branch `ideal-run-strategy` via
 `publish-strategy.sh` (`runs/<UTC-stamp>-<sha>.md` + `README.md` index) — never merge that branch
 into `main`, and do not rename it with an agent/session suffix.
-
-**Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Latency/Overclock
-heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
 
 ## Path aliases
 
@@ -1098,9 +1097,9 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1986 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1976 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
-  'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
+  'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
   (`'Ones'`, `'money'`, `'hundreds'`, or a purchasable Bytes tier) left behind by prior renames/removals
   (see `docs/DESIGN_HISTORY.md`). Saves must use the current schema (`resources.base`,

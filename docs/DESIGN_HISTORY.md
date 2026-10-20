@@ -3447,17 +3447,6 @@ longer Boost uptime (“effect time doubles after merge”) without returning to
 separate, later lever. **If flattening duration again, document why slot-cap incentives alone are
 enough.**
 
-### Compute Boost: tier funds breadth, not strength (reverses the 4× power / 2× duration scaling)
-
-Maintainer instruction: every compute-ladder tier now gives the SAME boost attributes as Cores
-(`COMPUTE_BOOST_PRESETS`' own `multiplier`/`durationSeconds`), and the funding tier instead sets how
-many Factory tiers the boost applies to — tier N covers the first N Factory tiers
-(`getComputeBoostCoveredTierCount`; Memory is always boosted). `COMPUTE_BOOST_TIER_POWER_STEP` (4) and
-`COMPUTE_BOOST_TIER_DURATION_STEP` (2) were removed. This supersedes the "4× effect + doubled duration"
-decisions above, so the earlier note ("if flattening duration again, document why slot-cap incentives
-alone are enough") is answered by the new breadth incentive: merging up still pays off, now by
-widening what the boost reaches. `simulate-run-times` has not been re-run for this change.
-
 ### Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380)
 
 Fixed second tables (60s doubling, then 1s×10^n experiments in #370/#371/#372) drifted from Foundry
@@ -8812,10 +8801,7 @@ shipped it to `1.1` — corrected to the current `1.25` in the same commit.
 **Verification.** `yarn test`: 1798/1798. `simulate-run-times` re-run and published to the
 `ideal-run-strategy` orphan branch at the final `1.25` value per this repo's own convention.
 
-### Upgrade Data Stream arms below a full Buffer (outflow pause) — SUPERSEDED
-
-Superseded: Upgrade Data Stream now diverts 100% of nominal Speed into `intro.capacityUpgradeProgress` from `tickIntroProduction` and no outflow is paused (the pause was a source of races/confusion). The notes below describe the removed design.
-
+### Upgrade Data Stream arms below a full Buffer (outflow pause)
 
 **Problem:** the Data Stream could stall below full forever. Pool buffers and — once a pool is fully
 built — its Data Lake's overflow draw from `intro.bits` every tick, while the fill-based multiplier
@@ -8890,18 +8876,3 @@ larger ×10/×100 disks are deliberately ignored. The duration upgrade, its stat
 explicitly rejected by the maintainer. Durations still grow across pools, because each pool's
 smallest disk is 1000× the previous pool's while Bandwidth is sqrt-capped. That matches how slowly
 those pools' own disks fill.
-
-## Foundry multiplier bar: one diverging bar tried and dropped (2026-10)
-
-To shrink the Data Stream/pool tiles (4 rows → 2), the balance moved onto the title row and the
-fill-multiplier and tap-bonus bars were compacted. A single bar anchored at the neutral 100%
-midpoint (blue right of center when boosted, left when penalised, yellow bonus extending it
-outward) was implemented and reviewed on screenshots; the maintainer found it unintuitive and it was
-reverted. Final design: two center-growing bars (as before) with their percent labels inside; the
-base/lake bar's scale is now 0..`FILL_MULTIPLIER_MAX_PERCENT` (150%) so it is full-width at its own
-maximum (it previously used the 200% combined cap, which the base reading never reaches), and the
-bonus bar is full-width at `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT`. Lake mode still shares the base
-bar's scale, so the 50% hand-off between the two readings stays jump-free. Pill backgrounds behind
-the labels were also tried and dropped: plain page-colored text reads on both themes' fills, and
-labels move just past a fill too narrow to hold them. The tap emoji gets a thin dark outline (a
-light halo glowed on the light theme's brown bar).
