@@ -1,6 +1,6 @@
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
-import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeMergeDurationSeconds, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProductionFrozen, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
-import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, TIER_DEFINITIONS } from 'game/layers'
+import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeMergeDurationSeconds, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
+import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, TIER_DEFINITIONS } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
 
@@ -687,44 +687,31 @@ const ComputePage = ({ game }) => {
         </StackReclaimRow>
       )}
 
+      {state.computeAutoBoostUnlocked && (
       <AutoBoostRow aria-label="compute auto boost">
-        {state.computeAutoBoostUnlocked ? (
-          <>
-            <AutoBoostLabel>
-              Auto from biggest tier waiting on merge — preference:
-            </AutoBoostLabel>
-            <BoostRow role="group" aria-label="auto boost preference">
-              {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
-                const selected = (intro.computeAutoBoostType ?? 'standard') === boostType
-                return (
-                  <CompactButton
-                    key={`auto-${boostType}`}
-                    aria-label={`set auto boost preference to ${boostType}`}
-                    aria-pressed={selected}
-                    onClick={() => actions.setComputeAutoBoostType(boostType)}
-                    title={`Auto-Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
-                    type="button"
-                    variant={selected ? 'prestige' : 'neutral'}
-                  >
-                    <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon}${selected ? ' ✓' : ''}`}</ButtonContent>
-                  </CompactButton>
-                )
-              })}
-            </BoostRow>
-          </>
-        ) : (
-          <CompactButton
-            aria-label={`unlock compute auto boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} Prestige Points`}
-            disabled={isProductionFrozen(state) || (state.prestige?.points ?? 0) < COMPUTE_AUTO_BOOST_UNLOCK_COST}
-            onClick={actions.buyComputeAutoBoost}
-            title={`Unlock Auto-Boost: while a tier is full and waiting on its own in-flight merge, automatically activate your preferred preset from the biggest such tier (default Standard). Costs ${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP.`}
-            type="button"
-            variant="neutral"
-          >
-            <ButtonContent>{`🤖 Unlock Auto-Boost · ${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP`}</ButtonContent>
-          </CompactButton>
-        )}
+        <AutoBoostLabel>
+          Auto from biggest tier waiting on merge — preference:
+        </AutoBoostLabel>
+        <BoostRow role="group" aria-label="auto boost preference">
+          {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
+            const selected = (intro.computeAutoBoostType ?? 'standard') === boostType
+            return (
+              <CompactButton
+                key={`auto-${boostType}`}
+                aria-label={`set auto boost preference to ${boostType}`}
+                aria-pressed={selected}
+                onClick={() => actions.setComputeAutoBoostType(boostType)}
+                title={`Auto-Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
+                type="button"
+                variant={selected ? 'prestige' : 'neutral'}
+              >
+                <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon}${selected ? ' ✓' : ''}`}</ButtonContent>
+              </CompactButton>
+            )
+          })}
+        </BoostRow>
       </AutoBoostRow>
+      )}
       </BoostCard>
 
       {intro.computeMergePageUnlocked
