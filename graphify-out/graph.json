@@ -4,6 +4,17 @@
   "graph": {},
   "nodes": [
     {
+      "label": "autonomous-maintenance-workflow.test.js",
+      "file_type": "code",
+      "source_file": "scripts/autonomous-maintenance-workflow.test.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "scripts_autonomous_maintenance_workflow_test",
+      "community": 0,
+      "community_name": "lint-workflow-shell.mjs",
+      "norm_label": "autonomous-maintenance-workflow.test.js"
+    },
+    {
       "label": "session-start.sh",
       "file_type": "code",
       "source_file": ".claude/hooks/session-start.sh",
