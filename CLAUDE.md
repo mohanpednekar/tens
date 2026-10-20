@@ -685,7 +685,7 @@ Strict three-layer separation:
    this in the engine too), THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
    `COMPUTE_ENTITY_CAP` (10) normal-slot squares (never above 10/10, even once auto-merge is unlocked and
    the entity has grown into its reserve) plus a `TierSelectButton` arming the Boost presets at that
-   tier's scaled power; row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
+   tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
    Auto-merge `TierActionButton`s (the latter with a live progress fill toward its
    `COMPUTE_ENTITY_CAP`-unit cost), or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot
    squares (gradually filled, `getComputeReserveHeld`) as the manual-start trigger — Megacomputer has no
@@ -833,11 +833,11 @@ each cycle. Nothing here ever fully freezes — every action stays live indefini
 `engine.js`) — the displayed Speed/Bandwidth never change; a separate fill-dependent multiplier (150%
 empty → 100% at 50% full → 50% at full buffer) scales only the real per-tick amount delivered into the
 buffer, boosted temporarily by tapping (+5%, decaying 1%/sec, hard-capped at 200% total).
-`ByteFoundryPage` shows it via a `MultiplierBar`; for a pool whose buffer is full AND whose Data Lake can
-receive AUTOMATIC overflow (`isDataLakePoolReady` AND `isStoragePoolFullyBuilt`), or whenever
-`isDataLakePoolDrainAvailable`, it switches `mode="lake"` to show the lake's overflow RATE (tile tap
-disabled; `DataLakePanel`'s `LakePoolTile` tracks fill LEVEL). Bar rendering, tap-bonus headroom
-clamping, lake-mode handoff: `docs/ECONOMY_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`.
+`ByteFoundryPage` no longer draws a multiplier bar: the Data Stream's Speed and each pool's Bandwidth
+show the EFFECTIVE value (base × multiplier, 3 significant digits, `formatSpeedText`), tinted
+red (50%) → blue (100%) → green (150%+) by `getSpeedColor`; each tile also gets a `CapacityBonusRow` (📦 Capacity under the name, a narrow tap-bonus bar, and "+x% 👆" under the speed; bar and bonus text auto-hide at 0).
+A collapsed pool card also shows its Data Lake title/action row (`DataLakePanel section="header"`; an
+expanded pool renders the full lake). Tap-bonus headroom clamping: `docs/ECONOMY_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`.
 
 **Data Stream Buffer / pool Memory Capacity** — **standing rule: non-binary (SI-clean or decade-power)
 transforms are for storage-pool-scoped values only; `intro.capacity` itself keeps doubling plainly in
@@ -1098,7 +1098,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1979 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1986 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
