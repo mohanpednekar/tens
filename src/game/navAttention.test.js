@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   createInitialGameState,
   getIntroKilobyteConversionCost,
-  getPrestigeDoublePpUpgradeCost,
 } from 'game/engine'
 import {
-  AUTO_PRESTIGE_AUTOBUYER_COST,
+  BYTES_ID,
   COMPUTE_FLOPS_FIRST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_MERGE_RATIO,
@@ -15,7 +14,6 @@ import {
   INTRO_CONVERSION_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_STARTING_CAPACITY,
-  BITS_PER_BYTE,
   MONEY_ID,
   PRESTIGE_THRESHOLD,
   TICKSPEED_AUTOBUYER_COST,
@@ -28,8 +26,6 @@ import {
   hasAffordableComputeFlopsTier,
   hasAffordableFullLevel,
   hasAffordableGlobalTickspeed,
-  hasAffordablePpLevelUpgrade,
-  hasAffordablePpUnlock,
   hasAffordablePpUpgrade,
   hasComputeAttention,
   hasFoundryAttention,
@@ -76,16 +72,6 @@ describe('navAttention', () => {
     })
     expect(hasFoundryAttention(state)).toBe(true)
     expect(getNavAttention(state).foundry).toBe('high')
-  })
-
-  it('does not light Foundry for a full Buffer while an Upgrade Data Stream is running', () => {
-    const state = withIntro({
-      bits: INTRO_STARTING_CAPACITY,
-      capacity: INTRO_STARTING_CAPACITY,
-      byteCreated: true,
-      capacityUpgradeQueued: true,
-    })
-    expect(hasFoundryAttention(state)).toBe(false)
   })
 
   it('lights Foundry when combine into a Byte is ready', () => {
@@ -311,7 +297,7 @@ describe('navAttention', () => {
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })
 
-  it('lights Perks (not Factory) when an affordable PP automation unlock is available', () => {
+  it('lights Factory (Upgrades) when an affordable PP automation unlock is available', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
@@ -321,49 +307,8 @@ describe('navAttention', () => {
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
     }
     expect(hasAffordablePpUpgrade(state)).toBe(true)
-    expect(hasTiersAttention(state)).toBe(false)
-    expect(getNavAttention(state).game).toBe(false)
-    expect(getNavAttention(state).perks).toBe(ATTENTION_NORMAL)
-  })
-
-  it('splits PP affordability between one-time unlocks and leveled upgrades', () => {
-    const base = {
-      ...createInitialGameState(),
-      intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
-    }
-    const unlockOnly = { ...base, prestige: { count: 1, points: TICKSPEED_AUTOBUYER_COST }, autoGlobalTickspeed: false }
-    expect(hasAffordablePpUnlock(unlockOnly)).toBe(true)
-    expect(hasAffordablePpLevelUpgrade(unlockOnly)).toBe(false)
-
-    const doublePpCost = getPrestigeDoublePpUpgradeCost(0)
-    const levelOnly = {
-      ...base,
-      prestige: { count: 1, points: doublePpCost },
-      // Every one-time unlock already owned, so only the leveled Double PP is affordable.
-      prestigeSpeedBonusUnlocked: true,
-      autoScaleUp: true,
-      autoGlobalTickspeed: true,
-      smartAutobuyer: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])),
-    }
-    expect(hasAffordablePpUnlock(levelOnly)).toBe(false)
-    expect(hasAffordablePpLevelUpgrade(levelOnly)).toBe(true)
-    expect(hasAffordablePpUpgrade(levelOnly)).toBe(true)
-
-    // The Auto-Prestige Autobuyer (an Unlocks purchase) counts only once every tier is fully
-    // automated and Auto-Prestige is active.
-    const allDone = Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true]))
-    const autoPrestigeAutobuyerOnly = {
-      ...levelOnly,
-      prestige: { count: 1, points: AUTO_PRESTIGE_AUTOBUYER_COST },
-      prestigeDoublePpLevel: 5,
-      tierTickspeedAutobuyer: allDone,
-      autoPrestige: 30,
-      autoPrestigeAutobuyer: false,
-    }
-    expect(hasAffordablePpUnlock(autoPrestigeAutobuyerOnly)).toBe(true)
-    expect(hasAffordablePpUnlock({ ...autoPrestigeAutobuyerOnly, autoPrestigeAutobuyer: true })).toBe(false)
-    expect(hasAffordablePpUnlock({ ...autoPrestigeAutobuyerOnly, autoPrestige: null })).toBe(false)
+    expect(hasTiersAttention(state)).toBe(true)
+    expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })
 
   it('does not light PP upgrades before the first Prestige', () => {
@@ -376,7 +321,7 @@ describe('navAttention', () => {
     expect(hasAffordablePpUpgrade(state)).toBe(false)
   })
 
-  it('lights Factory when Latency is affordable from the Bits balance', () => {
+  it('lights Factory when Latency is affordable from the Bytes pool', () => {
     const tier01 = TIER_DEFINITIONS[0]
     const state = {
       ...createInitialGameState(),
@@ -385,7 +330,8 @@ describe('navAttention', () => {
       purchaseLevels: { [tier01.id]: 2 },
       resources: {
         ...createInitialGameState().resources,
-        [MONEY_ID]: 10 * BITS_PER_BYTE,
+        [MONEY_ID]: 0,
+        [BYTES_ID]: 10,
       },
       globalTickspeedMultiplier: null,
     }
@@ -394,12 +340,17 @@ describe('navAttention', () => {
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })
 
-  it('does not light Latency when the Bits balance is short of the cost', () => {
+  it('does not treat Latency as affordable when only Bits cover the cost', () => {
+    const tier02 = TIER_DEFINITIONS[1]
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      purchaseLevels: { [TIER_DEFINITIONS[0].id]: 2 },
-      resources: { ...createInitialGameState().resources, [MONEY_ID]: 10 * BITS_PER_BYTE - 1 },
+      owned: { [tier02.id]: 1 },
+      resources: {
+        ...createInitialGameState().resources,
+        [MONEY_ID]: 1e12,
+        [BYTES_ID]: 0,
+      },
       globalTickspeedMultiplier: null,
     }
     expect(hasAffordableGlobalTickspeed(state)).toBe(false)

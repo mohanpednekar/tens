@@ -1696,16 +1696,6 @@ at that time, matching this repo's "don't design for hypothetical future require
 The following records *why* specific MainPage/component behaviors were built the way they were —
 `CLAUDE.md`'s Architecture section states the current behavior; this is the reasoning trail.
 
-- **PP Upgrades tab split into Unlocks / Upgrades / Toggles.** The one PP page mixed three kinds of
-  control — one-time permanent unlocks, repeatable leveled upgrades, and pause/resume toggles — so a
-  bought unlock's row carried a pause button and a fully-smart tier's row (hidden once nothing was left
-  to buy) took its pause toggles with it. Per the maintainer's request each kind now has its own tab;
-  Unlocks shows a static "unlocked" badge, Toggles keeps every owned automation's toggle regardless of
-  remaining purchases, and the attention dot split along the same line (`hasAffordablePpUnlock` /
-  `hasAffordablePpLevelUpgrade`).
-  A follow-up request moved the three tabs off Byte Factory into their own AppNav page (**Perks**),
-  icon-only tab labels, folded the free autobuyer/Compute-autobuyer milestones into Unlocks (removing
-  them from MilestonesPage so each appears once), and moved the Buy max toggle onto Toggles.
 - **`Lv.N` on the Buy button instead of a separate Purchased cell.** Buy is the action that raises
   `purchased`, so folding the level into the Buy button's own label (plus a `(level N)` `aria-label`
   suffix) avoids a redundant grid cell. The player-facing term is "level" (it only ever increases and
@@ -3446,17 +3436,6 @@ longer Boost uptime (“effect time doubles after merge”) without returning to
 `× tierIndex` formula or the steeper 8× power step. Achievement-based multipliers remain a
 separate, later lever. **If flattening duration again, document why slot-cap incentives alone are
 enough.**
-
-### Compute Boost: tier funds breadth, not strength (reverses the 4× power / 2× duration scaling)
-
-Maintainer instruction: every compute-ladder tier now gives the SAME boost attributes as Cores
-(`COMPUTE_BOOST_PRESETS`' own `multiplier`/`durationSeconds`), and the funding tier instead sets how
-many Factory tiers the boost applies to — tier N covers the first N Factory tiers
-(`getComputeBoostCoveredTierCount`; Memory is always boosted). `COMPUTE_BOOST_TIER_POWER_STEP` (4) and
-`COMPUTE_BOOST_TIER_DURATION_STEP` (2) were removed. This supersedes the "4× effect + doubled duration"
-decisions above, so the earlier note ("if flattening duration again, document why slot-cap incentives
-alone are enough") is answered by the new breadth incentive: merging up still pays off, now by
-widening what the boost reaches. `simulate-run-times` has not been re-run for this change.
 
 ### Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380)
 
@@ -5876,21 +5855,6 @@ Verified visually via `yarn dev` + a real Playwright/Chromium screenshot: a pool
 condition satisfied but capacity below its own threshold correctly stays hidden (a "GB Pool" that
 would otherwise show, given fully-built KB+MB pools, stays absent below the 1 GiB threshold), and the
 manual transfer-block row is confirmed gone from every state that used to show it.
-
-### Cost icon: 🎯 replaced by 🏷️ (`COST_ICON`)
-
-🎯 read as "target/goal" and, on the Data Lake Booster control, doubled as the "aim and convert"
-action marker, so one glyph carried both the price and the action. Eighteen candidates were rendered
-on the real button (🪙 💰 🏷️ 💸 💎 🎟️ ⚖️ 🛒 ⛽ 🧾 🔻 📥 🔑 🧮 ¤ ⛁ ⊖); the maintainer picked 🏷️. It is now one shared
-constant (`components/icons.js`) used for every cost: Data Lake Booster, Upgrade Data Stream,
-Provision Disk. Caveat seen in the render: 🏷️ is small at this size, so keep a space after it.
-
-### Provision Disk moved into the Data Stream card
-
-Maintainer request: Provision Disk now sits in the Data Stream card directly below Upgrade Data
-Stream, reversing "Provision Disk moved back inside its pool card" below. One fixed location also
-drops the off-screen-pool fallback copy. Upgrade Data Stream gained a post-upgrade Capacity/Speed
-preview line so the player sees what the drain buys.
 
 ### Provision Disk moved back inside its pool card; pool Capacity switched from SI-clean to a plain decade-of-10 ladder
 
@@ -8812,10 +8776,7 @@ shipped it to `1.1` — corrected to the current `1.25` in the same commit.
 **Verification.** `yarn test`: 1798/1798. `simulate-run-times` re-run and published to the
 `ideal-run-strategy` orphan branch at the final `1.25` value per this repo's own convention.
 
-### Upgrade Data Stream arms below a full Buffer (outflow pause) — SUPERSEDED
-
-Superseded: Upgrade Data Stream now diverts 100% of nominal Speed into `intro.capacityUpgradeProgress` from `tickIntroProduction` and no outflow is paused (the pause was a source of races/confusion). The notes below describe the removed design.
-
+### Upgrade Data Stream arms below a full Buffer (outflow pause)
 
 **Problem:** the Data Stream could stall below full forever. Pool buffers and — once a pool is fully
 built — its Data Lake's overflow draw from `intro.bits` every tick, while the fill-based multiplier
@@ -8890,18 +8851,3 @@ larger ×10/×100 disks are deliberately ignored. The duration upgrade, its stat
 explicitly rejected by the maintainer. Durations still grow across pools, because each pool's
 smallest disk is 1000× the previous pool's while Bandwidth is sqrt-capped. That matches how slowly
 those pools' own disks fill.
-
-## Foundry multiplier bar: one diverging bar tried and dropped (2026-10)
-
-To shrink the Data Stream/pool tiles (4 rows → 2), the balance moved onto the title row and the
-fill-multiplier and tap-bonus bars were compacted. A single bar anchored at the neutral 100%
-midpoint (blue right of center when boosted, left when penalised, yellow bonus extending it
-outward) was implemented and reviewed on screenshots; the maintainer found it unintuitive and it was
-reverted. Final design: two center-growing bars (as before) with their percent labels inside; the
-base/lake bar's scale is now 0..`FILL_MULTIPLIER_MAX_PERCENT` (150%) so it is full-width at its own
-maximum (it previously used the 200% combined cap, which the base reading never reaches), and the
-bonus bar is full-width at `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT`. Lake mode still shares the base
-bar's scale, so the 50% hand-off between the two readings stays jump-free. Pill backgrounds behind
-the labels were also tried and dropped: plain page-colored text reads on both themes' fills, and
-labels move just past a fill too narrow to hold them. The tap emoji gets a thin dark outline (a
-light halo glowed on the light theme's brown bar).

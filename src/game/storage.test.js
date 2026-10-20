@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState, eraGame, getUnlockedStoragePoolCount } from './engine'
-import { BYTES_ID, ERA_ELIGIBILITY_PP, INTRO_CAPACITY_CAP_BITS, MONEY_ID, MONEY_STARTING_AMOUNT, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
+import { ERA_ELIGIBILITY_PP, INTRO_CAPACITY_CAP_BITS, MONEY_ID, MONEY_STARTING_AMOUNT, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
 import { applyDevGameStateJson, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, getActiveSlotId, isDevModeActive, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, setDevModeActive, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
@@ -196,15 +196,9 @@ describe('schema merge on load', () => {
     }
     localStorage.setItem('tens_game_state', JSON.stringify(partial))
     const loaded = loadGameState()
-    TIER_DEFINITIONS.filter(tier => tier.producesResourceId !== BYTES_ID).forEach(tier => {
+    TIER_DEFINITIONS.forEach(tier => {
       expect(loaded.resources).toHaveProperty(tier.producesResourceId)
     })
-  })
-
-  it('drops a legacy separate Bytes pool — Bytes and Bits are one balance', () => {
-    const legacy = { ...createInitialGameState(), resources: { [MONEY_ID]: 10, bytes: 99 } }
-    localStorage.setItem('tens_game_state', JSON.stringify(legacy))
-    expect(loadGameState().resources).not.toHaveProperty('bytes')
   })
 
   it('fills in missing owned keys for newer tiers', () => {
@@ -473,7 +467,6 @@ describe('schema merge on load', () => {
         bits: 5, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true,
         mainGameUnlocked: false,
         capacityUpgradeQueued: false,
-        capacityUpgradeProgress: 0,
         disks: { 8000: 1 }, disksBuiltTotal: { 8000: 1 }, diskCache: { 8000: 250 },
         diskBuild: { size: 80000, remainingSeconds: 4, totalSeconds: 10 },
         diskProvisionPasses: {},

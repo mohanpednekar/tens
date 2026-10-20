@@ -25,14 +25,18 @@ test('an already-unlocked tier autobuyer stays unlocked after a reload', async (
   await expect(kilobytesLayer).toContainText(/owned: 50\b/i)
   await expect(page.getByRole('button', { name: /level 50\)/i })).toBeVisible()
 
-  await page.getByRole('button', { name: /^open perks$/i }).click()
+  await page.getByRole('tab', { name: /upgrades/i }).click()
 
-  const unlockRow = page.locator('[aria-label="Kilobytes PP unlocks"]')
-  await expect(unlockRow).toBeVisible()
+  const upgradeRow = page.locator('[aria-label="Kilobytes PP upgrades"]')
+  await expect(upgradeRow).toBeVisible()
 
-  // The autobuyer was already unlocked in the seeded save — it must read as unlocked, not locked
-  // (a locked badge would mean the reload silently relocked it), with Smart offered in its place.
-  await expect(unlockRow.getByLabel(/^kilobytes's autobuyer unlocked at prestige 1$/i)).toBeVisible()
-  await expect(unlockRow.getByLabel(/^kilobytes's autobuyer unlocks at prestige/i)).toHaveCount(0)
-  await expect(unlockRow.getByRole('button', { name: /make kilobytes's autobuyer smart/i })).toBeVisible()
+  // The autobuyer was already unlocked in the seeded save — it must not show the Unlock
+  // button (that would mean the reload silently relocked it).
+  await expect(upgradeRow.getByRole('button', { name: /unlock .*autobuyer/i })).toHaveCount(0)
+
+  // Rows that only appear once the autobuyer is unlocked should be present instead.
+  await expect(
+    upgradeRow.getByRole('button', { name: /tickspeed multiplier upgrade itself automatically/i })
+  ).toBeVisible()
+  await expect(upgradeRow.getByRole('button', { name: /make kilobytes's autobuyer smart/i })).toBeVisible()
 })

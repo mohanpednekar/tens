@@ -26,6 +26,7 @@ import {
   FILL_MULTIPLIER_MIN_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT,
+  FILL_MULTIPLIER_TAP_CAP_PERCENT,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_CAP_BITS,
@@ -38,7 +39,6 @@ import {
   TIER_DEFINITIONS,
   DISK_LADDER_BASE_SIZE_BITS,
 } from 'game/layers'
-import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
 
@@ -111,18 +111,6 @@ const openSettings = async user => {
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
 }
-
-
-// PP unlocks/upgrades/toggles live on the Perks page (AppNav → Perks), as three icon tabs.
-const openPerksTab = async (user, tab) => {
-  await user.click(screen.getByRole('button', { name: /^open perks$/i }))
-  await user.click(screen.getByRole('tab', { name: tab }))
-}
-const openPerksTabSync = tab => {
-  fireEvent.click(screen.getByRole('button', { name: /^open perks$/i }))
-  fireEvent.click(screen.getByRole('tab', { name: tab }))
-}
-const openFactorySync = () => fireEvent.click(screen.getByRole('button', { name: /^open byte factory$/i }))
 
 test('renders the game title and the Kilobytes tier', () => {
   seedMainGameState()
@@ -256,75 +244,20 @@ test('AppNav Factory attention dot lights when a full purchase level is affordab
 
   const tiersButton = screen.getByRole('button', { name: /open byte factory/i })
   expect(within(tiersButton).getByLabelText(/important action available/i)).toBeInTheDocument()
-  // Perks (PP unlocks/upgrades/toggles) only appears after prestige.
-  expect(screen.queryByRole('button', { name: /^open perks$/i })).not.toBeInTheDocument()
+  // Factory tab is the default view — no redundant Game tab; Upgrades only appears after prestige.
+  expect(screen.queryByRole('tab', { name: /open upgrades/i })).not.toBeInTheDocument()
 })
 
-test('the Byte Factory screen has no second-level tabs; Perks is its own AppNav page with three icon tabs', async () => {
+test('no redundant Game or Milestones tabs on the Byte Factory screen', () => {
   seedMainGameState({ prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 } })
   render(<App />)
 
-  expect(screen.queryByRole('tablist', { name: /factory view/i })).not.toBeInTheDocument()
-  await userEvent.setup().click(screen.getByRole('button', { name: /^open perks$/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /perks/i })).toBeInTheDocument()
-  const tablist = screen.getByRole('tablist', { name: /perks view/i })
-  for (const name of [/open unlocks/i, /open upgrades/i, /open toggles/i]) {
-    const tab = within(tablist).getByRole('tab', { name })
-    // Icon-only: visible text carries no words.
-    expect(tab.textContent).not.toMatch(/[a-z]/i)
-  }
-  expect(within(tablist).getByRole('tab', { name: /open unlocks/i })).toHaveAttribute('aria-selected', 'true')
-})
-test('after an Era ascension (prestige count 0, era 1) Perks stays reachable with every owned automation\'s toggle', async () => {
-  const user = userEvent.setup()
-  seedMainGameState({
-    autobuyers: { tier01: 1 },
-    autoScaleUp: true,
-    era: { count: 1 },
-    prestige: { xp: 0, points: 0, count: 0, highestMilestone: 1 },
-  })
-  render(<App />)
-  await openPerksTab(user, /open toggles/i)
-
-  expect(screen.getByRole('button', { name: /buy max mode/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /^Kilobytes's autobuyer$/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /^Auto Scale Up automation$/i })).toBeInTheDocument()
-})
-
-test('an Era-unlocked Compute (Flops) autobuyer gets its own pause toggle on Perks → Toggles', async () => {
-  const user = userEvent.setup()
-  seedMainGameState({
-    era: { count: 1 },
-    computeFlops: { pageUnlocked: true, owned: {}, cumulativeBoost: {} },
-    computeFlopsAutobuyers: { flop01: 1, flop02: null, flop03: null, flop04: null, flop05: null, flop06: null, flop07: null, flop08: null, flop09: null, flop10: null },
-    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  })
-  render(<App />)
-  await openPerksTab(user, /open toggles/i)
-
-  expect(screen.queryByRole('button', { name: /^MFlops's autobuyer$/i })).not.toBeInTheDocument()
-  const toggle = screen.getByRole('button', { name: /^KFlops's autobuyer$/i })
-  expect(toggle).toHaveAttribute('aria-pressed', 'true')
-  await user.click(toggle)
-  expect(screen.getByLabelText("KFlops's autobuyer paused")).toBeInTheDocument()
-  expect(JSON.parse(localStorage.getItem('tens_game_state')).computeFlopsAutobuyersEnabled.flop01).toBe(false)
-})
-
-test('a fully-smart tier keeps its pause toggles on the Toggles tab alongside its Unlocks history', async () => {
-  const user = userEvent.setup()
-  seedMainGameState({
-    autobuyers: { tier01: 1 },
-    smartAutobuyer: { tier01: true },
-    tierTickspeedAutobuyer: { tier01: true },
-    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  })
-  render(<App />)
-  await openPerksTab(user, /open unlocks/i)
-  expect(screen.getByLabelText("Kilobytes's autobuyer is smart")).toBeInTheDocument()
-
-  await user.click(screen.getByRole('tab', { name: /open toggles/i }))
-  expect(screen.getByRole('button', { name: /^Kilobytes's autobuyer$/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /^Kilobytes's tickspeed autobuyer$/i })).toBeInTheDocument()
+  expect(screen.getByRole('tablist', { name: /factory view/i })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: /^factory$/i })).toBeInTheDocument()
+  expect(screen.queryByRole('tab', { name: /^game$/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('tab', { name: /milestones/i })).not.toBeInTheDocument()
+  // Upgrades stays as a peer tab — it's the only PP-purchase surface (not in AppNav/More).
+  expect(screen.getByRole('tab', { name: /open upgrades/i })).toBeInTheDocument()
 })
 
 test('the Guide nav item opens the Info page and Factory returns, preserving game state', async () => {
@@ -726,7 +659,7 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
   expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 0\.91s \(tier ×1, global ×1\.1\)/i)
 })
 
-test('clicking elsewhere on a tier row\'s tile (not the name) does not toggle its details', async () => {
+test('clicking anywhere else on a tier row\'s tile (not a button) also expands its details', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -739,12 +672,14 @@ test('clicking elsewhere on a tier row\'s tile (not the name) does not toggle it
   const trigger = within(megabytesLayer).getByRole('button', { name: /megabytes/i })
   expect(trigger).toHaveAttribute('aria-expanded', 'false')
 
-  // Only the name toggles — clicking the row's own container does nothing.
+  // Click the row's own container, not the name trigger and not a button.
+  await user.click(megabytesLayer)
+
+  expect(trigger).toHaveAttribute('aria-expanded', 'true')
+
+  // Clicking the tile again collapses it back.
   await user.click(megabytesLayer)
   expect(trigger).toHaveAttribute('aria-expanded', 'false')
-
-  await user.click(trigger)
-  expect(trigger).toHaveAttribute('aria-expanded', 'true')
 })
 
 test('clicking a tier row\'s Buy/tickspeed buttons does not also toggle its details disclosure', async () => {
@@ -1466,7 +1401,7 @@ test('the Overclock button is disabled once production freezes at a googol', () 
   expect(screen.getByRole('button', { name: /overclock \(requires 5 completed quettabytes levels/i })).toBeDisabled()
 })
 
-test('the PP Unlocks page groups purchases into labeled categories', async () => {
+test('the PP Upgrades page groups purchases into labeled categories', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1474,7 +1409,7 @@ test('the PP Unlocks page groups purchases into labeled categories', async () =>
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   expect(screen.getByLabelText(/^tier autobuyers category$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^tier autobuyers category$/i)).toHaveTextContent(/tier autobuyers/i)
@@ -1492,7 +1427,7 @@ test('the Production Bonuses category disappears once the speed bonus is bought 
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(userEvent.setup(), /open unlocks/i)
+  await userEvent.setup().click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   expect(screen.queryByLabelText(/^production bonuses category$/i)).not.toBeInTheDocument()
 })
@@ -1507,14 +1442,14 @@ test('an Enable Auto Scale Up button appears on the PP Upgrades page after the f
     prestige: { xp: 0, points: 20, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   const autoScaleUpButton = screen.getByRole('button', { name: /enable auto scale up for 20 prestige points/i })
   expect(autoScaleUpButton).toBeEnabled()
 
   await user.click(autoScaleUpButton)
 
-  expect(screen.getByLabelText('Auto Scale Up unlocked')).toBeInTheDocument()
+  expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /enable auto scale up/i })).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
@@ -1540,19 +1475,19 @@ test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after
     prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   const tickspeedAutobuyerButton = screen.getByRole('button', { name: /enable tickspeed autobuyer for 10 prestige points/i })
   expect(tickspeedAutobuyerButton).toBeEnabled()
 
   await user.click(tickspeedAutobuyerButton)
 
-  expect(screen.getByLabelText('Tickspeed Autobuyer unlocked')).toBeInTheDocument()
+  expect(screen.getByLabelText('Tickspeed Autobuyer active')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /enable tickspeed autobuyer/i })).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('a static "unlocked" badge shows on the PP Unlocks page once Auto Scale Up has been bought', async () => {
+test('a static "Active" badge shows on the PP Upgrades page once Auto Scale Up has been bought', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1563,9 +1498,9 @@ test('a static "unlocked" badge shows on the PP Unlocks page once Auto Scale Up 
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
-  expect(screen.getByLabelText('Auto Scale Up unlocked')).toBeInTheDocument()
+  expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /enable auto scale up/i })).not.toBeInTheDocument()
 })
 
@@ -1583,7 +1518,7 @@ test('Auto Scale Up remains active at the final tier', async () => {
   expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
   expect(screen.queryByLabelText('Auto Scale Up suspended at final tier')).not.toBeInTheDocument()
 
-  await openPerksTab(userEvent.setup(), /open toggles/i)
+  await userEvent.setup().click(screen.getByRole('tab', { name: /open upgrades/i }))
   expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
 })
 
@@ -1603,11 +1538,11 @@ test('pausing Auto Scale Up via its toggle stops it from firing automatically, e
   // Still eligible (purchaseLevels.tier01 untouched) since Auto Scale Up starts paused.
   expect(screen.getByRole('button', { name: /scale up \(requires 3 completed kilobytes levels/i })).toBeEnabled()
 
-  // The pause toggle lives on the Toggles tab; the tick timer itself keeps running
+  // The pause toggle lives on the PP Upgrades page; the tick timer itself keeps running
   // regardless of which view is currently rendered.
-  openPerksTabSync(/open toggles/i)
+  fireEvent.click(screen.getByRole('tab', { name: /open upgrades/i }))
   fireEvent.click(screen.getByRole('button', { name: /^Auto Scale Up automation$/i }))
-  openFactorySync()
+  fireEvent.click(screen.getByRole('tab', { name: /^factory$/i }))
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
   // Scale Up fired automatically once resumed — resources reset and the target tier advances to
@@ -1633,7 +1568,7 @@ test('an Enable Latency button appears once level 1 of the first tier completes 
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { base: 80 },
+    resources: { base: 10, bytes: 10 },
     purchaseLevels: { tier01: 2 },
   })
   render(<App />)
@@ -1653,15 +1588,14 @@ test('an Enable Latency button appears once level 1 of the first tier completes 
   expect(panel).toHaveTextContent(/lv\.1/i)
   // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
   expect(panel).toHaveTextContent(/\+1%/i)
-  // Latency spends Bits (10 B = 80 b) from the one shared balance.
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('10 b')
 })
 
-test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line does not collapse it', async () => {
+test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line collapses it again', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { base: 999 },
+    resources: { base: 999, bytes: 999 },
     globalTickspeedMultiplier: 1,
   })
   render(<App />)
@@ -1673,17 +1607,20 @@ test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clic
   await user.click(heading)
   expect(statusLine).toBeVisible()
 
-  // Only the heading toggles — clicking the revealed line itself does nothing.
+  // Clicking the revealed line itself (not the heading) also collapses it.
   await user.click(statusLine)
-  expect(statusLine).toBeVisible()
+  expect(statusLine).not.toBeVisible()
 
+  await user.click(heading)
+  expect(statusLine).toBeVisible()
+  // Clicking the heading again (native <summary> toggle) still works too.
   await user.click(heading)
   expect(statusLine).not.toBeVisible()
 })
 
-test('the Enable Latency button stays disabled without enough Bits', () => {
+test('the Enable Latency button stays disabled without enough Bytes', () => {
   seedMainGameState({
-    resources: { base: 79 },
+    resources: { base: 10, bytes: 9 },
     purchaseLevels: { tier01: 2 },
   })
   render(<App />)
@@ -1693,7 +1630,7 @@ test('the Enable Latency button stays disabled without enough Bits', () => {
 
 test('the Latency Upgrade button costs another power of ten each level, and shows the compounding bonus with decimal precision below 100%', () => {
   seedMainGameState({
-    resources: { base: 999 },
+    resources: { base: 999, bytes: 999 },
     globalTickspeedMultiplier: 2,
   })
   render(<App />)
@@ -1769,7 +1706,6 @@ test.each([
     name: 'Auto-Prestige',
     seed: { ...allTiersSmartSeed(), prestige: { xp: 0, points: 999, count: 1, highestMilestone: 1 } },
     buttonName: /enable auto-prestige for 1000 prestige points/i,
-    tab: /open upgrades/i,
   },
   {
     name: 'Auto-Prestige Autobuyer',
@@ -1790,7 +1726,7 @@ test.each([
     seed: { autobuyers: { tier01: 1 }, prestige: { xp: 0, points: 9, count: 1, highestMilestone: 1 } },
     buttonName: /make kilobytes's autobuyer smart .* for 10 prestige points/i,
   },
-])('the $name button stays disabled without enough Prestige Points', async ({ seed, buttonName, tab = /open unlocks/i }) => {
+])('the $name button stays disabled without enough Prestige Points', async ({ seed, buttonName }) => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1798,7 +1734,7 @@ test.each([
     ...seed,
   })
   render(<App />)
-  await openPerksTab(user, tab)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   expect(screen.getByRole('button', { name: buttonName })).toBeDisabled()
 })
@@ -1837,7 +1773,7 @@ test.each([
     pauseName: /^Kilobytes's tickspeed autobuyer$/i,
     resumeName: /^Kilobytes's tickspeed autobuyer$/i,
   },
-])('a pause toggle appears beside the $name badge once bought on the Toggles tab, and pausing/resuming updates it', async ({ seed, pauseName, resumeName, name }) => {
+])('a pause toggle appears beside the $name badge once bought, and pausing/resuming updates it', async ({ seed, pauseName, resumeName, name }) => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1846,7 +1782,7 @@ test.each([
     ...seed,
   })
   render(<App />)
-  await openPerksTab(user, /open toggles/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   const pauseButton = screen.getByRole('button', { name: pauseName })
   expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
@@ -1873,7 +1809,7 @@ test('the Auto-Prestige option stays hidden until every tier is upgraded to Smar
     prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open upgrades/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   expect(screen.queryByRole('button', { name: /auto-prestige/i })).not.toBeInTheDocument()
   expect(screen.queryByText(/auto-prestige/i)).not.toBeInTheDocument()
@@ -1888,7 +1824,7 @@ test('an Auto-Prestige button appears on the PP Upgrades page once every tier is
     prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open upgrades/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   const autoPrestigeButton = screen.getByRole('button', { name: /enable auto-prestige for 1000 prestige points/i })
   expect(autoPrestigeButton).toBeEnabled()
@@ -1909,9 +1845,9 @@ test('no pause toggle appears for Auto-Prestige before it has ever been activate
     prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open toggles/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
-  expect(screen.queryByRole('button', { name: /^auto-prestige automation$/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /pause auto-prestige automation/i })).not.toBeInTheDocument()
 })
 
 test('the Auto-Prestige Upgrade button costs double the previous level, and stays disabled without enough points', async () => {
@@ -1924,7 +1860,7 @@ test('the Auto-Prestige Upgrade button costs double the previous level, and stay
     prestige: { xp: 0, points: 1999, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open upgrades/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/lv\.1/i)
   expect(screen.getByRole('button', { name: /upgrade auto-prestige for 2000 prestige points/i })).toBeDisabled()
@@ -1939,7 +1875,7 @@ test('the Auto-Prestige Autobuyer row stays hidden until Auto-Prestige has been 
     prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   expect(screen.queryByText(/auto-prestige autobuyer/i)).not.toBeInTheDocument()
 })
@@ -1954,14 +1890,14 @@ test(`an Auto-Prestige Autobuyer button appears once Auto-Prestige is active, an
     prestige: { xp: 0, points: AUTO_PRESTIGE_AUTOBUYER_COST, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   const unlockButton = screen.getByRole('button', { name: new RegExp(`enable auto-prestige autobuyer for ${AUTO_PRESTIGE_AUTOBUYER_COST} prestige points`, 'i') })
   expect(unlockButton).toBeEnabled()
 
   await user.click(unlockButton)
 
-  expect(screen.getByLabelText('Auto-Prestige Autobuyer unlocked')).toBeInTheDocument()
+  expect(screen.getByLabelText('Auto-Prestige Autobuyer active')).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -1977,7 +1913,7 @@ test('prestige points and the production speed bonus are shown once the bonus is
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('+50% production speed')
 })
 
-test('the production speed bonus reads as locked, and an unlock button is offered on the PP Unlocks page, before it has been bought', async () => {
+test('the production speed bonus reads as locked, and an unlock button is offered on the PP Upgrades page, before it has been bought', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1990,18 +1926,17 @@ test('the production speed bonus reads as locked, and an unlock button is offere
   // The compact sticky balance bar stays terse and omits the "locked" caveat entirely.
   expect(screen.getByLabelText(/^prestige points display$/i)).not.toHaveTextContent(/production speed bonus locked/i)
 
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
   const unlockButton = screen.getByRole('button', { name: /unlock prestige point production speed bonus for 10000 prestige points/i })
   expect(unlockButton).toBeEnabled()
 
   await user.click(unlockButton)
 
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('500 PP')
-  expect(screen.queryByRole('button', { name: /unlock prestige point production speed bonus/i })).not.toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /^open byte factory$/i }))
   // 500 unspent PP → ×6 production speed (1 + 0.01×500) — at/above +100%, this shows as a "6x"
   // multiplier (formatBonusOrMultiplier) rather than a percentage.
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('6x production speed')
+  expect(screen.queryByRole('button', { name: /unlock prestige point production speed bonus/i })).not.toBeInTheDocument()
 })
 
 test('PP-spending buttons report how much of their cost the current balance covers, like the tier buttons', async () => {
@@ -2012,7 +1947,7 @@ test('PP-spending buttons report how much of their cost the current balance cove
     prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   // tier01's autobuyer unlocked automatically at Prestige 1 (count 1 here) — Smart costs 10 PP,
   // and 10 PP fully covers it (valuenow caps at the cost).
@@ -2026,7 +1961,7 @@ test('PP-spending buttons report how much of their cost the current balance cove
   expect(autoScaleUpProgress).toHaveAttribute('aria-valuemax', '20')
 })
 
-test('a locked badge appears on the PP Unlocks page for a tier whose autobuyer milestone has not been reached yet', async () => {
+test('a locked badge appears on the PP Upgrades page for a tier whose autobuyer milestone has not been reached yet', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2040,7 +1975,7 @@ test('a locked badge appears on the PP Unlocks page for a tier whose autobuyer m
     prestige: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   expect(screen.getByLabelText(/^megabytes's autobuyer unlocks at prestige 2$/i)).toBeInTheDocument()
   // Smart isn't purchasable yet — it requires the autobuyer already be unlocked, regardless of PP held.
@@ -2057,17 +1992,17 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
     prestige: { xp: 0, points: 20, count: 2, highestMilestone: 1 }, // meets megabytes' milestone (2)
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   expect(screen.queryByLabelText(/^megabytes's autobuyer unlocks at prestige/i)).not.toBeInTheDocument()
-  expect(screen.getByLabelText("Megabytes's autobuyer unlocked at Prestige 2")).toBeInTheDocument()
+  expect(screen.getByLabelText("Megabytes's autobuyer active")).toBeInTheDocument()
   // Megabytes' Smart cost is 20 PP (SMART_AUTOBUYER_COST_MULTIPLIER × its 2 PP-equivalent benchmark).
   expect(screen.getByRole('button', { name: /make megabytes's autobuyer smart/i })).toBeEnabled()
   // Confirms no PP was spent to reach this state — the milestone unlock is free.
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('20 PP')
 })
 
-test('no PP tabs or PP-based controls appear before the player has ever prestiged, even with an active autobuyer and unspent PP — Milestones stays via More', async () => {
+test('no PP Upgrades tab or PP-based controls appear before the player has ever prestiged, even with an active autobuyer and unspent PP — Milestones stays via More', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
@@ -2077,14 +2012,15 @@ test('no PP tabs or PP-based controls appear before the player has ever prestige
   render(<App />)
 
   expect(screen.queryByLabelText(/^prestige points display$/i)).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /^open perks$/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('tab', { name: /open upgrades/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('tablist', { name: /factory view/i })).not.toBeInTheDocument()
   // Chapters (Milestones) stays reachable pre-prestige via AppNav → More.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open milestones/i }))
   expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
 })
 
-test('a Smart button appears on the PP Unlocks page once a tier\'s autobuyer is unlocked (not before), and spends 10x the unlock cost', async () => {
+test('a Smart button appears on the PP Upgrades page once a tier\'s autobuyer is unlocked (not before), and spends 10x the unlock cost', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2093,7 +2029,7 @@ test('a Smart button appears on the PP Unlocks page once a tier\'s autobuyer is 
     prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   const smartButton = screen.getByRole('button', { name: /make kilobytes's autobuyer smart .* for 10 prestige points/i })
   expect(smartButton).toBeEnabled()
@@ -2105,7 +2041,8 @@ test('a Smart button appears on the PP Unlocks page once a tier\'s autobuyer is 
   // Smart is bought, but the row stays — the tier tickspeed autobuyer purchase is independent
   // and still pending, so there's still something left to buy for this tier.
   expect(screen.queryByRole('button', { name: /make kilobytes's autobuyer smart/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText("Kilobytes's autobuyer is smart")).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes pp upgrades$/i)).toHaveTextContent(/smart/i)
+  expect(screen.queryByLabelText(/^full smart autobuyer notice$/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -2118,7 +2055,7 @@ test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) p
     prestige: { xp: 0, points: 10, count: 11, highestMilestone: 1 }, // one short of Kilobytes's tickspeed milestone (12)
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 12$/i)).toBeInTheDocument()
   // Smart is independent of the tickspeed autobuyer and already purchasable (autobuyer unlocked, 10 PP held).
@@ -2132,90 +2069,55 @@ test('a tier\'s tickspeed autobuyer auto-unlocks (no PP spent) once its own pres
     prestige: { xp: 0, points: 10, count: 12, highestMilestone: 1 }, // meets Kilobytes's tickspeed milestone (12)
   })
   render(<App />)
-  await openPerksTab(userEvent.setup(), /open unlocks/i)
+  await userEvent.setup().click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   expect(screen.queryByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige/i)).not.toBeInTheDocument()
-  expect(screen.getByLabelText("Kilobytes's tickspeed autobuyer unlocked at Prestige 12")).toBeInTheDocument()
+  expect(screen.getByLabelText("Kilobytes's tickspeed autobuyer active")).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('10 PP')
 })
 
-test('a tier\'s Unlocks row stays listed (as unlock history) once Smart and its tier tickspeed autobuyer are both owned', async () => {
+test('a tier\'s row disappears only once both Smart and its tier tickspeed autobuyer are bought', async () => {
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 },
     smartAutobuyer: { tier01: true },
     tierTickspeedAutobuyer: { tier01: true },
-    prestige: { xp: 0, points: 0, count: 12, highestMilestone: 1 },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(userEvent.setup(), /open unlocks/i)
+  await userEvent.setup().click(screen.getByRole('tab', { name: /open upgrades/i }))
 
-  const row = screen.getByLabelText(/^kilobytes pp unlocks$/i)
-  expect(within(row).getByLabelText("Kilobytes's autobuyer unlocked at Prestige 1")).toBeInTheDocument()
-  expect(within(row).getByLabelText("Kilobytes's tickspeed autobuyer unlocked at Prestige 12")).toBeInTheDocument()
-  expect(within(row).getByLabelText("Kilobytes's autobuyer is smart")).toBeInTheDocument()
-})
-test('an owned Smart marker stays on a tier\'s Unlocks row even before that tier is reachable again this run', async () => {
-  seedMainGameState({
-    resources: { base: 10 },
-    owned: { tier01: 3 }, // tier02 not reachable this run
-    autobuyers: { tier01: 1, tier02: 1 },
-    smartAutobuyer: { tier02: true },
-    prestige: { xp: 0, points: 100, count: 30, highestMilestone: 1 },
-  })
-  render(<App />)
-  await openPerksTab(userEvent.setup(), /open unlocks/i)
-
-  const row = screen.getByLabelText(/^megabytes pp unlocks$/i)
-  expect(within(row).getByLabelText("Megabytes's autobuyer is smart")).toBeInTheDocument()
+  expect(screen.queryByLabelText(/^kilobytes pp upgrades$/i)).not.toBeInTheDocument()
 })
 
-test('a tier\'s Unlocks row shows only its milestones (no Smart) before that tier itself is reachable', async () => {
+test('a tier\'s row on the PP Upgrades page does not appear before that tier itself is reachable, regardless of prestige count', async () => {
   seedMainGameState({
     resources: { base: 10 },
     // tier02 isn't unlocked yet: tier01 is owned below the 8-unit unlock threshold.
     owned: { tier01: 3 },
-    // A high enough prestige count to have already met tier02's milestones — its row still shows
-    // them, but Smart needs the tier itself reachable this run.
+    // A high enough prestige count to have already met every milestone up through tier02 — still
+    // shouldn't matter, since the row itself is gated on the tier being reachable this run, not on
+    // milestones already met.
     prestige: { xp: 0, points: 100, count: 30, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(userEvent.setup(), /open unlocks/i)
+  await userEvent.setup().click(screen.getByRole('tab', { name: /open upgrades/i }))
 
-  const row = screen.getByLabelText(/^megabytes pp unlocks$/i)
-  expect(within(row).getByLabelText("Megabytes's autobuyer unlocked at Prestige 2")).toBeInTheDocument()
-  expect(within(row).queryByRole('button', { name: /make megabytes's autobuyer smart/i })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^megabytes pp upgrades$/i)).not.toBeInTheDocument()
 })
 
-test('the PP Unlocks tab NavDot lights up when a tier\'s Smart purchase is affordable, even though autobuyer unlock/tier tickspeed autobuyer no longer cost PP at all', async () => {
+test('the PP Upgrades tab NavDot lights up when a tier\'s Smart purchase is affordable, even though autobuyer unlock/tier tickspeed autobuyer no longer cost PP at all', () => {
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 },
-    // Tickspeed Autobuyer also costs 10 PP — own it so only Smart is affordable.
-    autoGlobalTickspeed: true,
     prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
   })
   render(<App />)
 
-  const perksButton = screen.getByRole('button', { name: /^open perks$/i })
-  expect(within(perksButton).getByLabelText(/^action available$/i)).toBeInTheDocument()
-  await userEvent.setup().click(perksButton)
-  expect(screen.getByLabelText(/^pp unlock available$/i)).toBeInTheDocument()
-  expect(screen.queryByLabelText(/^pp upgrade available$/i)).not.toBeInTheDocument()
-})
-
-test('the Perks Upgrades tab NavDot lights up when a leveled Double PP purchase is affordable', async () => {
-  seedMainGameState({
-    resources: { base: 10 },
-    prestige: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
-  })
-  render(<App />)
-  await userEvent.setup().click(screen.getByRole('button', { name: /^open perks$/i }))
-
   expect(screen.getByLabelText(/^pp upgrade available$/i)).toBeInTheDocument()
 })
 
-test('the Perks tab NavDots stay dark when only a locked (milestone-gated) tier autobuyer/tier tickspeed autobuyer is pending, since neither costs PP', async () => {
+test('the PP Upgrades tab NavDot stays dark when only a locked (milestone-gated) tier autobuyer/tier tickspeed autobuyer is pending, since neither costs PP', () => {
   seedMainGameState({
     resources: { base: 10 },
     // tier01's autobuyer is already unlocked (milestone 1, met by count 1) but there's no PP to
@@ -2225,13 +2127,10 @@ test('the Perks tab NavDots stay dark when only a locked (milestone-gated) tier 
   })
   render(<App />)
 
-  const perksButton = screen.getByRole('button', { name: /^open perks$/i })
-  expect(within(perksButton).queryByLabelText(/action available$/i)).not.toBeInTheDocument()
-  await userEvent.setup().click(perksButton)
-  expect(screen.queryByLabelText(/^pp (unlock|upgrade) available$/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^pp upgrade available$/i)).not.toBeInTheDocument()
 })
 
-test('the Perks tab NavDots go dark once a tier is fully done and nothing else is affordable', async () => {
+test('the PP Upgrades tab NavDot goes dark once a tier is fully done and nothing else is affordable', () => {
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 },
@@ -2241,10 +2140,7 @@ test('the Perks tab NavDots go dark once a tier is fully done and nothing else i
   })
   render(<App />)
 
-  const perksButton = screen.getByRole('button', { name: /^open perks$/i })
-  expect(within(perksButton).queryByLabelText(/action available$/i)).not.toBeInTheDocument()
-  await userEvent.setup().click(perksButton)
-  expect(screen.queryByLabelText(/^pp (unlock|upgrade) available$/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^pp upgrade available$/i)).not.toBeInTheDocument()
 })
 
 test('Milestones is reachable via More both before and after the first prestige (unlike Upgrades)', async () => {
@@ -2263,7 +2159,7 @@ test('Milestones is reachable via More both before and after the first prestige 
   expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
 })
 
-test('Perks → Unlocks lists every tier\'s autobuyer/tier-tickspeed-autobuyer unlock milestone once, reflecting what\'s already unlocked', async () => {
+test('the Milestones page lists every tier\'s autobuyer/tier-tickspeed-autobuyer unlock milestone, reflecting what\'s already unlocked', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2271,29 +2167,26 @@ test('Perks → Unlocks lists every tier\'s autobuyer/tier-tickspeed-autobuyer u
     prestige: { xp: 0, points: 0, count: 3, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+
+  expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
 
   // Prestige count 3 meets Kilobytes/Megabytes/Gigabytes' autobuyer-unlock milestones (1/2/3) but not
   // Terabytes' (4) — each already-met tier shows as unlocked, the next one as still locked.
   expect(screen.getByLabelText(/^kilobytes's autobuyer unlocked at prestige 1$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^megabytes's autobuyer unlocked at prestige 2$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^gigabytes's autobuyer unlocked at prestige 3$/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^terabytes's autobuyer unlocks at prestige 4$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^terabytes's autobuyer unlocks at prestige 4, currently at prestige 3$/i)).toBeInTheDocument()
 
   // None of the tier tickspeed autobuyer milestones (12+) are anywhere close yet.
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 12$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 12, currently at prestige 3$/i)).toBeInTheDocument()
   const tickspeedProgress = screen.getByRole('progressbar', { name: /^kilobytes tickspeed autobuyer milestone progress$/i })
   expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '3')
   expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '12')
-
-  // Milestones no longer repeats these — it keeps only Chapters / Era ascension.
-  await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open milestones/i }))
-  expect(screen.queryByLabelText(/autobuyer unlock milestones category$/i)).not.toBeInTheDocument()
-  expect(screen.queryByLabelText(/^tier tickspeed autobuyer milestones category$/i)).not.toBeInTheDocument()
 })
 
-test('an autobuyer active/paused badge appears on the Toggles tab once its autobuyer is unlocked, toggled by its own pause button', async () => {
+test('an autobuyer active/paused badge appears on the PP Upgrades page once its autobuyer is unlocked, toggled by its own pause button', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2302,7 +2195,7 @@ test('an autobuyer active/paused badge appears on the Toggles tab once its autob
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open toggles/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   expect(screen.getByLabelText("Kilobytes's autobuyer active")).toBeInTheDocument()
   const pauseButton = screen.getByRole('button', { name: /^Kilobytes's autobuyer$/i })
@@ -2317,7 +2210,7 @@ test('an autobuyer active/paused badge appears on the Toggles tab once its autob
   expect(screen.getByLabelText("Kilobytes's autobuyer active")).toBeInTheDocument()
 })
 
-test('no autobuyer pause button appears on the Toggles tab before its autobuyer is unlocked', async () => {
+test('no autobuyer pause button appears on the PP Upgrades page before its autobuyer is unlocked', async () => {
   const user = userEvent.setup()
 
   // Megabytes' autobuyer unlocks at Prestige 2 (getAutobuyerUnlockMilestone) — Prestige 1 is
@@ -2329,15 +2222,13 @@ test('no autobuyer pause button appears on the Toggles tab before its autobuyer 
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
-  expect(screen.getByLabelText("Megabytes's autobuyer unlocks at Prestige 2")).toBeInTheDocument()
-  await user.click(screen.getByRole('tab', { name: /open toggles/i }))
   expect(screen.queryByRole('button', { name: /^Megabytes's autobuyer$/i })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /^Kilobytes's autobuyer$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText("Megabytes's autobuyer unlocks at Prestige 2")).toBeInTheDocument()
 })
 
-test('pausing a tier\'s autobuyer via its Toggles-tab toggle stops it from buying automatically; resuming resumes it', () => {
+test('pausing a tier\'s autobuyer via its PP Upgrades toggle stops it from buying automatically; resuming resumes it', () => {
   vi.useFakeTimers()
 
   seedMainGameState({
@@ -2347,28 +2238,28 @@ test('pausing a tier\'s autobuyer via its Toggles-tab toggle stops it from buyin
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   const { unmount } = render(<App />)
-  openPerksTabSync(/open toggles/i)
+  fireEvent.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   // The autobuyer attempt budget accumulates at a flat rate of 1 per real second, so a single
   // 100ms tick isn't enough to trigger a purchase attempt either way — advance a full second
   // (10 ticks) so a paused autobuyer's lack of purchases is a meaningful assertion, not just "not
   // enough time has passed yet".
   act(() => { vi.advanceTimersByTime(1000) })
-  openFactorySync()
+  fireEvent.click(screen.getByRole('tab', { name: /^factory$/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 0\b/i)
 
-  openPerksTabSync(/open toggles/i)
+  fireEvent.click(screen.getByRole('tab', { name: /open upgrades/i }))
   fireEvent.click(screen.getByRole('button', { name: /^Kilobytes's autobuyer$/i }))
   act(() => { vi.advanceTimersByTime(1000) })
 
-  openFactorySync()
+  fireEvent.click(screen.getByRole('tab', { name: /^factory$/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).not.toHaveTextContent(/owned: 0\b/i)
 
   unmount()
   vi.useRealTimers()
 })
 
-test('pausing a tier\'s tickspeed autobuyer via its Toggles-tab toggle stops it from upgrading automatically; resuming resumes it', () => {
+test('pausing a tier\'s tickspeed autobuyer via its PP Upgrades toggle stops it from upgrading automatically; resuming resumes it', () => {
   vi.useFakeTimers()
 
   // tier09 (Ronnabytes, tierIndex 8) has a much cheaper tickspeed multiplier base cost (100) than
@@ -2382,7 +2273,7 @@ test('pausing a tier\'s tickspeed autobuyer via its Toggles-tab toggle stops it 
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   const { unmount } = render(<App />)
-  openPerksTabSync(/open toggles/i)
+  fireEvent.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
   expect(screen.getByRole('button', { name: /^Ronnabytes's tickspeed autobuyer$/i })).toBeInTheDocument()
@@ -2391,14 +2282,14 @@ test('pausing a tier\'s tickspeed autobuyer via its Toggles-tab toggle stops it 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
   expect(screen.getByRole('button', { name: /^Ronnabytes's tickspeed autobuyer$/i })).toBeInTheDocument()
-  openFactorySync()
+  fireEvent.click(screen.getByRole('tab', { name: /^factory$/i }))
   expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()
 })
 
-test('once every tier is smart and tickspeed-automated, every tier row still shows its reached milestones and no purchase remains', async () => {
+test('once every tier is smart and tickspeed-automated, a single notice replaces every per-tier row', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2407,14 +2298,15 @@ test('once every tier is smart and tickspeed-automated, every tier row still sho
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
-  for (const tier of TIER_DEFINITIONS) {
-    expect(screen.getByLabelText(`${tier.name} PP unlocks`)).toBeInTheDocument()
-  }
+  expect(screen.getByLabelText(/^full smart autobuyer notice$/i)).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /make .*'s autobuyer smart/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /unlock .*'s autobuyer/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /make .*'s tickspeed multiplier upgrade itself automatically/i })).not.toBeInTheDocument()
 })
-test('a tier fully Smart but not yet tickspeed-automated still offers its tickspeed-autobuyer milestone', async () => {
+
+test('a tier fully Smart but not yet tickspeed-automated does not trigger the "every tier" notice', async () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: Object.fromEntries(ALL_TIER_IDS.slice(0, 9).map(id => [id, 10])),
@@ -2424,9 +2316,10 @@ test('a tier fully Smart but not yet tickspeed-automated still offers its ticksp
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(userEvent.setup(), /open unlocks/i)
+  await userEvent.setup().click(screen.getByRole('tab', { name: /open upgrades/i }))
 
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 12$/i)).toBeInTheDocument()
+  expect(screen.queryByLabelText(/^full smart autobuyer notice$/i)).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes pp upgrades$/i)).toBeInTheDocument()
 })
 
 test('clicking the money balance expands a breakdown of every global production multiplier currently in effect, and collapses again on a second click', async () => {
@@ -2473,7 +2366,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
   await user.click(screen.getByRole('button', { name: /^money display$/i }))
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
-  expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on perks → unlocks\)/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on the upgrades page\)/i)
   expect(breakdown).toHaveTextContent(/scale up: not yet activated \(reach 3 completed levels on kilobytes\)/i)
   expect(breakdown).toHaveTextContent(/latency: not yet active/i)
 })
@@ -2635,7 +2528,7 @@ test('combining 8 bits into a Byte resets the balance and starts passive product
   // exactly 0.
   expect(Number(balanceBar.getAttribute('aria-valuenow'))).toBeLessThan(INTRO_BYTE_COMBINE_COST)
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_BYTE_COMBINE_COST))
-  expect(screen.getByText(/1\.5 b\/s$/i)).toBeInTheDocument() // 1 B/s base x 150% (empty buffer)
+  expect(screen.getByText(/1 b\/s$/i)).toBeInTheDocument()
 })
 
 test("the Upgrade Data Stream button stays clickable (to arm) while the Buffer isn't full", () => {
@@ -2652,7 +2545,7 @@ test("the Upgrade Data Stream button stays clickable (to arm) while the Buffer i
 
 // Upgrade Data Stream spends the full Buffer (cost = current capacity) and doubles Capacity —
 // Speed follows the new capacity automatically rather than being upgraded independently.
-test('Upgrade Data Stream fills its bar from the stream and doubles Capacity', () => {
+test('Upgrade Data Stream drains the Buffer and doubles Capacity', () => {
   // Fake timers so a real production tick can't race the exact post-upgrade balance assertion.
   vi.useFakeTimers()
 
@@ -2663,15 +2556,14 @@ test('Upgrade Data Stream fills its bar from the stream and doubles Capacity', (
   expect(upgradeButton).toBeEnabled()
 
   fireEvent.click(upgradeButton)
-  // A full Buffer delivers at 50%, so the 1 B bar completes after ~2s of ticks.
-  act(() => { vi.advanceTimersByTime(2_500) })
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', '16')
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   // The new capacity (2 B) derives the new speed — e=log2(2B) is odd, so the mean of the
   // neighbouring even-exponent sqrts: (1 + 2)/2 = 1.5 B/s.
   const dataStream = screen.getByRole('region', { name: 'Data Stream' })
-  expect(within(dataStream).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
+  expect(within(dataStream).getByText(/1\.5 b\/s$/i)).toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()
@@ -2783,16 +2675,16 @@ test('the "Data Stream" label is shown on the balance card', () => {
 test('the Data Stream header shows the capacity-derived rate — sqrt on even exponents, the neighbouring mean on odd ones', () => {
   // Scoped to the Data Stream region — pool 1's own Bandwidth can coincidentally render the same
   // "N B/s" text at these rates. Capacity is in BITS: 800,000 bits = 100,000 B, e=17 (odd) ->
-  // (256 + 512)/2 = 384 B/s, shown at the empty-buffer 150% multiplier: 576 B/s.
+  // (256 + 512)/2 = 384 B/s.
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   const { unmount } = render(<App />)
-  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/576 B\/s$/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/384 B\/s$/i)).toBeInTheDocument()
   unmount()
 
   // Starting capacity (8 bits = 1 B, e=0, even) -> sqrt(1) = 1 B/s.
   seedIntroState({ bits: 0, byteCreated: true })
   render(<App />)
-  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/1\.5 B\/s$/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/1 B\/s$/i)).toBeInTheDocument()
 })
 
 test('Upgrade Data Stream shows its cost on its own line below the label, with no stray comma', () => {
@@ -2820,28 +2712,6 @@ test('Upgrade Data Stream shows its cost in the nearest fitting binary unit', ()
   expect(upgradeButton).toHaveTextContent('64 B')
 })
 
-test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () => {
-  // 512 bits (64 B) doubles to 128 B; Speed at 2^7 B is the mean of sqrt(64) and sqrt(256) = 12 B/s.
-  seedIntroState({ capacity: 512, bits: 0, byteCreated: true })
-  render(<App />)
-
-  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
-  expect(upgradeButton).toHaveTextContent(`${COST_ICON} 64 B · 📦 ×2 · ⚡ ×1.5`)
-  // The absolute next values stay available to assistive tech.
-  expect(upgradeButton).toHaveAccessibleDescription('Costs 64 B; capacity 128 B and speed 12 B/s after upgrading')
-})
-
-test('Upgrade Data Stream at maximum Capacity is disabled and reads "Max capacity" without a preview', () => {
-  seedIntroState({ capacity: 1.298074214633707e33, bits: 0, byteCreated: true })
-  render(<App />)
-
-  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
-  expect(upgradeButton).toBeDisabled()
-  expect(upgradeButton).toHaveTextContent('Max capacity')
-  expect(upgradeButton).not.toHaveTextContent('→')
-  expect(upgradeButton).not.toHaveTextContent(COST_ICON)
-})
-
 test('each Upgrade Data Stream press doubles Capacity, and the next cost always equals the new capacity', () => {
   // Fake timers so a real production tick can't race the exact balance assertions below.
   vi.useFakeTimers()
@@ -2854,12 +2724,13 @@ test('each Upgrade Data Stream press doubles Capacity, and the next cost always 
   let upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
   expect(upgradeButton).toBeEnabled()
   fireEvent.click(upgradeButton)
-  act(() => { vi.advanceTimersByTime(2_500) })
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', '16')
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
   expect(upgradeButton).toHaveTextContent('2 B') // cost = the new capacity
+  // The Buffer drained to 0 — the next press can only arm (not fire) until the Buffer refills.
   expect(upgradeButton).toBeEnabled()
   expect(upgradeButton).toHaveTextContent('Upgrade Data Stream')
 
@@ -2878,8 +2749,9 @@ test("Upgrade Data Stream shows fill progress toward a full Buffer, matching the
   expect(upgradeButton).toBeEnabled()
 })
 
-test('starting Upgrade Data Stream turns the same button into an inert progress bar; there is no cancel', () => {
+test('arming Upgrade Data Stream hides the button and the Data Stream tile shows the status; Cancel disarms', () => {
   vi.useFakeTimers()
+  // 1000 bits capacity, 400 banked: not a full Buffer, but armable at any fill.
   seedIntroState({ capacity: 1000, bits: 400, byteCreated: true, mainGameUnlocked: true })
   const { unmount } = render(<App />)
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
@@ -2888,14 +2760,20 @@ test('starting Upgrade Data Stream turns the same button into an inert progress 
   expect(upgradeButton).toBeEnabled()
   fireEvent.click(upgradeButton)
 
-  // Same DOM node, now disabled and showing progress; no Cancel control and no tile status line.
-  const running = screen.getByRole('button', { name: /^upgrade data stream$/i })
-  expect(running).toBe(upgradeButton)
-  expect(running).toHaveAttribute('aria-disabled', 'true')
-  expect(running).toHaveTextContent(/Upgrading Data Stream/)
-  expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument()
-  expect(screen.getByRole('progressbar', { name: /data stream upgrade progress/i })).toHaveAttribute('aria-valuenow', '0')
-  expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.capacityUpgradeQueued).toBe(true)
+  // The upgrade button is gone while armed; the tile carries the status instead.
+  expect(screen.queryByRole('button', { name: /^upgrade data stream$/i })).not.toBeInTheDocument()
+  const dataStream = screen.getByRole('region', { name: 'Data Stream' })
+  expect(dataStream).toHaveTextContent(/Upgrading to .* · outflow paused/)
+  expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toHaveAccessibleDescription(/outflow paused/)
+
+  // The same DOM node flips role in place, so keyboard focus is never dropped.
+  const cancel = screen.getByRole('button', { name: /cancel data stream upgrade/i })
+  expect(cancel).toBe(upgradeButton)
+  fireEvent.click(cancel)
+  expect(screen.getByRole('button', { name: /^upgrade data stream$/i })).toBe(upgradeButton)
+  expect(upgradeButton).toBeEnabled()
+  expect(dataStream).not.toHaveTextContent(/outflow paused/)
+  expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.capacityUpgradeQueued).toBe(false)
 
   unmount()
   vi.useRealTimers()
@@ -2951,7 +2829,7 @@ test('Data Stream still renders raw bits (not a fractional Byte) before the Byte
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('5 bits')
+  expect(section.querySelector('p')).toHaveTextContent('5 / 8 bits')
   expect(section).toHaveTextContent('8 bits')
   expect(section).not.toHaveTextContent(/\d+(?:\.\d+)? B\b/)
 })
@@ -2968,7 +2846,7 @@ test('Data Stream renders bits/Buffer scaled into the same appropriate binary un
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('48.828 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('48.828 / 97.656 KiB')
   expect(section).toHaveTextContent('97.656 KiB')
 })
 
@@ -2990,7 +2868,7 @@ test('Data Stream balance floors the binary-unit conversion instead of rounding,
   expect(balanceBar.closest('[aria-label="data stream bit balance"]') || balanceBar).toHaveAttribute('aria-valuenow', String(bits))
   // Flooring: the balance itself must not also read "97.656 KiB" (which would mean it rounded up
   // to match the full capacity reading).
-  expect(section.querySelector('p')).toHaveTextContent('96.679 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('96.679 / 97.656 KiB')
 })
 
 test('Data Stream balance self-sizes into its own finer unit rather than falling back to raw bits when it would floor below 1 in the capacity-shared unit', () => {
@@ -3006,7 +2884,7 @@ test('Data Stream balance self-sizes into its own finer unit rather than falling
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('30.031 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('30.031 KiB / 1 MiB')
   expect(section).toHaveTextContent('1 MiB')
 })
 
@@ -3017,7 +2895,7 @@ test('Data Stream balance still falls back to raw bits when genuinely below 1 By
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('4 bits')
+  expect(section.querySelector('p')).toHaveTextContent('4 bits / 1 MiB')
   expect(section).toHaveTextContent('1 MiB')
 })
 
@@ -3031,7 +2909,7 @@ test('Data Stream balance shows a stable, non-trimmed decimal digit count — a 
   render(<App />)
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
-  expect(balanceBar.closest('section').querySelector('p')).toHaveTextContent('5.600 MiB')
+  expect(balanceBar.closest('section').querySelector('p')).toHaveTextContent('5.600 / 100 MiB')
 })
 
 test('a pool\'s own Memory buffer balance also shows a stable, non-trimmed decimal digit count', () => {
@@ -3045,7 +2923,7 @@ test('a pool\'s own Memory buffer balance also shows a stable, non-trimmed decim
   render(<App />)
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  expect(pool1.querySelector('p')).toHaveTextContent('5.600 KB')
+  expect(pool1.querySelector('p')).toHaveTextContent('5.600 / 100 KB')
 })
 
 test('Data Stream balance drops its padded trailing zeros once it has been full for more than 1 second', () => {
@@ -3054,7 +2932,7 @@ test('Data Stream balance drops its padded trailing zeros once it has been full 
   // one tier01 unit from intro.bits — the balance genuinely sits still at capacity instead of being
   // drained back down the instant it tops up, which a bigger, conversion-eligible capacity would be.
   // 4000 bits is exactly 500 B (below MEMORY_BINARY_UNIT_STEP's own 1 KiB rung), a round balance so
-  // the stable/trimmed forms visibly differ ("500.00 B" vs "500 B").
+  // the stable/trimmed forms visibly differ ("500.000 B" vs "500 B").
   const capacity = 4000
   seedIntroState({ bits: capacity, capacity, byteCreated: true })
   const { unmount } = render(<App />)
@@ -3062,10 +2940,10 @@ test('Data Stream balance drops its padded trailing zeros once it has been full 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const balanceText = () => balanceBar.closest('section').querySelector('p')
   // Immediately full, but not YET trimmed — the delay hasn't elapsed.
-  expect(balanceText()).toHaveTextContent('500.00 B')
+  expect(balanceText()).toHaveTextContent('500.000 / 500 B')
 
   act(() => { vi.advanceTimersByTime(1000) })
-  expect(balanceText()).toHaveTextContent('500 B')
+  expect(balanceText()).toHaveTextContent('500 / 500 B')
 
   unmount()
   vi.useRealTimers()
@@ -3101,10 +2979,10 @@ test('a pool\'s own Memory buffer balance also drops its padded trailing zeros o
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   const balanceText = () => pool1.querySelector('p')
-  expect(balanceText()).toHaveTextContent('1.000 KB')
+  expect(balanceText()).toHaveTextContent('1.000 / 1 KB')
 
   await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
-  expect(balanceText()).toHaveTextContent('1 KB')
+  expect(balanceText()).toHaveTextContent('1 / 1 KB')
 
   unmount()
   vi.useRealTimers()
@@ -3129,10 +3007,10 @@ test('Speed and Bandwidth render at the top-right, with disk status removed enti
   expect(within(dataStreamSection).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  expect(within(pool1).getByTitle(/^Bandwidth at/)).toBeInTheDocument()
+  expect(within(pool1).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
 
   const pool2 = screen.getByRole('region', { name: 'pool 2' })
-  expect(within(pool2).getByTitle(/^Bandwidth at/)).toBeInTheDocument()
+  expect(within(pool2).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
   expect(screen.queryByLabelText(/full disks/i)).not.toBeInTheDocument()
   expect(screen.queryByText(/💾/)).not.toBeInTheDocument()
 })
@@ -3146,43 +3024,82 @@ test('Pool balance and Capacity share one precisely centered line', () => {
   const balance = pool1.querySelector('p')
   // Balance and capacity now always share the same fixed pool unit, so formatCombinedBalance
   // always dedupes the balance's own unit suffix, leaving just the bare number.
-  expect(balance).toHaveTextContent(/^0(\.0+)? \w+$/)
+  expect(balance).toHaveTextContent(`0 / ${formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 1), 1)}`)
   expect(balance).toHaveStyle({ textAlign: 'center' })
 })
 
-test('Data Stream and pool speeds show the fill-multiplied value, with no multiplier bar', () => {
+test('Data Stream and pool multiplier bars are progressbars capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (200%)', () => {
   seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
   render(<App />)
 
-  expect(screen.queryByRole('progressbar', { name: /fill-based/i })).not.toBeInTheDocument()
-  expect(screen.queryByRole('progressbar', { name: /data lake overflow rate/i })).not.toBeInTheDocument()
-  const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
-  const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  // Empty buffer -> FILL_MULTIPLIER_MAX_PERCENT (150%) of the pool's base Bandwidth, to 3 significant digits.
-  const expected = formatDiskSize(getStoragePoolBandwidth(savedState, 1) * FILL_MULTIPLIER_MAX_PERCENT / 100)
-  const speed = within(pool1).getByTitle(/^Bandwidth at/)
-  expect(speed).toHaveAttribute('title', `Bandwidth at ${FILL_MULTIPLIER_MAX_PERCENT}% fill multiplier`)
-  expect(speed.textContent.replace(/^⚡ /, '').replace(/\/s$/, '').split(' ')[1]).toBe(expected.split(' ')[1])
-  expect(Number(speed.textContent.match(/[\d.]+/)[0])).toBeCloseTo(parseFloat(expected), 0)
+  const dataStreamBar = screen.getByRole('progressbar', { name: /data stream fill-based speed multiplier/i })
+  expect(dataStreamBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+  // Both the Data Stream Buffer and pool 1's own Memory buffer start empty — FILL_MULTIPLIER_MAX_PERCENT.
+  expect(dataStreamBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
+
+  const poolBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
+  expect(poolBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+  expect(poolBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
 })
 
-test('a pool\'s speed tints red at the full-buffer 50% floor', () => {
+test('the pool bar switches from the fill-based multiplier to the Data Lake overflow rate the instant that pool\'s own Memory buffer is full, transitioning cleanly at 50% (both readings share the same scale)', () => {
+  // Pool 1's own derived buffer Capacity at INTRO_DISK_UNLOCK_CAPACITY is exactly 8,000 bits — seed
+  // the buffer AT that capacity so it reads as full.
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
   )
+  // disksBuiltTotal seeded so the pool is entirely COMPLETE (isStoragePoolFullyBuilt) — the bar
+  // only switches to lake mode once AUTOMATIC overflow can actually feed this pool's own lake
+  // (see the "buffer full but no disk built yet" and "ready but not yet complete" tests below for
+  // the two not-yet-automatic cases this transition is gated against).
   seedIntroState({
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
     poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
   })
   render(<App />)
 
-  const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByTitle(/^Bandwidth at/)
-  expect(speed).toHaveAttribute('title', `Bandwidth at ${FILL_MULTIPLIER_MIN_PERCENT}% fill multiplier`)
-  expect(speed).toHaveStyle({ color: 'rgb(229, 72, 77)' })
+  // The old "fill-based bandwidth multiplier" reading is gone — the SAME bar now reads as the
+  // Data Lake's own overflow rate instead, still on the identical 0..FILL_MULTIPLIER_TAP_CAP_PERCENT
+  // scale (never a separately-scaled bar).
+  expect(screen.queryByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })).not.toBeInTheDocument()
+  const lakeRateBar = screen.getByRole('progressbar', { name: /pool 1 data lake overflow rate/i })
+  expect(lakeRateBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+  // A fresh, untouched lake's currently-open disk is empty, so its overflow rate reads at its own
+  // ceiling (DATA_LAKE_OVERFLOW_MAX_PERCENT, 50) — the SAME numeric value FILL_MULTIPLIER_MIN_PERCENT
+  // (the fill-based multiplier's own floor, reached exactly when the buffer becomes full) already
+  // sits at, so the bar's width does not jump across this transition.
+  expect(lakeRateBar).toHaveAttribute('aria-valuenow', String(DATA_LAKE_OVERFLOW_MAX_PERCENT))
 })
 
-test('the pool tap tile is inert, with an explanatory title, while the Data Lake drains a half-full buffer', () => {
+test('a maxed pre-reset Data Lake retains its 5% speed floor', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  const maxedCapacity = DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_MAX_LEVEL]
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
+    // Lake fully maxed (capacity level + deposited units both at their ceiling) — no open disk
+    // slot left, so getDataLakeCurrentFillSubSize is null and getDataLakeOverflowRatePercent
+    // reads DATA_LAKE_OVERFLOW_MIN_PERCENT (0) rather than a real in-progress rate.
+    dataLakes: { 1: { depositedUnits: maxedCapacity, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
+  })
+  expect(DATA_LAKE_OVERFLOW_MIN_PERCENT).toBe(0)
+  render(<App />)
+
+  const pool1 = screen.getByRole('region', { name: 'pool 1' })
+  // The ordinary fill multiplier is gone once overflow takes over, while the pre-reset lake's
+  // original taper remains visible at its 5% floor.
+  expect(within(pool1).queryByRole('progressbar', { name: /fill-based bandwidth multiplier/i })).not.toBeInTheDocument()
+  expect(within(pool1).getByRole('progressbar', { name: /data lake overflow rate/i })).toHaveAttribute('aria-valuenow', '5')
+  expect(within(pool1).getByText('5%')).toBeInTheDocument()
+})
+
+test('the pool bar shows the Data Lake rate (and the tile is inert) while the lake drains a half-full buffer — every built disk full, no build in progress', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
@@ -3196,64 +3113,76 @@ test('the pool tap tile is inert, with an explanatory title, while the Data Lake
   })
   render(<App />)
 
-  const tap = within(screen.getByRole('region', { name: 'pool 1' })).getByRole('button', { name: /tap pool 1 memory/i })
-  expect(tap).toBeDisabled()
-  expect(tap).toHaveAttribute('title', expect.stringMatching(/Data Lake is draining/))
-})
-
-test('the Data Lake header shows target price, filled amount and fill speed', () => {
-  const poolCapacity = getPoolBufferCapacity(
-    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
-    1,
-  )
-  seedIntroState({
-    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-    poolBuffers: { 1: poolCapacity },
-    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
-    dataLakes: { 1: { depositedUnits: 1, fillBits: 2000, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
-  })
-  render(<App />)
-
-  const lake = screen.getByLabelText('KB lake')
-  // The target price is the lake's Booster control itself (shown once, not duplicated in the header).
-  expect(within(lake).getAllByText(/1 KB/).filter(el => el.closest('h4') === null && el.textContent.includes('🏷️'))).toHaveLength(1)
-  expect(within(lake).getByTitle('Currently filled')).toHaveTextContent('1.25 KB')
-  // Buffer full + pool complete -> the lake fills at the pool's Bandwidth, so the speed is non-zero.
-  expect(within(lake).getByTitle('Current fill speed')).not.toHaveTextContent('⚡ 0 B/s')
-})
-
-test('a collapsed pool still shows its Data Lake heading and action row', () => {
-  const poolCapacity = getPoolBufferCapacity(
-    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
-    1,
-  )
-  seedIntroState({
-    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-    poolBuffers: { 1: poolCapacity },
-    disksBuiltTotal: { 8000: 1 },
-  })
-  render(<App />)
-
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  const toggle = within(pool1).getByRole('button', { name: /(collapse|expand) pool 1/i })
-  if (toggle.getAttribute('aria-expanded') === 'true') fireEvent.click(toggle)
-  expect(within(pool1).getByRole('button', { name: /expand pool 1/i })).toBeInTheDocument()
-  expect(within(pool1).getByText('Lake')).toBeInTheDocument()
-  expect(within(pool1).queryByRole('group', { name: /lake .* disks/i })).not.toBeInTheDocument()
+  expect(within(pool1).getByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).toBeInTheDocument()
+  expect(within(pool1).getByRole('button', { name: /tap pool 1 memory/i })).toBeDisabled()
 })
 
-test('tapping a pool\'s own Memory buffer shows only that pool\'s tap bonus bar, leaving the Data Stream\'s untouched', () => {
+test('the pool bar stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {
+  // Same full-buffer seed as the transition test above, but with no disksBuiltTotal entry —
+  // isDataLakePoolReady(state, 1) is false, so tickPoolBufferFill's overflow branch (engine.js)
+  // will never actually credit this pool's lake. Switching the bar to "lake" mode here would
+  // show a constant nonzero "incoming rate" that can never turn into real progress — the same
+  // stalled-tile-shown-as-active bug LakePoolTile was fixed for on this same PR, just on this
+  // page's own bar (found by the adversarial reviewer as a follow-up).
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+  })
+  render(<App />)
+
+  expect(screen.queryByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).not.toBeInTheDocument()
+  const multiplierBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
+  expect(multiplierBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MIN_PERCENT))
+})
+
+test('the pool bar also stays in fill-based-multiplier mode while the pool has built one disk (isDataLakePoolReady) but is not yet entirely complete — AUTOMATIC overflow, what this bar describes, has not started yet either', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity }, disksBuiltTotal: { 8000: 1 }, // ready, but far from complete
+  })
+  render(<App />)
+
+  expect(screen.queryByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).not.toBeInTheDocument()
+  const multiplierBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
+  expect(multiplierBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MIN_PERCENT))
+})
+
+test('tapping a pool\'s own Memory buffer boosts only that pool\'s own multiplier, leaving the Data Stream\'s untouched', () => {
+  // Fake timers so no real tick can land between the tap and the assertions — the Data Stream's
+  // continuous production would otherwise creep the pools' fill fractions (and their fill-based
+  // percentages) off the exact seeded values mid-test.
   vi.useFakeTimers()
+  // mainGameUnlocked: true set explicitly — capacity is already >= INTRO_DISK_UNLOCK_CAPACITY,
+  // which would latch it true on the first real tick anyway (see latchMainGameUnlocked in
+  // engine.js), and this test's own `await user.click` leaves enough real time for that tick to
+  // fire; seeding it upfront (and navigating to Foundry explicitly, same as the sibling
+  // disabled-at-cap tests below) avoids racing that latch mid-test.
   seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } })
   render(<App />)
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   fireEvent.click(screen.getByRole('button', { name: /tap pool 1 memory/i }))
 
-  const bonusBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i })
-  expect(bonusBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_PERCENT))
-  expect(bonusBar).toHaveAttribute('aria-valuetext', `+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}%`)
-  expect(screen.getByRole('region', { name: 'pool 1' })).toHaveTextContent(`+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}% 👆`)
+  // The tap bonus is its own separate bar (named "<base> tap bonus") — the pool's base multiplier
+  // bar itself stays at its fill-based value and never absorbs the bonus.
+  expect(screen.getByRole('progressbar', { name: /^pool 1 fill-based bandwidth multiplier$/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
+  expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_PERCENT))
+  expect(screen.getByRole('button', { name: /tap pool 1 memory/i }))
+    .toHaveTextContent(`${FILL_MULTIPLIER_MAX_PERCENT}%+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}% 👆`)
+  expect(screen.getByRole('progressbar', { name: /^data stream fill-based speed multiplier$/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
+  // The Data Stream's own tap bonus bar never appears from a pool tap.
   expect(screen.queryByRole('progressbar', { name: /data stream fill-based speed multiplier tap bonus/i })).not.toBeInTheDocument()
   vi.useRealTimers()
 })
@@ -3270,7 +3199,9 @@ test('the Data Stream tap target disables once its own tap bonus is already at t
 
   const tapTarget = screen.getByRole('button', { name: /tap to generate a bit/i })
   expect(tapTarget).toBeDisabled()
-  // The capped bonus shows on its own bar at 100.
+  // Base bar stays at the fill-based 150%; the capped bonus shows on its own bar at 100.
+  expect(screen.getByRole('progressbar', { name: /^data stream fill-based speed multiplier$/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
   expect(screen.getByRole('progressbar', { name: /data stream fill-based speed multiplier tap bonus/i }))
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT))
 })
@@ -3359,32 +3290,10 @@ describe('Byte Foundry Storage', () => {
     // queues the build (diskBuildQueued) so it fires itself the moment the buffer covers a pass,
     // the same automatic continuation every LATER pass already gets once one is collected.
     expect(buildButton).not.toBeDisabled()
-    expect(buildButton).toHaveTextContent(/1 KB · tap to queue/)
-    expect(buildButton).toHaveAttribute('aria-description', expect.stringMatching(/pool buffer too low/))
-    expect(buildButton).not.toHaveTextContent(/Ready|Queued|Provisioning/)
-    expect(buildButton).toHaveTextContent('Provision 1 KB Disk')
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(savedState.intro.diskBuildQueued).toBe(true)
-    expect(buildButton).toHaveTextContent(/⏳.*Provisioning 1 KB Disk….*Queued · needs buffer/)
-    expect(buildButton).not.toHaveTextContent(/tap to queue/)
     expect(savedState.intro.diskProvisionPasses ?? {}).toEqual({})
-  })
-
-  test('a queued Provision Disk reads "Provisioning …" with its banked passes, unlike the idle "Provision …" label', () => {
-    // 8 built → this is the 9th disk (9 passes); 2 already banked and the queue is armed.
-    seedIntroState({
-      bits: 0, capacity: currentBankCost, byteCreated: true,
-      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP - 1 },
-      diskProvisionPasses: { [currentBankSize]: 2 },
-      diskBuildQueued: true,
-    })
-    render(<App />)
-
-    const buildButton = screen.getByRole('button', { name: /provision disk/i })
-    expect(buildButton).toHaveTextContent(/⏳.*Provisioning 1 KB Disk…/)
-    expect(buildButton).toHaveTextContent('2/9 · needs buffer')
-    expect(buildButton).not.toHaveTextContent(/tap to queue|Ready/)
   })
 
   test('Provision Disk shows its cost in the nearest fitting SI unit (matching the Disk\'s own SI size), not a raw unitless bit count', () => {
@@ -3474,13 +3383,13 @@ describe('Byte Foundry Storage', () => {
     // (see FillableStatCard/BalanceText/FooterRow in ByteFoundryPage/index.jsx) rather than a
     // labelled Bandwidth/Capacity/Memory stat row.
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(pool1).toHaveTextContent('/s')
-    expect(pool2).toHaveTextContent('/s')
+    expect(pool1).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 1))}/s`)
+    expect(pool2).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 2))}/s`)
     // Balance and capacity now always share the same fixed pool unit, so formatCombinedBalance
     // always dedupes the balance's own unit suffix, leaving just the bare number.
-    expect(pool1.querySelector('p')).toHaveTextContent(/^0(\.0+)? \w+$/)
+    expect(pool1.querySelector('p')).toHaveTextContent(`0 / ${formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 1), 1)}`)
     expect(pool1).toHaveTextContent(formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 1), 1))
-    expect(pool2.querySelector('p')).toHaveTextContent(/^0(\.0+)? \w+$/)
+    expect(pool2.querySelector('p')).toHaveTextContent(`0 / ${formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 2), 2)}`)
     expect(pool2).toHaveTextContent(formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 2), 2))
     expect(within(pool2).getByRole('button', { name: /collapse pool 2/i })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
@@ -3493,10 +3402,6 @@ describe('Byte Foundry Storage', () => {
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toHaveTextContent('1 MB')
     expect(provisionButton).not.toHaveTextContent('All Pools Complete')
-    // Lives in its own Provision Disk card, independent of the Data Stream card and every pool card.
-    expect(screen.getByRole('region', { name: 'Provision Disk' })).toContainElement(provisionButton)
-    expect(screen.getByRole('region', { name: 'Data Stream' })).not.toContainElement(provisionButton)
-    expect(pool2).not.toContainElement(provisionButton)
     // The Data Stream balance line already reads "<bits> / <capacity>" — no separate "Buffer"
     // line restating the same capacity figure a second time (see ByteFoundryPage/index.jsx).
     expect(screen.getByRole('region', { name: 'Data Stream' })).toHaveTextContent(
@@ -3504,7 +3409,7 @@ describe('Byte Foundry Storage', () => {
     )
   })
 
-  test('a pool with its disk-build condition met but Capacity below its own threshold stays hidden, with Provision Disk still reachable in the Data Stream card', () => {
+  test('a pool with its disk-build condition met but Capacity below its own threshold stays hidden, with Provision Disk falling back outside any pool card', () => {
     const size10kb = currentBankSize * 10
     const size100kb = currentBankSize * 100
     seedIntroState({
@@ -3520,23 +3425,12 @@ describe('Byte Foundry Storage', () => {
 
     expect(screen.getByRole('region', { name: 'pool 1' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'pool 2' })).not.toBeInTheDocument()
-    // The disk ladder has already advanced to pool 2's first size (1 MB) — Provision Disk lives in
-    // the Data Stream card, so it stays reachable before pool 2's own card is visible.
+    // The disk ladder has already advanced to pool 2's first size (1 MB) — Provision Disk falls
+    // back to rendering outside any pool card (see ByteFoundryPage's provisionDiskButton fallback)
+    // rather than disappearing until pool 2's own card catches up.
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toHaveTextContent('1 MB')
     expect(screen.getByRole('region', { name: 'pool 1' })).not.toContainElement(provisionButton)
-  })
-
-  test('Provision Disk is hidden while the pool its current offer belongs to is rebuilding', () => {
-    seedIntroState({
-      bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true,
-      diskCache: { [currentBankSize]: currentBankSize },
-      dataLakes: { 1: { rebuilding: true } },
-    })
-    render(<App />)
-
-    expect(screen.getByRole('region', { name: 'pool 1' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /provision disk/i })).not.toBeInTheDocument()
   })
 
   test('Provision Disk fires its first pass on click once affordable — the consolidated Upgrade Data Stream is now the LOWER-priority action that waits on it', () => {
@@ -3554,8 +3448,6 @@ describe('Byte Foundry Storage', () => {
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
     expect(buildButton).not.toBeDisabled()
-    expect(buildButton).toHaveTextContent(/🏦.*Ready · /)
-    expect(screen.getByRole('region', { name: 'Provision Disk' })).toContainElement(buildButton)
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     // The first disk needs exactly one pass, which the seeded buffer funds outright — it lands
@@ -3911,7 +3803,7 @@ describe('Byte Foundry Storage', () => {
 
     const lakeBlock = within(screen.getByRole('region', { name: 'pool 1' })).getByLabelText('KB lake')
     expect(within(lakeBlock).queryByRole('button', { name: /cores from the kb data lake/i })).not.toBeInTheDocument()
-    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent(`${COST_ICON} 1 KB`)
+    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent('🎯 1 KB')
   })
 
   test('an old save\'s legacy boostersUnlocked latch keeps Boosters purchasable but the pool-fill tile still reads Locked while its own Storage pool has never built a disk (Devin Review finding)', () => {
@@ -4309,7 +4201,7 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByText(/spends 1 core.*4 held/i)).toBeInTheDocument()
+    expect(screen.getByText(/armed:.*cores.*4 held/i)).toBeInTheDocument()
   })
 
   test('render order top to bottom: active-boost status, then the Boost effects section (presets/Stack/Reclaim), then the tier entity rows — issue #326 "the effects section is at the top of the Boosters page, not at the bottom"', () => {
@@ -4396,62 +4288,7 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openBoosters()
 
-    // Idle tiers collapse to one line; selecting the tier reveals its merge row.
-    fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
     expect(screen.getByRole('button', { name: /merge 8 nodes into 1 cluster/i })).toBeDisabled()
-  })
-
-  describe('tier detail row is progressively disclosed', () => {
-    const base = { bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true }
-    const nodesMerge = () => screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })
-    const nodesAuto = () => screen.queryByRole('button', { name: /enable auto-merge for nodes into clusters/i })
-
-    test('an idle, unselected tier shows no merge/auto buttons until selected', () => {
-      seedIntroState({ ...base, computeCores: 1, computeNodes: 2 })
-      render(<App />)
-      openBoosters()
-
-      expect(nodesMerge()).not.toBeInTheDocument()
-      expect(nodesAuto()).not.toBeInTheDocument()
-      fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
-      expect(nodesMerge()).toBeInTheDocument()
-      expect(nodesAuto()).toBeInTheDocument()
-    })
-
-    test('a tier with a possible merge is revealed without selecting it', () => {
-      seedIntroState({ ...base, computeNodes: 8, computeClusters: 0 })
-      render(<App />)
-      openBoosters()
-
-      expect(nodesMerge()).toBeEnabled()
-    })
-
-    test('Auto-merge unlock progress (cost tier held > 0) reveals the row', () => {
-      seedIntroState({ ...base, computeNodes: 2, computeClusters: 3 })
-      render(<App />)
-      openBoosters()
-
-      expect(nodesAuto()).toBeDisabled()
-    })
-
-    test('an in-flight reserve merge reveals the row', () => {
-      seedIntroState({ ...base, computeNodes: 2, autoMergeNodesIntoCluster: true, computeNodesMergeRemainingSeconds: 30 })
-      render(<App />)
-      openBoosters()
-
-      expect(screen.getByRole('button', { name: /nodes reserve merge in progress/i })).toBeInTheDocument()
-    })
-
-    test('the selected tier is marked via aria-pressed and a single tier is armed at a time', () => {
-      seedIntroState({ ...base, computeCores: 1, computeNodes: 2 })
-      render(<App />)
-      openBoosters()
-
-      const nodes = screen.getByRole('button', { name: /select nodes to fund a compute boost/i })
-      fireEvent.click(nodes)
-      expect(nodes).toHaveAttribute('aria-pressed', 'true')
-      expect(screen.getByRole('button', { name: /select cores to fund a compute boost/i })).toHaveAttribute('aria-pressed', 'false')
-    })
   })
 
   test('merging spends 8 of the input entity for 1 of the output entity', () => {
@@ -4671,7 +4508,7 @@ describe('Compute auto-merge automation', () => {
     openBoosters()
 
     const autoButton = screen.getByRole('button', { name: /enable auto-merge for cores into nodes/i })
-    expect(autoButton).toHaveTextContent('🤖 Auto · 6/10 Nodes')
+    expect(autoButton).toHaveTextContent('🤖 6/10')
     expect(autoButton).toBeDisabled() // below the 10-unit unlock cost
   })
 
@@ -4697,7 +4534,9 @@ describe('Compute auto-merge automation', () => {
 // productionAccumulator) resets each cycle. Scale Up/Overclock remain unaffected (covered at the
 // engine.test.js level, not here).
 
-test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', () => {
+test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', async () => {
+  const user = userEvent.setup()
+
   // prestige.count: 1 skips the mandatory first-time full-screen prompt (see the test above) in
   // favor of the ordinary top banner, so MainPage's own heading is actually on-screen to assert on.
   seedMainGameState({
@@ -4708,10 +4547,7 @@ test('a real Prestige from MainPage resets Data Stream balance but keeps Factory
   render(<App />)
 
   expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
-  // A synchronous click, then an immediate read: a real timer tick can't fire in between. (An
-  // awaited userEvent click yields to the event loop, and under CPU load a live tick credits the
-  // Data Stream bits before the `bits === 0` assertion below — the old, intermittent failure.)
-  fireEvent.click(screen.getByRole('button', { name: /prestige \(requires/i }))
+  await user.click(screen.getByRole('button', { name: /prestige \(requires/i }))
 
   // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked in engine.js) — a real Prestige
   // never re-gates it, so Factory stays on screen with no navigation to the Byte Foundry.
@@ -4927,19 +4763,6 @@ test('Chapters track Compute, Unbounded, and Era milestones', async () => {
   expect(screen.queryByLabelText(/^coming soon/i)).not.toBeInTheDocument()
 })
 
-test('Compute (Flops) buy buttons show their PP cost as text, not "[object Object]"', async () => {
-  seedMainGameState({
-    computeFlops: { pageUnlocked: true, owned: {}, cumulativeBoost: {} },
-    prestige: { xp: 0, points: 5000, count: 1, highestMilestone: 1 },
-  })
-  render(<App />)
-  await userEvent.setup().click(screen.getByRole('button', { name: /^open compute$/i }))
-
-  const buy = screen.getByRole('button', { name: /^buy KFlops for/i })
-  expect(buy).toHaveTextContent(/^[\d,.e+]+ PP$/)
-  expect(buy).not.toHaveTextContent(/object/i)
-})
-
 test('Compute autobuyer milestones list Era unlocks once Compute is revealed', async () => {
   const user = userEvent.setup()
 
@@ -4951,12 +4774,12 @@ test('Compute autobuyer milestones list Era unlocks once Compute is revealed', a
     computeFlopsAutobuyers: { flop01: 1, flop02: null, flop03: null, flop04: null, flop05: null, flop06: null, flop07: null, flop08: null, flop09: null, flop10: null },
   })
   render(<App />)
-  await openPerksTab(user, /open unlocks/i)
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
 
   expect(screen.getByLabelText(/^compute autobuyer unlock milestones category$/i)).toBeInTheDocument()
-  expect(screen.getByLabelText("KFlops's autobuyer unlocked at Era 1")).toBeInTheDocument()
-  expect(screen.getByLabelText(/^kflops autobuyer unlock milestone$/i)).toHaveTextContent('✓')
-  expect(screen.getByLabelText(/^mflops autobuyer unlock milestone$/i)).toHaveTextContent('🔒 2')
+  expect(screen.getByLabelText(/^kflops autobuyer unlock milestone$/i)).toHaveTextContent('✅ Era 1')
+  expect(screen.getByLabelText(/^mflops autobuyer unlock milestone$/i)).toHaveTextContent('🔒 Era 2')
 })
 
 test('Settings Era ascension confirms, resets Foundry assets, and keeps automation', async () => {
@@ -5264,7 +5087,6 @@ describe('Buy max mode', () => {
     seedMainGameState({ resources: { base: 1e6 } })
     render(<App />)
     expect(screen.queryByRole('button', { name: /buy max mode/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^open perks$/i })).not.toBeInTheDocument()
   })
 
   test('once unlocked, toggling it on makes the tier Buy button buy every affordable full level', async () => {
@@ -5277,15 +5099,11 @@ describe('Buy max mode', () => {
     })
     render(<App />)
 
-    // The toggle lives only on Perks → Toggles, not on the Factory screen.
-    expect(screen.queryByRole('button', { name: /buy max mode/i })).not.toBeInTheDocument()
-    await openPerksTab(user, /open toggles/i)
     const toggle = screen.getByRole('button', { name: /buy max mode/i })
     expect(toggle).toHaveAttribute('aria-pressed', 'false')
     await user.click(toggle)
     expect(toggle).toHaveAttribute('aria-pressed', 'true')
     expect(localStorage.getItem('tens_buy_max_mode')).toBe('true')
-    await user.click(screen.getByRole('button', { name: /^open byte factory$/i }))
 
     await user.click(screen.getByRole('button', { name: /^Buy 2 full levels/ }))
     const kilobytesPanel = screen.getByLabelText(`${kilobytes.name} layer`)

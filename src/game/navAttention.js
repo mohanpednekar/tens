@@ -1,6 +1,6 @@
 import {
-  AUTO_PRESTIGE_AUTOBUYER_COST,
   AUTO_SCALE_UP_COST,
+  BYTES_ID,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   COMPUTE_MERGE_RATIO,
   INTRO_BYTE_COMBINE_COST,
@@ -12,7 +12,7 @@ import {
   canBuyComputeFlopsTier,
   getComputeFieldEffectiveCap,
   getAutoPrestigeCost,
-  isGlobalTickspeedAffordable,
+  getGlobalTickspeedMultiplierCost,
   getIntroKilobyteConversionCost,
   getOverclockRequirement,
   getPrestigeDoublePpUpgradeCost,
@@ -99,9 +99,7 @@ const COMPUTE_RESERVE_MERGE_STARTS = [
   isComputeSupercomputersMergeStartAvailable,
 ]
 
-// Not "full" for attention purposes while an Upgrade Data Stream runs — nothing is waiting on the player.
-const isMemoryFull = state =>
-  (state.intro?.bits ?? 0) >= (state.intro?.capacity ?? 0) && !state.intro?.capacityUpgradeQueued
+const isMemoryFull = state => (state.intro?.bits ?? 0) >= (state.intro?.capacity ?? 0)
 
 const isCombineAvailable = state =>
   !(state.intro?.byteCreated ?? false) && (state.intro?.bits ?? 0) >= INTRO_BYTE_COMBINE_COST
@@ -141,7 +139,8 @@ export const hasAffordableFullLevel = state => {
 export const hasAffordableGlobalTickspeed = state => {
   if (isProductionFrozen(state)) return false
   if (!isGlobalTickspeedMultiplierUnlocked(state)) return false
-  return isGlobalTickspeedAffordable(state)
+  const cost = getGlobalTickspeedMultiplierCost(state.globalTickspeedMultiplier ?? 0)
+  return (state.resources[BYTES_ID] ?? 0) >= cost
 }
 
 export const hasScaleUpAvailable = state => {
@@ -167,12 +166,15 @@ export const hasTiersGameAttention = state =>
   hasScaleUpAvailable(state) ||
   hasOverclockAvailable(state)
 
-// The Perks page's PP tabs (see pages/PerksPage): Unlocks = one-time
-// permanent unlocks, repeatable leveled upgrades, and pause/resume toggles (never "affordable").
-export const hasAffordablePpUnlock = state => {
+/** PP Upgrades view — unspent PP can buy at least one upgrade. */
+export const hasAffordablePpUpgrade = state => {
   if ((state.prestige?.count ?? 0) < 1) return false
-  if (isProductionFrozen(state)) return false
   const points = state.prestige?.points ?? 0
+  if (points >= getPrestigeDoublePpUpgradeCost(state.prestigeDoublePpLevel ?? 0)) return true
+  if (isProductionFrozen(state)) return false
+  const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier =>
+    Boolean(state.smartAutobuyer?.[tier.id]) && Boolean(state.tierTickspeedAutobuyer?.[tier.id]),
+  )
   return (
     TIER_DEFINITIONS.some(tier =>
       isTierUnlocked(state)(tier) &&
@@ -183,28 +185,12 @@ export const hasAffordablePpUnlock = state => {
     (!state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) ||
     (!(state.autoScaleUp ?? false) && points >= AUTO_SCALE_UP_COST) ||
     (!(state.autoGlobalTickspeed ?? false) && points >= TICKSPEED_AUTOBUYER_COST) ||
-    (state.autoPrestige != null && !(state.autoPrestigeAutobuyer ?? false) &&
-      TIER_DEFINITIONS.every(tier => Boolean(state.smartAutobuyer?.[tier.id]) && Boolean(state.tierTickspeedAutobuyer?.[tier.id])) &&
-      points >= AUTO_PRESTIGE_AUTOBUYER_COST)
+    (allTiersFullyAutomated && points >= getAutoPrestigeCost(state.autoPrestige ?? 0))
   )
 }
 
-export const hasAffordablePpLevelUpgrade = state => {
-  if ((state.prestige?.count ?? 0) < 1) return false
-  const points = state.prestige?.points ?? 0
-  if (points >= getPrestigeDoublePpUpgradeCost(state.prestigeDoublePpLevel ?? 0)) return true
-  if (isProductionFrozen(state)) return false
-  const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier =>
-    Boolean(state.smartAutobuyer?.[tier.id]) && Boolean(state.tierTickspeedAutobuyer?.[tier.id]),
-  )
-  return allTiersFullyAutomated && points >= getAutoPrestigeCost(state.autoPrestige ?? 0)
-}
-
-export const hasAffordablePpUpgrade = state =>
-  hasAffordablePpUnlock(state) || hasAffordablePpLevelUpgrade(state)
-
-// PP purchases light the Perks nav item (perks), not Factory.
-export const hasTiersAttention = state => hasTiersGameAttention(state)
+export const hasTiersAttention = state =>
+  hasTiersGameAttention(state) || hasAffordablePpUpgrade(state)
 
 export const getTiersAttentionLevel = state =>
   pickLevel(
@@ -221,7 +207,7 @@ export const getTiersAttentionLevel = state =>
 export const hasFoundryAttention = state =>
   isMemoryFull(state) ||
   isCombineAvailable(state) ||
-  (isMemoryCapacityUpgradeAvailable(state) && !state.intro?.capacityUpgradeQueued) ||
+  isMemoryCapacityUpgradeAvailable(state) ||
   isProvisionDiskTurnAvailable(state) ||
   isTransferBlockAffordable(state)
 
@@ -284,5 +270,4 @@ export const getNavAttention = state => ({
   foundry: getFoundryAttentionLevel(state),
   boosters: getComputeAttentionLevel(state),
   compute: getComputeFlopsAttentionLevel(state),
-  perks: hasAffordablePpUpgrade(state) ? ATTENTION_NORMAL : false,
 })
