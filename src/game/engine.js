@@ -3238,7 +3238,7 @@ export const isMemoryCapacityUpgradeAvailable = state => isPoolCapacityUpgradeAv
 // the pool's derived value), not by clamping this raw value directly. See docs/DESIGN_HISTORY.md for
 // two earlier, reverted attempts at this mechanic.
 export const upgradePoolCapacity = state => {
-  if (!isMemoryCapacityUpgradeAvailable(state)) return state
+  if (!isMemoryCapacityUpgradeAvailable(state) || state.intro.speedUpgradeQueued) return state
   return doubleIntroCapacity({ ...state, intro: { ...state.intro, bits: 0 } })
 }
 
@@ -6628,7 +6628,7 @@ export const tickFoundryResetConvenience = state => {
     }
   }
 
-  if ((caps.speedCapacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0)) {
+  if ((caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0)) {
     const upgraded = upgradePoolSpeed(next)
     if (upgraded !== next) {
       next = upgraded

@@ -202,15 +202,14 @@ const InfoPage = () => {
             {FILL_MULTIPLIER_TAP_CAP_PERCENT}%.
           </li>
           <li>
-            <strong>Upgrade Data Stream</strong> is the single Data Stream upgrade: it costs your
-            current Capacity in bits and doubles Capacity each purchase. Pressing it starts the
-            upgrade: the button becomes its own progress bar while a constant 100% of the Data
-            Stream&apos;s base Speed is pulled from the Buffer into it, ahead of everything else
-            (nothing else is paused). When the bar fills, Capacity doubles and the button is
-            clickable again.
-            Speed is derived from Capacity — never upgraded separately — at{' '}
-            √(Capacity in Bytes) per second on even doublings, alternating ×1.5 and ×4/3 growth
-            (exactly ×2 every two upgrades).
+            <strong>Upgrade Capacity</strong> costs your current Capacity in bits and doubles it.{' '}
+            <strong>Upgrade Speed</strong> costs the square of your current base Speed (in Bytes),
+            which matches the Capacity cost at perfect squares and deviates slightly in between. Only
+            one runs at a time: pressing either replaces both buttons with a progress bar while a
+            constant 100% of the Data Stream&apos;s base Speed is pulled from the Buffer into it,
+            ahead of everything else. When the bar fills the upgrade applies and both buttons return.
+            Base Speed alternates ×1.5 and ×4/3 growth per Speed upgrade (exactly ×2 every two) and
+            can never exceed √(Capacity in Bytes) per second, so upgrade Capacity to unlock more Speed.
           </li>
           <li>
             <strong>Transfer blocks</strong> convert Data Stream bits into free {firstTierName} at

@@ -305,6 +305,7 @@ import {
   tickGame,
   tickIntroAutoInvest,
   isSpeedUpgradeArmable,
+  upgradePoolSpeed,
   getSpeedUpgradeCostBits,
   queueIntroSpeedUpgrade,
   tickSpeedUpgradeDrain,
@@ -11973,5 +11974,42 @@ describe('getSpeedUpgradeCostBits', () => {
     expect(getSpeedUpgradeCostBits({ capacity: 512 })).toBe(512) // 64 B: speed 8 B/s, 8² B
     expect(getSpeedUpgradeCostBits({ capacity: 256 })).not.toBe(256) // 32 B: speed 6 B/s -> 36 B
     expect(getSpeedUpgradeCostBits({ capacity: 256 })).toBe(288)
+  })
+})
+
+describe('Upgrade Speed cross-system paths', () => {
+  const seeded = intro => {
+    const s = createInitialGameState()
+    return { ...s, intro: { ...s.intro, byteCreated: true, ...intro } }
+  }
+
+  it('upgradePoolSpeed pays the Speed cost from a full Buffer and doubles the basis', () => {
+    const state = seeded({ capacity: 512, speedCapacity: 256, bits: 512 })
+    const after = upgradePoolSpeed(state)
+    expect(after.intro.speedCapacity).toBe(512)
+    expect(after.intro.bits).toBe(512 - 288)
+    expect(upgradePoolSpeed(seeded({ capacity: 512, speedCapacity: 256, bits: 10 }))).toEqual(seeded({ capacity: 512, speedCapacity: 256, bits: 10 }))
+  })
+
+  it('prestigeGame keeps speedCapacity; eraGame resets it with Capacity', () => {
+    const state = { ...seeded({ capacity: 512, speedCapacity: 256 }), resources: { ...createInitialGameState().resources, base: PRESTIGE_THRESHOLD } }
+    expect(prestigeGame(state).intro.speedCapacity).toBe(256)
+    const era = eraGame({ ...seeded({ capacity: 512, speedCapacity: 256 }), prestige: { ...createInitialGameState().prestige, points: ERA_ELIGIBILITY_PP } })
+    expect(era.intro.speedCapacity).toBeUndefined()
+  })
+
+  it('normalizePoolMemoryCapacity clears a stale speed queue (no byte, or Capacity upgrade also queued)', () => {
+    const stale = seeded({ byteCreated: false, speedUpgradeQueued: true, speedUpgradeProgress: 3 })
+    const fixed = normalizePoolMemoryCapacity(stale)
+    expect(fixed.intro.speedUpgradeQueued).toBe(false)
+    expect(fixed.intro.speedUpgradeProgress).toBe(0)
+  })
+
+  it('a pre-split Foundry reset cap (capacity only) still replays Speed', () => {
+    const base = seeded({ capacity: 8, foundryResetCaps: { byteCreated: true, capacity: 32, disksBuiltTotal: {}, diskProvisionPasses: {} } })
+    let state = base
+    for (let i = 0; i < 8; i++) state = tickFoundryResetConvenience({ ...state, intro: { ...state.intro, bits: state.intro.capacity } })
+    expect(state.intro.capacity).toBe(32)
+    expect(state.intro.speedCapacity).toBeGreaterThan(8)
   })
 })

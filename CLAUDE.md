@@ -456,7 +456,7 @@ src/
   pages/
     ByteFoundryPage/index.jsx ← the "Byte Foundry" tap screen (Architecture 4, "Economy model"). Takes
                                `{ game, focusNonce }`; Data Stream + every DiskArrayRow as continuous
-                               sections, one "Upgrade Data Stream" action. Pool Memory derives from the
+                               sections, Upgrade Capacity / Upgrade Speed actions. Pool Memory derives from the
                                shared Data Stream Capacity, which doubles up to the FINAL pool's end bound
                                (`isMemoryCapacityAtCap`) — see "Pool liveness is Capacity-only"
     StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow list (Architecture 4a)
@@ -629,15 +629,15 @@ Strict three-layer separation:
    inside its own card"). Disk Fill is fully automatic every tick (`DiskArrayRow` is a pure status
    display). Provision Disk is a single shared control (one disk ladder spans every pool) rendered in
    its own standalone "Provision Disk" card directly below the Data Stream card (hidden while the offer's pool is
-   rebuilding); Upgrade Data Stream previews the post-upgrade Capacity and Speed
+   rebuilding); Upgrade Capacity / Speed preview their post-upgrade value
    (`docs/DESIGN_HISTORY.md`: "Provision Disk moved into the Data Stream card"). Each disk
    array shows every size from `getDiskSizesToShow`, all `DISK_ARRAY_LADDER_CAP` (9) slots in one row.
    The "queue next build" pin-icon toggle was removed from the UI, but the auto-arming queue stays wired
    and live (see "Disks"; `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section);
    `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but unexposed (unlike Capacity's
-   `queueIntroCapacityUpgrade`, which the Upgrade Data Stream button drives). Every action here or on
+   `queueIntroCapacityUpgrade`, which the Upgrade Capacity button drives). Every action here or on
    either dedicated screen is gated by the forced priority order (see "Economy model") — Data Lake
-   Booster purchases, its capacity Upgrade, and Upgrade Data Stream are the three exceptions, each
+   Booster purchases, its capacity Upgrade, and Upgrade Capacity / Speed are the three exceptions, each
    arbitrated on its own eligibility. Full UI layout: `docs/MAINPAGE_REFERENCE.md`; mechanic/formula
    detail (Bandwidth cap, buffer capacity, fill multiplier, disk ladder/build-pass):
    `docs/ECONOMY_REFERENCE.md`; component contracts (`DiskArrayRow`, `DataLakePanel`):
@@ -687,7 +687,7 @@ Strict three-layer separation:
     Supporter pack (unlock code / dummy checkout), multi-slot saves, Prestige museum, Era ascension
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
     dashboard, and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
-    Storage / Compute + upgrades wipe to scratch; Combine / Upgrade Data Stream / Provision Disk
+    Storage / Compute + upgrades wipe to scratch; Combine / Upgrade Capacity / Upgrade Speed / Provision Disk
     convenience-auto up to prior highs; Factory + Prestige kept). Takes `{ game, onReset,
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
@@ -772,7 +772,7 @@ generator. Combine creates the generator without snapping Capacity; save load vi
 `normalizePoolMemoryCapacity` preserves current Capacity and only clamps when necessary. Era ascension
 keeps the generator (`byteCreated`) and the `mainGameUnlocked` latch but resets Capacity to
 `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`) — Capacity is rebuilt each
-Era, Factory access never goes away again once earned. Production and storage grow via two **Upgrade Capacity** / **Upgrade Speed** actions (one runs at a time; both buttons are replaced by one status bar while it runs; `intro.speedCapacity` is the Speed basis, absent = follows Capacity, and an upgrade is allowed only while base Speed stays ≤ sqrt(Capacity in Bytes) — `queueIntroSpeedUpgrade`/`tickSpeedUpgradeDrain`; cost = current base Speed² in Bytes, `getSpeedUpgradeCostBits` — equals the Capacity upgrade cost at perfect squares): a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
+Era, Factory access never goes away again once earned. Production and storage grow via two **Upgrade Capacity** / **Upgrade Speed** actions, one at a time (`queueIntroSpeedUpgrade`; detail: `docs/ECONOMY_REFERENCE.md`'s "Upgrade Speed"): a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
 and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at a constant 100% of the base Speed
 (like a pool pulling at its Bandwidth, regardless of the fill multiplier) into `intro.capacityUpgradeProgress`, ahead of
 every other consumer — nothing is paused or raced; when the bar
@@ -784,7 +784,7 @@ the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1
 nav **Boosters**) unlock; a separate **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
 unlocks at 100 PP — see Architecture 4c. Recurring "upgrade" actions are ranked in a fixed **forced
 priority order** — Disk Fill > Provision Disk > Compute Boost — so a lower-ranked action is disabled (in
-the UI and in the engine reducer) whenever a higher one is available. **Upgrade Data Stream itself sits
+the UI and in the engine reducer) whenever a higher one is available. **Upgrade Capacity / Speed themselves sit
 OUTSIDE this order** (`isMemoryCapacityUpgradeAvailable`) — its growth never waits on Storage or Compute;
 a deliberate reversal of an earlier version that ranked it lowest — see `docs/DESIGN_HISTORY.md`. An
 always-on auto-convert (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`) turns Data Stream bits into
@@ -1071,7 +1071,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1992 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2000 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

@@ -11,6 +11,8 @@ import {
 } from 'game/layers'
 import {
   canBuyComputeFlopsTier,
+  getSpeedUpgradeCostBits,
+  isSpeedUpgradeArmable,
   getComputeFieldEffectiveCap,
   getAutoPrestigeCost,
   isGlobalTickspeedAffordable,
@@ -224,6 +226,7 @@ export const hasFoundryAttention = state =>
   isMemoryFull(state) ||
   isCombineAvailable(state) ||
   (isMemoryCapacityUpgradeAvailable(state) && !state.intro?.capacityUpgradeQueued && !state.intro?.speedUpgradeQueued) ||
+  (isSpeedUpgradeArmable(state) && (state.intro?.bits ?? 0) >= getSpeedUpgradeCostBits(state.intro)) ||
   isProvisionDiskTurnAvailable(state) ||
   isTransferBlockAffordable(state)
 
