@@ -4275,9 +4275,10 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     }
     return poolBudgets[poolIndex]
   }
-  let disks = state.intro.disks ?? {}
-  let diskCache = state.intro.diskCache ?? {}
-  let diskReadCacheFlush = { ...(state.intro.diskReadCacheFlush ?? {}) }
+  const disks = { ...(state.intro.disks ?? {}) }
+  // ⚡ Bolt Optimization: Replace O(N) object spreading with local mutations to avoid garbage collection overhead in hot loop
+  const diskCache = { ...(state.intro.diskCache ?? {}) }
+  const diskReadCacheFlush = { ...(state.intro.diskReadCacheFlush ?? {}) }
   let changed = false
 
   // Computed up front so the self-heal pass below can use the SAME "currently unlocked" test the
@@ -4318,15 +4319,13 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
         getPoolBufferClampCeilingBits(state, poolIndex),
       )
     }
-    const { [size]: _removedCache, ...restCache } = diskCache
-    diskCache = restCache
+    delete diskCache[size]
     changed = true
   }
   for (const sizeStr in diskReadCacheFlush) {
     const size = Number(sizeStr)
     if (isCacheStillEligible(size)) continue
-    const { [size]: _removedFlush, ...restFlush } = diskReadCacheFlush
-    diskReadCacheFlush = restFlush
+    delete diskReadCacheFlush[size]
     changed = true
   }
 
@@ -4354,8 +4353,7 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   for (const sizeStr in diskReadCacheFlush) {
     const size = Number(sizeStr)
     if (size === buildingSize || (builtTotal[size] ?? 0) <= (disks[size] ?? 0)) {
-      const { [size]: _removed, ...rest } = diskReadCacheFlush
-      diskReadCacheFlush = rest
+      delete diskReadCacheFlush[size]
       changed = true
     }
   }
@@ -4403,7 +4401,7 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
 
       if (transferAmount > 0) {
         poolBuffers[poolIndex] = available - transferAmount
-        diskCache = { ...diskCache, [size]: cached + transferAmount }
+        diskCache[size] = cached + transferAmount
         memoryToCacheBudget -= transferAmount
         changed = true
       }
@@ -4461,11 +4459,10 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     const hasEmptyContainer = (builtTotal[size] ?? 0) > (disks[size] ?? 0)
     const cached = diskCache[size] ?? 0
     if (hasEmptyContainer && cached >= size) {
-      diskCache = { ...diskCache, [size]: cached - size }
-      disks = { ...disks, [size]: (disks[size] ?? 0) + 1 }
+      diskCache[size] = cached - size
+      disks[size] = (disks[size] ?? 0) + 1
     }
-    const { [size]: _removed, ...rest } = diskReadCacheFlush
-    diskReadCacheFlush = rest
+    delete diskReadCacheFlush[size]
     changed = true
   }
 
