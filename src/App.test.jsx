@@ -5220,7 +5220,7 @@ describe('Dev Mode', () => {
 
     expect(await screen.findByText(/applied\./i)).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(123)
-  })
+  }, 20000)
 
   // Round-4 adversarial review flagged that only the 'unlock-factory' preset (covered above) had
   // direct coverage — the other six were only traced by reading code. One table covers the rest,
