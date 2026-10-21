@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Boosters page text is shorter: funding line reads "1 ▦ → KB–PB · 0 held" (tier symbols), tier buttons read "⬆ 8→1 Fabric" and "🤖 0/10", and the "Boost" / "Boost with" headings are gone.
+
+- Auto-Boost unlock moved from the Boosters page to Perks → Unlocks (Global Automation); Boosters only shows its preset preference once unlocked, and the Perks dot now lights when it's affordable.
 - Compute Boosts: every funding tier now gives the same multiplier and duration as Cores; spending a higher tier instead boosts more Factory tiers (Node: the first two, Cluster: the first three, …). Memory is always boosted.
 - **Data Lake header.** Each lake's header now matches the pool/Data Stream tile layout: name with the Booster target price (also the buy control) under it, the amount filled big and centered, and the current fill speed on the right.
 - **Memory amounts show at most 5 significant digits.** Unit-scaled sizes/balances/speeds (e.g. the Data Stream

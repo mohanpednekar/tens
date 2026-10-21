@@ -521,10 +521,10 @@ not at the bottom"):
    control here any more — it moved to the Stack + Reclaim row below (see 2c).
 2. Right below that, the Boost EFFECTS section itself — always rendered, whether or not a boost is
    active or the merge chain has unlocked yet:
-   The effects section, Stack/Reclaim/Forfeit row and Auto-Boost control all live in one `BoostCard`
-   (a `<section>` headed "Boost"); the tier list below it is headed "Power a boost with".
-   a. An `ArmedStatusText` line (`"Spends 1 <Singular> per boost · boosts <First>–<Last Factory tier> · <symbol> <N> held"`, or "Pick a
-      tier below to power a boost" if nothing's armed yet) naming whichever compute-ladder tier is currently armed —
+   The effects section, Stack/Reclaim/Forfeit row and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Global Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
+   (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
+   a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol> · <N> held"`, full sentence in its `title`, or "Pick a
+      tier ↓" if nothing's armed yet) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row below — see 3),
       falling back to the active boost's own tier (`intro.computeBoostTierIndex`) when nothing is
       clicked; always Cores (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
@@ -600,7 +600,7 @@ not at the bottom"):
        - **Before that boundary's auto-merge is unlocked:** an instant Merge button (`TierActionButton`,
          `flex: 1 1 0; width: 100%` — fills exactly half the row, the same "two equal-width buttons"
          look `MainPage`'s own tier-row Buy/Upgrade pair uses, rather than a small icon-only square —
-         `variant="prestige"`, visible content "⬆ Merge 8 → 1 <Output>", `aria-label` spelling out the full action
+         `variant="prestige"`, visible content "⬆ 8→1 <Output>", `aria-label` spelling out the full action
          e.g. "merge 8 nodes into 1 cluster") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
          tier is held and the produced tier is under its effective cap (`getComputeFieldEffectiveCap` — 18
          once that tier's own auto-merge is unlocked), calling the matching

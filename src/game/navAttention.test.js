@@ -11,6 +11,7 @@ import {
   COMPUTE_MERGE_RATIO,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   INTRO_BYTE_COMBINE_COST,
+  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
@@ -364,6 +365,31 @@ describe('navAttention', () => {
     expect(hasAffordablePpUnlock(autoPrestigeAutobuyerOnly)).toBe(true)
     expect(hasAffordablePpUnlock({ ...autoPrestigeAutobuyerOnly, autoPrestigeAutobuyer: true })).toBe(false)
     expect(hasAffordablePpUnlock({ ...autoPrestigeAutobuyerOnly, autoPrestige: null })).toBe(false)
+  })
+
+  it('lights the Perks unlocks dot for an affordable Auto-Boost only once Boosters is available and it is not owned', () => {
+    const init = createInitialGameState()
+    const ownedEverythingElse = {
+      ...init,
+      resources: { ...init.resources, [MONEY_ID]: 0 },
+      prestige: { count: 1, points: COMPUTE_AUTO_BOOST_UNLOCK_COST },
+      prestigeSpeedBonusUnlocked: true,
+      autoScaleUp: true,
+      autoGlobalTickspeed: true,
+      smartAutobuyer: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])),
+    }
+    const withBoosters = capacity => ({
+      ...ownedEverythingElse,
+      intro: { ...init.intro, mainGameUnlocked: true, byteCreated: true, capacity },
+    })
+
+    expect(hasAffordablePpUnlock(withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY))).toBe(true)
+    expect(hasAffordablePpUnlock(withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY / 2))).toBe(false)
+    expect(hasAffordablePpUnlock({ ...withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY), computeAutoBoostUnlocked: true })).toBe(false)
+    expect(hasAffordablePpUnlock({
+      ...withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY),
+      prestige: { count: 1, points: COMPUTE_AUTO_BOOST_UNLOCK_COST - 1 },
+    })).toBe(false)
   })
 
   it('does not light PP upgrades before the first Prestige', () => {

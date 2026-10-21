@@ -1,6 +1,7 @@
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   AUTO_SCALE_UP_COST,
+  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   COMPUTE_MERGE_RATIO,
   INTRO_BYTE_COMBINE_COST,
@@ -182,6 +183,7 @@ export const hasAffordablePpUnlock = state => {
     ) ||
     (!state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) ||
     (!(state.autoScaleUp ?? false) && points >= AUTO_SCALE_UP_COST) ||
+    (isComputeCoreConversionUnlocked(state) && !(state.computeAutoBoostUnlocked ?? false) && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST) ||
     (!(state.autoGlobalTickspeed ?? false) && points >= TICKSPEED_AUTOBUYER_COST) ||
     (state.autoPrestige != null && !(state.autoPrestigeAutobuyer ?? false) &&
       TIER_DEFINITIONS.every(tier => Boolean(state.smartAutobuyer?.[tier.id]) && Boolean(state.tierTickspeedAutobuyer?.[tier.id])) &&
