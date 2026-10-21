@@ -5118,7 +5118,8 @@ const openDevMode = async user => {
   await user.click(screen.getByRole('button', { name: /open dev mode/i }))
 }
 
-describe('Dev Mode', () => {
+// Dev Mode tests drive many sequential userEvent clicks and sit near Vitest's 5s default under load.
+describe('Dev Mode', { timeout: 20000 }, () => {
   it('is reachable from the More menu (dev build only)', async () => {
     const user = userEvent.setup()
     seedMainGameState()
@@ -5220,7 +5221,7 @@ describe('Dev Mode', () => {
 
     expect(await screen.findByText(/applied\./i)).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(123)
-  }, 20000)
+  })
 
   // Round-4 adversarial review flagged that only the 'unlock-factory' preset (covered above) had
   // direct coverage — the other six were only traced by reading code. One table covers the rest,
