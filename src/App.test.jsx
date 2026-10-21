@@ -2857,13 +2857,13 @@ test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () =
   const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
   expect(upgradeButton).toHaveTextContent(`${COST_ICON} 64 B · 📦 ×2`)
   expect(upgradeButton).toHaveAccessibleDescription('Costs 64 B; capacity 128 B after upgrading')
-  // Speed trails Capacity (basis 32 B): 6 B/s -> 8 B/s on its own button.
+  // Speed trails Capacity (basis 32 B, cost 6² = 36 B): 6 B/s -> 8 B/s on its own button.
   cleanup()
   seedIntroState({ capacity: 512, speedCapacity: 256, bits: 0, byteCreated: true })
   render(<App />)
   const speedButton = screen.getByRole('button', { name: /upgrade data stream speed/i })
-  expect(speedButton).toHaveTextContent(`${COST_ICON} 32 B · ⚡ ×1.33`)
-  expect(speedButton).toHaveAccessibleDescription('Costs 32 B; speed 8 B/s after upgrading')
+  expect(speedButton).toHaveTextContent(`${COST_ICON} 36 B · ⚡ ×1.33`)
+  expect(speedButton).toHaveAccessibleDescription('Costs 36 B; speed 8 B/s after upgrading')
 })
 
 test('Upgrade Data Stream at maximum Capacity is disabled and reads "Max capacity" without a preview', () => {

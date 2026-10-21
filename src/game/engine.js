@@ -3271,6 +3271,12 @@ export const isMemoryCapacityUpgradeArmable = state => {
   return !isMemoryCapacityAtCap(state)
 }
 
+// Upgrade Speed costs the Capacity a Data Stream of the CURRENT base Speed would have if Speed were
+// sqrt(Capacity): speed² Bytes, in bits. Equals the matching Capacity upgrade's cost at perfect squares
+// (even powers of 2); deviates at odd powers, where Speed is the mean of neighbouring sqrt steps.
+export const getSpeedUpgradeCostBits = intro =>
+  getDataStreamSpeedBytesPerSecond(intro.speedCapacity ?? intro.capacity ?? 0) ** 2 * BITS_PER_BYTE
+
 // Base Speed (B/s) can never exceed sqrt(Capacity in Bytes): an upgrade is armable only if the Speed
 // it would grant stays within that bound.
 export const isSpeedUpgradeArmable = state => {
@@ -3289,20 +3295,20 @@ export const queueIntroSpeedUpgrade = state => {
 
 // Instant full-Buffer variant, used only by Foundry-reset convenience replay.
 export const upgradePoolSpeed = state => {
-  const cost = state.intro.speedCapacity ?? state.intro.capacity
+  const cost = getSpeedUpgradeCostBits(state.intro)
   if (!isSpeedUpgradeArmable(state) || state.intro.bits < cost) return state
-  return { ...state, intro: { ...state.intro, bits: state.intro.bits - cost, speedCapacity: cost * INTRO_CAPACITY_DOUBLING_STEP } }
+  return { ...state, intro: { ...state.intro, bits: state.intro.bits - cost, speedCapacity: (state.intro.speedCapacity ?? state.intro.capacity) * INTRO_CAPACITY_DOUBLING_STEP } }
 }
 
 export const tickSpeedUpgradeDrain = elapsedSeconds => state => {
   if (!state.intro?.speedUpgradeQueued) return state
   const stored = state.intro.speedUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
-  const cost = state.intro.speedCapacity ?? state.intro.capacity
+  const cost = getSpeedUpgradeCostBits(state.intro)
   const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds, cost - progress)
   const intro = { ...state.intro, bits: state.intro.bits - pull, speedUpgradeProgress: progress + pull }
   if (intro.speedUpgradeProgress >= cost) {
-    return { ...state, intro: { ...intro, speedCapacity: cost * INTRO_CAPACITY_DOUBLING_STEP, speedUpgradeQueued: false, speedUpgradeProgress: 0 } }
+    return { ...state, intro: { ...intro, speedCapacity: (state.intro.speedCapacity ?? state.intro.capacity) * INTRO_CAPACITY_DOUBLING_STEP, speedUpgradeQueued: false, speedUpgradeProgress: 0 } }
   }
   return { ...state, intro }
 }

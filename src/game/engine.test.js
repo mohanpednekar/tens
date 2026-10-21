@@ -305,6 +305,7 @@ import {
   tickGame,
   tickIntroAutoInvest,
   isSpeedUpgradeArmable,
+  getSpeedUpgradeCostBits,
   queueIntroSpeedUpgrade,
   tickSpeedUpgradeDrain,
 } from './engine'
@@ -11964,5 +11965,13 @@ describe('Upgrade Speed (separate from Capacity)', () => {
     expect(state.intro.speedUpgradeQueued).toBe(false)
     expect(state.intro.speedCapacity).toBe(128)
     expect(getIntroProductionRate(state.intro)).toBeGreaterThan(before)
+  })
+})
+
+describe('getSpeedUpgradeCostBits', () => {
+  it('equals the Capacity upgrade cost at perfect squares and deviates at odd powers', () => {
+    expect(getSpeedUpgradeCostBits({ capacity: 512 })).toBe(512) // 64 B: speed 8 B/s, 8² B
+    expect(getSpeedUpgradeCostBits({ capacity: 256 })).not.toBe(256) // 32 B: speed 6 B/s -> 36 B
+    expect(getSpeedUpgradeCostBits({ capacity: 256 })).toBe(288)
   })
 })
