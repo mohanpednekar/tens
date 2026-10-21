@@ -421,6 +421,12 @@ export const createInitialGameState = () => ({
     // compatibility with the historical Sacrifice flow.
     capacityUpgradeQueued: false,
     capacityUpgradeProgress: 0,
+    // PERMANENT — the Speed basis: Speed derives from this (not Capacity) and it doubles per
+    // "Upgrade Speed" purchase (cost = this value), never exceeding Capacity. Only one Data Stream
+    // upgrade (Capacity or Speed) runs at a time; speedUpgradeProgress is the Speed bar's fill.
+    // Absent (undefined) until the first Capacity upgrade materializes it; reads fall back to Capacity.
+    speedUpgradeQueued: false,
+    speedUpgradeProgress: 0,
     // PERMANENT — { [capacityBits]: count } of currently-FULL Disks of that size (see
     // tickDiskAutoFill/pullDiskForCurrentLevel below) — "never lost," survives Prestige/Scale
     // Up/Overclock exactly like the Byte generator itself (a full disk's contents ride through a
@@ -1636,7 +1642,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // itself, so tickIntroProduction/tickPoolBufferFill below both read this tick's already-decayed
   // multiplier rather than lagging a tick behind.
   const stateAfterFillMultiplierDecay = tickFillMultiplierDecay(elapsedSeconds)(stateAfterMainGameLatch)
-  const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickCapacityUpgradeDrain(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay))))
+  const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickSpeedUpgradeDrain(elapsedSeconds)(tickCapacityUpgradeDrain(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay)))))
   // First pass advances in-flight read-cache flushes (and may complete them) so write-cache
   // collect can claim newly emptied source slots same tick. Second pass uses 0 elapsed so
   // flush countdowns are not applied twice per tickGame — it only refills / starts new flushes
@@ -2261,7 +2267,7 @@ export const getDataStreamSpeedBytesPerSecond = capacityBits => {
 // (× BITS_PER_BYTE). Replaces the old independently-upgraded tickSpeedSeconds/productionMultiplier
 // pair: capacity itself is the only purchased progression variable now.
 export const getIntroProductionRate = intro =>
-  getDataStreamSpeedBytesPerSecond(intro.capacity ?? 0) * BITS_PER_BYTE
+  getDataStreamSpeedBytesPerSecond(intro.speedCapacity ?? intro.capacity ?? 0) * BITS_PER_BYTE
 
 // --- Fill-based Speed/Bandwidth multiplier (see FILL_MULTIPLIER_* in layers.js) --- Displayed
 // rates (getIntroProductionRate above, getStoragePoolBandwidth below) never change; this
@@ -2883,8 +2889,12 @@ export const normalizePoolMemoryCapacity = state => {
   // that could never fire (no byte yet, or Capacity already at its cap) is cleared.
   const staleQueue = Boolean(state.intro.capacityUpgradeQueued) &&
     (!state.intro.byteCreated || isMemoryCapacityAtCap(state))
-  let changed = staleQueue
-  const nextIntro = staleQueue ? { ...state.intro, capacityUpgradeQueued: false, capacityUpgradeProgress: 0 } : { ...state.intro }
+  const staleSpeedQueue = Boolean(state.intro.speedUpgradeQueued) &&
+    (!state.intro.byteCreated || state.intro.capacityUpgradeQueued)
+  let changed = staleQueue || staleSpeedQueue
+  const nextIntro = { ...state.intro }
+  if (staleQueue) Object.assign(nextIntro, { capacityUpgradeQueued: false, capacityUpgradeProgress: 0 })
+  if (staleSpeedQueue) Object.assign(nextIntro, { speedUpgradeQueued: false, speedUpgradeProgress: 0 })
   const capacity = Math.max(0, nextIntro.capacity ?? INTRO_STARTING_CAPACITY)
   if (capacity !== nextIntro.capacity) {
     changed = true
@@ -3244,6 +3254,7 @@ const doubleIntroCapacity = state => {
     ...afterWipe,
     intro: {
       ...afterWipe.intro,
+      speedCapacity: afterWipe.intro.speedCapacity ?? afterWipe.intro.capacity,
       capacity: afterWipe.intro.capacity * INTRO_CAPACITY_DOUBLING_STEP,
       capacityUpgradeQueued: false,
       capacityUpgradeProgress: 0,
@@ -3255,9 +3266,42 @@ const doubleIntroCapacity = state => {
 // cap, and no upgrade is already running.
 export const isMemoryCapacityUpgradeArmable = state => {
   const intro = state.intro ?? {}
-  if (intro.capacityUpgradeQueued) return false
+  if (intro.capacityUpgradeQueued || intro.speedUpgradeQueued) return false
   if (!intro.byteCreated) return false
   return !isMemoryCapacityAtCap(state)
+}
+
+// Speed can only be raised while it trails Capacity (its basis never exceeds Capacity).
+export const isSpeedUpgradeArmable = state => {
+  const intro = state.intro ?? {}
+  if (intro.capacityUpgradeQueued || intro.speedUpgradeQueued) return false
+  if (!intro.byteCreated) return false
+  return (intro.speedCapacity ?? intro.capacity) < intro.capacity
+}
+
+export const queueIntroSpeedUpgrade = state => {
+  if (!isSpeedUpgradeArmable(state)) return state
+  return { ...state, intro: { ...state.intro, speedUpgradeQueued: true, speedUpgradeProgress: 0 } }
+}
+
+// Instant full-Buffer variant, used only by Foundry-reset convenience replay.
+export const upgradePoolSpeed = state => {
+  const cost = state.intro.speedCapacity ?? state.intro.capacity
+  if (!isSpeedUpgradeArmable(state) || state.intro.bits < cost) return state
+  return { ...state, intro: { ...state.intro, bits: state.intro.bits - cost, speedCapacity: cost * INTRO_CAPACITY_DOUBLING_STEP } }
+}
+
+export const tickSpeedUpgradeDrain = elapsedSeconds => state => {
+  if (!state.intro?.speedUpgradeQueued) return state
+  const stored = state.intro.speedUpgradeProgress
+  const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
+  const cost = state.intro.speedCapacity ?? state.intro.capacity
+  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds, cost - progress)
+  const intro = { ...state.intro, bits: state.intro.bits - pull, speedUpgradeProgress: progress + pull }
+  if (intro.speedUpgradeProgress >= cost) {
+    return { ...state, intro: { ...intro, speedCapacity: cost * INTRO_CAPACITY_DOUBLING_STEP, speedUpgradeQueued: false, speedUpgradeProgress: 0 } }
+  }
+  return { ...state, intro }
 }
 
 // Upgrade Data Stream click: starts the upgrade. From then on tickCapacityUpgradeDrain pulls from the
@@ -6448,6 +6492,7 @@ export const captureFoundryUpgradeCaps = intro => {
     disksBuiltTotal: diskCaps,
     diskProvisionPasses: diskProvisionPassCaps,
     capacity: Math.max(INTRO_STARTING_CAPACITY, clampNonNegative(intro?.capacity ?? INTRO_STARTING_CAPACITY)),
+    speedCapacity: Math.max(INTRO_STARTING_CAPACITY, clampNonNegative(intro?.speedCapacity ?? intro?.capacity ?? INTRO_STARTING_CAPACITY)),
   }
 }
 
@@ -6487,6 +6532,7 @@ export const mergeFoundryUpgradeCaps = (a, b) => {
     disksBuiltTotal: diskCaps,
     diskProvisionPasses: diskProvisionPassCaps,
     capacity: Math.max(left.capacity ?? INTRO_STARTING_CAPACITY, right.capacity ?? INTRO_STARTING_CAPACITY),
+    speedCapacity: Math.max(left.speedCapacity ?? INTRO_STARTING_CAPACITY, right.speedCapacity ?? INTRO_STARTING_CAPACITY),
   }
 }
 
@@ -6567,6 +6613,14 @@ export const tickFoundryResetConvenience = state => {
     // Full-Buffer upgrade only — never start the progress-bar upgrade (it would divert the whole
     // Data Stream output for the replay, starving pool buffers and tier01 auto-invest).
     const upgraded = upgradePoolCapacity(next)
+    if (upgraded !== next) {
+      next = upgraded
+      changed = true
+    }
+  }
+
+  if ((caps.speedCapacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0)) {
+    const upgraded = upgradePoolSpeed(next)
     if (upgraded !== next) {
       next = upgraded
       changed = true
@@ -6673,6 +6727,9 @@ export const prestigeGame = state => {
       // diskBuildQueued, and keeps filling its bar.
       capacityUpgradeQueued: state.intro?.capacityUpgradeQueued ?? initial.intro.capacityUpgradeQueued,
       capacityUpgradeProgress: state.intro?.capacityUpgradeProgress ?? initial.intro.capacityUpgradeProgress,
+      speedCapacity: state.intro?.speedCapacity,
+      speedUpgradeQueued: state.intro?.speedUpgradeQueued ?? initial.intro.speedUpgradeQueued,
+      speedUpgradeProgress: state.intro?.speedUpgradeProgress ?? initial.intro.speedUpgradeProgress,
       poolBuffers: state.intro?.poolBuffers ?? initial.intro.poolBuffers,
       // In-flight cache transfers are just as permanent as the Disks/build state they operate on
       // above (diskBuild already was) — a real Prestige must never affect the Byte Foundry beyond

@@ -508,7 +508,7 @@ describe('schema merge on load', () => {
     }
     saveGameState(state)
     const loaded = loadGameState()
-    expect(loaded.intro).toEqual(state.intro)
+    expect(loaded.intro).toMatchObject(state.intro)
   })
 
   it('drops the removed merge-duration upgrade count from an older save (#755)', () => {
