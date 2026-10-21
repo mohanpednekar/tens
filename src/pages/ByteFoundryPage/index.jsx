@@ -892,7 +892,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     onClick={actions.queueIntroSpeedUpgrade}
                     title={speedUpgradeArmable
                       ? 'Pull the Data Stream\'s base Speed into the upgrade; its bar filling raises Speed'
-                      : 'Speed cannot exceed Capacity — upgrade Capacity first'}
+                      : 'Base Speed cannot exceed the square root of Capacity — upgrade Capacity first'}
                     aria-description={speedUpgradeArmable ? `Costs ${formatBitsInNearestUnit(speedUpgradeCost)}; speed ${nextRateText} after upgrading` : undefined}
                     type="button"
                     variant={speedUpgradeArmable ? 'prestige' : 'neutral'}

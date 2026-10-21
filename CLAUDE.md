@@ -772,7 +772,7 @@ generator. Combine creates the generator without snapping Capacity; save load vi
 `normalizePoolMemoryCapacity` preserves current Capacity and only clamps when necessary. Era ascension
 keeps the generator (`byteCreated`) and the `mainGameUnlocked` latch but resets Capacity to
 `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`) — Capacity is rebuilt each
-Era, Factory access never goes away again once earned. Production and storage grow via two **Upgrade Capacity** / **Upgrade Speed** actions (one runs at a time; both buttons are replaced by one status bar while it runs; `intro.speedCapacity` is the Speed basis, absent = follows Capacity, and never exceeds Capacity — `queueIntroSpeedUpgrade`/`tickSpeedUpgradeDrain`): a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
+Era, Factory access never goes away again once earned. Production and storage grow via two **Upgrade Capacity** / **Upgrade Speed** actions (one runs at a time; both buttons are replaced by one status bar while it runs; `intro.speedCapacity` is the Speed basis, absent = follows Capacity, and an upgrade is allowed only while base Speed stays ≤ sqrt(Capacity in Bytes) — `queueIntroSpeedUpgrade`/`tickSpeedUpgradeDrain`): a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
 and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at a constant 100% of the base Speed
 (like a pool pulling at its Bandwidth, regardless of the fill multiplier) into `intro.capacityUpgradeProgress`, ahead of
 every other consumer — nothing is paused or raced; when the bar

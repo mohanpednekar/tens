@@ -3271,12 +3271,15 @@ export const isMemoryCapacityUpgradeArmable = state => {
   return !isMemoryCapacityAtCap(state)
 }
 
-// Speed can only be raised while it trails Capacity (its basis never exceeds Capacity).
+// Base Speed (B/s) can never exceed sqrt(Capacity in Bytes): an upgrade is armable only if the Speed
+// it would grant stays within that bound.
 export const isSpeedUpgradeArmable = state => {
   const intro = state.intro ?? {}
   if (intro.capacityUpgradeQueued || intro.speedUpgradeQueued) return false
   if (!intro.byteCreated) return false
-  return (intro.speedCapacity ?? intro.capacity) < intro.capacity
+  const basis = intro.speedCapacity ?? intro.capacity
+  const nextSpeed = getDataStreamSpeedBytesPerSecond(basis * INTRO_CAPACITY_DOUBLING_STEP)
+  return nextSpeed <= Math.sqrt(intro.capacity / BITS_PER_BYTE) * (1 + 1e-9)
 }
 
 export const queueIntroSpeedUpgrade = state => {
