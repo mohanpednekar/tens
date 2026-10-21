@@ -13,6 +13,14 @@ merge on green checks alone (see Auto-merge below). All five authenticate git/Gi
 with a `GH_AUTOMATION_PAT` repo secret instead of the default `GITHUB_TOKEN`, because
 commits/pushes/merges authored by the default token can't trigger other workflows (see
 `docs/DESIGN_HISTORY.md` for why this matters concretely).
+`autonomous-maintenance.yml`'s checkout passes that PAT as `token:`. `actions/checkout@v7`
+persists the checkout credential for later `git push`, and `claude-code-action` does not
+reliably replace it, so the step's `github_token:` alone is not what `git push` uses. The
+default `GITHUB_TOKEN` is a GitHub App token without `workflows` permission; GitHub rejects
+those pushes with `refusing to allow a GitHub App to create or update workflow … without
+workflows permission`. The PAT's `Workflows: write` (issue #62) is what allows a task that
+edits `.github/workflows/**` to push. Read-only guard steps and the deploy-failure comment
+still use `GITHUB_TOKEN`; they do not push workflow files.
 `autonomous-maintenance.yml`/`autonomous-pr-followup.yml`/`dependabot-pr-followup.yml`/
 `automation-self-heal.yml` additionally need `id-token: write` (OIDC token for
 `claude_code_oauth_token` auth) and `autonomous-maintenance.yml` needs `issues: write` (so its
@@ -342,7 +350,13 @@ allowed in Phase A only when the task issue's "Explicit authorizations" section 
 specific change. PRs are minimised for *similar* work but not capped to one at a time — Claude skips
 opening a PR that duplicates an already-open one's purpose, while still opening a separate PR for a
 genuinely independent task. A hard ceiling of 5 concurrently-open autonomous PRs is a safety net
-(bypassed only by Phase 0's main-is-broken case). `ci.yml`, `deploy.yml`, `release.yml`,
+(bypassed only by Phase 0's main-is-broken case). When that ceiling skips the run, or the
+task finishes without opening a pull request (nothing runnable, an issue-only exit such as
+gap analysis, or a transient failure the classifier downgrades), the job stays green and a
+final step emits a `::warning::` plus a job-summary section so the empty run is visible in
+the Actions log without failing. The maintenance prompt also forbids shell loops over
+variables: one `gh` invocation per command (a `for n in …; do gh issue view $n` loop is
+denied before it runs — #799). `ci.yml`, `deploy.yml`, `release.yml`,
 `autonomous-pr-followup.yml`, and `pr-auto-merge.yml` are all explicitly denied to Claude's Edit/Write
 tools, even during the self-improvement task — only `autonomous-maintenance.yml` may edit itself.
 
