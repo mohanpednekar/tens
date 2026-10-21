@@ -16223,7 +16223,7 @@
       "norm_label": "4. epics and sub-issues"
     },
     {
-      "label": "5. Specs go stale \u2014 write defensively, and re-verify before filing a rewrite",
+      "label": "5. Specs go stale — write defensively, and re-verify before filing a rewrite",
       "file_type": "document",
       "source_file": ".claude/skills/file-task-issue/SKILL.md",
       "source_location": "L124",
@@ -16231,7 +16231,7 @@
       "id": "claude_skills_file_task_issue_skill_5_specs_go_stale_write_defensively_and_re_verify_before_filing_a_rewrite",
       "community": 54,
       "community_name": "file-task-issue/SKILL.md",
-      "norm_label": "5. specs go stale \u2014 write defensively, and re-verify before filing a rewrite"
+      "norm_label": "5. specs go stale — write defensively, and re-verify before filing a rewrite"
     },
     {
       "label": "6. When an issue needs no PR",
@@ -16784,7 +16784,7 @@
       "norm_label": "graphify reference: query, path, explain"
     },
     {
-      "label": "Step 0 \u2014 Constrained query expansion (REQUIRED before traversal)",
+      "label": "Step 0 — Constrained query expansion (REQUIRED before traversal)",
       "file_type": "document",
       "source_file": ".claude/skills/graphify/references/query.md",
       "source_location": "L23",
@@ -16792,10 +16792,10 @@
       "id": "claude_skills_graphify_references_query_step_0_constrained_query_expansion_required_before_traversal",
       "community": 64,
       "community_name": "graphify reference: query, path, explain",
-      "norm_label": "step 0 \u2014 constrained query expansion (required before traversal)"
+      "norm_label": "step 0 — constrained query expansion (required before traversal)"
     },
     {
-      "label": "Step 1 \u2014 Traversal",
+      "label": "Step 1 — Traversal",
       "file_type": "document",
       "source_file": ".claude/skills/graphify/references/query.md",
       "source_location": "L61",
@@ -16803,7 +16803,7 @@
       "id": "claude_skills_graphify_references_query_step_1_traversal",
       "community": 64,
       "community_name": "graphify reference: query, path, explain",
-      "norm_label": "step 1 \u2014 traversal"
+      "norm_label": "step 1 — traversal"
     },
     {
       "label": "For /graphify path",
@@ -16927,7 +16927,7 @@
       "norm_label": "scope, in priority order"
     },
     {
-      "label": "Hard invariants \u2014 never remove or weaken these",
+      "label": "Hard invariants — never remove or weaken these",
       "file_type": "document",
       "source_file": ".claude/skills/optimize-ai-files/SKILL.md",
       "source_location": "L22",
@@ -16935,7 +16935,7 @@
       "id": "claude_skills_optimize_ai_files_skill_hard_invariants_never_remove_or_weaken_these",
       "community": 61,
       "community_name": "optimize-ai-files/SKILL.md",
-      "norm_label": "hard invariants \u2014 never remove or weaken these"
+      "norm_label": "hard invariants — never remove or weaken these"
     },
     {
       "label": "Safe reduction techniques",
@@ -17026,7 +17026,7 @@
       "norm_label": "usage"
     },
     {
-      "label": "Strategy snapshots (orphan branch) \u2014 required after every run",
+      "label": "Strategy snapshots (orphan branch) — required after every run",
       "file_type": "document",
       "source_file": ".claude/skills/simulate-run-times/SKILL.md",
       "source_location": "L123",
@@ -17034,7 +17034,7 @@
       "id": "claude_skills_simulate_run_times_skill_strategy_snapshots_orphan_branch_required_after_every_run",
       "community": 37,
       "community_name": "simulate-run-times/SKILL.md",
-      "norm_label": "strategy snapshots (orphan branch) \u2014 required after every run"
+      "norm_label": "strategy snapshots (orphan branch) — required after every run"
     },
     {
       "label": "When editing the simulation",
@@ -18269,7 +18269,7 @@
       "norm_label": "pwa support"
     },
     {
-      "label": "Native apps (Capacitor \u2014 #70)",
+      "label": "Native apps (Capacitor — #70)",
       "file_type": "document",
       "source_file": "CLAUDE.md",
       "source_location": "L1032",
@@ -18277,7 +18277,7 @@
       "id": "claude_native_apps_capacitor_70",
       "community": 121,
       "community_name": "PWA support",
-      "norm_label": "native apps (capacitor \u2014 #70)"
+      "norm_label": "native apps (capacitor — #70)"
     },
     {
       "label": "Funding",
@@ -18786,7 +18786,7 @@
       "norm_label": "design history & rationale"
     },
     {
-      "label": "Stale `graphify-out/*` after `main` merges: `-merge` gitattributes + a CI-verified freshness test (#761) \u2014 2026-09-29",
+      "label": "Stale `graphify-out/*` after `main` merges: `-merge` gitattributes + a CI-verified freshness test (#761) — 2026-09-29",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L3",
@@ -18794,10 +18794,10 @@
       "id": "docs_design_history_stale_graphify_out_after_main_merges_merge_gitattributes_a_ci_verified_freshness_test_761_2026_09_29",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "stale `graphify-out/*` after `main` merges: `-merge` gitattributes + a ci-verified freshness test (#761) \u2014 2026-09-29"
+      "norm_label": "stale `graphify-out/*` after `main` merges: `-merge` gitattributes + a ci-verified freshness test (#761) — 2026-09-29"
     },
     {
-      "label": "Adversarial-review follow-up to the extended-cap/one-shot-conversion PR: a stray merge corruption, a real reserve-wipe bug, and a stuck-conversion bug \u2014 2026-09-18",
+      "label": "Adversarial-review follow-up to the extended-cap/one-shot-conversion PR: a stray merge corruption, a real reserve-wipe bug, and a stuck-conversion bug — 2026-09-18",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L31",
@@ -18805,10 +18805,10 @@
       "id": "docs_design_history_adversarial_review_follow_up_to_the_extended_cap_one_shot_conversion_pr_a_stray_merge_corruption_a_real_reserve_wipe_bug_and_a_stuck_conversion_bug_2026_09_18",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "adversarial-review follow-up to the extended-cap/one-shot-conversion pr: a stray merge corruption, a real reserve-wipe bug, and a stuck-conversion bug \u2014 2026-09-18"
+      "norm_label": "adversarial-review follow-up to the extended-cap/one-shot-conversion pr: a stray merge corruption, a real reserve-wipe bug, and a stuck-conversion bug — 2026-09-18"
     },
     {
-      "label": "Auto-merge Booster progress display, a gradually-filling 18-slot extended cap, and one-shot Data Lake conversion replacing the persistent Auto/Manual toggle \u2014 2026-09-17",
+      "label": "Auto-merge Booster progress display, a gradually-filling 18-slot extended cap, and one-shot Data Lake conversion replacing the persistent Auto/Manual toggle — 2026-09-17",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L124",
@@ -18816,10 +18816,10 @@
       "id": "docs_design_history_auto_merge_booster_progress_display_a_gradually_filling_18_slot_extended_cap_and_one_shot_data_lake_conversion_replacing_the_persistent_auto_manual_toggle_2026_09_17",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "auto-merge booster progress display, a gradually-filling 18-slot extended cap, and one-shot data lake conversion replacing the persistent auto/manual toggle \u2014 2026-09-17"
+      "norm_label": "auto-merge booster progress display, a gradually-filling 18-slot extended cap, and one-shot data lake conversion replacing the persistent auto/manual toggle — 2026-09-17"
     },
     {
-      "label": "Boosters UI revamp: buyBooster now pauses at COMPUTE_ENTITY_CAP; tier row buttons no longer clump left \u2014 2026-09-17",
+      "label": "Boosters UI revamp: buyBooster now pauses at COMPUTE_ENTITY_CAP; tier row buttons no longer clump left — 2026-09-17",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L200",
@@ -18827,10 +18827,10 @@
       "id": "docs_design_history_boosters_ui_revamp_buybooster_now_pauses_at_compute_entity_cap_tier_row_buttons_no_longer_clump_left_2026_09_17",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "boosters ui revamp: buybooster now pauses at compute_entity_cap; tier row buttons no longer clump left \u2014 2026-09-17"
+      "norm_label": "boosters ui revamp: buybooster now pauses at compute_entity_cap; tier row buttons no longer clump left — 2026-09-17"
     },
     {
-      "label": "Tier tickspeed upgrade reverted from +1% to +10% per level \u2014 2026-09-14",
+      "label": "Tier tickspeed upgrade reverted from +1% to +10% per level — 2026-09-14",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L298",
@@ -18838,10 +18838,10 @@
       "id": "docs_design_history_tier_tickspeed_upgrade_reverted_from_1_to_10_per_level_2026_09_14",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "tier tickspeed upgrade reverted from +1% to +10% per level \u2014 2026-09-14"
+      "norm_label": "tier tickspeed upgrade reverted from +1% to +10% per level — 2026-09-14"
     },
     {
-      "label": "First ten Scale Ups standardized at three completed levels \u2014 2026-09-13",
+      "label": "First ten Scale Ups standardized at three completed levels — 2026-09-13",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L320",
@@ -18849,10 +18849,10 @@
       "id": "docs_design_history_first_ten_scale_ups_standardized_at_three_completed_levels_2026_09_13",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "first ten scale ups standardized at three completed levels \u2014 2026-09-13"
+      "norm_label": "first ten scale ups standardized at three completed levels — 2026-09-13"
     },
     {
-      "label": "Scale Up tier-scoped boosts and three-level reset cadence \u2014 2026-09-10",
+      "label": "Scale Up tier-scoped boosts and three-level reset cadence — 2026-09-10",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L328",
@@ -18860,10 +18860,10 @@
       "id": "docs_design_history_scale_up_tier_scoped_boosts_and_three_level_reset_cadence_2026_09_10",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "scale up tier-scoped boosts and three-level reset cadence \u2014 2026-09-10"
+      "norm_label": "scale up tier-scoped boosts and three-level reset cadence — 2026-09-10"
     },
     {
-      "label": "`prestigeGame` wiped era/eons/hyperscalerCount/eonsUpgrades/Flops-autobuyer state on every ordinary Prestige (#626) \u2014 2026-09-09",
+      "label": "`prestigeGame` wiped era/eons/hyperscalerCount/eonsUpgrades/Flops-autobuyer state on every ordinary Prestige (#626) — 2026-09-09",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L338",
@@ -18871,10 +18871,10 @@
       "id": "docs_design_history_prestigegame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_prestige_626_2026_09_09",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "`prestigegame` wiped era/eons/hyperscalercount/eonsupgrades/flops-autobuyer state on every ordinary prestige (#626) \u2014 2026-09-09"
+      "norm_label": "`prestigegame` wiped era/eons/hyperscalercount/eonsupgrades/flops-autobuyer state on every ordinary prestige (#626) — 2026-09-09"
     },
     {
-      "label": "Speed Up renamed to Scale Up and redesigned from a last-tier-only gate to a per-tier unlock ladder \u2014 2026-09-09",
+      "label": "Speed Up renamed to Scale Up and redesigned from a last-tier-only gate to a per-tier unlock ladder — 2026-09-09",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L357",
@@ -18882,10 +18882,10 @@
       "id": "docs_design_history_speed_up_renamed_to_scale_up_and_redesigned_from_a_last_tier_only_gate_to_a_per_tier_unlock_ladder_2026_09_09",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "speed up renamed to scale up and redesigned from a last-tier-only gate to a per-tier unlock ladder \u2014 2026-09-09"
+      "norm_label": "speed up renamed to scale up and redesigned from a last-tier-only gate to a per-tier unlock ladder — 2026-09-09"
     },
     {
-      "label": "Devin Review on PR #614: a false-update bug, a stale comment, and a deliberately-unfixed legacy-save ambiguity \u2014 2026-09-09",
+      "label": "Devin Review on PR #614: a false-update bug, a stale comment, and a deliberately-unfixed legacy-save ambiguity — 2026-09-09",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L462",
@@ -18893,10 +18893,10 @@
       "id": "docs_design_history_devin_review_on_pr_614_a_false_update_bug_a_stale_comment_and_a_deliberately_unfixed_legacy_save_ambiguity_2026_09_09",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "devin review on pr #614: a false-update bug, a stale comment, and a deliberately-unfixed legacy-save ambiguity \u2014 2026-09-09"
+      "norm_label": "devin review on pr #614: a false-update bug, a stale comment, and a deliberately-unfixed legacy-save ambiguity — 2026-09-09"
     },
     {
-      "label": "Critical: reverted a broken `buyBooster` bulk-purchase optimization that had merged onto `main` \u2014 2026-09-09",
+      "label": "Critical: reverted a broken `buyBooster` bulk-purchase optimization that had merged onto `main` — 2026-09-09",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L506",
@@ -18904,10 +18904,10 @@
       "id": "docs_design_history_critical_reverted_a_broken_buybooster_bulk_purchase_optimization_that_had_merged_onto_main_2026_09_09",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "critical: reverted a broken `buybooster` bulk-purchase optimization that had merged onto `main` \u2014 2026-09-09"
+      "norm_label": "critical: reverted a broken `buybooster` bulk-purchase optimization that had merged onto `main` — 2026-09-09"
     },
     {
-      "label": "Devin Review on PR #608, round 6: a provenance-tracking fix superseding an incomplete bot revert \u2014 2026-09-09",
+      "label": "Devin Review on PR #608, round 6: a provenance-tracking fix superseding an incomplete bot revert — 2026-09-09",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L531",
@@ -18915,10 +18915,10 @@
       "id": "docs_design_history_devin_review_on_pr_608_round_6_a_provenance_tracking_fix_superseding_an_incomplete_bot_revert_2026_09_09",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "devin review on pr #608, round 6: a provenance-tracking fix superseding an incomplete bot revert \u2014 2026-09-09"
+      "norm_label": "devin review on pr #608, round 6: a provenance-tracking fix superseding an incomplete bot revert — 2026-09-09"
     },
     {
-      "label": "Devin Review on PR #608, round 4: closed the bug class at its one true chokepoint instead of patching another arming site \u2014 2026-09-09",
+      "label": "Devin Review on PR #608, round 4: closed the bug class at its one true chokepoint instead of patching another arming site — 2026-09-09",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L569",
@@ -18926,10 +18926,10 @@
       "id": "docs_design_history_devin_review_on_pr_608_round_4_closed_the_bug_class_at_its_one_true_chokepoint_instead_of_patching_another_arming_site_2026_09_09",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "devin review on pr #608, round 4: closed the bug class at its one true chokepoint instead of patching another arming site \u2014 2026-09-09"
+      "norm_label": "devin review on pr #608, round 4: closed the bug class at its one true chokepoint instead of patching another arming site — 2026-09-09"
     },
     {
-      "label": "Devin Review on PR #608, round 3: the cap-clearing fix above didn't stop a single-call overshoot or the same gap via save load \u2014 2026-09-09",
+      "label": "Devin Review on PR #608, round 3: the cap-clearing fix above didn't stop a single-call overshoot or the same gap via save load — 2026-09-09",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L606",
@@ -18937,10 +18937,10 @@
       "id": "docs_design_history_devin_review_on_pr_608_round_3_the_cap_clearing_fix_above_didn_t_stop_a_single_call_overshoot_or_the_same_gap_via_save_load_2026_09_09",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "devin review on pr #608, round 3: the cap-clearing fix above didn't stop a single-call overshoot or the same gap via save load \u2014 2026-09-09"
+      "norm_label": "devin review on pr #608, round 3: the cap-clearing fix above didn't stop a single-call overshoot or the same gap via save load — 2026-09-09"
     },
     {
-      "label": "Devin Review on PR #608, round 2: Reset Byte Foundry's replay cap could be bypassed by the new auto-continue \u2014 2026-09-08",
+      "label": "Devin Review on PR #608, round 2: Reset Byte Foundry's replay cap could be bypassed by the new auto-continue — 2026-09-08",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L663",
@@ -18948,10 +18948,10 @@
       "id": "docs_design_history_devin_review_on_pr_608_round_2_reset_byte_foundry_s_replay_cap_could_be_bypassed_by_the_new_auto_continue_2026_09_08",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "devin review on pr #608, round 2: reset byte foundry's replay cap could be bypassed by the new auto-continue \u2014 2026-09-08"
+      "norm_label": "devin review on pr #608, round 2: reset byte foundry's replay cap could be bypassed by the new auto-continue — 2026-09-08"
     },
     {
-      "label": "Devin Review on PR #608: an unreachable self-heal branch, a legacy-save wake-up gap, two stale docs \u2014 2026-09-08",
+      "label": "Devin Review on PR #608: an unreachable self-heal branch, a legacy-save wake-up gap, two stale docs — 2026-09-08",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L693",
@@ -18959,10 +18959,10 @@
       "id": "docs_design_history_devin_review_on_pr_608_an_unreachable_self_heal_branch_a_legacy_save_wake_up_gap_two_stale_docs_2026_09_08",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "devin review on pr #608: an unreachable self-heal branch, a legacy-save wake-up gap, two stale docs \u2014 2026-09-08"
+      "norm_label": "devin review on pr #608: an unreachable self-heal branch, a legacy-save wake-up gap, two stale docs — 2026-09-08"
     },
     {
-      "label": "Two more gaps in Reset Byte Foundry's convenience-replay caps \u2014 2026-09-08",
+      "label": "Two more gaps in Reset Byte Foundry's convenience-replay caps — 2026-09-08",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L739",
@@ -18970,10 +18970,10 @@
       "id": "docs_design_history_two_more_gaps_in_reset_byte_foundry_s_convenience_replay_caps_2026_09_08",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "two more gaps in reset byte foundry's convenience-replay caps \u2014 2026-09-08"
+      "norm_label": "two more gaps in reset byte foundry's convenience-replay caps — 2026-09-08"
     },
     {
-      "label": "Reset Byte Foundry's convenience replay didn't cover partial Provision Disk passes \u2014 2026-09-08",
+      "label": "Reset Byte Foundry's convenience replay didn't cover partial Provision Disk passes — 2026-09-08",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L773",
@@ -18981,10 +18981,10 @@
       "id": "docs_design_history_reset_byte_foundry_s_convenience_replay_didn_t_cover_partial_provision_disk_passes_2026_09_08",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "reset byte foundry's convenience replay didn't cover partial provision disk passes \u2014 2026-09-08"
+      "norm_label": "reset byte foundry's convenience replay didn't cover partial provision disk passes — 2026-09-08"
     },
     {
-      "label": "Pool 10's buffer ceiling landed a ULP below its own largest disk's face value \u2014 2026-09-08",
+      "label": "Pool 10's buffer ceiling landed a ULP below its own largest disk's face value — 2026-09-08",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L794",
@@ -18992,10 +18992,10 @@
       "id": "docs_design_history_pool_10_s_buffer_ceiling_landed_a_ulp_below_its_own_largest_disk_s_face_value_2026_09_08",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "pool 10's buffer ceiling landed a ulp below its own largest disk's face value \u2014 2026-09-08"
+      "norm_label": "pool 10's buffer ceiling landed a ulp below its own largest disk's face value — 2026-09-08"
     },
     {
-      "label": "Provision Disk funding split into passes, pool Capacity ceilings shrunk 10x, queue toggle removed \u2014 2026-09-08",
+      "label": "Provision Disk funding split into passes, pool Capacity ceilings shrunk 10x, queue toggle removed — 2026-09-08",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L826",
@@ -19003,10 +19003,10 @@
       "id": "docs_design_history_provision_disk_funding_split_into_passes_pool_capacity_ceilings_shrunk_10x_queue_toggle_removed_2026_09_08",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "provision disk funding split into passes, pool capacity ceilings shrunk 10x, queue toggle removed \u2014 2026-09-08"
+      "norm_label": "provision disk funding split into passes, pool capacity ceilings shrunk 10x, queue toggle removed — 2026-09-08"
     },
     {
-      "label": "Compute Boost: Reclaim and Forfeit made mutually exclusive \u2014 2026-09-04",
+      "label": "Compute Boost: Reclaim and Forfeit made mutually exclusive — 2026-09-04",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L881",
@@ -19014,10 +19014,10 @@
       "id": "docs_design_history_compute_boost_reclaim_and_forfeit_made_mutually_exclusive_2026_09_04",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "compute boost: reclaim and forfeit made mutually exclusive \u2014 2026-09-04"
+      "norm_label": "compute boost: reclaim and forfeit made mutually exclusive — 2026-09-04"
     },
     {
-      "label": "CLAUDE.md Economy model duplication trim \u2014 2026-09-03",
+      "label": "CLAUDE.md Economy model duplication trim — 2026-09-03",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L965",
@@ -19025,10 +19025,10 @@
       "id": "docs_design_history_claude_md_economy_model_duplication_trim_2026_09_03",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "claude.md economy model duplication trim \u2014 2026-09-03"
+      "norm_label": "claude.md economy model duplication trim — 2026-09-03"
     },
     {
-      "label": "Data Lake unlock/capacity tied to real Storage progress; giant-circle CSS bug; Compute Boost reclaim floor \u2014 2026-09-03",
+      "label": "Data Lake unlock/capacity tied to real Storage progress; giant-circle CSS bug; Compute Boost reclaim floor — 2026-09-03",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1000",
@@ -19036,10 +19036,10 @@
       "id": "docs_design_history_data_lake_unlock_capacity_tied_to_real_storage_progress_giant_circle_css_bug_compute_boost_reclaim_floor_2026_09_03",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "data lake unlock/capacity tied to real storage progress; giant-circle css bug; compute boost reclaim floor \u2014 2026-09-03"
+      "norm_label": "data lake unlock/capacity tied to real storage progress; giant-circle css bug; compute boost reclaim floor — 2026-09-03"
     },
     {
-      "label": "Provision Disk gets a \"queue next build\" toggle \u2014 closing a real automation gap \u2014 2026-09-03",
+      "label": "Provision Disk gets a \"queue next build\" toggle — closing a real automation gap — 2026-09-03",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1177",
@@ -19047,10 +19047,10 @@
       "id": "docs_design_history_provision_disk_gets_a_queue_next_build_toggle_closing_a_real_automation_gap_2026_09_03",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "provision disk gets a \"queue next build\" toggle \u2014 closing a real automation gap \u2014 2026-09-03"
+      "norm_label": "provision disk gets a \"queue next build\" toggle — closing a real automation gap — 2026-09-03"
     },
     {
-      "label": "Byte Foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile \u2014 2026-09-02",
+      "label": "Byte Foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile — 2026-09-02",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1250",
@@ -19058,10 +19058,10 @@
       "id": "docs_design_history_byte_foundry_gate_made_permanent_one_time_ever_fill_multiplier_instant_loss_beyond_200_gauge_relocated_inside_the_tile_2026_09_02",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "byte foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile \u2014 2026-09-02"
+      "norm_label": "byte foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile — 2026-09-02"
     },
     {
-      "label": "Ladder screen renamed back to Byte Factory (reverses #399/#431) \u2014 2026-08-31",
+      "label": "Ladder screen renamed back to Byte Factory (reverses #399/#431) — 2026-08-31",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1327",
@@ -19069,10 +19069,10 @@
       "id": "docs_design_history_ladder_screen_renamed_back_to_byte_factory_reverses_399_431_2026_08_31",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "ladder screen renamed back to byte factory (reverses #399/#431) \u2014 2026-08-31"
+      "norm_label": "ladder screen renamed back to byte factory (reverses #399/#431) — 2026-08-31"
     },
     {
-      "label": "Storage pools derive from one Data Stream; Capacity ladder restored (#456) \u2014 2026-08-27",
+      "label": "Storage pools derive from one Data Stream; Capacity ladder restored (#456) — 2026-08-27",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1345",
@@ -19080,10 +19080,10 @@
       "id": "docs_design_history_storage_pools_derive_from_one_data_stream_capacity_ladder_restored_456_2026_08_27",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "storage pools derive from one data stream; capacity ladder restored (#456) \u2014 2026-08-27"
+      "norm_label": "storage pools derive from one data stream; capacity ladder restored (#456) — 2026-08-27"
     },
     {
-      "label": "Data Stream / Buffer rename; Capacity Sacrifice removed (#506; superseded by #456) \u2014 2026-08-27",
+      "label": "Data Stream / Buffer rename; Capacity Sacrifice removed (#506; superseded by #456) — 2026-08-27",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1359",
@@ -19091,7 +19091,7 @@
       "id": "docs_design_history_data_stream_buffer_rename_capacity_sacrifice_removed_506_superseded_by_456_2026_08_27",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "data stream / buffer rename; capacity sacrifice removed (#506; superseded by #456) \u2014 2026-08-27"
+      "norm_label": "data stream / buffer rename; capacity sacrifice removed (#506; superseded by #456) — 2026-08-27"
     },
     {
       "label": "Sacrifice confirm: in-game dialog; Core warning only when unlocked",
@@ -19116,7 +19116,7 @@
       "norm_label": "automation workflows"
     },
     {
-      "label": "Stale `blocked` labels after Workflows: write landed \u2014 2026-08-20",
+      "label": "Stale `blocked` labels after Workflows: write landed — 2026-08-20",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1404",
@@ -19124,10 +19124,10 @@
       "id": "docs_design_history_stale_blocked_labels_after_workflows_write_landed_2026_08_20",
       "community": 7,
       "community_name": "Automation workflows",
-      "norm_label": "stale `blocked` labels after workflows: write landed \u2014 2026-08-20"
+      "norm_label": "stale `blocked` labels after workflows: write landed — 2026-08-20"
     },
     {
-      "label": "Schedule retune (Cursor IST slots + Claude twice-daily) \u2014 2026-08-20",
+      "label": "Schedule retune (Cursor IST slots + Claude twice-daily) — 2026-08-20",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1417",
@@ -19135,7 +19135,7 @@
       "id": "docs_design_history_schedule_retune_cursor_ist_slots_claude_twice_daily_2026_08_20",
       "community": 7,
       "community_name": "Automation workflows",
-      "norm_label": "schedule retune (cursor ist slots + claude twice-daily) \u2014 2026-08-20"
+      "norm_label": "schedule retune (cursor ist slots + claude twice-daily) — 2026-08-20"
     },
     {
       "label": "Why a PAT instead of the default `GITHUB_TOKEN`",
@@ -19171,7 +19171,7 @@
       "norm_label": "turn-budget history"
     },
     {
-      "label": "Orchestration model \u2014 background",
+      "label": "Orchestration model — background",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1481",
@@ -19179,7 +19179,7 @@
       "id": "docs_design_history_orchestration_model_background",
       "community": 7,
       "community_name": "Automation workflows",
-      "norm_label": "orchestration model \u2014 background"
+      "norm_label": "orchestration model — background"
     },
     {
       "label": "Automation design principles",
@@ -19193,7 +19193,7 @@
       "norm_label": "automation design principles"
     },
     {
-      "label": "Scheduled maintenance (`autonomous-maintenance.yml`) \u2014 job status reconciliation",
+      "label": "Scheduled maintenance (`autonomous-maintenance.yml`) — job status reconciliation",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1528",
@@ -19201,7 +19201,7 @@
       "id": "docs_design_history_scheduled_maintenance_autonomous_maintenance_yml_job_status_reconciliation",
       "community": 7,
       "community_name": "Automation workflows",
-      "norm_label": "scheduled maintenance (`autonomous-maintenance.yml`) \u2014 job status reconciliation"
+      "norm_label": "scheduled maintenance (`autonomous-maintenance.yml`) — job status reconciliation"
     },
     {
       "label": "Outage: the main prompt tripped GitHub's 21,000-character mixed-expression limit",
@@ -19215,7 +19215,7 @@
       "norm_label": "outage: the main prompt tripped github's 21,000-character mixed-expression limit"
     },
     {
-      "label": "PR follow-up (`autonomous-pr-followup.yml`) \u2014 security reasoning",
+      "label": "PR follow-up (`autonomous-pr-followup.yml`) — security reasoning",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1630",
@@ -19223,10 +19223,10 @@
       "id": "docs_design_history_pr_follow_up_autonomous_pr_followup_yml_security_reasoning",
       "community": 7,
       "community_name": "Automation workflows",
-      "norm_label": "pr follow-up (`autonomous-pr-followup.yml`) \u2014 security reasoning"
+      "norm_label": "pr follow-up (`autonomous-pr-followup.yml`) — security reasoning"
     },
     {
-      "label": "Auto-merge (`pr-auto-merge.yml`) \u2014 why the low-risk path is safe even if heuristics mis-fire",
+      "label": "Auto-merge (`pr-auto-merge.yml`) — why the low-risk path is safe even if heuristics mis-fire",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1659",
@@ -19234,7 +19234,7 @@
       "id": "docs_design_history_auto_merge_pr_auto_merge_yml_why_the_low_risk_path_is_safe_even_if_heuristics_mis_fire",
       "community": 7,
       "community_name": "Automation workflows",
-      "norm_label": "auto-merge (`pr-auto-merge.yml`) \u2014 why the low-risk path is safe even if heuristics mis-fire"
+      "norm_label": "auto-merge (`pr-auto-merge.yml`) — why the low-risk path is safe even if heuristics mis-fire"
     },
     {
       "label": "Auto-merge merge method must match the Main ruleset (2026-08-20)",
@@ -19248,7 +19248,7 @@
       "norm_label": "auto-merge merge method must match the main ruleset (2026-08-20)"
     },
     {
-      "label": "Cursor-powered successor engine removed (never enabled) \u2014 2026-09-14",
+      "label": "Cursor-powered successor engine removed (never enabled) — 2026-09-14",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1677",
@@ -19256,7 +19256,7 @@
       "id": "docs_design_history_cursor_powered_successor_engine_removed_never_enabled_2026_09_14",
       "community": 7,
       "community_name": "Automation workflows",
-      "norm_label": "cursor-powered successor engine removed (never enabled) \u2014 2026-09-14"
+      "norm_label": "cursor-powered successor engine removed (never enabled) — 2026-09-14"
     },
     {
       "label": "Architecture / MainPage UI decisions",
@@ -19281,7 +19281,7 @@
       "norm_label": "economy model"
     },
     {
-      "label": "Reset Byte Foundry convenience-auto now includes Capacity/Sacrifice \u2014 2026-08-25",
+      "label": "Reset Byte Foundry convenience-auto now includes Capacity/Sacrifice — 2026-08-25",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2045",
@@ -19289,7 +19289,7 @@
       "id": "docs_design_history_reset_byte_foundry_convenience_auto_now_includes_capacity_sacrifice_2026_08_25",
       "community": 8,
       "community_name": "Economy model",
-      "norm_label": "reset byte foundry convenience-auto now includes capacity/sacrifice \u2014 2026-08-25"
+      "norm_label": "reset byte foundry convenience-auto now includes capacity/sacrifice — 2026-08-25"
     },
     {
       "label": "Why Bytes was pulled out of the tier ladder in favor of the Byte Foundry intro",
@@ -19314,7 +19314,7 @@
       "norm_label": "the byte foundry becomes a per-prestige-cycle mechanic, not a one-time gate"
     },
     {
-      "label": "The Byte generator becomes permanent \u2014 only \"Memory\" and the gate reset each Prestige",
+      "label": "The Byte generator becomes permanent — only \"Memory\" and the gate reset each Prestige",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2109",
@@ -19322,7 +19322,7 @@
       "id": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_prestige",
       "community": 8,
       "community_name": "Economy model",
-      "norm_label": "the byte generator becomes permanent \u2014 only \"memory\" and the gate reset each prestige"
+      "norm_label": "the byte generator becomes permanent — only \"memory\" and the gate reset each prestige"
     },
     {
       "label": "Why the Prestige threshold became `GOOGOL * BITS_PER_BYTE`, not a round new number",
@@ -19358,7 +19358,7 @@
       "norm_label": "the transfer budget becomes dynamic (tied to the kilobyte tier's own block size); a real buttoncontent bug fixed along the way"
     },
     {
-      "label": "The per-cycle transfer budget cap was removed \u2014 the transfer row mirrors tier01's own purchase-block progress instead",
+      "label": "The per-cycle transfer budget cap was removed — the transfer row mirrors tier01's own purchase-block progress instead",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2272",
@@ -19366,7 +19366,7 @@
       "id": "docs_design_history_the_per_cycle_transfer_budget_cap_was_removed_the_transfer_row_mirrors_tier01_s_own_purchase_block_progress_instead",
       "community": 8,
       "community_name": "Economy model",
-      "norm_label": "the per-cycle transfer budget cap was removed \u2014 the transfer row mirrors tier01's own purchase-block progress instead"
+      "norm_label": "the per-cycle transfer budget cap was removed — the transfer row mirrors tier01's own purchase-block progress instead"
     },
     {
       "label": "Storage auto-redeem toggle button removed for now, default flipped to always-on",
@@ -19380,7 +19380,7 @@
       "norm_label": "storage auto-redeem toggle button removed for now, default flipped to always-on"
     },
     {
-      "label": "The transfer-block row looked permanently stuck \u2014 `tickIntroAutoInvest` waited for a whole batch instead of converting live",
+      "label": "The transfer-block row looked permanently stuck — `tickIntroAutoInvest` waited for a whole batch instead of converting live",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2331",
@@ -19388,7 +19388,7 @@
       "id": "docs_design_history_the_transfer_block_row_looked_permanently_stuck_tickintroautoinvest_waited_for_a_whole_batch_instead_of_converting_live",
       "community": 8,
       "community_name": "Economy model",
-      "norm_label": "the transfer-block row looked permanently stuck \u2014 `tickintroautoinvest` waited for a whole batch instead of converting live"
+      "norm_label": "the transfer-block row looked permanently stuck — `tickintroautoinvest` waited for a whole batch instead of converting live"
     },
     {
       "label": "Transfer-block/Storage-bank cost stops being pinned to tier01's fresh-level-1 price",
@@ -19644,7 +19644,7 @@
       "norm_label": "purchase level resized from 10 to 8, and the cost-epoch sequence changed from fibonacci to triangular"
     },
     {
-      "label": "Purchase block size became a runtime-configurable, growing value \u2014 `getTierLevel` replaced by direct state tracking",
+      "label": "Purchase block size became a runtime-configurable, growing value — `getTierLevel` replaced by direct state tracking",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2837",
@@ -19652,7 +19652,7 @@
       "id": "docs_design_history_purchase_block_size_became_a_runtime_configurable_growing_value_gettierlevel_replaced_by_direct_state_tracking",
       "community": 8,
       "community_name": "Economy model",
-      "norm_label": "purchase block size became a runtime-configurable, growing value \u2014 `gettierlevel` replaced by direct state tracking"
+      "norm_label": "purchase block size became a runtime-configurable, growing value — `gettierlevel` replaced by direct state tracking"
     },
     {
       "label": "`getTierCost` split into per-unit price vs. level-total price",
@@ -19710,7 +19710,7 @@
       "norm_label": "overclock, again: the standalone multiplier comes back, deliberately, plus a full requirement rework"
     },
     {
-      "label": "Overclock, once more: back to folding into the Tickspeed multiplier's own step \u2014 now multiplicative and covering milestones too",
+      "label": "Overclock, once more: back to folding into the Tickspeed multiplier's own step — now multiplicative and covering milestones too",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L3115",
@@ -19718,7 +19718,7 @@
       "id": "docs_design_history_overclock_once_more_back_to_folding_into_the_tickspeed_multiplier_s_own_step_now_multiplicative_and_covering_milestones_too",
       "community": 8,
       "community_name": "Economy model",
-      "norm_label": "overclock, once more: back to folding into the tickspeed multiplier's own step \u2014 now multiplicative and covering milestones too"
+      "norm_label": "overclock, once more: back to folding into the tickspeed multiplier's own step — now multiplicative and covering milestones too"
     },
     {
       "label": "The 1000-Byte Invest tier drops from two claims to one",
@@ -19787,7 +19787,7 @@
       "norm_label": "compute boost: the first mechanic to spend compute cores, and a sacrifice confirmation"
     },
     {
-      "label": "Compute Boost tier scaling: 4\u00d7 effect only, no duration enhancement (#363)",
+      "label": "Compute Boost tier scaling: 4× effect only, no duration enhancement (#363)",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L3433",
@@ -19795,10 +19795,10 @@
       "id": "docs_design_history_compute_boost_tier_scaling_4_effect_only_no_duration_enhancement_363",
       "community": 8,
       "community_name": "Economy model",
-      "norm_label": "compute boost tier scaling: 4\u00d7 effect only, no duration enhancement (#363)"
+      "norm_label": "compute boost tier scaling: 4× effect only, no duration enhancement (#363)"
     },
     {
-      "label": "Compute merge timers from live Core earn \u00d710; Auto-Boost 30 PP; forfeit with confirm (#377/#380)",
+      "label": "Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380)",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L3450",
@@ -19806,7 +19806,7 @@
       "id": "docs_design_history_compute_merge_timers_from_live_core_earn_10_auto_boost_30_pp_forfeit_with_confirm_377_380",
       "community": 8,
       "community_name": "Economy model",
-      "norm_label": "compute merge timers from live core earn \u00d710; auto-boost 30 pp; forfeit with confirm (#377/#380)"
+      "norm_label": "compute merge timers from live core earn ×10; auto-boost 30 pp; forfeit with confirm (#377/#380)"
     },
     {
       "label": "Forced priority order (Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory), and splitting Storage/Compute into their own screens",
@@ -19864,7 +19864,7 @@
       "norm_label": "bytefoundrypage: hiding the disk detail row and the transfer-to-main-game row once they're no longer pulling their weight"
     },
     {
-      "label": "Era ascension and Eons \u2014 meta-prestige above Unbounded (#407 / #405)",
+      "label": "Era ascension and Eons — meta-prestige above Unbounded (#407 / #405)",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L3710",
@@ -19872,10 +19872,10 @@
       "id": "docs_design_history_era_ascension_and_eons_meta_prestige_above_unbounded_407_405",
       "community": 8,
       "community_name": "Economy model",
-      "norm_label": "era ascension and eons \u2014 meta-prestige above unbounded (#407 / #405)"
+      "norm_label": "era ascension and eons — meta-prestige above unbounded (#407 / #405)"
     },
     {
-      "label": "Pool 1 byte generator: binary Memory units, doubling capacity cap, \u00d74 Bandwidth ladder (#457, epic #456)",
+      "label": "Pool 1 byte generator: binary Memory units, doubling capacity cap, ×4 Bandwidth ladder (#457, epic #456)",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L3782",
@@ -19883,7 +19883,7 @@
       "id": "docs_design_history_pool_1_byte_generator_binary_memory_units_doubling_capacity_cap_4_bandwidth_ladder_457_epic_456",
       "community": 8,
       "community_name": "Economy model",
-      "norm_label": "pool 1 byte generator: binary memory units, doubling capacity cap, \u00d74 bandwidth ladder (#457, epic #456)"
+      "norm_label": "pool 1 byte generator: binary memory units, doubling capacity cap, ×4 bandwidth ladder (#457, epic #456)"
     },
     {
       "label": "Save persistence",
@@ -19897,7 +19897,7 @@
       "norm_label": "save persistence"
     },
     {
-      "label": "Migration in `src/save-migration/`, runs on every load \u2014 2026-08-22",
+      "label": "Migration in `src/save-migration/`, runs on every load — 2026-08-22",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L3940",
@@ -19905,7 +19905,7 @@
       "id": "docs_design_history_migration_in_src_save_migration_runs_on_every_load_2026_08_22",
       "community": 30,
       "community_name": "Design history & rationale",
-      "norm_label": "migration in `src/save-migration/`, runs on every load \u2014 2026-08-22"
+      "norm_label": "migration in `src/save-migration/`, runs on every load — 2026-08-22"
     },
     {
       "label": "Distribution",
@@ -19985,7 +19985,7 @@
       "norm_label": "disk cache: always-full reserve, whole-block memory transfers, no pour into disks (issue #382)"
     },
     {
-      "label": "Factory MoneyHero frozen after Kilobytes \u2192 Bytes (#430 / #442)",
+      "label": "Factory MoneyHero frozen after Kilobytes → Bytes (#430 / #442)",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L4051",
@@ -19993,10 +19993,10 @@
       "id": "docs_design_history_factory_moneyhero_frozen_after_kilobytes_bytes_430_442",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "factory moneyhero frozen after kilobytes \u2192 bytes (#430 / #442)"
+      "norm_label": "factory moneyhero frozen after kilobytes → bytes (#430 / #442)"
     },
     {
-      "label": "Timed read-cache \u2192 disk flush (#445)",
+      "label": "Timed read-cache → disk flush (#445)",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L4066",
@@ -20004,7 +20004,7 @@
       "id": "docs_design_history_timed_read_cache_disk_flush_445",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "timed read-cache \u2192 disk flush (#445)"
+      "norm_label": "timed read-cache → disk flush (#445)"
     },
     {
       "label": "Compute Boost base presets: fixing a total-extra-production ordering bug",
@@ -20040,7 +20040,7 @@
       "norm_label": "removing claim core: superseded by data lake boosters"
     },
     {
-      "label": "Data Lake refill gating: staged 9 \u2192 99 \u2192 999 capacity from disk-array completion",
+      "label": "Data Lake refill gating: staged 9 → 99 → 999 capacity from disk-array completion",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L4183",
@@ -20048,7 +20048,7 @@
       "id": "docs_design_history_data_lake_refill_gating_staged_9_99_999_capacity_from_disk_array_completion",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "data lake refill gating: staged 9 \u2192 99 \u2192 999 capacity from disk-array completion"
+      "norm_label": "data lake refill gating: staged 9 → 99 → 999 capacity from disk-array completion"
     },
     {
       "label": "Data Lake Boosters, take two: from a spendable balance to a live transfer pipe",
@@ -20227,7 +20227,7 @@
       "norm_label": "app icon redesigned from a plain \"10\" text glyph to an 8-cell \"byte\" grid"
     },
     {
-      "label": "Pool Capacity's SI-clean doubling mechanic reverted \u2014 it broke the Data Stream tile's own binary display",
+      "label": "Pool Capacity's SI-clean doubling mechanic reverted — it broke the Data Stream tile's own binary display",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L5398",
@@ -20235,10 +20235,10 @@
       "id": "docs_design_history_pool_capacity_s_si_clean_doubling_mechanic_reverted_it_broke_the_data_stream_tile_s_own_binary_display",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "pool capacity's si-clean doubling mechanic reverted \u2014 it broke the data stream tile's own binary display"
+      "norm_label": "pool capacity's si-clean doubling mechanic reverted — it broke the data stream tile's own binary display"
     },
     {
-      "label": "Pool Capacity's SI-clean mechanic restored \u2014 decoupled from the Data Stream's binary value instead of shared with it",
+      "label": "Pool Capacity's SI-clean mechanic restored — decoupled from the Data Stream's binary value instead of shared with it",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L5453",
@@ -20246,10 +20246,10 @@
       "id": "docs_design_history_pool_capacity_s_si_clean_mechanic_restored_decoupled_from_the_data_stream_s_binary_value_instead_of_shared_with_it",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "pool capacity's si-clean mechanic restored \u2014 decoupled from the data stream's binary value instead of shared with it"
+      "norm_label": "pool capacity's si-clean mechanic restored — decoupled from the data stream's binary value instead of shared with it"
     },
     {
-      "label": "Pool Bandwidth's formula corrected \u2014 follows the raw Speed doublings via the SI transform, not sqrt(Capacity)",
+      "label": "Pool Bandwidth's formula corrected — follows the raw Speed doublings via the SI transform, not sqrt(Capacity)",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L5549",
@@ -20257,10 +20257,10 @@
       "id": "docs_design_history_pool_bandwidth_s_formula_corrected_follows_the_raw_speed_doublings_via_the_si_transform_not_sqrt_capacity",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "pool bandwidth's formula corrected \u2014 follows the raw speed doublings via the si transform, not sqrt(capacity)"
+      "norm_label": "pool bandwidth's formula corrected — follows the raw speed doublings via the si transform, not sqrt(capacity)"
     },
     {
-      "label": "Precision loss at large magnitudes in the SI-clean transform \u2014 fixed with a closed-form computation",
+      "label": "Precision loss at large magnitudes in the SI-clean transform — fixed with a closed-form computation",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L5645",
@@ -20268,7 +20268,7 @@
       "id": "docs_design_history_precision_loss_at_large_magnitudes_in_the_si_clean_transform_fixed_with_a_closed_form_computation",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "precision loss at large magnitudes in the si-clean transform \u2014 fixed with a closed-form computation"
+      "norm_label": "precision loss at large magnitudes in the si-clean transform — fixed with a closed-form computation"
     },
     {
       "label": "Data Stream balance: raw-bits fallback narrowed to self-sizing into a finer unit; Pool Bandwidth moved beside its title",
@@ -20293,7 +20293,7 @@
       "norm_label": "pool cards gated on a capacity threshold too; read cache pre-fills on pool unlock; manual transfer-block ui removed"
     },
     {
-      "label": "Cost icon: \ud83c\udfaf replaced by \ud83c\udff7\ufe0f (`COST_ICON`)",
+      "label": "Cost icon: 🎯 replaced by 🏷️ (`COST_ICON`)",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L5869",
@@ -20301,7 +20301,7 @@
       "id": "docs_design_history_cost_icon_replaced_by_cost_icon",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "cost icon: \ud83c\udfaf replaced by \ud83c\udff7\ufe0f (`cost_icon`)"
+      "norm_label": "cost icon: 🎯 replaced by 🏷️ (`cost_icon`)"
     },
     {
       "label": "Provision Disk moved into the Data Stream card",
@@ -20458,7 +20458,7 @@
       "norm_label": "a tenth finding: idle disk liquidation could starve a still-needed write-cache merge of its own source disks"
     },
     {
-      "label": "An eleventh finding: the Data Lake overflow taper was sampled once per disk-completion segment, not truly continuous \u2014 making a single tick's own result depend on how it was split",
+      "label": "An eleventh finding: the Data Lake overflow taper was sampled once per disk-completion segment, not truly continuous — making a single tick's own result depend on how it was split",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L6680",
@@ -20466,7 +20466,7 @@
       "id": "docs_design_history_an_eleventh_finding_the_data_lake_overflow_taper_was_sampled_once_per_disk_completion_segment_not_truly_continuous_making_a_single_tick_s_own_result_depend_on_how_it_was_split",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "an eleventh finding: the data lake overflow taper was sampled once per disk-completion segment, not truly continuous \u2014 making a single tick's own result depend on how it was split"
+      "norm_label": "an eleventh finding: the data lake overflow taper was sampled once per disk-completion segment, not truly continuous — making a single tick's own result depend on how it was split"
     },
     {
       "label": "The read-cache pre-fill design was never reconciled with the later decade-of-10 Capacity ladder, starving a freshly-unlocked pool's buffer",
@@ -20513,7 +20513,7 @@
       "norm_label": "a live tap bonus could survive into the pool gauge's mode switch, breaking the \"clean transition at 50%\" claim"
     },
     {
-      "label": "Idle disk liquidation removed entirely \u2014 stranded disks now just sit idle instead of being converted to Bits",
+      "label": "Idle disk liquidation removed entirely — stranded disks now just sit idle instead of being converted to Bits",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L6897",
@@ -20521,7 +20521,7 @@
       "id": "docs_design_history_idle_disk_liquidation_removed_entirely_stranded_disks_now_just_sit_idle_instead_of_being_converted_to_bits",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "idle disk liquidation removed entirely \u2014 stranded disks now just sit idle instead of being converted to bits"
+      "norm_label": "idle disk liquidation removed entirely — stranded disks now just sit idle instead of being converted to bits"
     },
     {
       "label": "A Devin Review pass on the idle-disk-liquidation removal found write-cache still consuming stranded disks",
@@ -20535,7 +20535,7 @@
       "norm_label": "a devin review pass on the idle-disk-liquidation removal found write-cache still consuming stranded disks"
     },
     {
-      "label": "A further Devin Review finding on the same area: pausing a stranded write-cache merge still lost its progress to Prestige \u2014 fixed by making diskWriteCache/diskReadCacheFlush Prestige-permanent",
+      "label": "A further Devin Review finding on the same area: pausing a stranded write-cache merge still lost its progress to Prestige — fixed by making diskWriteCache/diskReadCacheFlush Prestige-permanent",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L7011",
@@ -20543,10 +20543,10 @@
       "id": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_prestige_fixed_by_making_diskwritecache_diskreadcacheflush_prestige_permanent",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "a further devin review finding on the same area: pausing a stranded write-cache merge still lost its progress to prestige \u2014 fixed by making diskwritecache/diskreadcacheflush prestige-permanent"
+      "norm_label": "a further devin review finding on the same area: pausing a stranded write-cache merge still lost its progress to prestige — fixed by making diskwritecache/diskreadcacheflush prestige-permanent"
     },
     {
-      "label": "Storage funding rebuilt push\u2192pull: the manual Redeem button and autobuyer-gated auto-redeem are gone (issue #571)",
+      "label": "Storage funding rebuilt push→pull: the manual Redeem button and autobuyer-gated auto-redeem are gone (issue #571)",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L7063",
@@ -20554,7 +20554,7 @@
       "id": "docs_design_history_storage_funding_rebuilt_push_pull_the_manual_redeem_button_and_autobuyer_gated_auto_redeem_are_gone_issue_571",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "storage funding rebuilt push\u2192pull: the manual redeem button and autobuyer-gated auto-redeem are gone (issue #571)"
+      "norm_label": "storage funding rebuilt push→pull: the manual redeem button and autobuyer-gated auto-redeem are gone (issue #571)"
     },
     {
       "label": "A second Devin Review finding on the same PR: the level-1 cache fallback could spend cache out from under an in-flight read-cache flush, leaving it stuck for its whole remaining duration then producing no disk",
@@ -20579,7 +20579,7 @@
       "norm_label": "the \"stranded disks never touch write-cache either\" rule (from the two devin review findings above) itself turned out to be the bug: it permanently starved every disk size past the first one"
     },
     {
-      "label": "A Devin Review finding on the PR above: the target-stranded gate broke cross-tier-boundary write-cache chains \u2014 removed the \"stranded\" gate from write-cache entirely",
+      "label": "A Devin Review finding on the PR above: the target-stranded gate broke cross-tier-boundary write-cache chains — removed the \"stranded\" gate from write-cache entirely",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L7264",
@@ -20587,7 +20587,7 @@
       "id": "docs_design_history_a_devin_review_finding_on_the_pr_above_the_target_stranded_gate_broke_cross_tier_boundary_write_cache_chains_removed_the_stranded_gate_from_write_cache_entirely",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "a devin review finding on the pr above: the target-stranded gate broke cross-tier-boundary write-cache chains \u2014 removed the \"stranded\" gate from write-cache entirely"
+      "norm_label": "a devin review finding on the pr above: the target-stranded gate broke cross-tier-boundary write-cache chains — removed the \"stranded\" gate from write-cache entirely"
     },
     {
       "label": "An adversarial review pass on PR #603 caught the new cross-tier-boundary test asserting a false \"would have failed under the prior fix\" claim",
@@ -20623,7 +20623,7 @@
       "norm_label": "the multiplier bar moved below the balance, with its percent readout below the bar itself"
     },
     {
-      "label": "Icons added to the Byte Foundry footer figures; \ud83e\udde0 replaced on \"Capacity \u00d72\"",
+      "label": "Icons added to the Byte Foundry footer figures; 🧠 replaced on \"Capacity ×2\"",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L7442",
@@ -20631,7 +20631,7 @@
       "id": "docs_design_history_icons_added_to_the_byte_foundry_footer_figures_replaced_on_capacity_2",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "icons added to the byte foundry footer figures; \ud83e\udde0 replaced on \"capacity \u00d72\""
+      "norm_label": "icons added to the byte foundry footer figures; 🧠 replaced on \"capacity ×2\""
     },
     {
       "label": "Read cache blocks (`DiskArrayRow`) render a proportional fill overlay, not just full/empty",
@@ -20667,7 +20667,7 @@
       "norm_label": "provision disk's idle label now shows \"0/n\" up front; write-cache collect sped up to 5x"
     },
     {
-      "label": "Data Lake capacity Upgrade removed from the forced priority order \u2014 array completion is now the only gate",
+      "label": "Data Lake capacity Upgrade removed from the forced priority order — array completion is now the only gate",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L7616",
@@ -20675,10 +20675,10 @@
       "id": "docs_design_history_data_lake_capacity_upgrade_removed_from_the_forced_priority_order_array_completion_is_now_the_only_gate",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "data lake capacity upgrade removed from the forced priority order \u2014 array completion is now the only gate"
+      "norm_label": "data lake capacity upgrade removed from the forced priority order — array completion is now the only gate"
     },
     {
-      "label": "Provision Disk's own click still required its first pass to already be banked \u2014 closing the one case the prior auto-continue fix left open",
+      "label": "Provision Disk's own click still required its first pass to already be banked — closing the one case the prior auto-continue fix left open",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L7667",
@@ -20686,7 +20686,7 @@
       "id": "docs_design_history_provision_disk_s_own_click_still_required_its_first_pass_to_already_be_banked_closing_the_one_case_the_prior_auto_continue_fix_left_open",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "provision disk's own click still required its first pass to already be banked \u2014 closing the one case the prior auto-continue fix left open"
+      "norm_label": "provision disk's own click still required its first pass to already be banked — closing the one case the prior auto-continue fix left open"
     },
     {
       "label": "Provision Disk's post-funding build timer duplicated the wait already spent funding it",
@@ -20865,7 +20865,7 @@
       "norm_label": "disk arrays and data lakes moved from 10 disks per size to 9 + cache/buffer as the 10th unit"
     },
     {
-      "label": "`PURCHASE_MILESTONE_MULTIPLIER_BASE` raised 1.1 \u2192 1.25; a 2-vs-3-Overclock-claim \"stretch/easy\" retune was explored and dropped",
+      "label": "`PURCHASE_MILESTONE_MULTIPLIER_BASE` raised 1.1 → 1.25; a 2-vs-3-Overclock-claim \"stretch/easy\" retune was explored and dropped",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L8738",
@@ -20873,10 +20873,10 @@
       "id": "docs_design_history_purchase_milestone_multiplier_base_raised_1_1_1_25_a_2_vs_3_overclock_claim_stretch_easy_retune_was_explored_and_dropped",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "`purchase_milestone_multiplier_base` raised 1.1 \u2192 1.25; a 2-vs-3-overclock-claim \"stretch/easy\" retune was explored and dropped"
+      "norm_label": "`purchase_milestone_multiplier_base` raised 1.1 → 1.25; a 2-vs-3-overclock-claim \"stretch/easy\" retune was explored and dropped"
     },
     {
-      "label": "Upgrade Data Stream arms below a full Buffer (outflow pause) \u2014 SUPERSEDED",
+      "label": "Upgrade Data Stream arms below a full Buffer (outflow pause) — SUPERSEDED",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L8804",
@@ -20884,7 +20884,7 @@
       "id": "docs_design_history_upgrade_data_stream_arms_below_a_full_buffer_outflow_pause_superseded",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "upgrade data stream arms below a full buffer (outflow pause) \u2014 superseded"
+      "norm_label": "upgrade data stream arms below a full buffer (outflow pause) — superseded"
     },
     {
       "label": "Pool isolation: disk write-cache merges no longer cross pool boundaries",
@@ -20898,7 +20898,7 @@
       "norm_label": "pool isolation: disk write-cache merges no longer cross pool boundaries"
     },
     {
-      "label": "Compute merge timers switched from a Core-earn \u00d710 chain to 8 normal-disk fills (#755)",
+      "label": "Compute merge timers switched from a Core-earn ×10 chain to 8 normal-disk fills (#755)",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L8864",
@@ -20906,7 +20906,7 @@
       "id": "docs_design_history_compute_merge_timers_switched_from_a_core_earn_10_chain_to_8_normal_disk_fills_755",
       "community": 40,
       "community_name": "Testing",
-      "norm_label": "compute merge timers switched from a core-earn \u00d710 chain to 8 normal-disk fills (#755)"
+      "norm_label": "compute merge timers switched from a core-earn ×10 chain to 8 normal-disk fills (#755)"
     },
     {
       "label": "Foundry multiplier bar: one diverging bar tried and dropped (2026-10)",
@@ -21556,6 +21556,11 @@
       "type": "external",
       "_origin": "semantic",
       "id": "ref_node_url"
+    },
+    {
+      "id": "scripts/autonomous-maintenance-workflow.test.js",
+      "type": "file",
+      "source_file": "scripts/autonomous-maintenance-workflow.test.js"
     }
   ],
   "links": [
