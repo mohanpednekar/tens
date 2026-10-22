@@ -12020,3 +12020,19 @@ describe('Upgrade Speed cross-system paths', () => {
     expect(state.intro.speedCapacity).toBeGreaterThan(8)
   })
 })
+
+describe('pre-split saves (speedCapacity absent)', () => {
+  it('derive Speed from Capacity^0.8 until the first Capacity upgrade materializes the Speed basis', () => {
+    const s = createInitialGameState()
+    const intro = { ...s.intro, byteCreated: true, capacity: 2 ** 30 * BITS_PER_BYTE }
+    delete intro.speedCapacity
+    expect(getIntroProductionRate(intro)).toBeCloseTo(2 ** (30 * DATA_STREAM_SPEED_EXPONENT) * BITS_PER_BYTE, 3)
+    const state = { ...s, intro }
+    // Speed already sits at the cap, so no Speed upgrade is offered yet.
+    expect(isSpeedUpgradeArmable(state)).toBe(false)
+    // The first Capacity upgrade pins the basis at the pre-upgrade Capacity, freeing one Speed upgrade.
+    const after = upgradePoolCapacity({ ...state, intro: { ...intro, bits: intro.capacity } })
+    expect(after.intro.speedCapacity).toBe(2 ** 30 * BITS_PER_BYTE)
+    expect(isSpeedUpgradeArmable(after)).toBe(true)
+  })
+})
