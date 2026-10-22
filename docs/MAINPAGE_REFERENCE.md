@@ -53,8 +53,8 @@ applies `components/Button`'s own
 toward Capacity the same visual way every button on this page already does, and shows balance and
 capacity together in the middle, centered `BalanceText` (`balance / capacity-unit`, using
 `formatMemoryBalanceValue`; see "Numbers are formatted"
-below — `useTrimBalanceAfterFull` switches it to the ordinary trimmed form once `isFull` has held
-continuously for `FULL_BALANCE_TRIM_DELAY_MS`, 1 real second) — scaled into the same binary unit `capacity` picks (raw bits before the Byte generator
+below — `useTrimBalanceWhenSettled` switches it to the ordinary trimmed form once its padded text is an
+integer and has been unchanged for `SETTLED_BALANCE_TRIM_DELAY_MS`, 5 real seconds) — scaled into the same binary unit `capacity` picks (raw bits before the Byte generator
 exists, since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to
 denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extending
 `TIER_DEFINITIONS`' own tier symbols with an "i") — plus a hidden `role="progressbar"`
@@ -383,16 +383,15 @@ BALANCE — changing nearly every tick — visibly change display width from one
 because a digit happened to land on zero. The stable variant always shows exactly 3 decimal places
 once ≥ 1 in its unit (a true zero still renders bare, "0 <unit>") so "3.578" and "5.600" read as the
 same precision instead of "3.578" and "5.6" reading like a bigger jump than actually occurred — see
-`docs/DESIGN_HISTORY.md`. That stability stops mattering once a balance sits completely full (nothing
-left to jitter against), so `useTrimBalanceAfterFull` (`ByteFoundryPage`, one hook instance per
+`docs/DESIGN_HISTORY.md`. That stability stops mattering once a balance has settled (nothing
+left to jitter against), so `useTrimBalanceWhenSettled` (`ByteFoundryPage`, one hook instance per
 balance — a shared per-pool `PoolBalanceText` subcomponent for pool buffers, since a hook can't be
 called a variable number of times in one render) switches BOTH the Data Stream and every pool's own
-balance over to the ordinary trimmed formatter once `isFull` (`bits >= capacity` / `poolBufferBits >=
-poolBufferCapacity`) has held continuously for `FULL_BALANCE_TRIM_DELAY_MS` (1 real second, wall-clock
-— independent of the game's own tick rate), reverting instantly the moment it drains back below full.
-The 1-second hold-off is deliberate: a balance that only brushes full for a single tick before
-draining again (e.g. a production tick landing exactly at capacity) never flickers into the trimmed
-form for an instant. Capacity always renders in its own unit; the balance shares it unless that
+balance over to the ordinary trimmed formatter (1–2 digits) once its padded text is an integer
+(all-zero decimals) and has been unchanged for `SETTLED_BALANCE_TRIM_DELAY_MS` (5 real seconds,
+wall-clock — independent of the game's own tick rate), reverting instantly on any text change or any
+pointer/key press. The hold-off is deliberate: a transiently integer balance never flickers into the
+trimmed form. Capacity always renders in its own unit; the balance shares it unless that
 would floor the balance below 1 (a bare "0.xyz" fraction), in which case the balance self-sizes into
 its own finer unit instead (e.g. "30.031 KiB" alongside a "1 MiB" capacity) — only a genuinely
 sub-Byte balance still falls back to a raw bit count, since neither unit ladder defines anything

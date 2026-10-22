@@ -425,20 +425,15 @@ const formatMemoryCapacityValue = (capacityBits, byteCreated) =>
 
 // A balance's fixed decimal padding (formatMemoryAmountStable/formatDiskSizeStable — see either's
 // own doc comment) exists only to stop its displayed WIDTH from jittering tick to tick while the
-// value is actually changing. Once a buffer sits completely full — no longer changing — that
-// padding is pure trailing-zero noise ("8.000 KB" forever) with no jitter left to guard against, so
-// this switches a balance over to the ordinary trimmed formatter once it's been continuously full
-// for FULL_BALANCE_TRIM_DELAY_MS, real wall-clock time (not tied to the game's own tick rate) —
-// long enough that a balance which briefly touches full and immediately drains again (e.g. a
-// single production tick landing exactly at capacity) never flickers into the trimmed form for an
-// instant. Resets the instant `isFull` goes false again, whatever the reason.
-// Generalized: the balance trims to 1–2 digits when its fixed-digit text is an integer (all-zero
-// decimals) and has been unchanged for SETTLED_BALANCE_TRIM_DELAY_MS, or reverts on any user action
-// (pointer/key press) or on any text change.
+// value is actually changing. Once the padded text is an integer (all-zero decimals) and has been
+// unchanged for SETTLED_BALANCE_TRIM_DELAY_MS of real wall-clock time, the padding is pure noise
+// ("8.000 KB" forever), so the balance switches to the ordinary trimmed formatter. Any user action
+// (pointer/key press) restarts the wait and restores the padded form. The settled text is stored
+// alongside the flag so a text change reads as untrimmed on the very same render (no flash).
 const SETTLED_BALANCE_TRIM_DELAY_MS = 5000
 const isIntegerValueText = text => /^[\d,]+(\.0+)?(\s|$)/.test(text)
 const useTrimBalanceWhenSettled = text => {
-  const [trimmed, setTrimmed] = useState(false)
+  const [settledText, setSettledText] = useState(null)
   const [actionNonce, setActionNonce] = useState(0)
   useEffect(() => {
     const onAction = () => setActionNonce(n => n + 1)
@@ -450,12 +445,12 @@ const useTrimBalanceWhenSettled = text => {
     }
   }, [])
   useEffect(() => {
-    setTrimmed(false)
+    setSettledText(null)
     if (!isIntegerValueText(text)) return undefined
-    const timer = setTimeout(() => setTrimmed(true), SETTLED_BALANCE_TRIM_DELAY_MS)
+    const timer = setTimeout(() => setSettledText(text), SETTLED_BALANCE_TRIM_DELAY_MS)
     return () => clearTimeout(timer)
   }, [text, actionNonce])
-  return trimmed
+  return settledText === text
 }
 
 // A pool's own Memory balance, as its own tiny component (rather than inline in the pool-card
