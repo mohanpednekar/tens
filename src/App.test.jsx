@@ -3601,7 +3601,7 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('region', { name: 'pool 1' })).not.toContainElement(provisionButton)
   })
 
-  test('Provision Disk is hidden while the pool its current offer belongs to is rebuilding', () => {
+  test('Provision Disk stays visible while the pool its current offer belongs to is rebuilding, and a click queues the build', () => {
     seedIntroState({
       bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true,
       diskCache: { [currentBankSize]: currentBankSize },
@@ -3610,7 +3610,9 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     expect(screen.getByRole('region', { name: 'pool 1' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /provision disk/i })).not.toBeInTheDocument()
+    const provisionButton = screen.getByRole('button', { name: /provision disk/i })
+    fireEvent.click(provisionButton)
+    expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.diskBuildQueued).toBe(true)
   })
 
   test('Provision Disk fires its first pass on click once affordable — the consolidated Upgrade Data Stream is now the LOWER-priority action that waits on it', () => {

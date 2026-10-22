@@ -4003,7 +4003,7 @@ export const queueDiskBuild = state => {
   if (state.intro?.diskBuildQueued) return state
   if (state.intro.diskBuild) return state
   if (isDiskLadderExhaustedForActivePools(state)) return state
-  if (isStoragePoolRebuilding(state, getPoolIndexForDiskSize(getDiskSize(state)))) return state
+  // Allowed while the offer's pool is rebuilding: provisionDisk stays gated on rebuild (isProvisionDiskAvailable), so the queue just waits.
   // A standalone/manual arm, never replay-owned — see diskBuildQueuedByReplay's own comment in
   // createInitialGameState.
   return { ...state, intro: { ...state.intro, diskBuildQueued: true, diskBuildQueuedByReplay: false } }

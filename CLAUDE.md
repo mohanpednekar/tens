@@ -628,8 +628,7 @@ Strict three-layer separation:
    (`docs/DESIGN_HISTORY.md`: "Pool titles simplified to `<symbol>` Pool; each pool's Data Lake moved
    inside its own card"). Disk Fill is fully automatic every tick (`DiskArrayRow` is a pure status
    display). Provision Disk is a single shared control (one disk ladder spans every pool) rendered in
-   its own standalone "Provision Disk" card directly below the Data Stream card (hidden while the offer's pool is
-   rebuilding); Upgrade Capacity / Speed preview their post-upgrade value
+   its own standalone "Provision Disk" card directly below the Data Stream card; Upgrade Capacity / Speed preview their post-upgrade value
    (`docs/DESIGN_HISTORY.md`: "Provision Disk moved into the Data Stream card"). Each disk
    array shows every size from `getDiskSizesToShow`, all `DISK_ARRAY_LADDER_CAP` (9) slots in one row.
    The "queue next build" pin-icon toggle was removed from the UI, but the auto-arming queue stays wired
@@ -1069,7 +1068,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2016 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2017 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
