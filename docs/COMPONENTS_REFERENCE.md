@@ -69,7 +69,7 @@ stranded past its tier's current level — see `isDiskStrandedByAdvancedTier`) r
 full circle, `aria-label="full … disk"`, with the distinguishing detail only in `title`.
 Instructional copy lives in `title`/`aria` only (no under-strip ActionHint). There is no deposit
 control of any kind here — Storage Disks no longer feed a Data Lake at all (that mechanic now feeds
-lakes directly from pool overflow, see CLAUDE.md's "Data Lakes"); a fully-built, stranded array's
+lakes directly from pool overflow, see docs/FOUNDRY_MECHANICS_REFERENCE.md's "Data Lakes"); a fully-built, stranded array's
 disk instead just sits full and idle until its tier's level matches again (see CLAUDE.md's "Data
 Lakes"), not through this component. While `intro.diskBuild?.size`
 matches this size, a plain centered `"Rebuilding <size> x <N> array - Ready in Ns"` status line
