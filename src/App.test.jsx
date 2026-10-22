@@ -2676,7 +2676,7 @@ test("the Upgrade Data Stream button stays clickable (to arm) while the Buffer i
   const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
   expect(upgradeButton).toBeEnabled()
   expect(upgradeButton).toHaveTextContent('Upgrade Capacity')
-  expect(upgradeButton).toHaveTextContent('97.656 KiB') // its cost = current capacity
+  expect(upgradeButton).toHaveTextContent('97.65 KiB') // its cost = current capacity
 })
 
 // Upgrade Data Stream spends the full Buffer (cost = current capacity) and doubles Capacity —
@@ -3003,8 +3003,8 @@ test('Data Stream renders bits/Buffer scaled into the same appropriate binary un
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('48.828 KiB')
-  expect(section).toHaveTextContent('97.656 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('48.82 KiB')
+  expect(section).toHaveTextContent('97.65 KiB')
 })
 
 test('Data Stream balance floors the binary-unit conversion instead of rounding, so it never reads complete early', () => {
@@ -3021,11 +3021,11 @@ test('Data Stream balance floors the binary-unit conversion instead of rounding,
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section).toHaveTextContent('97.656 KiB') // the Capacity footer figure, in full
+  expect(section).toHaveTextContent('97.65 KiB') // the Capacity footer figure, in full
   expect(balanceBar.closest('[aria-label="data stream bit balance"]') || balanceBar).toHaveAttribute('aria-valuenow', String(bits))
   // Flooring: the balance itself must not also read "97.656 KiB" (which would mean it rounded up
   // to match the full capacity reading).
-  expect(section.querySelector('p')).toHaveTextContent('96.679 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('96.67 KiB')
 })
 
 test('Data Stream balance self-sizes into its own finer unit rather than falling back to raw bits when it would floor below 1 in the capacity-shared unit', () => {
@@ -3041,7 +3041,7 @@ test('Data Stream balance self-sizes into its own finer unit rather than falling
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('30.031 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('30.03 KiB')
   expect(section).toHaveTextContent('1 MiB')
 })
 
@@ -3083,7 +3083,7 @@ test('a pool\'s own Memory buffer balance also shows a stable, non-trimmed decim
   expect(pool1.querySelector('p')).toHaveTextContent('5.600 KB')
 })
 
-test('Data Stream balance drops its padded trailing zeros once it has been full for more than 1 second', () => {
+test('Data Stream balance drops its padded trailing zeros once it has been unchanged for 5 seconds', () => {
   vi.useFakeTimers()
   // Below INTRO_CONVERSION_UNLOCK_CAPACITY (8000 bits) so tickIntroAutoInvest can never afford even
   // one tier01 unit from intro.bits — the balance genuinely sits still at capacity instead of being
@@ -3097,16 +3097,20 @@ test('Data Stream balance drops its padded trailing zeros once it has been full 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const balanceText = () => balanceBar.closest('section').querySelector('p')
   // Immediately full, but not YET trimmed — the delay hasn't elapsed.
-  expect(balanceText()).toHaveTextContent('500.00 B')
+  expect(balanceText()).toHaveTextContent('500.0 B')
 
-  act(() => { vi.advanceTimersByTime(1000) })
+  act(() => { vi.advanceTimersByTime(4900) })
+  expect(balanceText()).toHaveTextContent('500.0 B')
+  act(() => { vi.advanceTimersByTime(200) })
   expect(balanceText()).toHaveTextContent('500 B')
+  fireEvent.pointerDown(document.body)
+  expect(balanceText()).toHaveTextContent('500.0 B')
 
   unmount()
   vi.useRealTimers()
 })
 
-test('a pool\'s own Memory buffer balance also drops its padded trailing zeros once its buffer has been full for more than 1 second', async () => {
+test('a pool\'s own Memory buffer balance also drops its padded trailing zeros once it has been unchanged for 5 seconds', async () => {
   vi.useFakeTimers()
   const firstDiskSize = getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE // 8000 — pool 1's own smallest (read-cache-eligible) size
   const poolBufferCapacity = getPoolBufferCapacity({ intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } }, 1)
@@ -3138,7 +3142,7 @@ test('a pool\'s own Memory buffer balance also drops its padded trailing zeros o
   const balanceText = () => pool1.querySelector('p')
   expect(balanceText()).toHaveTextContent('1.000 KB')
 
-  await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+  await act(async () => { await vi.advanceTimersByTimeAsync(5100) })
   expect(balanceText()).toHaveTextContent('1 KB')
 
   unmount()
