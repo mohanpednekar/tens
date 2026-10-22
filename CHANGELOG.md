@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Unit-scaled memory amounts use fixed significant digits (4 below 1,000, 5 above). A balance that is an integer and has not changed for 5 seconds collapses to 1–2 digits (e.g. "500 B"), reverting on any click or key press.
+
 - Byte Foundry: the running Capacity/Speed upgrade bar now shows the percent on its first line, the actual from → to value, and the time left.
 
 - Byte Foundry: "Upgrade Data Stream" is split into separate **Upgrade Capacity** and **Upgrade Speed** buttons; both are replaced by a status bar while an upgrade runs and return when it completes. Base Speed can't exceed the square root of Capacity.

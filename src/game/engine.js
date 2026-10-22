@@ -3502,11 +3502,14 @@ const MEMORY_AMOUNT_DECIMAL_PLACES = 3
 // Hard cap on significant digits in any unit-scaled memory amount: decimals shrink as the integer
 // part grows, so "1,011.147 MiB" renders "1,011.1 MiB". Never exceeds MEMORY_AMOUNT_DECIMAL_PLACES.
 const MEMORY_AMOUNT_MAX_SIGNIFICANT_DIGITS = 5
+// Fixed significant digits by range: 4 below 1,000 (1.234 / 12.34 / 123.4), 5 from 1,000 up.
+const getMemoryAmountSignificantDigits = integerDigits =>
+  integerDigits >= 4 ? MEMORY_AMOUNT_MAX_SIGNIFICANT_DIGITS : 4
 const getMemoryAmountDecimals = value => {
   const integerDigits = value >= 1 ? Math.floor(Math.log10(value)) + 1 : 1
   return Math.min(
     MEMORY_AMOUNT_DECIMAL_PLACES,
-    Math.max(0, MEMORY_AMOUNT_MAX_SIGNIFICANT_DIGITS - integerDigits),
+    Math.max(0, getMemoryAmountSignificantDigits(integerDigits) - integerDigits),
   )
 }
 
