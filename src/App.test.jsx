@@ -5135,7 +5135,8 @@ const openDevMode = async user => {
   await user.click(screen.getByRole('button', { name: /open dev mode/i }))
 }
 
-describe('Dev Mode', () => {
+// Dev Mode tests drive many sequential userEvent clicks and sit near Vitest's 5s default under load.
+describe('Dev Mode', { timeout: 20000 }, () => {
   // Freeze only the live tick loop (setTimeout stays real for userEvent): several tests below assert
   // exact seeded values (e.g. resources.base) that a real tick on a slow runner would drift (#764).
   beforeEach(() => {
