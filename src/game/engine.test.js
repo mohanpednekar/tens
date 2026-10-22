@@ -1830,10 +1830,9 @@ describe('pool buffers', () => {
       byteCreated: true,
       bits: 1000,
       // Pool 1's own Capacity is hard-clamped to INTRO_CAPACITY_CAP_BITS (800,000 bits =
-      // 100,000 Bytes) regardless of this seeded value; sqrt(100,000 Bytes) ≈ 316.23
-      // Bytes/sec, SI-clean-floored to 250 Bytes/sec = 2,000 bits/sec pool 1 Bandwidth cap —
-      // plenty above the 1,000-bit balance below, so it doesn't matter that this comment's own
-      // bound is only a guideline (see getStoragePoolBandwidth) rather than the exact number.
+      // 100,000 Bytes) regardless of this seeded value; its Bandwidth cap is (100,000 Bytes)^0.8 =
+      // 10,000 Bytes/sec (SI-snapped to 8,000 = 64,000 bits/sec) — plenty above the 1,000-bit balance
+      // below, so the exact number doesn't matter here (see getStoragePoolBandwidth).
       capacity: 32_000_000,
     })
     const after = tickPoolBufferFill(1)(state)
@@ -4044,7 +4043,7 @@ describe('tickDiskAutoFill', () => {
     const pool2FlushSeconds = getDiskReadCacheFlushSeconds(state, megabyteSize)
     const pool1FlushSeconds = getDiskReadCacheFlushSeconds(state, FIRST_DISK_SIZE)
     // Both pools pace at the shared production rate — the raw 1 B/s derived rate sits under every
-    // pool's own sqrt(Capacity) bound here, so each reads the same 8 bits/sec.
+    // pool's own Capacity^0.8 bound here, so each reads the same 8 bits/sec.
     expect(pool2FlushSeconds).toBe(megabyteSize / DISK_CACHE_BLOCK_COUNT / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 2))
     expect(pool1FlushSeconds).toBe(FIRST_DISK_SIZE / DISK_CACHE_BLOCK_COUNT / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 1))
   })
@@ -11022,8 +11021,9 @@ describe('Data Lakes', () => {
 
   describe('overflow fill (see tickPoolBufferFill\'s own overflow branch / fillDataLakeDisks in engine.js)', () => {
     // Pool 1's own Capacity clamps to INTRO_CAPACITY_CAP_BITS (800,000 bits) regardless of this
-    // seeded value, giving Bandwidth sqrt(100,000 Bytes) ≈ 316.23 Bytes/sec, SI-clean-floored to
-    // 250 Bytes/sec = 2,000 bits/sec, and a buffer capacity of 800,000 bits — see the existing
+    // seeded value, giving a Capacity^0.8 Bandwidth ceiling of 10,000 Bytes/sec (snapped to 8,000);
+    // the fixture's `speedCapacity` pin keeps the raw rate (and so Bandwidth) at 250 Bytes/sec =
+    // 2,000 bits/sec, and a buffer capacity of 800,000 bits — see the existing
     // tickPoolBufferFill tests above for the same derivation. `poolBuffers: { 1: 800_000 }` seeds
     // that buffer already completely full, so every bit of pool 1's own reserved rate this tick is
     // overflow, none of it topping up the (already-full) buffer itself.
