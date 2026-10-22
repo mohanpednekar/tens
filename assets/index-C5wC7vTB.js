@@ -1801,7 +1801,7 @@ Error generating stack: `+e.message+`
       transition: none;
     }
   }
-`,Yh=({game:e})=>{if(!La(e.state))return null;let t=!!e.buyMaxMode;return(0,z.jsx)(Jh,{$on:t,"aria-label":`Toggle buy max mode`,"aria-pressed":t,onClick:()=>e.setBuyMaxMode(!t),title:t?`Buy max is on: each purchase buys as many levels as you can afford (Factory tiers buy full levels only — a partial level takes its own click). Click to turn off.`:`Buy max is off: each purchase buys one level. Click to buy as many levels as you can afford instead.`})},Xh=R.main`
+`,Yh=({game:e})=>{if(!La(e.state))return null;let t=!!e.buyMaxMode;return(0,z.jsx)(Jh,{$on:t,"aria-label":`Buy max mode`,"aria-pressed":t,onClick:()=>e.setBuyMaxMode(!t),title:t?`Buy max is on: each purchase buys as many levels as you can afford (Factory tiers buy full levels only — a partial level takes its own click). Click to turn off.`:`Buy max is off: each purchase buys one level. Click to buy as many levels as you can afford instead.`})},Xh=R.main`
   width: min(880px, calc(100vw - 2rem));
   margin: 0 auto;
   display: flex;
