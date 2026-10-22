@@ -3781,13 +3781,11 @@ describe('Byte Foundry Storage', () => {
     // Buffer (intro.bits), so this seeds poolBuffers directly rather than relying on
     // tickPoolBufferFill's own separate bandwidth-limited top-up (a different mechanism this test
     // isn't exercising). tier01 past level 1 so read cache may flush into the empty disk without an
-    // active tier claim at this size. capacity is set so pool 1's own Bandwidth cap (sqrt of its own
-    // Capacity IN BYTES, converted back to bits/sec — see getStoragePoolBandwidth) lands on a clean
-    // 2,000 bits/sec — deliberately BELOW currentBankSize (8,000), so a full cache fill genuinely
-    // takes real time. tickSpeedSeconds is
-    // set very large (with productionMultiplier scaled to match) purely to push the Byte generator's
-    // own periodic batch delivery (see tickIntroProduction) far outside this test's short window —
-    // with intro.bits seeded at 0, that keeps tickPoolBufferFill inert throughout (nothing to
+    // active tier claim at this size. Pool 1's Bandwidth is 2,000 bits/sec (a clean 250 B/s) —
+    // deliberately BELOW currentBankSize (8,000), so a full cache fill genuinely takes real time. It
+    // comes from the pinned Speed basis below (raw stream rate 256 B/s -> SI-clean 250 B/s), which sits
+    // well under pool 1's own Capacity^0.8 ceiling, so the large seeded Capacity doesn't bind it.
+    // with intro.bits seeded at 0, tickPoolBufferFill stays inert throughout (nothing to
     // transfer), so it can't perturb the directly-seeded pool buffer either.
     // A cache refill FROM the pool buffer is itself further bandwidth-capped
     // (CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER × the pool's own capped rate × elapsed REAL
@@ -3797,13 +3795,9 @@ describe('Byte Foundry Storage', () => {
     // of SIMULATED game time, but only 6 real 100ms ticks (600ms) since each tick only ever advances
     // elapsedSeconds by TICK_RATE_MS/1000 regardless of the underlying rate.
     const bandwidthCapBits = 2000
-    // Pool Capacity now advances in plain decade-power-of-10 steps (getDecadePowerEquivalentBits),
-    // so it's no longer possible to solve directly for a capacity whose sqrt lands on an exact
-    // bandwidth value the way the old SI-clean formula allowed — instead, 2**17 bits happens to
-    // land on decade step 10**5 Bytes (800,000 bits), whose sqrt (≈316.23 Bytes/sec) rounds via the
-    // SAME SI-clean step getStoragePoolBandwidth's own outer rounding already uses to exactly
-    // bandwidthCapBits (2,000) — verified numerically, not just algebraically, since this formula
-    // has no closed-form inverse any more.
+    // Pool Capacity advances in plain decade-power-of-10 steps (getDecadePowerEquivalentBits):
+    // 2**17 bits lands on decade step 10**5 Bytes (800,000 bits), whose Capacity^0.8 ceiling
+    // (10,000 B/s) is far above the pinned raw rate, so Bandwidth is the SI-clean raw rate.
     const bandwidthCapCapacityBits = (2 ** 17) * 8
     seedIntroState(
       {
@@ -3814,8 +3808,8 @@ describe('Byte Foundry Storage', () => {
         // Production is continuous now (no tickSpeedSeconds/productionMultiplier knobs) — the huge
         // capacity keeps the derived rate far above the pool bandwidth cap, so the pool buffer
         // stays topped up and can't perturb the cache-fill timing being measured. The Speed basis is
-        // pinned to ~384 B/s (384^1.25 B) so production stays at the rate this timing was tuned for.
-        speedCapacity: 13_599,
+        // pinned to 256 B/s raw (1024 B basis) so pool 1 Bandwidth stays a clean 250 B/s (2,000 bits/sec) as this timing was tuned.
+        speedCapacity: 8192,
       },
       { purchaseLevels: { [tier01.id]: 2 } }
     )

@@ -2543,22 +2543,21 @@ export const getStoragePoolBandwidth = (state, poolIndex) => {
   // Capacity threshold is reached, independent of disk-build progress; see that function's own doc
   // comment.
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getVisibleStoragePoolCount(state)) return 0
-  // Each unlocked pool's Bandwidth simply follows the Data Stream's own Speed doublings — the
-  // same raw production rate the Data Stream tile itself uses — just re-expressed via the
-  // SI-clean switchover sequence instead of plain binary (getSiCleanEquivalentBits): it matches
-  // the raw rate up to 64 B/s, then diverges to 125 instead of 128, and repeats that pattern every
-  // decade (e.g. a raw 256 B/s rate reads as a clean 250 B/s). sqrt(that pool's own Capacity) is
-  // only a GUIDELINE for the bandwidth's lower/upper bounds, not the value itself — it still acts
-  // as the real throughput ceiling once a pool's own (now fixed, maxed-out) Capacity can no longer
-  // keep up with an ever-growing rate, but even then the number shown is the SI-clean equivalent
-  // of that bound, not a raw sqrt remainder. Without either half of this, a small early pool's
-  // Bandwidth (and every rate derived from it: disk/cache fill and build speeds, Booster transfer
-  // pacing) could run far ahead of what its own tiny Memory window could ever plausibly move
-  // through.
+  // Each unlocked pool's Bandwidth follows the Data Stream's own Speed (the same raw production rate
+  // the Data Stream tile itself uses), re-expressed via the SI-clean switchover sequence instead of
+  // plain binary (getSiCleanEquivalentBits): it matches the raw rate up to 64 B/s, then diverges to 125
+  // instead of 128, and repeats that pattern every decade (e.g. a raw 256 B/s rate reads as a clean
+  // 250 B/s). (that pool's own Capacity in Bytes) ^ DATA_STREAM_SPEED_EXPONENT — the same exponent that
+  // caps the Data Stream's own Speed against its Capacity — is the real throughput ceiling once a
+  // pool's own (fixed, maxed-out) Capacity can no longer keep up with an ever-growing rate, but even
+  // then the number shown is the SI-clean equivalent of that bound, not a raw power remainder. Without
+  // it, a small early pool's Bandwidth (and every rate derived from it: disk/cache fill and build
+  // speeds, Booster transfer pacing) could run far ahead of what its own tiny Memory window could ever
+  // plausibly move through.
   const capacityBytes = getStoragePoolCapacity(state, poolIndex) / BITS_PER_BYTE
-  const sqrtCapBytes = Math.sqrt(capacityBytes)
+  const capBytes = capacityBytes ** DATA_STREAM_SPEED_EXPONENT
   const rawRateBytes = getIntroProductionRate(state.intro ?? {}) / BITS_PER_BYTE
-  const boundedBytes = Math.min(rawRateBytes, sqrtCapBytes)
+  const boundedBytes = Math.min(rawRateBytes, capBytes)
   const base = getSiCleanEquivalentBits(boundedBytes * BITS_PER_BYTE)
   const steps = Math.max(0, getDataLakeTier(state, poolIndex)?.bandwidthSteps ?? 0)
   if (steps === 0) return base
