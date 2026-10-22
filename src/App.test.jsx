@@ -5136,6 +5136,12 @@ const openDevMode = async user => {
 }
 
 describe('Dev Mode', () => {
+  // Freeze only the live tick loop (setTimeout stays real for userEvent): several tests below assert
+  // exact seeded values (e.g. resources.base) that a real tick on a slow runner would drift (#764).
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+  })
+
   it('is reachable from the More menu (dev build only)', async () => {
     const user = userEvent.setup()
     seedMainGameState()
