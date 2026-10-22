@@ -611,7 +611,7 @@ Strict three-layer separation:
    `StoragePage` wrapper), not a separate AppNav item or tab. Data Stream owns the shared
    Combine/Speed/Capacity actions and the common Provision Disk control; Storage pools 1–10 are derived
    views over the one Data Stream, each with its own Bandwidth (`getStoragePoolBandwidth`, hard-capped at
-   the square root of that pool's Capacity converted to Bytes) and local buffer
+   that pool's Capacity in Bytes ^ `DATA_STREAM_SPEED_EXPONENT`, 0.8 — the same exponent as the Data Stream's own cap) and local buffer
    (`intro.poolBuffers[poolIndex]`, `getPoolBufferBits`/`getPoolBufferCapacity`) that every bit-costing
    Storage action for that pool — Provision Disk's build cost, the read-cache fill — spends from
    exclusively (`tickPoolBufferFill` tops it up from `intro.bits`, pool 1 first, after tier01's

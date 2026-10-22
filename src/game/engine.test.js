@@ -1651,12 +1651,12 @@ describe('storage pools', () => {
     }
   })
 
-  it('snaps a pool\'s Bandwidth cap down to the nearest SI-clean value below sqrt(Capacity)', () => {
+  it('snaps a pool\'s Bandwidth cap down to the nearest SI-clean value below Capacity^0.8', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: 8 * 2 ** 14, // pool Capacity derives to 16,000 Bytes; sqrt(16,000) ≈ 126.49 Bytes/sec
+      capacity: 8 * 2 ** 14, // pool Capacity derives to 16,000 Bytes; 16,000^0.8 ≈ 2,300 Bytes/sec
     })
-    expect(getStoragePoolBandwidth(state, 1)).toBe(1_000) // 125 Bytes/sec (SI-clean), not a raw ~126.49
+    expect(getStoragePoolBandwidth(state, 1)).toBe(16_000) // 2,000 Bytes/sec (SI-clean), not a raw ~2,300
   })
 
   it('unlocks pool 2 only after all three pool 1 arrays reach the build cap', () => {
@@ -1740,47 +1740,50 @@ describe('storage pools', () => {
     expect(getStoragePoolCapacity(afterThreshold, 2)).toBeGreaterThan(0)
   })
 
-  it('caps a pool\'s own Bandwidth at the square root of its own Capacity (in Bytes) once the production rate outgrows it', () => {
+  it('caps a pool\'s own Bandwidth at its own Capacity (in Bytes) ^ 0.8 once the production rate outgrows it', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS (800,000 bits =
       // 100,000 Bytes, a clean SI 100 KB — see POOL_CAPACITY_SI_STEP in layers.js);
-      // sqrt(100,000 Bytes) ≈ 316.23 Bytes/sec, SI-clean-floored down to 250 Bytes/sec =
-      // 2,000 bits/sec — the clean SI Bandwidth cap the pool's own 100 KB Capacity should produce.
-      capacity: INTRO_CAPACITY_CAP_BITS, // the derived rate (384 B/s) is far above the cap
+      // (100,000 Bytes)^0.8 = 10,000 Bytes/sec, SI-clean-snapped to 8,000 Bytes/sec =
+      // 64,000 bits/sec — the clean SI Bandwidth cap the pool's own 100 KB Capacity produces. Pin the
+      // Speed basis higher so the raw stream rate is above that cap.
+      capacity: INTRO_CAPACITY_CAP_BITS, speedCapacity: INTRO_CAPACITY_CAP_BITS,
     })
-    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(2_000)
-    expect(getStoragePoolBandwidth(state, 1)).toBe(2_000)
+    expect(getIntroProductionRate(state.intro)).toBeGreaterThanOrEqual(64_000)
+    expect(getStoragePoolBandwidth(state, 1)).toBe(64_000)
   })
 
-  it('Bandwidth is the SI-clean equivalent of the sqrt(Capacity) bound once the derived rate outgrows it', () => {
+  it('Bandwidth is the SI-clean equivalent of the Capacity^0.8 bound once the derived rate outgrows it', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: 4_000_000, // pool 1 Capacity 100 KB; sqrt(100,000 B) ≈ 316 B/s vs the far higher derived Speed
+      capacity: 4_000_000, // pool 1 Capacity 100 KB; (100,000 B)^0.8 = 10,000 B/s vs the higher derived Speed
     })
     expect(getIntroProductionRate(state.intro)).toBeGreaterThan(768 * BITS_PER_BYTE)
-    // sqrt bound 316.2 Bytes/sec → SI-clean 250 Bytes/sec = 2,000 bits/sec
-    expect(getStoragePoolBandwidth(state, 1)).toBe(2_000)
+    // bound 10,000 Bytes/sec → SI-clean 8,000 Bytes/sec = 64,000 bits/sec
+    expect(getStoragePoolBandwidth(state, 1)).toBe(64_000)
   })
 
   it('Bandwidth still matches the plain-binary derived rate below the 64→125 SI-clean deviation', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      // 1 KiB capacity derives 256 B/s (1024^0.8); pool 1's own 1 KB Capacity caps at sqrt(1000) ≈
-      // 31.6 B/s, whose SI-clean equivalent (32 B/s) lands on 256 bits/sec.
+      // Speed basis 32 B derives 32^0.8 = 16 B/s (128 bits/sec), below pool 1's own 1 KB Capacity cap
+      // (1000^0.8 ≈ 251 B/s), so Bandwidth is just the raw rate in its SI-clean form (still 16 B/s).
       capacity: 8 * 2 ** 10,
+      speedCapacity: 256,
     })
-    expect(getIntroProductionRate(state.intro)).toBeCloseTo(2048, 6)
-    expect(getStoragePoolBandwidth(state, 1)).toBe(256)
+    expect(getIntroProductionRate(state.intro)).toBeCloseTo(128, 6)
+    expect(getStoragePoolBandwidth(state, 1)).toBe(128)
   })
 
   it('Bandwidth diverges from the raw binary rate past 64 Bytes/sec, e.g. a raw 256 Bytes/sec rate reads as a clean 250', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: INTRO_CAPACITY_CAP_BITS, // pool 1 maxed — sqrt(100,000 B) ≈ 316 B/s cap binds the far higher derived rate
+      capacity: INTRO_CAPACITY_CAP_BITS, // pool 1 maxed — its cap ((100,000 B)^0.8 ≈ 10,000 B/s) is above the raw rate
+      speedCapacity: 8192, // 1024 B basis -> 1024^0.8 = 256 B/s raw
     })
-    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(384 * BITS_PER_BYTE)
-    expect(getStoragePoolBandwidth(state, 1)).toBe(2000) // 250 Bytes/sec (SI-clean), not the raw value
+    expect(getIntroProductionRate(state.intro)).toBeCloseTo(256 * BITS_PER_BYTE, 6)
+    expect(getStoragePoolBandwidth(state, 1)).toBe(2000) // 250 Bytes/sec (SI-clean), not the raw 256
   })
 
   it('is unaffected by disk-build progress — the true cap depends purely on Capacity vs. the FINAL pool\'s own ceiling', () => {
@@ -1875,7 +1878,7 @@ describe('pool buffers', () => {
       bits: 1_000_000,
       // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS (800,000 bits, a
       // clean SI 100 KB) regardless of the shared Capacity's own magnitude; pool 1 Bandwidth cap
-      // = sqrt(100,000 Bytes) ≈ 316.23 Bytes/sec, SI-clean-floored to 250 Bytes/sec = 2,000 bits/sec.
+      // = (100,000 Bytes)^0.8 = 10,000 Bytes/sec, SI-clean-snapped to 8,000 Bytes/sec = 64,000 bits/sec.
       capacity: 32_000_000,
       disksBuiltTotal: {
         [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
@@ -1894,7 +1897,7 @@ describe('pool buffers', () => {
     // its own Bandwidth cap and buffer room.
     const pool1Transfer = after.intro.poolBuffers[1] - 400_000
     const pool2Transfer = after.intro.poolBuffers[2]
-    expect(pool1Transfer).toBe(2_000)
+    expect(pool1Transfer).toBe(64_000)
     expect(pool2Transfer).toBeGreaterThan(0)
     expect(after.intro.bits).toBe(1_000_000 - pool1Transfer - pool2Transfer)
   })
@@ -4161,13 +4164,13 @@ describe('tickDiskWriteCache', () => {
     const fast = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP, [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
       disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 0 },
-      // Pool 1's own Capacity ceiling bounds its bandwidth at a clean 250 B/s (2,000 bits/sec)
+      // Pool 1's own Capacity ceiling bounds its bandwidth at a clean 8,000 B/s (64,000 bits/sec)
       // regardless of how high the derived Data Stream speed climbs past it.
       capacity: INTRO_CAPACITY_CAP_BITS,
     })
     const after = tickDiskWriteCache(0)(fast)
     const merge = getDiskWriteCacheMerge(after, level2Size)
-    expect(getStoragePoolBandwidth(fast, 1)).toBe(2_000)
+    expect(getStoragePoolBandwidth(fast, 1)).toBe(64_000)
     expect(merge.flushTotalSeconds).toBe(level2Size / (getStoragePoolBandwidth(fast, 1) * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER))
     expect(merge.segmentTotalSeconds).toBe(FIRST_DISK_SIZE / (getStoragePoolBandwidth(fast, 1) * CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER))
   })
@@ -4914,7 +4917,8 @@ describe.each([
 ])('auto-merge / reserve-merge timer: $label', ({ tick, enable, isUnlockAvailable, start, isStartAvailable, inputField, outputField, autoFlagField, timerField, boundaryIndex }) => {
   // Capacity high enough for all 10 pools to be visible, so every boundary's pool has Bandwidth
   // (a pool with 0 Bandwidth makes its merge duration 0, i.e. unavailable).
-  const allPoolsVisibleState = () => withIntro(createInitialGameState(), { capacity: 8 * 1024 ** 10, byteCreated: true })
+  // The Speed basis is pinned (1 KiB -> 256 B/s raw) so merge timers stay long relative to a 1s tick.
+  const allPoolsVisibleState = () => withIntro(createInitialGameState(), { capacity: 8 * 1024 ** 10, speedCapacity: 8 * 2 ** 10, byteCreated: true })
   const durationOf = (introOverrides = {}) =>
     getComputeMergeDurationSeconds(withIntro(allPoolsVisibleState(), introOverrides), boundaryIndex)
 
@@ -5079,6 +5083,7 @@ describe('isComputeEntityAutoMergeUnlocked / getComputeReserveHeld (tier 1 Cores
 describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool (#755)', () => {
   const poolVisible = overrides => withIntro(createInitialGameState(), {
     capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+    speedCapacity: 7932, // raw stream rate 250 B/s (2,000 bits/sec), so merge durations stay long vs. a 1s tick
     byteCreated: true,
     ...overrides,
   })
@@ -11036,6 +11041,7 @@ describe('Data Lakes', () => {
       // also start reserving/spending intro.bits into its own buffer, defeating every test below's
       // own pool-1-only isolation.
       capacity: 5_000_000,
+      speedCapacity: 8192, // raw stream rate 256 B/s -> pool 1 reserves a clean 250 B/s = 2,000 bits/sec
       poolBuffers: { 1: 800_000 },
       disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
       ...overrides,
@@ -11204,6 +11210,7 @@ describe('Data Lakes', () => {
         // otherwise pool 2 would also start reserving/spending intro.bits into its own (here
         // unseeded, so unconditionally room-having) buffer, defeating this test's own isolation.
         capacity: 5_000_000,
+        speedCapacity: 8192, // raw stream rate 256 B/s -> pool 1 Bandwidth 2,000 bits/sec, so the lake isn't maxed in one tick
         poolBuffers: { 1: 8_000_000 }, // already completely full
       })
       const after = tickPoolBufferFill(1000)(state)
@@ -11234,6 +11241,7 @@ describe('Data Lakes', () => {
         byteCreated: true,
         bits: 1_000_000,
         capacity: 5_000_000,
+        speedCapacity: 8192, // raw stream rate 256 B/s, so the lake isn't maxed in a single tick
         poolBuffers: { 1: 8_000_000 },
         disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
       })

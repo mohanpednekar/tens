@@ -270,14 +270,14 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      decade-power one above, though both share the same `N = round(log2(...))` doubling-step
      calculation) — it matches the raw rate up
      to 64 B/s, then diverges (125 instead of 128, repeating every decade — e.g. a raw
-     256 B/s rate reads as a clean 250 B/s). `sqrt(that pool's own Capacity in Bytes)` is only a
+     256 B/s rate reads as a clean 250 B/s). `(that pool's own Capacity in Bytes) ** DATA_STREAM_SPEED_EXPONENT` (0.8, the same exponent that caps the Data Stream's own Speed against its Capacity) is only a
      GUIDELINE for the bandwidth's lower/upper bounds, not the formula itself — a small early pool's
      Bandwidth (and every rate derived from it: disk/cache fill and build speeds, Data Lake overflow
      pacing) could otherwise run far ahead of what its own tiny Memory window could plausibly move
-     through — so `getStoragePoolBandwidth` computes `min(rawRate, sqrt(Capacity))` in raw terms
-     FIRST, then applies the SI-clean transform once to that bounded value; the sqrt bound still acts
+     through — so `getStoragePoolBandwidth` computes `min(rawRate, Capacity ** 0.8)` in raw terms
+     FIRST, then applies the SI-clean transform once to that bounded value; the power bound still acts
      as the real throughput ceiling once a pool's own (now fixed, maxed) Capacity can't keep up with
-     an ever-growing rate, but the number shown is always the SI-clean equivalent, never a raw `sqrt`
+     an ever-growing rate, but the number shown is always the SI-clean equivalent, never a raw power
      remainder.
    - `isMemoryCapacityAtCap` — the predicate `isMemoryCapacityUpgradeAvailable`/
      `upgradePoolCapacity` actually gate on — compares the FINAL pool's (`getStoragePoolCount()`)

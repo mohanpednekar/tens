@@ -3814,8 +3814,8 @@ describe('Byte Foundry Storage', () => {
         // Production is continuous now (no tickSpeedSeconds/productionMultiplier knobs) — the huge
         // capacity keeps the derived rate far above the pool bandwidth cap, so the pool buffer
         // stays topped up and can't perturb the cache-fill timing being measured. The Speed basis is
-        // pinned to ~384 B/s (384^1.25 B) so production stays at the rate this timing was tuned for.
-        speedCapacity: 13_599,
+        // pinned to 256 B/s raw (1024 B basis) so pool 1 Bandwidth stays a clean 250 B/s (2,000 bits/sec) as this timing was tuned.
+        speedCapacity: 8192,
       },
       { purchaseLevels: { [tier01.id]: 2 } }
     )
