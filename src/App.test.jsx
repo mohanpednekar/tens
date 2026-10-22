@@ -3545,6 +3545,15 @@ describe('Byte Foundry Storage', () => {
     )
   })
 
+  test('Provision Disk is available as soon as the Byte exists, before Storage is revealed — clicking it queues the build', () => {
+    seedIntroState({ bits: 0, byteCreated: true })
+    render(<App />)
+    const provisionButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(provisionButton).toBeEnabled()
+    fireEvent.click(provisionButton)
+    expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.diskBuildQueued).toBe(true)
+  })
+
   test('a full unlocked Disk array offers a confirm-guarded Foundry reset instead of Provision Disk, which unlocks the next size and raises the exponent', async () => {
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,

@@ -968,7 +968,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         )}
       </DataStreamCard>
 
-      {storageRevealed && !isStoragePoolRebuilding(state, diskPoolIndex) && (
+      {intro.byteCreated && !isStoragePoolRebuilding(state, diskPoolIndex) && (
         <ProvisionCard aria-label="Provision Disk">{provisionDiskButton}</ProvisionCard>
       )}
 
