@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Byte Foundry pacing: base Speed is now (Speed level in Bytes)^e and capped at Capacity^e, instead of √Capacity. `e` starts at 0.5 (unchanged early game) and rises by 0.01 for every further Disk size you unlock with a **Foundry reset** (see Added). Upgrade Speed costs the current Speed level. Capacity upgrade costs are unchanged. Old saves keep every Disk size they already built (grandfathered), so their exponent starts at 0.5 + 0.01 per built size.
 
-- Unit-scaled memory amounts use fixed significant digits (4 below 1,000, 5 above). A balance that is an integer and has not changed for 5 seconds collapses to 1–2 digits (e.g. "500 B"), reverting on any click or key press. Balances render in fixed slots so the decimal point and unit symbol stay in place while the value changes.
+- Unit-scaled memory amounts use fixed significant digits (4 below 1,000, 5 above). A balance that is an integer and has not changed for 5 seconds collapses to 1–2 digits (e.g. "500 B"), reverting on any click or key press.
 
 - Byte Foundry: the running Capacity/Speed upgrade bar now shows the percent on its first line, the actual from → to value, and the time left.
 
