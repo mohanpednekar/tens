@@ -10,7 +10,7 @@ const BuyMaxToggle = ({ game }) => {
   return (
     <Switch
       $on={enabled}
-      aria-label="Toggle buy max mode"
+      aria-label="Buy max mode"
       aria-pressed={enabled}
       onClick={() => game.setBuyMaxMode(!enabled)}
       title={enabled
