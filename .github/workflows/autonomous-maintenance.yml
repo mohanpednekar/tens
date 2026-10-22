@@ -420,6 +420,20 @@ jobs:
           fi
           scripts/sync-release-milestones.sh
 
+      - name: Sweep stalled claude/auto-* PRs
+        # Deterministic and unconditional, same rationale as "Backlog issue hygiene" above (#60).
+        # Comments (via the PAT, so autonomous-pr-followup.yml's issue_comment trigger fires) on
+        # claude/auto-* PRs idle 24h+ with a failing check or a merge conflict; escalates to an
+        # automation-retro issue after 3 sweep comments on one PR.
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+        run: |
+          if [ ! -x scripts/sweep-stalled-auto-prs.sh ]; then
+            echo "::warning::scripts/sweep-stalled-auto-prs.sh missing or not executable — skipping."
+            exit 0
+          fi
+          scripts/sweep-stalled-auto-prs.sh
+
       - name: Set up Node + Yarn
         if: steps.guard.outputs.skip != 'true'
         uses: ./.github/actions/setup-node-yarn
