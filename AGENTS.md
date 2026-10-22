@@ -142,7 +142,7 @@ one-time-ever gate (`latchMainGameUnlocked` — see above) before `MainPage` (`t
 is reachable. Tapping accumulates bits into the **Data Stream** (Buffer-capped, binary units —
 Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator grown via a single
 **Upgrade Capacity** / **Upgrade Speed** actions (one at a time; cost = current capacity / current Speed basis, a click starts a progress bar fed at a constant 100% of base Speed from the Buffer; displayed Speed is
-*derived* from the Speed basis as `basis^0.8` via `getDataStreamSpeedBytesPerSecond`, capped at `Capacity^0.8`, not purchased) — entirely OUTSIDE the
+*derived* from the Speed basis as `basis^0.75` via `getDataStreamSpeedBytesPerSecond`, capped at `Capacity^0.75`, not purchased) — entirely OUTSIDE the
 forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a separate fill-based
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer
 fullness and recent taps. Disks (`StoragePage`) fill and pull into Factory automatically, with no manual

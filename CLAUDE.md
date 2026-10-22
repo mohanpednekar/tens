@@ -611,7 +611,7 @@ Strict three-layer separation:
    `StoragePage` wrapper), not a separate AppNav item or tab. Data Stream owns the shared
    Combine/Speed/Capacity actions and the common Provision Disk control; Storage pools 1–10 are derived
    views over the one Data Stream, each with its own Bandwidth (`getStoragePoolBandwidth`, hard-capped at
-   that pool's Capacity in Bytes ^ `DATA_STREAM_SPEED_EXPONENT`, 0.8 — the same exponent as the Data Stream's own cap) and local buffer
+   that pool's Capacity in Bytes ^ `DATA_STREAM_SPEED_EXPONENT`, 0.75 — the same exponent as the Data Stream's own cap) and local buffer
    (`intro.poolBuffers[poolIndex]`, `getPoolBufferBits`/`getPoolBufferCapacity`) that every bit-costing
    Storage action for that pool — Provision Disk's build cost, the read-cache fill — spends from
    exclusively (`tickPoolBufferFill` tops it up from `intro.bits`, pool 1 first, after tier01's
@@ -778,8 +778,8 @@ and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at a constant 
 every other consumer — nothing is paused or raced; when the bar
 reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
 running, the same button becomes an inert progress bar (no cancel; the tile is unchanged). Displayed Speed is *derived* from the Speed basis
-(`getDataStreamSpeedBytesPerSecond`): it's `basisBytes ** DATA_STREAM_SPEED_EXPONENT` (0.8) B/s, ×1.74 per Speed upgrade, capped at
-`Capacity^0.8`. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,
+(`getDataStreamSpeedBytesPerSecond`): it's `basisBytes ** DATA_STREAM_SPEED_EXPONENT` (0.75) B/s, ×1.68 per Speed upgrade, capped at
+`Capacity^0.75`. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,
 nav **Boosters**) unlock; a separate **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
 unlocks at 100 PP — see Architecture 4c. Recurring "upgrade" actions are ranked in a fixed **forced
 priority order** — Disk Fill > Provision Disk > Compute Boost — so a lower-ranked action is disabled (in

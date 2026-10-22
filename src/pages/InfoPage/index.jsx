@@ -43,6 +43,7 @@ import {
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
   getStoragePoolMemoryBounds,
+  DATA_STREAM_SPEED_EXPONENT,
 } from 'game/layers'
 import { version } from '../../../package.json'
 import styled from 'styled-components'
@@ -207,8 +208,8 @@ const InfoPage = () => {
             one runs at a time: pressing either replaces both buttons with a progress bar while a
             constant 100% of the Data Stream&apos;s base Speed is pulled from the Buffer into it,
             ahead of everything else. When the bar fills the upgrade applies and both buttons return.
-            Base Speed is (Speed level in Bytes)<sup>0.8</sup> per second, growing ×1.74 per Speed upgrade,
-            and can never exceed Capacity<sup>0.8</sup>, so upgrade Capacity to unlock more Speed.
+            Base Speed is (Speed level in Bytes)<sup>{DATA_STREAM_SPEED_EXPONENT}</sup> per second, growing ×{(2 ** DATA_STREAM_SPEED_EXPONENT).toFixed(2)} per Speed upgrade,
+            and can never exceed Capacity<sup>{DATA_STREAM_SPEED_EXPONENT}</sup>, so upgrade Capacity to unlock more Speed.
           </li>
           <li>
             <strong>Transfer blocks</strong> convert Data Stream bits into free {firstTierName} at

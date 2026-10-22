@@ -8944,3 +8944,13 @@ snap of 10,000 B/s), and every later pool's cap scales the same way. Everything 
 pacing) speeds up accordingly. Not re-run through `simulate-run-times`; several engine/App tests now pin the
 Speed basis (`speedCapacity`) so their timing assumptions stay meaningful.
 
+
+### Speed exponent set to 0.75, with later upgrades expected to raise it (2026-10)
+
+The 0.8 exponent chosen to hit ~1 year to the 128 QiB cap was dialed back to `DATA_STREAM_SPEED_EXPONENT = 0.75`
+by the maintainer ("use 0.75 for now and allow upgrades later"). It applies to both the Data Stream and the pool
+Bandwidth caps. At 0.75 each upgrade at Capacity C takes ~C^0.25 s, so the uninterrupted-play total to the
+cap is on the order of 38 years (hand model, no boosts); the intent is that future upgrades raise the exponent
+(0.8 ≈ 1 year). No such upgrade exists yet — the exponent is a single constant and the pacing/test fixtures
+are written against it (tests use `DATA_STREAM_SPEED_EXPONENT`, `basisBitsForRawRate`) so raising it later is a
+localized change.

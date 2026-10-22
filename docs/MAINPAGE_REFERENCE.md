@@ -93,7 +93,7 @@ INTRO_BYTE_COMBINE_COST`. Once `byteCreated`, a single **"Upgrade Data Stream"**
 Capacity ×2 actions into one purchase: **Capacity is the only bought progression variable** — the
 button costs exactly the current capacity (a full Buffer, drained on purchase) and doubles
 `intro.capacity` (`INTRO_CAPACITY_DOUBLING_STEP`). The displayed Speed is *derived* from the Speed basis (`intro.speedCapacity`, falling back to Capacity),
-never purchased directly — `getDataStreamSpeedBytesPerSecond(basisBits)` returns `basisBytes ** DATA_STREAM_SPEED_EXPONENT` (0.8) B/s, ×1.74 per Speed upgrade; the separate Upgrade Speed button doubles the basis (cost = the basis) while the doubled basis fits within Capacity. The current Capacity and
+never purchased directly — `getDataStreamSpeedBytesPerSecond(basisBits)` returns `basisBytes ** DATA_STREAM_SPEED_EXPONENT` (0.75) B/s, ×1.68 per Speed upgrade; the separate Upgrade Speed button doubles the basis (cost = the basis) while the doubled basis fits within Capacity. The current Capacity and
 derived Speed stay visible above the button on the Data Stream tile's own footer row; there is no
 after-upgrade preview. `disabled={!capacityUpgradeClickable}` where `capacityUpgradeClickable =
 isMemoryCapacityUpgradeArmable(state)`: a click at any fill (byte combined, not at cap, not already
@@ -150,7 +150,7 @@ Renders in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no
 location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
 only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows only
 relative gains (current values are on the tile): `🏷️ <current Capacity (= cost)> · 📦 ×2 · ⚡ ×<speed
-ratio>` (🏷️ is the game's cost icon — `COST_ICON` in `components/icons.js`, shared with Data Lake Boosters and Provision Disk) (Capacity button: `🏷️ <Capacity (= cost)> · 📦 ×2`; Speed button: `🏷️ <Speed basis (= cost)> · ⚡ ×<ratio>`, ratio = `getIntroProductionRate` at the doubled basis ÷ now ≈ ×1.74),
+ratio>` (🏷️ is the game's cost icon — `COST_ICON` in `components/icons.js`, shared with Data Lake Boosters and Provision Disk) (Capacity button: `🏷️ <Capacity (= cost)> · 📦 ×2`; Speed button: `🏷️ <Speed basis (= cost)> · ⚡ ×<ratio>`, ratio = `getIntroProductionRate` at the doubled basis ÷ now ≈ ×1.68),
 `📦 Max capacity` at the cap; its `aria-description` carries the cost and absolute next Capacity and Speed, and
 the armed status line shows them too. Its
 visible label always tracks
