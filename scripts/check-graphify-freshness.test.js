@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -128,5 +129,18 @@ describe('check-graphify-freshness', () => {
     expect(names.has('fs')).toBe(true);
     expect(names.has('node:fs')).toBe(true);
     expect(names.has('not-a-real-package')).toBe(false);
+  });
+});
+
+// Root-level code files are config entry points only. A one-off helper script committed to the repo
+// root (e.g. the stray `submit_pr.cjs` bot helper from #874) is almost always an accident, and it
+// also leaves the committed graph uncovered. Add a new entry here deliberately if one is intended.
+const ALLOWED_ROOT_CODE_FILES = ['playwright.config.js', 'vite.config.js', 'viteConfigFactory.js'];
+
+describe('repo root hygiene', () => {
+  it('has no unexpected root-level script files', () => {
+    const tracked = execFileSync('git', ['ls-files'], { cwd: REPO_ROOT, encoding: 'utf8' }).split('\n');
+    const rootScripts = tracked.filter((file) => /^[^/]+\.(c?js|mjs|sh|py)$/.test(file));
+    expect(rootScripts.filter((file) => !ALLOWED_ROOT_CODE_FILES.includes(file))).toEqual([]);
   });
 });
