@@ -310,7 +310,7 @@ import {
   queueIntroSpeedUpgrade,
   tickSpeedUpgradeDrain,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -3774,20 +3774,24 @@ describe('tickDiskAutoFill', () => {
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
   })
 
-  it('caps a single call\'s cache refill from its pool buffer at CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER × rate × elapsedSeconds, even with a huge banked balance', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), blockBits * 5), {
-      // far more than the 1-second budget below could ever move
+  it('fills read-cache blocks instantly and whole once the pool buffer holds a full block, ignoring elapsed time and bandwidth', () => {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), blockBits * 5 + 7), {
       capacity: storageCapacity,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
-      disks: { [FIRST_DISK_SIZE]: 1 }, // no empty container — isolates the cache-refill budget
+      disks: { [FIRST_DISK_SIZE]: 1 },
     })
-    // storageCapacity gives pool 1 a 256 bits/sec bandwidth, so 0.1 elapsed second's budget is
-    // 256 bits — far below one full block (1,000 bits) — yet still a real, nonzero, continuous
-    // (not block-quantized) transfer.
-    const budget = CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER * getStoragePoolBandwidth(state, 1) * 0.1
-    const after = tickDiskAutoFill(0.1)(state)
-    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(budget)
-    expect(after.intro.poolBuffers[1]).toBe(blockBits * 5 - budget)
+    const after = tickDiskAutoFill(0)(state)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(blockBits * 5)
+    expect(after.intro.poolBuffers[1]).toBe(7)
+  })
+
+  it('does not move a partial block: a pool buffer below one block leaves the cache untouched', () => {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), blockBits - 1), {
+      capacity: storageCapacity,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      disks: { [FIRST_DISK_SIZE]: 1 },
+    })
+    expect(tickDiskAutoFill(1e12)(state)).toBe(state)
   })
 
   it('dumps the whole pool buffer balance when the pool buffer\'s own clamped capacity is smaller than one cache block', () => {
@@ -3803,18 +3807,6 @@ describe('tickDiskAutoFill', () => {
     const after = tickDiskAutoFill(1e12)(state)
     expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(INTRO_STARTING_CAPACITY)
     expect(after.intro.poolBuffers[1]).toBe(0)
-  })
-
-  it('refills exactly one whole block once elapsed time covers that block\'s own bandwidth-capped duration', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), blockBits * 5), {
-      capacity: storageCapacity,
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
-      disks: { [FIRST_DISK_SIZE]: 1 },
-    })
-    const oneBlockSeconds = blockBits / (CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER * getStoragePoolBandwidth(state, 1))
-    const after = tickDiskAutoFill(oneBlockSeconds)(state)
-    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(blockBits)
-    expect(after.intro.poolBuffers[1]).toBe(blockBits * 4)
   })
 
   it('keeps an already-full read cache full and does not pour into an empty disk while that size\'s own fixed tier is at its required level', () => {
@@ -3884,7 +3876,8 @@ describe('tickDiskAutoFill', () => {
     })
     const after = tickDiskAutoFill(0)(state)
     expect(after.intro.diskCache?.[level2Size] ?? 0).toBe(0)
-    expect(after.intro.poolBuffers[1]).toBe(level2Size)
+    // The refund lands in the buffer, where the pool's own read cache may instantly take whole blocks.
+    expect(after.intro.poolBuffers[1] + (after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0)).toBe(level2Size)
   })
 
   it('self-heals a save carrying a stale in-flight read-cache flush for a now-ineligible size, dropping it without touching its pool buffer', () => {
@@ -3907,7 +3900,8 @@ describe('tickDiskAutoFill', () => {
     // The stale cache itself is still refunded to its pool buffer (same as the sibling test above)
     // — the flush entry is just the timer wrapped around it, dropped alongside.
     expect(after.intro.diskCache?.[level2Size] ?? 0).toBe(0)
-    expect(after.intro.poolBuffers[1]).toBe(level2Size)
+    // The refund lands in the buffer, where the pool's own read cache may instantly take whole blocks.
+    expect(after.intro.poolBuffers[1] + (after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0)).toBe(level2Size)
     // No disk was ever credited from this stale, now-abandoned flush.
     expect(after.intro.disks?.[level2Size] ?? 0).toBe(0)
   })

@@ -21,7 +21,6 @@ import {
   COMPUTE_FLOPS_LAST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
   CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER,
-  CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER,
   DATA_LAKE_CAPACITY_BY_LEVEL,
   DATA_LAKE_SUB_SIZE_DISK_CAPS,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
@@ -288,9 +287,8 @@ const InfoPage = () => {
             1 MB array → 8 × 1 Mb). Cache stays full as its steady state; Memory refills whole
             blocks when a block was just spent by the tier's own automatic pull below or the size
             was just unlocked — Memory fills visibly between transfers rather than draining
-            bit-by-bit, at up to
-            {' '}{CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER}× your current production rate, so
-            even a large banked balance can't refill it instantly.
+            bit-by-bit: the moment Memory holds a full block, that block lands in the Cache
+            instantly and is subtracted from Memory.
           </li>
           <li>
             That smallest array's empty disks fill from its full read cache when no tier claim
