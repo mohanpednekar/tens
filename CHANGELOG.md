@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Foundry reset unlocks the next Disk size.** Once the current Disk array is full, Provision Disk is replaced by a confirm-guarded **Foundry reset: unlock <size> Disks** button. It resets the Byte Foundry (Capacity, Disks, Lakes, Compute) and unlocks provisioning for the next size, raising the Data Stream Speed / pool Bandwidth exponent by 0.01 (starts at 0.5). Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs, paid from the Data Stream, with no clicks; Data Lakes (Boosters, lake upgrades, pool resets) and Compute entities are wiped, exactly like Reset Byte Foundry. Era ascension resets the unlocked sizes and exponent.
+
 - **Perks page.** A new **Perks** item in the bottom bar (after your first Prestige) gathers every
   permanent feature into three icon tabs: 🔓 **Unlocks** (one-time purchases like Smart, Tickspeed
   Autobuyer and Auto Scale Up, plus every tier's autobuyer milestones, reached ones included — shown
@@ -35,9 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Storage pool Bandwidth is now capped at the pool's Capacity^0.8 (was √Capacity), matching the Data Stream's new Speed rule, so pools benefit from faster Speed too. Disk fill/provisioning, merge timers and Data Lake feeding run much faster once the Data Stream outpaces the old cap.
+- Storage pool Bandwidth is now capped at the pool's Capacity^e (was √Capacity), using the same rising exponent `e` as the Data Stream's Speed rule (see the Foundry-reset entry below), so pools benefit from faster Speed too.
 
-- Byte Foundry pacing: base Speed is now (Speed level in Bytes)^0.8 (×1.74 per Speed upgrade) and capped at Capacity^0.8, instead of √Capacity. Upgrade Speed costs the current Speed level. Capacity upgrade costs are unchanged. Reaching the 128 QiB cap drops from billions of years to roughly a year of play; the early game is faster too. Existing saves' Speed jumps up on load.
+- Byte Foundry pacing: base Speed is now (Speed level in Bytes)^e and capped at Capacity^e, instead of √Capacity. `e` starts at 0.5 (unchanged early game) and rises by 0.01 for every further Disk size you unlock with a **Foundry reset** (see Added). Upgrade Speed costs the current Speed level. Capacity upgrade costs are unchanged. Old saves keep every Disk size they already built (grandfathered), so their exponent starts at 0.5 + 0.01 per built size.
 
 - Unit-scaled memory amounts use fixed significant digits (4 below 1,000, 5 above). A balance that is an integer and has not changed for 5 seconds collapses to 1–2 digits (e.g. "500 B"), reverting on any click or key press.
 

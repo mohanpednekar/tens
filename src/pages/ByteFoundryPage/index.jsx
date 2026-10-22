@@ -4,7 +4,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolRebuilding } from 'game/engine'
+import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolRebuilding } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled, { css } from 'styled-components'
@@ -640,6 +640,19 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // that isProvisionDiskAvailable/provisionDisk themselves treat as unavailable to spend.
   const diskPoolSpendableBufferBits = Math.max(0, diskPoolBufferBits - getPoolCacheReservationBits(state, diskPoolIndex))
   const diskLadderExhausted = isDiskLadderExhaustedForActivePools(state)
+  // A full array whose next size is reachable but locked: only a Foundry reset unlocks it (and raises
+  // the speed exponent by one step).
+  const diskUnlockAvailable = isDiskSizeUnlockAvailable(state)
+  const speedExponent = getDataStreamSpeedExponent(intro)
+  const speedExponentText = speedExponent.toFixed(2)
+  const nextSpeedExponentText = getDataStreamSpeedExponent({ ...intro, unlockedDiskSteps: getUnlockedDiskSteps(intro) + 1 }).toFixed(2)
+  const nextUnlockDiskSizeText = formatDiskSize(getDiskLadderSizeBits(getUnlockedDiskSteps(intro) + 1))
+  const handleUnlockDiskSizeClick = () => {
+    const confirmed = typeof window === 'undefined' || typeof window.confirm !== 'function' || window.confirm(
+      `Foundry reset to unlock ${nextUnlockDiskSizeText} disks? Capacity, Disks, Data Lakes (Boosters, lake upgrades, pool resets) and Compute entities are wiped; only Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs; speed exponent ${speedExponentText} → ${nextSpeedExponentText}.`
+    )
+    if (confirmed) actions.unlockNextDiskSize()
+  }
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
   const canStartDiskBuild = isProvisionDiskTurnAvailable(state)
   const diskBuildInProgress = intro.diskBuild
@@ -683,7 +696,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const capacityUpgradeCost = intro.capacity
   const speedUpgradeCost = getSpeedUpgradeCostBits(intro)
   // Capacity doubles on its own button; Speed (derived from its own basis, which trails Capacity)
-  // grows ×2^DATA_STREAM_SPEED_EXPONENT per upgrade (see getDataStreamSpeedBytesPerSecond).
+  // grows ×2^exponent per upgrade (see getDataStreamSpeedBytesPerSecond / getDataStreamSpeedExponent).
   const nextCapacity = intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
   const nextCapacityText = formatMemoryCapacityValue(nextCapacity, true)
   const nextRate = getIntroProductionRate({ ...intro, speedCapacity: speedUpgradeCost * INTRO_CAPACITY_DOUBLING_STEP })
@@ -750,7 +763,21 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               status: `${COST_ICON} ${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
               reason: diskBuildBlockedByPriority ? 'disk fill comes first' : 'pool buffer too low',
             }
-  const provisionDiskButton = (
+  const unlockDiskSizeButton = (
+    <Button
+      aria-label="foundry reset to unlock disk size"
+      onClick={handleUnlockDiskSizeClick}
+      title={`Reset the Byte Foundry to unlock ${nextUnlockDiskSizeText} disks. Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs; Data Lakes and Compute entities are wiped; the speed exponent rises ${speedExponentText} → ${nextSpeedExponentText}.`}
+      type="button"
+      variant="prestige"
+    >
+      <MilestoneButtonContent>
+        <span>🔁 Foundry reset: unlock {nextUnlockDiskSizeText} Disks</span>
+        <MilestoneCostLine>{`Speed exponent ${speedExponentText} → ${nextSpeedExponentText} · auto-rebuilds to your highs`}</MilestoneCostLine>
+      </MilestoneButtonContent>
+    </Button>
+  )
+  const provisionDiskButton = diskUnlockAvailable ? unlockDiskSizeButton : (
     <Button
       aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
       aria-description={diskBuildStatus.reason ? `${diskBuildStatus.status} (${diskBuildStatus.reason})` : diskBuildStatus.status ?? undefined}
@@ -918,7 +945,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     onClick={actions.queueIntroSpeedUpgrade}
                     title={speedUpgradeArmable
                       ? 'Pull the Data Stream\'s base Speed into the upgrade; its bar filling raises Speed'
-                      : 'Base Speed cannot exceed Capacity^0.8 — upgrade Capacity first'}
+                      : `Base Speed cannot exceed Capacity^${speedExponentText} — upgrade Capacity first`}
                     aria-description={speedUpgradeArmable ? `Costs ${formatBitsInNearestUnit(speedUpgradeCost)}; speed ${nextRateText} after upgrading` : undefined}
                     type="button"
                     variant={speedUpgradeArmable ? 'prestige' : 'neutral'}

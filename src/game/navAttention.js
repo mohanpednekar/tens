@@ -12,6 +12,7 @@ import {
 import {
   canBuyComputeFlopsTier,
   getSpeedUpgradeCostBits,
+  isDiskSizeUnlockAvailable,
   isSpeedUpgradeArmable,
   getComputeFieldEffectiveCap,
   getAutoPrestigeCost,
@@ -228,6 +229,7 @@ export const hasFoundryAttention = state =>
   (isMemoryCapacityUpgradeAvailable(state) && !state.intro?.capacityUpgradeQueued && !state.intro?.speedUpgradeQueued) ||
   (isSpeedUpgradeArmable(state) && (state.intro?.bits ?? 0) >= getSpeedUpgradeCostBits(state.intro)) ||
   isProvisionDiskTurnAvailable(state) ||
+  isDiskSizeUnlockAvailable(state) ||
   isTransferBlockAffordable(state)
 
 export const getFoundryAttentionLevel = state =>
