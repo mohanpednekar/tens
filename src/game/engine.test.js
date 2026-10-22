@@ -310,7 +310,7 @@ import {
   queueIntroSpeedUpgrade,
   tickSpeedUpgradeDrain,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -653,28 +653,25 @@ describe('getIntroProductionRate / getDataStreamSpeedBytesPerSecond', () => {
   })
 
   it.each([
-    [64 * 1024, 256],
-    [128 * 1024, 384],
-    [256 * 1024, 512],
-    [512 * 1024, 768],
-    [1024 * 1024, 1024],
-    [2 * 1024 * 1024, 1.5 * 1024],
-    [4 * 1024 * 1024, 2 * 1024],
-  ])('Speed at %i Bytes capacity is %i B/s', (capacityBytes, expectedSpeed) => {
-    expect(getDataStreamSpeedBytesPerSecond(capacityBytes * BITS_PER_BYTE)).toBe(expectedSpeed)
+    [1, 1],
+    [1024, 2 ** 8],
+    [64 * 1024, 2 ** 12.8],
+    [1024 * 1024, 2 ** 16],
+    [2 ** 30, 2 ** 24],
+  ])('Speed at %i Bytes basis is basis^%f B/s', (basisBytes, expectedSpeed) => {
+    expect(getDataStreamSpeedBytesPerSecond(basisBytes * BITS_PER_BYTE)).toBeCloseTo(expectedSpeed, 6)
   })
 
-  it('alternates x1.5 and x4/3 growth — exactly x2 every two Capacity doublings', () => {
+  it('grows by x2^DATA_STREAM_SPEED_EXPONENT (about x1.74) per basis doubling', () => {
     const rate64 = getDataStreamSpeedBytesPerSecond(64 * 1024 * BITS_PER_BYTE)
     const rate128 = getDataStreamSpeedBytesPerSecond(128 * 1024 * BITS_PER_BYTE)
-    const rate256 = getDataStreamSpeedBytesPerSecond(256 * 1024 * BITS_PER_BYTE)
-    expect(rate128 / rate64).toBeCloseTo(1.5)
-    expect(rate256 / rate128).toBeCloseTo(4 / 3)
-    expect(rate256 / rate64).toBeCloseTo(2)
+    expect(rate128 / rate64).toBeCloseTo(2 ** DATA_STREAM_SPEED_EXPONENT, 9)
   })
 
   it('expresses the derived Speed in bits/sec through getIntroProductionRate', () => {
-    expect(getIntroProductionRate({ capacity: 64 * 1024 * BITS_PER_BYTE })).toBe(256 * BITS_PER_BYTE)
+    expect(getIntroProductionRate({ capacity: 1024 * BITS_PER_BYTE })).toBeCloseTo(2 ** 8 * BITS_PER_BYTE, 6)
+    // The Speed basis, when present, wins over Capacity.
+    expect(getIntroProductionRate({ capacity: 1024 * BITS_PER_BYTE, speedCapacity: 8 })).toBe(8)
   })
 
   it('returns 0 for a missing/non-positive capacity (defensive)', () => {
@@ -685,11 +682,12 @@ describe('getIntroProductionRate / getDataStreamSpeedBytesPerSecond', () => {
 
 describe('tapIntroBit', () => {
   it('credits the current production rate (getIntroProductionRate), not a flat 1, once the rate has grown', () => {
-    // 512-Byte capacity (4,096 bits) derives a 24 B/s = 192 bits/sec Speed — still below the
-    // Storage-pool reveal threshold, so the tap credits bits directly.
+    // 512-Byte capacity (4,096 bits) derives a 512^0.8 B/s Speed (about 147 B/s = 1,176 bits/sec) —
+    // still below the Storage-pool reveal threshold, so the tap credits bits directly.
     const state = withIntro(createInitialGameState(), { capacity: 4096 })
     const after = tapIntroBit(state)
-    expect(after.intro.bits).toBe(192)
+    expect(after.intro.bits).toBe(Math.floor(getIntroProductionRate(state.intro)))
+    expect(after.intro.bits).toBeCloseTo(1176, 0)
   })
 
   it('credits one second of the derived rate at the starting capacity (8 bits/sec at 1 Byte)', () => {
@@ -950,7 +948,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
     it('tickIntroProduction delivers exactly the displayed rate at a half-full Buffer (100%)', () => {
       const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 500, capacity: 1000 })
       const after = tickIntroProduction(1)(state)
-      expect(after.intro.bits - state.intro.bits).toBe(getIntroProductionRate(state.intro))
+      expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro), 6)
     })
 
     it('tickPoolBufferFill transfers more than the raw rate into an empty pool buffer (near FILL_MULTIPLIER_MAX_PERCENT)', () => {
@@ -1758,9 +1756,9 @@ describe('storage pools', () => {
   it('Bandwidth is the SI-clean equivalent of the sqrt(Capacity) bound once the derived rate outgrows it', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: 4_000_000, // pool 1 Capacity 100 KB; sqrt(100,000 B) ≈ 316 B/s vs derived 768 B/s
+      capacity: 4_000_000, // pool 1 Capacity 100 KB; sqrt(100,000 B) ≈ 316 B/s vs the far higher derived Speed
     })
-    expect(getIntroProductionRate(state.intro)).toBe(768 * BITS_PER_BYTE)
+    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(768 * BITS_PER_BYTE)
     // sqrt bound 316.2 Bytes/sec → SI-clean 250 Bytes/sec = 2,000 bits/sec
     expect(getStoragePoolBandwidth(state, 1)).toBe(2_000)
   })
@@ -1768,20 +1766,20 @@ describe('storage pools', () => {
   it('Bandwidth still matches the plain-binary derived rate below the 64→125 SI-clean deviation', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      // 1 KiB capacity derives 32 B/s; pool 1's own 1 KB Capacity caps at sqrt(1000) ≈ 31.6 B/s,
-      // whose SI-clean equivalent (32 B/s) still lands on the same 256 bits/sec.
+      // 1 KiB capacity derives 256 B/s (1024^0.8); pool 1's own 1 KB Capacity caps at sqrt(1000) ≈
+      // 31.6 B/s, whose SI-clean equivalent (32 B/s) lands on 256 bits/sec.
       capacity: 8 * 2 ** 10,
     })
-    expect(getIntroProductionRate(state.intro)).toBe(256)
+    expect(getIntroProductionRate(state.intro)).toBeCloseTo(2048, 6)
     expect(getStoragePoolBandwidth(state, 1)).toBe(256)
   })
 
   it('Bandwidth diverges from the raw binary rate past 64 Bytes/sec, e.g. a raw 256 Bytes/sec rate reads as a clean 250', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: INTRO_CAPACITY_CAP_BITS, // pool 1 maxed — sqrt(100,000 B) ≈ 316 B/s cap binds the 384 B/s derived rate
+      capacity: INTRO_CAPACITY_CAP_BITS, // pool 1 maxed — sqrt(100,000 B) ≈ 316 B/s cap binds the far higher derived rate
     })
-    expect(getIntroProductionRate(state.intro)).toBe(384 * BITS_PER_BYTE)
+    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(384 * BITS_PER_BYTE)
     expect(getStoragePoolBandwidth(state, 1)).toBe(2000) // 250 Bytes/sec (SI-clean), not the raw value
   })
 
@@ -3003,10 +3001,10 @@ describe('tickIntroProduction', () => {
   it('keeps producing after mainGameUnlocked — nothing about passive production ever freezes', () => {
     // bits seeded at exactly 50% of capacity so the fill-based Speed multiplier (see
     // FILL_MULTIPLIER_* in layers.js) is neutral (100%) — this test is about production not
-    // freezing, not about the multiplier itself. 100-bit capacity derives a 32 bits/sec rate.
-    const state = withIntro(createInitialGameState(), { byteCreated: true, mainGameUnlocked: true, bits: 50, capacity: 100 })
+    // freezing, not about the multiplier itself.
+    const state = withIntro(createInitialGameState(), { byteCreated: true, mainGameUnlocked: true, bits: 50, capacity: 100, speedCapacity: 8 })
     const after = tickIntroProduction(1)(state)
-    expect(after.intro.bits - state.intro.bits).toBe(32)
+    expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro))
   })
 
   it('returns the same state reference for a true zero-delta tick, not just an equal-valued one', () => {
@@ -3015,29 +3013,28 @@ describe('tickIntroProduction', () => {
   })
 
   it('delivers continuously — a fractional second banks a fractional share of the rate, with no separate accumulator', () => {
-    // 100-bit capacity derives 32 bits/sec; an empty buffer's 150% fill multiplier lifts the real
-    // delivery to 48 bits/sec → 0.4s delivers 19.2 bits.
+    // An empty buffer's 150% fill multiplier lifts the real delivery to 1.5x the derived rate, so
+    // 0.4s delivers 0.4 x 1.5 x rate bits.
     const state = withIntro(createInitialGameState(), { byteCreated: true, capacity: 100 })
     const after = tickIntroProduction(0.4)(state)
-    expect(after.intro.bits).toBeCloseTo(19.2)
+    expect(after.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 0.4 * 1.5)
     expect(after.intro.productionAccumulator).toBeUndefined()
   })
 
   it('delivers proportionally over a longer elapsed window too, evaluated against the pre-tick fill level', () => {
     // bits seeded at exactly 50% of capacity to neutralize the fill-based Speed multiplier (see
-    // the previous test's comment): 32 bits/sec x 1.4s = 44.8 bits.
-    const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 50, capacity: 100 })
+    // the previous test's comment): rate x 1.4s bits.
+    const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 50, capacity: 100, speedCapacity: 8 })
     const after = tickIntroProduction(1.4)(state)
-    expect(after.intro.bits - state.intro.bits).toBeCloseTo(44.8)
+    expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 1.4)
   })
 
   it('delivers multiple seconds of production in one call', () => {
     // bits seeded at exactly 50% of capacity to neutralize the fill-based Speed multiplier (see
-    // the earlier "keeps producing after mainGameUnlocked" test's comment). 1,000-bit capacity
-    // derives 96 bits/sec → 192 bits over 2s.
-    const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 500, capacity: 1000 })
+    // the earlier "keeps producing after mainGameUnlocked" test's comment): rate x 2s bits.
+    const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 500, capacity: 1000, speedCapacity: 8 })
     const after = tickIntroProduction(2)(state)
-    expect(after.intro.bits - state.intro.bits).toBeCloseTo(192)
+    expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 2)
   })
 
   it('caps delivered bits at capacity rather than overshooting', () => {
@@ -5745,13 +5742,12 @@ describe('tickGame Compute Boost integration', () => {
       // bits seeded at exactly 50% of capacity to neutralize the fill-based Speed multiplier (see
       // FILL_MULTIPLIER_* in layers.js) — this test is about the Compute Boost multiplier, not
       // that one. tickIntroProduction itself reads the boost, so no tickGame wrapper needed.
-      byteCreated: true, bits: 500_000, capacity: 1_000_000,
+      byteCreated: true, bits: 500_000, capacity: 1_000_000, speedCapacity: 8,
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 10,
     })
     const after = tickIntroProduction(1)(state)
-    // Derived rate at 1,000,000-bit capacity is 384 B/s = 3,072 bits/sec; burst (tier 1 / Core)
-    // multiplies it ×20.
-    expect(after.intro.bits - state.intro.bits).toBeCloseTo(3072 * COMPUTE_BOOST_PRESETS.burst.multiplier)
+    // Burst (tier 1 / Core) multiplies the derived rate ×20.
+    expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * COMPUTE_BOOST_PRESETS.burst.multiplier)
   })
 
   it('multiplies tier01\'s own production while a boost is active, leaving every other tier unaffected', () => {
@@ -11970,10 +11966,21 @@ describe('Upgrade Speed (separate from Capacity)', () => {
 })
 
 describe('getSpeedUpgradeCostBits', () => {
-  it('equals the Capacity upgrade cost at perfect squares and deviates at odd powers', () => {
-    expect(getSpeedUpgradeCostBits({ capacity: 512 })).toBe(512) // 64 B: speed 8 B/s, 8² B
-    expect(getSpeedUpgradeCostBits({ capacity: 256 })).not.toBe(256) // 32 B: speed 6 B/s -> 36 B
-    expect(getSpeedUpgradeCostBits({ capacity: 256 })).toBe(288)
+  it('costs the current Speed basis, matching the Capacity at which that Speed is the cap', () => {
+    expect(getSpeedUpgradeCostBits({ capacity: 512 })).toBe(512)
+    expect(getSpeedUpgradeCostBits({ capacity: 512, speedCapacity: 256 })).toBe(256)
+    // Speed = (basis bytes)^0.8, so the Capacity at which that Speed is the cap equals the basis.
+    const intro = { capacity: 2 ** 40, speedCapacity: 2 ** 30 }
+    const speed = getDataStreamSpeedBytesPerSecond(intro.speedCapacity)
+    expect((speed ** (1 / DATA_STREAM_SPEED_EXPONENT)) * BITS_PER_BYTE).toBeCloseTo(intro.speedCapacity, -3)
+  })
+
+  it('is armable only while the doubled basis still fits within Capacity (Speed <= Capacity^0.8)', () => {
+    const s = createInitialGameState()
+    const at = intro => ({ ...s, intro: { ...s.intro, byteCreated: true, ...intro } })
+    expect(isSpeedUpgradeArmable(at({ capacity: 512, speedCapacity: 256 }))).toBe(true)
+    expect(isSpeedUpgradeArmable(at({ capacity: 512, speedCapacity: 512 }))).toBe(false)
+    expect(isSpeedUpgradeArmable(at({ capacity: 512 }))).toBe(false)
   })
 })
 
@@ -11987,7 +11994,7 @@ describe('Upgrade Speed cross-system paths', () => {
     const state = seeded({ capacity: 512, speedCapacity: 256, bits: 512 })
     const after = upgradePoolSpeed(state)
     expect(after.intro.speedCapacity).toBe(512)
-    expect(after.intro.bits).toBe(512 - 288)
+    expect(after.intro.bits).toBe(512 - 256)
     expect(upgradePoolSpeed(seeded({ capacity: 512, speedCapacity: 256, bits: 10 }))).toEqual(seeded({ capacity: 512, speedCapacity: 256, bits: 10 }))
   })
 
@@ -12011,5 +12018,21 @@ describe('Upgrade Speed cross-system paths', () => {
     for (let i = 0; i < 8; i++) state = tickFoundryResetConvenience({ ...state, intro: { ...state.intro, bits: state.intro.capacity } })
     expect(state.intro.capacity).toBe(32)
     expect(state.intro.speedCapacity).toBeGreaterThan(8)
+  })
+})
+
+describe('pre-split saves (speedCapacity absent)', () => {
+  it('derive Speed from Capacity^0.8 until the first Capacity upgrade materializes the Speed basis', () => {
+    const s = createInitialGameState()
+    const intro = { ...s.intro, byteCreated: true, capacity: 2 ** 30 * BITS_PER_BYTE }
+    delete intro.speedCapacity
+    expect(getIntroProductionRate(intro)).toBeCloseTo(2 ** (30 * DATA_STREAM_SPEED_EXPONENT) * BITS_PER_BYTE, 3)
+    const state = { ...s, intro }
+    // Speed already sits at the cap, so no Speed upgrade is offered yet.
+    expect(isSpeedUpgradeArmable(state)).toBe(false)
+    // The first Capacity upgrade pins the basis at the pre-upgrade Capacity, freeing one Speed upgrade.
+    const after = upgradePoolCapacity({ ...state, intro: { ...intro, bits: intro.capacity } })
+    expect(after.intro.speedCapacity).toBe(2 ** 30 * BITS_PER_BYTE)
+    expect(isSpeedUpgradeArmable(after)).toBe(true)
   })
 })

@@ -778,9 +778,8 @@ and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at a constant 
 every other consumer — nothing is paused or raced; when the bar
 reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
 running, the same button becomes an inert progress bar (no cancel; the tile is unchanged). Displayed Speed is *derived* from the Speed basis
-(`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd powers
-the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3 growth, exactly
-×2 per two upgrades. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,
+(`getDataStreamSpeedBytesPerSecond`): it's `basisBytes ** DATA_STREAM_SPEED_EXPONENT` (0.8) B/s, ×1.74 per Speed upgrade, capped at
+`Capacity^0.8`. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,
 nav **Boosters**) unlock; a separate **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
 unlocks at 100 PP — see Architecture 4c. Recurring "upgrade" actions are ranked in a fixed **forced
 priority order** — Disk Fill > Provision Disk > Compute Boost — so a lower-ranked action is disabled (in

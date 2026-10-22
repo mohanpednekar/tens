@@ -35,11 +35,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Byte Foundry pacing: base Speed is now (Speed level in Bytes)^0.8 (×1.74 per Speed upgrade) and capped at Capacity^0.8, instead of √Capacity. Upgrade Speed costs the current Speed level. Capacity upgrade costs are unchanged. Reaching the 128 QiB cap drops from billions of years to roughly a year of play; the early game is faster too. Existing saves' Speed jumps up on load.
+
 - Unit-scaled memory amounts use fixed significant digits (4 below 1,000, 5 above). A balance that is an integer and has not changed for 5 seconds collapses to 1–2 digits (e.g. "500 B"), reverting on any click or key press. Balances render in fixed slots so the decimal point and unit symbol stay in place while the value changes.
 
 - Byte Foundry: the running Capacity/Speed upgrade bar now shows the percent on its first line, the actual from → to value, and the time left.
 
-- Byte Foundry: "Upgrade Data Stream" is split into separate **Upgrade Capacity** and **Upgrade Speed** buttons; both are replaced by a status bar while an upgrade runs and return when it completes. Base Speed can't exceed the square root of Capacity.
+- Byte Foundry: "Upgrade Data Stream" is split into separate **Upgrade Capacity** and **Upgrade Speed** buttons; both are replaced by a status bar while an upgrade runs and return when it completes. Base Speed is capped relative to Capacity (see the pacing entry above).
 
 - Boosters page text is shorter: funding line reads "1 ▦ → KB–PB · 0 held" (tier symbols), tier buttons read "⬆ 8→1 Fabric" and "🤖 0/10", and the "Boost" / "Boost with" headings are gone.
 
