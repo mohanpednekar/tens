@@ -688,7 +688,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const capacityUpgradeCost = intro.capacity
   const speedUpgradeCost = getSpeedUpgradeCostBits(intro)
   // Capacity doubles on its own button; Speed (derived from its own basis, which trails Capacity)
-  // alternates ×1.5 and ×4/3 per upgrade (see getDataStreamSpeedBytesPerSecond).
+  // grows ×2^DATA_STREAM_SPEED_EXPONENT per upgrade (see getDataStreamSpeedBytesPerSecond).
   const nextCapacity = intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
   const nextCapacityText = formatMemoryCapacityValue(nextCapacity, true)
   const nextRate = getIntroProductionRate({ ...intro, speedCapacity: speedUpgradeCost * INTRO_CAPACITY_DOUBLING_STEP })
@@ -923,7 +923,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     onClick={actions.queueIntroSpeedUpgrade}
                     title={speedUpgradeArmable
                       ? 'Pull the Data Stream\'s base Speed into the upgrade; its bar filling raises Speed'
-                      : 'Base Speed cannot exceed the square root of Capacity — upgrade Capacity first'}
+                      : 'Base Speed cannot exceed Capacity^0.8 — upgrade Capacity first'}
                     aria-description={speedUpgradeArmable ? `Costs ${formatBitsInNearestUnit(speedUpgradeCost)}; speed ${nextRateText} after upgrading` : undefined}
                     type="button"
                     variant={speedUpgradeArmable ? 'prestige' : 'neutral'}

@@ -2779,8 +2779,8 @@ test('tapping still increments Data Stream (still tappable) after the Byte gener
 
   fireEvent.click(tapButton)
 
-  // Same derived-rate credit as above (capacity 1000 bits -> 12 B/s -> 96 bits per tap).
-  expect(balanceBar).toHaveAttribute('aria-valuenow', '96')
+  // Same derived-rate credit as above (capacity 1000 bits = 125 B -> 125^0.8 = 47.65 B/s -> 380 bits per tap (floored)).
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '380')
 
   unmount()
   vi.useRealTimers()
@@ -2809,16 +2809,16 @@ test('the "Data Stream" label is shown on the balance card', () => {
   expect(screen.getByText('Data Stream')).toBeInTheDocument()
 })
 
-test('the Data Stream header shows the capacity-derived rate — sqrt on even exponents, the neighbouring mean on odd ones', () => {
+test('the Data Stream header shows the basis-derived rate — (basis in Bytes)^0.8', () => {
   // Scoped to the Data Stream region — pool 1's own Bandwidth can coincidentally render the same
-  // "N B/s" text at these rates. Capacity is in BITS: 800,000 bits = 100,000 B, e=17 (odd) ->
-  // (256 + 512)/2 = 384 B/s, shown at the empty-buffer 150% multiplier: 576 B/s.
+  // "N B/s" text at these rates. Capacity is in BITS: 800,000 bits = 100,000 B -> 100,000^0.8 =
+  // 10,000 B/s, shown at the empty-buffer 150% multiplier: 15,000 B/s.
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   const { unmount } = render(<App />)
-  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/576 B\/s$/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/14\.6 KiB\/s$/i)).toBeInTheDocument()
   unmount()
 
-  // Starting capacity (8 bits = 1 B, e=0, even) -> sqrt(1) = 1 B/s.
+  // Starting capacity (8 bits = 1 B) -> 1^0.8 = 1 B/s.
   seedIntroState({ bits: 0, byteCreated: true })
   render(<App />)
   expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/1\.5 B\/s$/i)).toBeInTheDocument()
@@ -2850,20 +2850,20 @@ test('Upgrade Data Stream shows its cost in the nearest fitting binary unit', ()
 })
 
 test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () => {
-  // 512 bits (64 B) doubles to 128 B; Speed at 2^7 B is the mean of sqrt(64) and sqrt(256) = 12 B/s.
+  // 512 bits (64 B) doubles to 128 B.
   seedIntroState({ capacity: 512, bits: 0, byteCreated: true })
   render(<App />)
 
   const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
   expect(upgradeButton).toHaveTextContent(`${COST_ICON} 64 B · 📦 ×2`)
   expect(upgradeButton).toHaveAccessibleDescription('Costs 64 B; capacity 128 B after upgrading')
-  // Speed trails Capacity (basis 32 B, cost 6² = 36 B): 6 B/s -> 8 B/s on its own button.
+  // Speed trails Capacity (basis 32 B -> 16 B/s, cost 32 B): 16 B/s -> 64^0.8 = 27.9 B/s on its own button.
   cleanup()
   seedIntroState({ capacity: 512, speedCapacity: 256, bits: 0, byteCreated: true })
   render(<App />)
   const speedButton = screen.getByRole('button', { name: /upgrade data stream speed/i })
-  expect(speedButton).toHaveTextContent(`${COST_ICON} 36 B · ⚡ ×1.33`)
-  expect(speedButton).toHaveAccessibleDescription('Costs 36 B; speed 8 B/s after upgrading')
+  expect(speedButton).toHaveTextContent(`${COST_ICON} 32 B · ⚡ ×1.74`)
+  expect(speedButton).toHaveAccessibleDescription('Costs 32 B; speed 27.85 B/s after upgrading')
 })
 
 test('Upgrade Data Stream at maximum Capacity is disabled and reads "Max capacity" without a preview', () => {
@@ -3813,7 +3813,9 @@ describe('Byte Foundry Storage', () => {
         disksBuiltTotal: { [currentBankSize]: 1 },
         // Production is continuous now (no tickSpeedSeconds/productionMultiplier knobs) — the huge
         // capacity keeps the derived rate far above the pool bandwidth cap, so the pool buffer
-        // stays topped up and can't perturb the cache-fill timing being measured.
+        // stays topped up and can't perturb the cache-fill timing being measured. The Speed basis is
+        // pinned to ~384 B/s (384^1.25 B) so production stays at the rate this timing was tuned for.
+        speedCapacity: 13_599,
       },
       { purchaseLevels: { [tier01.id]: 2 } }
     )

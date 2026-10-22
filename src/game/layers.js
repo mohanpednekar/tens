@@ -170,12 +170,12 @@ export const getStoragePoolMemoryBounds = (poolIndex = 1) => {
     endBits: (BITS_PER_BYTE / DISK_BUILD_COST_MULTIPLIER) * (POOL_CAPACITY_SI_STEP ** (index + 1)),
   }
 }
-// Data Stream Speed is DERIVED from Capacity, not independently upgraded (see
-// getIntroProductionRate in engine.js): with e = log2(capacity in Bytes), Speed is sqrt(capacity
-// Bytes)/s when e is even and the arithmetic mean of the neighbouring even-exponent sqrt speeds
-// when e is odd — alternating ×1.5 and ×4/3 growth, exactly ×2 per two Capacity doublings.
-// At the starting Capacity (1 Byte) this is exactly 1 Byte/sec (8 bits/sec), matching a manual
-// tap's own base amount (see tapIntroBit/getIntroProductionRate in engine.js).
+// Data Stream Speed is DERIVED from the Speed basis (see getIntroProductionRate in engine.js), not
+// independently priced: Speed = (basis in Bytes) ^ DATA_STREAM_SPEED_EXPONENT B/s, and the basis can
+// never exceed Capacity, so base Speed <= Capacity ^ DATA_STREAM_SPEED_EXPONENT. At the starting
+// Capacity (1 Byte) this is exactly 1 Byte/sec (8 bits/sec), matching a manual tap's own base amount
+// (see tapIntroBit/getIntroProductionRate in engine.js).
+export const DATA_STREAM_SPEED_EXPONENT = 0.8
 export const INTRO_BYTE_BASE_RATE = 1
 // One-time cost, in bits, to combine your first 8 tapped bits into the Byte generator (see
 // combineIntroByte in engine.js) — equal to the starting capacity, since that's exactly how many

@@ -8921,3 +8921,14 @@ bar's scale, so the 50% hand-off between the two readings stays jump-free. Pill 
 the labels were also tried and dropped: plain page-colored text reads on both themes' fills, and
 labels move just past a fill too narrow to hold them. The tap emoji gets a thin dark outline (a
 light halo glowed on the light theme's brown bar).
+
+### Data Stream Speed exponent 0.5 → 0.8 (2026-10)
+
+With Speed capped at √Capacity and the Capacity upgrade costing C at 100% of base Speed, each Capacity
+doubling took √C seconds, so the 128 QiB cap (2^107 B) needed on the order of a billion years of play (an
+earlier 1.9-million-year figure wrongly used 2^87 B). Cheaper Capacity costs were rejected by the maintainer
+("keep costs the same"); the lever was the Speed rule. Speed = basis^0.8 with the basis capped at Capacity,
+and Upgrade Speed costing the basis, makes each upgrade take ~C^0.2 s, ≈1.2 years total (hand model, no
+boosts). Exponent 0.75 gave ≈38 years; 0.8 was solved for the ~1-year target. Side effects: early game is
+faster (1 KiB at ~40 s of upgrades), and pool Bandwidth (still capped at √pool Capacity) can now be the
+tighter limit than the Data Stream. A real-engine playthrough (alternating upgrades via `tickGame`) matched the hand model up to 1 GiB (1 KiB at 38 s, 1 MiB at 190 s, 1 GiB at 13 min); not run through `simulate-run-times`.
