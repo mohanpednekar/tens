@@ -550,9 +550,8 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         </Button>
         <p>
           Wipe Capacity, Memory, Disks / Storage, and Compute on the active save — useful if
-          Capacity was pushed too far. Combine, Upgrade Data Stream, and Provision Disk restart
-          from scratch, then auto-press again up to your pre-reset highs. Upgrade Data Stream
-          remains a full-Buffer doubling ladder whose ceiling rises as storage pools unlock.
+          Capacity was pushed too far. Combine, Upgrade Capacity, Upgrade Speed, and Provision Disk
+          restart from scratch, then auto-press again up to your pre-reset highs.
           Byte Factory progress and Prestige stay.
         </p>
         <Button

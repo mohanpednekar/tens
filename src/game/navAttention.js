@@ -11,6 +11,8 @@ import {
 } from 'game/layers'
 import {
   canBuyComputeFlopsTier,
+  getSpeedUpgradeCostBits,
+  isSpeedUpgradeArmable,
   getComputeFieldEffectiveCap,
   getAutoPrestigeCost,
   isGlobalTickspeedAffordable,
@@ -102,7 +104,7 @@ const COMPUTE_RESERVE_MERGE_STARTS = [
 
 // Not "full" for attention purposes while an Upgrade Data Stream runs — nothing is waiting on the player.
 const isMemoryFull = state =>
-  (state.intro?.bits ?? 0) >= (state.intro?.capacity ?? 0) && !state.intro?.capacityUpgradeQueued
+  (state.intro?.bits ?? 0) >= (state.intro?.capacity ?? 0) && !state.intro?.capacityUpgradeQueued && !state.intro?.speedUpgradeQueued
 
 const isCombineAvailable = state =>
   !(state.intro?.byteCreated ?? false) && (state.intro?.bits ?? 0) >= INTRO_BYTE_COMBINE_COST
@@ -223,7 +225,8 @@ export const getTiersAttentionLevel = state =>
 export const hasFoundryAttention = state =>
   isMemoryFull(state) ||
   isCombineAvailable(state) ||
-  (isMemoryCapacityUpgradeAvailable(state) && !state.intro?.capacityUpgradeQueued) ||
+  (isMemoryCapacityUpgradeAvailable(state) && !state.intro?.capacityUpgradeQueued && !state.intro?.speedUpgradeQueued) ||
+  (isSpeedUpgradeArmable(state) && (state.intro?.bits ?? 0) >= getSpeedUpgradeCostBits(state.intro)) ||
   isProvisionDiskTurnAvailable(state) ||
   isTransferBlockAffordable(state)
 
