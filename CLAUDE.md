@@ -524,6 +524,8 @@ e2e/
   meta-prestige.e2e.js        ← Settings Era ascension from 1 Googol PP seed; era/Eons + Foundry gate
   data-lake.e2e.js            ← a seeded KB Data Lake renders its disk-square breakdown on Foundry, then a
                                manual Buy Booster click grants a Core (verified on the Boosters page)
+  visual-regression.e2e.js    ← Linux-only full-page screenshot baselines (Byte Foundry / Byte Factory, both
+                               themes) in `visual-regression.e2e.js-snapshots/`; update process: `e2e/README.md`
 scripts/
   bump-version.mjs (+ `.test.js`) ← `yarn bump-version` (see "Changelog convention") — #52
   generate-pwa-icons.mjs     ← one-off script (`yarn gen-pwa-icons`) rasterizing an inline "byte grid"
