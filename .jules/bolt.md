@@ -1,20 +1,4 @@
-## 2024-05-24 - Bulk Purchase State Updates in React Incremental Game
-**Learning:** Performing `O(n)` loop state updates for bulk purchases (`N` iterations deep-cloning an immutable state tree) creates a major performance bottleneck, especially in incremental games with autobuyers running continuously.
-**Action:** Replace `for` or `while` loops with mathematical formulas using division/modulo for `O(1)` updates for resource costs and level crossing boundary math to maintain fast and predictable state updates for bulk processing. Also, refactor the underlying action (like `buyBooster`) to accept a `quantity` parameter rather than manually updating state inside the autobuyer, preventing code duplication and side-effect bypasses.
-
-## 2024-06-25 - Replace O(N) cost epoch exponent calculation with O(1) mathematical equivalent
-**Learning:** Performing `O(N)` loop calculation for `getCostEpochExponent` creates an unnecessary overhead that grows linearly with the level, especially since this is called frequently for every level of bulk purchase loops.
-**Action:** Replace `for` or `while` loops with `O(1)` mathematical equivalent formulas where possible to maintain fast and predictable calculation for long-running incremental games. For instance, the summation of linear increments used in cost curves can be replaced with quadratic functions (e.g. `2 + ((e - 1) * e) / 2`).
-
-## 2024-05-25 - Replace O(N) while loop for Booster bulk purchases with O(1) mathematical formulation
-**Learning:** In idle/incremental games, offline progress or massive resource gains can trigger O(N) `while` loops for autobuyers (like `tickDataLakeAutoBuy`), freezing the main thread. Calculating the maximum affordable quantity using a `while` loop iteratively checks costs which causes a performance bottleneck.
-**Action:** Use the sum of arithmetic progression formula and its inverse (quadratic formula) to determine the maximum affordable quantity in O(1) time. Properly account for edge cases such as when the cost scales linearly up to a specific capacity and then remains flat. Pass a `quantity` parameter to the buy action (e.g., `buyBooster(tierIndex, quantity)`) to compute exact costs and update the state in one bulk operation.
-
-## 2024-06-25 - Replace O(N) while loop for Compute Flops bulk purchases with O(1) loop equivalent calculation
-**Learning:** The Compute Flops autobuyers used a budget loop `while (budget >= 1)` that iteratively called `buyComputeFlopsTier` which was extremely slow when catching up on large budgets (e.g. offline progress), freezing the thread.
-**Action:** Refactored `tickComputeFlopsAutobuyers` to consume the entire budget at once by determining the affordable quantity natively and passing the calculated total cost and quantity to the updated `buyComputeFlopsTier` action, removing the O(N) while loop.
-
-## 2024-07-28 - Replace O(N) attempts loop with O(1) batch processing for tickGame autobuyers
+## 2024-06-25 - Prevent O(N) performance drops with O(1) math batching in tickGame autobuyers
 **Learning:** In `tickGame`, when processing massive offline progress (large `budget`), the `while (budget >= 1)` loop iteratively evaluated and purchased units for a single attempt (e.g. 10 units) at a time. Each attempt created a new clone of the massive immutable state object by calling `buyTierQuantity`. If a player afforded 1,000 attempts within the same level boundary, this caused 1,000 redundant deep clones resulting in severe performance drops and thread freezes.
 **Action:** Replaced the `O(N)` loop (where `N` = number of affordable attempts) with an `O(1)` mathematical batching calculation bounded by the current level. The loop now calculates exactly how many affordable attempts fit within the remainder of the current level and executes them all in a single `buyTierQuantity` step. The loop gracefully resumes on the next level boundary if any `budget` is left, changing time complexity from `O(budget)` to `O(levels crossed)` which is functionally O(1) for large idle accumulations since costs increase exponentially.
 
@@ -25,6 +9,11 @@
 ## 2024-10-24 - Replace O(N) iterative loop in tickDiskAutoFill with O(1) mathematical formulation
 **Learning:** During massive offline progress intervals, simulating `tickGame` thousands of times exposes an O(N) `for (;;)` iterative chunking loop in `tickDiskAutoFill`. This loop repeatedly transfers `blockBits` blocks of cache data from `poolBuffers` to `diskCache` until depleted or budgeted. This iteratively subtracting calculation can freeze the main thread, operating as a severe performance bottleneck for large accumulated capacities.
 **Action:** Replaced the iterative `for (;;)` subtraction loop with an O(1) bulk chunk mathematical formula using `Math.floor(available / blockBits) * blockBits` which executes natively, immediately evaluating the total exact `transferUnit` without repeatedly jumping through branch evaluations. The new single-pass math fully mirrors the logic, preventing the offline progress thread freeze while maintaining block-size precision logic.
+
+## 2024-10-25 - Replace O(N) iterative loop in getDataLakeManualFillBitsNeeded with O(1) mathematical formulation
+**Learning:** During massive offline progress intervals, simulating `tickGame` thousands of times exposes an O(N) `while (unitsGained < neededUnits)` iterative loop in `getDataLakeManualFillBitsNeeded`. This loop iteratively evaluates sub-sizes and subtracts `fillBits`, creating a performance bottleneck when `neededUnits` is massive.
+**Action:** Replaced the iterative `while` subtraction loop with an O(1) bulk chunk mathematical formula using `Math.min(neededUnits - unitsGained, maxAvailable)` bounded by the current capacity level and slots structure. The new math directly calculates the bulk unit buy boundary (`actualUnitsToBuy`) and evaluates exact `bitsNeeded` without repeatedly hopping through small iterations, preserving exact logic and avoiding freezes.
+
 ## 2024-11-06 - Replace O(N) object spreading in tick loops with direct mutation
 **Learning:** Performing `O(N)` object spreading inside hot game loop components like `tickDiskAutoFill` creates an enormous number of intermediate garbage objects (e.g. `{...diskCache, [size]: ...}` for every tier pool) that stress the garbage collector and cause main thread pauses.
 **Action:** Always replace deep or shallow spreading inside `for` loops by cloning the object once upfront (`const diskCache = { ...state.diskCache }`) and locally mutating that clone (`diskCache[size] = ...`, `delete diskCache[size]`) before finally passing the mutated clone down into the returned immutable state tree. This converts `O(N)` allocations into `O(1)` upfront cost.
