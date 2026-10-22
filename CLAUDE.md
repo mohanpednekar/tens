@@ -425,20 +425,14 @@ src/
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic `variant`
                                prop resolved against theme color tokens, deprecated raw `color` prop
                                still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
-    DiskArrayRow/index.jsx  ← one Disk array's full STATUS detail for a single size, a pure display with
-                               nothing clickable (read cache blocks — only on the pool's smallest size,
-                               see `isDiskReadCacheEligible` — and disk squares; tier funding is
-                               automatic via `tickDiskPull`/`tickDiskLevelOneCachePull`, Data Lake
-                               feeding too), taking `{ actions, size, state }` (`actions` unused, kept
-                               for a uniform call-site shape); shared by ByteFoundryPage and StoragePage
-                               — see `docs/DESIGN_HISTORY.md` for why it's standalone. Full contract:
-                               `docs/COMPONENTS_REFERENCE.md`
-    DataLakePanel/index.jsx ← one Data Lake's self-contained block (title row, disk-square fill display,
-                               Buy/auto-buy/Upgrade-Capacity action row), taking `{ actions, state, bare,
-                               tierIndex }` — embedded per-pool (`bare`, `tierIndex={poolIndex}`) inside
-                               each `ByteFoundryPage` pool card. Full contract (incl. the
-                               omitted-`tierIndex` every-lake fallback mode, unused by any current
-                               caller): `docs/COMPONENTS_REFERENCE.md`. Mechanic: "Economy model".
+    DiskArrayRow/index.jsx  ← one Disk array's STATUS display for a single size (read cache + disk squares;
+                               nothing clickable — funding is automatic), `{ actions, size, state }`
+                               (`actions` unused); shared by ByteFoundryPage and StoragePage. Contract +
+                               why it's standalone: `docs/COMPONENTS_REFERENCE.md`, `docs/DESIGN_HISTORY.md`
+    DataLakePanel/index.jsx ← one Data Lake's block (title row, disk-square fill, Buy/Upgrade-Capacity row),
+                               `{ actions, state, bare, tierIndex }`, embedded per pool card. Contract
+                               (incl. the unused omitted-`tierIndex` mode): `docs/COMPONENTS_REFERENCE.md`;
+                               mechanic: "Economy model"
     icons.js                ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Data Lake Booster, Upgrade Data Stream,
                                Provision Disk status line)
     Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`) for Perks → Toggles and
@@ -460,27 +454,20 @@ src/
     StatCard/index.js       ← styled card container used for every panel, fully token-driven.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
   pages/
-    ByteFoundryPage/index.jsx ← the "Byte Foundry" tap screen (see "Architecture" 4 and "Economy
-                               model"). Takes `{ game, focusNonce }` — navigation lives in App.jsx's
-                               AppNav. Data Stream + every DiskArrayRow as continuous sections (no
-                               second-level tabs); a single "Upgrade Data Stream" action sits in the
-                               Data Stream section; pool Memory values derive from the shared Data
-                               Stream's Capacity, which keeps doubling up to the FINAL pool's end bound
-                               (`isMemoryCapacityAtCap`), not any one pool's — see "Pool liveness is
-                               Capacity-only"
+    ByteFoundryPage/index.jsx ← the "Byte Foundry" tap screen (Architecture 4, "Economy model"). Takes
+                               `{ game, focusNonce }`; Data Stream + every DiskArrayRow as continuous
+                               sections, one "Upgrade Data Stream" action. Pool Memory derives from the
+                               shared Data Stream Capacity, which doubles up to the FINAL pool's end bound
+                               (`isMemoryCapacityAtCap`) — see "Pool liveness is Capacity-only"
     StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow list (Architecture 4a)
     ComputePage/index.jsx   ← Foundry Boosters screen: merge chain + Boost (Architecture 4b)
     ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen; page id `'compute'`. Takes `{ game }`
                                (Architecture 4c / "Economy model")
     MainPage/index.jsx      ← the tier ladder (see "Architecture"). Takes `{ game }`.
                                No second-level tabs. Full reference: `docs/MAINPAGE_REFERENCE.md`
-    PerksPage/index.jsx     ← page id `'perks'`, AppNav item once `isPerksPageRevealed` (= first
-                               Prestige/Era). Takes `{ game, focusNonce }`. Icon tabs: 🔓 Unlocks
-                               (one-time PP unlocks + every free autobuyer/Compute-autobuyer/Unbounded
-                               milestone, shown once), ⏫ Upgrades (Double PP, Auto-Prestige), 🎛
-                               Toggles (Buy max + every owned automation's pause). Tab dots:
-                               `hasAffordablePpUnlock`/`hasAffordablePpLevelUpgrade`
-                               (`docs/MAINPAGE_REFERENCE.md`)
+    PerksPage/index.jsx     ← page id `'perks'`, AppNav item once `isPerksPageRevealed` (first Prestige/
+                               Era). Takes `{ game, focusNonce }`. Icon tabs 🔓 Unlocks / ⏫ Upgrades / 🎛
+                               Toggles — detail + tab dots: `docs/MAINPAGE_REFERENCE.md`
     InfoPage/index.jsx      ← the Guide page (Architecture 5), including Byte Foundry/Storage/Compute
                                sections. Reached via AppNav's Guide item; takes no navigation props
                                (AppNav is the exit)
@@ -506,29 +493,16 @@ src/
     index.jsx               ← <ThemeProvider mode> wrapper (styled-components ThemeProvider) + re-exports;
                                imports `./fonts` as a side effect; `mode` defaults to dark, driven from
                                system pref + Settings → Appearance toggle (#140)
-  App.jsx                   ← root component; owns the single `useIncrementalGame()` call (lifted up
-                               from MainPage so ByteFoundryPage shares the save/tick loop), wraps
-                               <ThemeProvider><GlobalStyle/>, and switches between <ByteFoundryPage/>/
-                               <MainPage/>/<InfoPage/>/<ComputePage/>/<ComputeFlopsPage/>/
-                               <MilestonesPage/>/<SettingsPage/>/<DevModePage/> via a local `page`
-                               useState (`'game'`/`'info'`/`'foundry'`/`'boosters'`/`'compute'`/
-                               `'perks'`/`'milestones'`/`'settings'`/`'dev'`, default `'game'`) — not a routing
-                               library — plus a shared fixed bottom `AppNav` (Foundry → Boosters →
-                               Compute → Factory → Perks → Guide → More) and `AppMenu` (More sheet → Milestones /
-                               Settings / Dev Mode in dev builds). Legacy `page === 'storage'` rewrites
-                               to `'foundry'`. Which screen renders is derived, not `page` directly:
-                               `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked
-                               || page === 'foundry')` (`GATE_EXEMPT_PAGES` = `'info'`/`'boosters'`/
-                               `'compute'`/`'milestones'`/`'settings'`/`'dev'`, so those stay reachable
-                               during the gate — Boosters only once capacity reveals it, Compute only
-                               once 100 PP, see Architecture 4b/4c). ByteFoundryPage is both a *mandatory gate* (while
-                               `intro.mainGameUnlocked` is false) and, once unlocked, a permanent
-                               revisitable screen (`page = 'foundry'`). `intro.mainGameUnlocked` is
-                               PERMANENT (`latchMainGameUnlocked` in `engine.js`; never reset by a real
-                               Prestige or Era ascension), so `!intro.mainGameUnlocked` is true only on a
-                               save's very first cycle. `page` is independent of it, so no syncing effect
-                               is needed: the gate resolving just reveals whatever `page` already was
-                               (typically `'game'`)
+  App.jsx                   ← root component; owns the single `useIncrementalGame()` call, wraps
+                               <ThemeProvider><GlobalStyle/>, and switches pages via a local `page`
+                               useState (`'game'`/`'info'`/`'foundry'`/`'boosters'`/`'compute'`/`'perks'`/
+                               `'milestones'`/`'settings'`/`'dev'`, default `'game'`; legacy `'storage'`
+                               → `'foundry'`) — not a router — plus the shared bottom `AppNav` and
+                               `AppMenu` (More sheet). Rendered screen is derived: `showingFoundry =
+                               !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked || page ===
+                               'foundry')`; `intro.mainGameUnlocked` is a permanent latch, so the gate
+                               exists only on a save's very first cycle. Full routing/gate detail:
+                               `docs/MAINPAGE_REFERENCE.md`'s "App.jsx routing and the Foundry gate"
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless passed
                                a callback — currently called with none, so a no-op in practice
@@ -1098,7 +1072,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1988 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1992 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -1116,10 +1090,12 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
   `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) that's
-  12 of the 18 files; the other six are
+  12 of the 19 files; the other seven are
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
   `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`,
-  `scripts/classify-claude-failure.test.js`, and `scripts/lint-workflow-shell.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`
+  `scripts/classify-claude-failure.test.js`, `scripts/lint-workflow-shell.test.js`, and
+  `scripts/autonomous-maintenance-workflow.test.js` (checkout PAT, empty-run warning,
+  prompt `gh` rule) — Vitest's default glob picks these up since `vite.config.js`'s `test`
   block sets no custom `include`.
 
 ### End-to-end testing

@@ -1,9 +1,11 @@
 name: Devin workflow health check
 
-# Daily midnight (UTC) watchdog for devin-autonomous-maintenance.yml. Verifies
-# the workflow file still parses as YAML, that a run has started recently (its
-# cron fires every 4h, so >26h of silence means the schedule is disabled or
-# dormant), and that the latest completed run did not fail. On any failure it
+# Watchdog for devin-autonomous-maintenance.yml. The daily midnight (UTC)
+# schedule was removed on 2026-10-20 by owner decision; this workflow now runs
+# only via workflow_dispatch. When dispatched, verifies
+# the workflow file still parses as YAML, that a run has started recently
+# (>26h of silence is reported as unhealthy), and that the latest completed
+# run did not fail. On any failure it
 # files — or comments on an existing — `automation-failure` issue and exits red.
 # Per-run failure triage itself is handled by automation-self-heal.yml, which
 # watches this workflow's completed runs; this job is the belt-and-suspenders
@@ -15,8 +17,6 @@ name: Devin workflow health check
 # docs/AUTOMATION.md "Reliability: cron dormancy".
 
 on:
-  schedule:
-    - cron: "0 0 * * *" # midnight UTC
   workflow_dispatch:
 
 permissions:

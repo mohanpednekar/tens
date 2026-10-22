@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
@@ -66,6 +66,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  cleanup() // unmount before restoring real timers (see CLAUDE.md Testing)
+  vi.useRealTimers()
   vi.restoreAllMocks()
 })
 
@@ -2592,6 +2594,9 @@ test('tapping increments the bit balance and stops once capacity is reached', as
 })
 
 test('once mainGameUnlocked, the standalone Tap button is gone and Data Stream itself is the tap target', async () => {
+  // Only setInterval is faked: the live tick loop never fires, while setTimeout stays real so
+  // userEvent / Testing Library's async wrappers still resolve.
+  vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
   const user = userEvent.setup()
 
   // Capacity stays well under INTRO_DISK_UNLOCK_CAPACITY (8,192) — this test uses real timers, so
@@ -4825,6 +4830,9 @@ test('a Prestige firing while on the Guide page does not disrupt the page — ma
 // gate as always — AppNav omits Factory, so there's no way onto MainPage.
 
 test('AppNav\'s Foundry item navigates to the always-interactive screen; Factory returns to MainPage', async () => {
+  // Only setInterval is faked: the live tick loop never fires, while setTimeout stays real so
+  // userEvent / Testing Library's async wrappers still resolve.
+  vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -4984,6 +4992,9 @@ test('Compute autobuyer milestones list Era unlocks once Compute is revealed', a
 })
 
 test('Settings Era ascension confirms, resets Foundry assets, and keeps automation', async () => {
+  // Only setInterval is faked: the live tick loop never fires, while setTimeout stays real so
+  // userEvent / Testing Library's async wrappers still resolve.
+  vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
   const user = userEvent.setup()
   const tier0 = TIER_DEFINITIONS[0].id
   const diskSize = INTRO_BITS_PER_KILOBYTE_CONVERSION
@@ -5119,6 +5130,12 @@ const openDevMode = async user => {
 }
 
 describe('Dev Mode', () => {
+  // Freeze only the live tick loop (setTimeout stays real for userEvent): several tests below assert
+  // exact seeded values (e.g. resources.base) that a real tick on a slow runner would drift (#764).
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+  })
+
   it('is reachable from the More menu (dev build only)', async () => {
     const user = userEvent.setup()
     seedMainGameState()

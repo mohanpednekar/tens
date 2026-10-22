@@ -1220,3 +1220,20 @@ full-screen button still auto-focuses on mount. Presentation gates (`showFullScr
 
 Once `isProductionFrozen(state)` is true, every control except Prestige disables — see "Prestige and
 the Googol freeze" below.
+
+## App.jsx routing and the Foundry gate
+
+`App.jsx` switches screens via a local `page` `useState` (`'game'`/`'info'`/`'foundry'`/`'boosters'`/
+`'compute'`/`'perks'`/`'milestones'`/`'settings'`/`'dev'`, default `'game'`) — not a routing library —
+plus a shared fixed bottom `AppNav` (Foundry → Boosters → Compute → Factory → Perks → Guide → More) and
+`AppMenu` (More sheet → Milestones / Settings / Dev Mode in dev builds). Legacy `page === 'storage'`
+rewrites to `'foundry'`. Which screen renders is derived, not `page` directly:
+`showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked || page === 'foundry')`.
+`GATE_EXEMPT_PAGES` = `'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`, so those
+stay reachable during the gate — Boosters only once capacity reveals it, Compute only once 100 PP
+(Architecture 4b/4c). ByteFoundryPage is both a *mandatory gate* (while `intro.mainGameUnlocked` is
+false) and, once unlocked, a permanent revisitable screen (`page = 'foundry'`). `intro.mainGameUnlocked`
+is PERMANENT (`latchMainGameUnlocked` in `engine.js`; never reset by a real Prestige or Era ascension),
+so `!intro.mainGameUnlocked` is true only on a save's very first cycle. `page` is independent of it, so
+no syncing effect is needed: the gate resolving just reveals whatever `page` already was (typically
+`'game'`).
