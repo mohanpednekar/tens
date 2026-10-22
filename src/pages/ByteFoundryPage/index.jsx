@@ -410,7 +410,7 @@ const PoolTile = styled(FillableStatCard)`
 // falling all the way back to a raw bit count. Only a genuinely sub-Byte balance (no named unit
 // finer than a Byte exists) still falls back to raw bits, via formatMemoryAmount's own bottom-rung
 // handling — see docs/DESIGN_HISTORY.md. `stable` picks the fixed-3-decimal formatter (the ticking
-// default) or the ordinary trimmed one — see useTrimBalanceAfterFull below for why a caller would
+// default) or the ordinary trimmed one — see useTrimBalanceWhenSettled below for why a caller would
 // ever want the trimmed form here.
 const formatMemoryBalanceValue = (bits, capacityBits, byteCreated, stable = true) => {
   const capacityUnit = getMemoryUnit(capacityBits, byteCreated)
@@ -432,25 +432,38 @@ const formatMemoryCapacityValue = (capacityBits, byteCreated) =>
 // long enough that a balance which briefly touches full and immediately drains again (e.g. a
 // single production tick landing exactly at capacity) never flickers into the trimmed form for an
 // instant. Resets the instant `isFull` goes false again, whatever the reason.
-const FULL_BALANCE_TRIM_DELAY_MS = 1000
-const useTrimBalanceAfterFull = isFull => {
+// Generalized: the balance trims to 1–2 digits when its fixed-digit text is an integer (all-zero
+// decimals) and has been unchanged for SETTLED_BALANCE_TRIM_DELAY_MS, or reverts on any user action
+// (pointer/key press) or on any text change.
+const SETTLED_BALANCE_TRIM_DELAY_MS = 5000
+const isIntegerValueText = text => /^[\d,]+(\.0+)?(\s|$)/.test(text)
+const useTrimBalanceWhenSettled = text => {
   const [trimmed, setTrimmed] = useState(false)
+  const [actionNonce, setActionNonce] = useState(0)
   useEffect(() => {
-    if (!isFull) {
-      setTrimmed(false)
-      return undefined
+    const onAction = () => setActionNonce(n => n + 1)
+    window.addEventListener('pointerdown', onAction)
+    window.addEventListener('keydown', onAction)
+    return () => {
+      window.removeEventListener('pointerdown', onAction)
+      window.removeEventListener('keydown', onAction)
     }
-    const timer = setTimeout(() => setTrimmed(true), FULL_BALANCE_TRIM_DELAY_MS)
+  }, [])
+  useEffect(() => {
+    setTrimmed(false)
+    if (!isIntegerValueText(text)) return undefined
+    const timer = setTimeout(() => setTrimmed(true), SETTLED_BALANCE_TRIM_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [isFull])
+  }, [text, actionNonce])
   return trimmed
 }
 
 // A pool's own Memory balance, as its own tiny component (rather than inline in the pool-card
-// loop below) purely so useTrimBalanceAfterFull gets its own hook instance per pool — a hook
+// loop below) purely so useTrimBalanceWhenSettled gets its own hook instance per pool — a hook
 // can't be called a variable number of times inside a single component's own render.
-const PoolBalanceText = ({ bits, isFull, poolIndex, large }) => {
-  const trimmed = useTrimBalanceAfterFull(isFull)
+const PoolBalanceText = ({ bits, poolIndex, large }) => {
+  const stableText = formatPoolBalanceStable(bits, poolIndex)
+  const trimmed = useTrimBalanceWhenSettled(stableText)
   // The balance self-sizes below this pool's own fixed unit (see formatPoolBalance's own doc
   // comment in engine.js) — capacity itself stays fixed to the pool's own unit (never auto-
   // converting up to the next one), per formatDiskSizeInPoolUnit's own doc comment.
@@ -585,7 +598,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const { intro } = state
 
   const isFull = intro.bits >= intro.capacity
-  const dataStreamBalanceTrimmed = useTrimBalanceAfterFull(isFull)
+  const dataStreamBalanceTrimmed = useTrimBalanceWhenSettled(
+    formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, true),
+  )
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
   const storageRevealed = isStorageUnlocked(state)
   const visiblePoolCount = getVisibleStoragePoolCount(state)
@@ -992,7 +1007,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                       <span>Pool</span>
                     </PoolTitleToggle>
                   </SectionTitle>
-                  <PoolBalanceText bits={poolBufferBits} isFull={poolBufferFull} poolIndex={poolIndex} large={poolTapBonusPercent <= 0} />
+                  <PoolBalanceText bits={poolBufferBits} poolIndex={poolIndex} large={poolTapBonusPercent <= 0} />
                   <SpeedText $centered={poolTapBonusPercent <= 0} $color={getSpeedColor(poolMultiplierPercent)} title={`Bandwidth at ${Math.round(poolMultiplierPercent)}% fill multiplier`}>
                     ⚡ {formatSpeedText(formatDiskSize(poolBandwidth * poolMultiplierPercent / 100))}/s
                   </SpeedText>
