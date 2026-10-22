@@ -12159,3 +12159,24 @@ describe('Foundry-reset disk-size unlocks (rising Data Stream Speed exponent)', 
     expect(getUnlockedDiskSteps(normalizePoolMemoryCapacity(old).intro)).toBe(2)
   })
 })
+
+describe('Speed/Capacity upgrades alongside provisioning', () => {
+  it('a Speed upgrade can be armed and completes while a Disk build is queued, raising Bandwidth immediately', () => {
+    const base = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: 1024 * BITS_PER_BYTE,
+      speedCapacity: 256 * BITS_PER_BYTE,
+      bits: 1024 * BITS_PER_BYTE,
+      diskBuildQueued: true,
+    })
+    expect(isSpeedUpgradeArmable(base)).toBe(true)
+    let state = queueIntroSpeedUpgrade(base)
+    expect(state.intro.speedUpgradeQueued).toBe(true)
+    expect(state.intro.diskBuildQueued).toBe(true) // the queued provision is untouched
+    const before = getIntroProductionRate(state.intro)
+    for (let i = 0; i < 2000 && state.intro.speedUpgradeQueued; i += 1) state = tickGame(1)(state)
+    expect(state.intro.speedUpgradeQueued).toBe(false)
+    expect(state.intro.speedCapacity).toBe(512 * BITS_PER_BYTE)
+    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(before)
+  })
+})

@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The Provision Disk button now appears as soon as the Byte exists, instead of waiting for 1 KiB of Capacity; clicking it early queues the build. Upgrade Speed / Capacity were never blocked by a queued or running provision and still aren't (covered by a new test).
+
 - Storage pool Bandwidth is now capped at the pool's Capacity^e (was √Capacity), using the same rising exponent `e` as the Data Stream's Speed rule (see the Foundry-reset entry below), so pools benefit from faster Speed too.
 
 - Byte Foundry pacing: base Speed is now (Speed level in Bytes)^e and capped at Capacity^e, instead of √Capacity. `e` starts at 0.5 (unchanged early game) and rises by 0.01 for every further Disk size you unlock with a **Foundry reset** (see Added). Upgrade Speed costs the current Speed level. Capacity upgrade costs are unchanged. Old saves keep every Disk size they already built (grandfathered), so their exponent starts at 0.5 + 0.01 per built size.
