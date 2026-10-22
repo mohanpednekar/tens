@@ -4,7 +4,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolRebuilding } from 'game/engine'
+import { formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolRebuilding } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled, { css } from 'styled-components'
@@ -144,6 +144,15 @@ const ProvisionCard = styled(StatCard)`
 // same flex layout the old Speed+Capacity pair used. `min-width: 0` lets each button's own label
 // ellipsis-truncate (see ButtonLabel in components/Button) instead of forcing the row wider than
 // its container at narrow viewports.
+// "45s" / "12m 5s" / "3h 20m" / "2d 4h" — remaining time of a running Data Stream upgrade.
+const formatUpgradeTimeLeft = totalSeconds => {
+  if (!Number.isFinite(totalSeconds)) return '—'
+  const seconds = Math.max(1, Math.ceil(totalSeconds))
+  const days = Math.floor(seconds / 86400)
+  if (days > 0) return `${days}d ${Math.floor((seconds % 86400) / 3600)}h`
+  return formatOfflineDuration(seconds)
+}
+
 const MilestonesRow = styled.div`
   display: flex;
   gap: ${props => props.theme.space.sm};
@@ -675,6 +684,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const capacityUpgradeProgress = clampPercent(((intro.capacityUpgradeProgress ?? 0) / capacityUpgradeCost) * 100)
   const speedUpgradeProgress = clampPercent(((intro.speedUpgradeProgress ?? 0) / speedUpgradeCost) * 100)
   const runningProgress = speedUpgradeQueued ? speedUpgradeProgress : capacityUpgradeProgress
+  // The bar fills at 100% of base Speed, so time left is the remaining cost over that rate.
+  const runningRemainingBits = speedUpgradeQueued
+    ? speedUpgradeCost - (intro.speedUpgradeProgress ?? 0)
+    : capacityUpgradeCost - (intro.capacityUpgradeProgress ?? 0)
+  const runningTimeLeftText = formatUpgradeTimeLeft(productionRate > 0 ? runningRemainingBits / productionRate : Infinity)
+  const currentCapacityText = formatMemoryCapacityValue(intro.capacity, true)
+  const currentRateText = `${formatBitsInNearestUnit(productionRate)}/s`
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
 
   // The shared Provision Disk control (one ladder spanning every pool, not per-pool) — rendered
@@ -849,11 +865,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   $pulse
                 >
                   <MilestoneButtonContent>
-                    <span>{speedUpgradeQueued ? '⏫ Upgrading Speed…' : '⏫ Upgrading Capacity…'}</span>
+                    <span>{speedUpgradeQueued ? '⏫ Upgrading Speed…' : '⏫ Upgrading Capacity…'} ({Math.floor(runningProgress)}%)</span>
                     <MilestoneCostLine>
                       {speedUpgradeQueued
-                        ? `${Math.floor(runningProgress)}% · ⚡ ${nextRateText}`
-                        : `${Math.floor(runningProgress)}% · 📦 ${nextCapacityText}`}
+                        ? `⚡ ${currentRateText} → ${nextRateText} · ⏳ ${runningTimeLeftText}`
+                        : `📦 ${currentCapacityText} → ${nextCapacityText} · ⏳ ${runningTimeLeftText}`}
                     </MilestoneCostLine>
                   </MilestoneButtonContent>
                   <VisuallyHidden
