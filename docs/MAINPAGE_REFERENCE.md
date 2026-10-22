@@ -93,7 +93,7 @@ INTRO_BYTE_COMBINE_COST`. Once `byteCreated`, a single **"Upgrade Data Stream"**
 Capacity ×2 actions into one purchase: **Capacity is the only bought progression variable** — the
 button costs exactly the current capacity (a full Buffer, drained on purchase) and doubles
 `intro.capacity` (`INTRO_CAPACITY_DOUBLING_STEP`). The displayed Speed is *derived* from the Speed basis (`intro.speedCapacity`, falling back to Capacity),
-never purchased directly — `getDataStreamSpeedBytesPerSecond(basisBits)` returns `basisBytes ** DATA_STREAM_SPEED_EXPONENT` (0.75) B/s, ×1.68 per Speed upgrade; the separate Upgrade Speed button doubles the basis (cost = the basis) while the doubled basis fits within Capacity. The current Capacity and
+never purchased directly — `getDataStreamSpeedBytesPerSecond(basisBits)` returns `basisBytes ** e` B/s (`e` = `getDataStreamSpeedExponent`, 0.5 + 0.01 per unlocked Disk size beyond the first), ×2^e per Speed upgrade; once the unlocked Disk array is full the Provision Disk button is replaced by a confirm-guarded `foundry reset to unlock disk size` button (`isDiskSizeUnlockAvailable` → `actions.unlockNextDiskSize`); the separate Upgrade Speed button doubles the basis (cost = the basis) while the doubled basis fits within Capacity. The current Capacity and
 derived Speed stay visible above the button on the Data Stream tile's own footer row; there is no
 after-upgrade preview. `disabled={!capacityUpgradeClickable}` where `capacityUpgradeClickable =
 isMemoryCapacityUpgradeArmable(state)`: a click at any fill (byte combined, not at cap, not already

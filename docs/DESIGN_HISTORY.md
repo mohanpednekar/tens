@@ -8954,3 +8954,17 @@ cap is on the order of 38 years (hand model, no boosts); the intent is that futu
 (0.8 ≈ 1 year). No such upgrade exists yet — the exponent is a single constant and the pacing/test fixtures
 are written against it (tests use `DATA_STREAM_SPEED_EXPONENT`, `basisBitsForRawRate`) so raising it later is a
 localized change.
+
+
+### Speed exponent rises with Foundry-reset Disk-size unlocks (2026-10)
+
+Replaces the fixed 0.75 exponent. The maintainer's idea: start at 0.5 and require a Foundry reset to unlock
+provisioning each further Disk size, each unlock adding 0.01 (`DATA_STREAM_SPEED_EXPONENT_BASE`/`_STEP`,
+`intro.unlockedDiskSteps`). The exponent is therefore earned through repeated resets rather than a one-off
+purchase: at most 0.5 + 0.29 = 0.79 after all 30 sizes. Decisions: Era ascension resets the unlocked sizes and
+exponent to base; the post-reset rebuild uses the existing Reset Byte Foundry convenience replay (paid from the
+Data Stream, no clicks); old saves are grandfathered (sizes already built count as unlocked). The gate is
+implemented by clamping `getMaxActiveDiskLadderStep`, so a full unlocked array reads as "exhausted" and every
+existing provision/queue guard blocks without new branches; `isDiskSizeUnlockAvailable` only decides when to
+show the reset button. Not re-run through `simulate-run-times`; total pacing now also depends on the repeated
+replays.

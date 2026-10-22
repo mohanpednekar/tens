@@ -34,6 +34,10 @@ import {
   canReclaimComputeBoost,
   canStackComputeBoost,
   combineIntroByte,
+  getUnlockedDiskSteps,
+  getDataStreamSpeedExponent,
+  isDiskSizeUnlockAvailable,
+  unlockNextDiskSizeByFoundryReset,
   normalizePoolMemoryCapacity,
   consumeXpForLastTierTickspeed,
   convertIntroBitsToKilobytes,
@@ -310,8 +314,12 @@ import {
   queueIntroSpeedUpgrade,
   tickSpeedUpgradeDrain,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
+// Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
+const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
+// Default (first-disk-size) Data Stream Speed exponent; tests that unlock more disk sizes read getDataStreamSpeedExponent instead.
+const DATA_STREAM_SPEED_EXPONENT = DATA_STREAM_SPEED_EXPONENT_BASE
 // Speed basis (bits) whose raw Data Stream rate is at least `bytesPerSec` — keeps fixtures valid if DATA_STREAM_SPEED_EXPONENT changes.
 const basisBitsForRawRate = bytesPerSec => Math.ceil(bytesPerSec ** (1 / DATA_STREAM_SPEED_EXPONENT) * BITS_PER_BYTE)
 
@@ -1185,6 +1193,7 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       capacity: BITS_PER_BYTE * (2 ** 20), // deep enough that pool 1's buffer ceiling isn't limiting
+      unlockedDiskSteps: 2, // the 10 KB size is unlocked, so the ladder has moved past 1 KB
       disksBuiltTotal: { [size1KB]: DISK_ARRAY_LADDER_CAP },
       diskProvisionPasses: { [size1KB]: passes },
       poolBuffers: { [poolIndex]: 0 },
@@ -1657,9 +1666,9 @@ describe('storage pools', () => {
   it('snaps a pool\'s Bandwidth cap down to the nearest SI-clean value below Capacity^DATA_STREAM_SPEED_EXPONENT', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: 8 * 2 ** 14, // pool Capacity derives to 16,000 Bytes; 16,000^0.75 ≈ 1,423 Bytes/sec
+      capacity: 8 * 2 ** 14, // pool Capacity derives to 16,000 Bytes; 16,000^0.5 ≈ 126 Bytes/sec
     })
-    expect(getStoragePoolBandwidth(state, 1)).toBe(8_000) // 1,000 Bytes/sec (SI-clean), not a raw ~1,423
+    expect(getStoragePoolBandwidth(state, 1)).toBe(1_000) // 125 Bytes/sec (SI-clean), not a raw ~126
   })
 
   it('unlocks pool 2 only after all three pool 1 arrays reach the build cap', () => {
@@ -1748,30 +1757,30 @@ describe('storage pools', () => {
       byteCreated: true,
       // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS (800,000 bits =
       // 100,000 Bytes, a clean SI 100 KB — see POOL_CAPACITY_SI_STEP in layers.js);
-      // (100,000 Bytes)^0.75 ≈ 5,623 Bytes/sec, SI-clean-snapped to 4,000 Bytes/sec =
-      // 32,000 bits/sec — the clean SI Bandwidth cap the pool's own 100 KB Capacity produces. Pin the
+      // (100,000 Bytes)^0.5 ≈ 316 Bytes/sec, SI-clean-snapped to 250 Bytes/sec =
+      // 2,000 bits/sec — the clean SI Bandwidth cap the pool's own 100 KB Capacity produces. Pin the
       // Speed basis at Capacity so the raw stream rate is above that cap.
       capacity: INTRO_CAPACITY_CAP_BITS, speedCapacity: INTRO_CAPACITY_CAP_BITS,
     })
-    expect(getIntroProductionRate(state.intro)).toBeGreaterThanOrEqual(32_000)
-    expect(getStoragePoolBandwidth(state, 1)).toBe(32_000)
+    expect(getIntroProductionRate(state.intro)).toBeGreaterThanOrEqual(2_000)
+    expect(getStoragePoolBandwidth(state, 1)).toBe(2_000)
   })
 
   it('Bandwidth is the SI-clean equivalent of the Capacity^DATA_STREAM_SPEED_EXPONENT bound once the derived rate outgrows it', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: 4_000_000, // pool 1 Capacity 100 KB; (100,000 B)^0.75 ≈ 5,623 B/s vs the higher derived Speed
+      capacity: 40_000_000, // pool 1 Capacity 100 KB; (100,000 B)^0.5 ≈ 316 B/s vs the higher derived Speed
     })
     expect(getIntroProductionRate(state.intro)).toBeGreaterThan(768 * BITS_PER_BYTE)
-    // bound ≈ 5,623 Bytes/sec → SI-clean 4,000 Bytes/sec = 32,000 bits/sec
-    expect(getStoragePoolBandwidth(state, 1)).toBe(32_000)
+    // bound ≈ 316 Bytes/sec → SI-clean 250 Bytes/sec = 2,000 bits/sec
+    expect(getStoragePoolBandwidth(state, 1)).toBe(2_000)
   })
 
   it('Bandwidth still matches the plain-binary derived rate below the 64→125 SI-clean deviation', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       // A Speed basis giving a raw ~16 B/s (128 bits/sec) sits below pool 1's own 1 KB Capacity cap
-      // (1000^0.75 ≈ 178 B/s), so Bandwidth is just the raw rate in its SI-clean form (16 B/s).
+      // (1000^0.5 ≈ 32 B/s), so Bandwidth is just the raw rate in its SI-clean form (16 B/s).
       capacity: 8 * 2 ** 10,
       speedCapacity: basisBitsForRawRate(16),
     })
@@ -1782,7 +1791,7 @@ describe('storage pools', () => {
   it('Bandwidth diverges from the raw binary rate past 64 Bytes/sec, e.g. a raw 256 Bytes/sec rate reads as a clean 250', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: INTRO_CAPACITY_CAP_BITS, // pool 1 maxed — its cap ((100,000 B)^0.75 ≈ 5,623 B/s) is above the raw rate
+      capacity: INTRO_CAPACITY_CAP_BITS, // pool 1 maxed — its cap ((100,000 B)^0.5 ≈ 316 B/s) is above the raw rate
       speedCapacity: basisBitsForRawRate(256), // raw rate ≈ 256 B/s
     })
     expect(getIntroProductionRate(state.intro)).toBeCloseTo(256 * BITS_PER_BYTE, 0)
@@ -1899,7 +1908,7 @@ describe('pool buffers', () => {
     // its own Bandwidth cap and buffer room.
     const pool1Transfer = after.intro.poolBuffers[1] - 400_000
     const pool2Transfer = after.intro.poolBuffers[2]
-    expect(pool1Transfer).toBe(32_000)
+    expect(pool1Transfer).toBe(2_000)
     expect(pool2Transfer).toBeGreaterThan(0)
     expect(after.intro.bits).toBe(1_000_000 - pool1Transfer - pool2Transfer)
   })
@@ -3148,12 +3157,13 @@ describe('getDiskSize', () => {
   })
 
   it('advances to the next Byte power-of-ten size once DISK_ARRAY_LADDER_CAP disks have ever been built at the current size', () => {
-    const state = withIntro(createInitialGameState(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP } })
+    const state = withIntro(createInitialGameState(), { unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED, disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP } })
     expect(getDiskSize(state)).toBe(FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER) // 80,000 = 10 KB
   })
 
   it('does not regress after disks of the maxed-out size are later redeemed — the ladder only ever advances', () => {
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
       disks: { [FIRST_DISK_SIZE]: 3 }, // some already redeemed, some still full — either way, below the cap
     })
@@ -3164,12 +3174,14 @@ describe('getDiskSize', () => {
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
     const after10KB = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
     })
     expect(getDiskSize(after10KB)).toBe(size10KB)
     expect(size10KB).toBe(80000)
 
     const after100KB = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP },
     })
     expect(getDiskSize(after100KB)).toBe(size100KB)
@@ -3180,6 +3192,7 @@ describe('getDiskSize', () => {
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: {
         [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
         [size10KB]: DISK_ARRAY_LADDER_CAP,
@@ -3195,6 +3208,7 @@ describe('isDiskLadderExhaustedForActivePools', () => {
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP - 1 },
     })
     expect(isDiskLadderExhaustedForActivePools(state)).toBe(false)
@@ -3204,6 +3218,7 @@ describe('isDiskLadderExhaustedForActivePools', () => {
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP },
     })
     expect(isDiskLadderExhaustedForActivePools(state)).toBe(false)
@@ -3214,7 +3229,7 @@ describe('isDiskLadderExhaustedForActivePools', () => {
     for (let step = 1; step <= DATA_LAKE_TIER_COUNT * 3; step += 1) {
       disksBuiltTotal[getDiskLadderSizeBits(step)] = DISK_ARRAY_LADDER_CAP
     }
-    const state = withIntro(createInitialGameState(), { disksBuiltTotal })
+    const state = withIntro(createInitialGameState(), { unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED, disksBuiltTotal })
     expect(getUnlockedStoragePoolCount(state)).toBe(DATA_LAKE_TIER_COUNT)
     expect(isDiskLadderExhaustedForActivePools(state)).toBe(true)
   })
@@ -3299,6 +3314,7 @@ describe('getDiskSizesToShow', () => {
 
   it('includes every size ever built, even after its disks have all been redeemed back to 0 full', () => {
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 3 },
       disks: { [FIRST_DISK_SIZE]: 0 },
     })
@@ -3307,6 +3323,7 @@ describe('getDiskSizesToShow', () => {
 
   it('includes a size that is currently held but has no matching disksBuiltTotal entry (a migrated pre-ladder save)', () => {
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: {},
       disks: { [FIRST_DISK_SIZE]: 2 },
     })
@@ -3317,6 +3334,7 @@ describe('getDiskSizesToShow', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const level3Size = getTierCost(tensTier, 3) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level3Size]: 0 },
       disks: { [level3Size]: 0 },
     })
@@ -3329,6 +3347,7 @@ describe('getDiskSizesToShow', () => {
   it('de-duplicates a size present in both maps and sorts the result ascending', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 4 },
       disks: { [level2Size]: 2 },
     })
@@ -3342,6 +3361,7 @@ describe('getDiskSizesToShow', () => {
   it('includes a capacity-visible pool\'s own smallest size even though the disk-provisioning chain hasn\'t reached it yet, so its own cache activity (tickDiskAutoFill pre-fills/consumes it purely on Capacity liveness) always has a row to render against', () => {
     const pool2SmallestSize = getDataLakeUnitBits(2)
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       capacity: getPoolCapacityUnlockThresholdBits(2), // pool 2 live via Capacity alone
       // No disksBuiltTotal at all — pool 1 hasn't even started, let alone completed.
     })
@@ -3360,6 +3380,7 @@ describe('getRelevantDiskSizesForFoundry', () => {
   it('keeps an older built size while its own fixed tier is still at the right level, even after the ladder advances', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
     })
     expect(getDiskSize(state)).toBe(level2Size)
@@ -3371,6 +3392,7 @@ describe('getRelevantDiskSizesForFoundry', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withPurchaseLevel(
       withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
         disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
       }),
       tensTier.id,
@@ -3383,6 +3405,7 @@ describe('getRelevantDiskSizesForFoundry', () => {
   it('lists multiple matching sizes ascending (smallest first)', () => {
     const megabyteDiskSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1, [megabyteDiskSize]: 1 },
     })
     expect(getRelevantDiskSizesForFoundry(state)).toEqual([FIRST_DISK_SIZE, megabyteDiskSize])
@@ -4166,13 +4189,13 @@ describe('tickDiskWriteCache', () => {
     const fast = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP, [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
       disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 0 },
-      // Pool 1's own Capacity ceiling bounds its bandwidth at a clean 4,000 B/s (32,000 bits/sec)
+      // Pool 1's own Capacity ceiling bounds its bandwidth at a clean 250 B/s (2,000 bits/sec)
       // regardless of how high the derived Data Stream speed climbs past it.
       capacity: INTRO_CAPACITY_CAP_BITS,
     })
     const after = tickDiskWriteCache(0)(fast)
     const merge = getDiskWriteCacheMerge(after, level2Size)
-    expect(getStoragePoolBandwidth(fast, 1)).toBe(32_000)
+    expect(getStoragePoolBandwidth(fast, 1)).toBe(2_000)
     expect(merge.flushTotalSeconds).toBe(level2Size / (getStoragePoolBandwidth(fast, 1) * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER))
     expect(merge.segmentTotalSeconds).toBe(FIRST_DISK_SIZE / (getStoragePoolBandwidth(fast, 1) * CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER))
   })
@@ -12045,5 +12068,83 @@ describe('pre-split saves (speedCapacity absent)', () => {
     const after = upgradePoolCapacity({ ...state, intro: { ...intro, bits: intro.capacity } })
     expect(after.intro.speedCapacity).toBe(2 ** 30 * BITS_PER_BYTE)
     expect(isSpeedUpgradeArmable(after)).toBe(true)
+  })
+})
+
+describe('Foundry-reset disk-size unlocks (rising Data Stream Speed exponent)', () => {
+  const fullFirstPool = () =>
+    withIntro(createInitialGameState(), {
+      byteCreated: true,
+      unlockedDiskSteps: 1,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
+    })
+
+  it('starts at 1 unlocked step and the base exponent; each further step adds DATA_STREAM_SPEED_EXPONENT_STEP', () => {
+    const intro = createInitialGameState().intro
+    expect(getUnlockedDiskSteps(intro)).toBe(1)
+    expect(getDataStreamSpeedExponent(intro)).toBeCloseTo(DATA_STREAM_SPEED_EXPONENT_BASE, 12)
+    expect(getDataStreamSpeedExponent({ ...intro, unlockedDiskSteps: 11 })).toBeCloseTo(
+      DATA_STREAM_SPEED_EXPONENT_BASE + 10 * DATA_STREAM_SPEED_EXPONENT_STEP, 12
+    )
+  })
+
+  it('clamps unlocked steps to the ladder length and ignores garbage', () => {
+    const max = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
+    expect(getUnlockedDiskSteps({ unlockedDiskSteps: 9999 })).toBe(max)
+    expect(getUnlockedDiskSteps({ unlockedDiskSteps: -3 })).toBe(1)
+    expect(getUnlockedDiskSteps({ unlockedDiskSteps: 'x' })).toBe(1)
+  })
+
+  it('a higher exponent raises the Data Stream Speed', () => {
+    const intro = { ...createInitialGameState().intro, capacity: 1024 * BITS_PER_BYTE, byteCreated: true }
+    expect(getIntroProductionRate({ ...intro, unlockedDiskSteps: 10 })).toBeGreaterThan(getIntroProductionRate(intro))
+  })
+
+  it('a full unlocked array stops Provision Disk until a Foundry reset unlocks the next size', () => {
+    const state = fullFirstPool()
+    expect(getDiskSize(state)).toBe(FIRST_DISK_SIZE)
+    expect(isDiskLadderExhaustedForActivePools(state)).toBe(true)
+    expect(isProvisionDiskAvailable(state)).toBe(false)
+    expect(isDiskSizeUnlockAvailable(state)).toBe(true)
+  })
+
+  it('no unlock is offered while the unlocked array is not full', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP - 1 } })
+    expect(isDiskSizeUnlockAvailable(state)).toBe(false)
+    expect(unlockNextDiskSizeByFoundryReset(state)).toBe(state)
+  })
+
+  it('no unlock is offered once every reachable size is already unlocked', () => {
+    const state = withIntro(fullFirstPool(), { unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED })
+    expect(isDiskSizeUnlockAvailable(state)).toBe(false)
+  })
+
+  it('unlockNextDiskSizeByFoundryReset resets the Foundry, unlocks one more step, and keeps prior highs for the replay', () => {
+    const state = withIntro(fullFirstPool(), { capacity: 1024 * BITS_PER_BYTE })
+    const after = unlockNextDiskSizeByFoundryReset(state)
+    expect(getUnlockedDiskSteps(after.intro)).toBe(2)
+    expect(getDataStreamSpeedExponent(after.intro)).toBeCloseTo(DATA_STREAM_SPEED_EXPONENT_BASE + DATA_STREAM_SPEED_EXPONENT_STEP, 12)
+    expect(after.intro.capacity).toBeLessThan(state.intro.capacity)
+    expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(isDiskSizeUnlockAvailable(after)).toBe(false)
+    expect(getDiskSize(after)).toBe(FIRST_DISK_SIZE) // the next size is offered only once the replay refills the 1 KB array
+  })
+
+  it('unlocked steps survive Prestige and Reset Byte Foundry but reset on Era ascension', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, unlockedDiskSteps: 5 })
+    expect(getUnlockedDiskSteps(prestigeGame(withMoney(state, PRESTIGE_THRESHOLD)).intro)).toBe(5)
+    expect(getUnlockedDiskSteps(resetByteFoundry(state).intro)).toBe(5)
+    const era = eraGame({ ...state, prestige: { ...state.prestige, points: ERA_ELIGIBILITY_PP } })
+    expect(getUnlockedDiskSteps(era.intro)).toBe(1)
+  })
+
+  it('normalizePoolMemoryCapacity grandfathers sizes already built in an older save', () => {
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const old = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      unlockedDiskSteps: undefined,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: 2 },
+    })
+    expect(getUnlockedDiskSteps(normalizePoolMemoryCapacity(old).intro)).toBe(2)
   })
 })
