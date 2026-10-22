@@ -463,3 +463,15 @@ describe('navAttention', () => {
     expect(getNavAttention(state).compute).toBe(ATTENTION_NORMAL)
   })
 })
+
+describe('Speed upgrade attention', () => {
+  const seeded = intro => {
+    const s = createInitialGameState()
+    return { ...s, intro: { ...s.intro, byteCreated: true, ...intro } }
+  }
+  it('lights the Foundry dot for an affordable Speed upgrade and not while one runs', () => {
+    const ready = seeded({ capacity: 512, speedCapacity: 256, bits: 288 })
+    expect(hasFoundryAttention(ready)).toBe(true)
+    expect(hasFoundryAttention({ ...ready, intro: { ...ready.intro, speedUpgradeQueued: true, bits: 0 } })).toBe(false)
+  })
+})

@@ -304,6 +304,11 @@ import {
   isDiskWriteCacheCollectPaused,
   tickGame,
   tickIntroAutoInvest,
+  isSpeedUpgradeArmable,
+  upgradePoolSpeed,
+  getSpeedUpgradeCostBits,
+  queueIntroSpeedUpgrade,
+  tickSpeedUpgradeDrain,
 } from './engine'
 import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
@@ -2213,6 +2218,7 @@ describe('resetByteFoundry', () => {
     expect(after.intro.mainGameUnlocked).toBe(true)
     expect(after.intro.foundryResetCaps).toEqual({
       byteCreated: true,
+      speedCapacity: 400000,
       disksBuiltTotal: { [String(diskSize)]: 5 },
       diskProvisionPasses: {},
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -11930,5 +11936,80 @@ describe('Buy max mode', () => {
     const after = repeatPurchaseMax(buyPrestigeDoublePp)({ ...base, prestige: { ...base.prestige, points } })
     expect(after.prestigeDoublePpLevel).toBe(2)
     expect(after.prestige.points).toBe(0)
+  })
+})
+
+describe('Upgrade Speed (separate from Capacity)', () => {
+  const base = () => {
+    const s = createInitialGameState()
+    return { ...s, intro: { ...s.intro, byteCreated: true, capacity: 64, bits: 0 } }
+  }
+
+  it('is not armable until Speed trails Capacity, and Capacity upgrades leave Speed alone', () => {
+    const state = base()
+    expect(isSpeedUpgradeArmable(state)).toBe(false)
+    const doubled = upgradePoolCapacity({ ...state, intro: { ...state.intro, bits: 64 } })
+    expect(doubled.intro.capacity).toBe(128)
+    expect(doubled.intro.speedCapacity).toBe(64)
+    expect(getIntroProductionRate(doubled.intro)).toBe(getIntroProductionRate(state.intro))
+    expect(isSpeedUpgradeArmable(doubled)).toBe(true)
+  })
+
+  it('fills its bar from the stream, then raises Speed and clears the queue', () => {
+    let state = { ...base(), intro: { ...base().intro, capacity: 128, speedCapacity: 64, bits: 128 } }
+    const before = getIntroProductionRate(state.intro)
+    state = queueIntroSpeedUpgrade(state)
+    expect(state.intro.speedUpgradeQueued).toBe(true)
+    expect(isSpeedUpgradeArmable(state)).toBe(false)
+    expect(isMemoryCapacityUpgradeArmable(state)).toBe(false)
+    for (let i = 0; i < 200 && state.intro.speedUpgradeQueued; i++) state = tickSpeedUpgradeDrain(1)(state)
+    expect(state.intro.speedUpgradeQueued).toBe(false)
+    expect(state.intro.speedCapacity).toBe(128)
+    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(before)
+  })
+})
+
+describe('getSpeedUpgradeCostBits', () => {
+  it('equals the Capacity upgrade cost at perfect squares and deviates at odd powers', () => {
+    expect(getSpeedUpgradeCostBits({ capacity: 512 })).toBe(512) // 64 B: speed 8 B/s, 8² B
+    expect(getSpeedUpgradeCostBits({ capacity: 256 })).not.toBe(256) // 32 B: speed 6 B/s -> 36 B
+    expect(getSpeedUpgradeCostBits({ capacity: 256 })).toBe(288)
+  })
+})
+
+describe('Upgrade Speed cross-system paths', () => {
+  const seeded = intro => {
+    const s = createInitialGameState()
+    return { ...s, intro: { ...s.intro, byteCreated: true, ...intro } }
+  }
+
+  it('upgradePoolSpeed pays the Speed cost from a full Buffer and doubles the basis', () => {
+    const state = seeded({ capacity: 512, speedCapacity: 256, bits: 512 })
+    const after = upgradePoolSpeed(state)
+    expect(after.intro.speedCapacity).toBe(512)
+    expect(after.intro.bits).toBe(512 - 288)
+    expect(upgradePoolSpeed(seeded({ capacity: 512, speedCapacity: 256, bits: 10 }))).toEqual(seeded({ capacity: 512, speedCapacity: 256, bits: 10 }))
+  })
+
+  it('prestigeGame keeps speedCapacity; eraGame resets it with Capacity', () => {
+    const state = { ...seeded({ capacity: 512, speedCapacity: 256 }), resources: { ...createInitialGameState().resources, base: PRESTIGE_THRESHOLD } }
+    expect(prestigeGame(state).intro.speedCapacity).toBe(256)
+    const era = eraGame({ ...seeded({ capacity: 512, speedCapacity: 256 }), prestige: { ...createInitialGameState().prestige, points: ERA_ELIGIBILITY_PP } })
+    expect(era.intro.speedCapacity).toBeUndefined()
+  })
+
+  it('normalizePoolMemoryCapacity clears a stale speed queue (no byte, or Capacity upgrade also queued)', () => {
+    const stale = seeded({ byteCreated: false, speedUpgradeQueued: true, speedUpgradeProgress: 3 })
+    const fixed = normalizePoolMemoryCapacity(stale)
+    expect(fixed.intro.speedUpgradeQueued).toBe(false)
+    expect(fixed.intro.speedUpgradeProgress).toBe(0)
+  })
+
+  it('a pre-split Foundry reset cap (capacity only) still replays Speed', () => {
+    const base = seeded({ capacity: 8, foundryResetCaps: { byteCreated: true, capacity: 32, disksBuiltTotal: {}, diskProvisionPasses: {} } })
+    let state = base
+    for (let i = 0; i < 8; i++) state = tickFoundryResetConvenience({ ...state, intro: { ...state.intro, bits: state.intro.capacity } })
+    expect(state.intro.capacity).toBe(32)
+    expect(state.intro.speedCapacity).toBeGreaterThan(8)
   })
 })
