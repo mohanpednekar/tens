@@ -8932,3 +8932,15 @@ and Upgrade Speed costing the basis, makes each upgrade take ~C^0.2 s, ≈1.2 ye
 boosts). Exponent 0.75 gave ≈38 years; 0.8 was solved for the ~1-year target. Side effects: early game is
 faster (1 KiB at ~40 s of upgrades), and pool Bandwidth (still capped at √pool Capacity) can now be the
 tighter limit than the Data Stream. A real-engine playthrough (alternating upgrades via `tickGame`) matched the hand model up to 1 GiB (1 KiB at 38 s, 1 MiB at 190 s, 1 GiB at 13 min); not run through `simulate-run-times`.
+
+### Pool Bandwidth cap exponent 0.5 → 0.8 (2026-10)
+
+After the Data Stream Speed exponent moved to 0.8, pools stayed capped at √(pool Capacity) and so saw no
+benefit from the faster stream (pool 1 topped out at ~316 B/s while the stream ran at KB/s+). The maintainer
+asked that pools share the same speed benefits, so `getStoragePoolBandwidth` now caps at
+(pool Capacity in Bytes)^`DATA_STREAM_SPEED_EXPONENT`. Pool 1's ceiling goes 250 B/s → 8,000 B/s (SI-clean
+snap of 10,000 B/s), and every later pool's cap scales the same way. Everything keyed to pool Bandwidth
+(disk fill/cache fill/provisioning speed, compute merge timers = 8 smallest-disk fills, Data Lake overflow
+pacing) speeds up accordingly. Not re-run through `simulate-run-times`; several engine/App tests now pin the
+Speed basis (`speedCapacity`) so their timing assumptions stay meaningful.
+
