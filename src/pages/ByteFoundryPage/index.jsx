@@ -683,7 +683,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const nextUnlockDiskSizeText = formatDiskSize(getDiskLadderSizeBits(getUnlockedDiskSteps(intro) + 1))
   const handleUnlockDiskSizeClick = () => {
     const confirmed = typeof window === 'undefined' || typeof window.confirm !== 'function' || window.confirm(
-      `Foundry reset to unlock ${nextUnlockDiskSizeText} disks? Capacity, Disks and Compute restart and are auto-rebuilt up to your prior highs; speed exponent ${speedExponentText} → ${nextSpeedExponentText}.`
+      `Foundry reset to unlock ${nextUnlockDiskSizeText} disks? Capacity, Disks, Data Lakes (Boosters, lake upgrades, pool resets) and Compute entities are wiped; only Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs; speed exponent ${speedExponentText} → ${nextSpeedExponentText}.`
     )
     if (confirmed) actions.unlockNextDiskSize()
   }
@@ -801,7 +801,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     <Button
       aria-label="foundry reset to unlock disk size"
       onClick={handleUnlockDiskSizeClick}
-      title={`Reset the Byte Foundry to unlock ${nextUnlockDiskSizeText} disks. Everything you already built is auto-rebuilt up to your prior highs; the speed exponent rises ${speedExponentText} → ${nextSpeedExponentText}.`}
+      title={`Reset the Byte Foundry to unlock ${nextUnlockDiskSizeText} disks. Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs; Data Lakes and Compute entities are wiped; the speed exponent rises ${speedExponentText} → ${nextSpeedExponentText}.`}
       type="button"
       variant="prestige"
     >

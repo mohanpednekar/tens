@@ -2917,6 +2917,13 @@ export const normalizePoolMemoryCapacity = state => {
     if (!(count > 0)) continue
     highestBuiltStep = Math.max(highestBuiltStep, getDiskLadderStep(Number(sizeKey)) ?? 1)
   }
+  // Paid-for progress toward the next size (partial passes, an in-flight legacy build) counts too.
+  for (const [sizeKey, passes] of Object.entries(nextIntro.diskProvisionPasses ?? {})) {
+    if (passes > 0) highestBuiltStep = Math.max(highestBuiltStep, getDiskLadderStep(Number(sizeKey)) ?? 1)
+  }
+  if (nextIntro.diskBuild?.size > 0) {
+    highestBuiltStep = Math.max(highestBuiltStep, getDiskLadderStep(nextIntro.diskBuild.size) ?? 1)
+  }
   if (highestBuiltStep > getUnlockedDiskSteps(nextIntro)) {
     changed = true
     nextIntro.unlockedDiskSteps = highestBuiltStep

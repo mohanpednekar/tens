@@ -12147,4 +12147,15 @@ describe('Foundry-reset disk-size unlocks (rising Data Stream Speed exponent)', 
     })
     expect(getUnlockedDiskSteps(normalizePoolMemoryCapacity(old).intro)).toBe(2)
   })
+
+  it('grandfathering also counts partial passes already paid toward the next size', () => {
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const old = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      unlockedDiskSteps: undefined,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
+      diskProvisionPasses: { [size10KB]: 1 },
+    })
+    expect(getUnlockedDiskSteps(normalizePoolMemoryCapacity(old).intro)).toBe(2)
+  })
 })
