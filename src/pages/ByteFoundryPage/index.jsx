@@ -55,7 +55,41 @@ const BalanceText = styled.p`
   text-align: center;
   white-space: nowrap;
   text-shadow: 0 0 2px ${props => props.theme.color.surface};
+  font-variant-numeric: tabular-nums;
 `
+
+// Fixed-slot layout for a formatted amount ("398.3 KB"): the integer part is right-aligned in a
+// fixed-width slot, the fraction (".3", ".375", or none) left-aligned in a fixed-width slot, and the
+// unit in its own slot — so the decimal point and unit symbol stay put while the value changes
+// rapidly (digits are tabular, so equal width). Text content is unchanged.
+const AmountInt = styled.span`
+  display: inline-block;
+  min-width: 5ch;
+  text-align: right;
+`
+const AmountFrac = styled.span`
+  display: inline-block;
+  min-width: 4ch;
+  text-align: left;
+`
+const AmountUnit = styled.span`
+  display: inline-block;
+  min-width: 3ch;
+  text-align: left;
+`
+const AMOUNT_TEXT_PATTERN = /^([\d,]+)(\.\d+)?\s+(.+)$/
+const AlignedAmount = ({ text }) => {
+  const match = AMOUNT_TEXT_PATTERN.exec(text)
+  if (!match) return text
+  const [, whole, fraction = '', unit] = match
+  return (
+    <>
+      <AmountInt>{whole}</AmountInt>
+      <AmountFrac>{fraction}</AmountFrac>{' '}
+      <AmountUnit>{unit}</AmountUnit>
+    </>
+  )
+}
 
 // Tapping stays a fully live action forever (never freezes, never goes read-only — see
 // "Byte Foundry" in CLAUDE.md); while the Byte generator exists but the main game isn't unlocked
@@ -463,7 +497,7 @@ const PoolBalanceText = ({ bits, poolIndex, large }) => {
   // comment in engine.js) — capacity itself stays fixed to the pool's own unit (never auto-
   // converting up to the next one), per formatDiskSizeInPoolUnit's own doc comment.
   const balance = trimmed ? formatPoolBalance(bits, poolIndex) : formatPoolBalanceStable(bits, poolIndex)
-  return <BalanceText $large={large}>{balance}</BalanceText>
+  return <BalanceText $large={large}><AlignedAmount text={balance} /></BalanceText>
 }
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
@@ -812,7 +846,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           <TitleRow>
             <SectionTitle>Data Stream</SectionTitle>
             <BalanceText $large={!(intro.byteCreated && (intro.dataStreamTapBonusPercent ?? 0) > 0)}>
-              {formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed)}
+              <AlignedAmount text={formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed)} />
             </BalanceText>
             {dataStreamRateText && (
               <SpeedText $centered={!(intro.dataStreamTapBonusPercent > 0)} $color={getSpeedColor(dataStreamMultiplierPercent)} title={`Speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}>
