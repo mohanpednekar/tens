@@ -926,7 +926,7 @@ disk-breakdown mixed-radix proof, and every gating predicate: `docs/ECONOMY_REFE
 aria-labels/tooltips keep unit-suffixed `formatDiskSize`). A pool's/Data Lake's CAPACITY (and a lake's
 balance) always renders in its own fixed unit (`formatDiskSizeInPoolUnit`) — a maxed KB lake reads
 "1000 KB", never "1 MB". A pool's buffer BALANCE (`PoolBalanceText`) self-sizes below that unit
-(`formatPoolBalance`/`formatPoolBalanceStable`, e.g. "398.375 KB / 1 MB"). Details:
+(`formatPoolBalance`/`formatPoolBalanceStable`, e.g. "398.3 KB / 1 MB"). Details:
 `docs/ECONOMY_REFERENCE.md`.
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
