@@ -5343,3 +5343,19 @@ describe('Buy max mode', () => {
     expect(saved.purchaseLevels[kilobytes.id]).toBe(3)
   })
 })
+
+test('a running Capacity upgrade shows percent on the first line, from → to capacity and time left', () => {
+  vi.useFakeTimers()
+  seedIntroState({ capacity: 1000, bits: 400, byteCreated: true, mainGameUnlocked: true })
+  const { unmount } = render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+  fireEvent.click(screen.getByRole('button', { name: /upgrade data stream capacity/i }))
+
+  const running = screen.getByRole('button', { name: /^upgrade capacity$/i })
+  expect(running).toHaveTextContent(/Upgrading Capacity…\s*\(0%\)/)
+  expect(running).toHaveTextContent(/→/)
+  expect(running).toHaveTextContent(/⏳ \d+[smhd]/)
+
+  unmount()
+  vi.useRealTimers()
+})

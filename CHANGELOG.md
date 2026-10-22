@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Byte Foundry: the running Capacity/Speed upgrade bar now shows the percent on its first line, the actual from → to value, and the time left.
+
 - Byte Foundry: "Upgrade Data Stream" is split into separate **Upgrade Capacity** and **Upgrade Speed** buttons; both are replaced by a status bar while an upgrade runs and return when it completes. Base Speed can't exceed the square root of Capacity.
 
 - Boosters page text is shorter: funding line reads "1 ▦ → KB–PB · 0 held" (tier symbols), tier buttons read "⬆ 8→1 Fabric" and "🤖 0/10", and the "Boost" / "Boost with" headings are gone.
