@@ -5105,13 +5105,13 @@ const getDataLakeManualFillBitsNeeded = (state, tierIndex, neededUnits) => {
   if (openSubSize === null) return null
   let unitsGained = 0
   let bitsNeeded = 0
-  
+
   // ⚡ Bolt Optimization: Replace O(N) iterative loop with O(1) mathematical formulation
   // Calculate max chunk boundaries directly without repeatedly deep diving into decomposeDataLakeUnits
   while (unitsGained < neededUnits && openSubSize !== null) {
     const slotSizeBits = unitBits * openSubSize
     const representable = getDataLakeSlotRepresentableUnits(slotCounts)
-    
+
     let maxAvailable = 0;
     if (depositedUnits >= representable) {
       maxAvailable = capacity - depositedUnits
