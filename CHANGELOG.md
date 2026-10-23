@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- After a Foundry reset, Capacity and Speed upgrades replay to your previous highs automatically in order of increasing cost, using the normal progress-bar upgrades one at a time (while one runs, the Data Stream's output feeds its bar, so tier01 auto-invest and pool filling only get what is left over), and Provision Disk names the newest unlocked size immediately.
+
 - After a Foundry reset, every smaller Disk size rebuilds itself for free (one disk at a time; each counts as provisioned again once it fills) and Provision Disk presents only the newest unlocked size (disabled with a "Rebuilding … first" note until the smaller sizes are done).
 
 - The Provision Disk button also stays visible while its pool is rebuilding after a pool reset; a click queues the build, which fires once the rebuild finishes.

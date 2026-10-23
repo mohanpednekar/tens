@@ -3267,6 +3267,7 @@ export const isMemoryCapacityUpgradeAvailable = state => isPoolCapacityUpgradeAv
 // FINAL pool's own end bound — see isMemoryCapacityAtCap) is enforced by gating availability (via
 // the pool's derived value), not by clamping this raw value directly. See docs/DESIGN_HISTORY.md for
 // two earlier, reverted attempts at this mechanic.
+// (Test-only since the Foundry-reset replay moved to the progress-bar upgrades.)
 export const upgradePoolCapacity = state => {
   if (!isMemoryCapacityUpgradeAvailable(state) || state.intro.speedUpgradeQueued) return state
   return doubleIntroCapacity({ ...state, intro: { ...state.intro, bits: 0 } })
@@ -3320,7 +3321,7 @@ export const queueIntroSpeedUpgrade = state => {
   return { ...state, intro: { ...state.intro, speedUpgradeQueued: true, speedUpgradeProgress: 0 } }
 }
 
-// Instant full-Buffer variant, used only by Foundry-reset convenience replay.
+// Instant full-Buffer variant (no longer used by the Foundry-reset replay, which uses the progress-bar upgrades).
 export const upgradePoolSpeed = state => {
   const cost = getSpeedUpgradeCostBits(state.intro)
   if (!isSpeedUpgradeArmable(state) || state.intro.bits < cost) return state
@@ -3736,11 +3737,15 @@ export const getMaxActiveDiskLadderStep = state =>
 // The size Provision Disk PRESENTS to the player: always the newest unlocked size. Smaller sizes that are
 // still incomplete (e.g. right after a Foundry reset) are provisioned automatically — see
 // tickAutoProvisionLowerDiskSizes — so the player only ever acts on the last unlocked size.
-export const getPresentedDiskSize = state =>
-  getDiskLadderSizeBits(Math.min(getPoolReachableDiskLadderStep(state), getUnlockedDiskSteps(state.intro)))
+export const getPresentedDiskSize = state => getDiskLadderSizeBits(getUnlockedDiskSteps(state.intro))
 
 // Whether a smaller-than-presented size still has to be (re)built before the presented one can be.
-export const isLowerDiskSizePending = state => getDiskSize(state) < getPresentedDiskSize(state)
+// Not pending while that size's own pool is rebuilding after a pool-local reset: that rebuild has its own free
+// loop (tickPoolResetReprovision) and the Provision Disk button must stay visible and queueable then.
+export const isLowerDiskSizePending = state => {
+  const size = getDiskSize(state)
+  return size < getPresentedDiskSize(state) && !isStoragePoolRebuilding(state, getPoolIndexForDiskSize(size))
+}
 
 // Whether a Foundry reset can now unlock the next disk size: the current gated array is full and the
 // next step is already reachable from the unlocked pools (so it is only the reset that is missing).
@@ -6721,20 +6726,20 @@ export const tickFoundryResetConvenience = state => {
     }
   }
 
-  if ((caps.capacity ?? 0) > (next.intro?.capacity ?? 0)) {
-    // Full-Buffer upgrade only — never start the progress-bar upgrade (it would divert the whole
-    // Data Stream output for the replay, starving pool buffers and tier01 auto-invest).
-    const upgraded = upgradePoolCapacity(next)
-    if (upgraded !== next) {
-      next = upgraded
-      changed = true
-    }
-  }
-
-  if ((caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0)) {
-    const upgraded = upgradePoolSpeed(next)
-    if (upgraded !== next) {
-      next = upgraded
+  // Capacity and Speed upgrades replay up to their prior highs through the ordinary progress-bar mechanism
+  // (queueIntroCapacityUpgrade / queueIntroSpeedUpgrade), one at a time, so tickCapacityUpgradeDrain /
+  // tickSpeedUpgradeDrain pay for them from the Data Stream exactly like a manual click. Speed is
+  // PRIORITISED: while a pending Speed upgrade is armable (the doubled basis still fits within Capacity — which
+  // also makes it the cheaper of the two, its cost being the basis) it goes first; Capacity is only chosen once
+  // Speed has reached the "needs Capacity" state (or has nothing pending), so increasing-cost order holds.
+  if (!next.intro?.capacityUpgradeQueued && !next.intro?.speedUpgradeQueued) {
+    const speedPending = (caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0)
+    const capacityPending = (caps.capacity ?? 0) > (next.intro?.capacity ?? 0)
+    let queued = next
+    if (speedPending) queued = queueIntroSpeedUpgrade(next)
+    if (queued === next && capacityPending) queued = queueIntroCapacityUpgrade(next)
+    if (queued !== next) {
+      next = queued
       changed = true
     }
   }
