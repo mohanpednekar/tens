@@ -7,7 +7,7 @@ import StatCard from 'components/StatCard'
 import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getFillMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
-import styled, { css } from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
 
 const RootDiv = styled.div`
   display: flex;
@@ -175,6 +175,21 @@ const MilestoneButtonContent = styled.div`
   align-items: center;
   gap: 2px;
   min-width: 0;
+`
+
+// The "…" in "Upgrading …" reveals its dots one at a time (clip-path steps), so the label reads as in
+// progress while keeping the real "…" character in the text. Static under reduced motion.
+const revealDots = keyframes`
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+`
+
+const UpgradingDots = styled.span`
+  display: inline-block;
+  animation: ${revealDots} 1.2s steps(4, jump-none) infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 `
 
 const MilestoneCostLine = styled.span`
@@ -915,7 +930,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   $pulse
                 >
                   <MilestoneButtonContent>
-                    <span>{speedUpgradeQueued ? '⏫ Upgrading Speed…' : '⏫ Upgrading Capacity…'} ({Math.floor(runningProgress)}%)</span>
+                    <span>{speedUpgradeQueued ? '⏫ Upgrading Speed' : '⏫ Upgrading Capacity'}<UpgradingDots>…</UpgradingDots> ({Math.floor(runningProgress)}%)</span>
                     <MilestoneCostLine>
                       {speedUpgradeQueued
                         ? `⚡ ${currentRateText} → ${nextRateText} · ⏳ ${runningTimeLeftText}`
