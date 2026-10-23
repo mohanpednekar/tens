@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, AUTO_PRESTIGE_AUTOBUYER_COST, BUY_MAX_ITERATION_CAP, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, AUTO_PRESTIGE_AUTOBUYER_COST, BUY_MAX_ITERATION_CAP, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -165,6 +165,16 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: 0,
   }), {}),
+  // Permanent interval-upgrade levels for the global automations (latency/scaleUp/overclock/prestige —
+  // see AUTOMATION_INTERVAL_CONFIG) and per-tier tickspeed autobuyers; never reset by prestige.
+  automationIntervalLevels: { latency: 0, scaleUp: 0, overclock: 0, prestige: 0 },
+  tierTickspeedIntervalLevels: TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: 0 }), {}),
+  // Run-scoped attempt budgets for those automations (accrue elapsed / interval; fire at >= 1).
+  // Prestige keeps its own autoPrestigeAttemptBudget.
+  automationAttemptBudgets: { latency: 0, scaleUp: 0, overclock: 0 },
+  tierTickspeedAttemptBudgets: TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: 0 }), {}),
+  // Permanent pause preference for Auto Overclock (unlocked by the first overclock interval level).
+  autoOverclockEnabled: true,
   // Permanent per-tier flag: whether this tier's own (Money-funded) tickspeed multiplier upgrades
   // itself automatically — see applyAutobuyerMilestones/tickGame; unlocked automatically at a
   // prestige-count milestone, no PP cost. Needs no other prerequisite (the manual purchase itself
@@ -1299,6 +1309,8 @@ export const eraGame = state => {
     autobuyersEnabled: state.autobuyersEnabled ?? initial.autobuyersEnabled,
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     autobuyerIntervalLevels: state.autobuyerIntervalLevels ?? initial.autobuyerIntervalLevels,
+    automationIntervalLevels: state.automationIntervalLevels ?? initial.automationIntervalLevels,
+    tierTickspeedIntervalLevels: state.tierTickspeedIntervalLevels ?? initial.tierTickspeedIntervalLevels,
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
     tierTickspeedAutobuyerEnabled: state.tierTickspeedAutobuyerEnabled ?? initial.tierTickspeedAutobuyerEnabled,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
@@ -1308,6 +1320,7 @@ export const eraGame = state => {
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     autoScaleUp: state.autoScaleUp ?? initial.autoScaleUp,
     autoScaleUpEnabled: state.autoScaleUpEnabled ?? initial.autoScaleUpEnabled,
+    autoOverclockEnabled: state.autoOverclockEnabled ?? initial.autoOverclockEnabled,
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
@@ -1443,8 +1456,7 @@ export const getAutoPrestigeCost = currentLevel =>
 // "accumulate until it crosses 1" mechanism used for tier autobuyers applies here too. `null`
 // (not yet bought) is never actually fed into this in tickGame — treated as level 1 here
 // defensively, same defensive convention used elsewhere in this file.
-export const getAutoPrestigeAttemptRate = autoPrestigeLevel =>
-  (1.1 ** clampNonNegative((autoPrestigeLevel ?? 1) - 1)) / AUTO_PRESTIGE_BASE_INTERVAL_SECONDS
+export const getAutoPrestigeAttemptRate = state => 1 / getAutomationIntervalSeconds(state, 'prestige')
 
 // Once Money reaches PRESTIGE_THRESHOLD ("1 Googol Bytes," expressed in Bits — see layers.js), all
 // production and purchasing (manual and automatic) freezes — the only action left is to Prestige —
@@ -1614,6 +1626,37 @@ const checkMilestones = (resources, prestige) => {
   }
 }
 
+// Interval-driven automation: accrues elapsed / intervalSeconds into a budget and fires `attempt`
+// once per whole unit. A no-op attempt (same state reference) stops the loop and clamps the banked
+// budget to 1, so an automation that was waiting on affordability/eligibility fires the moment it
+// can but never bursts. Per-tick attempts are bounded for very short intervals.
+const MAX_AUTOMATION_ATTEMPTS_PER_TICK = 200
+const runIntervalAutomation = (state, elapsedSeconds, intervalSeconds, startingBudget, attempt) => {
+  let result = state
+  let budget = startingBudget + elapsedSeconds / intervalSeconds
+  let fired = 0
+  while (budget >= 1 - TICK_ACCUMULATION_EPSILON && fired < MAX_AUTOMATION_ATTEMPTS_PER_TICK) {
+    const next = attempt(result)
+    if (next === result) {
+      budget = Math.min(budget, 1)
+      break
+    }
+    result = next
+    budget -= 1
+    fired += 1
+  }
+  if (fired >= MAX_AUTOMATION_ATTEMPTS_PER_TICK) budget = Math.min(budget, 1)
+  return { state: result, budget }
+}
+
+const runGlobalIntervalAutomation = (state, elapsedSeconds, key, attempt) => {
+  const { state: next, budget } = runIntervalAutomation(
+    state, elapsedSeconds, getAutomationIntervalSeconds(state, key), state.automationAttemptBudgets?.[key] ?? 0, attempt,
+  )
+  return { ...next, automationAttemptBudgets: { ...next.automationAttemptBudgets, [key]: budget } }
+}
+
+
 // autobuyerBatchSize mirrors the manual ×1/×10 toggle, but only governs autobuyer purchases
 // (the manual Buy button always buys 1 — see buyTier). At 1 (default), each attempt buys a
 // single unit as soon as it's affordable, same as always. Above 1, each attempt only buys once
@@ -1741,7 +1784,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // automatically.
   if (isProductionFrozen(stateAfterFlops)) {
     if (!autoPrestigeActive) return tickStorage(stateAfterFlops)
-    const nextBudget = (stateAfterFlops.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds
+    const nextBudget = (stateAfterFlops.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(stateAfterFlops) * elapsedSeconds
     // A completed attempt (budget >= 1, with a small epsilon tolerance for the same repeated-
     // fractional-elapsedSeconds floating-point drift described on TICK_ACCUMULATION_EPSILON)
     // only actually prestiges once Money has reached PRESTIGE_THRESHOLD — which it already has,
@@ -1913,7 +1956,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // when prestige.count >= PRESTIGE_UNBOUNDED_MIN_COUNT. Paused (autoPrestigeActive
     // false) stops this accumulation too, same as the frozen branch above.
     ...(autoPrestigeActive ? {
-      autoPrestigeAttemptBudget: (stateAfterAutobuyers.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds,
+      autoPrestigeAttemptBudget: (stateAfterAutobuyers.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(stateAfterAutobuyers) * elapsedSeconds,
     } : {}),
   }
 
@@ -1933,10 +1976,13 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // Gated on tierTickspeedAutobuyerEnabled (see setTierTickspeedAutobuyerEnabled) — paused
     // behaves exactly as if tierTickspeedAutobuyer were still false, for automation purposes only.
     if (!s.tierTickspeedAutobuyer?.[tier.id] || !(s.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true)) return s
-    if (tier.id === getLastTierId() && isLastTierTickspeedXpUnlocked(s)) {
-      return consumeXpForLastTierTickspeed(s.prestige.xp)(s)
-    }
-    return buyTickspeedMultiplier(tier.id)(s)
+    const attempt = tier.id === getLastTierId() && isLastTierTickspeedXpUnlocked(s)
+      ? x => consumeXpForLastTierTickspeed(x.prestige.xp)(x)
+      : x => buyTickspeedMultiplier(tier.id)(x)
+    const { state: next, budget } = runIntervalAutomation(
+      s, elapsedSeconds, getTierTickspeedIntervalSeconds(s, tier.id), s.tierTickspeedAttemptBudgets?.[tier.id] ?? 0, attempt,
+    )
+    return { ...next, tierTickspeedAttemptBudgets: { ...next.tierTickspeedAttemptBudgets, [tier.id]: budget } }
   }, producedState)
 
   // If the global tickspeed multiplier's autobuyer is bought (see buyTickspeedAutobuyer), upgrade
@@ -1947,7 +1993,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // (see setAutoGlobalTickspeedEnabled) — paused behaves exactly as if autoGlobalTickspeed were
   // still false, for automation purposes only.
   const stateAfterGlobalTickspeedAutobuyer = stateAfterAutomation.autoGlobalTickspeed && (stateAfterAutomation.autoGlobalTickspeedEnabled ?? true)
-    ? buyGlobalTickspeedMultiplier(stateAfterAutomation)
+    ? runGlobalIntervalAutomation(stateAfterAutomation, elapsedSeconds, 'latency', buyGlobalTickspeedMultiplier)
     : stateAfterAutomation
 
   // If the Auto-Prestige Autobuyer is bought (see buyAutoPrestigeAutobuyer), keep re-leveling
@@ -1958,7 +2004,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // setAutoPrestigeAutobuyerEnabled) — paused behaves exactly as if autoPrestigeAutobuyer were still
   // false, for automation purposes only; the manual Auto-Prestige upgrade button is unaffected.
   const stateAfterAutoPrestigeAutobuyer = stateAfterGlobalTickspeedAutobuyer.autoPrestigeAutobuyer && (stateAfterGlobalTickspeedAutobuyer.autoPrestigeAutobuyerEnabled ?? true)
-    ? buyAutoPrestige(stateAfterGlobalTickspeedAutobuyer)
+    ? buyAutomationIntervalUpgrade('prestige')(stateAfterGlobalTickspeedAutobuyer)
     : stateAfterGlobalTickspeedAutobuyer
 
   // If Auto Scale Up is bought (see buyAutoScaleUp), trigger a Scale Up automatically the instant
@@ -1969,10 +2015,17 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // rate-accumulating budget — Scale Up has no cadence to throttle, unlike Auto-Prestige. Gated on
   // autoScaleUpEnabled (see setAutoScaleUpEnabled) — paused behaves exactly as if autoScaleUp were
   // still false, for automation purposes only; the manual Scale Up button is unaffected.
-  const stateAfterScaleUp = stateAfterAutoPrestigeAutobuyer.autoScaleUp
+  const stateAfterAutoScaleUp = stateAfterAutoPrestigeAutobuyer.autoScaleUp
     && (stateAfterAutoPrestigeAutobuyer.autoScaleUpEnabled ?? true)
-    ? scaleUpGame(stateAfterAutoPrestigeAutobuyer)
+    ? runGlobalIntervalAutomation(stateAfterAutoPrestigeAutobuyer, elapsedSeconds, 'scaleUp', scaleUpGame)
     : stateAfterAutoPrestigeAutobuyer
+
+  // Auto Overclock: unlocked by the first overclock interval level; claims Overclock whenever
+  // eligible, at most once per interval. overclockGame re-validates eligibility internally.
+  const stateAfterScaleUp = (stateAfterAutoScaleUp.automationIntervalLevels?.overclock ?? 0) >= 1
+    && (stateAfterAutoScaleUp.autoOverclockEnabled ?? true)
+    ? runGlobalIntervalAutomation(stateAfterAutoScaleUp, elapsedSeconds, 'overclock', overclockGame)
+    : stateAfterAutoScaleUp
 
   // Runs last, against this tick's final tier01 level (post autobuyer/Scale Up), so a Disk
   // sized for a level tier01 only just reached THIS tick can still redeem the same tick — see
@@ -6469,6 +6522,79 @@ export const buyAutobuyerIntervalUpgrade = tierId => state => {
   }
 }
 
+const getIntervalMaxLevelForBase = baseSeconds =>
+  Math.max(0, Math.ceil(Math.log(AUTOBUYER_MIN_INTERVAL_SECONDS / baseSeconds) / Math.log(AUTOBUYER_INTERVAL_MULTIPLIER)))
+
+// Global automation interval chains (latency / scaleUp / overclock / prestige): AUTOMATION_INTERVAL_CONFIG.
+export const getAutomationIntervalMaxLevel = key => getIntervalMaxLevelForBase(AUTOMATION_INTERVAL_CONFIG[key].baseSeconds)
+export const getAutomationIntervalSeconds = (state, key) =>
+  Math.max(
+    AUTOBUYER_MIN_INTERVAL_SECONDS,
+    AUTOMATION_INTERVAL_CONFIG[key].baseSeconds * AUTOBUYER_INTERVAL_MULTIPLIER ** (state.automationIntervalLevels?.[key] ?? 0),
+  )
+export const getAutomationIntervalUpgradeCost = (key, level) =>
+  AUTOMATION_INTERVAL_CONFIG[key].baseCost * getAutobuyerIntervalUpgradeCost(level)
+
+// The automation each chain speeds up must already be unlocked (Auto Overclock unlocks with its first
+// level, but needs Auto Scale Up first so the row only appears once Scale Up is automated).
+const isAutomationIntervalChainAvailable = (state, key) => {
+  if (key === 'latency') return Boolean(state.autoGlobalTickspeed)
+  if (key === 'scaleUp' || key === 'overclock') return Boolean(state.autoScaleUp)
+  if (key === 'prestige') return (state.autoPrestige ?? null) !== null
+  return false
+}
+export const isAutomationIntervalChainUnlocked = isAutomationIntervalChainAvailable
+
+export const buyAutomationIntervalUpgrade = key => state => {
+  if (!AUTOMATION_INTERVAL_CONFIG[key]) return state
+  if (isProductionFrozen(state)) return state
+  if (!isAutomationIntervalChainAvailable(state, key)) return state
+  const level = state.automationIntervalLevels?.[key] ?? 0
+  if (level >= getAutomationIntervalMaxLevel(key)) return state
+  const cost = getAutomationIntervalUpgradeCost(key, level)
+  if (clampNonNegative(state.prestige.points) < cost) return state
+
+  const latched = latchComputeFlopsPageUnlocked(state)
+  return {
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - cost },
+    automationIntervalLevels: { ...latched.automationIntervalLevels, [key]: level + 1 },
+  }
+}
+
+// Per-tier tickspeed autobuyer chain: TIER_TICKSPEED_INTERVAL_CONFIG.
+export const getTierTickspeedIntervalMaxLevel = () => getIntervalMaxLevelForBase(TIER_TICKSPEED_INTERVAL_CONFIG.baseSeconds)
+export const getTierTickspeedIntervalSeconds = (state, tierId) =>
+  Math.max(
+    AUTOBUYER_MIN_INTERVAL_SECONDS,
+    TIER_TICKSPEED_INTERVAL_CONFIG.baseSeconds * AUTOBUYER_INTERVAL_MULTIPLIER ** (state.tierTickspeedIntervalLevels?.[tierId] ?? 0),
+  )
+export const getTierTickspeedIntervalUpgradeCost = level =>
+  TIER_TICKSPEED_INTERVAL_CONFIG.baseCost * getAutobuyerIntervalUpgradeCost(level)
+
+export const buyTierTickspeedIntervalUpgrade = tierId => state => {
+  if (isProductionFrozen(state)) return state
+  if (!TIER_BY_ID[tierId]) return state
+  if (!state.tierTickspeedAutobuyer?.[tierId]) return state
+  const level = state.tierTickspeedIntervalLevels?.[tierId] ?? 0
+  if (level >= getTierTickspeedIntervalMaxLevel()) return state
+  const cost = getTierTickspeedIntervalUpgradeCost(level)
+  if (clampNonNegative(state.prestige.points) < cost) return state
+
+  const latched = latchComputeFlopsPageUnlocked(state)
+  return {
+    ...latched,
+    prestige: { ...latched.prestige, points: latched.prestige.points - cost },
+    tierTickspeedIntervalLevels: { ...latched.tierTickspeedIntervalLevels, [tierId]: level + 1 },
+  }
+}
+
+// Auto Overclock pause preference (permanent), meaningless until its first interval level is bought.
+export const setAutoOverclockEnabled = enabled => state => {
+  if ((state.automationIntervalLevels?.overclock ?? 0) < 1) return state
+  return { ...state, autoOverclockEnabled: !!enabled }
+}
+
 export const buySmartAutobuyer = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = TIER_BY_ID[tierId]
@@ -6507,16 +6633,17 @@ export const setTierTickspeedAutobuyerEnabled = (tierId, enabled) => state => {
 // already in progress).
 export const buyAutoPrestige = state => {
   if (isProductionFrozen(state)) return state
+  // Activation only — the cadence is upgraded separately (buyAutomationIntervalUpgrade('prestige')).
+  if ((state.autoPrestige ?? null) !== null) return state
 
-  const currentLevel = state.autoPrestige ?? null
-  const cost = getAutoPrestigeCost(currentLevel ?? 0)
+  const cost = getAutoPrestigeCost(0)
   if (clampNonNegative(state.prestige.points) < cost) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
   return {
     ...latched,
     prestige: { ...latched.prestige, points: latched.prestige.points - cost },
-    autoPrestige: (currentLevel ?? 0) + 1,
+    autoPrestige: 1,
   }
 }
 
@@ -6970,6 +7097,8 @@ export const prestigeGame = state => {
     autobuyersEnabled: state.autobuyersEnabled ?? initial.autobuyersEnabled,
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     autobuyerIntervalLevels: state.autobuyerIntervalLevels ?? initial.autobuyerIntervalLevels,
+    automationIntervalLevels: state.automationIntervalLevels ?? initial.automationIntervalLevels,
+    tierTickspeedIntervalLevels: state.tierTickspeedIntervalLevels ?? initial.tierTickspeedIntervalLevels,
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
     tierTickspeedAutobuyerEnabled: state.tierTickspeedAutobuyerEnabled ?? initial.tierTickspeedAutobuyerEnabled,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
@@ -6984,6 +7113,7 @@ export const prestigeGame = state => {
     prestigeDoublePpLevel: state.prestigeDoublePpLevel ?? initial.prestigeDoublePpLevel,
     autoScaleUp: state.autoScaleUp ?? initial.autoScaleUp,
     autoScaleUpEnabled: state.autoScaleUpEnabled ?? initial.autoScaleUpEnabled,
+    autoOverclockEnabled: state.autoOverclockEnabled ?? initial.autoOverclockEnabled,
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
@@ -7123,6 +7253,8 @@ export const scaleUpGame = state => {
     autobuyersEnabled: state.autobuyersEnabled ?? initial.autobuyersEnabled,
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     autobuyerIntervalLevels: state.autobuyerIntervalLevels ?? initial.autobuyerIntervalLevels,
+    automationIntervalLevels: state.automationIntervalLevels ?? initial.automationIntervalLevels,
+    tierTickspeedIntervalLevels: state.tierTickspeedIntervalLevels ?? initial.tierTickspeedIntervalLevels,
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
     tierTickspeedAutobuyerEnabled: state.tierTickspeedAutobuyerEnabled ?? initial.tierTickspeedAutobuyerEnabled,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
@@ -7134,6 +7266,7 @@ export const scaleUpGame = state => {
     prestigeDoublePpLevel: state.prestigeDoublePpLevel ?? initial.prestigeDoublePpLevel,
     autoScaleUp: state.autoScaleUp ?? initial.autoScaleUp,
     autoScaleUpEnabled: state.autoScaleUpEnabled ?? initial.autoScaleUpEnabled,
+    autoOverclockEnabled: state.autoOverclockEnabled ?? initial.autoOverclockEnabled,
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
@@ -7218,6 +7351,8 @@ export const overclockGame = state => {
     autobuyersEnabled: state.autobuyersEnabled ?? initial.autobuyersEnabled,
     smartAutobuyer: state.smartAutobuyer ?? initial.smartAutobuyer,
     autobuyerIntervalLevels: state.autobuyerIntervalLevels ?? initial.autobuyerIntervalLevels,
+    automationIntervalLevels: state.automationIntervalLevels ?? initial.automationIntervalLevels,
+    tierTickspeedIntervalLevels: state.tierTickspeedIntervalLevels ?? initial.tierTickspeedIntervalLevels,
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
     tierTickspeedAutobuyerEnabled: state.tierTickspeedAutobuyerEnabled ?? initial.tierTickspeedAutobuyerEnabled,
     autoPrestige: state.autoPrestige ?? initial.autoPrestige,
@@ -7229,6 +7364,7 @@ export const overclockGame = state => {
     prestigeDoublePpLevel: state.prestigeDoublePpLevel ?? initial.prestigeDoublePpLevel,
     autoScaleUp: state.autoScaleUp ?? initial.autoScaleUp,
     autoScaleUpEnabled: state.autoScaleUpEnabled ?? initial.autoScaleUpEnabled,
+    autoOverclockEnabled: state.autoOverclockEnabled ?? initial.autoOverclockEnabled,
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,

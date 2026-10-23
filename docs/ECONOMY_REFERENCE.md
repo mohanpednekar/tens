@@ -1708,6 +1708,16 @@ milestones" below), spending no PP at all.
   `getAutobuyerIntervalMaxLevel(tierId)`, e.g. 44 for tier01, 66 for tier10). `tickGame` accrues attempt budget at
   `elapsedSeconds / getAutobuyerIntervalSeconds(state, tierId)`. Needs the autobuyer unlocked; kept
   through Prestige/Scale Up/Overclock/Era. UI: Perks → Upgrades → Autobuyer Speed.
+- **Active — Automation interval chains:** `AUTOMATION_INTERVAL_CONFIG` (`latency` 8 PP/1 s, `scaleUp`
+  16 PP/64 s, `overclock` 32 PP/256 s, `prestige` 64 PP/1024 s) and `TIER_TICKSPEED_INTERVAL_CONFIG`
+  (2 PP/16 s per tier). Cost = baseCost × the tier-autobuyer ladder (`getAutobuyerIntervalUpgradeCost`);
+  interval = baseSeconds × 0.9^level, floor 10 ms. `buyAutomationIntervalUpgrade(key)` /
+  `buyTierTickspeedIntervalUpgrade(tierId)` (state: `automationIntervalLevels`,
+  `tierTickspeedIntervalLevels`, permanent). Each automation accrues a run-scoped budget
+  (`automationAttemptBudgets`, `tierTickspeedAttemptBudgets`, `autoPrestigeAttemptBudget`) at
+  elapsed ÷ interval via `runIntervalAutomation`; a no-op attempt clamps the bank to 1. Auto-Prestige
+  is activation-only (`buyAutoPrestige`); its Autobuyer buys the prestige chain. **Auto Overclock**
+  unlocks with overclock level 1 (needs Auto Scale Up), pausable via `autoOverclockEnabled`.
 - **Active — Smart:** `buySmartAutobuyer(tierId)` permanently spends PP to make a tier's autobuyer buy
   singly until 10 lifetime purchases (then revert to normal full-block batching) — **requires the
   autobuyer already unlocked** (enforced in the engine), since it specifically optimizes unit-buying

@@ -649,6 +649,18 @@ export const SMART_AUTOBUYER_COST_MULTIPLIER = 10
 export const AUTOBUYER_BASE_INTERVAL_SECONDS = 1
 export const AUTOBUYER_INTERVAL_MULTIPLIER = 0.9
 export const AUTOBUYER_MIN_INTERVAL_SECONDS = 0.01
+// Interval upgrade chains for the global/per-tier automations (engine.js's
+// buyAutomationIntervalUpgrade / buyTierTickspeedIntervalUpgrade): cost = baseCost × the same
+// 1,2,4,…,64,125,… ladder as the tier autobuyer chain; interval = baseSeconds × 0.9^level, 10 ms floor.
+// Auto Overclock is unlocked by its first level.
+export const AUTOMATION_INTERVAL_CONFIG = {
+  latency: { baseCost: 8, baseSeconds: 1 },
+  scaleUp: { baseCost: 16, baseSeconds: 64 },
+  overclock: { baseCost: 32, baseSeconds: 256 },
+  prestige: { baseCost: 64, baseSeconds: 1024 },
+}
+// Per-tier tickspeed autobuyer: 2× the tier autobuyer chain's cost, 16 s base.
+export const TIER_TICKSPEED_INTERVAL_CONFIG = { baseCost: 2, baseSeconds: 16 }
 // How many times the player must have prestiged before a tier's unit-buying autobuyer unlocks
 // automatically (see engine.js's getAutobuyerUnlockMilestone/applyAutobuyerMilestones) — replaces
 // the old PP-cost-funded unlock entirely: no purchase, no PP spent, just a milestone reached by

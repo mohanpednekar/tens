@@ -3,6 +3,15 @@ import fc from 'fast-check'
 import {
   activateComputeBoost,
   buyAutobuyerIntervalUpgrade,
+  buyAutomationIntervalUpgrade,
+  buyTierTickspeedIntervalUpgrade,
+  getAutomationIntervalMaxLevel,
+  getAutomationIntervalSeconds,
+  getAutomationIntervalUpgradeCost,
+  getTierTickspeedIntervalMaxLevel,
+  getTierTickspeedIntervalSeconds,
+  getTierTickspeedIntervalUpgradeCost,
+  setAutoOverclockEnabled,
   getAutobuyerIntervalMaxLevel,
   getAutobuyerIntervalSeconds,
   getAutobuyerIntervalSecondsAtLevel,
@@ -6689,18 +6698,20 @@ describe('getAutoPrestigeCost', () => {
 
 // ─── getAutoPrestigeAttemptRate ───────────────────────────────────────────────
 
+const withReadyIntervalBudgets = state => ({
+  ...state,
+  automationAttemptBudgets: { latency: 1, scaleUp: 1, overclock: 1 },
+  tierTickspeedAttemptBudgets: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 1])),
+})
+
 describe('getAutoPrestigeAttemptRate', () => {
-  it('is 1/1000 at the baseline (level 1) — fires roughly every 1000 ticks', () => {
-    expect(getAutoPrestigeAttemptRate(1)).toBeCloseTo(1 / 1000)
+  it('is 1/1024 at the base interval — fires roughly every 1024 seconds', () => {
+    expect(getAutoPrestigeAttemptRate(createInitialGameState())).toBeCloseTo(1 / 1024)
   })
 
-  it('treats a not-yet-bought (null) level as the baseline rate, defensively', () => {
-    expect(getAutoPrestigeAttemptRate(null)).toBeCloseTo(1 / 1000)
-  })
-
-  it('compounds by 10% per level above 1', () => {
-    expect(getAutoPrestigeAttemptRate(2)).toBeCloseTo(1.1 / 1000)
-    expect(getAutoPrestigeAttemptRate(3)).toBeCloseTo(1.21 / 1000)
+  it('speeds up by 1/0.9 per interval upgrade level', () => {
+    const state = { ...createInitialGameState(), automationIntervalLevels: { latency: 0, scaleUp: 0, overclock: 0, prestige: 2 } }
+    expect(getAutoPrestigeAttemptRate(state)).toBeCloseTo(1 / (1024 * 0.81))
   })
 })
 
@@ -7637,12 +7648,12 @@ describe('tickGame', () => {
 
   it('keeps banking the Auto-Prestige attempt budget tick after tick while frozen, without firing early', () => {
     let state = withAutoPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5))
-    for (let i = 0; i < 500; i++) state = tickGame(1)(state)
-    // 500 ticks at the level-1 rate (1/1000) accumulates to 0.5 — still frozen, not yet fired.
+    for (let i = 0; i < 512; i++) state = tickGame(1)(state)
+    // 512 ticks at the base rate (1/1024) accumulates to 0.5 — still frozen, not yet fired.
     expect(state.prestige.count).toBe(0)
     expect(state.autoPrestigeAttemptBudget).toBeCloseTo(0.5)
-    for (let i = 0; i < 500; i++) state = tickGame(1)(state)
-    // Another 500 ticks crosses the 1.0 threshold — fires now, exactly once.
+    for (let i = 0; i < 512; i++) state = tickGame(1)(state)
+    // Another 512 ticks crosses the 1.0 threshold — fires now, exactly once.
     expect(state.prestige.count).toBe(1)
     expect(state.resources[MONEY_ID]).toBe(1)
   })
@@ -7685,7 +7696,7 @@ describe('tickGame', () => {
       withResource(withTierTickspeedAutobuyer(unlockedLastTierState(), lastTier.id), lastTier.id, 11),
       'tierTickspeedAutobuyerEnabled'
     )
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
   })
 
@@ -7700,11 +7711,11 @@ describe('tickGame', () => {
 
   it('lets the Auto-Prestige Autobuyer re-level Auto-Prestige when autoPrestigeAutobuyerEnabled is missing from state entirely (defaults to active)', () => {
     const state = omit(
-      withPrestigePoints(withAutoPrestigeAutobuyer(withAutoPrestige(createInitialGameState(), 1)), 2000),
+      withPrestigePoints(withAutoPrestigeAutobuyer(withAutoPrestige(createInitialGameState(), 1)), 64),
       'autoPrestigeAutobuyerEnabled'
     )
     const after = tickGame(1)(state)
-    expect(after.autoPrestige).toBe(2)
+    expect(after.automationIntervalLevels.prestige).toBe(1)
   })
 
   it('lets Auto Scale Up trigger automatically when autoScaleUpEnabled is missing from state entirely (defaults to active)', () => {
@@ -7712,7 +7723,7 @@ describe('tickGame', () => {
       withAutoScaleUp(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 4)),
       'autoScaleUpEnabled'
     )
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.scaleUpCount).toBe(1)
   })
 
@@ -8044,7 +8055,7 @@ describe('tickGame', () => {
       0
     )
     expect(state.autobuyers[lastTier.id]).toBeNull()
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
     expect(after.resources[lastTier.id]).toBe(1)
   })
@@ -8094,7 +8105,7 @@ describe('tickGame', () => {
     state = withMoney(state, 5) // stays within the same milestone exponent as the default watermark, so checkMilestones doesn't grant incidental XP
     state = withXP(state, 50)
 
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.lastTierXpConsumed).toBe(50)
     expect(after.prestige.xp).toBe(0)
     expect(after.owned[thousandsTier.id]).toBe(0)
@@ -8147,7 +8158,7 @@ describe('tickGame', () => {
     state = withMoney(state, 0)
     expect(isLastTierTickspeedXpUnlocked(state)).toBe(false)
 
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
     expect(after.prestige.xp).toBe(50)
     expect(after.lastTierXpConsumed).toBe(0)
@@ -8219,7 +8230,7 @@ describe('tickGame', () => {
     const state = withAutoScaleUp(
       withPurchaseLevel(createInitialGameState(), firstTier.id, 4) // 3 completed levels
     )
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.scaleUpCount).toBe(1)
     expect(after.purchaseLevels[firstTier.id]).toBe(1)
   })
@@ -8231,7 +8242,7 @@ describe('tickGame', () => {
       scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
       scaleUpCount: TIER_DEFINITIONS.length - 1,
     }, lastTier.id, 4)) // 3 completed levels — meets the first Scale Up's requirement
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.scaleUpCount).toBe(TIER_DEFINITIONS.length)
     expect(after.purchaseLevels[lastTier.id]).toBe(1)
     expect(getScaleUpRequirement(after)).toBe(6)
@@ -8271,7 +8282,7 @@ describe('tickGame', () => {
       false
     )
     const resumed = setAutoScaleUpEnabled(true)(paused)
-    const after = tickGame(1)(resumed)
+    const after = tickGame(1)(withReadyIntervalBudgets(resumed))
     expect(after.scaleUpCount).toBe(1)
   })
 
@@ -8318,10 +8329,10 @@ describe('tickGame', () => {
 
   it('automatically upgrades Auto-Prestige when the Auto-Prestige Autobuyer is bought and it is affordable', () => {
     const state = withAutoPrestigeAutobuyer(
-      withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), getAutoPrestigeCost(1))
+      withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 64)
     )
     const after = tickGame(1)(state)
-    expect(after.autoPrestige).toBe(2)
+    expect(after.automationIntervalLevels.prestige).toBe(1)
   })
 
   it('does not upgrade Auto-Prestige automatically without enough PP', () => {
@@ -8349,12 +8360,12 @@ describe('tickGame', () => {
 
   it('resumes automatically upgrading Auto-Prestige once the Auto-Prestige Autobuyer is re-enabled', () => {
     const paused = withAutoPrestigeAutobuyerEnabled(
-      withAutoPrestigeAutobuyer(withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), getAutoPrestigeCost(1))),
+      withAutoPrestigeAutobuyer(withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 64)),
       false
     )
     const resumed = setAutoPrestigeAutobuyerEnabled(true)(paused)
     const after = tickGame(1)(resumed)
-    expect(after.autoPrestige).toBe(2)
+    expect(after.automationIntervalLevels.prestige).toBe(1)
   })
 
   it('does not purchase automatically while a tier\'s autobuyer is paused (autobuyersEnabled false), even when affordable', () => {
@@ -8422,7 +8433,7 @@ describe('tickGame', () => {
       false
     )
     const resumed = setTierTickspeedAutobuyerEnabled(tier.id, true)(paused)
-    const after = tickGame(1)(resumed)
+    const after = tickGame(1)(withReadyIntervalBudgets(resumed))
     expect(after.tickspeedLevels[tier.id]).toBe(2)
   })
 
@@ -8444,7 +8455,7 @@ describe('tickGame', () => {
       tierA.id,
       false
     )
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.tickspeedLevels[tierA.id]).toBe(1)
     expect(after.tickspeedLevels[tierB.id]).toBe(2)
   })
@@ -8721,16 +8732,9 @@ describe('buyAutoPrestige', () => {
     expect(after.prestige.points).toBe(0)
   })
 
-  it('costs 2000 PP for level 1 → 2, doubling each level after that', () => {
-    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 2000)
-    const after = buyAutoPrestige(state)
-    expect(after.autoPrestige).toBe(2)
-    expect(after.prestige.points).toBe(0)
-
-    const state2 = withPrestigePoints(withAutoPrestige(createInitialGameState(), 2), 4000)
-    const after2 = buyAutoPrestige(state2)
-    expect(after2.autoPrestige).toBe(3)
-    expect(after2.prestige.points).toBe(0)
+  it('is activation-only: an already-active Auto-Prestige is a no-op (cadence upgrades are a separate chain)', () => {
+    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 5000)
+    expect(buyAutoPrestige(state)).toBe(state)
   })
 
   it('returns the same state when there are not enough points to activate', () => {
@@ -12364,5 +12368,62 @@ describe('autobuyer interval upgrade', () => {
     const a = tickGame(0.1)(base)
     const b = tickGame(0.1)(fast)
     expect(b.owned.tier01 + b.autobuyerAttemptBudgets.tier01).toBeGreaterThanOrEqual(a.owned.tier01 + a.autobuyerAttemptBudgets.tier01)
+  })
+})
+
+describe('automation interval chains', () => {
+  const base = () => createInitialGameState()
+  const withPoints = (state, points) => ({ ...state, prestige: { ...state.prestige, points } })
+
+  it('start at the specified costs and intervals', () => {
+    const s = base()
+    expect(['latency', 'scaleUp', 'overclock', 'prestige'].map(k => getAutomationIntervalUpgradeCost(k, 0))).toEqual([8, 16, 32, 64])
+    expect(['latency', 'scaleUp', 'overclock', 'prestige'].map(k => getAutomationIntervalSeconds(s, k))).toEqual([1, 64, 256, 1024])
+    expect(getTierTickspeedIntervalUpgradeCost(0)).toBe(2)
+    expect(getTierTickspeedIntervalSeconds(s, 'tier01')).toBe(16)
+  })
+
+  it('double on the 125-based ladder and cap at 10ms', () => {
+    expect([6, 7, 8, 10].map(l => getAutomationIntervalUpgradeCost('latency', l))).toEqual([512, 1000, 2000, 8000])
+    for (const k of ['latency', 'scaleUp', 'overclock', 'prestige']) {
+      const s = { ...base(), automationIntervalLevels: { ...base().automationIntervalLevels, [k]: getAutomationIntervalMaxLevel(k) } }
+      expect(getAutomationIntervalSeconds(s, k)).toBe(0.01)
+    }
+    expect(getTierTickspeedIntervalMaxLevel()).toBe(Math.ceil(Math.log(0.01 / 16) / Math.log(0.9)))
+  })
+
+  it('buying needs the automation unlocked and enough PP, then spends PP', () => {
+    const locked = withPoints(base(), 100)
+    expect(buyAutomationIntervalUpgrade('latency')(locked)).toBe(locked)
+    const unlocked = withPoints({ ...base(), autoGlobalTickspeed: true }, 100)
+    const after = buyAutomationIntervalUpgrade('latency')(unlocked)
+    expect(after.prestige.points).toBe(92)
+    expect(after.automationIntervalLevels.latency).toBe(1)
+    const poor = withPoints({ ...base(), autoGlobalTickspeed: true }, 7)
+    expect(buyAutomationIntervalUpgrade('latency')(poor)).toBe(poor)
+  })
+
+  it('tier tickspeed chain needs the tier tickspeed autobuyer and costs 2 PP first', () => {
+    const noAuto = withPoints(base(), 10)
+    expect(buyTierTickspeedIntervalUpgrade('tier01')(noAuto)).toBe(noAuto)
+    const s = withPoints({ ...base(), tierTickspeedAutobuyer: { ...base().tierTickspeedAutobuyer, tier01: true } }, 10)
+    const after = buyTierTickspeedIntervalUpgrade('tier01')(s)
+    expect(after.prestige.points).toBe(8)
+    expect(after.tierTickspeedIntervalLevels.tier01).toBe(1)
+  })
+
+  it('Auto Overclock stays off until its first interval level, and respects the pause toggle', () => {
+    const s = base()
+    expect(setAutoOverclockEnabled(false)(s)).toBe(s)
+    const bought = withPoints({ ...base(), autoScaleUp: true }, 32)
+    const after = buyAutomationIntervalUpgrade('overclock')(bought)
+    expect(after.automationIntervalLevels.overclock).toBe(1)
+    expect(setAutoOverclockEnabled(false)(after).autoOverclockEnabled).toBe(false)
+  })
+
+  it('Latency autobuyer waits for its interval timer', () => {
+    const state = { ...base(), autoGlobalTickspeed: true, automationIntervalLevels: { ...base().automationIntervalLevels, latency: 0 } }
+    const half = tickGame(0.5)(state)
+    expect(half.automationAttemptBudgets.latency).toBeCloseTo(0.5)
   })
 })

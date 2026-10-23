@@ -1623,6 +1623,7 @@ test('pausing Auto Scale Up via its toggle stops it from firing automatically, e
     purchaseLevels: { tier01: 4 }, // 3 completed levels — meets the first Scale Up's requirement
     autoScaleUp: true,
     autoScaleUpEnabled: false,
+    automationAttemptBudgets: { scaleUp: 1 }, // interval timer already elapsed
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   const { unmount } = render(<App />)
@@ -1907,7 +1908,7 @@ test('the Auto-Prestige option stays hidden until every tier is upgraded to Smar
   expect(screen.queryByText(/auto-prestige/i)).not.toBeInTheDocument()
 })
 
-test('an Auto-Prestige button appears on the PP Upgrades page once every tier is Smart, and spends 1000 PP to activate level 1', async () => {
+test('an Auto-Prestige button appears on the PP Upgrades page once every tier is Smart, and spends 1000 PP to activate it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1923,8 +1924,8 @@ test('an Auto-Prestige button appears on the PP Upgrades page once every tier is
 
   await user.click(autoPrestigeButton)
 
-  expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/lv\.1/i)
-  expect(screen.getByRole('button', { name: /upgrade auto-prestige for 2000 prestige points/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/every 1024 s/i)
+  expect(screen.getByRole('button', { name: /upgrade prestige automation speed to level 1 for 64 prestige points/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -1942,20 +1943,20 @@ test('no pause toggle appears for Auto-Prestige before it has ever been activate
   expect(screen.queryByRole('button', { name: /^auto-prestige automation$/i })).not.toBeInTheDocument()
 })
 
-test('the Auto-Prestige Upgrade button costs double the previous level, and stays disabled without enough points', async () => {
+test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled without enough points', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 10 },
     ...allTiersSmartSeed(),
     autoPrestige: 1,
-    prestige: { xp: 0, points: 1999, count: 1, highestMilestone: 1 },
+    prestige: { xp: 0, points: 63, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open upgrades/i)
 
-  expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/lv\.1/i)
-  expect(screen.getByRole('button', { name: /upgrade auto-prestige for 2000 prestige points/i })).toBeDisabled()
+  expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/every 1024 s/i)
+  expect(screen.getByRole('button', { name: /upgrade prestige automation speed to level 1 for 64 prestige points/i })).toBeDisabled()
 })
 
 test('the Auto-Prestige Autobuyer row stays hidden until Auto-Prestige has been activated', async () => {
@@ -2407,6 +2408,7 @@ test('pausing a tier\'s tickspeed autobuyer via its Toggles-tab toggle stops it 
     owned: { tier09: 101 },
     tierTickspeedAutobuyer: { tier09: true },
     tierTickspeedAutobuyerEnabled: { tier09: false },
+    tierTickspeedAttemptBudgets: { tier09: 1 }, // interval timer already elapsed
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   const { unmount } = render(<App />)

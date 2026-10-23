@@ -16,6 +16,8 @@ import {
   isSpeedUpgradeArmable,
   getComputeFieldEffectiveCap,
   getAutoPrestigeCost,
+  getAutomationIntervalMaxLevel,
+  getAutomationIntervalUpgradeCost,
   isGlobalTickspeedAffordable,
   getIntroKilobyteConversionCost,
   getOverclockRequirement,
@@ -202,7 +204,10 @@ export const hasAffordablePpLevelUpgrade = state => {
   const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier =>
     Boolean(state.smartAutobuyer?.[tier.id]) && Boolean(state.tierTickspeedAutobuyer?.[tier.id]),
   )
-  return allTiersFullyAutomated && points >= getAutoPrestigeCost(state.autoPrestige ?? 0)
+  if (!allTiersFullyAutomated) return false
+  if (state.autoPrestige == null) return points >= getAutoPrestigeCost(0)
+  const level = state.automationIntervalLevels?.prestige ?? 0
+  return level < getAutomationIntervalMaxLevel('prestige') && points >= getAutomationIntervalUpgradeCost('prestige', level)
 }
 
 export const hasAffordablePpUpgrade = state =>
