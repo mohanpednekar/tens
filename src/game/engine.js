@@ -6432,16 +6432,21 @@ export const buyTickspeedMultiplier = tierId => state => {
 // MainPage PP Upgrades page can show Smart's button and the tier tickspeed autobuyer's status at
 // the same time once the autobuyer itself is unlocked. A no-op if not yet unlocked, already smart,
 // or there aren't enough unspent points.
-// Autobuyer interval upgrade: each level multiplies a tier's attempt interval by
-// AUTOBUYER_INTERVAL_MULTIPLIER (0.9), floored at AUTOBUYER_MIN_INTERVAL_SECONDS (10 ms).
-export const getAutobuyerIntervalMaxLevel = () =>
-  Math.ceil(Math.log(AUTOBUYER_MIN_INTERVAL_SECONDS / AUTOBUYER_BASE_INTERVAL_SECONDS) / Math.log(AUTOBUYER_INTERVAL_MULTIPLIER))
+// Autobuyer interval: tier N's autobuyer attempts a purchase every N seconds (1 s … 10 s) until
+// upgraded; each upgrade level multiplies it by AUTOBUYER_INTERVAL_MULTIPLIER (0.9), floored at
+// AUTOBUYER_MIN_INTERVAL_SECONDS (10 ms). Autobuyer-only — unrelated to tier tickspeed (production)
+// and to manual buying.
+export const getAutobuyerBaseIntervalSeconds = tierId =>
+  AUTOBUYER_BASE_INTERVAL_SECONDS * ((TIER_INDEX_BY_ID[tierId] ?? 0) + 1)
 
-export const getAutobuyerIntervalSecondsAtLevel = level =>
-  Math.max(AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BASE_INTERVAL_SECONDS * AUTOBUYER_INTERVAL_MULTIPLIER ** level)
+export const getAutobuyerIntervalMaxLevel = tierId =>
+  Math.max(0, Math.ceil(Math.log(AUTOBUYER_MIN_INTERVAL_SECONDS / getAutobuyerBaseIntervalSeconds(tierId)) / Math.log(AUTOBUYER_INTERVAL_MULTIPLIER)))
+
+export const getAutobuyerIntervalSecondsAtLevel = (tierId, level) =>
+  Math.max(AUTOBUYER_MIN_INTERVAL_SECONDS, getAutobuyerBaseIntervalSeconds(tierId) * AUTOBUYER_INTERVAL_MULTIPLIER ** level)
 
 export const getAutobuyerIntervalSeconds = (state, tierId) =>
-  getAutobuyerIntervalSecondsAtLevel(state.autobuyerIntervalLevels?.[tierId] ?? 0)
+  getAutobuyerIntervalSecondsAtLevel(tierId, state.autobuyerIntervalLevels?.[tierId] ?? 0)
 
 // 1 PP, doubling per level on the SI-clean ladder (…64 → 125 instead of 128, ×1000 per ten levels).
 export const getAutobuyerIntervalUpgradeCost = level =>
@@ -6452,7 +6457,7 @@ export const buyAutobuyerIntervalUpgrade = tierId => state => {
   if (!TIER_BY_ID[tierId]) return state
   if (state.autobuyers[tierId] == null) return state
   const level = state.autobuyerIntervalLevels?.[tierId] ?? 0
-  if (level >= getAutobuyerIntervalMaxLevel()) return state
+  if (level >= getAutobuyerIntervalMaxLevel(tierId)) return state
   const cost = getAutobuyerIntervalUpgradeCost(level)
   if (clampNonNegative(state.prestige.points) < cost) return state
 

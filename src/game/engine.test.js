@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest'
 import fc from 'fast-check'
 import {
   activateComputeBoost,
+  buyAutobuyerIntervalUpgrade,
+  getAutobuyerIntervalMaxLevel,
+  getAutobuyerIntervalSeconds,
+  getAutobuyerIntervalSecondsAtLevel,
+  getAutobuyerIntervalUpgradeCost,
   isAnyComputeMergeInFlight,
   tickAutoComputeBoost,
   setComputeAutoBoostType,
@@ -8018,7 +8023,7 @@ describe('tickGame', () => {
       ),
       thousandsTier.id
     )
-    const after = tickGame(1)(state)
+    const after = tickGame(2)(state)
     expect(after.purchased[thousandsTier.id]).toBe(1)
     expect(after.purchased[tensTier.id]).toBe(0)
   })
@@ -8385,6 +8390,8 @@ describe('tickGame', () => {
       tensTier.id,
       false
     )
+    // Tier 2's autobuyer fires every 2 s at base, so bank one attempt up front.
+    state.autobuyerAttemptBudgets = { ...state.autobuyerAttemptBudgets, [thousandsTier.id]: 1 }
     const after = tickGame(1)(state)
     expect(after.owned[tensTier.id]).toBe(0)
     expect(after.owned[thousandsTier.id]).toBeGreaterThan(1)
@@ -12313,5 +12320,49 @@ describe('Foundry-reset replay of Capacity / Speed upgrades (increasing cost ord
   it('presents the newest unlocked Disk size immediately, even before its pool is reachable', () => {
     const state = withIntro(createInitialGameState(), { byteCreated: true, unlockedDiskSteps: 4 })
     expect(getPresentedDiskSize(state)).toBe(getDiskLadderSizeBits(4))
+  })
+})
+
+const withPpForInterval = (points, autobuyer = 1) => {
+  const s = createInitialGameState()
+  return { ...s, prestige: { ...s.prestige, points }, autobuyers: { ...s.autobuyers, tier01: autobuyer } }
+}
+
+describe('autobuyer interval upgrade', () => {
+  it('costs 1 PP doubling on the 125-based ladder', () => {
+    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(getAutobuyerIntervalUpgradeCost)).toEqual([1, 2, 4, 64, 125, 250, 500, 1000, 2000])
+  })
+
+  it('multiplies the interval by 0.9 per level and caps at 10ms', () => {
+    let s = withPpForInterval(1e30)
+    s = buyAutobuyerIntervalUpgrade('tier01')(s)
+    expect(s.prestige.points).toBe(1e30 - 1)
+    expect(getAutobuyerIntervalSeconds(s, 'tier01')).toBeCloseTo(0.9)
+    for (let i = 0; i < 60; i++) s = buyAutobuyerIntervalUpgrade('tier01')(s)
+    expect(s.autobuyerIntervalLevels.tier01).toBe(getAutobuyerIntervalMaxLevel('tier01'))
+    expect(getAutobuyerIntervalSeconds(s, 'tier01')).toBe(0.01)
+  })
+
+  it('base interval is N seconds for tier N and caps at 10ms', () => {
+    const s = createInitialGameState()
+    expect(getAutobuyerIntervalSeconds(s, 'tier01')).toBe(1)
+    expect(getAutobuyerIntervalSeconds(s, 'tier10')).toBe(10)
+    expect(getAutobuyerIntervalMaxLevel('tier10')).toBe(66)
+    expect(getAutobuyerIntervalSecondsAtLevel('tier10', 66)).toBe(0.01)
+  })
+
+  it('is a no-op without PP or without the autobuyer unlocked', () => {
+    const poor = withPpForInterval(0)
+    expect(buyAutobuyerIntervalUpgrade('tier01')(poor)).toBe(poor)
+    const locked = withPpForInterval(10, null)
+    expect(buyAutobuyerIntervalUpgrade('tier01')(locked)).toBe(locked)
+  })
+
+  it('banks attempts faster at a shorter interval', () => {
+    const base = withPpForInterval(0)
+    const fast = { ...base, autobuyerIntervalLevels: { ...base.autobuyerIntervalLevels, tier01: getAutobuyerIntervalMaxLevel('tier01') } }
+    const a = tickGame(0.1)(base)
+    const b = tickGame(0.1)(fast)
+    expect(b.owned.tier01 + b.autobuyerAttemptBudgets.tier01).toBeGreaterThanOrEqual(a.owned.tier01 + a.autobuyerAttemptBudgets.tier01)
   })
 })

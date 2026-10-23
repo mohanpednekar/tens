@@ -1703,9 +1703,9 @@ milestones" below), spending no PP at all.
   unlocked, insufficient points, or frozen.
 - **Active — Autobuyer interval:** `buyAutobuyerIntervalUpgrade(tierId)` permanently spends PP
   (`getAutobuyerIntervalUpgradeCost(level)` = SI-clean ladder 1,2,4,…,64,125,250,500 × 1000^floor(level/10))
-  to multiply that tier's autobuyer interval by `AUTOBUYER_INTERVAL_MULTIPLIER` (0.9) per level in
+  to multiply that tier's autobuyer interval (base `getAutobuyerBaseIntervalSeconds` = tier N → N s, autobuyer only, independent of tickspeed/manual buys) by `AUTOBUYER_INTERVAL_MULTIPLIER` (0.9) per level in
   `autobuyerIntervalLevels[tierId]`, floored at `AUTOBUYER_MIN_INTERVAL_SECONDS` (10 ms; max level
-  `getAutobuyerIntervalMaxLevel()` = 44). `tickGame` accrues attempt budget at
+  `getAutobuyerIntervalMaxLevel(tierId)`, e.g. 44 for tier01, 66 for tier10). `tickGame` accrues attempt budget at
   `elapsedSeconds / getAutobuyerIntervalSeconds(state, tierId)`. Needs the autobuyer unlocked; kept
   through Prestige/Scale Up/Overclock/Era. UI: Perks → Upgrades → Autobuyer Speed.
 - **Active — Smart:** `buySmartAutobuyer(tierId)` permanently spends PP to make a tier's autobuyer buy

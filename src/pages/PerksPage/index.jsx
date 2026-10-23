@@ -296,6 +296,8 @@ export const PERKS_TABS = [
   { id: 'toggles', icon: '🎛', ariaLabel: 'open toggles', title: 'Toggles — Buy max and automation pause/resume' },
 ]
 
+const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Math.round(ms * 10) / 10} ms`)
+
 const PerksPage = ({ game, focusNonce = 0 }) => {
   const { state, actions } = game
   const theme = useTheme()
@@ -601,9 +603,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         {TIER_DEFINITIONS.map(tier => {
           if ((state.autobuyers[tier.id] ?? null) === null) return null
           const level = state.autobuyerIntervalLevels?.[tier.id] ?? 0
-          const maxed = level >= getAutobuyerIntervalMaxLevel()
+          const maxed = level >= getAutobuyerIntervalMaxLevel(tier.id)
           const cost = getAutobuyerIntervalUpgradeCost(level)
-          const intervalMs = Math.round(getAutobuyerIntervalSeconds(state, tier.id) * 1000 * 10) / 10
+          const intervalMs = getAutobuyerIntervalSeconds(state, tier.id) * 1000
           return (
             <Row key={tier.id} aria-label={`${tier.name} autobuyer speed upgrade`}>
               <RowLabelStack>
@@ -611,7 +613,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   ⏱ {tier.name}
                   {level > 0 && ` (Lv.${level})`}
                 </RowLabel>
-                <SubText>every {intervalMs} ms{maxed ? ' (max)' : ''}</SubText>
+                <SubText>every {formatInterval(intervalMs)}{maxed ? ' (max)' : ''}</SubText>
               </RowLabelStack>
               {!maxed && (
                 <PpPurchaseButton
