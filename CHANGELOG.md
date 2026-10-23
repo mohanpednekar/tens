@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - **Read-cache blocks fill instantly.** Once a pool's Memory holds a full cache block, that block is
-  filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate.
+  filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate. The first empty cache block shows the pool's progress toward it, so it still looks like a gradual fill.
 
 ### Added
 
