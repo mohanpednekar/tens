@@ -3263,6 +3263,29 @@ test('the Data Lake header shows target price, filled amount and fill speed', ()
   expect(within(lake).getByTitle('Current fill speed')).not.toHaveTextContent('⚡ 0 B/s')
 })
 
+test('the Data Lake header shows time until the next Booster is banked, only while it is still short of the cost', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  const seedLake = lakeOverrides => seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
+    dataLakes: { 1: { purchased: 0, boostersUnlocked: true, autoConvertActive: true, capacityLevel: 1, ...lakeOverrides } },
+  })
+
+  seedLake({ depositedUnits: 0, fillBits: 2000 })
+  const short = render(<App />)
+  expect(within(screen.getByLabelText('KB lake')).getByTitle(/Time until the next Booster's cost is banked/)).toHaveTextContent(/⏳ \d+[smhd]/)
+  short.unmount()
+
+  localStorage.clear()
+  seedLake({ depositedUnits: 1, fillBits: 2000 })
+  render(<App />)
+  expect(within(screen.getByLabelText('KB lake')).queryByTitle(/Time until the next Booster's cost is banked/)).toBeNull()
+})
+
 test('a collapsed pool still shows its Data Lake heading and action row', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
