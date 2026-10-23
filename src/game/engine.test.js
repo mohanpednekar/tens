@@ -2,6 +2,20 @@ import { describe, expect, it } from 'vitest'
 import fc from 'fast-check'
 import {
   activateComputeBoost,
+  buyAutobuyerIntervalUpgrade,
+  buyAutomationIntervalUpgrade,
+  buyTierTickspeedIntervalUpgrade,
+  getAutomationIntervalMaxLevel,
+  getAutomationIntervalSeconds,
+  getAutomationIntervalUpgradeCost,
+  getTierTickspeedIntervalMaxLevel,
+  getTierTickspeedIntervalSeconds,
+  getTierTickspeedIntervalUpgradeCost,
+  setAutoOverclockEnabled,
+  getAutobuyerIntervalMaxLevel,
+  getAutobuyerIntervalSeconds,
+  getAutobuyerIntervalSecondsAtLevel,
+  getAutobuyerIntervalUpgradeCost,
   isAnyComputeMergeInFlight,
   tickAutoComputeBoost,
   setComputeAutoBoostType,
@@ -21,7 +35,7 @@ import {
   buyHyperscaler,
   buyPrestigeDoublePp,
   buyPrestigeSpeedBonus,
-  buySmartAutobuyer,
+  buyAutobuyerBulkMode,
   buyTickspeedAutobuyer,
   buyTickspeedMultiplier,
   buyTier,
@@ -99,7 +113,8 @@ import {
   getAutobuyerUnlockCost,
   getAutobuyerUnlockMilestone,
   getAutoPrestigeAttemptRate,
-  getAutoPrestigeCost,
+  getAutomationUnlockCost,
+  buyAutoOverclock,
   getComputeBoostCoveredTierCount,
   getComputeBoostMultiplier,
   getComputeBoostTierDurationSeconds,
@@ -161,7 +176,7 @@ import {
   getNextBytePowerProgressFraction,
   getPurchaseBlockSize,
   getPurchaseMilestoneMultiplier,
-  getSmartAutobuyerCost,
+  getAutobuyerBulkModeCost,
   getTierTickspeedAutobuyerMilestone,
   getScaleUpMultiplier,
   getScaleUpRequirement,
@@ -317,7 +332,7 @@ import {
   queueIntroSpeedUpgrade,
   tickSpeedUpgradeDrain,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -390,9 +405,9 @@ const withPrestigeCount = (state, count) => ({
   prestige: { ...state.prestige, count },
 })
 
-const withSmartAutobuyer = (state, tierId, smart = true) => ({
+const withBulkLevel = (state, tierId, mode = 1) => ({
   ...state,
-  smartAutobuyer: { ...state.smartAutobuyer, [tierId]: smart },
+  autobuyerBulkLevels: { ...state.autobuyerBulkLevels, [tierId]: mode },
 })
 
 const withTierTickspeedAutobuyer = (state, tierId, active = true) => ({
@@ -595,10 +610,10 @@ describe('createInitialGameState', () => {
     expect(prestige.xp).toBe(0)
   })
 
-  it('initialises all tiers with smartAutobuyer = false', () => {
+  it('initialises all tiers with autobuyerBulkLevels = 0', () => {
     const state = createInitialGameState()
     TIER_DEFINITIONS.forEach(tier => {
-      expect(state.smartAutobuyer[tier.id]).toBe(false)
+      expect(state.autobuyerBulkLevels[tier.id]).toBe(0)
     })
   })
 
@@ -6645,51 +6660,35 @@ describe('getPrestigePointsAwarded (property-based)', () => {
   })
 })
 
-// ─── getSmartAutobuyerCost ────────────────────────────────────────────────────
+// ─── getAutomationUnlockCost ────────────────────────────────────
 
-describe('getSmartAutobuyerCost', () => {
-  it('costs 10x the unlock cost for the first tier', () => {
-    expect(getSmartAutobuyerCost(tensTier.id)).toBe(10)
-  })
-
-  it('costs 10x the unlock cost for later tiers', () => {
-    expect(getSmartAutobuyerCost(thousandsTier.id)).toBe(20)
-    expect(getSmartAutobuyerCost(TIER_DEFINITIONS[9].id)).toBe(100)
+describe('getAutomationUnlockCost', () => {
+  it('is the same amount as each automation\'s first interval-upgrade level', () => {
+    expect(['latency', 'scaleUp', 'overclock', 'prestige'].map(getAutomationUnlockCost)).toEqual([8, 16, 32, 64])
+    for (const key of ['latency', 'scaleUp', 'overclock', 'prestige']) {
+      expect(getAutomationIntervalUpgradeCost(key, 0)).toBe(getAutomationUnlockCost(key))
+    }
   })
 })
-
-// ─── getAutoPrestigeCost ──────────────────────────────────────────────────────
-
-describe('getAutoPrestigeCost', () => {
-  it('costs the base 1000 PP to activate (level 0 → 1)', () => {
-    expect(getAutoPrestigeCost(0)).toBe(1000)
-  })
-
-  it('doubles each level after that', () => {
-    expect(getAutoPrestigeCost(1)).toBe(2000)
-    expect(getAutoPrestigeCost(2)).toBe(4000)
-    expect(getAutoPrestigeCost(3)).toBe(8000)
-  })
-
-  it('treats negative levels as 0', () => {
-    expect(getAutoPrestigeCost(-1)).toBe(1000)
-  })
-})
-
 // ─── getAutoPrestigeAttemptRate ───────────────────────────────────────────────
 
+const AUTO_SCALE_UP_COST = getAutomationUnlockCost('scaleUp')
+const TICKSPEED_AUTOBUYER_COST = getAutomationUnlockCost('latency')
+
+const withReadyIntervalBudgets = state => ({
+  ...state,
+  automationAttemptBudgets: { latency: 1, scaleUp: 1, overclock: 1 },
+  tierTickspeedAttemptBudgets: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 1])),
+})
+
 describe('getAutoPrestigeAttemptRate', () => {
-  it('is 1/1000 at the baseline (level 1) — fires roughly every 1000 ticks', () => {
-    expect(getAutoPrestigeAttemptRate(1)).toBeCloseTo(1 / 1000)
+  it('is 1/1024 at the base interval — fires roughly every 1024 seconds', () => {
+    expect(getAutoPrestigeAttemptRate(createInitialGameState())).toBeCloseTo(1 / 1024)
   })
 
-  it('treats a not-yet-bought (null) level as the baseline rate, defensively', () => {
-    expect(getAutoPrestigeAttemptRate(null)).toBeCloseTo(1 / 1000)
-  })
-
-  it('compounds by 10% per level above 1', () => {
-    expect(getAutoPrestigeAttemptRate(2)).toBeCloseTo(1.1 / 1000)
-    expect(getAutoPrestigeAttemptRate(3)).toBeCloseTo(1.21 / 1000)
+  it('speeds up by 1/0.9 per interval upgrade level', () => {
+    const state = { ...createInitialGameState(), automationIntervalLevels: { latency: 0, scaleUp: 0, overclock: 0, prestige: 2 } }
+    expect(getAutoPrestigeAttemptRate(state)).toBeCloseTo(1 / (1024 * 0.81))
   })
 })
 
@@ -7626,12 +7625,12 @@ describe('tickGame', () => {
 
   it('keeps banking the Auto-Prestige attempt budget tick after tick while frozen, without firing early', () => {
     let state = withAutoPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5))
-    for (let i = 0; i < 500; i++) state = tickGame(1)(state)
-    // 500 ticks at the level-1 rate (1/1000) accumulates to 0.5 — still frozen, not yet fired.
+    for (let i = 0; i < 512; i++) state = tickGame(1)(state)
+    // 512 ticks at the base rate (1/1024) accumulates to 0.5 — still frozen, not yet fired.
     expect(state.prestige.count).toBe(0)
     expect(state.autoPrestigeAttemptBudget).toBeCloseTo(0.5)
-    for (let i = 0; i < 500; i++) state = tickGame(1)(state)
-    // Another 500 ticks crosses the 1.0 threshold — fires now, exactly once.
+    for (let i = 0; i < 512; i++) state = tickGame(1)(state)
+    // Another 512 ticks crosses the 1.0 threshold — fires now, exactly once.
     expect(state.prestige.count).toBe(1)
     expect(state.resources[MONEY_ID]).toBe(1)
   })
@@ -7674,7 +7673,7 @@ describe('tickGame', () => {
       withResource(withTierTickspeedAutobuyer(unlockedLastTierState(), lastTier.id), lastTier.id, 11),
       'tierTickspeedAutobuyerEnabled'
     )
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
   })
 
@@ -7689,11 +7688,11 @@ describe('tickGame', () => {
 
   it('lets the Auto-Prestige Autobuyer re-level Auto-Prestige when autoPrestigeAutobuyerEnabled is missing from state entirely (defaults to active)', () => {
     const state = omit(
-      withPrestigePoints(withAutoPrestigeAutobuyer(withAutoPrestige(createInitialGameState(), 1)), 2000),
+      withPrestigePoints(withAutoPrestigeAutobuyer(withAutoPrestige(createInitialGameState(), 1)), 64),
       'autoPrestigeAutobuyerEnabled'
     )
     const after = tickGame(1)(state)
-    expect(after.autoPrestige).toBe(2)
+    expect(after.automationIntervalLevels.prestige).toBe(1)
   })
 
   it('lets Auto Scale Up trigger automatically when autoScaleUpEnabled is missing from state entirely (defaults to active)', () => {
@@ -7701,7 +7700,7 @@ describe('tickGame', () => {
       withAutoScaleUp(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 4)),
       'autoScaleUpEnabled'
     )
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.scaleUpCount).toBe(1)
   })
 
@@ -7882,120 +7881,43 @@ describe('tickGame', () => {
     expect(after.owned[tensTier.id]).toBe(0)
   })
 
-  it('with a batch size above 1, autobuyer holds until it can afford the entire block', () => {
-    // Per-unit cost at level 1, blockSize 8, is 8/8=1 — the entire block costs $8. $7 affords 7
-    // units individually but not the full block of 8, so a batch-size-10 (non-smart) autobuyer
-    // holds rather than trickling in a partial purchase.
-    const state = withAutobuyer(
-      withMoney(createInitialGameState(), 7),
-      tensTier.id
-    )
-    const after = tickGame(1, 10)(state)
-    expect(after.owned[tensTier.id]).toBe(0)
-    expect(after.resources[MONEY_ID]).toBe(7)
-  })
-
-  it('without smart, a tier with only its $1 starting balance never buys anything at batch size 10 (the bootstrap stall)', () => {
-    // tier01's per-unit cost at level 1, blockSize 8, is 8/8=$1 — the entire first block costs $8
-    // total. MONEY_STARTING_AMOUNT is $1, well short of that, so a non-"smart" autobuyer with a
-    // full-block batch size holds rather than trickling in a partial purchase — the reason
-    // smartAutobuyer exists (see the next test). This stall isn't specific to tier01: every tier
-    // stalls the same way from a starting balance smaller than its own full-block price (see the
-    // following test for a much pricier tier).
-    const state = withAutobuyer(
-      createInitialGameState(),
-      tensTier.id
-    )
-    const after = tickGame(1, 10)(state)
-    expect(after.owned[tensTier.id]).toBe(0)
-    expect(after.purchased[tensTier.id]).toBe(0)
-    expect(after.resources[MONEY_ID]).toBe(1)
-  })
-
-  it('the bootstrap stall still applies to a tier whose baseCost is large relative to available money', () => {
-    // thousandsTier (baseCost $1,000,000) at level 1, blockSize 8: per-unit cost $1,000,000, full
-    // block $8,000,000. With only $500 available, a batch-size-10 (non-smart) autobuyer still
-    // holds rather than buying anything.
-    const state = withAutobuyer(
-      withMoney(withOwned(createInitialGameState(), tensTier.id, 8), 500),
-      thousandsTier.id
-    )
-    const after = tickGame(1, 10)(state)
-    expect(after.owned[thousandsTier.id]).toBe(0)
-    expect(after.purchased[thousandsTier.id]).toBe(0)
-    // tensTier's own 1s tickspeed exactly completes one period within this single 1s tick, so its
-    // 8 pre-owned generators already produce once — Bytes +8 and Bits mirrored +8 × BITS_PER_BYTE.
-    expect(after.resources[MONEY_ID]).toBe(500 + 8 * BITS_PER_BYTE)
-  })
-
-  it('a smart tier buys one at a time (ignoring the batch size) instead of stalling on the first block', () => {
-    const state = withSmartAutobuyer(
-      withAutobuyer(
-        withMoney(createInitialGameState(), 1000), // affords exactly 1 unit, not the full block
-        tensTier.id
-      ),
-      tensTier.id
-    )
+  it('an autobuyer buys one unit per attempt, ignoring the batch size argument and Buy max', () => {
+    const state = withAutobuyer(withMoney(createInitialGameState(), 9000), tensTier.id)
     const after = tickGame(1, 10)(state)
     expect(after.purchased[tensTier.id]).toBe(1)
     expect(after.owned[tensTier.id]).toBe(1)
-    // Per-unit cost at level 1 is $1,000: money spent on the single unit ($1,000 → $0). tensTier's
-    // own 1s tickspeed exactly completes one period within this same 1s tick, so that unit already
-    // produces once this tick, landing 1 Byte plus BITS_PER_BYTE Bits mirrored.
+  })
+
+  it('an autobuyer never stalls on a partly affordable block — it buys the single unit it can afford', () => {
+    const state = withAutobuyer(createInitialGameState(), tensTier.id)
+    const after = tickGame(1)(withMoney(state, 1000))
+    expect(after.purchased[tensTier.id]).toBe(1)
     expect(after.resources[MONEY_ID]).toBe(BITS_PER_BYTE)
-    expect(bytesOf(after)).toBe(1)
   })
 
-  it('a smart tier reverts to the normal (full-block) batch size once past its first level', () => {
-    const state = withSmartAutobuyer(
-      withAutobuyer(
-        withMoney(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), 65), // 2nd level: per-unit cost is now 80/8=$10 (10x epoch jump); $65 affords 6, still short of the full block of 8
-        tensTier.id
-      ),
-      tensTier.id
-    )
-    const after = tickGame(1, 10)(state)
-    expect(after.purchaseLevels[tensTier.id]).toBe(2) // unchanged — holds for the full block, same as non-smart
+  it('bulk mode 1 buys 10 full levels in one attempt when affordable', () => {
+    const state = withBulkLevel(withAutobuyer(withMoney(createInitialGameState(), 1e60), tensTier.id), tensTier.id, 1)
+    const after = tickGame(1)(state)
+    expect(after.purchaseLevels[tensTier.id]).toBe(11)
     expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
-    expect(after.resources[MONEY_ID]).toBe(65)
   })
 
-  it('with a batch size above 1, autobuyer buys the whole block at once once affordable', () => {
-    const state = withAutobuyer(
-      withMoney(createInitialGameState(), 9000),
-      tensTier.id
-    )
-    const after = tickGame(1, 10)(state)
-    // Pays for 8 units ($8,000 total, per-unit cost $1,000) at the normal rate — no purchase-yield
-    // bonus (block is capped at the current block size regardless of the requested batch size of
-    // 10).
-    expect(after.owned[tensTier.id]).toBe(8)
-    expect(after.purchased[tensTier.id]).toBe(8)
-    // Cost drains money to $1,000. tensTier's own 1s tickspeed exactly completes one period within
-    // this same 1s tick, so the freshly-bought 8 units already produce once — buying the full block
-    // completes level 1 -> 2 before this tick's production runs, so that delivery already reflects
-    // level 2's own milestone multiplier (getPurchaseMilestoneMultiplier(2) = 1.25): floor(8 * 1.25)
-    // = 10 Bytes, mirrored into Bits.
-    expect(after.resources[MONEY_ID]).toBe(1000 + 10 * BITS_PER_BYTE)
+  it('bulk mode falls back to a single unit when 10 levels are not affordable', () => {
+    const state = withBulkLevel(withAutobuyer(withMoney(createInitialGameState(), 1000), tensTier.id), tensTier.id, 1)
+    const after = tickGame(1)(state)
+    expect(after.purchased[tensTier.id]).toBe(1)
+    expect(after.purchaseLevels[tensTier.id]).toBe(1)
   })
 
-  it('caps an autobuyer batch purchase at the remaining units in the current cost block', () => {
-    const state = withAutobuyer(
-      withMoney(withPurchaseLevelProgress(createInitialGameState(), tensTier.id, 5), 3500), // only 3 units left in this block
-      tensTier.id
+  it('bulk mode only buys whole levels from a clean slate — partial progress finishes one unit at a time', () => {
+    const state = withBulkLevel(
+      withAutobuyer(withMoney(withPurchaseLevelProgress(createInitialGameState(), tensTier.id, 3), 1e60), tensTier.id),
+      tensTier.id,
+      1,
     )
-    const after = tickGame(1, 10)(state)
-    expect(after.purchaseLevels[tensTier.id]).toBe(2)
-    expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
-    // Pays for the 3 remaining units in the block at the normal rate ($1,000 each, $3,000 total) —
-    // no purchase-yield bonus. $3,500 - $3,000 = $500.
-    expect(after.owned[tensTier.id]).toBe(3)
-    // tensTier's own 1s tickspeed exactly completes one period within this same 1s tick, so the
-    // freshly-bought 3 units already produce once — and since this purchase completes the whole
-    // level-1 block (purchaseLevels reaches 2, asserted above), but the completed-level
-    // multiplier only applies to deliveries after the level completes — this one lands at the
-    // base 3 Bytes.
-    expect(after.resources[MONEY_ID]).toBe(500 + 3 * BITS_PER_BYTE)
+    const after = tickGame(1)(state)
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(4)
+    expect(after.purchaseLevels[tensTier.id]).toBe(1)
   })
 
   it('when multiple autobuyers compete for the same money, the higher tier is bought first', () => {
@@ -8012,7 +7934,7 @@ describe('tickGame', () => {
       ),
       thousandsTier.id
     )
-    const after = tickGame(1)(state)
+    const after = tickGame(2)(state)
     expect(after.purchased[thousandsTier.id]).toBe(1)
     expect(after.purchased[tensTier.id]).toBe(0)
   })
@@ -8033,7 +7955,7 @@ describe('tickGame', () => {
       0
     )
     expect(state.autobuyers[lastTier.id]).toBeNull()
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
     expect(after.resources[lastTier.id]).toBe(1)
   })
@@ -8083,7 +8005,7 @@ describe('tickGame', () => {
     state = withMoney(state, 5) // stays within the same milestone exponent as the default watermark, so checkMilestones doesn't grant incidental XP
     state = withXP(state, 50)
 
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.lastTierXpConsumed).toBe(50)
     expect(after.prestige.xp).toBe(0)
     expect(after.owned[thousandsTier.id]).toBe(0)
@@ -8136,7 +8058,7 @@ describe('tickGame', () => {
     state = withMoney(state, 0)
     expect(isLastTierTickspeedXpUnlocked(state)).toBe(false)
 
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
     expect(after.prestige.xp).toBe(50)
     expect(after.lastTierXpConsumed).toBe(0)
@@ -8208,7 +8130,7 @@ describe('tickGame', () => {
     const state = withAutoScaleUp(
       withPurchaseLevel(createInitialGameState(), firstTier.id, 4) // 3 completed levels
     )
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.scaleUpCount).toBe(1)
     expect(after.purchaseLevels[firstTier.id]).toBe(1)
   })
@@ -8220,7 +8142,7 @@ describe('tickGame', () => {
       scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
       scaleUpCount: TIER_DEFINITIONS.length - 1,
     }, lastTier.id, 4)) // 3 completed levels — meets the first Scale Up's requirement
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.scaleUpCount).toBe(TIER_DEFINITIONS.length)
     expect(after.purchaseLevels[lastTier.id]).toBe(1)
     expect(getScaleUpRequirement(after)).toBe(6)
@@ -8260,7 +8182,7 @@ describe('tickGame', () => {
       false
     )
     const resumed = setAutoScaleUpEnabled(true)(paused)
-    const after = tickGame(1)(resumed)
+    const after = tickGame(1)(withReadyIntervalBudgets(resumed))
     expect(after.scaleUpCount).toBe(1)
   })
 
@@ -8307,29 +8229,29 @@ describe('tickGame', () => {
 
   it('automatically upgrades Auto-Prestige when the Auto-Prestige Autobuyer is bought and it is affordable', () => {
     const state = withAutoPrestigeAutobuyer(
-      withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), getAutoPrestigeCost(1))
+      withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 64)
     )
     const after = tickGame(1)(state)
-    expect(after.autoPrestige).toBe(2)
+    expect(after.automationIntervalLevels.prestige).toBe(1)
   })
 
   it('does not upgrade Auto-Prestige automatically without enough PP', () => {
     const state = withAutoPrestigeAutobuyer(
-      withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), getAutoPrestigeCost(1) - 1)
+      withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 64 - 1)
     )
     const after = tickGame(1)(state)
     expect(after.autoPrestige).toBe(1)
   })
 
   it('does not upgrade Auto-Prestige automatically without the Auto-Prestige Autobuyer bought', () => {
-    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), getAutoPrestigeCost(1))
+    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 64)
     const after = tickGame(1)(state)
     expect(after.autoPrestige).toBe(1)
   })
 
   it('does not upgrade Auto-Prestige automatically while the Auto-Prestige Autobuyer is paused (autoPrestigeAutobuyerEnabled false)', () => {
     const state = withAutoPrestigeAutobuyerEnabled(
-      withAutoPrestigeAutobuyer(withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), getAutoPrestigeCost(1))),
+      withAutoPrestigeAutobuyer(withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 64)),
       false
     )
     const after = tickGame(1)(state)
@@ -8338,12 +8260,12 @@ describe('tickGame', () => {
 
   it('resumes automatically upgrading Auto-Prestige once the Auto-Prestige Autobuyer is re-enabled', () => {
     const paused = withAutoPrestigeAutobuyerEnabled(
-      withAutoPrestigeAutobuyer(withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), getAutoPrestigeCost(1))),
+      withAutoPrestigeAutobuyer(withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 64)),
       false
     )
     const resumed = setAutoPrestigeAutobuyerEnabled(true)(paused)
     const after = tickGame(1)(resumed)
-    expect(after.autoPrestige).toBe(2)
+    expect(after.automationIntervalLevels.prestige).toBe(1)
   })
 
   it('does not purchase automatically while a tier\'s autobuyer is paused (autobuyersEnabled false), even when affordable', () => {
@@ -8379,6 +8301,8 @@ describe('tickGame', () => {
       tensTier.id,
       false
     )
+    // Tier 2's autobuyer fires every 2 s at base, so bank one attempt up front.
+    state.autobuyerAttemptBudgets = { ...state.autobuyerAttemptBudgets, [thousandsTier.id]: 1 }
     const after = tickGame(1)(state)
     expect(after.owned[tensTier.id]).toBe(0)
     expect(after.owned[thousandsTier.id]).toBeGreaterThan(1)
@@ -8409,7 +8333,7 @@ describe('tickGame', () => {
       false
     )
     const resumed = setTierTickspeedAutobuyerEnabled(tier.id, true)(paused)
-    const after = tickGame(1)(resumed)
+    const after = tickGame(1)(withReadyIntervalBudgets(resumed))
     expect(after.tickspeedLevels[tier.id]).toBe(2)
   })
 
@@ -8431,7 +8355,7 @@ describe('tickGame', () => {
       tierA.id,
       false
     )
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.tickspeedLevels[tierA.id]).toBe(1)
     expect(after.tickspeedLevels[tierB.id]).toBe(2)
   })
@@ -8649,89 +8573,60 @@ describe('buyTickspeedMultiplier', () => {
   })
 })
 
-// ─── buySmartAutobuyer ────────────────────────────────────────────────────────
+// ─── buyAutobuyerBulkMode ─────────────────────────────────────────────────────
 
-describe('buySmartAutobuyer', () => {
-  it('spends 10x the unlock cost to make a tier smart once its autobuyer is unlocked', () => {
-    const state = withPrestigePoints(withAutobuyer(unlockedLastTierState(), lastTier.id, 1), 100)
-    const after = buySmartAutobuyer(lastTier.id)(state)
-    expect(after.smartAutobuyer[lastTier.id]).toBe(true)
-    expect(after.prestige.points).toBe(0)
+describe('buyAutobuyerBulkMode', () => {
+  it('costs the tier\'s base autobuyer cost × levels^3: 1000×, 1e6×, 1e9×', () => {
+    expect([1, 2, 3].map(m => getAutobuyerBulkModeCost(tensTier.id, m))).toEqual([1e3, 1e6, 1e9])
+    expect(getAutobuyerBulkModeCost(lastTier.id, 1)).toBe(10_000)
   })
 
-  it('costs 10x the first tier\'s unlock cost (10 PP)', () => {
-    const state = withPrestigePoints(withAutobuyer(createInitialGameState(), tensTier.id, 1), 10)
-    const after = buySmartAutobuyer(tensTier.id)(state)
-    expect(after.smartAutobuyer[tensTier.id]).toBe(true)
-    expect(after.prestige.points).toBe(0)
+  it('buys the next bulk mode once the autobuyer is unlocked', () => {
+    const state = withPrestigePoints(withAutobuyer(createInitialGameState(), tensTier.id, 1), 1e6 + 1e3)
+    const one = buyAutobuyerBulkMode(tensTier.id)(state)
+    expect(one.autobuyerBulkLevels[tensTier.id]).toBe(1)
+    expect(one.prestige.points).toBe(1e6)
+    const two = buyAutobuyerBulkMode(tensTier.id)(one)
+    expect(two.autobuyerBulkLevels[tensTier.id]).toBe(2)
+    expect(two.prestige.points).toBe(0)
   })
 
-  it('returns the same state when the tier\'s autobuyer is not yet unlocked, even with plenty of points', () => {
-    const state = withPrestigePoints(unlockedLastTierState(), 1000)
-    expect(buySmartAutobuyer(lastTier.id)(state)).toBe(state)
-  })
-
-  it('returns the same state when there are not enough points', () => {
-    const state = withPrestigePoints(withAutobuyer(unlockedLastTierState(), lastTier.id, 1), 99)
-    expect(buySmartAutobuyer(lastTier.id)(state)).toBe(state)
-  })
-
-  it('returns the same state when already smart (one-time purchase)', () => {
-    const state = withSmartAutobuyer(
-      withPrestigePoints(withAutobuyer(unlockedLastTierState(), lastTier.id, 1), 100),
-      lastTier.id
-    )
-    expect(buySmartAutobuyer(lastTier.id)(state)).toBe(state)
-  })
-
-  it('refuses to spend once production is frozen at PRESTIGE_THRESHOLD', () => {
-    const state = withMoney(
-      withPrestigePoints(withAutobuyer(unlockedLastTierState(), lastTier.id, 1), 100),
-      PRESTIGE_THRESHOLD
-    )
-    expect(buySmartAutobuyer(lastTier.id)(state)).toBe(state)
-  })
-
-  it('returns the same state for an unknown tier id', () => {
-    const state = withPrestigePoints(createInitialGameState(), 100)
-    expect(buySmartAutobuyer('does_not_exist')(state)).toBe(state)
+  it('returns the same state when the autobuyer is not unlocked, points are short, at max mode, frozen, or the tier is unknown', () => {
+    const locked = withPrestigePoints(unlockedLastTierState(), 1e12)
+    expect(buyAutobuyerBulkMode(lastTier.id)(locked)).toBe(locked)
+    const poor = withPrestigePoints(withAutobuyer(createInitialGameState(), tensTier.id, 1), 999)
+    expect(buyAutobuyerBulkMode(tensTier.id)(poor)).toBe(poor)
+    const maxed = withBulkLevel(withPrestigePoints(withAutobuyer(createInitialGameState(), tensTier.id, 1), 1e12), tensTier.id, 3)
+    expect(buyAutobuyerBulkMode(tensTier.id)(maxed)).toBe(maxed)
+    const frozen = withMoney(withPrestigePoints(withAutobuyer(createInitialGameState(), tensTier.id, 1), 1e12), PRESTIGE_THRESHOLD)
+    expect(buyAutobuyerBulkMode(tensTier.id)(frozen)).toBe(frozen)
+    const rich = withPrestigePoints(createInitialGameState(), 1e12)
+    expect(buyAutobuyerBulkMode('does_not_exist')(rich)).toBe(rich)
   })
 })
 
 // ─── buyAutoPrestige ──────────────────────────────────────────────────────────
 
 describe('buyAutoPrestige', () => {
-  it('spends 1000 PP to activate Auto-Prestige at level 1', () => {
-    const state = withPrestigePoints(createInitialGameState(), 1000)
+  it('spends 64 PP to activate Auto-Prestige at level 1', () => {
+    const state = withPrestigePoints(createInitialGameState(), 64)
     const after = buyAutoPrestige(state)
     expect(after.autoPrestige).toBe(1)
     expect(after.prestige.points).toBe(0)
   })
 
-  it('costs 2000 PP for level 1 → 2, doubling each level after that', () => {
-    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 2000)
-    const after = buyAutoPrestige(state)
-    expect(after.autoPrestige).toBe(2)
-    expect(after.prestige.points).toBe(0)
-
-    const state2 = withPrestigePoints(withAutoPrestige(createInitialGameState(), 2), 4000)
-    const after2 = buyAutoPrestige(state2)
-    expect(after2.autoPrestige).toBe(3)
-    expect(after2.prestige.points).toBe(0)
-  })
-
-  it('returns the same state when there are not enough points to activate', () => {
-    const state = withPrestigePoints(createInitialGameState(), 999)
+  it('is activation-only: an already-active Auto-Prestige is a no-op (cadence upgrades are a separate chain)', () => {
+    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 5000)
     expect(buyAutoPrestige(state)).toBe(state)
   })
 
-  it('returns the same state when there are not enough points to upgrade', () => {
-    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 1999)
+  it('returns the same state when there are not enough points to activate', () => {
+    const state = withPrestigePoints(createInitialGameState(), 63)
     expect(buyAutoPrestige(state)).toBe(state)
   })
 
   it('refuses to spend once production is frozen at PRESTIGE_THRESHOLD', () => {
-    const state = withMoney(withPrestigePoints(createInitialGameState(), 1000), PRESTIGE_THRESHOLD)
+    const state = withMoney(withPrestigePoints(createInitialGameState(), 64), PRESTIGE_THRESHOLD)
     expect(buyAutoPrestige(state)).toBe(state)
   })
 })
@@ -9108,13 +9003,13 @@ describe('prestigeGame', () => {
     )
   })
 
-  it('keeps the smart autobuyer flag permanently across prestige', () => {
-    const state = withSmartAutobuyer(
+  it('keeps the autobuyer bulk mode permanently across prestige', () => {
+    const state = withBulkLevel(
       withMoney(createInitialGameState(), PRESTIGE_THRESHOLD),
       tensTier.id
     )
     const after = prestigeGame(state)
-    expect(after.smartAutobuyer[tensTier.id]).toBe(true)
+    expect(after.autobuyerBulkLevels[tensTier.id]).toBe(1)
   })
 
   it('keeps the tier tickspeed autobuyer flag permanently across prestige', () => {
@@ -9347,7 +9242,7 @@ describe('prestigeGame', () => {
     const fresh = createInitialGameState()
     const state = omit(
       withMoney(fresh, PRESTIGE_THRESHOLD),
-      'autobuyers', 'autobuyersEnabled', 'smartAutobuyer', 'tierTickspeedAutobuyer',
+      'autobuyers', 'autobuyersEnabled', 'autobuyerBulkLevels', 'tierTickspeedAutobuyer',
       'tierTickspeedAutobuyerEnabled', 'autoPrestige', 'autoPrestigeEnabled',
       'autoPrestigeAutobuyer', 'autoPrestigeAutobuyerEnabled', 'prestigeSpeedBonusUnlocked',
       'autoScaleUp', 'autoScaleUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
@@ -9359,7 +9254,7 @@ describe('prestigeGame', () => {
     expect(after.autobuyers[tensTier.id]).toBe(1)
     expect(after.autobuyers[thousandsTier.id]).toBeNull()
     expect(after.autobuyersEnabled).toEqual(fresh.autobuyersEnabled)
-    expect(after.smartAutobuyer).toEqual(fresh.smartAutobuyer)
+    expect(after.autobuyerBulkLevels).toEqual(fresh.autobuyerBulkLevels)
     expect(after.tierTickspeedAutobuyer).toEqual(fresh.tierTickspeedAutobuyer)
     expect(after.tierTickspeedAutobuyerEnabled).toEqual(fresh.tierTickspeedAutobuyerEnabled)
     expect(after.autoPrestige).toBe(fresh.autoPrestige)
@@ -9567,10 +9462,10 @@ describe('scaleUpGame', () => {
     expect(after.autobuyers[tensTier.id]).toBeNull()
   })
 
-  it('keeps the smart autobuyer flag permanently', () => {
-    const state = withSmartAutobuyer(eligibleState(), tensTier.id)
+  it('keeps the autobuyer bulk mode permanently', () => {
+    const state = withBulkLevel(eligibleState(), tensTier.id)
     const after = scaleUpGame(state)
-    expect(after.smartAutobuyer[tensTier.id]).toBe(true)
+    expect(after.autobuyerBulkLevels[tensTier.id]).toBe(1)
   })
 
   it('keeps the tier tickspeed autobuyer flag permanently', () => {
@@ -9740,7 +9635,7 @@ describe('scaleUpGame', () => {
     const fresh = createInitialGameState()
     const state = omit(
       eligibleState(),
-      'autobuyers', 'autobuyersEnabled', 'smartAutobuyer', 'tierTickspeedAutobuyer',
+      'autobuyers', 'autobuyersEnabled', 'autobuyerBulkLevels', 'tierTickspeedAutobuyer',
       'tierTickspeedAutobuyerEnabled', 'autoPrestige', 'autoPrestigeEnabled',
       'autoPrestigeAutobuyer', 'autoPrestigeAutobuyerEnabled', 'prestigeSpeedBonusUnlocked',
       'autoScaleUp', 'autoScaleUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
@@ -9748,7 +9643,7 @@ describe('scaleUpGame', () => {
     const after = scaleUpGame(state)
     expect(after.autobuyers).toEqual(fresh.autobuyers)
     expect(after.autobuyersEnabled).toEqual(fresh.autobuyersEnabled)
-    expect(after.smartAutobuyer).toEqual(fresh.smartAutobuyer)
+    expect(after.autobuyerBulkLevels).toEqual(fresh.autobuyerBulkLevels)
     expect(after.tierTickspeedAutobuyer).toEqual(fresh.tierTickspeedAutobuyer)
     expect(after.tierTickspeedAutobuyerEnabled).toEqual(fresh.tierTickspeedAutobuyerEnabled)
     expect(after.autoPrestige).toBe(fresh.autoPrestige)
@@ -9949,10 +9844,10 @@ describe('overclockGame', () => {
     expect(after.tickspeedLevels[tensTier.id]).toBe(1)
   })
 
-  it('keeps the smart autobuyer flag permanently', () => {
-    const state = withSmartAutobuyer(eligibleState(), tensTier.id)
+  it('keeps the autobuyer bulk mode permanently', () => {
+    const state = withBulkLevel(eligibleState(), tensTier.id)
     const after = overclockGame(state)
-    expect(after.smartAutobuyer[tensTier.id]).toBe(true)
+    expect(after.autobuyerBulkLevels[tensTier.id]).toBe(1)
   })
 
   it('keeps the tier tickspeed autobuyer flag permanently', () => {
@@ -10095,7 +9990,7 @@ describe('overclockGame', () => {
     const fresh = createInitialGameState()
     const state = omit(
       eligibleState(),
-      'autobuyers', 'autobuyersEnabled', 'smartAutobuyer', 'tierTickspeedAutobuyer',
+      'autobuyers', 'autobuyersEnabled', 'autobuyerBulkLevels', 'tierTickspeedAutobuyer',
       'tierTickspeedAutobuyerEnabled', 'autoPrestige', 'autoPrestigeEnabled',
       'autoPrestigeAutobuyer', 'autoPrestigeAutobuyerEnabled', 'prestigeSpeedBonusUnlocked',
       'autoScaleUp', 'autoScaleUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
@@ -10103,7 +9998,7 @@ describe('overclockGame', () => {
     const after = overclockGame(state)
     expect(after.autobuyers).toEqual(fresh.autobuyers)
     expect(after.autobuyersEnabled).toEqual(fresh.autobuyersEnabled)
-    expect(after.smartAutobuyer).toEqual(fresh.smartAutobuyer)
+    expect(after.autobuyerBulkLevels).toEqual(fresh.autobuyerBulkLevels)
     expect(after.tierTickspeedAutobuyer).toEqual(fresh.tierTickspeedAutobuyer)
     expect(after.tierTickspeedAutobuyerEnabled).toEqual(fresh.tierTickspeedAutobuyerEnabled)
     expect(after.autoPrestige).toBe(fresh.autoPrestige)
@@ -10596,7 +10491,7 @@ const eraEligibleState = (overrides = {}) => {
     resources: { ...state.resources, [MONEY_ID]: PRESTIGE_THRESHOLD },
     owned: { ...state.owned, [TIER_DEFINITIONS[0].id]: 10 },
     autobuyers: { ...state.autobuyers, [TIER_DEFINITIONS[0].id]: 1 },
-    smartAutobuyer: { ...state.smartAutobuyer, [TIER_DEFINITIONS[0].id]: true },
+    autobuyerBulkLevels: { ...state.autobuyerBulkLevels, [TIER_DEFINITIONS[0].id]: 1 },
     prestigeDoublePpLevel: 2,
     computeFlops: {
       pageUnlocked: true,
@@ -10674,7 +10569,7 @@ describe('eraGame', () => {
     expect(after.intro.disks).toEqual({})
     expect(after.intro.foundryResetCaps).toEqual({})
     expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(1)
-    expect(after.smartAutobuyer[TIER_DEFINITIONS[0].id]).toBe(true)
+    expect(after.autobuyerBulkLevels[TIER_DEFINITIONS[0].id]).toBe(1)
     // Unlike a real Prestige (which now carries these through, see prestigeGame), Era ascension is
     // its own, deliberately much bigger full-Foundry reset — diskWriteCache/diskReadCacheFlush wipe
     // along with everything else above.
@@ -12307,5 +12202,112 @@ describe('Foundry-reset replay of Capacity / Speed upgrades (increasing cost ord
   it('presents the newest unlocked Disk size immediately, even before its pool is reachable', () => {
     const state = withIntro(createInitialGameState(), { byteCreated: true, unlockedDiskSteps: 4 })
     expect(getPresentedDiskSize(state)).toBe(getDiskLadderSizeBits(4))
+  })
+})
+
+const withPpForInterval = (points, autobuyer = 1) => {
+  const s = createInitialGameState()
+  return { ...s, prestige: { ...s.prestige, points }, autobuyers: { ...s.autobuyers, tier01: autobuyer } }
+}
+
+describe('autobuyer interval upgrade', () => {
+  it('costs 1 PP doubling on the 125-based ladder', () => {
+    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(getAutobuyerIntervalUpgradeCost)).toEqual([1, 2, 4, 64, 125, 250, 500, 1000, 2000])
+  })
+
+  it('multiplies the interval by 0.9 per level and caps at 10ms', () => {
+    let s = withPpForInterval(1e30)
+    s = buyAutobuyerIntervalUpgrade('tier01')(s)
+    expect(s.prestige.points).toBe(1e30 - 1)
+    expect(getAutobuyerIntervalSeconds(s, 'tier01')).toBeCloseTo(0.9)
+    for (let i = 0; i < 60; i++) s = buyAutobuyerIntervalUpgrade('tier01')(s)
+    expect(s.autobuyerIntervalLevels.tier01).toBe(getAutobuyerIntervalMaxLevel('tier01'))
+    expect(getAutobuyerIntervalSeconds(s, 'tier01')).toBe(0.01)
+  })
+
+  it('base interval is N seconds for tier N and caps at 10ms', () => {
+    const s = createInitialGameState()
+    expect(getAutobuyerIntervalSeconds(s, 'tier01')).toBe(1)
+    expect(getAutobuyerIntervalSeconds(s, 'tier10')).toBe(10)
+    expect(getAutobuyerIntervalMaxLevel('tier10')).toBe(66)
+    expect(getAutobuyerIntervalSecondsAtLevel('tier10', 66)).toBe(0.01)
+  })
+
+  it('is a no-op without PP or without the autobuyer unlocked', () => {
+    const poor = withPpForInterval(0)
+    expect(buyAutobuyerIntervalUpgrade('tier01')(poor)).toBe(poor)
+    const locked = withPpForInterval(10, null)
+    expect(buyAutobuyerIntervalUpgrade('tier01')(locked)).toBe(locked)
+  })
+
+  it('banks attempts faster at a shorter interval', () => {
+    const base = withPpForInterval(0)
+    const fast = { ...base, autobuyerIntervalLevels: { ...base.autobuyerIntervalLevels, tier01: getAutobuyerIntervalMaxLevel('tier01') } }
+    const a = tickGame(0.1)(base)
+    const b = tickGame(0.1)(fast)
+    expect(b.owned.tier01 + b.autobuyerAttemptBudgets.tier01).toBeGreaterThanOrEqual(a.owned.tier01 + a.autobuyerAttemptBudgets.tier01)
+  })
+})
+
+describe('automation interval chains', () => {
+  const base = () => createInitialGameState()
+  const withPoints = (state, points) => ({ ...state, prestige: { ...state.prestige, points } })
+
+  it('start at the specified costs and intervals', () => {
+    const s = base()
+    expect(['latency', 'scaleUp', 'overclock', 'prestige'].map(k => getAutomationIntervalUpgradeCost(k, 0))).toEqual([8, 16, 32, 64])
+    expect(['latency', 'scaleUp', 'overclock', 'prestige'].map(k => getAutomationIntervalSeconds(s, k))).toEqual([1, 64, 256, 1024])
+    expect(getTierTickspeedIntervalUpgradeCost(0)).toBe(2)
+    expect(getTierTickspeedIntervalSeconds(s, 'tier01')).toBe(16)
+  })
+
+  it('double on the 125-based ladder and cap at 10ms', () => {
+    expect([6, 7, 8, 10].map(l => getAutomationIntervalUpgradeCost('latency', l))).toEqual([512, 1000, 2000, 8000])
+    for (const k of ['latency', 'scaleUp', 'overclock', 'prestige']) {
+      const s = { ...base(), automationIntervalLevels: { ...base().automationIntervalLevels, [k]: getAutomationIntervalMaxLevel(k) } }
+      expect(getAutomationIntervalSeconds(s, k)).toBe(0.01)
+    }
+    expect(getTierTickspeedIntervalMaxLevel()).toBe(Math.ceil(Math.log(0.01 / 16) / Math.log(0.9)))
+  })
+
+  it('buying needs the automation unlocked and enough PP, then spends PP', () => {
+    const locked = withPoints(base(), 100)
+    expect(buyAutomationIntervalUpgrade('latency')(locked)).toBe(locked)
+    const unlocked = withPoints({ ...base(), autoGlobalTickspeed: true }, 100)
+    const after = buyAutomationIntervalUpgrade('latency')(unlocked)
+    expect(after.prestige.points).toBe(92)
+    expect(after.automationIntervalLevels.latency).toBe(1)
+    const poor = withPoints({ ...base(), autoGlobalTickspeed: true }, 7)
+    expect(buyAutomationIntervalUpgrade('latency')(poor)).toBe(poor)
+  })
+
+  it('tier tickspeed chain needs the tier tickspeed autobuyer and costs 2 PP first', () => {
+    const noAuto = withPoints(base(), 10)
+    expect(buyTierTickspeedIntervalUpgrade('tier01')(noAuto)).toBe(noAuto)
+    const s = withPoints({ ...base(), tierTickspeedAutobuyer: { ...base().tierTickspeedAutobuyer, tier01: true } }, 10)
+    const after = buyTierTickspeedIntervalUpgrade('tier01')(s)
+    expect(after.prestige.points).toBe(8)
+    expect(after.tierTickspeedIntervalLevels.tier01).toBe(1)
+  })
+
+  it('Auto Overclock costs 32 PP to unlock (needs Auto Scale Up), then its speed chain also starts at 32 PP', () => {
+    const s = base()
+    expect(setAutoOverclockEnabled(false)(s)).toBe(s)
+    const noScaleUp = withPoints(base(), 100)
+    expect(buyAutoOverclock(noScaleUp)).toBe(noScaleUp)
+    expect(buyAutomationIntervalUpgrade('overclock')(withPoints({ ...base(), autoScaleUp: true }, 100)).automationIntervalLevels.overclock).toBe(0)
+    const unlocked = buyAutoOverclock(withPoints({ ...base(), autoScaleUp: true }, 64))
+    expect(unlocked.autoOverclock).toBe(true)
+    expect(unlocked.prestige.points).toBe(32)
+    const upgraded = buyAutomationIntervalUpgrade('overclock')(unlocked)
+    expect(upgraded.automationIntervalLevels.overclock).toBe(1)
+    expect(upgraded.prestige.points).toBe(0)
+    expect(setAutoOverclockEnabled(false)(upgraded).autoOverclockEnabled).toBe(false)
+  })
+
+  it('Latency autobuyer waits for its interval timer', () => {
+    const state = { ...base(), autoGlobalTickspeed: true, automationIntervalLevels: { ...base().automationIntervalLevels, latency: 0 } }
+    const half = tickGame(0.5)(state)
+    expect(half.automationAttemptBudgets.latency).toBeCloseTo(0.5)
   })
 })

@@ -4,15 +4,24 @@ import StatCard from 'components/StatCard'
 import Switch from 'components/Switch'
 import {
   formatAmount,
+  getAutobuyerIntervalMaxLevel,
+  getAutomationIntervalMaxLevel,
+  getAutomationIntervalSeconds,
+  getAutomationIntervalUpgradeCost,
+  getTierTickspeedIntervalMaxLevel,
+  getTierTickspeedIntervalSeconds,
+  getTierTickspeedIntervalUpgradeCost,
+  isAutomationIntervalChainUnlocked,
+  getAutobuyerIntervalSeconds,
+  getAutobuyerIntervalUpgradeCost,
   getAutobuyerUnlockMilestone,
-  getAutoPrestigeAttemptRate,
-  getAutoPrestigeCost,
+  getAutomationUnlockCost,
   getFlopsAutobuyerUnlockEra,
   getPrestigeDoublePpUpgradeCost,
   getPrestigePowersPerPp,
   getPrestigePpPerPower,
   getPurchaseBlockSize,
-  getSmartAutobuyerCost,
+  getAutobuyerBulkModeCost,
   getTierTickspeedAutobuyerMilestone,
   isBuyMaxUnlocked,
   isComputeCoreConversionUnlocked,
@@ -22,12 +31,12 @@ import {
 } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
-  AUTO_SCALE_UP_COST,
+  AUTOBUYER_BULK_LEVELS_BASE,
+  AUTOBUYER_BULK_MAX_MODE,
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   PRESTIGE_UNBOUNDED_MIN_COUNT,
-  TICKSPEED_AUTOBUYER_COST,
   TIER_DEFINITIONS,
 } from 'game/layers'
 import { hasAffordablePpLevelUpgrade, hasAffordablePpUnlock } from 'game/navAttention'
@@ -293,6 +302,8 @@ export const PERKS_TABS = [
   { id: 'toggles', icon: '🎛', ariaLabel: 'open toggles', title: 'Toggles — Buy max and automation pause/resume' },
 ]
 
+const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Math.round(ms * 10) / 10} ms`)
+
 const PerksPage = ({ game, focusNonce = 0 }) => {
   const { state, actions } = game
   const theme = useTheme()
@@ -309,16 +320,19 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   }, [focusNonce])
 
   const purchaseBlockSize = getPurchaseBlockSize(state)
-  const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier =>
-    state.smartAutobuyer?.[tier.id] && state.tierTickspeedAutobuyer?.[tier.id]
-  )
+  const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier => state.tierTickspeedAutobuyer?.[tier.id])
 
+  const latencyUnlockCost = getAutomationUnlockCost('latency')
+  const scaleUpUnlockCost = getAutomationUnlockCost('scaleUp')
+  const overclockUnlockCost = getAutomationUnlockCost('overclock')
   const isAutoScaleUpActive = state.autoScaleUp ?? false
-  const canBuyAutoScaleUp = !isFrozen && !isAutoScaleUpActive && !isFirstRun && points >= AUTO_SCALE_UP_COST
+  const isAutoOverclockActive = state.autoOverclock ?? false
+  const canBuyAutoOverclock = !isFrozen && isAutoScaleUpActive && !isAutoOverclockActive && !isFirstRun && points >= overclockUnlockCost
+  const canBuyAutoScaleUp = !isFrozen && !isAutoScaleUpActive && !isFirstRun && points >= scaleUpUnlockCost
   const autoScaleUpEnabled = state.autoScaleUpEnabled ?? true
 
   const isTickspeedAutobuyerActive = state.autoGlobalTickspeed ?? false
-  const canBuyTickspeedAutobuyer = !isFrozen && !isTickspeedAutobuyerActive && !isFirstRun && points >= TICKSPEED_AUTOBUYER_COST
+  const canBuyTickspeedAutobuyer = !isFrozen && !isTickspeedAutobuyerActive && !isFirstRun && points >= latencyUnlockCost
   const tickspeedAutobuyerEnabled = state.autoGlobalTickspeedEnabled ?? true
 
   const doublePpLevel = state.prestigeDoublePpLevel ?? 0
@@ -331,15 +345,11 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     : `1 PP per ${formatAmount(powersPerPp)} power${powersPerPp === 1 ? '' : 's'}`
   const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
 
-  // Auto-Prestige: leveled (each level fires 10% sooner at double the cost) — see
-  // getAutoPrestigeAttemptRate/getAutoPrestigeCost.
+  // Auto-Prestige: one-time activation, then the interval chain (see AUTOMATION_INTERVAL_CONFIG.prestige).
   const autoPrestigeLevel = state.autoPrestige ?? null
   const isAutoPrestigeActive = autoPrestigeLevel !== null
-  const autoPrestigeCost = getAutoPrestigeCost(autoPrestigeLevel ?? 0)
-  const canBuyAutoPrestige = !isFrozen && points >= autoPrestigeCost
-  const autoPrestigeIntervalSeconds = isAutoPrestigeActive
-    ? Math.round(1 / getAutoPrestigeAttemptRate(autoPrestigeLevel))
-    : null
+  const autoPrestigeCost = getAutomationUnlockCost('prestige')
+  const canBuyAutoPrestige = !isFrozen && !isAutoPrestigeActive && points >= autoPrestigeCost
   const autoPrestigeEnabled = state.autoPrestigeEnabled ?? true
 
   const isAutoPrestigeAutobuyerActive = state.autoPrestigeAutobuyer ?? false
@@ -362,14 +372,16 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <CategoryHeading>Tier Autobuyers</CategoryHeading>
         {/* Every tier's row stays listed (reached milestones included) so unlock history is never lost. */}
         {TIER_DEFINITIONS.map(tier => {
-          const isSmart = state.smartAutobuyer?.[tier.id] ?? false
+          const bulkMode = state.autobuyerBulkLevels?.[tier.id] ?? 0
+          const bulkLevels = AUTOBUYER_BULK_LEVELS_BASE ** (bulkMode + 1)
+          const hasNextBulk = bulkMode < AUTOBUYER_BULK_MAX_MODE
           const isTierTickspeedAutobuyerActive = state.tierTickspeedAutobuyer?.[tier.id] ?? false
           const unlocked = isTierUnlocked(state)(tier)
           const isAutobuyerLocked = (state.autobuyers[tier.id] ?? null) === null
           const autobuyerMilestone = getAutobuyerUnlockMilestone(tier.id)
           const tickspeedMilestone = getTierTickspeedAutobuyerMilestone(tier.id)
-          const smartCost = getSmartAutobuyerCost(tier.id)
-          const canBuySmart = unlocked && !isFrozen && !isAutobuyerLocked && points >= smartCost
+          const bulkCost = hasNextBulk ? getAutobuyerBulkModeCost(tier.id, bulkMode + 1) : 0
+          const canBuyBulk = unlocked && !isFrozen && !isAutobuyerLocked && points >= bulkCost
           return (
             <Row key={tier.id} $tier="unlocks" aria-label={`${tier.name} PP unlocks`}>
               <TierSymbol tier={tier} />
@@ -394,23 +406,23 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 />
               </span>
               <span>
-                {/* Owned Smart always shows (history); buying it needs the tier reachable this run. */}
-                {!isAutobuyerLocked && (isSmart || unlocked) && (
-                  isSmart ? (
-                    <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer is smart`}>🧠 ✓</Badge>
-                  ) : (
-                    <PpPurchaseButton
-                      ariaLabel={`Make ${tier.name}'s autobuyer smart (buy singly until ${purchaseBlockSize} purchases, then in blocks of ${purchaseBlockSize}) for ${formatAmount(smartCost)} Prestige Point${smartCost === 1 ? '' : 's'}`}
-                      color="#a78bfa"
-                      cost={smartCost}
-                      disabled={!canBuySmart}
-                      icon="🧠"
-                      label={`${formatAmount(smartCost)} PP`}
-                      onClick={() => actions.buySmartAutobuyer(tier.id)}
-                      points={points}
-                      progressLabel={`${tier.name} smart autobuyer Prestige Point progress`}
-                    />
-                  )
+                {/* Owned bulk mode always shows (history); buying the next needs the tier reachable this run. */}
+                {!isAutobuyerLocked && bulkMode > 0 && (
+                  <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer buys ${AUTOBUYER_BULK_LEVELS_BASE ** bulkMode} levels at once`}>📦 ×{AUTOBUYER_BULK_LEVELS_BASE ** bulkMode}</Badge>
+                )}
+                {!isAutobuyerLocked && hasNextBulk && unlocked && (
+                  <PpPurchaseButton
+                    ariaLabel={`Let ${tier.name}'s autobuyer buy ${bulkLevels} levels at once when affordable for ${formatAmount(bulkCost)} Prestige Points`}
+                    color="#a78bfa"
+                    cost={bulkCost}
+                    disabled={!canBuyBulk}
+                    icon="📦"
+                    label={`×${bulkLevels} · ${formatAmount(bulkCost)} PP`}
+                    onClick={() => actions.buyAutobuyerBulkMode(tier.id)}
+                    points={points}
+                    progressLabel={`${tier.name} bulk autobuyer Prestige Point progress`}
+                    title={`Each autobuyer attempt buys ${bulkLevels} full levels when that many are affordable (otherwise one unit). Without bulk mode an autobuyer buys one unit per attempt. Buy max mode never applies to autobuyers.`}
+                  />
                 )}
               </span>
             </Row>
@@ -426,12 +438,12 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             <UnlockedBadge icon="🌐" name="Tickspeed Autobuyer" />
           ) : (
             <PpPurchaseButton
-              ariaLabel={`Enable Tickspeed Autobuyer for ${TICKSPEED_AUTOBUYER_COST} Prestige Points`}
+              ariaLabel={`Enable Tickspeed Autobuyer for ${latencyUnlockCost} Prestige Points`}
               color="#38bdf8"
-              cost={TICKSPEED_AUTOBUYER_COST}
+              cost={latencyUnlockCost}
               disabled={!canBuyTickspeedAutobuyer}
               icon="🔓"
-              label={`${TICKSPEED_AUTOBUYER_COST} PP`}
+              label={`${latencyUnlockCost} PP`}
               onClick={actions.buyTickspeedAutobuyer}
               points={points}
               progressLabel="Tickspeed Autobuyer Prestige Point progress"
@@ -445,12 +457,12 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             <UnlockedBadge icon="⏩" name="Auto Scale Up" />
           ) : (
             <PpPurchaseButton
-              ariaLabel={`Enable Auto Scale Up for ${AUTO_SCALE_UP_COST} Prestige Points`}
+              ariaLabel={`Enable Auto Scale Up for ${scaleUpUnlockCost} Prestige Points`}
               color="#38bdf8"
-              cost={AUTO_SCALE_UP_COST}
+              cost={scaleUpUnlockCost}
               disabled={!canBuyAutoScaleUp}
               icon="🔓"
-              label={`${AUTO_SCALE_UP_COST} PP`}
+              label={`${scaleUpUnlockCost} PP`}
               onClick={actions.buyAutoScaleUp}
               points={points}
               progressLabel="Auto Scale Up Prestige Point progress"
@@ -458,6 +470,27 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             />
           )}
         </Row>
+        {isAutoScaleUpActive && (
+          <Row aria-label="auto overclock upgrade">
+            <RowLabel>🚀 Auto Overclock</RowLabel>
+            {isAutoOverclockActive ? (
+              <UnlockedBadge icon="🚀" name="Auto Overclock" />
+            ) : (
+              <PpPurchaseButton
+                ariaLabel={`Enable Auto Overclock for ${overclockUnlockCost} Prestige Points`}
+                color="#38bdf8"
+                cost={overclockUnlockCost}
+                disabled={!canBuyAutoOverclock}
+                icon="🔓"
+                label={`${overclockUnlockCost} PP`}
+                onClick={actions.buyAutoOverclock}
+                points={points}
+                progressLabel="Auto Overclock Prestige Point progress"
+                title="Spend Prestige Points so Overclock is claimed automatically whenever it is eligible"
+              />
+            )}
+          </Row>
+        )}
         {showComputeAutoBoost && (
           <Row aria-label="compute auto boost upgrade">
             <RowLabel>🤖 Auto-Boost</RowLabel>
@@ -593,7 +626,110 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </Row>
       </Category>
 
-      {/* Auto-Prestige stays hidden entirely until every tier is fully smart (allTiersFullyAutomated). */}
+      <Category aria-label="autobuyer speed category">
+        <CategoryHeading>Autobuyer Speed</CategoryHeading>
+        {TIER_DEFINITIONS.map(tier => {
+          if ((state.autobuyers[tier.id] ?? null) === null) return null
+          const level = state.autobuyerIntervalLevels?.[tier.id] ?? 0
+          const maxed = level >= getAutobuyerIntervalMaxLevel(tier.id)
+          const cost = getAutobuyerIntervalUpgradeCost(level)
+          const intervalMs = getAutobuyerIntervalSeconds(state, tier.id) * 1000
+          return (
+            <Row key={tier.id} aria-label={`${tier.name} autobuyer speed upgrade`}>
+              <RowLabelStack>
+                <RowLabel>
+                  ⏱ {tier.name}
+                  {level > 0 && ` (Lv.${level})`}
+                </RowLabel>
+                <SubText>every {formatInterval(intervalMs)}{maxed ? ' (max)' : ''}</SubText>
+              </RowLabelStack>
+              {!maxed && (
+                <PpPurchaseButton
+                  ariaLabel={`Upgrade ${tier.name}'s autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Prestige Points — interval ×0.9`}
+                  color="#34d399"
+                  cost={cost}
+                  disabled={isFrozen || points < cost}
+                  icon="⏫"
+                  label={`${formatAmount(cost)} PP`}
+                  onClick={() => actions.buyAutobuyerIntervalUpgrade(tier.id)}
+                  points={points}
+                  progressLabel={`${tier.name} autobuyer speed Prestige Point progress`}
+                  title="Spend Prestige Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); cost doubles each level"
+                />
+              )}
+            </Row>
+          )
+        })}
+        {TIER_DEFINITIONS.map(tier => {
+          if (!state.tierTickspeedAutobuyer?.[tier.id]) return null
+          const level = state.tierTickspeedIntervalLevels?.[tier.id] ?? 0
+          const maxed = level >= getTierTickspeedIntervalMaxLevel()
+          const cost = getTierTickspeedIntervalUpgradeCost(level)
+          return (
+            <Row key={`ts-${tier.id}`} aria-label={`${tier.name} tickspeed autobuyer speed upgrade`}>
+              <RowLabelStack>
+                <RowLabel>
+                  ⚙ {tier.name} tickspeed
+                  {level > 0 && ` (Lv.${level})`}
+                </RowLabel>
+                <SubText>every {formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)}{maxed ? ' (max)' : ''}</SubText>
+              </RowLabelStack>
+              {!maxed && (
+                <PpPurchaseButton
+                  ariaLabel={`Upgrade ${tier.name}'s tickspeed autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Prestige Points — interval ×0.9`}
+                  color="#34d399"
+                  cost={cost}
+                  disabled={isFrozen || points < cost}
+                  icon="⏫"
+                  label={`${formatAmount(cost)} PP`}
+                  onClick={() => actions.buyTierTickspeedIntervalUpgrade(tier.id)}
+                  points={points}
+                  progressLabel={`${tier.name} tickspeed autobuyer speed Prestige Point progress`}
+                  title="Spend Prestige Points to shorten this tier tickspeed autobuyer's interval by 10% (floor 10 ms); cost doubles each level"
+                />
+              )}
+            </Row>
+          )
+        })}
+        {[
+          ['latency', 'Latency', '🌐'],
+          ['scaleUp', 'Scale Up', '⏩'],
+          ['overclock', 'Overclock', '🚀'],
+          ['prestige', 'Prestige', '✦'],
+        ].map(([key, name, icon]) => {
+          if (!isAutomationIntervalChainUnlocked(state, key)) return null
+          const level = state.automationIntervalLevels?.[key] ?? 0
+          const maxed = level >= getAutomationIntervalMaxLevel(key)
+          const cost = getAutomationIntervalUpgradeCost(key, level)
+          return (
+            <Row key={`auto-${key}`} aria-label={`${name} automation speed upgrade`}>
+              <RowLabelStack>
+                <RowLabel>
+                  {icon} {name}
+                  {level > 0 && ` (Lv.${level})`}
+                </RowLabel>
+                <SubText>every {formatInterval(getAutomationIntervalSeconds(state, key) * 1000)}{maxed ? ' (max)' : ''}</SubText>
+              </RowLabelStack>
+              {!maxed && (
+                <PpPurchaseButton
+                  ariaLabel={`Upgrade ${name} automation speed to level ${level + 1} for ${formatAmount(cost)} Prestige Points — interval ×0.9`}
+                  color="#34d399"
+                  cost={cost}
+                  disabled={isFrozen || points < cost}
+                  icon="⏫"
+                  label={`${formatAmount(cost)} PP`}
+                  onClick={() => actions.buyAutomationIntervalUpgrade(key)}
+                  points={points}
+                  progressLabel={`${name} automation speed Prestige Point progress`}
+                  title="Spend Prestige Points to shorten this automation's interval by 10% (floor 10 ms); cost doubles each level"
+                />
+              )}
+            </Row>
+          )
+        })}
+      </Category>
+
+      {/* Auto-Prestige stays hidden entirely until every tier's tickspeed autobuyer is active (allTiersFullyAutomated). */}
       {allTiersFullyAutomated && (
         <Category aria-label="automation upgrades category">
           <CategoryHeading>Automation</CategoryHeading>
@@ -601,25 +737,23 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             <RowLabelStack>
               <RowLabel>✦ Auto-Prestige</RowLabel>
               {isAutoPrestigeActive && (
-                <SubText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Bits reaches 1 Googol Bytes`}>
-                  Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
-                </SubText>
+                <SubText>every {formatInterval(getAutomationIntervalSeconds(state, 'prestige') * 1000)}</SubText>
               )}
             </RowLabelStack>
-            <PpPurchaseButton
-              ariaLabel={isAutoPrestigeActive
-                ? `Upgrade Auto-Prestige for ${autoPrestigeCost} Prestige Points`
-                : `Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`}
-              color="#38bdf8"
-              cost={autoPrestigeCost}
-              disabled={!canBuyAutoPrestige}
-              icon={isAutoPrestigeActive ? '⏫' : '🔓'}
-              label={`${autoPrestigeCost} PP`}
-              onClick={actions.buyAutoPrestige}
-              points={points}
-              progressLabel="Auto-Prestige Prestige Point progress"
-              title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol Bytes — each level makes it fire 10% sooner, at double the cost"
-            />
+            {!isAutoPrestigeActive && (
+              <PpPurchaseButton
+                ariaLabel={`Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`}
+                color="#38bdf8"
+                cost={autoPrestigeCost}
+                disabled={!canBuyAutoPrestige}
+                icon="🔓"
+                label={`${autoPrestigeCost} PP`}
+                onClick={actions.buyAutoPrestige}
+                points={points}
+                progressLabel="Auto-Prestige Prestige Point progress"
+                title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol Bytes"
+              />
+            )}
           </Row>
         </Category>
       )}
@@ -683,6 +817,18 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               ? "Scale Up triggers automatically the instant it's eligible"
               : 'Auto Scale Up is paused — it will not trigger until resumed'}
             toggleLabel="Auto Scale Up automation"
+          />
+        </Row>
+      ),
+      isAutoOverclockActive && (
+        <Row key="auto-overclock" aria-label="auto-overclock toggle">
+          <RowLabel>🚀 Auto Overclock</RowLabel>
+          <AutomationToggle
+            enabled={state.autoOverclockEnabled ?? true}
+            icon="🚀"
+            name="Auto Overclock"
+            onToggle={() => actions.setAutoOverclockEnabled(!(state.autoOverclockEnabled ?? true))}
+            toggleLabel="Auto Overclock automation"
           />
         </Row>
       ),

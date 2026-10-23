@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  AUTO_PRESTIGE_BASE_INTERVAL_SECONDS,
-  AUTO_PRESTIGE_COST,
-  AUTO_PRESTIGE_COST_MULTIPLIER,
-  AUTO_SCALE_UP_COST,
   BITS_PER_BYTE,
   BYTES_ID,
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
@@ -50,7 +46,8 @@ import {
   PRESTIGE_THRESHOLD,
   PRESTIGE_UNBOUNDED_MIN_COUNT,
   RESOURCE_SYMBOL,
-  SMART_AUTOBUYER_COST_MULTIPLIER,
+  AUTOBUYER_BULK_LEVELS_BASE,
+  AUTOBUYER_BULK_MAX_MODE,
   SCALE_UP_FINAL_TIER_REQUIREMENT_STEP,
   SCALE_UP_MULTIPLIER_BASE,
   TICKSPEED_MULTIPLIER_BASE_EXPONENT,
@@ -249,28 +246,13 @@ describe('constants', () => {
     expect(TICKSPEED_PRODUCTION_STEP).toBe(0.1)
   })
 
-  it('SMART_AUTOBUYER_COST_MULTIPLIER is 10 (smart costs 10x the unlock cost)', () => {
-    expect(SMART_AUTOBUYER_COST_MULTIPLIER).toBe(10)
-  })
-
-  it('AUTO_PRESTIGE_COST is 1000', () => {
-    expect(AUTO_PRESTIGE_COST).toBe(1000)
+  it('autobuyer bulk mode buys 10^m levels, up to mode 3', () => {
+    expect(AUTOBUYER_BULK_LEVELS_BASE).toBe(10)
+    expect(AUTOBUYER_BULK_MAX_MODE).toBe(3)
   })
 
   it('PRESTIGE_SPEED_BONUS_UNLOCK_COST is 10000', () => {
     expect(PRESTIGE_SPEED_BONUS_UNLOCK_COST).toBe(10000)
-  })
-
-  it('AUTO_SCALE_UP_COST is 20', () => {
-    expect(AUTO_SCALE_UP_COST).toBe(20)
-  })
-
-  it('AUTO_PRESTIGE_COST_MULTIPLIER is 2 (cost doubles per level)', () => {
-    expect(AUTO_PRESTIGE_COST_MULTIPLIER).toBe(2)
-  })
-
-  it('AUTO_PRESTIGE_BASE_INTERVAL_SECONDS is 1000', () => {
-    expect(AUTO_PRESTIGE_BASE_INTERVAL_SECONDS).toBe(1000)
   })
 
   it('SCALE_UP_MULTIPLIER_BASE is 2 (production doubles per activation)', () => {

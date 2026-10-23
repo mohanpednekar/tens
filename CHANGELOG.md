@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Autobuyer Speed upgrades (Perks → Upgrades).** Each unlocked tier autobuyer can be upgraded with PP to shorten its purchase interval ×0.9 per level (base interval is N seconds for tier N, 1 s … 10 s, down to a 10 ms floor; autobuyer only — separate from tier tickspeed, and manual buying is unaffected). Cost starts at 1 PP and doubles per level on the 125-based ladder (…64 → 125 → 250 → 500 → 1000, ×1000 per ten levels). Permanent across Prestige and Era ascension.
+- **Interval upgrades for the other automations (Perks → Upgrades → Autobuyer Speed).** Latency (8 PP, 1 s), Scale Up (16 PP, 64 s), Overclock (32 PP, 256 s), Auto-Prestige (64 PP, 1024 s) and each tier's tickspeed autobuyer (2 PP, 16 s) now run on a timer (attempt budget accrues elapsed ÷ interval) with the same ×0.9-per-level, 125-based doubling chain, capped at 10 ms. **Auto Overclock** is new: claims Overclock whenever eligible (pause on Toggles).
 
 - **Foundry reset unlocks the next Disk size.** Once the current Disk array is full, Provision Disk is replaced by a confirm-guarded **Foundry reset: unlock <size> Disks** button. It resets the Byte Foundry (Capacity, Disks, Lakes, Compute) and unlocks provisioning for the next size, raising the Data Stream Speed / pool Bandwidth exponent by 0.01 (starts at 0.5). Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs, paid from the Data Stream, with no clicks; Data Lakes (Boosters, lake upgrades, pool resets) and Compute entities are wiped, exactly like Reset Byte Foundry. Era ascension resets the unlocked sizes and exponent.
 
@@ -43,6 +45,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Automation unlock costs now match their first speed upgrade.** Latency autobuyer 8 PP (was 10), Auto Scale Up 16 PP (was 20), Auto-Prestige 64 PP (was 1000, with its levels already replaced by the speed chain), and Auto Overclock is now its own 32 PP unlock (needs Auto Scale Up) instead of unlocking with its first speed level. Milestone-unlocked automations (tier autobuyers, tier tickspeed autobuyers) have no unlock cost, only upgrades.
+
+- **Smart autobuyer → bulk mode.** Tier autobuyers now always buy one unit per attempt (Buy max mode never applies to them). The per-tier PP purchase that used to be "Smart" now unlocks bulk modes: each attempt buys 10 levels at once when affordable (1000× the tier's base autobuyer PP), then 100 levels (1e6×), then 1000 (1e9×). Previously-owned Smart is dropped. Auto-Prestige's visibility now only needs every tier's tickspeed autobuyer.
+
+- **Auto-Prestige no longer has levels.** Activation (64 PP, was 1000) is one-time; cadence now comes from the 64 PP speed chain (base 1024 s, replacing the old 1000 s with +10% per level). The Auto-Prestige Autobuyer now buys that speed chain automatically.
 - **Read-cache blocks fill instantly.** Once a pool's Memory holds a full cache block, that block is
   filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate. The first empty cache block shows the pool's progress toward it, so it still looks like a gradual fill.
 - **Lake time to next Booster.** Each Data Lake header now shows `⏳ time left` under its fill speed — the time until it has banked the next Booster's cost at the current fill speed. Reset Pool / Scale Out replace it when offered.
