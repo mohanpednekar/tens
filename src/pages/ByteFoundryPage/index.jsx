@@ -153,9 +153,20 @@ const formatUpgradeTimeLeft = totalSeconds => {
   return formatOfflineDuration(seconds)
 }
 
-// Time until a buffer is full at `ratePerSecond` (null when already full or not filling).
-const formatBufferTimeToFull = (bits, capacity, ratePerSecond) =>
-  bits >= capacity || !(ratePerSecond > 0) ? null : formatUpgradeTimeLeft((capacity - bits) / ratePerSecond)
+// Seconds until a buffer is full (null when already full or not filling). The fill multiplier falls linearly
+// from 150% (empty) to 50% (full), so the buffer follows dx/dt = rate × (1.5 − x/capacity) and the time from
+// `bits` is (capacity / rate) × ln((1.5 − fill) / 0.5) — the same integral the running-upgrade bar uses.
+// `baseRate` is the Speed/Bandwidth before the fill multiplier; assumes nothing else draws from the buffer.
+export const getBufferSecondsToFull = (bits, capacity, baseRate) => {
+  if (!(capacity > 0) || bits >= capacity || !(baseRate > 0)) return null
+  const fill = Math.max(0, bits) / capacity
+  return (capacity / baseRate) * Math.log((1.5 - fill) / 0.5)
+}
+
+const formatBufferTimeToFull = (bits, capacity, baseRate) => {
+  const seconds = getBufferSecondsToFull(bits, capacity, baseRate)
+  return seconds === null ? null : formatUpgradeTimeLeft(seconds)
+}
 
 const MilestonesRow = styled.div`
   display: flex;
@@ -579,7 +590,7 @@ const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel, timeLeftT
         </BarTrack>
       )}
       {hasBonus && <BonusText>+{Math.round(clampedBonus)}% <TapIcon>👆</TapIcon></BonusText>}
-      {!hasBonus && timeLeftText && <TimeText title="Time until this buffer is full at its current rate">⏳ {timeLeftText}</TimeText>}
+      {!hasBonus && timeLeftText && <TimeText title="Estimated time until this buffer is full, following the fill multiplier and assuming nothing else draws from it">⏳ {timeLeftText}</TimeText>}
     </SubRow>
   )
 }
@@ -649,7 +660,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // exactly what applies at 100% of this — the real per-tick delivery scales by this percent
   // instead (see getDataStreamEffectMultiplier in game/engine).
   const dataStreamMultiplierPercent = getDataStreamMultiplierPercent(intro)
-  const dataStreamTimeLeftText = formatBufferTimeToFull(intro.bits, intro.capacity, productionRate * dataStreamMultiplierPercent / 100)
+  const dataStreamTimeLeftText = formatBufferTimeToFull(intro.bits, intro.capacity, productionRate)
   // Matches tapIntroBit's own post-reveal no-op guard (engine.js) — only relevant once Storage
   // pools are revealed (visiblePoolCount >= 1), the same condition that switches the tap itself
   // from a direct bit credit into a multiplier-bonus tap.
@@ -1033,7 +1044,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // Matches tapPoolBuffer's own no-op guards (engine.js) — the button must be disabled for
         // both, not just a full buffer, or a capped tap silently does nothing with no feedback.
         const poolTapBonusPercent = getPoolTapBonusPercent(state, poolIndex)
-        const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolBandwidth * poolMultiplierPercent / 100)
+        const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolBandwidth)
         const poolMultiplierCapped = poolTapBonusPercent >= FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT
         // tickDataLakePoolDrain (engine.js) feeds the lake straight from this pool's buffer whenever
         // isDataLakePoolDrainAvailable. A tap can't speed the lake up then (the drain is capped at
