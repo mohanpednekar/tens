@@ -81,8 +81,7 @@ const LakeTitleSymbol = styled.span`
 `
 
 // One lake's header laid out like a pool / Data Stream tile: name + target price on the left, fill
-// speed on the right, the filled amount absolutely centered (vertically too when nothing sits under
-// the speed).
+// speed on the right, the filled amount centered on the title row.
 const LakeHeader = styled.div`
   position: relative;
   width: 100%;
@@ -113,11 +112,13 @@ const LakeSubRow = styled.div`
 const LakeFilledText = styled.span`
   position: absolute;
   left: 50%;
-  ${props => (props.$large ? 'top: 50%; transform: translate(-50%, -50%);' : 'top: 0; transform: translateX(-50%);')}
+  top: 0;
+  transform: translateX(-50%);
   pointer-events: none;
   color: ${props => props.theme.color.text};
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => (props.$large ? props.theme.type.scale.lg.size : props.theme.type.scale.sm.size)};
+  font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -126,7 +127,6 @@ const LakeFilledText = styled.span`
 const LakeSpeedText = styled.span`
   flex-shrink: 0;
   margin-left: auto;
-  ${props => (props.$centered ? 'position: absolute; right: 0.25rem; top: 50%; transform: translateY(-50%);' : '')}
   font-size: ${props => props.theme.type.scale.xs.size};
   font-weight: 600;
   color: ${props => props.theme.color.textMuted};
@@ -248,7 +248,10 @@ const LakePoolLabel = styled.span`
 // Provision Disk).
 const ActionButton = styled(Button)`
   padding: 0.1rem 0.5rem;
-  font-size: ${props => props.theme.type.scale.sm.size};
+  min-height: 1.4rem;
+  font-size: ${props => props.theme.type.scale.xs.size};
+  /* The pill's own padding must not shift its label off the lake's left/right text edges. */
+  margin: 0 -0.5rem;
 `
 
 // Only rendered in `bare` mode, and only once there's actually a list below it to separate from
@@ -385,13 +388,13 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                     <LakeTitleSymbol aria-hidden="true">{label}</LakeTitleSymbol>
                     <span>Lake</span>
                   </LakeTitle>
-                  <LakeSpeedText $centered={!(rightSlotButton || timeLeftText)} title="Current fill speed">⚡ {formatDiskSize(fillSpeed)}/s</LakeSpeedText>
+                  <LakeSpeedText title="Current fill speed">⚡ {formatDiskSize(fillSpeed)}/s</LakeSpeedText>
                 </LakeHeaderRow>
                 {/* Same layout as a pool/Data Stream tile: name top-left with the Booster target price
                     under it (that price is also the lake's Booster control — clicking it buys
                     immediately if already affordable, or starts the one-shot fill-then-buy automation,
                     see startDataLakeAutoConvert), fill speed on the right, and the amount filled big
-                    and centered. Reset Pool / Scale Out, when offered, sit under the speed. */}
+                    centered on the title row. Reset Pool / Scale Out, when offered, sit under the speed. */}
                 <LakeSubRow>
                   {converting ? (
                   <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own buffer until ${nextCostSize} is banked, then buys 1 and stops`}>
@@ -455,7 +458,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               ) : null}
 
                 </LakeSubRow>
-                <LakeFilledText $large={!(rightSlotButton || timeLeftText)} title="Currently filled">{formatPoolBalance(filledBits, tierIndex)}</LakeFilledText>
+                <LakeFilledText title="Currently filled">{formatPoolBalance(filledBits, tierIndex)}</LakeFilledText>
               </LakeHeader>
             )}
 

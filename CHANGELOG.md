@@ -188,6 +188,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   lifetime-purchased-count text is gone — the cost figure alone is self-explanatory.
 
 ### Fixed
+- **Data Lake header layout is consistent.** The filled amount and fill speed now always sit on the title row at one size (no more jumping between rows/sizes), and the Booster cost pill no longer shifts its label off the lake's text edges.
 
 - **Latency purchases now spend like any other.** Buying a Latency level also deducts the mirrored Bits from your balance, so the headline money drops instead of staying unchanged.
 
