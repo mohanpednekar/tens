@@ -1646,7 +1646,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // itself, so tickIntroProduction/tickPoolBufferFill below both read this tick's already-decayed
   // multiplier rather than lagging a tick behind.
   const stateAfterFillMultiplierDecay = tickFillMultiplierDecay(elapsedSeconds)(stateAfterMainGameLatch)
-  const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickSpeedUpgradeDrain(elapsedSeconds)(tickCapacityUpgradeDrain(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay)))))
+  const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickSpeedUpgradeDrain(elapsedSeconds, getUpgradeDrainFraction(stateAfterFillMultiplierDecay))(tickCapacityUpgradeDrain(elapsedSeconds, getUpgradeDrainFraction(stateAfterFillMultiplierDecay))(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay)))))
   // First pass advances in-flight read-cache flushes (and may complete them) so write-cache
   // collect can claim newly emptied source slots same tick. Second pass uses 0 elapsed so
   // flush countdowns are not applied twice per tickGame — it only refills / starts new flushes
@@ -1676,7 +1676,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // throughput, never competing with the main-game-unlock gate or a Capacity doubling in flight.
   // One tick's lag before a topped-up buffer is visible to that same tick's own cache fill
   // (tickDiskAutoFill, which already ran earlier this tick) is imperceptible at TICK_RATE_MS.
-  const stateAfterPoolBufferFill = tickDataLakePoolDrain(elapsedSeconds)(tickPoolBufferFill(elapsedSeconds)(stateAfterIntro))
+  const stateAfterPoolBufferFill = tickFoundryReplayLeftoverDrain(elapsedSeconds)(tickDataLakePoolDrain(elapsedSeconds)(tickPoolBufferFill(elapsedSeconds)(stateAfterIntro)))
   // Advances every lake's own one-shot autoConvertActive automation, now that this tick's own
   // overflow fill above has had its chance to fund it — see tickDataLakeAutoConvert/buyBooster.
   const stateAfterDataLakeAutoConvert = tickDataLakeAutoConvert(stateAfterPoolBufferFill)
@@ -3328,12 +3328,12 @@ export const upgradePoolSpeed = state => {
   return { ...state, intro: { ...state.intro, bits: state.intro.bits - cost, speedCapacity: (state.intro.speedCapacity ?? state.intro.capacity) * INTRO_CAPACITY_DOUBLING_STEP } }
 }
 
-export const tickSpeedUpgradeDrain = elapsedSeconds => state => {
+export const tickSpeedUpgradeDrain = (elapsedSeconds, rateFraction = 1) => state => {
   if (!state.intro?.speedUpgradeQueued) return state
   const stored = state.intro.speedUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
   const cost = getSpeedUpgradeCostBits(state.intro)
-  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds, cost - progress)
+  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds * rateFraction * getFillMultiplierPercent(cost > 0 ? progress / cost : 1) / 100, cost - progress)
   const intro = { ...state.intro, bits: state.intro.bits - pull, speedUpgradeProgress: progress + pull }
   if (intro.speedUpgradeProgress >= cost) {
     return { ...state, intro: { ...intro, speedCapacity: (state.intro.speedCapacity ?? state.intro.capacity) * INTRO_CAPACITY_DOUBLING_STEP, speedUpgradeQueued: false, speedUpgradeProgress: 0 } }
@@ -3342,7 +3342,7 @@ export const tickSpeedUpgradeDrain = elapsedSeconds => state => {
 }
 
 // Upgrade Data Stream click: starts the upgrade. From then on tickCapacityUpgradeDrain pulls from the
-// Data Stream Buffer at a constant 100% of the base Speed (like a pool pulling at its Bandwidth) into
+// Data Stream Buffer at the base Speed scaled by the bar's own fill multiplier (like a pool pulling at its Bandwidth) into
 // intro.capacityUpgradeProgress, ahead of every other consumer; Capacity doubles when the bar fills.
 export const pickIntroCapacityMilestone = state => queueIntroCapacityUpgrade(state)
 
@@ -3351,14 +3351,36 @@ export const queueIntroCapacityUpgrade = state => {
   return { ...state, intro: { ...state.intro, capacityUpgradeQueued: true, capacityUpgradeProgress: 0 } }
 }
 
-// Runs right after production, before any other Data Stream consumer. Pulls min(Buffer, 100% of base
-// Speed) into the bar regardless of the fill multiplier; fires the upgrade once the bar reaches Capacity.
-export const tickCapacityUpgradeDrain = elapsedSeconds => state => {
+// While a Foundry-reset replay is still climbing back to its prior Capacity/Speed highs, the bar is
+// served leftover-first: it is guaranteed only FOUNDRY_REPLAY_UPGRADE_FLOOR_FRACTION of base Speed
+// ahead of the other consumers, and tickFoundryReplayLeftoverDrain gives it what they leave over.
+export const FOUNDRY_REPLAY_UPGRADE_FLOOR_FRACTION = 0.25
+
+export const isFoundryReplayUpgradePending = state => {
+  const caps = state.intro?.foundryResetCaps
+  if (!caps) return false
+  return (caps.capacity ?? 0) > (state.intro?.capacity ?? 0)
+    || (caps.speedCapacity ?? caps.capacity ?? 0) > (state.intro?.speedCapacity ?? state.intro?.capacity ?? 0)
+}
+
+const getUpgradeDrainFraction = state => (isFoundryReplayUpgradePending(state) ? FOUNDRY_REPLAY_UPGRADE_FLOOR_FRACTION : 1)
+
+// Late pass (after every other consumer): during a replay, ALL Data Stream bits the other consumers left
+// unspent go to the bar (not capped at the base-Speed share, so leftover beyond 100% of base Speed — e.g.
+// from a fill-multiplier above 100% — is a real benefit).
+export const tickFoundryReplayLeftoverDrain = elapsedSeconds => state => {
+  if (!isFoundryReplayUpgradePending(state)) return state
+  return tickSpeedUpgradeDrain(elapsedSeconds, Number.MAX_VALUE)(tickCapacityUpgradeDrain(elapsedSeconds, Number.MAX_VALUE)(state))
+}
+
+// Runs right after production, before any other Data Stream consumer. Pulls min(Buffer, base Speed ×
+// the bar's own fill multiplier — 150% empty, 100% half, 50% full, like pools) into the bar; fires the upgrade once the bar reaches Capacity.
+export const tickCapacityUpgradeDrain = (elapsedSeconds, rateFraction = 1) => state => {
   if (!state.intro?.capacityUpgradeQueued) return state
   if (isMemoryCapacityAtCap(state)) return clearIntroCapacityUpgradeQueue(state)
   const stored = state.intro.capacityUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
-  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds, state.intro.capacity - progress)
+  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds * rateFraction * getFillMultiplierPercent(state.intro.capacity > 0 ? progress / state.intro.capacity : 1) / 100, state.intro.capacity - progress)
   const next = {
     ...state,
     intro: { ...state.intro, bits: state.intro.bits - pull, capacityUpgradeProgress: progress + pull },
