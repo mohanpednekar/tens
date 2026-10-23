@@ -3267,6 +3267,7 @@ export const isMemoryCapacityUpgradeAvailable = state => isPoolCapacityUpgradeAv
 // FINAL pool's own end bound — see isMemoryCapacityAtCap) is enforced by gating availability (via
 // the pool's derived value), not by clamping this raw value directly. See docs/DESIGN_HISTORY.md for
 // two earlier, reverted attempts at this mechanic.
+// (Test-only since the Foundry-reset replay moved to the progress-bar upgrades.)
 export const upgradePoolCapacity = state => {
   if (!isMemoryCapacityUpgradeAvailable(state) || state.intro.speedUpgradeQueued) return state
   return doubleIntroCapacity({ ...state, intro: { ...state.intro, bits: 0 } })
