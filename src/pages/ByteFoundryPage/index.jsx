@@ -499,6 +499,14 @@ const FillableStatCard = styled.div`
   `}
 `
 
+// Running Data Stream upgrade: a full-width status tile flush under the stream tile (same fill
+// convention as the tile above and the pool tiles), not a button-like control.
+const UpgradeStatusTile = styled(FillableStatCard)`
+  align-items: stretch;
+  border-top: 1px solid ${props => props.theme.color.border};
+  border-radius: 0;
+`
+
 const PoolTile = styled(FillableStatCard)`
   position: relative;
   ${props => props.$expanded && 'border-bottom-left-radius: 0; border-bottom-right-radius: 0;'}
@@ -1001,7 +1009,43 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           />
         </FillableStatCard>
 
-        {(canCombine || intro.byteCreated) && (
+        {intro.byteCreated && upgradeRunning && (
+          <UpgradeStatusTile
+            aria-label={speedUpgradeQueued ? 'upgrade speed' : 'upgrade capacity'}
+            as="section"
+            title={speedUpgradeQueued
+              ? 'Upgrading Speed — pulling the Data Stream\'s Speed into the bar'
+              : `Upgrading to ${nextCapacityText} — pulling the Data Stream's base Speed into the bar`}
+            $progress={runningProgress}
+          >
+            <RunningUpgradeContent>
+              <RunningTitle>⏫ Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
+              <RunningChange>
+                {speedUpgradeQueued
+                  ? `⚡ ${formatBitsTransition(productionRate, nextRate, '/s')}`
+                  : `📦 ${formatBitsTransition(intro.capacity, nextCapacity)}`}
+              </RunningChange>
+              <RunningPercent>{Math.floor(runningProgress)}%</RunningPercent>
+              <SpeedText
+                $color={getSpeedColor(runningMultiplierPercent)}
+                style={{ gridColumn: 3, gridRow: 1, justifySelf: 'end' }}
+                title={`Upgrade draw at ${Math.round(runningMultiplierPercent)}% fill multiplier`}
+              >
+                ⚡ {runningRateText}
+              </SpeedText>
+              <RunningTime>⏳ {runningTimeLeftText}</RunningTime>
+            </RunningUpgradeContent>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="data stream upgrade progress"
+              aria-valuenow={Math.round(runningProgress)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </UpgradeStatusTile>
+        )}
+
+        {(canCombine || (intro.byteCreated && !upgradeRunning)) && (
         <ActionsRow>
           {canCombine && (
             <Button
@@ -1025,47 +1069,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           {/* Two upgrade buttons; while either runs they are replaced by one inert status bar (aria-disabled,
               not `disabled`, so it keeps its colors and pulse) filled by the running upgrade's progress.
               No cancel — the buttons return when the upgrade completes. */}
-          {intro.byteCreated && (
+          {intro.byteCreated && !upgradeRunning && (
             <MilestonesRow>
-              {upgradeRunning ? (
-                <Button
-                  aria-label={speedUpgradeQueued ? 'upgrade speed' : 'upgrade capacity'}
-                  aria-disabled
-                  style={{ pointerEvents: 'none', cursor: 'default' }}
-                  title={speedUpgradeQueued
-                    ? 'Upgrading Speed — pulling the Data Stream\'s Speed into the bar'
-                    : `Upgrading to ${nextCapacityText} — pulling the Data Stream's base Speed into the bar`}
-                  type="button"
-                  variant="prestige"
-                  $progress={runningProgress}
-                  $pulse
-                >
-                  <RunningUpgradeContent>
-                    <RunningTitle>⏫ Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
-                    <RunningChange>
-                      {speedUpgradeQueued
-                        ? `⚡ ${formatBitsTransition(productionRate, nextRate, '/s')}`
-                        : `📦 ${formatBitsTransition(intro.capacity, nextCapacity)}`}
-                    </RunningChange>
-                    <RunningPercent>{Math.floor(runningProgress)}%</RunningPercent>
-                    <SpeedText
-                      $color={getSpeedColor(runningMultiplierPercent)}
-                      style={{ gridColumn: 3, gridRow: 1, justifySelf: 'end' }}
-                      title={`Upgrade draw at ${Math.round(runningMultiplierPercent)}% fill multiplier`}
-                    >
-                      ⚡ {runningRateText}
-                    </SpeedText>
-                    <RunningTime>⏳ {runningTimeLeftText}</RunningTime>
-                  </RunningUpgradeContent>
-                  <VisuallyHidden
-                    role="progressbar"
-                    aria-label="data stream upgrade progress"
-                    aria-valuenow={Math.round(runningProgress)}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                  />
-                </Button>
-              ) : (
+              {!upgradeRunning && (
                 <>
                   <Button
                     aria-label="upgrade data stream capacity"
