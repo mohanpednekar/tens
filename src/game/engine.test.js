@@ -12297,6 +12297,18 @@ describe('Foundry-reset replay of Capacity / Speed upgrades (increasing cost ord
     expect(tickFoundryReplayLeftoverDrain(1)(starved)).toEqual(starved)
   })
 
+  it('through tickGame: a replaying bar gets at least its 25% floor plus the leftover, for Speed and Capacity alike', () => {
+    for (const bar of ['speed', 'capacity']) {
+      const queued = withIntro(base(1000), bar === 'speed' ? { speedUpgradeQueued: true } : { speedCapacity: caps.speedCapacity, capacityUpgradeQueued: true })
+      const rate = getIntroProductionRate(queued.intro)
+      const after = tickGame(0.1)(queued)
+      const progress = bar === 'speed' ? after.intro.speedUpgradeProgress : after.intro.capacityUpgradeProgress
+      expect(progress).toBeGreaterThanOrEqual(rate * 0.1 * FOUNDRY_REPLAY_UPGRADE_FLOOR_FRACTION - 1e-9)
+      // The late pass hands over the Buffer's unspent bits, so the bar beats the floor alone.
+      expect(progress).toBeGreaterThan(rate * 0.1 * FOUNDRY_REPLAY_UPGRADE_FLOOR_FRACTION)
+    }
+  })
+
   it('outside a replay the upgrade bar keeps 100% priority and the late pass is a no-op', () => {
     const state = withIntro(createInitialGameState(), { byteCreated: true, capacity: 2 ** 13, speedCapacity: 2 ** 11, bits: 2 ** 13, speedUpgradeQueued: true })
     expect(isFoundryReplayUpgradePending(state)).toBe(false)

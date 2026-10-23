@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Foundry-reset rebuild prioritises Disks and pools.** While Capacity/Speed are replaying to their prior highs, Provision Disk, pool fill and auto-invest get first claim on the Data Stream; the upgrade bar gets all the leftover (even above 100% of base Speed), guaranteed at least 25% of base Speed.
 
 - **Foundry reset unlocks the next Disk size.** Once the current Disk array is full, Provision Disk is replaced by a confirm-guarded **Foundry reset: unlock <size> Disks** button. It resets the Byte Foundry (Capacity, Disks, Lakes, Compute) and unlocks provisioning for the next size, raising the Data Stream Speed / pool Bandwidth exponent by 0.01 (starts at 0.5). Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs, paid from the Data Stream, with no clicks; Data Lakes (Boosters, lake upgrades, pool resets) and Compute entities are wiped, exactly like Reset Byte Foundry. Era ascension resets the unlocked sizes and exponent.
 
@@ -39,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Foundry-reset rebuild prioritises Disks and pools.** While Capacity/Speed are replaying to their prior highs, Provision Disk, pool fill and auto-invest get first claim on the Data Stream; the upgrade bar gets all the leftover (even above 100% of base Speed), up to 25% of base Speed is served ahead of them.
 - After a Foundry reset, Capacity and Speed upgrades replay to your previous highs automatically in order of increasing cost, using the normal progress-bar upgrades one at a time (while one runs, the Data Stream's output feeds its bar, so tier01 auto-invest and pool filling only get what is left over), and Provision Disk names the newest unlocked size immediately.
 
 - After a Foundry reset, every smaller Disk size rebuilds itself for free (one disk at a time; each counts as provisioned again once it fills) and Provision Disk presents only the newest unlocked size (disabled with a "Rebuilding … first" note until the smaller sizes are done).
