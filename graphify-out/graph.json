@@ -21572,6 +21572,17 @@
       "id": "scripts/autonomous-maintenance-workflow.test.js",
       "type": "file",
       "source_file": "scripts/autonomous-maintenance-workflow.test.js"
+    },
+    {
+      "label": "FOUNDRY_MECHANICS_REFERENCE.md",
+      "file_type": "document",
+      "source_file": "docs/FOUNDRY_MECHANICS_REFERENCE.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_foundry_mechanics_reference",
+      "community": 99,
+      "community_name": "PWA_REFERENCE.md",
+      "norm_label": "foundry_mechanics_reference.md"
     }
   ],
   "links": [

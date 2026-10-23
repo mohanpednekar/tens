@@ -59,6 +59,7 @@ docs/
                             check before changing a formula/workflow a past iteration may have tried
   AUTOMATION.md           ← full autonomous-workflow phase-by-phase reference
   ECONOMY_REFERENCE.md    ← full economy/prestige/tickspeed mechanic + engine function/constants reference
+  FOUNDRY_MECHANICS_REFERENCE.md ← full Byte Foundry/Storage/Disks/Data Lakes/Boosters prose (moved out of CLAUDE.md)
   MAINPAGE_REFERENCE.md   ← full MainPage UI field-by-field reference
   COMPONENTS_REFERENCE.md ← full Button/Money/StatCard prop/styling reference
   THEMING_REFERENCE.md    ← full design-token/font/ThemeProvider reference
