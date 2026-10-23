@@ -124,7 +124,7 @@ empty → 100% at 50% full → 50% at full buffer) scales only the real per-tick
 buffer, boosted temporarily by tapping (+5%, decaying 1%/sec, hard-capped at 200% total).
 `ByteFoundryPage` no longer draws a multiplier bar: the Data Stream's Speed and each pool's Bandwidth
 show the EFFECTIVE value (base × multiplier, 3 significant digits, `formatSpeedText`), tinted
-red (50%) → blue (100%) → green (150%+) by `getSpeedColor`; each tile also gets a `CapacityBonusRow` (📦 Capacity under the name, a narrow tap-bonus bar, and "+x% 👆" under the speed; bar and bonus text auto-hide at 0).
+red (50%) → blue (100%) → green (150%+) by `getSpeedColor`; each tile also gets a `CapacityBonusRow` (📦 Capacity under the name, a narrow tap-bonus bar, and "+x% 👆" under the speed — or, while no bonus is active, "⏳ time to full" (`getBufferSecondsToFull`: (capacity/rate)·ln((1.5−fill)/0.5), the integral of the fill-multiplier curve, assuming nothing else draws from the buffer) — or, while no bonus is active, "⏳ time to full" (`getBufferSecondsToFull`: (capacity/rate)·ln((1.5−fill)/0.5), the integral of the fill-multiplier curve, assuming no other draw); bar and bonus text auto-hide at 0).
 A collapsed pool card also shows its Data Lake title/action row (`DataLakePanel section="header"`; an
 expanded pool renders the full lake). Tap-bonus headroom clamping: `docs/ECONOMY_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`.
 

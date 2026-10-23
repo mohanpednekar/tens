@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - **Running upgrade bar layout.** The Upgrading Capacity/Speed bar now uses the same title-left / speed-right layout as the Data Stream tile: a percent gutter on the left, the title and cost lines left-aligned, and the ⚡ draw rate on the right, so they no longer overlap on narrow screens (below 380px the verb is dropped and the cost line wraps).
+- **Time to full under the speed.** The Data Stream and pool tiles now show `⏳ time until the buffer is full` under their ⚡ speed figure, in the slot the tap bonus uses; an active tap bonus replaces it.
 
 - **Upgrade bars follow the fill curve.** The Capacity/Speed upgrade bars now draw from the Data Stream at 150% of base Speed when empty, 100% at half full and 50% when nearly full (same curve as pools), instead of a flat 100%, and the running upgrade bar shows that draw rate (⚡) on its right, colour-coded like the other speed readouts, and its “…” animates while upgrading.
 - After a Foundry reset, Capacity and Speed upgrades replay to your previous highs automatically in order of increasing cost, using the normal progress-bar upgrades one at a time (while one runs, the Data Stream's output feeds its bar, so tier01 auto-invest and pool filling only get what is left over), and Provision Disk names the newest unlocked size immediately.
