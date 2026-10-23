@@ -43,7 +43,7 @@ import {
 import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
-import { getBufferSecondsToFull } from 'pages/ByteFoundryPage'
+import { formatBitsTransition, getBufferSecondsToFull } from 'pages/ByteFoundryPage'
 
 // Enough Data Stream Capacity for Storage pool 2 (MB) to be visible — Node merges are timed off
 // that pool's Bandwidth (getComputeMergeDurationSeconds), which is 0 until it's visible.
@@ -5449,4 +5449,17 @@ test('the Data Stream tile shows time to full under its speed, replaced by the t
   // The Data Stream's slot now shows its tap bonus instead (other tiles, e.g. pools, keep their time).
   expect(screen.queryAllByTitle(/Estimated time until this buffer is full/)).toHaveLength(withoutBonus.length - 1)
   bonus.unmount()
+})
+
+describe('formatBitsTransition (running-upgrade from → to)', () => {
+  const KIB = 8 * 1024
+  it('shows the unit once, on the right, with at most 3 significant digits', () => {
+    expect(formatBitsTransition(1.41421 * KIB, 2 * KIB, '/s')).toBe('1.41 → 2 KiB/s')
+    expect(formatBitsTransition(128 * KIB, 256 * KIB)).toBe('128 → 256 KiB')
+  })
+
+  it('re-expresses a from-value that would have read in a smaller unit in the target unit', () => {
+    expect(formatBitsTransition(512 * 8, 1 * KIB, '/s')).toBe('0.5 → 1 KiB/s')
+    expect(formatBitsTransition(512 * KIB, 1024 * KIB)).toBe('0.5 → 1 MiB')
+  })
 })
