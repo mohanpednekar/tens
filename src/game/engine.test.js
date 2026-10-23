@@ -12312,6 +12312,17 @@ describe('Foundry-reset replay of Capacity / Speed upgrades (increasing cost ord
     expect(state.intro.speedCapacity).toBe(caps.speedCapacity)
   })
 
+  it('after a pool-local reset with a raised unlocked step, the rebuild is not "pending" and Provision Disk stays queueable', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      unlockedDiskSteps: 4,
+      dataLakes: { 1: { rebuilding: true } },
+    })
+    expect(getDiskSize(state)).toBeLessThan(getPresentedDiskSize(state))
+    expect(isLowerDiskSizePending(state)).toBe(false)
+    expect(queueDiskBuild(state).intro.diskBuildQueued).toBe(true)
+  })
+
   it('presents the newest unlocked Disk size immediately, even before its pool is reachable', () => {
     const state = withIntro(createInitialGameState(), { byteCreated: true, unlockedDiskSteps: 4 })
     expect(getPresentedDiskSize(state)).toBe(getDiskLadderSizeBits(4))

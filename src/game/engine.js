@@ -3739,7 +3739,12 @@ export const getMaxActiveDiskLadderStep = state =>
 export const getPresentedDiskSize = state => getDiskLadderSizeBits(getUnlockedDiskSteps(state.intro))
 
 // Whether a smaller-than-presented size still has to be (re)built before the presented one can be.
-export const isLowerDiskSizePending = state => getDiskSize(state) < getPresentedDiskSize(state)
+// Not pending while that size's own pool is rebuilding after a pool-local reset: that rebuild has its own free
+// loop (tickPoolResetReprovision) and the Provision Disk button must stay visible and queueable then.
+export const isLowerDiskSizePending = state => {
+  const size = getDiskSize(state)
+  return size < getPresentedDiskSize(state) && !isStoragePoolRebuilding(state, getPoolIndexForDiskSize(size))
+}
 
 // Whether a Foundry reset can now unlock the next disk size: the current gated array is full and the
 // next step is already reachable from the unlocked pools (so it is only the reset that is missing).
