@@ -5403,7 +5403,7 @@ test('a running Capacity upgrade shows percent on the first line, from → to ca
   fireEvent.click(screen.getByRole('button', { name: /upgrade data stream capacity/i }))
 
   const running = screen.getByRole('button', { name: /^upgrade capacity$/i })
-  expect(running).toHaveTextContent(/Upgrading Capacity…\s*\(0%\)/)
+  expect(running).toHaveTextContent(/0%\s*⏫ Upgrading Capacity…/)
   expect(running).toHaveTextContent(/→/)
   expect(running).toHaveTextContent(/⏳ \d+[smhd]/)
   // The draw rate (base Speed × the bar's fill multiplier) shows at the right, like the other speed readouts.
