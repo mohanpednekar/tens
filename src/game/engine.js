@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, AUTO_PRESTIGE_AUTOBUYER_COST, BUY_MAX_ITERATION_CAP, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, AUTO_PRESTIGE_AUTOBUYER_COST, BUY_MAX_ITERATION_CAP, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -1713,7 +1713,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     const afterCache = tickDiskLevelOneCachePull(afterPull)
     // A queued Provision Disk build (see queueDiskBuild) takes its turn here, once this tick's own
     // disk pull/cache pull have had first claim on the forced-priority state.
-    const afterQueuedBuild = tickQueuedDiskBuild(afterCache)
+    const afterQueuedBuild = tickQueuedDiskBuild(tickAutoProvisionLowerDiskSizes(afterCache))
     // 0 elapsed: start any newly eligible read-cache flushes after a pull emptied a slot;
     // countdown continues on the next ordinary tickGame pass. A queued build firing this tick
     // doesn't add any newly-fillable slot itself (its size stays IO-locked until the build
@@ -3162,6 +3162,8 @@ export const getPoolCacheReservationBits = (state, poolIndex) => {
 
 export const isProvisionDiskAvailable = state => {
   if (state.intro.diskBuild) return false
+  // Smaller sizes below the newest unlocked one are provisioned automatically and for free instead.
+  if (isLowerDiskSizePending(state)) return false
   if (isDiskLadderExhaustedForActivePools(state)) return false
   const size = getDiskSize(state)
   if (getDiskProvisionPassesCollected(state, size) >= getDiskProvisionPassesRequired(state, size)) return true
@@ -3265,6 +3267,7 @@ export const isMemoryCapacityUpgradeAvailable = state => isPoolCapacityUpgradeAv
 // FINAL pool's own end bound — see isMemoryCapacityAtCap) is enforced by gating availability (via
 // the pool's derived value), not by clamping this raw value directly. See docs/DESIGN_HISTORY.md for
 // two earlier, reverted attempts at this mechanic.
+// (Test-only since the Foundry-reset replay moved to the progress-bar upgrades.)
 export const upgradePoolCapacity = state => {
   if (!isMemoryCapacityUpgradeAvailable(state) || state.intro.speedUpgradeQueued) return state
   return doubleIntroCapacity({ ...state, intro: { ...state.intro, bits: 0 } })
@@ -3318,7 +3321,7 @@ export const queueIntroSpeedUpgrade = state => {
   return { ...state, intro: { ...state.intro, speedUpgradeQueued: true, speedUpgradeProgress: 0 } }
 }
 
-// Instant full-Buffer variant, used only by Foundry-reset convenience replay.
+// Instant full-Buffer variant (no longer used by the Foundry-reset replay, which uses the progress-bar upgrades).
 export const upgradePoolSpeed = state => {
   const cost = getSpeedUpgradeCostBits(state.intro)
   if (!isSpeedUpgradeArmable(state) || state.intro.bits < cost) return state
@@ -3330,7 +3333,7 @@ export const tickSpeedUpgradeDrain = elapsedSeconds => state => {
   const stored = state.intro.speedUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
   const cost = getSpeedUpgradeCostBits(state.intro)
-  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds, cost - progress)
+  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds * getFillMultiplierPercent(cost > 0 ? progress / cost : 1) / 100, cost - progress)
   const intro = { ...state.intro, bits: state.intro.bits - pull, speedUpgradeProgress: progress + pull }
   if (intro.speedUpgradeProgress >= cost) {
     return { ...state, intro: { ...intro, speedCapacity: (state.intro.speedCapacity ?? state.intro.capacity) * INTRO_CAPACITY_DOUBLING_STEP, speedUpgradeQueued: false, speedUpgradeProgress: 0 } }
@@ -3339,7 +3342,7 @@ export const tickSpeedUpgradeDrain = elapsedSeconds => state => {
 }
 
 // Upgrade Data Stream click: starts the upgrade. From then on tickCapacityUpgradeDrain pulls from the
-// Data Stream Buffer at a constant 100% of the base Speed (like a pool pulling at its Bandwidth) into
+// Data Stream Buffer at the base Speed scaled by the bar's own fill multiplier (like a pool pulling at its Bandwidth) into
 // intro.capacityUpgradeProgress, ahead of every other consumer; Capacity doubles when the bar fills.
 export const pickIntroCapacityMilestone = state => queueIntroCapacityUpgrade(state)
 
@@ -3348,14 +3351,14 @@ export const queueIntroCapacityUpgrade = state => {
   return { ...state, intro: { ...state.intro, capacityUpgradeQueued: true, capacityUpgradeProgress: 0 } }
 }
 
-// Runs right after production, before any other Data Stream consumer. Pulls min(Buffer, 100% of base
-// Speed) into the bar regardless of the fill multiplier; fires the upgrade once the bar reaches Capacity.
+// Runs right after production, before any other Data Stream consumer. Pulls min(Buffer, base Speed ×
+// the bar's own fill multiplier — 150% empty, 100% half, 50% full, like pools) into the bar; fires the upgrade once the bar reaches Capacity.
 export const tickCapacityUpgradeDrain = elapsedSeconds => state => {
   if (!state.intro?.capacityUpgradeQueued) return state
   if (isMemoryCapacityAtCap(state)) return clearIntroCapacityUpgradeQueue(state)
   const stored = state.intro.capacityUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
-  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds, state.intro.capacity - progress)
+  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds * getFillMultiplierPercent(state.intro.capacity > 0 ? progress / state.intro.capacity : 1) / 100, state.intro.capacity - progress)
   const next = {
     ...state,
     intro: { ...state.intro, bits: state.intro.bits - pull, capacityUpgradeProgress: progress + pull },
@@ -3731,6 +3734,19 @@ export const getPoolReachableDiskLadderStep = state =>
 export const getMaxActiveDiskLadderStep = state =>
   Math.min(getPoolReachableDiskLadderStep(state), getUnlockedDiskSteps(state.intro))
 
+// The size Provision Disk PRESENTS to the player: always the newest unlocked size. Smaller sizes that are
+// still incomplete (e.g. right after a Foundry reset) are provisioned automatically — see
+// tickAutoProvisionLowerDiskSizes — so the player only ever acts on the last unlocked size.
+export const getPresentedDiskSize = state => getDiskLadderSizeBits(getUnlockedDiskSteps(state.intro))
+
+// Whether a smaller-than-presented size still has to be (re)built before the presented one can be.
+// Not pending while that size's own pool is rebuilding after a pool-local reset: that rebuild has its own free
+// loop (tickPoolResetReprovision) and the Provision Disk button must stay visible and queueable then.
+export const isLowerDiskSizePending = state => {
+  const size = getDiskSize(state)
+  return size < getPresentedDiskSize(state) && !isStoragePoolRebuilding(state, getPoolIndexForDiskSize(size))
+}
+
 // Whether a Foundry reset can now unlock the next disk size: the current gated array is full and the
 // next step is already reachable from the unlocked pools (so it is only the reset that is missing).
 export const isDiskSizeUnlockAvailable = state => {
@@ -3740,7 +3756,8 @@ export const isDiskSizeUnlockAvailable = state => {
 }
 
 // The Foundry reset that unlocks the next disk size: a Reset Byte Foundry (Capacity, Disks, Lakes, Compute
-// wipe; Combine / Upgrade Capacity / Upgrade Speed / Provision Disk convenience-replay up to prior highs)
+// wipe; Combine / Upgrade Capacity / Upgrade Speed convenience-replay up to prior highs; every smaller Disk size
+// re-provisions itself for free via tickAutoProvisionLowerDiskSizes)
 // plus one more unlocked disk step, which raises the speed exponent by DATA_STREAM_SPEED_EXPONENT_STEP.
 export const unlockNextDiskSizeByFoundryReset = state => {
   if (!isDiskSizeUnlockAvailable(state)) return state
@@ -4001,9 +4018,10 @@ export const provisionDisk = (state, maxPasses = Infinity) => {
 // affordability instants to catch by hand otherwise, one per disk.
 export const queueDiskBuild = state => {
   if (state.intro?.diskBuildQueued) return state
+  if (isLowerDiskSizePending(state)) return state
   if (state.intro.diskBuild) return state
   if (isDiskLadderExhaustedForActivePools(state)) return state
-  if (isStoragePoolRebuilding(state, getPoolIndexForDiskSize(getDiskSize(state)))) return state
+  // Allowed while the offer's pool is rebuilding: provisionDisk stays gated on rebuild (isProvisionDiskAvailable), so the queue just waits.
   // A standalone/manual arm, never replay-owned — see diskBuildQueuedByReplay's own comment in
   // createInitialGameState.
   return { ...state, intro: { ...state.intro, diskBuildQueued: true, diskBuildQueuedByReplay: false } }
@@ -4047,6 +4065,27 @@ export const tickQueuedDiskBuild = state => {
   // it leaves only partially funded must stay marked replay-owned, or the very next tick would treat
   // it as an unrestricted manual continuation and fund straight past this same allowance.
   return built.intro?.diskBuildQueued ? { ...built, intro: { ...built.intro, diskBuildQueuedByReplay: true } } : built
+}
+
+// Sizes below the newest unlocked one (rebuilt after a Foundry reset) provision themselves FOR FREE, one
+// disk at a time (same shape as tickPoolResetReprovision): while the size Provision Disk would build is
+// smaller than the presented (newest unlocked) size, add one empty disk to that array, then wait for it
+// to fill (the ordinary cache fill) before adding the next — a disk counts as provisioned again once it
+// is full. Same-reference no-op otherwise.
+export const tickAutoProvisionLowerDiskSizes = state => {
+  if (!state.intro?.byteCreated) return state
+  if (!isLowerDiskSizePending(state)) return state
+  const size = getDiskSize(state)
+  const poolIndex = getPoolIndexForDiskSize(size)
+  if (isStoragePoolRebuilding(state, poolIndex) || isLaterPoolProvisioningLocked(state, poolIndex)) return state
+  if (state.intro.diskBuild) return state
+  const built = state.intro.disksBuiltTotal?.[size] ?? 0
+  const full = state.intro.disks?.[size] ?? 0
+  if (built > 0 && full < built) return state
+  return {
+    ...state,
+    intro: { ...state.intro, disksBuiltTotal: { ...state.intro.disksBuiltTotal, [size]: built + 1 } },
+  }
 }
 
 // Counts down intro.diskBuild's remainingSeconds every tick — a no-op when no build is in
@@ -6639,7 +6678,9 @@ export const tickFoundryResetConvenience = state => {
     }
   }
 
-  if (isDiskBuildBelowCap(next, caps)) {
+  // Sizes below the newest unlocked one are re-provisioned for free by tickAutoProvisionLowerDiskSizes —
+  // the paid replay must not also fund them (it would bank passes the free loop then ignores).
+  if (!isLowerDiskSizePending(next) && isDiskBuildBelowCap(next, caps)) {
     // getDiskReplayPassAllowance stops a single call from collecting more passes than the cap
     // allows even when the pool buffer (e.g. after a long offline gap) can afford more than that in
     // one go — Infinity everywhere except the exact "matched a fully pre-earned run of completed
@@ -6656,20 +6697,20 @@ export const tickFoundryResetConvenience = state => {
     }
   }
 
-  if ((caps.capacity ?? 0) > (next.intro?.capacity ?? 0)) {
-    // Full-Buffer upgrade only — never start the progress-bar upgrade (it would divert the whole
-    // Data Stream output for the replay, starving pool buffers and tier01 auto-invest).
-    const upgraded = upgradePoolCapacity(next)
-    if (upgraded !== next) {
-      next = upgraded
-      changed = true
-    }
-  }
-
-  if ((caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0)) {
-    const upgraded = upgradePoolSpeed(next)
-    if (upgraded !== next) {
-      next = upgraded
+  // Capacity and Speed upgrades replay up to their prior highs through the ordinary progress-bar mechanism
+  // (queueIntroCapacityUpgrade / queueIntroSpeedUpgrade), one at a time, so tickCapacityUpgradeDrain /
+  // tickSpeedUpgradeDrain pay for them from the Data Stream exactly like a manual click. Speed is
+  // PRIORITISED: while a pending Speed upgrade is armable (the doubled basis still fits within Capacity — which
+  // also makes it the cheaper of the two, its cost being the basis) it goes first; Capacity is only chosen once
+  // Speed has reached the "needs Capacity" state (or has nothing pending), so increasing-cost order holds.
+  if (!next.intro?.capacityUpgradeQueued && !next.intro?.speedUpgradeQueued) {
+    const speedPending = (caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0)
+    const capacityPending = (caps.capacity ?? 0) > (next.intro?.capacity ?? 0)
+    let queued = next
+    if (speedPending) queued = queueIntroSpeedUpgrade(next)
+    if (queued === next && capacityPending) queued = queueIntroCapacityUpgrade(next)
+    if (queued !== next) {
+      next = queued
       changed = true
     }
   }

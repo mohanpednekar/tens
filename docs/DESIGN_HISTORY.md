@@ -8859,6 +8859,8 @@ called `pickIntroCapacityMilestone`, which re-armed every tick and paused all ou
 Capacity replay (no pool buffers, no tier01 auto-invest). It calls `upgradePoolCapacity` (full-Buffer
 only) instead; arming is reserved for an explicit player click.
 
+*Superseded (2026-10):* the maintainer reversed this — the replay now queues the ordinary progress-bar Capacity / Speed upgrades itself (cheapest first, one at a time, `tickFoundryResetConvenience`), accepting that tier01 auto-invest and pool fill get only the leftover Data Stream output while it runs.
+
 **Lakes keep filling from their own pool while the Data Stream is paused.** With outflow paused,
 `tickPoolBufferFill` (and so its full-buffer lake overflow) doesn't run, which starved every Data
 Lake for the whole wait. Per maintainer request, a lake now also draws straight from its own pool's
@@ -8968,3 +8970,9 @@ implemented by clamping `getMaxActiveDiskLadderStep`, so a full unlocked array r
 existing provision/queue guard blocks without new branches; `isDiskSizeUnlockAvailable` only decides when to
 show the reset button. Not re-run through `simulate-run-times`; total pacing now also depends on the repeated
 replays.
+
+**Read-cache refill from Memory made instant (PR #879).** The 10x `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER`
+cap above was removed at the maintainer's request: once a pool's buffer holds a full cache block, that
+block moves into the read cache and is subtracted from the buffer in the same call; the buffer's own
+Bandwidth is the only throttle. `DiskArrayRow` mirrors the buffer's progress toward the next block in the
+first empty cache block so the fill still looks gradual. Not re-run through `simulate-run-times`.

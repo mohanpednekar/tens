@@ -58,7 +58,7 @@ integer and has been unchanged for `SETTLED_BALANCE_TRIM_DELAY_MS`, 5 real secon
 exists, since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to
 denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extending
 `TIER_DEFINITIONS`' own tier symbols with an "i") — plus a hidden `role="progressbar"`
-(`aria-label="data stream bit balance"`). Its second line is a `CapacityBonusRow` (📦 Capacity left, a narrow tap-bonus bar centered, "+x% 👆" right — bar and text only while a bonus is active; the fill multiplier itself is the tinted ⚡ Speed figure, see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), — replacing an earlier corner needle-speedometer that
+(`aria-label="data stream bit balance"`). Its second line is a `CapacityBonusRow` (📦 Capacity left, a narrow tap-bonus bar centered, "+x% 👆" right — or, while no bonus is active, "⏳ time to full" (`getBufferSecondsToFull`: (capacity/rate)·ln((1.5−fill)/0.5), the integral of the fill-multiplier curve, assuming nothing else draws from the buffer) — bar and text only while a bonus is active; the fill multiplier itself is the tinted ⚡ Speed figure, see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), — replacing an earlier corner needle-speedometer that
 took too much vertical space. The production rate, shown as its EFFECTIVE value (base × fill multiplier, 3 significant digits, tinted red→blue→green) — `` `⚡ ${formatSpeedText(formatBitsInNearestUnit(rate × multiplier))}/s` `` (e.g. "⚡ 4
 bits/s" below 1 Byte/sec, "⚡ 1 B/s" at/above it, "⚡ 2 KiB/s" once the rate itself crosses the next
 binary-unit threshold — the SAME binary B/KiB/MiB/… ladder the balance line above it renders in) —
@@ -146,7 +146,7 @@ Storage is continuous on this same page: **Provision Disk** — the common disk-
 hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary
 scale, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and
 pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-bit ("1,000 B") one above).
-Renders as soon as the Byte exists (`intro.byteCreated`, no Storage-reveal gate — a click before pool 1 can fund a pass simply queues the build) in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
+Presents only the newest unlocked size (`getPresentedDiskSize`); smaller incomplete sizes (after a Foundry reset) rebuild by themselves (`tickAutoProvisionLowerDiskSizes`) while the button is disabled with a "Rebuilding … first" note. Renders as soon as the Byte exists (`intro.byteCreated`, no Storage-reveal gate — a click before pool 1 can fund a pass simply queues the build) in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
 location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
 only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows only
 relative gains (current values are on the tile): `🏷️ <current Capacity (= cost)> · 📦 ×2 · ⚡ ×<speed

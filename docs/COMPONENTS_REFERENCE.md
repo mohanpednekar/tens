@@ -69,7 +69,7 @@ stranded past its tier's current level — see `isDiskStrandedByAdvancedTier`) r
 full circle, `aria-label="full … disk"`, with the distinguishing detail only in `title`.
 Instructional copy lives in `title`/`aria` only (no under-strip ActionHint). There is no deposit
 control of any kind here — Storage Disks no longer feed a Data Lake at all (that mechanic now feeds
-lakes directly from pool overflow, see CLAUDE.md's "Data Lakes"); a fully-built, stranded array's
+lakes directly from pool overflow, see docs/FOUNDRY_MECHANICS_REFERENCE.md's "Data Lakes"); a fully-built, stranded array's
 disk instead just sits full and idle until its tier's level matches again (see CLAUDE.md's "Data
 Lakes"), not through this component. While `intro.diskBuild?.size`
 matches this size, a plain centered `"Rebuilding <size> x <N> array - Ready in Ns"` status line
@@ -108,7 +108,7 @@ directly below its disks, not in a separate panel after all the pool cards.
 not a labelled table row: a header row pairing the lake's title ("`<symbol>` Lake", e.g. "KB Lake" —
 the size unit is always part of the visible name) with a single next-Booster-cost control in place of
 a lifetime-purchased-count readout (the cost figure alone is self-explanatory — see below for what
-this control does); laid out like a pool/Data Stream tile (`LakeHeader`): name top-left with the Booster target price + buy control (🏷️) under it, ⚡ current fill speed top-right (the pool's Bandwidth while the lake drains/overflows automatically, else 0), the filled amount (full disks plus the open slot, `formatPoolBalance`) big and centered, and Reset Pool / Scale Out under the speed when offered; then a dedicated `LakePoolTile` (own
+this control does); laid out like a pool/Data Stream tile (`LakeHeader`): name top-left with the Booster target price + buy control (🏷️) under it, ⚡ current fill speed top-right (the pool's Bandwidth while the lake drains/overflows automatically, else 0), the filled amount (full disks plus the open slot, `formatPoolBalance`) big and centered, and Reset Pool / Scale Out under the speed when offered (otherwise `⏳ time left` there — `(next Booster cost − filled) / fill speed`, shown only while still short of the cost, the lake can hold it, the Booster entity isn't at cap, and the lake is filling); then a dedicated `LakePoolTile` (own
 `FillableStatCard`-style element, purely additive over the per-square fill overlay below — same
 `fillBits`/`getDataLakeCurrentFillSubSize` data, no separate mechanic) showing "`<fillBits>` /
 `<open slot size>`" — ALWAYS rendered whenever an open slot exists (`currentFillSubSize !== null`),
