@@ -212,7 +212,7 @@ const UpgradingDots = styled.span`
 // other timer). Columns size to content (centre takes the rest) so nothing overlaps on narrow screens.
 const RunningUpgradeContent = styled.div`
   display: grid;
-  grid-template-columns: auto minmax(3.5ch, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   grid-template-rows: auto auto;
   column-gap: ${props => props.theme.space.sm};
   row-gap: 2px;
@@ -229,6 +229,9 @@ const RunningTitle = styled.span`
   font-size: ${props => props.theme.type.scale.sm.size};
   line-height: ${props => props.theme.type.scale.sm.lineHeight};
   font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 `
 
@@ -241,6 +244,9 @@ const RunningChange = styled.span`
   font-weight: 500;
   opacity: 0.85;
   font-variant-numeric: tabular-nums;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   @media (max-width: 360px) {
     font-size: 0.62rem;
@@ -513,6 +519,21 @@ const formatMemoryBalanceValue = (bits, capacityBits, byteCreated, stable = true
     ? getMemoryUnit(bits, byteCreated)
     : capacityUnit
   return stable ? formatMemoryAmountStable(bits, balanceUnit) : formatMemoryAmount(bits, balanceUnit)
+}
+
+// Floors to at most 3 significant digits (never overstates), no unit — the number half of formatSpeedText.
+const formatThreeSignificant = value => {
+  if (!(value > 0)) return '0'
+  const scale = 10 ** (Math.floor(Math.log10(value)) - 2)
+  return String(Number((Math.floor(value / scale + 1e-9) * scale).toPrecision(12)))
+}
+
+// "from → to" for the running-upgrade bar: both numbers in the TARGET's binary unit (so a from-value that
+// would have read in a smaller unit becomes a fraction of it, e.g. "0.5 → 1 KiB/s"), max 3 significant
+// digits, and the unit (plus `suffix`) shown once, on the right-hand number only.
+export const formatBitsTransition = (fromBits, toBits, suffix = '') => {
+  const unit = getMemoryUnit(toBits, true)
+  return `${formatThreeSignificant(fromBits / unit.divisor)} → ${formatThreeSignificant(toBits / unit.divisor)} ${unit.symbol}${suffix}`
 }
 
 const formatMemoryCapacityValue = (capacityBits, byteCreated) =>
@@ -827,8 +848,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const runningTimeLeftText = formatUpgradeTimeLeft(productionRate > 0 && runningCost > 0
     ? (runningCost / productionRate) * Math.log((1.5 - runningFill) / 0.5)
     : Infinity)
-  const currentCapacityText = formatMemoryCapacityValue(intro.capacity, true)
-  const currentRateText = `${formatBitsInNearestUnit(productionRate)}/s`
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
 
   // The shared Provision Disk control (one ladder spanning every pool, not per-pool) — rendered
@@ -1025,8 +1044,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     <RunningTitle>⏫ Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
                     <RunningChange>
                       {speedUpgradeQueued
-                        ? `⚡ ${currentRateText} → ${nextRateText}`
-                        : `📦 ${currentCapacityText} → ${nextCapacityText}`}
+                        ? `⚡ ${formatBitsTransition(productionRate, nextRate, '/s')}`
+                        : `📦 ${formatBitsTransition(intro.capacity, nextCapacity)}`}
                     </RunningChange>
                     <RunningPercent>{Math.floor(runningProgress)}%</RunningPercent>
                     <SpeedText
