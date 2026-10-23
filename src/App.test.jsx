@@ -5406,6 +5406,9 @@ test('a running Capacity upgrade shows percent on the first line, from → to ca
   expect(running).toHaveTextContent(/Upgrading Capacity…\s*\(0%\)/)
   expect(running).toHaveTextContent(/→/)
   expect(running).toHaveTextContent(/⏳ \d+[smhd]/)
+  // The draw rate (base Speed × the bar's fill multiplier) shows at the right, like the other speed readouts.
+  expect(running).toHaveTextContent(/⚡ [\d.]+ \w+\/s/)
+  expect(running.querySelector('[title^="Upgrade draw at 150%"]')).not.toBeNull()
 
   unmount()
   vi.useRealTimers()
