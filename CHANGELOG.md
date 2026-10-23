@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Lake time to next Booster.** Each Data Lake header now shows `⏳ time left` under its fill speed — the time until it has banked the next Booster's cost at the current fill speed. Reset Pool / Scale Out replace it when offered.
 
 - Boosters page shows only unlocked tiers; tiers without auto-merge get a spacious layout, automated ones keep the compact layout.
-- **Running upgrade bar layout.** The Upgrading Capacity/Speed bar now reads "⏫ Upgrading…" top-left with the from → to values on one line below it, the percent centred, and the ⚡ draw rate top-right with the ⏳ time left directly under it, like the other tiles.
+- **Running upgrade bar layout.** The Upgrading Capacity/Speed bar now reads "⏫ Upgrading…" top-left with the from → to values on one line below it, the percent centred, and the ⚡ draw rate top-right with the ⏳ time left directly under it, like the other tiles, with the same fonts and sizes as the Data Stream and pool tiles.
 - **Time to full under the speed.** The Data Stream and pool tiles now show `⏳ time until the buffer is full` under their ⚡ speed figure, in the slot the tap bonus uses; an active tap bonus replaces it.
 
 - **Upgrade bars follow the fill curve.** The Capacity/Speed upgrade bars now draw from the Data Stream at 150% of base Speed when empty, 100% at half full and 50% when nearly full (same curve as pools), instead of a flat 100%, and the running upgrade bar shows that draw rate (⚡) on its right, colour-coded like the other speed readouts, and its “…” animates while upgrading.
