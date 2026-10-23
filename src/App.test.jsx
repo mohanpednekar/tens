@@ -43,6 +43,7 @@ import {
 import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
+import { getBufferSecondsToFull } from 'pages/ByteFoundryPage'
 
 // Enough Data Stream Capacity for Storage pool 2 (MB) to be visible — Node merges are timed off
 // that pool's Bandwidth (getComputeMergeDurationSeconds), which is 0 until it's visible.
@@ -5412,4 +5413,35 @@ test('a running Capacity upgrade shows percent on the first line, from → to ca
 
   unmount()
   vi.useRealTimers()
+})
+
+describe('getBufferSecondsToFull (tile time-to-full)', () => {
+  it('integrates the 150% → 50% fill multiplier curve', () => {
+    expect(getBufferSecondsToFull(0, 1000, 10)).toBeCloseTo(100 * Math.log(3))
+    expect(getBufferSecondsToFull(500, 1000, 10)).toBeCloseTo(100 * Math.log(2))
+    expect(getBufferSecondsToFull(900, 1000, 10)).toBeCloseTo(100 * Math.log(1.2))
+  })
+
+  it('is null when full, over-full, or not filling', () => {
+    expect(getBufferSecondsToFull(1000, 1000, 10)).toBeNull()
+    expect(getBufferSecondsToFull(0, 1000, 0)).toBeNull()
+    expect(getBufferSecondsToFull(0, 0, 10)).toBeNull()
+  })
+})
+
+test('the Data Stream tile shows time to full under its speed, replaced by the tap bonus when one is active', () => {
+  seedIntroState({ capacity: 1048576, bits: 5000, byteCreated: true, mainGameUnlocked: true })
+  const { unmount } = render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+  const withoutBonus = screen.getAllByTitle(/Estimated time until this buffer is full/)
+  expect(withoutBonus[0]).toHaveTextContent(/⏳ \d+[smhd]/)
+  unmount()
+
+  localStorage.clear()
+  seedIntroState({ capacity: 1048576, bits: 5000, byteCreated: true, mainGameUnlocked: true, dataStreamTapBonusPercent: 40 })
+  const bonus = render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+  // The Data Stream's slot now shows its tap bonus instead (other tiles, e.g. pools, keep their time).
+  expect(screen.queryAllByTitle(/Estimated time until this buffer is full/)).toHaveLength(withoutBonus.length - 1)
+  bonus.unmount()
 })
