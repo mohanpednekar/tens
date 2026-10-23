@@ -3162,6 +3162,8 @@ export const getPoolCacheReservationBits = (state, poolIndex) => {
 
 export const isProvisionDiskAvailable = state => {
   if (state.intro.diskBuild) return false
+  // Smaller sizes below the newest unlocked one are provisioned automatically and for free instead.
+  if (isLowerDiskSizePending(state)) return false
   if (isDiskLadderExhaustedForActivePools(state)) return false
   const size = getDiskSize(state)
   if (getDiskProvisionPassesCollected(state, size) >= getDiskProvisionPassesRequired(state, size)) return true
@@ -3749,7 +3751,8 @@ export const isDiskSizeUnlockAvailable = state => {
 }
 
 // The Foundry reset that unlocks the next disk size: a Reset Byte Foundry (Capacity, Disks, Lakes, Compute
-// wipe; Combine / Upgrade Capacity / Upgrade Speed / Provision Disk convenience-replay up to prior highs)
+// wipe; Combine / Upgrade Capacity / Upgrade Speed convenience-replay up to prior highs; every smaller Disk size
+// re-provisions itself for free via tickAutoProvisionLowerDiskSizes)
 // plus one more unlocked disk step, which raises the speed exponent by DATA_STREAM_SPEED_EXPONENT_STEP.
 export const unlockNextDiskSizeByFoundryReset = state => {
   if (!isDiskSizeUnlockAvailable(state)) return state
@@ -4010,6 +4013,7 @@ export const provisionDisk = (state, maxPasses = Infinity) => {
 // affordability instants to catch by hand otherwise, one per disk.
 export const queueDiskBuild = state => {
   if (state.intro?.diskBuildQueued) return state
+  if (isLowerDiskSizePending(state)) return state
   if (state.intro.diskBuild) return state
   if (isDiskLadderExhaustedForActivePools(state)) return state
   // Allowed while the offer's pool is rebuilding: provisionDisk stays gated on rebuild (isProvisionDiskAvailable), so the queue just waits.
@@ -6698,7 +6702,9 @@ export const tickFoundryResetConvenience = state => {
     }
   }
 
-  if (isDiskBuildBelowCap(next, caps)) {
+  // Sizes below the newest unlocked one are re-provisioned for free by tickAutoProvisionLowerDiskSizes —
+  // the paid replay must not also fund them (it would bank passes the free loop then ignores).
+  if (!isLowerDiskSizePending(next) && isDiskBuildBelowCap(next, caps)) {
     // getDiskReplayPassAllowance stops a single call from collecting more passes than the cap
     // allows even when the pool buffer (e.g. after a long offline gap) can afford more than that in
     // one go — Infinity everywhere except the exact "matched a fully pre-earned run of completed

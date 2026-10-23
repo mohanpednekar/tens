@@ -12232,6 +12232,41 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
     expect(tickAutoProvisionLowerDiskSizes(state)).toBe(state)
   })
 
+  it('skips while its pool is rebuilding, while a legacy build is in flight, and before the Byte exists', () => {
+    const base = afterReset()
+    const rebuilding = withIntro(base, { dataLakes: { 1: { rebuilding: true } } })
+    expect(tickAutoProvisionLowerDiskSizes(rebuilding)).toBe(rebuilding)
+    const building = withIntro(base, { diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 5, totalSeconds: 10 } })
+    expect(tickAutoProvisionLowerDiskSizes(building)).toBe(building)
+    const noByte = withIntro(base, { byteCreated: false })
+    expect(tickAutoProvisionLowerDiskSizes(noByte)).toBe(noByte)
+  })
+
+  it('the paid manual / queued / replay paths do nothing while a lower size is pending', () => {
+    const base = withPoolBuffer(afterReset(), getDiskCost(afterReset(), FIRST_DISK_SIZE))
+    expect(isProvisionDiskAvailable(base)).toBe(false)
+    expect(provisionDisk(base)).toBe(base)
+    expect(queueDiskBuild(base)).toBe(base)
+    const queued = withIntro(base, { diskBuildQueued: true })
+    expect(tickQueuedDiskBuild(queued)).toBe(queued)
+  })
+
+  it('the Foundry-reset convenience replay does not pay for lower-size disks the free loop handles', () => {
+    const base = withIntro(withPoolBuffer(afterReset(), getDiskCost(afterReset(), FIRST_DISK_SIZE) * 10), {
+      foundryResetCaps: { disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP }, diskProvisionPasses: {} },
+    })
+    const after = tickFoundryResetConvenience(base)
+    expect(after.intro.poolBuffers[1]).toBe(base.intro.poolBuffers[1]) // nothing spent
+    expect(after.intro.diskProvisionPasses?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+  })
+
+  it('tickGame drives the free loop end to end until the smaller array is full', () => {
+    let state = afterReset()
+    for (let i = 0; i < 20000 && isLowerDiskSizePending(state); i += 1) state = tickGame(1)(state)
+    expect(isLowerDiskSizePending(state)).toBe(false)
+    expect(state.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(DISK_ARRAY_LADDER_CAP)
+  })
+
   it('unlocking a size by Foundry reset leaves earlier sizes to rebuild automatically', () => {
     const full = withIntro(createInitialGameState(), {
       byteCreated: true,
