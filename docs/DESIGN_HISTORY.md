@@ -8921,3 +8921,50 @@ bar's scale, so the 50% hand-off between the two readings stays jump-free. Pill 
 the labels were also tried and dropped: plain page-colored text reads on both themes' fills, and
 labels move just past a fill too narrow to hold them. The tap emoji gets a thin dark outline (a
 light halo glowed on the light theme's brown bar).
+
+### Data Stream Speed exponent 0.5 → 0.8 (2026-10)
+
+With Speed capped at √Capacity and the Capacity upgrade costing C at 100% of base Speed, each Capacity
+doubling took √C seconds, so the 128 QiB cap (2^107 B) needed on the order of a billion years of play (an
+earlier 1.9-million-year figure wrongly used 2^87 B). Cheaper Capacity costs were rejected by the maintainer
+("keep costs the same"); the lever was the Speed rule. Speed = basis^0.8 with the basis capped at Capacity,
+and Upgrade Speed costing the basis, makes each upgrade take ~C^0.2 s, ≈1.2 years total (hand model, no
+boosts). Exponent 0.75 gave ≈38 years; 0.8 was solved for the ~1-year target. Side effects: early game is
+faster (1 KiB at ~40 s of upgrades), and pool Bandwidth (still capped at √pool Capacity) can now be the
+tighter limit than the Data Stream. A real-engine playthrough (alternating upgrades via `tickGame`) matched the hand model up to 1 GiB (1 KiB at 38 s, 1 MiB at 190 s, 1 GiB at 13 min); not run through `simulate-run-times`.
+
+### Pool Bandwidth cap exponent 0.5 → 0.8 (2026-10)
+
+After the Data Stream Speed exponent moved to 0.8, pools stayed capped at √(pool Capacity) and so saw no
+benefit from the faster stream (pool 1 topped out at ~316 B/s while the stream ran at KB/s+). The maintainer
+asked that pools share the same speed benefits, so `getStoragePoolBandwidth` now caps at
+(pool Capacity in Bytes)^`DATA_STREAM_SPEED_EXPONENT`. Pool 1's ceiling goes 250 B/s → 8,000 B/s (SI-clean
+snap of 10,000 B/s), and every later pool's cap scales the same way. Everything keyed to pool Bandwidth
+(disk fill/cache fill/provisioning speed, compute merge timers = 8 smallest-disk fills, Data Lake overflow
+pacing) speeds up accordingly. Not re-run through `simulate-run-times`; several engine/App tests now pin the
+Speed basis (`speedCapacity`) so their timing assumptions stay meaningful.
+
+
+### Speed exponent set to 0.75, with later upgrades expected to raise it (2026-10)
+
+The 0.8 exponent chosen to hit ~1 year to the 128 QiB cap was dialed back to `DATA_STREAM_SPEED_EXPONENT = 0.75`
+by the maintainer ("use 0.75 for now and allow upgrades later"). It applies to both the Data Stream and the pool
+Bandwidth caps. At 0.75 each upgrade at Capacity C takes ~C^0.25 s, so the uninterrupted-play total to the
+cap is on the order of 38 years (hand model, no boosts); the intent is that future upgrades raise the exponent
+(0.8 ≈ 1 year). No such upgrade exists yet — the exponent is a single constant and the pacing/test fixtures
+are written against it (tests use `DATA_STREAM_SPEED_EXPONENT`, `basisBitsForRawRate`) so raising it later is a
+localized change.
+
+
+### Speed exponent rises with Foundry-reset Disk-size unlocks (2026-10)
+
+Replaces the fixed 0.75 exponent. The maintainer's idea: start at 0.5 and require a Foundry reset to unlock
+provisioning each further Disk size, each unlock adding 0.01 (`DATA_STREAM_SPEED_EXPONENT_BASE`/`_STEP`,
+`intro.unlockedDiskSteps`). The exponent is therefore earned through repeated resets rather than a one-off
+purchase: at most 0.5 + 0.29 = 0.79 after all 30 sizes. Decisions: Era ascension resets the unlocked sizes and
+exponent to base; the post-reset rebuild uses the existing Reset Byte Foundry convenience replay (paid from the
+Data Stream, no clicks); old saves are grandfathered (sizes already built count as unlocked). The gate is
+implemented by clamping `getMaxActiveDiskLadderStep`, so a full unlocked array reads as "exhausted" and every
+existing provision/queue guard blocks without new branches; `isDiskSizeUnlockAvailable` only decides when to
+show the reset button. Not re-run through `simulate-run-times`; total pacing now also depends on the repeated
+replays.

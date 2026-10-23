@@ -34,6 +34,10 @@ import {
   canReclaimComputeBoost,
   canStackComputeBoost,
   combineIntroByte,
+  getUnlockedDiskSteps,
+  getDataStreamSpeedExponent,
+  isDiskSizeUnlockAvailable,
+  unlockNextDiskSizeByFoundryReset,
   normalizePoolMemoryCapacity,
   consumeXpForLastTierTickspeed,
   convertIntroBitsToKilobytes,
@@ -310,7 +314,14 @@ import {
   queueIntroSpeedUpgrade,
   tickSpeedUpgradeDrain,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+
+// Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
+const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
+// Default (first-disk-size) Data Stream Speed exponent; tests that unlock more disk sizes read getDataStreamSpeedExponent instead.
+const DATA_STREAM_SPEED_EXPONENT = DATA_STREAM_SPEED_EXPONENT_BASE
+// Speed basis (bits) whose raw Data Stream rate is at least `bytesPerSec` — keeps fixtures valid if DATA_STREAM_SPEED_EXPONENT changes.
+const basisBitsForRawRate = bytesPerSec => Math.ceil(bytesPerSec ** (1 / DATA_STREAM_SPEED_EXPONENT) * BITS_PER_BYTE)
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -653,28 +664,25 @@ describe('getIntroProductionRate / getDataStreamSpeedBytesPerSecond', () => {
   })
 
   it.each([
-    [64 * 1024, 256],
-    [128 * 1024, 384],
-    [256 * 1024, 512],
-    [512 * 1024, 768],
-    [1024 * 1024, 1024],
-    [2 * 1024 * 1024, 1.5 * 1024],
-    [4 * 1024 * 1024, 2 * 1024],
-  ])('Speed at %i Bytes capacity is %i B/s', (capacityBytes, expectedSpeed) => {
-    expect(getDataStreamSpeedBytesPerSecond(capacityBytes * BITS_PER_BYTE)).toBe(expectedSpeed)
+    [1, 1],
+    [1024, 2 ** (10 * DATA_STREAM_SPEED_EXPONENT)],
+    [64 * 1024, 2 ** (16 * DATA_STREAM_SPEED_EXPONENT)],
+    [1024 * 1024, 2 ** (20 * DATA_STREAM_SPEED_EXPONENT)],
+    [2 ** 30, 2 ** (30 * DATA_STREAM_SPEED_EXPONENT)],
+  ])('Speed at %i Bytes basis is basis^DATA_STREAM_SPEED_EXPONENT B/s (%d)', (basisBytes, expectedSpeed) => {
+    expect(getDataStreamSpeedBytesPerSecond(basisBytes * BITS_PER_BYTE)).toBeCloseTo(expectedSpeed, 6)
   })
 
-  it('alternates x1.5 and x4/3 growth — exactly x2 every two Capacity doublings', () => {
+  it('grows by x2^DATA_STREAM_SPEED_EXPONENT (about x1.74) per basis doubling', () => {
     const rate64 = getDataStreamSpeedBytesPerSecond(64 * 1024 * BITS_PER_BYTE)
     const rate128 = getDataStreamSpeedBytesPerSecond(128 * 1024 * BITS_PER_BYTE)
-    const rate256 = getDataStreamSpeedBytesPerSecond(256 * 1024 * BITS_PER_BYTE)
-    expect(rate128 / rate64).toBeCloseTo(1.5)
-    expect(rate256 / rate128).toBeCloseTo(4 / 3)
-    expect(rate256 / rate64).toBeCloseTo(2)
+    expect(rate128 / rate64).toBeCloseTo(2 ** DATA_STREAM_SPEED_EXPONENT, 9)
   })
 
   it('expresses the derived Speed in bits/sec through getIntroProductionRate', () => {
-    expect(getIntroProductionRate({ capacity: 64 * 1024 * BITS_PER_BYTE })).toBe(256 * BITS_PER_BYTE)
+    expect(getIntroProductionRate({ capacity: 1024 * BITS_PER_BYTE })).toBeCloseTo(2 ** (10 * DATA_STREAM_SPEED_EXPONENT) * BITS_PER_BYTE, 6)
+    // The Speed basis, when present, wins over Capacity.
+    expect(getIntroProductionRate({ capacity: 1024 * BITS_PER_BYTE, speedCapacity: 8 })).toBe(8)
   })
 
   it('returns 0 for a missing/non-positive capacity (defensive)', () => {
@@ -685,11 +693,12 @@ describe('getIntroProductionRate / getDataStreamSpeedBytesPerSecond', () => {
 
 describe('tapIntroBit', () => {
   it('credits the current production rate (getIntroProductionRate), not a flat 1, once the rate has grown', () => {
-    // 512-Byte capacity (4,096 bits) derives a 24 B/s = 192 bits/sec Speed — still below the
-    // Storage-pool reveal threshold, so the tap credits bits directly.
+    // 512-Byte capacity (4,096 bits) derives a 512^DATA_STREAM_SPEED_EXPONENT B/s Speed (about 108 B/s =
+    // 861 bits/sec at 0.75) — still below the Storage-pool reveal threshold, so the tap credits bits directly.
     const state = withIntro(createInitialGameState(), { capacity: 4096 })
     const after = tapIntroBit(state)
-    expect(after.intro.bits).toBe(192)
+    expect(after.intro.bits).toBe(Math.floor(getIntroProductionRate(state.intro)))
+    expect(after.intro.bits).toBeCloseTo(Math.floor(512 ** DATA_STREAM_SPEED_EXPONENT * BITS_PER_BYTE), 0)
   })
 
   it('credits one second of the derived rate at the starting capacity (8 bits/sec at 1 Byte)', () => {
@@ -950,7 +959,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
     it('tickIntroProduction delivers exactly the displayed rate at a half-full Buffer (100%)', () => {
       const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 500, capacity: 1000 })
       const after = tickIntroProduction(1)(state)
-      expect(after.intro.bits - state.intro.bits).toBe(getIntroProductionRate(state.intro))
+      expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro), 6)
     })
 
     it('tickPoolBufferFill transfers more than the raw rate into an empty pool buffer (near FILL_MULTIPLIER_MAX_PERCENT)', () => {
@@ -1184,6 +1193,7 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       capacity: BITS_PER_BYTE * (2 ** 20), // deep enough that pool 1's buffer ceiling isn't limiting
+      unlockedDiskSteps: 2, // the 10 KB size is unlocked, so the ladder has moved past 1 KB
       disksBuiltTotal: { [size1KB]: DISK_ARRAY_LADDER_CAP },
       diskProvisionPasses: { [size1KB]: passes },
       poolBuffers: { [poolIndex]: 0 },
@@ -1653,12 +1663,12 @@ describe('storage pools', () => {
     }
   })
 
-  it('snaps a pool\'s Bandwidth cap down to the nearest SI-clean value below sqrt(Capacity)', () => {
+  it('snaps a pool\'s Bandwidth cap down to the nearest SI-clean value below Capacity^DATA_STREAM_SPEED_EXPONENT', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: 8 * 2 ** 14, // pool Capacity derives to 16,000 Bytes; sqrt(16,000) ≈ 126.49 Bytes/sec
+      capacity: 8 * 2 ** 14, // pool Capacity derives to 16,000 Bytes; 16,000^0.5 ≈ 126 Bytes/sec
     })
-    expect(getStoragePoolBandwidth(state, 1)).toBe(1_000) // 125 Bytes/sec (SI-clean), not a raw ~126.49
+    expect(getStoragePoolBandwidth(state, 1)).toBe(1_000) // 125 Bytes/sec (SI-clean), not a raw ~126
   })
 
   it('unlocks pool 2 only after all three pool 1 arrays reach the build cap', () => {
@@ -1742,47 +1752,50 @@ describe('storage pools', () => {
     expect(getStoragePoolCapacity(afterThreshold, 2)).toBeGreaterThan(0)
   })
 
-  it('caps a pool\'s own Bandwidth at the square root of its own Capacity (in Bytes) once the production rate outgrows it', () => {
+  it('caps a pool\'s own Bandwidth at its own Capacity (in Bytes) ^ DATA_STREAM_SPEED_EXPONENT once the production rate outgrows it', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS (800,000 bits =
       // 100,000 Bytes, a clean SI 100 KB — see POOL_CAPACITY_SI_STEP in layers.js);
-      // sqrt(100,000 Bytes) ≈ 316.23 Bytes/sec, SI-clean-floored down to 250 Bytes/sec =
-      // 2,000 bits/sec — the clean SI Bandwidth cap the pool's own 100 KB Capacity should produce.
-      capacity: INTRO_CAPACITY_CAP_BITS, // the derived rate (384 B/s) is far above the cap
+      // (100,000 Bytes)^0.5 ≈ 316 Bytes/sec, SI-clean-snapped to 250 Bytes/sec =
+      // 2,000 bits/sec — the clean SI Bandwidth cap the pool's own 100 KB Capacity produces. Pin the
+      // Speed basis at Capacity so the raw stream rate is above that cap.
+      capacity: INTRO_CAPACITY_CAP_BITS, speedCapacity: INTRO_CAPACITY_CAP_BITS,
     })
-    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(2_000)
+    expect(getIntroProductionRate(state.intro)).toBeGreaterThanOrEqual(2_000)
     expect(getStoragePoolBandwidth(state, 1)).toBe(2_000)
   })
 
-  it('Bandwidth is the SI-clean equivalent of the sqrt(Capacity) bound once the derived rate outgrows it', () => {
+  it('Bandwidth is the SI-clean equivalent of the Capacity^DATA_STREAM_SPEED_EXPONENT bound once the derived rate outgrows it', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: 4_000_000, // pool 1 Capacity 100 KB; sqrt(100,000 B) ≈ 316 B/s vs derived 768 B/s
+      capacity: 40_000_000, // pool 1 Capacity 100 KB; (100,000 B)^0.5 ≈ 316 B/s vs the higher derived Speed
     })
-    expect(getIntroProductionRate(state.intro)).toBe(768 * BITS_PER_BYTE)
-    // sqrt bound 316.2 Bytes/sec → SI-clean 250 Bytes/sec = 2,000 bits/sec
+    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(768 * BITS_PER_BYTE)
+    // bound ≈ 316 Bytes/sec → SI-clean 250 Bytes/sec = 2,000 bits/sec
     expect(getStoragePoolBandwidth(state, 1)).toBe(2_000)
   })
 
   it('Bandwidth still matches the plain-binary derived rate below the 64→125 SI-clean deviation', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      // 1 KiB capacity derives 32 B/s; pool 1's own 1 KB Capacity caps at sqrt(1000) ≈ 31.6 B/s,
-      // whose SI-clean equivalent (32 B/s) still lands on the same 256 bits/sec.
+      // A Speed basis giving a raw ~16 B/s (128 bits/sec) sits below pool 1's own 1 KB Capacity cap
+      // (1000^0.5 ≈ 32 B/s), so Bandwidth is just the raw rate in its SI-clean form (16 B/s).
       capacity: 8 * 2 ** 10,
+      speedCapacity: basisBitsForRawRate(16),
     })
-    expect(getIntroProductionRate(state.intro)).toBe(256)
-    expect(getStoragePoolBandwidth(state, 1)).toBe(256)
+    expect(getIntroProductionRate(state.intro)).toBeCloseTo(128, 0)
+    expect(getStoragePoolBandwidth(state, 1)).toBe(128)
   })
 
   it('Bandwidth diverges from the raw binary rate past 64 Bytes/sec, e.g. a raw 256 Bytes/sec rate reads as a clean 250', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: INTRO_CAPACITY_CAP_BITS, // pool 1 maxed — sqrt(100,000 B) ≈ 316 B/s cap binds the 384 B/s derived rate
+      capacity: INTRO_CAPACITY_CAP_BITS, // pool 1 maxed — its cap ((100,000 B)^0.5 ≈ 316 B/s) is above the raw rate
+      speedCapacity: basisBitsForRawRate(256), // raw rate ≈ 256 B/s
     })
-    expect(getIntroProductionRate(state.intro)).toBe(384 * BITS_PER_BYTE)
-    expect(getStoragePoolBandwidth(state, 1)).toBe(2000) // 250 Bytes/sec (SI-clean), not the raw value
+    expect(getIntroProductionRate(state.intro)).toBeCloseTo(256 * BITS_PER_BYTE, 0)
+    expect(getStoragePoolBandwidth(state, 1)).toBe(2000) // 250 Bytes/sec (SI-clean), not the raw 256
   })
 
   it('is unaffected by disk-build progress — the true cap depends purely on Capacity vs. the FINAL pool\'s own ceiling', () => {
@@ -1829,10 +1842,9 @@ describe('pool buffers', () => {
       byteCreated: true,
       bits: 1000,
       // Pool 1's own Capacity is hard-clamped to INTRO_CAPACITY_CAP_BITS (800,000 bits =
-      // 100,000 Bytes) regardless of this seeded value; sqrt(100,000 Bytes) ≈ 316.23
-      // Bytes/sec, SI-clean-floored to 250 Bytes/sec = 2,000 bits/sec pool 1 Bandwidth cap —
-      // plenty above the 1,000-bit balance below, so it doesn't matter that this comment's own
-      // bound is only a guideline (see getStoragePoolBandwidth) rather than the exact number.
+      // 100,000 Bytes) regardless of this seeded value; its Bandwidth cap is (100,000 Bytes)^0.8 =
+      // 10,000 Bytes/sec (SI-snapped to 8,000 = 64,000 bits/sec) — plenty above the 1,000-bit balance
+      // below, so the exact number doesn't matter here (see getStoragePoolBandwidth).
       capacity: 32_000_000,
     })
     const after = tickPoolBufferFill(1)(state)
@@ -1877,7 +1889,7 @@ describe('pool buffers', () => {
       bits: 1_000_000,
       // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS (800,000 bits, a
       // clean SI 100 KB) regardless of the shared Capacity's own magnitude; pool 1 Bandwidth cap
-      // = sqrt(100,000 Bytes) ≈ 316.23 Bytes/sec, SI-clean-floored to 250 Bytes/sec = 2,000 bits/sec.
+      // = (100,000 Bytes)^0.75 ≈ 5,623 Bytes/sec, SI-clean-snapped to 4,000 Bytes/sec = 32,000 bits/sec.
       capacity: 32_000_000,
       disksBuiltTotal: {
         [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
@@ -2832,8 +2844,8 @@ describe('formatMemoryAmount', () => {
       // Pool 2's own fixed unit is MB (divisor 8,000,000 bits) — a 3,187,000-bit balance is below
       // that, so this must read in the pool's own next-finer unit (KB) rather than falling back to
       // formatDiskSizeInPoolUnit's raw-bits case (the bug this fix addresses: "3.187e6 bits").
-      expect(formatPoolBalance(3_187_000, 2)).toBe('398.37 KB')
-      expect(formatPoolBalanceStable(3_187_000, 2)).toBe('398.37 KB')
+      expect(formatPoolBalance(3_187_000, 2)).toBe('398.3 KB')
+      expect(formatPoolBalanceStable(3_187_000, 2)).toBe('398.3 KB')
     })
 
     it('stays in the pool\'s own fixed unit once the balance reaches it', () => {
@@ -3003,10 +3015,10 @@ describe('tickIntroProduction', () => {
   it('keeps producing after mainGameUnlocked — nothing about passive production ever freezes', () => {
     // bits seeded at exactly 50% of capacity so the fill-based Speed multiplier (see
     // FILL_MULTIPLIER_* in layers.js) is neutral (100%) — this test is about production not
-    // freezing, not about the multiplier itself. 100-bit capacity derives a 32 bits/sec rate.
-    const state = withIntro(createInitialGameState(), { byteCreated: true, mainGameUnlocked: true, bits: 50, capacity: 100 })
+    // freezing, not about the multiplier itself.
+    const state = withIntro(createInitialGameState(), { byteCreated: true, mainGameUnlocked: true, bits: 50, capacity: 100, speedCapacity: 8 })
     const after = tickIntroProduction(1)(state)
-    expect(after.intro.bits - state.intro.bits).toBe(32)
+    expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro))
   })
 
   it('returns the same state reference for a true zero-delta tick, not just an equal-valued one', () => {
@@ -3015,29 +3027,28 @@ describe('tickIntroProduction', () => {
   })
 
   it('delivers continuously — a fractional second banks a fractional share of the rate, with no separate accumulator', () => {
-    // 100-bit capacity derives 32 bits/sec; an empty buffer's 150% fill multiplier lifts the real
-    // delivery to 48 bits/sec → 0.4s delivers 19.2 bits.
+    // An empty buffer's 150% fill multiplier lifts the real delivery to 1.5x the derived rate, so
+    // 0.4s delivers 0.4 x 1.5 x rate bits.
     const state = withIntro(createInitialGameState(), { byteCreated: true, capacity: 100 })
     const after = tickIntroProduction(0.4)(state)
-    expect(after.intro.bits).toBeCloseTo(19.2)
+    expect(after.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 0.4 * 1.5)
     expect(after.intro.productionAccumulator).toBeUndefined()
   })
 
   it('delivers proportionally over a longer elapsed window too, evaluated against the pre-tick fill level', () => {
     // bits seeded at exactly 50% of capacity to neutralize the fill-based Speed multiplier (see
-    // the previous test's comment): 32 bits/sec x 1.4s = 44.8 bits.
-    const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 50, capacity: 100 })
+    // the previous test's comment): rate x 1.4s bits.
+    const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 50, capacity: 100, speedCapacity: 8 })
     const after = tickIntroProduction(1.4)(state)
-    expect(after.intro.bits - state.intro.bits).toBeCloseTo(44.8)
+    expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 1.4)
   })
 
   it('delivers multiple seconds of production in one call', () => {
     // bits seeded at exactly 50% of capacity to neutralize the fill-based Speed multiplier (see
-    // the earlier "keeps producing after mainGameUnlocked" test's comment). 1,000-bit capacity
-    // derives 96 bits/sec → 192 bits over 2s.
-    const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 500, capacity: 1000 })
+    // the earlier "keeps producing after mainGameUnlocked" test's comment): rate x 2s bits.
+    const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 500, capacity: 1000, speedCapacity: 8 })
     const after = tickIntroProduction(2)(state)
-    expect(after.intro.bits - state.intro.bits).toBeCloseTo(192)
+    expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 2)
   })
 
   it('caps delivered bits at capacity rather than overshooting', () => {
@@ -3146,12 +3157,13 @@ describe('getDiskSize', () => {
   })
 
   it('advances to the next Byte power-of-ten size once DISK_ARRAY_LADDER_CAP disks have ever been built at the current size', () => {
-    const state = withIntro(createInitialGameState(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP } })
+    const state = withIntro(createInitialGameState(), { unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED, disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP } })
     expect(getDiskSize(state)).toBe(FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER) // 80,000 = 10 KB
   })
 
   it('does not regress after disks of the maxed-out size are later redeemed — the ladder only ever advances', () => {
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
       disks: { [FIRST_DISK_SIZE]: 3 }, // some already redeemed, some still full — either way, below the cap
     })
@@ -3162,12 +3174,14 @@ describe('getDiskSize', () => {
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
     const after10KB = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
     })
     expect(getDiskSize(after10KB)).toBe(size10KB)
     expect(size10KB).toBe(80000)
 
     const after100KB = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP },
     })
     expect(getDiskSize(after100KB)).toBe(size100KB)
@@ -3178,6 +3192,7 @@ describe('getDiskSize', () => {
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: {
         [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
         [size10KB]: DISK_ARRAY_LADDER_CAP,
@@ -3193,6 +3208,7 @@ describe('isDiskLadderExhaustedForActivePools', () => {
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP - 1 },
     })
     expect(isDiskLadderExhaustedForActivePools(state)).toBe(false)
@@ -3202,6 +3218,7 @@ describe('isDiskLadderExhaustedForActivePools', () => {
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP },
     })
     expect(isDiskLadderExhaustedForActivePools(state)).toBe(false)
@@ -3212,7 +3229,7 @@ describe('isDiskLadderExhaustedForActivePools', () => {
     for (let step = 1; step <= DATA_LAKE_TIER_COUNT * 3; step += 1) {
       disksBuiltTotal[getDiskLadderSizeBits(step)] = DISK_ARRAY_LADDER_CAP
     }
-    const state = withIntro(createInitialGameState(), { disksBuiltTotal })
+    const state = withIntro(createInitialGameState(), { unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED, disksBuiltTotal })
     expect(getUnlockedStoragePoolCount(state)).toBe(DATA_LAKE_TIER_COUNT)
     expect(isDiskLadderExhaustedForActivePools(state)).toBe(true)
   })
@@ -3297,6 +3314,7 @@ describe('getDiskSizesToShow', () => {
 
   it('includes every size ever built, even after its disks have all been redeemed back to 0 full', () => {
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 3 },
       disks: { [FIRST_DISK_SIZE]: 0 },
     })
@@ -3305,6 +3323,7 @@ describe('getDiskSizesToShow', () => {
 
   it('includes a size that is currently held but has no matching disksBuiltTotal entry (a migrated pre-ladder save)', () => {
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: {},
       disks: { [FIRST_DISK_SIZE]: 2 },
     })
@@ -3315,6 +3334,7 @@ describe('getDiskSizesToShow', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const level3Size = getTierCost(tensTier, 3) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level3Size]: 0 },
       disks: { [level3Size]: 0 },
     })
@@ -3327,6 +3347,7 @@ describe('getDiskSizesToShow', () => {
   it('de-duplicates a size present in both maps and sorts the result ascending', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 4 },
       disks: { [level2Size]: 2 },
     })
@@ -3340,6 +3361,7 @@ describe('getDiskSizesToShow', () => {
   it('includes a capacity-visible pool\'s own smallest size even though the disk-provisioning chain hasn\'t reached it yet, so its own cache activity (tickDiskAutoFill pre-fills/consumes it purely on Capacity liveness) always has a row to render against', () => {
     const pool2SmallestSize = getDataLakeUnitBits(2)
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       capacity: getPoolCapacityUnlockThresholdBits(2), // pool 2 live via Capacity alone
       // No disksBuiltTotal at all — pool 1 hasn't even started, let alone completed.
     })
@@ -3358,6 +3380,7 @@ describe('getRelevantDiskSizesForFoundry', () => {
   it('keeps an older built size while its own fixed tier is still at the right level, even after the ladder advances', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
     })
     expect(getDiskSize(state)).toBe(level2Size)
@@ -3369,6 +3392,7 @@ describe('getRelevantDiskSizesForFoundry', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withPurchaseLevel(
       withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
         disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
       }),
       tensTier.id,
@@ -3381,6 +3405,7 @@ describe('getRelevantDiskSizesForFoundry', () => {
   it('lists multiple matching sizes ascending (smallest first)', () => {
     const megabyteDiskSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
+      unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1, [megabyteDiskSize]: 1 },
     })
     expect(getRelevantDiskSizesForFoundry(state)).toEqual([FIRST_DISK_SIZE, megabyteDiskSize])
@@ -4044,7 +4069,7 @@ describe('tickDiskAutoFill', () => {
     const pool2FlushSeconds = getDiskReadCacheFlushSeconds(state, megabyteSize)
     const pool1FlushSeconds = getDiskReadCacheFlushSeconds(state, FIRST_DISK_SIZE)
     // Both pools pace at the shared production rate — the raw 1 B/s derived rate sits under every
-    // pool's own sqrt(Capacity) bound here, so each reads the same 8 bits/sec.
+    // pool's own Capacity^0.8 bound here, so each reads the same 8 bits/sec.
     expect(pool2FlushSeconds).toBe(megabyteSize / DISK_CACHE_BLOCK_COUNT / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 2))
     expect(pool1FlushSeconds).toBe(FIRST_DISK_SIZE / DISK_CACHE_BLOCK_COUNT / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 1))
   })
@@ -4917,7 +4942,8 @@ describe.each([
 ])('auto-merge / reserve-merge timer: $label', ({ tick, enable, isUnlockAvailable, start, isStartAvailable, inputField, outputField, autoFlagField, timerField, boundaryIndex }) => {
   // Capacity high enough for all 10 pools to be visible, so every boundary's pool has Bandwidth
   // (a pool with 0 Bandwidth makes its merge duration 0, i.e. unavailable).
-  const allPoolsVisibleState = () => withIntro(createInitialGameState(), { capacity: 8 * 1024 ** 10, byteCreated: true })
+  // The Speed basis is pinned (1 KiB -> 256 B/s raw) so merge timers stay long relative to a 1s tick.
+  const allPoolsVisibleState = () => withIntro(createInitialGameState(), { capacity: 8 * 1024 ** 10, speedCapacity: 8 * 2 ** 10, byteCreated: true })
   const durationOf = (introOverrides = {}) =>
     getComputeMergeDurationSeconds(withIntro(allPoolsVisibleState(), introOverrides), boundaryIndex)
 
@@ -5082,6 +5108,7 @@ describe('isComputeEntityAutoMergeUnlocked / getComputeReserveHeld (tier 1 Cores
 describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool (#755)', () => {
   const poolVisible = overrides => withIntro(createInitialGameState(), {
     capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+    speedCapacity: basisBitsForRawRate(250), // raw stream rate ≈ 250 B/s (2,000 bits/sec), so merge durations stay long vs. a 1s tick
     byteCreated: true,
     ...overrides,
   })
@@ -5745,13 +5772,12 @@ describe('tickGame Compute Boost integration', () => {
       // bits seeded at exactly 50% of capacity to neutralize the fill-based Speed multiplier (see
       // FILL_MULTIPLIER_* in layers.js) — this test is about the Compute Boost multiplier, not
       // that one. tickIntroProduction itself reads the boost, so no tickGame wrapper needed.
-      byteCreated: true, bits: 500_000, capacity: 1_000_000,
+      byteCreated: true, bits: 500_000, capacity: 1_000_000, speedCapacity: 8,
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 10,
     })
     const after = tickIntroProduction(1)(state)
-    // Derived rate at 1,000,000-bit capacity is 384 B/s = 3,072 bits/sec; burst (tier 1 / Core)
-    // multiplies it ×20.
-    expect(after.intro.bits - state.intro.bits).toBeCloseTo(3072 * COMPUTE_BOOST_PRESETS.burst.multiplier)
+    // Burst (tier 1 / Core) multiplies the derived rate ×20.
+    expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * COMPUTE_BOOST_PRESETS.burst.multiplier)
   })
 
   it('multiplies tier01\'s own production while a boost is active, leaving every other tier unaffected', () => {
@@ -11021,8 +11047,9 @@ describe('Data Lakes', () => {
 
   describe('overflow fill (see tickPoolBufferFill\'s own overflow branch / fillDataLakeDisks in engine.js)', () => {
     // Pool 1's own Capacity clamps to INTRO_CAPACITY_CAP_BITS (800,000 bits) regardless of this
-    // seeded value, giving Bandwidth sqrt(100,000 Bytes) ≈ 316.23 Bytes/sec, SI-clean-floored to
-    // 250 Bytes/sec = 2,000 bits/sec, and a buffer capacity of 800,000 bits — see the existing
+    // seeded value, giving a Capacity^0.8 Bandwidth ceiling of 10,000 Bytes/sec (snapped to 8,000);
+    // the fixture's `speedCapacity` pin keeps the raw rate (and so Bandwidth) at 250 Bytes/sec =
+    // 2,000 bits/sec, and a buffer capacity of 800,000 bits — see the existing
     // tickPoolBufferFill tests above for the same derivation. `poolBuffers: { 1: 800_000 }` seeds
     // that buffer already completely full, so every bit of pool 1's own reserved rate this tick is
     // overflow, none of it topping up the (already-full) buffer itself.
@@ -11040,6 +11067,7 @@ describe('Data Lakes', () => {
       // also start reserving/spending intro.bits into its own buffer, defeating every test below's
       // own pool-1-only isolation.
       capacity: 5_000_000,
+      speedCapacity: basisBitsForRawRate(256), // raw stream rate ≈ 256 B/s -> pool 1 reserves a clean 250 B/s = 2,000 bits/sec
       poolBuffers: { 1: 800_000 },
       disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
       ...overrides,
@@ -11208,6 +11236,7 @@ describe('Data Lakes', () => {
         // otherwise pool 2 would also start reserving/spending intro.bits into its own (here
         // unseeded, so unconditionally room-having) buffer, defeating this test's own isolation.
         capacity: 5_000_000,
+        speedCapacity: basisBitsForRawRate(256), // raw stream rate ≈ 256 B/s -> pool 1 Bandwidth 2,000 bits/sec, so the lake isn't maxed in one tick
         poolBuffers: { 1: 8_000_000 }, // already completely full
       })
       const after = tickPoolBufferFill(1000)(state)
@@ -11238,6 +11267,7 @@ describe('Data Lakes', () => {
         byteCreated: true,
         bits: 1_000_000,
         capacity: 5_000_000,
+        speedCapacity: basisBitsForRawRate(256), // raw stream rate ≈ 256 B/s, so the lake isn't maxed in a single tick
         poolBuffers: { 1: 8_000_000 },
         disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
       })
@@ -11970,10 +12000,21 @@ describe('Upgrade Speed (separate from Capacity)', () => {
 })
 
 describe('getSpeedUpgradeCostBits', () => {
-  it('equals the Capacity upgrade cost at perfect squares and deviates at odd powers', () => {
-    expect(getSpeedUpgradeCostBits({ capacity: 512 })).toBe(512) // 64 B: speed 8 B/s, 8² B
-    expect(getSpeedUpgradeCostBits({ capacity: 256 })).not.toBe(256) // 32 B: speed 6 B/s -> 36 B
-    expect(getSpeedUpgradeCostBits({ capacity: 256 })).toBe(288)
+  it('costs the current Speed basis, matching the Capacity at which that Speed is the cap', () => {
+    expect(getSpeedUpgradeCostBits({ capacity: 512 })).toBe(512)
+    expect(getSpeedUpgradeCostBits({ capacity: 512, speedCapacity: 256 })).toBe(256)
+    // Speed = (basis bytes)^0.8, so the Capacity at which that Speed is the cap equals the basis.
+    const intro = { capacity: 2 ** 40, speedCapacity: 2 ** 30 }
+    const speed = getDataStreamSpeedBytesPerSecond(intro.speedCapacity)
+    expect((speed ** (1 / DATA_STREAM_SPEED_EXPONENT)) * BITS_PER_BYTE).toBeCloseTo(intro.speedCapacity, -3)
+  })
+
+  it('is armable only while the doubled basis still fits within Capacity (Speed <= Capacity^0.8)', () => {
+    const s = createInitialGameState()
+    const at = intro => ({ ...s, intro: { ...s.intro, byteCreated: true, ...intro } })
+    expect(isSpeedUpgradeArmable(at({ capacity: 512, speedCapacity: 256 }))).toBe(true)
+    expect(isSpeedUpgradeArmable(at({ capacity: 512, speedCapacity: 512 }))).toBe(false)
+    expect(isSpeedUpgradeArmable(at({ capacity: 512 }))).toBe(false)
   })
 })
 
@@ -11987,7 +12028,7 @@ describe('Upgrade Speed cross-system paths', () => {
     const state = seeded({ capacity: 512, speedCapacity: 256, bits: 512 })
     const after = upgradePoolSpeed(state)
     expect(after.intro.speedCapacity).toBe(512)
-    expect(after.intro.bits).toBe(512 - 288)
+    expect(after.intro.bits).toBe(512 - 256)
     expect(upgradePoolSpeed(seeded({ capacity: 512, speedCapacity: 256, bits: 10 }))).toEqual(seeded({ capacity: 512, speedCapacity: 256, bits: 10 }))
   })
 
@@ -12011,5 +12052,131 @@ describe('Upgrade Speed cross-system paths', () => {
     for (let i = 0; i < 8; i++) state = tickFoundryResetConvenience({ ...state, intro: { ...state.intro, bits: state.intro.capacity } })
     expect(state.intro.capacity).toBe(32)
     expect(state.intro.speedCapacity).toBeGreaterThan(8)
+  })
+})
+
+describe('pre-split saves (speedCapacity absent)', () => {
+  it('derive Speed from Capacity^0.8 until the first Capacity upgrade materializes the Speed basis', () => {
+    const s = createInitialGameState()
+    const intro = { ...s.intro, byteCreated: true, capacity: 2 ** 30 * BITS_PER_BYTE }
+    delete intro.speedCapacity
+    expect(getIntroProductionRate(intro)).toBeCloseTo(2 ** (30 * DATA_STREAM_SPEED_EXPONENT) * BITS_PER_BYTE, 3)
+    const state = { ...s, intro }
+    // Speed already sits at the cap, so no Speed upgrade is offered yet.
+    expect(isSpeedUpgradeArmable(state)).toBe(false)
+    // The first Capacity upgrade pins the basis at the pre-upgrade Capacity, freeing one Speed upgrade.
+    const after = upgradePoolCapacity({ ...state, intro: { ...intro, bits: intro.capacity } })
+    expect(after.intro.speedCapacity).toBe(2 ** 30 * BITS_PER_BYTE)
+    expect(isSpeedUpgradeArmable(after)).toBe(true)
+  })
+})
+
+describe('Foundry-reset disk-size unlocks (rising Data Stream Speed exponent)', () => {
+  const fullFirstPool = () =>
+    withIntro(createInitialGameState(), {
+      byteCreated: true,
+      unlockedDiskSteps: 1,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
+    })
+
+  it('starts at 1 unlocked step and the base exponent; each further step adds DATA_STREAM_SPEED_EXPONENT_STEP', () => {
+    const intro = createInitialGameState().intro
+    expect(getUnlockedDiskSteps(intro)).toBe(1)
+    expect(getDataStreamSpeedExponent(intro)).toBeCloseTo(DATA_STREAM_SPEED_EXPONENT_BASE, 12)
+    expect(getDataStreamSpeedExponent({ ...intro, unlockedDiskSteps: 11 })).toBeCloseTo(
+      DATA_STREAM_SPEED_EXPONENT_BASE + 10 * DATA_STREAM_SPEED_EXPONENT_STEP, 12
+    )
+  })
+
+  it('clamps unlocked steps to the ladder length and ignores garbage', () => {
+    const max = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
+    expect(getUnlockedDiskSteps({ unlockedDiskSteps: 9999 })).toBe(max)
+    expect(getUnlockedDiskSteps({ unlockedDiskSteps: -3 })).toBe(1)
+    expect(getUnlockedDiskSteps({ unlockedDiskSteps: 'x' })).toBe(1)
+  })
+
+  it('a higher exponent raises the Data Stream Speed', () => {
+    const intro = { ...createInitialGameState().intro, capacity: 1024 * BITS_PER_BYTE, byteCreated: true }
+    expect(getIntroProductionRate({ ...intro, unlockedDiskSteps: 10 })).toBeGreaterThan(getIntroProductionRate(intro))
+  })
+
+  it('a full unlocked array stops Provision Disk until a Foundry reset unlocks the next size', () => {
+    const state = fullFirstPool()
+    expect(getDiskSize(state)).toBe(FIRST_DISK_SIZE)
+    expect(isDiskLadderExhaustedForActivePools(state)).toBe(true)
+    expect(isProvisionDiskAvailable(state)).toBe(false)
+    expect(isDiskSizeUnlockAvailable(state)).toBe(true)
+  })
+
+  it('no unlock is offered while the unlocked array is not full', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP - 1 } })
+    expect(isDiskSizeUnlockAvailable(state)).toBe(false)
+    expect(unlockNextDiskSizeByFoundryReset(state)).toBe(state)
+  })
+
+  it('no unlock is offered once every reachable size is already unlocked', () => {
+    const state = withIntro(fullFirstPool(), { unlockedDiskSteps: ALL_DISK_STEPS_UNLOCKED })
+    expect(isDiskSizeUnlockAvailable(state)).toBe(false)
+  })
+
+  it('unlockNextDiskSizeByFoundryReset resets the Foundry, unlocks one more step, and keeps prior highs for the replay', () => {
+    const state = withIntro(fullFirstPool(), { capacity: 1024 * BITS_PER_BYTE })
+    const after = unlockNextDiskSizeByFoundryReset(state)
+    expect(getUnlockedDiskSteps(after.intro)).toBe(2)
+    expect(getDataStreamSpeedExponent(after.intro)).toBeCloseTo(DATA_STREAM_SPEED_EXPONENT_BASE + DATA_STREAM_SPEED_EXPONENT_STEP, 12)
+    expect(after.intro.capacity).toBeLessThan(state.intro.capacity)
+    expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(isDiskSizeUnlockAvailable(after)).toBe(false)
+    expect(getDiskSize(after)).toBe(FIRST_DISK_SIZE) // the next size is offered only once the replay refills the 1 KB array
+  })
+
+  it('unlocked steps survive Prestige and Reset Byte Foundry but reset on Era ascension', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, unlockedDiskSteps: 5 })
+    expect(getUnlockedDiskSteps(prestigeGame(withMoney(state, PRESTIGE_THRESHOLD)).intro)).toBe(5)
+    expect(getUnlockedDiskSteps(resetByteFoundry(state).intro)).toBe(5)
+    const era = eraGame({ ...state, prestige: { ...state.prestige, points: ERA_ELIGIBILITY_PP } })
+    expect(getUnlockedDiskSteps(era.intro)).toBe(1)
+  })
+
+  it('normalizePoolMemoryCapacity grandfathers sizes already built in an older save', () => {
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const old = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      unlockedDiskSteps: undefined,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: 2 },
+    })
+    expect(getUnlockedDiskSteps(normalizePoolMemoryCapacity(old).intro)).toBe(2)
+  })
+
+  it('grandfathering also counts partial passes already paid toward the next size', () => {
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const old = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      unlockedDiskSteps: undefined,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
+      diskProvisionPasses: { [size10KB]: 1 },
+    })
+    expect(getUnlockedDiskSteps(normalizePoolMemoryCapacity(old).intro)).toBe(2)
+  })
+})
+
+describe('Speed/Capacity upgrades alongside provisioning', () => {
+  it('a Speed upgrade can be armed and completes while a Disk build is queued, raising Bandwidth immediately', () => {
+    const base = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: 1024 * BITS_PER_BYTE,
+      speedCapacity: 256 * BITS_PER_BYTE,
+      bits: 1024 * BITS_PER_BYTE,
+      diskBuildQueued: true,
+    })
+    expect(isSpeedUpgradeArmable(base)).toBe(true)
+    let state = queueIntroSpeedUpgrade(base)
+    expect(state.intro.speedUpgradeQueued).toBe(true)
+    expect(state.intro.diskBuildQueued).toBe(true) // the queued provision is untouched
+    const before = getIntroProductionRate(state.intro)
+    for (let i = 0; i < 2000 && state.intro.speedUpgradeQueued; i += 1) state = tickGame(1)(state)
+    expect(state.intro.speedUpgradeQueued).toBe(false)
+    expect(state.intro.speedCapacity).toBe(512 * BITS_PER_BYTE)
+    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(before)
   })
 })

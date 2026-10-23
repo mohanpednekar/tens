@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Foundry reset unlocks the next Disk size.** Once the current Disk array is full, Provision Disk is replaced by a confirm-guarded **Foundry reset: unlock <size> Disks** button. It resets the Byte Foundry (Capacity, Disks, Lakes, Compute) and unlocks provisioning for the next size, raising the Data Stream Speed / pool Bandwidth exponent by 0.01 (starts at 0.5). Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs, paid from the Data Stream, with no clicks; Data Lakes (Boosters, lake upgrades, pool resets) and Compute entities are wiped, exactly like Reset Byte Foundry. Era ascension resets the unlocked sizes and exponent.
+
 - **Perks page.** A new **Perks** item in the bottom bar (after your first Prestige) gathers every
   permanent feature into three icon tabs: 🔓 **Unlocks** (one-time purchases like Smart, Tickspeed
   Autobuyer and Auto Scale Up, plus every tier's autobuyer milestones, reached ones included — shown
@@ -35,9 +37,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The Provision Disk button now appears as soon as the Byte exists, instead of waiting for 1 KiB of Capacity; clicking it early queues the build. Upgrade Speed / Capacity were never blocked by a queued or running provision and still aren't (covered by a new test).
+
+- Storage pool Bandwidth is now capped at the pool's Capacity^e (was √Capacity), using the same rising exponent `e` as the Data Stream's Speed rule (see the Foundry-reset entry below), so pools benefit from faster Speed too.
+
+- Byte Foundry pacing: base Speed is now (Speed level in Bytes)^e and capped at Capacity^e, instead of √Capacity. `e` starts at 0.5 (unchanged early game) and rises by 0.01 for every further Disk size you unlock with a **Foundry reset** (see Added). Upgrade Speed costs the current Speed level. Capacity upgrade costs are unchanged. Old saves keep every Disk size they already built (grandfathered), so their exponent starts at 0.5 + 0.01 per built size.
+
+- Unit-scaled memory amounts use fixed significant digits (4 below 1,000, 5 above). A balance that is an integer and has not changed for 5 seconds collapses to 1–2 digits (e.g. "500 B"), reverting on any click or key press.
+
 - Byte Foundry: the running Capacity/Speed upgrade bar now shows the percent on its first line, the actual from → to value, and the time left.
 
-- Byte Foundry: "Upgrade Data Stream" is split into separate **Upgrade Capacity** and **Upgrade Speed** buttons; both are replaced by a status bar while an upgrade runs and return when it completes. Base Speed can't exceed the square root of Capacity.
+- Byte Foundry: "Upgrade Data Stream" is split into separate **Upgrade Capacity** and **Upgrade Speed** buttons; both are replaced by a status bar while an upgrade runs and return when it completes. Base Speed is capped relative to Capacity (see the pacing entry above).
 
 - Boosters page text is shorter: funding line reads "1 ▦ → KB–PB · 0 held" (tier symbols), tier buttons read "⬆ 8→1 Fabric" and "🤖 0/10", and the "Boost" / "Boost with" headings are gone.
 
