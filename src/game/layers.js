@@ -320,10 +320,6 @@ export const DISK_CACHE_BLOCK_COUNT = 8
 // A DISK filling FROM a cache (read-cache → disk, write-cache → disk) moves faster than Memory's
 // own live production, since the cache itself is a pre-staged buffer, not a live trickle.
 export const DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER = 2
-// A CACHE filling FROM Memory (read-cache refill) can drain a banked Memory balance faster still —
-// even a large surplus balance still only drains into the cache at this multiple of the CURRENT
-// production rate, not instantly.
-export const CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER = 10
 // A CACHE filling FROM Disks (write-cache collecting from the source size's full disks) — faster
 // than a disk filling FROM a cache (DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER above): moving an
 // already-built Disk's contents into the write cache is a bulk transfer, not bandwidth-limited the

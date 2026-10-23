@@ -8970,3 +8970,9 @@ implemented by clamping `getMaxActiveDiskLadderStep`, so a full unlocked array r
 existing provision/queue guard blocks without new branches; `isDiskSizeUnlockAvailable` only decides when to
 show the reset button. Not re-run through `simulate-run-times`; total pacing now also depends on the repeated
 replays.
+
+**Read-cache refill from Memory made instant (PR #879).** The 10x `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER`
+cap above was removed at the maintainer's request: once a pool's buffer holds a full cache block, that
+block moves into the read cache and is subtracted from the buffer in the same call; the buffer's own
+Bandwidth is the only throttle. `DiskArrayRow` mirrors the buffer's progress toward the next block in the
+first empty cache block so the fill still looks gradual. Not re-run through `simulate-run-times`.

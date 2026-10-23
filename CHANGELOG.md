@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Read-cache blocks fill instantly.** Once a pool's Memory holds a full cache block, that block is
+  filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate. The first empty cache block shows the pool's progress toward it, so it still looks like a gradual fill.
 - **Lake time to next Booster.** Each Data Lake header now shows `⏳ time left` under its fill speed — the time until it has banked the next Booster's cost at the current fill speed. Reset Pool / Scale Out replace it when offered.
 
 - Boosters page shows only unlocked tiers; tiers without auto-merge get a spacious layout, automated ones keep the compact layout.
