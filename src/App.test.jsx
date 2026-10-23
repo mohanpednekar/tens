@@ -2929,7 +2929,7 @@ test('starting Upgrade Data Stream turns the same button into an inert progress 
   expect(screen.queryByRole('button', { name: /upgrade data stream (capacity|speed)/i })).not.toBeInTheDocument()
   const running = screen.getByRole('button', { name: /^upgrade capacity$/i })
   expect(running).toHaveAttribute('aria-disabled', 'true')
-  expect(running).toHaveTextContent(/Upgrading Capacity/)
+  expect(running).toHaveTextContent(/Upgrading/)
   expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument()
   expect(screen.getByRole('progressbar', { name: /data stream upgrade progress/i })).toHaveAttribute('aria-valuenow', '0')
   expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.capacityUpgradeQueued).toBe(true)
@@ -5409,7 +5409,7 @@ test('a running Capacity upgrade shows percent on the first line, from → to ca
   fireEvent.click(screen.getByRole('button', { name: /upgrade data stream capacity/i }))
 
   const running = screen.getByRole('button', { name: /^upgrade capacity$/i })
-  expect(running).toHaveTextContent(/0%\s*⏫ Upgrading Capacity…/)
+  expect(running).toHaveTextContent(/⏫ Upgrading…/)
   expect(running).toHaveTextContent(/→/)
   expect(running).toHaveTextContent(/⏳ \d+[smhd]/)
   // The draw rate (base Speed × the bar's fill multiplier) shows at the right, like the other speed readouts.

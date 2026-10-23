@@ -207,47 +207,64 @@ const UpgradingDots = styled.span`
   }
 `
 
-// Running-upgrade layout (same title-left / speed-right arrangement as the Data Stream and pool tiles):
-// a fixed-width percent gutter on the left, the title + cost lines (left-aligned, truncating) in the
-// middle, and the ⚡ draw rate in normal flow on the right, so nothing can overlap on narrow screens.
+// Running-upgrade layout: "⏫ Upgrading…" top-left with the from → to on one line below it, the percent
+// centred in the middle, and the ⚡ draw rate top-right with the ⏳ time left directly under it (like every
+// other timer). Columns size to content (centre takes the rest) so nothing overlaps on narrow screens.
 const RunningUpgradeContent = styled.div`
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-columns: auto minmax(3.5ch, 1fr) auto;
+  grid-template-rows: auto auto;
   column-gap: ${props => props.theme.space.sm};
+  row-gap: 2px;
   width: 100%;
   min-width: 0;
   text-align: left;
 `
 
-const RunningPercent = styled.span`
-  min-width: 4ch;
+const RunningTitle = styled.span`
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
+  white-space: nowrap;
 `
 
-// On very narrow screens the verb is dropped ("⏫ Capacity…") and the cost line may wrap instead of truncating.
-const RunningVerb = styled.span``
+// One line under the title: "current → next".
+const RunningChange = styled.span`
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: start;
+  font-size: 0.8em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  @media (max-width: 360px) {
+    font-size: 0.68em;
+  }
+`
 
-const RunningText = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  & > span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+const RunningPercent = styled.span`
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  justify-self: center;
+  font-size: 1.4em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  @media (max-width: 360px) {
+    font-size: 1.1em;
   }
-  @media (max-width: 380px) {
-    ${RunningVerb} {
-      display: none;
-    }
-    & > span:last-child {
-      white-space: normal;
-    }
-  }
+`
+
+const RunningTime = styled.span`
+  grid-column: 3;
+  grid-row: 2;
+  justify-self: end;
+  font-size: 0.75em;
+  font-weight: 500;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 `
 
 const MilestoneCostLine = styled.span`
@@ -1000,18 +1017,21 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   $pulse
                 >
                   <RunningUpgradeContent>
+                    <RunningTitle>⏫ Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
+                    <RunningChange>
+                      {speedUpgradeQueued
+                        ? `⚡ ${currentRateText} → ${nextRateText}`
+                        : `📦 ${currentCapacityText} → ${nextCapacityText}`}
+                    </RunningChange>
                     <RunningPercent>{Math.floor(runningProgress)}%</RunningPercent>
-                    <RunningText>
-                      <span>⏫ <RunningVerb>Upgrading </RunningVerb>{speedUpgradeQueued ? 'Speed' : 'Capacity'}<UpgradingDots>…</UpgradingDots></span>
-                      <MilestoneCostLine>
-                        {speedUpgradeQueued
-                          ? `⚡ ${currentRateText} → ${nextRateText} · ⏳ ${runningTimeLeftText}`
-                          : `📦 ${currentCapacityText} → ${nextCapacityText} · ⏳ ${runningTimeLeftText}`}
-                      </MilestoneCostLine>
-                    </RunningText>
-                    <SpeedText $color={getSpeedColor(runningMultiplierPercent)} title={`Upgrade draw at ${Math.round(runningMultiplierPercent)}% fill multiplier`}>
+                    <SpeedText
+                      $color={getSpeedColor(runningMultiplierPercent)}
+                      style={{ gridColumn: 3, gridRow: 1, justifySelf: 'end' }}
+                      title={`Upgrade draw at ${Math.round(runningMultiplierPercent)}% fill multiplier`}
+                    >
                       ⚡ {runningRateText}
                     </SpeedText>
+                    <RunningTime>⏳ {runningTimeLeftText}</RunningTime>
                   </RunningUpgradeContent>
                   <VisuallyHidden
                     role="progressbar"
