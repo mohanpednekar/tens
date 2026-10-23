@@ -1071,7 +1071,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2018 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2017 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -1088,8 +1088,8 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
-  `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) and `components/DiskArrayRow/index.test.jsx` (read-cache gradual-fill display) that's
-  13 of the 20 files; the other seven are
+  `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) that's
+  12 of the 19 files; the other seven are
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
   `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`,
   `scripts/classify-claude-failure.test.js`, `scripts/lint-workflow-shell.test.js`, and

@@ -3810,6 +3810,21 @@ describe('Byte Foundry Storage', () => {
     unmount()
   })
 
+  test('the first empty read-cache block mirrors the pool buffer\'s progress, so the instant block fill still looks gradual', () => {
+    const bufferBits = currentBankSize / DISK_CACHE_BLOCK_COUNT / 4
+    seedIntroState({
+      poolBuffers: { 1: bufferBits },
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: 1 },
+    })
+    render(<App />)
+    openStorage()
+
+    expect(screen.getByLabelText(/^1 kb cache block 1$/i)).toHaveAttribute('title', 'Filling from Memory (25%)')
+    expect(screen.getByLabelText(/^1 kb cache block 2$/i)).toHaveAttribute('title', 'Filling from Memory')
+  })
+
   test('Memory keeps read cache full then pours into an empty disk on a later tick when tier does not block', () => {
     vi.useFakeTimers()
 
