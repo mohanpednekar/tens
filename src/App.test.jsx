@@ -38,6 +38,7 @@ import {
   TICK_RATE_MS,
   TIER_DEFINITIONS,
   DISK_LADDER_BASE_SIZE_BITS,
+  DATA_STREAM_SPEED_EXPONENT_BASE as DATA_STREAM_SPEED_EXPONENT,
 } from 'game/layers'
 import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
@@ -2613,9 +2614,9 @@ test('once mainGameUnlocked, the standalone Tap button is gone and Data Stream i
   await user.click(tapTarget)
 
   // Below the Storage-pools reveal threshold a tap credits the floor of the derived rate — at
-  // 1000 bits of capacity (125 B, odd exponent) that's 12 B/s = 96 bits, on top of whatever the
+  // 1000 bits of capacity (125 B) that's 11.18 B/s = 89 bits, on top of whatever the
   // continuous production delivered during the real-time click.
-  expect(Number(balanceBar.getAttribute('aria-valuenow'))).toBeGreaterThanOrEqual(96)
+  expect(Number(balanceBar.getAttribute('aria-valuenow'))).toBeGreaterThanOrEqual(89)
 })
 
 test('the Data Stream tile stops accepting taps once Buffer is full, same as the old standalone button', () => {
@@ -2676,7 +2677,7 @@ test("the Upgrade Data Stream button stays clickable (to arm) while the Buffer i
   const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
   expect(upgradeButton).toBeEnabled()
   expect(upgradeButton).toHaveTextContent('Upgrade Capacity')
-  expect(upgradeButton).toHaveTextContent('97.656 KiB') // its cost = current capacity
+  expect(upgradeButton).toHaveTextContent('97.65 KiB') // its cost = current capacity
 })
 
 // Upgrade Data Stream spends the full Buffer (cost = current capacity) and doubles Capacity —
@@ -2779,8 +2780,8 @@ test('tapping still increments Data Stream (still tappable) after the Byte gener
 
   fireEvent.click(tapButton)
 
-  // Same derived-rate credit as above (capacity 1000 bits -> 12 B/s -> 96 bits per tap).
-  expect(balanceBar).toHaveAttribute('aria-valuenow', '96')
+  // Same derived-rate credit as above (capacity 1000 bits = 125 B -> 125^0.5 = 11.18 B/s -> 89 bits per tap (floored)).
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '89')
 
   unmount()
   vi.useRealTimers()
@@ -2809,16 +2810,16 @@ test('the "Data Stream" label is shown on the balance card', () => {
   expect(screen.getByText('Data Stream')).toBeInTheDocument()
 })
 
-test('the Data Stream header shows the capacity-derived rate — sqrt on even exponents, the neighbouring mean on odd ones', () => {
+test('the Data Stream header shows the basis-derived rate — (basis in Bytes)^DATA_STREAM_SPEED_EXPONENT', () => {
   // Scoped to the Data Stream region — pool 1's own Bandwidth can coincidentally render the same
-  // "N B/s" text at these rates. Capacity is in BITS: 800,000 bits = 100,000 B, e=17 (odd) ->
-  // (256 + 512)/2 = 384 B/s, shown at the empty-buffer 150% multiplier: 576 B/s.
+  // "N B/s" text at these rates. Capacity is in BITS: 800,000 bits = 100,000 B -> 100,000^0.5 =
+  // 316 B/s, shown at the empty-buffer 150% multiplier: about 474 B/s.
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   const { unmount } = render(<App />)
-  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/576 B\/s$/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/474 B\/s$/i)).toBeInTheDocument()
   unmount()
 
-  // Starting capacity (8 bits = 1 B, e=0, even) -> sqrt(1) = 1 B/s.
+  // Starting capacity (8 bits = 1 B) -> 1^0.5 = 1 B/s.
   seedIntroState({ bits: 0, byteCreated: true })
   render(<App />)
   expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/1\.5 B\/s$/i)).toBeInTheDocument()
@@ -2850,20 +2851,20 @@ test('Upgrade Data Stream shows its cost in the nearest fitting binary unit', ()
 })
 
 test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () => {
-  // 512 bits (64 B) doubles to 128 B; Speed at 2^7 B is the mean of sqrt(64) and sqrt(256) = 12 B/s.
+  // 512 bits (64 B) doubles to 128 B.
   seedIntroState({ capacity: 512, bits: 0, byteCreated: true })
   render(<App />)
 
   const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
   expect(upgradeButton).toHaveTextContent(`${COST_ICON} 64 B · 📦 ×2`)
   expect(upgradeButton).toHaveAccessibleDescription('Costs 64 B; capacity 128 B after upgrading')
-  // Speed trails Capacity (basis 32 B, cost 6² = 36 B): 6 B/s -> 8 B/s on its own button.
+  // Speed trails Capacity (basis 32 B -> 5.66 B/s, cost 32 B): 5.66 B/s -> 64^0.5 = 8 B/s on its own button.
   cleanup()
   seedIntroState({ capacity: 512, speedCapacity: 256, bits: 0, byteCreated: true })
   render(<App />)
   const speedButton = screen.getByRole('button', { name: /upgrade data stream speed/i })
-  expect(speedButton).toHaveTextContent(`${COST_ICON} 36 B · ⚡ ×1.33`)
-  expect(speedButton).toHaveAccessibleDescription('Costs 36 B; speed 8 B/s after upgrading')
+  expect(speedButton).toHaveTextContent(`${COST_ICON} 32 B · ⚡ ×1.41`)
+  expect(speedButton).toHaveAccessibleDescription('Costs 32 B; speed 8 B/s after upgrading')
 })
 
 test('Upgrade Data Stream at maximum Capacity is disabled and reads "Max capacity" without a preview', () => {
@@ -3003,8 +3004,8 @@ test('Data Stream renders bits/Buffer scaled into the same appropriate binary un
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('48.828 KiB')
-  expect(section).toHaveTextContent('97.656 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('48.82 KiB')
+  expect(section).toHaveTextContent('97.65 KiB')
 })
 
 test('Data Stream balance floors the binary-unit conversion instead of rounding, so it never reads complete early', () => {
@@ -3021,11 +3022,11 @@ test('Data Stream balance floors the binary-unit conversion instead of rounding,
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section).toHaveTextContent('97.656 KiB') // the Capacity footer figure, in full
+  expect(section).toHaveTextContent('97.65 KiB') // the Capacity footer figure, in full
   expect(balanceBar.closest('[aria-label="data stream bit balance"]') || balanceBar).toHaveAttribute('aria-valuenow', String(bits))
   // Flooring: the balance itself must not also read "97.656 KiB" (which would mean it rounded up
   // to match the full capacity reading).
-  expect(section.querySelector('p')).toHaveTextContent('96.679 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('96.67 KiB')
 })
 
 test('Data Stream balance self-sizes into its own finer unit rather than falling back to raw bits when it would floor below 1 in the capacity-shared unit', () => {
@@ -3041,7 +3042,7 @@ test('Data Stream balance self-sizes into its own finer unit rather than falling
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('30.031 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('30.03 KiB')
   expect(section).toHaveTextContent('1 MiB')
 })
 
@@ -3083,7 +3084,7 @@ test('a pool\'s own Memory buffer balance also shows a stable, non-trimmed decim
   expect(pool1.querySelector('p')).toHaveTextContent('5.600 KB')
 })
 
-test('Data Stream balance drops its padded trailing zeros once it has been full for more than 1 second', () => {
+test('Data Stream balance drops its padded trailing zeros once it has been unchanged for 5 seconds', () => {
   vi.useFakeTimers()
   // Below INTRO_CONVERSION_UNLOCK_CAPACITY (8000 bits) so tickIntroAutoInvest can never afford even
   // one tier01 unit from intro.bits — the balance genuinely sits still at capacity instead of being
@@ -3097,16 +3098,20 @@ test('Data Stream balance drops its padded trailing zeros once it has been full 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const balanceText = () => balanceBar.closest('section').querySelector('p')
   // Immediately full, but not YET trimmed — the delay hasn't elapsed.
-  expect(balanceText()).toHaveTextContent('500.00 B')
+  expect(balanceText()).toHaveTextContent('500.0 B')
 
-  act(() => { vi.advanceTimersByTime(1000) })
+  act(() => { vi.advanceTimersByTime(4900) })
+  expect(balanceText()).toHaveTextContent('500.0 B')
+  act(() => { vi.advanceTimersByTime(200) })
   expect(balanceText()).toHaveTextContent('500 B')
+  fireEvent.pointerDown(document.body)
+  expect(balanceText()).toHaveTextContent('500.0 B')
 
   unmount()
   vi.useRealTimers()
 })
 
-test('a pool\'s own Memory buffer balance also drops its padded trailing zeros once its buffer has been full for more than 1 second', async () => {
+test('a pool\'s own Memory buffer balance also drops its padded trailing zeros once it has been unchanged for 5 seconds', async () => {
   vi.useFakeTimers()
   const firstDiskSize = getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE // 8000 — pool 1's own smallest (read-cache-eligible) size
   const poolBufferCapacity = getPoolBufferCapacity({ intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } }, 1)
@@ -3138,7 +3143,7 @@ test('a pool\'s own Memory buffer balance also drops its padded trailing zeros o
   const balanceText = () => pool1.querySelector('p')
   expect(balanceText()).toHaveTextContent('1.000 KB')
 
-  await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+  await act(async () => { await vi.advanceTimersByTimeAsync(5100) })
   expect(balanceText()).toHaveTextContent('1 KB')
 
   unmount()
@@ -3198,7 +3203,7 @@ test('Data Stream and pool speeds show the fill-multiplied value, with no multip
   const speed = within(pool1).getByTitle(/^Bandwidth at/)
   expect(speed).toHaveAttribute('title', `Bandwidth at ${FILL_MULTIPLIER_MAX_PERCENT}% fill multiplier`)
   expect(speed.textContent.replace(/^⚡ /, '').replace(/\/s$/, '').split(' ')[1]).toBe(expected.split(' ')[1])
-  expect(Number(speed.textContent.match(/[\d.]+/)[0])).toBeCloseTo(parseFloat(expected), 0)
+  expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
 })
 
 test('a pool\'s speed tints red at the full-buffer 50% floor', () => {
@@ -3493,6 +3498,7 @@ describe('Byte Foundry Storage', () => {
       // in addition to INTRO_DISK_UNLOCK_CAPACITY, so pool 2's own card actually renders.
       capacity: 1024 * 1024 * BITS_PER_BYTE,
       byteCreated: true,
+      unlockedDiskSteps: 30,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP, [size10kb]: DISK_ARRAY_LADDER_CAP, [size100kb]: DISK_ARRAY_LADDER_CAP },
     })
     render(<App />)
@@ -3539,6 +3545,38 @@ describe('Byte Foundry Storage', () => {
     )
   })
 
+  test('Provision Disk is available as soon as the Byte exists, before Storage is revealed — clicking it queues the build', () => {
+    seedIntroState({ bits: 0, byteCreated: true })
+    render(<App />)
+    const provisionButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(provisionButton).toBeEnabled()
+    fireEvent.click(provisionButton)
+    expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.diskBuildQueued).toBe(true)
+  })
+
+  test('a full unlocked Disk array offers a confirm-guarded Foundry reset instead of Provision Disk, which unlocks the next size and raises the exponent', async () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 1,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+    })
+    render(<App />)
+    expect(screen.queryByRole('button', { name: /^provision disk/i })).not.toBeInTheDocument()
+    const unlockButton = screen.getByRole('button', { name: /foundry reset to unlock disk size/i })
+    expect(unlockButton).toHaveTextContent('10 KB')
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    fireEvent.click(unlockButton)
+    expect(confirmSpy).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: /foundry reset to unlock disk size/i })).toBeInTheDocument()
+
+    confirmSpy.mockReturnValue(true)
+    fireEvent.click(screen.getByRole('button', { name: /foundry reset to unlock disk size/i }))
+    expect(screen.queryByRole('button', { name: /foundry reset to unlock disk size/i })).not.toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.unlockedDiskSteps).toBe(2)
+    confirmSpy.mockRestore()
+  })
+
   test('a pool with its disk-build condition met but Capacity below its own threshold stays hidden, with Provision Disk still reachable in the Data Stream card', () => {
     const size10kb = currentBankSize * 10
     const size100kb = currentBankSize * 100
@@ -3549,6 +3587,7 @@ describe('Byte Foundry Storage', () => {
       // — pool 2's own card must stay hidden even though the disk ladder has already moved on to it.
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
+      unlockedDiskSteps: 30,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP, [size10kb]: DISK_ARRAY_LADDER_CAP, [size100kb]: DISK_ARRAY_LADDER_CAP },
     })
     render(<App />)
@@ -3677,6 +3716,7 @@ describe('Byte Foundry Storage', () => {
     // but the 1 KB array still matches Kilobytes — both sizes stay on the continuous Foundry screen.
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 30,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
       disks: { [currentBankSize]: 1 },
     })
@@ -3698,7 +3738,8 @@ describe('Byte Foundry Storage', () => {
     seedIntroState(
       {
         bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-        disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+        unlockedDiskSteps: 30,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
       },
       { purchaseLevels: { [tier01.id]: 3 } }
     )
@@ -3777,13 +3818,11 @@ describe('Byte Foundry Storage', () => {
     // Buffer (intro.bits), so this seeds poolBuffers directly rather than relying on
     // tickPoolBufferFill's own separate bandwidth-limited top-up (a different mechanism this test
     // isn't exercising). tier01 past level 1 so read cache may flush into the empty disk without an
-    // active tier claim at this size. capacity is set so pool 1's own Bandwidth cap (sqrt of its own
-    // Capacity IN BYTES, converted back to bits/sec — see getStoragePoolBandwidth) lands on a clean
-    // 2,000 bits/sec — deliberately BELOW currentBankSize (8,000), so a full cache fill genuinely
-    // takes real time. tickSpeedSeconds is
-    // set very large (with productionMultiplier scaled to match) purely to push the Byte generator's
-    // own periodic batch delivery (see tickIntroProduction) far outside this test's short window —
-    // with intro.bits seeded at 0, that keeps tickPoolBufferFill inert throughout (nothing to
+    // active tier claim at this size. Pool 1's Bandwidth is 2,000 bits/sec (a clean 250 B/s) —
+    // deliberately BELOW currentBankSize (8,000), so a full cache fill genuinely takes real time. It
+    // comes from the pinned Speed basis below (raw stream rate 256 B/s -> SI-clean 250 B/s), which sits
+    // well under pool 1's own Capacity^0.8 ceiling, so the large seeded Capacity doesn't bind it.
+    // with intro.bits seeded at 0, tickPoolBufferFill stays inert throughout (nothing to
     // transfer), so it can't perturb the directly-seeded pool buffer either.
     // A cache refill FROM the pool buffer is itself further bandwidth-capped
     // (formerly bandwidth-budgeted; now whole blocks land instantly once the pool buffer holds them — elapsed REAL
@@ -3793,13 +3832,9 @@ describe('Byte Foundry Storage', () => {
     // of SIMULATED game time, but only 6 real 100ms ticks (600ms) since each tick only ever advances
     // elapsedSeconds by TICK_RATE_MS/1000 regardless of the underlying rate.
     const bandwidthCapBits = 2000
-    // Pool Capacity now advances in plain decade-power-of-10 steps (getDecadePowerEquivalentBits),
-    // so it's no longer possible to solve directly for a capacity whose sqrt lands on an exact
-    // bandwidth value the way the old SI-clean formula allowed — instead, 2**17 bits happens to
-    // land on decade step 10**5 Bytes (800,000 bits), whose sqrt (≈316.23 Bytes/sec) rounds via the
-    // SAME SI-clean step getStoragePoolBandwidth's own outer rounding already uses to exactly
-    // bandwidthCapBits (2,000) — verified numerically, not just algebraically, since this formula
-    // has no closed-form inverse any more.
+    // Pool Capacity advances in plain decade-power-of-10 steps (getDecadePowerEquivalentBits):
+    // 2**17 bits lands on decade step 10**5 Bytes (800,000 bits), whose Capacity^0.8 ceiling
+    // (10,000 B/s) is far above the pinned raw rate, so Bandwidth is the SI-clean raw rate.
     const bandwidthCapCapacityBits = (2 ** 17) * 8
     seedIntroState(
       {
@@ -3809,7 +3844,9 @@ describe('Byte Foundry Storage', () => {
         disksBuiltTotal: { [currentBankSize]: 1 },
         // Production is continuous now (no tickSpeedSeconds/productionMultiplier knobs) — the huge
         // capacity keeps the derived rate far above the pool bandwidth cap, so the pool buffer
-        // stays topped up and can't perturb the cache-fill timing being measured.
+        // stays topped up and can't perturb the cache-fill timing being measured. The Speed basis is
+        // pinned to 256 B/s raw (1024 B basis) so pool 1 Bandwidth stays a clean 250 B/s (2,000 bits/sec) as this timing was tuned.
+        speedCapacity: Math.ceil(256 ** (1 / DATA_STREAM_SPEED_EXPONENT) * 8),
       },
       { purchaseLevels: { [tier01.id]: 2 } }
     )

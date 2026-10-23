@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, BUY_MAX_ITERATION_CAP, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, AUTO_PRESTIGE_AUTOBUYER_COST, BUY_MAX_ITERATION_CAP, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -427,6 +427,10 @@ export const createInitialGameState = () => ({
     // Absent (undefined) until the first Capacity upgrade materializes it; reads fall back to Capacity.
     speedUpgradeQueued: false,
     speedUpgradeProgress: 0,
+    // PERMANENT through Prestige and Reset Byte Foundry (reset by Era ascension): highest disk ladder step
+    // the player may provision. Step 1 is free; each later step needs a Foundry reset
+    // (unlockNextDiskSizeByFoundryReset), which also raises the speed exponent by 0.01.
+    unlockedDiskSteps: 1,
     // PERMANENT — { [capacityBits]: count } of currently-FULL Disks of that size (see
     // tickDiskAutoFill/pullDiskForCurrentLevel below) — "never lost," survives Prestige/Scale
     // Up/Overclock exactly like the Byte generator itself (a full disk's contents ride through a
@@ -2250,24 +2254,31 @@ const grantTierUnits = (tierId, quantity) => state => {
   return result
 }
 
-// The Data Stream's Speed in BYTES per second, derived from Capacity (never purchased
-// independently — see layers.js's "Data Stream Speed" note): e = log2(capacity in Bytes); sqrt
-// speed at even e; arithmetic mean of the neighbouring even-exponent sqrt speeds at odd e —
-// alternating ×1.5 and ×4/3 growth, exactly ×2 per two Capacity doublings.
-export const getDataStreamSpeedBytesPerSecond = capacityBits => {
-  const capacityBytes = capacityBits / BITS_PER_BYTE
-  if (!Number.isFinite(capacityBytes) || capacityBytes <= 0) return 0
-  const e = Math.round(Math.log2(capacityBytes))
-  const lower = 2 ** Math.floor(e / 2)
-  const upper = 2 ** Math.ceil(e / 2)
-  return (lower + upper) / 2
+// Disk sizes the player may provision: ladder steps 1..unlockedDiskSteps. Step 1 is free; every later
+// step needs a Foundry reset (unlockNextDiskSizeByFoundryReset). Capped at the full ladder length.
+export const getUnlockedDiskSteps = intro => {
+  const raw = Math.floor(Number(intro?.unlockedDiskSteps))
+  return Math.min(DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length, Number.isFinite(raw) && raw >= 1 ? raw : 1)
+}
+
+// The exponent behind Data Stream Speed and the pool Bandwidth cap: BASE (0.5, i.e. sqrt) plus STEP
+// (0.01) per unlocked disk size beyond the first.
+export const getDataStreamSpeedExponent = intro =>
+  DATA_STREAM_SPEED_EXPONENT_BASE + DATA_STREAM_SPEED_EXPONENT_STEP * (getUnlockedDiskSteps(intro) - 1)
+
+// The Data Stream's Speed in BYTES per second for a Speed basis (in bits): (basis in Bytes) ^ exponent
+// (default: the base exponent). Never purchased directly — see layers.js's "Data Stream Speed" note.
+export const getDataStreamSpeedBytesPerSecond = (basisBits, exponent = DATA_STREAM_SPEED_EXPONENT_BASE) => {
+  const basisBytes = basisBits / BITS_PER_BYTE
+  if (!Number.isFinite(basisBytes) || basisBytes <= 0) return 0
+  return basisBytes ** exponent
 }
 
 // The Data Stream's production rate in bits/sec — its derived Speed above expressed in bits
 // (× BITS_PER_BYTE). Replaces the old independently-upgraded tickSpeedSeconds/productionMultiplier
 // pair: capacity itself is the only purchased progression variable now.
 export const getIntroProductionRate = intro =>
-  getDataStreamSpeedBytesPerSecond(intro.speedCapacity ?? intro.capacity ?? 0) * BITS_PER_BYTE
+  getDataStreamSpeedBytesPerSecond(intro.speedCapacity ?? intro.capacity ?? 0, getDataStreamSpeedExponent(intro)) * BITS_PER_BYTE
 
 // --- Fill-based Speed/Bandwidth multiplier (see FILL_MULTIPLIER_* in layers.js) --- Displayed
 // rates (getIntroProductionRate above, getStoragePoolBandwidth below) never change; this
@@ -2548,22 +2559,21 @@ export const getStoragePoolBandwidth = (state, poolIndex) => {
   // Capacity threshold is reached, independent of disk-build progress; see that function's own doc
   // comment.
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getVisibleStoragePoolCount(state)) return 0
-  // Each unlocked pool's Bandwidth simply follows the Data Stream's own Speed doublings — the
-  // same raw production rate the Data Stream tile itself uses — just re-expressed via the
-  // SI-clean switchover sequence instead of plain binary (getSiCleanEquivalentBits): it matches
-  // the raw rate up to 64 B/s, then diverges to 125 instead of 128, and repeats that pattern every
-  // decade (e.g. a raw 256 B/s rate reads as a clean 250 B/s). sqrt(that pool's own Capacity) is
-  // only a GUIDELINE for the bandwidth's lower/upper bounds, not the value itself — it still acts
-  // as the real throughput ceiling once a pool's own (now fixed, maxed-out) Capacity can no longer
-  // keep up with an ever-growing rate, but even then the number shown is the SI-clean equivalent
-  // of that bound, not a raw sqrt remainder. Without either half of this, a small early pool's
-  // Bandwidth (and every rate derived from it: disk/cache fill and build speeds, Booster transfer
-  // pacing) could run far ahead of what its own tiny Memory window could ever plausibly move
-  // through.
+  // Each unlocked pool's Bandwidth follows the Data Stream's own Speed (the same raw production rate
+  // the Data Stream tile itself uses), re-expressed via the SI-clean switchover sequence instead of
+  // plain binary (getSiCleanEquivalentBits): it matches the raw rate up to 64 B/s, then diverges to 125
+  // instead of 128, and repeats that pattern every decade (e.g. a raw 256 B/s rate reads as a clean
+  // 250 B/s). (that pool's own Capacity in Bytes) ^ the current speed exponent (getDataStreamSpeedExponent) — the same exponent that
+  // caps the Data Stream's own Speed against its Capacity — is the real throughput ceiling once a
+  // pool's own (fixed, maxed-out) Capacity can no longer keep up with an ever-growing rate, but even
+  // then the number shown is the SI-clean equivalent of that bound, not a raw power remainder. Without
+  // it, a small early pool's Bandwidth (and every rate derived from it: disk/cache fill and build
+  // speeds, Booster transfer pacing) could run far ahead of what its own tiny Memory window could ever
+  // plausibly move through.
   const capacityBytes = getStoragePoolCapacity(state, poolIndex) / BITS_PER_BYTE
-  const sqrtCapBytes = Math.sqrt(capacityBytes)
+  const capBytes = capacityBytes ** getDataStreamSpeedExponent(state.intro)
   const rawRateBytes = getIntroProductionRate(state.intro ?? {}) / BITS_PER_BYTE
-  const boundedBytes = Math.min(rawRateBytes, sqrtCapBytes)
+  const boundedBytes = Math.min(rawRateBytes, capBytes)
   const base = getSiCleanEquivalentBits(boundedBytes * BITS_PER_BYTE)
   const steps = Math.max(0, getDataLakeTier(state, poolIndex)?.bandwidthSteps ?? 0)
   if (steps === 0) return base
@@ -2899,6 +2909,24 @@ export const normalizePoolMemoryCapacity = state => {
   if (capacity !== nextIntro.capacity) {
     changed = true
     nextIntro.capacity = capacity
+  }
+  // Grandfather saves that built disks before disk sizes needed a Foundry reset: every size already
+  // built counts as unlocked, so nobody is locked out of (or loses) progress they already have.
+  let highestBuiltStep = 1
+  for (const [sizeKey, count] of Object.entries(nextIntro.disksBuiltTotal ?? {})) {
+    if (!(count > 0)) continue
+    highestBuiltStep = Math.max(highestBuiltStep, getDiskLadderStep(Number(sizeKey)) ?? 1)
+  }
+  // Paid-for progress toward the next size (partial passes, an in-flight legacy build) counts too.
+  for (const [sizeKey, passes] of Object.entries(nextIntro.diskProvisionPasses ?? {})) {
+    if (passes > 0) highestBuiltStep = Math.max(highestBuiltStep, getDiskLadderStep(Number(sizeKey)) ?? 1)
+  }
+  if (nextIntro.diskBuild?.size > 0) {
+    highestBuiltStep = Math.max(highestBuiltStep, getDiskLadderStep(nextIntro.diskBuild.size) ?? 1)
+  }
+  if (highestBuiltStep > getUnlockedDiskSteps(nextIntro)) {
+    changed = true
+    nextIntro.unlockedDiskSteps = highestBuiltStep
   }
   // Clamp EVERY pool's own buffer (not just currently Capacity-visible ones — see
   // getPoolBufferClampCeilingBits) down to its own ceiling. A save written before the pool Capacity
@@ -3271,21 +3299,18 @@ export const isMemoryCapacityUpgradeArmable = state => {
   return !isMemoryCapacityAtCap(state)
 }
 
-// Upgrade Speed costs the Capacity a Data Stream of the CURRENT base Speed would have if Speed were
-// sqrt(Capacity): speed² Bytes, in bits. Equals the matching Capacity upgrade's cost at perfect squares
-// (even powers of 2); deviates at odd powers, where Speed is the mean of neighbouring sqrt steps.
-export const getSpeedUpgradeCostBits = intro =>
-  getDataStreamSpeedBytesPerSecond(intro.speedCapacity ?? intro.capacity ?? 0) ** 2 * BITS_PER_BYTE
+// Upgrade Speed costs the current Speed basis (bits): exactly the Capacity at which this Speed would
+// be the cap (Speed = Capacity^exponent), so it matches the Capacity upgrade's cost
+// when Speed is at its cap.
+export const getSpeedUpgradeCostBits = intro => intro.speedCapacity ?? intro.capacity ?? 0
 
-// Base Speed (B/s) can never exceed sqrt(Capacity in Bytes): an upgrade is armable only if the Speed
-// it would grant stays within that bound.
+// Base Speed can never exceed Capacity^exponent, i.e. the doubled basis must still
+// fit within Capacity.
 export const isSpeedUpgradeArmable = state => {
   const intro = state.intro ?? {}
   if (intro.capacityUpgradeQueued || intro.speedUpgradeQueued) return false
   if (!intro.byteCreated) return false
-  const basis = intro.speedCapacity ?? intro.capacity
-  const nextSpeed = getDataStreamSpeedBytesPerSecond(basis * INTRO_CAPACITY_DOUBLING_STEP)
-  return nextSpeed <= Math.sqrt(intro.capacity / BITS_PER_BYTE) * (1 + 1e-9)
+  return getSpeedUpgradeCostBits(intro) * INTRO_CAPACITY_DOUBLING_STEP <= intro.capacity
 }
 
 export const queueIntroSpeedUpgrade = state => {
@@ -3502,11 +3527,14 @@ const MEMORY_AMOUNT_DECIMAL_PLACES = 3
 // Hard cap on significant digits in any unit-scaled memory amount: decimals shrink as the integer
 // part grows, so "1,011.147 MiB" renders "1,011.1 MiB". Never exceeds MEMORY_AMOUNT_DECIMAL_PLACES.
 const MEMORY_AMOUNT_MAX_SIGNIFICANT_DIGITS = 5
+// Fixed significant digits by range: 4 below 1,000 (1.234 / 12.34 / 123.4), 5 from 1,000 up.
+const getMemoryAmountSignificantDigits = integerDigits =>
+  integerDigits >= 4 ? MEMORY_AMOUNT_MAX_SIGNIFICANT_DIGITS : 4
 const getMemoryAmountDecimals = value => {
   const integerDigits = value >= 1 ? Math.floor(Math.log10(value)) + 1 : 1
   return Math.min(
     MEMORY_AMOUNT_DECIMAL_PLACES,
-    Math.max(0, MEMORY_AMOUNT_MAX_SIGNIFICANT_DIGITS - integerDigits),
+    Math.max(0, getMemoryAmountSignificantDigits(integerDigits) - integerDigits),
   )
 }
 
@@ -3695,9 +3723,31 @@ export const getDiskLadderSizeBits = step => {
   return DISK_LADDER_BASE_SIZE_BITS * (DISK_LADDER_SIZE_MULTIPLIER ** (safeStep - 1))
 }
 
-// Number of disk-ladder steps currently reachable from unlocked storage pools.
-export const getMaxActiveDiskLadderStep = state =>
+// Number of disk-ladder steps reachable from unlocked storage pools (ignoring the Foundry-reset gate).
+export const getPoolReachableDiskLadderStep = state =>
   getUnlockedStoragePoolCount(state) * DATA_LAKE_SUB_SIZES.length
+
+// Highest ladder step Provision Disk may currently offer: pool-reachable AND unlocked by a Foundry reset.
+export const getMaxActiveDiskLadderStep = state =>
+  Math.min(getPoolReachableDiskLadderStep(state), getUnlockedDiskSteps(state.intro))
+
+// Whether a Foundry reset can now unlock the next disk size: the current gated array is full and the
+// next step is already reachable from the unlocked pools (so it is only the reset that is missing).
+export const isDiskSizeUnlockAvailable = state => {
+  if (state.intro?.diskBuild) return false
+  if (!isDiskLadderExhaustedForActivePools(state)) return false
+  return getUnlockedDiskSteps(state.intro) < getPoolReachableDiskLadderStep(state)
+}
+
+// The Foundry reset that unlocks the next disk size: a Reset Byte Foundry (Capacity, Disks, Lakes, Compute
+// wipe; Combine / Upgrade Capacity / Upgrade Speed / Provision Disk convenience-replay up to prior highs)
+// plus one more unlocked disk step, which raises the speed exponent by DATA_STREAM_SPEED_EXPONENT_STEP.
+export const unlockNextDiskSizeByFoundryReset = state => {
+  if (!isDiskSizeUnlockAvailable(state)) return state
+  const next = getUnlockedDiskSteps(state.intro) + 1
+  const reset = resetByteFoundry(state)
+  return { ...reset, intro: { ...reset.intro, unlockedDiskSteps: next } }
+}
 
 // Whether every disk size belonging to the currently unlocked pools has been fully built.
 export const isDiskLadderExhaustedForActivePools = state => {
@@ -6645,6 +6695,8 @@ export const resetByteFoundry = state => {
       ...initialIntro,
       mainGameUnlocked: keepMainUnlocked,
       foundryResetCaps,
+      // Unlocked disk sizes (and so the speed exponent) survive a Foundry reset.
+      unlockedDiskSteps: getUnlockedDiskSteps(prev),
     },
   }
 }
@@ -6725,6 +6777,7 @@ export const prestigeGame = state => {
       capacityUpgradeQueued: state.intro?.capacityUpgradeQueued ?? initial.intro.capacityUpgradeQueued,
       capacityUpgradeProgress: state.intro?.capacityUpgradeProgress ?? initial.intro.capacityUpgradeProgress,
       speedCapacity: state.intro?.speedCapacity,
+      unlockedDiskSteps: getUnlockedDiskSteps(state.intro),
       speedUpgradeQueued: state.intro?.speedUpgradeQueued ?? initial.intro.speedUpgradeQueued,
       speedUpgradeProgress: state.intro?.speedUpgradeProgress ?? initial.intro.speedUpgradeProgress,
       poolBuffers: state.intro?.poolBuffers ?? initial.intro.poolBuffers,
