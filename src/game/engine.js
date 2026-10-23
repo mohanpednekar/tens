@@ -4058,13 +4058,25 @@ export const tickQueuedDiskBuild = state => {
   return built.intro?.diskBuildQueued ? { ...built, intro: { ...built.intro, diskBuildQueuedByReplay: true } } : built
 }
 
-// Sizes below the newest unlocked one (rebuilt after a Foundry reset) provision themselves: each tick,
-// while the size Provision Disk would build is smaller than the presented (newest unlocked) size, fund
-// it from the pool buffer exactly like a click would. Same-reference no-op otherwise.
+// Sizes below the newest unlocked one (rebuilt after a Foundry reset) provision themselves FOR FREE, one
+// disk at a time (same shape as tickPoolResetReprovision): while the size Provision Disk would build is
+// smaller than the presented (newest unlocked) size, add one empty disk to that array, then wait for it
+// to fill (the ordinary cache fill) before adding the next — a disk counts as provisioned again once it
+// is full. Same-reference no-op otherwise.
 export const tickAutoProvisionLowerDiskSizes = state => {
   if (!state.intro?.byteCreated) return state
   if (!isLowerDiskSizePending(state)) return state
-  return provisionDisk(state)
+  const size = getDiskSize(state)
+  const poolIndex = getPoolIndexForDiskSize(size)
+  if (isStoragePoolRebuilding(state, poolIndex) || isLaterPoolProvisioningLocked(state, poolIndex)) return state
+  if (state.intro.diskBuild) return state
+  const built = state.intro.disksBuiltTotal?.[size] ?? 0
+  const full = state.intro.disks?.[size] ?? 0
+  if (built > 0 && full < built) return state
+  return {
+    ...state,
+    intro: { ...state.intro, disksBuiltTotal: { ...state.intro.disksBuiltTotal, [size]: built + 1 } },
+  }
 }
 
 // Counts down intro.diskBuild's remainingSeconds every tick — a no-op when no build is in

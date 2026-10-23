@@ -37,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- After a Foundry reset, every smaller Disk size rebuilds itself automatically and Provision Disk presents only the newest unlocked size (disabled with a "Rebuilding … first" note until the smaller sizes are done).
+- After a Foundry reset, every smaller Disk size rebuilds itself for free (one disk at a time; each counts as provisioned again once it fills) and Provision Disk presents only the newest unlocked size (disabled with a "Rebuilding … first" note until the smaller sizes are done).
 
 - The Provision Disk button also stays visible while its pool is rebuilding after a pool reset; a click queues the build, which fires once the rebuild finishes.
 

@@ -12214,12 +12214,15 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
     expect(tickAutoProvisionLowerDiskSizes(state)).toBe(state)
   })
 
-  it('funds the smaller size by itself from the pool buffer, no click needed', () => {
+  it('provisions the smaller size for free, one disk at a time, each waiting for the previous to fill', () => {
     const base = afterReset()
-    const funded = withPoolBuffer(base, getDiskCost(base, FIRST_DISK_SIZE))
-    const withCache = withIntro(funded, { diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE } })
-    const after = tickAutoProvisionLowerDiskSizes(withCache)
-    expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(1)
+    expect(base.intro.poolBuffers?.[1] ?? 0).toBe(0) // nothing to pay with
+    const first = tickAutoProvisionLowerDiskSizes(base)
+    expect(first.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(1)
+    expect(first.intro.poolBuffers?.[1] ?? 0).toBe(0) // free
+    expect(tickAutoProvisionLowerDiskSizes(first)).toBe(first) // first disk still empty
+    const filled = withIntro(first, { disks: { [FIRST_DISK_SIZE]: 1 } })
+    expect(tickAutoProvisionLowerDiskSizes(filled).intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(2)
   })
 
   it('keeps going until the smaller array is full, then presents/offers the newest size', () => {
