@@ -51,7 +51,7 @@ If any tier `id` is renamed or removed, check `src/game/storage.js`'s `LEGACY_TI
 issue specifies — an old id missing from either one silently orphans that tier's saved
 `resources`/`owned`/`purchased`/`purchaseLevels`/`purchaseLevelProgress`/`autobuyers`/
 `autobuyersEnabled`/`tickspeedLevels`/`autobuyerAttemptBudgets`/`tierProductionAccumulators`/
-`smartAutobuyer`/`tierTickspeedAutobuyer`/`tierTickspeedAutobuyerEnabled`/`everUnlockedTierIds`
+`autobuyerBulkLevels`/`tierTickspeedAutobuyer`/`tierTickspeedAutobuyerEnabled`/`everUnlockedTierIds`
 data on existing players' next load, rather than carrying it forward or making a deliberate,
 spec'd decision to discard it (see every `migrateTierKeys(saved.<field>)` call site in
 `migrateState`, `storage.js`, and the `LEGACY_REMOVED_TIER_IDS` comment for an example of a

@@ -611,7 +611,7 @@ export const PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10
 export const PRESTIGE_POINT_SPEED_BONUS = 0.01
 // One-time PP cost to unlock the passive production-speed bonus above (see engine.js's
 // buyPrestigeSpeedBonus) — before this is bought, unspent Prestige Points grant no production
-// bonus at all, regardless of balance. Permanent once bought, like autobuyer automation/Smart/
+// bonus at all, regardless of balance. Permanent once bought, like autobuyer automation/bulk mode/
 // Auto-Prestige. Priced well above the global automation unlocks (see AUTOMATION_INTERVAL_CONFIG),
 // since it's a passive, always-on bonus rather than a one-shot action.
 export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000
@@ -628,7 +628,7 @@ export const TICKSPEED_PRODUCTION_STEP = 0.1
 // Historical per-tier PP-cost formula (see engine.js's getAutobuyerUnlockCost) — no longer an
 // actual purchase (a tier's autobuyer now unlocks automatically at a prestige-count milestone
 // instead, see AUTOBUYER_UNLOCK_MILESTONE_START below), kept only as the pricing benchmark
-// SMART_AUTOBUYER_COST_MULTIPLIER below multiplies: 1 "PP-equivalent" for the first tier, up
+// getAutobuyerBulkModeCost multiplies: 1 "PP-equivalent" for the first tier, up
 // through 10 for the 10th/last tier.
 export const AUTOBUYER_UNLOCK_BASE_COST = 1
 // Autobuyer bulk mode (engine.js's getAutobuyerBulkModeCost/buyAutobuyerBulkMode): without it a tier's
@@ -678,10 +678,6 @@ export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 2
 // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) speeds up *every* tier's
 // production at once. Every level compounds by the same rate.
 export const GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01
-// Auto-Prestige's base check cadence at level 1: once unlocked, it attempts to prestige roughly
-// this often (see engine.js's getAutoPrestigeAttemptRate) — only actually firing once Money has
-// reached GOOGOL. Each level beyond the first speeds this up by 10%, compounding.
-export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
 // Per-activation production-speed multiplier base for Scale Up (see engine.js's
 // getTierScaleUpMultiplier/scaleUpGame) — production is multiplied by SCALE_UP_MULTIPLIER_BASE raised
 // to each included tier’s Scale Up count, so a claim doubles only tiers already unlocked.

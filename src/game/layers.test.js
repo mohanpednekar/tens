@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  AUTO_PRESTIGE_BASE_INTERVAL_SECONDS,
   BITS_PER_BYTE,
   BYTES_ID,
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
@@ -254,10 +253,6 @@ describe('constants', () => {
 
   it('PRESTIGE_SPEED_BONUS_UNLOCK_COST is 10000', () => {
     expect(PRESTIGE_SPEED_BONUS_UNLOCK_COST).toBe(10000)
-  })
-
-  it('AUTO_PRESTIGE_BASE_INTERVAL_SECONDS is 1000', () => {
-    expect(AUTO_PRESTIGE_BASE_INTERVAL_SECONDS).toBe(1000)
   })
 
   it('SCALE_UP_MULTIPLIER_BASE is 2 (production doubles per activation)', () => {
