@@ -225,6 +225,9 @@ const RunningTitle = styled.span`
   grid-column: 1;
   grid-row: 1;
   justify-self: start;
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
   font-weight: 700;
   white-space: nowrap;
 `
@@ -234,12 +237,13 @@ const RunningChange = styled.span`
   grid-column: 1;
   grid-row: 2;
   justify-self: start;
-  font-size: 0.8em;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 500;
+  opacity: 0.85;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   @media (max-width: 360px) {
-    font-size: 0.68em;
+    font-size: 0.62rem;
   }
 `
 
@@ -248,11 +252,12 @@ const RunningPercent = styled.span`
   grid-row: 1 / span 2;
   align-self: center;
   justify-self: center;
-  font-size: 1.4em;
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.xl.size};
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   @media (max-width: 360px) {
-    font-size: 1.1em;
+    font-size: ${props => props.theme.type.scale.md.size};
   }
 `
 
@@ -260,7 +265,7 @@ const RunningTime = styled.span`
   grid-column: 3;
   grid-row: 2;
   justify-self: end;
-  font-size: 0.75em;
+  font-size: 0.7rem;
   font-weight: 500;
   opacity: 0.85;
   font-variant-numeric: tabular-nums;
