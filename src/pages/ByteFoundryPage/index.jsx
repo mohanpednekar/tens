@@ -207,6 +207,49 @@ const UpgradingDots = styled.span`
   }
 `
 
+// Running-upgrade layout (same title-left / speed-right arrangement as the Data Stream and pool tiles):
+// a fixed-width percent gutter on the left, the title + cost lines (left-aligned, truncating) in the
+// middle, and the ⚡ draw rate in normal flow on the right, so nothing can overlap on narrow screens.
+const RunningUpgradeContent = styled.div`
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: ${props => props.theme.space.sm};
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+`
+
+const RunningPercent = styled.span`
+  min-width: 4ch;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+`
+
+// On very narrow screens the verb is dropped ("⏫ Capacity…") and the cost line may wrap instead of truncating.
+const RunningVerb = styled.span``
+
+const RunningText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  & > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  @media (max-width: 380px) {
+    ${RunningVerb} {
+      display: none;
+    }
+    & > span:last-child {
+      white-space: normal;
+    }
+  }
+`
+
 const MilestoneCostLine = styled.span`
   font-size: 0.75em;
   font-weight: 500;
@@ -956,17 +999,20 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   $progress={runningProgress}
                   $pulse
                 >
-                  <MilestoneButtonContent>
-                    <span>{speedUpgradeQueued ? '⏫ Upgrading Speed' : '⏫ Upgrading Capacity'}<UpgradingDots>…</UpgradingDots> ({Math.floor(runningProgress)}%)</span>
-                    <MilestoneCostLine>
-                      {speedUpgradeQueued
-                        ? `⚡ ${currentRateText} → ${nextRateText} · ⏳ ${runningTimeLeftText}`
-                        : `📦 ${currentCapacityText} → ${nextCapacityText} · ⏳ ${runningTimeLeftText}`}
-                    </MilestoneCostLine>
-                  </MilestoneButtonContent>
-                  <SpeedText $centered $color={getSpeedColor(runningMultiplierPercent)} title={`Upgrade draw at ${Math.round(runningMultiplierPercent)}% fill multiplier`}>
-                    ⚡ {runningRateText}
-                  </SpeedText>
+                  <RunningUpgradeContent>
+                    <RunningPercent>{Math.floor(runningProgress)}%</RunningPercent>
+                    <RunningText>
+                      <span>⏫ <RunningVerb>Upgrading </RunningVerb>{speedUpgradeQueued ? 'Speed' : 'Capacity'}<UpgradingDots>…</UpgradingDots></span>
+                      <MilestoneCostLine>
+                        {speedUpgradeQueued
+                          ? `⚡ ${currentRateText} → ${nextRateText} · ⏳ ${runningTimeLeftText}`
+                          : `📦 ${currentCapacityText} → ${nextCapacityText} · ⏳ ${runningTimeLeftText}`}
+                      </MilestoneCostLine>
+                    </RunningText>
+                    <SpeedText $color={getSpeedColor(runningMultiplierPercent)} title={`Upgrade draw at ${Math.round(runningMultiplierPercent)}% fill multiplier`}>
+                      ⚡ {runningRateText}
+                    </SpeedText>
+                  </RunningUpgradeContent>
                   <VisuallyHidden
                     role="progressbar"
                     aria-label="data stream upgrade progress"
