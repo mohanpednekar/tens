@@ -4,10 +4,10 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolRebuilding } from 'game/engine'
+import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getFillMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
-import styled, { css } from 'styled-components'
+import styled, { css, keyframes } from 'styled-components'
 
 const RootDiv = styled.div`
   display: flex;
@@ -153,6 +153,21 @@ const formatUpgradeTimeLeft = totalSeconds => {
   return formatOfflineDuration(seconds)
 }
 
+// Seconds until a buffer is full (null when already full or not filling). The fill multiplier falls linearly
+// from 150% (empty) to 50% (full), so the buffer follows dx/dt = rate × (1.5 − x/capacity) and the time from
+// `bits` is (capacity / rate) × ln((1.5 − fill) / 0.5) — the same integral the running-upgrade bar uses.
+// `baseRate` is the Speed/Bandwidth before the fill multiplier; assumes nothing else draws from the buffer.
+export const getBufferSecondsToFull = (bits, capacity, baseRate) => {
+  if (!(capacity > 0) || bits >= capacity || !(baseRate > 0)) return null
+  const fill = Math.max(0, bits) / capacity
+  return (capacity / baseRate) * Math.log((1.5 - fill) / 0.5)
+}
+
+const formatBufferTimeToFull = (bits, capacity, baseRate) => {
+  const seconds = getBufferSecondsToFull(bits, capacity, baseRate)
+  return seconds === null ? null : formatUpgradeTimeLeft(seconds)
+}
+
 const MilestonesRow = styled.div`
   display: flex;
   gap: ${props => props.theme.space.sm};
@@ -175,6 +190,92 @@ const MilestoneButtonContent = styled.div`
   align-items: center;
   gap: 2px;
   min-width: 0;
+`
+
+// The "…" in "Upgrading …" reveals its dots one at a time (clip-path steps), so the label reads as in
+// progress while keeping the real "…" character in the text. Static under reduced motion.
+const revealDots = keyframes`
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+`
+
+const UpgradingDots = styled.span`
+  display: inline-block;
+  animation: ${revealDots} 1.2s steps(4, jump-none) infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+`
+
+// Running-upgrade layout: "⏫ Upgrading…" top-left with the from → to on one line below it, the percent
+// centred in the middle, and the ⚡ draw rate top-right with the ⏳ time left directly under it (like every
+// other timer). Columns size to content (centre takes the rest) so nothing overlaps on narrow screens.
+const RunningUpgradeContent = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: ${props => props.theme.space.sm};
+  row-gap: 2px;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+`
+
+const RunningTitle = styled.span`
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+// One line under the title: "current → next".
+const RunningChange = styled.span`
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: start;
+  font-size: 0.7rem;
+  font-weight: 500;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  @media (max-width: 360px) {
+    font-size: 0.62rem;
+  }
+`
+
+const RunningPercent = styled.span`
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  justify-self: center;
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.xl.size};
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  @media (max-width: 360px) {
+    font-size: ${props => props.theme.type.scale.md.size};
+  }
+`
+
+const RunningTime = styled.span`
+  grid-column: 3;
+  grid-row: 2;
+  justify-self: end;
+  font-size: 0.7rem;
+  font-weight: 500;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 `
 
 const MilestoneCostLine = styled.span`
@@ -398,6 +499,14 @@ const FillableStatCard = styled.div`
   `}
 `
 
+// Running Data Stream upgrade: a full-width status tile flush under the stream tile (same fill
+// convention as the tile above and the pool tiles), not a button-like control.
+const UpgradeStatusTile = styled(FillableStatCard)`
+  align-items: stretch;
+  border-top: 1px solid ${props => props.theme.color.border};
+  border-radius: 0;
+`
+
 const PoolTile = styled(FillableStatCard)`
   position: relative;
   ${props => props.$expanded && 'border-bottom-left-radius: 0; border-bottom-right-radius: 0;'}
@@ -418,6 +527,21 @@ const formatMemoryBalanceValue = (bits, capacityBits, byteCreated, stable = true
     ? getMemoryUnit(bits, byteCreated)
     : capacityUnit
   return stable ? formatMemoryAmountStable(bits, balanceUnit) : formatMemoryAmount(bits, balanceUnit)
+}
+
+// Floors to at most 3 significant digits (never overstates), no unit — the number half of formatSpeedText.
+const formatThreeSignificant = value => {
+  if (!(value > 0)) return '0'
+  const scale = 10 ** (Math.floor(Math.log10(value)) - 2)
+  return String(Number((Math.floor(value / scale + 1e-9) * scale).toPrecision(12)))
+}
+
+// "from → to" for the running-upgrade bar: both numbers in the TARGET's binary unit (so a from-value that
+// would have read in a smaller unit becomes a fraction of it, e.g. "0.5 → 1 KiB/s"), max 3 significant
+// digits, and the unit (plus `suffix`) shown once, on the right-hand number only.
+export const formatBitsTransition = (fromBits, toBits, suffix = '') => {
+  const unit = getMemoryUnit(toBits, true)
+  return `${formatThreeSignificant(fromBits / unit.divisor)} → ${formatThreeSignificant(toBits / unit.divisor)} ${unit.symbol}${suffix}`
 }
 
 const formatMemoryCapacityValue = (capacityBits, byteCreated) =>
@@ -495,6 +619,15 @@ const BonusText = styled.span`
   white-space: nowrap;
 `
 
+// Shown in the bonus slot (right column, under the Speed figure) while no tap bonus is active — the
+// bonus takes the slot over whenever it is.
+const TimeText = styled.span`
+  grid-column: 3;
+  justify-self: end;
+  color: ${props => props.theme.color.textMuted};
+  white-space: nowrap;
+`
+
 const BarTrack = styled.div`
   position: relative;
   min-width: 0;
@@ -529,10 +662,10 @@ const TapIcon = styled.span`
 `
 
 // Second row under the title row: Capacity under the section name (left), the tap bonus under the
-// Speed/Bandwidth figure (right, "+x% 👆"), and between them a narrow bonus bar that only shows
+// Speed/Bandwidth figure (right, "+x% 👆" — or, while no bonus is active, the time until the buffer is full), and between them a narrow bonus bar that only shows
 // while a bonus is active (the fill-based multiplier itself is the tinted Speed figure, see
 // getSpeedColor/formatSpeedText).
-const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel }) => {
+const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel, timeLeftText = null }) => {
   const clampedBonus = Math.min(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, Math.max(0, bonusPercent))
   const hasBonus = clampedBonus > 0
   return (
@@ -551,6 +684,7 @@ const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel }) => {
         </BarTrack>
       )}
       {hasBonus && <BonusText>+{Math.round(clampedBonus)}% <TapIcon>👆</TapIcon></BonusText>}
+      {!hasBonus && timeLeftText && <TimeText title="Estimated time until this buffer is full, following the fill multiplier and assuming nothing else draws from it">⏳ {timeLeftText}</TimeText>}
     </SubRow>
   )
 }
@@ -620,6 +754,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // exactly what applies at 100% of this — the real per-tick delivery scales by this percent
   // instead (see getDataStreamEffectMultiplier in game/engine).
   const dataStreamMultiplierPercent = getDataStreamMultiplierPercent(intro)
+  const dataStreamTimeLeftText = formatBufferTimeToFull(intro.bits, intro.capacity, productionRate)
   // Matches tapIntroBit's own post-reveal no-op guard (engine.js) — only relevant once Storage
   // pools are revealed (visiblePoolCount >= 1), the same condition that switches the tap itself
   // from a direct bit credit into a multiplier-bonus tap.
@@ -630,7 +765,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // Starting the next disk's build stays on this page (the Byte Foundry's own core loop). Ranked
   // third in the forced priority order — see isProvisionDiskTurnAvailable. Every shown size's
   // DiskArrayRow (Cache then Disks per size, ascending) renders below as continuous sections.
-  const diskSize = getDiskSize(state)
+  // Only the newest unlocked size is ever presented; smaller incomplete sizes (after a Foundry reset)
+  // rebuild themselves automatically (tickAutoProvisionLowerDiskSizes).
+  const lowerDiskSizePending = isLowerDiskSizePending(state)
+  const autoDiskSize = getDiskSize(state)
+  const diskSize = getPresentedDiskSize(state)
   const diskCost = getDiskCost(state, diskSize)
   const diskPassesRequired = getDiskProvisionPassesRequired(state, diskSize)
   const diskPoolIndex = getPoolIndexForDiskSize(diskSize)
@@ -654,14 +793,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     if (confirmed) actions.unlockNextDiskSize()
   }
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
-  const canStartDiskBuild = isProvisionDiskTurnAvailable(state)
+  const canStartDiskBuild = !lowerDiskSizePending && isProvisionDiskTurnAvailable(state)
   const diskBuildInProgress = intro.diskBuild
   // The build cost is paid in diskPassesRequired passes of the disk's own face-value size each (N
   // for the array's Nth disk, capped at DISK_BUILD_COST_MULTIPLIER — see provisionDisk/
   // getDiskProvisionPassesRequired in game/engine) — "blocked by priority" now only needs a single
   // pass's worth in the SPENDABLE buffer (cache reservation excluded), not the whole cost, to be a
   // real (if lower-priority) option.
-  const diskBuildBlockedByPriority = !diskLadderExhausted && diskPoolSpendableBufferBits >= diskSize && !canStartDiskBuild && !diskBuildInProgress
+  const diskBuildBlockedByPriority = !lowerDiskSizePending && !diskLadderExhausted && diskPoolSpendableBufferBits >= diskSize && !canStartDiskBuild && !diskBuildInProgress
   // Clamped at diskPassesRequired: a save carrying a diskProvisionPasses value banked under an
   // earlier flat-multiplier version of this ladder (now exceeding a smaller ordinal's own
   // requirement) would otherwise display a nonsensical "N/M" with N > M until the engine's own
@@ -707,13 +846,16 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const capacityUpgradeProgress = clampPercent(((intro.capacityUpgradeProgress ?? 0) / capacityUpgradeCost) * 100)
   const speedUpgradeProgress = clampPercent(((intro.speedUpgradeProgress ?? 0) / speedUpgradeCost) * 100)
   const runningProgress = speedUpgradeQueued ? speedUpgradeProgress : capacityUpgradeProgress
-  // The bar fills at 100% of base Speed, so time left is the remaining cost over that rate.
-  const runningRemainingBits = speedUpgradeQueued
-    ? speedUpgradeCost - (intro.speedUpgradeProgress ?? 0)
-    : capacityUpgradeCost - (intro.capacityUpgradeProgress ?? 0)
-  const runningTimeLeftText = formatUpgradeTimeLeft(productionRate > 0 ? runningRemainingBits / productionRate : Infinity)
-  const currentCapacityText = formatMemoryCapacityValue(intro.capacity, true)
-  const currentRateText = `${formatBitsInNearestUnit(productionRate)}/s`
+  // The bar draws at base Speed × its own fill multiplier (1.5 - fill, i.e. 150% empty → 50% full), so the
+  // time left is the integral of that curve: (cost / rate) × ln((1.5 - fill) / 0.5) for fill = progress / cost.
+  const runningCost = speedUpgradeQueued ? speedUpgradeCost : capacityUpgradeCost
+  const runningDone = speedUpgradeQueued ? (intro.speedUpgradeProgress ?? 0) : (intro.capacityUpgradeProgress ?? 0)
+  const runningFill = runningCost > 0 ? Math.min(1, Math.max(0, runningDone / runningCost)) : 1
+  const runningMultiplierPercent = getFillMultiplierPercent(runningFill)
+  const runningRateText = `${formatSpeedText(formatBitsInNearestUnit(productionRate * runningMultiplierPercent / 100))}/s`
+  const runningTimeLeftText = formatUpgradeTimeLeft(productionRate > 0 && runningCost > 0
+    ? (runningCost / productionRate) * Math.log((1.5 - runningFill) / 0.5)
+    : Infinity)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
 
   // The shared Provision Disk control (one ladder spanning every pool, not per-pool) — rendered
@@ -744,11 +886,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // A queued build is the only state where provisioning is actually progressing (it fires itself as
   // the buffer allows), so it alone gets the progressive title, the pulse and the hourglass — idle
   // states keep the imperative "Provision …" so the two never read alike.
-  const diskProvisioningActive = Boolean(diskBuildQueued) && !diskBuildInProgress && !diskLadderExhausted
+  const diskProvisioningActive = Boolean(diskBuildQueued) && !diskBuildInProgress && !diskLadderExhausted && !lowerDiskSizePending
   const diskBuildStatus = diskBuildInProgress
     ? { icon: '🏗', label: `Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk`, status: `${Math.ceil(diskBuildInProgress.remainingSeconds)}s left` }
     : diskLadderExhausted
       ? { icon: '✅', label: `All Pools Complete (${formatDiskSize(diskSize)})`, status: null }
+      : lowerDiskSizePending
+        ? { icon: '🔁', label: diskOfferLabel, status: `Rebuilding ${formatDiskSize(autoDiskSize)} first · automatic` }
       : diskBuildQueued
         ? {
             icon: '⏳',
@@ -781,13 +925,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     <Button
       aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
       aria-description={diskBuildStatus.reason ? `${diskBuildStatus.status} (${diskBuildStatus.reason})` : diskBuildStatus.status ?? undefined}
-      disabled={!!diskBuildInProgress || diskLadderExhausted}
+      disabled={!!diskBuildInProgress || diskLadderExhausted || lowerDiskSizePending}
       onClick={handleProvisionDiskClick}
       title={
         diskBuildInProgress
           ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
           : diskLadderExhausted
             ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
+            : lowerDiskSizePending
+              ? `Smaller sizes are re-provisioned for free first (${formatDiskSize(autoDiskSize)} now); ${formatDiskSize(diskSize)} unlocks for provisioning once they are done`
             : diskBuildQueued
               ? `Queued — fires itself the instant ${diskBuildBlockedByPriority ? 'it is your turn' : 'enough is banked'} (${diskPassesCollected}/${diskPassesRequired} passes so far)`
               : canStartDiskBuild
@@ -799,7 +945,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   : `Not enough banked yet for the next pass (${diskPassesCollected}/${diskPassesRequired} collected) — click to queue this build so it fires itself as the buffer fills`
       }
       type="button"
-      variant={diskLadderExhausted ? 'neutral' : diskBuildQueued ? 'smart' : canStartDiskBuild ? 'info' : 'neutral'}
+      variant={diskLadderExhausted || lowerDiskSizePending ? 'neutral' : diskBuildQueued ? 'smart' : canStartDiskBuild ? 'info' : 'neutral'}
       $progress={diskBuildProgress}
       $pulse={diskProvisioningActive}
     >
@@ -842,7 +988,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               {formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed)}
             </BalanceText>
             {dataStreamRateText && (
-              <SpeedText $centered={!(intro.dataStreamTapBonusPercent > 0)} $color={getSpeedColor(dataStreamMultiplierPercent)} title={`Speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}>
+              <SpeedText $centered={!(intro.dataStreamTapBonusPercent > 0) && !dataStreamTimeLeftText} $color={getSpeedColor(dataStreamMultiplierPercent)} title={`Speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}>
                 ⚡ {dataStreamRateText}
               </SpeedText>
             )}
@@ -850,6 +996,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           <CapacityBonusRow
             capacityText={formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
             bonusPercent={intro.dataStreamTapBonusPercent ?? 0}
+            timeLeftText={dataStreamTimeLeftText}
             ariaLabel="data stream fill-based speed multiplier"
           />
           </TileHeader>
@@ -862,7 +1009,43 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           />
         </FillableStatCard>
 
-        {(canCombine || intro.byteCreated) && (
+        {intro.byteCreated && upgradeRunning && (
+          <UpgradeStatusTile
+            aria-label={speedUpgradeQueued ? 'upgrade speed' : 'upgrade capacity'}
+            as="section"
+            title={speedUpgradeQueued
+              ? 'Upgrading Speed — pulling the Data Stream\'s Speed into the bar'
+              : `Upgrading to ${nextCapacityText} — pulling the Data Stream's base Speed into the bar`}
+            $progress={runningProgress}
+          >
+            <RunningUpgradeContent>
+              <RunningTitle>⏫ Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
+              <RunningChange>
+                {speedUpgradeQueued
+                  ? `⚡ ${formatBitsTransition(productionRate, nextRate, '/s')}`
+                  : `📦 ${formatBitsTransition(intro.capacity, nextCapacity)}`}
+              </RunningChange>
+              <RunningPercent>{Math.floor(runningProgress)}%</RunningPercent>
+              <SpeedText
+                $color={getSpeedColor(runningMultiplierPercent)}
+                style={{ gridColumn: 3, gridRow: 1, justifySelf: 'end' }}
+                title={`Upgrade draw at ${Math.round(runningMultiplierPercent)}% fill multiplier`}
+              >
+                ⚡ {runningRateText}
+              </SpeedText>
+              <RunningTime>⏳ {runningTimeLeftText}</RunningTime>
+            </RunningUpgradeContent>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="data stream upgrade progress"
+              aria-valuenow={Math.round(runningProgress)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </UpgradeStatusTile>
+        )}
+
+        {(canCombine || (intro.byteCreated && !upgradeRunning)) && (
         <ActionsRow>
           {canCombine && (
             <Button
@@ -886,38 +1069,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           {/* Two upgrade buttons; while either runs they are replaced by one inert status bar (aria-disabled,
               not `disabled`, so it keeps its colors and pulse) filled by the running upgrade's progress.
               No cancel — the buttons return when the upgrade completes. */}
-          {intro.byteCreated && (
+          {intro.byteCreated && !upgradeRunning && (
             <MilestonesRow>
-              {upgradeRunning ? (
-                <Button
-                  aria-label={speedUpgradeQueued ? 'upgrade speed' : 'upgrade capacity'}
-                  aria-disabled
-                  style={{ pointerEvents: 'none', cursor: 'default' }}
-                  title={speedUpgradeQueued
-                    ? 'Upgrading Speed — pulling the Data Stream\'s base Speed into the bar'
-                    : `Upgrading to ${nextCapacityText} — pulling the Data Stream's base Speed into the bar`}
-                  type="button"
-                  variant="prestige"
-                  $progress={runningProgress}
-                  $pulse
-                >
-                  <MilestoneButtonContent>
-                    <span>{speedUpgradeQueued ? '⏫ Upgrading Speed…' : '⏫ Upgrading Capacity…'} ({Math.floor(runningProgress)}%)</span>
-                    <MilestoneCostLine>
-                      {speedUpgradeQueued
-                        ? `⚡ ${currentRateText} → ${nextRateText} · ⏳ ${runningTimeLeftText}`
-                        : `📦 ${currentCapacityText} → ${nextCapacityText} · ⏳ ${runningTimeLeftText}`}
-                    </MilestoneCostLine>
-                  </MilestoneButtonContent>
-                  <VisuallyHidden
-                    role="progressbar"
-                    aria-label="data stream upgrade progress"
-                    aria-valuenow={Math.round(runningProgress)}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                  />
-                </Button>
-              ) : (
+              {!upgradeRunning && (
                 <>
                   <Button
                     aria-label="upgrade data stream capacity"
@@ -968,7 +1122,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         )}
       </DataStreamCard>
 
-      {intro.byteCreated && !isStoragePoolRebuilding(state, diskPoolIndex) && (
+      {intro.byteCreated && (
         <ProvisionCard aria-label="Provision Disk">{provisionDiskButton}</ProvisionCard>
       )}
 
@@ -986,6 +1140,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // Matches tapPoolBuffer's own no-op guards (engine.js) — the button must be disabled for
         // both, not just a full buffer, or a capped tap silently does nothing with no feedback.
         const poolTapBonusPercent = getPoolTapBonusPercent(state, poolIndex)
+        const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolBandwidth)
         const poolMultiplierCapped = poolTapBonusPercent >= FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT
         // tickDataLakePoolDrain (engine.js) feeds the lake straight from this pool's buffer whenever
         // isDataLakePoolDrainAvailable. A tap can't speed the lake up then (the drain is capped at
@@ -1030,13 +1185,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     </PoolTitleToggle>
                   </SectionTitle>
                   <PoolBalanceText bits={poolBufferBits} poolIndex={poolIndex} large={poolTapBonusPercent <= 0} />
-                  <SpeedText $centered={poolTapBonusPercent <= 0} $color={getSpeedColor(poolMultiplierPercent)} title={`Bandwidth at ${Math.round(poolMultiplierPercent)}% fill multiplier`}>
+                  <SpeedText $centered={poolTapBonusPercent <= 0 && !poolTimeLeftText} $color={getSpeedColor(poolMultiplierPercent)} title={`Bandwidth at ${Math.round(poolMultiplierPercent)}% fill multiplier`}>
                     ⚡ {formatSpeedText(formatDiskSize(poolBandwidth * poolMultiplierPercent / 100))}/s
                   </SpeedText>
                 </TitleRow>
                 <CapacityBonusRow
                   capacityText={formatDiskSizeInPoolUnit(poolBufferCapacity, poolIndex)}
                   bonusPercent={poolTapBonusPercent}
+                  timeLeftText={poolTimeLeftText}
                   ariaLabel={`pool ${poolIndex} fill-based bandwidth multiplier`}
                 />
                 </TileHeader>

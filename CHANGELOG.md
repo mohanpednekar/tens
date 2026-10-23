@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Read-cache blocks fill instantly.** Once a pool's Memory holds a full cache block, that block is
+  filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate.
+
 ### Added
+
 
 - **Foundry reset unlocks the next Disk size.** Once the current Disk array is full, Provision Disk is replaced by a confirm-guarded **Foundry reset: unlock <size> Disks** button. It resets the Byte Foundry (Capacity, Disks, Lakes, Compute) and unlocks provisioning for the next size, raising the Data Stream Speed / pool Bandwidth exponent by 0.01 (starts at 0.5). Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs, paid from the Data Stream, with no clicks; Data Lakes (Boosters, lake upgrades, pool resets) and Compute entities are wiped, exactly like Reset Byte Foundry. Era ascension resets the unlocked sizes and exponent.
 
@@ -36,6 +42,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   contents automatically, without a conversion button.
 
 ### Changed
+
+- **Read-cache blocks fill instantly.** Once a pool's Memory holds a full cache block, that block is
+  filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate. The first empty cache block shows the pool's progress toward it, so it still looks like a gradual fill.
+- **Lake time to next Booster.** Each Data Lake header now shows `⏳ time left` under its fill speed — the time until it has banked the next Booster's cost at the current fill speed. Reset Pool / Scale Out replace it when offered.
+
+- Boosters page shows only unlocked tiers; tiers without auto-merge get a spacious layout, automated ones keep the compact layout.
+- **Running upgrade bar layout.** The Upgrading Capacity/Speed bar now reads "⏫ Upgrading…" top-left with the from → to values on one line below it, the percent centred, and the ⚡ draw rate top-right with the ⏳ time left directly under it, like the other tiles, with the same fonts and sizes as the Data Stream and pool tiles. The from → to shows its unit once, on the right-hand number, with at most 3 significant digits (a left value that would have used a smaller unit is shown in the right-hand unit, e.g. `0.5 → 1 KiB/s`), and the percent sits in the exact centre.
+- **Time to full under the speed.** The Data Stream and pool tiles now show `⏳ time until the buffer is full` under their ⚡ speed figure, in the slot the tap bonus uses; an active tap bonus replaces it.
+
+- **Upgrade bars follow the fill curve.** The Capacity/Speed upgrade bars now draw from the Data Stream at 150% of base Speed when empty, 100% at half full and 50% when nearly full (same curve as pools), instead of a flat 100%, and the running upgrade bar shows that draw rate (⚡) on its right, colour-coded like the other speed readouts, and its “…” animates while upgrading.
+- After a Foundry reset, Capacity and Speed upgrades replay to your previous highs automatically in order of increasing cost, using the normal progress-bar upgrades one at a time (while one runs, the Data Stream's output feeds its bar, so tier01 auto-invest and pool filling only get what is left over), and Provision Disk names the newest unlocked size immediately.
+
+- After a Foundry reset, every smaller Disk size rebuilds itself for free (one disk at a time; each counts as provisioned again once it fills) and Provision Disk presents only the newest unlocked size (disabled with a "Rebuilding … first" note until the smaller sizes are done).
+
+- The Provision Disk button also stays visible while its pool is rebuilding after a pool reset; a click queues the build, which fires once the rebuild finishes.
 
 - The Provision Disk button now appears as soon as the Byte exists, instead of waiting for 1 KiB of Capacity; clicking it early queues the build. Upgrade Speed / Capacity were never blocked by a queued or running provision and still aren't (covered by a new test).
 
@@ -174,6 +195,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   lifetime-purchased-count text is gone — the cost figure alone is self-explanatory.
 
 ### Fixed
+- **Running Data Stream upgrade is a full-width status tile**, not a button-like container, filled like the Data Stream tile above it.
+- **Data Lake header layout is consistent.** The filled amount and fill speed now always sit on the title row at one size (no more jumping between rows/sizes), and the Booster cost pill no longer shifts its label off the lake's text edges.
 
 - **Latency purchases now spend like any other.** Buying a Latency level also deducts the mirrored Bits from your balance, so the headline money drops instead of staying unchanged.
 

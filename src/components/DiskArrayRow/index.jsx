@@ -9,6 +9,8 @@ import {
   getDiskWriteCacheFlushFill,
   getDiskWriteCacheMerge,
   getDiskWriteCacheSegmentFill,
+  getPoolBufferBits,
+  getPoolIndexForDiskSize,
   isDiskPullEligible,
   isDiskReadCacheEligible,
   isDiskReadCacheFlushPaused,
@@ -247,9 +249,14 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
   const readFlushRemainingFraction = readFlushing
     ? Math.max(0, 1 - getDiskReadCacheFlushFill(readFlush))
     : 1
+  // Blocks land in the cache instantly and whole (tickDiskAutoFill), so for display the first empty
+  // block mirrors the pool buffer's progress toward the next block — it reads as a gradual fill.
+  const bufferProgressBits = readFlushing || cached >= size
+    ? 0
+    : Math.min(blockBits, getPoolBufferBits(state, getPoolIndexForDiskSize(size)) ?? 0)
   const displayCached = readFlushing
     ? size * readFlushRemainingFraction
-    : cached
+    : cached + bufferProgressBits
   // Only the pool's smallest size keeps a read cache at all (see isDiskReadCacheEligible in
   // engine.js) — every larger size fills exclusively via the write-cache ripple below, so there's
   // nothing here to render for it.
