@@ -91,8 +91,8 @@ generator. Combine creates the generator without snapping Capacity; save load vi
 keeps the generator (`byteCreated`) and the `mainGameUnlocked` latch but resets Capacity to
 `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`) — Capacity is rebuilt each
 Era, Factory access never goes away again once earned. Production and storage grow via two **Upgrade Capacity** / **Upgrade Speed** actions, one at a time (`queueIntroSpeedUpgrade`; detail: `docs/ECONOMY_REFERENCE.md`'s "Upgrade Speed"): a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
-and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at a constant 100% of the base Speed
-(like a pool pulling at its Bandwidth, regardless of the fill multiplier) into `intro.capacityUpgradeProgress`, ahead of
+and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at the base Speed
+(like a pool pulling at its Bandwidth, scaled by the bar's own fill multiplier: 150% empty → 100% at half → 50% full, same curve as pools) into `intro.capacityUpgradeProgress`, ahead of
 every other consumer — nothing is paused or raced; when the bar
 reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
 running, the same button becomes an inert progress bar (no cancel; the tile is unchanged). Displayed Speed is *derived* from the Speed basis
