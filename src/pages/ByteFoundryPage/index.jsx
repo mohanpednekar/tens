@@ -153,6 +153,10 @@ const formatUpgradeTimeLeft = totalSeconds => {
   return formatOfflineDuration(seconds)
 }
 
+// Time until a buffer is full at `ratePerSecond` (null when already full or not filling).
+const formatBufferTimeToFull = (bits, capacity, ratePerSecond) =>
+  bits >= capacity || !(ratePerSecond > 0) ? null : formatUpgradeTimeLeft((capacity - bits) / ratePerSecond)
+
 const MilestonesRow = styled.div`
   display: flex;
   gap: ${props => props.theme.space.sm};
@@ -510,6 +514,15 @@ const BonusText = styled.span`
   white-space: nowrap;
 `
 
+// Shown in the bonus slot (right column, under the Speed figure) while no tap bonus is active — the
+// bonus takes the slot over whenever it is.
+const TimeText = styled.span`
+  grid-column: 3;
+  justify-self: end;
+  color: ${props => props.theme.color.textMuted};
+  white-space: nowrap;
+`
+
 const BarTrack = styled.div`
   position: relative;
   min-width: 0;
@@ -544,10 +557,10 @@ const TapIcon = styled.span`
 `
 
 // Second row under the title row: Capacity under the section name (left), the tap bonus under the
-// Speed/Bandwidth figure (right, "+x% 👆"), and between them a narrow bonus bar that only shows
+// Speed/Bandwidth figure (right, "+x% 👆" — or, while no bonus is active, the time until the buffer is full), and between them a narrow bonus bar that only shows
 // while a bonus is active (the fill-based multiplier itself is the tinted Speed figure, see
 // getSpeedColor/formatSpeedText).
-const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel }) => {
+const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel, timeLeftText = null }) => {
   const clampedBonus = Math.min(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, Math.max(0, bonusPercent))
   const hasBonus = clampedBonus > 0
   return (
@@ -566,6 +579,7 @@ const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel }) => {
         </BarTrack>
       )}
       {hasBonus && <BonusText>+{Math.round(clampedBonus)}% <TapIcon>👆</TapIcon></BonusText>}
+      {!hasBonus && timeLeftText && <TimeText title="Time until this buffer is full at its current rate">⏳ {timeLeftText}</TimeText>}
     </SubRow>
   )
 }
@@ -635,6 +649,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // exactly what applies at 100% of this — the real per-tick delivery scales by this percent
   // instead (see getDataStreamEffectMultiplier in game/engine).
   const dataStreamMultiplierPercent = getDataStreamMultiplierPercent(intro)
+  const dataStreamTimeLeftText = formatBufferTimeToFull(intro.bits, intro.capacity, productionRate * dataStreamMultiplierPercent / 100)
   // Matches tapIntroBit's own post-reveal no-op guard (engine.js) — only relevant once Storage
   // pools are revealed (visiblePoolCount >= 1), the same condition that switches the tap itself
   // from a direct bit credit into a multiplier-bonus tap.
@@ -870,7 +885,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               {formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed)}
             </BalanceText>
             {dataStreamRateText && (
-              <SpeedText $centered={!(intro.dataStreamTapBonusPercent > 0)} $color={getSpeedColor(dataStreamMultiplierPercent)} title={`Speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}>
+              <SpeedText $centered={!(intro.dataStreamTapBonusPercent > 0) && !dataStreamTimeLeftText} $color={getSpeedColor(dataStreamMultiplierPercent)} title={`Speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}>
                 ⚡ {dataStreamRateText}
               </SpeedText>
             )}
@@ -878,6 +893,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           <CapacityBonusRow
             capacityText={formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
             bonusPercent={intro.dataStreamTapBonusPercent ?? 0}
+            timeLeftText={dataStreamTimeLeftText}
             ariaLabel="data stream fill-based speed multiplier"
           />
           </TileHeader>
@@ -1017,6 +1033,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // Matches tapPoolBuffer's own no-op guards (engine.js) — the button must be disabled for
         // both, not just a full buffer, or a capped tap silently does nothing with no feedback.
         const poolTapBonusPercent = getPoolTapBonusPercent(state, poolIndex)
+        const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolBandwidth * poolMultiplierPercent / 100)
         const poolMultiplierCapped = poolTapBonusPercent >= FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT
         // tickDataLakePoolDrain (engine.js) feeds the lake straight from this pool's buffer whenever
         // isDataLakePoolDrainAvailable. A tap can't speed the lake up then (the drain is capped at
@@ -1061,13 +1078,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     </PoolTitleToggle>
                   </SectionTitle>
                   <PoolBalanceText bits={poolBufferBits} poolIndex={poolIndex} large={poolTapBonusPercent <= 0} />
-                  <SpeedText $centered={poolTapBonusPercent <= 0} $color={getSpeedColor(poolMultiplierPercent)} title={`Bandwidth at ${Math.round(poolMultiplierPercent)}% fill multiplier`}>
+                  <SpeedText $centered={poolTapBonusPercent <= 0 && !poolTimeLeftText} $color={getSpeedColor(poolMultiplierPercent)} title={`Bandwidth at ${Math.round(poolMultiplierPercent)}% fill multiplier`}>
                     ⚡ {formatSpeedText(formatDiskSize(poolBandwidth * poolMultiplierPercent / 100))}/s
                   </SpeedText>
                 </TitleRow>
                 <CapacityBonusRow
                   capacityText={formatDiskSizeInPoolUnit(poolBufferCapacity, poolIndex)}
                   bonusPercent={poolTapBonusPercent}
+                  timeLeftText={poolTimeLeftText}
                   ariaLabel={`pool ${poolIndex} fill-based bandwidth multiplier`}
                 />
                 </TileHeader>
