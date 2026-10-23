@@ -2927,8 +2927,7 @@ test('starting Upgrade Data Stream turns the same button into an inert progress 
 
   // Both buttons are replaced by an inert status bar; no Cancel control and no tile status line.
   expect(screen.queryByRole('button', { name: /upgrade data stream (capacity|speed)/i })).not.toBeInTheDocument()
-  const running = screen.getByRole('button', { name: /^upgrade capacity$/i })
-  expect(running).toHaveAttribute('aria-disabled', 'true')
+  const running = screen.getByRole('region', { name: /^upgrade capacity$/i })
   expect(running).toHaveTextContent(/Upgrading/)
   expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument()
   expect(screen.getByRole('progressbar', { name: /data stream upgrade progress/i })).toHaveAttribute('aria-valuenow', '0')
@@ -5431,7 +5430,7 @@ test('a running Capacity upgrade shows percent on the first line, from → to ca
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
   fireEvent.click(screen.getByRole('button', { name: /upgrade data stream capacity/i }))
 
-  const running = screen.getByRole('button', { name: /^upgrade capacity$/i })
+  const running = screen.getByRole('region', { name: /^upgrade capacity$/i })
   expect(running).toHaveTextContent(/⏫ Upgrading…/)
   expect(running).toHaveTextContent(/→/)
   expect(running).toHaveTextContent(/⏳ \d+[smhd]/)
