@@ -59,6 +59,7 @@ docs/
                             check before changing a formula/workflow a past iteration may have tried
   AUTOMATION.md           ← full autonomous-workflow phase-by-phase reference
   ECONOMY_REFERENCE.md    ← full economy/prestige/tickspeed mechanic + engine function/constants reference
+  FOUNDRY_MECHANICS_REFERENCE.md ← full Byte Foundry/Storage/Disks/Data Lakes/Boosters prose (moved out of CLAUDE.md)
   MAINPAGE_REFERENCE.md   ← full MainPage UI field-by-field reference
   COMPONENTS_REFERENCE.md ← full Button/Money/StatCard prop/styling reference
   THEMING_REFERENCE.md    ← full design-token/font/ThemeProvider reference
@@ -141,7 +142,7 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 one-time-ever gate (`latchMainGameUnlocked` — see above) before `MainPage` (`tier01`/Kilobytes onward)
 is reachable. Tapping accumulates bits into the **Data Stream** (Buffer-capped, binary units —
 Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator grown via a single
-**Upgrade Capacity** / **Upgrade Speed** actions (one at a time; cost = current capacity / current Speed basis, a click starts a progress bar fed at a constant 100% of base Speed from the Buffer; displayed Speed is
+**Upgrade Capacity** / **Upgrade Speed** actions (one at a time; cost = current capacity / current Speed basis, a click starts a progress bar fed from the Buffer at base Speed scaled by the bar's own fill multiplier (150% empty → 50% full); displayed Speed is
 *derived* from the Speed basis as `basis^e` via `getDataStreamSpeedBytesPerSecond`, capped at `Capacity^e`, where `e` = 0.5 + 0.01 per Disk size unlocked beyond the first via Foundry reset (`getDataStreamSpeedExponent`), not purchased) — entirely OUTSIDE the
 forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a separate fill-based
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer

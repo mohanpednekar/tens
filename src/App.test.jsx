@@ -43,6 +43,7 @@ import {
 import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
+import { formatBitsTransition, getBufferSecondsToFull } from 'pages/ByteFoundryPage'
 
 // Enough Data Stream Capacity for Storage pool 2 (MB) to be visible — Node merges are timed off
 // that pool's Bandwidth (getComputeMergeDurationSeconds), which is 0 until it's visible.
@@ -2926,9 +2927,8 @@ test('starting Upgrade Data Stream turns the same button into an inert progress 
 
   // Both buttons are replaced by an inert status bar; no Cancel control and no tile status line.
   expect(screen.queryByRole('button', { name: /upgrade data stream (capacity|speed)/i })).not.toBeInTheDocument()
-  const running = screen.getByRole('button', { name: /^upgrade capacity$/i })
-  expect(running).toHaveAttribute('aria-disabled', 'true')
-  expect(running).toHaveTextContent(/Upgrading Capacity/)
+  const running = screen.getByRole('region', { name: /^upgrade capacity$/i })
+  expect(running).toHaveTextContent(/Upgrading/)
   expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument()
   expect(screen.getByRole('progressbar', { name: /data stream upgrade progress/i })).toHaveAttribute('aria-valuenow', '0')
   expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.capacityUpgradeQueued).toBe(true)
@@ -3262,6 +3262,29 @@ test('the Data Lake header shows target price, filled amount and fill speed', ()
   expect(within(lake).getByTitle('Current fill speed')).not.toHaveTextContent('⚡ 0 B/s')
 })
 
+test('the Data Lake header shows time until the next Booster is banked, only while it is still short of the cost', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  const seedLake = lakeOverrides => seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
+    dataLakes: { 1: { purchased: 0, boostersUnlocked: true, autoConvertActive: true, capacityLevel: 1, ...lakeOverrides } },
+  })
+
+  seedLake({ depositedUnits: 0, fillBits: 2000 })
+  const short = render(<App />)
+  expect(within(screen.getByLabelText('KB lake')).getByTitle(/Time until the next Booster's cost is banked/)).toHaveTextContent(/⏳ \d+[smhd]/)
+  short.unmount()
+
+  localStorage.clear()
+  seedLake({ depositedUnits: 1, fillBits: 2000 })
+  render(<App />)
+  expect(within(screen.getByLabelText('KB lake')).queryByTitle(/Time until the next Booster's cost is banked/)).toBeNull()
+})
+
 test('a collapsed pool still shows its Data Lake heading and action row', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
@@ -3554,6 +3577,18 @@ describe('Byte Foundry Storage', () => {
     expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.diskBuildQueued).toBe(true)
   })
 
+  test('after a Foundry reset the button presents only the newest unlocked size, disabled while smaller sizes rebuild automatically', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 2,
+    })
+    render(<App />)
+    const provisionButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(provisionButton).toBeDisabled()
+    expect(provisionButton).toHaveTextContent('10 KB')
+    expect(provisionButton).toHaveTextContent(/Rebuilding 1 KB first/)
+  })
+
   test('a full unlocked Disk array offers a confirm-guarded Foundry reset instead of Provision Disk, which unlocks the next size and raises the exponent', async () => {
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
@@ -3601,7 +3636,7 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('region', { name: 'pool 1' })).not.toContainElement(provisionButton)
   })
 
-  test('Provision Disk is hidden while the pool its current offer belongs to is rebuilding', () => {
+  test('Provision Disk stays visible while the pool its current offer belongs to is rebuilding, and a click queues the build', () => {
     seedIntroState({
       bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true,
       diskCache: { [currentBankSize]: currentBankSize },
@@ -3610,7 +3645,9 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     expect(screen.getByRole('region', { name: 'pool 1' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /provision disk/i })).not.toBeInTheDocument()
+    const provisionButton = screen.getByRole('button', { name: /provision disk/i })
+    fireEvent.click(provisionButton)
+    expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.diskBuildQueued).toBe(true)
   })
 
   test('Provision Disk fires its first pass on click once affordable — the consolidated Upgrade Data Stream is now the LOWER-priority action that waits on it', () => {
@@ -4491,16 +4528,21 @@ describe('ComputePage merge chain', () => {
     const nodesMerge = () => screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })
     const nodesAuto = () => screen.queryByRole('button', { name: /enable auto-merge for nodes into clusters/i })
 
-    test('an idle, unselected tier shows no merge/auto buttons until selected', () => {
+    test('a non-automated unlocked tier always shows its merge/auto buttons (spacious layout)', () => {
       seedIntroState({ ...base, computeCores: 1, computeNodes: 2 })
       render(<App />)
       openBoosters()
 
-      expect(nodesMerge()).not.toBeInTheDocument()
-      expect(nodesAuto()).not.toBeInTheDocument()
-      fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
       expect(nodesMerge()).toBeInTheDocument()
       expect(nodesAuto()).toBeInTheDocument()
+    })
+
+    test('locked tiers (nothing held at or above, predecessor cannot feed) are not rendered', () => {
+      seedIntroState({ ...base, computeCores: 1, computeNodes: 0 })
+      render(<App />)
+      openBoosters()
+
+      expect(screen.queryByRole('button', { name: /select grids to fund a compute boost/i })).not.toBeInTheDocument()
     })
 
     test('a tier with a possible merge is revealed without selecting it', () => {
@@ -5401,11 +5443,58 @@ test('a running Capacity upgrade shows percent on the first line, from → to ca
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
   fireEvent.click(screen.getByRole('button', { name: /upgrade data stream capacity/i }))
 
-  const running = screen.getByRole('button', { name: /^upgrade capacity$/i })
-  expect(running).toHaveTextContent(/Upgrading Capacity…\s*\(0%\)/)
+  const running = screen.getByRole('region', { name: /^upgrade capacity$/i })
+  expect(running).toHaveTextContent(/⏫ Upgrading…/)
   expect(running).toHaveTextContent(/→/)
   expect(running).toHaveTextContent(/⏳ \d+[smhd]/)
+  // The draw rate (base Speed × the bar's fill multiplier) shows at the right, like the other speed readouts.
+  expect(running).toHaveTextContent(/⚡ [\d.]+ \w+\/s/)
+  expect(running.querySelector('[title^="Upgrade draw at 150%"]')).not.toBeNull()
 
   unmount()
   vi.useRealTimers()
+})
+
+describe('getBufferSecondsToFull (tile time-to-full)', () => {
+  it('integrates the 150% → 50% fill multiplier curve', () => {
+    expect(getBufferSecondsToFull(0, 1000, 10)).toBeCloseTo(100 * Math.log(3))
+    expect(getBufferSecondsToFull(500, 1000, 10)).toBeCloseTo(100 * Math.log(2))
+    expect(getBufferSecondsToFull(900, 1000, 10)).toBeCloseTo(100 * Math.log(1.2))
+  })
+
+  it('is null when full, over-full, or not filling', () => {
+    expect(getBufferSecondsToFull(1000, 1000, 10)).toBeNull()
+    expect(getBufferSecondsToFull(0, 1000, 0)).toBeNull()
+    expect(getBufferSecondsToFull(0, 0, 10)).toBeNull()
+  })
+})
+
+test('the Data Stream tile shows time to full under its speed, replaced by the tap bonus when one is active', () => {
+  seedIntroState({ capacity: 1048576, bits: 5000, byteCreated: true, mainGameUnlocked: true })
+  const { unmount } = render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+  const withoutBonus = screen.getAllByTitle(/Estimated time until this buffer is full/)
+  expect(withoutBonus[0]).toHaveTextContent(/⏳ \d+[smhd]/)
+  unmount()
+
+  localStorage.clear()
+  seedIntroState({ capacity: 1048576, bits: 5000, byteCreated: true, mainGameUnlocked: true, dataStreamTapBonusPercent: 40 })
+  const bonus = render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+  // The Data Stream's slot now shows its tap bonus instead (other tiles, e.g. pools, keep their time).
+  expect(screen.queryAllByTitle(/Estimated time until this buffer is full/)).toHaveLength(withoutBonus.length - 1)
+  bonus.unmount()
+})
+
+describe('formatBitsTransition (running-upgrade from → to)', () => {
+  const KIB = 8 * 1024
+  it('shows the unit once, on the right, with at most 3 significant digits', () => {
+    expect(formatBitsTransition(1.41421 * KIB, 2 * KIB, '/s')).toBe('1.41 → 2 KiB/s')
+    expect(formatBitsTransition(128 * KIB, 256 * KIB)).toBe('128 → 256 KiB')
+  })
+
+  it('re-expresses a from-value that would have read in a smaller unit in the target unit', () => {
+    expect(formatBitsTransition(512 * 8, 1 * KIB, '/s')).toBe('0.5 → 1 KiB/s')
+    expect(formatBitsTransition(512 * KIB, 1024 * KIB)).toBe('0.5 → 1 MiB')
+  })
 })

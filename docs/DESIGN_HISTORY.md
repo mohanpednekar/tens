@@ -8859,6 +8859,8 @@ called `pickIntroCapacityMilestone`, which re-armed every tick and paused all ou
 Capacity replay (no pool buffers, no tier01 auto-invest). It calls `upgradePoolCapacity` (full-Buffer
 only) instead; arming is reserved for an explicit player click.
 
+*Superseded (2026-10):* the maintainer reversed this — the replay now queues the ordinary progress-bar Capacity / Speed upgrades itself (cheapest first, one at a time, `tickFoundryResetConvenience`), accepting that tier01 auto-invest and pool fill get only the leftover Data Stream output while it runs.
+
 **Lakes keep filling from their own pool while the Data Stream is paused.** With outflow paused,
 `tickPoolBufferFill` (and so its full-buffer lake overflow) doesn't run, which starved every Data
 Lake for the whole wait. Per maintainer request, a lake now also draws straight from its own pool's

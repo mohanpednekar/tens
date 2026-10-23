@@ -48,9 +48,9 @@ const TierBlocksGroup = styled.div`
 const TierBlock = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: ${props => (props.$spacious ? props.theme.space.sm : '4px')};
   width: 100%;
-  padding: 0.2rem 0.6rem;
+  padding: ${props => (props.$spacious ? '0.7rem 0.8rem' : '0.2rem 0.6rem')};
   border-radius: ${props => props.theme.radius.md};
   background: ${props => props.theme.color.surface};
   border: 1px solid ${props => (props.$selected ? props.theme.color.warn : props.theme.color.border)};
@@ -124,7 +124,7 @@ const TierSelectButton = styled.button`
 const TierLabel = styled.span`
   flex: 0 0 auto;
   font-weight: 600;
-  font-size: 0.9em;
+  font-size: ${props => (props.$spacious ? '1.05em' : '0.9em')};
   white-space: nowrap;
 `
 
@@ -153,8 +153,8 @@ const SlotsRow = styled.div`
 // StoragePage's own DiskSquare uses, just non-interactive (a plain status square, not a button).
 const NormalSlot = styled.span`
   flex: 0 0 auto;
-  width: 0.85rem;
-  height: 0.85rem;
+  width: ${props => (props.$spacious ? '1.1rem' : '0.85rem')};
+  height: ${props => (props.$spacious ? '1.1rem' : '0.85rem')};
   border-radius: ${props => props.theme.radius.sm};
   border: 1.2px solid ${props => (props.$filled ? props.theme.color.accent : props.theme.color.surfaceSunken)};
   background: ${props => (props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
@@ -171,7 +171,7 @@ const TierMergeRow = styled.div`
   align-items: stretch;
   justify-content: flex-end;
   flex-wrap: nowrap;
-  gap: ${props => props.theme.space.xs};
+  gap: ${props => (props.$spacious ? props.theme.space.sm : props.theme.space.xs)};
   width: 100%;
 `
 
@@ -188,6 +188,7 @@ const CompactButton = styled(Button)`
 const TierActionButton = styled(CompactButton)`
   flex: 1 1 0;
   width: 100%;
+  ${props => props.$spacious && 'font-size: 0.9em; padding: 0.7em 0.8em;'}
 `
 
 const ReserveSlotsRow = styled.button`
@@ -729,14 +730,24 @@ const ComputePage = ({ game }) => {
               // Progressive disclosure: the merge/auto row only shows for the selected tier or when
               // there is something to act on or watch, so idle tiers stay a single line.
               const canMergeNow = autoEnabled ? startAvailable : canMerge(count, intro[row.mergeOutputField] ?? 0, outputCap)
+              // Spacious layout for tiers not yet automated (always show their merge/auto row);
+              // the tight layout is for already-automated tiers.
+              const spacious = !autoEnabled
               const showDetail = hasMergeRow && (
-                armedTierIndex === tierIndex || merging || canMergeNow || reserveHeld > 0
-                || (!autoEnabled && autoCostHeld > 0)
+                spacious || armedTierIndex === tierIndex || merging || canMergeNow || reserveHeld > 0
               )
 
+              // Only unlocked tiers render: the first, anything held/automated/merging, or one whose
+              // predecessor can already feed it (or any higher tier is held).
+              const prevRow = rowIndex > 0 ? ENTITY_ROWS[rowIndex - 1] : null
+              const heldAtOrAbove = ENTITY_ROWS.some((r, i) => i >= rowIndex && (intro[r.countField] ?? 0) > 0)
+              const unlocked = rowIndex === 0 || heldAtOrAbove || autoEnabled || merging
+                || (prevRow && ((intro[prevRow.countField] ?? 0) >= COMPUTE_MERGE_RATIO || intro[prevRow.autoFlagField]))
+              if (!unlocked) return null
+
               return (
-                <TierBlock key={row.key} aria-label={`${row.label} tier`} $selected={armedTierIndex === tierIndex}>
-                  <TierHeaderRow>
+                <TierBlock key={row.key} aria-label={`${row.label} tier`} $selected={armedTierIndex === tierIndex} $spacious={spacious}>
+                  <TierHeaderRow $spacious={spacious}>
                     <TierSelectButton
                       type="button"
                       onClick={() => setSelectedBoostTierIndex(armedTierIndex === tierIndex ? null : tierIndex)}
@@ -747,20 +758,20 @@ const ComputePage = ({ game }) => {
                     >
                       <SelectMarker aria-hidden="true" $selected={armedTierIndex === tierIndex} />
                       <TierSymbol aria-hidden="true">{row.symbol}</TierSymbol>
-                      <TierLabel>
+                      <TierLabel $spacious={spacious}>
                         {row.label}
                         <VisuallyHidden>{` ${formatAmount(primaryHeld)}/${COMPUTE_ENTITY_CAP}`}</VisuallyHidden>
                       </TierLabel>
                       <SlotsRow role="group" aria-label={`${row.label} slots`}>
                         {Array.from({ length: COMPUTE_ENTITY_CAP }, (_, index) => (
-                          <NormalSlot key={index} $filled={index < primaryHeld} aria-hidden="true" />
+                          <NormalSlot key={index} $filled={index < primaryHeld} $spacious={spacious} aria-hidden="true" />
                         ))}
                       </SlotsRow>
                     </TierSelectButton>
                   </TierHeaderRow>
 
                   {showDetail && (
-                  <TierMergeRow>
+                  <TierMergeRow $spacious={spacious}>
                     {hasMergeRow && (
                       autoEnabled ? (
                         <ReserveSlotsRow
@@ -803,6 +814,7 @@ const ComputePage = ({ game }) => {
                             }
                             type="button"
                             variant="prestige"
+                            $spacious
                           >
                             <ButtonContent>{`⬆ ${COMPUTE_MERGE_RATIO}→1 ${row.mergeOutputLabel}`}</ButtonContent>
                           </TierActionButton>
@@ -814,6 +826,7 @@ const ComputePage = ({ game }) => {
                             type="button"
                             variant="info"
                             $progress={autoUnlockProgress}
+                            $spacious
                           >
                             <ButtonContent>{`🤖 ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
                           </TierActionButton>

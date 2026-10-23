@@ -35,6 +35,9 @@ import {
   canStackComputeBoost,
   combineIntroByte,
   getUnlockedDiskSteps,
+  getPresentedDiskSize,
+  isLowerDiskSizePending,
+  tickAutoProvisionLowerDiskSizes,
   getDataStreamSpeedExponent,
   isDiskSizeUnlockAvailable,
   unlockNextDiskSizeByFoundryReset,
@@ -1416,12 +1419,12 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     expect(isMemoryCapacityUpgradeArmable(after)).toBe(false)
   })
 
-  it('pulls a constant 100% of base Speed from the Buffer into the bar', () => {
+  it("pulls base Speed scaled by the bar's own fill multiplier (150% empty) from the Buffer into the bar", () => {
     const started = pickIntroCapacityMilestone(armState(capacity / 2))
     const rate = getIntroProductionRate(started.intro)
     const after = tickCapacityUpgradeDrain(1)(started)
-    expect(after.intro.capacityUpgradeProgress).toBe(rate)
-    expect(after.intro.bits).toBe(capacity / 2 - rate)
+    expect(after.intro.capacityUpgradeProgress).toBeCloseTo(rate * 1.5)
+    expect(after.intro.bits).toBeCloseTo(capacity / 2 - rate * 1.5)
   })
 
   it('pulls only what the Buffer holds', () => {
@@ -1956,6 +1959,13 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
     expect(queueDiskBuild(state)).toBe(state)
   })
 
+  it('queueDiskBuild arms the queue while the offer\'s pool is rebuilding, without provisioning until the rebuild ends', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, dataLakes: { 1: { rebuilding: true } } })
+    const queued = queueDiskBuild(state)
+    expect(queued.intro.diskBuildQueued).toBe(true)
+    expect(tickQueuedDiskBuild(queued)).toBe(queued)
+  })
+
   it('queueDiskBuild is a same-reference no-op once the disk ladder is exhausted for active pools', () => {
     const disksBuiltTotal = {}
     for (let step = 1; step <= DATA_LAKE_TIER_COUNT * 3; step += 1) {
@@ -2330,15 +2340,14 @@ describe('resetByteFoundry', () => {
 })
 
 describe('tickFoundryResetConvenience', () => {
-  it('auto-combines and auto-upgrades Capacity up to the recorded cap', () => {
+  it('auto-combines and then auto-upgrades Capacity up to the recorded cap through the progress-bar upgrade', () => {
     const caps = {
       byteCreated: true,
       disksBuiltTotal: {},
       capacity: INTRO_STARTING_CAPACITY * 4,
     }
-    // Enough Memory for Combine (8) + the first Capacity upgrade (current Capacity).
     let state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY + INTRO_BYTE_COMBINE_COST,
+      bits: INTRO_BYTE_COMBINE_COST,
       capacity: INTRO_STARTING_CAPACITY,
       foundryResetCaps: caps,
       mainGameUnlocked: true,
@@ -2346,15 +2355,11 @@ describe('tickFoundryResetConvenience', () => {
 
     state = tickFoundryResetConvenience(state)
     expect(state.intro.byteCreated).toBe(true)
-    // One Capacity upgrade fired — the combine (8) left exactly INTRO_STARTING_CAPACITY to spend.
-    expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY * 2)
-    expect(state.intro.bits).toBe(0)
+    // The Capacity upgrade is only QUEUED (ordinary progress bar) — nothing is paid or doubled instantly.
+    expect(state.intro.capacityUpgradeQueued).toBe(true)
+    expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
 
-    // Keep topping the buffer up — each call upgrades Capacity once until the cap is reached.
-    for (let i = 0; i < 20; i += 1) {
-      state = withIntro(state, { bits: Math.max(state.intro.bits, state.intro.capacity) })
-      state = tickFoundryResetConvenience(state)
-    }
+    for (let i = 0; i < 60000 && state.intro.capacity < caps.capacity; i += 1) state = tickGame(1)(state)
     expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY * 4)
   })
 
@@ -2503,23 +2508,7 @@ describe('tickFoundryResetConvenience', () => {
     expect(after.intro.capacityUpgradeQueued).toBe(false)
   })
 
-  it('auto-upgrades Capacity during convenience', () => {
-    const state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY,
-      capacity: INTRO_STARTING_CAPACITY,
-      byteCreated: true,
-      foundryResetCaps: {
-        byteCreated: true,
-        disksBuiltTotal: {},
-        capacity: INTRO_CAPACITY_CAP_BITS,
-      },
-    })
-    const after = tickFoundryResetConvenience(state)
-    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * 2)
-    expect(after.intro.bits).toBe(0)
-  })
-
-  it('never starts a progress-bar upgrade for a Capacity replay below a full Buffer', () => {
+  it('auto-queues the ordinary progress-bar Capacity upgrade during convenience', () => {
     const state = withIntro(createInitialGameState(), {
       bits: 1,
       capacity: INTRO_STARTING_CAPACITY,
@@ -2531,7 +2520,9 @@ describe('tickFoundryResetConvenience', () => {
       },
     })
     const after = tickFoundryResetConvenience(state)
-    expect(after.intro.capacityUpgradeQueued).toBe(false)
+    expect(after.intro.capacityUpgradeQueued).toBe(true)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY) // not doubled until the bar fills
+    expect(after.intro.bits).toBe(1) // nothing paid instantly
   })
 
   it('auto-Combine during convenience leaves Capacity on the doubling ladder', () => {
@@ -11817,7 +11808,8 @@ describe('Data Lakes', () => {
       expect(isStoragePoolRebuilding(reset, 1)).toBe(true)
       expect(isProvisionDiskAvailable(reset)).toBe(false)
       expect(provisionDisk(reset)).toBe(reset)
-      expect(queueDiskBuild(reset)).toBe(reset)
+      // Queueing is allowed (it just waits), but nothing is provisioned while the pool rebuilds.
+      expect(tickQueuedDiskBuild(queueDiskBuild(reset))).toEqual(queueDiskBuild(reset))
       const first = tickPoolResetReprovision(reset)
       expect(first.intro.disksBuiltTotal[kb1]).toBe(1)
       expect(tickPoolResetReprovision(first)).toBe(first) // first disk must fill before the next appears
@@ -12041,9 +12033,8 @@ describe('Upgrade Speed cross-system paths', () => {
   })
 
   it('a pre-split Foundry reset cap (capacity only) still replays Speed', () => {
-    const base = seeded({ capacity: 8, foundryResetCaps: { byteCreated: true, capacity: 32, disksBuiltTotal: {}, diskProvisionPasses: {} } })
-    let state = base
-    for (let i = 0; i < 8; i++) state = tickFoundryResetConvenience({ ...state, intro: { ...state.intro, bits: state.intro.capacity } })
+    let state = seeded({ capacity: 8, foundryResetCaps: { byteCreated: true, capacity: 32, disksBuiltTotal: {}, diskProvisionPasses: {} } })
+    for (let i = 0; i < 60000 && !(state.intro.capacity >= 32 && state.intro.speedCapacity > 8); i += 1) state = tickGame(1)(state)
     expect(state.intro.capacity).toBe(32)
     expect(state.intro.speedCapacity).toBeGreaterThan(8)
   })
@@ -12172,5 +12163,149 @@ describe('Speed/Capacity upgrades alongside provisioning', () => {
     expect(state.intro.speedUpgradeQueued).toBe(false)
     expect(state.intro.speedCapacity).toBe(512 * BITS_PER_BYTE)
     expect(getIntroProductionRate(state.intro)).toBeGreaterThan(before)
+  })
+})
+
+describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
+  const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+  const afterReset = () => withIntro(createInitialGameState(), {
+    byteCreated: true,
+    capacity: 1024 * BITS_PER_BYTE,
+    unlockedDiskSteps: 2,
+  })
+
+  it('presents the newest unlocked size while a smaller one is still incomplete', () => {
+    const state = afterReset()
+    expect(getDiskSize(state)).toBe(FIRST_DISK_SIZE)
+    expect(getPresentedDiskSize(state)).toBe(size10KB)
+    expect(isLowerDiskSizePending(state)).toBe(true)
+  })
+
+  it('presents the only unlocked size on a fresh save, with nothing auto-provisioned', () => {
+    const state = createInitialGameState()
+    expect(getPresentedDiskSize(state)).toBe(FIRST_DISK_SIZE)
+    expect(isLowerDiskSizePending(state)).toBe(false)
+    expect(tickAutoProvisionLowerDiskSizes(state)).toBe(state)
+  })
+
+  it('provisions the smaller size for free, one disk at a time, each waiting for the previous to fill', () => {
+    const base = afterReset()
+    expect(base.intro.poolBuffers?.[1] ?? 0).toBe(0) // nothing to pay with
+    const first = tickAutoProvisionLowerDiskSizes(base)
+    expect(first.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(1)
+    expect(first.intro.poolBuffers?.[1] ?? 0).toBe(0) // free
+    expect(tickAutoProvisionLowerDiskSizes(first)).toBe(first) // first disk still empty
+    const filled = withIntro(first, { disks: { [FIRST_DISK_SIZE]: 1 } })
+    expect(tickAutoProvisionLowerDiskSizes(filled).intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(2)
+  })
+
+  it('keeps going until the smaller array is full, then presents/offers the newest size', () => {
+    let state = withIntro(afterReset(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP } })
+    expect(getDiskSize(state)).toBe(size10KB)
+    expect(isLowerDiskSizePending(state)).toBe(false)
+    expect(tickAutoProvisionLowerDiskSizes(state)).toBe(state)
+  })
+
+  it('skips while its pool is rebuilding, while a legacy build is in flight, and before the Byte exists', () => {
+    const base = afterReset()
+    const rebuilding = withIntro(base, { dataLakes: { 1: { rebuilding: true } } })
+    expect(tickAutoProvisionLowerDiskSizes(rebuilding)).toBe(rebuilding)
+    const building = withIntro(base, { diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 5, totalSeconds: 10 } })
+    expect(tickAutoProvisionLowerDiskSizes(building)).toBe(building)
+    const noByte = withIntro(base, { byteCreated: false })
+    expect(tickAutoProvisionLowerDiskSizes(noByte)).toBe(noByte)
+  })
+
+  it('the paid manual / queued / replay paths do nothing while a lower size is pending', () => {
+    const base = withPoolBuffer(afterReset(), getDiskCost(afterReset(), FIRST_DISK_SIZE))
+    expect(isProvisionDiskAvailable(base)).toBe(false)
+    expect(provisionDisk(base)).toBe(base)
+    expect(queueDiskBuild(base)).toBe(base)
+    const queued = withIntro(base, { diskBuildQueued: true })
+    expect(tickQueuedDiskBuild(queued)).toBe(queued)
+  })
+
+  it('the Foundry-reset convenience replay does not pay for lower-size disks the free loop handles', () => {
+    const base = withIntro(withPoolBuffer(afterReset(), getDiskCost(afterReset(), FIRST_DISK_SIZE) * 10), {
+      foundryResetCaps: { disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP }, diskProvisionPasses: {} },
+    })
+    const after = tickFoundryResetConvenience(base)
+    expect(after.intro.poolBuffers[1]).toBe(base.intro.poolBuffers[1]) // nothing spent
+    expect(after.intro.diskProvisionPasses?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+  })
+
+  it('tickGame drives the free loop end to end until the smaller array is full', () => {
+    let state = afterReset()
+    for (let i = 0; i < 20000 && isLowerDiskSizePending(state); i += 1) state = tickGame(1)(state)
+    expect(isLowerDiskSizePending(state)).toBe(false)
+    expect(state.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(DISK_ARRAY_LADDER_CAP)
+  })
+
+  it('unlocking a size by Foundry reset leaves earlier sizes to rebuild automatically', () => {
+    const full = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      unlockedDiskSteps: 1,
+      capacity: 1024 * BITS_PER_BYTE,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
+    })
+    const after = unlockNextDiskSizeByFoundryReset(full)
+    expect(isLowerDiskSizePending(after)).toBe(true)
+    expect(getPresentedDiskSize(after)).toBe(size10KB)
+  })
+})
+
+describe('Foundry-reset replay of Capacity / Speed upgrades (increasing cost order, progress-bar mechanism)', () => {
+  const caps = { capacity: 2 ** 15, speedCapacity: 2 ** 14, disksBuiltTotal: {}, diskProvisionPasses: {} }
+  const base = (bits = 0) => withIntro(createInitialGameState(), {
+    byteCreated: true,
+    capacity: 2 ** 13,
+    speedCapacity: 2 ** 11,
+    bits,
+    foundryResetCaps: caps,
+  })
+
+  it('starts the cheapest pending upgrade first through the ordinary progress-bar queue (Speed costs its basis, Capacity the Capacity)', () => {
+    const after = tickFoundryResetConvenience(base())
+    expect(after.intro.speedUpgradeQueued).toBe(true)
+    expect(after.intro.capacityUpgradeQueued ?? false).toBe(false)
+    expect(after.intro.speedCapacity).toBe(2 ** 11) // nothing is paid instantly
+    expect(after.intro.bits).toBe(0)
+  })
+
+  it('never starts a second upgrade while one is running', () => {
+    const running = tickFoundryResetConvenience(base())
+    expect(tickFoundryResetConvenience(running)).toBe(running)
+  })
+
+  it('starts Capacity when Speed is not armable, and replays every upgrade up to the prior highs in cost order', () => {
+    let state = withIntro(base(2 ** 13), { speedUpgradeProgress: 0 })
+    const completed = []
+    for (let i = 0; i < 60000; i += 1) {
+      const before = state
+      state = tickGame(1)(state)
+      if (state.intro.speedCapacity > before.intro.speedCapacity) completed.push('speed')
+      if (state.intro.capacity > before.intro.capacity) completed.push('capacity')
+      if (state.intro.capacity >= caps.capacity && state.intro.speedCapacity >= caps.speedCapacity) break
+    }
+    expect(state.intro.capacity).toBe(caps.capacity)
+    expect(state.intro.speedCapacity).toBe(caps.speedCapacity)
+    // Speed is prioritised until it needs Capacity: 2^11 -> 2^12 -> 2^13 (basis*2 <= capacity), then Capacity, then Speed again.
+    expect(completed.slice(0, 4)).toEqual(['speed', 'speed', 'capacity', 'speed'])
+  })
+
+  it('after a pool-local reset with a raised unlocked step, the rebuild is not "pending" and Provision Disk stays queueable', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      unlockedDiskSteps: 4,
+      dataLakes: { 1: { rebuilding: true } },
+    })
+    expect(getDiskSize(state)).toBeLessThan(getPresentedDiskSize(state))
+    expect(isLowerDiskSizePending(state)).toBe(false)
+    expect(queueDiskBuild(state).intro.diskBuildQueued).toBe(true)
+  })
+
+  it('presents the newest unlocked Disk size immediately, even before its pool is reachable', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, unlockedDiskSteps: 4 })
+    expect(getPresentedDiskSize(state)).toBe(getDiskLadderSizeBits(4))
   })
 })
