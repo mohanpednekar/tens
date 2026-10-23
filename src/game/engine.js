@@ -6726,24 +6726,18 @@ export const tickFoundryResetConvenience = state => {
     }
   }
 
-  // Capacity and Speed upgrades replay up to their prior highs in order of INCREASING cost (Capacity costs
-  // the current Capacity, Speed costs the current Speed basis): each tick, when no upgrade is running, the
-  // cheapest pending armable one is started through the ordinary progress-bar mechanism
-  // (queueIntroCapacityUpgrade / queueIntroSpeedUpgrade), so tickCapacityUpgradeDrain / tickSpeedUpgradeDrain
-  // pay for it from the Data Stream exactly like a manual click — one at a time.
-  const replayCandidates = []
-  if ((caps.capacity ?? 0) > (next.intro?.capacity ?? 0) && isMemoryCapacityUpgradeArmable(next)) {
-    replayCandidates.push({ cost: next.intro?.capacity ?? 0, run: queueIntroCapacityUpgrade })
-  }
-  if (
-    (caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0) &&
-    isSpeedUpgradeArmable(next)
-  ) {
-    replayCandidates.push({ cost: getSpeedUpgradeCostBits(next.intro), run: queueIntroSpeedUpgrade })
-  }
-  replayCandidates.sort((a, b) => a.cost - b.cost)
-  if (replayCandidates.length > 0) {
-    const queued = replayCandidates[0].run(next)
+  // Capacity and Speed upgrades replay up to their prior highs through the ordinary progress-bar mechanism
+  // (queueIntroCapacityUpgrade / queueIntroSpeedUpgrade), one at a time, so tickCapacityUpgradeDrain /
+  // tickSpeedUpgradeDrain pay for them from the Data Stream exactly like a manual click. Speed is
+  // PRIORITISED: while a pending Speed upgrade is armable (the doubled basis still fits within Capacity — which
+  // also makes it the cheaper of the two, its cost being the basis) it goes first; Capacity is only chosen once
+  // Speed has reached the "needs Capacity" state (or has nothing pending), so increasing-cost order holds.
+  if (!next.intro?.capacityUpgradeQueued && !next.intro?.speedUpgradeQueued) {
+    const speedPending = (caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0)
+    const capacityPending = (caps.capacity ?? 0) > (next.intro?.capacity ?? 0)
+    let queued = next
+    if (speedPending) queued = queueIntroSpeedUpgrade(next)
+    if (queued === next && capacityPending) queued = queueIntroCapacityUpgrade(next)
     if (queued !== next) {
       next = queued
       changed = true

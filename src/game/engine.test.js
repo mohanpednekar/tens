@@ -12285,18 +12285,18 @@ describe('Foundry-reset replay of Capacity / Speed upgrades (increasing cost ord
 
   it('starts Capacity when Speed is not armable, and replays every upgrade up to the prior highs in cost order', () => {
     let state = withIntro(base(2 ** 13), { speedUpgradeProgress: 0 })
-    const started = []
+    const completed = []
     for (let i = 0; i < 60000; i += 1) {
       const before = state
       state = tickGame(1)(state)
-      if (!before.intro.speedUpgradeQueued && state.intro.speedUpgradeQueued) started.push('speed')
-      if (!before.intro.capacityUpgradeQueued && state.intro.capacityUpgradeQueued) started.push('capacity')
+      if (state.intro.speedCapacity > before.intro.speedCapacity) completed.push('speed')
+      if (state.intro.capacity > before.intro.capacity) completed.push('capacity')
       if (state.intro.capacity >= caps.capacity && state.intro.speedCapacity >= caps.speedCapacity) break
     }
     expect(state.intro.capacity).toBe(caps.capacity)
     expect(state.intro.speedCapacity).toBe(caps.speedCapacity)
-    expect(started[0]).toBe('speed')
-    expect(started).toContain('capacity')
+    // Speed is prioritised until it needs Capacity: 2^11 -> 2^12 -> 2^13 (basis*2 <= capacity), then Capacity, then Speed again.
+    expect(completed.slice(0, 4)).toEqual(['speed', 'speed', 'capacity', 'speed'])
   })
 
   it('after a pool-local reset with a raised unlocked step, the rebuild is not "pending" and Provision Disk stays queueable', () => {
