@@ -12279,3 +12279,41 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
     expect(getPresentedDiskSize(after)).toBe(size10KB)
   })
 })
+
+describe('Foundry-reset replay of Capacity / Speed upgrades (increasing cost order)', () => {
+  const caps = { capacity: 2 ** 15, speedCapacity: 2 ** 14, disksBuiltTotal: {}, diskProvisionPasses: {} }
+  const base = bits => withIntro(createInitialGameState(), {
+    byteCreated: true,
+    capacity: 2 ** 13,
+    speedCapacity: 2 ** 11,
+    bits,
+    foundryResetCaps: caps,
+  })
+
+  it('runs the cheapest pending upgrade first (Speed costs its basis, Capacity costs the Capacity)', () => {
+    const after = tickFoundryResetConvenience(base(2 ** 13))
+    expect(after.intro.speedCapacity).toBe(2 ** 12)
+    expect(after.intro.capacity).toBe(2 ** 13)
+    expect(after.intro.bits).toBe(2 ** 13 - 2 ** 11)
+  })
+
+  it('waits for the cheapest upgrade instead of skipping ahead to a dearer one it can afford', () => {
+    const state = base(1000)
+    expect(tickFoundryResetConvenience(state)).toBe(state)
+  })
+
+  it('switches to Capacity when Speed would exceed it, and finishes every upgrade up to the prior highs', () => {
+    let state = base(0)
+    for (let i = 0; i < 40; i += 1) {
+      state = withIntro(state, { bits: state.intro.capacity })
+      state = tickFoundryResetConvenience(state)
+    }
+    expect(state.intro.capacity).toBe(caps.capacity)
+    expect(state.intro.speedCapacity).toBe(caps.speedCapacity)
+  })
+
+  it('presents the newest unlocked Disk size immediately, even before its pool is reachable', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, unlockedDiskSteps: 4 })
+    expect(getPresentedDiskSize(state)).toBe(getDiskLadderSizeBits(4))
+  })
+})

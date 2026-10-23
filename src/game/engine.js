@@ -3736,8 +3736,7 @@ export const getMaxActiveDiskLadderStep = state =>
 // The size Provision Disk PRESENTS to the player: always the newest unlocked size. Smaller sizes that are
 // still incomplete (e.g. right after a Foundry reset) are provisioned automatically — see
 // tickAutoProvisionLowerDiskSizes — so the player only ever acts on the last unlocked size.
-export const getPresentedDiskSize = state =>
-  getDiskLadderSizeBits(Math.min(getPoolReachableDiskLadderStep(state), getUnlockedDiskSteps(state.intro)))
+export const getPresentedDiskSize = state => getDiskLadderSizeBits(getUnlockedDiskSteps(state.intro))
 
 // Whether a smaller-than-presented size still has to be (re)built before the presented one can be.
 export const isLowerDiskSizePending = state => getDiskSize(state) < getPresentedDiskSize(state)
@@ -6721,18 +6720,23 @@ export const tickFoundryResetConvenience = state => {
     }
   }
 
+  // Capacity and Speed upgrades replay up to their prior highs in order of INCREASING cost (Capacity costs
+  // the current Capacity, Speed costs the current Speed basis): only the cheapest pending upgrade is
+  // attempted each tick, and it waits for the Data Stream to hold its cost (Full-Buffer variants only —
+  // never the progress-bar upgrade, which would divert the whole Data Stream output for the replay).
+  const replayCandidates = []
   if ((caps.capacity ?? 0) > (next.intro?.capacity ?? 0)) {
-    // Full-Buffer upgrade only — never start the progress-bar upgrade (it would divert the whole
-    // Data Stream output for the replay, starving pool buffers and tier01 auto-invest).
-    const upgraded = upgradePoolCapacity(next)
-    if (upgraded !== next) {
-      next = upgraded
-      changed = true
-    }
+    replayCandidates.push({ cost: next.intro?.capacity ?? 0, run: upgradePoolCapacity })
   }
-
-  if ((caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0)) {
-    const upgraded = upgradePoolSpeed(next)
+  if (
+    (caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0) &&
+    isSpeedUpgradeArmable(next)
+  ) {
+    replayCandidates.push({ cost: getSpeedUpgradeCostBits(next.intro), run: upgradePoolSpeed })
+  }
+  replayCandidates.sort((a, b) => a.cost - b.cost)
+  if (replayCandidates.length > 0) {
+    const upgraded = replayCandidates[0].run(next)
     if (upgraded !== next) {
       next = upgraded
       changed = true
