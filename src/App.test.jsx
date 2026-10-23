@@ -3554,6 +3554,18 @@ describe('Byte Foundry Storage', () => {
     expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.diskBuildQueued).toBe(true)
   })
 
+  test('after a Foundry reset the button presents only the newest unlocked size, disabled while smaller sizes rebuild automatically', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 2,
+    })
+    render(<App />)
+    const provisionButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(provisionButton).toBeDisabled()
+    expect(provisionButton).toHaveTextContent('10 KB')
+    expect(provisionButton).toHaveTextContent(/Rebuilding 1 KB first/)
+  })
+
   test('a full unlocked Disk array offers a confirm-guarded Foundry reset instead of Provision Disk, which unlocks the next size and raises the exponent', async () => {
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
