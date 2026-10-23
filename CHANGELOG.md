@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Boosters page shows only unlocked tiers; tiers without auto-merge get a spacious layout, automated ones keep the compact layout.
 - **Running upgrade bar layout.** The Upgrading Capacity/Speed bar now reads "⏫ Upgrading…" top-left with the from → to values on one line below it, the percent centred, and the ⚡ draw rate top-right with the ⏳ time left directly under it, like the other tiles.
 - **Time to full under the speed.** The Data Stream and pool tiles now show `⏳ time until the buffer is full` under their ⚡ speed figure, in the slot the tap bonus uses; an active tap bonus replaces it.
 
