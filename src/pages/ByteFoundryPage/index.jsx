@@ -4,7 +4,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled, { css } from 'styled-components'
@@ -630,7 +630,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // Starting the next disk's build stays on this page (the Byte Foundry's own core loop). Ranked
   // third in the forced priority order — see isProvisionDiskTurnAvailable. Every shown size's
   // DiskArrayRow (Cache then Disks per size, ascending) renders below as continuous sections.
-  const diskSize = getDiskSize(state)
+  // Only the newest unlocked size is ever presented; smaller incomplete sizes (after a Foundry reset)
+  // rebuild themselves automatically (tickAutoProvisionLowerDiskSizes).
+  const lowerDiskSizePending = isLowerDiskSizePending(state)
+  const autoDiskSize = getDiskSize(state)
+  const diskSize = getPresentedDiskSize(state)
   const diskCost = getDiskCost(state, diskSize)
   const diskPassesRequired = getDiskProvisionPassesRequired(state, diskSize)
   const diskPoolIndex = getPoolIndexForDiskSize(diskSize)
@@ -654,14 +658,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     if (confirmed) actions.unlockNextDiskSize()
   }
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
-  const canStartDiskBuild = isProvisionDiskTurnAvailable(state)
+  const canStartDiskBuild = !lowerDiskSizePending && isProvisionDiskTurnAvailable(state)
   const diskBuildInProgress = intro.diskBuild
   // The build cost is paid in diskPassesRequired passes of the disk's own face-value size each (N
   // for the array's Nth disk, capped at DISK_BUILD_COST_MULTIPLIER — see provisionDisk/
   // getDiskProvisionPassesRequired in game/engine) — "blocked by priority" now only needs a single
   // pass's worth in the SPENDABLE buffer (cache reservation excluded), not the whole cost, to be a
   // real (if lower-priority) option.
-  const diskBuildBlockedByPriority = !diskLadderExhausted && diskPoolSpendableBufferBits >= diskSize && !canStartDiskBuild && !diskBuildInProgress
+  const diskBuildBlockedByPriority = !lowerDiskSizePending && !diskLadderExhausted && diskPoolSpendableBufferBits >= diskSize && !canStartDiskBuild && !diskBuildInProgress
   // Clamped at diskPassesRequired: a save carrying a diskProvisionPasses value banked under an
   // earlier flat-multiplier version of this ladder (now exceeding a smaller ordinal's own
   // requirement) would otherwise display a nonsensical "N/M" with N > M until the engine's own
@@ -744,11 +748,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // A queued build is the only state where provisioning is actually progressing (it fires itself as
   // the buffer allows), so it alone gets the progressive title, the pulse and the hourglass — idle
   // states keep the imperative "Provision …" so the two never read alike.
-  const diskProvisioningActive = Boolean(diskBuildQueued) && !diskBuildInProgress && !diskLadderExhausted
+  const diskProvisioningActive = Boolean(diskBuildQueued) && !diskBuildInProgress && !diskLadderExhausted && !lowerDiskSizePending
   const diskBuildStatus = diskBuildInProgress
     ? { icon: '🏗', label: `Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk`, status: `${Math.ceil(diskBuildInProgress.remainingSeconds)}s left` }
     : diskLadderExhausted
       ? { icon: '✅', label: `All Pools Complete (${formatDiskSize(diskSize)})`, status: null }
+      : lowerDiskSizePending
+        ? { icon: '🔁', label: diskOfferLabel, status: `Rebuilding ${formatDiskSize(autoDiskSize)} first · automatic` }
       : diskBuildQueued
         ? {
             icon: '⏳',
@@ -781,13 +787,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     <Button
       aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
       aria-description={diskBuildStatus.reason ? `${diskBuildStatus.status} (${diskBuildStatus.reason})` : diskBuildStatus.status ?? undefined}
-      disabled={!!diskBuildInProgress || diskLadderExhausted}
+      disabled={!!diskBuildInProgress || diskLadderExhausted || lowerDiskSizePending}
       onClick={handleProvisionDiskClick}
       title={
         diskBuildInProgress
           ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
           : diskLadderExhausted
             ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
+            : lowerDiskSizePending
+              ? `Smaller sizes are re-provisioned for free first (${formatDiskSize(autoDiskSize)} now); ${formatDiskSize(diskSize)} unlocks for provisioning once they are done`
             : diskBuildQueued
               ? `Queued — fires itself the instant ${diskBuildBlockedByPriority ? 'it is your turn' : 'enough is banked'} (${diskPassesCollected}/${diskPassesRequired} passes so far)`
               : canStartDiskBuild
@@ -799,7 +807,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   : `Not enough banked yet for the next pass (${diskPassesCollected}/${diskPassesRequired} collected) — click to queue this build so it fires itself as the buffer fills`
       }
       type="button"
-      variant={diskLadderExhausted ? 'neutral' : diskBuildQueued ? 'smart' : canStartDiskBuild ? 'info' : 'neutral'}
+      variant={diskLadderExhausted || lowerDiskSizePending ? 'neutral' : diskBuildQueued ? 'smart' : canStartDiskBuild ? 'info' : 'neutral'}
       $progress={diskBuildProgress}
       $pulse={diskProvisioningActive}
     >

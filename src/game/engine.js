@@ -1713,7 +1713,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     const afterCache = tickDiskLevelOneCachePull(afterPull)
     // A queued Provision Disk build (see queueDiskBuild) takes its turn here, once this tick's own
     // disk pull/cache pull have had first claim on the forced-priority state.
-    const afterQueuedBuild = tickQueuedDiskBuild(afterCache)
+    const afterQueuedBuild = tickQueuedDiskBuild(tickAutoProvisionLowerDiskSizes(afterCache))
     // 0 elapsed: start any newly eligible read-cache flushes after a pull emptied a slot;
     // countdown continues on the next ordinary tickGame pass. A queued build firing this tick
     // doesn't add any newly-fillable slot itself (its size stays IO-locked until the build
@@ -3162,6 +3162,8 @@ export const getPoolCacheReservationBits = (state, poolIndex) => {
 
 export const isProvisionDiskAvailable = state => {
   if (state.intro.diskBuild) return false
+  // Smaller sizes below the newest unlocked one are provisioned automatically and for free instead.
+  if (isLowerDiskSizePending(state)) return false
   if (isDiskLadderExhaustedForActivePools(state)) return false
   const size = getDiskSize(state)
   if (getDiskProvisionPassesCollected(state, size) >= getDiskProvisionPassesRequired(state, size)) return true
@@ -3731,6 +3733,15 @@ export const getPoolReachableDiskLadderStep = state =>
 export const getMaxActiveDiskLadderStep = state =>
   Math.min(getPoolReachableDiskLadderStep(state), getUnlockedDiskSteps(state.intro))
 
+// The size Provision Disk PRESENTS to the player: always the newest unlocked size. Smaller sizes that are
+// still incomplete (e.g. right after a Foundry reset) are provisioned automatically — see
+// tickAutoProvisionLowerDiskSizes — so the player only ever acts on the last unlocked size.
+export const getPresentedDiskSize = state =>
+  getDiskLadderSizeBits(Math.min(getPoolReachableDiskLadderStep(state), getUnlockedDiskSteps(state.intro)))
+
+// Whether a smaller-than-presented size still has to be (re)built before the presented one can be.
+export const isLowerDiskSizePending = state => getDiskSize(state) < getPresentedDiskSize(state)
+
 // Whether a Foundry reset can now unlock the next disk size: the current gated array is full and the
 // next step is already reachable from the unlocked pools (so it is only the reset that is missing).
 export const isDiskSizeUnlockAvailable = state => {
@@ -3740,7 +3751,8 @@ export const isDiskSizeUnlockAvailable = state => {
 }
 
 // The Foundry reset that unlocks the next disk size: a Reset Byte Foundry (Capacity, Disks, Lakes, Compute
-// wipe; Combine / Upgrade Capacity / Upgrade Speed / Provision Disk convenience-replay up to prior highs)
+// wipe; Combine / Upgrade Capacity / Upgrade Speed convenience-replay up to prior highs; every smaller Disk size
+// re-provisions itself for free via tickAutoProvisionLowerDiskSizes)
 // plus one more unlocked disk step, which raises the speed exponent by DATA_STREAM_SPEED_EXPONENT_STEP.
 export const unlockNextDiskSizeByFoundryReset = state => {
   if (!isDiskSizeUnlockAvailable(state)) return state
@@ -4001,6 +4013,7 @@ export const provisionDisk = (state, maxPasses = Infinity) => {
 // affordability instants to catch by hand otherwise, one per disk.
 export const queueDiskBuild = state => {
   if (state.intro?.diskBuildQueued) return state
+  if (isLowerDiskSizePending(state)) return state
   if (state.intro.diskBuild) return state
   if (isDiskLadderExhaustedForActivePools(state)) return state
   // Allowed while the offer's pool is rebuilding: provisionDisk stays gated on rebuild (isProvisionDiskAvailable), so the queue just waits.
@@ -4047,6 +4060,27 @@ export const tickQueuedDiskBuild = state => {
   // it leaves only partially funded must stay marked replay-owned, or the very next tick would treat
   // it as an unrestricted manual continuation and fund straight past this same allowance.
   return built.intro?.diskBuildQueued ? { ...built, intro: { ...built.intro, diskBuildQueuedByReplay: true } } : built
+}
+
+// Sizes below the newest unlocked one (rebuilt after a Foundry reset) provision themselves FOR FREE, one
+// disk at a time (same shape as tickPoolResetReprovision): while the size Provision Disk would build is
+// smaller than the presented (newest unlocked) size, add one empty disk to that array, then wait for it
+// to fill (the ordinary cache fill) before adding the next — a disk counts as provisioned again once it
+// is full. Same-reference no-op otherwise.
+export const tickAutoProvisionLowerDiskSizes = state => {
+  if (!state.intro?.byteCreated) return state
+  if (!isLowerDiskSizePending(state)) return state
+  const size = getDiskSize(state)
+  const poolIndex = getPoolIndexForDiskSize(size)
+  if (isStoragePoolRebuilding(state, poolIndex) || isLaterPoolProvisioningLocked(state, poolIndex)) return state
+  if (state.intro.diskBuild) return state
+  const built = state.intro.disksBuiltTotal?.[size] ?? 0
+  const full = state.intro.disks?.[size] ?? 0
+  if (built > 0 && full < built) return state
+  return {
+    ...state,
+    intro: { ...state.intro, disksBuiltTotal: { ...state.intro.disksBuiltTotal, [size]: built + 1 } },
+  }
 }
 
 // Counts down intro.diskBuild's remainingSeconds every tick — a no-op when no build is in
@@ -6668,7 +6702,9 @@ export const tickFoundryResetConvenience = state => {
     }
   }
 
-  if (isDiskBuildBelowCap(next, caps)) {
+  // Sizes below the newest unlocked one are re-provisioned for free by tickAutoProvisionLowerDiskSizes —
+  // the paid replay must not also fund them (it would bank passes the free loop then ignores).
+  if (!isLowerDiskSizePending(next) && isDiskBuildBelowCap(next, caps)) {
     // getDiskReplayPassAllowance stops a single call from collecting more passes than the cap
     // allows even when the pool buffer (e.g. after a long offline gap) can afford more than that in
     // one go — Infinity everywhere except the exact "matched a fully pre-earned run of completed
