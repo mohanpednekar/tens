@@ -1956,6 +1956,13 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
     expect(queueDiskBuild(state)).toBe(state)
   })
 
+  it('queueDiskBuild arms the queue while the offer\'s pool is rebuilding, without provisioning until the rebuild ends', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, dataLakes: { 1: { rebuilding: true } } })
+    const queued = queueDiskBuild(state)
+    expect(queued.intro.diskBuildQueued).toBe(true)
+    expect(tickQueuedDiskBuild(queued)).toBe(queued)
+  })
+
   it('queueDiskBuild is a same-reference no-op once the disk ladder is exhausted for active pools', () => {
     const disksBuiltTotal = {}
     for (let step = 1; step <= DATA_LAKE_TIER_COUNT * 3; step += 1) {
@@ -11823,7 +11830,8 @@ describe('Data Lakes', () => {
       expect(isStoragePoolRebuilding(reset, 1)).toBe(true)
       expect(isProvisionDiskAvailable(reset)).toBe(false)
       expect(provisionDisk(reset)).toBe(reset)
-      expect(queueDiskBuild(reset)).toBe(reset)
+      // Queueing is allowed (it just waits), but nothing is provisioned while the pool rebuilds.
+      expect(tickQueuedDiskBuild(queueDiskBuild(reset))).toEqual(queueDiskBuild(reset))
       const first = tickPoolResetReprovision(reset)
       expect(first.intro.disksBuiltTotal[kb1]).toBe(1)
       expect(tickPoolResetReprovision(first)).toBe(first) // first disk must fill before the next appears

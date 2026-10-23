@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The Provision Disk button also stays visible while its pool is rebuilding after a pool reset; a click queues the build, which fires once the rebuild finishes.
+
 - The Provision Disk button now appears as soon as the Byte exists, instead of waiting for 1 KiB of Capacity; clicking it early queues the build. Upgrade Speed / Capacity were never blocked by a queued or running provision and still aren't (covered by a new test).
 
 - Storage pool Bandwidth is now capped at the pool's Capacity^e (was √Capacity), using the same rising exponent `e` as the Data Stream's Speed rule (see the Foundry-reset entry below), so pools benefit from faster Speed too.
