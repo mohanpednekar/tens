@@ -207,13 +207,13 @@ const UpgradingDots = styled.span`
   }
 `
 
-// Running-upgrade layout: title top-left, percent bottom-left, the "from → to" centred in the middle, and the
-// ⚡ draw rate top-right with the ⏳ time left directly under it (like every other timer). The verb is
-// dropped below 400px and the middle text may wrap, so nothing overlaps on narrow screens.
+// Running-upgrade layout: "⏫ Upgrading…" top-left with the from → to on two lines below it, the percent
+// centred in the middle, and the ⚡ draw rate top-right with the ⏳ time left directly under it (like every
+// other timer). Columns size to content (centre takes the rest) so nothing overlaps on narrow screens.
 const RunningUpgradeContent = styled.div`
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   column-gap: ${props => props.theme.space.sm};
   row-gap: 2px;
   width: 100%;
@@ -221,44 +221,34 @@ const RunningUpgradeContent = styled.div`
   text-align: left;
 `
 
-const RunningVerb = styled.span``
-
 const RunningTitle = styled.span`
   grid-column: 1;
   grid-row: 1;
   justify-self: start;
   font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
-  @media (max-width: 400px) {
-    ${RunningVerb} {
-      display: none;
-    }
-  }
 `
 
-const RunningPercent = styled.span`
-  grid-column: 1;
-  grid-row: 2;
-  justify-self: start;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-`
-
+// Two stacked lines: the current value, then "→ next".
 const RunningChange = styled.span`
   display: flex;
   flex-direction: column;
-  align-items: center;
-  white-space: nowrap;
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
-  justify-self: center;
-  text-align: center;
+  grid-column: 1;
+  grid-row: 2 / span 2;
+  justify-self: start;
   font-size: 0.8em;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+`
+
+const RunningPercent = styled.span`
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: center;
+  justify-self: center;
+  font-size: 1.4em;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 `
 
@@ -1023,12 +1013,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   $pulse
                 >
                   <RunningUpgradeContent>
-                    <RunningTitle>⏫ <RunningVerb>Upgrading </RunningVerb>{speedUpgradeQueued ? 'Speed' : 'Capacity'}<UpgradingDots>…</UpgradingDots></RunningTitle>
-                    <RunningPercent>{Math.floor(runningProgress)}%</RunningPercent>
+                    <RunningTitle>⏫ Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
                     <RunningChange>
                       <span>{speedUpgradeQueued ? `⚡ ${currentRateText}` : `📦 ${currentCapacityText}`}</span>
                       <span>{`→ ${speedUpgradeQueued ? nextRateText : nextCapacityText}`}</span>
                     </RunningChange>
+                    <RunningPercent>{Math.floor(runningProgress)}%</RunningPercent>
                     <SpeedText
                       $color={getSpeedColor(runningMultiplierPercent)}
                       style={{ gridColumn: 3, gridRow: 1, justifySelf: 'end' }}
