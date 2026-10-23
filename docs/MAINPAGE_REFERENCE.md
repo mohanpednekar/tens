@@ -53,8 +53,8 @@ applies `components/Button`'s own
 toward Capacity the same visual way every button on this page already does, and shows balance and
 capacity together in the middle, centered `BalanceText` (`balance / capacity-unit`, using
 `formatMemoryBalanceValue`; see "Numbers are formatted"
-below — `useTrimBalanceAfterFull` switches it to the ordinary trimmed form once `isFull` has held
-continuously for `FULL_BALANCE_TRIM_DELAY_MS`, 1 real second) — scaled into the same binary unit `capacity` picks (raw bits before the Byte generator
+below — `useTrimBalanceWhenSettled` switches it to the ordinary trimmed form once its padded text is an
+integer and has been unchanged for `SETTLED_BALANCE_TRIM_DELAY_MS`, 5 real seconds) — scaled into the same binary unit `capacity` picks (raw bits before the Byte generator
 exists, since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to
 denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extending
 `TIER_DEFINITIONS`' own tier symbols with an "i") — plus a hidden `role="progressbar"`
@@ -92,10 +92,8 @@ INTRO_BYTE_COMBINE_COST`. Once `byteCreated`, a single **"Upgrade Data Stream"**
 (`aria-label="upgrade data stream"`, no icon; not rendered while an upgrade is armed) consolidates the former paired Speed ×2 (Invest) and
 Capacity ×2 actions into one purchase: **Capacity is the only bought progression variable** — the
 button costs exactly the current capacity (a full Buffer, drained on purchase) and doubles
-`intro.capacity` (`INTRO_CAPACITY_DOUBLING_STEP`). The displayed Speed is *derived* from Capacity,
-never purchased — `getDataStreamSpeedBytesPerSecond(capacityBits)` returns `sqrt(capacityBytes)`
-B/s at even `log2` exponents and the arithmetic mean of the two neighbouring even-exponent speeds at
-odd exponents (alternating ×1.5/×4/3 growth, exactly ×2 per two upgrades). The current Capacity and
+`intro.capacity` (`INTRO_CAPACITY_DOUBLING_STEP`). The displayed Speed is *derived* from the Speed basis (`intro.speedCapacity`, falling back to Capacity),
+never purchased directly — `getDataStreamSpeedBytesPerSecond(basisBits)` returns `basisBytes ** e` B/s (`e` = `getDataStreamSpeedExponent`, 0.5 + 0.01 per unlocked Disk size beyond the first), ×2^e per Speed upgrade; once the unlocked Disk array is full the Provision Disk button is replaced by a confirm-guarded `foundry reset to unlock disk size` button (`isDiskSizeUnlockAvailable` → `actions.unlockNextDiskSize`); the separate Upgrade Speed button doubles the basis (cost = the basis) while the doubled basis fits within Capacity. The current Capacity and
 derived Speed stay visible above the button on the Data Stream tile's own footer row; there is no
 after-upgrade preview. `disabled={!capacityUpgradeClickable}` where `capacityUpgradeClickable =
 isMemoryCapacityUpgradeArmable(state)`: a click at any fill (byte combined, not at cap, not already
@@ -148,11 +146,11 @@ Storage is continuous on this same page: **Provision Disk** — the common disk-
 hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary
 scale, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and
 pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-bit ("1,000 B") one above).
-Renders in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
+Renders as soon as the Byte exists (`intro.byteCreated`, no Storage-reveal gate — a click before pool 1 can fund a pass simply queues the build) in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
 location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
 only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows only
 relative gains (current values are on the tile): `🏷️ <current Capacity (= cost)> · 📦 ×2 · ⚡ ×<speed
-ratio>` (🏷️ is the game's cost icon — `COST_ICON` in `components/icons.js`, shared with Data Lake Boosters and Provision Disk) (ratio = `getIntroProductionRate` at the doubled Capacity ÷ now: ×1.5 / ×1.33 alternating),
+ratio>` (🏷️ is the game's cost icon — `COST_ICON` in `components/icons.js`, shared with Data Lake Boosters and Provision Disk) (Capacity button: `🏷️ <Capacity (= cost)> · 📦 ×2`; Speed button: `🏷️ <Speed basis (= cost)> · ⚡ ×<ratio>`, ratio = `getIntroProductionRate` at the doubled basis ÷ now ≈ ×1.68),
 `📦 Max capacity` at the cap; its `aria-description` carries the cost and absolute next Capacity and Speed, and
 the armed status line shows them too. Its
 visible label always tracks
@@ -383,16 +381,15 @@ BALANCE — changing nearly every tick — visibly change display width from one
 because a digit happened to land on zero. The stable variant always shows exactly 3 decimal places
 once ≥ 1 in its unit (a true zero still renders bare, "0 <unit>") so "3.578" and "5.600" read as the
 same precision instead of "3.578" and "5.6" reading like a bigger jump than actually occurred — see
-`docs/DESIGN_HISTORY.md`. That stability stops mattering once a balance sits completely full (nothing
-left to jitter against), so `useTrimBalanceAfterFull` (`ByteFoundryPage`, one hook instance per
+`docs/DESIGN_HISTORY.md`. That stability stops mattering once a balance has settled (nothing
+left to jitter against), so `useTrimBalanceWhenSettled` (`ByteFoundryPage`, one hook instance per
 balance — a shared per-pool `PoolBalanceText` subcomponent for pool buffers, since a hook can't be
 called a variable number of times in one render) switches BOTH the Data Stream and every pool's own
-balance over to the ordinary trimmed formatter once `isFull` (`bits >= capacity` / `poolBufferBits >=
-poolBufferCapacity`) has held continuously for `FULL_BALANCE_TRIM_DELAY_MS` (1 real second, wall-clock
-— independent of the game's own tick rate), reverting instantly the moment it drains back below full.
-The 1-second hold-off is deliberate: a balance that only brushes full for a single tick before
-draining again (e.g. a production tick landing exactly at capacity) never flickers into the trimmed
-form for an instant. Capacity always renders in its own unit; the balance shares it unless that
+balance over to the ordinary trimmed formatter (1–2 digits) once its padded text is an integer
+(all-zero decimals) and has been unchanged for `SETTLED_BALANCE_TRIM_DELAY_MS` (5 real seconds,
+wall-clock — independent of the game's own tick rate), reverting instantly on any text change or any
+pointer/key press. The hold-off is deliberate: a transiently integer balance never flickers into the
+trimmed form. Capacity always renders in its own unit; the balance shares it unless that
 would floor the balance below 1 (a bare "0.xyz" fraction), in which case the balance self-sizes into
 its own finer unit instead (e.g. "30.031 KiB" alongside a "1 MiB" capacity) — only a genuinely
 sub-Byte balance still falls back to a raw bit count, since neither unit ladder defines anything

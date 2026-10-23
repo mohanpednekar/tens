@@ -69,6 +69,15 @@ const computeBoostReadyIntro = {
 }
 
 describe('navAttention', () => {
+  it('lights Foundry when a full unlocked disk array can be unlocked further by a Foundry reset', () => {
+    const state = withIntro({
+      byteCreated: true,
+      unlockedDiskSteps: 1,
+      disksBuiltTotal: { 8000: 9 }, // 1 KB array full (DISK_ARRAY_LADDER_CAP)
+    })
+    expect(hasFoundryAttention(state)).toBe(true)
+  })
+
   it('lights Foundry when Memory is full', () => {
     const state = withIntro({
       bits: INTRO_STARTING_CAPACITY,

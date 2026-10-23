@@ -524,6 +524,8 @@ e2e/
   meta-prestige.e2e.js        ← Settings Era ascension from 1 Googol PP seed; era/Eons + Foundry gate
   data-lake.e2e.js            ← a seeded KB Data Lake renders its disk-square breakdown on Foundry, then a
                                manual Buy Booster click grants a Core (verified on the Boosters page)
+  visual-regression.e2e.js    ← Linux-only full-page screenshot baselines (Byte Foundry / Byte Factory, both
+                               themes) in `visual-regression.e2e.js-snapshots/`; update process: `e2e/README.md`
 scripts/
   bump-version.mjs (+ `.test.js`) ← `yarn bump-version` (see "Changelog convention") — #52
   generate-pwa-icons.mjs     ← one-off script (`yarn gen-pwa-icons`) rasterizing an inline "byte grid"
@@ -611,7 +613,7 @@ Strict three-layer separation:
    `StoragePage` wrapper), not a separate AppNav item or tab. Data Stream owns the shared
    Combine/Speed/Capacity actions and the common Provision Disk control; Storage pools 1–10 are derived
    views over the one Data Stream, each with its own Bandwidth (`getStoragePoolBandwidth`, hard-capped at
-   the square root of that pool's Capacity converted to Bytes) and local buffer
+   that pool's Capacity in Bytes ^ `getDataStreamSpeedExponent(intro)` — the same rising exponent as the Data Stream's own cap) and local buffer
    (`intro.poolBuffers[poolIndex]`, `getPoolBufferBits`/`getPoolBufferCapacity`) that every bit-costing
    Storage action for that pool — Provision Disk's build cost, the read-cache fill — spends from
    exclusively (`tickPoolBufferFill` tops it up from `intro.bits`, pool 1 first, after tier01's
@@ -778,9 +780,7 @@ and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at a constant 
 every other consumer — nothing is paused or raced; when the bar
 reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
 running, the same button becomes an inert progress bar (no cancel; the tile is unchanged). Displayed Speed is *derived* from the Speed basis
-(`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd powers
-the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3 growth, exactly
-×2 per two upgrades. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,
+(`getDataStreamSpeedBytesPerSecond`): it's `basisBytes ** e` B/s, capped at `Capacity^e`, where `e = getDataStreamSpeedExponent(intro)` = `DATA_STREAM_SPEED_EXPONENT_BASE` (0.5) + `DATA_STREAM_SPEED_EXPONENT_STEP` (0.01) per unlocked Disk size beyond the first (`intro.unlockedDiskSteps`, default 1). Provisioning a size beyond the unlocked ones needs a **Foundry reset** (`unlockNextDiskSizeByFoundryReset`/`isDiskSizeUnlockAvailable`; `resetByteFoundry` + one more step, convenience replay rebuilds prior highs); steps survive Prestige/Reset Byte Foundry, reset on Era ascension, and old saves are grandfathered in `normalizePoolMemoryCapacity`. Detail: `docs/ECONOMY_REFERENCE.md`. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,
 nav **Boosters**) unlock; a separate **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
 unlocks at 100 PP — see Architecture 4c. Recurring "upgrade" actions are ranked in a fixed **forced
 priority order** — Disk Fill > Provision Disk > Compute Boost — so a lower-ranked action is disabled (in
@@ -927,7 +927,7 @@ disk-breakdown mixed-radix proof, and every gating predicate: `docs/ECONOMY_REFE
 aria-labels/tooltips keep unit-suffixed `formatDiskSize`). A pool's/Data Lake's CAPACITY (and a lake's
 balance) always renders in its own fixed unit (`formatDiskSizeInPoolUnit`) — a maxed KB lake reads
 "1000 KB", never "1 MB". A pool's buffer BALANCE (`PoolBalanceText`) self-sizes below that unit
-(`formatPoolBalance`/`formatPoolBalanceStable`, e.g. "398.375 KB / 1 MB"). Details:
+(`formatPoolBalance`/`formatPoolBalanceStable`, e.g. "398.3 KB / 1 MB"). Details:
 `docs/ECONOMY_REFERENCE.md`.
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
@@ -1071,7 +1071,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2000 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2016 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
