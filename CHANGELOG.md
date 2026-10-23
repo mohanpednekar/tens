@@ -7,11 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
-
-- **Read-cache blocks fill instantly.** Once a pool's Memory holds a full cache block, that block is
-  filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate. The first empty cache block shows the pool's progress toward it, so it still looks like a gradual fill.
-
 ### Added
 
 - **Foundry reset unlocks the next Disk size.** Once the current Disk array is full, Provision Disk is replaced by a confirm-guarded **Foundry reset: unlock <size> Disks** button. It resets the Byte Foundry (Capacity, Disks, Lakes, Compute) and unlocks provisioning for the next size, raising the Data Stream Speed / pool Bandwidth exponent by 0.01 (starts at 0.5). Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs, paid from the Data Stream, with no clicks; Data Lakes (Boosters, lake upgrades, pool resets) and Compute entities are wiped, exactly like Reset Byte Foundry. Era ascension resets the unlocked sizes and exponent.
@@ -42,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Read-cache blocks fill instantly.** Once a pool's Memory holds a full cache block, that block is
+  filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate. The first empty cache block shows the pool's progress toward it, so it still looks like a gradual fill.
 - The Provision Disk button now appears as soon as the Byte exists, instead of waiting for 1 KiB of Capacity; clicking it early queues the build. Upgrade Speed / Capacity were never blocked by a queued or running provision and still aren't (covered by a new test).
 
 - Storage pool Bandwidth is now capped at the pool's Capacity^e (was √Capacity), using the same rising exponent `e` as the Data Stream's Speed rule (see the Foundry-reset entry below), so pools benefit from faster Speed too.

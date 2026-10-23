@@ -3839,13 +3839,11 @@ describe('Byte Foundry Storage', () => {
     // well under pool 1's own Capacity^0.8 ceiling, so the large seeded Capacity doesn't bind it.
     // with intro.bits seeded at 0, tickPoolBufferFill stays inert throughout (nothing to
     // transfer), so it can't perturb the directly-seeded pool buffer either.
-    // A cache refill FROM the pool buffer is itself further bandwidth-capped
-    // (formerly bandwidth-budgeted; now whole blocks land instantly once the pool buffer holds them — elapsed REAL
-    // seconds), so filling this size's 8,000-bit cache from empty takes 4 real seconds (8,000 /
-    // 2,000), then flushing the full cache into the empty disk (a DISK filling FROM a cache, at
-    // DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER × the same capped rate) takes another 0.25s — 4.2s
-    // of SIMULATED game time, but only 6 real 100ms ticks (600ms) since each tick only ever advances
-    // elapsedSeconds by TICK_RATE_MS/1000 regardless of the underlying rate.
+    // A cache refill FROM the pool buffer is instant and whole-block (no bandwidth budget), so the
+    // seeded 16,000-bit buffer fills this size's 8,000-bit cache on the first tick; flushing the full
+    // cache into the empty disk (a DISK filling FROM a cache, at
+    // DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER × the pool's capped rate) then takes ~0.25s, after
+    // which the cache instantly refills from the remaining buffer.
     const bandwidthCapBits = 2000
     // Pool Capacity advances in plain decade-power-of-10 steps (getDecadePowerEquivalentBits):
     // 2**17 bits lands on decade step 10**5 Bytes (800,000 bits), whose Capacity^0.8 ceiling
