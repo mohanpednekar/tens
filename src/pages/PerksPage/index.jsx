@@ -4,6 +4,9 @@ import StatCard from 'components/StatCard'
 import Switch from 'components/Switch'
 import {
   formatAmount,
+  getAutobuyerIntervalMaxLevel,
+  getAutobuyerIntervalSeconds,
+  getAutobuyerIntervalUpgradeCost,
   getAutobuyerUnlockMilestone,
   getAutoPrestigeAttemptRate,
   getAutoPrestigeCost,
@@ -591,6 +594,42 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               : 'Doubles how many Prestige Points each power earns (claimable once you reach 1 Googol Bytes)'}
           />
         </Row>
+      </Category>
+
+      <Category aria-label="autobuyer speed category">
+        <CategoryHeading>Autobuyer Speed</CategoryHeading>
+        {TIER_DEFINITIONS.map(tier => {
+          if ((state.autobuyers[tier.id] ?? null) === null) return null
+          const level = state.autobuyerIntervalLevels?.[tier.id] ?? 0
+          const maxed = level >= getAutobuyerIntervalMaxLevel()
+          const cost = getAutobuyerIntervalUpgradeCost(level)
+          const intervalMs = Math.round(getAutobuyerIntervalSeconds(state, tier.id) * 1000 * 10) / 10
+          return (
+            <Row key={tier.id} aria-label={`${tier.name} autobuyer speed upgrade`}>
+              <RowLabelStack>
+                <RowLabel>
+                  ⏱ {tier.name}
+                  {level > 0 && ` (Lv.${level})`}
+                </RowLabel>
+                <SubText>every {intervalMs} ms{maxed ? ' (max)' : ''}</SubText>
+              </RowLabelStack>
+              {!maxed && (
+                <PpPurchaseButton
+                  ariaLabel={`Upgrade ${tier.name}'s autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Prestige Points — interval ×0.9`}
+                  color="#34d399"
+                  cost={cost}
+                  disabled={isFrozen || points < cost}
+                  icon="⏫"
+                  label={`${formatAmount(cost)} PP`}
+                  onClick={() => actions.buyAutobuyerIntervalUpgrade(tier.id)}
+                  points={points}
+                  progressLabel={`${tier.name} autobuyer speed Prestige Point progress`}
+                  title="Spend Prestige Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); cost doubles each level"
+                />
+              )}
+            </Row>
+          )
+        })}
       </Category>
 
       {/* Auto-Prestige stays hidden entirely until every tier is fully smart (allTiersFullyAutomated). */}

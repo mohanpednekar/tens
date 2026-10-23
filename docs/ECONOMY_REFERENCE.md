@@ -1701,6 +1701,13 @@ milestones" below), spending no PP at all.
   `PRESTIGE_SPEED_BONUS_UNLOCK_COST` PP (`10000` — the priciest of the four global PP automation
   unlocks, since it's passive/always-on) to set `prestigeSpeedBonusUnlocked = true`. No-op if already
   unlocked, insufficient points, or frozen.
+- **Active — Autobuyer interval:** `buyAutobuyerIntervalUpgrade(tierId)` permanently spends PP
+  (`getAutobuyerIntervalUpgradeCost(level)` = SI-clean ladder 1,2,4,…,64,125,250,500 × 1000^floor(level/10))
+  to multiply that tier's autobuyer interval by `AUTOBUYER_INTERVAL_MULTIPLIER` (0.9) per level in
+  `autobuyerIntervalLevels[tierId]`, floored at `AUTOBUYER_MIN_INTERVAL_SECONDS` (10 ms; max level
+  `getAutobuyerIntervalMaxLevel()` = 44). `tickGame` accrues attempt budget at
+  `elapsedSeconds / getAutobuyerIntervalSeconds(state, tierId)`. Needs the autobuyer unlocked; kept
+  through Prestige/Scale Up/Overclock/Era. UI: Perks → Upgrades → Autobuyer Speed.
 - **Active — Smart:** `buySmartAutobuyer(tierId)` permanently spends PP to make a tier's autobuyer buy
   singly until 10 lifetime purchases (then revert to normal full-block batching) — **requires the
   autobuyer already unlocked** (enforced in the engine), since it specifically optimizes unit-buying

@@ -640,6 +640,14 @@ export const AUTOBUYER_UNLOCK_BASE_COST = 1
 // times more PP than AUTOBUYER_UNLOCK_BASE_COST's benchmark above — 10 PP through 100 PP across
 // the ten tiers. Still a genuine PP purchase, unlike autobuyer unlock itself.
 export const SMART_AUTOBUYER_COST_MULTIPLIER = 10
+// Tier autobuyer interval upgrade (PP-funded, per tier, permanent): each level multiplies the
+// autobuyer's purchase-attempt interval by AUTOBUYER_INTERVAL_MULTIPLIER, from the 1 s base down to
+// the AUTOBUYER_MIN_INTERVAL_SECONDS floor (see engine.js's getAutobuyerIntervalSeconds /
+// getAutobuyerIntervalMaxLevel). Cost: 1 PP, doubling per level on the SI-clean 1,2,4,…,64,125,250,500
+// ladder (×1000 every ten levels) — see engine.js's getAutobuyerIntervalUpgradeCost.
+export const AUTOBUYER_BASE_INTERVAL_SECONDS = 1
+export const AUTOBUYER_INTERVAL_MULTIPLIER = 0.9
+export const AUTOBUYER_MIN_INTERVAL_SECONDS = 0.01
 // How many times the player must have prestiged before a tier's unit-buying autobuyer unlocks
 // automatically (see engine.js's getAutobuyerUnlockMilestone/applyAutobuyerMilestones) — replaces
 // the old PP-cost-funded unlock entirely: no purchase, no PP spent, just a milestone reached by
