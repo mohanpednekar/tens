@@ -3365,12 +3365,12 @@ export const isFoundryReplayUpgradePending = state => {
 
 const getUpgradeDrainFraction = state => (isFoundryReplayUpgradePending(state) ? FOUNDRY_REPLAY_UPGRADE_FLOOR_FRACTION : 1)
 
-// Late pass (after every other consumer): during a replay, the rest of this tick's base-Speed share
-// (1 - floor) goes to the bar, but only from Data Stream bits the other consumers left unspent.
+// Late pass (after every other consumer): during a replay, ALL Data Stream bits the other consumers left
+// unspent go to the bar (not capped at the base-Speed share, so leftover beyond 100% of base Speed — e.g.
+// from a fill-multiplier above 100% — is a real benefit).
 export const tickFoundryReplayLeftoverDrain = elapsedSeconds => state => {
   if (!isFoundryReplayUpgradePending(state)) return state
-  const rest = 1 - FOUNDRY_REPLAY_UPGRADE_FLOOR_FRACTION
-  return tickSpeedUpgradeDrain(elapsedSeconds, rest)(tickCapacityUpgradeDrain(elapsedSeconds, rest)(state))
+  return tickSpeedUpgradeDrain(elapsedSeconds, Number.MAX_VALUE)(tickCapacityUpgradeDrain(elapsedSeconds, Number.MAX_VALUE)(state))
 }
 
 // Runs right after production, before any other Data Stream consumer. Pulls min(Buffer, 100% of base

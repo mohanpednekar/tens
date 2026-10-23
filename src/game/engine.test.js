@@ -12287,9 +12287,11 @@ describe('Foundry-reset replay of Capacity / Speed upgrades (increasing cost ord
     const rate = getIntroProductionRate(queued.intro)
     const early = tickSpeedUpgradeDrain(1, FOUNDRY_REPLAY_UPGRADE_FLOOR_FRACTION)(queued)
     expect(early.intro.speedUpgradeProgress).toBeCloseTo(rate * FOUNDRY_REPLAY_UPGRADE_FLOOR_FRACTION)
-    // Plenty of leftover: the late pass tops the bar up to the remaining 75% of base Speed.
+    // Plenty of leftover: the late pass is not capped at base Speed — it takes everything left, up to the cost.
     const late = tickFoundryReplayLeftoverDrain(1)(early)
-    expect(late.intro.speedUpgradeProgress).toBeCloseTo(rate)
+    // (here the leftover covers the whole cost, far above base Speed, so the upgrade completes this tick)
+    expect(late.intro.speedCapacity).toBe(2 ** 12)
+    expect(late.intro.speedUpgradeQueued).toBe(false)
     // No leftover (consumers emptied the Buffer): the late pass takes nothing.
     const starved = withIntro(early, { bits: 0 })
     expect(tickFoundryReplayLeftoverDrain(1)(starved)).toEqual(starved)
