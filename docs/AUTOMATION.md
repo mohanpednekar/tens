@@ -222,6 +222,14 @@ small issue if no merged PR exists; either way it dedupes against a prior run's 
 run URL before posting again. `deploy.yml` itself is never touched — it's on the protected/denied
 file list below — so surfacing the failure to a human is the full extent of what this step does.
 
+**Stalled-PR sweep (#60).** A third plain-bash step, `Sweep stalled claude/auto-* PRs`
+(`scripts/sweep-stalled-auto-prs.sh`, tested by `scripts/sweep-stalled-auto-prs.test.js`), runs every
+invocation. It finds open `claude/auto-*` PRs with no activity (`updatedAt`) for 24h (`STALL_HOURS`)
+that have a failing check or `mergeable: CONFLICTING` (a conflicted PR can have all-green checks) and
+posts a `<!-- stalled-pr-sweep-v1 -->` comment via `GH_AUTOMATION_PAT`, which re-fires
+`autonomous-pr-followup.yml`'s existing `issue_comment` trigger (no edit to that file). After 3
+(`MAX_RETRIES`) sweep comments on one PR it files an `automation-retro` issue instead of retrying.
+
 **Backlog/milestone hygiene is also deterministic and unconditional.** Two more plain-bash steps —
 `Backlog issue hygiene` (`scripts/backlog-issue-hygiene.sh`, which also runs
 `scripts/epic-407-issue-hygiene.sh`) and `Sync release milestones`

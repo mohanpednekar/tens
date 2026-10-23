@@ -550,6 +550,8 @@ scripts/
                                (close shipped/stray issues, unblock/label ready work) run on every
                                `autonomous-maintenance.yml` invocation — see docs/AUTOMATION.md
   sync-release-milestones.sh ← idempotent GitHub Milestone create/assign (see "GitHub Milestones")
+  sweep-stalled-auto-prs.sh (+ `.test.js`) ← comments on `claude/auto-*` PRs idle 24h+ with a failing
+                               check or merge conflict to re-fire follow-up; 3 retries, then `automation-retro` (#60)
 public/
   pwa-192x192.png, pwa-512x512.png, pwa-maskable-512x512.png, apple-touch-icon.png
                                ← generated PWA icon assets (see `docs/PWA_REFERENCE.md`); the old
@@ -921,11 +923,11 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
   `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) that's
-  12 of the 19 files; the other seven are
+  12 of the 20 files; the other eight are
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
   `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`,
   `scripts/classify-claude-failure.test.js`, `scripts/lint-workflow-shell.test.js`, and
-  `scripts/autonomous-maintenance-workflow.test.js` (checkout PAT, empty-run warning,
+  `scripts/sweep-stalled-auto-prs.test.js`, `scripts/autonomous-maintenance-workflow.test.js` (checkout PAT, empty-run warning,
   prompt `gh` rule) — Vitest's default glob picks these up since `vite.config.js`'s `test`
   block sets no custom `include`.
 

@@ -3303,6 +3303,21 @@
       "norm_label": "withtempdir()"
     },
     {
+      "label": "sweep-stalled-auto-prs.sh",
+      "file_type": "code",
+      "source_file": "scripts/sweep-stalled-auto-prs.sh",
+      "source_location": "L1",
+      "metadata": {
+        "language": "bash",
+        "kind": "file"
+      },
+      "_origin": "ast",
+      "id": "scripts_sweep_stalled_auto_prs",
+      "community": 55,
+      "community_name": "orphan-branch-scan.sh",
+      "norm_label": "sweep-stalled-auto-prs.sh"
+    },
+    {
       "label": "orphan-branch-scan.sh",
       "file_type": "code",
       "source_file": "scripts/orphan-branch-scan.sh",
