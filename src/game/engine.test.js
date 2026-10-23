@@ -69,6 +69,9 @@ import {
   tickDataLakePoolDrain,
   tickIntroProduction,
   tickCapacityUpgradeDrain,
+  tickFoundryReplayLeftoverDrain,
+  isFoundryReplayUpgradePending,
+  FOUNDRY_REPLAY_UPGRADE_FLOOR_FRACTION,
   upgradePoolCapacity,
   queueIntroCapacityUpgrade,
   clearIntroCapacityUpgradeQueue,
@@ -12276,6 +12279,26 @@ describe('Foundry-reset replay of Capacity / Speed upgrades (increasing cost ord
     expect(after.intro.capacityUpgradeQueued ?? false).toBe(false)
     expect(after.intro.speedCapacity).toBe(2 ** 11) // nothing is paid instantly
     expect(after.intro.bits).toBe(0)
+  })
+
+  it('replay allocation: the early drain is floored at 25% of base Speed, the late pass adds only leftover bits', () => {
+    const queued = withIntro(base(2 ** 13), { speedUpgradeQueued: true, speedUpgradeProgress: 0 })
+    expect(isFoundryReplayUpgradePending(queued)).toBe(true)
+    const rate = getIntroProductionRate(queued.intro)
+    const early = tickSpeedUpgradeDrain(1, FOUNDRY_REPLAY_UPGRADE_FLOOR_FRACTION)(queued)
+    expect(early.intro.speedUpgradeProgress).toBeCloseTo(rate * FOUNDRY_REPLAY_UPGRADE_FLOOR_FRACTION)
+    // Plenty of leftover: the late pass tops the bar up to the remaining 75% of base Speed.
+    const late = tickFoundryReplayLeftoverDrain(1)(early)
+    expect(late.intro.speedUpgradeProgress).toBeCloseTo(rate)
+    // No leftover (consumers emptied the Buffer): the late pass takes nothing.
+    const starved = withIntro(early, { bits: 0 })
+    expect(tickFoundryReplayLeftoverDrain(1)(starved)).toEqual(starved)
+  })
+
+  it('outside a replay the upgrade bar keeps 100% priority and the late pass is a no-op', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: true, capacity: 2 ** 13, speedCapacity: 2 ** 11, bits: 2 ** 13, speedUpgradeQueued: true })
+    expect(isFoundryReplayUpgradePending(state)).toBe(false)
+    expect(tickFoundryReplayLeftoverDrain(1)(state)).toBe(state)
   })
 
   it('never starts a second upgrade while one is running', () => {
