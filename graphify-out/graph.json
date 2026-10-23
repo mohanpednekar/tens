@@ -3318,6 +3318,17 @@
       "norm_label": "sweep-stalled-auto-prs.sh"
     },
     {
+      "label": "sweep-stalled-auto-prs.test.js",
+      "file_type": "code",
+      "source_file": "scripts/sweep-stalled-auto-prs.test.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "scripts_sweep_stalled_auto_prs_test",
+      "community": 55,
+      "community_name": "orphan-branch-scan.sh",
+      "norm_label": "sweep-stalled-auto-prs.test.js"
+    },
+    {
       "label": "orphan-branch-scan.sh",
       "file_type": "code",
       "source_file": "scripts/orphan-branch-scan.sh",
