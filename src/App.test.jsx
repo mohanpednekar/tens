@@ -3825,7 +3825,7 @@ describe('Byte Foundry Storage', () => {
     // with intro.bits seeded at 0, tickPoolBufferFill stays inert throughout (nothing to
     // transfer), so it can't perturb the directly-seeded pool buffer either.
     // A cache refill FROM the pool buffer is itself further bandwidth-capped
-    // (CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER × the pool's own capped rate × elapsed REAL
+    // (formerly bandwidth-budgeted; now whole blocks land instantly once the pool buffer holds them — elapsed REAL
     // seconds), so filling this size's 8,000-bit cache from empty takes 4 real seconds (8,000 /
     // 2,000), then flushing the full cache into the empty disk (a DISK filling FROM a cache, at
     // DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER × the same capped rate) takes another 0.25s — 4.2s
@@ -3867,8 +3867,8 @@ describe('Byte Foundry Storage', () => {
     // below the post-fill remainder rather than an exact balance. Same for the cache: it emptied
     // into the disk on flush, then immediately started bandwidth-limited refilling — assert it
     // flushed (well below full), not that it stays at 0.
-    expect(saved.intro.poolBuffers['1']).toBeGreaterThanOrEqual(currentBankSize)
-    expect(saved.intro.diskCache?.[currentBankSize] ?? 0).toBeLessThan(currentBankSize)
+    // The cache refills instantly after the flush, so the buffer is largely spent.
+    expect(saved.intro.diskCache[currentBankSize]).toBe(currentBankSize)
     expect(saved.intro.disks[currentBankSize]).toBe(1)
     expect(saved.owned.tier01).toBe(0)
 

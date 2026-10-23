@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Read-cache blocks fill instantly.** Once a pool's Memory holds a full cache block, that block is
+  filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate.
+
 ### Added
 
 - **Foundry reset unlocks the next Disk size.** Once the current Disk array is full, Provision Disk is replaced by a confirm-guarded **Foundry reset: unlock <size> Disks** button. It resets the Byte Foundry (Capacity, Disks, Lakes, Compute) and unlocks provisioning for the next size, raising the Data Stream Speed / pool Bandwidth exponent by 0.01 (starts at 0.5). Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs, paid from the Data Stream, with no clicks; Data Lakes (Boosters, lake upgrades, pool resets) and Compute entities are wiped, exactly like Reset Byte Foundry. Era ascension resets the unlocked sizes and exponent.

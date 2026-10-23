@@ -4370,14 +4370,6 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   const buildingSize = state.intro.diskBuild?.size
   const poolBuffers = { ...(state.intro.poolBuffers ?? {}) }
   const getPoolBufferBitsLocal = poolIndex => poolBuffers[poolIndex] ?? 0
-  const poolBudgets = {}
-  const getPoolBudget = poolIndex => {
-    if (poolBudgets[poolIndex] === undefined) {
-      poolBudgets[poolIndex] = CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER
-        * getStoragePoolBandwidth(state, poolIndex) * elapsedSeconds
-    }
-    return poolBudgets[poolIndex]
-  }
   const disks = { ...(state.intro.disks ?? {}) }
   // ⚡ Bolt Optimization: Replace O(N) object spreading with local mutations to avoid garbage collection overhead in hot loop
   const diskCache = { ...(state.intro.diskCache ?? {}) }
@@ -4461,55 +4453,34 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     }
   }
 
-  // Pass 1 — refill caches toward full in whole-block quanta (each pool's own buffer progress
-  // stays visible), capped at CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER times the current Byte
-  // Foundry production rate — a CACHE filling FROM that pool's buffer can drain a big banked
-  // balance faster than live production, but never instantly, no matter how much has piled up
-  // while blocked. One shared budget per pool across every eligible size in that pool this call,
-  // since it's all drawn from that pool's own Bandwidth AND its own local buffer (see
-  // getPoolBufferBits/tickPoolBufferFill — the shared Data Stream Buffer no longer funds this
-  // directly). Skip sizes mid-flush: their cache is locked full until the pour completes or
-  // cancels.
+  // Pass 1 — refill caches toward full in WHOLE-BLOCK quanta, instantly: the pool's buffer fills at
+  // its Bandwidth as usual, and the moment it holds a full cache block's worth that block lands in
+  // the cache and is subtracted from the buffer in the same call. No bandwidth budget — the buffer's
+  // own fill rate is the only throttle. Skip sizes mid-flush: their cache is locked full until the
+  // pour completes or cancels.
   for (const size of sizes) {
     if (diskReadCacheFlush[size]) continue
     const poolIndex = getPoolIndexForDiskSize(size)
-    let memoryToCacheBudget = getPoolBudget(poolIndex)
     const bufferCapacity = getPoolBufferCapacity(state, poolIndex)
     const blockBits = size / DISK_CACHE_BLOCK_COUNT
     const cached = diskCache[size] ?? 0
     const available = getPoolBufferBitsLocal(poolIndex)
-    if (cached < size && available > 0 && memoryToCacheBudget > 0) {
+    if (cached < size && available > 0) {
       const need = size - cached
-      const target = Math.min(need, memoryToCacheBudget)
+      let transferAmount = Math.min(need, Math.floor(available / blockBits) * blockBits)
 
-      let transferAmount = 0
-      // ⚡ Bolt Optimization: Replace O(N) iterative chunking loop with O(1) mathematical formulation
-      // Resolves thread freezing by bypassing thousands of deep object clones on massive available pools
-      if (available >= target) {
-        transferAmount = target
-      } else {
-        const chunks = Math.floor(available / blockBits)
-        transferAmount = chunks * blockBits
-
-        const remainingAvailable = available - transferAmount
-        const remainingTarget = target - transferAmount
-        const transferUnit = Math.min(blockBits, remainingTarget)
-
-        // The pool's own buffer is full but its capacity itself is smaller than one block on this
-        // size — dump the full balance rather than stalling the refill forever on a large array.
-        if (bufferCapacity > 0 && bufferCapacity < transferUnit && remainingAvailable >= bufferCapacity) {
-          transferAmount += remainingAvailable
-        }
+      // The pool's own buffer capacity itself is smaller than one block on this size — dump the
+      // full balance rather than stalling the refill forever on a large array.
+      if (transferAmount === 0 && bufferCapacity > 0 && bufferCapacity < blockBits && available >= bufferCapacity) {
+        transferAmount = Math.min(need, available)
       }
 
       if (transferAmount > 0) {
         poolBuffers[poolIndex] = available - transferAmount
         diskCache[size] = cached + transferAmount
-        memoryToCacheBudget -= transferAmount
         changed = true
       }
     }
-    poolBudgets[poolIndex] = memoryToCacheBudget
   }
 
   // Pass 2 — start timed read-cache → empty disk flushes when tier isn't reserving this size for
