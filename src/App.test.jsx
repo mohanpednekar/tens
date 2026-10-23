@@ -4492,16 +4492,21 @@ describe('ComputePage merge chain', () => {
     const nodesMerge = () => screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })
     const nodesAuto = () => screen.queryByRole('button', { name: /enable auto-merge for nodes into clusters/i })
 
-    test('an idle, unselected tier shows no merge/auto buttons until selected', () => {
+    test('a non-automated unlocked tier always shows its merge/auto buttons (spacious layout)', () => {
       seedIntroState({ ...base, computeCores: 1, computeNodes: 2 })
       render(<App />)
       openBoosters()
 
-      expect(nodesMerge()).not.toBeInTheDocument()
-      expect(nodesAuto()).not.toBeInTheDocument()
-      fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
       expect(nodesMerge()).toBeInTheDocument()
       expect(nodesAuto()).toBeInTheDocument()
+    })
+
+    test('locked tiers (nothing held at or above, predecessor cannot feed) are not rendered', () => {
+      seedIntroState({ ...base, computeCores: 1, computeNodes: 0 })
+      render(<App />)
+      openBoosters()
+
+      expect(screen.queryByRole('button', { name: /select grids to fund a compute boost/i })).not.toBeInTheDocument()
     })
 
     test('a tier with a possible merge is revealed without selecting it', () => {
