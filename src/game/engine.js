@@ -3320,7 +3320,7 @@ export const queueIntroSpeedUpgrade = state => {
   return { ...state, intro: { ...state.intro, speedUpgradeQueued: true, speedUpgradeProgress: 0 } }
 }
 
-// Instant full-Buffer variant, used only by Foundry-reset convenience replay.
+// Instant full-Buffer variant (no longer used by the Foundry-reset replay, which uses the progress-bar upgrades).
 export const upgradePoolSpeed = state => {
   const cost = getSpeedUpgradeCostBits(state.intro)
   if (!isSpeedUpgradeArmable(state) || state.intro.bits < cost) return state
@@ -6726,24 +6726,25 @@ export const tickFoundryResetConvenience = state => {
   }
 
   // Capacity and Speed upgrades replay up to their prior highs in order of INCREASING cost (Capacity costs
-  // the current Capacity, Speed costs the current Speed basis): only the cheapest pending upgrade is
-  // attempted each tick, and it waits for the Data Stream to hold its cost (Full-Buffer variants only —
-  // never the progress-bar upgrade, which would divert the whole Data Stream output for the replay).
+  // the current Capacity, Speed costs the current Speed basis): each tick, when no upgrade is running, the
+  // cheapest pending armable one is started through the ordinary progress-bar mechanism
+  // (queueIntroCapacityUpgrade / queueIntroSpeedUpgrade), so tickCapacityUpgradeDrain / tickSpeedUpgradeDrain
+  // pay for it from the Data Stream exactly like a manual click — one at a time.
   const replayCandidates = []
-  if ((caps.capacity ?? 0) > (next.intro?.capacity ?? 0)) {
-    replayCandidates.push({ cost: next.intro?.capacity ?? 0, run: upgradePoolCapacity })
+  if ((caps.capacity ?? 0) > (next.intro?.capacity ?? 0) && isMemoryCapacityUpgradeArmable(next)) {
+    replayCandidates.push({ cost: next.intro?.capacity ?? 0, run: queueIntroCapacityUpgrade })
   }
   if (
     (caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0) &&
     isSpeedUpgradeArmable(next)
   ) {
-    replayCandidates.push({ cost: getSpeedUpgradeCostBits(next.intro), run: upgradePoolSpeed })
+    replayCandidates.push({ cost: getSpeedUpgradeCostBits(next.intro), run: queueIntroSpeedUpgrade })
   }
   replayCandidates.sort((a, b) => a.cost - b.cost)
   if (replayCandidates.length > 0) {
-    const upgraded = replayCandidates[0].run(next)
-    if (upgraded !== next) {
-      next = upgraded
+    const queued = replayCandidates[0].run(next)
+    if (queued !== next) {
+      next = queued
       changed = true
     }
   }
