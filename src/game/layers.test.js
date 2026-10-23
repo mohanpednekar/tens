@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   AUTO_PRESTIGE_BASE_INTERVAL_SECONDS,
-  AUTO_PRESTIGE_COST,
-  AUTO_PRESTIGE_COST_MULTIPLIER,
-  AUTO_SCALE_UP_COST,
   BITS_PER_BYTE,
   BYTES_ID,
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
@@ -255,20 +252,8 @@ describe('constants', () => {
     expect(AUTOBUYER_BULK_MAX_MODE).toBe(3)
   })
 
-  it('AUTO_PRESTIGE_COST is 1000', () => {
-    expect(AUTO_PRESTIGE_COST).toBe(1000)
-  })
-
   it('PRESTIGE_SPEED_BONUS_UNLOCK_COST is 10000', () => {
     expect(PRESTIGE_SPEED_BONUS_UNLOCK_COST).toBe(10000)
-  })
-
-  it('AUTO_SCALE_UP_COST is 20', () => {
-    expect(AUTO_SCALE_UP_COST).toBe(20)
-  })
-
-  it('AUTO_PRESTIGE_COST_MULTIPLIER is 2 (cost doubles per level)', () => {
-    expect(AUTO_PRESTIGE_COST_MULTIPLIER).toBe(2)
   })
 
   it('AUTO_PRESTIGE_BASE_INTERVAL_SECONDS is 1000', () => {

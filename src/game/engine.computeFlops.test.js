@@ -2,6 +2,7 @@ import {
   buyAutoScaleUp,
   buyComputeFlopsTier,
   createInitialGameState,
+  getAutomationUnlockCost,
   getComputeFlopsAffordableQuantity,
   getComputeFlopsTotal,
   getComputeFlopsTierCost,
@@ -13,7 +14,7 @@ import {
   tickComputeFlops,
   tickGame,
 } from './engine'
-import { AUTO_SCALE_UP_COST, BITS_PER_BYTE, MONEY_ID, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_FIRST_TIER_COST_PP, COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_THRESHOLD, TICK_RATE_MS } from './layers'
+import { BITS_PER_BYTE, MONEY_ID, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_FIRST_TIER_COST_PP, COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_THRESHOLD, TICK_RATE_MS } from './layers'
 
 // Bytes and Bits are one pool (MONEY_ID) — 8 Bits per Byte.
 const bytesOf = state => (state.resources[MONEY_ID] ?? 0) / BITS_PER_BYTE
@@ -168,7 +169,7 @@ describe('Compute Flops screen', () => {
     state = buyAutoScaleUp(state)
     expect(state.computeFlops.pageUnlocked).toBe(true)
     expect(isComputeFlopsPageRevealed(state)).toBe(true)
-    expect(state.prestige.points).toBe(COMPUTE_FLOPS_REVEAL_PP - AUTO_SCALE_UP_COST)
+    expect(state.prestige.points).toBe(COMPUTE_FLOPS_REVEAL_PP - getAutomationUnlockCost('scaleUp'))
   })
 
   describe('getComputeFlopsAffordableQuantity', () => {

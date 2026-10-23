@@ -616,9 +616,8 @@ export const PRESTIGE_POINT_SPEED_BONUS = 0.01
 // One-time PP cost to unlock the passive production-speed bonus above (see engine.js's
 // buyPrestigeSpeedBonus) — before this is bought, unspent Prestige Points grant no production
 // bonus at all, regardless of balance. Permanent once bought, like autobuyer automation/Smart/
-// Auto-Prestige. The priciest of the four global PP automation unlocks (see AUTO_SCALE_UP_COST/
-// TICKSPEED_AUTOBUYER_COST/AUTO_PRESTIGE_COST below), since it's a passive, always-on bonus rather
-// than a one-shot action.
+// Auto-Prestige. Priced well above the global automation unlocks (see AUTOMATION_INTERVAL_CONFIG),
+// since it's a passive, always-on bonus rather than a one-shot action.
 export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000
 // Per-tier base cost for the tickspeed multiplier ladder (see engine.js's
 // getTickspeedMultiplierBaseCost/getTickspeedMultiplierCost) — 10^10 for the first tier (index 0),
@@ -654,7 +653,9 @@ export const AUTOBUYER_MIN_INTERVAL_SECONDS = 0.01
 // Interval upgrade chains for the global/per-tier automations (engine.js's
 // buyAutomationIntervalUpgrade / buyTierTickspeedIntervalUpgrade): cost = baseCost × the same
 // 1,2,4,…,64,125,… ladder as the tier autobuyer chain; interval = baseSeconds × 0.9^level, 10 ms floor.
-// Auto Overclock is unlocked by its first level.
+// baseCost is BOTH the one-time unlock cost of the automation (Latency / Scale Up / Overclock /
+// Auto-Prestige autobuyers) AND the first interval-upgrade level's cost. Automations unlocked by a
+// milestone (tier autobuyers, tier tickspeed autobuyers) have no unlock cost — only the upgrades.
 export const AUTOMATION_INTERVAL_CONFIG = {
   latency: { baseCost: 8, baseSeconds: 1 },
   scaleUp: { baseCost: 16, baseSeconds: 64 },
@@ -681,14 +682,6 @@ export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 2
 // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) speeds up *every* tier's
 // production at once. Every level compounds by the same rate.
 export const GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01
-// Base PP cost of Auto-Prestige's first level (see engine.js's getAutoPrestigeCost/
-// buyAutoPrestige) — a single global upgrade track, not per-tier, so unlike the tier costs above
-// it scales by level rather than by tier index; AUTO_PRESTIGE_COST_MULTIPLIER below doubles it
-// each level. Priced above AUTO_SCALE_UP_COST (see below) since Auto-Prestige only ever fires
-// once per run at most, versus Scale Up's much higher activation frequency.
-export const AUTO_PRESTIGE_COST = 1000
-// Auto-Prestige's cost doubles with each level purchased (see engine.js's getAutoPrestigeCost).
-export const AUTO_PRESTIGE_COST_MULTIPLIER = 2
 // Auto-Prestige's base check cadence at level 1: once unlocked, it attempts to prestige roughly
 // this often (see engine.js's getAutoPrestigeAttemptRate) — only actually firing once Money has
 // reached GOOGOL. Each level beyond the first speeds this up by 10%, compounding.
@@ -717,33 +710,18 @@ export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // count the previous claim was taken at, plus this step (see getOverclockRequirement/
 // overclockGame in engine.js).
 export const OVERCLOCK_REQUIREMENT_STEP = 3
-// One-time PP cost to permanently automate Scale Up (see engine.js's buyAutoScaleUp) — once
-// bought, tickGame triggers eligible Scale Ups automatically before the final-tier target; claims
-// remain manual there so Overclock can be reached. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Scale Up
-// itself fires far more often than either of those two over a run — but pricier than
-// TICKSPEED_AUTOBUYER_COST below, since the global tickspeed multiplier it automates is a much
-// smaller, earlier-game upgrade than Scale Up.
-export const AUTO_SCALE_UP_COST = 20
 // One-time PP cost to permanently unlock Compute auto-Boost (see engine.js's
 // buyComputeAutoBoost / tickAutoComputeBoost): while a reserve merge is in flight and any
 // compute-ladder tier is at COMPUTE_ENTITY_CAP, automatically activate (or stack) the player's
-// preferred Boost preset (default Standard). Priced just above AUTO_SCALE_UP_COST — a mid-early
-// automation that only matters once Compute merges are timed — and well below AUTO_PRESTIGE_COST.
+// preferred Boost preset (default Standard). A mid-early automation that only
+// matters once Compute merges are timed.
 export const COMPUTE_AUTO_BOOST_UNLOCK_COST = 30
-// One-time PP cost to automate the (Money-funded) global tickspeed multiplier — once bought,
-// tickGame calls buyGlobalTickspeedMultiplier automatically every tick, re-validating its own
-// eligibility internally (see engine.js's buyTickspeedAutobuyer/tickGame). The cheapest of all
-// four global PP automation unlocks (see PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_SCALE_UP_COST
-// above and AUTO_PRESTIGE_COST below), since the global tickspeed multiplier it automates is a
-// much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than any of
-// the actions those other three automate.
-export const TICKSPEED_AUTOBUYER_COST = 10
 // One-time PP cost to permanently automate RE-LEVELING Auto-Prestige itself (see engine.js's
 // buyAutoPrestigeAutobuyer) — once bought, tickGame calls buyAutoPrestige automatically every
 // tick once affordable, so a level-up beyond the first no longer needs a manual click. This is a
 // "meta-automation" (it automates re-buying an already-PP-funded track, not a Money-funded one
 // like the other two autobuyer toggles above), and only ever does anything once Auto-Prestige has
-// already been activated once — so it's priced below AUTO_PRESTIGE_COST's own initial-activation
+// already been activated once — so it's priced below the Auto-Prestige unlock's own
 // cost (the clicks it saves are already rare, since each Auto-Prestige level doubles in cost) but
 // well above the two cheaper Money-funded autobuyer toggles above, since this row is gated behind
 // allTiersFullyAutomated — a genuinely late-game convenience, not an early one.

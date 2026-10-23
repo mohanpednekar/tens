@@ -1,13 +1,11 @@
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   AUTOBUYER_BULK_MAX_MODE,
-  AUTO_SCALE_UP_COST,
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   COMPUTE_MERGE_RATIO,
   INTRO_BYTE_COMBINE_COST,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
-  TICKSPEED_AUTOBUYER_COST,
   TIER_DEFINITIONS,
 } from 'game/layers'
 import {
@@ -16,7 +14,7 @@ import {
   isDiskSizeUnlockAvailable,
   isSpeedUpgradeArmable,
   getComputeFieldEffectiveCap,
-  getAutoPrestigeCost,
+  getAutomationUnlockCost,
   getAutomationIntervalMaxLevel,
   getAutomationIntervalUpgradeCost,
   isGlobalTickspeedAffordable,
@@ -188,9 +186,10 @@ export const hasAffordablePpUnlock = state => {
       points >= getAutobuyerBulkModeCost(tier.id, (state.autobuyerBulkLevels?.[tier.id] ?? 0) + 1),
     ) ||
     (!state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) ||
-    (!(state.autoScaleUp ?? false) && points >= AUTO_SCALE_UP_COST) ||
+    (!(state.autoScaleUp ?? false) && points >= getAutomationUnlockCost('scaleUp')) ||
     (isComputeCoreConversionUnlocked(state) && !(state.computeAutoBoostUnlocked ?? false) && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST) ||
-    (!(state.autoGlobalTickspeed ?? false) && points >= TICKSPEED_AUTOBUYER_COST) ||
+    (Boolean(state.autoScaleUp) && !(state.autoOverclock ?? false) && points >= getAutomationUnlockCost('overclock')) ||
+    (!(state.autoGlobalTickspeed ?? false) && points >= getAutomationUnlockCost('latency')) ||
     (state.autoPrestige != null && !(state.autoPrestigeAutobuyer ?? false) &&
       TIER_DEFINITIONS.every(tier => Boolean(state.tierTickspeedAutobuyer?.[tier.id])) &&
       points >= AUTO_PRESTIGE_AUTOBUYER_COST)
@@ -206,7 +205,7 @@ export const hasAffordablePpLevelUpgrade = state => {
     Boolean(state.tierTickspeedAutobuyer?.[tier.id]),
   )
   if (!allTiersFullyAutomated) return false
-  if (state.autoPrestige == null) return points >= getAutoPrestigeCost(0)
+  if (state.autoPrestige == null) return points >= getAutomationUnlockCost('prestige')
   const level = state.automationIntervalLevels?.prestige ?? 0
   return level < getAutomationIntervalMaxLevel('prestige') && points >= getAutomationIntervalUpgradeCost('prestige', level)
 }

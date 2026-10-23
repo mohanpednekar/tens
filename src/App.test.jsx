@@ -1502,19 +1502,19 @@ test('the Production Bonuses category disappears once the speed bonus is bought 
   expect(screen.queryByLabelText(/^production bonuses category$/i)).not.toBeInTheDocument()
 })
 
-test('an Enable Auto Scale Up button appears on the PP Upgrades page after the first prestige, and spends 20 PP to enable it', async () => {
+test('an Enable Auto Scale Up button appears on the PP Upgrades page after the first prestige, and spends 16 PP to enable it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
     everUnlockedTierIds: { tier01: true, tier10: true },
-    prestige: { xp: 0, points: 20, count: 1, highestMilestone: 1 },
+    prestige: { xp: 0, points: 16, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  const autoScaleUpButton = screen.getByRole('button', { name: /enable auto scale up for 20 prestige points/i })
+  const autoScaleUpButton = screen.getByRole('button', { name: /enable auto scale up for 16 prestige points/i })
   expect(autoScaleUpButton).toBeEnabled()
 
   await user.click(autoScaleUpButton)
@@ -1558,19 +1558,19 @@ test('the global latency panel renders above the tier list, not below it', () =>
   expect(regions.indexOf('global latency panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after the first prestige, and spends 10 PP to enable it', async () => {
+test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after the first prestige, and spends 8 PP to enable it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
     everUnlockedTierIds: { tier01: true, tier10: true },
-    prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
+    prestige: { xp: 0, points: 8, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  const tickspeedAutobuyerButton = screen.getByRole('button', { name: /enable tickspeed autobuyer for 10 prestige points/i })
+  const tickspeedAutobuyerButton = screen.getByRole('button', { name: /enable tickspeed autobuyer for 8 prestige points/i })
   expect(tickspeedAutobuyerButton).toBeEnabled()
 
   await user.click(tickspeedAutobuyerButton)
@@ -1785,18 +1785,18 @@ const allTiersSmartSeed = () => ({
 test.each([
   {
     name: 'Enable Tickspeed Autobuyer',
-    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 9, count: 1, highestMilestone: 1 } },
-    buttonName: /enable tickspeed autobuyer for 10 prestige points/i,
+    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 7, count: 1, highestMilestone: 1 } },
+    buttonName: /enable tickspeed autobuyer for 8 prestige points/i,
   },
   {
     name: 'Enable Auto Scale Up',
-    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 19, count: 1, highestMilestone: 1 } },
-    buttonName: /enable auto scale up for 20 prestige points/i,
+    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 15, count: 1, highestMilestone: 1 } },
+    buttonName: /enable auto scale up for 16 prestige points/i,
   },
   {
     name: 'Auto-Prestige',
-    seed: { ...allTiersSmartSeed(), prestige: { xp: 0, points: 999, count: 1, highestMilestone: 1 } },
-    buttonName: /enable auto-prestige for 1000 prestige points/i,
+    seed: { ...allTiersSmartSeed(), prestige: { xp: 0, points: 63, count: 1, highestMilestone: 1 } },
+    buttonName: /enable auto-prestige for 64 prestige points/i,
     tab: /open upgrades/i,
   },
   {
@@ -1907,18 +1907,18 @@ test('the Auto-Prestige option stays hidden until every tier is upgraded to Smar
   expect(screen.queryByText(/auto-prestige/i)).not.toBeInTheDocument()
 })
 
-test('an Auto-Prestige button appears on the PP Upgrades page once every tier is Smart, and spends 1000 PP to activate it', async () => {
+test('an Auto-Prestige button appears on the PP Upgrades page once every tier is Smart, and spends 64 PP to activate it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 10 },
     ...allTiersSmartSeed(),
-    prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
+    prestige: { xp: 0, points: 64, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open upgrades/i)
 
-  const autoPrestigeButton = screen.getByRole('button', { name: /enable auto-prestige for 1000 prestige points/i })
+  const autoPrestigeButton = screen.getByRole('button', { name: /enable auto-prestige for 64 prestige points/i })
   expect(autoPrestigeButton).toBeEnabled()
 
   await user.click(autoPrestigeButton)
@@ -2048,10 +2048,10 @@ test('PP-spending buttons report how much of their cost the current balance cove
   expect(smartProgress).toHaveAttribute('aria-valuenow', '10')
   expect(smartProgress).toHaveAttribute('aria-valuemax', '1000')
 
-  // Auto Scale Up costs 20 PP — 10 PP covers half.
+  // Auto Scale Up costs 16 PP — 10 PP covers most of it.
   const autoScaleUpProgress = screen.getByRole('progressbar', { name: /auto scale up prestige point progress/i })
   expect(autoScaleUpProgress).toHaveAttribute('aria-valuenow', '10')
-  expect(autoScaleUpProgress).toHaveAttribute('aria-valuemax', '20')
+  expect(autoScaleUpProgress).toHaveAttribute('aria-valuemax', '16')
 })
 
 test('a locked badge appears on the PP Unlocks page for a tier whose autobuyer milestone has not been reached yet', async () => {

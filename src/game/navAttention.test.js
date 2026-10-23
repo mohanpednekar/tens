@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createInitialGameState,
+  getAutomationUnlockCost,
   getIntroKilobyteConversionCost,
   getPrestigeDoublePpUpgradeCost,
 } from 'game/engine'
@@ -19,7 +20,6 @@ import {
   BITS_PER_BYTE,
   MONEY_ID,
   PRESTIGE_THRESHOLD,
-  TICKSPEED_AUTOBUYER_COST,
   TIER_DEFINITIONS,
 } from 'game/layers'
 import {
@@ -325,7 +325,7 @@ describe('navAttention', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      prestige: { count: 1, points: TICKSPEED_AUTOBUYER_COST },
+      prestige: { count: 1, points: getAutomationUnlockCost('latency') },
       autoGlobalTickspeed: false,
       // Keep money low so Factory high-cues (full purchase level) stay off.
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
@@ -342,7 +342,7 @@ describe('navAttention', () => {
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
     }
-    const unlockOnly = { ...base, prestige: { count: 1, points: TICKSPEED_AUTOBUYER_COST }, autoGlobalTickspeed: false }
+    const unlockOnly = { ...base, prestige: { count: 1, points: getAutomationUnlockCost('latency') }, autoGlobalTickspeed: false }
     expect(hasAffordablePpUnlock(unlockOnly)).toBe(true)
     expect(hasAffordablePpLevelUpgrade(unlockOnly)).toBe(false)
 
@@ -353,6 +353,7 @@ describe('navAttention', () => {
       // Every one-time unlock already owned, so only the leveled Double PP is affordable.
       prestigeSpeedBonusUnlocked: true,
       autoScaleUp: true,
+      autoOverclock: true,
       autoGlobalTickspeed: true,
       autobuyerBulkLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 3])),
     }
@@ -405,7 +406,7 @@ describe('navAttention', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      prestige: { count: 0, points: TICKSPEED_AUTOBUYER_COST },
+      prestige: { count: 0, points: getAutomationUnlockCost('latency') },
       autoGlobalTickspeed: false,
     }
     expect(hasAffordablePpUpgrade(state)).toBe(false)

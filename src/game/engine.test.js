@@ -113,7 +113,8 @@ import {
   getAutobuyerUnlockCost,
   getAutobuyerUnlockMilestone,
   getAutoPrestigeAttemptRate,
-  getAutoPrestigeCost,
+  getAutomationUnlockCost,
+  buyAutoOverclock,
   getComputeBoostCoveredTierCount,
   getComputeBoostMultiplier,
   getComputeBoostTierDurationSeconds,
@@ -331,7 +332,7 @@ import {
   queueIntroSpeedUpgrade,
   tickSpeedUpgradeDrain,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -6665,25 +6666,20 @@ describe('getPrestigePointsAwarded (property-based)', () => {
   })
 })
 
-// ─── getAutoPrestigeCost ──────────────────────────────────────────────────────
+// ─── getAutomationUnlockCost ────────────────────────────────────
 
-describe('getAutoPrestigeCost', () => {
-  it('costs the base 1000 PP to activate (level 0 → 1)', () => {
-    expect(getAutoPrestigeCost(0)).toBe(1000)
-  })
-
-  it('doubles each level after that', () => {
-    expect(getAutoPrestigeCost(1)).toBe(2000)
-    expect(getAutoPrestigeCost(2)).toBe(4000)
-    expect(getAutoPrestigeCost(3)).toBe(8000)
-  })
-
-  it('treats negative levels as 0', () => {
-    expect(getAutoPrestigeCost(-1)).toBe(1000)
+describe('getAutomationUnlockCost', () => {
+  it('is the same amount as each automation\'s first interval-upgrade level', () => {
+    expect(['latency', 'scaleUp', 'overclock', 'prestige'].map(getAutomationUnlockCost)).toEqual([8, 16, 32, 64])
+    for (const key of ['latency', 'scaleUp', 'overclock', 'prestige']) {
+      expect(getAutomationIntervalUpgradeCost(key, 0)).toBe(getAutomationUnlockCost(key))
+    }
   })
 })
-
 // ─── getAutoPrestigeAttemptRate ───────────────────────────────────────────────
+
+const AUTO_SCALE_UP_COST = getAutomationUnlockCost('scaleUp')
+const TICKSPEED_AUTOBUYER_COST = getAutomationUnlockCost('latency')
 
 const withReadyIntervalBudgets = state => ({
   ...state,
@@ -8247,21 +8243,21 @@ describe('tickGame', () => {
 
   it('does not upgrade Auto-Prestige automatically without enough PP', () => {
     const state = withAutoPrestigeAutobuyer(
-      withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), getAutoPrestigeCost(1) - 1)
+      withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 64 - 1)
     )
     const after = tickGame(1)(state)
     expect(after.autoPrestige).toBe(1)
   })
 
   it('does not upgrade Auto-Prestige automatically without the Auto-Prestige Autobuyer bought', () => {
-    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), getAutoPrestigeCost(1))
+    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 64)
     const after = tickGame(1)(state)
     expect(after.autoPrestige).toBe(1)
   })
 
   it('does not upgrade Auto-Prestige automatically while the Auto-Prestige Autobuyer is paused (autoPrestigeAutobuyerEnabled false)', () => {
     const state = withAutoPrestigeAutobuyerEnabled(
-      withAutoPrestigeAutobuyer(withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), getAutoPrestigeCost(1))),
+      withAutoPrestigeAutobuyer(withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 64)),
       false
     )
     const after = tickGame(1)(state)
@@ -8618,8 +8614,8 @@ describe('buyAutobuyerBulkMode', () => {
 // ─── buyAutoPrestige ──────────────────────────────────────────────────────────
 
 describe('buyAutoPrestige', () => {
-  it('spends 1000 PP to activate Auto-Prestige at level 1', () => {
-    const state = withPrestigePoints(createInitialGameState(), 1000)
+  it('spends 64 PP to activate Auto-Prestige at level 1', () => {
+    const state = withPrestigePoints(createInitialGameState(), 64)
     const after = buyAutoPrestige(state)
     expect(after.autoPrestige).toBe(1)
     expect(after.prestige.points).toBe(0)
@@ -8631,17 +8627,12 @@ describe('buyAutoPrestige', () => {
   })
 
   it('returns the same state when there are not enough points to activate', () => {
-    const state = withPrestigePoints(createInitialGameState(), 999)
-    expect(buyAutoPrestige(state)).toBe(state)
-  })
-
-  it('returns the same state when there are not enough points to upgrade', () => {
-    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 1999)
+    const state = withPrestigePoints(createInitialGameState(), 63)
     expect(buyAutoPrestige(state)).toBe(state)
   })
 
   it('refuses to spend once production is frozen at PRESTIGE_THRESHOLD', () => {
-    const state = withMoney(withPrestigePoints(createInitialGameState(), 1000), PRESTIGE_THRESHOLD)
+    const state = withMoney(withPrestigePoints(createInitialGameState(), 64), PRESTIGE_THRESHOLD)
     expect(buyAutoPrestige(state)).toBe(state)
   })
 })
@@ -12305,13 +12296,19 @@ describe('automation interval chains', () => {
     expect(after.tierTickspeedIntervalLevels.tier01).toBe(1)
   })
 
-  it('Auto Overclock stays off until its first interval level, and respects the pause toggle', () => {
+  it('Auto Overclock costs 32 PP to unlock (needs Auto Scale Up), then its speed chain also starts at 32 PP', () => {
     const s = base()
     expect(setAutoOverclockEnabled(false)(s)).toBe(s)
-    const bought = withPoints({ ...base(), autoScaleUp: true }, 32)
-    const after = buyAutomationIntervalUpgrade('overclock')(bought)
-    expect(after.automationIntervalLevels.overclock).toBe(1)
-    expect(setAutoOverclockEnabled(false)(after).autoOverclockEnabled).toBe(false)
+    const noScaleUp = withPoints(base(), 100)
+    expect(buyAutoOverclock(noScaleUp)).toBe(noScaleUp)
+    expect(buyAutomationIntervalUpgrade('overclock')(withPoints({ ...base(), autoScaleUp: true }, 100)).automationIntervalLevels.overclock).toBe(0)
+    const unlocked = buyAutoOverclock(withPoints({ ...base(), autoScaleUp: true }, 64))
+    expect(unlocked.autoOverclock).toBe(true)
+    expect(unlocked.prestige.points).toBe(32)
+    const upgraded = buyAutomationIntervalUpgrade('overclock')(unlocked)
+    expect(upgraded.automationIntervalLevels.overclock).toBe(1)
+    expect(upgraded.prestige.points).toBe(0)
+    expect(setAutoOverclockEnabled(false)(upgraded).autoOverclockEnabled).toBe(false)
   })
 
   it('Latency autobuyer waits for its interval timer', () => {

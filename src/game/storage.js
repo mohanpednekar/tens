@@ -568,6 +568,7 @@ const mergeState = saved => {
     tierTickspeedIntervalLevels: mergeTierMap(fresh.tierTickspeedIntervalLevels, saved.tierTickspeedIntervalLevels),
     automationAttemptBudgets: { ...fresh.automationAttemptBudgets, ...(saved.automationAttemptBudgets ?? {}) },
     tierTickspeedAttemptBudgets: mergeTierMap(fresh.tierTickspeedAttemptBudgets, saved.tierTickspeedAttemptBudgets),
+    autoOverclock: saved.autoOverclock ?? fresh.autoOverclock,
     autoOverclockEnabled: saved.autoOverclockEnabled ?? fresh.autoOverclockEnabled,
     tierTickspeedAutobuyer: mergeTierMap(fresh.tierTickspeedAutobuyer, saved.tierTickspeedAutobuyer),
     tierTickspeedAutobuyerEnabled: mergeTierMap(fresh.tierTickspeedAutobuyerEnabled, saved.tierTickspeedAutobuyerEnabled),
