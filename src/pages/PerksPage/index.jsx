@@ -21,7 +21,7 @@ import {
   getPrestigePowersPerPp,
   getPrestigePpPerPower,
   getPurchaseBlockSize,
-  getSmartAutobuyerCost,
+  getAutobuyerBulkModeCost,
   getTierTickspeedAutobuyerMilestone,
   isBuyMaxUnlocked,
   isComputeCoreConversionUnlocked,
@@ -31,6 +31,8 @@ import {
 } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
+  AUTOBUYER_BULK_LEVELS_BASE,
+  AUTOBUYER_BULK_MAX_MODE,
   AUTO_SCALE_UP_COST,
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
@@ -320,9 +322,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   }, [focusNonce])
 
   const purchaseBlockSize = getPurchaseBlockSize(state)
-  const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier =>
-    state.smartAutobuyer?.[tier.id] && state.tierTickspeedAutobuyer?.[tier.id]
-  )
+  const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier => state.tierTickspeedAutobuyer?.[tier.id])
 
   const isAutoScaleUpActive = state.autoScaleUp ?? false
   const canBuyAutoScaleUp = !isFrozen && !isAutoScaleUpActive && !isFirstRun && points >= AUTO_SCALE_UP_COST
@@ -369,14 +369,16 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <CategoryHeading>Tier Autobuyers</CategoryHeading>
         {/* Every tier's row stays listed (reached milestones included) so unlock history is never lost. */}
         {TIER_DEFINITIONS.map(tier => {
-          const isSmart = state.smartAutobuyer?.[tier.id] ?? false
+          const bulkMode = state.autobuyerBulkLevels?.[tier.id] ?? 0
+          const bulkLevels = AUTOBUYER_BULK_LEVELS_BASE ** (bulkMode + 1)
+          const hasNextBulk = bulkMode < AUTOBUYER_BULK_MAX_MODE
           const isTierTickspeedAutobuyerActive = state.tierTickspeedAutobuyer?.[tier.id] ?? false
           const unlocked = isTierUnlocked(state)(tier)
           const isAutobuyerLocked = (state.autobuyers[tier.id] ?? null) === null
           const autobuyerMilestone = getAutobuyerUnlockMilestone(tier.id)
           const tickspeedMilestone = getTierTickspeedAutobuyerMilestone(tier.id)
-          const smartCost = getSmartAutobuyerCost(tier.id)
-          const canBuySmart = unlocked && !isFrozen && !isAutobuyerLocked && points >= smartCost
+          const bulkCost = hasNextBulk ? getAutobuyerBulkModeCost(tier.id, bulkMode + 1) : 0
+          const canBuyBulk = unlocked && !isFrozen && !isAutobuyerLocked && points >= bulkCost
           return (
             <Row key={tier.id} $tier="unlocks" aria-label={`${tier.name} PP unlocks`}>
               <TierSymbol tier={tier} />
@@ -401,23 +403,23 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 />
               </span>
               <span>
-                {/* Owned Smart always shows (history); buying it needs the tier reachable this run. */}
-                {!isAutobuyerLocked && (isSmart || unlocked) && (
-                  isSmart ? (
-                    <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer is smart`}>🧠 ✓</Badge>
-                  ) : (
-                    <PpPurchaseButton
-                      ariaLabel={`Make ${tier.name}'s autobuyer smart (buy singly until ${purchaseBlockSize} purchases, then in blocks of ${purchaseBlockSize}) for ${formatAmount(smartCost)} Prestige Point${smartCost === 1 ? '' : 's'}`}
-                      color="#a78bfa"
-                      cost={smartCost}
-                      disabled={!canBuySmart}
-                      icon="🧠"
-                      label={`${formatAmount(smartCost)} PP`}
-                      onClick={() => actions.buySmartAutobuyer(tier.id)}
-                      points={points}
-                      progressLabel={`${tier.name} smart autobuyer Prestige Point progress`}
-                    />
-                  )
+                {/* Owned bulk mode always shows (history); buying the next needs the tier reachable this run. */}
+                {!isAutobuyerLocked && bulkMode > 0 && (
+                  <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer buys ${AUTOBUYER_BULK_LEVELS_BASE ** bulkMode} levels at once`}>📦 ×{AUTOBUYER_BULK_LEVELS_BASE ** bulkMode}</Badge>
+                )}
+                {!isAutobuyerLocked && hasNextBulk && unlocked && (
+                  <PpPurchaseButton
+                    ariaLabel={`Let ${tier.name}'s autobuyer buy ${bulkLevels} levels at once when affordable for ${formatAmount(bulkCost)} Prestige Points`}
+                    color="#a78bfa"
+                    cost={bulkCost}
+                    disabled={!canBuyBulk}
+                    icon="📦"
+                    label={`×${bulkLevels} · ${formatAmount(bulkCost)} PP`}
+                    onClick={() => actions.buyAutobuyerBulkMode(tier.id)}
+                    points={points}
+                    progressLabel={`${tier.name} bulk autobuyer Prestige Point progress`}
+                    title={`Each autobuyer attempt buys ${bulkLevels} full levels when that many are affordable (otherwise one unit). Without bulk mode an autobuyer buys one unit per attempt. Buy max mode never applies to autobuyers.`}
+                  />
                 )}
               </span>
             </Row>
@@ -708,7 +710,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         })}
       </Category>
 
-      {/* Auto-Prestige stays hidden entirely until every tier is fully smart (allTiersFullyAutomated). */}
+      {/* Auto-Prestige stays hidden entirely until every tier's tickspeed autobuyer is active (allTiersFullyAutomated). */}
       {allTiersFullyAutomated && (
         <Category aria-label="automation upgrades category">
           <CategoryHeading>Automation</CategoryHeading>

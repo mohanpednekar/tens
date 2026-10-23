@@ -562,7 +562,7 @@ const mergeState = saved => {
     tickspeedLevels: mergeTierMap(fresh.tickspeedLevels, saved.tickspeedLevels),
     autobuyerAttemptBudgets: mergeTierMap(fresh.autobuyerAttemptBudgets, saved.autobuyerAttemptBudgets),
     tierProductionAccumulators: mergeTierMap(fresh.tierProductionAccumulators, saved.tierProductionAccumulators),
-    smartAutobuyer: mergeTierMap(fresh.smartAutobuyer, saved.smartAutobuyer),
+    autobuyerBulkLevels: mergeTierMap(fresh.autobuyerBulkLevels, saved.autobuyerBulkLevels),
     autobuyerIntervalLevels: mergeTierMap(fresh.autobuyerIntervalLevels, saved.autobuyerIntervalLevels),
     automationIntervalLevels: { ...fresh.automationIntervalLevels, ...(saved.automationIntervalLevels ?? {}) },
     tierTickspeedIntervalLevels: mergeTierMap(fresh.tierTickspeedIntervalLevels, saved.tierTickspeedIntervalLevels),

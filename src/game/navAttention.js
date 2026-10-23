@@ -1,5 +1,6 @@
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
+  AUTOBUYER_BULK_MAX_MODE,
   AUTO_SCALE_UP_COST,
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
@@ -23,7 +24,7 @@ import {
   getOverclockRequirement,
   getPrestigeDoublePpUpgradeCost,
   getPurchaseBlockSize,
-  getSmartAutobuyerCost,
+  getAutobuyerBulkModeCost,
   getScaleUpRequirement,
   getScaleUpTargetTier,
   getTierAffordableQuantity,
@@ -183,15 +184,15 @@ export const hasAffordablePpUnlock = state => {
     TIER_DEFINITIONS.some(tier =>
       isTierUnlocked(state)(tier) &&
       (state.autobuyers[tier.id] ?? null) !== null &&
-      !state.smartAutobuyer?.[tier.id] &&
-      points >= getSmartAutobuyerCost(tier.id),
+      (state.autobuyerBulkLevels?.[tier.id] ?? 0) < AUTOBUYER_BULK_MAX_MODE &&
+      points >= getAutobuyerBulkModeCost(tier.id, (state.autobuyerBulkLevels?.[tier.id] ?? 0) + 1),
     ) ||
     (!state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) ||
     (!(state.autoScaleUp ?? false) && points >= AUTO_SCALE_UP_COST) ||
     (isComputeCoreConversionUnlocked(state) && !(state.computeAutoBoostUnlocked ?? false) && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST) ||
     (!(state.autoGlobalTickspeed ?? false) && points >= TICKSPEED_AUTOBUYER_COST) ||
     (state.autoPrestige != null && !(state.autoPrestigeAutobuyer ?? false) &&
-      TIER_DEFINITIONS.every(tier => Boolean(state.smartAutobuyer?.[tier.id]) && Boolean(state.tierTickspeedAutobuyer?.[tier.id])) &&
+      TIER_DEFINITIONS.every(tier => Boolean(state.tierTickspeedAutobuyer?.[tier.id])) &&
       points >= AUTO_PRESTIGE_AUTOBUYER_COST)
   )
 }
@@ -202,7 +203,7 @@ export const hasAffordablePpLevelUpgrade = state => {
   if (points >= getPrestigeDoublePpUpgradeCost(state.prestigeDoublePpLevel ?? 0)) return true
   if (isProductionFrozen(state)) return false
   const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier =>
-    Boolean(state.smartAutobuyer?.[tier.id]) && Boolean(state.tierTickspeedAutobuyer?.[tier.id]),
+    Boolean(state.tierTickspeedAutobuyer?.[tier.id]),
   )
   if (!allTiersFullyAutomated) return false
   if (state.autoPrestige == null) return points >= getAutoPrestigeCost(0)

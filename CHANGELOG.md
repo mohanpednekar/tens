@@ -40,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Smart autobuyer → bulk mode.** Tier autobuyers now always buy one unit per attempt (Buy max mode never applies to them). The per-tier PP purchase that used to be "Smart" now unlocks bulk modes: each attempt buys 10 levels at once when affordable (1000× the tier's base autobuyer PP), then 100 levels (1e6×), then 1000 (1e9×). Previously-owned Smart is dropped. Auto-Prestige's visibility now only needs every tier's tickspeed autobuyer.
+
 - **Auto-Prestige no longer has levels.** Activation (1000 PP) is one-time; cadence now comes from the 64 PP speed chain (base 1024 s, replacing the old 1000 s with +10% per level). The Auto-Prestige Autobuyer now buys that speed chain automatically.
 - **Lake time to next Booster.** Each Data Lake header now shows `⏳ time left` under its fill speed — the time until it has banked the next Booster's cost at the current fill speed. Reset Pool / Scale Out replace it when offered.
 

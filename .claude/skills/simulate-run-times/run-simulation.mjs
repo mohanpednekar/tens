@@ -275,7 +275,7 @@ function wouldAutobuyerStall(state, tier) {
   const tierLevel = state.purchaseLevels?.[tier.id] ?? 1
   const levelProgress = state.purchaseLevelProgress?.[tier.id] ?? 0
   const blockSize = getPurchaseBlockSize(state)
-  const effectiveBatchSize = state.smartAutobuyer?.[tier.id] && tierLevel === 1 ? 1 : BUY_QUANTITY
+  const effectiveBatchSize = 1
   const blockMax = getTierBulkQuantity(blockSize, levelProgress, effectiveBatchSize)
   if (blockMax <= 0) return false
   const affordable = getTierAffordableQuantity(

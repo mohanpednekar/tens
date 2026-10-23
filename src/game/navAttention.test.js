@@ -354,7 +354,7 @@ describe('navAttention', () => {
       prestigeSpeedBonusUnlocked: true,
       autoScaleUp: true,
       autoGlobalTickspeed: true,
-      smartAutobuyer: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])),
+      autobuyerBulkLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 3])),
     }
     expect(hasAffordablePpUnlock(levelOnly)).toBe(false)
     expect(hasAffordablePpLevelUpgrade(levelOnly)).toBe(true)
@@ -385,7 +385,7 @@ describe('navAttention', () => {
       prestigeSpeedBonusUnlocked: true,
       autoScaleUp: true,
       autoGlobalTickspeed: true,
-      smartAutobuyer: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])),
+      autobuyerBulkLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 3])),
     }
     const withBoosters = capacity => ({
       ...ownedEverythingElse,

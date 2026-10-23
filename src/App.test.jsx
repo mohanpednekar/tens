@@ -315,17 +315,17 @@ test('an Era-unlocked Compute (Flops) autobuyer gets its own pause toggle on Per
   expect(JSON.parse(localStorage.getItem('tens_game_state')).computeFlopsAutobuyersEnabled.flop01).toBe(false)
 })
 
-test('a fully-smart tier keeps its pause toggles on the Toggles tab alongside its Unlocks history', async () => {
+test('a fully-automated tier keeps its pause toggles on the Toggles tab alongside its Unlocks history', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     autobuyers: { tier01: 1 },
-    smartAutobuyer: { tier01: true },
+    autobuyerBulkLevels: { tier01: 1 },
     tierTickspeedAutobuyer: { tier01: true },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
-  expect(screen.getByLabelText("Kilobytes's autobuyer is smart")).toBeInTheDocument()
+  expect(screen.getByLabelText("Kilobytes's autobuyer buys 10 levels at once")).toBeInTheDocument()
 
   await user.click(screen.getByRole('tab', { name: /open toggles/i }))
   expect(screen.getByRole('button', { name: /^Kilobytes's autobuyer$/i })).toBeInTheDocument()
@@ -1776,7 +1776,6 @@ const ALL_TIER_IDS = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06'
 const allTiersSmartSeed = () => ({
   owned: Object.fromEntries(ALL_TIER_IDS.slice(0, 9).map(id => [id, 10])),
   autobuyers: Object.fromEntries(ALL_TIER_IDS.map(id => [id, 1])),
-  smartAutobuyer: Object.fromEntries(ALL_TIER_IDS.map(id => [id, true])),
   tierTickspeedAutobuyer: Object.fromEntries(ALL_TIER_IDS.map(id => [id, true])),
 })
 
@@ -1815,9 +1814,9 @@ test.each([
     buttonName: /unlock prestige point production speed bonus for 10000 prestige points/i,
   },
   {
-    name: "Kilobytes's Smart",
-    seed: { autobuyers: { tier01: 1 }, prestige: { xp: 0, points: 9, count: 1, highestMilestone: 1 } },
-    buttonName: /make kilobytes's autobuyer smart .* for 10 prestige points/i,
+    name: "Kilobytes's bulk mode",
+    seed: { autobuyers: { tier01: 1 }, prestige: { xp: 0, points: 999, count: 1, highestMilestone: 1 } },
+    buttonName: /let kilobytes's autobuyer buy 10 levels at once .* for 1,?000 prestige points/i,
   },
 ])('the $name button stays disabled without enough Prestige Points', async ({ seed, buttonName, tab = /open unlocks/i }) => {
   const user = userEvent.setup()
@@ -2043,11 +2042,11 @@ test('PP-spending buttons report how much of their cost the current balance cove
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  // tier01's autobuyer unlocked automatically at Prestige 1 (count 1 here) — Smart costs 10 PP,
-  // and 10 PP fully covers it (valuenow caps at the cost).
-  const smartProgress = screen.getByRole('progressbar', { name: /kilobytes smart autobuyer prestige point progress/i })
+  // tier01's autobuyer unlocked automatically at Prestige 1 (count 1 here) — bulk mode costs
+  // 1000 PP, so 10 PP covers a hundredth of it.
+  const smartProgress = screen.getByRole('progressbar', { name: /kilobytes bulk autobuyer prestige point progress/i })
   expect(smartProgress).toHaveAttribute('aria-valuenow', '10')
-  expect(smartProgress).toHaveAttribute('aria-valuemax', '10')
+  expect(smartProgress).toHaveAttribute('aria-valuemax', '1000')
 
   // Auto Scale Up costs 20 PP — 10 PP covers half.
   const autoScaleUpProgress = screen.getByRole('progressbar', { name: /auto scale up prestige point progress/i })
@@ -2072,28 +2071,28 @@ test('a locked badge appears on the PP Unlocks page for a tier whose autobuyer m
   await openPerksTab(user, /open unlocks/i)
 
   expect(screen.getByLabelText(/^megabytes's autobuyer unlocks at prestige 2$/i)).toBeInTheDocument()
-  // Smart isn't purchasable yet — it requires the autobuyer already be unlocked, regardless of PP held.
-  expect(screen.queryByRole('button', { name: /make megabytes's autobuyer smart/i })).not.toBeInTheDocument()
+  // Bulk mode isn't purchasable yet — it requires the autobuyer already be unlocked, regardless of PP held.
+  expect(screen.queryByRole('button', { name: /let megabytes's autobuyer buy 10 levels at once/i })).not.toBeInTheDocument()
 })
 
-test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone is reached, revealing Smart in its place', async () => {
+test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone is reached, revealing bulk mode in its place', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier01: 16 },
     everUnlockedTierIds: { tier01: true, tier02: true },
-    prestige: { xp: 0, points: 20, count: 2, highestMilestone: 1 }, // meets megabytes' milestone (2)
+    prestige: { xp: 0, points: 2000, count: 2, highestMilestone: 1 }, // meets megabytes' milestone (2)
   })
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
   expect(screen.queryByLabelText(/^megabytes's autobuyer unlocks at prestige/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText("Megabytes's autobuyer unlocked at Prestige 2")).toBeInTheDocument()
-  // Megabytes' Smart cost is 20 PP (SMART_AUTOBUYER_COST_MULTIPLIER × its 2 PP-equivalent benchmark).
-  expect(screen.getByRole('button', { name: /make megabytes's autobuyer smart/i })).toBeEnabled()
+  // Megabytes' bulk mode 1 costs 2,000 PP (1000 × its 2 PP-equivalent base cost).
+  expect(screen.getByRole('button', { name: /let megabytes's autobuyer buy 10 levels at once/i })).toBeEnabled()
   // Confirms no PP was spent to reach this state — the milestone unlock is free.
-  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('20 PP')
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent(/2,?000 PP/)
 })
 
 test('no PP tabs or PP-based controls appear before the player has ever prestiged, even with an active autobuyer and unspent PP — Milestones stays via More', async () => {
@@ -2113,18 +2112,18 @@ test('no PP tabs or PP-based controls appear before the player has ever prestige
   expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
 })
 
-test('a Smart button appears on the PP Unlocks page once a tier\'s autobuyer is unlocked (not before), and spends 10x the unlock cost', async () => {
+test('a bulk-mode button appears on the PP Unlocks page once a tier\'s autobuyer is unlocked (not before), and spends 1000x the unlock cost', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 },
-    prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
+    prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  const smartButton = screen.getByRole('button', { name: /make kilobytes's autobuyer smart .* for 10 prestige points/i })
+  const smartButton = screen.getByRole('button', { name: /let kilobytes's autobuyer buy 10 levels at once .* for 1,?000 prestige points/i })
   expect(smartButton).toBeEnabled()
   // The Unlock control is already gone — the autobuyer is unlocked, Smart has taken its place.
   expect(screen.queryByRole('button', { name: /unlock kilobytes's autobuyer/i })).not.toBeInTheDocument()
@@ -2133,8 +2132,8 @@ test('a Smart button appears on the PP Unlocks page once a tier\'s autobuyer is 
 
   // Smart is bought, but the row stays — the tier tickspeed autobuyer purchase is independent
   // and still pending, so there's still something left to buy for this tier.
-  expect(screen.queryByRole('button', { name: /make kilobytes's autobuyer smart/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText("Kilobytes's autobuyer is smart")).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /let kilobytes's autobuyer buy 10 levels at once/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText("Kilobytes's autobuyer buys 10 levels at once")).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -2144,14 +2143,14 @@ test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) p
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 }, // the unit-buying autobuyer is already unlocked
-    prestige: { xp: 0, points: 10, count: 11, highestMilestone: 1 }, // one short of Kilobytes's tickspeed milestone (12)
+    prestige: { xp: 0, points: 1000, count: 11, highestMilestone: 1 }, // one short of Kilobytes's tickspeed milestone (12)
   })
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
   expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 12$/i)).toBeInTheDocument()
-  // Smart is independent of the tickspeed autobuyer and already purchasable (autobuyer unlocked, 10 PP held).
-  expect(screen.getByRole('button', { name: /make kilobytes's autobuyer smart/i })).toBeEnabled()
+  // Bulk mode is independent of the tickspeed autobuyer and already purchasable (autobuyer unlocked, 1000 PP held).
+  expect(screen.getByRole('button', { name: /let kilobytes's autobuyer buy 10 levels at once/i })).toBeEnabled()
 })
 
 test('a tier\'s tickspeed autobuyer auto-unlocks (no PP spent) once its own prestige milestone is reached', async () => {
@@ -2168,11 +2167,11 @@ test('a tier\'s tickspeed autobuyer auto-unlocks (no PP spent) once its own pres
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('10 PP')
 })
 
-test('a tier\'s Unlocks row stays listed (as unlock history) once Smart and its tier tickspeed autobuyer are both owned', async () => {
+test('a tier\'s Unlocks row stays listed (as unlock history) once bulk mode and its tier tickspeed autobuyer are both owned', async () => {
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 },
-    smartAutobuyer: { tier01: true },
+    autobuyerBulkLevels: { tier01: 1 },
     tierTickspeedAutobuyer: { tier01: true },
     prestige: { xp: 0, points: 0, count: 12, highestMilestone: 1 },
   })
@@ -2182,21 +2181,21 @@ test('a tier\'s Unlocks row stays listed (as unlock history) once Smart and its 
   const row = screen.getByLabelText(/^kilobytes pp unlocks$/i)
   expect(within(row).getByLabelText("Kilobytes's autobuyer unlocked at Prestige 1")).toBeInTheDocument()
   expect(within(row).getByLabelText("Kilobytes's tickspeed autobuyer unlocked at Prestige 12")).toBeInTheDocument()
-  expect(within(row).getByLabelText("Kilobytes's autobuyer is smart")).toBeInTheDocument()
+  expect(within(row).getByLabelText("Kilobytes's autobuyer buys 10 levels at once")).toBeInTheDocument()
 })
-test('an owned Smart marker stays on a tier\'s Unlocks row even before that tier is reachable again this run', async () => {
+test('an owned bulk-mode marker stays on a tier\'s Unlocks row even before that tier is reachable again this run', async () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier01: 3 }, // tier02 not reachable this run
     autobuyers: { tier01: 1, tier02: 1 },
-    smartAutobuyer: { tier02: true },
+    autobuyerBulkLevels: { tier02: 1 },
     prestige: { xp: 0, points: 100, count: 30, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(userEvent.setup(), /open unlocks/i)
 
   const row = screen.getByLabelText(/^megabytes pp unlocks$/i)
-  expect(within(row).getByLabelText("Megabytes's autobuyer is smart")).toBeInTheDocument()
+  expect(within(row).getByLabelText("Megabytes's autobuyer buys 10 levels at once")).toBeInTheDocument()
 })
 
 test('a tier\'s Unlocks row shows only its milestones (no Smart) before that tier itself is reachable', async () => {
@@ -2216,13 +2215,14 @@ test('a tier\'s Unlocks row shows only its milestones (no Smart) before that tie
   expect(within(row).queryByRole('button', { name: /make megabytes's autobuyer smart/i })).not.toBeInTheDocument()
 })
 
-test('the PP Unlocks tab NavDot lights up when a tier\'s Smart purchase is affordable, even though autobuyer unlock/tier tickspeed autobuyer no longer cost PP at all', async () => {
+test('the PP Unlocks tab NavDot lights up when a tier\'s bulk-mode purchase is affordable, even though autobuyer unlock/tier tickspeed autobuyer no longer cost PP at all', async () => {
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 },
-    // Tickspeed Autobuyer also costs 10 PP — own it so only Smart is affordable.
+    // Tickspeed Autobuyer also costs 10 PP — own it so only bulk mode is affordable.
     autoGlobalTickspeed: true,
-    prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
+    prestigeDoublePpLevel: 5, // keep the (otherwise affordable) Double PP upgrade out of reach
+    prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
   })
   render(<App />)
 
@@ -2428,12 +2428,13 @@ test('pausing a tier\'s tickspeed autobuyer via its Toggles-tab toggle stops it 
   vi.useRealTimers()
 })
 
-test('once every tier is smart and tickspeed-automated, every tier row still shows its reached milestones and no purchase remains', async () => {
+test('once every tier is at max bulk mode and tickspeed-automated, every tier row still shows its reached milestones and no purchase remains', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 10 },
     ...allTiersSmartSeed(),
+    autobuyerBulkLevels: Object.fromEntries(ALL_TIER_IDS.map(id => [id, 3])),
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
@@ -2442,15 +2443,14 @@ test('once every tier is smart and tickspeed-automated, every tier row still sho
   for (const tier of TIER_DEFINITIONS) {
     expect(screen.getByLabelText(`${tier.name} PP unlocks`)).toBeInTheDocument()
   }
-  expect(screen.queryByRole('button', { name: /make .*'s autobuyer smart/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /let .*'s autobuyer buy .* levels at once/i })).not.toBeInTheDocument()
 })
-test('a tier fully Smart but not yet tickspeed-automated still offers its tickspeed-autobuyer milestone', async () => {
+test('a tier at max bulk mode but not yet tickspeed-automated still offers its tickspeed-autobuyer milestone', async () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: Object.fromEntries(ALL_TIER_IDS.slice(0, 9).map(id => [id, 10])),
     autobuyers: Object.fromEntries(ALL_TIER_IDS.map(id => [id, 1])),
-    smartAutobuyer: Object.fromEntries(ALL_TIER_IDS.map(id => [id, true])),
-    // tierTickspeedAutobuyer deliberately left unbought for every tier.
+      // tierTickspeedAutobuyer deliberately left unbought for every tier.
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)

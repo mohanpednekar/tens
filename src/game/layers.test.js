@@ -50,7 +50,8 @@ import {
   PRESTIGE_THRESHOLD,
   PRESTIGE_UNBOUNDED_MIN_COUNT,
   RESOURCE_SYMBOL,
-  SMART_AUTOBUYER_COST_MULTIPLIER,
+  AUTOBUYER_BULK_LEVELS_BASE,
+  AUTOBUYER_BULK_MAX_MODE,
   SCALE_UP_FINAL_TIER_REQUIREMENT_STEP,
   SCALE_UP_MULTIPLIER_BASE,
   TICKSPEED_MULTIPLIER_BASE_EXPONENT,
@@ -249,8 +250,9 @@ describe('constants', () => {
     expect(TICKSPEED_PRODUCTION_STEP).toBe(0.1)
   })
 
-  it('SMART_AUTOBUYER_COST_MULTIPLIER is 10 (smart costs 10x the unlock cost)', () => {
-    expect(SMART_AUTOBUYER_COST_MULTIPLIER).toBe(10)
+  it('autobuyer bulk mode buys 10^m levels, up to mode 3', () => {
+    expect(AUTOBUYER_BULK_LEVELS_BASE).toBe(10)
+    expect(AUTOBUYER_BULK_MAX_MODE).toBe(3)
   })
 
   it('AUTO_PRESTIGE_COST is 1000', () => {

@@ -636,10 +636,12 @@ export const TICKSPEED_PRODUCTION_STEP = 0.1
 // SMART_AUTOBUYER_COST_MULTIPLIER below multiplies: 1 "PP-equivalent" for the first tier, up
 // through 10 for the 10th/last tier.
 export const AUTOBUYER_UNLOCK_BASE_COST = 1
-// The "smart" autobuyer (see engine.js's getSmartAutobuyerCost/buySmartAutobuyer) costs this many
-// times more PP than AUTOBUYER_UNLOCK_BASE_COST's benchmark above — 10 PP through 100 PP across
-// the ten tiers. Still a genuine PP purchase, unlike autobuyer unlock itself.
-export const SMART_AUTOBUYER_COST_MULTIPLIER = 10
+// Autobuyer bulk mode (engine.js's getAutobuyerBulkModeCost/buyAutobuyerBulkMode): without it a tier's
+// autobuyer buys one unit per attempt. Mode m (1..AUTOBUYER_BULK_MAX_MODE) lets each attempt buy
+// AUTOBUYER_BULK_LEVELS_BASE^m full levels at once when that many are affordable (else one unit).
+// Cost = the tier's autobuyer base cost × levels^3 (1000×, 1e6×, 1e9×). Buy max mode never applies to autobuyers.
+export const AUTOBUYER_BULK_LEVELS_BASE = 10
+export const AUTOBUYER_BULK_MAX_MODE = 3
 // Tier autobuyer interval upgrade (PP-funded, per tier, permanent): each level multiplies the
 // autobuyer's purchase-attempt interval by AUTOBUYER_INTERVAL_MULTIPLIER, from the tier's base (tier N =
 // N × AUTOBUYER_BASE_INTERVAL_SECONDS, i.e. 1 s … 10 s) down to

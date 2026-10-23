@@ -881,7 +881,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   rather than test IDs; `StatCard` panels carry `aria-label="<tier name> layer"` for this purpose, and
   each tier row's Buy button nests a visually-hidden `role="progressbar"` (via `VisuallyHidden`) with
   `aria-label="<tier name> cost-block progress"` plus `aria-valuenow`/`aria-valuemin`/`aria-valuemax` —
-  the Buy/tickspeed-multiplier/Unlock/Smart/Prestige buttons also carry an explicit `aria-label` with the
+  the Buy/tickspeed-multiplier/Unlock/bulk-mode/Prestige buttons also carry an explicit `aria-label` with the
   full descriptive sentence (independent of their compact icon-based visible text), so
   `getByRole('button', { name: … })` still matches despite the nested labeled node.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`). Tests for
@@ -903,7 +903,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2048 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2040 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

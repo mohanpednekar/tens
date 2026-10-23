@@ -593,9 +593,10 @@ const InfoPage = () => {
             Once unlocked, its ⏸/▶ control on Perks → 🎛 Toggles pauses or resumes without losing the unlock.
           </li>
           <li>
-            <strong>Smart</strong> is a one-time Prestige Point purchase: the unit autobuyer buys
-            one at a time until a full level is affordable, then in blocks — fixing an early-game
-            stall where a full level isn’t affordable yet.
+            A tier’s autobuyer buys <strong>one unit per attempt</strong> (Buy max mode never
+            applies to it). <strong>Bulk mode</strong> is a Prestige Point purchase per tier: each
+            attempt then buys 10 levels at once when that many are affordable (1000× the
+            autobuyer’s base PP), then 100 levels (1e6×), then 1000 (1e9×).
           </li>
         </ul>
       </Section>
