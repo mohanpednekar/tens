@@ -8976,3 +8976,28 @@ cap above was removed at the maintainer's request: once a pool's buffer holds a 
 block moves into the read cache and is subtracted from the buffer in the same call; the buffer's own
 Bandwidth is the only throttle. `DiskArrayRow` mirrors the buffer's progress toward the next block in the
 first empty cache block so the fill still looks gradual. Not re-run through `simulate-run-times`.
+
+## Store release prep: flags-off monetization and config-time feature loaders (2026-10)
+
+- **Why a `virtual:tens-features` module instead of `if (FLAG) import()`.** The first cut gated each
+  dynamic import behind a constant from `services/config.js` (`import.meta.env.VITE_*` comparisons).
+  Rolldown still emitted the AdMob, RevenueCat and Firebase chunks into the GitHub Pages `dist/` —
+  chunking happens before minifier dead-code elimination, so an unreachable `import()` still
+  produces a chunk. `viteConfigFactory.js` now generates the flags and loaders at config time; a
+  disabled feature's loader is the literal `null`, so its module is never referenced.
+- **Why `includePlugins` in a JS Capacitor config.** Installing the AdMob/RevenueCat npm packages
+  would otherwise link their native SDKs into every binary: the AD_ID / BILLING permissions, the
+  Google Mobile Ads launch-time APPLICATION_ID check, and the SDK privacy manifests (which App Store
+  review cross-checks against the privacy label). Deriving `includePlugins` from the same env flags
+  keeps flags-off binaries free of them. JSON configs can't read env, hence `capacitor.config.js`
+  (loaded by the CLI through Node's `require(esm)`, which returns the `'module.exports'` export).
+- **Cloud save is email/password on the Firebase JS SDK.** It runs unchanged in both WebViews and on
+  the web, needs no native plugin, and avoids the Sign in with Apple requirement that a Google/social
+  login would trigger on iOS. `initializeAuth` with explicit persistence replaces `getAuth`, whose
+  popup/redirect iframe resolver never loads in a Capacitor WebView. Upload/download are explicit
+  player actions (no automatic sync), so there is no merge/conflict policy to get wrong.
+- **Delete order.** Reauthenticate → delete `saves/{uid}` → delete the Auth user. A failed data delete
+  keeps the account so the player can retry instead of orphaning data they can no longer reach.
+- **R8 verification runs in CI.** The authoring container could not reach `dl.google.com` for the
+  Android SDK, so `mobile-build.yml`'s `android-release` job builds the minified release with a
+  throwaway key and boots it on an emulator (`scripts/android-boot-smoke.sh`).

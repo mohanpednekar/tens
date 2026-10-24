@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { createViteConfig } from '../../viteConfigFactory.js'
+import capacitorConfig, { ADS_PLUGIN, IAP_PLUGIN, buildIncludePlugins } from '../../capacitor.config.js'
+import { buildFeaturesModule, createViteConfig, resolveFeatureFlags } from '../../viteConfigFactory.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
@@ -11,11 +12,18 @@ function pluginNames(config) {
 }
 
 describe('Capacitor foundation (#70)', () => {
-  it('ships a capacitor.config.json aimed at the Vite dist/ output', () => {
-    const config = JSON.parse(readFileSync(join(root, 'capacitor.config.json'), 'utf8'))
-    expect(config.appId).toBe('com.mohanpednekar.tens')
-    expect(config.appName).toBe('Tens')
-    expect(config.webDir).toBe('dist')
+  it('ships a capacitor.config.js aimed at the Vite dist/ output', () => {
+    expect(capacitorConfig.appId).toBe('com.mohanpednekar.tens')
+    expect(capacitorConfig.appName).toBe('Tens')
+    expect(capacitorConfig.webDir).toBe('dist')
+    expect(capacitorConfig.plugins.SystemBars.insetsHandling).toBe('native')
+  })
+
+  it('only syncs the AdMob / RevenueCat native SDKs when their flag is on', () => {
+    expect(buildIncludePlugins({})).toEqual(['@capacitor/splash-screen'])
+    expect(buildIncludePlugins({ VITE_TENS_ADS_ENABLED: 'true' })).toContain(ADS_PLUGIN)
+    expect(buildIncludePlugins({ VITE_TENS_ADS_ENABLED: 'true' })).not.toContain(IAP_PLUGIN)
+    expect(buildIncludePlugins({ VITE_TENS_IAP_ENABLED: 'true' })).toEqual(['@capacitor/splash-screen', IAP_PLUGIN])
   })
 
   it('uses a relative base and omits VitePWA when capacitor builds are requested', () => {
@@ -34,4 +42,50 @@ describe('Capacitor foundation (#70)', () => {
     expect(html).toMatch(/href="\.\/apple-touch-icon\.png"/)
     expect(html).not.toMatch(/href="\/tens\/apple-touch-icon\.png"/)
   })
+
+  it('never enables ads or purchases outside a Capacitor build', () => {
+    const env = { VITE_TENS_ADS_ENABLED: 'true', VITE_TENS_IAP_ENABLED: 'true' }
+    expect(resolveFeatureFlags({ capacitor: false, env })).toMatchObject({ ADS_ENABLED: false, IAP_ENABLED: false })
+    expect(resolveFeatureFlags({ capacitor: true, env })).toMatchObject({ ADS_ENABLED: true, IAP_ENABLED: true })
+    expect(resolveFeatureFlags({ capacitor: true, env: {} })).toMatchObject({ ADS_ENABLED: false, IAP_ENABLED: false, CLOUD_SAVE_ENABLED: false })
+  })
+
+  it('emits no import of a disabled feature', () => {
+    const off = buildFeaturesModule(resolveFeatureFlags({ capacitor: false }), '/src')
+    expect(off).not.toMatch(/import\(/)
+    expect(off).toContain('export const loadAdsModule = null')
+    const on = buildFeaturesModule(resolveFeatureFlags({
+      capacitor: true,
+      env: { VITE_TENS_ADS_ENABLED: 'true', VITE_FIREBASE_API_KEY: 'k', VITE_FIREBASE_PROJECT_ID: 'p', VITE_FIREBASE_APP_ID: 'a' },
+    }), '/src')
+    expect(on).toContain('admobAdapter.js')
+    expect(on).toContain('firebaseBackend.js')
+    expect(on).toContain('export const loadIapModule = null')
+  })
 })
+
+describe('Android release configuration', () => {
+  const read = file => readFileSync(join(root, file), 'utf8')
+
+  it('targets and compiles against API 36', () => {
+    const vars = read('android/variables.gradle')
+    expect(vars).toMatch(/compileSdkVersion = 36/)
+    expect(vars).toMatch(/targetSdkVersion = 36/)
+  })
+
+  it('minifies release builds and signs them only from externally supplied credentials', () => {
+    const gradle = read('android/app/build.gradle')
+    expect(gradle).toMatch(/release \{\s*minifyEnabled true\s*shrinkResources true/)
+    for (const key of ['TENS_UPLOAD_STORE_FILE', 'TENS_UPLOAD_STORE_PASSWORD', 'TENS_UPLOAD_KEY_ALIAS', 'TENS_UPLOAD_KEY_PASSWORD']) {
+      expect(gradle).toContain(`releaseSetting('${key}')`)
+    }
+    const ignored = read('.gitignore')
+    for (const pattern of ['*.keystore', '*.jks', 'android/keystore.properties']) expect(ignored).toContain(pattern)
+  })
+
+  it('declares no permission beyond INTERNET', () => {
+    const manifest = read('android/app/src/main/AndroidManifest.xml')
+    expect([...manifest.matchAll(/<uses-permission android:name="([^"]+)"/g)].map(m => m[1])).toEqual(['android.permission.INTERNET'])
+  })
+})
+

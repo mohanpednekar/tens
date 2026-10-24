@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import ConfirmDialog from 'components/ConfirmDialog'
-import StatCard from 'components/StatCard'
 import { formatAmount, formatCurrency, formatMoneyBalance, getEonsAwarded, isEraEligible, isProductionFrozen } from 'game/engine'
 import { MUSEUM_PIN_CAP } from 'game/layers'
 import { FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE as UNLOCK_CODE, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage } from 'game/storage'
 import styled from 'styled-components'
+import CloudSaveSection from './CloudSaveSection'
+import LegalSection from './LegalSection'
+import StoreSection from './StoreSection'
+import { CodeForm, CodeInput, Row, Section, StatusText } from './styles'
 
 // Always-reachable Settings screen (via AppNav → More). Holds Supporter pack
 // (unlock code / dummy checkout), save slots, Prestige museum, Ops dashboard, and Reset —
@@ -32,28 +35,6 @@ const Header = styled.header`
   }
 `
 
-const Section = styled(StatCard)`
-  gap: 0.5rem;
-
-  h2 {
-    font-size: ${props => props.theme.type.scale.md.size};
-    margin: 0;
-  }
-
-  p {
-    color: ${props => props.theme.color.textMuted};
-    margin: 0;
-  }
-`
-
-const Row = styled.div`
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  justify-content: space-between;
-`
-
 const SlotRow = styled(Row)`
   border: 1px solid ${props => props.theme.color.border};
   border-radius: ${props => props.theme.radius.sm};
@@ -77,36 +58,6 @@ const SlotLabel = styled.div`
     color: ${props => props.theme.color.textMuted};
     font-size: 0.75rem;
   }
-`
-
-const CodeForm = styled.form`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  width: 100%;
-`
-
-const CodeInput = styled.input`
-  background: ${props => props.theme.color.surfaceSunken};
-  border: 1px solid ${props => props.theme.color.border};
-  border-radius: ${props => props.theme.radius.sm};
-  color: ${props => props.theme.color.text};
-  flex: 1;
-  font-family: ${props => props.theme.font.body};
-  font-size: 0.9rem;
-  min-width: 10rem;
-  padding: 0.5rem 0.65rem;
-
-  &:focus-visible {
-    outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
-  }
-`
-
-const StatusText = styled.p`
-  color: ${props => (props.$error ? props.theme.color.danger : props.theme.color.textMuted)};
-  font-size: 0.8rem;
-  margin: 0;
 `
 
 const MuseumList = styled.ul`
@@ -303,6 +254,10 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         )}
         {codeStatus && <StatusText $error={codeStatus.error}>{codeStatus.text}</StatusText>}
       </Section>
+
+      <CloudSaveSection game={game} />
+
+      <StoreSection />
 
       <Section aria-label="save slots section">
         <h2>Save slots</h2>
@@ -523,6 +478,8 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           ))}
         </ThemeOptionRow>
       </Section>
+
+      <LegalSection />
 
       <Section aria-label="danger zone">
         <h2>Danger zone</h2>

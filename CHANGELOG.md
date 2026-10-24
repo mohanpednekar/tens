@@ -14,6 +14,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Optional cloud save.** When a Firebase config is built in, Settings → Cloud save lets you sign
+  in with email and password, upload your current save and download it on another device (web,
+  Android and iOS). **Delete account and data** permanently removes the account and its cloud save.
+- **Privacy Policy and Terms of Use** pages on the website, linked from Settings → Legal.
+- **Store-ready native apps.** Signed, R8-minified Android App Bundle builds (`yarn android:aab`),
+  edge-to-edge layout and a branded splash screen on Android and iOS. Optional rewarded ads (AdMob)
+  and purchases (RevenueCat: remove ads, tip) are built in but switched off — no game content is
+  ever behind a purchase.
+
+### Fixed
+
+- **Typing inside an in-game confirm dialog no longer loses focus** after the first character.
+
 - **Autobuyer Speed upgrades (Perks → Upgrades).** Each unlocked tier autobuyer can be upgraded with PP to shorten its purchase interval ×0.9 per level (base interval is N seconds for tier N, 1 s … 10 s, down to a 10 ms floor; autobuyer only — separate from tier tickspeed, and manual buying is unaffected). Cost starts at 1 PP and doubles per level on the 125-based ladder (…64 → 125 → 250 → 500 → 1000, ×1000 per ten levels). Permanent across Prestige and Era ascension.
 - **Interval upgrades for the other automations (Perks → Upgrades → Autobuyer Speed).** Latency (8 PP, 1 s), Scale Up (16 PP, 64 s), Overclock (32 PP, 256 s), Auto-Prestige (64 PP, 1024 s) and each tier's tickspeed autobuyer (2 PP, 16 s) now run on a timer (attempt budget accrues elapsed ÷ interval) with the same ×0.9-per-level, 125-based doubling chain, capped at 10 ms. **Auto Overclock** is new: claims Overclock whenever eligible (pause on Toggles).
 
