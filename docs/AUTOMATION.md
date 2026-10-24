@@ -568,12 +568,16 @@ session):
 
 Deterministic (no agent, no secrets, `contents: read`) — the CI half of the Capacitor native
 apps (#70). Runs on `workflow_dispatch` and on push-to-`main`/PRs whose diff touches `android/**`,
-`ios/**`, `capacitor.config.json`, `viteConfigFactory.js`, `package.json`, `yarn.lock` or the
+`ios/**`, `capacitor.config.js`, `viteConfigFactory.js`, `package.json`, `yarn.lock` or the
 workflow itself. `android` (ubuntu, JDK 21) runs `yarn build:capacitor` → `cap sync android` →
-`./gradlew assembleDebug` and uploads the unsigned debug APK; `ios` (macos) syncs, then
-`xcodebuild` builds the `App` scheme for the iOS Simulator with `CODE_SIGNING_ALLOWED=NO` and
-uploads the zipped `App.app`. Neither artifact is signed/store-ready; store signing and release
-upload are deliberately out of scope until a maintainer provisions keystore/App Store credentials.
+`./gradlew assembleDebug` and uploads the unsigned debug APK. `android-release` generates a
+throwaway upload key in `$RUNNER_TEMP`, builds the R8-minified `bundleRelease` + `assembleRelease`,
+boots the release APK on an API 34 emulator (`reactivecircus/android-emulator-runner`,
+`scripts/android-boot-smoke.sh` — fails on a crash or if the game UI never renders) and uploads the
+CI-signed AAB + R8 mapping (not uploadable to Play: wrong key). `ios` (macos) syncs, runs `yarn
+ios:configure`, then `xcodebuild` builds the `App` scheme for the iOS Simulator with
+`CODE_SIGNING_ALLOWED=NO` and uploads the zipped `App.app`. Store uploads are signed locally with the
+maintainer's upload key (docs/RELEASE_ANDROID.md, docs/RELEASE_IOS.md); no store credentials live in CI.
 
 ### Release (`release.yml`)
 

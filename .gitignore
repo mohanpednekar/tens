@@ -109,3 +109,9 @@ graphify-out/.graphify_semantic.json
 graphify-out/.graphify_semantic_new.json
 graphify-out/.graphify_cached.json
 graphify-out/.graphify_uncached.txt
+
+# Android release signing — upload keystore and its credentials are never committed
+# (docs/RELEASE_ANDROID.md). *.keystore / *.jks are already ignored above.
+android/keystore.properties
+*.p12
+*.mobileprovision

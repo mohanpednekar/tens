@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState, eraGame, getUnlockedStoragePoolCount } from './engine'
 import { BYTES_ID, ERA_ELIGIBILITY_PP, INTRO_CAPACITY_CAP_BITS, MONEY_ID, MONEY_STARTING_AMOUNT, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
-import { applyDevGameStateJson, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, getActiveSlotId, isDevModeActive, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, setDevModeActive, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
+import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, getActiveSlotId, isDevModeActive, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, setDevModeActive, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 
@@ -1153,5 +1153,27 @@ describe('Dev Mode', () => {
 
     setDevModeActive(false)
     expect(loadGameState().resources[MONEY_ID]).toBe(111)
+  })
+})
+
+describe('cloud save export / import', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('round-trips the live state into the active slot', () => {
+    const state = createInitialGameState()
+    state.resources[MONEY_ID] = 12345
+    const json = serializeSaveForExport(state)
+    expect(JSON.parse(json).saveSchemaVersion).toBe(SAVE_SCHEMA_VERSION)
+    localStorage.clear()
+    const result = importSaveJson(json)
+    expect(result.ok).toBe(true)
+    expect(result.state.resources[MONEY_ID]).toBe(12345)
+    expect(loadGameState().resources[MONEY_ID]).toBe(12345)
+  })
+
+  it('refuses invalid JSON without touching the slot', () => {
+    expect(importSaveJson('not json')).toEqual({ ok: false, reason: 'invalid_json' })
+    expect(importSaveJson('[1,2]')).toEqual({ ok: false, reason: 'invalid_json' })
+    expect(loadGameState()).toBeNull()
   })
 })
