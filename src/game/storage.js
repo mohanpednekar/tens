@@ -749,6 +749,29 @@ export const applyDevGameStateJson = (jsonText, currentState) => {
   return { ok: true, state: loaded }
 }
 
+/** Serializes a live game state exactly as saveGameState writes it — the cloud-save upload payload. */
+export const serializeSaveForExport = state => JSON.stringify({ saveSchemaVersion: SAVE_SCHEMA_VERSION, ...state })
+
+/**
+ * Replaces the active slot's save with an exported payload (a cloud-save download). The payload goes
+ * through the same adaptSaveForCurrentSchema + mergeState pipeline as an ordinary load, so an older
+ * or partial save is upgraded or refused exactly like one read from localStorage.
+ */
+export const importSaveJson = jsonText => {
+  let parsed
+  try {
+    parsed = safeJsonParse(jsonText)
+  } catch {
+    return { ok: false, reason: 'invalid_json' }
+  }
+  if (!isPlainObject(parsed)) return { ok: false, reason: 'invalid_json' }
+  const adapted = adaptSaveForCurrentSchema(parsed)
+  if (!adapted.ok) return { ok: false, reason: 'incompatible_save' }
+  const state = mergeState(adapted.payload)
+  saveGameState(state)
+  return { ok: true, state }
+}
+
 /** Buy max mode preference (see isBuyMaxUnlocked in engine.js) — a per-device UI preference like
  * the theme below, separate from game save data; survives reset/clearGameState. */
 export const BUY_MAX_PREFERENCE_KEY = 'tens_buy_max_mode'

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoScaleUp, buyAutobuyerIntervalUpgrade, buyAutomationIntervalUpgrade, buyAutoOverclock, buyTierTickspeedIntervalUpgrade, setAutoOverclockEnabled, buyComputeAutoBoost, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyPrestigeSpeedBonus, buyAutobuyerBulkMode, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierMaxLevels, buyTierQuantity, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, eraGame, getOfflineEffectiveSeconds, isBuyMaxUnlocked, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, queueIntroSpeedUpgrade, unlockNextDiskSizeByFoundryReset, pinMuseumEntry, prestigeGame, provisionDisk, queueDiskBuild, repeatPurchaseMax, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, resetStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry } from './engine'
+import { activateComputeBoost, applyOfflineProgress, applyOfflineRewardBonus, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoScaleUp, buyAutobuyerIntervalUpgrade, buyAutomationIntervalUpgrade, buyAutoOverclock, buyTierTickspeedIntervalUpgrade, setAutoOverclockEnabled, buyComputeAutoBoost, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyPrestigeSpeedBonus, buyAutobuyerBulkMode, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierMaxLevels, buyTierQuantity, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, eraGame, getOfflineEffectiveSeconds, getOfflineRewardBonusSeconds, isBuyMaxUnlocked, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, queueIntroSpeedUpgrade, unlockNextDiskSizeByFoundryReset, pinMuseumEntry, prestigeGame, provisionDisk, queueDiskBuild, repeatPurchaseMax, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, resetStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry } from './engine'
 import { MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OPS_SAMPLE_CAP, OPS_SAMPLE_INTERVAL_MS, TICK_RATE_MS } from './layers'
-import { applyDevGameStateJson, loadBuyMaxPreference, saveBuyMaxPreference, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
+import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, loadBuyMaxPreference, saveBuyMaxPreference, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
 
 // Every purchase — manual Buy and autobuyer ticks alike — always batches up to the current
 // level's cost-block boundary. The actual cap is applied dynamically inside the engine (see
@@ -119,16 +119,25 @@ const computeInitialGame = () => {
       // runs next, double-counting it. This is safe specifically because JS is single-threaded and
       // this function is fully synchronous — two calls to runTick can never overlap, so the next call
       // (whether from the interval or the visibilitychange listener) only ever starts after this one
-      // has fully returned and already restamped lastTickRealTime, never mid-flight.
+      // has fully returned and already restamped lastTickRealTime, never mid-flight. (Because the
+      // gap catch-up is a functional update, React may defer its replay to render when another
+      // update is already queued — then a slow replay's own time can be counted once more as a
+      // small extra gap; harmless, since that only happens for the short gap a queued claim implies.)
       const runTick = () => {
         const now = Date.now()
         const gapSeconds = (now - lastTickRealTime) / 1000
 
         if (gapSeconds > BACKGROUND_TICK_GAP_THRESHOLD_SECONDS) {
-          const caughtUp = computeOfflineCatchUp(gapSeconds, stateRef.current)
-          if (caughtUp) {
-            setState(caughtUp.state)
-            setOfflineProgress(caughtUp.offlineProgress)
+          // Functional update (not a value computed from stateRef.current): an update queued just
+          // before this — e.g. claimOfflineAdReward as a rewarded video closes, right when the
+          // resume fires visibilitychange — must not be overwritten by a catch-up of older state.
+          // A short gap leaves any notice already showing in place.
+          const effectiveSeconds = getOfflineEffectiveSeconds(gapSeconds)
+          if (effectiveSeconds > 0) {
+            setState(prev => applyOfflineProgress(gapSeconds, BUY_QUANTITY)(prev))
+            if (gapSeconds > OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS) {
+              setOfflineProgress({ elapsedRealSeconds: gapSeconds, effectiveSeconds })
+            }
             lastTickRealTime = Date.now()
             return
           }
@@ -325,6 +334,21 @@ const computeInitialGame = () => {
 
   const dismissOfflineProgress = useCallback(() => setOfflineProgress(null), [])
 
+  // Rewarded-video bonus on the "Welcome back!" notice: tops one offline catch-up up from 50% to
+  // 100% speed (applyOfflineRewardBonus). Keyed on the summary object the notice was showing when
+  // the video started, so it still pays out if the notice auto-dismissed during the video, and can
+  // never be claimed twice for the same absence.
+  const claimedOfflineRewardsRef = useRef(new WeakSet())
+  const claimOfflineAdReward = useCallback(summary => {
+    if (!summary || summary.rewardClaimed || claimedOfflineRewardsRef.current.has(summary)) return false
+    claimedOfflineRewardsRef.current.add(summary)
+    setState(prev => applyOfflineRewardBonus(summary.elapsedRealSeconds, BUY_QUANTITY)(prev))
+    setOfflineProgress(prev => (prev === summary
+      ? { ...summary, effectiveSeconds: summary.effectiveSeconds + getOfflineRewardBonusSeconds(summary.elapsedRealSeconds), rewardClaimed: true }
+      : prev))
+    return true
+  }, [])
+
   const dismissIncompatibleSaveNotice = useCallback(() => setIncompatibleSaveReason(null), [])
 
   const switchSaveSlot = useCallback(slotId => {
@@ -404,6 +428,23 @@ const computeInitialGame = () => {
     setState(prev => normalizePoolMemoryCapacity(updater(prev)))
   }, [])
 
+  // Cloud save (SettingsPage's Cloud save section): serialize the live state for upload, and
+  // replace the active slot from a downloaded payload.
+  const exportSaveJson = useCallback(() => serializeSaveForExport(stateRef.current), [])
+
+  const applyCloudSave = useCallback(jsonText => {
+    const result = importSaveJson(jsonText)
+    if (result.ok) {
+      // Update the ref now, not on the next passive effect: a tick firing before React commits
+      // would otherwise catch up (and re-persist) the pre-import state over the imported save.
+      stateRef.current = result.state
+      setState(result.state)
+      setOfflineProgress(null)
+      setIncompatibleSaveReason(null)
+    }
+    return result
+  }, [])
+
   const renameActiveSaveSlot = useCallback((slotId, name) => {
     const result = renameSaveSlot(slotId, name)
     if (result.ok) refreshSavesUi()
@@ -424,13 +465,16 @@ const computeInitialGame = () => {
 
   return {
     actions,
+    applyCloudSave,
     applyDevStateJson,
     buyMaxMode,
+    claimOfflineAdReward,
     clearSlot,
     devModeActive,
     dismissIncompatibleSaveNotice,
     dismissOfflineProgress,
     eraseAllSaveProgress,
+    exportSaveJson,
     incompatibleSaveReason,
     offlineProgress,
     opsSamples,

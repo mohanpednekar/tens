@@ -8,7 +8,7 @@ inputs:
   node-version:
     description: Node major version for actions/setup-node
     required: false
-    default: "22"
+    default: "24"
   install:
     description: Run `yarn install --frozen-lockfile` after setup ("true"/"false")
     required: false

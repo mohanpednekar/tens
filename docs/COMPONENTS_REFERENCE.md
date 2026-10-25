@@ -219,8 +219,10 @@ Prestige or any Era ascension); then a `components/Switch` (`aria-label="Toggle 
 styled (`.jsx`) in-game confirm overlay — theme `StatCard` + Cancel/Confirm `Button`s, fixed
 dimmed backdrop, Escape / backdrop-click cancel. Replaces native `window.confirm` for irreversible
 actions so the prompt matches the rest of the UI. Takes `{ open, title, children,
-confirmLabel, cancelLabel, confirmVariant, onConfirm, onCancel, ariaLabel }`. Used by
-`SettingsPage` for Era ascension. Capacity ×2 on `ByteFoundryPage` does **not** use
+confirmLabel, cancelLabel, confirmVariant, onConfirm, onCancel, ariaLabel, confirmDisabled = false }`
+(`confirmDisabled` blocks a double confirm while async work runs; `onCancel` is read through a ref,
+so an inline arrow doesn't re-steal focus each render). Used by `SettingsPage` for Era ascension and
+Cloud save's Delete account and data. Capacity ×2 on `ByteFoundryPage` does **not** use
 this component — it fires immediately on click, with no confirm prompt (see `docs/DESIGN_HISTORY.md`).
 
 ## `Money/index.js`
@@ -239,7 +241,10 @@ mechanically regardless of which page renders it (`tickGame` runs `tickIntroProd
 generator's passive production and auto-transfers up while the game was away), but the notice itself
 used to only ever render inside `MainPage` — a player landing on (or still gated to)
 `ByteFoundryPage` after being away got no acknowledgment of it. Takes `{ offlineProgress,
-dismissOfflineProgress }` (the same two fields `useIncrementalGame()` returns) as props and renders
+dismissOfflineProgress, claimOfflineAdReward, monetization = getMonetizationService() }` (the first
+three are `useIncrementalGame()` fields; the rewarded **▶ 100% speed** button renders only when
+`monetization.adsAvailable`, the summary isn't `rewardClaimed`, and `getOfflineRewardBonusSeconds` > 0;
+the auto-dismiss countdown pauses while the video plays) as props and renders
 `null` when `offlineProgress` is `null` — which includes a short absence at or below
 `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` (10 minutes): progress still applies (at 100% speed),
 but `useIncrementalGame.js`'s `computeOfflineCatchUp` deliberately withholds the summary object so this

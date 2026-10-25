@@ -1549,7 +1549,7 @@ identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
   interval's own next scheduled firing) — it compares `Date.now()` against that stored time. A gap
   bigger than `BACKGROUND_TICK_GAP_THRESHOLD_SECONDS` (2 seconds — comfortably past ordinary
   `setInterval` scheduling jitter, which stays within tens of ms) is replayed via
-  `computeOfflineCatchUp` instead of an ordinary `tickGame(TICK_RATE_MS / 1000, …)` call; anything
+  `applyOfflineProgress` as a **functional** `setState` update (so an update queued just before it — e.g. `claimOfflineAdReward` as a rewarded video closes — is built on, not overwritten), surfacing a fresh summary only past the full-speed threshold (a short gap leaves any notice already showing in place), instead of an ordinary `tickGame(TICK_RATE_MS / 1000, …)` call; anything
   smaller runs the ordinary tick, unchanged from before. Both the interval and the visibilitychange
   listener call the exact same function, and the tracked time is only ever restamped *after* that
   call's own tick/catch-up work finishes, never at entry — a large catch-up replays
@@ -1558,7 +1558,7 @@ identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
   slow replay's own processing time be mistaken for a further background gap by whichever call runs
   next. Safe specifically because this function is synchronous and JS is single-threaded — two calls
   can never overlap, so the next one only ever starts after the previous one has fully returned and
-  already restamped the tracked time.
+  already restamped the tracked time. (The gap catch-up is a functional `setState`, which React may defer to render when another update is already queued — e.g. a rewarded claim — so in that one case a slow replay's processing time can be counted once more as a small extra gap.)
 
   This second path exists because mobile browsers and installed-PWA hosts routinely throttle or fully
   suspend a backgrounded tab's `setInterval` timer without ever tearing the page down (unlike a true
@@ -1570,6 +1570,16 @@ identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
   (and re-show the "Welcome back!" notice) any number of times across a session, once per detected
   gap; `components/OfflineProgressNotice` re-arms its own countdown/fade timing via an effect keyed
   on the   `offlineProgress` object reference (not a one-time lazy initializer) to handle this.
+
+**Rewarded-video bonus (ads builds only).** When the "Welcome back!" notice shows a reduced-speed
+catch-up and rewarded ads are available (`services/monetization`, `ADS_ENABLED`), it offers
+**▶ 100% speed**. A completed video calls `useIncrementalGame`'s `claimOfflineAdReward(summary)`, which
+replays `getOfflineRewardBonusSeconds(elapsedRealSeconds)` more simulated seconds
+(`applyOfflineRewardBonus` — the capped elapsed time minus what `getOfflineEffectiveSeconds` granted),
+so the absence ends up simulated at 100% speed. One claim per summary object (tracked in a `WeakSet`,
+and the summary is replaced with `rewardClaimed: true`); it still pays out if the notice was dismissed
+during the video. Owning remove-ads grants it without a video. No change to the 50% default or to
+web builds.
 
 ### PP Compute (Flops)
 

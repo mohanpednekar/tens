@@ -824,7 +824,7 @@ const formatBonusOrMultiplier = (multiplier, { precise = false } = {}) =>
     : `+${precise ? formatGlobalTickspeedBonusPercent(multiplier) : formatBonusPercent(multiplier)}%`
 
 const MainPage = ({ game }) => {
-  const { actions, dismissOfflineProgress, offlineProgress, state } = game
+  const { actions, claimOfflineAdReward, dismissOfflineProgress, offlineProgress, state } = game
   const theme = useTheme()
   const { prestige } = state
   const canPrestige = state.resources[MONEY_ID] >= PRESTIGE_THRESHOLD
@@ -1177,7 +1177,7 @@ const MainPage = ({ game }) => {
         </MutedText>
       )}
 
-      <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
+      <OfflineProgressNotice claimOfflineAdReward={claimOfflineAdReward} dismissOfflineProgress={dismissOfflineProgress} offlineProgress={offlineProgress} />
 
       <BalancesSentinel ref={balancesSentinelRef} aria-hidden="true" />
       <StickyBalances

@@ -14,6 +14,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Optional cloud save.** When a Firebase config is built in, Settings → Cloud save lets you sign
+  in with email and password, upload your current save and download it on another device (web,
+  Android and iOS). **Delete account and data** permanently removes the account and its cloud save.
+- **Privacy Policy and Terms of Use** pages on the website, linked from Settings → Legal.
+- **Store-ready native apps.** Signed, R8-minified Android App Bundle builds (`yarn android:aab`),
+  edge-to-edge layout and a branded splash screen on Android and iOS. Optional rewarded ads (AdMob)
+  and purchases (RevenueCat: remove ads, tip) are built in but switched off — no game content is
+  ever behind a purchase.
+
+- **Watch a video for 100% offline progress (apps with ads enabled).** The "Welcome back!" notice
+  offers a rewarded video that tops your time away up from 50% to 100% speed — once per return.
+  Remove-ads owners get it without a video. The video is preloaded so it starts instantly.
 - **Boosted status is visible everywhere it applies.** While a Compute Boost is active, the Data
   Stream and every Factory tier it covers glow and show a 🌟×N badge; hovering (or a screen reader, via the element's description)
   gives the preset, multiplier, time left and stacks, and the tier's details list repeats it.
@@ -1312,6 +1324,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   wiping era count, Eons balance, hyperscaler count, Eon upgrade levels, and Flops autobuyer
   unlock/pause flags back to fresh defaults on every activation; they now carry these permanent
   fields through unchanged, same as every other permanent field they already preserve.
+- **Typing inside an in-game confirm dialog no longer loses focus** after the first character.
 
 ## [0.5.0] - 2026-07-14
 

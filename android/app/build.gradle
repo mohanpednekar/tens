@@ -1,5 +1,41 @@
 apply plugin: 'com.android.application'
 
+import groovy.json.JsonSlurper
+
+// ---------------------------------------------------------------------------------------------
+// Release configuration (docs/RELEASE_ANDROID.md). Every secret is read from a Gradle property
+// (~/.gradle/gradle.properties or -P) or the matching environment variable, never from a file in
+// this repo. android/keystore.properties is also honored for local convenience and is gitignored.
+// ---------------------------------------------------------------------------------------------
+def keystoreProps = new Properties()
+def keystorePropsFile = rootProject.file('keystore.properties')
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
+def releaseSetting = { String name ->
+    def value = project.findProperty(name) ?: System.getenv(name) ?: keystoreProps.getProperty(name)
+    value ? value.toString() : null
+}
+
+def uploadStoreFile = releaseSetting('TENS_UPLOAD_STORE_FILE')
+def uploadStorePassword = releaseSetting('TENS_UPLOAD_STORE_PASSWORD')
+def uploadKeyAlias = releaseSetting('TENS_UPLOAD_KEY_ALIAS')
+def uploadKeyPassword = releaseSetting('TENS_UPLOAD_KEY_PASSWORD')
+def hasReleaseSigning = [uploadStoreFile, uploadStorePassword, uploadKeyAlias, uploadKeyPassword].every { it }
+
+// versionName mirrors package.json; versionCode derives from it (major*10000 + minor*100 + patch)
+// unless TENS_VERSION_CODE overrides it. Play requires every upload to raise versionCode.
+def packageVersion = new JsonSlurper().parse(rootProject.file('../package.json')).version
+def versionParts = packageVersion.tokenize('.-')
+def derivedVersionCode = versionParts[0].toInteger() * 10000 + versionParts[1].toInteger() * 100 + versionParts[2].toInteger()
+def appVersionCode = (releaseSetting('TENS_VERSION_CODE') ?: derivedVersionCode.toString()).toInteger()
+
+// AdMob app id: only read by the Google Mobile Ads SDK, which is compiled in only when
+// VITE_TENS_ADS_ENABLED=true at `cap sync` time (capacitor.config.js). Defaults to Google's
+// published sample app id so a test build never needs a real account.
+def admobAppId = releaseSetting('TENS_ADMOB_APP_ID_ANDROID') ?: 'ca-app-pub-3940256099942544~3347511713'
+
 android {
     namespace = "com.mohanpednekar.tens"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +43,9 @@ android {
         applicationId "com.mohanpednekar.tens"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName packageVersion
+        manifestPlaceholders = [admobAppId: admobAppId]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +53,37 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(uploadStoreFile)
+                storePassword uploadStorePassword
+                keyAlias uploadKeyAlias
+                keyPassword uploadKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+}
+
+// A store upload must be signed with the upload key — fail loudly instead of emitting an unsigned
+// artifact that Play would reject later.
+tasks.matching { it.name in ['bundleRelease', 'assembleRelease'] }.configureEach {
+    doFirst {
+        if (!hasReleaseSigning) {
+            throw new GradleException(
+                'Release signing is not configured. Set TENS_UPLOAD_STORE_FILE, TENS_UPLOAD_STORE_PASSWORD, ' +
+                'TENS_UPLOAD_KEY_ALIAS and TENS_UPLOAD_KEY_PASSWORD (Gradle property, env var, or ' +
+                'android/keystore.properties). See docs/RELEASE_ANDROID.md.')
         }
     }
 }
@@ -40,6 +104,22 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+}
+
+// Google Play requires Play Billing Library 8+. When the RevenueCat plugin is synced in
+// (VITE_TENS_IAP_ENABLED=true), fail the release build if its resolved billing client is older.
+configurations.matching { it.name == 'releaseRuntimeClasspath' }.configureEach {
+    incoming.afterResolve {
+        resolutionResult.allComponents.each { component ->
+            def id = component.moduleVersion
+            if (id != null && id.group == 'com.android.billingclient' && id.name == 'billing') {
+                def major = id.version.tokenize('.')[0].toInteger()
+                if (major < 8) {
+                    throw new GradleException("Play Billing Library ${id.version} is below the required 8.x — upgrade @revenuecat/purchases-capacitor.")
+                }
+            }
+        }
+    }
 }
 
 apply from: 'capacitor.build.gradle'

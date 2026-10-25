@@ -75,11 +75,18 @@ const ConfirmDialog = ({
   cancelLabel = 'Cancel',
   confirmVariant = 'prestige',
   onConfirm,
+  confirmDisabled = false,
   onCancel,
   ariaLabel,
 }) => {
   const cancelRef = useRef(null)
   const titleId = useId()
+
+  // Latest onCancel without re-running the open effect: callers often pass an inline arrow, and
+  // re-running would steal focus back to Cancel on every parent render (e.g. while typing into an
+  // input rendered inside the dialog).
+  const onCancelRef = useRef(onCancel)
+  onCancelRef.current = onCancel
 
   useEffect(() => {
     if (!open) return undefined
@@ -87,12 +94,12 @@ const ConfirmDialog = ({
     const onKeyDown = event => {
       if (event.key === 'Escape') {
         event.preventDefault()
-        onCancel()
+        onCancelRef.current()
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [open, onCancel])
+  }, [open])
 
   if (!open) return null
 
@@ -123,6 +130,7 @@ const ConfirmDialog = ({
             type="button"
             variant={confirmVariant}
             aria-label={confirmLabel}
+            disabled={confirmDisabled}
             onClick={onConfirm}
           >
             {confirmLabel}

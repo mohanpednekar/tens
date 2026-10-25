@@ -725,7 +725,7 @@ const formatSpeedText = formatted =>
 // screen (no second-level tabs). Forced priority: Disk Fill > Speed > Provision Disk > Compute.
 // focusNonce is accepted for App.jsx parity with MainPage; Foundry no longer has a tab to reset.
 const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
-  const { actions, dismissOfflineProgress, offlineProgress, state } = game
+  const { actions, claimOfflineAdReward, dismissOfflineProgress, offlineProgress, state } = game
   const { intro } = state
 
   const isFull = intro.bits >= intro.capacity
@@ -967,7 +967,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
   return (
     <RootDiv>
-      <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
+      <OfflineProgressNotice claimOfflineAdReward={claimOfflineAdReward} dismissOfflineProgress={dismissOfflineProgress} offlineProgress={offlineProgress} />
       <Header>
         <Title>🔥 Byte Foundry</Title>
       </Header>
