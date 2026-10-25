@@ -577,6 +577,17 @@
       "source_location": "L67"
     },
     {
+      "label": "index.test.jsx",
+      "file_type": "code",
+      "source_file": "src/components/OfflineProgressNotice/index.test.jsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_components_offlineprogressnotice_index_test",
+      "community": 106,
+      "community_name": "formatOfflineDuration",
+      "norm_label": "index.test.jsx"
+    },
+    {
       "id": "src_game_engine_formatofflineduration",
       "label": "formatOfflineDuration()",
       "_callable": true,
