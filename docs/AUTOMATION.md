@@ -575,6 +575,16 @@ workflow itself. `android` (ubuntu, JDK 21) runs `yarn build:capacitor` → `cap
 uploads the zipped `App.app`. Neither artifact is signed/store-ready; store signing and release
 upload are deliberately out of scope until a maintainer provisions keystore/App Store credentials.
 
+### CodeQL (`codeql.yml`)
+
+Advanced CodeQL setup (replaces GitHub's default setup, which must be **disabled** in Settings → Code
+security for these uploads to be accepted). Push/PR to `main` plus a weekly schedule; matrix of
+`actions`, `java-kotlin`, `javascript-typescript` (all `build-mode: none`) and `swift`. Swift is
+`manual` on `macos-latest`: `setup-node-yarn` → `yarn build:capacitor` → `cap sync ios` (untraced, so
+`CapApp-SPM`'s `node_modules/` plugin paths resolve), then a traced simulator `xcodebuild` with
+`CODE_SIGNING_ALLOWED=NO`. Default setup's Swift autobuild ran a bare `swift build` with no
+`node_modules` and failed once Capacitor plugins were synced in (#915).
+
 ### Release (`release.yml`)
 
 Deterministic (no agent) — the post-merge half of #52, complementing the pre-merge
