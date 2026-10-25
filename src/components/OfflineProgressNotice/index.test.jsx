@@ -74,3 +74,24 @@ describe('OfflineProgressNotice countdown during a video', () => {
     vi.useRealTimers()
   })
 })
+
+describe('OfflineProgressNotice fade during a video', () => {
+  it('does not finish fading out while a video started in the fade window is playing', async () => {
+    vi.useFakeTimers()
+    const dismiss = vi.fn()
+    let finish
+    const monetization = adsService(() => new Promise(resolve => { finish = resolve }))
+    const { unmount } = render(
+      <ThemeProvider mode="dark">
+        <OfflineProgressNotice claimOfflineAdReward={vi.fn()} dismissOfflineProgress={dismiss} monetization={monetization} offlineProgress={summary} />
+      </ThemeProvider>,
+    )
+    await act(async () => { vi.advanceTimersByTime(10_100) }) // countdown done → fading
+    await act(async () => { screen.getByRole('button', { name: WATCH }).click() })
+    await act(async () => { vi.advanceTimersByTime(5_000) }) // well past the 400 ms fade
+    expect(dismiss).not.toHaveBeenCalled()
+    await act(async () => { finish({ shown: true, rewarded: false }) })
+    unmount()
+    vi.useRealTimers()
+  })
+})

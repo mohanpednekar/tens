@@ -119,7 +119,10 @@ const computeInitialGame = () => {
       // runs next, double-counting it. This is safe specifically because JS is single-threaded and
       // this function is fully synchronous — two calls to runTick can never overlap, so the next call
       // (whether from the interval or the visibilitychange listener) only ever starts after this one
-      // has fully returned and already restamped lastTickRealTime, never mid-flight.
+      // has fully returned and already restamped lastTickRealTime, never mid-flight. (Because the
+      // gap catch-up is a functional update, React may defer its replay to render when another
+      // update is already queued — then a slow replay's own time can be counted once more as a
+      // small extra gap; harmless, since that only happens for the short gap a queued claim implies.)
       const runTick = () => {
         const now = Date.now()
         const gapSeconds = (now - lastTickRealTime) / 1000

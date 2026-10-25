@@ -172,7 +172,7 @@ const CloudSaveSection = ({ game, enabled = CLOUD_SAVE_ENABLED, loadBackend = lo
       {status && <StatusText $error={status.error}>{status.text}</StatusText>}
 
       <ConfirmDialog
-        cancelLabel="Cancel"
+        cancelLabel={busy ? 'Close' : 'Cancel'}
         confirmDisabled={busy}
         confirmLabel="Delete forever"
         confirmVariant="danger"

@@ -1558,7 +1558,7 @@ identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
   slow replay's own processing time be mistaken for a further background gap by whichever call runs
   next. Safe specifically because this function is synchronous and JS is single-threaded — two calls
   can never overlap, so the next one only ever starts after the previous one has fully returned and
-  already restamped the tracked time.
+  already restamped the tracked time. (The gap catch-up is a functional `setState`, which React may defer to render when another update is already queued — e.g. a rewarded claim — so in that one case a slow replay's processing time can be counted once more as a small extra gap.)
 
   This second path exists because mobile browsers and installed-PWA hosts routinely throttle or fully
   suspend a backgrounded tab's `setInterval` timer without ever tearing the page down (unlike a true
