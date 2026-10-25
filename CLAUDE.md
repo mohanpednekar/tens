@@ -355,11 +355,20 @@ moves Unreleased into `## [x.y.z] - YYYY-MM-DD`, and resets Unreleased to empty 
 `paths: ['package.json']`, deterministic — no agent) pushes the annotated `v<x.y.z>` tag and creates
 the GitHub Release from that version's changelog section; see `docs/AUTOMATION.md`'s "Release" entry.
 
+## Model delegation
+
+When spawning subagents (Agent tool), hand work to the cheapest model that fits, always via the
+`haiku`/`sonnet`/`opus` aliases (they resolve to the latest release — never pin a dated/old model ID):
+**haiku** for mechanical, well-specified work (QA/test runs, searches, doc sync, formatting);
+**sonnet** for implementation (code edits, tests, refactors); **opus** for judgment-heavy work
+(design/economy specs, adversarial review, architecture, ambiguous debugging).
+`.claude/agents/*.md` carry a `model:` frontmatter field following this split.
+
 ## AI-instruction file cost hygiene
 
 `CLAUDE.md`/`.claude/CLAUDE.md` load into every session unconditionally, `AGENTS.md`/
 `.claude/agents/*.md`/`.claude/skills/*/SKILL.md` whenever a non-Claude tool or that agent/skill runs —
-so their size is a recurring cost. `.claude/skills/optimize-ai-files/SKILL.md` defines a
+so their size is a recurring cost. `.claude/skills/optimize-ai-files/SKILL.md` (which also re-checks "Model delegation") defines a
 content-independent, meaning-preserving trimming process (it re-derives what's redundant each run, so
 it doesn't go stale). An interactive session gets a non-blocking staleness note from
 `.claude/hooks/session-start.sh`; a monthly Claude Code Remote Routine also runs it end-to-end, PR
@@ -436,7 +445,11 @@ src/
                                (incl. the unused omitted-`tierIndex` mode): `docs/COMPONENTS_REFERENCE.md`;
                                mechanic: "Economy model"
     icons.js                ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Data Lake Booster, Upgrade Data Stream,
-                               Provision Disk status line)
+                               Provision Disk status line; `BOOST_ICON` 🌟 marks Compute-Boosted elements)
+    BoostBadge/index.jsx    ← Compute-Boosted marker (🌟×N badge, description in title/aria-label) +
+                               `boostGlow` card css + `isDataStreamBoosted`/`isFactoryTierBoosted`;
+                               used by ByteFoundryPage's Data Stream and MainPage tier rows.
+                               Contract: `docs/COMPONENTS_REFERENCE.md`
     Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`) for Perks → Toggles and
                                Buy max. Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
@@ -905,7 +918,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2038 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2045 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -922,8 +935,8 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
-  `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) that's
-  12 of the 20 files; the other eight are
+  `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) and
+  `components/BoostBadge/index.test.jsx` that's 13 of the 21 files; the other eight are
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
   `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`,
   `scripts/classify-claude-failure.test.js`, `scripts/lint-workflow-shell.test.js`, and

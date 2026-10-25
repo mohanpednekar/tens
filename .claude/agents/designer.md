@@ -1,6 +1,7 @@
 ---
 name: designer
 description: Game/economy designer for Tens. Use before implementing any new mechanic, tier, cost/production change, or balance tweak. Produces a short, testable spec; never edits code.
+model: opus
 tools: Read, Grep, Glob, Bash
 ---
 

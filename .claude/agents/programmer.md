@@ -1,6 +1,7 @@
 ---
 name: programmer
 description: Implements one small, specified change in Tens (engine, UI or tests) on a feature branch. Use after a spec or issue exists. Does not self-approve; a review and QA pass follow.
+model: sonnet
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 
