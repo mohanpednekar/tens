@@ -355,11 +355,20 @@ moves Unreleased into `## [x.y.z] - YYYY-MM-DD`, and resets Unreleased to empty 
 `paths: ['package.json']`, deterministic — no agent) pushes the annotated `v<x.y.z>` tag and creates
 the GitHub Release from that version's changelog section; see `docs/AUTOMATION.md`'s "Release" entry.
 
+## Model delegation
+
+When spawning subagents (Agent tool), hand work to the cheapest model that fits, always via the
+`haiku`/`sonnet`/`opus` aliases (they resolve to the latest release — never pin a dated/old model ID):
+**haiku** for mechanical, well-specified work (QA/test runs, searches, doc sync, formatting);
+**sonnet** for implementation (code edits, tests, refactors); **opus** for judgment-heavy work
+(design/economy specs, adversarial review, architecture, ambiguous debugging).
+`.claude/agents/*.md` carry a `model:` frontmatter field following this split.
+
 ## AI-instruction file cost hygiene
 
 `CLAUDE.md`/`.claude/CLAUDE.md` load into every session unconditionally, `AGENTS.md`/
 `.claude/agents/*.md`/`.claude/skills/*/SKILL.md` whenever a non-Claude tool or that agent/skill runs —
-so their size is a recurring cost. `.claude/skills/optimize-ai-files/SKILL.md` defines a
+so their size is a recurring cost. `.claude/skills/optimize-ai-files/SKILL.md` (which also re-checks "Model delegation") defines a
 content-independent, meaning-preserving trimming process (it re-derives what's redundant each run, so
 it doesn't go stale). An interactive session gets a non-blocking staleness note from
 `.claude/hooks/session-start.sh`; a monthly Claude Code Remote Routine also runs it end-to-end, PR

@@ -72,9 +72,14 @@ time this runs — don't maintain a hardcoded file list anywhere else.
 5. **Re-measure.** Only keep an edit if it's a genuine word-count reduction with the checklist
    fully accounted for. If a file already has no safe reduction available, say so and leave it
    alone — that's a legitimate, honest outcome, not a failure to report around.
-6. **Verify.** Run `yarn test` once after all files are edited. Doc-only edits rarely break tests,
+6. **Model delegation check.** Confirm every `.claude/agents/*.md` has a `model:` frontmatter alias
+   (`haiku` mechanical, `sonnet` implementation, `opus` judgment-heavy) matching `CLAUDE.md`'s
+   "Model delegation" section, and that no dated/old model ID is pinned anywhere in the in-scope
+   files — aliases track the latest release. Fix drift (this step is exempt from step 5's word-count rule); delegate the mechanical trimming itself to
+   a `haiku` subagent and the self-check/review to `opus` where practical.
+7. **Verify.** Run `yarn test` once after all files are edited. Doc-only edits rarely break tests,
    but a stale test-count reference or similar is cheap to catch here.
-7. **Commit.** Include this exact trailer line in the commit message body (its own line, verbatim):
+8. **Commit.** Include this exact trailer line in the commit message body (its own line, verbatim):
 
    ```
    AI-File-Cost-Pass: <UTC ISO-8601 timestamp, e.g. 2026-09-07T06:00:00Z>
@@ -82,7 +87,7 @@ time this runs — don't maintain a hardcoded file list anywhere else.
 
    `.claude/hooks/session-start.sh` greps for this trailer to report how long it's been since the
    last pass — it must be present exactly like this for that check to find it.
-8. **PR as normal.** This is an ordinary PR — follow `CLAUDE.md`'s "Pull requests" section in
+9. **PR as normal.** This is an ordinary PR — follow `CLAUDE.md`'s "Pull requests" section in
    full: open it (draft while anything's still pending), run the adversarial `code-reviewer`
    subagent before considering it done, post its marker, and follow the repo's auto-merge policy.
    Nothing about this being a docs-cost pass exempts it from review.

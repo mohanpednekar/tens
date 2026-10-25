@@ -1,6 +1,7 @@
 ---
 name: code-reviewer
 description: Comprehensive, adversarial code review of a PR or working diff in this repo. Use before merging any non-trivial change (autonomous or interactive), when asked to review a diff/PR/branch, or as a pre-push self-check. Reports verified, file:line-cited findings with a merge verdict; never edits code itself.
+model: opus
 tools: Read, Grep, Glob, Bash
 ---
 

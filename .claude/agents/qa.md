@@ -1,6 +1,7 @@
 ---
 name: qa
 description: Verifies a Tens change with tests and edge-case probes, and reports bugs with repro steps. Use after the programmer finishes, before code-reviewer. Never edits source code.
+model: haiku
 tools: Read, Grep, Glob, Bash
 ---
 
