@@ -125,10 +125,16 @@ const computeInitialGame = () => {
         const gapSeconds = (now - lastTickRealTime) / 1000
 
         if (gapSeconds > BACKGROUND_TICK_GAP_THRESHOLD_SECONDS) {
-          const caughtUp = computeOfflineCatchUp(gapSeconds, stateRef.current)
-          if (caughtUp) {
-            setState(caughtUp.state)
-            setOfflineProgress(caughtUp.offlineProgress)
+          // Functional update (not a value computed from stateRef.current): an update queued just
+          // before this — e.g. claimOfflineAdReward as a rewarded video closes, right when the
+          // resume fires visibilitychange — must not be overwritten by a catch-up of older state.
+          // A short gap leaves any notice already showing in place.
+          const effectiveSeconds = getOfflineEffectiveSeconds(gapSeconds)
+          if (effectiveSeconds > 0) {
+            setState(prev => applyOfflineProgress(gapSeconds, BUY_QUANTITY)(prev))
+            if (gapSeconds > OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS) {
+              setOfflineProgress({ elapsedRealSeconds: gapSeconds, effectiveSeconds })
+            }
             lastTickRealTime = Date.now()
             return
           }

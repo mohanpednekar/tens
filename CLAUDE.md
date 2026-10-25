@@ -944,7 +944,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2085 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2089 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -962,8 +962,9 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
   `navAttention.test.js`, `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) and
-  `components/OfflineProgressNotice/index.test.jsx` (rewarded 100%-speed bonus) that's 13 of the 27 files; five more cover the store-release services and Settings sections
+  `components/OfflineProgressNotice/index.test.jsx` (rewarded 100%-speed bonus) that's 13 of the 28 files; six more cover the store-release services and Settings sections
   (`services/config.test.js`, `services/monetization/index.test.js`, `services/monetization/rewardedAdCache.test.js`,
+  `game/useIncrementalGame.offlineReward.test.jsx` (`claimOfflineAdReward`),
   `services/cloudSave/deleteAccount.test.js`, `pages/SettingsPage/sections.test.jsx`); the other nine are
   `scripts/configure-ios-plist.test.js`,
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,

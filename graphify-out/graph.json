@@ -2412,6 +2412,17 @@
       "source_location": "L52"
     },
     {
+      "label": "useIncrementalGame.offlineReward.test.jsx",
+      "file_type": "code",
+      "source_file": "src/game/useIncrementalGame.offlineReward.test.jsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_game_useincrementalgame_offlinereward_test",
+      "community": 19,
+      "community_name": "storage.js",
+      "norm_label": "useincrementalgame.offlinereward.test.jsx"
+    },
+    {
       "id": "src_game_useincrementalgame_computeofflinecatchup",
       "label": "computeOfflineCatchUp()",
       "_callable": true,

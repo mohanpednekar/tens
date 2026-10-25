@@ -176,7 +176,7 @@ const CloudSaveSection = ({ game, enabled = CLOUD_SAVE_ENABLED, loadBackend = lo
         confirmDisabled={busy}
         confirmLabel="Delete forever"
         confirmVariant="danger"
-        onCancel={() => { if (!busy) { setDeleteOpen(false); setDeletePassword('') } }}
+        onCancel={() => { setDeleteOpen(false); setDeletePassword('') }}
         onConfirm={confirmDelete}
         open={deleteOpen}
         title="Delete account and data?"

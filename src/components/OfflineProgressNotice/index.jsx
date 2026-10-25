@@ -124,10 +124,10 @@ const OfflineProgressNotice = ({
   }, [offlineProgress, offlineNoticeTiming, offlineNoticeFading, adPending])
 
   useEffect(() => {
-    if (!offlineNoticeFading) return undefined
+    if (!offlineNoticeFading || adPending) return undefined
     const timeout = setTimeout(dismissOfflineProgress, OFFLINE_NOTICE_FADE_MS)
     return () => clearTimeout(timeout)
-  }, [offlineNoticeFading, dismissOfflineProgress])
+  }, [offlineNoticeFading, adPending, dismissOfflineProgress])
 
   if (!offlineProgress) return null
 
@@ -138,6 +138,7 @@ const OfflineProgressNotice = ({
 
   const watchForBonus = async () => {
     const summary = offlineProgress
+    setOfflineNoticeFading(false)
     setAdPending(true)
     try {
       const result = await monetization.showRewarded('offline_full_speed')

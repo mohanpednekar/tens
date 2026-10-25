@@ -1549,7 +1549,7 @@ identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
   interval's own next scheduled firing) — it compares `Date.now()` against that stored time. A gap
   bigger than `BACKGROUND_TICK_GAP_THRESHOLD_SECONDS` (2 seconds — comfortably past ordinary
   `setInterval` scheduling jitter, which stays within tens of ms) is replayed via
-  `computeOfflineCatchUp` instead of an ordinary `tickGame(TICK_RATE_MS / 1000, …)` call; anything
+  `applyOfflineProgress` as a **functional** `setState` update (so an update queued just before it — e.g. `claimOfflineAdReward` as a rewarded video closes — is built on, not overwritten), surfacing a fresh summary only past the full-speed threshold (a short gap leaves any notice already showing in place), instead of an ordinary `tickGame(TICK_RATE_MS / 1000, …)` call; anything
   smaller runs the ordinary tick, unchanged from before. Both the interval and the visibilitychange
   listener call the exact same function, and the tracked time is only ever restamped *after* that
   call's own tick/catch-up work finishes, never at entry — a large catch-up replays

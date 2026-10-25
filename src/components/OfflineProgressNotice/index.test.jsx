@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
@@ -50,5 +50,27 @@ describe('OfflineProgressNotice rewarded bonus', () => {
     unmount()
     renderNotice({ claimOfflineAdReward: vi.fn(), monetization, offlineProgress: { elapsedRealSeconds: 300, effectiveSeconds: 300 } })
     expect(screen.queryByRole('button', { name: WATCH })).toBeNull()
+  })
+})
+
+describe('OfflineProgressNotice countdown during a video', () => {
+  it('does not auto-dismiss while the rewarded video is playing', async () => {
+    vi.useFakeTimers()
+    const dismiss = vi.fn()
+    let finish
+    const monetization = adsService(() => new Promise(resolve => { finish = resolve }))
+    const { unmount } = render(
+      <ThemeProvider mode="dark">
+        <OfflineProgressNotice claimOfflineAdReward={vi.fn()} dismissOfflineProgress={dismiss} monetization={monetization} offlineProgress={summary} />
+      </ThemeProvider>,
+    )
+    await act(async () => { screen.getByRole('button', { name: WATCH }).click() })
+    await act(async () => { vi.advanceTimersByTime(30_000) })
+    expect(dismiss).not.toHaveBeenCalled()
+    await act(async () => { finish({ shown: true, rewarded: false }) })
+    await act(async () => { vi.advanceTimersByTime(11_000) })
+    expect(dismiss).toHaveBeenCalled()
+    unmount()
+    vi.useRealTimers()
   })
 })
