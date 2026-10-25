@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - **Boosted status is visible everywhere it applies.** While a Compute Boost is active, the Data
-  Stream and every Factory tier it covers glow and show a 🌟×N badge; hovering (or a screen reader)
+  Stream and every Factory tier it covers glow and show a 🌟×N badge; hovering (or a screen reader, via the element's description)
   gives the preset, multiplier, time left and stacks, and the tier's details list repeats it.
 
 - **Autobuyer Speed upgrades (Perks → Upgrades).** Each unlocked tier autobuyer can be upgraded with PP to shorten its purchase interval ×0.9 per level (base interval is N seconds for tier N, 1 s … 10 s, down to a 10 ms floor; autobuyer only — separate from tier tickspeed, and manual buying is unaffected). Cost starts at 1 PP and doubles per level on the 125-based ladder (…64 → 125 → 250 → 500 → 1000, ×1000 per ten levels). Permanent across Prestige and Era ascension.

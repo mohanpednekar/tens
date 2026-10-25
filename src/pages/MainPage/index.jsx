@@ -1518,12 +1518,12 @@ const MainPage = ({ game }) => {
                 </TierDetailsContent>
               )}
               <ProductionText>
-                {isBoosted && <><BoostBadge intro={state.intro} />{' '}</>}
                 +{tier.producesResourceId === MONEY_ID
                   ? formatCurrency(production)
                   : tier.producesResourceId === BYTES_ID
                     ? formatBytes(production)
                     : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
+                {isBoosted && <>{' '}<BoostBadge intro={state.intro} /></>}
               </ProductionText>
               {isLastTierXpUnlocked ? (
                 <UpgradeButton

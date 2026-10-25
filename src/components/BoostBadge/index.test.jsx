@@ -13,6 +13,12 @@ describe('BoostBadge helpers', () => {
     expect(getComputeBoostDescription({ computeBoostType: null })).toBeNull()
   })
 
+  it('treats an invalid funding tier as inactive, like the engine (×1 on nothing)', () => {
+    const invalid = { ...activeIntro, computeBoostTierIndex: 0 }
+    expect(isDataStreamBoosted(invalid)).toBe(false)
+    expect(getComputeBoostDescription(invalid)).toBeNull()
+  })
+
   it('boosts the Data Stream and only the covered Factory tiers', () => {
     expect(isDataStreamBoosted(activeIntro)).toBe(true)
     expect(isFactoryTierBoosted(activeIntro, 0)).toBe(true)

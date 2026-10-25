@@ -979,6 +979,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           onClick={intro.mainGameUnlocked ? actions.tapIntroBit : undefined}
           disabled={intro.mainGameUnlocked ? isFull || dataStreamMultiplierCapped : undefined}
           aria-label={intro.mainGameUnlocked ? 'tap to generate a bit' : 'data stream balance'}
+          aria-describedby={isDataStreamBoosted(intro) ? 'data-stream-boost' : undefined}
           title={intro.mainGameUnlocked && !isFull && dataStreamMultiplierCapped ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap` : undefined}
           $progress={fullProgress}
           $tappable={intro.mainGameUnlocked}
@@ -992,7 +993,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             {dataStreamRateText && (
               <SpeedText $centered={!(intro.dataStreamTapBonusPercent > 0) && !dataStreamTimeLeftText} $color={getSpeedColor(dataStreamMultiplierPercent)} title={`Speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}>
                 ⚡ {dataStreamRateText}
-                {isDataStreamBoosted(intro) && <>{' '}<BoostBadge intro={intro} /></>}
+                {isDataStreamBoosted(intro) && <>{' '}<BoostBadge id="data-stream-boost" intro={intro} /></>}
               </SpeedText>
             )}
           </TitleRow>

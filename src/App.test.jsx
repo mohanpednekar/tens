@@ -4251,6 +4251,8 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /^open byte foundry$/i }))
     expect(within(screen.getByLabelText('Data Stream')).getByRole('img', { name: /Boosted ×5 production by the Standard Compute Boost/ })).toHaveTextContent('×5')
+    const tapButton = screen.getByRole('button', { name: 'tap to generate a bit' })
+    expect(tapButton).toHaveAccessibleDescription(/Boosted ×5 production/)
 
     openFactorySync()
     expect(within(screen.getByLabelText('Kilobytes layer')).getByRole('img', { name: /Boosted ×5/ })).toBeInTheDocument()

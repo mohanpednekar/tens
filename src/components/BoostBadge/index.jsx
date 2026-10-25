@@ -10,7 +10,8 @@ import { COMPUTE_BOOST_PRESETS } from 'game/layers'
 
 export const COMPUTE_BOOST_LABELS = { burst: 'Burst', standard: 'Standard', sustain: 'Sustain' }
 
-const isBoostActive = intro => Boolean(intro?.computeBoostType && COMPUTE_BOOST_PRESETS[intro.computeBoostType])
+// Mirrors the engine: an unknown preset or invalid funding tier applies ×1 to nothing.
+const isBoostActive = intro => Boolean(intro?.computeBoostType && COMPUTE_BOOST_PRESETS[intro.computeBoostType]) && getComputeBoostCoveredTierCount(intro) > 0
 
 export const isDataStreamBoosted = intro => isBoostActive(intro)
 
@@ -51,13 +52,19 @@ const Badge = styled.span`
 `
 
 // Renders nothing while no boost is active (or `boosted` is false).
-const BoostBadge = ({ intro, boosted = true, className }) => {
+// `id` names a hidden plain-text copy of the description for a containing control's
+// aria-describedby — a <button>'s own children are presentational, so the badge's label alone is
+// not announced inside one.
+const BoostBadge = ({ intro, boosted = true, className, id }) => {
   const description = boosted ? getComputeBoostDescription(intro) : null
   if (!description) return null
   return (
-    <Badge className={className} role="img" aria-label={description} title={description}>
-      {`${BOOST_ICON}×${getComputeBoostMultiplier(intro)}`}
-    </Badge>
+    <>
+      <Badge className={className} role="img" aria-label={description} title={description}>
+        {`${BOOST_ICON}×${getComputeBoostMultiplier(intro)}`}
+      </Badge>
+      {id && <span id={id} hidden>{description}</span>}
+    </>
   )
 }
 
