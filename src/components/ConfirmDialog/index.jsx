@@ -75,6 +75,7 @@ const ConfirmDialog = ({
   cancelLabel = 'Cancel',
   confirmVariant = 'prestige',
   onConfirm,
+  confirmDisabled = false,
   onCancel,
   ariaLabel,
 }) => {
@@ -129,6 +130,7 @@ const ConfirmDialog = ({
             type="button"
             variant={confirmVariant}
             aria-label={confirmLabel}
+            disabled={confirmDisabled}
             onClick={onConfirm}
           >
             {confirmLabel}

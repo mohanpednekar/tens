@@ -6,6 +6,7 @@ Tens ships to Play as a Capacitor 8 wrapper around the same Vite web build that 
 ## One-time setup
 
 1. **Android Studio / SDK** — install Android Studio (SDK Platform 36, Build-Tools 36) and JDK 21.
+   Node.js **24.12+** (Firebase's engine floor; CI uses Node 24).
 2. **Upload key** — create it once and back it up somewhere safe (password manager + offline copy).
    Losing it means asking Play support for an upload-key reset.
 

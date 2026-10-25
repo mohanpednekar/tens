@@ -8057,6 +8057,28 @@
       "source_location": "L6"
     },
     {
+      "label": "rewardedAdCache.js",
+      "file_type": "code",
+      "source_file": "src/services/monetization/rewardedAdCache.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_services_monetization_rewardedadcache",
+      "community": 73,
+      "community_name": "config.js",
+      "norm_label": "rewardedAdCache.js"
+    },
+    {
+      "label": "rewardedAdCache.test.js",
+      "file_type": "code",
+      "source_file": "src/services/monetization/rewardedAdCache.test.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_services_monetization_rewardedadcache_test",
+      "community": 73,
+      "community_name": "config.js",
+      "norm_label": "rewardedAdCache.test.js"
+    },
+    {
       "id": "src_services_monetization_revenuecatadapter_createrevenuecatadapter",
       "label": "createRevenueCatAdapter()",
       "_callable": true,

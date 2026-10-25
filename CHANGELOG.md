@@ -25,11 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Watch a video for 100% offline progress (apps with ads enabled).** The "Welcome back!" notice
   offers a rewarded video that tops your time away up from 50% to 100% speed — once per return.
-  Remove-ads owners get it without a video.
-
-### Fixed
-
-- **Typing inside an in-game confirm dialog no longer loses focus** after the first character.
+  Remove-ads owners get it without a video. The video is preloaded so it starts instantly.
 
 - **Autobuyer Speed upgrades (Perks → Upgrades).** Each unlocked tier autobuyer can be upgraded with PP to shorten its purchase interval ×0.9 per level (base interval is N seconds for tier N, 1 s … 10 s, down to a 10 ms floor; autobuyer only — separate from tier tickspeed, and manual buying is unaffected). Cost starts at 1 PP and doubles per level on the 125-based ladder (…64 → 125 → 250 → 500 → 1000, ×1000 per ten levels). Permanent across Prestige and Era ascension.
 - **Interval upgrades for the other automations (Perks → Upgrades → Autobuyer Speed).** Latency (8 PP, 1 s), Scale Up (16 PP, 64 s), Overclock (32 PP, 256 s), Auto-Prestige (64 PP, 1024 s) and each tier's tickspeed autobuyer (2 PP, 16 s) now run on a timer (attempt budget accrues elapsed ÷ interval) with the same ×0.9-per-level, 125-based doubling chain, capped at 10 ms. **Auto Overclock** is new: claims Overclock whenever eligible (pause on Toggles).
@@ -1325,6 +1321,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   wiping era count, Eons balance, hyperscaler count, Eon upgrade levels, and Flops autobuyer
   unlock/pause flags back to fresh defaults on every activation; they now carry these permanent
   fields through unchanged, same as every other permanent field they already preserve.
+
+### Fixed
+
+- **Typing inside an in-game confirm dialog no longer loses focus** after the first character.
 
 ## [0.5.0] - 2026-07-14
 

@@ -73,18 +73,21 @@ const CloudSaveSection = ({ game, enabled = CLOUD_SAVE_ENABLED, loadBackend = lo
     platform: Capacitor.getPlatform(),
   }), 'This save was uploaded to the cloud.')
 
-  const handleDownload = () => run(async () => {
-    const remote = await backend.downloadSave()
-    if (!remote) return 'No cloud save yet — upload one first.'
-    if (!window.confirm('Replace the current save slot with your cloud save? Unsaved local progress in this slot will be lost.')) {
-      return 'Download cancelled.'
-    }
-    const result = game.applyCloudSave(remote.payload)
-    if (!result.ok) throw Object.assign(new Error('bad payload'), { code: 'cloud/incompatible-save' })
-    return 'Cloud save loaded into this slot.'
-  })
+  // Confirm before the fetch: a blocking prompt after the await would stall the tick loop's clock
+  // while the downloaded state is still uncommitted (see applyCloudSave in useIncrementalGame).
+  const handleDownload = () => {
+    if (!window.confirm('Replace the current save slot with your cloud save? Unsaved local progress in this slot will be lost.')) return
+    run(async () => {
+      const remote = await backend.downloadSave()
+      if (!remote) return 'No cloud save yet — upload one first.'
+      const result = game.applyCloudSave(remote.payload)
+      if (!result.ok) throw Object.assign(new Error('bad payload'), { code: 'cloud/incompatible-save' })
+      return 'Cloud save loaded into this slot.'
+    })
+  }
 
   const confirmDelete = async () => {
+    if (busy) return
     setBusy(true)
     setStatus(null)
     const result = await backend.deleteAccount(deletePassword)
@@ -170,9 +173,10 @@ const CloudSaveSection = ({ game, enabled = CLOUD_SAVE_ENABLED, loadBackend = lo
 
       <ConfirmDialog
         cancelLabel="Cancel"
+        confirmDisabled={busy}
         confirmLabel="Delete forever"
         confirmVariant="danger"
-        onCancel={() => { setDeleteOpen(false); setDeletePassword('') }}
+        onCancel={() => { if (!busy) { setDeleteOpen(false); setDeletePassword('') } }}
         onConfirm={confirmDelete}
         open={deleteOpen}
         title="Delete account and data?"

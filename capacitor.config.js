@@ -2,7 +2,7 @@
 // compiled into the Android/iOS binaries when their flag is on: with TENS ADS/IAP flags off (the
 // default), `cap sync` leaves the AdMob and RevenueCat native SDKs out entirely — no AD_ID or
 // BILLING permission, no ad SDK privacy manifest. The same VITE_TENS_* env vars drive the JS side
-// (src/config/flags.js), so one switch controls both halves. See docs/RELEASE_ANDROID.md.
+// (viteConfigFactory.js resolveFeatureFlags → services/config.js), so one switch controls both halves. See docs/RELEASE_ANDROID.md.
 export const ADS_PLUGIN = '@capacitor-community/admob'
 export const IAP_PLUGIN = '@revenuecat/purchases-capacitor'
 export const BASE_PLUGINS = ['@capacitor/splash-screen']

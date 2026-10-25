@@ -426,6 +426,9 @@ const computeInitialGame = () => {
   const applyCloudSave = useCallback(jsonText => {
     const result = importSaveJson(jsonText)
     if (result.ok) {
+      // Update the ref now, not on the next passive effect: a tick firing before React commits
+      // would otherwise catch up (and re-persist) the pre-import state over the imported save.
+      stateRef.current = result.state
       setState(result.state)
       setOfflineProgress(null)
       setIncompatibleSaveReason(null)

@@ -419,7 +419,7 @@ To keep the workflows DRY and single-responsibility, four pieces are extracted i
 copied per-workflow:
 
 - `.github/actions/setup-node-yarn` — composite action: `corepack enable` →
-  `actions/setup-node@v7` (Node 22, yarn cache) → `yarn install --frozen-lockfile`
+  `actions/setup-node@v7` (Node 24 — Firebase needs ≥ 24.12 — yarn cache) → `yarn install --frozen-lockfile`
   (`install: "false"` skips the install for agent-driven jobs that run yarn themselves).
   **Trusted refs only** — never `uses:` it in a job whose checkout is an untrusted PR SHA;
   a composite's steps execute with the workflow's privileges, so a hostile branch could

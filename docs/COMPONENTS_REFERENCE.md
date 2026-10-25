@@ -199,8 +199,10 @@ Prestige or any Era ascension); then a `components/Switch` (`aria-label="Toggle 
 styled (`.jsx`) in-game confirm overlay — theme `StatCard` + Cancel/Confirm `Button`s, fixed
 dimmed backdrop, Escape / backdrop-click cancel. Replaces native `window.confirm` for irreversible
 actions so the prompt matches the rest of the UI. Takes `{ open, title, children,
-confirmLabel, cancelLabel, confirmVariant, onConfirm, onCancel, ariaLabel }`. Used by
-`SettingsPage` for Era ascension. Capacity ×2 on `ByteFoundryPage` does **not** use
+confirmLabel, cancelLabel, confirmVariant, onConfirm, onCancel, ariaLabel, confirmDisabled = false }`
+(`confirmDisabled` blocks a double confirm while async work runs; `onCancel` is read through a ref,
+so an inline arrow doesn't re-steal focus each render). Used by `SettingsPage` for Era ascension and
+Cloud save's Delete account and data. Capacity ×2 on `ByteFoundryPage` does **not** use
 this component — it fires immediately on click, with no confirm prompt (see `docs/DESIGN_HISTORY.md`).
 
 ## `Money/index.js`

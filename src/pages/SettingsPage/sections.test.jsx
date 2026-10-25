@@ -106,3 +106,17 @@ describe('CloudSaveSection', () => {
     expect(await screen.findByText(/Password is incorrect — nothing was deleted/)).toBeInTheDocument()
   })
 })
+
+describe('CloudSaveSection delete re-entry', () => {
+  it('disables the confirm button while the delete is in flight', async () => {
+    const backend = fakeBackend({ uid: 'u1', email: 'p@example.com' })
+    let finish
+    backend.deleteAccount.mockImplementation(() => new Promise(resolve => { finish = resolve }))
+    renderInTheme(<CloudSaveSection enabled game={fakeGame()} loadBackend={async () => backend} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'delete account and data' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete forever' }))
+    expect(screen.getByRole('button', { name: 'Delete forever' })).toBeDisabled()
+    await act(async () => finish({ ok: true }))
+    expect(backend.deleteAccount).toHaveBeenCalledTimes(1)
+  })
+})

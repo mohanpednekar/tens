@@ -502,7 +502,8 @@ src/
                                `IS_NATIVE_BUILD`, re-exported from `virtual:tens-features`), AdMob test/real
                                unit ids, RevenueCat keys, `IAP_PRODUCTS`, policy URLs
     monetization/           ← MonetizationService (`init`/`showRewarded`/`purchase`/`restore`/
-                               `getEntitlements`): `noop.js` (web / flags off), `admobAdapter.js`,
+                               `getEntitlements`): `noop.js` (web / flags off), `admobAdapter.js` (+ `rewardedAdCache.js`: one
+                               video preloaded at init and after each show, refreshed past 55 min),
                                `revenueCatAdapter.js`, composed by `index.js` `getMonetizationService()`
     cloudSave/              ← Firebase Auth (email/password) + Firestore `saves/{uid}` backend
                                (`firebaseBackend.js`, lazy) and `deleteAccountAndData` (reauth → data → user)
@@ -869,7 +870,7 @@ Android and iOS apps wrap the same web build via Capacitor 8 (not yet store-sign
 - Minimum OS = oldest still receiving security updates (maintainer policy; no older OS support):
   Android 14 (`minSdkVersion = 34`, `android/variables.gradle`) and iOS 18
   (`IPHONEOS_DEPLOYMENT_TARGET`, which `cap sync` also writes into `CapApp-SPM/Package.swift`; `.v18`
-  needs `experimental.ios.spm.swiftToolsVersion: "6.0"` in `capacitor.config.json`). Raise both as
+  needs `experimental.ios.spm.swiftToolsVersion: "6.0"` in `capacitor.config.js`). Raise both as
   vendors drop security support.
 - `yarn build:capacitor` sets `CAPACITOR=1` so Vite uses `base: './'` and omits `VitePWA` — a
   Workbox SW under Capacitor's origin is redundant/harmful; `yarn build` for Pages is unchanged.
@@ -943,7 +944,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2080 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2085 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -961,8 +962,8 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
   `navAttention.test.js`, `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) and
-  `components/OfflineProgressNotice/index.test.jsx` (rewarded 100%-speed bonus) that's 13 of the 26 files; four more cover the store-release services and Settings sections
-  (`services/config.test.js`, `services/monetization/index.test.js`,
+  `components/OfflineProgressNotice/index.test.jsx` (rewarded 100%-speed bonus) that's 13 of the 27 files; five more cover the store-release services and Settings sections
+  (`services/config.test.js`, `services/monetization/index.test.js`, `services/monetization/rewardedAdCache.test.js`,
   `services/cloudSave/deleteAccount.test.js`, `pages/SettingsPage/sections.test.jsx`); the other nine are
   `scripts/configure-ios-plist.test.js`,
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
