@@ -17,9 +17,9 @@
     "@capacitor/ios": "^8.5.3",
     "@fontsource/inter": "^5.3.0",
     "@fontsource/space-grotesk": "^5.3.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "react-is": "^19.2.8",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-is": "^19.3.1",
     "styled-components": "^6.6.0",
     "web-vitals": "^6.2.3"
   },
