@@ -445,7 +445,11 @@ src/
                                (incl. the unused omitted-`tierIndex` mode): `docs/COMPONENTS_REFERENCE.md`;
                                mechanic: "Economy model"
     icons.js                ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Data Lake Booster, Upgrade Data Stream,
-                               Provision Disk status line)
+                               Provision Disk status line; `BOOST_ICON` 🌟 marks Compute-Boosted elements)
+    BoostBadge/index.jsx    ← Compute-Boosted marker (🌟×N badge, description in title/aria-label) +
+                               `boostGlow` card css + `isDataStreamBoosted`/`isFactoryTierBoosted`;
+                               used by ByteFoundryPage's Data Stream and MainPage tier rows.
+                               Contract: `docs/COMPONENTS_REFERENCE.md`
     Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`) for Perks → Toggles and
                                Buy max. Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
@@ -914,7 +918,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2035 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2045 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -931,8 +935,8 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
-  `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) that's
-  12 of the 20 files; the other eight are
+  `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) and
+  `components/BoostBadge/index.test.jsx` that's 13 of the 21 files; the other eight are
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
   `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`,
   `scripts/classify-claude-failure.test.js`, `scripts/lint-workflow-shell.test.js`, and
