@@ -4243,6 +4243,20 @@ describe('Byte Foundry Compute Boost', () => {
     )
   })
 
+  test('an active boost marks the Data Stream and only its covered Factory tiers as boosted', () => {
+    seedIntroState(
+      { bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, mainGameUnlocked: true, computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 600 },
+      { owned: { tier01: 1, tier02: 1 }, purchased: { tier01: 1, tier02: 1 } },
+    )
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /^open byte foundry$/i }))
+    expect(within(screen.getByLabelText('Data Stream')).getByRole('img', { name: /Boosted ×5 production by the Standard Compute Boost/ })).toHaveTextContent('×5')
+
+    openFactorySync()
+    expect(within(screen.getByLabelText('Kilobytes layer')).getByRole('img', { name: /Boosted ×5/ })).toBeInTheDocument()
+    expect(within(screen.getByLabelText('Megabytes layer')).queryByRole('img', { name: /Boosted/ })).toBeNull()
+  })
+
   test('same-type preset stays disabled while active (use Stack); other presets offer forfeit-replace with confirmation', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,

@@ -1,3 +1,4 @@
+import BoostBadge, { boostGlow, isDataStreamBoosted } from 'components/BoostBadge'
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import { COST_ICON } from 'components/icons'
 import DiskArrayRow from 'components/DiskArrayRow'
@@ -322,6 +323,7 @@ const DataStreamCard = styled(StatCard)`
   padding: 0;
   overflow: hidden;
   ${cardEdge}
+  ${props => props.$boosted && boostGlow}
 
   > :first-child {
     border-bottom-left-radius: 0;
@@ -970,7 +972,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         <Title>🔥 Byte Foundry</Title>
       </Header>
 
-      <DataStreamCard aria-label="Data Stream">
+      <DataStreamCard aria-label="Data Stream" $boosted={isDataStreamBoosted(intro)}>
         <FillableStatCard
           as={intro.mainGameUnlocked ? 'button' : 'section'}
           type={intro.mainGameUnlocked ? 'button' : undefined}
@@ -990,6 +992,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             {dataStreamRateText && (
               <SpeedText $centered={!(intro.dataStreamTapBonusPercent > 0) && !dataStreamTimeLeftText} $color={getSpeedColor(dataStreamMultiplierPercent)} title={`Speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}>
                 ⚡ {dataStreamRateText}
+                {isDataStreamBoosted(intro) && <>{' '}<BoostBadge intro={intro} /></>}
               </SpeedText>
             )}
           </TitleRow>

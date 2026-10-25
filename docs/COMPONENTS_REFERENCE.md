@@ -179,6 +179,23 @@ back to every visible-with-activity lake
 wrapped in one shared `StatCard` (`bare = false`) — retained for reuse/tests; no current caller uses
 this mode.
 
+## `BoostBadge/index.jsx`
+
+Marks anything an active Compute Boost multiplies — the Data Stream (`tickIntroProduction`) and the
+first `getComputeBoostCoveredTierCount` Factory tiers (`tickGame`). Exports:
+
+- default `BoostBadge` `{ intro, boosted = true, className }` — `role="img"` span rendering
+  `BOOST_ICON`×multiplier (`theme.color.warn` + text-shadow glow); `getComputeBoostDescription(intro)`
+  is both its `title` and `aria-label`. Renders nothing while no boost is active or `boosted` is false.
+- `boostGlow` — css mixin (`${props => props.$boosted && boostGlow}`) giving a card a pulsing
+  `warn`-colored box-shadow (static under `prefers-reduced-motion`). Overrides the card's own
+  `box-shadow`/`animation` while boosted.
+- `isDataStreamBoosted(intro)`, `isFactoryTierBoosted(intro, tierIndex)` (0-based ladder index),
+  `getComputeBoostDescription(intro)` (null when inactive), `COMPUTE_BOOST_LABELS`.
+
+Used on ByteFoundryPage's `DataStreamCard` (glow + badge after the Speed figure) and MainPage's
+`TierLine` (glow + badge before the production figure + a line in the tier's details list).
+
 ## `Switch/index.js`
 
 Styled `<button type="button">` on/off switch (pill track + sliding knob; `$on` drives the visual,

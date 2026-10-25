@@ -1,4 +1,5 @@
 import { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
+import BoostBadge, { boostGlow, COMPUTE_BOOST_LABELS, getComputeBoostDescription, isFactoryTierBoosted } from 'components/BoostBadge'
 import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
@@ -99,6 +100,7 @@ const TierLine = styled(StatCard)`
   border-left: 3px solid ${props => props.$accent};
   transition: border-color ${props => props.theme.motion.duration.base} ${props => props.theme.motion.easing.standard};
   animation: ${props => (props.$animateReveal ? css`${reveal} 0.4s ease-out` : 'none')};
+  ${props => props.$boosted && boostGlow}
 
   &:hover {
     border-color: ${props => props.theme.color.borderStrong};
@@ -610,11 +612,6 @@ const MutedText = styled.p`
   color: ${props => props.theme.color.textMuted};
   margin: 0;
 `
-
-// Display labels for COMPUTE_BOOST_PRESETS' own keys (layers.js), same map ByteFoundryPage's own
-// activation buttons use — not shared as a module since the two pages don't otherwise import from
-// each other.
-const COMPUTE_BOOST_LABELS = { burst: 'Burst', standard: 'Standard', sustain: 'Sustain' }
 
 
 // Occupies the top line's first track. Used to also share this line with a compact tickspeed
@@ -1461,6 +1458,7 @@ const MainPage = ({ game }) => {
           const accent = theme.tierAccents[tierIndex % theme.tierAccents.length]
           const isDetailsOpen = openTierDetailIds.has(tier.id)
           const detailsId = `${tier.id}-details`
+          const isBoosted = isFactoryTierBoosted(state.intro, tierIndex)
 
           return (
             <TierLine
@@ -1470,6 +1468,7 @@ const MainPage = ({ game }) => {
               aria-label={`${tier.name} layer`}
               $accent={accent}
               $animateReveal={!initialUnlockedIds.has(tier.id)}
+              $boosted={isBoosted}
             >
               <TierNameTrigger>
                 <TierName>
@@ -1507,6 +1506,7 @@ const MainPage = ({ game }) => {
                       milestone bonus: ×{formatRate(milestoneMultiplier)} from {formatAmount(purchased)} lifetime purchases
                     </li>
                     {tierScaleUpMultiplier > 1 && <li>Scale Up bonus: ×{formatRate(tierScaleUpMultiplier)}</li>}
+                    {isBoosted && <li>{getComputeBoostDescription(state.intro)}</li>}
                     {isLastTierXpUnlocked && (
                       <li>
                         XP Tickspeed — unspent XP: {formatAmount(lastTierXpBalance)}
@@ -1518,6 +1518,7 @@ const MainPage = ({ game }) => {
                 </TierDetailsContent>
               )}
               <ProductionText>
+                {isBoosted && <><BoostBadge intro={state.intro} />{' '}</>}
                 +{tier.producesResourceId === MONEY_ID
                   ? formatCurrency(production)
                   : tier.producesResourceId === BYTES_ID
