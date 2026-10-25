@@ -10,7 +10,7 @@ inputs:
     required: false
     default: "22"
   install:
-    description: Run `yarn install --frozen-lockfile` after setup ("true"/"false")
+    description: Run `yarn install --frozen-lockfile --ignore-engines` after setup ("true"/"false")
     required: false
     default: "true"
 runs:

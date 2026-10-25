@@ -135,7 +135,7 @@ describe('check-graphify-freshness', () => {
 // Root-level code files are config entry points only. A one-off helper script committed to the repo
 // root (e.g. the stray `submit_pr.cjs` bot helper from #874) is almost always an accident, and it
 // also leaves the committed graph uncovered. Add a new entry here deliberately if one is intended.
-const ALLOWED_ROOT_CODE_FILES = ['playwright.config.js', 'vite.config.js', 'viteConfigFactory.js'];
+const ALLOWED_ROOT_CODE_FILES = ['playwright.config.js', 'vite.config.js', 'viteConfigFactory.js', 'capacitor.config.js'];
 
 describe('repo root hygiene', () => {
   it('has no unexpected root-level script files', () => {
