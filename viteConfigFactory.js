@@ -21,10 +21,16 @@ export const resolveFeatureFlags = ({ capacitor = false, env = {} } = {}) => ({
  * `null`, so its code (AdMob, RevenueCat, Firebase, the native splash plugin) is never referenced
  * and never bundled — dead-code elimination of `if (false) import()` alone still emits the chunk.
  */
+const UNSAFE_IN_SCRIPT = { '<': '\\u003C', '>': '\\u003E', '/': '\\u002F', '\u2028': '\\u2028', '\u2029': '\\u2029' }
+
+// JSON string literal that is also safe to splice into generated JS (no `</script>`, no raw line
+// separators) — the module path comes from the filesystem, so treat it as untrusted text.
+const toSafeStringLiteral = value => JSON.stringify(String(value)).replace(/[<>/\u2028\u2029]/g, char => UNSAFE_IN_SCRIPT[char])
+
 export const buildFeaturesModule = (flags, srcPath) => {
-  const lazy = (on, file) => (on ? `() => import(${JSON.stringify(path.join(srcPath, file))})` : 'null')
+  const lazy = (on, file) => (on ? `() => import(${toSafeStringLiteral(path.join(srcPath, file))})` : 'null')
   return [
-    ...Object.entries(flags).map(([name, value]) => `export const ${name} = ${value}`),
+    ...Object.entries(flags).map(([name, value]) => `export const ${name} = ${value === true}`),
     `export const loadAdsModule = ${lazy(flags.ADS_ENABLED, 'services/monetization/admobAdapter.js')}`,
     `export const loadIapModule = ${lazy(flags.IAP_ENABLED, 'services/monetization/revenueCatAdapter.js')}`,
     `export const loadCloudSaveModule = ${lazy(flags.CLOUD_SAVE_ENABLED, 'services/cloudSave/firebaseBackend.js')}`,
