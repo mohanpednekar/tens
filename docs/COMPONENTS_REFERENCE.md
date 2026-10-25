@@ -219,7 +219,10 @@ mechanically regardless of which page renders it (`tickGame` runs `tickIntroProd
 generator's passive production and auto-transfers up while the game was away), but the notice itself
 used to only ever render inside `MainPage` — a player landing on (or still gated to)
 `ByteFoundryPage` after being away got no acknowledgment of it. Takes `{ offlineProgress,
-dismissOfflineProgress }` (the same two fields `useIncrementalGame()` returns) as props and renders
+dismissOfflineProgress, claimOfflineAdReward, monetization = getMonetizationService() }` (the first
+three are `useIncrementalGame()` fields; the rewarded **▶ 100% speed** button renders only when
+`monetization.adsAvailable`, the summary isn't `rewardClaimed`, and `getOfflineRewardBonusSeconds` > 0;
+the auto-dismiss countdown pauses while the video plays) as props and renders
 `null` when `offlineProgress` is `null` — which includes a short absence at or below
 `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` (10 minutes): progress still applies (at 100% speed),
 but `useIncrementalGame.js`'s `computeOfflineCatchUp` deliberately withholds the summary object so this

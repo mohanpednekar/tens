@@ -594,7 +594,7 @@ Strict three-layer separation:
    resetByteFoundry, offlineProgress, dismissOfflineProgress, incompatibleSaveReason,
    dismissIncompatibleSaveNotice, buyMaxMode, setBuyMaxMode, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
    redeemUnlockCode, purchaseSupporterDummy, opsSamples, clearSlot, eraseAllSaveProgress,
-   exportSaveJson, applyCloudSave, devModeActive, toggleDevMode, setDevState, applyDevStateJson, resetDevState }` — the last five back
+   exportSaveJson, applyCloudSave, claimOfflineAdReward, devModeActive, toggleDevMode, setDevState, applyDevStateJson, resetDevState }` — the last five back
    Dev Mode; always present on the return value (not gated by `import.meta.env.DEV`) but consumed only
    by `DevModePage`, whose rendering *is* dev-build-gated, so unreachable from any shipped UI. Every
    purchase — manual Buy and autobuyer ticks alike — always batches up to the current level's
@@ -889,6 +889,8 @@ Android and iOS apps wrap the same web build via Capacitor 8 (not yet store-sign
 - `.github/workflows/mobile-build.yml` builds an unsigned debug APK, a throwaway-key-signed minified
   release (AAB + emulator boot check via `scripts/android-boot-smoke.sh`) and an iOS Simulator `.app`
   as workflow artifacts (manual dispatch, or native-path changes) — see `docs/AUTOMATION.md`.
+- The one rewarded-ad placement is the offline notice's **▶ 100% speed** bonus (`claimOfflineAdReward`,
+  `applyOfflineRewardBonus` — see `docs/ECONOMY_REFERENCE.md`'s "Offline progress").
 - Saves are `localStorage` inside each app's WebView, separate from the browser/PWA's saves; the
   optional cloud save (`storage.js` `serializeSaveForExport`/`importSaveJson`) bridges devices.
 
@@ -941,7 +943,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2073 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2080 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -958,8 +960,8 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
-  `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) that's
-  12 of the 25 files; four more cover the store-release services and Settings sections
+  `navAttention.test.js`, `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) and
+  `components/OfflineProgressNotice/index.test.jsx` (rewarded 100%-speed bonus) that's 13 of the 26 files; four more cover the store-release services and Settings sections
   (`services/config.test.js`, `services/monetization/index.test.js`,
   `services/cloudSave/deleteAccount.test.js`, `pages/SettingsPage/sections.test.jsx`); the other nine are
   `scripts/configure-ios-plist.test.js`,

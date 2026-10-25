@@ -1,7 +1,8 @@
 import Button, { VisuallyHidden } from 'components/Button'
 import StatCard from 'components/StatCard'
-import { formatOfflineDuration } from 'game/engine'
+import { formatOfflineDuration, getOfflineRewardBonusSeconds } from 'game/engine'
 import { useEffect, useState } from 'react'
+import { getMonetizationService } from 'services/monetization'
 import styled from 'styled-components'
 
 // Offline-progress notice auto-dismiss timing (UI chrome only — not a game/economy constant, so
@@ -54,6 +55,13 @@ const NoticeText = styled.p`
   margin: 0;
 `
 
+const NoticeActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+`
+
 // Shown on whichever page happens to be active when the player returns (MainPage or
 // ByteFoundryPage) — offline progress is computed in useIncrementalGame regardless of which page
 // the player lands on, so this notice needs to be page-agnostic too. `offlineProgress` is no
@@ -64,7 +72,17 @@ const NoticeText = styled.p`
 // keyed on the `offlineProgress` reference itself, rather than computed once via a lazy
 // initializer, so a later mid-session event restarts the countdown instead of inheriting the
 // first one's already-elapsed (or already dismissed) timing.
-const OfflineProgressNotice = ({ offlineProgress, dismissOfflineProgress }) => {
+//
+// When rewarded ads are available (services/monetization) and the absence ran at reduced speed,
+// a "Watch video" action tops it up to 100% via `claimOfflineAdReward`. The countdown pauses while
+// the video plays, and the claim is keyed on the summary captured at click time.
+const OfflineProgressNotice = ({
+  offlineProgress,
+  dismissOfflineProgress,
+  claimOfflineAdReward,
+  monetization = getMonetizationService(),
+}) => {
+  const [adPending, setAdPending] = useState(false)
   const [offlineNoticeTiming, setOfflineNoticeTiming] = useState(null)
   const [offlineNoticeFading, setOfflineNoticeFading] = useState(false)
   const [offlineNoticeRemainingPercent, setOfflineNoticeRemainingPercent] = useState(100)
@@ -78,10 +96,17 @@ const OfflineProgressNotice = ({ offlineProgress, dismissOfflineProgress }) => {
   }, [offlineProgress])
 
   useEffect(() => {
+    // Restart the countdown from full once a video finishes, rather than resuming mid-way.
+    if (adPending || !offlineProgress) return
+    const now = Date.now()
+    setOfflineNoticeTiming(timing => (timing ? { start: now, end: now + OFFLINE_NOTICE_AUTO_DISMISS_MS } : timing))
+  }, [adPending, offlineProgress])
+
+  useEffect(() => {
     // Guarded on offlineProgress (not just offlineNoticeTiming) so this effect re-runs — and its
     // interval cleanup fires — the instant the notice is dismissed (manually or via the fade
     // below), rather than leaving a 100ms interval running forever in the background.
-    if (!offlineProgress || !offlineNoticeTiming || offlineNoticeFading) return undefined
+    if (!offlineProgress || !offlineNoticeTiming || offlineNoticeFading || adPending) return undefined
     const { start, end } = offlineNoticeTiming
     const total = end - start
     const tick = () => {
@@ -96,7 +121,7 @@ const OfflineProgressNotice = ({ offlineProgress, dismissOfflineProgress }) => {
     tick()
     const interval = setInterval(tick, OFFLINE_NOTICE_PROGRESS_INTERVAL_MS)
     return () => clearInterval(interval)
-  }, [offlineProgress, offlineNoticeTiming, offlineNoticeFading])
+  }, [offlineProgress, offlineNoticeTiming, offlineNoticeFading, adPending])
 
   useEffect(() => {
     if (!offlineNoticeFading) return undefined
@@ -106,31 +131,62 @@ const OfflineProgressNotice = ({ offlineProgress, dismissOfflineProgress }) => {
 
   if (!offlineProgress) return null
 
+  const canWatchForBonus = Boolean(claimOfflineAdReward)
+    && monetization.adsAvailable
+    && !offlineProgress.rewardClaimed
+    && getOfflineRewardBonusSeconds(offlineProgress.elapsedRealSeconds) > 0
+
+  const watchForBonus = async () => {
+    const summary = offlineProgress
+    setAdPending(true)
+    try {
+      const result = await monetization.showRewarded('offline_full_speed')
+      if (result.rewarded) claimOfflineAdReward(summary)
+    } finally {
+      setAdPending(false)
+    }
+  }
+
   return (
     <OfflineNoticeOverlay>
       <OfflineNoticeCard aria-label="offline progress notice" $fading={offlineNoticeFading}>
         <NoticeText>
           Welcome back! You were away for {formatOfflineDuration(offlineProgress.elapsedRealSeconds)}
-          {' — simulated '}{formatOfflineDuration(offlineProgress.effectiveSeconds)} of progress at 50% speed.
+          {' — simulated '}{formatOfflineDuration(offlineProgress.effectiveSeconds)} of progress at{' '}
+          {offlineProgress.rewardClaimed ? '100% speed (video bonus).' : '50% speed.'}
         </NoticeText>
-        <Button
-          aria-label="Dismiss offline progress notice"
-          variant="neutral"
-          onClick={dismissOfflineProgress}
-          title="Dismiss this notice"
-          type="button"
-          $progress={offlineNoticeRemainingPercent}
-          $progressColor="#525252"
-        >
-          Dismiss
-          <VisuallyHidden
-            role="progressbar"
-            aria-label="Time until this notice auto-dismisses"
-            aria-valuenow={offlineNoticeRemainingPercent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          />
-        </Button>
+        <NoticeActions>
+          {canWatchForBonus && (
+            <Button
+              aria-label="Watch a video to simulate your time away at 100% speed"
+              disabled={adPending}
+              onClick={watchForBonus}
+              title="Watch a short video to double your offline progress to 100% speed"
+              type="button"
+              variant="primary"
+            >
+              {adPending ? 'Loading video…' : '▶ 100% speed'}
+            </Button>
+          )}
+          <Button
+            aria-label="Dismiss offline progress notice"
+            variant="neutral"
+            onClick={dismissOfflineProgress}
+            title="Dismiss this notice"
+            type="button"
+            $progress={offlineNoticeRemainingPercent}
+            $progressColor="#525252"
+          >
+            Dismiss
+            <VisuallyHidden
+              role="progressbar"
+              aria-label="Time until this notice auto-dismisses"
+              aria-valuenow={offlineNoticeRemainingPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </Button>
+        </NoticeActions>
       </OfflineNoticeCard>
     </OfflineNoticeOverlay>
   )

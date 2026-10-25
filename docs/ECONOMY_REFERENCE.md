@@ -1571,6 +1571,16 @@ identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
   gap; `components/OfflineProgressNotice` re-arms its own countdown/fade timing via an effect keyed
   on the   `offlineProgress` object reference (not a one-time lazy initializer) to handle this.
 
+**Rewarded-video bonus (ads builds only).** When the "Welcome back!" notice shows a reduced-speed
+catch-up and rewarded ads are available (`services/monetization`, `ADS_ENABLED`), it offers
+**▶ 100% speed**. A completed video calls `useIncrementalGame`'s `claimOfflineAdReward(summary)`, which
+replays `getOfflineRewardBonusSeconds(elapsedRealSeconds)` more simulated seconds
+(`applyOfflineRewardBonus` — the capped elapsed time minus what `getOfflineEffectiveSeconds` granted),
+so the absence ends up simulated at 100% speed. One claim per summary object (tracked in a `WeakSet`,
+and the summary is replaced with `rewardClaimed: true`); it still pays out if the notice was dismissed
+during the video. Owning remove-ads grants it without a video. No change to the 50% default or to
+web builds.
+
 ### PP Compute (Flops)
 
 A separate top-level screen (nav **Compute**, page id `'compute'`, `ComputeFlopsPage`) from the

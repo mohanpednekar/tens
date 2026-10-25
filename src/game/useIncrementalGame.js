@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoScaleUp, buyAutobuyerIntervalUpgrade, buyAutomationIntervalUpgrade, buyAutoOverclock, buyTierTickspeedIntervalUpgrade, setAutoOverclockEnabled, buyComputeAutoBoost, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyPrestigeSpeedBonus, buyAutobuyerBulkMode, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierMaxLevels, buyTierQuantity, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, eraGame, getOfflineEffectiveSeconds, isBuyMaxUnlocked, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, queueIntroSpeedUpgrade, unlockNextDiskSizeByFoundryReset, pinMuseumEntry, prestigeGame, provisionDisk, queueDiskBuild, repeatPurchaseMax, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, resetStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry } from './engine'
+import { activateComputeBoost, applyOfflineProgress, applyOfflineRewardBonus, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoScaleUp, buyAutobuyerIntervalUpgrade, buyAutomationIntervalUpgrade, buyAutoOverclock, buyTierTickspeedIntervalUpgrade, setAutoOverclockEnabled, buyComputeAutoBoost, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyPrestigeSpeedBonus, buyAutobuyerBulkMode, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierMaxLevels, buyTierQuantity, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, eraGame, getOfflineEffectiveSeconds, getOfflineRewardBonusSeconds, isBuyMaxUnlocked, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, queueIntroSpeedUpgrade, unlockNextDiskSizeByFoundryReset, pinMuseumEntry, prestigeGame, provisionDisk, queueDiskBuild, repeatPurchaseMax, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, resetStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry } from './engine'
 import { MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OPS_SAMPLE_CAP, OPS_SAMPLE_INTERVAL_MS, TICK_RATE_MS } from './layers'
 import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, loadBuyMaxPreference, saveBuyMaxPreference, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
 
@@ -325,6 +325,21 @@ const computeInitialGame = () => {
 
   const dismissOfflineProgress = useCallback(() => setOfflineProgress(null), [])
 
+  // Rewarded-video bonus on the "Welcome back!" notice: tops one offline catch-up up from 50% to
+  // 100% speed (applyOfflineRewardBonus). Keyed on the summary object the notice was showing when
+  // the video started, so it still pays out if the notice auto-dismissed during the video, and can
+  // never be claimed twice for the same absence.
+  const claimedOfflineRewardsRef = useRef(new WeakSet())
+  const claimOfflineAdReward = useCallback(summary => {
+    if (!summary || summary.rewardClaimed || claimedOfflineRewardsRef.current.has(summary)) return false
+    claimedOfflineRewardsRef.current.add(summary)
+    setState(prev => applyOfflineRewardBonus(summary.elapsedRealSeconds, BUY_QUANTITY)(prev))
+    setOfflineProgress(prev => (prev === summary
+      ? { ...summary, effectiveSeconds: summary.effectiveSeconds + getOfflineRewardBonusSeconds(summary.elapsedRealSeconds), rewardClaimed: true }
+      : prev))
+    return true
+  }, [])
+
   const dismissIncompatibleSaveNotice = useCallback(() => setIncompatibleSaveReason(null), [])
 
   const switchSaveSlot = useCallback(slotId => {
@@ -441,6 +456,7 @@ const computeInitialGame = () => {
     applyCloudSave,
     applyDevStateJson,
     buyMaxMode,
+    claimOfflineAdReward,
     clearSlot,
     devModeActive,
     dismissIncompatibleSaveNotice,

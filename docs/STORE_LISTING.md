@@ -57,7 +57,7 @@ Re-check every answer whenever a flag or SDK changes.
 | User-generated content / users can interact or communicate | No |
 | Shares user location | No |
 | Digital purchases | No by default; **Yes** when IAP is enabled (remove ads, tip) |
-| Ads | No by default; **Yes** when ads are enabled (rewarded video only) |
+| Ads | No by default; **Yes** when ads are enabled (opt-in rewarded video: 100%-speed offline progress) |
 | Unrestricted web access | No (policy links open in the system browser) |
 | Medical / treatment info | No |
 

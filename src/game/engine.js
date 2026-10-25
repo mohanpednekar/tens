@@ -2082,6 +2082,24 @@ export const applyOfflineProgress = (elapsedRealSeconds, autobuyerBatchSize = 1)
   return result
 }
 
+// Rewarded-video top-up for a reduced-speed offline catch-up: the simulated seconds still owed to
+// bring an absence from OFFLINE_PROGRESS_SPEED_MULTIPLIER up to 100% speed (the capped real elapsed
+// time minus what getOfflineEffectiveSeconds already granted). 0 for a short absence that already
+// ran at full speed.
+export const getOfflineRewardBonusSeconds = elapsedRealSeconds =>
+  Math.floor(Math.min(clampNonNegative(elapsedRealSeconds), MAX_OFFLINE_SECONDS)) - getOfflineEffectiveSeconds(elapsedRealSeconds)
+
+// Replays the bonus seconds above with the same one-tick-per-simulated-second cadence as
+// applyOfflineProgress, so 50% catch-up + this bonus = the full absence simulated at 100% speed.
+export const applyOfflineRewardBonus = (elapsedRealSeconds, autobuyerBatchSize = 1) => state => {
+  const bonusSeconds = getOfflineRewardBonusSeconds(elapsedRealSeconds)
+  let result = state
+  for (let i = 0; i < bonusSeconds; i++) {
+    result = tickGame(1, autobuyerBatchSize)(result)
+  }
+  return result
+}
+
 // "1h 15m" / "15m 30s" / "45s" — used only to summarize the elapsed/simulated duration in the
 // offline-progress notice; only ever needs to read up to MAX_OFFLINE_SECONDS (24h), so it has no
 // need to express days.

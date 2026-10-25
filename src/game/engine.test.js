@@ -165,6 +165,8 @@ import {
   getMemoryUnit,
   getMoneyExponent,
   getOfflineEffectiveSeconds,
+  getOfflineRewardBonusSeconds,
+  applyOfflineRewardBonus,
   getOverclockMultiplier,
   getOverclockRequirement,
   getPrestigeDoublePpUpgradeCost,
@@ -8413,6 +8415,27 @@ describe('getOfflineEffectiveSeconds', () => {
 })
 
 // ─── applyOfflineProgress ─────────────────────────────────────────────────────
+
+describe('offline rewarded-video bonus', () => {
+  it('owes the other half of a reduced-speed absence, capped like the catch-up itself', () => {
+    expect(getOfflineRewardBonusSeconds(1000)).toBe(500)
+    expect(getOfflineRewardBonusSeconds(1001)).toBe(1001 - getOfflineEffectiveSeconds(1001))
+    expect(getOfflineRewardBonusSeconds(MAX_OFFLINE_SECONDS * 3)).toBe(MAX_OFFLINE_SECONDS / 2)
+  })
+
+  it('owes nothing for a short absence that already ran at full speed', () => {
+    expect(getOfflineRewardBonusSeconds(100)).toBe(0)
+    const state = withOwned(createInitialGameState(), tensTier.id, 5)
+    expect(applyOfflineRewardBonus(100)(state)).toBe(state)
+  })
+
+  it('makes 50% catch-up + bonus equal the full absence at 100% speed', () => {
+    const state = withOwned(createInitialGameState(), tensTier.id, 5)
+    const topped = applyOfflineRewardBonus(1000)(applyOfflineProgress(1000)(state))
+    // 1000 simulated seconds × 5 generators of tensTier (1s tickspeed) = +5000 Bytes
+    expect(bytesOf(topped)).toBe(bytesOf(state) + 5000)
+  })
+})
 
 describe('applyOfflineProgress', () => {
   it('produces resources at 100% speed for a gap at or below the full-speed threshold', () => {

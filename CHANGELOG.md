@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   and purchases (RevenueCat: remove ads, tip) are built in but switched off — no game content is
   ever behind a purchase.
 
+- **Watch a video for 100% offline progress (apps with ads enabled).** The "Welcome back!" notice
+  offers a rewarded video that tops your time away up from 50% to 100% speed — once per return.
+  Remove-ads owners get it without a video.
+
 ### Fixed
 
 - **Typing inside an in-game confirm dialog no longer loses focus** after the first character.
