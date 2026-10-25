@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Tens — Privacy Policy</title>
+    <style>
+      :root { color-scheme: light dark; --bg: #ffffff; --fg: #1b1d24; --muted: #555b6b; --accent: #2457c5; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #0c0d11; --fg: #e8eaf0; --muted: #a3a9b8; --accent: #7aa2ff; } }
+      body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+      main { max-width: 46rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
+      h1 { margin-top: 0; } h2 { margin-top: 2rem; font-size: 1.2rem; }
+      p, li { color: var(--fg); } .muted { color: var(--muted); } a { color: var(--accent); }
+      table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+      th, td { border: 1px solid var(--muted); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Tens — Privacy Policy</h1>
+      <p class="muted">Effective 24 October 2026. Applies to the Tens web game (mohanpednekar.github.io/tens) and the Tens apps for Android and iOS.</p>
+
+      <p>Tens is an incremental game made by an independent developer ("we"). The game works without an account and without sending anything to us. This policy explains the few optional features that do involve other services.</p>
+
+      <h2>1. Data stored on your device</h2>
+      <p>Your game progress, save slots and settings (theme, Buy max mode) are stored locally in your browser or app storage. They never leave your device unless you use cloud save. You can erase them at any time in <strong>Settings → Danger zone</strong>, or by clearing site data / uninstalling the app.</p>
+
+      <h2>2. Cloud save (optional account)</h2>
+      <p>If you create a cloud save account, we use Google Firebase Authentication and Cloud Firestore (provided by Google LLC) to:</p>
+      <ul>
+        <li>store your <strong>email address</strong>, a hashed password and an account ID, to sign you in;</li>
+        <li>store a copy of your <strong>game save</strong> (game progress only), the time it was uploaded and the platform it came from, so you can restore it on another device.</li>
+      </ul>
+      <p>Firebase also processes your IP address and basic device information as part of providing and securing the service. Data is stored on Google Cloud servers and is accessible only to your account. We do not use it for advertising and do not sell it. See <a href="https://firebase.google.com/support/privacy">Firebase privacy and security</a>.</p>
+
+      <h2>3. Advertising (apps only, when enabled)</h2>
+      <p>The Android and iOS apps may offer optional <strong>rewarded video ads</strong> through Google AdMob. Ads are never shown unless you choose to watch one. When ads are enabled, Google may collect your device's advertising identifier, IP address, approximate location derived from it, and ad interaction data to serve and measure ads and prevent fraud. In regions where consent is required we ask for it through Google's consent form, and on iOS we ask for permission before any tracking (App Tracking Transparency). You can change your choice in your device settings. See <a href="https://policies.google.com/technologies/partner-sites">how Google uses information from apps that use its services</a>. The web game shows no ads.</p>
+
+      <h2>4. In-app purchases (apps only, when enabled)</h2>
+      <p>Optional purchases (such as "Remove ads" or a tip) are processed by Google Play or the Apple App Store; we never see your payment details. We use RevenueCat, Inc. to validate purchases and restore them on your devices. RevenueCat receives purchase records (product, time, price, store transaction ID) together with a random app user ID. See the <a href="https://www.revenuecat.com/privacy">RevenueCat privacy policy</a>. No game content requires payment.</p>
+
+      <h2>5. What we do not do</h2>
+      <ul>
+        <li>No analytics or crash-reporting SDKs, no social logins, no contacts, photos, camera, microphone or precise location.</li>
+        <li>We do not sell personal data or share it with data brokers.</li>
+      </ul>
+
+      <h2>6. Summary of data</h2>
+      <table>
+        <tr><th>Data</th><th>When</th><th>Processor</th><th>Purpose</th></tr>
+        <tr><td>Email, account ID</td><td>Cloud save account</td><td>Firebase (Google)</td><td>Sign-in</td></tr>
+        <tr><td>Game save</td><td>Cloud save upload</td><td>Firebase (Google)</td><td>Restore progress</td></tr>
+        <tr><td>Advertising ID, IP, ad interactions</td><td>Apps with ads enabled (an ad is preloaded at launch so the optional video starts instantly)</td><td>Google AdMob</td><td>Serving and measuring ads, fraud prevention</td></tr>
+        <tr><td>Purchase history, app user ID</td><td>Purchases (apps, if enabled)</td><td>Google Play / App Store, RevenueCat</td><td>Delivering and restoring purchases</td></tr>
+      </table>
+
+      <h2 id="delete-account">7. Deleting your account and data</h2>
+      <p>In the game, open <strong>Settings → Cloud save → Delete account and data</strong> and confirm with your password. This immediately and permanently deletes your Firebase account and your cloud save. If you cannot access the app, email the developer at the support address shown on the Tens Google Play or App Store listing, from the address of the account (never send your password); we will delete the account and its data within 30 days and confirm. Please do not post personal data in public GitHub issues. Local saves are deleted with the app or via Settings → Danger zone.</p>
+      <p>Purchase records kept by Google, Apple and RevenueCat are retained under their own policies and tax obligations.</p>
+
+      <h2>8. Children</h2>
+      <p>Tens is not directed at children under 13, and cloud save accounts are not intended for them. When ads are enabled, whether ads may be personalized follows the choice you make in Google's consent form (and, on iOS, the App Tracking Transparency prompt).</p>
+
+      <h2>9. Your rights</h2>
+      <p>Depending on where you live (for example under the GDPR or California law) you may have rights to access, correct, export or delete your data and to object to processing. Contact us at the support email address on the store listing to exercise them.</p>
+
+      <h2>10. Changes</h2>
+      <p>We will post any changes on this page and update the effective date.</p>
+
+      <p class="muted"><a href="./terms.html">Terms of Use</a> · <a href="./">Play Tens</a></p>
+    </main>
+  </body>
+</html>
