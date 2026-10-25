@@ -73,9 +73,9 @@ time this runs — don't maintain a hardcoded file list anywhere else.
    fully accounted for. If a file already has no safe reduction available, say so and leave it
    alone — that's a legitimate, honest outcome, not a failure to report around.
 6. **Model delegation check.** Confirm every `.claude/agents/*.md` has a `model:` frontmatter alias
-   (`haiku` for mechanical/specified work, `opus` for judgment-heavy work) matching `CLAUDE.md`'s
+   (`haiku` mechanical, `sonnet` implementation, `opus` judgment-heavy) matching `CLAUDE.md`'s
    "Model delegation" section, and that no dated/old model ID is pinned anywhere in the in-scope
-   files — aliases track the latest release. Fix drift; delegate the mechanical trimming itself to
+   files — aliases track the latest release. Fix drift (this step is exempt from step 5's word-count rule); delegate the mechanical trimming itself to
    a `haiku` subagent and the self-check/review to `opus` where practical.
 7. **Verify.** Run `yarn test` once after all files are edited. Doc-only edits rarely break tests,
    but a stale test-count reference or similar is cheap to catch here.
