@@ -230,6 +230,16 @@ posts a `<!-- stalled-pr-sweep-v1 -->` comment via `GH_AUTOMATION_PAT`, which re
 `autonomous-pr-followup.yml`'s existing `issue_comment` trigger (no edit to that file). After 3
 (`MAX_RETRIES`) sweep comments on one PR it files an `automation-retro` issue instead of retrying.
 
+**Maintainer-checklist verification (#63).** A plain-Node step, `Verify maintainer checklist (#62)`
+(`scripts/verify-maintainer-checklist.mjs`, tested by `.test.js`), runs every invocation. It checks the
+API-verifiable items on pinned issue #62 (PAT secret exists, `allow_auto_merge`, `test` required on
+`main`, Code Owners review required, Discussions enabled, PAT Projects scope via `gh project list`) and
+rewrites passing `- [ ] text` lines to `- [x] ~~text~~` (also normalising checked-without-strike lines),
+commenting once when all verifiable items are done. API errors leave a line untouched. It never edits
+the "Tracked separately" section and deliberately does **not** check `Workflows: write` — only a real
+push outcome proves it. **Convention:** any new `claude-task` issue introducing a manual-only
+prerequisite must add a line to #62; extend `CHECKS` in the script if it is API-checkable.
+
 **Backlog/milestone hygiene is also deterministic and unconditional.** Two more plain-bash steps —
 `Backlog issue hygiene` (`scripts/backlog-issue-hygiene.sh`, which also runs
 `scripts/epic-407-issue-hygiene.sh`) and `Sync release milestones`
