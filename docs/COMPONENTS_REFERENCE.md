@@ -179,6 +179,26 @@ back to every visible-with-activity lake
 wrapped in one shared `StatCard` (`bare = false`) — retained for reuse/tests; no current caller uses
 this mode.
 
+## `BoostBadge/index.jsx`
+
+Marks anything an active Compute Boost multiplies — the Data Stream (`tickIntroProduction`) and the
+first `getComputeBoostCoveredTierCount` Factory tiers (`tickGame`). Exports:
+
+- default `BoostBadge` `{ intro, boosted = true, className, id }` — `role="img"` span rendering
+  `BOOST_ICON`×multiplier (`theme.color.warn` + text-shadow glow); `getComputeBoostDescription(intro)`
+  is both its `title` and `aria-label`. With `id`, also renders a `hidden` plain-text copy under that id
+  for a containing `<button>`'s `aria-describedby` (button children are presentational). Renders
+  nothing while no boost is active (unknown preset or invalid funding tier counts as inactive, matching
+  the engine) or `boosted` is false.
+- `boostGlow` — css mixin (`${props => props.$boosted && boostGlow}`) giving a card a pulsing
+  `warn`-colored box-shadow (static under `prefers-reduced-motion`). Overrides the card's own
+  `box-shadow`/`animation` while boosted.
+- `isDataStreamBoosted(intro)`, `isFactoryTierBoosted(intro, tierIndex)` (0-based ladder index),
+  `getComputeBoostDescription(intro)` (null when inactive), `COMPUTE_BOOST_LABELS`.
+
+Used on ByteFoundryPage's `DataStreamCard` (glow + badge after the Speed figure, tap button described by it) and MainPage's
+`TierLine` (glow + badge after the production figure + a line in the tier's details list).
+
 ## `Switch/index.js`
 
 Styled `<button type="button">` on/off switch (pill track + sliding knob; `$on` drives the visual,

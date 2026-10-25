@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Watch a video for 100% offline progress (apps with ads enabled).** The "Welcome back!" notice
   offers a rewarded video that tops your time away up from 50% to 100% speed — once per return.
   Remove-ads owners get it without a video. The video is preloaded so it starts instantly.
+- **Boosted status is visible everywhere it applies.** While a Compute Boost is active, the Data
+  Stream and every Factory tier it covers glow and show a 🌟×N badge; hovering (or a screen reader, via the element's description)
+  gives the preset, multiplier, time left and stacks, and the tier's details list repeats it.
 
 - **Autobuyer Speed upgrades (Perks → Upgrades).** Each unlocked tier autobuyer can be upgraded with PP to shorten its purchase interval ×0.9 per level (base interval is N seconds for tier N, 1 s … 10 s, down to a 10 ms floor; autobuyer only — separate from tier tickspeed, and manual buying is unaffected). Cost starts at 1 PP and doubles per level on the 125-based ladder (…64 → 125 → 250 → 500 → 1000, ×1000 per ten levels). Permanent across Prestige and Era ascension.
 - **Interval upgrades for the other automations (Perks → Upgrades → Autobuyer Speed).** Latency (8 PP, 1 s), Scale Up (16 PP, 64 s), Overclock (32 PP, 256 s), Auto-Prestige (64 PP, 1024 s) and each tier's tickspeed autobuyer (2 PP, 16 s) now run on a timer (attempt budget accrues elapsed ÷ interval) with the same ×0.9-per-level, 125-based doubling chain, capped at 10 ms. **Auto Overclock** is new: claims Overclock whenever eligible (pause on Toggles).
