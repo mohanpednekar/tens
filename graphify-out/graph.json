@@ -28438,6 +28438,12 @@
       "community": 113,
       "community_name": "graphify reference: incremental update and cluster-only",
       "norm_label": "for --cluster-only"
+    },
+    {
+      "source_file": "scripts/verify-maintainer-checklist.mjs"
+    },
+    {
+      "source_file": "scripts/verify-maintainer-checklist.test.js"
     }
   ],
   "links": [
@@ -120793,5 +120799,7 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "4c63904afc4adbd2832f8431b1381c73e22a857d"
+  "built_at_commit": "4c63904afc4adbd2832f8431b1381c73e22a857d",
+  "scripts/verify-maintainer-checklist.mjs": {},
+  "scripts/verify-maintainer-checklist.test.js": {}
 }
