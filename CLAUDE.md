@@ -299,6 +299,8 @@ Convention: a new `claude-task` issue that adds a manual-only prerequisite must 
 
 Guard-step context feeds are bounded: any new feed passes an explicit `--limit` and display-cap with a
 "+N more" note; list feeds render number + title + labels only, never bodies (`docs/AUTOMATION.md`, #81).
+`autonomous-maintenance.yml` also feeds unpromoted GitHub Discussions "Ideas" (#66); Phase B item 6 may
+promote a substantial one to a `claude-task` issue linking the discussion URL (propose-only).
 
 **Budget discipline applies to every Claude Code session — interactive and automated.** Self-estimate
 the remaining rolling 5-hour Claude usage window and keep a session at or under roughly **50%** of a full window,
