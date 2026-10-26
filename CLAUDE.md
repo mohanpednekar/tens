@@ -292,6 +292,11 @@ outright), saying so when it deviates from lowest-number order.
 - `automation-self-heal.yml` — watches the orchestration workflows for failed runs; opens a draft
   `claude/self-heal-*` fix or an `automation-failure` issue; never edits `ci.yml`/`deploy.yml`/itself.
 
+**Maintainer checklist (#62) verification (#63).** `scripts/verify-maintainer-checklist.mjs` runs each
+`autonomous-maintenance.yml` invocation and strikes through API-verifiable #62 items that now pass.
+Convention: a new `claude-task` issue that adds a manual-only prerequisite must add a line to #62
+(what to check, why); extend the script's `CHECKS` if it's API-checkable. Detail: `docs/AUTOMATION.md`.
+
 Guard-step context feeds are bounded: any new feed passes an explicit `--limit` and display-cap with a
 "+N more" note; list feeds render number + title + labels only, never bodies (`docs/AUTOMATION.md`, #81).
 
@@ -957,7 +962,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2098 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2102 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -976,11 +981,11 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
   `navAttention.test.js`, `components/Button/index.test.jsx` (`ButtonContent` icon-split rules),
   `components/BoostBadge/index.test.jsx` and `components/OfflineProgressNotice/index.test.jsx`
-  (rewarded 100%-speed bonus) that's 14 of the 29 files; six more cover the store-release services and Settings sections
+  (rewarded 100%-speed bonus) that's 14 of the 30 files; six more cover the store-release services and Settings sections
   (`services/config.test.js`, `services/monetization/index.test.js`, `services/monetization/rewardedAdCache.test.js`,
   `game/useIncrementalGame.offlineReward.test.jsx` (`claimOfflineAdReward`),
-  `services/cloudSave/deleteAccount.test.js`, `pages/SettingsPage/sections.test.jsx`); the other nine are
-  `scripts/configure-ios-plist.test.js`,
+  `services/cloudSave/deleteAccount.test.js`, `pages/SettingsPage/sections.test.jsx`); the other ten are
+  `scripts/verify-maintainer-checklist.test.js`, `scripts/configure-ios-plist.test.js`,
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
   `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`,
   `scripts/classify-claude-failure.test.js`, `scripts/lint-workflow-shell.test.js`, and
