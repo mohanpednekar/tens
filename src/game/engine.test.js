@@ -132,6 +132,7 @@ import {
   getStoragePoolCount,
   getNextSiDoubledValue,
   getStoragePoolBandwidth,
+  getPoolAvailableFillRate,
   getStoragePoolCapacity,
   getUnlockedStoragePoolCount,
   getVisibleStoragePoolCount,
@@ -991,6 +992,31 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(after.intro.poolBuffers[1]).toBeGreaterThan(rawRate)
       expect(after.intro.poolBuffers[1]).toBeCloseTo(rawRate * 1.5)
     })
+  })
+})
+
+describe('getPoolAvailableFillRate', () => {
+  it('caps each pool at its Bandwidth, limited by the Data Stream rate left after earlier pools', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true, bits: 1_000_000, capacity: 32_000_000, speedCapacity: 1024,
+    })
+    const rate = getIntroProductionRate(state.intro)
+    const bw1 = getStoragePoolBandwidth(state, 1)
+    const bw2 = getStoragePoolBandwidth(state, 2)
+    expect(getPoolAvailableFillRate(state, 1)).toBe(Math.min(bw1, rate))
+    expect(getPoolAvailableFillRate(state, 2)).toBe(Math.min(bw2, Math.max(0, rate - bw1)))
+  })
+
+  it('is below the theoretical Bandwidth when the Data Stream cannot supply it, and matches the real fill', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true, bits: 1_000_000, capacity: 32_000_000, speedCapacity: 1024,
+    })
+    state.intro.dataLakes = { ...state.intro.dataLakes, 1: { ...(state.intro.dataLakes?.[1] ?? {}), bandwidthSteps: 4 } }
+    const available = getPoolAvailableFillRate(state, 1)
+    expect(available).toBe(getIntroProductionRate(state.intro))
+    expect(available).toBeLessThan(getStoragePoolBandwidth(state, 1))
+    const after = tickPoolBufferFill(1)(state)
+    expect(after.intro.poolBuffers[1]).toBeCloseTo(available * getPoolMultiplierPercent(state, 1) / 100)
   })
 })
 

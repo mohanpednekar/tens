@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
-import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getStoragePoolBandwidth, getTierCost } from 'game/engine'
+import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
@@ -3171,10 +3171,10 @@ test('Speed and Bandwidth render at the top-right, with disk status removed enti
   expect(within(dataStreamSection).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  expect(within(pool1).getByTitle(/^Bandwidth at/)).toBeInTheDocument()
+  expect(within(pool1).getByTitle(/^Available fill speed at/)).toBeInTheDocument()
 
   const pool2 = screen.getByRole('region', { name: 'pool 2' })
-  expect(within(pool2).getByTitle(/^Bandwidth at/)).toBeInTheDocument()
+  expect(within(pool2).getByTitle(/^Available fill speed at/)).toBeInTheDocument()
   expect(screen.queryByLabelText(/full disks/i)).not.toBeInTheDocument()
   expect(screen.queryByText(/💾/)).not.toBeInTheDocument()
 })
@@ -3200,10 +3200,26 @@ test('Data Stream and pool speeds show the fill-multiplied value, with no multip
   expect(screen.queryByRole('progressbar', { name: /data lake overflow rate/i })).not.toBeInTheDocument()
   const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  // Empty buffer -> FILL_MULTIPLIER_MAX_PERCENT (150%) of the pool's base Bandwidth, to 3 significant digits.
-  const expected = formatDiskSize(getStoragePoolBandwidth(savedState, 1) * FILL_MULTIPLIER_MAX_PERCENT / 100)
-  const speed = within(pool1).getByTitle(/^Bandwidth at/)
-  expect(speed).toHaveAttribute('title', `Bandwidth at ${FILL_MULTIPLIER_MAX_PERCENT}% fill multiplier`)
+  // Empty buffer -> FILL_MULTIPLIER_MAX_PERCENT (150%) of the pool's available fill rate, to 3 significant digits.
+  const expected = formatDiskSize(getPoolAvailableFillRate(savedState, 1) * FILL_MULTIPLIER_MAX_PERCENT / 100)
+  const speed = within(pool1).getByTitle(/^Available fill speed at/)
+  expect(speed).toHaveAttribute('title', `Available fill speed at ${FILL_MULTIPLIER_MAX_PERCENT}% fill multiplier`)
+  expect(speed.textContent.replace(/^⚡ /, '').replace(/\/s$/, '').split(' ')[1]).toBe(expected.split(' ')[1])
+  expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
+})
+
+test('a pool\'s speed shows the fill speed actually available, not its higher theoretical Bandwidth', () => {
+  seedIntroState({
+    bits: 0, capacity: 32_000_000, speedCapacity: 1024, byteCreated: true,
+    dataLakes: { 1: { bandwidthSteps: 4 } },
+  })
+  render(<App />)
+
+  const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
+  const available = getPoolAvailableFillRate(savedState, 1)
+  expect(available).toBeLessThan(getStoragePoolBandwidth(savedState, 1))
+  const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByTitle(/^Available fill speed at/)
+  const expected = formatDiskSize(available * FILL_MULTIPLIER_MAX_PERCENT / 100)
   expect(speed.textContent.replace(/^⚡ /, '').replace(/\/s$/, '').split(' ')[1]).toBe(expected.split(' ')[1])
   expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
 })
@@ -3219,8 +3235,8 @@ test('a pool\'s speed tints red at the full-buffer 50% floor', () => {
   })
   render(<App />)
 
-  const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByTitle(/^Bandwidth at/)
-  expect(speed).toHaveAttribute('title', `Bandwidth at ${FILL_MULTIPLIER_MIN_PERCENT}% fill multiplier`)
+  const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByTitle(/^Available fill speed at/)
+  expect(speed).toHaveAttribute('title', `Available fill speed at ${FILL_MULTIPLIER_MIN_PERCENT}% fill multiplier`)
   expect(speed).toHaveStyle({ color: 'rgb(229, 72, 77)' })
 })
 

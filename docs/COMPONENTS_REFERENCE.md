@@ -95,7 +95,7 @@ is Capacity-only" in CLAUDE.md, in ascending order, `aria-label="pool N"`),
 titled "`<symbol>` Pool" (e.g. "KB Pool" — no index number or tier name), all inside one
 `FillableStatCard` tap tile (the same component the Data Stream card's own tile uses): a `TitleRow`
 (title top-left, that pool's own current full-disk count top-right), then the Memory buffer balance
-alone in a bigger centered `BalanceText`, then a `CapacityBonusRow` (Capacity left, narrow tap-bonus bar, "+x% 👆" right; bar/text hidden at 0). The ⚡ Speed/Bandwidth figure is the effective value, tinted by the fill multiplier. Pool 1's own threshold — 1 KiB — is
+alone in a bigger centered `BalanceText`, then a `CapacityBonusRow` (Capacity left, narrow tap-bonus bar, "+x% 👆" right; bar/text hidden at 0). The ⚡ Speed/Bandwidth figure is the effective value, tinted by the fill multiplier; a pool's is its actually-available fill speed (`getPoolAvailableFillRate` × multiplier), not its theoretical Bandwidth, even while its lake drains. Pool 1's own threshold — 1 KiB — is
 deliberately set equal to `isStorageUnlocked`'s own reveal gate (`INTRO_DISK_UNLOCK_CAPACITY`), so
 the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already showing
 a clean "1 KB" Capacity rather than a value mid-decade. Only the largest unlocked pool is expanded

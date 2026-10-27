@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Pool speed shows the real fill speed.** A pool's ⚡ figure (and its time-to-full) now shows the
+  speed actually available to fill it — its Bandwidth limited by what the Data Stream has left after
+  earlier pools — instead of the theoretical Bandwidth, even while its Data Lake drains it.
 - **Read-cache blocks fill instantly.** Once a pool's Memory holds a full cache block, that block is
   filled at once and subtracted from the pool balance, instead of draining at a bandwidth-capped rate.
 

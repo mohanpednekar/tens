@@ -5,7 +5,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getFillMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getFillMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
@@ -1132,19 +1132,21 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
       {storageRevealed && Array.from({ length: visiblePoolCount }, (_, offset) => {
         const poolIndex = offset + 1
-        const poolBandwidth = getStoragePoolBandwidth(state, poolIndex)
+        // What can actually reach this buffer: Bandwidth limited by the Data Stream's leftover
+        // production after earlier pools (getPoolAvailableFillRate) — never the theoretical cap.
+        const poolFillRate = getPoolAvailableFillRate(state, poolIndex)
         const poolBufferBits = getPoolBufferBits(state, poolIndex)
         const poolBufferCapacity = getPoolBufferCapacity(state, poolIndex)
         const poolBufferPercent = poolBufferCapacity > 0 ? clampPercent((poolBufferBits / poolBufferCapacity) * 100) : 0
         const poolBufferFull = poolBufferBits >= poolBufferCapacity
-        // Fill-based multiplier (see FILL_MULTIPLIER_* in game/layers.js): poolBandwidth above
+        // Fill-based multiplier (see FILL_MULTIPLIER_* in game/layers.js): poolFillRate above
         // stays exactly what applies at 100% of this — the real per-tick buffer fill scales by
         // this percent instead (see getPoolEffectMultiplier in game/engine).
         const poolMultiplierPercent = getPoolMultiplierPercent(state, poolIndex)
         // Matches tapPoolBuffer's own no-op guards (engine.js) — the button must be disabled for
         // both, not just a full buffer, or a capped tap silently does nothing with no feedback.
         const poolTapBonusPercent = getPoolTapBonusPercent(state, poolIndex)
-        const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolBandwidth)
+        const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolFillRate)
         const poolMultiplierCapped = poolTapBonusPercent >= FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT
         // tickDataLakePoolDrain (engine.js) feeds the lake straight from this pool's buffer whenever
         // isDataLakePoolDrainAvailable. A tap can't speed the lake up then (the drain is capped at
@@ -1189,8 +1191,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     </PoolTitleToggle>
                   </SectionTitle>
                   <PoolBalanceText bits={poolBufferBits} poolIndex={poolIndex} large={poolTapBonusPercent <= 0} />
-                  <SpeedText $centered={poolTapBonusPercent <= 0 && !poolTimeLeftText} $color={getSpeedColor(poolMultiplierPercent)} title={`Bandwidth at ${Math.round(poolMultiplierPercent)}% fill multiplier`}>
-                    ⚡ {formatSpeedText(formatDiskSize(poolBandwidth * poolMultiplierPercent / 100))}/s
+                  <SpeedText $centered={poolTapBonusPercent <= 0 && !poolTimeLeftText} $color={getSpeedColor(poolMultiplierPercent)} title={`Available fill speed at ${Math.round(poolMultiplierPercent)}% fill multiplier`}>
+                    ⚡ {formatSpeedText(formatDiskSize(poolFillRate * poolMultiplierPercent / 100))}/s
                   </SpeedText>
                 </TitleRow>
                 <CapacityBonusRow

@@ -2790,6 +2790,18 @@ export const getPoolMultiplierPercent = (state, poolIndex) =>
 
 export const getPoolEffectMultiplier = (state, poolIndex) => getPoolMultiplierPercent(state, poolIndex) / 100
 
+// The raw fill rate (bits/s, before the fill-based multiplier) actually available to one pool's
+// buffer: its Bandwidth cap, limited by whatever Data Stream production earlier pools haven't
+// already reserved — the same ascending allocation tickPoolBufferFill uses. ByteFoundryPage shows
+// this (× multiplier) rather than the theoretical Bandwidth, regardless of any lake drain.
+export const getPoolAvailableFillRate = (state, poolIndex) => {
+  let remainingRate = getIntroProductionRate(state.intro ?? {})
+  for (let index = 1; index < poolIndex; index += 1) {
+    remainingRate = Math.max(0, remainingRate - getStoragePoolBandwidth(state, index))
+  }
+  return Math.min(getStoragePoolBandwidth(state, poolIndex), remainingRate)
+}
+
 // Manual tap on one pool's own local Memory buffer — adds FILL_MULTIPLIER_TAP_BONUS_PERCENT to
 // that pool's own decaying multiplier bonus (poolTapBonusPercents[poolIndex]), scoped to this one
 // pool only — never touches the Data Stream's own bonus or any other pool's (see FILL_MULTIPLIER_*
@@ -2902,13 +2914,10 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
   let bits = state.intro.bits
   const poolBuffers = { ...(state.intro.poolBuffers ?? {}) }
   const dataLakes = { ...state.intro.dataLakes }
-  let remainingRate = getIntroProductionRate(state.intro ?? {})
   let changed = false
 
   for (let poolIndex = 1; poolIndex <= unlockedCount; poolIndex += 1) {
-    const poolRate = getStoragePoolBandwidth(state, poolIndex)
-    const fillRate = Math.min(poolRate, remainingRate)
-    remainingRate = Math.max(0, remainingRate - poolRate)
+    const fillRate = getPoolAvailableFillRate(state, poolIndex)
     if (fillRate <= 0 || bits <= 0) continue
 
     const current = poolBuffers[poolIndex] ?? 0
