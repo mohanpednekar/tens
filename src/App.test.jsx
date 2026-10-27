@@ -3224,6 +3224,60 @@ test('a pool\'s speed shows the fill speed actually available, not its higher th
   expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
 })
 
+describe('pool speed details popover', () => {
+  const dialogName = 'KB Pool speed'
+  const openPool1SpeedDetails = () => {
+    seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+    const pool1 = screen.getByRole('region', { name: 'pool 1' })
+    const speed = within(pool1).getByRole('button', { name: /^pool 1 speed .*show speed details$/ })
+    expect(speed).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(speed)
+    return { speed, dialog: screen.getByRole('dialog', { name: dialogName }) }
+  }
+
+  it('opens on click with every speed-related figure, without tapping the pool', () => {
+    const { speed, dialog } = openPool1SpeedDetails()
+    expect(speed).toHaveAttribute('aria-expanded', 'true')
+    for (const label of ['Fill speed now', 'Available (before multiplier)', 'Bandwidth (theoretical)', 'Data Stream speed', 'Fill multiplier', 'Buffer', 'Time to full']) {
+      expect(within(dialog).getByText(label)).toBeInTheDocument()
+    }
+    expect(within(dialog).getByText(speed.textContent.replace(/^⚡ /, ''))).toBeInTheDocument()
+    expect(screen.queryByLabelText('pool 1 fill-based bandwidth multiplier tap bonus')).not.toBeInTheDocument()
+  })
+
+  it('stays open when clicked inside and closes when pressed outside', () => {
+    const { dialog } = openPool1SpeedDetails()
+    fireEvent.pointerDown(dialog)
+    fireEvent.click(dialog)
+    expect(screen.getByRole('dialog', { name: dialogName })).toBeInTheDocument()
+    fireEvent.pointerDown(document.body)
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+  })
+
+  it('closes when scrolling outside, but not when scrolling inside', () => {
+    const { dialog } = openPool1SpeedDetails()
+    fireEvent.scroll(dialog)
+    fireEvent.wheel(dialog)
+    expect(screen.getByRole('dialog', { name: dialogName })).toBeInTheDocument()
+    fireEvent.scroll(document)
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+  })
+
+  it('closes on a wheel or touch-move outside, and toggles closed when the speed is clicked again', () => {
+    const { speed } = openPool1SpeedDetails()
+    fireEvent.wheel(document.body)
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+    fireEvent.click(speed)
+    fireEvent.touchMove(document.body)
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+    fireEvent.click(speed)
+    fireEvent.click(speed)
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+  })
+})
+
 test('a pool\'s speed tints red at the full-buffer 50% floor', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
