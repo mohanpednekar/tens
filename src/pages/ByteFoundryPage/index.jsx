@@ -7,7 +7,7 @@ import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
 import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getFillMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
-import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
+import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 
@@ -1199,7 +1199,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             ...(poolIndex > 1
               ? [{ label: 'Taken by earlier pools', value: formatPoolRate(Math.min(productionRate, earlierBandwidth)) }]
               : []),
-            { label: 'Fill multiplier', value: `${Math.round(poolMultiplierPercent)}%` },
+            {
+              label: 'Fill multiplier',
+              value: poolBaseMultiplierPercent + poolTapBonusPercent > FILL_MULTIPLIER_TAP_CAP_PERCENT
+                ? `${Math.round(poolMultiplierPercent)}% (capped)`
+                : `${Math.round(poolMultiplierPercent)}%`,
+            },
             { label: '· from buffer fill', value: `${Math.round(poolBaseMultiplierPercent)}%` },
             { label: '· tap bonus', value: `+${Math.round(poolTapBonusPercent)}%` },
             { label: 'Buffer', value: `${Math.floor(poolBufferPercent * 10) / 10}% full` },

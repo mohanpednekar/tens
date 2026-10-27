@@ -9,9 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- **Pool speed details.** Click a pool's ⚡ speed to see every speed figure behind it: available vs.
-  theoretical Bandwidth, Data Stream speed, what earlier pools take, the fill multiplier and tap bonus,
-  buffer fill, time to full, and any Data Lake drain. Click or scroll anywhere outside to dismiss.
 - **Pool speed shows the real fill speed.** A pool's ⚡ figure (and its time-to-full) now shows the
   speed actually available to fill it — its Bandwidth limited by what the Data Stream has left after
   earlier pools — instead of the theoretical Bandwidth, even while its Data Lake drains it.
@@ -20,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Pool speed details.** Click a pool's ⚡ speed to see every speed figure behind it: available vs.
+  theoretical Bandwidth, Data Stream speed, what earlier pools take, the fill multiplier and tap bonus,
+  buffer fill, time to full, and any Data Lake drain. Click or scroll anywhere outside to dismiss.
 - **Optional cloud save.** When a Firebase config is built in, Settings → Cloud save lets you sign
   in with email and password, upload your current save and download it on another device (web,
   Android and iOS). **Delete account and data** permanently removes the account and its cloud save.

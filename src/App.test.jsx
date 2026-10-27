@@ -3265,6 +3265,39 @@ describe('pool speed details popover', () => {
     expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
   })
 
+  it('moves focus into the panel, and closes on Escape (returning focus) or a resize', () => {
+    const { speed, dialog } = openPool1SpeedDetails()
+    expect(dialog).toHaveFocus()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+    expect(speed).toHaveFocus()
+    fireEvent.click(speed)
+    fireEvent(window, new Event('resize'))
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+  })
+
+  it('explains a Data Stream limit, the share earlier pools take, and a capped multiplier', () => {
+    seedMainGameState({ intro: {
+      mainGameUnlocked: true, bits: 0, capacity: 32_000_000, speedCapacity: 1024, byteCreated: true,
+      dataLakes: { 1: { bandwidthSteps: 4 } },
+      poolTapBonusPercents: { 2: FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT },
+    } })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+
+    fireEvent.click(screen.getByRole('button', { name: /^pool 1 speed .*show speed details$/ }))
+    const pool1Dialog = screen.getByRole('dialog', { name: 'KB Pool speed' })
+    expect(within(pool1Dialog).getByText('Limited by the Data Stream\'s own speed.')).toBeInTheDocument()
+    expect(within(pool1Dialog).queryByText('Taken by earlier pools')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^pool 2 speed .*show speed details$/ }))
+    expect(screen.queryByRole('dialog', { name: 'KB Pool speed' })).not.toBeInTheDocument()
+    const pool2Dialog = screen.getByRole('dialog', { name: 'MB Pool speed' })
+    expect(within(pool2Dialog).getByText('Taken by earlier pools')).toBeInTheDocument()
+    expect(within(pool2Dialog).getByText(/earlier pools take their Bandwidth first/)).toBeInTheDocument()
+    expect(within(pool2Dialog).getByText(/% \(capped\)$/)).toBeInTheDocument()
+  })
+
   it('closes on a wheel or touch-move outside, and toggles closed when the speed is clicked again', () => {
     const { speed } = openPool1SpeedDetails()
     fireEvent.wheel(document.body)

@@ -22,6 +22,10 @@ const Panel = styled.div`
   font-size: ${props => props.theme.type.scale.sm.size};
   line-height: ${props => props.theme.type.scale.sm.lineHeight};
   text-align: left;
+
+  &:focus {
+    outline: none;
+  }
 `
 
 const Heading = styled.h4`
@@ -54,18 +58,38 @@ const Note = styled.p`
 `
 
 const VIEWPORT_GUTTER = 8
+const ANCHOR_GAP = 6
 
 const SpeedDetailsPopover = ({ anchorRef, id, onClose, title, rows, note }) => {
   const panelRef = useRef(null)
   const [position, setPosition] = useState(null)
 
+  // Re-measured every render (the page re-renders each tick), so the panel follows an anchor that
+  // moves. Below the anchor by default; flips above it when that would overflow the viewport bottom,
+  // else clamps inside the viewport.
   useLayoutEffect(() => {
     const rect = anchorRef.current?.getBoundingClientRect()
     if (!rect) return
-    setPosition({
-      top: rect.bottom + 6,
-      right: Math.max(VIEWPORT_GUTTER, window.innerWidth - rect.right),
-    })
+    const height = panelRef.current?.offsetHeight ?? 0
+    const maxTop = window.innerHeight - VIEWPORT_GUTTER - height
+    const below = rect.bottom + ANCHOR_GAP
+    const above = rect.top - ANCHOR_GAP - height
+    const top = below <= maxTop || above < VIEWPORT_GUTTER
+      ? Math.max(VIEWPORT_GUTTER, Math.min(below, maxTop))
+      : above
+    const right = Math.max(VIEWPORT_GUTTER, window.innerWidth - rect.right)
+    setPosition(previous => (previous?.top === top && previous?.right === right ? previous : { top, right }))
+  })
+
+  // Non-modal, but focus moves into the panel so assistive tech reads it, and returns to the anchor
+  // on close if it was still inside (a layout cleanup, so it runs before the panel leaves the DOM).
+  useLayoutEffect(() => {
+    const panel = panelRef.current
+    const anchor = anchorRef.current
+    panel?.focus({ preventScroll: true })
+    return () => {
+      if (panel?.contains(document.activeElement)) anchor?.focus({ preventScroll: true })
+    }
   }, [anchorRef])
 
   useEffect(() => {
@@ -103,7 +127,9 @@ const SpeedDetailsPopover = ({ anchorRef, id, onClose, title, rows, note }) => {
       id={id}
       role="dialog"
       aria-label={title}
-      style={position ?? { visibility: 'hidden' }}
+      tabIndex={-1}
+      // Unmeasured first frame: transparent rather than visibility:hidden, which can't take focus.
+      style={position ?? { top: 0, right: VIEWPORT_GUTTER, opacity: 0 }}
       // React events bubble through portals to the anchor's ancestors (e.g. a tap tile) — keep
       // clicks inside the panel from reaching them.
       onClick={event => event.stopPropagation()}
