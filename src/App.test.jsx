@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
-import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getStoragePoolBandwidth, getTierCost } from 'game/engine'
+import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
@@ -3171,10 +3171,10 @@ test('Speed and Bandwidth render at the top-right, with disk status removed enti
   expect(within(dataStreamSection).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  expect(within(pool1).getByTitle(/^Bandwidth at/)).toBeInTheDocument()
+  expect(within(pool1).getByTitle(/^Available fill speed at/)).toBeInTheDocument()
 
   const pool2 = screen.getByRole('region', { name: 'pool 2' })
-  expect(within(pool2).getByTitle(/^Bandwidth at/)).toBeInTheDocument()
+  expect(within(pool2).getByTitle(/^Available fill speed at/)).toBeInTheDocument()
   expect(screen.queryByLabelText(/full disks/i)).not.toBeInTheDocument()
   expect(screen.queryByText(/💾/)).not.toBeInTheDocument()
 })
@@ -3200,12 +3200,115 @@ test('Data Stream and pool speeds show the fill-multiplied value, with no multip
   expect(screen.queryByRole('progressbar', { name: /data lake overflow rate/i })).not.toBeInTheDocument()
   const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  // Empty buffer -> FILL_MULTIPLIER_MAX_PERCENT (150%) of the pool's base Bandwidth, to 3 significant digits.
-  const expected = formatDiskSize(getStoragePoolBandwidth(savedState, 1) * FILL_MULTIPLIER_MAX_PERCENT / 100)
-  const speed = within(pool1).getByTitle(/^Bandwidth at/)
-  expect(speed).toHaveAttribute('title', `Bandwidth at ${FILL_MULTIPLIER_MAX_PERCENT}% fill multiplier`)
+  // Empty buffer -> FILL_MULTIPLIER_MAX_PERCENT (150%) of the pool's available fill rate, to 3 significant digits.
+  const expected = formatDiskSize(getPoolAvailableFillRate(savedState, 1) * FILL_MULTIPLIER_MAX_PERCENT / 100)
+  const speed = within(pool1).getByTitle(/^Available fill speed at/)
+  expect(speed).toHaveAttribute('title', `Available fill speed at ${FILL_MULTIPLIER_MAX_PERCENT}% fill multiplier`)
   expect(speed.textContent.replace(/^⚡ /, '').replace(/\/s$/, '').split(' ')[1]).toBe(expected.split(' ')[1])
   expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
+})
+
+test('a pool\'s speed shows the fill speed actually available, not its higher theoretical Bandwidth', () => {
+  seedIntroState({
+    bits: 0, capacity: 32_000_000, speedCapacity: 1024, byteCreated: true,
+    dataLakes: { 1: { bandwidthSteps: 4 } },
+  })
+  render(<App />)
+
+  const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
+  const available = getPoolAvailableFillRate(savedState, 1)
+  expect(available).toBeLessThan(getStoragePoolBandwidth(savedState, 1))
+  const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByTitle(/^Available fill speed at/)
+  const expected = formatDiskSize(available * FILL_MULTIPLIER_MAX_PERCENT / 100)
+  expect(speed.textContent.replace(/^⚡ /, '').replace(/\/s$/, '').split(' ')[1]).toBe(expected.split(' ')[1])
+  expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
+})
+
+describe('pool speed details popover', () => {
+  const dialogName = 'KB Pool speed'
+  const openPool1SpeedDetails = () => {
+    seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+    const pool1 = screen.getByRole('region', { name: 'pool 1' })
+    const speed = within(pool1).getByRole('button', { name: /^pool 1 speed .*show speed details$/ })
+    expect(speed).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(speed)
+    return { speed, dialog: screen.getByRole('dialog', { name: dialogName }) }
+  }
+
+  it('opens on click with every speed-related figure, without tapping the pool', () => {
+    const { speed, dialog } = openPool1SpeedDetails()
+    expect(speed).toHaveAttribute('aria-expanded', 'true')
+    for (const label of ['Fill speed now', 'Available (before multiplier)', 'Bandwidth (theoretical)', 'Data Stream speed', 'Fill multiplier', 'Buffer', 'Time to full']) {
+      expect(within(dialog).getByText(label)).toBeInTheDocument()
+    }
+    expect(within(dialog).getByText(speed.textContent.replace(/^⚡ /, ''))).toBeInTheDocument()
+    expect(screen.queryByLabelText('pool 1 fill-based bandwidth multiplier tap bonus')).not.toBeInTheDocument()
+  })
+
+  it('stays open when clicked inside and closes when pressed outside', () => {
+    const { dialog } = openPool1SpeedDetails()
+    fireEvent.pointerDown(dialog)
+    fireEvent.click(dialog)
+    expect(screen.getByRole('dialog', { name: dialogName })).toBeInTheDocument()
+    fireEvent.pointerDown(document.body)
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+  })
+
+  it('closes when scrolling outside, but not when scrolling inside', () => {
+    const { dialog } = openPool1SpeedDetails()
+    fireEvent.scroll(dialog)
+    fireEvent.wheel(dialog)
+    expect(screen.getByRole('dialog', { name: dialogName })).toBeInTheDocument()
+    fireEvent.scroll(document)
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+  })
+
+  it('moves focus into the panel, and closes on Escape (returning focus) or a resize', () => {
+    const { speed, dialog } = openPool1SpeedDetails()
+    expect(dialog).toHaveFocus()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+    expect(speed).toHaveFocus()
+    fireEvent.click(speed)
+    fireEvent(window, new Event('resize'))
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+  })
+
+  it('explains a Data Stream limit, the share earlier pools take, and a capped multiplier', () => {
+    seedMainGameState({ intro: {
+      mainGameUnlocked: true, bits: 0, capacity: 32_000_000, speedCapacity: 1024, byteCreated: true,
+      dataLakes: { 1: { bandwidthSteps: 4 } },
+      poolTapBonusPercents: { 2: FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT },
+    } })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+
+    fireEvent.click(screen.getByRole('button', { name: /^pool 1 speed .*show speed details$/ }))
+    const pool1Dialog = screen.getByRole('dialog', { name: 'KB Pool speed' })
+    expect(within(pool1Dialog).getByText('Limited by the Data Stream\'s own speed.')).toBeInTheDocument()
+    expect(within(pool1Dialog).queryByText('Taken by earlier pools')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^pool 2 speed .*show speed details$/ }))
+    expect(screen.queryByRole('dialog', { name: 'KB Pool speed' })).not.toBeInTheDocument()
+    const pool2Dialog = screen.getByRole('dialog', { name: 'MB Pool speed' })
+    expect(within(pool2Dialog).getByText('Taken by earlier pools')).toBeInTheDocument()
+    expect(within(pool2Dialog).getByText(/earlier pools take their Bandwidth first/)).toBeInTheDocument()
+    expect(within(pool2Dialog).getByText(/% \(capped\)$/)).toBeInTheDocument()
+  })
+
+  it('closes on a wheel or touch-move outside, and toggles closed when the speed is clicked again', () => {
+    const { speed } = openPool1SpeedDetails()
+    fireEvent.wheel(document.body)
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+    fireEvent.click(speed)
+    fireEvent.touchMove(document.body)
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+    fireEvent.click(speed)
+    fireEvent.click(speed)
+    expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
+  })
 })
 
 test('a pool\'s speed tints red at the full-buffer 50% floor', () => {
@@ -3219,8 +3322,8 @@ test('a pool\'s speed tints red at the full-buffer 50% floor', () => {
   })
   render(<App />)
 
-  const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByTitle(/^Bandwidth at/)
-  expect(speed).toHaveAttribute('title', `Bandwidth at ${FILL_MULTIPLIER_MIN_PERCENT}% fill multiplier`)
+  const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByTitle(/^Available fill speed at/)
+  expect(speed).toHaveAttribute('title', `Available fill speed at ${FILL_MULTIPLIER_MIN_PERCENT}% fill multiplier`)
   expect(speed).toHaveStyle({ color: 'rgb(229, 72, 77)' })
 })
 

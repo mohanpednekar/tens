@@ -4,10 +4,11 @@ import { COST_ICON } from 'components/icons'
 import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
+import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
-import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getFillMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
-import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
-import { useEffect, useState } from 'react'
+import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getFillMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 
 const RootDiv = styled.div`
@@ -449,6 +450,27 @@ const SpeedText = styled.span`
   white-space: nowrap;
 `
 
+// A pool's speed figure as its own button (above the tile's stretched PoolTapButton), opening
+// SpeedDetailsPopover with every speed-related number for that pool.
+const SpeedButton = styled(SpeedText).attrs({ as: 'button', type: 'button' })`
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  border-radius: ${props => props.theme.radius.sm};
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+`
+
 // Reuses Button's own progressFill gradient (see components/Button) so Memory's tile fills toward
 // its capacity the same visual way every actionable control on this page already does, rather
 // than introducing a second, differently-styled meter convention. Deliberately a plain div, not
@@ -741,6 +763,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     setExpandedPoolIndex(null)
   }, [visiblePoolCount])
   const visibleExpandedPool = expandedPoolIndex === 0 ? null : expandedPoolIndex ?? visiblePoolCount
+  // Which pool's speed-details popover is open (null = none); the anchor ref follows that pool's button.
+  const [speedDetailsPoolIndex, setSpeedDetailsPoolIndex] = useState(null)
+  const speedDetailsAnchorRef = useRef(null)
+  const closeSpeedDetails = useCallback(() => setSpeedDetailsPoolIndex(null), [])
   const productionRate = getIntroProductionRate(intro)
   // Bottom-left-half figure (see "Speed/Bandwidth at bottom centre of left half" in CLAUDE.md) —
   // plain text, same convention a pool's own Bandwidth figure uses in its own footer row. Reuses
@@ -1132,19 +1158,21 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
       {storageRevealed && Array.from({ length: visiblePoolCount }, (_, offset) => {
         const poolIndex = offset + 1
-        const poolBandwidth = getStoragePoolBandwidth(state, poolIndex)
+        // What can actually reach this buffer: Bandwidth limited by the Data Stream's leftover
+        // production after earlier pools (getPoolAvailableFillRate) — never the theoretical cap.
+        const poolFillRate = getPoolAvailableFillRate(state, poolIndex)
         const poolBufferBits = getPoolBufferBits(state, poolIndex)
         const poolBufferCapacity = getPoolBufferCapacity(state, poolIndex)
         const poolBufferPercent = poolBufferCapacity > 0 ? clampPercent((poolBufferBits / poolBufferCapacity) * 100) : 0
         const poolBufferFull = poolBufferBits >= poolBufferCapacity
-        // Fill-based multiplier (see FILL_MULTIPLIER_* in game/layers.js): poolBandwidth above
+        // Fill-based multiplier (see FILL_MULTIPLIER_* in game/layers.js): poolFillRate above
         // stays exactly what applies at 100% of this — the real per-tick buffer fill scales by
         // this percent instead (see getPoolEffectMultiplier in game/engine).
         const poolMultiplierPercent = getPoolMultiplierPercent(state, poolIndex)
         // Matches tapPoolBuffer's own no-op guards (engine.js) — the button must be disabled for
         // both, not just a full buffer, or a capped tap silently does nothing with no feedback.
         const poolTapBonusPercent = getPoolTapBonusPercent(state, poolIndex)
-        const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolBandwidth)
+        const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolFillRate)
         const poolMultiplierCapped = poolTapBonusPercent >= FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT
         // tickDataLakePoolDrain (engine.js) feeds the lake straight from this pool's buffer whenever
         // isDataLakePoolDrainAvailable. A tap can't speed the lake up then (the drain is capped at
@@ -1153,6 +1181,37 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
         const poolTapDisabled = poolBufferFull || lakeDraining || poolMultiplierCapped
+        const poolSymbol = TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`
+        const formatPoolRate = bits => `${formatSpeedText(formatDiskSize(bits))}/s`
+        const poolSpeedText = formatPoolRate(poolFillRate * poolMultiplierPercent / 100)
+        const speedDetailsOpen = speedDetailsPoolIndex === poolIndex
+        let poolSpeedDetailRows = null
+        const poolBandwidth = getStoragePoolBandwidth(state, poolIndex)
+        if (speedDetailsOpen) {
+          let earlierBandwidth = 0
+          for (let index = 1; index < poolIndex; index += 1) earlierBandwidth += getStoragePoolBandwidth(state, index)
+          const poolBaseMultiplierPercent = getPoolBaseMultiplierPercent(state, poolIndex)
+          poolSpeedDetailRows = [
+            { label: 'Fill speed now', value: poolSpeedText },
+            { label: 'Available (before multiplier)', value: formatPoolRate(poolFillRate) },
+            { label: 'Bandwidth (theoretical)', value: formatPoolRate(poolBandwidth) },
+            { label: 'Data Stream speed', value: formatPoolRate(productionRate) },
+            ...(poolIndex > 1
+              ? [{ label: 'Taken by earlier pools', value: formatPoolRate(Math.min(productionRate, earlierBandwidth)) }]
+              : []),
+            {
+              label: 'Fill multiplier',
+              value: poolBaseMultiplierPercent + poolTapBonusPercent > FILL_MULTIPLIER_TAP_CAP_PERCENT
+                ? `${Math.round(poolMultiplierPercent)}% (capped)`
+                : `${Math.round(poolMultiplierPercent)}%`,
+            },
+            { label: '· from buffer fill', value: `${Math.round(poolBaseMultiplierPercent)}%` },
+            { label: '· tap bonus', value: `+${Math.round(poolTapBonusPercent)}%` },
+            { label: 'Buffer', value: `${Math.floor(poolBufferPercent * 10) / 10}% full` },
+            { label: 'Time to full', value: poolTimeLeftText ?? (poolBufferFull ? 'Full' : '—') },
+            ...(lakeDraining ? [{ label: 'Draining to Data Lake', value: formatPoolRate(poolBandwidth) }] : []),
+          ]
+        }
         return (
           <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
             {/* One tile: a stretched PoolTapButton (tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and
@@ -1184,14 +1243,38 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                       aria-label={`${isExpanded ? 'collapse' : 'expand'} pool ${poolIndex}`}
                       onClick={() => setExpandedPoolIndex(isExpanded ? 0 : poolIndex)}
                     >
-                      <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
+                      <PoolTitleSymbol aria-hidden="true">{poolSymbol}</PoolTitleSymbol>
                       <span>Pool</span>
                     </PoolTitleToggle>
                   </SectionTitle>
                   <PoolBalanceText bits={poolBufferBits} poolIndex={poolIndex} large={poolTapBonusPercent <= 0} />
-                  <SpeedText $centered={poolTapBonusPercent <= 0 && !poolTimeLeftText} $color={getSpeedColor(poolMultiplierPercent)} title={`Bandwidth at ${Math.round(poolMultiplierPercent)}% fill multiplier`}>
-                    ⚡ {formatSpeedText(formatDiskSize(poolBandwidth * poolMultiplierPercent / 100))}/s
-                  </SpeedText>
+                  <SpeedButton
+                    ref={speedDetailsOpen ? speedDetailsAnchorRef : undefined}
+                    $centered={poolTapBonusPercent <= 0 && !poolTimeLeftText}
+                    $color={getSpeedColor(poolMultiplierPercent)}
+                    title={`Available fill speed at ${Math.round(poolMultiplierPercent)}% fill multiplier`}
+                    aria-label={`pool ${poolIndex} speed ${poolSpeedText}, show speed details`}
+                    aria-haspopup="dialog"
+                    aria-expanded={speedDetailsOpen}
+                    aria-controls={speedDetailsOpen ? `pool-${poolIndex}-speed-details` : undefined}
+                    onClick={() => setSpeedDetailsPoolIndex(speedDetailsOpen ? null : poolIndex)}
+                  >
+                    ⚡ {poolSpeedText}
+                  </SpeedButton>
+                  {speedDetailsOpen && (
+                    <SpeedDetailsPopover
+                      anchorRef={speedDetailsAnchorRef}
+                      id={`pool-${poolIndex}-speed-details`}
+                      onClose={closeSpeedDetails}
+                      title={`${poolSymbol} Pool speed`}
+                      rows={poolSpeedDetailRows}
+                      note={poolFillRate >= poolBandwidth
+                        ? undefined
+                        : poolIndex > 1
+                          ? 'Limited by the Data Stream: earlier pools take their Bandwidth first.'
+                          : 'Limited by the Data Stream\'s own speed.'}
+                    />
+                  )}
                 </TitleRow>
                 <CapacityBonusRow
                   capacityText={formatDiskSizeInPoolUnit(poolBufferCapacity, poolIndex)}

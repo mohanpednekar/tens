@@ -95,7 +95,7 @@ is Capacity-only" in CLAUDE.md, in ascending order, `aria-label="pool N"`),
 titled "`<symbol>` Pool" (e.g. "KB Pool" — no index number or tier name), all inside one
 `FillableStatCard` tap tile (the same component the Data Stream card's own tile uses): a `TitleRow`
 (title top-left, that pool's own current full-disk count top-right), then the Memory buffer balance
-alone in a bigger centered `BalanceText`, then a `CapacityBonusRow` (Capacity left, narrow tap-bonus bar, "+x% 👆" right; bar/text hidden at 0). The ⚡ Speed/Bandwidth figure is the effective value, tinted by the fill multiplier. Pool 1's own threshold — 1 KiB — is
+alone in a bigger centered `BalanceText`, then a `CapacityBonusRow` (Capacity left, narrow tap-bonus bar, "+x% 👆" right; bar/text hidden at 0). The ⚡ Speed/Bandwidth figure is the effective value, tinted by the fill multiplier; a pool's is its actually-available fill speed (`getPoolAvailableFillRate` × multiplier), not its theoretical Bandwidth, even while its lake drains. A pool's figure is a button (`aria-expanded`, above the stretched tap button) that opens `SpeedDetailsPopover` with: fill speed now, available rate before the multiplier, theoretical Bandwidth, Data Stream speed, the share earlier pools take (pool 2+), the fill multiplier split into fill-level and tap-bonus parts, buffer %, time to full, and the Data Lake drain rate while draining. A note appears when the Data Stream limits the pool below its Bandwidth. Pool 1's own threshold — 1 KiB — is
 deliberately set equal to `isStorageUnlocked`'s own reveal gate (`INTRO_DISK_UNLOCK_CAPACITY`), so
 the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already showing
 a clean "1 KB" Capacity rather than a value mid-decade. Only the largest unlocked pool is expanded
@@ -103,6 +103,8 @@ initially; earlier pools remain visible as compact summary disclosure buttons wi
 and reveal, when opened, their three `DiskArrayRow`s followed by that pool's own `DataLakePanel`
 block (`bare`, `tierIndex={poolIndex}`) — each pool's Lake lives inside that pool's own card,
 directly below its disks, not in a separate panel after all the pool cards.
+
+**`SpeedDetailsPopover`** (`components/SpeedDetailsPopover/index.jsx`) — `{ anchorRef, id, onClose, title, rows: [{ label, value }], note? }`. Rendered by the caller only while open; portals a `role="dialog"` panel to `<body>`, fixed just below the anchor and right-aligned to it (right edge clamped 8px from the viewport; flips above the anchor when it would overflow the bottom, else clamps to the viewport; re-measured every render). Opening moves focus to the panel (`preventScroll`); closing returns focus to the anchor if focus was inside. It calls `onClose` on a pointer press outside both the panel and the anchor (the anchor's own click toggles), any wheel, touch-move or scroll whose target is outside the panel (including over the anchor), Escape, or a window resize. Clicks inside stop propagation so they never reach the anchor's React ancestors.
 
 `DataLakePanel` (`bare tierIndex={poolIndex}`; optional `section="header"`/`"body"` splits the title+stats rows from the fill tile/squares, a collapsed pool card renders `header`) renders one lake as a single self-contained block —
 not a labelled table row: a header row pairing the lake's title ("`<symbol>` Lake", e.g. "KB Lake" —

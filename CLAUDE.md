@@ -457,6 +457,9 @@ src/
                                `boostGlow` card css + `isDataStreamBoosted`/`isFactoryTierBoosted`;
                                used by ByteFoundryPage's Data Stream and MainPage tier rows.
                                Contract: `docs/COMPONENTS_REFERENCE.md`
+    SpeedDetailsPopover/index.jsx ← non-modal details panel (portal, fixed under its anchor) behind each
+                               pool's clickable ⚡ speed; closes on outside press/scroll/wheel/touch-move,
+                               Escape, resize. Contract: `docs/COMPONENTS_REFERENCE.md`
     Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`) for Perks → Toggles and
                                Buy max. Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
@@ -962,7 +965,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2102 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2111 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
