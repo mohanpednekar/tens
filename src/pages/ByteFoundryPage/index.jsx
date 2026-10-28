@@ -2,6 +2,7 @@ import BoostBadge, { boostGlow, isDataStreamBoosted } from 'components/BoostBadg
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import { COST_ICON } from 'components/icons'
 import DiskArrayRow from 'components/DiskArrayRow'
+import LeadIcon from 'components/LeadIcon'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
@@ -217,7 +218,6 @@ const RunningUpgradeContent = styled.div`
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   grid-template-rows: auto auto;
   column-gap: ${props => props.theme.space.sm};
-  row-gap: 2px;
   width: 100%;
   min-width: 0;
   text-align: left;
@@ -262,6 +262,8 @@ const RunningPercent = styled.span`
   justify-self: center;
   font-family: ${props => props.theme.font.display};
   font-size: ${props => props.theme.type.scale.xl.size};
+  /* Like the pool/stream balance, the big figure must not make the tile taller than its two text rows. */
+  line-height: 1;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   @media (max-width: 360px) {
@@ -305,7 +307,7 @@ const PoolCard = styled(StatCard)`
 // The lake's title/action row, shown on a collapsed pool card (an expanded one renders the full lake).
 // Flush under the pool tile with the same divider and padding as the Data Stream's UpgradeStatusTile.
 const PoolLakeHeader = styled.div`
-  padding: 0.6rem 0.75rem;
+  padding: calc(0.6rem - 1px) 0.75rem 0.6rem;
   border-top: 1px solid ${props => props.theme.color.border};
   &:empty {
     display: none;
@@ -525,8 +527,10 @@ const FillableStatCard = styled.div`
 
 // Running Data Stream upgrade: a full-width status tile flush under the stream tile (same fill
 // convention as the tile above and the pool tiles), not a button-like control.
+// Same height as the Data Stream / pool tiles: the top padding gives back the divider's 1px.
 const UpgradeStatusTile = styled(FillableStatCard)`
   align-items: stretch;
+  padding-top: calc(0.6rem - 1px);
   border-top: 1px solid ${props => props.theme.color.border};
   border-radius: 0;
 `
@@ -697,7 +701,7 @@ const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel, timeLeftT
   const hasBonus = clampedBonus > 0
   return (
     <SubRow>
-      <CapacityText>📦 {capacityText}</CapacityText>
+      <CapacityText><LeadIcon>📦</LeadIcon>{capacityText}</CapacityText>
       {hasBonus && (
         <BarTrack
           role="progressbar"
@@ -1015,7 +1019,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         >
           <TileHeader>
           <TitleRow>
-            <SectionTitle>Data Stream</SectionTitle>
+            <SectionTitle><span><LeadIcon>🌊</LeadIcon>Data Stream</span></SectionTitle>
             <BalanceText $large={!(intro.byteCreated && (intro.dataStreamTapBonusPercent ?? 0) > 0)}>
               {formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed)}
             </BalanceText>
@@ -1052,11 +1056,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             $progress={runningProgress}
           >
             <RunningUpgradeContent>
-              <RunningTitle>⏫ Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
+              <RunningTitle><LeadIcon>⏫</LeadIcon>Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
               <RunningChange>
+                <LeadIcon>{speedUpgradeQueued ? '⚡' : '📦'}</LeadIcon>
                 {speedUpgradeQueued
-                  ? `⚡ ${formatBitsTransition(productionRate, nextRate, '/s')}`
-                  : `📦 ${formatBitsTransition(intro.capacity, nextCapacity)}`}
+                  ? formatBitsTransition(productionRate, nextRate, '/s')
+                  : formatBitsTransition(intro.capacity, nextCapacity)}
               </RunningChange>
               <RunningPercent>{Math.floor(runningProgress)}%</RunningPercent>
               <SpeedText
@@ -1232,7 +1237,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                       aria-label={`${isExpanded ? 'collapse' : 'expand'} pool ${poolIndex}`}
                       onClick={() => setExpandedPoolIndex(isExpanded ? 0 : poolIndex)}
                     >
-                      <PoolTitleSymbol aria-hidden="true">{poolSymbol}</PoolTitleSymbol>
+                      <PoolTitleSymbol aria-hidden="true"><LeadIcon>💧</LeadIcon>{poolSymbol}</PoolTitleSymbol>
                       <span>Pool</span>
                     </PoolTitleToggle>
                   </SectionTitle>

@@ -460,6 +460,8 @@ src/
     SpeedDetailsPopover/index.jsx ← non-modal details panel (portal, fixed under its anchor) behind each
                                pool's clickable ⚡ speed; closes on outside press/scroll/wheel/touch-move,
                                Escape, resize. Contract: `docs/COMPONENTS_REFERENCE.md`
+    LeadIcon/index.js       ← a line's leading emoji in a fixed-size, aria-hidden box so text after it
+                               aligns across a tile's lines (Foundry stream/pool/lake/Upgrading rows)
     Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`) for Perks → Toggles and
                                Buy max. Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
