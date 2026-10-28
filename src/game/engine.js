@@ -2810,8 +2810,8 @@ export const getPoolAvailableFillRate = (state, poolIndex) => {
 // tap bonus is already at FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT (100).
 export const tapPoolBuffer = poolIndex => state => {
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getVisibleStoragePoolCount(state)) return state
-  if (getPoolBufferBits(state, poolIndex) >= getPoolBufferCapacity(state, poolIndex)) return state
-  // Same independent 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT clamp as tapIntroBit above.
+  // Deliberately no full-buffer / lake-draining guard: a pool tap always grants its bonus, whether or
+  // not the faster fill can currently help. Same independent 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT clamp as tapIntroBit above.
   const priorBonus = getPoolTapBonusPercent(state, poolIndex)
   if (priorBonus >= FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT) return state
   return {

@@ -1174,18 +1174,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // stays exactly what applies at 100% of this — the real per-tick buffer fill scales by
         // this percent instead (see getPoolEffectMultiplier in game/engine).
         const poolMultiplierPercent = getPoolMultiplierPercent(state, poolIndex)
-        // Matches tapPoolBuffer's own no-op guards (engine.js) — the button must be disabled for
-        // both, not just a full buffer, or a capped tap silently does nothing with no feedback.
         const poolTapBonusPercent = getPoolTapBonusPercent(state, poolIndex)
         const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolFillRate)
-        const poolMultiplierCapped = poolTapBonusPercent >= FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT
         // tickDataLakePoolDrain (engine.js) feeds the lake straight from this pool's buffer whenever
-        // isDataLakePoolDrainAvailable. A tap can't speed the lake up then (the drain is capped at
-        // Bandwidth), so the tile is disabled.
+        // isDataLakePoolDrainAvailable (listed in the speed details below).
         const lakeDraining = isDataLakePoolDrainAvailable(state, poolIndex)
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
-        const poolTapDisabled = poolBufferFull || lakeDraining || poolMultiplierCapped
         const poolSymbol = TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`
         const formatPoolRate = bits => `${formatSpeedText(formatDiskSize(bits))}/s`
         const poolSpeedText = formatPoolRate(poolFillRate * poolMultiplierPercent / 100)
@@ -1225,18 +1220,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             <PoolTile $progress={poolBufferPercent}>
               <PoolTapButton
                 type="button"
+                // Always tappable: every tap grants the bonus (up to its cap), whether or not it can help.
                 onClick={() => actions.tapPoolBuffer(poolIndex)}
-                disabled={poolTapDisabled}
                 aria-label={`tap pool ${poolIndex} memory`}
-                title={
-                  lakeDraining
-                    ? 'The Data Lake is draining this buffer — tapping cannot speed it up'
-                    : poolBufferFull
-                    ? undefined
-                    : poolMultiplierCapped
-                      ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap`
-                      : undefined
-                }
               />
               <PoolTileContent>
                 <TileHeader>
