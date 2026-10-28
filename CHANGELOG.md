@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Data Lake balance matches the pool's.** A lake's filled amount now sits vertically centered in
   its header like the pool balance above it, in a slightly smaller font; a collapsed pool card's tile no
-  longer has rounded bottom corners above the lake row.
+  longer has rounded bottom corners, and the lake row below it uses the same divider and padding as
+  the Data Stream's Upgrading row.
 
 - **Pool speed shows the real fill speed.** A pool's ⚡ figure (and its time-to-full) now shows the
   speed actually available to fill it — its Bandwidth limited by what the Data Stream has left after

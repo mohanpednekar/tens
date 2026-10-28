@@ -303,8 +303,10 @@ const PoolCard = styled(StatCard)`
 `
 
 // The lake's title/action row, shown on a collapsed pool card (an expanded one renders the full lake).
+// Flush under the pool tile with the same divider and padding as the Data Stream's UpgradeStatusTile.
 const PoolLakeHeader = styled.div`
-  padding: 0 0.5rem 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-top: 1px solid ${props => props.theme.color.border};
   &:empty {
     display: none;
   }
