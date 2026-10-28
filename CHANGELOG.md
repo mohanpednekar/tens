@@ -11,12 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Pools are always tappable.** Tapping a pool now always adds its tap bonus, even while its buffer
   is full or its Data Lake is draining it (the bonus still caps at 100%).
-
 - **Data Lake balance matches the pool's.** A lake's filled amount now sits vertically centered in
   its header like the pool balance above it, in a slightly smaller font; a collapsed pool card's tile no
   longer has rounded bottom corners, and the lake row below it uses the same divider and padding as
   the Data Stream's Upgrading row.
-
+- **No underlines on clickable text.** A pool's ⚡ speed and Factory tier names no longer show
+  link-style underlines.
 - **Pool speed shows the real fill speed.** A pool's ⚡ figure (and its time-to-full) now shows the
   speed actually available to fill it — its Bandwidth limited by what the Data Stream has left after
   earlier pools — instead of the theoretical Bandwidth, even while its Data Lake drains it.
