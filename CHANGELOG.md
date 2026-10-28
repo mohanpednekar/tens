@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Boosters: presets live on the selected tier.** The three Boost presets now appear inside the
+  selected tier's block (one tier at a time) instead of the top card, which now shows the current
+  boost effect (including which Factory tiers it covers). Opening Boosters pre-selects the active
+  boost's tier.
+- **Boosters: clearer auto-merge row.** Once a tier is automated, its reserve row is highlighted and
+  shows "⬆ 8→1 <next tier>" whenever 8 are available, making it clear that tapping it starts a merge.
+
 - **Matching Foundry row heights.** The Data Stream's Upgrading row and a pool's Data Lake row are
   now exactly as tall as the Data Stream and pool tiles above them.
 - **Title icons.** The Data Stream title now shows 🌊, each pool title 💧 and each Data Lake title 🏞️, so

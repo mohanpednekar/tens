@@ -505,26 +505,27 @@ line (see issue #316's "fit every compute tier in one line ... clever symbols ..
 or single word labels" ask). The full prose explanation of every mechanic here lives in the Guide
 (`InfoPage`'s "Compute" section) — this page shows live state and controls only, not descriptions.
 
-Render order top to bottom (issue #326 — "the effects section is at the top of the Compute page,
-not at the bottom"):
+Render order top to bottom (a top `BoostCard` with the current effect, then tier rows; the presets
+live inside the selected tier):
 
 1. Right after the header — before anything else, deliberately at the TOP of the page — an
    `ActiveBoostRow` (`aria-label="active compute boost"`) renders whenever a Compute Boost is
-   active: one line, `"<icon> ×<multiplier> · <countdown> · <stacks>×"` (e.g. `"💥 ×2048 · 2m59s ·
-   1×"`), with the full sentence (e.g. "burst (Clusters) active: ×2048 production, 2m59s left, 1x
+   active: one line, `"<icon> <label> ×<multiplier> on <KB–covered tier> · <funding tier symbol> ·
+   <countdown> left[ · <N> stacked]"` (e.g. `"💥 Burst ×20 on KB–MB · 🔗 · 2m59s left"`), with the full sentence (e.g. "burst (Clusters) active: ×2048 production, 2m59s left, 1x
    stacked") only in that span's own `title`. Kept at the top so an active boost stays visible
    regardless of what else is happening lower on the page; `MainPage` shows a matching read-only
    status line while a boost is active, since its effect reaches `tier01` there too. No Reclaim
    control here any more — it moved to the Stack + Reclaim row below (see 2c).
-2. Right below that, the Boost EFFECTS section itself — always rendered, whether or not a boost is
-   active or the merge chain has unlocked yet:
-   The effects section, Stack/Reclaim/Forfeit row and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Global Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
+   With no boost active, the card instead shows "No boost running" (plus "· pick a tier ↓" when the
+   merge chain is unlocked and nothing is selected).
+2. The Boost presets (`boostPresets`: `ArmedStatusText` + `BoostRow`) render INSIDE the one selected
+   tier block (3) — only one tier shows them at a time; re-clicking the selected tier collapses them.
+   Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cores:
+   The active/idle status line, Stack/Reclaim/Forfeit row and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Global Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
-   a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol> · <N> held"`, full sentence in its `title`, or "Pick a
-      tier ↓" if nothing's armed yet) naming whichever compute-ladder tier is currently armed —
-      local component state (`selectedBoostTierIndex`, set by clicking a tier row below — see 3),
-      falling back to the active boost's own tier (`intro.computeBoostTierIndex`) when nothing is
-      clicked; always Cores (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
+   a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol> · <N> held"`, full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
+      local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
+      initialized on arrival to the active boost's own tier (`intro.computeBoostTierIndex`), else none; always Cores (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
       tier that can hold a balance that early. Clicking a different tier mid-boost arms a
       confirmed forfeit-and-switch (only at 1 stack, per `canActivateComputeBoost`); the active-boost
       line, Stack, and Reclaim always describe the ACTIVE tier, not the armed one. The row
@@ -535,13 +536,13 @@ not at the bottom"):
       for the CURRENTLY ARMED tier via `getComputeBoostTierMultiplier(boostType, armedTierIndex)` —
       e.g. `"💥 ×20 · 10m 0s"` for Burst — identical for every armed tier — the preset name itself lives only in
       `title`), calling `actions.activateComputeBoost(boostType, armedTierIndex)`.
-      `disabled={!turnAvailable}` where `turnAvailable = armedTierIndex !== null &&
+      `disabled={!turnAvailable}` where `turnAvailable = !sameAsActive &&
       isComputeBoostTurnAvailable(state, boostType, armedTierIndex)` — folds
       `canActivateComputeBoost`'s own mechanical guard (a tier must be armed, ≥1 token of it held,
       AND no boost of any kind already active — issue #326 removed same-type restacking through
       this button) together with the forced priority order (a no-op while Disk Fill/Bandwidth/Disk
       Build outranks Compute — see "Forced priority order" in docs/ECONOMY_REFERENCE.md), with a
-      `title` naming which to take first in that case, or prompting tier selection if none is armed.
+      `title` naming which to take first in that case.
    c. A `StackReclaimRow` (`role="group"`,
       `aria-label="stack, reclaim, or forfeit the active compute boost"`) — rendered only while a
       boost is active (`boostActive`) — always shows **Stack**
@@ -562,7 +563,7 @@ not at the bottom"):
       label `"✕ Forfeit"`, `disabled={!canForfeitComputeBoost(state)}`) calling
       `actions.forfeitComputeBoost` after a `window.confirm`, clearing the boost entirely with no
       token refund — the only way to end that last stack early (letting it run out is the other).
-3. THEN, below the whole effects section, the page branches on `intro.computeMergePageUnlocked` (a
+3. THEN, below the `BoostCard`, the page branches on `intro.computeMergePageUnlocked` (a
    permanent, one-time reveal latch — see `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" step 9 —
    that flips the first time `intro.computeCoresEverEarned`, a lifetime counter never decremented by
    spending or merging, ever reaches 8):
@@ -585,8 +586,9 @@ not at the bottom"):
        instead — see below) — the same discrete-square convention `StoragePage`'s own `DiskSquare`
        uses, just non-interactive (a plain status square, not a button). Clicking `TierSelectButton`
        toggles
-       `selectedBoostTierIndex` (local component state) to arm/disarm that tier for the Boost
-       effects section above (issue #326 — "click any tier row"), highlighted
+       `selectedBoostTierIndex` (local component state) to select/collapse that tier — the selected
+       block hosts the presets (2); the selected and active-boost tiers always render even if
+       otherwise locked — highlighted
        (`$selected`/`aria-pressed`, plus a highlighted `TierBlock` border) while armed.
      - **Row 2** (`TierMergeRow`) is progressively disclosed (`showDetail`): rendered only for the
        armed tier, or when that tier is merging, a merge is startable/possible, reserve slots hold
@@ -616,7 +618,9 @@ not at the bottom"):
          up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a merge is actually in flight
          the reserve instead reads as fully committed regardless of the live count (which has by then
          dropped back toward 10 and may be accumulating the next batch) — clicking the row IS the
-         manual-start trigger ("slots are the button"), calling the matching
+         manual-start trigger ("slots are the button"); while startable it gets an accent border/raised
+         background plus a visible `MergeCue` (`"⬆ 8→1 <output>"`) on its left, so it reads as a
+         button, calling the matching
          `game.actions.startCompute*Merge` action, enabled once `isCompute*MergeStartAvailable`
          allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the normal + reserve slots — the
          SAME, lower threshold as before this row existed, deliberately NOT the stricter

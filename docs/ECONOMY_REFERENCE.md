@@ -1296,18 +1296,17 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    stack count — no longer a Reclaim control, moved below, see next) renders at the very TOP of the
    page, right after the header, so it stays visible regardless of what else is on screen; `MainPage`
    shows a matching read-only status line while a boost is active, since its effect reaches `tier01`
-   there too. Right below that is the Boost EFFECTS section itself ("the effects section is at the
-   top of the Compute page, not at the bottom"): an armed-tier status line names the currently armed
-   tier and how many tokens it holds, then the 3 small icon preset buttons — disabled entirely until
-   a tier is armed, and (per the "no boost of any kind currently active" gate above) disabled again
+   there too. The armed-tier status line (naming the selected tier and how many tokens it holds) and
+   the 3 small icon preset buttons render inside the ONE selected tier's block (in the top card before
+   the merge chain unlocks) — shown only once a tier is selected, and (per the "no boost of any kind currently active" gate above) disabled again
    the instant any boost starts, regardless of type/tier. Only while a boost IS active, a row appears
-   right below the presets with Stack plus exactly ONE of Reclaim or Forfeit ("Stack and reclaim
+   in the top card with Stack plus exactly ONE of Reclaim or Forfeit ("Stack and reclaim
    buttons shall be shown on the next row") — mutually exclusive by `computeBoostStacks`: Reclaim
    (instant, no confirmation) while `> 1`, Forfeit (confirmation-gated, clears the boost entirely
    with no refund) once down to the last remaining stack (`=== 1`) — see the Reclaim/Forfeit
    paragraph above and `docs/DESIGN_HISTORY.md` for why these two were made mutually exclusive
-   rather than Reclaim staying visible-but-disabled at 1 stack. THEN, below the whole effects section, come the tier rows themselves — clicking one arms
-   the presets above it. Ranked lowest in the forced priority order
+   rather than Reclaim staying visible-but-disabled at 1 stack. THEN come the tier rows themselves — clicking one selects it and shows the presets inside
+   it; arriving on the page pre-selects the active boost's tier. Ranked lowest in the forced priority order
    (below Disk Fill/Provision Disk — see "Forced priority order" below; Upgrade Data Stream sits
    outside the order entirely and never blocks or is blocked by Compute):
    `isComputeBoostTurnAvailable(state, boostType, tierIndex)`/`isStackComputeBoostTurnAvailable(state)`
