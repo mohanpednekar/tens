@@ -91,7 +91,6 @@ const LakeHeader = styled.div`
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
 `
 
 const LakeSubRow = styled.div`
@@ -103,7 +102,6 @@ const LakeSubRow = styled.div`
   font-size: ${props => props.theme.type.scale.xs.size};
   color: ${props => props.theme.color.textMuted};
   white-space: nowrap;
-  min-height: 1.4rem;
 
   & > p {
     text-align: left;
@@ -250,10 +248,14 @@ const LakePoolLabel = styled.span`
 // Icon + amount only, cost/state tucked into the title/aria-label rather than a second visible
 // line — matches every other milestone-style action button on this page (Upgrade Data Stream,
 // Provision Disk).
+// Compact pill: no taller than the pool tile's own second line, so the lake row matches the pool
+// tile's height.
 const ActionButton = styled(Button)`
-  padding: 0.1rem 0.5rem;
-  min-height: 1.4rem;
+  padding: 0 0.5rem;
+  min-height: 0;
   font-size: ${props => props.theme.type.scale.xs.size};
+  /* 12px line + 1px borders = the 14px of the pool tile's own second line. */
+  line-height: 12px;
   /* The pill's own padding must not shift its label off the lake's left/right text edges. */
   margin: 0 -0.5rem;
 `

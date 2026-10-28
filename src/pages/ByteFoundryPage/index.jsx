@@ -217,7 +217,6 @@ const RunningUpgradeContent = styled.div`
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   grid-template-rows: auto auto;
   column-gap: ${props => props.theme.space.sm};
-  row-gap: 2px;
   width: 100%;
   min-width: 0;
   text-align: left;
@@ -262,6 +261,8 @@ const RunningPercent = styled.span`
   justify-self: center;
   font-family: ${props => props.theme.font.display};
   font-size: ${props => props.theme.type.scale.xl.size};
+  /* Like the pool/stream balance, the big figure must not make the tile taller than its two text rows. */
+  line-height: 1;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   @media (max-width: 360px) {
@@ -305,7 +306,7 @@ const PoolCard = styled(StatCard)`
 // The lake's title/action row, shown on a collapsed pool card (an expanded one renders the full lake).
 // Flush under the pool tile with the same divider and padding as the Data Stream's UpgradeStatusTile.
 const PoolLakeHeader = styled.div`
-  padding: 0.6rem 0.75rem;
+  padding: calc(0.6rem - 1px) 0.75rem 0.6rem;
   border-top: 1px solid ${props => props.theme.color.border};
   &:empty {
     display: none;
@@ -525,8 +526,10 @@ const FillableStatCard = styled.div`
 
 // Running Data Stream upgrade: a full-width status tile flush under the stream tile (same fill
 // convention as the tile above and the pool tiles), not a button-like control.
+// Same height as the Data Stream / pool tiles: the top padding gives back the divider's 1px.
 const UpgradeStatusTile = styled(FillableStatCard)`
   align-items: stretch;
+  padding-top: calc(0.6rem - 1px);
   border-top: 1px solid ${props => props.theme.color.border};
   border-radius: 0;
 `
