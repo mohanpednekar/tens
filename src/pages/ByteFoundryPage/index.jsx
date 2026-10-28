@@ -2,6 +2,7 @@ import BoostBadge, { boostGlow, isDataStreamBoosted } from 'components/BoostBadg
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import { COST_ICON } from 'components/icons'
 import DiskArrayRow from 'components/DiskArrayRow'
+import LeadIcon from 'components/LeadIcon'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
@@ -700,7 +701,7 @@ const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel, timeLeftT
   const hasBonus = clampedBonus > 0
   return (
     <SubRow>
-      <CapacityText>📦 {capacityText}</CapacityText>
+      <CapacityText><LeadIcon>📦</LeadIcon>{capacityText}</CapacityText>
       {hasBonus && (
         <BarTrack
           role="progressbar"
@@ -1018,7 +1019,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         >
           <TileHeader>
           <TitleRow>
-            <SectionTitle><span aria-hidden="true">🌊</span><span>Data Stream</span></SectionTitle>
+            <SectionTitle><span><LeadIcon>🌊</LeadIcon>Data Stream</span></SectionTitle>
             <BalanceText $large={!(intro.byteCreated && (intro.dataStreamTapBonusPercent ?? 0) > 0)}>
               {formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed)}
             </BalanceText>
@@ -1055,11 +1056,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             $progress={runningProgress}
           >
             <RunningUpgradeContent>
-              <RunningTitle>⏫ Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
+              <RunningTitle><LeadIcon>⏫</LeadIcon>Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
               <RunningChange>
+                <LeadIcon>{speedUpgradeQueued ? '⚡' : '📦'}</LeadIcon>
                 {speedUpgradeQueued
-                  ? `⚡ ${formatBitsTransition(productionRate, nextRate, '/s')}`
-                  : `📦 ${formatBitsTransition(intro.capacity, nextCapacity)}`}
+                  ? formatBitsTransition(productionRate, nextRate, '/s')
+                  : formatBitsTransition(intro.capacity, nextCapacity)}
               </RunningChange>
               <RunningPercent>{Math.floor(runningProgress)}%</RunningPercent>
               <SpeedText
@@ -1235,8 +1237,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                       aria-label={`${isExpanded ? 'collapse' : 'expand'} pool ${poolIndex}`}
                       onClick={() => setExpandedPoolIndex(isExpanded ? 0 : poolIndex)}
                     >
-                      <span aria-hidden="true">💧</span>
-                      <PoolTitleSymbol aria-hidden="true">{poolSymbol}</PoolTitleSymbol>
+                      <PoolTitleSymbol aria-hidden="true"><LeadIcon>💧</LeadIcon>{poolSymbol}</PoolTitleSymbol>
                       <span>Pool</span>
                     </PoolTitleToggle>
                   </SectionTitle>

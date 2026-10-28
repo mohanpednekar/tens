@@ -4140,7 +4140,7 @@ describe('Byte Foundry Storage', () => {
 
     const lakeBlock = within(screen.getByRole('region', { name: 'pool 1' })).getByLabelText('KB lake')
     expect(within(lakeBlock).queryByRole('button', { name: /cores from the kb data lake/i })).not.toBeInTheDocument()
-    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent(`${COST_ICON} 1 KB`)
+    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent(`${COST_ICON}1 KB`)
   })
 
   test('an old save\'s legacy boostersUnlocked latch keeps Boosters purchasable but the pool-fill tile still reads Locked while its own Storage pool has never built a disk (Devin Review finding)', () => {
@@ -5567,7 +5567,7 @@ test('a running Capacity upgrade shows percent on the first line, from → to ca
   fireEvent.click(screen.getByRole('button', { name: /upgrade data stream capacity/i }))
 
   const running = screen.getByRole('region', { name: /^upgrade capacity$/i })
-  expect(running).toHaveTextContent(/⏫ Upgrading…/)
+  expect(running).toHaveTextContent(/⏫Upgrading…/)
   expect(running).toHaveTextContent(/→/)
   expect(running).toHaveTextContent(/⏳ \d+[smhd]/)
   // The draw rate (base Speed × the bar's fill multiplier) shows at the right, like the other speed readouts.

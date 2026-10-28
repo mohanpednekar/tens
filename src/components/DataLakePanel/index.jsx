@@ -1,5 +1,6 @@
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import { COST_ICON } from 'components/icons'
+import LeadIcon from 'components/LeadIcon'
 import StatCard from 'components/StatCard'
 import {
   formatDiskSize,
@@ -251,7 +252,8 @@ const LakePoolLabel = styled.span`
 // Compact pill: no taller than the pool tile's own second line, so the lake row matches the pool
 // tile's height. The ::before extends the tap area to 24px without changing layout.
 const ActionButton = styled(Button)`
-  padding: 0 0.5rem;
+  /* Left padding gives back the 1px border so the pill's text lines up with the title above. */
+  padding: 0 0.5rem 0 calc(0.5rem - 1px);
   min-height: 0;
   border-width: 1px;
   font-size: ${props => props.theme.type.scale.xs.size};
@@ -393,14 +395,14 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
           ? formatLakeTimeLeft((nextCostBits - filledBits) / fillSpeed)
           : null
 
+        const costLabel = <><LeadIcon>{COST_ICON}</LeadIcon>{nextCostSize}</>
         return (
           <LakeBlock aria-label={showHeader ? `${label} lake` : undefined} key={tierIndex}>
             {showHeader && (
               <LakeHeader $flush={headerOnly}>
                 <LakeHeaderRow>
                   <LakeTitle title={`${label} Data Lake — funds ${boosterLabel}`}>
-                    <span aria-hidden="true">🏞️</span>
-                    <LakeTitleSymbol aria-hidden="true">{label}</LakeTitleSymbol>
+                    <LakeTitleSymbol aria-hidden="true"><LeadIcon>🏞️</LeadIcon>{label}</LakeTitleSymbol>
                     <span>Lake</span>
                   </LakeTitle>
                   <LakeSpeedText title="Current fill speed">⚡ {formatDiskSize(fillSpeed)}/s</LakeSpeedText>
@@ -413,15 +415,15 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                 <LakeSubRow>
                   {converting ? (
                   <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own buffer until ${nextCostSize} is banked, then buys 1 and stops`}>
-                    {`${COST_ICON} ${nextCostSize}`}
+                    {costLabel}
                   </StatusText>
                 ) : entityAtCap ? (
                   <StatusText title={`${boosterLabel} is already at the max — spend or merge it down first`}>
-                    {`${COST_ICON} ${nextCostSize}`}
+                    {costLabel}
                   </StatusText>
                 ) : poolComplete ? (
                   <StatusText title={`Automatically buys the next ${boosterLabel} for ${nextCostSize} whenever this lake has enough stored`}>
-                    {`${COST_ICON} ${nextCostSize}`}
+                    {costLabel}
                   </StatusText>
                 ) : canBuy ? (
                   <ActionButton
@@ -431,7 +433,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                     type="button"
                     variant="success"
                   >
-                    <ButtonContent>{`${COST_ICON} ${nextCostSize}`}</ButtonContent>
+                    <ButtonContent>{costLabel}</ButtonContent>
                   </ActionButton>
                 ) : poolReady ? (
                   <ActionButton
@@ -441,11 +443,11 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                     type="button"
                     variant="success"
                   >
-                    <ButtonContent>{`${COST_ICON} ${nextCostSize}`}</ButtonContent>
+                    <ButtonContent>{costLabel}</ButtonContent>
                   </ActionButton>
                 ) : (
                   <StatusText title={`Build a ${formatDiskSize(unitBits)} disk in Storage to unlock Boosters here`}>
-                    {`${COST_ICON} ${nextCostSize}`}
+                    {costLabel}
                   </StatusText>
                 )}
                   {resetAvailable ? (
