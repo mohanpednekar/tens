@@ -618,7 +618,9 @@ live inside the selected tier):
          up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a merge is actually in flight
          the reserve instead reads as fully committed regardless of the live count (which has by then
          dropped back toward 10 and may be accumulating the next batch) — clicking the row IS the
-         manual-start trigger ("slots are the button"), calling the matching
+         manual-start trigger ("slots are the button"); while startable it gets an accent border/raised
+         background plus a visible `MergeCue` (`"⬆ 8→1 <output>"`) on its left, so it reads as a
+         button, calling the matching
          `game.actions.startCompute*Merge` action, enabled once `isCompute*MergeStartAvailable`
          allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the normal + reserve slots — the
          SAME, lower threshold as before this row existed, deliberately NOT the stricter

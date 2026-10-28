@@ -198,10 +198,17 @@ const ReserveSlotsRow = styled.button`
   justify-content: flex-end;
   gap: 2px;
   min-width: 0;
-  border: none;
-  background: none;
-  padding: 0;
+  border: 1px solid ${props => (props.$clickable ? props.theme.color.accent : 'transparent')};
+  border-radius: ${props => props.theme.radius.sm};
+  background: ${props => (props.$clickable ? props.theme.color.surfaceRaised : 'none')};
+  padding: 2px 4px;
+  color: inherit;
+  font: inherit;
   cursor: ${props => (props.$clickable ? 'pointer' : 'default')};
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.15);
+  }
 
   &:disabled {
     cursor: not-allowed;
@@ -226,6 +233,16 @@ const ReserveSlot = styled.span`
   border-radius: ${props => props.theme.radius.sm};
   border: 1.2px solid ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.accent : props.theme.color.surfaceSunken)};
   background: ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
+`
+
+// Visible "⬆ 8→1 <output>" cue at the row's left edge while a manual merge can start, so the
+// reserve row reads as a Merge button rather than a passive status strip.
+const MergeCue = styled.span`
+  flex: 0 0 auto;
+  margin-right: auto;
+  font-size: 0.78em;
+  font-weight: 600;
+  color: ${props => props.theme.color.accent};
 `
 
 const MergeCountdown = styled.span`
@@ -807,6 +824,7 @@ const ComputePage = ({ game }) => {
                           }
                           type="button"
                         >
+                          {startAvailable && <MergeCue aria-hidden="true">{`⬆ ${COMPUTE_MERGE_RATIO}→1 ${row.mergeOutputLabel}`}</MergeCue>}
                           {merging && <MergeCountdown>{formatOfflineDuration(remainingSeconds)}</MergeCountdown>}
                           {Array.from({ length: COMPUTE_MERGE_RESERVE_CAP }, (_, index) => (
                             <ReserveSlot key={index} $filled={index < reserveHeld} $merging={merging} aria-hidden="true" />

@@ -4942,6 +4942,22 @@ describe('Compute auto-merge automation', () => {
 
     expect(screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toBeEnabled()
+    // A visible merge cue marks the row as clickable while 8 are available.
+    expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toHaveTextContent('⬆ 8→1 Cluster')
+  })
+
+  test('the reserve-slot row shows no merge cue below 8 of the input entity', () => {
+    seedIntroState({
+      bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeNodes: 7, autoMergeNodesIntoCluster: true,
+    })
+    render(<App />)
+    openBoosters()
+
+    fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
+    const row = screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })
+    expect(row).toBeDisabled()
+    expect(row).not.toHaveTextContent('⬆')
   })
 
   test('the pre-unlock Auto button shows live progress toward its own unlock cost, matching Factory\'s own Buy-button convention', () => {
