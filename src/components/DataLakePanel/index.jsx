@@ -249,13 +249,20 @@ const LakePoolLabel = styled.span`
 // line — matches every other milestone-style action button on this page (Upgrade Data Stream,
 // Provision Disk).
 // Compact pill: no taller than the pool tile's own second line, so the lake row matches the pool
-// tile's height.
+// tile's height. The ::before extends the tap area to 24px without changing layout.
 const ActionButton = styled(Button)`
   padding: 0 0.5rem;
   min-height: 0;
+  border-width: 1px;
   font-size: ${props => props.theme.type.scale.xs.size};
   /* 12px line + 1px borders = the 14px of the pool tile's own second line. */
   line-height: 12px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -5px 0;
+  }
   /* The pill's own padding must not shift its label off the lake's left/right text edges. */
   margin: 0 -0.5rem;
 `
