@@ -848,6 +848,8 @@ into `main`, and do not rename it with an agent/session suffix.
 
 **Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Latency/Overclock
 heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
+**No link styling:** it's a game — never underline (solid, dotted or on hover) just because something is
+clickable; use `cursor: pointer` and a `:focus-visible` outline instead.
 
 ## Path aliases
 
