@@ -516,15 +516,16 @@ not at the bottom"):
    regardless of what else is happening lower on the page; `MainPage` shows a matching read-only
    status line while a boost is active, since its effect reaches `tier01` there too. No Reclaim
    control here any more — it moved to the Stack + Reclaim row below (see 2c).
-2. Right below that, the Boost EFFECTS section itself — always rendered, whether or not a boost is
-   active or the merge chain has unlocked yet:
+   With no boost active, the card instead shows "No boost running" (plus "· pick a tier ↓" when the
+   merge chain is unlocked and nothing is selected).
+2. The Boost presets (`boostPresets`: `ArmedStatusText` + `BoostRow`) render INSIDE the one selected
+   tier block (3) — only one tier shows them at a time; re-clicking the selected tier collapses them.
+   Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cores:
    The effects section, Stack/Reclaim/Forfeit row and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Global Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
-   a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol> · <N> held"`, full sentence in its `title`, or "Pick a
-      tier ↓" if nothing's armed yet) naming whichever compute-ladder tier is currently armed —
-      local component state (`selectedBoostTierIndex`, set by clicking a tier row below — see 3),
-      falling back to the active boost's own tier (`intro.computeBoostTierIndex`) when nothing is
-      clicked; always Cores (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
+   a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol> · <N> held"`, full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
+      local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
+      initialized on arrival to the active boost's own tier (`intro.computeBoostTierIndex`), else none; always Cores (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
       tier that can hold a balance that early. Clicking a different tier mid-boost arms a
       confirmed forfeit-and-switch (only at 1 stack, per `canActivateComputeBoost`); the active-boost
       line, Stack, and Reclaim always describe the ACTIVE tier, not the armed one. The row
@@ -535,7 +536,7 @@ not at the bottom"):
       for the CURRENTLY ARMED tier via `getComputeBoostTierMultiplier(boostType, armedTierIndex)` —
       e.g. `"💥 ×20 · 10m 0s"` for Burst — identical for every armed tier — the preset name itself lives only in
       `title`), calling `actions.activateComputeBoost(boostType, armedTierIndex)`.
-      `disabled={!turnAvailable}` where `turnAvailable = armedTierIndex !== null &&
+      `disabled={!turnAvailable}` where `turnAvailable = !sameAsActive &&
       isComputeBoostTurnAvailable(state, boostType, armedTierIndex)` — folds
       `canActivateComputeBoost`'s own mechanical guard (a tier must be armed, ≥1 token of it held,
       AND no boost of any kind already active — issue #326 removed same-type restacking through

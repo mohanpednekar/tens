@@ -4557,7 +4557,7 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.getByText(/1 ⬡ → KB · 4 held/)).toBeInTheDocument()
   })
 
-  test('render order top to bottom: active-boost status, then the Boost effects section (presets/Stack/Reclaim), then the tier entity rows — issue #326 "the effects section is at the top of the Boosters page, not at the bottom"', () => {
+  test('render order: active-boost status and Stack/Reclaim on top, the armed presets inside the selected (active) tier block below', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 1, computeNodes: 9,
@@ -4567,15 +4567,34 @@ describe('Byte Foundry Compute Boost', () => {
     openBoosters()
 
     const activeStatus = screen.getByLabelText(/^active compute boost$/i)
-    const boostRow = screen.getByLabelText(/^compute boost$/i)
     const stackReclaimRow = screen.getByLabelText(/^stack, reclaim, or forfeit the active compute boost$/i)
     const entities = screen.getByLabelText(/^compute entities$/i)
-    // DOCUMENT_POSITION_FOLLOWING (4) means the first argument comes before the second in document
-    // order — i.e. activeStatus renders above boostRow, which renders above stackReclaimRow, which
-    // renders above the tier entity rows.
-    expect(activeStatus.compareDocumentPosition(boostRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(boostRow.compareDocumentPosition(stackReclaimRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // DOCUMENT_POSITION_FOLLOWING (4): the first node renders before the second.
+    expect(activeStatus.compareDocumentPosition(stackReclaimRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(stackReclaimRow.compareDocumentPosition(entities) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // Navigating here pre-selects the active boost's tier, whose block hosts the presets.
+    expect(within(screen.getByLabelText(/^cores tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+    expect(screen.getAllByLabelText(/^compute boost$/i)).toHaveLength(1)
+  })
+
+  test('only the selected tier shows the presets; selecting another moves them, re-clicking collapses them', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true, computeCores: 1, computeNodes: 2 })
+    render(<App />)
+    openBoosters()
+
+    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/no boost running · pick a tier/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /select cores to fund a compute boost/i }))
+    expect(within(screen.getByLabelText(/^cores tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+
+    const nodes = screen.getByRole('button', { name: /select nodes to fund a compute boost/i })
+    fireEvent.click(nodes)
+    expect(within(screen.getByLabelText(/^nodes tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+    expect(screen.getAllByLabelText(/^compute boost$/i)).toHaveLength(1)
+
+    fireEvent.click(nodes)
+    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
   })
 
   test('no Reclaim control appears while no boost is active', () => {
