@@ -461,8 +461,6 @@ const SpeedButton = styled(SpeedText).attrs({ as: 'button', type: 'button' })`
   line-height: inherit;
   cursor: pointer;
   pointer-events: auto;
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
   border-radius: ${props => props.theme.radius.sm};
 
   &:focus-visible {
