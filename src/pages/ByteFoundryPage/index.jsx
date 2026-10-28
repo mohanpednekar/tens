@@ -531,9 +531,12 @@ const UpgradeStatusTile = styled(FillableStatCard)`
   border-radius: 0;
 `
 
+// Square bottom corners whether collapsed (lake header below) or expanded (pool body below); the
+// card's own radius + overflow clips the outer corners.
 const PoolTile = styled(FillableStatCard)`
   position: relative;
-  ${props => props.$expanded && 'border-bottom-left-radius: 0; border-bottom-right-radius: 0;'}
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 `
 
 // The balance and Capacity figures use compact formatting (see
@@ -1217,7 +1220,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             {/* One tile: a stretched PoolTapButton (tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and
                 game/layers) sits behind the readouts, and the "<symbol> Pool" title is its own
                 sibling PoolTitleToggle button (expand/collapse) — never nested in the tap button. */}
-            <PoolTile $progress={poolBufferPercent} $expanded={isExpanded}>
+            <PoolTile $progress={poolBufferPercent}>
               <PoolTapButton
                 type="button"
                 onClick={() => actions.tapPoolBuffer(poolIndex)}

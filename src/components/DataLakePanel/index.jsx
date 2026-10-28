@@ -109,19 +109,22 @@ const LakeSubRow = styled.div`
   }
 `
 
+// Same size and placement as a pool tile's own balance (ByteFoundryPage's BalanceText, large form):
+// big and vertically centered across the title and sub rows.
 const LakeFilledText = styled.span`
   position: absolute;
   left: 50%;
-  top: 0;
-  transform: translateX(-50%);
+  top: 50%;
+  transform: translate(-50%, -50%);
   pointer-events: none;
   color: ${props => props.theme.color.text};
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.sm.size};
-  line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  font-size: ${props => props.theme.type.scale.xl.size};
+  line-height: ${props => props.theme.type.scale.xl.lineHeight};
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  text-shadow: 0 0 2px ${props => props.theme.color.surface};
 `
 
 const LakeSpeedText = styled.span`
