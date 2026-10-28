@@ -17,3 +17,7 @@
 ## 2024-11-06 - Replace O(N) object spreading in tick loops with direct mutation
 **Learning:** Performing `O(N)` object spreading inside hot game loop components like `tickDiskAutoFill` creates an enormous number of intermediate garbage objects (e.g. `{...diskCache, [size]: ...}` for every tier pool) that stress the garbage collector and cause main thread pauses.
 **Action:** Always replace deep or shallow spreading inside `for` loops by cloning the object once upfront (`const diskCache = { ...state.diskCache }`) and locally mutating that clone (`diskCache[size] = ...`, `delete diskCache[size]`) before finally passing the mutated clone down into the returned immutable state tree. This converts `O(N)` allocations into `O(1)` upfront cost.
+
+## 2024-10-28 - O(N) Loop Replacement Dimensionality Check
+**Learning:** When attempting to replace iterative `while` loops processing massive scale incremental progression with O(1) mathematical chunks (e.g. data lake bits to disk unit conversions), it is critical to keep the dimensions (units vs. slots vs. capacities) aligned to avoid state corruption. Incorrectly intermingling variable capacities meant to represent slots with those meant to represent base units causes disastrous overflow bugs that aren't immediately caught without precise state boundary checks.
+**Action:** Always strictly verify dimensionality in formulas (like deriving `maxAvailable` bounds and `slotsToBuy`) and ensure any `if/else` breakout conditions in the O(1) loop perfectly replicate the boundary constraints of the original logic.
