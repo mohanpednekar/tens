@@ -63,14 +63,13 @@ commit as any change to the mechanics it describes.
    see "Economy model", issues #280/#316/#321), behind its own later, one-time
    `intro.computeMergePageUnlocked` reveal. "Compute" names the page/feature only — entities drop the word
    (`Core`/`Node`/…) in every player-visible label. Deliberately terse — icon-only controls, full sentence
-   in `title`/`aria-label`; mechanic prose lives in the Guide (`InfoPage`). Render order (issue #326): an
-   active Boost's status at the top, then the Boost EFFECTS section (`ArmedStatusText`, the 3
-   Burst/Standard/Sustain presets, and — while a boost is active — a Stack + Reclaim-or-Forfeit row,
+   in `title`/`aria-label`; mechanic prose lives in the Guide (`InfoPage`). Render order: a top card with the
+   active Boost's effect (or "No boost running") and — while a boost is active — a Stack + Reclaim-or-Forfeit row,
    mutually exclusive by `computeBoostStacks`; `canReclaimComputeBoost`/`canForfeitComputeBoost` enforce
    this in the engine too), THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
    `COMPUTE_ENTITY_CAP` (10) normal-slot squares (never above 10/10, even once auto-merge is unlocked and
-   the entity has grown into its reserve) plus a `TierSelectButton` arming the Boost presets at that
-   tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
+   the entity has grown into its reserve) plus a `TierSelectButton` selecting that tier — only the ONE selected tier block shows
+   `ArmedStatusText` + the 3 Burst/Standard/Sustain presets inline, at that tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
    Auto-merge `TierActionButton`s (the latter with a live progress fill toward its
    `COMPUTE_ENTITY_CAP`-unit cost), or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot
    squares (gradually filled, `getComputeReserveHeld`) as the manual-start trigger — Megacomputer has no

@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Boosters: presets live on the selected tier.** The three Boost presets now appear inside the
+  selected tier's block (one tier at a time) instead of the top card, which now shows the current
+  boost effect (including which Factory tiers it covers). Opening Boosters pre-selects the active
+  boost's tier.
+- **Boosters: clearer auto-merge row.** Once a tier is automated, its reserve row is highlighted and
+  shows "⬆ 8→1 <next tier>" whenever 8 are available, making it clear that tapping it starts a merge.
+
+- **Matching Foundry row heights.** The Data Stream's Upgrading row and a pool's Data Lake row are
+  now exactly as tall as the Data Stream and pool tiles above them.
+- **Title icons.** The Data Stream title now shows 🌊, each pool title 💧 and each Data Lake title 🏞️, so
+  the title text lines up with the 📦 / 🏷️ line under it.
+
+- **Pools are always tappable.** Tapping a pool now always adds its tap bonus, even while its buffer
+  is full or its Data Lake is draining it (the bonus still caps at 100%).
+- **Data Lake balance matches the pool's.** A lake's filled amount now sits vertically centered in
+  its header like the pool balance above it, in a slightly smaller font; a collapsed pool card's tile no
+  longer has rounded bottom corners, and the lake row below it uses the same divider and padding as
+  the Data Stream's Upgrading row.
+- **No underlines on clickable text.** A pool's ⚡ speed and Factory tier names no longer show
+  link-style underlines.
 - **Pool speed shows the real fill speed.** A pool's ⚡ figure (and its time-to-full) now shows the
   speed actually available to fill it — its Bandwidth limited by what the Data Stream has left after
   earlier pools — instead of the theoretical Bandwidth, even while its Data Lake drains it.

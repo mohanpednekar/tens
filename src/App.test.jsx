@@ -3327,7 +3327,7 @@ test('a pool\'s speed tints red at the full-buffer 50% floor', () => {
   expect(speed).toHaveStyle({ color: 'rgb(229, 72, 77)' })
 })
 
-test('the pool tap tile is inert, with an explanatory title, while the Data Lake drains a half-full buffer', () => {
+test('the pool tap tile stays tappable and grants the bonus while the Data Lake drains a half-full buffer', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
@@ -3342,8 +3342,10 @@ test('the pool tap tile is inert, with an explanatory title, while the Data Lake
   render(<App />)
 
   const tap = within(screen.getByRole('region', { name: 'pool 1' })).getByRole('button', { name: /tap pool 1 memory/i })
-  expect(tap).toBeDisabled()
-  expect(tap).toHaveAttribute('title', expect.stringMatching(/Data Lake is draining/))
+  expect(tap).toBeEnabled()
+  fireEvent.click(tap)
+  expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_PERCENT))
 })
 
 test('the Data Lake header shows target price, filled amount and fill speed', () => {
@@ -3443,7 +3445,7 @@ test('the Data Stream tap target disables once its own tap bonus is already at t
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT))
 })
 
-test('a pool\'s own Memory tap target disables once that pool\'s own tap bonus is at the 100% cap', () => {
+test('a pool\'s own Memory tap target stays enabled once that pool\'s own tap bonus is at the 100% cap', () => {
   seedIntroState({
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
     poolTapBonusPercents: { 1: FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT },
@@ -3451,7 +3453,7 @@ test('a pool\'s own Memory tap target disables once that pool\'s own tap bonus i
   render(<App />)
 
   const poolTapTarget = screen.getByRole('button', { name: /tap pool 1 memory/i })
-  expect(poolTapTarget).toBeDisabled()
+  expect(poolTapTarget).toBeEnabled()
   expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT))
 })
@@ -4138,7 +4140,7 @@ describe('Byte Foundry Storage', () => {
 
     const lakeBlock = within(screen.getByRole('region', { name: 'pool 1' })).getByLabelText('KB lake')
     expect(within(lakeBlock).queryByRole('button', { name: /cores from the kb data lake/i })).not.toBeInTheDocument()
-    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent(`${COST_ICON} 1 KB`)
+    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent(`${COST_ICON}1 KB`)
   })
 
   test('an old save\'s legacy boostersUnlocked latch keeps Boosters purchasable but the pool-fill tile still reads Locked while its own Storage pool has never built a disk (Devin Review finding)', () => {
@@ -4555,7 +4557,7 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.getByText(/1 ⬡ → KB · 4 held/)).toBeInTheDocument()
   })
 
-  test('render order top to bottom: active-boost status, then the Boost effects section (presets/Stack/Reclaim), then the tier entity rows — issue #326 "the effects section is at the top of the Boosters page, not at the bottom"', () => {
+  test('render order: active-boost status and Stack/Reclaim on top, the armed presets inside the selected (active) tier block below', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 1, computeNodes: 9,
@@ -4565,15 +4567,47 @@ describe('Byte Foundry Compute Boost', () => {
     openBoosters()
 
     const activeStatus = screen.getByLabelText(/^active compute boost$/i)
-    const boostRow = screen.getByLabelText(/^compute boost$/i)
     const stackReclaimRow = screen.getByLabelText(/^stack, reclaim, or forfeit the active compute boost$/i)
     const entities = screen.getByLabelText(/^compute entities$/i)
-    // DOCUMENT_POSITION_FOLLOWING (4) means the first argument comes before the second in document
-    // order — i.e. activeStatus renders above boostRow, which renders above stackReclaimRow, which
-    // renders above the tier entity rows.
-    expect(activeStatus.compareDocumentPosition(boostRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(boostRow.compareDocumentPosition(stackReclaimRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // DOCUMENT_POSITION_FOLLOWING (4): the first node renders before the second.
+    expect(activeStatus.compareDocumentPosition(stackReclaimRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(stackReclaimRow.compareDocumentPosition(entities) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // Navigating here pre-selects the active boost's tier, whose block hosts the presets.
+    expect(within(screen.getByLabelText(/^cores tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+    expect(screen.getAllByLabelText(/^compute boost$/i)).toHaveLength(1)
+  })
+
+  test('the active status names the covered tiers, and the active tier stays visible (with presets) after the boost spends its last unit', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeCores: 1, computeNodes: 0,
+      computeBoostType: 'burst', computeBoostTierIndex: 2, computeBoostStacks: 1, computeBoostRemainingSeconds: 30,
+    })
+    render(<App />)
+    openBoosters()
+
+    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(/ on KB–MB · /)
+    expect(within(screen.getByLabelText(/^nodes tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+  })
+
+  test('only the selected tier shows the presets; selecting another moves them, re-clicking collapses them', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true, computeCores: 1, computeNodes: 2 })
+    render(<App />)
+    openBoosters()
+
+    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/no boost running · pick a tier/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /select cores to fund a compute boost/i }))
+    expect(within(screen.getByLabelText(/^cores tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+
+    const nodes = screen.getByRole('button', { name: /select nodes to fund a compute boost/i })
+    fireEvent.click(nodes)
+    expect(within(screen.getByLabelText(/^nodes tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+    expect(screen.getAllByLabelText(/^compute boost$/i)).toHaveLength(1)
+
+    fireEvent.click(nodes)
+    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
   })
 
   test('no Reclaim control appears while no boost is active', () => {
@@ -4908,6 +4942,22 @@ describe('Compute auto-merge automation', () => {
 
     expect(screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toBeEnabled()
+    // A visible merge cue marks the row as clickable while 8 are available.
+    expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toHaveTextContent('⬆ 8→1 Cluster')
+  })
+
+  test('the reserve-slot row shows no merge cue below 8 of the input entity', () => {
+    seedIntroState({
+      bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeNodes: 7, autoMergeNodesIntoCluster: true,
+    })
+    render(<App />)
+    openBoosters()
+
+    fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
+    const row = screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })
+    expect(row).toBeDisabled()
+    expect(row).not.toHaveTextContent('⬆')
   })
 
   test('the pre-unlock Auto button shows live progress toward its own unlock cost, matching Factory\'s own Buy-button convention', () => {
@@ -5565,7 +5615,7 @@ test('a running Capacity upgrade shows percent on the first line, from → to ca
   fireEvent.click(screen.getByRole('button', { name: /upgrade data stream capacity/i }))
 
   const running = screen.getByRole('region', { name: /^upgrade capacity$/i })
-  expect(running).toHaveTextContent(/⏫ Upgrading…/)
+  expect(running).toHaveTextContent(/⏫Upgrading…/)
   expect(running).toHaveTextContent(/→/)
   expect(running).toHaveTextContent(/⏳ \d+[smhd]/)
   // The draw rate (base Speed × the bar's fill multiplier) shows at the right, like the other speed readouts.

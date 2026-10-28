@@ -878,10 +878,10 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(tapPoolBuffer(2)(state)).toBe(state)
     })
 
-    it('is a no-op once that pool\'s own buffer is already full', () => {
+    it('still grants the bonus when that pool\'s own buffer is already full', () => {
       // Pool 1's own buffer capacity is 8 at the Data Stream's starting Capacity.
       const state = withPoolBuffer(createInitialGameState(), 8, 1)
-      expect(tapPoolBuffer(1)(state)).toBe(state)
+      expect(tapPoolBuffer(1)(state).intro.poolTapBonusPercents[1]).toBe(FILL_MULTIPLIER_TAP_BONUS_PERCENT)
     })
 
     it('is a no-op once that pool\'s own stored tap bonus is at FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT', () => {

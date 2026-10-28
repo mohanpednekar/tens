@@ -2,6 +2,7 @@ import BoostBadge, { boostGlow, isDataStreamBoosted } from 'components/BoostBadg
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import { COST_ICON } from 'components/icons'
 import DiskArrayRow from 'components/DiskArrayRow'
+import LeadIcon from 'components/LeadIcon'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
@@ -217,7 +218,6 @@ const RunningUpgradeContent = styled.div`
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   grid-template-rows: auto auto;
   column-gap: ${props => props.theme.space.sm};
-  row-gap: 2px;
   width: 100%;
   min-width: 0;
   text-align: left;
@@ -262,6 +262,8 @@ const RunningPercent = styled.span`
   justify-self: center;
   font-family: ${props => props.theme.font.display};
   font-size: ${props => props.theme.type.scale.xl.size};
+  /* Like the pool/stream balance, the big figure must not make the tile taller than its two text rows. */
+  line-height: 1;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   @media (max-width: 360px) {
@@ -303,8 +305,10 @@ const PoolCard = styled(StatCard)`
 `
 
 // The lake's title/action row, shown on a collapsed pool card (an expanded one renders the full lake).
+// Flush under the pool tile with the same divider and padding as the Data Stream's UpgradeStatusTile.
 const PoolLakeHeader = styled.div`
-  padding: 0 0.5rem 0.5rem;
+  padding: calc(0.6rem - 1px) 0.75rem 0.6rem;
+  border-top: 1px solid ${props => props.theme.color.border};
   &:empty {
     display: none;
   }
@@ -461,8 +465,6 @@ const SpeedButton = styled(SpeedText).attrs({ as: 'button', type: 'button' })`
   line-height: inherit;
   cursor: pointer;
   pointer-events: auto;
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
   border-radius: ${props => props.theme.radius.sm};
 
   &:focus-visible {
@@ -525,15 +527,20 @@ const FillableStatCard = styled.div`
 
 // Running Data Stream upgrade: a full-width status tile flush under the stream tile (same fill
 // convention as the tile above and the pool tiles), not a button-like control.
+// Same height as the Data Stream / pool tiles: the top padding gives back the divider's 1px.
 const UpgradeStatusTile = styled(FillableStatCard)`
   align-items: stretch;
+  padding-top: calc(0.6rem - 1px);
   border-top: 1px solid ${props => props.theme.color.border};
   border-radius: 0;
 `
 
+// Square bottom corners whether collapsed (lake header below) or expanded (pool body below); the
+// card's own radius + overflow clips the outer corners.
 const PoolTile = styled(FillableStatCard)`
   position: relative;
-  ${props => props.$expanded && 'border-bottom-left-radius: 0; border-bottom-right-radius: 0;'}
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 `
 
 // The balance and Capacity figures use compact formatting (see
@@ -694,7 +701,7 @@ const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel, timeLeftT
   const hasBonus = clampedBonus > 0
   return (
     <SubRow>
-      <CapacityText>📦 {capacityText}</CapacityText>
+      <CapacityText><LeadIcon>📦</LeadIcon>{capacityText}</CapacityText>
       {hasBonus && (
         <BarTrack
           role="progressbar"
@@ -1012,7 +1019,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         >
           <TileHeader>
           <TitleRow>
-            <SectionTitle>Data Stream</SectionTitle>
+            <SectionTitle><span><LeadIcon>🌊</LeadIcon>Data Stream</span></SectionTitle>
             <BalanceText $large={!(intro.byteCreated && (intro.dataStreamTapBonusPercent ?? 0) > 0)}>
               {formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed)}
             </BalanceText>
@@ -1049,11 +1056,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             $progress={runningProgress}
           >
             <RunningUpgradeContent>
-              <RunningTitle>⏫ Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
+              <RunningTitle><LeadIcon>⏫</LeadIcon>Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
               <RunningChange>
+                <LeadIcon>{speedUpgradeQueued ? '⚡' : '📦'}</LeadIcon>
                 {speedUpgradeQueued
-                  ? `⚡ ${formatBitsTransition(productionRate, nextRate, '/s')}`
-                  : `📦 ${formatBitsTransition(intro.capacity, nextCapacity)}`}
+                  ? formatBitsTransition(productionRate, nextRate, '/s')
+                  : formatBitsTransition(intro.capacity, nextCapacity)}
               </RunningChange>
               <RunningPercent>{Math.floor(runningProgress)}%</RunningPercent>
               <SpeedText
@@ -1169,18 +1177,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // stays exactly what applies at 100% of this — the real per-tick buffer fill scales by
         // this percent instead (see getPoolEffectMultiplier in game/engine).
         const poolMultiplierPercent = getPoolMultiplierPercent(state, poolIndex)
-        // Matches tapPoolBuffer's own no-op guards (engine.js) — the button must be disabled for
-        // both, not just a full buffer, or a capped tap silently does nothing with no feedback.
         const poolTapBonusPercent = getPoolTapBonusPercent(state, poolIndex)
         const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolFillRate)
-        const poolMultiplierCapped = poolTapBonusPercent >= FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT
         // tickDataLakePoolDrain (engine.js) feeds the lake straight from this pool's buffer whenever
-        // isDataLakePoolDrainAvailable. A tap can't speed the lake up then (the drain is capped at
-        // Bandwidth), so the tile is disabled.
+        // isDataLakePoolDrainAvailable (listed in the speed details below).
         const lakeDraining = isDataLakePoolDrainAvailable(state, poolIndex)
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
-        const poolTapDisabled = poolBufferFull || lakeDraining || poolMultiplierCapped
         const poolSymbol = TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`
         const formatPoolRate = bits => `${formatSpeedText(formatDiskSize(bits))}/s`
         const poolSpeedText = formatPoolRate(poolFillRate * poolMultiplierPercent / 100)
@@ -1217,21 +1220,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             {/* One tile: a stretched PoolTapButton (tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and
                 game/layers) sits behind the readouts, and the "<symbol> Pool" title is its own
                 sibling PoolTitleToggle button (expand/collapse) — never nested in the tap button. */}
-            <PoolTile $progress={poolBufferPercent} $expanded={isExpanded}>
+            <PoolTile $progress={poolBufferPercent}>
               <PoolTapButton
                 type="button"
+                // Always tappable: every tap grants the bonus (up to its cap), whether or not it can help.
                 onClick={() => actions.tapPoolBuffer(poolIndex)}
-                disabled={poolTapDisabled}
                 aria-label={`tap pool ${poolIndex} memory`}
-                title={
-                  lakeDraining
-                    ? 'The Data Lake is draining this buffer — tapping cannot speed it up'
-                    : poolBufferFull
-                    ? undefined
-                    : poolMultiplierCapped
-                      ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap`
-                      : undefined
-                }
               />
               <PoolTileContent>
                 <TileHeader>
@@ -1243,7 +1237,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                       aria-label={`${isExpanded ? 'collapse' : 'expand'} pool ${poolIndex}`}
                       onClick={() => setExpandedPoolIndex(isExpanded ? 0 : poolIndex)}
                     >
-                      <PoolTitleSymbol aria-hidden="true">{poolSymbol}</PoolTitleSymbol>
+                      <PoolTitleSymbol aria-hidden="true"><LeadIcon>💧</LeadIcon>{poolSymbol}</PoolTitleSymbol>
                       <span>Pool</span>
                     </PoolTitleToggle>
                   </SectionTitle>

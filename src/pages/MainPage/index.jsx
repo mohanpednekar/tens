@@ -641,10 +641,6 @@ const TierNameLabel = styled.span`
   cursor: pointer;
   flex-shrink: 0;
 
-  &:hover {
-    text-decoration: underline;
-  }
-
   &:focus-visible {
     outline: 2px solid ${props => props.theme.color.accent};
     outline-offset: 2px;

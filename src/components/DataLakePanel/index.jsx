@@ -1,5 +1,6 @@
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import { COST_ICON } from 'components/icons'
+import LeadIcon from 'components/LeadIcon'
 import StatCard from 'components/StatCard'
 import {
   formatDiskSize,
@@ -85,12 +86,12 @@ const LakeTitleSymbol = styled.span`
 const LakeHeader = styled.div`
   position: relative;
   width: 100%;
-  /* Insets the text to the same left/right edges as the pool tile above. */
-  padding: 0 0.25rem;
+  /* Insets the text to the same left/right edges as the pool tile above; a header-only render's
+     container (a collapsed pool card's lake row) supplies its own padding instead. */
+  padding: ${props => (props.$flush ? '0' : '0 0.25rem')};
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
 `
 
 const LakeSubRow = styled.div`
@@ -102,26 +103,28 @@ const LakeSubRow = styled.div`
   font-size: ${props => props.theme.type.scale.xs.size};
   color: ${props => props.theme.color.textMuted};
   white-space: nowrap;
-  min-height: 1.4rem;
 
   & > p {
     text-align: left;
   }
 `
 
+// Placed like a pool tile's own balance (ByteFoundryPage's BalanceText, large form) — vertically
+// centered across the title and sub rows — but a step smaller so it reads below the pool's.
 const LakeFilledText = styled.span`
   position: absolute;
   left: 50%;
-  top: 0;
-  transform: translateX(-50%);
+  top: 50%;
+  transform: translate(-50%, -50%);
   pointer-events: none;
   color: ${props => props.theme.color.text};
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.sm.size};
-  line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  font-size: ${props => props.theme.type.scale.lg.size};
+  line-height: ${props => props.theme.type.scale.lg.lineHeight};
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  text-shadow: 0 0 2px ${props => props.theme.color.surface};
 `
 
 const LakeSpeedText = styled.span`
@@ -246,10 +249,22 @@ const LakePoolLabel = styled.span`
 // Icon + amount only, cost/state tucked into the title/aria-label rather than a second visible
 // line — matches every other milestone-style action button on this page (Upgrade Data Stream,
 // Provision Disk).
+// Compact pill: no taller than the pool tile's own second line, so the lake row matches the pool
+// tile's height. The ::before extends the tap area to 24px without changing layout.
 const ActionButton = styled(Button)`
-  padding: 0.1rem 0.5rem;
-  min-height: 1.4rem;
+  /* Left padding gives back the 1px border so the pill's text lines up with the title above. */
+  padding: 0 0.5rem 0 calc(0.5rem - 1px);
+  min-height: 0;
+  border-width: 1px;
   font-size: ${props => props.theme.type.scale.xs.size};
+  /* 12px line + 1px borders = the 14px of the pool tile's own second line. */
+  line-height: 12px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -6px -1px;
+  }
   /* The pill's own padding must not shift its label off the lake's left/right text edges. */
   margin: 0 -0.5rem;
 `
@@ -295,6 +310,7 @@ const clampFraction = value => Math.min(1, Math.max(0, value))
 const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => {
   const showHeader = section !== 'body'
   const showBody = section !== 'header'
+  const headerOnly = section === 'header'
   const visibleTiers = tierIndex != null ? [tierIndex] : getVisibleLakeTierIndexes(state)
   if (visibleTiers.length === 0) return null
 
@@ -379,13 +395,14 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
           ? formatLakeTimeLeft((nextCostBits - filledBits) / fillSpeed)
           : null
 
+        const costLabel = <><LeadIcon>{COST_ICON}</LeadIcon>{nextCostSize}</>
         return (
           <LakeBlock aria-label={showHeader ? `${label} lake` : undefined} key={tierIndex}>
             {showHeader && (
-              <LakeHeader>
+              <LakeHeader $flush={headerOnly}>
                 <LakeHeaderRow>
                   <LakeTitle title={`${label} Data Lake — funds ${boosterLabel}`}>
-                    <LakeTitleSymbol aria-hidden="true">{label}</LakeTitleSymbol>
+                    <LakeTitleSymbol aria-hidden="true"><LeadIcon>🏞️</LeadIcon>{label}</LakeTitleSymbol>
                     <span>Lake</span>
                   </LakeTitle>
                   <LakeSpeedText title="Current fill speed">⚡ {formatDiskSize(fillSpeed)}/s</LakeSpeedText>
@@ -398,15 +415,15 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                 <LakeSubRow>
                   {converting ? (
                   <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own buffer until ${nextCostSize} is banked, then buys 1 and stops`}>
-                    {`${COST_ICON} ${nextCostSize}`}
+                    {costLabel}
                   </StatusText>
                 ) : entityAtCap ? (
                   <StatusText title={`${boosterLabel} is already at the max — spend or merge it down first`}>
-                    {`${COST_ICON} ${nextCostSize}`}
+                    {costLabel}
                   </StatusText>
                 ) : poolComplete ? (
                   <StatusText title={`Automatically buys the next ${boosterLabel} for ${nextCostSize} whenever this lake has enough stored`}>
-                    {`${COST_ICON} ${nextCostSize}`}
+                    {costLabel}
                   </StatusText>
                 ) : canBuy ? (
                   <ActionButton
@@ -416,7 +433,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                     type="button"
                     variant="success"
                   >
-                    <ButtonContent>{`${COST_ICON} ${nextCostSize}`}</ButtonContent>
+                    <ButtonContent>{costLabel}</ButtonContent>
                   </ActionButton>
                 ) : poolReady ? (
                   <ActionButton
@@ -426,11 +443,11 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                     type="button"
                     variant="success"
                   >
-                    <ButtonContent>{`${COST_ICON} ${nextCostSize}`}</ButtonContent>
+                    <ButtonContent>{costLabel}</ButtonContent>
                   </ActionButton>
                 ) : (
                   <StatusText title={`Build a ${formatDiskSize(unitBits)} disk in Storage to unlock Boosters here`}>
-                    {`${COST_ICON} ${nextCostSize}`}
+                    {costLabel}
                   </StatusText>
                 )}
                   {resetAvailable ? (
@@ -572,7 +589,8 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
   if (bare) {
     return (
       <>
-        {showHeader && <BareDivider />}
+        {/* A header-only render's container draws its own top border (see ByteFoundryPage's PoolLakeHeader). */}
+        {showHeader && !headerOnly && <BareDivider />}
         {list}
       </>
     )
