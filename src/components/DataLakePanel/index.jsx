@@ -261,7 +261,7 @@ const ActionButton = styled(Button)`
   &::before {
     content: '';
     position: absolute;
-    inset: -5px 0;
+    inset: -6px -1px;
   }
   /* The pill's own padding must not shift its label off the lake's left/right text edges. */
   margin: 0 -0.5rem;
