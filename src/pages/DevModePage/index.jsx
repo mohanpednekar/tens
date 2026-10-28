@@ -88,6 +88,11 @@ const NumberInput = styled.input`
   font-size: 0.9rem;
   min-width: 6rem;
   padding: 0.4rem 0.55rem;
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
 `
 
 const Details = styled.details`
@@ -120,6 +125,11 @@ const JsonTextarea = styled.textarea`
   padding: 0.6rem;
   resize: vertical;
   width: 100%;
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
 `
 
 const StatusText = styled.p`

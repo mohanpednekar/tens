@@ -28,3 +28,6 @@
 ## 2024-10-24 - Testing Toggle Button aria-labels
 **Learning:** The application's test suite heavily relies on strict testing-library `getByRole` queries matching specific accessible names (e.g., `name: /^enable dev mode$/i`). Changing an `aria-label` from a dynamic state-based string to a static string combined with `aria-pressed` (the correct pattern for toggle buttons) will break these tests.
 **Action:** When updating toggle buttons to use static `aria-label`s and `aria-pressed`, always grep for the old dynamic label text in the `src/` directory (especially `src/App.test.jsx`) and update the test queries to match the new static `aria-label`.
+## 2026-10-28 - Interactive Elements and Focus Visibility
+**Learning:** Custom interactive elements created with `styled-components` (like `styled.input`, `styled.textarea`, or ones using `as="button"`, `$tappable`, `cursor: pointer`) might lack explicit `&:focus-visible` styles, leading to poor keyboard accessibility as users cannot see which element has focus.
+**Action:** When creating or modifying custom interactive elements with styled-components, always explicitly define `&:focus-visible` styles using the app's established pattern (e.g., `outline: 2px solid ${props => props.theme.color.accent}; outline-offset: 2px;`) to maintain keyboard accessibility.
