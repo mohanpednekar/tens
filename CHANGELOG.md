@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Matching Foundry row heights.** The Data Stream's Upgrading row and a pool's Data Lake row are
   now exactly as tall as the Data Stream and pool tiles above them.
-- **Title icons.** The Data Stream title now shows 🌊 and each pool title 💧.
+- **Title icons.** The Data Stream title now shows 🌊, each pool title 💧 and each Data Lake title 🏞️.
 
 - **Pools are always tappable.** Tapping a pool now always adds its tap bonus, even while its buffer
   is full or its Data Lake is draining it (the bonus still caps at 100%).

@@ -399,6 +399,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               <LakeHeader $flush={headerOnly}>
                 <LakeHeaderRow>
                   <LakeTitle title={`${label} Data Lake — funds ${boosterLabel}`}>
+                    <span aria-hidden="true">🏞️</span>
                     <LakeTitleSymbol aria-hidden="true">{label}</LakeTitleSymbol>
                     <span>Lake</span>
                   </LakeTitle>
