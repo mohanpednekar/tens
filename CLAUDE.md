@@ -443,43 +443,29 @@ src/
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic `variant`
                                prop resolved against theme color tokens, deprecated raw `color` prop
                                still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
-    DiskArrayRow/index.jsx  ← one Disk array's STATUS display for a single size (read cache + disk squares;
-                               nothing clickable — funding is automatic), `{ actions, size, state }`
-                               (`actions` unused); shared by ByteFoundryPage and StoragePage. Contract +
-                               why it's standalone: `docs/COMPONENTS_REFERENCE.md`, `docs/DESIGN_HISTORY.md`
-    DataLakePanel/index.jsx ← one Data Lake's block (title row, disk-square fill, Buy/Upgrade-Capacity row),
-                               `{ actions, state, bare, tierIndex }`, embedded per pool card. Contract
-                               (incl. the unused omitted-`tierIndex` mode): `docs/COMPONENTS_REFERENCE.md`;
-                               mechanic: "Economy model"
+    DiskArrayRow/index.jsx  ← one Disk array's STATUS display (nothing clickable), `{ actions, size, state }`
+                               (`actions` unused); shared by ByteFoundryPage and StoragePage (why standalone: `docs/DESIGN_HISTORY.md`)
+    DataLakePanel/index.jsx ← one Data Lake's block, `{ actions, state, bare, tierIndex }`, embedded per pool
+                               card (unused omitted-`tierIndex` mode in the reference); mechanic: "Economy model"
     icons.js                ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Data Lake Booster, Upgrade Data Stream,
                                Provision Disk status line; `BOOST_ICON` 🌟 marks Compute-Boosted elements)
-    BoostBadge/index.jsx    ← Compute-Boosted marker (🌟×N badge, description in title/aria-label) +
-                               `boostGlow` card css + `isDataStreamBoosted`/`isFactoryTierBoosted`;
-                               used by ByteFoundryPage's Data Stream and MainPage tier rows.
-                               Contract: `docs/COMPONENTS_REFERENCE.md`
-    SpeedDetailsPopover/index.jsx ← non-modal details panel (portal, fixed under its anchor) behind each
-                               pool's clickable ⚡ speed; closes on outside press/scroll/wheel/touch-move,
-                               Escape, resize. Contract: `docs/COMPONENTS_REFERENCE.md`
-    LeadIcon/index.js       ← a line's leading emoji in a fixed-size, aria-hidden box so text after it
-                               aligns across a tile's lines (Foundry stream/pool/lake/Upgrading rows)
-    Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`) for Perks → Toggles and
-                               Buy max. Full contract: `docs/COMPONENTS_REFERENCE.md`
-    Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
-                               Full contract: `docs/COMPONENTS_REFERENCE.md`
-    BuyMaxToggle/index.jsx  ← Buy max mode toggle button (Perks → Toggles only); renders nothing until
+    BoostBadge/index.jsx    ← Compute-Boosted 🌟×N badge + `boostGlow` css + `isDataStreamBoosted`/
+                               `isFactoryTierBoosted` (ByteFoundryPage Data Stream, MainPage tier rows)
+    SpeedDetailsPopover/index.jsx ← non-modal portal panel behind each pool's clickable ⚡ speed
+    LeadIcon/index.js       ← a line's leading emoji in a fixed-size, aria-hidden box (Foundry tile rows)
+    Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`): Perks → Toggles, Buy max
+    Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums
+    BuyMaxToggle/index.jsx  ← Buy max mode toggle (Perks → Toggles only); renders nothing until
                                `isBuyMaxUnlocked` (first Prestige). See "Buy max mode" below
-    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
-                               SettingsPage's Era ascension action. Full contract:
-                               `docs/COMPONENTS_REFERENCE.md`
-    OfflineProgressNotice/index.jsx ← the "Welcome back!" offline-progress notice (`.jsx` — needs JSX),
-                               shared by MainPage and ByteFoundryPage — see `docs/DESIGN_HISTORY.md` for
-                               the extraction rationale. Full contract: `docs/COMPONENTS_REFERENCE.md`
+    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); SettingsPage's Era ascension
+    OfflineProgressNotice/index.jsx ← the "Welcome back!" notice (`.jsx`), shared by MainPage and
+                               ByteFoundryPage (extraction rationale: `docs/DESIGN_HISTORY.md`)
     IncompatibleSaveNotice/index.jsx ← blocking overlay when an on-disk save was cleared on load
                                because it predates the current schema; single **Start fresh**
                                acknowledge action. Rendered by `App.jsx` when `useIncrementalGame`'s
                                `incompatibleSaveReason` is set.
-    StatCard/index.js       ← styled card container used for every panel, fully token-driven.
-                               Full contract: `docs/COMPONENTS_REFERENCE.md`
+    StatCard/index.js       ← styled card container used for every panel, fully token-driven
+                               (every component's full prop/styling contract: `docs/COMPONENTS_REFERENCE.md`)
   pages/
     ByteFoundryPage/index.jsx ← the "Byte Foundry" tap screen (Architecture 4, "Economy model"). Takes
                                `{ game, focusNonce }`; Data Stream + every DiskArrayRow as continuous
@@ -986,20 +972,12 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   both themes, see `docs/THEMING_REFERENCE.md`. `engine.computeFlops.test.js` covers the PP Compute
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
-  (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
-  `navAttention.test.js`, `components/Button/index.test.jsx` (`ButtonContent` icon-split rules),
-  `components/BoostBadge/index.test.jsx` and `components/OfflineProgressNotice/index.test.jsx`
-  (rewarded 100%-speed bonus) that's 14 of the 30 files; six more cover the store-release services and Settings sections
-  (`services/config.test.js`, `services/monetization/index.test.js`, `services/monetization/rewardedAdCache.test.js`,
-  `game/useIncrementalGame.offlineReward.test.jsx` (`claimOfflineAdReward`),
-  `services/cloudSave/deleteAccount.test.js`, `pages/SettingsPage/sections.test.jsx`); the other ten are
-  `scripts/verify-maintainer-checklist.test.js`, `scripts/configure-ios-plist.test.js`,
-  `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
-  `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`,
-  `scripts/classify-claude-failure.test.js`, `scripts/lint-workflow-shell.test.js`, and
-  `scripts/sweep-stalled-auto-prs.test.js`, `scripts/autonomous-maintenance-workflow.test.js` (checkout PAT, empty-run warning,
-  prompt `gh` rule) — Vitest's default glob picks these up since `vite.config.js`'s `test`
-  block sets no custom `include`.
+  (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). The rest of the 30 test files (`yarn test` total) sit beside their source — `save-migration/`, `navAttention`,
+  `components/*` (Button, BoostBadge, OfflineProgressNotice), `services/*` (config, monetization, rewardedAdCache,
+  cloudSave/deleteAccount), `game/useIncrementalGame.offlineReward.test.jsx`, `pages/SettingsPage/sections.test.jsx`,
+  and `scripts/*.test.js` (maintainer checklist, iOS plist, adversarial marker, low-risk bar, bump-version,
+  graphify freshness, failure classifier, workflow-shell lint, stalled-PR sweep, autonomous-maintenance workflow) —
+  all picked up by Vitest's default glob since `vite.config.js`'s `test` block sets no custom `include`.
 
 ### End-to-end testing
 
