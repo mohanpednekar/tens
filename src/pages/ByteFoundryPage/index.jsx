@@ -1018,7 +1018,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         >
           <TileHeader>
           <TitleRow>
-            <SectionTitle>Data Stream</SectionTitle>
+            <SectionTitle><span aria-hidden="true">🌊</span><span>Data Stream</span></SectionTitle>
             <BalanceText $large={!(intro.byteCreated && (intro.dataStreamTapBonusPercent ?? 0) > 0)}>
               {formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed)}
             </BalanceText>
@@ -1235,6 +1235,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                       aria-label={`${isExpanded ? 'collapse' : 'expand'} pool ${poolIndex}`}
                       onClick={() => setExpandedPoolIndex(isExpanded ? 0 : poolIndex)}
                     >
+                      <span aria-hidden="true">💧</span>
                       <PoolTitleSymbol aria-hidden="true">{poolSymbol}</PoolTitleSymbol>
                       <span>Pool</span>
                     </PoolTitleToggle>
