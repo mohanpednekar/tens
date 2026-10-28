@@ -3327,7 +3327,7 @@ test('a pool\'s speed tints red at the full-buffer 50% floor', () => {
   expect(speed).toHaveStyle({ color: 'rgb(229, 72, 77)' })
 })
 
-test('the pool tap tile is inert, with an explanatory title, while the Data Lake drains a half-full buffer', () => {
+test('the pool tap tile stays tappable and grants the bonus while the Data Lake drains a half-full buffer', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
@@ -3342,8 +3342,10 @@ test('the pool tap tile is inert, with an explanatory title, while the Data Lake
   render(<App />)
 
   const tap = within(screen.getByRole('region', { name: 'pool 1' })).getByRole('button', { name: /tap pool 1 memory/i })
-  expect(tap).toBeDisabled()
-  expect(tap).toHaveAttribute('title', expect.stringMatching(/Data Lake is draining/))
+  expect(tap).toBeEnabled()
+  fireEvent.click(tap)
+  expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_PERCENT))
 })
 
 test('the Data Lake header shows target price, filled amount and fill speed', () => {
@@ -3443,7 +3445,7 @@ test('the Data Stream tap target disables once its own tap bonus is already at t
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT))
 })
 
-test('a pool\'s own Memory tap target disables once that pool\'s own tap bonus is at the 100% cap', () => {
+test('a pool\'s own Memory tap target stays enabled once that pool\'s own tap bonus is at the 100% cap', () => {
   seedIntroState({
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
     poolTapBonusPercents: { 1: FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT },
@@ -3451,7 +3453,7 @@ test('a pool\'s own Memory tap target disables once that pool\'s own tap bonus i
   render(<App />)
 
   const poolTapTarget = screen.getByRole('button', { name: /tap pool 1 memory/i })
-  expect(poolTapTarget).toBeDisabled()
+  expect(poolTapTarget).toBeEnabled()
   expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT))
 })

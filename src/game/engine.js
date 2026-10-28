@@ -2805,12 +2805,11 @@ export const getPoolAvailableFillRate = (state, poolIndex) => {
 // Manual tap on one pool's own local Memory buffer — adds FILL_MULTIPLIER_TAP_BONUS_PERCENT to
 // that pool's own decaying multiplier bonus (poolTapBonusPercents[poolIndex]), scoped to this one
 // pool only — never touches the Data Stream's own bonus or any other pool's (see FILL_MULTIPLIER_*
-// in layers.js). No-op for a locked/invalid pool, one whose buffer is already full (same "extra
-// rate has nowhere to go" reasoning tapIntroBit's own full-Buffer guard uses), or one whose stored
-// tap bonus is already at FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT (100).
+// in layers.js). No-op only for a locked/invalid pool or one whose stored tap bonus is already at
+// FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT (100) — deliberately NOT for a full or lake-draining buffer:
+// a pool tap always grants its bonus, whether or not the faster fill can currently help.
 export const tapPoolBuffer = poolIndex => state => {
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getVisibleStoragePoolCount(state)) return state
-  if (getPoolBufferBits(state, poolIndex) >= getPoolBufferCapacity(state, poolIndex)) return state
   // Same independent 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT clamp as tapIntroBit above.
   const priorBonus = getPoolTapBonusPercent(state, poolIndex)
   if (priorBonus >= FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT) return state

@@ -85,8 +85,9 @@ const LakeTitleSymbol = styled.span`
 const LakeHeader = styled.div`
   position: relative;
   width: 100%;
-  /* Insets the text to the same left/right edges as the pool tile above. */
-  padding: 0 0.25rem;
+  /* Insets the text to the same left/right edges as the pool tile above; a header-only render's
+     container (a collapsed pool card's lake row) supplies its own padding instead. */
+  padding: ${props => (props.$flush ? '0' : '0 0.25rem')};
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -109,19 +110,22 @@ const LakeSubRow = styled.div`
   }
 `
 
+// Placed like a pool tile's own balance (ByteFoundryPage's BalanceText, large form) — vertically
+// centered across the title and sub rows — but a step smaller so it reads below the pool's.
 const LakeFilledText = styled.span`
   position: absolute;
   left: 50%;
-  top: 0;
-  transform: translateX(-50%);
+  top: 50%;
+  transform: translate(-50%, -50%);
   pointer-events: none;
   color: ${props => props.theme.color.text};
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.sm.size};
-  line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  font-size: ${props => props.theme.type.scale.lg.size};
+  line-height: ${props => props.theme.type.scale.lg.lineHeight};
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  text-shadow: 0 0 2px ${props => props.theme.color.surface};
 `
 
 const LakeSpeedText = styled.span`
@@ -295,6 +299,7 @@ const clampFraction = value => Math.min(1, Math.max(0, value))
 const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => {
   const showHeader = section !== 'body'
   const showBody = section !== 'header'
+  const headerOnly = section === 'header'
   const visibleTiers = tierIndex != null ? [tierIndex] : getVisibleLakeTierIndexes(state)
   if (visibleTiers.length === 0) return null
 
@@ -382,7 +387,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
         return (
           <LakeBlock aria-label={showHeader ? `${label} lake` : undefined} key={tierIndex}>
             {showHeader && (
-              <LakeHeader>
+              <LakeHeader $flush={headerOnly}>
                 <LakeHeaderRow>
                   <LakeTitle title={`${label} Data Lake — funds ${boosterLabel}`}>
                     <LakeTitleSymbol aria-hidden="true">{label}</LakeTitleSymbol>
@@ -572,7 +577,8 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
   if (bare) {
     return (
       <>
-        {showHeader && <BareDivider />}
+        {/* A header-only render's container draws its own top border (see ByteFoundryPage's PoolLakeHeader). */}
+        {showHeader && !headerOnly && <BareDivider />}
         {list}
       </>
     )
