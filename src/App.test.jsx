@@ -4577,6 +4577,19 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.getAllByLabelText(/^compute boost$/i)).toHaveLength(1)
   })
 
+  test('the active status names the covered tiers, and the active tier stays visible (with presets) after the boost spends its last unit', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeCores: 1, computeNodes: 0,
+      computeBoostType: 'burst', computeBoostTierIndex: 2, computeBoostStacks: 1, computeBoostRemainingSeconds: 30,
+    })
+    render(<App />)
+    openBoosters()
+
+    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(/ on KB–MB · /)
+    expect(within(screen.getByLabelText(/^nodes tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+  })
+
   test('only the selected tier shows the presets; selecting another moves them, re-clicking collapses them', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true, computeCores: 1, computeNodes: 2 })
     render(<App />)

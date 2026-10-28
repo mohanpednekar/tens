@@ -91,8 +91,8 @@ const TierHeaderRow = styled.div`
 `
 
 // The symbol/label/slots portion of row 1 is its own clickable button — issue #326: clicking any
-// tier row arms the 3 Compute Boost presets above (the effects section renders before the tier
-// rows — see ComputePage below), scaled to that tier's own power (duration stays at the base
+// tier row selects it, showing the 3 Compute Boost presets inside that tier's own block (one tier
+// at a time — see ComputePage below), scaled to that tier's own power (duration stays at the base
 // preset — issue #363). Kept as a SEPARATE element from the auto-claim IconButton that sometimes
 // shares this row (Cores only) rather than making the whole TierHeaderRow itself a button, since
 // nesting a <button> (auto-claim) inside another <button> is invalid HTML.
@@ -491,10 +491,9 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // ByteFoundryPage/StoragePage) currently outranks it. The ten-tier merge chain (Core → Node →
 // Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer, see
 // issues #280/#321) lives here too, alongside Boost — one page for everything Compute, rather
-// than a second dedicated screen. Render order top to bottom: the active-boost status (if any),
-// then the Boost effects section itself (armed-tier status line, 3 preset buttons, Stack/Reclaim
-// row — issue #326), THEN the tier rows below it, since clicking a tier row is what arms the
-// effects section above it. Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1
+// than a second dedicated screen. Render order top to bottom: a card with the current boost
+// effect, Stack/Reclaim/Forfeit and Auto-Boost preference, THEN the tier rows — the one selected
+// tier shows the armed status line + 3 preset buttons inside its own block. Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1
 // is COMPUTE_ENTITY_CAP (10) normal slots plus the tier's name/symbol; row 2 is, pre-unlock, an
 // instant Merge button + an Unlock Auto-merge button, or, post-unlock, the
 // COMPUTE_MERGE_RESERVE_CAP (8) reserve slots themselves — clicking that row is what manually
@@ -745,11 +744,13 @@ const ComputePage = ({ game }) => {
                 spacious || armedTierIndex === tierIndex || merging || canMergeNow || reserveHeld > 0
               )
 
-              // Only unlocked tiers render: the first, anything held/automated/merging, or one whose
-              // predecessor can already feed it (or any higher tier is held).
+              // Only unlocked tiers render: the first, anything held/automated/merging, one whose
+              // predecessor can already feed it (or any higher tier is held), or the selected/active
+              // boost tier — so the presets never vanish after a boost spends that tier's last unit.
               const prevRow = rowIndex > 0 ? ENTITY_ROWS[rowIndex - 1] : null
               const heldAtOrAbove = ENTITY_ROWS.some((r, i) => i >= rowIndex && (intro[r.countField] ?? 0) > 0)
               const unlocked = rowIndex === 0 || heldAtOrAbove || autoEnabled || merging
+                || armedTierIndex === tierIndex || activeTierIndex === tierIndex
                 || (prevRow && ((intro[prevRow.countField] ?? 0) >= COMPUTE_MERGE_RATIO || intro[prevRow.autoFlagField]))
               if (!unlocked) return null
 
