@@ -5574,12 +5574,34 @@ const fillDataLakeDisks = (state, dataLakes, tierIndex, overflowBits) => {
   let fillBits = (lake.fillBits ?? 0) + overflowBits
   let boostersUnlocked = lake.boostersUnlocked ?? false
 
+  // ⚡ Bolt Optimization: Replace O(N) iterative loop with O(1) mathematical batch calculation
+  // Fixes application freezes when processing massive offline progress by jumping chunk boundaries
   while (openSubSize !== null) {
     const slotSizeBits = unitBits * openSubSize
-    if (fillBits < slotSizeBits) break
-    fillBits -= slotSizeBits
-    depositedUnits += openSubSize
-    boostersUnlocked = true
+    const representable = getDataLakeSlotRepresentableUnits(slotCounts)
+
+    let maxAvailable = 0;
+    if (depositedUnits >= representable) {
+      maxAvailable = capacity - depositedUnits
+    } else {
+       const disks = decomposeDataLakeUnits(Math.min(depositedUnits, representable)).disks
+       maxAvailable = ((slotCounts[openSubSize] ?? 0) - (disks[openSubSize] ?? 0)) * openSubSize
+    }
+
+    const chunkUnits = Math.min(
+      maxAvailable, 
+      Math.floor(fillBits / slotSizeBits) * openSubSize
+    )
+    const slotsToBuy = Math.ceil(chunkUnits / openSubSize)
+    const actualUnitsToBuy = slotsToBuy * openSubSize
+
+    if (slotsToBuy > 0) {
+      fillBits -= slotsToBuy * slotSizeBits
+      depositedUnits += actualUnitsToBuy
+      boostersUnlocked = true
+    } else {
+      break
+    }
     openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
   }
   // Fully maxed at this level — whatever's left in fillBits has nowhere to go; hand it back as
