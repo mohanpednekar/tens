@@ -895,8 +895,6 @@ Error generating stack: `+e.message+`
   line-height: inherit;
   cursor: pointer;
   pointer-events: auto;
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
   border-radius: ${e=>e.theme.radius.sm};
 
   &:focus-visible {
@@ -1789,10 +1787,6 @@ Error generating stack: `+e.message+`
 `,$g=R.span`
   cursor: pointer;
   flex-shrink: 0;
-
-  &:hover {
-    text-decoration: underline;
-  }
 
   &:focus-visible {
     outline: 2px solid ${e=>e.theme.color.accent};
