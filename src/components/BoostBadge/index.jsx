@@ -18,6 +18,10 @@ export const isDataStreamBoosted = intro => isBoostActive(intro)
 export const isFactoryTierBoosted = (intro, tierIndex) =>
   isBoostActive(intro) && tierIndex < getComputeBoostCoveredTierCount(intro)
 
+// 1-based Storage pool index (pool N ↔ Factory tier N).
+export const isPoolBoosted = (intro, poolIndex) =>
+  isBoostActive(intro) && poolIndex <= getComputeBoostCoveredTierCount(intro)
+
 // Full sentence describing the active boost, or null while none is active.
 export const getComputeBoostDescription = intro => {
   if (!isBoostActive(intro)) return null

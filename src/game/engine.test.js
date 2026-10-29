@@ -116,6 +116,7 @@ import {
   getAutomationUnlockCost,
   buyAutoOverclock,
   getComputeBoostCoveredTierCount,
+  getComputeBoostPoolMultiplier,
   getComputeBoostMultiplier,
   getComputeBoostTierDurationSeconds,
   getComputeBoostTierMultiplier,
@@ -5532,6 +5533,24 @@ describe('getComputeBoostTierMultiplier / getComputeBoostTierDurationSeconds', (
     expect(getComputeBoostTierMultiplier('burst', 0)).toBe(0)
     expect(getComputeBoostTierMultiplier('burst', 11)).toBe(0)
     expect(getComputeBoostTierDurationSeconds('burst', 0)).toBe(0)
+  })
+})
+
+describe('getComputeBoostPoolMultiplier', () => {
+  it('gives covered pools +200% / +50% / +10% (not the production multiplier) and others ×1', () => {
+    expect(getComputeBoostPoolMultiplier({ computeBoostType: 'burst', computeBoostTierIndex: 2 }, 1)).toBe(3)
+    expect(getComputeBoostPoolMultiplier({ computeBoostType: 'burst', computeBoostTierIndex: 2 }, 2)).toBe(3)
+    expect(getComputeBoostPoolMultiplier({ computeBoostType: 'burst', computeBoostTierIndex: 2 }, 3)).toBe(1)
+    expect(getComputeBoostPoolMultiplier({ computeBoostType: 'standard', computeBoostTierIndex: 1 }, 1)).toBeCloseTo(1.5)
+    expect(getComputeBoostPoolMultiplier({ computeBoostType: 'sustain', computeBoostTierIndex: 1 }, 1)).toBeCloseTo(1.1)
+    expect(getComputeBoostPoolMultiplier({ computeBoostType: null }, 1)).toBe(1)
+  })
+
+  it('scales a covered pool\'s real buffer-fill multiplier but not an uncovered one\'s', () => {
+    const base = createInitialGameState()
+    const boosted = { ...base, intro: { ...base.intro, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 60 } }
+    expect(getPoolEffectMultiplier(boosted, 1)).toBeCloseTo(getPoolEffectMultiplier(base, 1) * 3)
+    expect(getPoolEffectMultiplier(boosted, 2)).toBeCloseTo(getPoolEffectMultiplier(base, 2))
   })
 })
 

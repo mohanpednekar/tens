@@ -1,4 +1,4 @@
-import { boostGlow, isDataStreamBoosted } from 'components/BoostBadge'
+import { boostGlow, isDataStreamBoosted, isPoolBoosted } from 'components/BoostBadge'
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import { COST_ICON } from 'components/icons'
 import DiskArrayRow from 'components/DiskArrayRow'
@@ -7,7 +7,7 @@ import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
-import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getFillMultiplierPercent, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getFillMultiplierPercent, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
@@ -302,6 +302,7 @@ const PoolCard = styled(StatCard)`
   padding: 0;
   overflow: hidden;
   ${cardEdge}
+  ${props => props.$boosted && boostGlow}
 `
 
 // The lake's title/action row, shown on a collapsed pool card (an expanded one renders the full lake).
@@ -1259,7 +1260,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const isExpanded = visibleExpandedPool === poolIndex
         const poolSymbol = TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`
         const formatPoolRate = bits => `${formatSpeedText(formatDiskSize(bits))}/s`
-        const poolSpeedText = formatPoolRate(poolFillRate * poolMultiplierPercent / 100)
+        const poolSpeedText = formatPoolRate(poolFillRate * poolMultiplierPercent / 100 * getComputeBoostPoolMultiplier(intro, poolIndex))
         const speedDetailsOpen = speedDetailsKey === `pool-${poolIndex}`
         let poolSpeedDetailRows = null
         const poolBandwidth = getStoragePoolBandwidth(state, poolIndex)
@@ -1284,7 +1285,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           ]
         }
         return (
-          <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
+          <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`} $boosted={isPoolBoosted(intro, poolIndex)}>
             {/* One tile: a stretched PoolTapButton (tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and
                 game/layers) sits behind the readouts, and the "<symbol> Pool" title is its own
                 sibling PoolTitleToggle button (expand/collapse) — never nested in the tap button. */}

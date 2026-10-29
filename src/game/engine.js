@@ -2787,7 +2787,10 @@ export const getPoolTapBonusPercent = (state, poolIndex) =>
 export const getPoolMultiplierPercent = (state, poolIndex) =>
   Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getPoolBaseMultiplierPercent(state, poolIndex) + getPoolTapBonusPercent(state, poolIndex))
 
-export const getPoolEffectMultiplier = (state, poolIndex) => getPoolMultiplierPercent(state, poolIndex) / 100
+// The boost's pool bonus (getComputeBoostPoolMultiplier) scales the real buffer fill on top of the
+// capped fill-based percent; the displayed percent/Bandwidth stay unboosted.
+export const getPoolEffectMultiplier = (state, poolIndex) =>
+  (getPoolMultiplierPercent(state, poolIndex) / 100) * getComputeBoostPoolMultiplier(state.intro, poolIndex)
 
 // The raw fill rate (bits/s, before the fill-based multiplier) actually available to one pool's
 // buffer: its Bandwidth cap, limited by whatever Data Stream production earlier pools haven't
@@ -6142,6 +6145,16 @@ export const getComputeBoostCoveredTierCount = intro => {
   if (!intro?.computeBoostType) return 0
   const tierIndex = intro.computeBoostTierIndex ?? 1
   return isValidComputeBoostTier(tierIndex) ? tierIndex : 0
+}
+
+// Fill-speed multiplier an active boost gives one Storage pool's buffer (1-based `poolIndex`; pool N
+// ↔ Factory tier N, so the same getComputeBoostCoveredTierCount pools are covered): 1 + the preset's
+// `poolBonusPercent` (+200% / +50% / +10%) instead of its production multiplier; 1 for an
+// uncovered pool or while no boost is active.
+export const getComputeBoostPoolMultiplier = (intro, poolIndex) => {
+  if (!intro?.computeBoostType || poolIndex > getComputeBoostCoveredTierCount(intro)) return 1
+  const bonus = COMPUTE_BOOST_PRESETS[intro.computeBoostType]?.poolBonusPercent ?? 0
+  return 1 + bonus / 100
 }
 
 // Whether boostType can be activated right now FROM tierIndex: a valid preset, a valid tier with
