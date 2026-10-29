@@ -554,13 +554,16 @@ const ComputePage = ({ game }) => {
 
   // A click anywhere outside every tier block deselects, collapsing the presets. Clicks inside a
   // tier block (its select button, presets, merge row) are left to that block's own handlers.
+  // Capture phase + composedPath: decided before React re-renders, so a click that removes its own
+  // target (e.g. Unlock Auto-merge swapping in the auto-merge row) still counts as inside.
   useEffect(() => {
     if (selectedBoostTierIndex === null) return undefined
     const deselectOnOutsideClick = event => {
-      if (!event.target.closest?.('[data-boost-tier]')) setSelectedBoostTierIndex(null)
+      const insideTier = event.composedPath().some(node => node.dataset?.boostTier !== undefined)
+      if (!insideTier) setSelectedBoostTierIndex(null)
     }
-    document.addEventListener('click', deselectOnOutsideClick)
-    return () => document.removeEventListener('click', deselectOnOutsideClick)
+    document.addEventListener('click', deselectOnOutsideClick, true)
+    return () => document.removeEventListener('click', deselectOnOutsideClick, true)
   }, [selectedBoostTierIndex])
 
   const blockedByPriority = isDiskFillAvailable(state) || isProvisionDiskAvailable(state)
