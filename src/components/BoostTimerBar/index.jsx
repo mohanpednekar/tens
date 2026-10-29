@@ -15,23 +15,6 @@ export const COMPUTE_BOOST_DISPLAY = {
   sustain: { icon: '🔋', label: 'Sustain' },
 }
 
-// Compute-ladder tier display, indexed by funding tier (1 = Core).
-const COMPUTE_TIER_DISPLAY = [
-  { label: 'Cores', symbol: '⬡' },
-  { label: 'Nodes', symbol: '🔗' },
-  { label: 'Clusters', symbol: '🧩' },
-  { label: 'Networks', symbol: '🕸️' },
-  { label: 'Grids', symbol: '▦' },
-  { label: 'Fabrics', symbol: '🧵' },
-  { label: 'Clouds', symbol: '☁️' },
-  { label: 'Datacenters', symbol: '🏢' },
-  { label: 'Supercomputers', symbol: '🖥️' },
-  { label: 'Megacomputers', symbol: '👑' },
-]
-
-// Plural tier labels → "spend 1 Core", not "spend 1 Cores".
-export const singularize = label => label.replace(/s$/, '')
-
 // Drops zero-valued trailing units ("10m 0s" → "10m"); countdowns keep formatOfflineDuration as-is.
 export const formatPresetDuration = seconds => formatOfflineDuration(seconds).replace(/ 0[ms]$/, '')
 
@@ -65,18 +48,38 @@ const TimerBar = styled.div`
   min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0.3em 0.5em;
+  justify-content: space-between;
+  gap: ${props => props.theme.space.sm};
+  padding: 0.45em 0.75em;
   border-radius: ${props => props.theme.radius.sm};
   border: 1px solid ${props => props.theme.color.warn};
   background: linear-gradient(
     to right,
-    ${props => props.theme.color.surfaceRaised} ${props => props.$fill}%,
-    transparent ${props => props.$fill}%
+    color-mix(in srgb, ${props => props.theme.color.warn} 28%, transparent) ${props => props.$fill}%,
+    ${props => props.theme.color.surfaceRaised} ${props => props.$fill}%
   );
   color: ${props => props.theme.color.text};
   font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+`
+
+const TimerEffect = styled.span`
+  font-weight: 700;
+  white-space: nowrap;
+`
+
+const TimerTargets = styled.span`
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
   text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const TimerRemaining = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  white-space: nowrap;
 `
 
 const BoostTimerBar = ({ state, actions }) => {
@@ -84,13 +87,11 @@ const BoostTimerBar = ({ state, actions }) => {
   const activeType = intro.computeBoostType
   if (!activeType || !COMPUTE_BOOST_PRESETS[activeType]) return null
   const activeTierIndex = intro.computeBoostTierIndex ?? 1
-  const activeRow = COMPUTE_TIER_DISPLAY[activeTierIndex - 1]
   const activeDisplay = COMPUTE_BOOST_DISPLAY[activeType] ?? { icon: '⚡', label: activeType }
   const activeMultiplier = getComputeBoostTierMultiplier(activeType, activeTierIndex)
   const remaining = intro.computeBoostRemainingSeconds ?? 0
   const totalSeconds = (intro.computeBoostStacks ?? 1) * getComputeBoostTierDurationSeconds(activeType, activeTierIndex)
   const fillPercent = totalSeconds > 0 ? Math.min(100, (remaining / totalSeconds) * 100) : 0
-  const activeTokenLabel = singularize(activeRow?.label ?? 'Core')
   return (
     <BoostTimerRow role="group" aria-label="active boost controls">
       {canReclaimComputeBoost(state)
@@ -98,7 +99,7 @@ const BoostTimerBar = ({ state, actions }) => {
           <TimerSideButton
             aria-label="pop one stack of the active compute boost"
             onClick={actions.reclaimComputeBoost}
-            title={`Pop: refund the most recent unused stack (1 ${activeTokenLabel} and its time)`}
+            title={`Pop: refund the most recent unused stack`}
             type="button"
             variant="neutral"
           >
@@ -120,18 +121,23 @@ const BoostTimerBar = ({ state, actions }) => {
             <ButtonContent>✕</ButtonContent>
           </TimerSideButton>
           )}
-      <TimerBar aria-label="active compute boost" $fill={fillPercent}>
-        <span
-          title={`${activeDisplay.label} (${activeRow?.label ?? ''}) active: ×${activeMultiplier} production on ${describeCoveredTiers(activeTierIndex, 'name')}, ${formatOfflineDuration(remaining)} left, ${intro.computeBoostStacks}x stacked`}
-        >
-          {`${activeDisplay.icon} ${activeDisplay.label} ×${activeMultiplier} on ${describeCoveredTiers(activeTierIndex)} · ${activeRow?.symbol ?? ''} · ${formatOfflineDuration(remaining)} left${intro.computeBoostStacks > 1 ? ` · ${intro.computeBoostStacks} stacked` : ''}`}
-        </span>
+      <TimerBar
+        aria-label="active compute boost"
+        $fill={fillPercent}
+        title={`${activeDisplay.label} boost active: ×${activeMultiplier} production on ${describeCoveredTiers(activeTierIndex, 'name')}, ${formatOfflineDuration(remaining)} left, ${intro.computeBoostStacks ?? 1}x stacked`}
+      >
+        <TimerEffect>{`${activeDisplay.icon} ×${activeMultiplier}`}</TimerEffect>
+        <TimerTargets>{`Boosting ${describeCoveredTiers(activeTierIndex)}`}</TimerTargets>
+        <TimerRemaining>
+          {formatOfflineDuration(remaining)}
+          {intro.computeBoostStacks > 1 ? ` · ${intro.computeBoostStacks}x` : ''}
+        </TimerRemaining>
       </TimerBar>
       <TimerSideButton
         aria-label="stack the active compute boost"
         disabled={!isStackComputeBoostTurnAvailable(state)}
         onClick={actions.stackComputeBoost}
-        title={`Stack: spend 1 more ${activeTokenLabel} to add another ${formatPresetDuration(getComputeBoostTierDurationSeconds(activeType, activeTierIndex))} — up to ${COMPUTE_BOOST_MAX_STACKS}x`}
+        title={`Stack: add another ${formatPresetDuration(getComputeBoostTierDurationSeconds(activeType, activeTierIndex))} — up to ${COMPUTE_BOOST_MAX_STACKS}x`}
         type="button"
         variant="prestige"
       >

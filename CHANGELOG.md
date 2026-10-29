@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Factory tier rows show the Compute Boost badge next to the tier name instead of at the far right beside production.
-- The Byte Factory's active-boost status now uses the same timer bar (with Pop/Forfeit and Stack) as the Boosters screen, via a shared `BoostTimerBar` component.
+- The Byte Factory's active-boost status now uses the same timer bar (with Pop/Forfeit and Stack) as the Boosters screen, via a shared `BoostTimerBar` component. The bar is redesigned (effect · what it boosts · time left) and boost text no longer mentions the always-1 booster spent.
 - **Boosters: timer bar for the active boost.** The separate Stack / Reclaim / Forfeit row is gone. The
   active boost now shows a timer bar with **+** (Stack) on its right and **↩** (Pop, refunds the
   newest unused stack, no confirmation) on its left — replaced by **✕** (Forfeit, confirmed) once no

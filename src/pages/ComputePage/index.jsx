@@ -1,4 +1,4 @@
-import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration, singularize } from 'components/BoostTimerBar'
+import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration } from 'components/BoostTimerBar'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
@@ -532,8 +532,8 @@ const ComputePage = ({ game }) => {
   // in the top card before the merge chain unlocks (Cores armed implicitly, no tier rows yet).
   const boostPresets = armedRow && (
     <>
-      <ArmedStatusText title={`Each boost spends 1 ${singularize(armedRow.label)} and boosts ${describeCoveredTiers(armedTierIndex, 'name')}`}>
-        {`1 ${armedRow.symbol} → ${describeCoveredTiers(armedTierIndex)}`}
+      <ArmedStatusText title={`Boosts ${describeCoveredTiers(armedTierIndex, 'name')}`}>
+        {`Boosts ${describeCoveredTiers(armedTierIndex)}`}
       </ArmedStatusText>
       <BoostRow role="group" aria-label="compute boost">
         {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
@@ -552,7 +552,7 @@ const ComputePage = ({ game }) => {
             ? isStackComputeBoostTurnAvailable(state)
             : isComputeBoostTurnAvailable(state, boostType, armedTierIndex, needsForfeit)
           const blockedTitle = 'Take a higher-priority upgrade first (Disk Fill or Provision Disk)'
-          const spendText = `spend 1 ${singularize(armedRow.label)} for ×${multiplier} production, ${formatPresetDuration(durationSeconds)}`
+          const spendText = `×${multiplier} production, ${formatPresetDuration(durationSeconds)}`
 
           return (
             <CompactButton
@@ -580,7 +580,7 @@ const ComputePage = ({ game }) => {
               }}
               title={
                 sameAsActive
-                  ? (canStackComputeBoost(state) && blockedByPriority ? blockedTitle : `Stack ${nextLabel}: ${spendText} more — up to ${COMPUTE_BOOST_MAX_STACKS}x`)
+                  ? (canStackComputeBoost(state) && blockedByPriority ? blockedTitle : `Stack ${nextLabel}: add ${spendText} — up to ${COMPUTE_BOOST_MAX_STACKS}x`)
                   : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
                     ? blockedTitle
                     : needsForfeit
