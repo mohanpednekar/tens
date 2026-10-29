@@ -519,7 +519,7 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer, see
 // issues #280/#321) lives here too, alongside Boost — one page for everything Compute, rather
 // than a second dedicated screen. Render order top to bottom: a card with the current boost
-// effect, Stack/Reclaim/Forfeit and Auto-Boost preference, THEN the tier rows — the one selected
+// effect, the active boost timer bar (Pop/Forfeit, Stack) and Auto-Boost preference, THEN the tier rows — the one selected
 // tier shows the armed status line + 3 preset buttons inside its own block, below its merge row.
 // Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1 is COMPUTE_ENTITY_CAP (10)
 // normal slots plus the tier's name/symbol; row 2 is, pre-unlock, an instant Merge button + an
@@ -577,7 +577,7 @@ const ComputePage = ({ game }) => {
 
   const blockedByPriority = isDiskFillAvailable(state) || isProvisionDiskAvailable(state)
   const boostActive = Boolean(intro.computeBoostType)
-  // Once a boost is active, its own funding tier is what Stack/Reclaim act on, regardless of which
+  // Once a boost is active, its own funding tier is what Stack/Pop act on, regardless of which
   // row a player clicks next (issue #326 — Stack always extends the currently active boost).
   // `?? 1` defensively falls back to Core for a save from before issue #326 existed.
   const activeTierIndex = boostActive ? (intro.computeBoostTierIndex ?? 1) : null
