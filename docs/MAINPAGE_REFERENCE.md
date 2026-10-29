@@ -519,7 +519,9 @@ live inside the selected tier):
    With no boost active, the card instead shows "No boost running" (plus "· pick a tier ↓" when the
    merge chain is unlocked and nothing is selected).
 2. The Boost presets (`boostPresets`: `ArmedStatusText` + `BoostRow`) render INSIDE the one selected
-   tier block (3) — only one tier shows them at a time; re-clicking the selected tier collapses them.
+   tier block (3), BELOW that tier's merge / auto-merge row — only one tier shows them at a time;
+   re-clicking the selected tier collapses them. The 3 preset buttons share the row equally
+   (`flex: 1 1 0`).
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cores:
    The active/idle status line, Stack/Reclaim/Forfeit row and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Global Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
@@ -617,20 +619,19 @@ live inside the selected tier):
          keeps growing past its primary 10 (via continued Booster purchases or a lower-tier merge),
          up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a merge is actually in flight
          the reserve instead reads as fully committed regardless of the live count (which has by then
-         dropped back toward 10 and may be accumulating the next batch) — clicking the row IS the
-         manual-start trigger ("slots are the button"); while startable it gets an accent border/raised
-         background plus a visible `MergeCue` (`"⬆ 8→1 <output>"`) on its left, so it reads as a
-         button, calling the matching
-         `game.actions.startCompute*Merge` action, enabled once `isCompute*MergeStartAvailable`
-         allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the normal + reserve slots — the
-         SAME, lower threshold as before this row existed, deliberately NOT the stricter
-         `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) the automatic trigger itself now waits for — no merge
-         already in flight, room under the output's effective cap, and a live merge duration > 0 —
-         `isComputeMergeStartAvailableAtBoundary`). While a merge is in
+         dropped back toward 10 and may be accumulating the next batch) — a `MergeCue` on its left always
+         names it ("🤖 Auto-merge", muted), switching to an accent "🤖 ⬆ 8→1 <output>" (plus accent
+         border/raised background) while clicking would INSTANTLY merge 8 → 1 ("slots are the
+         button"), calling the matching `game.actions.startCompute*Merge` action, enabled once
+         `isCompute*MergeStartAvailable` allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the
+         normal + reserve slots and room under the output's effective cap —
+         `isComputeMergeStartAvailableAtBoundary`; not blocked by an in-flight automatic merge).
+         `aria-label`: "instantly merge 8 <input> into 1 <output>, N/8 auto-merge slots filled" when
+         available, "<Tier> auto-merge in progress, <time> left" while an automatic merge runs, else
+         "<Tier> auto-merge slots, N/8 filled". While an automatic merge is in
          flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
          inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
-         live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` banked count. When a start is available, the
-         `title` also names how long the merge will take (`getComputeMergeDurationSeconds`). There is
+         live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` filled count. There is
          no merge-duration upgrade button (removed, #755).
 
      Nothing spends a Megacomputer beyond funding a Boost — see issue #280's "Out of scope".

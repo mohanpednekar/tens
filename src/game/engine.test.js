@@ -5019,11 +5019,11 @@ describe.each([
     expect(after.intro[timerField]).toBe(0)
   })
 
-  it('isStartAvailable requires the auto flag unlocked, no merge already in flight, at least COMPUTE_MERGE_RATIO of the input, and room under COMPUTE_ENTITY_CAP on the output', () => {
+  it('isStartAvailable requires the auto flag unlocked, at least COMPUTE_MERGE_RATIO of the input, and room under COMPUTE_ENTITY_CAP on the output — not blocked by an in-flight auto-merge', () => {
     expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true }))).toBe(true)
     expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO }))).toBe(false) // not unlocked
     expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO - 1, [autoFlagField]: true }))).toBe(false) // below threshold
-    expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [timerField]: durationOf() }))).toBe(false) // already in flight
+    expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [timerField]: durationOf() }))).toBe(true) // auto-merge in flight
     expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [outputField]: COMPUTE_ENTITY_CAP }))).toBe(false) // output capped
   })
 
@@ -5032,12 +5032,12 @@ describe.each([
     expect(start(state)).toBe(state)
   })
 
-  it('start (manual click) fires at the lower COMPUTE_MERGE_RATIO (8) threshold — "the button is enabled only when there are at least 8 tokens available"', () => {
+  it('start (manual click) instantly merges 8 → 1 at the COMPUTE_MERGE_RATIO threshold, with no timer', () => {
     const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true })
     const after = start(state)
     expect(after.intro[inputField]).toBe(0)
-    expect(after.intro[timerField]).toBe(durationOf())
-    expect(after.intro[outputField]).toBe(0)
+    expect(after.intro[timerField] ?? 0).toBe(0)
+    expect(after.intro[outputField]).toBe(1)
   })
 
   it('isUnlockAvailable requires COMPUTE_ENTITY_CAP of the OUTPUT entity held and not already enabled', () => {
@@ -5178,11 +5178,11 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(getComputeMergeDurationSeconds(state, lastBoundary)).toBe(0)
   })
 
-  it('refuses to start a merge while the input tier\'s pool has no Bandwidth', () => {
+  it('a manual (instant) merge does not depend on the input tier\'s pool Bandwidth', () => {
     const state = poolVisible({ autoMergeNodesIntoCluster: true, computeNodes: COMPUTE_MERGE_RATIO })
     expect(getComputeMergeDurationSeconds(state, 1)).toBe(0)
-    expect(isComputeNodesMergeStartAvailable(state)).toBe(false)
-    expect(startComputeNodesMerge(state)).toBe(state)
+    expect(isComputeNodesMergeStartAvailable(state)).toBe(true)
+    expect(startComputeNodesMerge(state).intro.computeClusters).toBe(1)
   })
 
   it('an in-flight timer is clamped down to the live duration on tick (legacy/Bandwidth growth), never lengthened', () => {
@@ -5196,11 +5196,11 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(tickAutoMergeNodesIntoCluster(1)(hidden).intro.computeNodesMergeRemainingSeconds).toBe(5e6 - 1)
   })
 
-  it('a newly started Core→Node merge snapshots the live duration', () => {
-    const state = poolVisible({ autoMergeCoresIntoNode: true, computeCores: COMPUTE_MERGE_RATIO })
+  it('a manual Core→Node merge leaves an in-flight auto-merge timer untouched', () => {
+    const state = poolVisible({ autoMergeCoresIntoNode: true, computeCores: COMPUTE_MERGE_RATIO, computeCoresMergeRemainingSeconds: 42 })
     const after = startComputeCoresMerge(state)
-    expect(after.intro.computeCoresMergeRemainingSeconds).toBe(getComputeMergeDurationSeconds(state, 0))
-    expect(after.intro.computeCoresMergeRemainingSeconds).toBeGreaterThan(0)
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBe(42)
+    expect(after.intro.computeNodes).toBe(1)
   })
 
   it('manual merge fills the output tier\'s reserve once its own auto-merge is unlocked (#740)', () => {
@@ -5214,7 +5214,7 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(mergeComputeCoresIntoNode(full)).toBe(full)
   })
 
-  it('reserve merge starts into, and completes into, the output tier\'s reserve (#740)', () => {
+  it('an instant manual merge on an automated boundary fills the output tier\'s reserve (#740)', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       byteCreated: true,
@@ -5224,11 +5224,9 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
       computeNodes: COMPUTE_ENTITY_CAP,
     })
     expect(isComputeCoresMergeStartAvailable(state)).toBe(true)
-    const started = startComputeCoresMerge(state)
-    expect(started).not.toBe(state)
-    const remaining = started.intro.computeCoresMergeRemainingSeconds
-    const done = tickAutoMergeCoresIntoNode(remaining)(started)
-    expect(done.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP + 1)
+    const merged = startComputeCoresMerge(state)
+    expect(merged.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP + 1)
+    expect(merged.intro.computeCores).toBe(0)
   })
 
   it('completing a reserve merge never lowers an output that grew past its cap mid-merge (#740)', () => {
@@ -5239,14 +5237,14 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(tickAutoMergeCoresIntoNode(1)(state).intro.computeNodes).toBe(COMPUTE_ENTITY_CAP + 5)
   })
 
-  it('manual reserve start is unavailable while the live merge duration is 0 (#740)', () => {
+  it('manual instant merge stays available while the live auto-merge duration is 0', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: 0,
       autoMergeCoresIntoNode: true,
       computeCores: COMPUTE_MERGE_RATIO,
     })
-    expect(isComputeCoresMergeStartAvailable(state)).toBe(false)
-    expect(startComputeCoresMerge(state)).toBe(state)
+    expect(isComputeCoresMergeStartAvailable(state)).toBe(true)
+    expect(startComputeCoresMerge(state).intro.computeNodes).toBe(1)
   })
 
 })

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Boosters: instant manual merge on automated tiers.** Once a tier's auto-merge is unlocked,
+  tapping its auto-merge slots (now labelled "🤖 Auto-merge") merges 8 → 1 instantly instead of
+  starting a timed merge; only the automatic merge at 18 held is still timed. The auto-merge row now
+  sits above the selected tier's Boost presets, and the three preset buttons are equal width.
+
 - **Boosters: presets live on the selected tier.** The three Boost presets now appear inside the
   selected tier's block (one tier at a time) instead of the top card, which now shows the current
   boost effect (including which Factory tiers it covers). Opening Boosters pre-selects the active

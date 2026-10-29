@@ -417,8 +417,9 @@ const InfoPage = () => {
             After unlock: merging uses an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve, alongside the
             input tier's own {COMPUTE_ENTITY_CAP} normal slots ({COMPUTE_ENTITY_AUTO_MERGE_CAP} total
             held). The reserve fills gradually as that tier keeps growing past its normal 10 — via
-            continued Booster purchases or a lower-tier merge — rather than all at once. A merge
-            itself, once started, runs a timed countdown: the time {COMPUTE_MERGE_RATIO} of the
+            continued Booster purchases or a lower-tier merge — rather than all at once. Tapping
+            the auto-merge slots merges {COMPUTE_MERGE_RATIO} → 1 instantly. An automatic merge runs
+            a timed countdown: the time {COMPUTE_MERGE_RATIO} of the
             smallest disks in that tier’s own Storage pool take to fill from their read cache
             (Cores use the KB pool, Nodes the MB pool, and so on). The pool’s larger disks don’t
             count, so the timer never escalates within a pool. A tier’s merges wait until its
@@ -428,9 +429,8 @@ const InfoPage = () => {
           <li>
             Auto-merge starts only once the input tier reaches the FULL extended cap (
             {COMPUTE_ENTITY_AUTO_MERGE_CAP} — the normal slots plus the whole reserve) — a stricter
-            bar than starting a merge manually, which still only needs {COMPUTE_MERGE_RATIO} held
-            across the normal + reserve slots, letting you convert early instead of waiting for
-            automation.
+            bar than merging manually, which only needs {COMPUTE_MERGE_RATIO} held across the
+            normal + reserve slots and is instant.
           </li>
         </ul>
 

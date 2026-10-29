@@ -5861,19 +5861,19 @@ export const mergeComputeSupercomputersIntoMegacomputer = mergeComputeEntities('
 // e.g. enableAutoMergeNodesIntoCluster spends 10 Clusters to flip autoMergeNodesIntoCluster on.
 // Once enabled, the INPUT entity's own effective cap rises from COMPUTE_ENTITY_CAP to
 // COMPUTE_ENTITY_AUTO_MERGE_CAP (18 — see getComputeEntityEffectiveCap/isComputeEntityAutoMergeUnlocked
-// above and layers.js), and merging that boundary — auto or manual alike — transitions entirely to
-// a timed RESERVE pool (see COMPUTE_MERGE_RESERVE_CAP / getComputeMergeDurationSeconds in layers.js
-// / below): starting a merge instantly moves COMPUTE_MERGE_RATIO (8) tokens out of the input
+// above and layers.js), and the AUTOMATIC merge at that boundary uses a timed RESERVE pool (see
+// COMPUTE_MERGE_RESERVE_CAP / getComputeMergeDurationSeconds in layers.js / below), while a manual
+// click on the auto-merge slots stays an INSTANT 8→1 merge (instantComputeMergeAtBoundary): an
+// automatic start moves COMPUTE_MERGE_RATIO (8) tokens out of the input
 // entity, then counts down that boundary's duration (8 normal-disk fills of the input tier's own
 // pool — snapshotted at start, then clamped down (never up) to the live duration each tick) before
 // granting 1 of the output entity (cap-checked) and clearing the timer — at most one merge in
 // flight per boundary at a time. Auto-triggers only once the input reaches the FULL extended cap
-// (18, not just the primary 10) — a stricter bar than a manual start's own COMPUTE_MERGE_RATIO (8),
+// (18, not just the primary 10) — a stricter bar than a manual merge's own COMPUTE_MERGE_RATIO (8),
 // so automation only ever mops up an entity the player has let fill all the way past its primary
-// slots, never preempting a more efficient manual start at 8 (or at any point up to 17).
+// slots, never preempting a manual merge at 8 (or at any point up to 17).
 
-// Shared by both the auto-trigger (threshold COMPUTE_ENTITY_AUTO_MERGE_CAP, 18) and the manual
-// click-to-start action (threshold COMPUTE_MERGE_RATIO, 8) below — a same-reference no-op while
+// The auto-trigger (threshold COMPUTE_ENTITY_AUTO_MERGE_CAP, 18) — a same-reference no-op while
 // auto-merge isn't unlocked for this boundary, a merge is already in flight (timerField > 0), input
 // is below `threshold`, or output is already at its effective cap. Otherwise moves exactly
 // COMPUTE_MERGE_RATIO out of the input entity and starts the timer at `durationSeconds`.
@@ -5990,40 +5990,37 @@ const enableAutoMerge = (outputField, autoFlagField) => state => {
   }
 }
 
-// UI mirror of startComputeMergeReserve's own manual-click gate (threshold COMPUTE_MERGE_RATIO,
-// 8) — whether clicking this boundary's reserve-slot row right now ("the button is enabled only
-// when there are at least 8 tokens available across all the 18 slots" — issue #321) would start a
-// new merge: auto-merge unlocked, no merge already in flight, at least COMPUTE_MERGE_RATIO of the
-// input held, the output has room under its effective cap, and the live duration is positive
-// (startComputeMergeReserve no-ops at 0).
-const isComputeMergeReserveStartAvailable = (state, inputField, outputField, autoFlagField, timerField) =>
+// UI mirror of instantComputeMergeAtBoundary's own gate — whether clicking this boundary's
+// auto-merge slot row right now instantly merges COMPUTE_MERGE_RATIO (8) of the input into 1 of the
+// output: auto-merge unlocked, at least 8 of the input held, and the output has room under its
+// effective cap. Independent of any in-flight timed auto-merge (its own completion is cap-checked).
+const isComputeMergeReserveStartAvailable = (state, inputField, outputField, autoFlagField) =>
   (state.intro?.[autoFlagField] ?? false) &&
-  (state.intro?.[timerField] ?? 0) === 0 &&
   (state.intro?.[inputField] ?? 0) >= COMPUTE_MERGE_RATIO &&
-  (state.intro?.[outputField] ?? 0) < getComputeFieldEffectiveCap(state, outputField) &&
-  getComputeMergeDurationSeconds(state, COMPUTE_BOOST_TIER_FIELDS.indexOf(inputField)) > 0
+  (state.intro?.[outputField] ?? 0) < getComputeFieldEffectiveCap(state, outputField)
 
 // Boundary-index form of the per-boundary isCompute*MergeStartAvailable exports below, so
 // ComputePage can iterate COMPUTE_MERGE_BOUNDARIES without naming all nine.
 export const isComputeMergeStartAvailableAtBoundary = (state, boundaryIndex) => {
   const boundary = COMPUTE_MERGE_BOUNDARIES[boundaryIndex]
   if (!boundary) return false
-  return isComputeMergeReserveStartAvailable(state, boundary.inputField, boundary.outputField, boundary.autoFlagField, boundary.timerField)
+  return isComputeMergeReserveStartAvailable(state, boundary.inputField, boundary.outputField, boundary.autoFlagField)
 }
 
-// Manual start that reads the live duration from state and snapshots it
-// onto the timer field.
-const startComputeMergeReserveAtBoundary = (boundaryIndex, threshold) => state => {
-  const boundary = COMPUTE_MERGE_BOUNDARIES[boundaryIndex]
-  const durationSeconds = getComputeMergeDurationSeconds(state, boundaryIndex)
-  return startComputeMergeReserve(
-    boundary.inputField,
-    boundary.outputField,
-    boundary.autoFlagField,
-    boundary.timerField,
-    durationSeconds,
-    threshold,
-  )(state)
+// Manual merge on an automated boundary: INSTANT — moves COMPUTE_MERGE_RATIO (8) of the input
+// straight into 1 of the output, no timer (only the automatic trigger at the full extended cap
+// runs the timed reserve merge). Same-reference no-op unless isComputeMergeReserveStartAvailable.
+const instantComputeMergeAtBoundary = boundaryIndex => state => {
+  const { inputField, outputField, autoFlagField } = COMPUTE_MERGE_BOUNDARIES[boundaryIndex]
+  if (!isComputeMergeReserveStartAvailable(state, inputField, outputField, autoFlagField)) return state
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      [inputField]: state.intro[inputField] - COMPUTE_MERGE_RATIO,
+      [outputField]: (state.intro?.[outputField] ?? 0) + 1,
+    },
+  }
 }
 
 // One block per tier boundary, lowest first — every export below (tickAutoMerge*/enableAutoMerge*/
@@ -6034,56 +6031,56 @@ const startComputeMergeReserveAtBoundary = (boundaryIndex, threshold) => state =
 export const tickAutoMergeCoresIntoNode = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeCores', 'computeNodes', 'autoMergeCoresIntoNode', 'computeCoresMergeRemainingSeconds', 0)
 export const enableAutoMergeCoresIntoNode = enableAutoMerge('computeNodes', 'autoMergeCoresIntoNode')
 export const isAutoMergeCoresIntoNodeUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeNodes', 'autoMergeCoresIntoNode')
-export const startComputeCoresMerge = startComputeMergeReserveAtBoundary(0, COMPUTE_MERGE_RATIO)
-export const isComputeCoresMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeCores', 'computeNodes', 'autoMergeCoresIntoNode', 'computeCoresMergeRemainingSeconds')
+export const startComputeCoresMerge = instantComputeMergeAtBoundary(0)
+export const isComputeCoresMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeCores', 'computeNodes', 'autoMergeCoresIntoNode')
 
 export const tickAutoMergeNodesIntoCluster = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeNodes', 'computeClusters', 'autoMergeNodesIntoCluster', 'computeNodesMergeRemainingSeconds', 1)
 export const enableAutoMergeNodesIntoCluster = enableAutoMerge('computeClusters', 'autoMergeNodesIntoCluster')
 export const isAutoMergeNodesIntoClusterUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeClusters', 'autoMergeNodesIntoCluster')
-export const startComputeNodesMerge = startComputeMergeReserveAtBoundary(1, COMPUTE_MERGE_RATIO)
-export const isComputeNodesMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeNodes', 'computeClusters', 'autoMergeNodesIntoCluster', 'computeNodesMergeRemainingSeconds')
+export const startComputeNodesMerge = instantComputeMergeAtBoundary(1)
+export const isComputeNodesMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeNodes', 'computeClusters', 'autoMergeNodesIntoCluster')
 
 export const tickAutoMergeClustersIntoNetwork = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeClusters', 'computeNetworks', 'autoMergeClustersIntoNetwork', 'computeClustersMergeRemainingSeconds', 2)
 export const enableAutoMergeClustersIntoNetwork = enableAutoMerge('computeNetworks', 'autoMergeClustersIntoNetwork')
 export const isAutoMergeClustersIntoNetworkUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeNetworks', 'autoMergeClustersIntoNetwork')
-export const startComputeClustersMerge = startComputeMergeReserveAtBoundary(2, COMPUTE_MERGE_RATIO)
-export const isComputeClustersMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeClusters', 'computeNetworks', 'autoMergeClustersIntoNetwork', 'computeClustersMergeRemainingSeconds')
+export const startComputeClustersMerge = instantComputeMergeAtBoundary(2)
+export const isComputeClustersMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeClusters', 'computeNetworks', 'autoMergeClustersIntoNetwork')
 
 export const tickAutoMergeNetworksIntoGrid = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeNetworks', 'computeGrids', 'autoMergeNetworksIntoGrid', 'computeNetworksMergeRemainingSeconds', 3)
 export const enableAutoMergeNetworksIntoGrid = enableAutoMerge('computeGrids', 'autoMergeNetworksIntoGrid')
 export const isAutoMergeNetworksIntoGridUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeGrids', 'autoMergeNetworksIntoGrid')
-export const startComputeNetworksMerge = startComputeMergeReserveAtBoundary(3, COMPUTE_MERGE_RATIO)
-export const isComputeNetworksMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeNetworks', 'computeGrids', 'autoMergeNetworksIntoGrid', 'computeNetworksMergeRemainingSeconds')
+export const startComputeNetworksMerge = instantComputeMergeAtBoundary(3)
+export const isComputeNetworksMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeNetworks', 'computeGrids', 'autoMergeNetworksIntoGrid')
 
 export const tickAutoMergeGridsIntoFabric = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeGrids', 'computeFabrics', 'autoMergeGridsIntoFabric', 'computeGridsMergeRemainingSeconds', 4)
 export const enableAutoMergeGridsIntoFabric = enableAutoMerge('computeFabrics', 'autoMergeGridsIntoFabric')
 export const isAutoMergeGridsIntoFabricUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeFabrics', 'autoMergeGridsIntoFabric')
-export const startComputeGridsMerge = startComputeMergeReserveAtBoundary(4, COMPUTE_MERGE_RATIO)
-export const isComputeGridsMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeGrids', 'computeFabrics', 'autoMergeGridsIntoFabric', 'computeGridsMergeRemainingSeconds')
+export const startComputeGridsMerge = instantComputeMergeAtBoundary(4)
+export const isComputeGridsMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeGrids', 'computeFabrics', 'autoMergeGridsIntoFabric')
 
 export const tickAutoMergeFabricsIntoCloud = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeFabrics', 'computeClouds', 'autoMergeFabricsIntoCloud', 'computeFabricsMergeRemainingSeconds', 5)
 export const enableAutoMergeFabricsIntoCloud = enableAutoMerge('computeClouds', 'autoMergeFabricsIntoCloud')
 export const isAutoMergeFabricsIntoCloudUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeClouds', 'autoMergeFabricsIntoCloud')
-export const startComputeFabricsMerge = startComputeMergeReserveAtBoundary(5, COMPUTE_MERGE_RATIO)
-export const isComputeFabricsMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeFabrics', 'computeClouds', 'autoMergeFabricsIntoCloud', 'computeFabricsMergeRemainingSeconds')
+export const startComputeFabricsMerge = instantComputeMergeAtBoundary(5)
+export const isComputeFabricsMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeFabrics', 'computeClouds', 'autoMergeFabricsIntoCloud')
 
 export const tickAutoMergeCloudsIntoDatacenter = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeClouds', 'computeDatacenters', 'autoMergeCloudsIntoDatacenter', 'computeCloudsMergeRemainingSeconds', 6)
 export const enableAutoMergeCloudsIntoDatacenter = enableAutoMerge('computeDatacenters', 'autoMergeCloudsIntoDatacenter')
 export const isAutoMergeCloudsIntoDatacenterUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeDatacenters', 'autoMergeCloudsIntoDatacenter')
-export const startComputeCloudsMerge = startComputeMergeReserveAtBoundary(6, COMPUTE_MERGE_RATIO)
-export const isComputeCloudsMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeClouds', 'computeDatacenters', 'autoMergeCloudsIntoDatacenter', 'computeCloudsMergeRemainingSeconds')
+export const startComputeCloudsMerge = instantComputeMergeAtBoundary(6)
+export const isComputeCloudsMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeClouds', 'computeDatacenters', 'autoMergeCloudsIntoDatacenter')
 
 export const tickAutoMergeDatacentersIntoSupercomputer = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeDatacenters', 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer', 'computeDatacentersMergeRemainingSeconds', 7)
 export const enableAutoMergeDatacentersIntoSupercomputer = enableAutoMerge('computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer')
 export const isAutoMergeDatacentersIntoSupercomputerUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer')
-export const startComputeDatacentersMerge = startComputeMergeReserveAtBoundary(7, COMPUTE_MERGE_RATIO)
-export const isComputeDatacentersMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeDatacenters', 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer', 'computeDatacentersMergeRemainingSeconds')
+export const startComputeDatacentersMerge = instantComputeMergeAtBoundary(7)
+export const isComputeDatacentersMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeDatacenters', 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer')
 
 export const tickAutoMergeSupercomputersIntoMegacomputer = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeSupercomputers', 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer', 'computeSupercomputersMergeRemainingSeconds', 8)
 export const enableAutoMergeSupercomputersIntoMegacomputer = enableAutoMerge('computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
 export const isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
-export const startComputeSupercomputersMerge = startComputeMergeReserveAtBoundary(8, COMPUTE_MERGE_RATIO)
-export const isComputeSupercomputersMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeSupercomputers', 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer', 'computeSupercomputersMergeRemainingSeconds')
+export const startComputeSupercomputersMerge = instantComputeMergeAtBoundary(8)
+export const isComputeSupercomputersMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeSupercomputers', 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
 
 // Every tickAutoMerge* above, lowest tier first — tickGame reduces state through this array,
 // each called with the tick's own elapsedSeconds, in order so a single tick can cascade both

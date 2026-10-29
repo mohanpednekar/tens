@@ -1,5 +1,5 @@
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
-import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeMergeDurationSeconds, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
+import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, TIER_DEFINITIONS } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
@@ -161,7 +161,7 @@ const NormalSlot = styled.span`
 `
 
 // Row 2: pre-unlock, an instant Merge button + an Unlock Auto-merge button; post-unlock, the 8
-// reserve slots themselves, clickable as the manual-start trigger — "2nd row has merge button and
+// auto-merge slots themselves, clickable as an instant manual merge — "2nd row has merge button and
 // unlock automerge button (in place of the reserved slots before unlocking them)" (issue #321).
 // The post-unlock ReserveSlotsRow branch stretches itself via flex: 1 1 auto and right-aligns its
 // own slots internally, filling the row exactly like MainPage's own tier-row Buy/Upgrade pair;
@@ -235,14 +235,15 @@ const ReserveSlot = styled.span`
   background: ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
 `
 
-// Visible "⬆ 8→1 <output>" cue at the row's left edge while a manual merge can start, so the
-// reserve row reads as a Merge button rather than a passive status strip.
+// Left-edge label naming the row as auto-merge slots ("🤖 Auto-merge"), switching to an accent
+// "🤖 ⬆ 8→1 <output>" while an instant manual merge is available, so the row reads as a button.
 const MergeCue = styled.span`
   flex: 0 0 auto;
   margin-right: auto;
   font-size: 0.78em;
   font-weight: 600;
-  color: ${props => props.theme.color.accent};
+  white-space: nowrap;
+  color: ${props => (props.$active ? props.theme.color.accent : props.theme.color.textMuted)};
 `
 
 const MergeCountdown = styled.span`
@@ -272,7 +273,7 @@ const BoostRow = styled.div`
   width: 100%;
 
   > button {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-width: 0;
   }
 `
@@ -510,17 +511,13 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // issues #280/#321) lives here too, alongside Boost — one page for everything Compute, rather
 // than a second dedicated screen. Render order top to bottom: a card with the current boost
 // effect, Stack/Reclaim/Forfeit and Auto-Boost preference, THEN the tier rows — the one selected
-// tier shows the armed status line + 3 preset buttons inside its own block. Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1
-// is COMPUTE_ENTITY_CAP (10) normal slots plus the tier's name/symbol; row 2 is, pre-unlock, an
-// instant Merge button + an Unlock Auto-merge button, or, post-unlock, the
-// COMPUTE_MERGE_RESERVE_CAP (8) reserve slots themselves — clicking that row is what manually
-// starts a new reserve merge once isCompute*MergeStartAvailable allows it ("the button is
-// enabled only when there are at least 8 tokens available across all the 18 slots"). Merging
-// only ever fires automatically once the player has separately unlocked auto-merge for that
-// specific boundary; either way, once unlocked, a start (auto or manual) commits
-// COMPUTE_MERGE_RATIO (8) tokens to the reserve and counts down that boundary's live duration
-// (8 fills of the input tier's own pool's smallest disk — see getComputeMergeDurationSeconds)
-// before granting 1 of the output entity.
+// tier shows the armed status line + 3 preset buttons inside its own block, below its merge row.
+// Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1 is COMPUTE_ENTITY_CAP (10)
+// normal slots plus the tier's name/symbol; row 2 is, pre-unlock, an instant Merge button + an
+// Unlock Auto-merge button, or, post-unlock, the "🤖 Auto-merge" row of COMPUTE_MERGE_RESERVE_CAP
+// (8) auto-merge slots — clicking it instantly merges 8 → 1 whenever isCompute*MergeStartAvailable
+// allows it. Only the automatic merge (at the full extended cap) commits 8 tokens to the reserve
+// and counts down that boundary's live duration (see getComputeMergeDurationSeconds in the engine).
 // "Compute" names the page/feature only — individual entities drop the word (Core, Node,
 // Cluster, … not "Compute Core"/"Compute Node"/…). The merge section itself only renders once
 // `intro.computeMergePageUnlocked` — the page reveals as soon as Compute is unlocked
@@ -796,35 +793,35 @@ const ComputePage = ({ game }) => {
                     </TierSelectButton>
                   </TierHeaderRow>
 
-                  {armedTierIndex === tierIndex && boostPresets}
-
                   {showDetail && (
                   <TierMergeRow $spacious={spacious}>
                     {hasMergeRow && (
                       autoEnabled ? (
                         <ReserveSlotsRow
                           aria-label={
-                            merging
-                              ? `${row.label} reserve merge in progress, ${formatOfflineDuration(remainingSeconds)} left`
-                              : `start merging ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
+                            startAvailable
+                              ? `instantly merge ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} auto-merge slots filled`
+                              : merging
+                                ? `${row.label} auto-merge in progress, ${formatOfflineDuration(remainingSeconds)} left`
+                                : `${row.label} auto-merge slots, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
                           }
                           disabled={!startAvailable}
                           onClick={startAvailable ? () => actions[row.startAction]() : undefined}
                           $clickable={startAvailable}
                           title={
-                            merging
-                              ? `Merging: ${formatOfflineDuration(remainingSeconds)} left`
-                              : startAvailable
-                                ? `Merge: move ${COMPUTE_MERGE_RATIO} ${row.label} into the reserve and start a ${formatOfflineDuration(getComputeMergeDurationSeconds(state, rowIndex))} merge into 1 ${row.mergeOutputLabel}`
+                            startAvailable
+                              ? `Merge now: instantly turn ${COMPUTE_MERGE_RATIO} ${row.label} into 1 ${row.mergeOutputLabel}. Auto-merge slots fill past ${COMPUTE_ENTITY_CAP} and merge on their own when all ${COMPUTE_MERGE_RESERVE_CAP} are full`
+                              : merging
+                                ? `Auto-merging: ${formatOfflineDuration(remainingSeconds)} left`
                                 : (intro[row.mergeOutputField] ?? 0) >= outputCap
                                   ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
-                                  : !(getComputeMergeDurationSeconds(state, rowIndex) > 0)
-                                    ? `Merges wait until this tier's Storage pool is visible (grow Data Stream Capacity — its disks set the merge time)`
-                                    : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots — ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
+                                  : `Auto-merge slots: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — they merge on their own when full; tap to merge instantly once you hold ${COMPUTE_MERGE_RATIO} ${row.label}`
                           }
                           type="button"
                         >
-                          {startAvailable && <MergeCue aria-hidden="true">{`⬆ ${COMPUTE_MERGE_RATIO}→1 ${row.mergeOutputLabel}`}</MergeCue>}
+                          <MergeCue aria-hidden="true" $active={startAvailable}>
+                            {startAvailable ? `🤖 ⬆ ${COMPUTE_MERGE_RATIO}→1 ${row.mergeOutputLabel}` : '🤖 Auto-merge'}
+                          </MergeCue>
                           {merging && <MergeCountdown>{formatOfflineDuration(remainingSeconds)}</MergeCountdown>}
                           {Array.from({ length: COMPUTE_MERGE_RESERVE_CAP }, (_, index) => (
                             <ReserveSlot key={index} $filled={index < reserveHeld} $merging={merging} aria-hidden="true" />
@@ -864,6 +861,8 @@ const ComputePage = ({ game }) => {
                     )}
                   </TierMergeRow>
                   )}
+
+                  {armedTierIndex === tierIndex && boostPresets}
                 </TierBlock>
               )
             })}

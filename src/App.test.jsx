@@ -4721,7 +4721,7 @@ describe('ComputePage merge chain', () => {
       render(<App />)
       openBoosters()
 
-      expect(screen.getByRole('button', { name: /nodes reserve merge in progress/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /nodes auto-merge in progress/i })).toBeInTheDocument()
     })
 
     test('the selected tier is marked via aria-pressed and a single tier is armed at a time', () => {
@@ -4784,7 +4784,7 @@ describe('ComputePage merge chain', () => {
     expect(screen.queryByRole('button', { name: /^merge 8 cores into 1 node$/i })).not.toBeInTheDocument()
   })
 
-  test('once auto-merge is unlocked for Cores into Nodes, the clickable reserve-slot row starts a timed merge', () => {
+  test('once auto-merge is unlocked for Cores into Nodes, clicking the auto-merge slot row merges 8 → 1 instantly', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 8, autoMergeCoresIntoNode: true,
@@ -4792,11 +4792,12 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /start merging 8 cores into 1 node/i }))
+    fireEvent.click(screen.getByRole('button', { name: /instantly merge 8 cores into 1 node/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeCores).toBe(0)
-    expect(saved.intro.computeCoresMergeRemainingSeconds).toBeGreaterThan(0)
+    expect(saved.intro.computeNodes).toBe(1)
+    expect(saved.intro.computeCoresMergeRemainingSeconds ?? 0).toBe(0)
   })
 
   test('a merge button stays disabled once the output entity is already at COMPUTE_ENTITY_CAP', () => {
@@ -4932,6 +4933,20 @@ describe('Compute auto-merge automation', () => {
     vi.useRealTimers()
   })
 
+  test('on a selected automated tier, the auto-merge slot row renders above the Boost presets', () => {
+    seedIntroState({
+      bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeCores: 6, autoMergeCoresIntoNode: true,
+    })
+    render(<App />)
+    openBoosters()
+
+    fireEvent.click(screen.getByRole('button', { name: /select cores to fund a compute boost/i }))
+    const autoRow = screen.getByRole('button', { name: /^cores auto-merge slots/i })
+    const presets = within(screen.getByLabelText(/^cores tier$/i)).getByLabelText(/^compute boost$/i)
+    expect(autoRow.compareDocumentPosition(presets) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   test('once auto-merge is enabled for a tier, the old instant Merge button is replaced by the clickable reserve-slot row itself (issue #321 — "slots are the button")', () => {
     seedIntroState({
       bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
@@ -4940,10 +4955,10 @@ describe('Compute auto-merge automation', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /^merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /instantly merge 8 nodes into 1 cluster/i })).toBeEnabled()
     // A visible merge cue marks the row as clickable while 8 are available.
-    expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toHaveTextContent('⬆ 8→1 Cluster')
+    expect(screen.getByRole('button', { name: /instantly merge 8 nodes into 1 cluster/i })).toHaveTextContent('🤖 ⬆ 8→1 Cluster')
   })
 
   test('the reserve-slot row shows no merge cue below 8 of the input entity', () => {
@@ -4955,8 +4970,9 @@ describe('Compute auto-merge automation', () => {
     openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
-    const row = screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })
+    const row = screen.getByRole('button', { name: /^nodes auto-merge slots/i })
     expect(row).toBeDisabled()
+    expect(row).toHaveTextContent('🤖 Auto-merge')
     expect(row).not.toHaveTextContent('⬆')
   })
 
@@ -4981,7 +4997,7 @@ describe('Compute auto-merge automation', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /3\/8 banked toward the next automatic merge/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /3\/8 auto-merge slots filled/i })).toBeInTheDocument()
   })
 
 })
