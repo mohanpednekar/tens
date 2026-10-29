@@ -520,7 +520,8 @@ live inside the selected tier):
    merge chain is unlocked and nothing is selected).
 2. The Boost presets (`boostPresets`: `ArmedStatusText` + `BoostRow`) render INSIDE the one selected
    tier block (3), BELOW that tier's merge / auto-merge row — only one tier shows them at a time;
-   re-clicking the selected tier collapses them. The 3 preset buttons share the row equally
+   re-clicking the selected tier, or clicking anywhere outside every tier block (`data-boost-tier`;
+   a document click listener while a tier is selected), collapses them. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cores:
    The active/idle status line, Stack/Reclaim/Forfeit row and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Global Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked

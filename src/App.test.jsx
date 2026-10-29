@@ -4558,6 +4558,21 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.queryByText(/held/)).not.toBeInTheDocument()
   })
 
+  test('clicking outside every tier block deselects the boost tier; clicks inside keep it', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true, computeCores: 1, computeNodes: 2 })
+    render(<App />)
+    openBoosters()
+
+    const cores = screen.getByRole('button', { name: /select cores to fund a compute boost/i })
+    fireEvent.click(cores)
+    fireEvent.click(within(screen.getByLabelText(/^cores tier$/i)).getByText('1 ⬡ → KB'))
+    expect(cores).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(screen.getByRole('heading', { level: 1, name: /boosters/i }))
+    expect(cores).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
+  })
+
   test('preset buttons drop zero-valued trailing duration units', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1 })
     render(<App />)

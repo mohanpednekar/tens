@@ -1,7 +1,7 @@
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, TIER_DEFINITIONS } from 'game/layers'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -552,6 +552,17 @@ const ComputePage = ({ game }) => {
     () => (intro.computeBoostType ? (intro.computeBoostTierIndex ?? 1) : null),
   )
 
+  // A click anywhere outside every tier block deselects, collapsing the presets. Clicks inside a
+  // tier block (its select button, presets, merge row) are left to that block's own handlers.
+  useEffect(() => {
+    if (selectedBoostTierIndex === null) return undefined
+    const deselectOnOutsideClick = event => {
+      if (!event.target.closest?.('[data-boost-tier]')) setSelectedBoostTierIndex(null)
+    }
+    document.addEventListener('click', deselectOnOutsideClick)
+    return () => document.removeEventListener('click', deselectOnOutsideClick)
+  }, [selectedBoostTierIndex])
+
   const blockedByPriority = isDiskFillAvailable(state) || isProvisionDiskAvailable(state)
   const boostActive = Boolean(intro.computeBoostType)
   // Once a boost is active, its own funding tier is what Stack/Reclaim act on, regardless of which
@@ -614,8 +625,8 @@ const ComputePage = ({ game }) => {
                     : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
                       ? 'Take a higher-priority upgrade first (Disk Fill or Provision Disk)'
                       : needsForfeit
-                        ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow.label)} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)} — asks for confirmation`
-                        : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow.label)} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`
+                        ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow.label)} for ×${multiplier} production, ${formatPresetDuration(durationSeconds)} — asks for confirmation`
+                        : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow.label)} for ×${multiplier} production, ${formatPresetDuration(durationSeconds)}`
               }
               type="button"
               variant="prestige"
@@ -772,7 +783,7 @@ const ComputePage = ({ game }) => {
               if (!unlocked) return null
 
               return (
-                <TierBlock key={row.key} aria-label={`${row.label} tier`} $selected={armedTierIndex === tierIndex} $spacious={spacious}>
+                <TierBlock key={row.key} data-boost-tier aria-label={`${row.label} tier`} $selected={armedTierIndex === tierIndex} $spacious={spacious}>
                   <TierHeaderRow $spacious={spacious}>
                     <TierSelectButton
                       type="button"

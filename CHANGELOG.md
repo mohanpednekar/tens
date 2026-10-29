@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   sits above the selected tier's Boost presets, and the three preset buttons are equal width. The
   redundant "· N held" count was dropped from the preset line (the slot dots already show it), and
   preset durations drop zero units ("10m", "1h", "10h" instead of "10m 0s", "1h 0m", "10h 0m").
+  Clicking anywhere outside the tier rows deselects the selected boost tier.
 
 - **Boosters: presets live on the selected tier.** The three Boost presets now appear inside the
   selected tier's block (one tier at a time) instead of the top card, which now shows the current
