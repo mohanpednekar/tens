@@ -4407,20 +4407,19 @@ describe('Byte Foundry Compute Boost', () => {
     )
   })
 
-  test('an active boost marks the Data Stream and only its covered Factory tiers as boosted', () => {
+  test('an active boost shows no per-element badge; the timer bar names what is boosted', () => {
     seedIntroState(
       { bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, mainGameUnlocked: true, computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 600 },
       { owned: { tier01: 1, tier02: 1 }, purchased: { tier01: 1, tier02: 1 } },
     )
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /^open byte foundry$/i }))
-    expect(within(screen.getByLabelText('Data Stream')).getByRole('img', { name: /Boosted ×5 production by the Standard Compute Boost/ })).toHaveTextContent('×5')
-    const tapButton = screen.getByRole('button', { name: 'tap to generate a bit' })
-    expect(tapButton).toHaveAccessibleDescription(/Boosted ×5 production/)
+    // The glow is the only marker — no per-element badge.
+    expect(screen.queryByRole('img', { name: /Boosted/ })).toBeNull()
 
     openFactorySync()
-    expect(within(screen.getByLabelText('Kilobytes layer')).getByRole('img', { name: /Boosted ×5/ })).toBeInTheDocument()
-    expect(within(screen.getByLabelText('Megabytes layer')).queryByRole('img', { name: /Boosted/ })).toBeNull()
+    expect(screen.queryByRole('img', { name: /Boosted/ })).toBeNull()
+    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent('Boosting KB')
   })
 
   test('the same preset becomes a Stack button while active; other presets offer forfeit-replace with confirmation', () => {

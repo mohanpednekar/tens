@@ -454,8 +454,8 @@ src/
                                (incl. the unused omitted-`tierIndex` mode): `docs/COMPONENTS_REFERENCE.md`;
                                mechanic: "Economy model"
     icons.js                ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Data Lake Booster, Upgrade Data Stream,
-                               Provision Disk status line; `BOOST_ICON` 🌟 marks Compute-Boosted elements)
-    BoostBadge/index.jsx    ← Compute-Boosted marker (🌟×N badge, description in title/aria-label) +
+                               Provision Disk status line)
+    BoostBadge/index.jsx    ← Compute-Boosted glow helpers —
                                `boostGlow` card css + `isDataStreamBoosted`/`isFactoryTierBoosted`;
                                used by ByteFoundryPage's Data Stream and MainPage tier rows.
                                Contract: `docs/COMPONENTS_REFERENCE.md`

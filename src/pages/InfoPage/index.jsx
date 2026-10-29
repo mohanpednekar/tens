@@ -453,7 +453,10 @@ const InfoPage = () => {
           </li>
           <li>
             A boost always multiplies Memory production too, plus as many Factory tiers (from{' '}
-            {firstTierName} up) as the funding tier’s number.
+            {firstTierName} up) as the funding tier’s number. It also speeds up the matching Storage
+            pools’ buffer fill (pool N for Factory tier N) by +{COMPUTE_BOOST_PRESETS.burst.poolBonusPercent}% /
+            +{COMPUTE_BOOST_PRESETS.standard.poolBonusPercent}% / +{COMPUTE_BOOST_PRESETS.sustain.poolBonusPercent}%
+            for Burst / Standard / Sustain.
           </li>
           <li>
             Only one boost runs at a time. Picking the same preset + tier again{' '}
