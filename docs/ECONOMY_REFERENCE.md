@@ -194,7 +194,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    tap TARGET changes once
    `intro.mainGameUnlocked`: the
    standalone Tap button (`ByteFoundryPage`'s `TapArea`) is removed entirely, and the Data Stream tile
-   (`FillableStatCard`, rendered `as="button"` in that state) becomes clickable instead, calling the
+   (`DataStreamTile`, with a stretched `PoolTapButton` behind its readouts in that state) becomes clickable instead, calling the
    identical `tapIntroBit` action — one control instead of two, once the main loop no longer needs
    tapping to be the primary action.
 2. Once `bits` reaches `INTRO_BYTE_COMBINE_COST` (8) and `byteCreated` is still false, **Combine into a

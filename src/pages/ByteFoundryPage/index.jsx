@@ -985,6 +985,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     basePercent + tapPercent > FILL_MULTIPLIER_TAP_CAP_PERCENT
       ? `${Math.round(totalPercent)}% (capped)`
       : `${Math.round(totalPercent)}%`
+  // Drop an open key whose speed button has gone (an upgrade finished, a pool hidden by a reset), so
+  // it can't silently reopen when that speed comes back.
+  const speedDetailsKeyAvailable = speedDetailsKey === null ||
+    (speedDetailsKey === 'stream' && Boolean(dataStreamRateText)) ||
+    (speedDetailsKey === 'upgrade' && intro.byteCreated && upgradeRunning && Boolean(runningDraw)) ||
+    (storageRevealed && Array.from({ length: visiblePoolCount }, (_, offset) => `pool-${offset + 1}`).includes(speedDetailsKey))
+  useEffect(() => {
+    if (!speedDetailsKeyAvailable) setSpeedDetailsKey(null)
+  }, [speedDetailsKeyAvailable])
   const streamSpeedDetailsOpen = speedDetailsKey === 'stream'
   let streamSpeedDetailRows = null
   if (streamSpeedDetailsOpen) {

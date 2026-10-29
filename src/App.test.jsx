@@ -2,7 +2,8 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
-import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
+import { ThemeProvider } from 'theme'
+import { applyAutobuyerMilestones, createInitialGameState, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
@@ -43,7 +44,7 @@ import {
 import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
-import { formatBitsTransition, getBufferSecondsToFull } from 'pages/ByteFoundryPage'
+import ByteFoundryPage, { formatBitsTransition, getBufferSecondsToFull } from 'pages/ByteFoundryPage'
 
 // Enough Data Stream Capacity for Storage pool 2 (MB) to be visible — Node merges are timed off
 // that pool's Bandwidth (getComputeMergeDurationSeconds), which is 0 until it's visible.
@@ -3247,6 +3248,26 @@ describe('Data Stream and upgrade speed details popovers', () => {
     // The stretched tile button still taps.
     fireEvent.click(screen.getByRole('button', { name: 'tap to generate a bit' }))
     expect(screen.getByLabelText('data stream fill-based speed multiplier tap bonus')).toBeInTheDocument()
+  })
+
+  it('does not reopen the upgrade details by itself after the upgrade it was open for finished', () => {
+    const game = intro => {
+      const base = createInitialGameState()
+      return {
+        state: { ...base, intro: { ...base.intro, mainGameUnlocked: true, bits: 100, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, ...intro } },
+        actions: new Proxy({}, { get: () => () => {} }),
+        dismissOfflineProgress: () => {},
+        claimOfflineAdReward: () => {},
+        offlineProgress: null,
+      }
+    }
+    const ui = g => <ThemeProvider><ByteFoundryPage game={g} /></ThemeProvider>
+    const { rerender } = render(ui(game({ capacityUpgradeQueued: true, capacityUpgradeProgress: 0 })))
+    fireEvent.click(screen.getByRole('button', { name: /^upgrade draw speed/ }))
+    expect(screen.getByRole('dialog', { name: 'Upgrade Capacity draw' })).toBeInTheDocument()
+    rerender(ui(game({ capacityUpgradeQueued: false })))
+    rerender(ui(game({ speedUpgradeQueued: true, speedUpgradeProgress: 0 })))
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('opens the running upgrade\'s draw details from its speed', () => {
