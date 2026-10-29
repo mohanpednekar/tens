@@ -134,6 +134,8 @@ import {
   getStoragePoolBandwidth,
   getUnusedComputeBoostStacks,
   getPoolAvailableFillRate,
+  getDataStreamDeliveredRate,
+  getRunningUpgradeDraw,
   getStoragePoolCapacity,
   getUnlockedStoragePoolCount,
   getVisibleStoragePoolCount,
@@ -993,6 +995,36 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(after.intro.poolBuffers[1]).toBeGreaterThan(rawRate)
       expect(after.intro.poolBuffers[1]).toBeCloseTo(rawRate * 1.5)
     })
+  })
+})
+
+describe('getDataStreamDeliveredRate', () => {
+  it('is base Speed × Compute Boost × fill multiplier — exactly what tickIntroProduction adds per second', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true, bits: 0, capacity: 1000,
+      computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 600,
+    })
+    expect(getComputeBoostMultiplier(state.intro)).toBeGreaterThan(1)
+    const delivered = getDataStreamDeliveredRate(state.intro)
+    expect(delivered).toBeCloseTo(getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro) * 1.5)
+    expect(tickIntroProduction(1)(state).intro.bits).toBeCloseTo(Math.min(1000, delivered))
+  })
+})
+
+describe('getRunningUpgradeDraw', () => {
+  it('is null while no upgrade runs', () => {
+    expect(getRunningUpgradeDraw(withIntro(createInitialGameState(), { byteCreated: true }).intro)).toBeNull()
+  })
+
+  it('matches what tickCapacityUpgradeDrain pulls in a second from a banked Buffer', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true, bits: 1_000_000, capacity: 32_000_000, capacityUpgradeQueued: true, capacityUpgradeProgress: 16_000_000,
+    })
+    const draw = getRunningUpgradeDraw(state.intro)
+    expect(draw).toMatchObject({ kind: 'capacity', cost: 32_000_000, progress: 16_000_000, multiplierPercent: 100 })
+    expect(draw.rate).toBeCloseTo(getIntroProductionRate(state.intro))
+    const after = tickCapacityUpgradeDrain(1)(state)
+    expect(after.intro.capacityUpgradeProgress - 16_000_000).toBeCloseTo(draw.rate)
   })
 })
 

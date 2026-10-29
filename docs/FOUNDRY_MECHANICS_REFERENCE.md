@@ -17,7 +17,7 @@ commit as any change to the mechanics it describes.
    (`latchMainGameUnlocked`/`isStorageUnlocked` in `engine.js`) — the SAME "1 KiB" threshold that
    reveals pool 1's card and switches the tap into fill-multiplier-bonus mode. One-time-ever; never
    resets (see `App.jsx`'s repo-layout entry). Once latched, the standalone Tap button is gone and the
-   Data Stream tile itself is the tap target (`as="button"` on the same `FillableStatCard`, calling
+   Data Stream tile itself is the tap target (a stretched `PoolTapButton` inside `DataStreamTile`, calling
    `actions.tapIntroBit`; see "Fill-based Speed/Bandwidth multiplier"). Compute lives on its own screen
    (4b); Storage's every-size detail (4a) is continuous sections on this Foundry screen (and the reusable
    `StoragePage` wrapper), not a separate AppNav item or tab. Data Stream owns the shared

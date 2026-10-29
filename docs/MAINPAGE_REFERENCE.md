@@ -68,11 +68,11 @@ itself started carrying the fill-multiplier reading). There is no separate Cache
 progress the old Cache tile showed (progress toward the next convertible Data Stream→Kilobyte unit) is
 implicit in the Data Stream balance itself — there's no separate manual transfer UI any more (see
 below). Before `intro.mainGameUnlocked` the tile is a plain, non-interactive `<section>`,
-`aria-label="data stream balance"`; once unlocked it becomes the tap target itself: rendered
-`as="button"` (styled-components' own element-swap prop), `onClick={actions.tapIntroBit}`,
-`disabled={isFull || dataStreamMultiplierCapped}`, and `aria-label="tap to generate a bit"`
-replacing the plain balance label — a `$tappable` prop adds the same hover/active/disabled
-affordance the standalone tap button below has.
+`aria-label="data stream balance"`; once unlocked it becomes the tap target itself, built like a pool
+tile: a `DataStreamTile` div with a stretched `PoolTapButton` behind its readouts
+(`onClick={actions.tapIntroBit}`, `disabled={isFull || dataStreamMultiplierCapped}`,
+`aria-label="tap to generate a bit"`), so the ⚡ speed can be its own button opening
+`SpeedDetailsPopover` without nesting interactive elements.
 
 A large, always-full-width tap button (`aria-label="tap to generate a bit"`, `disabled={isFull ||
 dataStreamMultiplierCapped}`) calling `actions.tapIntroBit` — renders LAST on the page, after

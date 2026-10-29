@@ -7,7 +7,7 @@ import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
-import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getFillMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getFillMultiplierPercent, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
@@ -478,13 +478,11 @@ const SpeedButton = styled(SpeedText).attrs({ as: 'button', type: 'button' })`
 // than introducing a second, differently-styled meter convention. Deliberately a plain div, not
 // `styled(StatCard)` — it renders inside DataStreamCard, which supplies the outer border/shadow/
 // background.
-// Once intro.mainGameUnlocked, the Data Stream's own tile renders as a real <button> (via the `as`
-// prop below) instead of a plain <section> — Memory itself becomes the tap target, replacing the
-// standalone TapArea button below (which only renders pre-unlock). `$tappable` adds the same
-// hover/active/disabled affordance TapArea itself already has, scoped to this prop so the
-// pre-unlock (non-interactive) rendering keeps its plain, unclickable look. Each pool's own local
-// Memory buffer block reuses this component as PoolTile (a plain div filled the same way, with a
-// stretched PoolTapButton on top of it — tapPoolBuffer in game/engine) — tapping either boosts that specific Data Stream/pool's own
+// Once intro.mainGameUnlocked, the Data Stream's tile (DataStreamTile) carries a stretched
+// PoolTapButton behind its readouts, replacing the standalone TapArea button below (which only
+// renders pre-unlock); pre-unlock it is a plain <section>. Each pool's own local Memory buffer
+// block reuses this component as PoolTile the same way (tapPoolBuffer in game/engine) — tapping
+// either boosts that specific Data Stream/pool's own
 // fill-based multiplier bonus (see FILL_MULTIPLIER_* in game/layers), it never credits bits
 // directly. Everything for that section lives inside this one tile — TitleRow (title and Speed/Bandwidth),
 // the big centered balance/capacity line, and the tap-bonus bar — see CLAUDE.md's UI conventions.
@@ -500,29 +498,12 @@ const FillableStatCard = styled.div`
   color: ${props => props.theme.color.text};
   ${progressFill}
   background-color: ${softInnerFill};
+`
 
-  ${props => props.$tappable && `
-    cursor: pointer;
-    transition: filter 0.15s ease, transform 0.05s ease;
-
-    &:hover:not(:disabled):not([aria-disabled='true']) {
-      filter: brightness(1.2);
-    }
-
-    &:active:not(:disabled):not([aria-disabled='true']) {
-      transform: scale(0.98);
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${props.theme.color.accent};
-      outline-offset: 2px;
-    }
-
-    &:disabled,
-    &[aria-disabled='true'] {
-      cursor: not-allowed;
-    }
-  `}
+// The Data Stream tile: like PoolTile, a positioning context for its stretched tap button, so the
+// ⚡ speed can be its own button without nesting interactive elements.
+const DataStreamTile = styled(FillableStatCard)`
+  position: relative;
 `
 
 // Running Data Stream upgrade: a full-width status tile flush under the stream tile (same fill
@@ -770,11 +751,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     setExpandedPoolIndex(null)
   }, [visiblePoolCount])
   const visibleExpandedPool = expandedPoolIndex === 0 ? null : expandedPoolIndex ?? visiblePoolCount
-  // Which pool's speed-details popover is open (null = none); the anchor ref follows that pool's button.
-  const [speedDetailsPoolIndex, setSpeedDetailsPoolIndex] = useState(null)
+  // Which speed-details popover is open: 'stream', 'upgrade', `pool-<n>`, or null; the anchor ref
+  // follows that speed's button.
+  const [speedDetailsKey, setSpeedDetailsKey] = useState(null)
   const speedDetailsAnchorRef = useRef(null)
-  const closeSpeedDetails = useCallback(() => setSpeedDetailsPoolIndex(null), [])
+  const closeSpeedDetails = useCallback(() => setSpeedDetailsKey(null), [])
+  const toggleSpeedDetails = key => setSpeedDetailsKey(current => (current === key ? null : key))
+  const formatStreamRate = bits => `${formatSpeedText(formatBitsInNearestUnit(bits))}/s`
   const productionRate = getIntroProductionRate(intro)
+  const boostMultiplier = getComputeBoostMultiplier(intro)
   // Bottom-left-half figure (see "Speed/Bandwidth at bottom centre of left half" in CLAUDE.md) —
   // plain text, same convention a pool's own Bandwidth figure uses in its own footer row. Reuses
   // formatBitsInNearestUnit (the same binary B/KiB/MiB/… ladder the balance line above it already
@@ -782,14 +767,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // of an unscaled "2048 B/s" — consistent short "B"/"KiB" unit symbols throughout, matching the
   // pool's own Bandwidth figure's "/s" convention rather than the
   // longer "bytes/sec" this used to spell out.
-  const dataStreamRateText = !intro.byteCreated
-    ? null
-    : `${formatSpeedText(formatBitsInNearestUnit(productionRate * getDataStreamMultiplierPercent(intro) / 100))}/s`
-  // Fill-based multiplier (see FILL_MULTIPLIER_* in game/layers.js): productionRate above stays
-  // exactly what applies at 100% of this — the real per-tick delivery scales by this percent
-  // instead (see getDataStreamEffectMultiplier in game/engine).
+  // Shows what the stream actually delivers (getDataStreamDeliveredRate: base Speed × Compute Boost
+  // × fill multiplier), not the theoretical base Speed.
+  const dataStreamRateText = !intro.byteCreated ? null : formatStreamRate(getDataStreamDeliveredRate(intro))
   const dataStreamMultiplierPercent = getDataStreamMultiplierPercent(intro)
-  const dataStreamTimeLeftText = formatBufferTimeToFull(intro.bits, intro.capacity, productionRate)
+  const dataStreamTimeLeftText = formatBufferTimeToFull(intro.bits, intro.capacity, productionRate * boostMultiplier)
   // Matches tapIntroBit's own post-reveal no-op guard (engine.js) — only relevant once Storage
   // pools are revealed (visiblePoolCount >= 1), the same condition that switches the tap itself
   // from a direct bit credit into a multiplier-bonus tap.
@@ -881,13 +863,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const capacityUpgradeProgress = clampPercent(((intro.capacityUpgradeProgress ?? 0) / capacityUpgradeCost) * 100)
   const speedUpgradeProgress = clampPercent(((intro.speedUpgradeProgress ?? 0) / speedUpgradeCost) * 100)
   const runningProgress = speedUpgradeQueued ? speedUpgradeProgress : capacityUpgradeProgress
-  // The bar draws at base Speed × its own fill multiplier (1.5 - fill, i.e. 150% empty → 50% full), so the
-  // time left is the integral of that curve: (cost / rate) × ln((1.5 - fill) / 0.5) for fill = progress / cost.
-  const runningCost = speedUpgradeQueued ? speedUpgradeCost : capacityUpgradeCost
-  const runningDone = speedUpgradeQueued ? (intro.speedUpgradeProgress ?? 0) : (intro.capacityUpgradeProgress ?? 0)
-  const runningFill = runningCost > 0 ? Math.min(1, Math.max(0, runningDone / runningCost)) : 1
-  const runningMultiplierPercent = getFillMultiplierPercent(runningFill)
-  const runningRateText = `${formatSpeedText(formatBitsInNearestUnit(productionRate * runningMultiplierPercent / 100))}/s`
+  // The bar draws at base Speed × its own fill multiplier (getRunningUpgradeDraw), so the time left
+  // is the integral of that curve: (cost / rate) × ln((1.5 - fill) / 0.5) for fill = progress / cost.
+  const runningDraw = getRunningUpgradeDraw(intro)
+  const runningCost = runningDraw?.cost ?? 0
+  const runningDone = runningDraw?.progress ?? 0
+  const runningFill = runningCost > 0 ? Math.min(1, runningDone / runningCost) : 1
+  const runningMultiplierPercent = runningDraw?.multiplierPercent ?? 100
+  const runningRateText = formatStreamRate(runningDraw?.rate ?? 0)
   const runningTimeLeftText = formatUpgradeTimeLeft(productionRate > 0 && runningCost > 0
     ? (runningCost / productionRate) * Math.log((1.5 - runningFill) / 0.5)
     : Infinity)
@@ -998,6 +981,58 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     </Button>
   )
 
+  const formatMultiplierValue = (totalPercent, basePercent, tapPercent) =>
+    basePercent + tapPercent > FILL_MULTIPLIER_TAP_CAP_PERCENT
+      ? `${Math.round(totalPercent)}% (capped)`
+      : `${Math.round(totalPercent)}%`
+  // Drop an open key whose speed button has gone (an upgrade finished, a pool hidden by a reset), so
+  // it can't silently reopen when that speed comes back.
+  const speedDetailsKeyAvailable = speedDetailsKey === null ||
+    (speedDetailsKey === 'stream' && Boolean(dataStreamRateText)) ||
+    (speedDetailsKey === 'upgrade' && intro.byteCreated && upgradeRunning && Boolean(runningDraw)) ||
+    (storageRevealed && Array.from({ length: visiblePoolCount }, (_, offset) => `pool-${offset + 1}`).includes(speedDetailsKey))
+  useEffect(() => {
+    if (!speedDetailsKeyAvailable) setSpeedDetailsKey(null)
+  }, [speedDetailsKeyAvailable])
+  const streamSpeedDetailsOpen = speedDetailsKey === 'stream'
+  let streamSpeedDetailRows = null
+  if (streamSpeedDetailsOpen) {
+    const streamBasePercent = getDataStreamBaseMultiplierPercent(intro)
+    const streamTapPercent = intro.dataStreamTapBonusPercent ?? 0
+    let poolsBandwidth = 0
+    for (let index = 1; index <= visiblePoolCount; index += 1) poolsBandwidth += getStoragePoolBandwidth(state, index)
+    streamSpeedDetailRows = [
+      { label: 'Speed now', value: dataStreamRateText },
+      { label: 'Base Speed', value: formatStreamRate(productionRate) },
+      ...(boostMultiplier !== 1 ? [{ label: 'Compute Boost', value: `×${boostMultiplier}` }] : []),
+      { label: 'Fill multiplier', value: formatMultiplierValue(dataStreamMultiplierPercent, streamBasePercent, streamTapPercent) },
+      { label: '· from buffer fill', value: `${Math.round(streamBasePercent)}%` },
+      { label: '· tap bonus', value: `+${Math.round(streamTapPercent)}%` },
+      { label: 'Speed exponent', value: speedExponentText },
+      ...(storageRevealed && visiblePoolCount > 0
+        ? [{ label: 'Reserved by pools', value: formatStreamRate(Math.min(productionRate, poolsBandwidth)) }]
+        : []),
+      ...(runningDraw ? [{ label: 'Upgrade bar drawing', value: runningRateText }] : []),
+      { label: 'Buffer', value: `${Math.floor(fullProgress * 10) / 10}% full` },
+      { label: 'Time to full', value: dataStreamTimeLeftText ?? (isFull ? 'Full' : '—') },
+      ...(speedUpgradeArmable && !upgradeRunning ? [{ label: 'After Upgrade Speed', value: `${nextRateText} (${speedGainText})` }] : []),
+    ]
+  }
+  const upgradeSpeedDetailsOpen = speedDetailsKey === 'upgrade' && Boolean(runningDraw)
+  const upgradeSpeedDetailRows = upgradeSpeedDetailsOpen
+    ? [
+        { label: 'Draw now', value: runningRateText },
+        { label: 'Base Speed', value: formatStreamRate(productionRate) },
+        { label: 'Bar fill multiplier', value: `${Math.round(runningMultiplierPercent)}%` },
+        { label: 'Data Stream delivers', value: dataStreamRateText },
+        { label: 'Progress', value: `${formatBitsInNearestUnit(runningDone)} / ${formatBitsInNearestUnit(runningCost)}` },
+        { label: 'Time left', value: runningTimeLeftText },
+        runningDraw.kind === 'speed'
+          ? { label: 'Speed after', value: formatBitsTransition(productionRate, nextRate, '/s') }
+          : { label: 'Capacity after', value: formatBitsTransition(intro.capacity, nextCapacity) },
+      ]
+    : null
+
   return (
     <RootDiv>
       <OfflineProgressNotice claimOfflineAdReward={claimOfflineAdReward} dismissOfflineProgress={dismissOfflineProgress} offlineProgress={offlineProgress} />
@@ -1006,17 +1041,22 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       </Header>
 
       <DataStreamCard aria-label="Data Stream" $boosted={isDataStreamBoosted(intro)}>
-        <FillableStatCard
-          as={intro.mainGameUnlocked ? 'button' : 'section'}
-          type={intro.mainGameUnlocked ? 'button' : undefined}
-          onClick={intro.mainGameUnlocked ? actions.tapIntroBit : undefined}
-          disabled={intro.mainGameUnlocked ? isFull || dataStreamMultiplierCapped : undefined}
-          aria-label={intro.mainGameUnlocked ? 'tap to generate a bit' : 'data stream balance'}
-          aria-describedby={isDataStreamBoosted(intro) ? 'data-stream-boost' : undefined}
-          title={intro.mainGameUnlocked && !isFull && dataStreamMultiplierCapped ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap` : undefined}
+        <DataStreamTile
+          as={intro.mainGameUnlocked ? 'div' : 'section'}
+          aria-label={intro.mainGameUnlocked ? undefined : 'data stream balance'}
           $progress={fullProgress}
-          $tappable={intro.mainGameUnlocked}
         >
+          {intro.mainGameUnlocked && (
+            <PoolTapButton
+              type="button"
+              onClick={actions.tapIntroBit}
+              disabled={isFull || dataStreamMultiplierCapped}
+              aria-label="tap to generate a bit"
+              aria-describedby={isDataStreamBoosted(intro) ? 'data-stream-boost' : undefined}
+              title={!isFull && dataStreamMultiplierCapped ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap` : undefined}
+            />
+          )}
+          <PoolTileContent>
           <TileHeader>
           <TitleRow>
             <SectionTitle><span><LeadIcon>🌊</LeadIcon>Data Stream</span></SectionTitle>
@@ -1024,10 +1064,29 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               {formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed)}
             </BalanceText>
             {dataStreamRateText && (
-              <SpeedText $centered={!(intro.dataStreamTapBonusPercent > 0) && !dataStreamTimeLeftText} $color={getSpeedColor(dataStreamMultiplierPercent)} title={`Speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}>
+              <SpeedButton
+                ref={streamSpeedDetailsOpen ? speedDetailsAnchorRef : undefined}
+                $centered={!(intro.dataStreamTapBonusPercent > 0) && !dataStreamTimeLeftText}
+                $color={getSpeedColor(dataStreamMultiplierPercent)}
+                title={`Delivered speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}
+                aria-label={`data stream speed ${dataStreamRateText}, show speed details`}
+                aria-haspopup="dialog"
+                aria-expanded={streamSpeedDetailsOpen}
+                aria-controls={streamSpeedDetailsOpen ? 'data-stream-speed-details' : undefined}
+                onClick={() => toggleSpeedDetails('stream')}
+              >
                 ⚡ {dataStreamRateText}
                 {isDataStreamBoosted(intro) && <>{' '}<BoostBadge id="data-stream-boost" intro={intro} /></>}
-              </SpeedText>
+              </SpeedButton>
+            )}
+            {streamSpeedDetailsOpen && (
+              <SpeedDetailsPopover
+                anchorRef={speedDetailsAnchorRef}
+                id="data-stream-speed-details"
+                onClose={closeSpeedDetails}
+                title="Data Stream speed"
+                rows={streamSpeedDetailRows}
+              />
             )}
           </TitleRow>
           <CapacityBonusRow
@@ -1044,7 +1103,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             aria-valuemin={0}
             aria-valuemax={intro.capacity}
           />
-        </FillableStatCard>
+          </PoolTileContent>
+        </DataStreamTile>
 
         {intro.byteCreated && upgradeRunning && (
           <UpgradeStatusTile
@@ -1064,13 +1124,28 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   : formatBitsTransition(intro.capacity, nextCapacity)}
               </RunningChange>
               <RunningPercent>{Math.floor(runningProgress)}%</RunningPercent>
-              <SpeedText
+              <SpeedButton
+                ref={upgradeSpeedDetailsOpen ? speedDetailsAnchorRef : undefined}
                 $color={getSpeedColor(runningMultiplierPercent)}
                 style={{ gridColumn: 3, gridRow: 1, justifySelf: 'end' }}
                 title={`Upgrade draw at ${Math.round(runningMultiplierPercent)}% fill multiplier`}
+                aria-label={`upgrade draw speed ${runningRateText}, show speed details`}
+                aria-haspopup="dialog"
+                aria-expanded={upgradeSpeedDetailsOpen}
+                aria-controls={upgradeSpeedDetailsOpen ? 'upgrade-speed-details' : undefined}
+                onClick={() => toggleSpeedDetails('upgrade')}
               >
                 ⚡ {runningRateText}
-              </SpeedText>
+              </SpeedButton>
+              {upgradeSpeedDetailsOpen && (
+                <SpeedDetailsPopover
+                  anchorRef={speedDetailsAnchorRef}
+                  id="upgrade-speed-details"
+                  onClose={closeSpeedDetails}
+                  title={runningDraw.kind === 'speed' ? 'Upgrade Speed draw' : 'Upgrade Capacity draw'}
+                  rows={upgradeSpeedDetailRows}
+                />
+              )}
               <RunningTime>⏳ {runningTimeLeftText}</RunningTime>
             </RunningUpgradeContent>
             <VisuallyHidden
@@ -1187,7 +1262,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const poolSymbol = TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`
         const formatPoolRate = bits => `${formatSpeedText(formatDiskSize(bits))}/s`
         const poolSpeedText = formatPoolRate(poolFillRate * poolMultiplierPercent / 100)
-        const speedDetailsOpen = speedDetailsPoolIndex === poolIndex
+        const speedDetailsOpen = speedDetailsKey === `pool-${poolIndex}`
         let poolSpeedDetailRows = null
         const poolBandwidth = getStoragePoolBandwidth(state, poolIndex)
         if (speedDetailsOpen) {
@@ -1202,12 +1277,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             ...(poolIndex > 1
               ? [{ label: 'Taken by earlier pools', value: formatPoolRate(Math.min(productionRate, earlierBandwidth)) }]
               : []),
-            {
-              label: 'Fill multiplier',
-              value: poolBaseMultiplierPercent + poolTapBonusPercent > FILL_MULTIPLIER_TAP_CAP_PERCENT
-                ? `${Math.round(poolMultiplierPercent)}% (capped)`
-                : `${Math.round(poolMultiplierPercent)}%`,
-            },
+            { label: 'Fill multiplier', value: formatMultiplierValue(poolMultiplierPercent, poolBaseMultiplierPercent, poolTapBonusPercent) },
             { label: '· from buffer fill', value: `${Math.round(poolBaseMultiplierPercent)}%` },
             { label: '· tap bonus', value: `+${Math.round(poolTapBonusPercent)}%` },
             { label: 'Buffer', value: `${Math.floor(poolBufferPercent * 10) / 10}% full` },
@@ -1251,7 +1321,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     aria-haspopup="dialog"
                     aria-expanded={speedDetailsOpen}
                     aria-controls={speedDetailsOpen ? `pool-${poolIndex}-speed-details` : undefined}
-                    onClick={() => setSpeedDetailsPoolIndex(speedDetailsOpen ? null : poolIndex)}
+                    onClick={() => toggleSpeedDetails(`pool-${poolIndex}`)}
                   >
                     ⚡ {poolSpeedText}
                   </SpeedButton>
