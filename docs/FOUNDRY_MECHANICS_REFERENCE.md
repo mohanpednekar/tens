@@ -64,9 +64,10 @@ commit as any change to the mechanics it describes.
    `intro.computeMergePageUnlocked` reveal. "Compute" names the page/feature only — entities drop the word
    (`Core`/`Node`/…) in every player-visible label. Deliberately terse — icon-only controls, full sentence
    in `title`/`aria-label`; mechanic prose lives in the Guide (`InfoPage`). Render order: a top card with the
-   active Boost's effect (or "No boost running") and — while a boost is active — a Stack + Reclaim-or-Forfeit row,
-   mutually exclusive by `computeBoostStacks`; `canReclaimComputeBoost`/`canForfeitComputeBoost` enforce
-   this in the engine too), THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
+   active Boost's timer bar — Pop (refund newest unused stack, no confirm) or, once none is unused,
+   Forfeit (confirmed) on the left, Stack on the right (`canReclaimComputeBoost`/`canForfeitComputeBoost`
+   enforce the same split in the engine) — or "No boost running"; while a boost runs, the matching
+   preset stacks and any other preset is a confirmed switch that refunds unused stacks), THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
    `COMPUTE_ENTITY_CAP` (10) normal-slot squares (never above 10/10, even once auto-merge is unlocked and
    the entity has grown into its reserve) plus a `TierSelectButton` selecting that tier — only the ONE selected tier block shows
    `ArmedStatusText` + the 3 Burst/Standard/Sustain presets inline, at that tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
@@ -76,7 +77,7 @@ commit as any change to the mechanics it describes.
    8→1 manual merge (only the automatic merge is timed); the selected tier's presets render below this row — Megacomputer has no
    row 2. Cores come from buying Boosters from the matching Data Lake on Foundry's `DataLakePanel`, not
    minted from Memory. Full button/gate/aria-label detail: `docs/MAINPAGE_REFERENCE.md`; render-order and
-   Stack/Reclaim/Forfeit rationale: `docs/DESIGN_HISTORY.md`.
+   Stack/Pop/Forfeit rationale: `docs/DESIGN_HISTORY.md`.
 
 ## Economy model — Byte Foundry (full text)
 

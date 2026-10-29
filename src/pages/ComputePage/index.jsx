@@ -1,5 +1,5 @@
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
-import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
+import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -278,17 +278,6 @@ const BoostRow = styled.div`
   }
 `
 
-// Issue #326: "Stack and reclaim buttons shall be shown on the next row" — rendered only while a
-// boost is active, right below the 3 preset buttons above (Reclaim moved down here from its
-// former spot in ActiveBoostRow, so it's not duplicated in two places).
-const StackReclaimRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: ${props => props.theme.space.sm};
-  width: 100%;
-`
-
 const AutoBoostRow = styled.div`
   display: flex;
   flex-direction: column;
@@ -304,17 +293,37 @@ const AutoBoostLabel = styled.p`
   text-align: center;
 `
 
-// The active-boost status line (effect + countdown + stack count) plus its optional Reclaim
-// button, side by side — a plain row rather than a <p> (StatusText), since it now sometimes needs
-// to host an inline <button>. Rendered at the TOP of the page (right after the header) so an
-// active boost stays visible regardless of what else is happening lower down.
-const ActiveBoostRow = styled.div`
+// The active boost's timer bar: Pop (refund the newest unused stack, no confirm) — or Forfeit
+// (confirmed) once no unused stack remains — on the left, the bar itself (fill = remaining time
+// over the total stacked duration, effect text on top) in the middle, Stack on the right.
+const BoostTimerRow = styled.div`
+  display: flex;
+  align-items: stretch;
+  gap: ${props => props.theme.space.xs};
+  width: 100%;
+`
+
+const TimerSideButton = styled(CompactButton)`
+  flex: 0 0 auto;
+  min-width: 2.4em;
+`
+
+const TimerBar = styled.div`
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: ${props => props.theme.space.sm};
-  color: ${props => props.theme.color.textMuted};
+  padding: 0.3em 0.5em;
+  border-radius: ${props => props.theme.radius.sm};
+  border: 1px solid ${props => props.theme.color.warn};
+  background: linear-gradient(
+    to right,
+    ${props => props.theme.color.surfaceRaised} ${props => props.$fill}%,
+    transparent ${props => props.$fill}%
+  );
+  color: ${props => props.theme.color.text};
+  font-size: 0.85em;
   text-align: center;
 `
 
@@ -594,26 +603,35 @@ const ComputePage = ({ game }) => {
           const sameAsActive = needsForfeit
             && intro.computeBoostType === boostType
             && activeTierIndex === armedTierIndex
-          // Fresh start, or a different preset/tier that would forfeit (confirm happens on click).
-          const turnAvailable = !sameAsActive
-            && (
-              isComputeBoostTurnAvailable(state, boostType, armedTierIndex, false)
-              || isComputeBoostTurnAvailable(state, boostType, armedTierIndex, true)
-            )
+          const activeLabel = COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType
+          const nextLabel = COMPUTE_BOOST_DISPLAY[boostType].label
+          const unusedStacks = getUnusedComputeBoostStacks(state)
+          // Same preset + tier as the running boost → this button stacks it. A different one →
+          // confirmed switch: unused stacks are refunded, the running stack is forfeited.
+          const turnAvailable = sameAsActive
+            ? isStackComputeBoostTurnAvailable(state)
+            : isComputeBoostTurnAvailable(state, boostType, armedTierIndex, needsForfeit)
+          const blockedTitle = 'Take a higher-priority upgrade first (Disk Fill or Provision Disk)'
+          const spendText = `spend 1 ${singularize(armedRow.label)} for ×${multiplier} production, ${formatPresetDuration(durationSeconds)}`
 
           return (
             <CompactButton
               key={boostType}
-              aria-label={needsForfeit && !sameAsActive
-                ? `forfeit active boost and activate ${boostType} compute boost`
-                : `activate ${boostType} compute boost`}
+              aria-label={sameAsActive
+                ? `stack ${boostType} compute boost`
+                : needsForfeit
+                  ? `forfeit active boost and activate ${boostType} compute boost`
+                  : `activate ${boostType} compute boost`}
               disabled={!turnAvailable}
               onClick={() => {
+                if (sameAsActive) {
+                  actions.stackComputeBoost()
+                  return
+                }
                 if (needsForfeit) {
-                  const activeLabel = COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType
-                  const nextLabel = COMPUTE_BOOST_DISPLAY[boostType].label
+                  const refundNote = unusedStacks > 0 ? ` (${unusedStacks} unused stack${unusedStacks === 1 ? '' : 's'} refunded)` : ''
                   if (!window.confirm(
-                    `Forfeit the active ${activeLabel} boost with no refund, and start ${nextLabel}?`,
+                    `Forfeit the active ${activeLabel} boost${refundNote}, and start ${nextLabel}?`,
                   )) return
                   actions.activateComputeBoost(boostType, armedTierIndex, true)
                   return
@@ -622,19 +640,17 @@ const ComputePage = ({ game }) => {
               }}
               title={
                 sameAsActive
-                  ? 'This boost is already active — use Stack to extend it'
-                  : needsForfeit && intro.computeBoostStacks > 1
-                    ? 'Reclaim down to the last stack first — switching to a different boost forfeits everything currently held, same as the standalone Forfeit button'
-                    : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
-                      ? 'Take a higher-priority upgrade first (Disk Fill or Provision Disk)'
-                      : needsForfeit
-                        ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow.label)} for ×${multiplier} production, ${formatPresetDuration(durationSeconds)} — asks for confirmation`
-                        : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow.label)} for ×${multiplier} production, ${formatPresetDuration(durationSeconds)}`
+                  ? (canStackComputeBoost(state) && blockedByPriority ? blockedTitle : `Stack ${nextLabel}: ${spendText} more — up to ${COMPUTE_BOOST_MAX_STACKS}x`)
+                  : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
+                    ? blockedTitle
+                    : needsForfeit
+                      ? `Switch to ${nextLabel}: forfeit the running ${activeLabel} stack, refund unused stacks, then ${spendText} — asks for confirmation`
+                      : `${nextLabel}: ${spendText}`
               }
               type="button"
               variant="prestige"
             >
-              <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatPresetDuration(durationSeconds)}`}</ButtonContent>
+              <ButtonContent>{`${sameAsActive ? '+ ' : ''}${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatPresetDuration(durationSeconds)}`}</ButtonContent>
             </CompactButton>
           )
         })}
@@ -649,15 +665,63 @@ const ComputePage = ({ game }) => {
       </Header>
 
       <BoostCard aria-label="boost">
-      {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
-        <ActiveBoostRow aria-label="active compute boost">
-          <span
-            title={`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} (${activeRow?.label ?? ''}) active: ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} production on ${describeCoveredTiers(activeTierIndex, 'name')}, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left, ${intro.computeBoostStacks}x stacked`}
-          >
-            {`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.icon ?? '⚡'} ${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} on ${describeCoveredTiers(activeTierIndex)} · ${activeRow?.symbol ?? ''} · ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left${intro.computeBoostStacks > 1 ? ` · ${intro.computeBoostStacks} stacked` : ''}`}
-          </span>
-        </ActiveBoostRow>
-      )}
+      {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (() => {
+        const activeType = intro.computeBoostType
+        const activeDisplay = COMPUTE_BOOST_DISPLAY[activeType] ?? { icon: '⚡', label: activeType }
+        const activeMultiplier = getComputeBoostTierMultiplier(activeType, activeTierIndex)
+        const remaining = intro.computeBoostRemainingSeconds ?? 0
+        const totalSeconds = (intro.computeBoostStacks ?? 1) * getComputeBoostTierDurationSeconds(activeType, activeTierIndex)
+        const fillPercent = totalSeconds > 0 ? Math.min(100, (remaining / totalSeconds) * 100) : 0
+        const activeTokenLabel = singularize(activeRow?.label ?? 'Core')
+        return (
+          <BoostTimerRow role="group" aria-label="active boost controls">
+            {canReclaimComputeBoost(state)
+              ? (
+                <TimerSideButton
+                  aria-label="pop one stack of the active compute boost"
+                  onClick={actions.reclaimComputeBoost}
+                  title={`Pop: refund the most recent unused stack (1 ${activeTokenLabel} and its time)`}
+                  type="button"
+                  variant="neutral"
+                >
+                  <ButtonContent>↩</ButtonContent>
+                </TimerSideButton>
+                )
+              : (
+                <TimerSideButton
+                  aria-label="forfeit the active compute boost with no refund"
+                  disabled={!canForfeitComputeBoost(state)}
+                  onClick={() => {
+                    if (!window.confirm('Forfeit the active boost with no refund?')) return
+                    actions.forfeitComputeBoost()
+                  }}
+                  title="Forfeit: end the boost now with no refund — asks for confirmation"
+                  type="button"
+                  variant="danger"
+                >
+                  <ButtonContent>✕</ButtonContent>
+                </TimerSideButton>
+                )}
+            <TimerBar aria-label="active compute boost" $fill={fillPercent}>
+              <span
+                title={`${activeDisplay.label} (${activeRow?.label ?? ''}) active: ×${activeMultiplier} production on ${describeCoveredTiers(activeTierIndex, 'name')}, ${formatOfflineDuration(remaining)} left, ${intro.computeBoostStacks}x stacked`}
+              >
+                {`${activeDisplay.icon} ${activeDisplay.label} ×${activeMultiplier} on ${describeCoveredTiers(activeTierIndex)} · ${activeRow?.symbol ?? ''} · ${formatOfflineDuration(remaining)} left${intro.computeBoostStacks > 1 ? ` · ${intro.computeBoostStacks} stacked` : ''}`}
+              </span>
+            </TimerBar>
+            <TimerSideButton
+              aria-label="stack the active compute boost"
+              disabled={!isStackComputeBoostTurnAvailable(state)}
+              onClick={actions.stackComputeBoost}
+              title={`Stack: spend 1 more ${activeTokenLabel} to add another ${formatPresetDuration(getComputeBoostTierDurationSeconds(activeType, activeTierIndex))} — up to ${COMPUTE_BOOST_MAX_STACKS}x`}
+              type="button"
+              variant="prestige"
+            >
+              <ButtonContent>+</ButtonContent>
+            </TimerSideButton>
+          </BoostTimerRow>
+        )
+      })()}
       {!boostActive && (
         <ArmedStatusText>
           {intro.computeMergePageUnlocked && !armedRow ? 'No boost running · pick a tier ↓' : 'No boost running'}
@@ -666,55 +730,6 @@ const ComputePage = ({ game }) => {
 
       {!intro.computeMergePageUnlocked && boostPresets}
 
-      {boostActive && (
-        <StackReclaimRow role="group" aria-label="stack, reclaim, or forfeit the active compute boost">
-          <CompactButton
-            aria-label="stack the active compute boost"
-            disabled={!isStackComputeBoostTurnAvailable(state)}
-            onClick={actions.stackComputeBoost}
-            title={`Stack: spend 1 more ${singularize(activeRow?.label ?? 'Core')} to extend the active boost by its own duration again — up to ${COMPUTE_BOOST_MAX_STACKS}x`}
-            type="button"
-            variant="prestige"
-          >
-            <ButtonContent>+ Stack</ButtonContent>
-          </CompactButton>
-          {/* Reclaim and Forfeit are mutually exclusive, not two always-visible controls with
-              different disabled states: Reclaim only makes sense while there's quantity ABOVE the
-              one actively-funding stack to give back (computeBoostStacks > 1 — canReclaimComputeBoost's
-              own pooled-time floor can still disable it within that range); once down to the last
-              remaining stack, giving it back would end the boost outright, which is Forfeit's job
-              (instant refund vs. no-refund-with-confirmation are different enough operations that
-              conflating them into "Reclaim, but disabled" at 1 stack was confusing — see
-              docs/DESIGN_HISTORY.md). */}
-          {intro.computeBoostStacks > 1 && (
-            <CompactButton
-              aria-label="reclaim one stack of the active compute boost"
-              disabled={!canReclaimComputeBoost(state)}
-              onClick={actions.reclaimComputeBoost}
-              title={`Reclaim the most recent unused stack: refunds 1 ${singularize(activeRow?.label ?? 'Core')} and its duration — one at a time`}
-              type="button"
-              variant="neutral"
-            >
-              <ButtonContent>↩ Reclaim</ButtonContent>
-            </CompactButton>
-          )}
-          {intro.computeBoostStacks === 1 && (
-            <CompactButton
-              aria-label="forfeit the active compute boost with no refund"
-              disabled={!canForfeitComputeBoost(state)}
-              onClick={() => {
-                if (!window.confirm('Forfeit the active boost with no refund?')) return
-                actions.forfeitComputeBoost()
-              }}
-              title="Forfeit: cancel the active boost immediately with no token refund — asks for confirmation"
-              type="button"
-              variant="danger"
-            >
-              <ButtonContent>✕ Forfeit</ButtonContent>
-            </CompactButton>
-          )}
-        </StackReclaimRow>
-      )}
 
       {state.computeAutoBoostUnlocked && (
       <AutoBoostRow aria-label="compute auto boost">

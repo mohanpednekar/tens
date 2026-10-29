@@ -132,6 +132,7 @@ import {
   getStoragePoolCount,
   getNextSiDoubledValue,
   getStoragePoolBandwidth,
+  getUnusedComputeBoostStacks,
   getPoolAvailableFillRate,
   getStoragePoolCapacity,
   getUnlockedStoragePoolCount,
@@ -5558,10 +5559,12 @@ describe('canActivateComputeBoost', () => {
     expect(canActivateComputeBoost(state, 'burst', 1, true)).toBe(false) // same type+tier still blocked
   })
 
-  it('forfeit-replace of a different boost is blocked while more than 1 stack is held, even with forfeitConfirmed — Reclaim down to the last stack first (Devin Review finding)', () => {
-    const state = withIntro(createInitialGameState(), { computeCores: 5, computeNodes: 5, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2 })
-    expect(canActivateComputeBoost(state, 'standard', 1, true)).toBe(false)
-    expect(canActivateComputeBoost(state, 'burst', 2, true)).toBe(false)
+  it('forfeit-replace of a different boost is allowed at any stack count with forfeitConfirmed, funded after refunding unused stacks', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
+    const state = withIntro(createInitialGameState(), { computeCores: 0, computeNodes: 5, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: D * 1.5 })
+    expect(canActivateComputeBoost(state, 'standard', 1, true)).toBe(true) // the refunded Core funds it
+    expect(canActivateComputeBoost(state, 'burst', 2, true)).toBe(true)
+    expect(canActivateComputeBoost(state, 'standard', 1, false)).toBe(false)
   })
 
   it('is false for an unrecognized preset name', () => {
@@ -5631,15 +5634,32 @@ describe('activateComputeBoost', () => {
     expect(after.intro.computeCores).toBe(4) // spent 1 for the new boost; no refund of the forfeited burst stack
   })
 
-  it('is a same-reference no-op when replacing a different boost with forfeitConfirmed while more than 1 stack is held (Devin Review finding)', () => {
+  it('replacing a multi-stack boost refunds its unused stacks and forfeits only the running one', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
     const state = withIntro(createInitialGameState(), {
       computeCores: 5,
+      computeNodes: 2,
       computeBoostType: 'burst',
       computeBoostTierIndex: 1,
-      computeBoostStacks: 2,
-      computeBoostRemainingSeconds: 90,
+      computeBoostStacks: 3,
+      computeBoostRemainingSeconds: D * 2.5, // running stack half-used, 2 unused
     })
-    expect(activateComputeBoost('standard', 1, true)(state)).toBe(state)
+    expect(getUnusedComputeBoostStacks(state)).toBe(2)
+    const after = activateComputeBoost('standard', 2, true)(state)
+    expect(after.intro.computeCores).toBe(7) // 2 unused Cores refunded
+    expect(after.intro.computeNodes).toBe(1) // 1 Node spent on the new boost
+    expect(after.intro.computeBoostType).toBe('standard')
+    expect(after.intro.computeBoostStacks).toBe(1)
+  })
+
+  it('getUnusedComputeBoostStacks counts only stacks whose whole duration is still ahead', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
+    const at = (stacks, remaining) => getUnusedComputeBoostStacks(withIntro(createInitialGameState(), { computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: stacks, computeBoostRemainingSeconds: remaining }))
+    expect(at(1, D)).toBe(0)
+    expect(at(3, D * 3)).toBe(2)
+    expect(at(3, D * 2)).toBe(1)
+    expect(at(3, D * 0.5)).toBe(0)
+    expect(getUnusedComputeBoostStacks(createInitialGameState())).toBe(0)
   })
 
   it('forfeitComputeBoost clears the active boost with no token refund', () => {
@@ -5663,16 +5683,19 @@ describe('activateComputeBoost', () => {
     expect(forfeitComputeBoost(state)).toBe(state)
   })
 
-  it('forfeitComputeBoost is a same-reference no-op while more than 1 stack is held — a multi-stack boost must be Reclaimed down first (Devin Review finding)', () => {
+  it('forfeitComputeBoost is a same-reference no-op while an unused stack remains (Pop is offered instead)', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
     const state = withIntro(createInitialGameState(), {
       computeCores: 3,
       computeBoostType: 'burst',
       computeBoostTierIndex: 1,
       computeBoostStacks: 2,
-      computeBoostRemainingSeconds: 40,
+      computeBoostRemainingSeconds: D + 40,
     })
     expect(canForfeitComputeBoost(state)).toBe(false)
     expect(forfeitComputeBoost(state)).toBe(state)
+    // Once the extra stack's time has started running, nothing is unused → forfeit allowed.
+    expect(canForfeitComputeBoost(withIntro(state, { computeBoostRemainingSeconds: 40 }))).toBe(true)
   })
 
 

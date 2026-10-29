@@ -456,18 +456,17 @@ const InfoPage = () => {
             {firstTierName} up) as the funding tier’s number.
           </li>
           <li>
-            Only one boost runs at a time. To switch to a different preset or funding tier, you
-            must <strong>Forfeit</strong> the active boost (no refund) — the UI asks for explicit
-            confirmation. Same preset + tier while active uses <strong>Stack</strong> instead.
+            Only one boost runs at a time. Picking the same preset + tier again{' '}
+            <strong>Stacks</strong> it. Picking a different one switches after a confirmation: any
+            unused stacks are refunded and the running one is forfeited.
           </li>
           <li>
-            While active: <strong>Stack</strong> spends another token of the active boost’s own
-            funding tier to extend duration (up to {COMPUTE_BOOST_MAX_STACKS} stacks; multiplier
-            doesn’t compound). <strong>Reclaim</strong> undoes the most recent unused stack,
-            refunding 1 token — only while more than 1 stack is held, since the one stack actively
-            funding a started effect can never be reclaimed away. <strong>Forfeit</strong> cancels
-            everything with no refund (confirmation required) — the only way to end a boost early
-            once it's down to its last stack.
+            While active, a timer bar shows the time left. <strong>+</strong> on its right stacks
+            another token of the active boost’s own funding tier to extend it (up to{' '}
+            {COMPUTE_BOOST_MAX_STACKS} stacks; multiplier doesn’t compound).{' '}
+            <strong>Pop</strong> (↩) on its left refunds the most recent unused stack instantly.
+            Once no unused stack remains it becomes <strong>Forfeit</strong> (✕), which ends the
+            boost with no refund after a confirmation.
           </li>
           <li>
             <strong>Auto-Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time): when a

@@ -6147,32 +6147,25 @@ export const getComputeBoostCoveredTierCount = intro => {
 
 // Whether boostType can be activated right now FROM tierIndex: a valid preset, a valid tier with
 // at least 1 of that tier's own token held. Starting a brand-new boost while none is active needs
-// no extra flag. Replacing an already-running boost forfeits the current one with NO refund — that
-// path is only allowed when `forfeitConfirmed` is true (UI must get an explicit confirm first),
-// the new type/tier differs from the active one (same type+tier while active is Stack's job, not
-// a forfeit-restart), AND `computeBoostStacks <= 1` — the same last-remaining-stack restriction
-// the standalone Forfeit button uses, so a preset swap can't reopen the "discard several stacks'
-// worth of tokens outright" gap that restriction closed (a multi-stack boost must be Reclaimed
-// down first). The actual gate activateComputeBoost itself enforces, not just a UI-only
-// disabled state — see "Security notes" in CLAUDE.md.
+// no extra flag. Replacing an already-running boost forfeits the RUNNING stack with no refund but
+// refunds every still-unused stacked one (getUnusedComputeBoostStacks) — only allowed when
+// `forfeitConfirmed` is true (UI must get an explicit confirm first) and the new type/tier differs
+// from the active one (same type+tier while active is Stack's job). The token check runs after
+// that refund, so a switch to the same tier is funded by refunded tokens. The actual gate
+// activateComputeBoost itself enforces, not just a UI-only disabled state — see "Security notes".
 export const canActivateComputeBoost = (state, boostType, tierIndex, forfeitConfirmed = false) => {
   if (!COMPUTE_BOOST_PRESETS[boostType]) return false
   const field = getComputeBoostTierField(tierIndex)
   if (!field) return false
-  if ((state.intro[field] ?? 0) < 1) return false
 
   const activeType = state.intro.computeBoostType ?? null
-  if (activeType === null) return true
+  if (activeType === null) return (state.intro[field] ?? 0) >= 1
 
   // Same type + same funding tier while active → use stackComputeBoost, not forfeit-restart.
   if (activeType === boostType && (state.intro.computeBoostTierIndex ?? 1) === tierIndex) return false
-  // Different boost while one is running only with an explicit forfeit confirmation from the UI,
-  // and only once down to the last remaining stack — matches the standalone Forfeit button's own
-  // restriction (mutually exclusive with Reclaim, see docs/DESIGN_HISTORY.md). Without this, a
-  // preset swap would reopen the same "discard several stacks' worth of tokens outright" gap that
-  // restriction was meant to close, just through a different control (found by Devin Review).
-  if ((state.intro.computeBoostStacks ?? 0) > 1) return false
-  return forfeitConfirmed === true
+  // Different boost while one is running only with an explicit forfeit confirmation from the UI.
+  if (forfeitConfirmed !== true) return false
+  return (refundUnusedComputeBoostStacks(state).intro[field] ?? 0) >= 1
 }
 
 // A specific (boostType, tierIndex) activation's own forced-priority turn: mechanically
@@ -6220,16 +6213,33 @@ export const isComputeUpgradeTurnAvailable = state =>
     Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => isComputeBoostTurnAvailable(state, boostType, index + 1, false))
   )
 
+// How many stacks of the active boost are still fully unused — every stack beyond the one
+// currently running whose whole duration is still ahead in the pooled timer:
+// min(stacks − 1, ceil(remaining / stackDuration) − 1), never negative. 0 while no boost is
+// active. canReclaimComputeBoost (Pop) is exactly "this is > 0".
+export const getUnusedComputeBoostStacks = state => {
+  const boostType = state.intro.computeBoostType ?? null
+  if (boostType === null) return 0
+  const stackDuration = getComputeBoostTierDurationSeconds(boostType, state.intro.computeBoostTierIndex ?? 1)
+  if (!(stackDuration > 0)) return 0
+  const remaining = state.intro.computeBoostRemainingSeconds ?? 0
+  return Math.max(0, Math.min((state.intro.computeBoostStacks ?? 0) - 1, Math.ceil(remaining / stackDuration) - 1))
+}
+
+// Pops every unused stack (reclaimComputeBoost, one at a time) — the refund half of a preset
+// switch. Same reference when there is nothing to refund.
+const refundUnusedComputeBoostStacks = state => {
+  let next = state
+  for (let i = getUnusedComputeBoostStacks(state); i > 0; i -= 1) next = reclaimComputeBoost(next)
+  return next
+}
+
 // Cancels the active Compute Boost with NO token refund and NO duration credit — pure forfeit.
-// Same-reference no-op while no boost is active. Distinct from reclaimComputeBoost (which refunds).
-// UI must confirm before calling when the player is abandoning the last stack on purpose. Only
-// reachable at `computeBoostStacks <= 1` — the same restriction canActivateComputeBoost's own
-// forfeit-replace branch uses — so this API can't be used to discard several stacks' worth of
-// tokens outright any more than the standalone Forfeit button or a preset swap can; a multi-stack
-// boost must be Reclaimed down first (found by Devin Review on the same PR that added the
-// canActivateComputeBoost restriction — see docs/DESIGN_HISTORY.md).
+// Same-reference no-op while no boost is active. Only reachable once no unused stack remains
+// (getUnusedComputeBoostStacks === 0 — Pop is offered instead until then), so it can never discard
+// stacked tokens outright. UI must confirm before calling.
 export const canForfeitComputeBoost = state =>
-  (state.intro.computeBoostType ?? null) !== null && (state.intro.computeBoostStacks ?? 0) <= 1
+  (state.intro.computeBoostType ?? null) !== null && getUnusedComputeBoostStacks(state) === 0
 
 export const forfeitComputeBoost = state => {
   if (!canForfeitComputeBoost(state)) return state
@@ -6249,19 +6259,20 @@ export const forfeitComputeBoost = state => {
 // field (getComputeBoostTierField), sets computeBoostStacks to 1, and
 // computeBoostRemainingSeconds to that tier's own getComputeBoostTierDurationSeconds.
 // When a boost is already active, pass forfeitConfirmed=true (after an explicit UI confirm) to
-// forfeit the current boost with no refund and replace it; without that flag, a same-reference
+// refund its unused stacks, forfeit its running stack, and replace it; without that flag, a same-reference
 // no-op while any boost is running (see stackComputeBoost to extend, or forfeitComputeBoost alone
 // to cancel). Same-type+same-tier while active is always a no-op here — use Stack.
 export const activateComputeBoost = (boostType, tierIndex, forfeitConfirmed = false) => state => {
   if (!isComputeBoostTurnAvailable(state, boostType, tierIndex, forfeitConfirmed)) return state
 
   const field = getComputeBoostTierField(tierIndex)
+  const base = (state.intro.computeBoostType ?? null) === null ? state : refundUnusedComputeBoostStacks(state)
 
   return {
-    ...state,
+    ...base,
     intro: {
-      ...state.intro,
-      [field]: (state.intro[field] ?? 0) - 1,
+      ...base.intro,
+      [field]: (base.intro[field] ?? 0) - 1,
       computeBoostType: boostType,
       computeBoostTierIndex: tierIndex,
       computeBoostStacks: 1,
@@ -6387,20 +6398,9 @@ export const tickAutoComputeBoost = state => {
 // instant remaining hits 0, rather than leaving a live boost at 0 stacks). A boost's effect can no
 // longer be canceled outright via reclaim once it's started — letting it run out is the only way
 // to end it early (see docs/DESIGN_HISTORY.md for the earlier, un-gated behavior this replaced).
-export const canReclaimComputeBoost = state => {
-  if ((state.intro.computeBoostType ?? null) === null) return false
-  if ((state.intro.computeBoostStacks ?? 0) <= 1) return false
-  // `?? 1` matches getComputeBoostMultiplier's own fallback — a save from before
-  // computeBoostTierIndex existed can have an active boost with that field missing entirely.
-  // Without this fallback, getComputeBoostTierDurationSeconds sees an invalid tierIndex and
-  // returns 0, so this gate would always pass (any positive remaining time clears "> 0") and
-  // reclaimComputeBoost below would then resolve a bogus field via getComputeBoostTierField(undefined)
-  // instead of refunding a real token, while leaving computeBoostRemainingSeconds untouched
-  // (found by Devin Review on this same PR).
-  const tierIndex = state.intro.computeBoostTierIndex ?? 1
-  const stackDuration = getComputeBoostTierDurationSeconds(state.intro.computeBoostType, tierIndex)
-  return (state.intro.computeBoostRemainingSeconds ?? 0) - stackDuration > 0
-}
+// Equivalent to getUnusedComputeBoostStacks(state) > 0 (it applies the `?? 1` tierIndex fallback
+// and a zero-duration guard, so a legacy save can't refund a bogus field).
+export const canReclaimComputeBoost = state => getUnusedComputeBoostStacks(state) > 0
 
 // Reclaims the most recently added, still-unused stack of the active Compute Boost — one at a
 // time — the exact inverse of one activateComputeBoost/stackComputeBoost call: refunds 1 token of

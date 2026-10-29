@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Boosters: timer bar for the active boost.** The separate Stack / Reclaim / Forfeit row is gone. The
+  active boost now shows a timer bar with **+** (Stack) on its right and **↩** (Pop, refunds the
+  newest unused stack, no confirmation) on its left — replaced by **✕** (Forfeit, confirmed) once no
+  unused stack remains. On the selected tier, the running preset becomes a Stack button, and picking a
+  different preset switches after a confirmation, refunding any unused stacks.
+
 - **Boosters: instant manual merge on automated tiers.** Once a tier's auto-merge is unlocked,
   tapping its auto-merge slots (now labelled "🤖 Auto-merge") merges 8 → 1 instantly instead of
   starting a timed merge; only the automatic merge at 18 held is still timed. The auto-merge row now

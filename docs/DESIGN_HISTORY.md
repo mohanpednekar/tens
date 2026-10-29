@@ -9012,3 +9012,15 @@ automatic merge (at `COMPUTE_ENTITY_AUTO_MERGE_CAP`, 18 held) keeps the timer, s
 slower "mop-up" path. The instant merge's gate counts the 1 output an in-flight automatic merge still
 owes, so tapping can never fill the output cap and void that merge's already-committed 8 inputs on
 completion.
+
+## Boosters: timer bar with Pop / Forfeit / Stack; preset switch refunds unused stacks (2026-10)
+
+The standalone Stack + Reclaim-or-Forfeit row was replaced, at the maintainer's request, by a timer bar
+for the active boost: Pop (the old Reclaim, renamed, still unconfirmed) on its left — or Forfeit
+(confirmed) once no unused stack remains — and Stack on its right. Picking the running preset again
+stacks it; picking a different one switches after a confirmation. The earlier rule that a switch (and
+Forfeit) required being down to 1 stack existed so a player couldn't discard several stacks' worth of
+tokens outright (a Devin Review finding). That concern is now met differently: a switch refunds every
+still-unused stack (`getUnusedComputeBoostStacks`) before forfeiting only the running one, and Forfeit
+is offered only once nothing is unused. "Unused" counts stacks whose whole duration is still ahead in
+the pooled timer, which also covers the old pooled-time floor on Reclaim.

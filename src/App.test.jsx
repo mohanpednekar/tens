@@ -4364,7 +4364,7 @@ describe('Byte Foundry Compute Boost', () => {
     expect(within(screen.getByLabelText('Megabytes layer')).queryByRole('img', { name: /Boosted/ })).toBeNull()
   })
 
-  test('same-type preset stays disabled while active (use Stack); other presets offer forfeit-replace with confirmation', () => {
+  test('the same preset becomes a Stack button while active; other presets offer forfeit-replace with confirmation', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
@@ -4372,10 +4372,10 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /activate burst compute boost/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /forfeit active boost and activate standard/i })).toBeEnabled()
 
-    fireEvent.click(screen.getByRole('button', { name: /stack the active compute boost/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^stack burst compute boost$/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeCores).toBe(2)
@@ -4443,22 +4443,24 @@ describe('Byte Foundry Compute Boost', () => {
     confirmSpy.mockRestore()
   })
 
-  test('forfeit-replace of a different preset is blocked while more than 1 stack is held — must Reclaim down to the last stack first (Devin Review finding)', () => {
+  test('switching to a different preset with stacks held refunds the unused stacks after confirmation', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2,
+      computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds + 5,
     })
     render(<App />)
     openBoosters()
 
-    const replaceButton = screen.getByRole('button', { name: /forfeit active boost and activate standard/i })
-    expect(replaceButton).toBeDisabled()
-    fireEvent.click(replaceButton)
+    fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate standard/i }))
 
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/1 unused stack refunded/))
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeBoostType).toBe('burst')
-    expect(saved.intro.computeBoostStacks).toBe(2)
-    expect(saved.intro.computeCores).toBe(3)
+    expect(saved.intro.computeBoostType).toBe('standard')
+    expect(saved.intro.computeBoostStacks).toBe(1)
+    expect(saved.intro.computeCores).toBe(3) // +1 refunded, −1 spent
+    confirmSpy.mockRestore()
   })
 
   test('Forfeit button asks for confirmation and clears the active boost with no refund', () => {
@@ -4478,14 +4480,14 @@ describe('Byte Foundry Compute Boost', () => {
     confirmSpy.mockRestore()
   })
 
-  test('Reclaim and Forfeit are mutually exclusive — Reclaim shows only above 1 stack, Forfeit only at the last remaining stack', () => {
+  test('the timer bar\'s left button is Pop while an unused stack remains, and Forfeit at the last one', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds * 2,
     })
     const { unmount } = render(<App />)
     openBoosters()
-    expect(screen.getByRole('button', { name: /reclaim one stack/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /pop one stack/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /forfeit the active compute boost with no refund/i })).not.toBeInTheDocument()
     unmount()
 
@@ -4495,7 +4497,7 @@ describe('Byte Foundry Compute Boost', () => {
     })
     render(<App />)
     openBoosters()
-    expect(screen.queryByRole('button', { name: /reclaim one stack/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /pop one stack/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /forfeit the active compute boost with no refund/i })).toBeInTheDocument()
   })
 
@@ -4507,7 +4509,7 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^stack burst compute boost$/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /stack the active compute boost/i })).toBeDisabled()
   })
 
@@ -4584,7 +4586,7 @@ describe('Byte Foundry Compute Boost', () => {
     }
   })
 
-  test('render order: active-boost status and Stack/Reclaim on top, the armed presets inside the selected (active) tier block below', () => {
+  test('render order: the active-boost timer bar (Pop/Forfeit, Stack) on top, the armed presets inside the selected (active) tier block below', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 1, computeNodes: 9,
@@ -4593,12 +4595,15 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    const activeStatus = screen.getByLabelText(/^active compute boost$/i)
-    const stackReclaimRow = screen.getByLabelText(/^stack, reclaim, or forfeit the active compute boost$/i)
+    const timerRow = screen.getByLabelText(/^active boost controls$/i)
     const entities = screen.getByLabelText(/^compute entities$/i)
+    expect(within(timerRow).getByLabelText(/^active compute boost$/i)).toBeInTheDocument()
+    // Pop/Forfeit on the left of the bar, Stack on the right.
+    const buttons = within(timerRow).getAllByRole('button')
+    expect(buttons[0]).toHaveAccessibleName(/forfeit the active compute boost/i)
+    expect(buttons[1]).toHaveAccessibleName(/stack the active compute boost/i)
     // DOCUMENT_POSITION_FOLLOWING (4): the first node renders before the second.
-    expect(activeStatus.compareDocumentPosition(stackReclaimRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(stackReclaimRow.compareDocumentPosition(entities) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(timerRow.compareDocumentPosition(entities) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     // Navigating here pre-selects the active boost's tier, whose block hosts the presets.
     expect(within(screen.getByLabelText(/^cores tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
     expect(screen.getAllByLabelText(/^compute boost$/i)).toHaveLength(1)
@@ -4637,15 +4642,15 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
   })
 
-  test('no Reclaim control appears while no boost is active', () => {
+  test('no Pop control appears while no boost is active', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1, computeBoostType: null })
     render(<App />)
     openBoosters()
 
-    expect(screen.queryByRole('button', { name: /reclaim one stack/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /pop one stack/i })).not.toBeInTheDocument()
   })
 
-  test('reclaiming a stack refunds 1 Core, undoes one duration\'s worth, and decrements stacks', () => {
+  test('popping a stack refunds 1 Core, undoes one duration\'s worth, and decrements stacks — no confirmation', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
       computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.standard.durationSeconds * 2,
@@ -4653,7 +4658,10 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /reclaim one stack/i }))
+    const confirmSpy = vi.spyOn(window, 'confirm')
+    fireEvent.click(screen.getByRole('button', { name: /pop one stack/i }))
+    expect(confirmSpy).not.toHaveBeenCalled()
+    confirmSpy.mockRestore()
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeCores).toBe(1)
