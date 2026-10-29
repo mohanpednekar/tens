@@ -453,7 +453,10 @@ const InfoPage = () => {
           </li>
           <li>
             A boost always multiplies Memory production too, plus as many Factory tiers (from{' '}
-            {firstTierName} up) as the funding tier’s number.
+            {firstTierName} up) as the funding tier’s number. It also speeds up the matching Storage
+            pools’ buffer fill (pool N for Factory tier N) by +{COMPUTE_BOOST_PRESETS.burst.poolBonusPercent}% /
+            +{COMPUTE_BOOST_PRESETS.standard.poolBonusPercent}% / +{COMPUTE_BOOST_PRESETS.sustain.poolBonusPercent}%
+            for Burst / Standard / Sustain.
           </li>
           <li>
             Only one boost runs at a time. Picking the same preset + tier again{' '}
@@ -590,7 +593,8 @@ const InfoPage = () => {
             Once unlocked, its ⏸/▶ control on Perks → 🎛 Toggles pauses or resumes without losing the unlock.
           </li>
           <li>
-            A tier’s autobuyer buys <strong>one unit per attempt</strong> (Buy max mode never
+            A tier’s autobuyer buys <strong>one full level per attempt</strong> — only when the
+            whole level is affordable, or the rest of a partly bought level is (Buy max mode never
             applies to it). <strong>Bulk mode</strong> is a Prestige Point purchase per tier: each
             attempt then buys 10 levels at once when that many are affordable (1000× the
             autobuyer’s base PP), then 100 levels (1e6×), then 1000 (1e9×).

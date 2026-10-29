@@ -185,15 +185,9 @@ this mode.
 
 ## `BoostBadge/index.jsx`
 
-Marks anything an active Compute Boost multiplies — the Data Stream (`tickIntroProduction`) and the
+Glow helpers for anything an active Compute Boost multiplies (no badge — the glow is self-explanatory; `BoostTimerBar` states what is boosted) — the Data Stream (`tickIntroProduction`) and the
 first `getComputeBoostCoveredTierCount` Factory tiers (`tickGame`). Exports:
 
-- default `BoostBadge` `{ intro, boosted = true, className, id }` — `role="img"` span rendering
-  `BOOST_ICON`×multiplier (`theme.color.warn` + text-shadow glow); `getComputeBoostDescription(intro)`
-  is both its `title` and `aria-label`. With `id`, also renders a `hidden` plain-text copy under that id
-  for a containing `<button>`'s `aria-describedby` (button children are presentational). Renders
-  nothing while no boost is active (unknown preset or invalid funding tier counts as inactive, matching
-  the engine) or `boosted` is false.
 - `boostGlow` — css mixin (`${props => props.$boosted && boostGlow}`) giving a card a pulsing
   `warn`-colored box-shadow (static under `prefers-reduced-motion`). Overrides the card's own
   `box-shadow`/`animation` while boosted.

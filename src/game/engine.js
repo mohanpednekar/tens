@@ -1829,11 +1829,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
       const attempts = Math.floor(budget + TICK_ACCUMULATION_EPSILON)
       if (attempts <= 0) break
 
-      const tierLevel = result.purchaseLevels?.[tier.id] ?? 1
       const levelProgress = result.purchaseLevelProgress?.[tier.id] ?? 0
-      const blockSize = getPurchaseBlockSize(result)
       // Bulk mode: when a whole clean level is affordable (and the requested number of levels), one
-      // attempt buys them all; otherwise fall through to a single unit. Buy max never applies here.
+      // attempt buys them all; otherwise fall through to a single level. Buy max never applies here.
       const bulkMode = result.autobuyerBulkLevels?.[tier.id] ?? 0
       if (bulkMode >= 1 && levelProgress === 0) {
         const bulked = buyTierExactLevels(tier.id, AUTOBUYER_BULK_LEVELS_BASE ** bulkMode)(result)
@@ -1843,43 +1841,13 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
           continue
         }
       }
-      const effectiveBatchSize = 1
-
-      const remainingInLevel = Math.max(0, blockSize - levelProgress)
-      const maxAttemptsInLevel = Math.ceil(remainingInLevel / effectiveBatchSize)
-
-      let processAttempts = Math.min(attempts, maxAttemptsInLevel)
-
-      const unitCost = getTierCost(tier, tierLevel)
-      if (unitCost > 0) {
-        const spendable = getTierSpendableAmount(result, tier)
-        const affordableUnits = Math.floor(clampNonNegative(spendable) / unitCost)
-        let affordableAttempts = Math.floor(affordableUnits / effectiveBatchSize)
-
-        // If the affordable attempts reaches the last attempt in the level,
-        // the last attempt may require fewer units (remainingInLevel % effectiveBatchSize).
-        // Check if we can afford that final attempt.
-        if (affordableAttempts === maxAttemptsInLevel - 1) {
-           const unitsForAffordable = affordableAttempts * effectiveBatchSize
-           const finalAttemptUnits = remainingInLevel - unitsForAffordable
-           if (affordableUnits >= unitsForAffordable + finalAttemptUnits) {
-              affordableAttempts += 1
-           }
-        }
-        processAttempts = Math.min(processAttempts, affordableAttempts)
-      }
-
-      if (processAttempts <= 0) break // can't afford even 1 full attempt
-
-      let unitsToBuy = processAttempts * effectiveBatchSize
-      if (processAttempts === maxAttemptsInLevel) {
-          unitsToBuy = remainingInLevel
-      }
-
-      const next = buyTierQuantity(tier.id, unitsToBuy)(result)
+      // One attempt = one whole level: a fresh level when fully affordable, or the remainder of a
+      // partly bought level when that remainder is fully affordable. Never a partial purchase.
+      if (!canAffordRestOfTierLevel(result, tier)) break
+      const next = buyTierQuantity(tier.id, Number.MAX_SAFE_INTEGER)(result)
       if (next === result) break // safety guard, shouldn't happen unless frozen
       result = next
-      budget -= processAttempts
+      budget -= 1
     }
     return {
       ...result,
@@ -2239,6 +2207,15 @@ export const repeatPurchaseMax = action => state => {
     current = next
   }
   return current
+}
+
+// Whether `state` can afford everything left in the tier's current level (the whole level when
+// progress is 0, else just the unbought remainder).
+const canAffordRestOfTierLevel = (state, tier) => {
+  const level = state.purchaseLevels?.[tier.id] ?? 1
+  const blockSize = getPurchaseBlockSize(state)
+  const progress = state.purchaseLevelProgress?.[tier.id] ?? 0
+  return getTierAffordableQuantity(tier, level, blockSize, progress, getTierSpendableAmount(state, tier), blockSize) >= blockSize - progress
 }
 
 // Whether `state` can afford the tier's entire current level from scratch (no partial progress).
@@ -2810,7 +2787,10 @@ export const getPoolTapBonusPercent = (state, poolIndex) =>
 export const getPoolMultiplierPercent = (state, poolIndex) =>
   Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getPoolBaseMultiplierPercent(state, poolIndex) + getPoolTapBonusPercent(state, poolIndex))
 
-export const getPoolEffectMultiplier = (state, poolIndex) => getPoolMultiplierPercent(state, poolIndex) / 100
+// The boost's pool bonus (getComputeBoostPoolMultiplier) scales the real buffer fill on top of the
+// capped fill-based percent; the displayed percent/Bandwidth stay unboosted.
+export const getPoolEffectMultiplier = (state, poolIndex) =>
+  (getPoolMultiplierPercent(state, poolIndex) / 100) * getComputeBoostPoolMultiplier(state.intro, poolIndex)
 
 // The raw fill rate (bits/s, before the fill-based multiplier) actually available to one pool's
 // buffer: its Bandwidth cap, limited by whatever Data Stream production earlier pools haven't
@@ -6165,6 +6145,16 @@ export const getComputeBoostCoveredTierCount = intro => {
   if (!intro?.computeBoostType) return 0
   const tierIndex = intro.computeBoostTierIndex ?? 1
   return isValidComputeBoostTier(tierIndex) ? tierIndex : 0
+}
+
+// Fill-speed multiplier an active boost gives one Storage pool's buffer (1-based `poolIndex`; pool N
+// ↔ Factory tier N, so the same getComputeBoostCoveredTierCount pools are covered): 1 + the preset's
+// `poolBonusPercent` (+200% / +50% / +10%) instead of its production multiplier; 1 for an
+// uncovered pool or while no boost is active.
+export const getComputeBoostPoolMultiplier = (intro, poolIndex) => {
+  if (!intro?.computeBoostType || poolIndex > getComputeBoostCoveredTierCount(intro)) return 1
+  const bonus = COMPUTE_BOOST_PRESETS[intro.computeBoostType]?.poolBonusPercent ?? 0
+  return 1 + bonus / 100
 }
 
 // Whether boostType can be activated right now FROM tierIndex: a valid preset, a valid tier with

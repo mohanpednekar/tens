@@ -450,8 +450,8 @@ src/
     DataLakePanel/index.jsx ← one Data Lake's block, `{ actions, state, bare, tierIndex }`, embedded per pool
                                card (unused omitted-`tierIndex` mode in the reference); mechanic: "Economy model"
     icons.js                ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Data Lake Booster, Upgrade Data Stream,
-                               Provision Disk status line; `BOOST_ICON` 🌟 marks Compute-Boosted elements)
-    BoostBadge/index.jsx    ← Compute-Boosted 🌟×N badge + `boostGlow` css + `isDataStreamBoosted`/
+                               Provision Disk status line)
+    BoostBadge/index.jsx    ← Compute-Boosted glow helpers: `boostGlow` card css + `isDataStreamBoosted`/
                                `isFactoryTierBoosted` (ByteFoundryPage Data Stream, MainPage tier rows)
     SpeedDetailsPopover/index.jsx ← non-modal portal panel behind every Foundry ⚡ speed (Data Stream, running upgrade, each pool)
     LeadIcon/index.js       ← a line's leading emoji in a fixed-size, aria-hidden box (Foundry tile rows)

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Compute Boosts also speed up Storage pools.** A boost now boosts the buffer-fill speed of the pools matching the Factory tiers it covers (pool N ↔ tier N) by +200% (Burst), +50% (Standard) or +10% (Sustain), instead of the production multiplier; covered pool cards glow.
+- Removed the 🌟×N boost badge from Factory tiers and the Data Stream (the glow remains). On Boosters the active-boost status is no longer boxed in a card — it matches the Byte Factory's timer bar.
+- **Tier autobuyers buy whole levels.** Each attempt now buys one full level (8 blocks) only when it is
+  fully affordable, or completes a partly bought level when the rest of it is fully affordable — never a
+  partial level from scratch.
 - **Data Stream and upgrade speeds are clickable.** Like a pool's ⚡ speed, the Data Stream's and the
   running upgrade's now open a details panel, dismissed by clicking or scrolling outside. The Data
   Stream's ⚡ figure now includes any active Compute Boost, matching what it actually delivers, and its
