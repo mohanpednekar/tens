@@ -462,6 +462,8 @@ src/
     SpeedDetailsPopover/index.jsx ← non-modal details panel (portal, fixed under its anchor) behind each
                                pool's clickable ⚡ speed; closes on outside press/scroll/wheel/touch-move,
                                Escape, resize. Contract: `docs/COMPONENTS_REFERENCE.md`
+    LeadIcon/index.js       ← a line's leading emoji in a fixed-size, aria-hidden box so text after it
+                               aligns across a tile's lines (Foundry stream/pool/lake/Upgrading rows)
     Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`) for Perks → Toggles and
                                Buy max. Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
@@ -668,8 +670,9 @@ Strict three-layer separation:
    Node → … → Megacomputer) behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute"
    names the page/feature only — entities drop the word in every player-visible label. Deliberately terse
    (icon-only controls, full sentence in `title`/`aria-label`; mechanic prose lives in the Guide). Order:
-   active Boost status, Boost EFFECTS (arming presets; Stack + Reclaim-or-Forfeit mutually exclusive by
-   `computeBoostStacks`, enforced in the engine too), then per-tier rows (`COMPUTE_ENTITY_CAP` 10 slots,
+   top card = active Boost effect (or "No boost running") + Stack + Reclaim-or-Forfeit (mutually exclusive
+   by `computeBoostStacks`, enforced in the engine too) + Auto-Boost pref; then per-tier rows — the ONE
+   selected tier (pre-selected to the active boost's tier on arrival) shows the 3 Boost presets inline (`COMPUTE_ENTITY_CAP` 10 slots,
    Merge ratio `COMPUTE_MERGE_RATIO` 8, Unlock Auto-merge, `COMPUTE_MERGE_RESERVE_CAP` 8 reserve). Cores
    come from buying Boosters from the matching Data Lake, not minted from Memory. Full detail:
    **`docs/FOUNDRY_MECHANICS_REFERENCE.md`**, `docs/MAINPAGE_REFERENCE.md`, `docs/DESIGN_HISTORY.md`.
@@ -850,6 +853,8 @@ into `main`, and do not rename it with an agent/session suffix.
 
 **Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Latency/Overclock
 heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
+**No link styling:** it's a game — never underline (solid, dotted or on hover) just because something is
+clickable; use `cursor: pointer` and a `:focus-visible` outline instead.
 
 ## Path aliases
 
@@ -967,7 +972,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2111 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2114 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

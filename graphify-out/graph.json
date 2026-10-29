@@ -28511,6 +28511,28 @@
       "norm_label": "rows",
       "source_file": "src/components/SpeedDetailsPopover/index.jsx",
       "source_location": "L33"
+    },
+    {
+      "id": "src_components_leadicon_index",
+      "label": "LeadIcon/index.js",
+      "_origin": "ast",
+      "community": 132,
+      "community_name": "LeadIcon/index.js",
+      "file_type": "code",
+      "norm_label": "leadicon/index.js",
+      "source_file": "src/components/LeadIcon/index.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_components_leadicon_index_leadicon",
+      "label": "LeadIcon",
+      "_origin": "ast",
+      "community": 132,
+      "community_name": "LeadIcon/index.js",
+      "file_type": "code",
+      "norm_label": "leadicon",
+      "source_file": "src/components/LeadIcon/index.js",
+      "source_location": "L6"
     }
   ],
   "links": [
@@ -121049,6 +121071,78 @@
       "context": "SpeedDetailsPopover",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L98",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_leadicon_index",
+      "target": "src_components_leadicon_index_leadicon",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "contains",
+      "source_file": "src/components/LeadIcon/index.js",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_leadicon_index",
+      "target": "ref_styled_components",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/components/LeadIcon/index.js",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_pages_bytefoundrypage_index",
+      "target": "src_components_leadicon_index_leadicon",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/pages/ByteFoundryPage/index.jsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_pages_bytefoundrypage_index",
+      "target": "src_components_leadicon_index",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/pages/ByteFoundryPage/index.jsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_datalakepanel_index",
+      "target": "src_components_leadicon_index_leadicon",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/components/DataLakePanel/index.jsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "src_components_datalakepanel_index",
+      "target": "src_components_leadicon_index",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/components/DataLakePanel/index.jsx",
+      "source_location": "L1",
       "weight": 1.0
     }
   ],

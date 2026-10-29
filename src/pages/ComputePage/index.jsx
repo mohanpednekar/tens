@@ -91,8 +91,8 @@ const TierHeaderRow = styled.div`
 `
 
 // The symbol/label/slots portion of row 1 is its own clickable button — issue #326: clicking any
-// tier row arms the 3 Compute Boost presets above (the effects section renders before the tier
-// rows — see ComputePage below), scaled to that tier's own power (duration stays at the base
+// tier row selects it, showing the 3 Compute Boost presets inside that tier's own block (one tier
+// at a time — see ComputePage below), scaled to that tier's own power (duration stays at the base
 // preset — issue #363). Kept as a SEPARATE element from the auto-claim IconButton that sometimes
 // shares this row (Cores only) rather than making the whole TierHeaderRow itself a button, since
 // nesting a <button> (auto-claim) inside another <button> is invalid HTML.
@@ -198,10 +198,17 @@ const ReserveSlotsRow = styled.button`
   justify-content: flex-end;
   gap: 2px;
   min-width: 0;
-  border: none;
-  background: none;
-  padding: 0;
+  border: 1px solid ${props => (props.$clickable ? props.theme.color.accent : 'transparent')};
+  border-radius: ${props => props.theme.radius.sm};
+  background: ${props => (props.$clickable ? props.theme.color.surfaceRaised : 'none')};
+  padding: 2px 4px;
+  color: inherit;
+  font: inherit;
   cursor: ${props => (props.$clickable ? 'pointer' : 'default')};
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.15);
+  }
 
   &:disabled {
     cursor: not-allowed;
@@ -226,6 +233,16 @@ const ReserveSlot = styled.span`
   border-radius: ${props => props.theme.radius.sm};
   border: 1.2px solid ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.accent : props.theme.color.surfaceSunken)};
   background: ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
+`
+
+// Visible "⬆ 8→1 <output>" cue at the row's left edge while a manual merge can start, so the
+// reserve row reads as a Merge button rather than a passive status strip.
+const MergeCue = styled.span`
+  flex: 0 0 auto;
+  margin-right: auto;
+  font-size: 0.78em;
+  font-weight: 600;
+  color: ${props => props.theme.color.accent};
 `
 
 const MergeCountdown = styled.span`
@@ -491,10 +508,9 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // ByteFoundryPage/StoragePage) currently outranks it. The ten-tier merge chain (Core → Node →
 // Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer, see
 // issues #280/#321) lives here too, alongside Boost — one page for everything Compute, rather
-// than a second dedicated screen. Render order top to bottom: the active-boost status (if any),
-// then the Boost effects section itself (armed-tier status line, 3 preset buttons, Stack/Reclaim
-// row — issue #326), THEN the tier rows below it, since clicking a tier row is what arms the
-// effects section above it. Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1
+// than a second dedicated screen. Render order top to bottom: a card with the current boost
+// effect, Stack/Reclaim/Forfeit and Auto-Boost preference, THEN the tier rows — the one selected
+// tier shows the armed status line + 3 preset buttons inside its own block. Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1
 // is COMPUTE_ENTITY_CAP (10) normal slots plus the tier's name/symbol; row 2 is, pre-unlock, an
 // instant Merge button + an Unlock Auto-merge button, or, post-unlock, the
 // COMPUTE_MERGE_RESERVE_CAP (8) reserve slots themselves — clicking that row is what manually
@@ -527,10 +543,13 @@ const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
   // Issue #326: which compute-ladder tier is armed to fund the next Boost activation — purely
-  // local UI state (free to change, no cost), reset on navigating away/reloading. Before the merge
-  // chain unlocks, Cores (tier 1) is the only tier that can ever hold a balance at all, so it's
-  // armed implicitly without needing a clickable row.
-  const [selectedBoostTierIndex, setSelectedBoostTierIndex] = useState(null)
+  // local UI state (free to change, no cost). Navigating here pre-selects the active boost's own
+  // tier, so its presets open on arrival; clicking the selected tier again collapses it. Before the
+  // merge chain unlocks, Cores (tier 1) is the only tier that can ever hold a balance at all, so
+  // it's armed implicitly without needing a clickable row.
+  const [selectedBoostTierIndex, setSelectedBoostTierIndex] = useState(
+    () => (intro.computeBoostType ? (intro.computeBoostTierIndex ?? 1) : null),
+  )
 
   const blockedByPriority = isDiskFillAvailable(state) || isProvisionDiskAvailable(state)
   const boostActive = Boolean(intro.computeBoostType)
@@ -541,46 +560,28 @@ const ComputePage = ({ game }) => {
   const activeRow = activeTierIndex ? ENTITY_ROWS[activeTierIndex - 1] : null
   // A tier row the player clicks always arms the presets — even mid-boost, where picking a
   // different tier arms a confirmed forfeit-and-switch (canActivateComputeBoost allows it at 1
-  // stack). With nothing clicked, the active boost's own tier stays armed.
-  const armedTierIndex = intro.computeMergePageUnlocked
-    ? (selectedBoostTierIndex ?? activeTierIndex)
-    : 1
+  // stack).
+  const armedTierIndex = intro.computeMergePageUnlocked ? selectedBoostTierIndex : 1
   const armedRow = armedTierIndex ? ENTITY_ROWS[armedTierIndex - 1] : null
   const armedHeld = armedRow ? (intro[armedRow.countField] ?? 0) : 0
 
-  return (
-    <RootDiv>
-      <Header>
-        <Title>⚡ Boosters</Title>
-      </Header>
-
-      <BoostCard aria-label="boost">
-      {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
-        <ActiveBoostRow aria-label="active compute boost">
-          <span
-            title={`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} (${activeRow?.label ?? ''}) active: ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} production on ${describeCoveredTiers(activeTierIndex, 'name')}, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left, ${intro.computeBoostStacks}x stacked`}
-          >
-            {`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.icon ?? '⚡'} ${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} · ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left${intro.computeBoostStacks > 1 ? ` · ${intro.computeBoostStacks} stacked` : ''}`}
-          </span>
-        </ActiveBoostRow>
-      )}
-
-      <ArmedStatusText title={armedRow ? `Each boost spends 1 ${singularize(armedRow.label)} and boosts ${describeCoveredTiers(armedTierIndex, 'name')}` : undefined}>
-        {armedRow
-          ? `1 ${armedRow.symbol} → ${describeCoveredTiers(armedTierIndex)} · ${formatAmount(armedHeld)} held`
-          : 'Pick a tier ↓'}
+  // The armed tier's 3 presets — rendered inside the selected tier block (only one at a time), or
+  // in the top card before the merge chain unlocks (Cores armed implicitly, no tier rows yet).
+  const boostPresets = armedRow && (
+    <>
+      <ArmedStatusText title={`Each boost spends 1 ${singularize(armedRow.label)} and boosts ${describeCoveredTiers(armedTierIndex, 'name')}`}>
+        {`1 ${armedRow.symbol} → ${describeCoveredTiers(armedTierIndex)} · ${formatAmount(armedHeld)} held`}
       </ArmedStatusText>
       <BoostRow role="group" aria-label="compute boost">
-        {Object.entries(COMPUTE_BOOST_PRESETS).map(([boostType, preset]) => {
-          const multiplier = armedTierIndex ? getComputeBoostTierMultiplier(boostType, armedTierIndex) : preset.multiplier
-          const durationSeconds = armedTierIndex ? getComputeBoostTierDurationSeconds(boostType, armedTierIndex) : preset.durationSeconds
+        {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
+          const multiplier = getComputeBoostTierMultiplier(boostType, armedTierIndex)
+          const durationSeconds = getComputeBoostTierDurationSeconds(boostType, armedTierIndex)
           const needsForfeit = boostActive
           const sameAsActive = needsForfeit
             && intro.computeBoostType === boostType
             && activeTierIndex === armedTierIndex
           // Fresh start, or a different preset/tier that would forfeit (confirm happens on click).
-          const turnAvailable = armedTierIndex !== null
-            && !sameAsActive
+          const turnAvailable = !sameAsActive
             && (
               isComputeBoostTurnAvailable(state, boostType, armedTierIndex, false)
               || isComputeBoostTurnAvailable(state, boostType, armedTierIndex, true)
@@ -594,7 +595,6 @@ const ComputePage = ({ game }) => {
                 : `activate ${boostType} compute boost`}
               disabled={!turnAvailable}
               onClick={() => {
-                if (armedTierIndex === null) return
                 if (needsForfeit) {
                   const activeLabel = COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType
                   const nextLabel = COMPUTE_BOOST_DISPLAY[boostType].label
@@ -607,17 +607,15 @@ const ComputePage = ({ game }) => {
                 actions.activateComputeBoost(boostType, armedTierIndex, false)
               }}
               title={
-                armedTierIndex === null
-                  ? 'Select a tier below first'
-                  : sameAsActive
-                    ? 'This boost is already active — use Stack to extend it'
-                    : needsForfeit && intro.computeBoostStacks > 1
-                      ? 'Reclaim down to the last stack first — switching to a different boost forfeits everything currently held, same as the standalone Forfeit button'
-                      : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
-                        ? 'Take a higher-priority upgrade first (Disk Fill or Provision Disk)'
-                        : needsForfeit
-                          ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)} — asks for confirmation`
-                          : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`
+                sameAsActive
+                  ? 'This boost is already active — use Stack to extend it'
+                  : needsForfeit && intro.computeBoostStacks > 1
+                    ? 'Reclaim down to the last stack first — switching to a different boost forfeits everything currently held, same as the standalone Forfeit button'
+                    : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
+                      ? 'Take a higher-priority upgrade first (Disk Fill or Provision Disk)'
+                      : needsForfeit
+                        ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow.label)} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)} — asks for confirmation`
+                        : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow.label)} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`
               }
               type="button"
               variant="prestige"
@@ -627,6 +625,32 @@ const ComputePage = ({ game }) => {
           )
         })}
       </BoostRow>
+    </>
+  )
+
+  return (
+    <RootDiv>
+      <Header>
+        <Title>⚡ Boosters</Title>
+      </Header>
+
+      <BoostCard aria-label="boost">
+      {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
+        <ActiveBoostRow aria-label="active compute boost">
+          <span
+            title={`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} (${activeRow?.label ?? ''}) active: ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} production on ${describeCoveredTiers(activeTierIndex, 'name')}, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left, ${intro.computeBoostStacks}x stacked`}
+          >
+            {`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.icon ?? '⚡'} ${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} on ${describeCoveredTiers(activeTierIndex)} · ${activeRow?.symbol ?? ''} · ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left${intro.computeBoostStacks > 1 ? ` · ${intro.computeBoostStacks} stacked` : ''}`}
+          </span>
+        </ActiveBoostRow>
+      )}
+      {!boostActive && (
+        <ArmedStatusText>
+          {intro.computeMergePageUnlocked && !armedRow ? 'No boost running · pick a tier ↓' : 'No boost running'}
+        </ArmedStatusText>
+      )}
+
+      {!intro.computeMergePageUnlocked && boostPresets}
 
       {boostActive && (
         <StackReclaimRow role="group" aria-label="stack, reclaim, or forfeit the active compute boost">
@@ -737,11 +761,13 @@ const ComputePage = ({ game }) => {
                 spacious || armedTierIndex === tierIndex || merging || canMergeNow || reserveHeld > 0
               )
 
-              // Only unlocked tiers render: the first, anything held/automated/merging, or one whose
-              // predecessor can already feed it (or any higher tier is held).
+              // Only unlocked tiers render: the first, anything held/automated/merging, one whose
+              // predecessor can already feed it (or any higher tier is held), or the selected/active
+              // boost tier — so the presets never vanish after a boost spends that tier's last unit.
               const prevRow = rowIndex > 0 ? ENTITY_ROWS[rowIndex - 1] : null
               const heldAtOrAbove = ENTITY_ROWS.some((r, i) => i >= rowIndex && (intro[r.countField] ?? 0) > 0)
               const unlocked = rowIndex === 0 || heldAtOrAbove || autoEnabled || merging
+                || armedTierIndex === tierIndex || activeTierIndex === tierIndex
                 || (prevRow && ((intro[prevRow.countField] ?? 0) >= COMPUTE_MERGE_RATIO || intro[prevRow.autoFlagField]))
               if (!unlocked) return null
 
@@ -753,7 +779,7 @@ const ComputePage = ({ game }) => {
                       onClick={() => setSelectedBoostTierIndex(armedTierIndex === tierIndex ? null : tierIndex)}
                       aria-pressed={armedTierIndex === tierIndex}
                       aria-label={`select ${row.label} to fund a compute boost`}
-                      title={`Select ${row.label} to arm the Boost presets above — they'll boost ${describeCoveredTiers(tierIndex, 'name')}`}
+                      title={`Select ${row.label} to show its Boost presets — they'll boost ${describeCoveredTiers(tierIndex, 'name')}`}
                       $selected={armedTierIndex === tierIndex}
                     >
                       <SelectMarker aria-hidden="true" $selected={armedTierIndex === tierIndex} />
@@ -769,6 +795,8 @@ const ComputePage = ({ game }) => {
                       </SlotsRow>
                     </TierSelectButton>
                   </TierHeaderRow>
+
+                  {armedTierIndex === tierIndex && boostPresets}
 
                   {showDetail && (
                   <TierMergeRow $spacious={spacious}>
@@ -796,6 +824,7 @@ const ComputePage = ({ game }) => {
                           }
                           type="button"
                         >
+                          {startAvailable && <MergeCue aria-hidden="true">{`⬆ ${COMPUTE_MERGE_RATIO}→1 ${row.mergeOutputLabel}`}</MergeCue>}
                           {merging && <MergeCountdown>{formatOfflineDuration(remainingSeconds)}</MergeCountdown>}
                           {Array.from({ length: COMPUTE_MERGE_RESERVE_CAP }, (_, index) => (
                             <ReserveSlot key={index} $filled={index < reserveHeld} $merging={merging} aria-hidden="true" />

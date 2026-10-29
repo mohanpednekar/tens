@@ -322,9 +322,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      pool's, and never the Data Stream's when a pool is tapped or vice versa. `tickFillMultiplierDecay`
      (run once per tick, ahead of `tickIntroProduction`/`tickPoolBufferFill`, so both read that
      tick's already-decayed bonus) drains every live bonus back toward 0 — never below it — at
-     `FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND` (1) percentage point per second. Both tap
-     actions are no-ops once that Buffer is already full — a faster fill rate has nowhere to go, same
-     reasoning `tapIntroBit`'s own pre-reveal full-Buffer guard already uses.
+     `FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND` (1) percentage point per second. The Data
+     Stream tap is a no-op once its Buffer is already full (same as `tapIntroBit`'s pre-reveal guard);
+     a pool tap always grants its bonus, even on a full or lake-draining buffer.
    - The stored tap bonus is its OWN value, clamped independently to 0..`FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT`
      (100): `tapIntroBit`'s post-reveal branch and `tapPoolBuffer` no-op once the stored bonus
      (`dataStreamTapBonusPercent`/`poolTapBonusPercents[poolIndex]`) is already at that cap, and each tap
@@ -357,10 +357,10 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      `BalanceText` (balance only, no "/ capacity") is absolutely centered in the `TileHeader`: perfectly
      centered, larger, with the Speed also vertically centered when no bonus is active; top-aligned at the
      normal size when the bonus bar shows. Each pool's own Memory buffer tile is a real tap
-     target (`PoolTile` + stretched `PoolTapButton`, calling `tapPoolBuffer(poolIndex)`; disabled, with an
-     explanatory title, while `isDataLakePoolDrainAvailable` or at the tap-bonus cap). Expand/collapse is the "<symbol> Pool" title alone
+     target (`PoolTile` + stretched `PoolTapButton`, calling `tapPoolBuffer(poolIndex)`; never disabled — a tap at
+     the bonus cap is simply a no-op). Expand/collapse is the "<symbol> Pool" title alone
      (`PoolTitleToggle`, a real `<button>` with `aria-expanded`; the tap target is a separate stretched
-     `PoolTapButton` behind the readouts, so the two never nest and a disabled tap can't block the title).
+     `PoolTapButton` behind the readouts, so the two never nest and the tap can't block the title).
 5. **Upgrade Data Stream** (`upgradeIntroCapacity`, the single consolidated upgrade button —
    replacing the former paired "Speed ×2"/Invest ladder and "Capacity ×2" actions, now removed).
    **Capacity is the only purchased progression variable**: the upgrade costs exactly the current
@@ -1296,18 +1296,17 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    stack count — no longer a Reclaim control, moved below, see next) renders at the very TOP of the
    page, right after the header, so it stays visible regardless of what else is on screen; `MainPage`
    shows a matching read-only status line while a boost is active, since its effect reaches `tier01`
-   there too. Right below that is the Boost EFFECTS section itself ("the effects section is at the
-   top of the Compute page, not at the bottom"): an armed-tier status line names the currently armed
-   tier and how many tokens it holds, then the 3 small icon preset buttons — disabled entirely until
-   a tier is armed, and (per the "no boost of any kind currently active" gate above) disabled again
+   there too. The armed-tier status line (naming the selected tier and how many tokens it holds) and
+   the 3 small icon preset buttons render inside the ONE selected tier's block (in the top card before
+   the merge chain unlocks) — shown only once a tier is selected, and (per the "no boost of any kind currently active" gate above) disabled again
    the instant any boost starts, regardless of type/tier. Only while a boost IS active, a row appears
-   right below the presets with Stack plus exactly ONE of Reclaim or Forfeit ("Stack and reclaim
+   in the top card with Stack plus exactly ONE of Reclaim or Forfeit ("Stack and reclaim
    buttons shall be shown on the next row") — mutually exclusive by `computeBoostStacks`: Reclaim
    (instant, no confirmation) while `> 1`, Forfeit (confirmation-gated, clears the boost entirely
    with no refund) once down to the last remaining stack (`=== 1`) — see the Reclaim/Forfeit
    paragraph above and `docs/DESIGN_HISTORY.md` for why these two were made mutually exclusive
-   rather than Reclaim staying visible-but-disabled at 1 stack. THEN, below the whole effects section, come the tier rows themselves — clicking one arms
-   the presets above it. Ranked lowest in the forced priority order
+   rather than Reclaim staying visible-but-disabled at 1 stack. THEN come the tier rows themselves — clicking one selects it and shows the presets inside
+   it; arriving on the page pre-selects the active boost's tier. Ranked lowest in the forced priority order
    (below Disk Fill/Provision Disk — see "Forced priority order" below; Upgrade Data Stream sits
    outside the order entirely and never blocks or is blocked by Compute):
    `isComputeBoostTurnAvailable(state, boostType, tierIndex)`/`isStackComputeBoostTurnAvailable(state)`
@@ -2815,7 +2814,7 @@ purchases were manual or automatic.
 | `getPoolTapBonusPercent` | `(state, poolIndex) → percent` | `state.intro.poolTapBonusPercents[poolIndex] ?? 0` |
 | `getPoolMultiplierPercent` | `(state, poolIndex) → percent` | `min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getPoolBaseMultiplierPercent(...) + getPoolTapBonusPercent(...))` — what `ByteFoundryPage` displays next to that pool's own Bandwidth |
 | `getPoolEffectMultiplier` | `(state, poolIndex) → number` | `getPoolMultiplierPercent(...) / 100` — the real scale factor `tickPoolBufferFill` multiplies that pool's per-tick transfer by |
-| `tapPoolBuffer` | `poolIndex → state → state` | Adds `FILL_MULTIPLIER_TAP_BONUS_PERCENT` (5), clamped to `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` (100), to `intro.poolTapBonusPercents[poolIndex]` only. No-op for a locked/invalid pool, once that pool's own buffer is already full, or once that pool's stored tap bonus is already at `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` (100) |
+| `tapPoolBuffer` | `poolIndex → state → state` | Adds `FILL_MULTIPLIER_TAP_BONUS_PERCENT` (5), clamped to `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` (100), to `intro.poolTapBonusPercents[poolIndex]` only. No-op for a locked/invalid pool, or once that pool's stored tap bonus is already at `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` (100) |
 | `tickFillMultiplierDecay` | `elapsedSeconds → state → state` | Decays `intro.dataStreamTapBonusPercent` and every entry of `intro.poolTapBonusPercents` by `FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND * elapsedSeconds`, floored at 0 — except a pool whose own buffer is completely full, whose bonus is forced straight to 0 (lake-mode handoff seam). Run once per tick (`tickGame`), ahead of `tickIntroProduction`/`tickPoolBufferFill` |
 | `tapIntroBit` | `state → state` | Byte Foundry: before Storage itself is revealed at 1 KiB (`isStorageUnlocked(state)` — NOT `getVisibleStoragePoolCount(state) >= 1`, which pool 1's own always-live special case would satisfy regardless of actual Capacity), adds `getIntroProductionRate(intro)` bits to `intro.bits` — "one second's worth" at the current rate, not a flat 1 — capped at `intro.capacity`. Once revealed, this direct-credit effect is REPLACED: adds `FILL_MULTIPLIER_TAP_BONUS_PERCENT` (5), clamped to `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` (100), to `intro.dataStreamTapBonusPercent` instead (see point 4a above) — crediting no bits — no-op once the stored tap bonus is already at `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` (100), in addition to the full-Buffer no-op both modes share. Never freezes |
 | `combineIntroByte` | `state → state` | Byte Foundry: one-time — consumes `INTRO_BYTE_COMBINE_COST` (8) bits, sets `intro.byteCreated = true`. No-op once already created or below cost |
