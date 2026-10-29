@@ -4558,6 +4558,17 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.queryByText(/held/)).not.toBeInTheDocument()
   })
 
+  test('preset buttons drop zero-valued trailing duration units', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1 })
+    render(<App />)
+    openBoosters()
+
+    for (const type of ['burst', 'standard', 'sustain']) {
+      const button = screen.getByRole('button', { name: new RegExp(`activate ${type} compute boost`, 'i') })
+      expect(button.textContent).not.toMatch(/ 0[ms]\b/)
+    }
+  })
+
   test('render order: active-boost status and Stack/Reclaim on top, the armed presets inside the selected (active) tier block below', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,

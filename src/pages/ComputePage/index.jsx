@@ -528,6 +528,10 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // cost/spend sentence naming exactly 1 of a tier (e.g. "spend 1 Core", not "spend 1 Cores").
 const singularize = label => label.replace(/s$/, '')
 
+// Preset buttons drop zero-valued trailing units ("10m 0s" → "10m", "1h 0m" → "1h") — the
+// durations are round, so the extra unit adds nothing. Countdowns keep formatOfflineDuration as-is.
+const formatPresetDuration = seconds => formatOfflineDuration(seconds).replace(/ 0[ms]$/, '')
+
 // "KB" for 1 covered Factory tier, "KB–MB" for 2, … — which Factory tiers a boost funded from
 // compute-ladder tier `tierIndex` applies to (see getComputeBoostCoveredTierCount). `field` picks
 // the short `symbol` (on-screen text) or the full `name` (tooltips).
@@ -616,7 +620,7 @@ const ComputePage = ({ game }) => {
               type="button"
               variant="prestige"
             >
-              <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatOfflineDuration(durationSeconds)}`}</ButtonContent>
+              <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatPresetDuration(durationSeconds)}`}</ButtonContent>
             </CompactButton>
           )
         })}

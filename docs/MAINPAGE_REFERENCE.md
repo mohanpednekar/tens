@@ -536,7 +536,7 @@ live inside the selected tier):
       buttons, each a small `CompactButton` (`variant="prestige"`,
       `aria-label="activate <type> compute boost"`, visible label `"<icon> ×<multiplier> · <duration>"` computed
       for the CURRENTLY ARMED tier via `getComputeBoostTierMultiplier(boostType, armedTierIndex)` —
-      e.g. `"💥 ×20 · 10m 0s"` for Burst — identical for every armed tier — the preset name itself lives only in
+      e.g. `"💥 ×20 · 10m"` for Burst (`formatPresetDuration` drops a zero trailing unit) — identical for every armed tier — the preset name itself lives only in
       `title`), calling `actions.activateComputeBoost(boostType, armedTierIndex)`.
       `disabled={!turnAvailable}` where `turnAvailable = !sameAsActive &&
       isComputeBoostTurnAvailable(state, boostType, armedTierIndex)` — folds
