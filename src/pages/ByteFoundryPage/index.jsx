@@ -1,4 +1,4 @@
-import BoostBadge, { boostGlow, isDataStreamBoosted } from 'components/BoostBadge'
+import { boostGlow, isDataStreamBoosted } from 'components/BoostBadge'
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import { COST_ICON } from 'components/icons'
 import DiskArrayRow from 'components/DiskArrayRow'
@@ -1052,7 +1052,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               onClick={actions.tapIntroBit}
               disabled={isFull || dataStreamMultiplierCapped}
               aria-label="tap to generate a bit"
-              aria-describedby={isDataStreamBoosted(intro) ? 'data-stream-boost' : undefined}
               title={!isFull && dataStreamMultiplierCapped ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap` : undefined}
             />
           )}
@@ -1076,7 +1075,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 onClick={() => toggleSpeedDetails('stream')}
               >
                 ⚡ {dataStreamRateText}
-                {isDataStreamBoosted(intro) && <>{' '}<BoostBadge id="data-stream-boost" intro={intro} /></>}
               </SpeedButton>
             )}
             {streamSpeedDetailsOpen && (

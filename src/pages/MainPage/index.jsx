@@ -1,5 +1,5 @@
 import { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
-import BoostBadge, { boostGlow, getComputeBoostDescription, isFactoryTierBoosted } from 'components/BoostBadge'
+import { boostGlow, getComputeBoostDescription, isFactoryTierBoosted } from 'components/BoostBadge'
 import BoostTimerBar from 'components/BoostTimerBar'
 import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
@@ -1482,7 +1482,6 @@ const MainPage = ({ game }) => {
                     <span aria-hidden="true">{tier.symbol}</span>
                   </TierNameLabel>
                 </TierName>
-                {isBoosted && <BoostBadge intro={state.intro} />}
                   <OwnedText title="Owned">
                     <VisuallyHidden>Owned: </VisuallyHidden>
                     {formatAmount(owned)}

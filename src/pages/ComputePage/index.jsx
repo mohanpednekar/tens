@@ -604,7 +604,6 @@ const ComputePage = ({ game }) => {
         <Title>⚡ Boosters</Title>
       </Header>
 
-      <BoostCard aria-label="boost">
       {boostActive && <BoostTimerBar actions={actions} state={state} />}
       {!boostActive && (
         <ArmedStatusText>
@@ -612,8 +611,9 @@ const ComputePage = ({ game }) => {
         </ArmedStatusText>
       )}
 
+      {(!intro.computeMergePageUnlocked || state.computeAutoBoostUnlocked) && (
+      <BoostCard aria-label="boost">
       {!intro.computeMergePageUnlocked && boostPresets}
-
 
       {state.computeAutoBoostUnlocked && (
       <AutoBoostRow aria-label="compute auto boost">
@@ -641,6 +641,7 @@ const ComputePage = ({ game }) => {
       </AutoBoostRow>
       )}
       </BoostCard>
+      )}
 
       {intro.computeMergePageUnlocked
         ? (

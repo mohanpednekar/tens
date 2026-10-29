@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Removed the 🌟×N boost badge from Factory tiers and the Data Stream (the glow remains). On Boosters the active-boost status is no longer boxed in a card — it matches the Byte Factory's timer bar.
 - **Tier autobuyers buy whole levels.** Each attempt now buys one full level (8 blocks) only when it is
   fully affordable, or completes a partly bought level when the rest of it is fully affordable — never a
   partial level from scratch.
