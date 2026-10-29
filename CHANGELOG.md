@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Tier autobuyers buy whole levels.** Each attempt now buys one full level (8 blocks) only when it is
+  fully affordable, or completes a partly bought level when the rest of it is fully affordable — never a
+  partial level from scratch.
 - **Data Stream and upgrade speeds are clickable.** Like a pool's ⚡ speed, the Data Stream's and the
   running upgrade's now open a details panel, dismissed by clicking or scrolling outside. The Data
   Stream's ⚡ figure now includes any active Compute Boost, matching what it actually delivers, and its
