@@ -406,7 +406,8 @@ export const COMPUTE_MERGE_RATIO = 8
 // batch from 10 back up toward 18. Before a boundary's auto-merge is unlocked, merging that tier is
 // still the old-style instant, untimed action (see mergeComputeCoresIntoNode/
 // mergeComputeNodesIntoCluster/… — each becomes a same-reference no-op once its own auto-merge flag
-// flips true, since merging fully transitions to the timed reserve system from then on). An earlier
+// flips true, since merging then moves to the reserve system: the automatic merge is timed, a manual
+// tap on the auto-merge slots stays instant). An earlier
 // version filled the reserve in one atomic, all-8-at-once instant pull rather than gradually via
 // continued purchases — reversed; see docs/DESIGN_HISTORY.md.
 export const COMPUTE_MERGE_RESERVE_CAP = 8

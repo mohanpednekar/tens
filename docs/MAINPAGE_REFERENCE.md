@@ -508,61 +508,52 @@ or single word labels" ask). The full prose explanation of every mechanic here l
 Render order top to bottom (a top `BoostCard` with the current effect, then tier rows; the presets
 live inside the selected tier):
 
-1. Right after the header — before anything else, deliberately at the TOP of the page — an
-   `ActiveBoostRow` (`aria-label="active compute boost"`) renders whenever a Compute Boost is
-   active: one line, `"<icon> <label> ×<multiplier> on <KB–covered tier> · <funding tier symbol> ·
-   <countdown> left[ · <N> stacked]"` (e.g. `"💥 Burst ×20 on KB–MB · 🔗 · 2m59s left"`), with the full sentence (e.g. "burst (Clusters) active: ×2048 production, 2m59s left, 1x
-   stacked") only in that span's own `title`. Kept at the top so an active boost stays visible
-   regardless of what else is happening lower on the page; `MainPage` shows a matching read-only
-   status line while a boost is active, since its effect reaches `tier01` there too. No Reclaim
-   control here any more — it moved to the Stack + Reclaim row below (see 2c).
+1. Right after the header — deliberately at the TOP of the page — a `BoostTimerRow`
+   (`role="group"`, `aria-label="active boost controls"`) renders whenever a Compute Boost is active:
+   - Left: **Pop** (`aria-label="pop one stack of the active compute boost"`, `↩`, no confirmation,
+     `actions.reclaimComputeBoost`) while `canReclaimComputeBoost` (an unused stack remains —
+     `getUnusedComputeBoostStacks > 0`); otherwise **Forfeit** (`aria-label="forfeit the active compute
+     boost with no refund"`, `✕`, `window.confirm` first, `actions.forfeitComputeBoost`).
+   - Middle: a `TimerBar` (`aria-label="active compute boost"`) whose fill is remaining time over the
+     total stacked duration (`stacks × getComputeBoostTierDurationSeconds`), with one line on top,
+     `"<icon> <label> ×<multiplier> on <KB–covered tier> · <funding tier symbol> · <countdown> left[ · <N> stacked]"`
+     (e.g. `"💥 Burst ×20 on KB–MB · 🔗 · 2m59s left"`); the full sentence lives in that span's `title`.
+   - Right: **Stack** (`aria-label="stack the active compute boost"`, `+`,
+     `disabled={!isStackComputeBoostTurnAvailable(state)}`, `actions.stackComputeBoost`).
+   `MainPage` shows a matching read-only status line while a boost is active.
    With no boost active, the card instead shows "No boost running" (plus "· pick a tier ↓" when the
    merge chain is unlocked and nothing is selected).
 2. The Boost presets (`boostPresets`: `ArmedStatusText` + `BoostRow`) render INSIDE the one selected
-   tier block (3) — only one tier shows them at a time; re-clicking the selected tier collapses them.
+   tier block (3), BELOW that tier's merge / auto-merge row — only one tier shows them at a time;
+   re-clicking the selected tier, or clicking anywhere outside every tier block (`data-boost-tier`;
+   a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
+   (`flex: 1 1 0`).
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cores:
-   The active/idle status line, Stack/Reclaim/Forfeit row and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Global Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
+   The timer bar / idle status line and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Global Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
-   a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol> · <N> held"`, full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
+   a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
       initialized on arrival to the active boost's own tier (`intro.computeBoostTierIndex`), else none; always Cores (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
       tier that can hold a balance that early. Clicking a different tier mid-boost arms a
-      confirmed forfeit-and-switch (only at 1 stack, per `canActivateComputeBoost`); the active-boost
-      line, Stack, and Reclaim always describe the ACTIVE tier, not the armed one. The row
+      confirmed switch (per `canActivateComputeBoost`); the timer bar, Stack and Pop always describe
+      the ACTIVE tier, not the armed one. The row
       highlight (`aria-pressed`) tracks `armedTierIndex`.
    b. A `BoostRow` (`role="group"`, `aria-label="compute boost"`) of the 3 Compute Boost preset
       buttons, each a small `CompactButton` (`variant="prestige"`,
       `aria-label="activate <type> compute boost"`, visible label `"<icon> ×<multiplier> · <duration>"` computed
       for the CURRENTLY ARMED tier via `getComputeBoostTierMultiplier(boostType, armedTierIndex)` —
-      e.g. `"💥 ×20 · 10m 0s"` for Burst — identical for every armed tier — the preset name itself lives only in
-      `title`), calling `actions.activateComputeBoost(boostType, armedTierIndex)`.
-      `disabled={!turnAvailable}` where `turnAvailable = !sameAsActive &&
-      isComputeBoostTurnAvailable(state, boostType, armedTierIndex)` — folds
-      `canActivateComputeBoost`'s own mechanical guard (a tier must be armed, ≥1 token of it held,
-      AND no boost of any kind already active — issue #326 removed same-type restacking through
-      this button) together with the forced priority order (a no-op while Disk Fill/Bandwidth/Disk
-      Build outranks Compute — see "Forced priority order" in docs/ECONOMY_REFERENCE.md), with a
-      `title` naming which to take first in that case.
-   c. A `StackReclaimRow` (`role="group"`,
-      `aria-label="stack, reclaim, or forfeit the active compute boost"`) — rendered only while a
-      boost is active (`boostActive`) — always shows **Stack**
-      (`aria-label="stack the active compute boost"`, visible label `"+ Stack"`,
-      `disabled={!isStackComputeBoostTurnAvailable(state)}`) calling `actions.stackComputeBoost`,
-      which always extends the ACTIVE boost's own funding tier (`intro.computeBoostTierIndex`),
-      never whatever tier is currently armed if the player has since clicked a different row; PLUS
-      exactly one of **Reclaim** or **Forfeit**, mutually exclusive by `intro.computeBoostStacks`
-      (not two always-visible controls with different disabled states — conflating "Reclaim, but
-      disabled" with the last-stack case read as confusing, see `docs/DESIGN_HISTORY.md`): while
-      `computeBoostStacks > 1`, **Reclaim** (`aria-label="reclaim one stack of the active compute
-      boost"`, visible label `"↩ Reclaim"`, `disabled={!canReclaimComputeBoost(state)}` — the
-      pooled-time floor can still disable it within that range) calling
-      `actions.reclaimComputeBoost`, undoing the most recently added, still-unused stack one at a
-      time (refunds 1 token of the active funding tier, subtracts that stack's own duration) —
-      instant, no confirmation; once `computeBoostStacks === 1` (the last remaining, still-active
-      stack), **Forfeit** (`aria-label="forfeit the active compute boost with no refund"`, visible
-      label `"✕ Forfeit"`, `disabled={!canForfeitComputeBoost(state)}`) calling
-      `actions.forfeitComputeBoost` after a `window.confirm`, clearing the boost entirely with no
-      token refund — the only way to end that last stack early (letting it run out is the other).
+      e.g. `"💥 ×20 · 10m"` for Burst (`formatPresetDuration` drops a zero trailing unit) — the preset
+      name itself lives only in `title`). While a boost is active each preset becomes one of:
+      - the SAME preset + tier as the running boost → **Stack** (`aria-label="stack <type> compute
+        boost"`, label prefixed `"+ "`, `actions.stackComputeBoost`, gated by
+        `isStackComputeBoostTurnAvailable`);
+      - any other → a confirmed **switch** (`aria-label="forfeit active boost and activate <type>
+        compute boost"`; the `window.confirm` names how many unused stacks get refunded), calling
+        `actions.activateComputeBoost(boostType, armedTierIndex, true)` — refunds every unused stack
+        (`getUnusedComputeBoostStacks`), forfeits the running one, then spends 1 armed-tier token.
+      With no boost active, `actions.activateComputeBoost(boostType, armedTierIndex)`. Every preset
+      also folds in the forced priority order (disabled while Disk Fill / Provision Disk outranks
+      Compute, `title` naming which to take first).
 3. THEN, below the `BoostCard`, the page branches on `intro.computeMergePageUnlocked` (a
    permanent, one-time reveal latch — see `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" step 9 —
    that flips the first time `intro.computeCoresEverEarned`, a lifetime counter never decremented by
@@ -617,20 +608,19 @@ live inside the selected tier):
          keeps growing past its primary 10 (via continued Booster purchases or a lower-tier merge),
          up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a merge is actually in flight
          the reserve instead reads as fully committed regardless of the live count (which has by then
-         dropped back toward 10 and may be accumulating the next batch) — clicking the row IS the
-         manual-start trigger ("slots are the button"); while startable it gets an accent border/raised
-         background plus a visible `MergeCue` (`"⬆ 8→1 <output>"`) on its left, so it reads as a
-         button, calling the matching
-         `game.actions.startCompute*Merge` action, enabled once `isCompute*MergeStartAvailable`
-         allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the normal + reserve slots — the
-         SAME, lower threshold as before this row existed, deliberately NOT the stricter
-         `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) the automatic trigger itself now waits for — no merge
-         already in flight, room under the output's effective cap, and a live merge duration > 0 —
-         `isComputeMergeStartAvailableAtBoundary`). While a merge is in
+         dropped back toward 10 and may be accumulating the next batch) — a `MergeCue` on its left always
+         names it ("🤖 Auto-merge", muted), switching to an accent "🤖 ⬆ 8→1 <output>" (plus accent
+         border/raised background) while clicking would INSTANTLY merge 8 → 1 ("slots are the
+         button"), calling the matching `game.actions.startCompute*Merge` action, enabled once
+         `isCompute*MergeStartAvailable` allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the
+         normal + reserve slots and room under the output's effective cap, counting the 1 an in-flight
+         automatic merge still owes — `isComputeMergeStartAvailableAtBoundary`).
+         `aria-label`: "instantly merge 8 <input> into 1 <output>, N/8 auto-merge slots filled" (or
+         ", auto-merge in progress, <time> left") when available, "<Tier> auto-merge in progress, <time> left" while an automatic merge runs, else
+         "<Tier> auto-merge slots, N/8 filled". While an automatic merge is in
          flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
          inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
-         live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` banked count. When a start is available, the
-         `title` also names how long the merge will take (`getComputeMergeDurationSeconds`). There is
+         live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` filled count. There is
          no merge-duration upgrade button (removed, #755).
 
      Nothing spends a Megacomputer beyond funding a Boost — see issue #280's "Out of scope".

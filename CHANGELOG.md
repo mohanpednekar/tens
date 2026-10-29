@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Boosters: timer bar for the active boost.** The separate Stack / Reclaim / Forfeit row is gone. The
+  active boost now shows a timer bar with **+** (Stack) on its right and **↩** (Pop, refunds the
+  newest unused stack, no confirmation) on its left — replaced by **✕** (Forfeit, confirmed) once no
+  unused stack remains. On the selected tier, the running preset becomes a Stack button, and picking a
+  different preset switches after a confirmation, refunding any unused stacks.
+  Refunds are never lost when the funding tier is already full.
+
+- **Boosters: instant manual merge on automated tiers.** Once a tier's auto-merge is unlocked,
+  tapping its auto-merge slots (now labelled "🤖 Auto-merge") merges 8 → 1 instantly instead of
+  starting a timed merge; only the automatic merge at 18 held is still timed. The auto-merge row now
+  sits above the selected tier's Boost presets, and the three preset buttons are equal width. The
+  redundant "· N held" count was dropped from the preset line (the slot dots already show it), and
+  preset durations drop zero units ("10m", "1h", "10h" instead of "10m 0s", "1h 0m", "10h 0m").
+  Clicking anywhere outside the tier rows deselects the selected boost tier.
+
 - **Boosters: presets live on the selected tier.** The three Boost presets now appear inside the
   selected tier's block (one tier at a time) instead of the top card, which now shows the current
   boost effect (including which Factory tiers it covers). Opening Boosters pre-selects the active

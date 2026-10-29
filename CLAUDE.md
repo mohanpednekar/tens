@@ -670,8 +670,8 @@ Strict three-layer separation:
    Node → … → Megacomputer) behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute"
    names the page/feature only — entities drop the word in every player-visible label. Deliberately terse
    (icon-only controls, full sentence in `title`/`aria-label`; mechanic prose lives in the Guide). Order:
-   top card = active Boost effect (or "No boost running") + Stack + Reclaim-or-Forfeit (mutually exclusive
-   by `computeBoostStacks`, enforced in the engine too) + Auto-Boost pref; then per-tier rows — the ONE
+   top card = active Boost timer bar (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right,
+   enforced in the engine too; or "No boost running") + Auto-Boost pref; then per-tier rows — the ONE
    selected tier (pre-selected to the active boost's tier on arrival) shows the 3 Boost presets inline (`COMPUTE_ENTITY_CAP` 10 slots,
    Merge ratio `COMPUTE_MERGE_RATIO` 8, Unlock Auto-merge, `COMPUTE_MERGE_RESERVE_CAP` 8 reserve). Cores
    come from buying Boosters from the matching Data Lake, not minted from Memory. Full detail:
@@ -972,7 +972,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2114 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2120 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

@@ -9001,3 +9001,31 @@ first empty cache block so the fill still looks gradual. Not re-run through `sim
 - **R8 verification runs in CI.** The authoring container could not reach `dl.google.com` for the
   Android SDK, so `mobile-build.yml`'s `android-release` job builds the minified release with a
   throwaway key and boots it on an emulator (`scripts/android-boot-smoke.sh`).
+
+## Boosters: manual merge on automated tiers became instant (2026-10)
+
+Issue #321 made clicking an automated boundary's reserve slots ("slots are the button") START a timed
+reserve merge, the same timer the automatic trigger uses. Players read the slot row as a merge button
+and expected an immediate result, so — at the maintainer's explicit request — the manual tap is now an
+instant 8 → 1 merge (`instantComputeMergeAtBoundary`), and the row is labelled "🤖 Auto-merge". Only the
+automatic merge (at `COMPUTE_ENTITY_AUTO_MERGE_CAP`, 18 held) keeps the timer, so automation stays the
+slower "mop-up" path. The instant merge's gate counts the 1 output an in-flight automatic merge still
+owes, so tapping can never fill the output cap and void that merge's already-committed 8 inputs on
+completion.
+
+## Boosters: timer bar with Pop / Forfeit / Stack; preset switch refunds unused stacks (2026-10)
+
+The standalone Stack + Reclaim-or-Forfeit row was replaced, at the maintainer's request, by a timer bar
+for the active boost: Pop (the old Reclaim, renamed, still unconfirmed) on its left — or Forfeit
+(confirmed) once no unused stack remains — and Stack on its right. Picking the running preset again
+stacks it; picking a different one switches after a confirmation. The earlier rule that a switch (and
+Forfeit) required being down to 1 stack existed so a player couldn't discard several stacks' worth of
+tokens outright (a Devin Review finding). That concern is now met differently: a switch refunds every
+still-unused stack (`getUnusedComputeBoostStacks`) before forfeiting only the running one, and Forfeit
+is offered only once nothing is unused. "Unused" counts stacks whose whole duration is still ahead in
+the pooled timer, which also covers the old pooled-time floor on Reclaim.
+Pop's refund (`reclaimComputeBoost`) is no longer clamped to the funding tier's effective cap: with
+Pop as the main control and a switch refunding several stacks at once, a full tier (common, since
+Boosters keep it topped up) would otherwise silently destroy the refunded tokens. Counts above the cap
+were already tolerated (slot/reserve displays clamp, Booster purchases stop).
+
