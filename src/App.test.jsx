@@ -3224,6 +3224,44 @@ test('a pool\'s speed shows the fill speed actually available, not its higher th
   expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
 })
 
+describe('Data Stream and upgrade speed details popovers', () => {
+  const seedStream = intro => {
+    seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, ...intro } })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+  }
+
+  it('opens the Data Stream details from its speed, without tapping the stream, and shows the boosted delivered speed', () => {
+    seedStream({ computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 600 })
+    const speed = screen.getByRole('button', { name: /^data stream speed .*show speed details$/ })
+    expect(speed).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(speed)
+    const dialog = screen.getByRole('dialog', { name: 'Data Stream speed' })
+    for (const label of ['Speed now', 'Base Speed', 'Compute Boost', 'Fill multiplier', 'Speed exponent', 'Buffer', 'Time to full']) {
+      expect(within(dialog).getByText(label)).toBeInTheDocument()
+    }
+    expect(within(dialog).getByText('×5')).toBeInTheDocument()
+    expect(screen.queryByLabelText('data stream fill-based speed multiplier tap bonus')).not.toBeInTheDocument()
+    fireEvent.pointerDown(document.body)
+    expect(screen.queryByRole('dialog', { name: 'Data Stream speed' })).not.toBeInTheDocument()
+    // The stretched tile button still taps.
+    fireEvent.click(screen.getByRole('button', { name: 'tap to generate a bit' }))
+    expect(screen.getByLabelText('data stream fill-based speed multiplier tap bonus')).toBeInTheDocument()
+  })
+
+  it('opens the running upgrade\'s draw details from its speed', () => {
+    seedStream({ bits: 100, capacityUpgradeQueued: true, capacityUpgradeProgress: 0 })
+    fireEvent.click(screen.getByRole('button', { name: /^upgrade draw speed .*show speed details$/ }))
+    const dialog = screen.getByRole('dialog', { name: 'Upgrade Capacity draw' })
+    for (const label of ['Draw now', 'Base Speed', 'Bar fill multiplier', 'Data Stream delivers', 'Progress', 'Time left', 'Capacity after']) {
+      expect(within(dialog).getByText(label)).toBeInTheDocument()
+    }
+    fireEvent.click(screen.getByRole('button', { name: /^data stream speed .*show speed details$/ }))
+    expect(screen.queryByRole('dialog', { name: 'Upgrade Capacity draw' })).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Data Stream speed' })).toBeInTheDocument()
+  })
+})
+
 describe('pool speed details popover', () => {
   const dialogName = 'KB Pool speed'
   const openPool1SpeedDetails = () => {

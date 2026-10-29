@@ -2412,6 +2412,28 @@ export const getDataStreamMultiplierPercent = intro =>
 
 export const getDataStreamEffectMultiplier = intro => getDataStreamMultiplierPercent(intro) / 100
 
+// What the Data Stream actually delivers per second right now (bits/s): base Speed × any active
+// Compute Boost × the fill-based multiplier — exactly tickIntroProduction's per-second amount, and
+// the figure ByteFoundryPage shows.
+export const getDataStreamDeliveredRate = intro =>
+  getIntroProductionRate(intro) * getComputeBoostMultiplier(intro) * getDataStreamEffectMultiplier(intro)
+
+// The running Upgrade Capacity / Upgrade Speed bar's draw (null when none runs), mirroring
+// tickCapacityUpgradeDrain/tickSpeedUpgradeDrain: base Speed × the bar's own fill multiplier. That
+// is also the real draw — the drains run right after tickIntroProduction, and even with the
+// Buffer empty the stream delivers at least that much (its own multiplier is 150% when empty, the
+// bar's is at most 150%, and a Compute Boost only adds).
+export const getRunningUpgradeDraw = intro => {
+  const speed = Boolean(intro?.speedUpgradeQueued)
+  if (!speed && !intro?.capacityUpgradeQueued) return null
+  const cost = speed ? getSpeedUpgradeCostBits(intro) : intro.capacity
+  const stored = speed ? intro.speedUpgradeProgress : intro.capacityUpgradeProgress
+  const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
+  const multiplierPercent = getFillMultiplierPercent(cost > 0 ? progress / cost : 1)
+  const rate = getIntroProductionRate(intro) * multiplierPercent / 100
+  return { kind: speed ? 'speed' : 'capacity', cost, progress, multiplierPercent, rate }
+}
+
 // Manual tap. Before Storage pools are revealed at 1 KiB (getVisibleStoragePoolCount below), this
 // credits "one second's worth" at the Byte generator's current rate (see getIntroProductionRate),
 // capped at capacity — the original flat 1-bit tap at the starting rate. Once Storage pools ARE
@@ -3761,7 +3783,7 @@ export const tickIntroProduction = elapsedSeconds => state => {
   // layers.js) to this real per-tick delivery only — getIntroProductionRate's own displayed rate
   // never includes it. Evaluated against the Buffer's fill level BEFORE this batch is added, same
   // "read state, then derive the delta" order every other multiplier factor here already follows.
-  const bitsToAdd = getIntroProductionRate(state.intro) * elapsedSeconds * getComputeBoostMultiplier(state.intro) * getDataStreamEffectMultiplier(state.intro)
+  const bitsToAdd = getDataStreamDeliveredRate(state.intro) * elapsedSeconds
 
   if (bitsToAdd <= 0) return state
 

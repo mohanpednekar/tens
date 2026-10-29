@@ -459,8 +459,8 @@ src/
                                `boostGlow` card css + `isDataStreamBoosted`/`isFactoryTierBoosted`;
                                used by ByteFoundryPage's Data Stream and MainPage tier rows.
                                Contract: `docs/COMPONENTS_REFERENCE.md`
-    SpeedDetailsPopover/index.jsx ← non-modal details panel (portal, fixed under its anchor) behind each
-                               pool's clickable ⚡ speed; closes on outside press/scroll/wheel/touch-move,
+    SpeedDetailsPopover/index.jsx ← non-modal details panel (portal, fixed under its anchor) behind every
+                               Foundry ⚡ speed (Data Stream, running upgrade, each pool); closes on outside press/scroll/wheel/touch-move,
                                Escape, resize. Contract: `docs/COMPONENTS_REFERENCE.md`
     LeadIcon/index.js       ← a line's leading emoji in a fixed-size, aria-hidden box so text after it
                                aligns across a tile's lines (Foundry stream/pool/lake/Upgrading rows)
@@ -972,7 +972,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2120 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2125 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
