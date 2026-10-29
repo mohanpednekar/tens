@@ -560,14 +560,13 @@ const ComputePage = ({ game }) => {
   // stack).
   const armedTierIndex = intro.computeMergePageUnlocked ? selectedBoostTierIndex : 1
   const armedRow = armedTierIndex ? ENTITY_ROWS[armedTierIndex - 1] : null
-  const armedHeld = armedRow ? (intro[armedRow.countField] ?? 0) : 0
 
   // The armed tier's 3 presets — rendered inside the selected tier block (only one at a time), or
   // in the top card before the merge chain unlocks (Cores armed implicitly, no tier rows yet).
   const boostPresets = armedRow && (
     <>
       <ArmedStatusText title={`Each boost spends 1 ${singularize(armedRow.label)} and boosts ${describeCoveredTiers(armedTierIndex, 'name')}`}>
-        {`1 ${armedRow.symbol} → ${describeCoveredTiers(armedTierIndex)} · ${formatAmount(armedHeld)} held`}
+        {`1 ${armedRow.symbol} → ${describeCoveredTiers(armedTierIndex)}`}
       </ArmedStatusText>
       <BoostRow role="group" aria-label="compute boost">
         {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {

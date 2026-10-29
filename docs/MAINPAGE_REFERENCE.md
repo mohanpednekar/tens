@@ -525,7 +525,7 @@ live inside the selected tier):
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cores:
    The active/idle status line, Stack/Reclaim/Forfeit row and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Global Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
-   a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol> · <N> held"`, full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
+   a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
       initialized on arrival to the active boost's own tier (`intro.computeBoostTierIndex`), else none; always Cores (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
       tier that can hold a balance that early. Clicking a different tier mid-boost arms a

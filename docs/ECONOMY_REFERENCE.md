@@ -1295,7 +1295,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    stack count — no longer a Reclaim control, moved below, see next) renders at the very TOP of the
    page, right after the header, so it stays visible regardless of what else is on screen; `MainPage`
    shows a matching read-only status line while a boost is active, since its effect reaches `tier01`
-   there too. The armed-tier status line (naming the selected tier and how many tokens it holds) and
+   there too. The armed-tier status line (naming the selected tier and the Factory tiers it boosts) and
    the 3 small icon preset buttons render inside the ONE selected tier's block (in the top card before
    the merge chain unlocks) — shown only once a tier is selected, and (per the "no boost of any kind currently active" gate above) disabled again
    the instant any boost starts, regardless of type/tier. Only while a boost IS active, a row appears

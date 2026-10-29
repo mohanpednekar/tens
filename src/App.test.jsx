@@ -4549,12 +4549,13 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
   })
 
-  test('the armed-tier status line shows how many tokens are held for the currently armed tier (Cores by default, pre-merge-unlock)', () => {
+  test('the armed-tier status line names the spend and covered tiers without repeating the held count (Cores by default, pre-merge-unlock)', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 4 })
     render(<App />)
     openBoosters()
 
-    expect(screen.getByText(/1 ⬡ → KB · 4 held/)).toBeInTheDocument()
+    expect(screen.getByText('1 ⬡ → KB')).toBeInTheDocument()
+    expect(screen.queryByText(/held/)).not.toBeInTheDocument()
   })
 
   test('render order: active-boost status and Stack/Reclaim on top, the armed presets inside the selected (active) tier block below', () => {
