@@ -9001,3 +9001,14 @@ first empty cache block so the fill still looks gradual. Not re-run through `sim
 - **R8 verification runs in CI.** The authoring container could not reach `dl.google.com` for the
   Android SDK, so `mobile-build.yml`'s `android-release` job builds the minified release with a
   throwaway key and boots it on an emulator (`scripts/android-boot-smoke.sh`).
+
+## Boosters: manual merge on automated tiers became instant (2026-10)
+
+Issue #321 made clicking an automated boundary's reserve slots ("slots are the button") START a timed
+reserve merge, the same timer the automatic trigger uses. Players read the slot row as a merge button
+and expected an immediate result, so — at the maintainer's explicit request — the manual tap is now an
+instant 8 → 1 merge (`instantComputeMergeAtBoundary`), and the row is labelled "🤖 Auto-merge". Only the
+automatic merge (at `COMPUTE_ENTITY_AUTO_MERGE_CAP`, 18 held) keeps the timer, so automation stays the
+slower "mop-up" path. The instant merge's gate counts the 1 output an in-flight automatic merge still
+owes, so tapping can never fill the output cap and void that merge's already-committed 8 inputs on
+completion.

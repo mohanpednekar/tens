@@ -5196,6 +5196,14 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(tickAutoMergeNodesIntoCluster(1)(hidden).intro.computeNodesMergeRemainingSeconds).toBe(5e6 - 1)
   })
 
+  it('a manual merge is refused when it would fill the cap an in-flight auto-merge still owes a unit to', () => {
+    const state = poolVisible({ autoMergeCoresIntoNode: true, computeCores: COMPUTE_ENTITY_CAP, computeNodes: COMPUTE_ENTITY_CAP - 1, computeCoresMergeRemainingSeconds: 5 })
+    expect(isComputeCoresMergeStartAvailable(state)).toBe(false)
+    expect(startComputeCoresMerge(state)).toBe(state)
+    // Same output count with no merge in flight: the instant merge is allowed.
+    expect(isComputeCoresMergeStartAvailable(withIntro(state, { computeCoresMergeRemainingSeconds: 0 }))).toBe(true)
+  })
+
   it('a manual Core→Node merge leaves an in-flight auto-merge timer untouched', () => {
     const state = poolVisible({ autoMergeCoresIntoNode: true, computeCores: COMPUTE_MERGE_RATIO, computeCoresMergeRemainingSeconds: 42 })
     const after = startComputeCoresMerge(state)

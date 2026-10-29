@@ -624,10 +624,10 @@ live inside the selected tier):
          border/raised background) while clicking would INSTANTLY merge 8 → 1 ("slots are the
          button"), calling the matching `game.actions.startCompute*Merge` action, enabled once
          `isCompute*MergeStartAvailable` allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the
-         normal + reserve slots and room under the output's effective cap —
-         `isComputeMergeStartAvailableAtBoundary`; not blocked by an in-flight automatic merge).
-         `aria-label`: "instantly merge 8 <input> into 1 <output>, N/8 auto-merge slots filled" when
-         available, "<Tier> auto-merge in progress, <time> left" while an automatic merge runs, else
+         normal + reserve slots and room under the output's effective cap, counting the 1 an in-flight
+         automatic merge still owes — `isComputeMergeStartAvailableAtBoundary`).
+         `aria-label`: "instantly merge 8 <input> into 1 <output>, N/8 auto-merge slots filled" (or
+         ", auto-merge in progress, <time> left") when available, "<Tier> auto-merge in progress, <time> left" while an automatic merge runs, else
          "<Tier> auto-merge slots, N/8 filled". While an automatic merge is in
          flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
          inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the

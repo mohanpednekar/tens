@@ -422,9 +422,9 @@ const InfoPage = () => {
             a timed countdown: the time {COMPUTE_MERGE_RATIO} of the
             smallest disks in that tier’s own Storage pool take to fill from their read cache
             (Cores use the KB pool, Nodes the MB pool, and so on). The pool’s larger disks don’t
-            count, so the timer never escalates within a pool. A tier’s merges wait until its
-            pool is visible. A running merge never takes longer than the current merge time, so it
-            speeds up as the pool’s Bandwidth grows. Before unlock, merges stay instant.
+            count, so the timer never escalates within a pool. A tier’s automatic merges wait until
+            its pool is visible. A running automatic merge never takes longer than the current merge
+            time, so it speeds up as the pool’s Bandwidth grows.
           </li>
           <li>
             Auto-merge starts only once the input tier reaches the FULL extended cap (

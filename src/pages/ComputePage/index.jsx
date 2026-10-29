@@ -332,8 +332,8 @@ const COMPUTE_BOOST_DISPLAY = {
 // The full ten-tier progression this page walks top to bottom. Every row past Cores through
 // Supercomputers shares the exact same shape: a merge boundary into the tier above it, which —
 // once that boundary's auto-merge is unlocked (see intro.autoMergeCoresIntoNode/
-// autoMergeNodesIntoCluster/… in engine.js) — transitions from an instant manual click to
-// engine.js's timed reserve-pool system (see issue #321). Core → Node is included as an ordinary
+// autoMergeNodesIntoCluster/… in engine.js) — moves to the "🤖 Auto-merge" slot row: tapping it still merges
+// instantly, while engine.js's automatic merge uses the timed reserve pool (see issue #321). Core → Node is included as an ordinary
 // boundary here, same as every other one. Cores themselves are obtained by buying Boosters from
 // the matching Data Lake on Foundry (buyBooster — spent from that lake's own banked units, not
 // minted from Memory); the buy/auto-buy control itself lives on Foundry's DataLakePanel, not here
@@ -800,7 +800,7 @@ const ComputePage = ({ game }) => {
                         <ReserveSlotsRow
                           aria-label={
                             startAvailable
-                              ? `instantly merge ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} auto-merge slots filled`
+                              ? `instantly merge ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}, ${merging ? `auto-merge in progress, ${formatOfflineDuration(remainingSeconds)} left` : `${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} auto-merge slots filled`}`
                               : merging
                                 ? `${row.label} auto-merge in progress, ${formatOfflineDuration(remainingSeconds)} left`
                                 : `${row.label} auto-merge slots, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
@@ -810,7 +810,7 @@ const ComputePage = ({ game }) => {
                           $clickable={startAvailable}
                           title={
                             startAvailable
-                              ? `Merge now: instantly turn ${COMPUTE_MERGE_RATIO} ${row.label} into 1 ${row.mergeOutputLabel}. Auto-merge slots fill past ${COMPUTE_ENTITY_CAP} and merge on their own when all ${COMPUTE_MERGE_RESERVE_CAP} are full`
+                              ? `Merge now: instantly turn ${COMPUTE_MERGE_RATIO} ${row.label} into 1 ${row.mergeOutputLabel}. Auto-merge slots fill past ${COMPUTE_ENTITY_CAP} and merge on their own when all ${COMPUTE_MERGE_RESERVE_CAP} are full${merging ? ` (auto-merging: ${formatOfflineDuration(remainingSeconds)} left)` : ''}`
                               : merging
                                 ? `Auto-merging: ${formatOfflineDuration(remainingSeconds)} left`
                                 : (intro[row.mergeOutputField] ?? 0) >= outputCap
