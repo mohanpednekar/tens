@@ -1,6 +1,7 @@
+import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration } from 'components/BoostTimerBar'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
-import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
-import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, TIER_DEFINITIONS } from 'game/layers'
+import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
+import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -293,51 +294,6 @@ const AutoBoostLabel = styled.p`
   text-align: center;
 `
 
-// The active boost's timer bar: Pop (refund the newest unused stack, no confirm) — or Forfeit
-// (confirmed) once no unused stack remains — on the left, the bar itself (fill = remaining time
-// over the total stacked duration, effect text on top) in the middle, Stack on the right.
-const BoostTimerRow = styled.div`
-  display: flex;
-  align-items: stretch;
-  gap: ${props => props.theme.space.xs};
-  width: 100%;
-`
-
-const TimerSideButton = styled(CompactButton)`
-  flex: 0 0 auto;
-  min-width: 2.4em;
-`
-
-const TimerBar = styled.div`
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.3em 0.5em;
-  border-radius: ${props => props.theme.radius.sm};
-  border: 1px solid ${props => props.theme.color.warn};
-  background: linear-gradient(
-    to right,
-    ${props => props.theme.color.surfaceRaised} ${props => props.$fill}%,
-    transparent ${props => props.$fill}%
-  );
-  color: ${props => props.theme.color.text};
-  font-size: 0.85em;
-  text-align: center;
-`
-
-// A small leading icon + display label for COMPUTE_BOOST_PRESETS' own keys (layers.js) — the
-// preset objects themselves are keyed by a plain lowercase identifier with no display-ready name
-// or icon of their own. The icon alone is what renders on-screen (see the Boost row below); the
-// label is reserved for the active-boost status line and tooltips, where a bare icon would be
-// ambiguous about which preset is running.
-const COMPUTE_BOOST_DISPLAY = {
-  burst: { icon: '💥', label: 'Burst' },
-  standard: { icon: '⏱️', label: 'Standard' },
-  sustain: { icon: '🔋', label: 'Sustain' },
-}
-
 // The full ten-tier progression this page walks top to bottom. Every row past Cores through
 // Supercomputers shares the exact same shape: a merge boundary into the tier above it, which —
 // once that boundary's auto-merge is unlocked (see intro.autoMergeCoresIntoNode/
@@ -533,22 +489,6 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // (isComputeCoreConversionUnlocked, well before 8 Cores are possible), but the merge chain stays
 // hidden behind its own later, one-time latch until the player has actually earned enough Cores to
 // use it (see engine.js's latchComputeMergePageIfNeeded for where that latch flips).
-// ENTITY_ROWS' own labels are always plural ("Cores", "Nodes", …) — strip the trailing "s" for a
-// cost/spend sentence naming exactly 1 of a tier (e.g. "spend 1 Core", not "spend 1 Cores").
-const singularize = label => label.replace(/s$/, '')
-
-// Preset buttons drop zero-valued trailing units ("10m 0s" → "10m", "1h 0m" → "1h") — the
-// durations are round, so the extra unit adds nothing. Countdowns keep formatOfflineDuration as-is.
-const formatPresetDuration = seconds => formatOfflineDuration(seconds).replace(/ 0[ms]$/, '')
-
-// "KB" for 1 covered Factory tier, "KB–MB" for 2, … — which Factory tiers a boost funded from
-// compute-ladder tier `tierIndex` applies to (see getComputeBoostCoveredTierCount). `field` picks
-// the short `symbol` (on-screen text) or the full `name` (tooltips).
-const describeCoveredTiers = (tierIndex, field = 'symbol') =>
-  tierIndex <= 1
-    ? TIER_DEFINITIONS[0][field]
-    : `${TIER_DEFINITIONS[0][field]}–${TIER_DEFINITIONS[Math.min(tierIndex, TIER_DEFINITIONS.length) - 1][field]}`
-
 const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
@@ -592,8 +532,8 @@ const ComputePage = ({ game }) => {
   // in the top card before the merge chain unlocks (Cores armed implicitly, no tier rows yet).
   const boostPresets = armedRow && (
     <>
-      <ArmedStatusText title={`Each boost spends 1 ${singularize(armedRow.label)} and boosts ${describeCoveredTiers(armedTierIndex, 'name')}`}>
-        {`1 ${armedRow.symbol} → ${describeCoveredTiers(armedTierIndex)}`}
+      <ArmedStatusText title={`Boosts ${describeCoveredTiers(armedTierIndex, 'name')}`}>
+        {`Boosts ${describeCoveredTiers(armedTierIndex)}`}
       </ArmedStatusText>
       <BoostRow role="group" aria-label="compute boost">
         {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
@@ -612,7 +552,7 @@ const ComputePage = ({ game }) => {
             ? isStackComputeBoostTurnAvailable(state)
             : isComputeBoostTurnAvailable(state, boostType, armedTierIndex, needsForfeit)
           const blockedTitle = 'Take a higher-priority upgrade first (Disk Fill or Provision Disk)'
-          const spendText = `spend 1 ${singularize(armedRow.label)} for ×${multiplier} production, ${formatPresetDuration(durationSeconds)}`
+          const spendText = `×${multiplier} production, ${formatPresetDuration(durationSeconds)}`
 
           return (
             <CompactButton
@@ -640,7 +580,7 @@ const ComputePage = ({ game }) => {
               }}
               title={
                 sameAsActive
-                  ? (canStackComputeBoost(state) && blockedByPriority ? blockedTitle : `Stack ${nextLabel}: ${spendText} more — up to ${COMPUTE_BOOST_MAX_STACKS}x`)
+                  ? (canStackComputeBoost(state) && blockedByPriority ? blockedTitle : `Stack ${nextLabel}: add ${spendText} — up to ${COMPUTE_BOOST_MAX_STACKS}x`)
                   : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
                     ? blockedTitle
                     : needsForfeit
@@ -665,63 +605,7 @@ const ComputePage = ({ game }) => {
       </Header>
 
       <BoostCard aria-label="boost">
-      {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (() => {
-        const activeType = intro.computeBoostType
-        const activeDisplay = COMPUTE_BOOST_DISPLAY[activeType] ?? { icon: '⚡', label: activeType }
-        const activeMultiplier = getComputeBoostTierMultiplier(activeType, activeTierIndex)
-        const remaining = intro.computeBoostRemainingSeconds ?? 0
-        const totalSeconds = (intro.computeBoostStacks ?? 1) * getComputeBoostTierDurationSeconds(activeType, activeTierIndex)
-        const fillPercent = totalSeconds > 0 ? Math.min(100, (remaining / totalSeconds) * 100) : 0
-        const activeTokenLabel = singularize(activeRow?.label ?? 'Core')
-        return (
-          <BoostTimerRow role="group" aria-label="active boost controls">
-            {canReclaimComputeBoost(state)
-              ? (
-                <TimerSideButton
-                  aria-label="pop one stack of the active compute boost"
-                  onClick={actions.reclaimComputeBoost}
-                  title={`Pop: refund the most recent unused stack (1 ${activeTokenLabel} and its time)`}
-                  type="button"
-                  variant="neutral"
-                >
-                  <ButtonContent>↩</ButtonContent>
-                </TimerSideButton>
-                )
-              : (
-                <TimerSideButton
-                  aria-label="forfeit the active compute boost with no refund"
-                  disabled={!canForfeitComputeBoost(state)}
-                  onClick={() => {
-                    if (!window.confirm('Forfeit the active boost with no refund?')) return
-                    actions.forfeitComputeBoost()
-                  }}
-                  title="Forfeit: end the boost now with no refund — asks for confirmation"
-                  type="button"
-                  variant="danger"
-                >
-                  <ButtonContent>✕</ButtonContent>
-                </TimerSideButton>
-                )}
-            <TimerBar aria-label="active compute boost" $fill={fillPercent}>
-              <span
-                title={`${activeDisplay.label} (${activeRow?.label ?? ''}) active: ×${activeMultiplier} production on ${describeCoveredTiers(activeTierIndex, 'name')}, ${formatOfflineDuration(remaining)} left, ${intro.computeBoostStacks}x stacked`}
-              >
-                {`${activeDisplay.icon} ${activeDisplay.label} ×${activeMultiplier} on ${describeCoveredTiers(activeTierIndex)} · ${activeRow?.symbol ?? ''} · ${formatOfflineDuration(remaining)} left${intro.computeBoostStacks > 1 ? ` · ${intro.computeBoostStacks} stacked` : ''}`}
-              </span>
-            </TimerBar>
-            <TimerSideButton
-              aria-label="stack the active compute boost"
-              disabled={!isStackComputeBoostTurnAvailable(state)}
-              onClick={actions.stackComputeBoost}
-              title={`Stack: spend 1 more ${activeTokenLabel} to add another ${formatPresetDuration(getComputeBoostTierDurationSeconds(activeType, activeTierIndex))} — up to ${COMPUTE_BOOST_MAX_STACKS}x`}
-              type="button"
-              variant="prestige"
-            >
-              <ButtonContent>+</ButtonContent>
-            </TimerSideButton>
-          </BoostTimerRow>
-        )
-      })()}
+      {boostActive && <BoostTimerBar actions={actions} state={state} />}
       {!boostActive && (
         <ArmedStatusText>
           {intro.computeMergePageUnlocked && !armedRow ? 'No boost running · pick a tier ↓' : 'No boost running'}

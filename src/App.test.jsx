@@ -4398,7 +4398,7 @@ describe('Byte Foundry Compute Boost', () => {
     const nodesRow = screen.getByRole('button', { name: /select nodes to fund a compute boost/i })
     fireEvent.click(nodesRow)
     expect(nodesRow).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByLabelText(/^active compute boost$/i).firstChild.title).toMatch(/\(Cores\) active/)
+    expect(screen.getByLabelText(/^active compute boost$/i).title).toMatch(/boost active: ×\d+ production on Kilobytes/)
 
     // Same preset, different tier → forfeit-replace, funded by Nodes.
     fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate burst/i }))
@@ -4527,7 +4527,7 @@ describe('Byte Foundry Compute Boost', () => {
     seedMainGameState({ intro: { mainGameUnlocked: true, computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 30 } })
     const { unmount } = render(<App />)
     expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(
-      new RegExp(`standard.*×${COMPUTE_BOOST_PRESETS.standard.multiplier}`, 'i')
+      new RegExp(`×${COMPUTE_BOOST_PRESETS.standard.multiplier}.*boosting kb`, 'i')
     )
     unmount()
 
@@ -4556,7 +4556,7 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByText('1 ⬡ → KB')).toBeInTheDocument()
+    expect(screen.getByText('Boosts KB')).toBeInTheDocument()
     expect(screen.queryByText(/held/)).not.toBeInTheDocument()
   })
 
@@ -4567,7 +4567,7 @@ describe('Byte Foundry Compute Boost', () => {
 
     const cores = screen.getByRole('button', { name: /select cores to fund a compute boost/i })
     fireEvent.click(cores)
-    fireEvent.click(within(screen.getByLabelText(/^cores tier$/i)).getByText('1 ⬡ → KB'))
+    fireEvent.click(within(screen.getByLabelText(/^cores tier$/i)).getByText('Boosts KB'))
     expect(cores).toHaveAttribute('aria-pressed', 'true')
 
     fireEvent.click(screen.getByRole('heading', { level: 1, name: /boosters/i }))
@@ -4618,7 +4618,7 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(/ on KB–MB · /)
+    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(/Boosting KB–MB/)
     expect(within(screen.getByLabelText(/^nodes tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
   })
 
