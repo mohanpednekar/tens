@@ -1721,12 +1721,14 @@ milestones" below), spending no PP at all.
   elapsed ÷ interval via `runIntervalAutomation`; a no-op attempt clamps the bank to 1. Auto-Prestige
   is activation-only (`buyAutoPrestige`); its Autobuyer buys the prestige chain. **Auto Overclock**
   is a separate 32 PP unlock (needs Auto Scale Up), pausable via `autoOverclockEnabled`.
-- **Active — Bulk mode (replaced Smart):** without it a tier's autobuyer buys ONE unit per attempt
-  (the `autobuyerBatchSize` argument and Buy max mode are ignored by autobuyers).
+- **Active — Bulk mode (replaced Smart):** without it a tier's autobuyer buys ONE whole level (all 8
+  blocks) per attempt, only when fully affordable; with partial level progress it completes the rest
+  of that level, again only when the whole remainder is affordable (`canAffordRestOfTierLevel`) — never
+  a partial purchase (the `autobuyerBatchSize` argument and Buy max mode are ignored by autobuyers).
   `buyAutobuyerBulkMode(tierId)` permanently buys the next mode (`autobuyerBulkLevels[tierId]`, 0..
   `AUTOBUYER_BULK_MAX_MODE` = 3): each attempt then buys `AUTOBUYER_BULK_LEVELS_BASE^mode` (10/100/1000)
   FULL levels via `buyTierExactLevels` when that many are affordable from a clean slate (zero level
-  progress), otherwise a single unit. Cost `getAutobuyerBulkModeCost(tierId, mode) =
+  progress), otherwise a single level (or the affordable rest of a started one). Cost `getAutobuyerBulkModeCost(tierId, mode) =
   getAutobuyerUnlockCost(tierId) × (10^mode)^3` — 1000×, 1e6×, 1e9× the tier's base autobuyer cost.
   Requires the autobuyer unlocked; permanent across Prestige/Scale Up/Overclock/Era. The Auto-Prestige
   option is gated on every tier's tickspeed autobuyer only (no longer on any per-tier purchase).
