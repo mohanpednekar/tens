@@ -132,7 +132,10 @@ import {
   getStoragePoolCount,
   getNextSiDoubledValue,
   getStoragePoolBandwidth,
+  getUnusedComputeBoostStacks,
   getPoolAvailableFillRate,
+  getDataStreamDeliveredRate,
+  getRunningUpgradeDraw,
   getStoragePoolCapacity,
   getUnlockedStoragePoolCount,
   getVisibleStoragePoolCount,
@@ -992,6 +995,36 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(after.intro.poolBuffers[1]).toBeGreaterThan(rawRate)
       expect(after.intro.poolBuffers[1]).toBeCloseTo(rawRate * 1.5)
     })
+  })
+})
+
+describe('getDataStreamDeliveredRate', () => {
+  it('is base Speed × Compute Boost × fill multiplier — exactly what tickIntroProduction adds per second', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true, bits: 0, capacity: 1000,
+      computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 600,
+    })
+    expect(getComputeBoostMultiplier(state.intro)).toBeGreaterThan(1)
+    const delivered = getDataStreamDeliveredRate(state.intro)
+    expect(delivered).toBeCloseTo(getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro) * 1.5)
+    expect(tickIntroProduction(1)(state).intro.bits).toBeCloseTo(Math.min(1000, delivered))
+  })
+})
+
+describe('getRunningUpgradeDraw', () => {
+  it('is null while no upgrade runs', () => {
+    expect(getRunningUpgradeDraw(withIntro(createInitialGameState(), { byteCreated: true }).intro)).toBeNull()
+  })
+
+  it('matches what tickCapacityUpgradeDrain pulls in a second from a banked Buffer', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true, bits: 1_000_000, capacity: 32_000_000, capacityUpgradeQueued: true, capacityUpgradeProgress: 16_000_000,
+    })
+    const draw = getRunningUpgradeDraw(state.intro)
+    expect(draw).toMatchObject({ kind: 'capacity', cost: 32_000_000, progress: 16_000_000, multiplierPercent: 100 })
+    expect(draw.rate).toBeCloseTo(getIntroProductionRate(state.intro))
+    const after = tickCapacityUpgradeDrain(1)(state)
+    expect(after.intro.capacityUpgradeProgress - 16_000_000).toBeCloseTo(draw.rate)
   })
 })
 
@@ -4916,7 +4949,7 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(reclaimComputeBoost(state).intro.computeCores).toBe(COMPUTE_ENTITY_CAP + 6)
   })
 
-  it('refund never exceeds COMPUTE_ENTITY_CAP even if more tokens were earned while the boost was running', () => {
+  it('refund is never lost into a full tier — it may exceed COMPUTE_ENTITY_CAP', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: COMPUTE_ENTITY_CAP,
       computeBoostType: 'sustain',
@@ -4925,7 +4958,7 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
       computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds('sustain', 1) * 2,
     })
     const after = reclaimComputeBoost(state)
-    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP)
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP + 1)
   })
 
   it('is blocked once ticking has eaten into pooled time far enough, even with 3 stacks held — stack count alone is never sufficient', () => {
@@ -5019,11 +5052,11 @@ describe.each([
     expect(after.intro[timerField]).toBe(0)
   })
 
-  it('isStartAvailable requires the auto flag unlocked, no merge already in flight, at least COMPUTE_MERGE_RATIO of the input, and room under COMPUTE_ENTITY_CAP on the output', () => {
+  it('isStartAvailable requires the auto flag unlocked, at least COMPUTE_MERGE_RATIO of the input, and room under COMPUTE_ENTITY_CAP on the output — not blocked by an in-flight auto-merge', () => {
     expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true }))).toBe(true)
     expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO }))).toBe(false) // not unlocked
     expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO - 1, [autoFlagField]: true }))).toBe(false) // below threshold
-    expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [timerField]: durationOf() }))).toBe(false) // already in flight
+    expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [timerField]: durationOf() }))).toBe(true) // auto-merge in flight
     expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [outputField]: COMPUTE_ENTITY_CAP }))).toBe(false) // output capped
   })
 
@@ -5032,12 +5065,12 @@ describe.each([
     expect(start(state)).toBe(state)
   })
 
-  it('start (manual click) fires at the lower COMPUTE_MERGE_RATIO (8) threshold — "the button is enabled only when there are at least 8 tokens available"', () => {
+  it('start (manual click) instantly merges 8 → 1 at the COMPUTE_MERGE_RATIO threshold, with no timer', () => {
     const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true })
     const after = start(state)
     expect(after.intro[inputField]).toBe(0)
-    expect(after.intro[timerField]).toBe(durationOf())
-    expect(after.intro[outputField]).toBe(0)
+    expect(after.intro[timerField] ?? 0).toBe(0)
+    expect(after.intro[outputField]).toBe(1)
   })
 
   it('isUnlockAvailable requires COMPUTE_ENTITY_CAP of the OUTPUT entity held and not already enabled', () => {
@@ -5178,11 +5211,11 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(getComputeMergeDurationSeconds(state, lastBoundary)).toBe(0)
   })
 
-  it('refuses to start a merge while the input tier\'s pool has no Bandwidth', () => {
+  it('a manual (instant) merge does not depend on the input tier\'s pool Bandwidth', () => {
     const state = poolVisible({ autoMergeNodesIntoCluster: true, computeNodes: COMPUTE_MERGE_RATIO })
     expect(getComputeMergeDurationSeconds(state, 1)).toBe(0)
-    expect(isComputeNodesMergeStartAvailable(state)).toBe(false)
-    expect(startComputeNodesMerge(state)).toBe(state)
+    expect(isComputeNodesMergeStartAvailable(state)).toBe(true)
+    expect(startComputeNodesMerge(state).intro.computeClusters).toBe(1)
   })
 
   it('an in-flight timer is clamped down to the live duration on tick (legacy/Bandwidth growth), never lengthened', () => {
@@ -5196,11 +5229,19 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(tickAutoMergeNodesIntoCluster(1)(hidden).intro.computeNodesMergeRemainingSeconds).toBe(5e6 - 1)
   })
 
-  it('a newly started Core→Node merge snapshots the live duration', () => {
-    const state = poolVisible({ autoMergeCoresIntoNode: true, computeCores: COMPUTE_MERGE_RATIO })
+  it('a manual merge is refused when it would fill the cap an in-flight auto-merge still owes a unit to', () => {
+    const state = poolVisible({ autoMergeCoresIntoNode: true, computeCores: COMPUTE_ENTITY_CAP, computeNodes: COMPUTE_ENTITY_CAP - 1, computeCoresMergeRemainingSeconds: 5 })
+    expect(isComputeCoresMergeStartAvailable(state)).toBe(false)
+    expect(startComputeCoresMerge(state)).toBe(state)
+    // Same output count with no merge in flight: the instant merge is allowed.
+    expect(isComputeCoresMergeStartAvailable(withIntro(state, { computeCoresMergeRemainingSeconds: 0 }))).toBe(true)
+  })
+
+  it('a manual Core→Node merge leaves an in-flight auto-merge timer untouched', () => {
+    const state = poolVisible({ autoMergeCoresIntoNode: true, computeCores: COMPUTE_MERGE_RATIO, computeCoresMergeRemainingSeconds: 42 })
     const after = startComputeCoresMerge(state)
-    expect(after.intro.computeCoresMergeRemainingSeconds).toBe(getComputeMergeDurationSeconds(state, 0))
-    expect(after.intro.computeCoresMergeRemainingSeconds).toBeGreaterThan(0)
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBe(42)
+    expect(after.intro.computeNodes).toBe(1)
   })
 
   it('manual merge fills the output tier\'s reserve once its own auto-merge is unlocked (#740)', () => {
@@ -5214,7 +5255,7 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(mergeComputeCoresIntoNode(full)).toBe(full)
   })
 
-  it('reserve merge starts into, and completes into, the output tier\'s reserve (#740)', () => {
+  it('an instant manual merge on an automated boundary fills the output tier\'s reserve (#740)', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       byteCreated: true,
@@ -5224,11 +5265,9 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
       computeNodes: COMPUTE_ENTITY_CAP,
     })
     expect(isComputeCoresMergeStartAvailable(state)).toBe(true)
-    const started = startComputeCoresMerge(state)
-    expect(started).not.toBe(state)
-    const remaining = started.intro.computeCoresMergeRemainingSeconds
-    const done = tickAutoMergeCoresIntoNode(remaining)(started)
-    expect(done.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP + 1)
+    const merged = startComputeCoresMerge(state)
+    expect(merged.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP + 1)
+    expect(merged.intro.computeCores).toBe(0)
   })
 
   it('completing a reserve merge never lowers an output that grew past its cap mid-merge (#740)', () => {
@@ -5239,14 +5278,14 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(tickAutoMergeCoresIntoNode(1)(state).intro.computeNodes).toBe(COMPUTE_ENTITY_CAP + 5)
   })
 
-  it('manual reserve start is unavailable while the live merge duration is 0 (#740)', () => {
+  it('manual instant merge stays available while the live auto-merge duration is 0', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: 0,
       autoMergeCoresIntoNode: true,
       computeCores: COMPUTE_MERGE_RATIO,
     })
-    expect(isComputeCoresMergeStartAvailable(state)).toBe(false)
-    expect(startComputeCoresMerge(state)).toBe(state)
+    expect(isComputeCoresMergeStartAvailable(state)).toBe(true)
+    expect(startComputeCoresMerge(state).intro.computeNodes).toBe(1)
   })
 
 })
@@ -5552,10 +5591,12 @@ describe('canActivateComputeBoost', () => {
     expect(canActivateComputeBoost(state, 'burst', 1, true)).toBe(false) // same type+tier still blocked
   })
 
-  it('forfeit-replace of a different boost is blocked while more than 1 stack is held, even with forfeitConfirmed — Reclaim down to the last stack first (Devin Review finding)', () => {
-    const state = withIntro(createInitialGameState(), { computeCores: 5, computeNodes: 5, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2 })
-    expect(canActivateComputeBoost(state, 'standard', 1, true)).toBe(false)
-    expect(canActivateComputeBoost(state, 'burst', 2, true)).toBe(false)
+  it('forfeit-replace of a different boost is allowed at any stack count with forfeitConfirmed, funded after refunding unused stacks', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
+    const state = withIntro(createInitialGameState(), { computeCores: 0, computeNodes: 5, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: D * 1.5 })
+    expect(canActivateComputeBoost(state, 'standard', 1, true)).toBe(true) // the refunded Core funds it
+    expect(canActivateComputeBoost(state, 'burst', 2, true)).toBe(true)
+    expect(canActivateComputeBoost(state, 'standard', 1, false)).toBe(false)
   })
 
   it('is false for an unrecognized preset name', () => {
@@ -5625,15 +5666,47 @@ describe('activateComputeBoost', () => {
     expect(after.intro.computeCores).toBe(4) // spent 1 for the new boost; no refund of the forfeited burst stack
   })
 
-  it('is a same-reference no-op when replacing a different boost with forfeitConfirmed while more than 1 stack is held (Devin Review finding)', () => {
+  it('replacing a multi-stack boost refunds its unused stacks and forfeits only the running one', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
     const state = withIntro(createInitialGameState(), {
       computeCores: 5,
+      computeNodes: 2,
       computeBoostType: 'burst',
       computeBoostTierIndex: 1,
-      computeBoostStacks: 2,
-      computeBoostRemainingSeconds: 90,
+      computeBoostStacks: 3,
+      computeBoostRemainingSeconds: D * 2.5, // running stack half-used, 2 unused
     })
-    expect(activateComputeBoost('standard', 1, true)(state)).toBe(state)
+    expect(getUnusedComputeBoostStacks(state)).toBe(2)
+    const after = activateComputeBoost('standard', 2, true)(state)
+    expect(after.intro.computeCores).toBe(7) // 2 unused Cores refunded
+    expect(after.intro.computeNodes).toBe(1) // 1 Node spent on the new boost
+    expect(after.intro.computeBoostType).toBe('standard')
+    expect(after.intro.computeBoostStacks).toBe(1)
+  })
+
+  it('switching away from a stacked boost refunds unused stacks even into a full funding tier', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
+    const state = withIntro(createInitialGameState(), {
+      computeCores: COMPUTE_ENTITY_CAP,
+      computeNodes: 1,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 3,
+      computeBoostRemainingSeconds: D * 3,
+    })
+    const after = activateComputeBoost('standard', 2, true)(state)
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP + 2)
+    expect(after.intro.computeNodes).toBe(0)
+  })
+
+  it('getUnusedComputeBoostStacks counts only stacks whose whole duration is still ahead', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
+    const at = (stacks, remaining) => getUnusedComputeBoostStacks(withIntro(createInitialGameState(), { computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: stacks, computeBoostRemainingSeconds: remaining }))
+    expect(at(1, D)).toBe(0)
+    expect(at(3, D * 3)).toBe(2)
+    expect(at(3, D * 2)).toBe(1)
+    expect(at(3, D * 0.5)).toBe(0)
+    expect(getUnusedComputeBoostStacks(createInitialGameState())).toBe(0)
   })
 
   it('forfeitComputeBoost clears the active boost with no token refund', () => {
@@ -5657,16 +5730,19 @@ describe('activateComputeBoost', () => {
     expect(forfeitComputeBoost(state)).toBe(state)
   })
 
-  it('forfeitComputeBoost is a same-reference no-op while more than 1 stack is held — a multi-stack boost must be Reclaimed down first (Devin Review finding)', () => {
+  it('forfeitComputeBoost is a same-reference no-op while an unused stack remains (Pop is offered instead)', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
     const state = withIntro(createInitialGameState(), {
       computeCores: 3,
       computeBoostType: 'burst',
       computeBoostTierIndex: 1,
       computeBoostStacks: 2,
-      computeBoostRemainingSeconds: 40,
+      computeBoostRemainingSeconds: D + 40,
     })
     expect(canForfeitComputeBoost(state)).toBe(false)
     expect(forfeitComputeBoost(state)).toBe(state)
+    // Once the extra stack's time has started running, nothing is unused → forfeit allowed.
+    expect(canForfeitComputeBoost(withIntro(state, { computeBoostRemainingSeconds: 40 }))).toBe(true)
   })
 
 
