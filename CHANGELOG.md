@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Factory tier rows show the Compute Boost badge next to the tier name instead of at the far right beside production.
 - **Boosters: timer bar for the active boost.** The separate Stack / Reclaim / Forfeit row is gone. The
   active boost now shows a timer bar with **+** (Stack) on its right and **↩** (Pop, refunds the
   newest unused stack, no confirmation) on its left — replaced by **✕** (Forfeit, confirmed) once no

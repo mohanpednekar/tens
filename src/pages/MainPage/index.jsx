@@ -1485,6 +1485,7 @@ const MainPage = ({ game }) => {
                     <span aria-hidden="true">{tier.symbol}</span>
                   </TierNameLabel>
                 </TierName>
+                {isBoosted && <BoostBadge intro={state.intro} />}
                   <OwnedText title="Owned">
                     <VisuallyHidden>Owned: </VisuallyHidden>
                     {formatAmount(owned)}
@@ -1519,7 +1520,6 @@ const MainPage = ({ game }) => {
                   : tier.producesResourceId === BYTES_ID
                     ? formatBytes(production)
                     : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
-                {isBoosted && <>{' '}<BoostBadge intro={state.intro} /></>}
               </ProductionText>
               {isLastTierXpUnlocked ? (
                 <UpgradeButton
