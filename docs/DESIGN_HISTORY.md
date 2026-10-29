@@ -9024,3 +9024,8 @@ tokens outright (a Devin Review finding). That concern is now met differently: a
 still-unused stack (`getUnusedComputeBoostStacks`) before forfeiting only the running one, and Forfeit
 is offered only once nothing is unused. "Unused" counts stacks whose whole duration is still ahead in
 the pooled timer, which also covers the old pooled-time floor on Reclaim.
+Pop's refund (`reclaimComputeBoost`) is no longer clamped to the funding tier's effective cap: with
+Pop as the main control and a switch refunding several stacks at once, a full tier (common, since
+Boosters keep it topped up) would otherwise silently destroy the refunded tokens. Counts above the cap
+were already tolerated (slot/reserve displays clamp, Booster purchases stop).
+

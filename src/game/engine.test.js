@@ -4917,7 +4917,7 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(reclaimComputeBoost(state).intro.computeCores).toBe(COMPUTE_ENTITY_CAP + 6)
   })
 
-  it('refund never exceeds COMPUTE_ENTITY_CAP even if more tokens were earned while the boost was running', () => {
+  it('refund is never lost into a full tier — it may exceed COMPUTE_ENTITY_CAP', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: COMPUTE_ENTITY_CAP,
       computeBoostType: 'sustain',
@@ -4926,7 +4926,7 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
       computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds('sustain', 1) * 2,
     })
     const after = reclaimComputeBoost(state)
-    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP)
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP + 1)
   })
 
   it('is blocked once ticking has eaten into pooled time far enough, even with 3 stacks held — stack count alone is never sufficient', () => {
@@ -5650,6 +5650,21 @@ describe('activateComputeBoost', () => {
     expect(after.intro.computeNodes).toBe(1) // 1 Node spent on the new boost
     expect(after.intro.computeBoostType).toBe('standard')
     expect(after.intro.computeBoostStacks).toBe(1)
+  })
+
+  it('switching away from a stacked boost refunds unused stacks even into a full funding tier', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
+    const state = withIntro(createInitialGameState(), {
+      computeCores: COMPUTE_ENTITY_CAP,
+      computeNodes: 1,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 3,
+      computeBoostRemainingSeconds: D * 3,
+    })
+    const after = activateComputeBoost('standard', 2, true)(state)
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP + 2)
+    expect(after.intro.computeNodes).toBe(0)
   })
 
   it('getUnusedComputeBoostStacks counts only stacks whose whole duration is still ahead', () => {

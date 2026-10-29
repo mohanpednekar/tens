@@ -6404,8 +6404,7 @@ export const canReclaimComputeBoost = state => getUnusedComputeBoostStacks(state
 
 // Reclaims the most recently added, still-unused stack of the active Compute Boost — one at a
 // time — the exact inverse of one activateComputeBoost/stackComputeBoost call: refunds 1 token of
-// the active boost's own funding tier (capped at that tier's effective cap, never lowering a count
-// that grew past it while the boost was running) and subtracts that tier's own getComputeBoostTierDurationSeconds
+// the active boost's own funding tier (uncapped — see below) and subtracts that tier's own getComputeBoostTierDurationSeconds
 // back out of computeBoostRemainingSeconds, decrementing computeBoostStacks by 1.
 // canReclaimComputeBoost's own gate (>1 stack AND enough pooled time that this subtraction can't
 // zero it out) means nextStacks is always >= 1 and the resulting remaining time is always > 0 here
@@ -6421,10 +6420,10 @@ export const reclaimComputeBoost = state => {
   const tierIndex = state.intro.computeBoostTierIndex ?? 1
   const field = getComputeBoostTierField(tierIndex)
   const nextStacks = (state.intro.computeBoostStacks ?? 0) - 1
-  // Capped at the tier's effective cap (18 with its reserve open), never LOWERING a count that
-  // grew past it while the boost was running.
-  const held = state.intro[field] ?? 0
-  const refunded = Math.max(held, Math.min(getComputeEntityEffectiveCap(state, tierIndex), held + 1))
+  // NOT capped at the tier's effective cap: the token was the player's before it was stacked, so
+  // a refund into a full tier still returns it (counts above the cap are already tolerated — slot
+  // and reserve displays clamp, Booster purchases simply stop).
+  const refunded = (state.intro[field] ?? 0) + 1
 
   return {
     ...state,

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   newest unused stack, no confirmation) on its left — replaced by **✕** (Forfeit, confirmed) once no
   unused stack remains. On the selected tier, the running preset becomes a Stack button, and picking a
   different preset switches after a confirmation, refunding any unused stacks.
+  Refunds are never lost when the funding tier is already full.
 
 - **Boosters: instant manual merge on automated tiers.** Once a tier's auto-merge is unlocked,
   tapping its auto-merge slots (now labelled "🤖 Auto-merge") merges 8 → 1 instantly instead of
