@@ -977,7 +977,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
   })
 
   describe('applied to the real per-tick delivery, never to the displayed rate', () => {
-    it('tickIntroProduction delivers 1.5x at an empty Buffer (FILL_MULTIPLIER_MAX_PERCENT)', () => {
+    it('tickIntroProduction delivers 10x at an empty Buffer (FILL_MULTIPLIER_MAX_PERCENT)', () => {
       const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 0, capacity: 1000 })
       const after = tickIntroProduction(1)(state)
       // The displayed rate is unaffected — the multiplier scales only real delivery.
