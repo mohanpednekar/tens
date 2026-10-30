@@ -2697,7 +2697,7 @@ test('Upgrade Data Stream fills its bar from the stream and doubles Capacity', (
   expect(upgradeButton).toBeEnabled()
 
   fireEvent.click(upgradeButton)
-  // A full Buffer delivers at 50%, so the 1 B bar completes after ~2s of ticks.
+  // Empty-bar draw is 10× base Speed, so the 1 B bar completes in well under a second of ticks.
   act(() => { vi.advanceTimersByTime(2_500) })
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
@@ -2958,7 +2958,7 @@ test('the intro auto-transitions into the main game once the bit balance crosses
 
   // Starts one bit below the threshold. Production delivers continuously now — the fill-based
   // multiplier (see FILL_MULTIPLIER_* in game/layers) tapers it toward FILL_MULTIPLIER_MIN_PERCENT
-  // (50%) this close to a full Buffer, so a few ticks close that last bit.
+  // (10%) this close to a full Buffer, so a few ticks close that last bit.
   seedIntroState({
     bits: FRESH_CYCLE_BLOCK_BITS - 1,
     capacity: FRESH_CYCLE_BLOCK_BITS,
@@ -3370,7 +3370,7 @@ describe('pool speed details popover', () => {
   })
 })
 
-test('a pool\'s speed tints red at the full-buffer 50% floor', () => {
+test('a pool\'s speed tints red at the full-buffer 10% floor', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
