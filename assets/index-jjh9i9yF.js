@@ -1334,6 +1334,11 @@ Error generating stack: `+e.message+`
   font-size: 0.9rem;
   min-width: 6rem;
   padding: 0.4rem 0.55rem;
+
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
+  }
 `,B.details`
   border-left: 2px solid ${e=>e.theme.color.border};
   padding-left: 0.6rem;
@@ -1360,6 +1365,11 @@ Error generating stack: `+e.message+`
   padding: 0.6rem;
   resize: vertical;
   width: 100%;
+
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
+  }
 `,B.p`
   color: ${e=>e.$error?e.theme.color.danger:e.theme.color.good} !important;
   font-size: 0.8rem;
