@@ -290,10 +290,10 @@ describe('constants', () => {
     expect(INTRO_CAPACITY_DOUBLING_STEP).toBe(2)
   })
 
-  it('FILL_MULTIPLIER_* span exactly 100 percentage points, centered on 100% at 50% full', () => {
-    expect(FILL_MULTIPLIER_MAX_PERCENT).toBe(150)
-    expect(FILL_MULTIPLIER_MIN_PERCENT).toBe(50)
-    expect(FILL_MULTIPLIER_MAX_PERCENT - FILL_MULTIPLIER_MIN_PERCENT).toBe(100)
+  it("FILL_MULTIPLIER_* span 10x down to 0.1x, centered on 100% (1x) at 50% full", () => {
+    expect(FILL_MULTIPLIER_MAX_PERCENT).toBe(1000)
+    expect(FILL_MULTIPLIER_MIN_PERCENT).toBe(10)
+    expect(Math.sqrt(FILL_MULTIPLIER_MAX_PERCENT * FILL_MULTIPLIER_MIN_PERCENT)).toBe(100)
   })
 
   it('FILL_MULTIPLIER_TAP_BONUS_PERCENT is 5 and FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND is 1', () => {
@@ -301,8 +301,8 @@ describe('constants', () => {
     expect(FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND).toBe(1)
   })
 
-  it('FILL_MULTIPLIER_TAP_CAP_PERCENT is 200 (the cumulative fill + tap-bonus ceiling)', () => {
-    expect(FILL_MULTIPLIER_TAP_CAP_PERCENT).toBe(200)
+  it('FILL_MULTIPLIER_TAP_CAP_PERCENT is 1100 (the cumulative fill + tap-bonus ceiling)', () => {
+    expect(FILL_MULTIPLIER_TAP_CAP_PERCENT).toBe(1100)
   })
 
   it('getStoragePoolMemoryBounds delimits pool Memory Capacity start/end on the shared SI-aligned ladder', () => {

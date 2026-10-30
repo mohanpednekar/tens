@@ -945,7 +945,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       })
       const after = tickFillMultiplierDecay(0)(state)
       expect(after.intro.dataStreamTapBonusPercent).toBe(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT)
-      // base 150 (empty buffer) + bonus 100 = 250 → combined cap 200.
+      // base 1000 (empty buffer) + bonus 100 = 1100 → combined cap 1100.
       expect(getDataStreamMultiplierPercent(after.intro)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
     })
 
@@ -978,7 +978,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 0, capacity: 1000 })
       const after = tickIntroProduction(1)(state)
       // The displayed rate is unaffected — the multiplier scales only real delivery.
-      expect(after.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 1.5)
+      expect(after.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 10)
     })
 
     it('tickIntroProduction delivers exactly the displayed rate at a half-full Buffer (100%)', () => {
@@ -994,7 +994,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       const rawRate = getStoragePoolBandwidth(state, 1)
       const after = tickPoolBufferFill(1)(state)
       expect(after.intro.poolBuffers[1]).toBeGreaterThan(rawRate)
-      expect(after.intro.poolBuffers[1]).toBeCloseTo(rawRate * 1.5)
+      expect(after.intro.poolBuffers[1]).toBeCloseTo(rawRate * 10)
     })
   })
 })
@@ -1007,7 +1007,7 @@ describe('getDataStreamDeliveredRate', () => {
     })
     expect(getComputeBoostMultiplier(state.intro)).toBeGreaterThan(1)
     const delivered = getDataStreamDeliveredRate(state.intro)
-    expect(delivered).toBeCloseTo(getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro) * 1.5)
+    expect(delivered).toBeCloseTo(getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro) * 10)
     expect(tickIntroProduction(1)(state).intro.bits).toBeCloseTo(Math.min(1000, delivered))
   })
 })
@@ -1496,12 +1496,12 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     expect(isMemoryCapacityUpgradeArmable(after)).toBe(false)
   })
 
-  it("pulls base Speed scaled by the bar's own fill multiplier (150% empty) from the Buffer into the bar", () => {
+  it("pulls base Speed scaled by the bar's own fill multiplier (1000% empty) from the Buffer into the bar", () => {
     const started = pickIntroCapacityMilestone(armState(capacity / 2))
     const rate = getIntroProductionRate(started.intro)
     const after = tickCapacityUpgradeDrain(1)(started)
-    expect(after.intro.capacityUpgradeProgress).toBeCloseTo(rate * 1.5)
-    expect(after.intro.bits).toBeCloseTo(capacity / 2 - rate * 1.5)
+    expect(after.intro.capacityUpgradeProgress).toBeCloseTo(rate * 10)
+    expect(after.intro.bits).toBeCloseTo(capacity / 2 - rate * 10)
   })
 
   it('pulls only what the Buffer holds', () => {
@@ -3095,11 +3095,11 @@ describe('tickIntroProduction', () => {
   })
 
   it('delivers continuously — a fractional second banks a fractional share of the rate, with no separate accumulator', () => {
-    // An empty buffer's 150% fill multiplier lifts the real delivery to 1.5x the derived rate, so
+    // An empty buffer's 1000% fill multiplier lifts the real delivery to 10x the derived rate, so
     // 0.4s delivers 0.4 x 1.5 x rate bits.
-    const state = withIntro(createInitialGameState(), { byteCreated: true, capacity: 100 })
+    const state = withIntro(createInitialGameState(), { byteCreated: true, capacity: 100000 })
     const after = tickIntroProduction(0.4)(state)
-    expect(after.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 0.4 * 1.5)
+    expect(after.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 0.4 * 10)
     expect(after.intro.productionAccumulator).toBeUndefined()
   })
 

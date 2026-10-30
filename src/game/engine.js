@@ -2363,12 +2363,15 @@ export const getIntroProductionRate = intro =>
 //
 // Percent value (100 = "no change") from a 0..1 fill fraction: FILL_MULTIPLIER_MAX_PERCENT when
 // empty, exactly 100 at 50% full, FILL_MULTIPLIER_MIN_PERCENT once completely full. Shared by the
-// Data Stream itself and every pool's own local buffer below — same linear "150% down to 50%"
+// Data Stream itself and every pool's own local buffer below — same log-linear "1000% down to 10%"
 // curve either way. fillFraction is clamped defensively — both real callers already clamp their
 // own fraction to at most 1 before calling this, so this only guards a corrupted/hand-edited save.
 export const getFillMultiplierPercent = fillFraction => {
   const clampedFraction = Math.min(1, Math.max(0, fillFraction))
-  return FILL_MULTIPLIER_MAX_PERCENT - clampedFraction * (FILL_MULTIPLIER_MAX_PERCENT - FILL_MULTIPLIER_MIN_PERCENT)
+  // Log-linear: 10x at empty, exactly 1x at 50%, 0.1x when full (MAX/MIN are 1000/10 percent).
+  const maxLog = Math.log10(FILL_MULTIPLIER_MAX_PERCENT)
+  const minLog = Math.log10(FILL_MULTIPLIER_MIN_PERCENT)
+  return 10 ** (maxLog - clampedFraction * (maxLog - minLog))
 }
 
 // The Data Stream Buffer's own fill fraction (0..1) — intro.bits over intro.capacity.
@@ -2382,7 +2385,7 @@ export const getDataStreamBaseMultiplierPercent = intro =>
 // The Data Stream's currently active multiplier percent — fill-based value plus any live decaying
 // tap bonus (see tapIntroBit/tickFillMultiplierDecay). What ByteFoundryPage displays alongside the
 // Speed figure, and what getDataStreamEffectMultiplier below turns into the real production scale.
-// Combined fill-based + live tap bonus, hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (200) — the
+// Combined fill-based + live tap bonus, hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (1100) — the
 // cap applies to this CUMULATIVE total, not to dataStreamTapBonusPercent alone (see layers.js).
 export const getDataStreamMultiplierPercent = intro =>
   Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getDataStreamBaseMultiplierPercent(intro) + (intro.dataStreamTapBonusPercent ?? 0))
@@ -2782,7 +2785,7 @@ export const getPoolTapBonusPercent = (state, poolIndex) =>
 // bonus (see tapPoolBuffer/tickFillMultiplierDecay below). What ByteFoundryPage displays alongside
 // that pool's Bandwidth figure, and what getPoolEffectMultiplier below turns into the real
 // buffer-fill scale (see tickPoolBufferFill).
-// Combined fill-based + live tap bonus, hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (200) — same
+// Combined fill-based + live tap bonus, hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (1100) — same
 // "cumulative total, not the bonus alone" cap the Data Stream's own getDataStreamMultiplierPercent uses.
 export const getPoolMultiplierPercent = (state, poolIndex) =>
   Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getPoolBaseMultiplierPercent(state, poolIndex) + getPoolTapBonusPercent(state, poolIndex))

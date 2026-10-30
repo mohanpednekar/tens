@@ -207,9 +207,9 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // cache fill/flush, Data Lake transfer pacing, and Compute merge/boost pacing, keeps reading the
 // raw, un-multiplied rate exactly as before this mechanic existed). The
 // multiplier itself is fill-dependent: starts at FILL_MULTIPLIER_MAX_PERCENT when the Data Stream
-// Buffer / a pool's own local buffer (getPoolBufferBits/getPoolBufferCapacity) is empty, and drops
-// 1 percentage point per 1% of that buffer filled, reaching exactly 100% at 50% full and
-// FILL_MULTIPLIER_MIN_PERCENT once completely full (getFillMultiplierPercent). A manual tap on the
+// Buffer / a pool's own local buffer (getPoolBufferBits/getPoolBufferCapacity) is empty, and falls
+// geometrically (10x -> 1x over the first half, 1x -> 0.1x over the second), reaching exactly 100%
+// at 50% full and FILL_MULTIPLIER_MIN_PERCENT once completely full (getFillMultiplierPercent). A manual tap on the
 // Data Stream (once Storage pools are revealed at 1 KiB — see getVisibleStoragePoolCount/
 // tapIntroBit) or on a specific pool's own Memory tile (tapPoolBuffer) adds
 // FILL_MULTIPLIER_TAP_BONUS_PERCENT on top of that fill-based value for that one Data Stream/pool
@@ -217,8 +217,8 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // (tickFillMultiplierDecay) until only the fill-based value remains — never below it. Before
 // Storage pools are revealed, tapping the Data Stream keeps its original flat "one second's worth
 // of bits" effect instead (tapIntroBit) — this multiplier has no bearing pre-reveal.
-export const FILL_MULTIPLIER_MAX_PERCENT = 150
-export const FILL_MULTIPLIER_MIN_PERCENT = 50
+export const FILL_MULTIPLIER_MAX_PERCENT = 1000
+export const FILL_MULTIPLIER_MIN_PERCENT = 10
 export const FILL_MULTIPLIER_TAP_BONUS_PERCENT = 5
 export const FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND = 1
 // Hard ceiling on the manual tap bonus ITSELF (stored separately from the fill-based value — see
@@ -228,7 +228,7 @@ export const FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT = 100
 // Hard ceiling on the CUMULATIVE effect (fill-based value + live tap bonus combined), not on the
 // tap bonus alone — see getDataStreamMultiplierPercent/getPoolMultiplierPercent in engine.js, which
 // clamp their combined total to this.
-export const FILL_MULTIPLIER_TAP_CAP_PERCENT = 200
+export const FILL_MULTIPLIER_TAP_CAP_PERCENT = 1100
 
 // --- Byte Foundry Storage (Disks) --- see provisionDisk/tickProvisionDisk/tickDiskAutoFill/
 // tickDiskPull/getDiskSize in engine.js and intro.disks/disksBuiltTotal/diskCache/diskBuild/

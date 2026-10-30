@@ -777,7 +777,7 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
 
 **Hard rules (full text and the rest of the Foundry mechanics: `docs/FOUNDRY_MECHANICS_REFERENCE.md`):**
 - **Fill multiplier** (`FILL_MULTIPLIER_*`, `getFillMultiplierPercent`): displayed Speed/Bandwidth never
-  change; a fill-dependent multiplier (150% empty → 100% at 50% → 50% full, +5% tap bonus decaying
+  change; a fill-dependent multiplier (1000% empty → 100% at 50% → 10% full (log-linear), +5% tap bonus decaying
   1%/s, capped 200%) scales only the real per-tick amount delivered.
 - **Standing rule — `intro.capacity` keeps doubling plainly in binary** (IEC `KiB`/`MiB`, step 1024);
   non-binary (SI-clean/decade-power) transforms are for storage-pool-scoped values only

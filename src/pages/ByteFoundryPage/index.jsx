@@ -156,14 +156,18 @@ const formatUpgradeTimeLeft = totalSeconds => {
   return formatOfflineDuration(seconds)
 }
 
-// Seconds until a buffer is full (null when already full or not filling). The fill multiplier falls linearly
-// from 150% (empty) to 50% (full), so the buffer follows dx/dt = rate × (1.5 − x/capacity) and the time from
-// `bits` is (capacity / rate) × ln((1.5 − fill) / 0.5) — the same integral the running-upgrade bar uses.
-// `baseRate` is the Speed/Bandwidth before the fill multiplier; assumes nothing else draws from the buffer.
+// Seconds until a buffer is full (null when already full or not filling). The fill multiplier falls
+// geometrically from FILL_MULTIPLIER_MAX_PERCENT (empty) to FILL_MULTIPLIER_MIN_PERCENT (full), m(f) =
+// e^(a − b·f) with a = ln(MAX/100), b = ln(MAX/MIN), so dx/dt = rate × m(x/capacity) and the time from
+// `bits` is (capacity / rate) × e^−a × (e^b − e^(b·fill)) / b — the same integral the running-upgrade
+// bar uses. `baseRate` is the Speed/Bandwidth before the fill multiplier; assumes nothing else draws
+// from the buffer.
 export const getBufferSecondsToFull = (bits, capacity, baseRate) => {
   if (!(capacity > 0) || bits >= capacity || !(baseRate > 0)) return null
   const fill = Math.max(0, bits) / capacity
-  return (capacity / baseRate) * Math.log((1.5 - fill) / 0.5)
+  const a = Math.log(FILL_MULTIPLIER_MAX_PERCENT / 100)
+  const b = Math.log(FILL_MULTIPLIER_MAX_PERCENT / FILL_MULTIPLIER_MIN_PERCENT)
+  return (capacity / baseRate) * Math.exp(-a) * (Math.exp(b) - Math.exp(b * fill)) / b
 }
 
 const formatBufferTimeToFull = (bits, capacity, baseRate) => {
@@ -716,7 +720,7 @@ const getSpeedColor = percent => {
   const upper = SPEED_COLOR_STOPS.findIndex(([stop]) => percent <= stop)
   const [fromStop, fromRgb] = SPEED_COLOR_STOPS[upper - 1]
   const [toStop, toRgb] = SPEED_COLOR_STOPS[upper]
-  const t = (percent - fromStop) / (toStop - fromStop)
+  const t = Math.log(percent / fromStop) / Math.log(toStop / fromStop)
   return `rgb(${fromRgb.map((c, i) => Math.round(c + (toRgb[i] - c) * t)).join(',')})`
 }
 
@@ -983,7 +987,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   )
 
   const formatMultiplierValue = (totalPercent, basePercent, tapPercent) =>
-    basePercent + tapPercent > FILL_MULTIPLIER_TAP_CAP_PERCENT
+    basePercent + tapPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT
       ? `${Math.round(totalPercent)}% (capped)`
       : `${Math.round(totalPercent)}%`
   // Drop an open key whose speed button has gone (an upgrade finished, a pool hidden by a reset), so
