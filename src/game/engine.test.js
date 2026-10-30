@@ -1499,12 +1499,12 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     expect(isMemoryCapacityUpgradeArmable(after)).toBe(false)
   })
 
-  it("pulls base Speed scaled by the bar's own fill multiplier (1000% empty) from the Buffer into the bar", () => {
+  it("pulls base Speed at a constant 1x (no fill multiplier) from the Buffer into the bar", () => {
     const started = pickIntroCapacityMilestone(armState(capacity / 2))
     const rate = getIntroProductionRate(started.intro)
     const after = tickCapacityUpgradeDrain(1)(started)
-    expect(after.intro.capacityUpgradeProgress).toBeCloseTo(rate * 10)
-    expect(after.intro.bits).toBeCloseTo(capacity / 2 - rate * 10)
+    expect(after.intro.capacityUpgradeProgress).toBeCloseTo(rate)
+    expect(after.intro.bits).toBeCloseTo(capacity / 2 - rate)
   })
 
   it('pulls only what the Buffer holds', () => {

@@ -2399,18 +2399,18 @@ export const getDataStreamDeliveredRate = intro =>
   getIntroProductionRate(intro) * getComputeBoostMultiplier(intro) * getDataStreamEffectMultiplier(intro)
 
 // The running Upgrade Capacity / Upgrade Speed bar's draw (null when none runs), mirroring
-// tickCapacityUpgradeDrain/tickSpeedUpgradeDrain: base Speed × the bar's own fill multiplier. That
-// is also the real draw — the drains run right after tickIntroProduction, and even with the
-// Buffer empty the stream delivers at least that much (its own multiplier is 1000% when empty, the
-// bar's is at most 1000%, and a Compute Boost only adds).
+// tickCapacityUpgradeDrain/tickSpeedUpgradeDrain: base Speed at a constant 1x (the fill multiplier
+// does not apply to upgrades). The Buffer can still run dry, which only slows the real draw.
+const UPGRADE_DRAW_MULTIPLIER_PERCENT = 100
+
 export const getRunningUpgradeDraw = intro => {
   const speed = Boolean(intro?.speedUpgradeQueued)
   if (!speed && !intro?.capacityUpgradeQueued) return null
   const cost = speed ? getSpeedUpgradeCostBits(intro) : intro.capacity
   const stored = speed ? intro.speedUpgradeProgress : intro.capacityUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
-  const multiplierPercent = getFillMultiplierPercent(cost > 0 ? progress / cost : 1)
-  const rate = getIntroProductionRate(intro) * multiplierPercent / 100
+  const multiplierPercent = UPGRADE_DRAW_MULTIPLIER_PERCENT
+  const rate = getIntroProductionRate(intro)
   return { kind: speed ? 'speed' : 'capacity', cost, progress, multiplierPercent, rate }
 }
 
@@ -3441,7 +3441,7 @@ export const tickSpeedUpgradeDrain = elapsedSeconds => state => {
   const stored = state.intro.speedUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
   const cost = getSpeedUpgradeCostBits(state.intro)
-  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds * getFillMultiplierPercent(cost > 0 ? progress / cost : 1) / 100, cost - progress)
+  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds, cost - progress)
   const intro = { ...state.intro, bits: state.intro.bits - pull, speedUpgradeProgress: progress + pull }
   if (intro.speedUpgradeProgress >= cost) {
     return { ...state, intro: { ...intro, speedCapacity: (state.intro.speedCapacity ?? state.intro.capacity) * INTRO_CAPACITY_DOUBLING_STEP, speedUpgradeQueued: false, speedUpgradeProgress: 0 } }
@@ -3450,7 +3450,7 @@ export const tickSpeedUpgradeDrain = elapsedSeconds => state => {
 }
 
 // Upgrade Data Stream click: starts the upgrade. From then on tickCapacityUpgradeDrain pulls from the
-// Data Stream Buffer at the base Speed scaled by the bar's own fill multiplier (like a pool pulling at its Bandwidth) into
+// Data Stream Buffer at the base Speed (constant 1x) into
 // intro.capacityUpgradeProgress, ahead of every other consumer; Capacity doubles when the bar fills.
 export const pickIntroCapacityMilestone = state => queueIntroCapacityUpgrade(state)
 
@@ -3459,14 +3459,13 @@ export const queueIntroCapacityUpgrade = state => {
   return { ...state, intro: { ...state.intro, capacityUpgradeQueued: true, capacityUpgradeProgress: 0 } }
 }
 
-// Runs right after production, before any other Data Stream consumer. Pulls min(Buffer, base Speed ×
-// the bar's own fill multiplier — 1000% empty, 100% half, 10% full, like pools) into the bar; fires the upgrade once the bar reaches Capacity.
+// Runs right after production, before any other Data Stream consumer. Pulls min(Buffer, base Speed at a constant 1x) into the bar; fires the upgrade once the bar reaches Capacity.
 export const tickCapacityUpgradeDrain = elapsedSeconds => state => {
   if (!state.intro?.capacityUpgradeQueued) return state
   if (isMemoryCapacityAtCap(state)) return clearIntroCapacityUpgradeQueue(state)
   const stored = state.intro.capacityUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
-  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds * getFillMultiplierPercent(state.intro.capacity > 0 ? progress / state.intro.capacity : 1) / 100, state.intro.capacity - progress)
+  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds, state.intro.capacity - progress)
   const next = {
     ...state,
     intro: { ...state.intro, bits: state.intro.bits - pull, capacityUpgradeProgress: progress + pull },
