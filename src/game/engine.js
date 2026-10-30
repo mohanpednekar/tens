@@ -2422,9 +2422,9 @@ export const getDataStreamMultiplierPercent = intro =>
 
 export const getDataStreamEffectMultiplier = intro => getDataStreamMultiplierPercent(intro) / 100
 
-// What the Data Stream actually delivers per second right now (bits/s): base Speed × any active
-// Compute Boost × the fill-based multiplier — exactly tickIntroProduction's per-second amount, and
-// the figure ByteFoundryPage shows.
+// Instantaneous Data Stream delivery (bits/s): base Speed × any active Compute Boost × the
+// fill-based multiplier. ByteFoundryPage shows this; tickIntroProduction integrates the same
+// curve over elapsedSeconds via getFillCurveDelta rather than multiplying this by dt.
 export const getDataStreamDeliveredRate = intro =>
   getIntroProductionRate(intro) * getComputeBoostMultiplier(intro) * getDataStreamEffectMultiplier(intro)
 
