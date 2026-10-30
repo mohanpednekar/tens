@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Compute Boosts also speed up Storage pools.** A boost now boosts the buffer-fill speed of the pools matching the Factory tiers it covers (pool N ↔ tier N) by +200% (Burst), +50% (Standard) or +10% (Sustain), instead of the production multiplier; covered pool cards glow.
+- Removed the 🌟×N boost badge from Factory tiers and the Data Stream (the glow remains). On Boosters the active-boost status is no longer boxed in a card — it matches the Byte Factory's timer bar.
+- **Tier autobuyers buy whole levels.** Each attempt now buys one full level (8 blocks) only when it is
+  fully affordable, or completes a partly bought level when the rest of it is fully affordable — never a
+  partial level from scratch.
+- **Data Stream and upgrade speeds are clickable.** Like a pool's ⚡ speed, the Data Stream's and the
+  running upgrade's now open a details panel, dismissed by clicking or scrolling outside. The Data
+  Stream's ⚡ figure now includes any active Compute Boost, matching what it actually delivers, and its
+  time-to-full assumes the boost lasts.
+- Factory tier rows show the Compute Boost badge next to the tier name instead of at the far right beside production.
+- The Byte Factory's active-boost status now uses the same timer bar (with Pop/Forfeit and Stack) as the Boosters screen, via a shared `BoostTimerBar` component. The bar is redesigned (effect · what it boosts · time left) and boost text no longer mentions the always-1 booster spent.
+- **Boosters: timer bar for the active boost.** The separate Stack / Reclaim / Forfeit row is gone. The
+  active boost now shows a timer bar with **+** (Stack) on its right and **↩** (Pop, refunds the
+  newest unused stack, no confirmation) on its left — replaced by **✕** (Forfeit, confirmed) once no
+  unused stack remains. On the selected tier, the running preset becomes a Stack button, and picking a
+  different preset switches after a confirmation, refunding any unused stacks.
+  Refunds are never lost when the funding tier is already full.
+
+- **Boosters: instant manual merge on automated tiers.** Once a tier's auto-merge is unlocked,
+  tapping its auto-merge slots (now labelled "🤖 Auto-merge") merges 8 → 1 instantly instead of
+  starting a timed merge; only the automatic merge at 18 held is still timed. The auto-merge row now
+  sits above the selected tier's Boost presets, and the three preset buttons are equal width. The
+  redundant "· N held" count was dropped from the preset line (the slot dots already show it), and
+  preset durations drop zero units ("10m", "1h", "10h" instead of "10m 0s", "1h 0m", "10h 0m").
+  Clicking anywhere outside the tier rows deselects the selected boost tier.
+
 - **Boosters: presets live on the selected tier.** The three Boost presets now appear inside the
   selected tier's block (one tier at a time) instead of the top card, which now shows the current
   boost effect (including which Factory tiers it covers). Opening Boosters pre-selects the active
