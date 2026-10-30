@@ -1,7 +1,8 @@
+import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration } from 'components/BoostTimerBar'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
-import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeMergeDurationSeconds, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
-import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, TIER_DEFINITIONS } from 'game/layers'
-import { useState } from 'react'
+import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
+import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
+import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -161,7 +162,7 @@ const NormalSlot = styled.span`
 `
 
 // Row 2: pre-unlock, an instant Merge button + an Unlock Auto-merge button; post-unlock, the 8
-// reserve slots themselves, clickable as the manual-start trigger — "2nd row has merge button and
+// auto-merge slots themselves, clickable as an instant manual merge — "2nd row has merge button and
 // unlock automerge button (in place of the reserved slots before unlocking them)" (issue #321).
 // The post-unlock ReserveSlotsRow branch stretches itself via flex: 1 1 auto and right-aligns its
 // own slots internally, filling the row exactly like MainPage's own tier-row Buy/Upgrade pair;
@@ -235,14 +236,15 @@ const ReserveSlot = styled.span`
   background: ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
 `
 
-// Visible "⬆ 8→1 <output>" cue at the row's left edge while a manual merge can start, so the
-// reserve row reads as a Merge button rather than a passive status strip.
+// Left-edge label naming the row as auto-merge slots ("🤖 Auto-merge"), switching to an accent
+// "🤖 ⬆ 8→1 <output>" while an instant manual merge is available, so the row reads as a button.
 const MergeCue = styled.span`
   flex: 0 0 auto;
   margin-right: auto;
   font-size: 0.78em;
   font-weight: 600;
-  color: ${props => props.theme.color.accent};
+  white-space: nowrap;
+  color: ${props => (props.$active ? props.theme.color.accent : props.theme.color.textMuted)};
 `
 
 const MergeCountdown = styled.span`
@@ -272,20 +274,9 @@ const BoostRow = styled.div`
   width: 100%;
 
   > button {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-width: 0;
   }
-`
-
-// Issue #326: "Stack and reclaim buttons shall be shown on the next row" — rendered only while a
-// boost is active, right below the 3 preset buttons above (Reclaim moved down here from its
-// former spot in ActiveBoostRow, so it's not duplicated in two places).
-const StackReclaimRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: ${props => props.theme.space.sm};
-  width: 100%;
 `
 
 const AutoBoostRow = styled.div`
@@ -303,36 +294,11 @@ const AutoBoostLabel = styled.p`
   text-align: center;
 `
 
-// The active-boost status line (effect + countdown + stack count) plus its optional Reclaim
-// button, side by side — a plain row rather than a <p> (StatusText), since it now sometimes needs
-// to host an inline <button>. Rendered at the TOP of the page (right after the header) so an
-// active boost stays visible regardless of what else is happening lower down.
-const ActiveBoostRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: ${props => props.theme.space.sm};
-  color: ${props => props.theme.color.textMuted};
-  text-align: center;
-`
-
-// A small leading icon + display label for COMPUTE_BOOST_PRESETS' own keys (layers.js) — the
-// preset objects themselves are keyed by a plain lowercase identifier with no display-ready name
-// or icon of their own. The icon alone is what renders on-screen (see the Boost row below); the
-// label is reserved for the active-boost status line and tooltips, where a bare icon would be
-// ambiguous about which preset is running.
-const COMPUTE_BOOST_DISPLAY = {
-  burst: { icon: '💥', label: 'Burst' },
-  standard: { icon: '⏱️', label: 'Standard' },
-  sustain: { icon: '🔋', label: 'Sustain' },
-}
-
 // The full ten-tier progression this page walks top to bottom. Every row past Cores through
 // Supercomputers shares the exact same shape: a merge boundary into the tier above it, which —
 // once that boundary's auto-merge is unlocked (see intro.autoMergeCoresIntoNode/
-// autoMergeNodesIntoCluster/… in engine.js) — transitions from an instant manual click to
-// engine.js's timed reserve-pool system (see issue #321). Core → Node is included as an ordinary
+// autoMergeNodesIntoCluster/… in engine.js) — moves to the "🤖 Auto-merge" slot row: tapping it still merges
+// instantly, while engine.js's automatic merge uses the timed reserve pool (see issue #321). Core → Node is included as an ordinary
 // boundary here, same as every other one. Cores themselves are obtained by buying Boosters from
 // the matching Data Lake on Foundry (buyBooster — spent from that lake's own banked units, not
 // minted from Memory); the buy/auto-buy control itself lives on Foundry's DataLakePanel, not here
@@ -509,36 +475,20 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer, see
 // issues #280/#321) lives here too, alongside Boost — one page for everything Compute, rather
 // than a second dedicated screen. Render order top to bottom: a card with the current boost
-// effect, Stack/Reclaim/Forfeit and Auto-Boost preference, THEN the tier rows — the one selected
-// tier shows the armed status line + 3 preset buttons inside its own block. Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1
-// is COMPUTE_ENTITY_CAP (10) normal slots plus the tier's name/symbol; row 2 is, pre-unlock, an
-// instant Merge button + an Unlock Auto-merge button, or, post-unlock, the
-// COMPUTE_MERGE_RESERVE_CAP (8) reserve slots themselves — clicking that row is what manually
-// starts a new reserve merge once isCompute*MergeStartAvailable allows it ("the button is
-// enabled only when there are at least 8 tokens available across all the 18 slots"). Merging
-// only ever fires automatically once the player has separately unlocked auto-merge for that
-// specific boundary; either way, once unlocked, a start (auto or manual) commits
-// COMPUTE_MERGE_RATIO (8) tokens to the reserve and counts down that boundary's live duration
-// (8 fills of the input tier's own pool's smallest disk — see getComputeMergeDurationSeconds)
-// before granting 1 of the output entity.
+// effect, the active boost timer bar (Pop/Forfeit, Stack) and Auto-Boost preference, THEN the tier rows — the one selected
+// tier shows the armed status line + 3 preset buttons inside its own block, below its merge row.
+// Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1 is COMPUTE_ENTITY_CAP (10)
+// normal slots plus the tier's name/symbol; row 2 is, pre-unlock, an instant Merge button + an
+// Unlock Auto-merge button, or, post-unlock, the "🤖 Auto-merge" row of COMPUTE_MERGE_RESERVE_CAP
+// (8) auto-merge slots — clicking it instantly merges 8 → 1 whenever isCompute*MergeStartAvailable
+// allows it. Only the automatic merge (at the full extended cap) commits 8 tokens to the reserve
+// and counts down that boundary's live duration (see getComputeMergeDurationSeconds in the engine).
 // "Compute" names the page/feature only — individual entities drop the word (Core, Node,
 // Cluster, … not "Compute Core"/"Compute Node"/…). The merge section itself only renders once
 // `intro.computeMergePageUnlocked` — the page reveals as soon as Compute is unlocked
 // (isComputeCoreConversionUnlocked, well before 8 Cores are possible), but the merge chain stays
 // hidden behind its own later, one-time latch until the player has actually earned enough Cores to
 // use it (see engine.js's latchComputeMergePageIfNeeded for where that latch flips).
-// ENTITY_ROWS' own labels are always plural ("Cores", "Nodes", …) — strip the trailing "s" for a
-// cost/spend sentence naming exactly 1 of a tier (e.g. "spend 1 Core", not "spend 1 Cores").
-const singularize = label => label.replace(/s$/, '')
-
-// "KB" for 1 covered Factory tier, "KB–MB" for 2, … — which Factory tiers a boost funded from
-// compute-ladder tier `tierIndex` applies to (see getComputeBoostCoveredTierCount). `field` picks
-// the short `symbol` (on-screen text) or the full `name` (tooltips).
-const describeCoveredTiers = (tierIndex, field = 'symbol') =>
-  tierIndex <= 1
-    ? TIER_DEFINITIONS[0][field]
-    : `${TIER_DEFINITIONS[0][field]}–${TIER_DEFINITIONS[Math.min(tierIndex, TIER_DEFINITIONS.length) - 1][field]}`
-
 const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
@@ -551,9 +501,23 @@ const ComputePage = ({ game }) => {
     () => (intro.computeBoostType ? (intro.computeBoostTierIndex ?? 1) : null),
   )
 
+  // A click anywhere outside every tier block deselects, collapsing the presets. Clicks inside a
+  // tier block (its select button, presets, merge row) are left to that block's own handlers.
+  // Capture phase + composedPath: decided before React re-renders, so a click that removes its own
+  // target (e.g. Unlock Auto-merge swapping in the auto-merge row) still counts as inside.
+  useEffect(() => {
+    if (selectedBoostTierIndex === null) return undefined
+    const deselectOnOutsideClick = event => {
+      const insideTier = event.composedPath().some(node => node.dataset?.boostTier !== undefined)
+      if (!insideTier) setSelectedBoostTierIndex(null)
+    }
+    document.addEventListener('click', deselectOnOutsideClick, true)
+    return () => document.removeEventListener('click', deselectOnOutsideClick, true)
+  }, [selectedBoostTierIndex])
+
   const blockedByPriority = isDiskFillAvailable(state) || isProvisionDiskAvailable(state)
   const boostActive = Boolean(intro.computeBoostType)
-  // Once a boost is active, its own funding tier is what Stack/Reclaim act on, regardless of which
+  // Once a boost is active, its own funding tier is what Stack/Pop act on, regardless of which
   // row a player clicks next (issue #326 — Stack always extends the currently active boost).
   // `?? 1` defensively falls back to Core for a save from before issue #326 existed.
   const activeTierIndex = boostActive ? (intro.computeBoostTierIndex ?? 1) : null
@@ -563,14 +527,13 @@ const ComputePage = ({ game }) => {
   // stack).
   const armedTierIndex = intro.computeMergePageUnlocked ? selectedBoostTierIndex : 1
   const armedRow = armedTierIndex ? ENTITY_ROWS[armedTierIndex - 1] : null
-  const armedHeld = armedRow ? (intro[armedRow.countField] ?? 0) : 0
 
   // The armed tier's 3 presets — rendered inside the selected tier block (only one at a time), or
   // in the top card before the merge chain unlocks (Cores armed implicitly, no tier rows yet).
   const boostPresets = armedRow && (
     <>
-      <ArmedStatusText title={`Each boost spends 1 ${singularize(armedRow.label)} and boosts ${describeCoveredTiers(armedTierIndex, 'name')}`}>
-        {`1 ${armedRow.symbol} → ${describeCoveredTiers(armedTierIndex)} · ${formatAmount(armedHeld)} held`}
+      <ArmedStatusText title={`Boosts ${describeCoveredTiers(armedTierIndex, 'name')}`}>
+        {`Boosts ${describeCoveredTiers(armedTierIndex)}`}
       </ArmedStatusText>
       <BoostRow role="group" aria-label="compute boost">
         {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
@@ -580,26 +543,35 @@ const ComputePage = ({ game }) => {
           const sameAsActive = needsForfeit
             && intro.computeBoostType === boostType
             && activeTierIndex === armedTierIndex
-          // Fresh start, or a different preset/tier that would forfeit (confirm happens on click).
-          const turnAvailable = !sameAsActive
-            && (
-              isComputeBoostTurnAvailable(state, boostType, armedTierIndex, false)
-              || isComputeBoostTurnAvailable(state, boostType, armedTierIndex, true)
-            )
+          const activeLabel = COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType
+          const nextLabel = COMPUTE_BOOST_DISPLAY[boostType].label
+          const unusedStacks = getUnusedComputeBoostStacks(state)
+          // Same preset + tier as the running boost → this button stacks it. A different one →
+          // confirmed switch: unused stacks are refunded, the running stack is forfeited.
+          const turnAvailable = sameAsActive
+            ? isStackComputeBoostTurnAvailable(state)
+            : isComputeBoostTurnAvailable(state, boostType, armedTierIndex, needsForfeit)
+          const blockedTitle = 'Take a higher-priority upgrade first (Disk Fill or Provision Disk)'
+          const spendText = `×${multiplier} production, ${formatPresetDuration(durationSeconds)}`
 
           return (
             <CompactButton
               key={boostType}
-              aria-label={needsForfeit && !sameAsActive
-                ? `forfeit active boost and activate ${boostType} compute boost`
-                : `activate ${boostType} compute boost`}
+              aria-label={sameAsActive
+                ? `stack ${boostType} compute boost`
+                : needsForfeit
+                  ? `forfeit active boost and activate ${boostType} compute boost`
+                  : `activate ${boostType} compute boost`}
               disabled={!turnAvailable}
               onClick={() => {
+                if (sameAsActive) {
+                  actions.stackComputeBoost()
+                  return
+                }
                 if (needsForfeit) {
-                  const activeLabel = COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType
-                  const nextLabel = COMPUTE_BOOST_DISPLAY[boostType].label
+                  const refundNote = unusedStacks > 0 ? ` (${unusedStacks} unused stack${unusedStacks === 1 ? '' : 's'} refunded)` : ''
                   if (!window.confirm(
-                    `Forfeit the active ${activeLabel} boost with no refund, and start ${nextLabel}?`,
+                    `Forfeit the active ${activeLabel} boost${refundNote}, and start ${nextLabel}?`,
                   )) return
                   actions.activateComputeBoost(boostType, armedTierIndex, true)
                   return
@@ -608,19 +580,17 @@ const ComputePage = ({ game }) => {
               }}
               title={
                 sameAsActive
-                  ? 'This boost is already active — use Stack to extend it'
-                  : needsForfeit && intro.computeBoostStacks > 1
-                    ? 'Reclaim down to the last stack first — switching to a different boost forfeits everything currently held, same as the standalone Forfeit button'
-                    : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
-                      ? 'Take a higher-priority upgrade first (Disk Fill or Provision Disk)'
-                      : needsForfeit
-                        ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow.label)} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)} — asks for confirmation`
-                        : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow.label)} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`
+                  ? (canStackComputeBoost(state) && blockedByPriority ? blockedTitle : `Stack ${nextLabel}: add ${spendText} — up to ${COMPUTE_BOOST_MAX_STACKS}x`)
+                  : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
+                    ? blockedTitle
+                    : needsForfeit
+                      ? `Switch to ${nextLabel}: forfeit the running ${activeLabel} stack, refund unused stacks, then ${spendText} — asks for confirmation`
+                      : `${nextLabel}: ${spendText}`
               }
               type="button"
               variant="prestige"
             >
-              <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatOfflineDuration(durationSeconds)}`}</ButtonContent>
+              <ButtonContent>{`${sameAsActive ? '+ ' : ''}${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatPresetDuration(durationSeconds)}`}</ButtonContent>
             </CompactButton>
           )
         })}
@@ -634,73 +604,16 @@ const ComputePage = ({ game }) => {
         <Title>⚡ Boosters</Title>
       </Header>
 
-      <BoostCard aria-label="boost">
-      {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
-        <ActiveBoostRow aria-label="active compute boost">
-          <span
-            title={`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} (${activeRow?.label ?? ''}) active: ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} production on ${describeCoveredTiers(activeTierIndex, 'name')}, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left, ${intro.computeBoostStacks}x stacked`}
-          >
-            {`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.icon ?? '⚡'} ${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} on ${describeCoveredTiers(activeTierIndex)} · ${activeRow?.symbol ?? ''} · ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left${intro.computeBoostStacks > 1 ? ` · ${intro.computeBoostStacks} stacked` : ''}`}
-          </span>
-        </ActiveBoostRow>
-      )}
+      {boostActive && <BoostTimerBar actions={actions} state={state} />}
       {!boostActive && (
         <ArmedStatusText>
           {intro.computeMergePageUnlocked && !armedRow ? 'No boost running · pick a tier ↓' : 'No boost running'}
         </ArmedStatusText>
       )}
 
+      {(!intro.computeMergePageUnlocked || state.computeAutoBoostUnlocked) && (
+      <BoostCard aria-label="boost">
       {!intro.computeMergePageUnlocked && boostPresets}
-
-      {boostActive && (
-        <StackReclaimRow role="group" aria-label="stack, reclaim, or forfeit the active compute boost">
-          <CompactButton
-            aria-label="stack the active compute boost"
-            disabled={!isStackComputeBoostTurnAvailable(state)}
-            onClick={actions.stackComputeBoost}
-            title={`Stack: spend 1 more ${singularize(activeRow?.label ?? 'Core')} to extend the active boost by its own duration again — up to ${COMPUTE_BOOST_MAX_STACKS}x`}
-            type="button"
-            variant="prestige"
-          >
-            <ButtonContent>+ Stack</ButtonContent>
-          </CompactButton>
-          {/* Reclaim and Forfeit are mutually exclusive, not two always-visible controls with
-              different disabled states: Reclaim only makes sense while there's quantity ABOVE the
-              one actively-funding stack to give back (computeBoostStacks > 1 — canReclaimComputeBoost's
-              own pooled-time floor can still disable it within that range); once down to the last
-              remaining stack, giving it back would end the boost outright, which is Forfeit's job
-              (instant refund vs. no-refund-with-confirmation are different enough operations that
-              conflating them into "Reclaim, but disabled" at 1 stack was confusing — see
-              docs/DESIGN_HISTORY.md). */}
-          {intro.computeBoostStacks > 1 && (
-            <CompactButton
-              aria-label="reclaim one stack of the active compute boost"
-              disabled={!canReclaimComputeBoost(state)}
-              onClick={actions.reclaimComputeBoost}
-              title={`Reclaim the most recent unused stack: refunds 1 ${singularize(activeRow?.label ?? 'Core')} and its duration — one at a time`}
-              type="button"
-              variant="neutral"
-            >
-              <ButtonContent>↩ Reclaim</ButtonContent>
-            </CompactButton>
-          )}
-          {intro.computeBoostStacks === 1 && (
-            <CompactButton
-              aria-label="forfeit the active compute boost with no refund"
-              disabled={!canForfeitComputeBoost(state)}
-              onClick={() => {
-                if (!window.confirm('Forfeit the active boost with no refund?')) return
-                actions.forfeitComputeBoost()
-              }}
-              title="Forfeit: cancel the active boost immediately with no token refund — asks for confirmation"
-              type="button"
-              variant="danger"
-            >
-              <ButtonContent>✕ Forfeit</ButtonContent>
-            </CompactButton>
-          )}
-        </StackReclaimRow>
-      )}
 
       {state.computeAutoBoostUnlocked && (
       <AutoBoostRow aria-label="compute auto boost">
@@ -728,6 +641,7 @@ const ComputePage = ({ game }) => {
       </AutoBoostRow>
       )}
       </BoostCard>
+      )}
 
       {intro.computeMergePageUnlocked
         ? (
@@ -772,7 +686,7 @@ const ComputePage = ({ game }) => {
               if (!unlocked) return null
 
               return (
-                <TierBlock key={row.key} aria-label={`${row.label} tier`} $selected={armedTierIndex === tierIndex} $spacious={spacious}>
+                <TierBlock key={row.key} data-boost-tier aria-label={`${row.label} tier`} $selected={armedTierIndex === tierIndex} $spacious={spacious}>
                   <TierHeaderRow $spacious={spacious}>
                     <TierSelectButton
                       type="button"
@@ -796,35 +710,35 @@ const ComputePage = ({ game }) => {
                     </TierSelectButton>
                   </TierHeaderRow>
 
-                  {armedTierIndex === tierIndex && boostPresets}
-
                   {showDetail && (
                   <TierMergeRow $spacious={spacious}>
                     {hasMergeRow && (
                       autoEnabled ? (
                         <ReserveSlotsRow
                           aria-label={
-                            merging
-                              ? `${row.label} reserve merge in progress, ${formatOfflineDuration(remainingSeconds)} left`
-                              : `start merging ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
+                            startAvailable
+                              ? `instantly merge ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}, ${merging ? `auto-merge in progress, ${formatOfflineDuration(remainingSeconds)} left` : `${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} auto-merge slots filled`}`
+                              : merging
+                                ? `${row.label} auto-merge in progress, ${formatOfflineDuration(remainingSeconds)} left`
+                                : `${row.label} auto-merge slots, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
                           }
                           disabled={!startAvailable}
                           onClick={startAvailable ? () => actions[row.startAction]() : undefined}
                           $clickable={startAvailable}
                           title={
-                            merging
-                              ? `Merging: ${formatOfflineDuration(remainingSeconds)} left`
-                              : startAvailable
-                                ? `Merge: move ${COMPUTE_MERGE_RATIO} ${row.label} into the reserve and start a ${formatOfflineDuration(getComputeMergeDurationSeconds(state, rowIndex))} merge into 1 ${row.mergeOutputLabel}`
+                            startAvailable
+                              ? `Merge now: instantly turn ${COMPUTE_MERGE_RATIO} ${row.label} into 1 ${row.mergeOutputLabel}. Auto-merge slots fill past ${COMPUTE_ENTITY_CAP} and merge on their own when all ${COMPUTE_MERGE_RESERVE_CAP} are full${merging ? ` (auto-merging: ${formatOfflineDuration(remainingSeconds)} left)` : ''}`
+                              : merging
+                                ? `Auto-merging: ${formatOfflineDuration(remainingSeconds)} left`
                                 : (intro[row.mergeOutputField] ?? 0) >= outputCap
                                   ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
-                                  : !(getComputeMergeDurationSeconds(state, rowIndex) > 0)
-                                    ? `Merges wait until this tier's Storage pool is visible (grow Data Stream Capacity — its disks set the merge time)`
-                                    : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots — ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
+                                  : `Auto-merge slots: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — they merge on their own when full; tap to merge instantly once you hold ${COMPUTE_MERGE_RATIO} ${row.label}`
                           }
                           type="button"
                         >
-                          {startAvailable && <MergeCue aria-hidden="true">{`⬆ ${COMPUTE_MERGE_RATIO}→1 ${row.mergeOutputLabel}`}</MergeCue>}
+                          <MergeCue aria-hidden="true" $active={startAvailable}>
+                            {startAvailable ? `🤖 ⬆ ${COMPUTE_MERGE_RATIO}→1 ${row.mergeOutputLabel}` : '🤖 Auto-merge'}
+                          </MergeCue>
                           {merging && <MergeCountdown>{formatOfflineDuration(remainingSeconds)}</MergeCountdown>}
                           {Array.from({ length: COMPUTE_MERGE_RESERVE_CAP }, (_, index) => (
                             <ReserveSlot key={index} $filled={index < reserveHeld} $merging={merging} aria-hidden="true" />
@@ -864,6 +778,8 @@ const ComputePage = ({ game }) => {
                     )}
                   </TierMergeRow>
                   )}
+
+                  {armedTierIndex === tierIndex && boostPresets}
                 </TierBlock>
               )
             })}

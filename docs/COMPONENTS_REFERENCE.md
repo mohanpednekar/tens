@@ -95,7 +95,7 @@ is Capacity-only" in CLAUDE.md, in ascending order, `aria-label="pool N"`),
 titled "`<symbol>` Pool" (e.g. "KB Pool" — no index number or tier name), all inside one
 `FillableStatCard` tap tile (the same component the Data Stream card's own tile uses): a `TitleRow`
 (title top-left, that pool's own current full-disk count top-right), then the Memory buffer balance
-alone in a bigger centered `BalanceText`, then a `CapacityBonusRow` (Capacity left, narrow tap-bonus bar, "+x% 👆" right; bar/text hidden at 0). The ⚡ Speed/Bandwidth figure is the effective value, tinted by the fill multiplier; a pool's is its actually-available fill speed (`getPoolAvailableFillRate` × multiplier), not its theoretical Bandwidth, even while its lake drains. A pool's figure is a button (`aria-expanded`, above the stretched tap button) that opens `SpeedDetailsPopover` with: fill speed now, available rate before the multiplier, theoretical Bandwidth, Data Stream speed, the share earlier pools take (pool 2+), the fill multiplier split into fill-level and tap-bonus parts, buffer %, time to full, and the Data Lake drain rate while draining. A note appears when the Data Stream limits the pool below its Bandwidth. Pool 1's own threshold — 1 KiB — is
+alone in a bigger centered `BalanceText`, then a `CapacityBonusRow` (Capacity left, narrow tap-bonus bar, "+x% 👆" right; bar/text hidden at 0). The ⚡ Speed/Bandwidth figure is the effective value, tinted by the fill multiplier; a pool's is its actually-available fill speed (`getPoolAvailableFillRate` × multiplier), not its theoretical Bandwidth, even while its lake drains. A pool's figure is a button (`aria-expanded`, above the stretched tap button) that opens `SpeedDetailsPopover` with: fill speed now, available rate before the multiplier, theoretical Bandwidth, Data Stream speed, the share earlier pools take (pool 2+), the fill multiplier split into fill-level and tap-bonus parts, buffer %, time to full, and the Data Lake drain rate while draining. A note appears when the Data Stream limits the pool below its Bandwidth. The Data Stream tile works the same way: once the main game unlocks it is a `DataStreamTile` div with a stretched `PoolTapButton` ("tap to generate a bit") behind `PoolTileContent`, so its ⚡ figure (`getDataStreamDeliveredRate` — base Speed × Compute Boost × fill multiplier) is its own button. That button opens "Data Stream speed": speed now, base Speed, Compute Boost (when active), the fill multiplier and its two parts, speed exponent, what pools reserve, the upgrade bar's draw, buffer %, time to full, and the next Speed upgrade's result. The running upgrade tile's ⚡ draw (`getRunningUpgradeDraw`) opens "Upgrade Capacity/Speed draw": draw now, base Speed, the bar's fill multiplier, what the stream delivers, progress, time left, and the result. One popover is open at a time. Pool 1's own threshold — 1 KiB — is
 deliberately set equal to `isStorageUnlocked`'s own reveal gate (`INTRO_DISK_UNLOCK_CAPACITY`), so
 the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already showing
 a clean "1 KB" Capacity rather than a value mid-decade. Only the largest unlocked pool is expanded
@@ -185,15 +185,9 @@ this mode.
 
 ## `BoostBadge/index.jsx`
 
-Marks anything an active Compute Boost multiplies — the Data Stream (`tickIntroProduction`) and the
+Glow helpers for anything an active Compute Boost multiplies (no badge — the glow is self-explanatory; `BoostTimerBar` states what is boosted) — the Data Stream (`tickIntroProduction`) and the
 first `getComputeBoostCoveredTierCount` Factory tiers (`tickGame`). Exports:
 
-- default `BoostBadge` `{ intro, boosted = true, className, id }` — `role="img"` span rendering
-  `BOOST_ICON`×multiplier (`theme.color.warn` + text-shadow glow); `getComputeBoostDescription(intro)`
-  is both its `title` and `aria-label`. With `id`, also renders a `hidden` plain-text copy under that id
-  for a containing `<button>`'s `aria-describedby` (button children are presentational). Renders
-  nothing while no boost is active (unknown preset or invalid funding tier counts as inactive, matching
-  the engine) or `boosted` is false.
 - `boostGlow` — css mixin (`${props => props.$boosted && boostGlow}`) giving a card a pulsing
   `warn`-colored box-shadow (static under `prefers-reduced-motion`). Overrides the card's own
   `box-shadow`/`animation` while boosted.

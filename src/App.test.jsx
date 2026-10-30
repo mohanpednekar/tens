@@ -2,7 +2,8 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
-import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
+import { ThemeProvider } from 'theme'
+import { applyAutobuyerMilestones, createInitialGameState, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
@@ -43,7 +44,7 @@ import {
 import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
-import { formatBitsTransition, getBufferSecondsToFull } from 'pages/ByteFoundryPage'
+import ByteFoundryPage, { formatBitsTransition, getBufferSecondsToFull } from 'pages/ByteFoundryPage'
 
 // Enough Data Stream Capacity for Storage pool 2 (MB) to be visible — Node merges are timed off
 // that pool's Bandwidth (getComputeMergeDurationSeconds), which is 0 until it's visible.
@@ -3224,6 +3225,64 @@ test('a pool\'s speed shows the fill speed actually available, not its higher th
   expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
 })
 
+describe('Data Stream and upgrade speed details popovers', () => {
+  const seedStream = intro => {
+    seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, ...intro } })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+  }
+
+  it('opens the Data Stream details from its speed, without tapping the stream, and shows the boosted delivered speed', () => {
+    seedStream({ computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 600 })
+    const speed = screen.getByRole('button', { name: /^data stream speed .*show speed details$/ })
+    expect(speed).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(speed)
+    const dialog = screen.getByRole('dialog', { name: 'Data Stream speed' })
+    for (const label of ['Speed now', 'Base Speed', 'Compute Boost', 'Fill multiplier', 'Speed exponent', 'Buffer', 'Time to full']) {
+      expect(within(dialog).getByText(label)).toBeInTheDocument()
+    }
+    expect(within(dialog).getByText('×5')).toBeInTheDocument()
+    expect(screen.queryByLabelText('data stream fill-based speed multiplier tap bonus')).not.toBeInTheDocument()
+    fireEvent.pointerDown(document.body)
+    expect(screen.queryByRole('dialog', { name: 'Data Stream speed' })).not.toBeInTheDocument()
+    // The stretched tile button still taps.
+    fireEvent.click(screen.getByRole('button', { name: 'tap to generate a bit' }))
+    expect(screen.getByLabelText('data stream fill-based speed multiplier tap bonus')).toBeInTheDocument()
+  })
+
+  it('does not reopen the upgrade details by itself after the upgrade it was open for finished', () => {
+    const game = intro => {
+      const base = createInitialGameState()
+      return {
+        state: { ...base, intro: { ...base.intro, mainGameUnlocked: true, bits: 100, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, ...intro } },
+        actions: new Proxy({}, { get: () => () => {} }),
+        dismissOfflineProgress: () => {},
+        claimOfflineAdReward: () => {},
+        offlineProgress: null,
+      }
+    }
+    const ui = g => <ThemeProvider><ByteFoundryPage game={g} /></ThemeProvider>
+    const { rerender } = render(ui(game({ capacityUpgradeQueued: true, capacityUpgradeProgress: 0 })))
+    fireEvent.click(screen.getByRole('button', { name: /^upgrade draw speed/ }))
+    expect(screen.getByRole('dialog', { name: 'Upgrade Capacity draw' })).toBeInTheDocument()
+    rerender(ui(game({ capacityUpgradeQueued: false })))
+    rerender(ui(game({ speedUpgradeQueued: true, speedUpgradeProgress: 0 })))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('opens the running upgrade\'s draw details from its speed', () => {
+    seedStream({ bits: 100, capacityUpgradeQueued: true, capacityUpgradeProgress: 0 })
+    fireEvent.click(screen.getByRole('button', { name: /^upgrade draw speed .*show speed details$/ }))
+    const dialog = screen.getByRole('dialog', { name: 'Upgrade Capacity draw' })
+    for (const label of ['Draw now', 'Base Speed', 'Bar fill multiplier', 'Data Stream delivers', 'Progress', 'Time left', 'Capacity after']) {
+      expect(within(dialog).getByText(label)).toBeInTheDocument()
+    }
+    fireEvent.click(screen.getByRole('button', { name: /^data stream speed .*show speed details$/ }))
+    expect(screen.queryByRole('dialog', { name: 'Upgrade Capacity draw' })).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Data Stream speed' })).toBeInTheDocument()
+  })
+})
+
 describe('pool speed details popover', () => {
   const dialogName = 'KB Pool speed'
   const openPool1SpeedDetails = () => {
@@ -4348,23 +4407,22 @@ describe('Byte Foundry Compute Boost', () => {
     )
   })
 
-  test('an active boost marks the Data Stream and only its covered Factory tiers as boosted', () => {
+  test('an active boost shows no per-element badge; the timer bar names what is boosted', () => {
     seedIntroState(
       { bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, mainGameUnlocked: true, computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 600 },
       { owned: { tier01: 1, tier02: 1 }, purchased: { tier01: 1, tier02: 1 } },
     )
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /^open byte foundry$/i }))
-    expect(within(screen.getByLabelText('Data Stream')).getByRole('img', { name: /Boosted ×5 production by the Standard Compute Boost/ })).toHaveTextContent('×5')
-    const tapButton = screen.getByRole('button', { name: 'tap to generate a bit' })
-    expect(tapButton).toHaveAccessibleDescription(/Boosted ×5 production/)
+    // The glow is the only marker — no per-element badge.
+    expect(screen.queryByRole('img', { name: /Boosted/ })).toBeNull()
 
     openFactorySync()
-    expect(within(screen.getByLabelText('Kilobytes layer')).getByRole('img', { name: /Boosted ×5/ })).toBeInTheDocument()
-    expect(within(screen.getByLabelText('Megabytes layer')).queryByRole('img', { name: /Boosted/ })).toBeNull()
+    expect(screen.queryByRole('img', { name: /Boosted/ })).toBeNull()
+    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent('Boosting KB')
   })
 
-  test('same-type preset stays disabled while active (use Stack); other presets offer forfeit-replace with confirmation', () => {
+  test('the same preset becomes a Stack button while active; other presets offer forfeit-replace with confirmation', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
@@ -4372,10 +4430,10 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /activate burst compute boost/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /forfeit active boost and activate standard/i })).toBeEnabled()
 
-    fireEvent.click(screen.getByRole('button', { name: /stack the active compute boost/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^stack burst compute boost$/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeCores).toBe(2)
@@ -4398,7 +4456,7 @@ describe('Byte Foundry Compute Boost', () => {
     const nodesRow = screen.getByRole('button', { name: /select nodes to fund a compute boost/i })
     fireEvent.click(nodesRow)
     expect(nodesRow).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByLabelText(/^active compute boost$/i).firstChild.title).toMatch(/\(Cores\) active/)
+    expect(screen.getByLabelText(/^active compute boost$/i).title).toMatch(/boost active: ×\d+ production on Kilobytes/)
 
     // Same preset, different tier → forfeit-replace, funded by Nodes.
     fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate burst/i }))
@@ -4443,22 +4501,24 @@ describe('Byte Foundry Compute Boost', () => {
     confirmSpy.mockRestore()
   })
 
-  test('forfeit-replace of a different preset is blocked while more than 1 stack is held — must Reclaim down to the last stack first (Devin Review finding)', () => {
+  test('switching to a different preset with stacks held refunds the unused stacks after confirmation', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2,
+      computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds + 5,
     })
     render(<App />)
     openBoosters()
 
-    const replaceButton = screen.getByRole('button', { name: /forfeit active boost and activate standard/i })
-    expect(replaceButton).toBeDisabled()
-    fireEvent.click(replaceButton)
+    fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate standard/i }))
 
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/1 unused stack refunded/))
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeBoostType).toBe('burst')
-    expect(saved.intro.computeBoostStacks).toBe(2)
-    expect(saved.intro.computeCores).toBe(3)
+    expect(saved.intro.computeBoostType).toBe('standard')
+    expect(saved.intro.computeBoostStacks).toBe(1)
+    expect(saved.intro.computeCores).toBe(3) // +1 refunded, −1 spent
+    confirmSpy.mockRestore()
   })
 
   test('Forfeit button asks for confirmation and clears the active boost with no refund', () => {
@@ -4478,14 +4538,14 @@ describe('Byte Foundry Compute Boost', () => {
     confirmSpy.mockRestore()
   })
 
-  test('Reclaim and Forfeit are mutually exclusive — Reclaim shows only above 1 stack, Forfeit only at the last remaining stack', () => {
+  test('the timer bar\'s left button is Pop while an unused stack remains, and Forfeit at the last one', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds * 2,
     })
     const { unmount } = render(<App />)
     openBoosters()
-    expect(screen.getByRole('button', { name: /reclaim one stack/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /pop one stack/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /forfeit the active compute boost with no refund/i })).not.toBeInTheDocument()
     unmount()
 
@@ -4495,7 +4555,7 @@ describe('Byte Foundry Compute Boost', () => {
     })
     render(<App />)
     openBoosters()
-    expect(screen.queryByRole('button', { name: /reclaim one stack/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /pop one stack/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /forfeit the active compute boost with no refund/i })).toBeInTheDocument()
   })
 
@@ -4507,7 +4567,7 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /activate burst compute boost/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^stack burst compute boost$/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /stack the active compute boost/i })).toBeDisabled()
   })
 
@@ -4525,7 +4585,7 @@ describe('Byte Foundry Compute Boost', () => {
     seedMainGameState({ intro: { mainGameUnlocked: true, computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 30 } })
     const { unmount } = render(<App />)
     expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(
-      new RegExp(`standard.*×${COMPUTE_BOOST_PRESETS.standard.multiplier}`, 'i')
+      new RegExp(`×${COMPUTE_BOOST_PRESETS.standard.multiplier}.*boosting kb`, 'i')
     )
     unmount()
 
@@ -4549,15 +4609,42 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
   })
 
-  test('the armed-tier status line shows how many tokens are held for the currently armed tier (Cores by default, pre-merge-unlock)', () => {
+  test('the armed-tier status line names the spend and covered tiers without repeating the held count (Cores by default, pre-merge-unlock)', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 4 })
     render(<App />)
     openBoosters()
 
-    expect(screen.getByText(/1 ⬡ → KB · 4 held/)).toBeInTheDocument()
+    expect(screen.getByText('Boosts KB')).toBeInTheDocument()
+    expect(screen.queryByText(/held/)).not.toBeInTheDocument()
   })
 
-  test('render order: active-boost status and Stack/Reclaim on top, the armed presets inside the selected (active) tier block below', () => {
+  test('clicking outside every tier block deselects the boost tier; clicks inside keep it', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true, computeCores: 1, computeNodes: 2 })
+    render(<App />)
+    openBoosters()
+
+    const cores = screen.getByRole('button', { name: /select cores to fund a compute boost/i })
+    fireEvent.click(cores)
+    fireEvent.click(within(screen.getByLabelText(/^cores tier$/i)).getByText('Boosts KB'))
+    expect(cores).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(screen.getByRole('heading', { level: 1, name: /boosters/i }))
+    expect(cores).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
+  })
+
+  test('preset buttons drop zero-valued trailing duration units', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1 })
+    render(<App />)
+    openBoosters()
+
+    for (const type of ['burst', 'standard', 'sustain']) {
+      const button = screen.getByRole('button', { name: new RegExp(`activate ${type} compute boost`, 'i') })
+      expect(button.textContent).not.toMatch(/ 0[ms]\b/)
+    }
+  })
+
+  test('render order: the active-boost timer bar (Pop/Forfeit, Stack) on top, the armed presets inside the selected (active) tier block below', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 1, computeNodes: 9,
@@ -4566,12 +4653,15 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    const activeStatus = screen.getByLabelText(/^active compute boost$/i)
-    const stackReclaimRow = screen.getByLabelText(/^stack, reclaim, or forfeit the active compute boost$/i)
+    const timerRow = screen.getByLabelText(/^active boost controls$/i)
     const entities = screen.getByLabelText(/^compute entities$/i)
+    expect(within(timerRow).getByLabelText(/^active compute boost$/i)).toBeInTheDocument()
+    // Pop/Forfeit on the left of the bar, Stack on the right.
+    const buttons = within(timerRow).getAllByRole('button')
+    expect(buttons[0]).toHaveAccessibleName(/forfeit the active compute boost/i)
+    expect(buttons[1]).toHaveAccessibleName(/stack the active compute boost/i)
     // DOCUMENT_POSITION_FOLLOWING (4): the first node renders before the second.
-    expect(activeStatus.compareDocumentPosition(stackReclaimRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(stackReclaimRow.compareDocumentPosition(entities) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(timerRow.compareDocumentPosition(entities) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     // Navigating here pre-selects the active boost's tier, whose block hosts the presets.
     expect(within(screen.getByLabelText(/^cores tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
     expect(screen.getAllByLabelText(/^compute boost$/i)).toHaveLength(1)
@@ -4586,7 +4676,7 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(/ on KB–MB · /)
+    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(/Boosting KB–MB/)
     expect(within(screen.getByLabelText(/^nodes tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
   })
 
@@ -4610,15 +4700,15 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
   })
 
-  test('no Reclaim control appears while no boost is active', () => {
+  test('no Pop control appears while no boost is active', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1, computeBoostType: null })
     render(<App />)
     openBoosters()
 
-    expect(screen.queryByRole('button', { name: /reclaim one stack/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /pop one stack/i })).not.toBeInTheDocument()
   })
 
-  test('reclaiming a stack refunds 1 Core, undoes one duration\'s worth, and decrements stacks', () => {
+  test('popping a stack refunds 1 Core, undoes one duration\'s worth, and decrements stacks — no confirmation', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
       computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.standard.durationSeconds * 2,
@@ -4626,7 +4716,10 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /reclaim one stack/i }))
+    const confirmSpy = vi.spyOn(window, 'confirm')
+    fireEvent.click(screen.getByRole('button', { name: /pop one stack/i }))
+    expect(confirmSpy).not.toHaveBeenCalled()
+    confirmSpy.mockRestore()
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeCores).toBe(1)
@@ -4721,7 +4814,7 @@ describe('ComputePage merge chain', () => {
       render(<App />)
       openBoosters()
 
-      expect(screen.getByRole('button', { name: /nodes reserve merge in progress/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /nodes auto-merge in progress/i })).toBeInTheDocument()
     })
 
     test('the selected tier is marked via aria-pressed and a single tier is armed at a time', () => {
@@ -4784,7 +4877,7 @@ describe('ComputePage merge chain', () => {
     expect(screen.queryByRole('button', { name: /^merge 8 cores into 1 node$/i })).not.toBeInTheDocument()
   })
 
-  test('once auto-merge is unlocked for Cores into Nodes, the clickable reserve-slot row starts a timed merge', () => {
+  test('once auto-merge is unlocked for Cores into Nodes, clicking the auto-merge slot row merges 8 → 1 instantly', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 8, autoMergeCoresIntoNode: true,
@@ -4792,11 +4885,12 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /start merging 8 cores into 1 node/i }))
+    fireEvent.click(screen.getByRole('button', { name: /instantly merge 8 cores into 1 node/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeCores).toBe(0)
-    expect(saved.intro.computeCoresMergeRemainingSeconds).toBeGreaterThan(0)
+    expect(saved.intro.computeNodes).toBe(1)
+    expect(saved.intro.computeCoresMergeRemainingSeconds ?? 0).toBe(0)
   })
 
   test('a merge button stays disabled once the output entity is already at COMPUTE_ENTITY_CAP', () => {
@@ -4932,6 +5026,20 @@ describe('Compute auto-merge automation', () => {
     vi.useRealTimers()
   })
 
+  test('on a selected automated tier, the auto-merge slot row renders above the Boost presets', () => {
+    seedIntroState({
+      bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeCores: 6, autoMergeCoresIntoNode: true,
+    })
+    render(<App />)
+    openBoosters()
+
+    fireEvent.click(screen.getByRole('button', { name: /select cores to fund a compute boost/i }))
+    const autoRow = screen.getByRole('button', { name: /^cores auto-merge slots/i })
+    const presets = within(screen.getByLabelText(/^cores tier$/i)).getByLabelText(/^compute boost$/i)
+    expect(autoRow.compareDocumentPosition(presets) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   test('once auto-merge is enabled for a tier, the old instant Merge button is replaced by the clickable reserve-slot row itself (issue #321 — "slots are the button")', () => {
     seedIntroState({
       bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
@@ -4940,10 +5048,10 @@ describe('Compute auto-merge automation', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /^merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /instantly merge 8 nodes into 1 cluster/i })).toBeEnabled()
     // A visible merge cue marks the row as clickable while 8 are available.
-    expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toHaveTextContent('⬆ 8→1 Cluster')
+    expect(screen.getByRole('button', { name: /instantly merge 8 nodes into 1 cluster/i })).toHaveTextContent('🤖 ⬆ 8→1 Cluster')
   })
 
   test('the reserve-slot row shows no merge cue below 8 of the input entity', () => {
@@ -4955,8 +5063,9 @@ describe('Compute auto-merge automation', () => {
     openBoosters()
 
     fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
-    const row = screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })
+    const row = screen.getByRole('button', { name: /^nodes auto-merge slots/i })
     expect(row).toBeDisabled()
+    expect(row).toHaveTextContent('🤖 Auto-merge')
     expect(row).not.toHaveTextContent('⬆')
   })
 
@@ -4981,7 +5090,7 @@ describe('Compute auto-merge automation', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /3\/8 banked toward the next automatic merge/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /3\/8 auto-merge slots filled/i })).toBeInTheDocument()
   })
 
 })
