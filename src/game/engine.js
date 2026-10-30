@@ -5591,7 +5591,11 @@ const fillDataLakeDisks = (state, dataLakes, tierIndex, overflowBits) => {
     }
 
     const chunkUnits = Math.min(
+<<<<<<< HEAD
+      maxAvailable, 
+=======
       maxAvailable,
+>>>>>>> origin/main
       Math.floor(fillBits / slotSizeBits) * openSubSize
     )
     const slotsToBuy = Math.ceil(chunkUnits / openSubSize)
