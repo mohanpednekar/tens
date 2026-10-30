@@ -788,7 +788,7 @@ describe('tapIntroBit', () => {
     })
     const after = tapIntroBit(state)
     expect(after.intro.dataStreamTapBonusPercent).toBe(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT)
-    // The combined reading still caps at FILL_MULTIPLIER_TAP_CAP_PERCENT (200) as before.
+    // The combined reading still caps at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000).
     expect(getDataStreamMultiplierPercent(after.intro)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
   })
 })
@@ -820,11 +820,16 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(getDataStreamFillFraction({ bits: 0, capacity: 0 })).toBe(0)
     })
 
-    it('getDataStreamMultiplierPercent adds any live tap bonus on top of the fill-based value', () => {
+    it('getDataStreamMultiplierPercent applies any live tap bonus as ×(1 + bonus%) on the fill-based value', () => {
       const intro = { bits: 50, capacity: 100, dataStreamTapBonusPercent: 5 }
       expect(getDataStreamBaseMultiplierPercent(intro)).toBe(100)
       expect(getDataStreamMultiplierPercent(intro)).toBe(105)
       expect(getDataStreamEffectMultiplier(intro)).toBeCloseTo(1.05)
+    })
+
+    it('applies the tap bonus multiplicatively: base × (1 + bonus%)', () => {
+      const intro = { bits: 0, capacity: 100, dataStreamTapBonusPercent: 50 }
+      expect(getDataStreamMultiplierPercent(intro)).toBe(FILL_MULTIPLIER_MAX_PERCENT * 1.5)
     })
 
     it('caps the combined total at FILL_MULTIPLIER_TAP_CAP_PERCENT, not the tap bonus alone', () => {
@@ -842,7 +847,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(getPoolBufferFillFraction(state, 1)).toBeCloseTo(0.5)
     })
 
-    it('getPoolMultiplierPercent adds that pool\'s own live tap bonus on top of its fill-based value', () => {
+    it('getPoolMultiplierPercent applies that pool\'s own live tap bonus as ×(1 + bonus%) on its fill-based value', () => {
       const state = withIntro(withPoolBuffer(createInitialGameState(), 4, 1), { poolTapBonusPercents: { 1: 5 } })
       expect(getPoolBaseMultiplierPercent(state, 1)).toBe(100)
       expect(getPoolTapBonusPercent(state, 1)).toBe(5)
@@ -938,26 +943,24 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
     // The stored bonus is its own 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT value — a save
     // carrying an over-large value (hand-edited, or written before the bonus had its own cap)
     // is clamped on the next tick, independent of elapsedSeconds, while the COMBINED multiplier
-    // reading still caps at FILL_MULTIPLIER_TAP_CAP_PERCENT (200).
+    // reading still caps at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000).
     it('clamps a stored Data Stream bonus above 100 down to the cap, even with elapsedSeconds=0', () => {
       const state = withIntro(createInitialGameState(), {
         bits: 0, capacity: 1000, dataStreamTapBonusPercent: 170,
       })
       const after = tickFillMultiplierDecay(0)(state)
       expect(after.intro.dataStreamTapBonusPercent).toBe(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT)
-      // base 150 (empty buffer) + bonus 100 = 250 → combined cap 200.
+      // base 1000 (empty buffer) × (1 + 100%) = 2000 → combined cap 2000.
       expect(getDataStreamMultiplierPercent(after.intro)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
     })
 
-    it("forces a pool's own tap bonus to exactly 0 once its buffer is completely full — NOT merely headroom-truncated like the Data Stream's own bonus above — so ByteFoundryPage's gauge transitions cleanly into its Data Lake overflow-rate reading with no visible jump (Devin finding on PR #562: a residual bonus riding on top of the retired fill-based reading could sit well above the lake reading's own 50% ceiling)", () => {
+    it("forces a pool's own tap bonus to exactly 0 once its buffer is completely full — NOT merely headroom-truncated like the Data Stream's own bonus above (Devin finding on PR #562: a residual bonus riding on top of the retired fill-based reading)", () => {
       const baseState = withIntro(createInitialGameState(), { poolTapBonusPercents: { 1: 170 } })
       const fullBufferBits = getPoolBufferCapacity(baseState, 1)
       const state = withIntro(baseState, { poolBuffers: { 1: fullBufferBits } })
       const after = tickFillMultiplierDecay(0)(state)
       expect(after.intro.poolTapBonusPercents[1]).toBe(0)
-      // The pool's own total multiplier reading is now exactly FILL_MULTIPLIER_MIN_PERCENT (50) —
-      // the SAME value the gauge's lake-mode reading maxes out at (DATA_LAKE_OVERFLOW_MAX_PERCENT),
-      // so switching from one reading to the other never visibly jumps.
+      // The pool's own total multiplier reading is now exactly FILL_MULTIPLIER_MIN_PERCENT (10%).
       expect(getPoolMultiplierPercent(after, 1)).toBe(FILL_MULTIPLIER_MIN_PERCENT)
     })
 
@@ -978,7 +981,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 0, capacity: 1000 })
       const after = tickIntroProduction(1)(state)
       // The displayed rate is unaffected — the multiplier scales only real delivery.
-      expect(after.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 1.5)
+      expect(after.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 10)
     })
 
     it('tickIntroProduction delivers exactly the displayed rate at a half-full Buffer (100%)', () => {
@@ -994,7 +997,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       const rawRate = getStoragePoolBandwidth(state, 1)
       const after = tickPoolBufferFill(1)(state)
       expect(after.intro.poolBuffers[1]).toBeGreaterThan(rawRate)
-      expect(after.intro.poolBuffers[1]).toBeCloseTo(rawRate * 1.5)
+      expect(after.intro.poolBuffers[1]).toBeCloseTo(rawRate * 10)
     })
   })
 })
@@ -1007,7 +1010,7 @@ describe('getDataStreamDeliveredRate', () => {
     })
     expect(getComputeBoostMultiplier(state.intro)).toBeGreaterThan(1)
     const delivered = getDataStreamDeliveredRate(state.intro)
-    expect(delivered).toBeCloseTo(getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro) * 1.5)
+    expect(delivered).toBeCloseTo(getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro) * 10)
     expect(tickIntroProduction(1)(state).intro.bits).toBeCloseTo(Math.min(1000, delivered))
   })
 })
@@ -1496,12 +1499,12 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     expect(isMemoryCapacityUpgradeArmable(after)).toBe(false)
   })
 
-  it("pulls base Speed scaled by the bar's own fill multiplier (150% empty) from the Buffer into the bar", () => {
+  it("pulls base Speed scaled by the bar's own fill multiplier (1000% empty) from the Buffer into the bar", () => {
     const started = pickIntroCapacityMilestone(armState(capacity / 2))
     const rate = getIntroProductionRate(started.intro)
     const after = tickCapacityUpgradeDrain(1)(started)
-    expect(after.intro.capacityUpgradeProgress).toBeCloseTo(rate * 1.5)
-    expect(after.intro.bits).toBeCloseTo(capacity / 2 - rate * 1.5)
+    expect(after.intro.capacityUpgradeProgress).toBeCloseTo(rate * 10)
+    expect(after.intro.bits).toBeCloseTo(capacity / 2 - rate * 10)
   })
 
   it('pulls only what the Buffer holds', () => {
@@ -3095,11 +3098,11 @@ describe('tickIntroProduction', () => {
   })
 
   it('delivers continuously — a fractional second banks a fractional share of the rate, with no separate accumulator', () => {
-    // An empty buffer's 150% fill multiplier lifts the real delivery to 1.5x the derived rate, so
+    // An empty buffer's 1000% fill multiplier lifts the real delivery to 10x the derived rate, so
     // 0.4s delivers 0.4 x 1.5 x rate bits.
-    const state = withIntro(createInitialGameState(), { byteCreated: true, capacity: 100 })
+    const state = withIntro(createInitialGameState(), { byteCreated: true, capacity: 100000 })
     const after = tickIntroProduction(0.4)(state)
-    expect(after.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 0.4 * 1.5)
+    expect(after.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 0.4 * 10)
     expect(after.intro.productionAccumulator).toBeUndefined()
   })
 

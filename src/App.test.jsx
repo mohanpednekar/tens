@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
 import { ThemeProvider } from 'theme'
-import { applyAutobuyerMilestones, createInitialGameState, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
+import { applyAutobuyerMilestones, createInitialGameState, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, formatOfflineDuration, getIntroProductionRate, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
@@ -2669,7 +2669,7 @@ test('combining 8 bits into a Byte resets the balance and starts passive product
   // exactly 0.
   expect(Number(balanceBar.getAttribute('aria-valuenow'))).toBeLessThan(INTRO_BYTE_COMBINE_COST)
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_BYTE_COMBINE_COST))
-  expect(screen.getByText(/1\.5 b\/s$/i)).toBeInTheDocument() // 1 B/s base x 150% (empty buffer)
+  expect(screen.getByText(/10 b\/s$/i)).toBeInTheDocument() // 1 B/s base x 1000% (empty buffer)
 })
 
 test("the Upgrade Data Stream button stays clickable (to arm) while the Buffer isn't full", () => {
@@ -2817,16 +2817,16 @@ test('the "Data Stream" label is shown on the balance card', () => {
 test('the Data Stream header shows the basis-derived rate — (basis in Bytes)^DATA_STREAM_SPEED_EXPONENT', () => {
   // Scoped to the Data Stream region — pool 1's own Bandwidth can coincidentally render the same
   // "N B/s" text at these rates. Capacity is in BITS: 800,000 bits = 100,000 B -> 100,000^0.5 =
-  // 316 B/s, shown at the empty-buffer 150% multiplier: about 474 B/s.
+  // 316 B/s, shown at the empty-buffer 1000% multiplier: about 3.08 KiB/s.
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   const { unmount } = render(<App />)
-  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/474 B\/s$/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/3\.08 KiB\/s$/i)).toBeInTheDocument()
   unmount()
 
   // Starting capacity (8 bits = 1 B) -> 1^0.5 = 1 B/s.
   seedIntroState({ bits: 0, byteCreated: true })
   render(<App />)
-  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/1\.5 B\/s$/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/10 B\/s$/i)).toBeInTheDocument()
 })
 
 test('Upgrade Data Stream shows its cost on its own line below the label, with no stray comma', () => {
@@ -3201,7 +3201,7 @@ test('Data Stream and pool speeds show the fill-multiplied value, with no multip
   expect(screen.queryByRole('progressbar', { name: /data lake overflow rate/i })).not.toBeInTheDocument()
   const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  // Empty buffer -> FILL_MULTIPLIER_MAX_PERCENT (150%) of the pool's available fill rate, to 3 significant digits.
+  // Empty buffer -> FILL_MULTIPLIER_MAX_PERCENT (1000%) of the pool's available fill rate, to 3 significant digits.
   const expected = formatDiskSize(getPoolAvailableFillRate(savedState, 1) * FILL_MULTIPLIER_MAX_PERCENT / 100)
   const speed = within(pool1).getByTitle(/^Available fill speed at/)
   expect(speed).toHaveAttribute('title', `Available fill speed at ${FILL_MULTIPLIER_MAX_PERCENT}% fill multiplier`)
@@ -4095,7 +4095,7 @@ describe('Byte Foundry Storage', () => {
 
     saved = JSON.parse(localStorage.getItem('tens_game_state'))
     // Fully drained into the cache; only the small continuous top-up remains (< one cache-fill).
-    expect(saved.intro.poolBuffers['1']).toBeLessThan(currentBankSize)
+    expect(saved.intro.poolBuffers['1']).toBeLessThan(currentBankSize * 3) // the 10x empty-buffer multiplier tops it up faster
     expect(saved.intro.diskCache[currentBankSize]).toBe(currentBankSize)
     expect(saved.intro.disks[currentBankSize]).toBe(1)
     expect(saved.owned.tier01).toBe(0)
@@ -5152,7 +5152,7 @@ test('completing the Byte Foundry again after a Prestige navigates forward into 
 
   // A few ticks, not just one: the Data Stream Buffer starts one bit shy of full, and the
   // fill-based Speed multiplier (see FILL_MULTIPLIER_* in game/layers) tapers production down
-  // toward FILL_MULTIPLIER_MIN_PERCENT (50%) as it approaches capacity, so closing that last bit
+  // toward FILL_MULTIPLIER_MIN_PERCENT (10%) as it approaches capacity, so closing that last bit
   // now takes a couple of ticks rather than exactly one.
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS * 5) })
 
@@ -5729,17 +5729,29 @@ test('a running Capacity upgrade shows percent on the first line, from → to ca
   expect(running).toHaveTextContent(/⏳ \d+[smhd]/)
   // The draw rate (base Speed × the bar's fill multiplier) shows at the right, like the other speed readouts.
   expect(running).toHaveTextContent(/⚡ [\d.]+ \w+\/s/)
-  expect(running.querySelector('[title^="Upgrade draw at 150%"]')).not.toBeNull()
+  expect(running.querySelector('[title^="Upgrade draw at 1000%"]')).not.toBeNull()
+  // Empty-bar ETA uses the geometric 10×→0.1× integral, not the old linear ln((1.5−fill)/0.5).
+  const emptyBarSeconds = getBufferSecondsToFull(0, 1000, getIntroProductionRate({ capacity: 1000, byteCreated: true }))
+  const expectedTimeText = formatOfflineDuration(Math.max(1, Math.ceil(emptyBarSeconds)))
+  expect(running).toHaveTextContent(`⏳ ${expectedTimeText}`)
+  expect(emptyBarSeconds).not.toBeCloseTo((1000 / getIntroProductionRate({ capacity: 1000, byteCreated: true })) * Math.log(1.5 / 0.5), 1)
 
   unmount()
   vi.useRealTimers()
 })
 
 describe('getBufferSecondsToFull (tile time-to-full)', () => {
-  it('integrates the 150% → 50% fill multiplier curve', () => {
-    expect(getBufferSecondsToFull(0, 1000, 10)).toBeCloseTo(100 * Math.log(3))
-    expect(getBufferSecondsToFull(500, 1000, 10)).toBeCloseTo(100 * Math.log(2))
-    expect(getBufferSecondsToFull(900, 1000, 10)).toBeCloseTo(100 * Math.log(1.2))
+  it('integrates the 1000% → 10% fill multiplier curve', () => {
+    const expected = fill => 100 * (10 - 10 ** (2 * fill - 1)) / (2 * Math.LN10)
+    expect(getBufferSecondsToFull(0, 1000, 10)).toBeCloseTo(expected(0))
+    expect(getBufferSecondsToFull(500, 1000, 10)).toBeCloseTo(expected(0.5))
+    expect(getBufferSecondsToFull(900, 1000, 10)).toBeCloseTo(expected(0.9))
+  })
+
+  it('is not the old linear 150% → 50% integral', () => {
+    const geometric = getBufferSecondsToFull(0, 1000, 10)
+    const oldLinear = 100 * Math.log(1.5 / 0.5)
+    expect(geometric).not.toBeCloseTo(oldLinear, 1)
   })
 
   it('is null when full, over-full, or not filling', () => {

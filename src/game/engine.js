@@ -2363,12 +2363,15 @@ export const getIntroProductionRate = intro =>
 //
 // Percent value (100 = "no change") from a 0..1 fill fraction: FILL_MULTIPLIER_MAX_PERCENT when
 // empty, exactly 100 at 50% full, FILL_MULTIPLIER_MIN_PERCENT once completely full. Shared by the
-// Data Stream itself and every pool's own local buffer below — same linear "150% down to 50%"
+// Data Stream itself and every pool's own local buffer below — same log-linear "1000% down to 10%"
 // curve either way. fillFraction is clamped defensively — both real callers already clamp their
 // own fraction to at most 1 before calling this, so this only guards a corrupted/hand-edited save.
 export const getFillMultiplierPercent = fillFraction => {
   const clampedFraction = Math.min(1, Math.max(0, fillFraction))
-  return FILL_MULTIPLIER_MAX_PERCENT - clampedFraction * (FILL_MULTIPLIER_MAX_PERCENT - FILL_MULTIPLIER_MIN_PERCENT)
+  // Log-linear: 10x at empty, exactly 1x at 50%, 0.1x when full (MAX/MIN are 1000/10 percent).
+  const maxLog = Math.log10(FILL_MULTIPLIER_MAX_PERCENT)
+  const minLog = Math.log10(FILL_MULTIPLIER_MIN_PERCENT)
+  return 10 ** (maxLog - clampedFraction * (maxLog - minLog))
 }
 
 // The Data Stream Buffer's own fill fraction (0..1) — intro.bits over intro.capacity.
@@ -2379,13 +2382,13 @@ export const getDataStreamFillFraction = intro =>
 export const getDataStreamBaseMultiplierPercent = intro =>
   getFillMultiplierPercent(getDataStreamFillFraction(intro))
 
-// The Data Stream's currently active multiplier percent — fill-based value plus any live decaying
-// tap bonus (see tapIntroBit/tickFillMultiplierDecay). What ByteFoundryPage displays alongside the
+// The Data Stream's currently active multiplier percent — fill-based value times (1 + live decaying
+// tap bonus %) (see tapIntroBit/tickFillMultiplierDecay). What ByteFoundryPage displays alongside the
 // Speed figure, and what getDataStreamEffectMultiplier below turns into the real production scale.
-// Combined fill-based + live tap bonus, hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (200) — the
+// Fill-based value × (1 + live tap bonus %), hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000) — the
 // cap applies to this CUMULATIVE total, not to dataStreamTapBonusPercent alone (see layers.js).
 export const getDataStreamMultiplierPercent = intro =>
-  Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getDataStreamBaseMultiplierPercent(intro) + (intro.dataStreamTapBonusPercent ?? 0))
+  Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getDataStreamBaseMultiplierPercent(intro) * (1 + (intro.dataStreamTapBonusPercent ?? 0) / 100))
 
 export const getDataStreamEffectMultiplier = intro => getDataStreamMultiplierPercent(intro) / 100
 
@@ -2398,8 +2401,8 @@ export const getDataStreamDeliveredRate = intro =>
 // The running Upgrade Capacity / Upgrade Speed bar's draw (null when none runs), mirroring
 // tickCapacityUpgradeDrain/tickSpeedUpgradeDrain: base Speed × the bar's own fill multiplier. That
 // is also the real draw — the drains run right after tickIntroProduction, and even with the
-// Buffer empty the stream delivers at least that much (its own multiplier is 150% when empty, the
-// bar's is at most 150%, and a Compute Boost only adds).
+// Buffer empty the stream delivers at least that much (its own multiplier is 1000% when empty, the
+// bar's is at most 1000%, and a Compute Boost only adds).
 export const getRunningUpgradeDraw = intro => {
   const speed = Boolean(intro?.speedUpgradeQueued)
   if (!speed && !intro?.capacityUpgradeQueued) return null
@@ -2778,14 +2781,14 @@ export const getPoolBaseMultiplierPercent = (state, poolIndex) =>
 export const getPoolTapBonusPercent = (state, poolIndex) =>
   state.intro?.poolTapBonusPercents?.[poolIndex] ?? 0
 
-// The pool's currently active multiplier percent — fill-based value plus any live decaying tap
-// bonus (see tapPoolBuffer/tickFillMultiplierDecay below). What ByteFoundryPage displays alongside
+// The pool's currently active multiplier percent — fill-based value times (1 + live decaying tap
+// bonus %) (see tapPoolBuffer/tickFillMultiplierDecay below). What ByteFoundryPage displays alongside
 // that pool's Bandwidth figure, and what getPoolEffectMultiplier below turns into the real
 // buffer-fill scale (see tickPoolBufferFill).
-// Combined fill-based + live tap bonus, hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (200) — same
+// Fill-based value × (1 + live tap bonus %), hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000) — same
 // "cumulative total, not the bonus alone" cap the Data Stream's own getDataStreamMultiplierPercent uses.
 export const getPoolMultiplierPercent = (state, poolIndex) =>
-  Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getPoolBaseMultiplierPercent(state, poolIndex) + getPoolTapBonusPercent(state, poolIndex))
+  Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getPoolBaseMultiplierPercent(state, poolIndex) * (1 + getPoolTapBonusPercent(state, poolIndex) / 100))
 
 // The boost's pool bonus (getComputeBoostPoolMultiplier) scales the real buffer fill on top of the
 // capped fill-based percent; the displayed percent/Bandwidth stay unboosted.
@@ -2853,15 +2856,11 @@ export const tickFillMultiplierDecay = elapsedSeconds => state => {
   Object.keys(priorPoolBonuses).forEach(poolIndexKey => {
     const poolIndex = Number(poolIndexKey)
     const priorBonus = priorPoolBonuses[poolIndexKey]
-    // Once a pool's own buffer is completely full, its fill-based multiplier reading is retired —
-    // ByteFoundryPage's bar switches to that pool's Data Lake overflow-rate reading instead (see
-    // the (removed) lake-rate bar), which shares the SAME 0..FILL_MULTIPLIER_TAP_CAP_PERCENT
-    // scale specifically so the transition is seamless (both readings meet at exactly 50 —
-    // FILL_MULTIPLIER_MIN_PERCENT == DATA_LAKE_OVERFLOW_MAX_PERCENT). A leftover tap bonus riding on
-    // top of the now-retired base reading would break that seam — the pre-switch total could sit
-    // well above 50 (tapping is only blocked once full, not before), so the switch to the lake's
-    // own <=50 ceiling would visibly drop instead of continuing smoothly. Force it to 0 immediately
-    // once full, rather than merely letting it decay at the ordinary 1%/sec rate.
+    // Once a pool's own buffer is completely full, its fill-based multiplier reading is retired.
+    // Force the tap bonus to 0 immediately rather than letting it decay at 1%/sec — a leftover
+    // bonus would keep the derived multiplier above FILL_MULTIPLIER_MIN_PERCENT after the buffer
+    // is already full. (The old 50% seam with DATA_LAKE_OVERFLOW_MAX_PERCENT applied to a
+    // since-removed lake-rate bar; see docs/DESIGN_HISTORY.md.)
     const isBufferFull = getPoolBufferFillFraction(state, poolIndex) >= 1
     const decayedBonus = !isBufferFull && decay > 0 ? Math.max(0, priorBonus - decay) : priorBonus
     const finalBonus = isBufferFull ? 0 : Math.min(decayedBonus, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT)
@@ -3461,7 +3460,7 @@ export const queueIntroCapacityUpgrade = state => {
 }
 
 // Runs right after production, before any other Data Stream consumer. Pulls min(Buffer, base Speed ×
-// the bar's own fill multiplier — 150% empty, 100% half, 50% full, like pools) into the bar; fires the upgrade once the bar reaches Capacity.
+// the bar's own fill multiplier — 1000% empty, 100% half, 10% full, like pools) into the bar; fires the upgrade once the bar reaches Capacity.
 export const tickCapacityUpgradeDrain = elapsedSeconds => state => {
   if (!state.intro?.capacityUpgradeQueued) return state
   if (isMemoryCapacityAtCap(state)) return clearIntroCapacityUpgradeQueue(state)

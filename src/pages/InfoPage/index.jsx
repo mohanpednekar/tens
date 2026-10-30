@@ -191,15 +191,15 @@ const InfoPage = () => {
             <strong>Speed/Bandwidth multiplier</strong> — the displayed Data Stream Speed and each
             pool’s own Bandwidth never change; they’re always what applies at 100% of a separate
             multiplier shown alongside them. That multiplier starts at{' '}
-            {FILL_MULTIPLIER_MAX_PERCENT}% when its own Buffer (Data Stream, or a pool’s own Memory)
-            is empty, reaches exactly 100% at 50% full, and bottoms out at{' '}
-            {FILL_MULTIPLIER_MIN_PERCENT}% once completely full. Tapping the Data Stream (once
-            Storage pools are revealed at 1 KiB) or a pool’s own Memory tile adds{' '}
-            +{FILL_MULTIPLIER_TAP_BONUS_PERCENT}% to that one Data Stream/pool’s own multiplier,
+            {FILL_MULTIPLIER_MAX_PERCENT / 100}× when its own Buffer (Data Stream, or a pool’s own Memory)
+            is empty, falls geometrically to exactly 1× at 50% full, and bottoms out at{' '}
+            {FILL_MULTIPLIER_MIN_PERCENT / 100}× once completely full. Tapping the Data Stream (once
+            Storage pools are revealed at 1 KiB) or a pool’s own Memory tile multiplies{' '}
+            that one Data Stream/pool’s own multiplier by (1 + {FILL_MULTIPLIER_TAP_BONUS_PERCENT}%),
             decaying back down at {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}%/sec. The tap
             bonus is its own 0–{FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% value shown as a separate
             yellow bar directly below the blue base-multiplier bar (visible only while it’s above
-            0); the combined total (base multiplier plus any live tap bonus) is capped at{' '}
+            0); the combined total (base multiplier × any live tap bonus) is capped at{' '}
             {FILL_MULTIPLIER_TAP_CAP_PERCENT}%.
           </li>
           <li>

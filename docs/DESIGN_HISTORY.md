@@ -1,5 +1,23 @@
 # Design history & rationale
 
+### Fill multiplier 10× → 0.1× (log-linear) and a multiplicative tap bonus — 2026-10-30
+
+The original fill-based Speed/Bandwidth multiplier was linear in fill fraction: 150% empty, 100% at
+half, 50% full (`MAX − 100·fill`). That range was too mild to feel — empty buffers barely sped up,
+full ones barely slowed. The replacement is log-linear in the percent: `10 ** (log10(MAX) − fill ·
+(log10(MAX) − log10(MIN)))` with `MAX = 1000` / `MIN = 10`, so 10× empty, exactly 1× at 50%, 0.1×
+full. `getBufferSecondsToFull` and the speed-color ramp switched to the matching log integral /
+log interpolation; the running Upgrade Capacity/Speed ETA must use that same integral (it originally
+kept the old `ln((1.5 − fill) / 0.5)` closed form, which would have understated an empty bar by
+about 2×).
+
+The tap bonus stayed a stored 0–100 percentage-point value (+5 per tap, −1/s) but is now applied as
+`base × (1 + bonus%)` rather than `base + bonus`. Additive +5 on a 1000% empty reading was a 0.5%
+relative bump; multiplicative ×1.05 is an actual 5%. The combined cap moved with the range, 200 →
+2000 (empty 1000% × a full +100% tap). `DATA_LAKE_OVERFLOW_MAX_PERCENT` stays 50 — it is only a
+binary receiving/not-receiving indicator for a removed lake-rate bar, and no longer has to equal
+`FILL_MULTIPLIER_MIN_PERCENT`.
+
 ### Stale `graphify-out/*` after `main` merges: `-merge` gitattributes + a CI-verified freshness test (#761) — 2026-09-29
 
 `graphify-out/`'s generated artifacts kept going stale every time a long-lived feature branch merged
