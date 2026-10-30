@@ -1829,11 +1829,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
       const attempts = Math.floor(budget + TICK_ACCUMULATION_EPSILON)
       if (attempts <= 0) break
 
-      const tierLevel = result.purchaseLevels?.[tier.id] ?? 1
       const levelProgress = result.purchaseLevelProgress?.[tier.id] ?? 0
-      const blockSize = getPurchaseBlockSize(result)
       // Bulk mode: when a whole clean level is affordable (and the requested number of levels), one
-      // attempt buys them all; otherwise fall through to a single unit. Buy max never applies here.
+      // attempt buys them all; otherwise fall through to a single level. Buy max never applies here.
       const bulkMode = result.autobuyerBulkLevels?.[tier.id] ?? 0
       if (bulkMode >= 1 && levelProgress === 0) {
         const bulked = buyTierExactLevels(tier.id, AUTOBUYER_BULK_LEVELS_BASE ** bulkMode)(result)
@@ -1843,43 +1841,13 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
           continue
         }
       }
-      const effectiveBatchSize = 1
-
-      const remainingInLevel = Math.max(0, blockSize - levelProgress)
-      const maxAttemptsInLevel = Math.ceil(remainingInLevel / effectiveBatchSize)
-
-      let processAttempts = Math.min(attempts, maxAttemptsInLevel)
-
-      const unitCost = getTierCost(tier, tierLevel)
-      if (unitCost > 0) {
-        const spendable = getTierSpendableAmount(result, tier)
-        const affordableUnits = Math.floor(clampNonNegative(spendable) / unitCost)
-        let affordableAttempts = Math.floor(affordableUnits / effectiveBatchSize)
-
-        // If the affordable attempts reaches the last attempt in the level,
-        // the last attempt may require fewer units (remainingInLevel % effectiveBatchSize).
-        // Check if we can afford that final attempt.
-        if (affordableAttempts === maxAttemptsInLevel - 1) {
-           const unitsForAffordable = affordableAttempts * effectiveBatchSize
-           const finalAttemptUnits = remainingInLevel - unitsForAffordable
-           if (affordableUnits >= unitsForAffordable + finalAttemptUnits) {
-              affordableAttempts += 1
-           }
-        }
-        processAttempts = Math.min(processAttempts, affordableAttempts)
-      }
-
-      if (processAttempts <= 0) break // can't afford even 1 full attempt
-
-      let unitsToBuy = processAttempts * effectiveBatchSize
-      if (processAttempts === maxAttemptsInLevel) {
-          unitsToBuy = remainingInLevel
-      }
-
-      const next = buyTierQuantity(tier.id, unitsToBuy)(result)
+      // One attempt = one whole level: a fresh level when fully affordable, or the remainder of a
+      // partly bought level when that remainder is fully affordable. Never a partial purchase.
+      if (!canAffordRestOfTierLevel(result, tier)) break
+      const next = buyTierQuantity(tier.id, Number.MAX_SAFE_INTEGER)(result)
       if (next === result) break // safety guard, shouldn't happen unless frozen
       result = next
-      budget -= processAttempts
+      budget -= 1
     }
     return {
       ...result,
@@ -2241,6 +2209,15 @@ export const repeatPurchaseMax = action => state => {
   return current
 }
 
+// Whether `state` can afford everything left in the tier's current level (the whole level when
+// progress is 0, else just the unbought remainder).
+const canAffordRestOfTierLevel = (state, tier) => {
+  const level = state.purchaseLevels?.[tier.id] ?? 1
+  const blockSize = getPurchaseBlockSize(state)
+  const progress = state.purchaseLevelProgress?.[tier.id] ?? 0
+  return getTierAffordableQuantity(tier, level, blockSize, progress, getTierSpendableAmount(state, tier), blockSize) >= blockSize - progress
+}
+
 // Whether `state` can afford the tier's entire current level from scratch (no partial progress).
 const canAffordFullTierLevel = (state, tier) => {
   if ((state.purchaseLevelProgress?.[tier.id] ?? 0) > 0) return false
@@ -2411,6 +2388,28 @@ export const getDataStreamMultiplierPercent = intro =>
   Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getDataStreamBaseMultiplierPercent(intro) + (intro.dataStreamTapBonusPercent ?? 0))
 
 export const getDataStreamEffectMultiplier = intro => getDataStreamMultiplierPercent(intro) / 100
+
+// What the Data Stream actually delivers per second right now (bits/s): base Speed × any active
+// Compute Boost × the fill-based multiplier — exactly tickIntroProduction's per-second amount, and
+// the figure ByteFoundryPage shows.
+export const getDataStreamDeliveredRate = intro =>
+  getIntroProductionRate(intro) * getComputeBoostMultiplier(intro) * getDataStreamEffectMultiplier(intro)
+
+// The running Upgrade Capacity / Upgrade Speed bar's draw (null when none runs), mirroring
+// tickCapacityUpgradeDrain/tickSpeedUpgradeDrain: base Speed × the bar's own fill multiplier. That
+// is also the real draw — the drains run right after tickIntroProduction, and even with the
+// Buffer empty the stream delivers at least that much (its own multiplier is 150% when empty, the
+// bar's is at most 150%, and a Compute Boost only adds).
+export const getRunningUpgradeDraw = intro => {
+  const speed = Boolean(intro?.speedUpgradeQueued)
+  if (!speed && !intro?.capacityUpgradeQueued) return null
+  const cost = speed ? getSpeedUpgradeCostBits(intro) : intro.capacity
+  const stored = speed ? intro.speedUpgradeProgress : intro.capacityUpgradeProgress
+  const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
+  const multiplierPercent = getFillMultiplierPercent(cost > 0 ? progress / cost : 1)
+  const rate = getIntroProductionRate(intro) * multiplierPercent / 100
+  return { kind: speed ? 'speed' : 'capacity', cost, progress, multiplierPercent, rate }
+}
 
 // Manual tap. Before Storage pools are revealed at 1 KiB (getVisibleStoragePoolCount below), this
 // credits "one second's worth" at the Byte generator's current rate (see getIntroProductionRate),
@@ -2788,7 +2787,10 @@ export const getPoolTapBonusPercent = (state, poolIndex) =>
 export const getPoolMultiplierPercent = (state, poolIndex) =>
   Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getPoolBaseMultiplierPercent(state, poolIndex) + getPoolTapBonusPercent(state, poolIndex))
 
-export const getPoolEffectMultiplier = (state, poolIndex) => getPoolMultiplierPercent(state, poolIndex) / 100
+// The boost's pool bonus (getComputeBoostPoolMultiplier) scales the real buffer fill on top of the
+// capped fill-based percent; the displayed percent/Bandwidth stay unboosted.
+export const getPoolEffectMultiplier = (state, poolIndex) =>
+  (getPoolMultiplierPercent(state, poolIndex) / 100) * getComputeBoostPoolMultiplier(state.intro, poolIndex)
 
 // The raw fill rate (bits/s, before the fill-based multiplier) actually available to one pool's
 // buffer: its Bandwidth cap, limited by whatever Data Stream production earlier pools haven't
@@ -3761,7 +3763,7 @@ export const tickIntroProduction = elapsedSeconds => state => {
   // layers.js) to this real per-tick delivery only — getIntroProductionRate's own displayed rate
   // never includes it. Evaluated against the Buffer's fill level BEFORE this batch is added, same
   // "read state, then derive the delta" order every other multiplier factor here already follows.
-  const bitsToAdd = getIntroProductionRate(state.intro) * elapsedSeconds * getComputeBoostMultiplier(state.intro) * getDataStreamEffectMultiplier(state.intro)
+  const bitsToAdd = getDataStreamDeliveredRate(state.intro) * elapsedSeconds
 
   if (bitsToAdd <= 0) return state
 
@@ -5831,8 +5833,9 @@ export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?
 // the same "batch, but cap-bounded, surplus left unconverted" shape every tick-based conversion in
 // this file uses. A same-reference no-op below one full group of 8 of the input, once the output
 // is already at cap, OR — the key change from issue #321 — once autoFlagField has ever flipped
-// true: merging that boundary then fully transitions to the timed reserve system below
-// (startComputeMergeReserve/tickComputeMergeReserveTimer), and this plain instant path retires
+// true: merging that boundary then moves to the auto-merge slots below (timed automatic merge via
+// startComputeMergeReserve/tickComputeMergeReserveTimer, instant manual merge via
+// instantComputeMergeAtBoundary), and this pre-unlock path retires
 // permanently for it (an engine-level guard, not just a UI one — see "Security notes" in
 // CLAUDE.md).
 const mergeComputeEntities = (inputField, outputField, autoFlagField) => state => {
@@ -5883,19 +5886,19 @@ export const mergeComputeSupercomputersIntoMegacomputer = mergeComputeEntities('
 // e.g. enableAutoMergeNodesIntoCluster spends 10 Clusters to flip autoMergeNodesIntoCluster on.
 // Once enabled, the INPUT entity's own effective cap rises from COMPUTE_ENTITY_CAP to
 // COMPUTE_ENTITY_AUTO_MERGE_CAP (18 — see getComputeEntityEffectiveCap/isComputeEntityAutoMergeUnlocked
-// above and layers.js), and merging that boundary — auto or manual alike — transitions entirely to
-// a timed RESERVE pool (see COMPUTE_MERGE_RESERVE_CAP / getComputeMergeDurationSeconds in layers.js
-// / below): starting a merge instantly moves COMPUTE_MERGE_RATIO (8) tokens out of the input
+// above and layers.js), and the AUTOMATIC merge at that boundary uses a timed RESERVE pool (see
+// COMPUTE_MERGE_RESERVE_CAP / getComputeMergeDurationSeconds in layers.js / below), while a manual
+// click on the auto-merge slots stays an INSTANT 8→1 merge (instantComputeMergeAtBoundary): an
+// automatic start moves COMPUTE_MERGE_RATIO (8) tokens out of the input
 // entity, then counts down that boundary's duration (8 normal-disk fills of the input tier's own
 // pool — snapshotted at start, then clamped down (never up) to the live duration each tick) before
 // granting 1 of the output entity (cap-checked) and clearing the timer — at most one merge in
 // flight per boundary at a time. Auto-triggers only once the input reaches the FULL extended cap
-// (18, not just the primary 10) — a stricter bar than a manual start's own COMPUTE_MERGE_RATIO (8),
+// (18, not just the primary 10) — a stricter bar than a manual merge's own COMPUTE_MERGE_RATIO (8),
 // so automation only ever mops up an entity the player has let fill all the way past its primary
-// slots, never preempting a more efficient manual start at 8 (or at any point up to 17).
+// slots, never preempting a manual merge at 8 (or at any point up to 17).
 
-// Shared by both the auto-trigger (threshold COMPUTE_ENTITY_AUTO_MERGE_CAP, 18) and the manual
-// click-to-start action (threshold COMPUTE_MERGE_RATIO, 8) below — a same-reference no-op while
+// The auto-trigger (threshold COMPUTE_ENTITY_AUTO_MERGE_CAP, 18) — a same-reference no-op while
 // auto-merge isn't unlocked for this boundary, a merge is already in flight (timerField > 0), input
 // is below `threshold`, or output is already at its effective cap. Otherwise moves exactly
 // COMPUTE_MERGE_RATIO out of the input entity and starts the timer at `durationSeconds`.
@@ -6012,18 +6015,16 @@ const enableAutoMerge = (outputField, autoFlagField) => state => {
   }
 }
 
-// UI mirror of startComputeMergeReserve's own manual-click gate (threshold COMPUTE_MERGE_RATIO,
-// 8) — whether clicking this boundary's reserve-slot row right now ("the button is enabled only
-// when there are at least 8 tokens available across all the 18 slots" — issue #321) would start a
-// new merge: auto-merge unlocked, no merge already in flight, at least COMPUTE_MERGE_RATIO of the
-// input held, the output has room under its effective cap, and the live duration is positive
-// (startComputeMergeReserve no-ops at 0).
+// UI mirror of instantComputeMergeAtBoundary's own gate — whether clicking this boundary's
+// auto-merge slot row right now instantly merges COMPUTE_MERGE_RATIO (8) of the input into 1 of the
+// output: auto-merge unlocked, at least 8 of the input held, and the output has room under its
+// effective cap — counting the 1 output an in-flight automatic merge still owes, so an instant merge
+// can never fill the cap and void that merge's already-committed 8 inputs on completion.
 const isComputeMergeReserveStartAvailable = (state, inputField, outputField, autoFlagField, timerField) =>
   (state.intro?.[autoFlagField] ?? false) &&
-  (state.intro?.[timerField] ?? 0) === 0 &&
   (state.intro?.[inputField] ?? 0) >= COMPUTE_MERGE_RATIO &&
-  (state.intro?.[outputField] ?? 0) < getComputeFieldEffectiveCap(state, outputField) &&
-  getComputeMergeDurationSeconds(state, COMPUTE_BOOST_TIER_FIELDS.indexOf(inputField)) > 0
+  (state.intro?.[outputField] ?? 0) + ((state.intro?.[timerField] ?? 0) > 0 ? 1 : 0)
+    < getComputeFieldEffectiveCap(state, outputField)
 
 // Boundary-index form of the per-boundary isCompute*MergeStartAvailable exports below, so
 // ComputePage can iterate COMPUTE_MERGE_BOUNDARIES without naming all nine.
@@ -6033,19 +6034,20 @@ export const isComputeMergeStartAvailableAtBoundary = (state, boundaryIndex) => 
   return isComputeMergeReserveStartAvailable(state, boundary.inputField, boundary.outputField, boundary.autoFlagField, boundary.timerField)
 }
 
-// Manual start that reads the live duration from state and snapshots it
-// onto the timer field.
-const startComputeMergeReserveAtBoundary = (boundaryIndex, threshold) => state => {
-  const boundary = COMPUTE_MERGE_BOUNDARIES[boundaryIndex]
-  const durationSeconds = getComputeMergeDurationSeconds(state, boundaryIndex)
-  return startComputeMergeReserve(
-    boundary.inputField,
-    boundary.outputField,
-    boundary.autoFlagField,
-    boundary.timerField,
-    durationSeconds,
-    threshold,
-  )(state)
+// Manual merge on an automated boundary: INSTANT — moves COMPUTE_MERGE_RATIO (8) of the input
+// straight into 1 of the output, no timer (only the automatic trigger at the full extended cap
+// runs the timed reserve merge). Same-reference no-op unless isComputeMergeReserveStartAvailable.
+const instantComputeMergeAtBoundary = boundaryIndex => state => {
+  const { inputField, outputField, autoFlagField, timerField } = COMPUTE_MERGE_BOUNDARIES[boundaryIndex]
+  if (!isComputeMergeReserveStartAvailable(state, inputField, outputField, autoFlagField, timerField)) return state
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      [inputField]: state.intro[inputField] - COMPUTE_MERGE_RATIO,
+      [outputField]: (state.intro?.[outputField] ?? 0) + 1,
+    },
+  }
 }
 
 // One block per tier boundary, lowest first — every export below (tickAutoMerge*/enableAutoMerge*/
@@ -6056,55 +6058,55 @@ const startComputeMergeReserveAtBoundary = (boundaryIndex, threshold) => state =
 export const tickAutoMergeCoresIntoNode = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeCores', 'computeNodes', 'autoMergeCoresIntoNode', 'computeCoresMergeRemainingSeconds', 0)
 export const enableAutoMergeCoresIntoNode = enableAutoMerge('computeNodes', 'autoMergeCoresIntoNode')
 export const isAutoMergeCoresIntoNodeUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeNodes', 'autoMergeCoresIntoNode')
-export const startComputeCoresMerge = startComputeMergeReserveAtBoundary(0, COMPUTE_MERGE_RATIO)
+export const startComputeCoresMerge = instantComputeMergeAtBoundary(0)
 export const isComputeCoresMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeCores', 'computeNodes', 'autoMergeCoresIntoNode', 'computeCoresMergeRemainingSeconds')
 
 export const tickAutoMergeNodesIntoCluster = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeNodes', 'computeClusters', 'autoMergeNodesIntoCluster', 'computeNodesMergeRemainingSeconds', 1)
 export const enableAutoMergeNodesIntoCluster = enableAutoMerge('computeClusters', 'autoMergeNodesIntoCluster')
 export const isAutoMergeNodesIntoClusterUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeClusters', 'autoMergeNodesIntoCluster')
-export const startComputeNodesMerge = startComputeMergeReserveAtBoundary(1, COMPUTE_MERGE_RATIO)
+export const startComputeNodesMerge = instantComputeMergeAtBoundary(1)
 export const isComputeNodesMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeNodes', 'computeClusters', 'autoMergeNodesIntoCluster', 'computeNodesMergeRemainingSeconds')
 
 export const tickAutoMergeClustersIntoNetwork = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeClusters', 'computeNetworks', 'autoMergeClustersIntoNetwork', 'computeClustersMergeRemainingSeconds', 2)
 export const enableAutoMergeClustersIntoNetwork = enableAutoMerge('computeNetworks', 'autoMergeClustersIntoNetwork')
 export const isAutoMergeClustersIntoNetworkUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeNetworks', 'autoMergeClustersIntoNetwork')
-export const startComputeClustersMerge = startComputeMergeReserveAtBoundary(2, COMPUTE_MERGE_RATIO)
+export const startComputeClustersMerge = instantComputeMergeAtBoundary(2)
 export const isComputeClustersMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeClusters', 'computeNetworks', 'autoMergeClustersIntoNetwork', 'computeClustersMergeRemainingSeconds')
 
 export const tickAutoMergeNetworksIntoGrid = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeNetworks', 'computeGrids', 'autoMergeNetworksIntoGrid', 'computeNetworksMergeRemainingSeconds', 3)
 export const enableAutoMergeNetworksIntoGrid = enableAutoMerge('computeGrids', 'autoMergeNetworksIntoGrid')
 export const isAutoMergeNetworksIntoGridUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeGrids', 'autoMergeNetworksIntoGrid')
-export const startComputeNetworksMerge = startComputeMergeReserveAtBoundary(3, COMPUTE_MERGE_RATIO)
+export const startComputeNetworksMerge = instantComputeMergeAtBoundary(3)
 export const isComputeNetworksMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeNetworks', 'computeGrids', 'autoMergeNetworksIntoGrid', 'computeNetworksMergeRemainingSeconds')
 
 export const tickAutoMergeGridsIntoFabric = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeGrids', 'computeFabrics', 'autoMergeGridsIntoFabric', 'computeGridsMergeRemainingSeconds', 4)
 export const enableAutoMergeGridsIntoFabric = enableAutoMerge('computeFabrics', 'autoMergeGridsIntoFabric')
 export const isAutoMergeGridsIntoFabricUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeFabrics', 'autoMergeGridsIntoFabric')
-export const startComputeGridsMerge = startComputeMergeReserveAtBoundary(4, COMPUTE_MERGE_RATIO)
+export const startComputeGridsMerge = instantComputeMergeAtBoundary(4)
 export const isComputeGridsMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeGrids', 'computeFabrics', 'autoMergeGridsIntoFabric', 'computeGridsMergeRemainingSeconds')
 
 export const tickAutoMergeFabricsIntoCloud = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeFabrics', 'computeClouds', 'autoMergeFabricsIntoCloud', 'computeFabricsMergeRemainingSeconds', 5)
 export const enableAutoMergeFabricsIntoCloud = enableAutoMerge('computeClouds', 'autoMergeFabricsIntoCloud')
 export const isAutoMergeFabricsIntoCloudUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeClouds', 'autoMergeFabricsIntoCloud')
-export const startComputeFabricsMerge = startComputeMergeReserveAtBoundary(5, COMPUTE_MERGE_RATIO)
+export const startComputeFabricsMerge = instantComputeMergeAtBoundary(5)
 export const isComputeFabricsMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeFabrics', 'computeClouds', 'autoMergeFabricsIntoCloud', 'computeFabricsMergeRemainingSeconds')
 
 export const tickAutoMergeCloudsIntoDatacenter = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeClouds', 'computeDatacenters', 'autoMergeCloudsIntoDatacenter', 'computeCloudsMergeRemainingSeconds', 6)
 export const enableAutoMergeCloudsIntoDatacenter = enableAutoMerge('computeDatacenters', 'autoMergeCloudsIntoDatacenter')
 export const isAutoMergeCloudsIntoDatacenterUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeDatacenters', 'autoMergeCloudsIntoDatacenter')
-export const startComputeCloudsMerge = startComputeMergeReserveAtBoundary(6, COMPUTE_MERGE_RATIO)
+export const startComputeCloudsMerge = instantComputeMergeAtBoundary(6)
 export const isComputeCloudsMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeClouds', 'computeDatacenters', 'autoMergeCloudsIntoDatacenter', 'computeCloudsMergeRemainingSeconds')
 
 export const tickAutoMergeDatacentersIntoSupercomputer = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeDatacenters', 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer', 'computeDatacentersMergeRemainingSeconds', 7)
 export const enableAutoMergeDatacentersIntoSupercomputer = enableAutoMerge('computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer')
 export const isAutoMergeDatacentersIntoSupercomputerUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer')
-export const startComputeDatacentersMerge = startComputeMergeReserveAtBoundary(7, COMPUTE_MERGE_RATIO)
+export const startComputeDatacentersMerge = instantComputeMergeAtBoundary(7)
 export const isComputeDatacentersMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeDatacenters', 'computeSupercomputers', 'autoMergeDatacentersIntoSupercomputer', 'computeDatacentersMergeRemainingSeconds')
 
 export const tickAutoMergeSupercomputersIntoMegacomputer = elapsedSeconds => tickComputeMergeBoundary(elapsedSeconds, 'computeSupercomputers', 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer', 'computeSupercomputersMergeRemainingSeconds', 8)
 export const enableAutoMergeSupercomputersIntoMegacomputer = enableAutoMerge('computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
 export const isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable = state => isAutoMergeUnlockAvailable(state, 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
-export const startComputeSupercomputersMerge = startComputeMergeReserveAtBoundary(8, COMPUTE_MERGE_RATIO)
+export const startComputeSupercomputersMerge = instantComputeMergeAtBoundary(8)
 export const isComputeSupercomputersMergeStartAvailable = state => isComputeMergeReserveStartAvailable(state, 'computeSupercomputers', 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer', 'computeSupercomputersMergeRemainingSeconds')
 
 // Every tickAutoMerge* above, lowest tier first — tickGame reduces state through this array,
@@ -6167,34 +6169,37 @@ export const getComputeBoostCoveredTierCount = intro => {
   return isValidComputeBoostTier(tierIndex) ? tierIndex : 0
 }
 
+// Fill-speed multiplier an active boost gives one Storage pool's buffer (1-based `poolIndex`; pool N
+// ↔ Factory tier N, so the same getComputeBoostCoveredTierCount pools are covered): 1 + the preset's
+// `poolBonusPercent` (+200% / +50% / +10%) instead of its production multiplier; 1 for an
+// uncovered pool or while no boost is active.
+export const getComputeBoostPoolMultiplier = (intro, poolIndex) => {
+  if (!intro?.computeBoostType || poolIndex > getComputeBoostCoveredTierCount(intro)) return 1
+  const bonus = COMPUTE_BOOST_PRESETS[intro.computeBoostType]?.poolBonusPercent ?? 0
+  return 1 + bonus / 100
+}
+
 // Whether boostType can be activated right now FROM tierIndex: a valid preset, a valid tier with
 // at least 1 of that tier's own token held. Starting a brand-new boost while none is active needs
-// no extra flag. Replacing an already-running boost forfeits the current one with NO refund — that
-// path is only allowed when `forfeitConfirmed` is true (UI must get an explicit confirm first),
-// the new type/tier differs from the active one (same type+tier while active is Stack's job, not
-// a forfeit-restart), AND `computeBoostStacks <= 1` — the same last-remaining-stack restriction
-// the standalone Forfeit button uses, so a preset swap can't reopen the "discard several stacks'
-// worth of tokens outright" gap that restriction closed (a multi-stack boost must be Reclaimed
-// down first). The actual gate activateComputeBoost itself enforces, not just a UI-only
-// disabled state — see "Security notes" in CLAUDE.md.
+// no extra flag. Replacing an already-running boost forfeits the RUNNING stack with no refund but
+// refunds every still-unused stacked one (getUnusedComputeBoostStacks) — only allowed when
+// `forfeitConfirmed` is true (UI must get an explicit confirm first) and the new type/tier differs
+// from the active one (same type+tier while active is Stack's job). The token check runs after
+// that refund, so a switch to the same tier is funded by refunded tokens. The actual gate
+// activateComputeBoost itself enforces, not just a UI-only disabled state — see "Security notes".
 export const canActivateComputeBoost = (state, boostType, tierIndex, forfeitConfirmed = false) => {
   if (!COMPUTE_BOOST_PRESETS[boostType]) return false
   const field = getComputeBoostTierField(tierIndex)
   if (!field) return false
-  if ((state.intro[field] ?? 0) < 1) return false
 
   const activeType = state.intro.computeBoostType ?? null
-  if (activeType === null) return true
+  if (activeType === null) return (state.intro[field] ?? 0) >= 1
 
   // Same type + same funding tier while active → use stackComputeBoost, not forfeit-restart.
   if (activeType === boostType && (state.intro.computeBoostTierIndex ?? 1) === tierIndex) return false
-  // Different boost while one is running only with an explicit forfeit confirmation from the UI,
-  // and only once down to the last remaining stack — matches the standalone Forfeit button's own
-  // restriction (mutually exclusive with Reclaim, see docs/DESIGN_HISTORY.md). Without this, a
-  // preset swap would reopen the same "discard several stacks' worth of tokens outright" gap that
-  // restriction was meant to close, just through a different control (found by Devin Review).
-  if ((state.intro.computeBoostStacks ?? 0) > 1) return false
-  return forfeitConfirmed === true
+  // Different boost while one is running only with an explicit forfeit confirmation from the UI.
+  if (forfeitConfirmed !== true) return false
+  return (refundUnusedComputeBoostStacks(state).intro[field] ?? 0) >= 1
 }
 
 // A specific (boostType, tierIndex) activation's own forced-priority turn: mechanically
@@ -6242,16 +6247,33 @@ export const isComputeUpgradeTurnAvailable = state =>
     Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => isComputeBoostTurnAvailable(state, boostType, index + 1, false))
   )
 
+// How many stacks of the active boost are still fully unused — every stack beyond the one
+// currently running whose whole duration is still ahead in the pooled timer:
+// min(stacks − 1, ceil(remaining / stackDuration) − 1), never negative. 0 while no boost is
+// active. canReclaimComputeBoost (Pop) is exactly "this is > 0".
+export const getUnusedComputeBoostStacks = state => {
+  const boostType = state.intro.computeBoostType ?? null
+  if (boostType === null) return 0
+  const stackDuration = getComputeBoostTierDurationSeconds(boostType, state.intro.computeBoostTierIndex ?? 1)
+  if (!(stackDuration > 0)) return 0
+  const remaining = state.intro.computeBoostRemainingSeconds ?? 0
+  return Math.max(0, Math.min((state.intro.computeBoostStacks ?? 0) - 1, Math.ceil(remaining / stackDuration) - 1))
+}
+
+// Pops every unused stack (reclaimComputeBoost, one at a time) — the refund half of a preset
+// switch. Same reference when there is nothing to refund.
+const refundUnusedComputeBoostStacks = state => {
+  let next = state
+  for (let i = getUnusedComputeBoostStacks(state); i > 0; i -= 1) next = reclaimComputeBoost(next)
+  return next
+}
+
 // Cancels the active Compute Boost with NO token refund and NO duration credit — pure forfeit.
-// Same-reference no-op while no boost is active. Distinct from reclaimComputeBoost (which refunds).
-// UI must confirm before calling when the player is abandoning the last stack on purpose. Only
-// reachable at `computeBoostStacks <= 1` — the same restriction canActivateComputeBoost's own
-// forfeit-replace branch uses — so this API can't be used to discard several stacks' worth of
-// tokens outright any more than the standalone Forfeit button or a preset swap can; a multi-stack
-// boost must be Reclaimed down first (found by Devin Review on the same PR that added the
-// canActivateComputeBoost restriction — see docs/DESIGN_HISTORY.md).
+// Same-reference no-op while no boost is active. Only reachable once no unused stack remains
+// (getUnusedComputeBoostStacks === 0 — Pop is offered instead until then), so it can never discard
+// stacked tokens outright. UI must confirm before calling.
 export const canForfeitComputeBoost = state =>
-  (state.intro.computeBoostType ?? null) !== null && (state.intro.computeBoostStacks ?? 0) <= 1
+  (state.intro.computeBoostType ?? null) !== null && getUnusedComputeBoostStacks(state) === 0
 
 export const forfeitComputeBoost = state => {
   if (!canForfeitComputeBoost(state)) return state
@@ -6271,19 +6293,20 @@ export const forfeitComputeBoost = state => {
 // field (getComputeBoostTierField), sets computeBoostStacks to 1, and
 // computeBoostRemainingSeconds to that tier's own getComputeBoostTierDurationSeconds.
 // When a boost is already active, pass forfeitConfirmed=true (after an explicit UI confirm) to
-// forfeit the current boost with no refund and replace it; without that flag, a same-reference
+// refund its unused stacks, forfeit its running stack, and replace it; without that flag, a same-reference
 // no-op while any boost is running (see stackComputeBoost to extend, or forfeitComputeBoost alone
 // to cancel). Same-type+same-tier while active is always a no-op here — use Stack.
 export const activateComputeBoost = (boostType, tierIndex, forfeitConfirmed = false) => state => {
   if (!isComputeBoostTurnAvailable(state, boostType, tierIndex, forfeitConfirmed)) return state
 
   const field = getComputeBoostTierField(tierIndex)
+  const base = (state.intro.computeBoostType ?? null) === null ? state : refundUnusedComputeBoostStacks(state)
 
   return {
-    ...state,
+    ...base,
     intro: {
-      ...state.intro,
-      [field]: (state.intro[field] ?? 0) - 1,
+      ...base.intro,
+      [field]: (base.intro[field] ?? 0) - 1,
       computeBoostType: boostType,
       computeBoostTierIndex: tierIndex,
       computeBoostStacks: 1,
@@ -6409,25 +6432,13 @@ export const tickAutoComputeBoost = state => {
 // instant remaining hits 0, rather than leaving a live boost at 0 stacks). A boost's effect can no
 // longer be canceled outright via reclaim once it's started — letting it run out is the only way
 // to end it early (see docs/DESIGN_HISTORY.md for the earlier, un-gated behavior this replaced).
-export const canReclaimComputeBoost = state => {
-  if ((state.intro.computeBoostType ?? null) === null) return false
-  if ((state.intro.computeBoostStacks ?? 0) <= 1) return false
-  // `?? 1` matches getComputeBoostMultiplier's own fallback — a save from before
-  // computeBoostTierIndex existed can have an active boost with that field missing entirely.
-  // Without this fallback, getComputeBoostTierDurationSeconds sees an invalid tierIndex and
-  // returns 0, so this gate would always pass (any positive remaining time clears "> 0") and
-  // reclaimComputeBoost below would then resolve a bogus field via getComputeBoostTierField(undefined)
-  // instead of refunding a real token, while leaving computeBoostRemainingSeconds untouched
-  // (found by Devin Review on this same PR).
-  const tierIndex = state.intro.computeBoostTierIndex ?? 1
-  const stackDuration = getComputeBoostTierDurationSeconds(state.intro.computeBoostType, tierIndex)
-  return (state.intro.computeBoostRemainingSeconds ?? 0) - stackDuration > 0
-}
+// Equivalent to getUnusedComputeBoostStacks(state) > 0 (it applies the `?? 1` tierIndex fallback
+// and a zero-duration guard, so a legacy save can't refund a bogus field).
+export const canReclaimComputeBoost = state => getUnusedComputeBoostStacks(state) > 0
 
 // Reclaims the most recently added, still-unused stack of the active Compute Boost — one at a
 // time — the exact inverse of one activateComputeBoost/stackComputeBoost call: refunds 1 token of
-// the active boost's own funding tier (capped at that tier's effective cap, never lowering a count
-// that grew past it while the boost was running) and subtracts that tier's own getComputeBoostTierDurationSeconds
+// the active boost's own funding tier (uncapped — see below) and subtracts that tier's own getComputeBoostTierDurationSeconds
 // back out of computeBoostRemainingSeconds, decrementing computeBoostStacks by 1.
 // canReclaimComputeBoost's own gate (>1 stack AND enough pooled time that this subtraction can't
 // zero it out) means nextStacks is always >= 1 and the resulting remaining time is always > 0 here
@@ -6443,10 +6454,10 @@ export const reclaimComputeBoost = state => {
   const tierIndex = state.intro.computeBoostTierIndex ?? 1
   const field = getComputeBoostTierField(tierIndex)
   const nextStacks = (state.intro.computeBoostStacks ?? 0) - 1
-  // Capped at the tier's effective cap (18 with its reserve open), never LOWERING a count that
-  // grew past it while the boost was running.
-  const held = state.intro[field] ?? 0
-  const refunded = Math.max(held, Math.min(getComputeEntityEffectiveCap(state, tierIndex), held + 1))
+  // NOT capped at the tier's effective cap: the token was the player's before it was stacked, so
+  // a refund into a full tier still returns it (counts above the cap are already tolerated — slot
+  // and reserve displays clamp, Booster purchases simply stop).
+  const refunded = (state.intro[field] ?? 0) + 1
 
   return {
     ...state,

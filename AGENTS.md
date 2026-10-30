@@ -278,6 +278,8 @@ the tag doesn't already exist — the post-merge half of #52 (pre-merge half: `y
 
 Guard-step context feeds are bounded by standing rule (`docs/AUTOMATION.md`, #81): explicit `--limit`
 + display cap with a "+N more" note; list feeds render number + title + labels only, never bodies.
+`autonomous-maintenance.yml` also feeds unpromoted Discussions "Ideas" (#66); gap-analysis may promote a
+substantial one to a `claude-task` issue linking the discussion (propose-only).
 Both engines' guard steps also render an orphaned-branch feed (#59,
 `scripts/orphan-branch-scan.sh`): remote `claude/*`/`devin/*`/`cursor/*` branches with no open PR —
 a run deletes merged/closed-issue stale ones and prefers resuming a still-open-issue branch over

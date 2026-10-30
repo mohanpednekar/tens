@@ -417,20 +417,20 @@ const InfoPage = () => {
             After unlock: merging uses an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve, alongside the
             input tier's own {COMPUTE_ENTITY_CAP} normal slots ({COMPUTE_ENTITY_AUTO_MERGE_CAP} total
             held). The reserve fills gradually as that tier keeps growing past its normal 10 — via
-            continued Booster purchases or a lower-tier merge — rather than all at once. A merge
-            itself, once started, runs a timed countdown: the time {COMPUTE_MERGE_RATIO} of the
+            continued Booster purchases or a lower-tier merge — rather than all at once. Tapping
+            the auto-merge slots merges {COMPUTE_MERGE_RATIO} → 1 instantly. An automatic merge runs
+            a timed countdown: the time {COMPUTE_MERGE_RATIO} of the
             smallest disks in that tier’s own Storage pool take to fill from their read cache
             (Cores use the KB pool, Nodes the MB pool, and so on). The pool’s larger disks don’t
-            count, so the timer never escalates within a pool. A tier’s merges wait until its
-            pool is visible. A running merge never takes longer than the current merge time, so it
-            speeds up as the pool’s Bandwidth grows. Before unlock, merges stay instant.
+            count, so the timer never escalates within a pool. A tier’s automatic merges wait until
+            its pool is visible. A running automatic merge never takes longer than the current merge
+            time, so it speeds up as the pool’s Bandwidth grows.
           </li>
           <li>
             Auto-merge starts only once the input tier reaches the FULL extended cap (
             {COMPUTE_ENTITY_AUTO_MERGE_CAP} — the normal slots plus the whole reserve) — a stricter
-            bar than starting a merge manually, which still only needs {COMPUTE_MERGE_RATIO} held
-            across the normal + reserve slots, letting you convert early instead of waiting for
-            automation.
+            bar than merging manually, which only needs {COMPUTE_MERGE_RATIO} held across the
+            normal + reserve slots and is instant.
           </li>
         </ul>
 
@@ -453,21 +453,23 @@ const InfoPage = () => {
           </li>
           <li>
             A boost always multiplies Memory production too, plus as many Factory tiers (from{' '}
-            {firstTierName} up) as the funding tier’s number.
+            {firstTierName} up) as the funding tier’s number. It also speeds up the matching Storage
+            pools’ buffer fill (pool N for Factory tier N) by +{COMPUTE_BOOST_PRESETS.burst.poolBonusPercent}% /
+            +{COMPUTE_BOOST_PRESETS.standard.poolBonusPercent}% / +{COMPUTE_BOOST_PRESETS.sustain.poolBonusPercent}%
+            for Burst / Standard / Sustain.
           </li>
           <li>
-            Only one boost runs at a time. To switch to a different preset or funding tier, you
-            must <strong>Forfeit</strong> the active boost (no refund) — the UI asks for explicit
-            confirmation. Same preset + tier while active uses <strong>Stack</strong> instead.
+            Only one boost runs at a time. Picking the same preset + tier again{' '}
+            <strong>Stacks</strong> it. Picking a different one switches after a confirmation: any
+            unused stacks are refunded and the running one is forfeited.
           </li>
           <li>
-            While active: <strong>Stack</strong> spends another token of the active boost’s own
-            funding tier to extend duration (up to {COMPUTE_BOOST_MAX_STACKS} stacks; multiplier
-            doesn’t compound). <strong>Reclaim</strong> undoes the most recent unused stack,
-            refunding 1 token — only while more than 1 stack is held, since the one stack actively
-            funding a started effect can never be reclaimed away. <strong>Forfeit</strong> cancels
-            everything with no refund (confirmation required) — the only way to end a boost early
-            once it's down to its last stack.
+            While active, a timer bar shows the time left. <strong>+</strong> on its right stacks
+            another token of the active boost’s own funding tier to extend it (up to{' '}
+            {COMPUTE_BOOST_MAX_STACKS} stacks; multiplier doesn’t compound).{' '}
+            <strong>Pop</strong> (↩) on its left refunds the most recent unused stack instantly.
+            Once no unused stack remains it becomes <strong>Forfeit</strong> (✕), which ends the
+            boost with no refund after a confirmation.
           </li>
           <li>
             <strong>Auto-Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time): when a
@@ -591,7 +593,8 @@ const InfoPage = () => {
             Once unlocked, its ⏸/▶ control on Perks → 🎛 Toggles pauses or resumes without losing the unlock.
           </li>
           <li>
-            A tier’s autobuyer buys <strong>one unit per attempt</strong> (Buy max mode never
+            A tier’s autobuyer buys <strong>one full level per attempt</strong> — only when the
+            whole level is affordable, or the rest of a partly bought level is (Buy max mode never
             applies to it). <strong>Bulk mode</strong> is a Prestige Point purchase per tier: each
             attempt then buys 10 levels at once when that many are affordable (1000× the
             autobuyer’s base PP), then 100 levels (1e6×), then 1000 (1e9×).

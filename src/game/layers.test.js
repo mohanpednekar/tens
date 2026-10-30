@@ -371,9 +371,9 @@ describe('constants', () => {
   })
 
   it('COMPUTE_BOOST_PRESETS base (tier 1 / Core) values are 10 minutes (Burst x20), 1 hour (Standard x5), 10 hours (Sustain x2)', () => {
-    expect(COMPUTE_BOOST_PRESETS.burst).toEqual({ multiplier: 20, durationSeconds: 600 })
-    expect(COMPUTE_BOOST_PRESETS.standard).toEqual({ multiplier: 5, durationSeconds: 3600 })
-    expect(COMPUTE_BOOST_PRESETS.sustain).toEqual({ multiplier: 2, durationSeconds: 36000 })
+    expect(COMPUTE_BOOST_PRESETS.burst).toEqual({ multiplier: 20, durationSeconds: 600, poolBonusPercent: 200 })
+    expect(COMPUTE_BOOST_PRESETS.standard).toEqual({ multiplier: 5, durationSeconds: 3600, poolBonusPercent: 50 })
+    expect(COMPUTE_BOOST_PRESETS.sustain).toEqual({ multiplier: 2, durationSeconds: 36000, poolBonusPercent: 10 })
   })
 
   it('total extra production ((multiplier - 1) * durationSeconds) increases Burst -> Standard -> Sustain', () => {

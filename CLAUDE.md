@@ -299,6 +299,8 @@ Convention: a new `claude-task` issue that adds a manual-only prerequisite must 
 
 Guard-step context feeds are bounded: any new feed passes an explicit `--limit` and display-cap with a
 "+N more" note; list feeds render number + title + labels only, never bodies (`docs/AUTOMATION.md`, #81).
+`autonomous-maintenance.yml` also feeds unpromoted GitHub Discussions "Ideas" (#66); Phase B item 6 may
+promote a substantial one to a `claude-task` issue linking the discussion URL (propose-only).
 
 **Budget discipline applies to every Claude Code session — interactive and automated.** Self-estimate
 the remaining rolling 5-hour Claude usage window and keep a session at or under roughly **50%** of a full window,
@@ -452,13 +454,13 @@ src/
                                (incl. the unused omitted-`tierIndex` mode): `docs/COMPONENTS_REFERENCE.md`;
                                mechanic: "Economy model"
     icons.js                ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Data Lake Booster, Upgrade Data Stream,
-                               Provision Disk status line; `BOOST_ICON` 🌟 marks Compute-Boosted elements)
-    BoostBadge/index.jsx    ← Compute-Boosted marker (🌟×N badge, description in title/aria-label) +
+                               Provision Disk status line)
+    BoostBadge/index.jsx    ← Compute-Boosted glow helpers —
                                `boostGlow` card css + `isDataStreamBoosted`/`isFactoryTierBoosted`;
                                used by ByteFoundryPage's Data Stream and MainPage tier rows.
                                Contract: `docs/COMPONENTS_REFERENCE.md`
-    SpeedDetailsPopover/index.jsx ← non-modal details panel (portal, fixed under its anchor) behind each
-                               pool's clickable ⚡ speed; closes on outside press/scroll/wheel/touch-move,
+    SpeedDetailsPopover/index.jsx ← non-modal details panel (portal, fixed under its anchor) behind every
+                               Foundry ⚡ speed (Data Stream, running upgrade, each pool); closes on outside press/scroll/wheel/touch-move,
                                Escape, resize. Contract: `docs/COMPONENTS_REFERENCE.md`
     LeadIcon/index.js       ← a line's leading emoji in a fixed-size, aria-hidden box so text after it
                                aligns across a tile's lines (Foundry stream/pool/lake/Upgrading rows)
@@ -668,8 +670,8 @@ Strict three-layer separation:
    Node → … → Megacomputer) behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute"
    names the page/feature only — entities drop the word in every player-visible label. Deliberately terse
    (icon-only controls, full sentence in `title`/`aria-label`; mechanic prose lives in the Guide). Order:
-   top card = active Boost effect (or "No boost running") + Stack + Reclaim-or-Forfeit (mutually exclusive
-   by `computeBoostStacks`, enforced in the engine too) + Auto-Boost pref; then per-tier rows — the ONE
+   top card = active Boost timer bar (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right,
+   enforced in the engine too; or "No boost running") + Auto-Boost pref; then per-tier rows — the ONE
    selected tier (pre-selected to the active boost's tier on arrival) shows the 3 Boost presets inline (`COMPUTE_ENTITY_CAP` 10 slots,
    Merge ratio `COMPUTE_MERGE_RATIO` 8, Unlock Auto-merge, `COMPUTE_MERGE_RESERVE_CAP` 8 reserve). Cores
    come from buying Boosters from the matching Data Lake, not minted from Memory. Full detail:
@@ -970,7 +972,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2114 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2128 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
