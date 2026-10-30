@@ -356,6 +356,49 @@ jobs:
             echo "RETRO_EOF"
           } >> "$GITHUB_OUTPUT"
 
+          # Discussions "Ideas" feed (#66): half-formed ideas not yet promoted to an issue.
+          # Bounded per the standing guard-step feed rule (#81): explicit first:, a display
+          # cap with "+N more", and number + title + engagement counts only (never bodies).
+          # Fails soft: Discussions disabled or a GraphQL error yields an empty feed.
+          IDEAS_DISPLAY_CAP=15
+          ideas_json=$(gh api graphql -f query='
+            query($owner:String!,$name:String!){
+              repository(owner:$owner,name:$name){
+                discussions(first:50,orderBy:{field:UPDATED_AT,direction:DESC}){
+                  nodes{ number title closed category{name}
+                    comments{totalCount} reactions{totalCount} }
+                }
+              }
+            }' -f owner="${GITHUB_REPOSITORY%/*}" -f name="${GITHUB_REPOSITORY#*/}" \
+            --jq '[.data.repository.discussions.nodes[] | select(.category.name=="Ideas" and (.closed|not))]' \
+            2>/dev/null || echo '[]')
+          [ -n "$ideas_json" ] || ideas_json='[]'
+          # Drop discussions already referenced by any issue body (already promoted).
+          all_issue_bodies=$(gh issue list --state all --limit 500 --json body --jq '.[].body' 2>/dev/null || true)
+          open_ideas=""
+          ideas_total=0
+          while IFS=$'\t' read -r d_num d_title d_comments d_reactions; do
+            [ -n "$d_num" ] || continue
+            if grep -Eq "discussions/${d_num}([^0-9]|$)" <<<"$all_issue_bodies"; then
+              continue
+            fi
+            ideas_total=$((ideas_total + 1))
+            if [ "$ideas_total" -le "$IDEAS_DISPLAY_CAP" ]; then
+              open_ideas="$open_ideas
+          - Discussion #$d_num: $d_title ($d_comments replies, $d_reactions reactions)"
+            fi
+          done < <(jq -r '.[] | [.number, .title, .comments.totalCount, .reactions.totalCount] | @tsv' <<<"$ideas_json")
+          open_ideas="${open_ideas#$'\n'}"
+          if [ "$ideas_total" -gt "$IDEAS_DISPLAY_CAP" ]; then
+            open_ideas="$open_ideas
+          - (+$((ideas_total - IDEAS_DISPLAY_CAP)) more unpromoted Ideas discussion(s) not shown — see the repo's Discussions tab)"
+          fi
+          {
+            echo "open_ideas<<IDEAS_EOF"
+            echo "$open_ideas"
+            echo "IDEAS_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Surface a broken deploy.yml run
         # Deterministic (no Claude invocation) and unconditional — runs even when the guard step
         # sets skip=true (5-PR ceiling) or the "Run autonomous maintenance task" step below is
@@ -459,6 +502,7 @@ jobs:
           OPEN_BUG_ISSUES: ${{ steps.guard.outputs.open_bug_issues }}
 
           OPEN_RETRO_ISSUES: ${{ steps.guard.outputs.open_retro_issues }}
+          OPEN_IDEAS: ${{ steps.guard.outputs.open_ideas }}
 
           MAIN_CI_BROKEN: ${{ steps.guard.outputs.main_ci_broken }}
           MAIN_CI_RUN_URL: ${{ steps.guard.outputs.main_ci_run_url }}
@@ -492,6 +536,7 @@ jobs:
           : "${OPEN_BUG_ISSUES:=(none)}"
 
           : "${OPEN_RETRO_ISSUES:=(none)}"
+          : "${OPEN_IDEAS:=(none)}"
 
           : "${FAILING_PRS:=(none)}"
           : "${DEPENDABOT_ALERTS:=(none)}"
@@ -540,6 +585,10 @@ jobs:
           Currently-open automation-retro reports (number: title), filed by a previous run's
           automation-retro reporting (see AUTOMATION-RETRO REPORTING below):
           $OPEN_RETRO_ISSUES
+
+          Unpromoted GitHub Discussions "Ideas" (number: title, engagement), not yet referenced
+          by any issue — candidates for Phase B item 6 (see there):
+          $OPEN_IDEAS
 
 
           Main branch CI status: the latest completed run of ci.yml on main
@@ -866,7 +915,13 @@ jobs:
              criteria / Files likely touched / Out of scope / Verification / Explicit
              authorizations / Dependencies) and size it the same way a human-authored task issue
              would be sized (small enough for one run's budget, or explicitly split with
-             "Blocked by #N" if it's bigger). Do NOT implement the fix yourself in this run —
+             "Blocked by #N" if it's bigger). Alternatively, if an unpromoted Ideas discussion listed
+             above looks ready to formalize (enough detail to write a real Goal/Context/Spec, plus some
+             engagement — replies or reactions; read it with `gh api graphql` first), file that as your
+             one issue instead, with its Context section linking the discussion URL (that link is how
+             later runs know it was promoted). Leave sparse or zero-engagement ideas alone, and optionally
+             reply on the discussion noting the new issue number. Never close or lock the discussion.
+             Do NOT implement the fix yourself in this run —
              this task only proposes, it never opens a PR. Label the new issue with both
              `claude-task` and `gap-analysis`; ensure the `gap-analysis` label exists first
              (idempotent: `gh label create gap-analysis --color 0e8a16 --description
@@ -987,6 +1042,7 @@ jobs:
           prompt_text=${prompt_text//'$OPEN_BUG_ISSUES'/$OPEN_BUG_ISSUES}
 
           prompt_text=${prompt_text//'$OPEN_RETRO_ISSUES'/$OPEN_RETRO_ISSUES}
+          prompt_text=${prompt_text//'$OPEN_IDEAS'/$OPEN_IDEAS}
 
           prompt_text=${prompt_text//'$FAILING_PRS'/$FAILING_PRS}
           prompt_text=${prompt_text//'$DEPENDABOT_ALERTS'/$DEPENDABOT_ALERTS}

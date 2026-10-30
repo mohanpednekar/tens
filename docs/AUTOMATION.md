@@ -157,6 +157,14 @@ tracking surfaces accumulate. The rule applies to both engines' guard steps;
 lacks the "+N more" overflow note — a known gap for the future audit to close, not a compliant
 example.
 
+**Discussions Ideas feed (#66).** `autonomous-maintenance.yml`'s guard step queries Discussions via
+`gh api graphql` (first 50, category "Ideas", open), drops any discussion whose number appears as
+`discussions/<n>` in an issue body (already promoted), and renders up to 15 as number + title +
+reply/reaction counts with a "+N more" note (fails soft to empty if Discussions is off). Phase B item
+6 (gap analysis) may file its one issue from a substantial, engaged discussion instead — Context links
+the discussion URL, which is the dedup key; sparse ideas are left alone; propose-only, never closes or
+locks the discussion. `devin-autonomous-maintenance.yml` does not yet have this feed.
+
 **Bug filing and alert-to-bug wiring (#55) apply to every phase, in both engines.** Any run —
 Phase A task or Phase B menu item — that notices a genuine bug unrelated to (or beyond the scope
 of) its current work files a `claude-task` + `bug` issue for it instead of fixing it in the same
