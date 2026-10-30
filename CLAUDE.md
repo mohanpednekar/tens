@@ -273,20 +273,20 @@ outright), saying so when it deviates from lowest-number order.
 
 - `devin-autonomous-maintenance.yml` — Devin-CLI counterpart, every 4h (UTC :17), opens `devin/auto-*`
   PRs (auth `DEVIN_CLI_CREDENTIALS`; git/`gh` via `GH_AUTOMATION_PAT`). 5-open-PR ceiling counts
-  `devin/auto-*` + `claude/auto-*` together. May edit workflows incl. its own, but workflow-file changes
-  stay human-gated (`pr-auto-merge.yml` excludes `.github/workflows/**` from green-checks auto-merge).
+  `devin/auto-*` + `claude/auto-*` together. No file-scope restriction (may edit workflows incl. its own);
+  every change still lands via PR, and workflow-file changes stay human-gated (`pr-auto-merge.yml` excludes `.github/workflows/**` from green-checks auto-merge).
   Follows the Pull-requests convention; post-run feedback stays `autonomous-pr-followup.yml`'s job.
 - `devin-workflow-health.yml` — daily 00:00 UTC; files an `automation-failure` issue if the Devin workflow
   doesn't parse, hasn't started in 26h, or its latest completed run wasn't `success`.
 - `pr-conflict-sweep.yml` — on every push to `main`, flags newly conflicted open PRs; on
   `claude/auto-*`/`devin/auto-*` the comment triggers the follow-up agent to merge-and-resolve.
 - `release.yml` — deterministic: on a `package.json` push to `main`, tags `v<x.y.z>` if absent and
-  creates the GitHub Release from that version's `CHANGELOG.md` section.
+  creates the GitHub Release from that version's `CHANGELOG.md` section (see "Changelog convention").
 - `autonomous-pr-followup.yml` — review comments/CI failures on `claude/auto-*`/`devin/auto-*` PRs;
   `dependabot-pr-followup.yml` — failing checks on `dependabot/*` PRs when the bump broke call sites
   (Phase 0 owns `@dependabot rebase` for merely-behind branches).
 - `pr-auto-merge.yml` — native auto-merge on human approval (any PR) or green checks alone for
-  `claude/*`/`devin/auto-*` when the diff meets the low-risk bar.
+  `claude/*`/`devin/auto-*` when the diff meets the conservative low-risk bar.
 - `automation-self-heal.yml` — opens a draft `claude/self-heal-*` fix or an `automation-failure` issue
   for failed orchestration runs; never edits `ci.yml`/`deploy.yml`/itself.
 
