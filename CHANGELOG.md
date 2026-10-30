@@ -270,6 +270,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   lifetime-purchased-count text is gone — the cost figure alone is self-explanatory.
 
 ### Fixed
+- **The game loads again.** A bad merge left conflict markers in the Data Lake fill math, so the app could not build. Those markers are gone.
 - **Running Data Stream upgrade is a full-width status tile**, not a button-like container, filled like the Data Stream tile above it.
 - **Data Lake header layout is consistent.** The filled amount and fill speed now always sit on the title row at one size (no more jumping between rows/sizes), and the Booster cost pill no longer shifts its label off the lake's text edges.
 
