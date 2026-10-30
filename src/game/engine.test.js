@@ -788,7 +788,7 @@ describe('tapIntroBit', () => {
     })
     const after = tapIntroBit(state)
     expect(after.intro.dataStreamTapBonusPercent).toBe(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT)
-    // The combined reading still caps at FILL_MULTIPLIER_TAP_CAP_PERCENT (200) as before.
+    // The combined reading still caps at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000).
     expect(getDataStreamMultiplierPercent(after.intro)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
   })
 })
@@ -820,7 +820,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(getDataStreamFillFraction({ bits: 0, capacity: 0 })).toBe(0)
     })
 
-    it('getDataStreamMultiplierPercent adds any live tap bonus on top of the fill-based value', () => {
+    it('getDataStreamMultiplierPercent applies any live tap bonus as ×(1 + bonus%) on the fill-based value', () => {
       const intro = { bits: 50, capacity: 100, dataStreamTapBonusPercent: 5 }
       expect(getDataStreamBaseMultiplierPercent(intro)).toBe(100)
       expect(getDataStreamMultiplierPercent(intro)).toBe(105)
@@ -847,7 +847,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(getPoolBufferFillFraction(state, 1)).toBeCloseTo(0.5)
     })
 
-    it('getPoolMultiplierPercent adds that pool\'s own live tap bonus on top of its fill-based value', () => {
+    it('getPoolMultiplierPercent applies that pool\'s own live tap bonus as ×(1 + bonus%) on its fill-based value', () => {
       const state = withIntro(withPoolBuffer(createInitialGameState(), 4, 1), { poolTapBonusPercents: { 1: 5 } })
       expect(getPoolBaseMultiplierPercent(state, 1)).toBe(100)
       expect(getPoolTapBonusPercent(state, 1)).toBe(5)
@@ -943,7 +943,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
     // The stored bonus is its own 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT value — a save
     // carrying an over-large value (hand-edited, or written before the bonus had its own cap)
     // is clamped on the next tick, independent of elapsedSeconds, while the COMBINED multiplier
-    // reading still caps at FILL_MULTIPLIER_TAP_CAP_PERCENT (200).
+    // reading still caps at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000).
     it('clamps a stored Data Stream bonus above 100 down to the cap, even with elapsedSeconds=0', () => {
       const state = withIntro(createInitialGameState(), {
         bits: 0, capacity: 1000, dataStreamTapBonusPercent: 170,
@@ -954,15 +954,13 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(getDataStreamMultiplierPercent(after.intro)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
     })
 
-    it("forces a pool's own tap bonus to exactly 0 once its buffer is completely full — NOT merely headroom-truncated like the Data Stream's own bonus above — so ByteFoundryPage's gauge transitions cleanly into its Data Lake overflow-rate reading with no visible jump (Devin finding on PR #562: a residual bonus riding on top of the retired fill-based reading could sit well above the lake reading's own 50% ceiling)", () => {
+    it("forces a pool's own tap bonus to exactly 0 once its buffer is completely full — NOT merely headroom-truncated like the Data Stream's own bonus above (Devin finding on PR #562: a residual bonus riding on top of the retired fill-based reading)", () => {
       const baseState = withIntro(createInitialGameState(), { poolTapBonusPercents: { 1: 170 } })
       const fullBufferBits = getPoolBufferCapacity(baseState, 1)
       const state = withIntro(baseState, { poolBuffers: { 1: fullBufferBits } })
       const after = tickFillMultiplierDecay(0)(state)
       expect(after.intro.poolTapBonusPercents[1]).toBe(0)
-      // The pool's own total multiplier reading is now exactly FILL_MULTIPLIER_MIN_PERCENT (50) —
-      // the SAME value the gauge's lake-mode reading maxes out at (DATA_LAKE_OVERFLOW_MAX_PERCENT),
-      // so switching from one reading to the other never visibly jumps.
+      // The pool's own total multiplier reading is now exactly FILL_MULTIPLIER_MIN_PERCENT (10%).
       expect(getPoolMultiplierPercent(after, 1)).toBe(FILL_MULTIPLIER_MIN_PERCENT)
     })
 

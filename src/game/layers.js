@@ -538,9 +538,8 @@ export const DATA_LAKE_CAPACITY_BY_LEVEL = [1, 10, 100, 1000]
 // near completion) via a closed-form exponential-decay ODE; removed in favor of the simpler flat
 // rate — see docs/DESIGN_HISTORY.md. These two constants remain only as the fixed values
 // getDataLakeOverflowRatePercent (engine.js) now reports as a plain binary "receiving/not
-// receiving" indicator for ByteFoundryPage's own `mode="lake"` bar, chosen to match
-// FILL_MULTIPLIER_MIN_PERCENT so that bar's width still doesn't jump at the multiplier→lake
-// handoff (the UI bar that showed it was removed).
+// receiving" indicator for ByteFoundryPage's own (removed) `mode="lake"` bar. They no longer
+// need to match FILL_MULTIPLIER_MIN_PERCENT (the UI bar that showed the handoff was removed).
 export const DATA_LAKE_OVERFLOW_MAX_PERCENT = 50
 export const DATA_LAKE_OVERFLOW_MIN_PERCENT = 0
 

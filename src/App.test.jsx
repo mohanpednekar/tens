@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
 import { ThemeProvider } from 'theme'
-import { applyAutobuyerMilestones, createInitialGameState, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
+import { applyAutobuyerMilestones, createInitialGameState, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, formatOfflineDuration, getIntroProductionRate, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
@@ -5152,7 +5152,7 @@ test('completing the Byte Foundry again after a Prestige navigates forward into 
 
   // A few ticks, not just one: the Data Stream Buffer starts one bit shy of full, and the
   // fill-based Speed multiplier (see FILL_MULTIPLIER_* in game/layers) tapers production down
-  // toward FILL_MULTIPLIER_MIN_PERCENT (50%) as it approaches capacity, so closing that last bit
+  // toward FILL_MULTIPLIER_MIN_PERCENT (10%) as it approaches capacity, so closing that last bit
   // now takes a couple of ticks rather than exactly one.
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS * 5) })
 
@@ -5730,6 +5730,11 @@ test('a running Capacity upgrade shows percent on the first line, from → to ca
   // The draw rate (base Speed × the bar's fill multiplier) shows at the right, like the other speed readouts.
   expect(running).toHaveTextContent(/⚡ [\d.]+ \w+\/s/)
   expect(running.querySelector('[title^="Upgrade draw at 1000%"]')).not.toBeNull()
+  // Empty-bar ETA uses the geometric 10×→0.1× integral, not the old linear ln((1.5−fill)/0.5).
+  const emptyBarSeconds = getBufferSecondsToFull(0, 1000, getIntroProductionRate({ capacity: 1000, byteCreated: true }))
+  const expectedTimeText = formatOfflineDuration(Math.max(1, Math.ceil(emptyBarSeconds)))
+  expect(running).toHaveTextContent(`⏳ ${expectedTimeText}`)
+  expect(emptyBarSeconds).not.toBeCloseTo((1000 / getIntroProductionRate({ capacity: 1000, byteCreated: true })) * Math.log(1.5 / 0.5), 1)
 
   unmount()
   vi.useRealTimers()
@@ -5741,6 +5746,12 @@ describe('getBufferSecondsToFull (tile time-to-full)', () => {
     expect(getBufferSecondsToFull(0, 1000, 10)).toBeCloseTo(expected(0))
     expect(getBufferSecondsToFull(500, 1000, 10)).toBeCloseTo(expected(0.5))
     expect(getBufferSecondsToFull(900, 1000, 10)).toBeCloseTo(expected(0.9))
+  })
+
+  it('is not the old linear 150% → 50% integral', () => {
+    const geometric = getBufferSecondsToFull(0, 1000, 10)
+    const oldLinear = 100 * Math.log(1.5 / 0.5)
+    expect(geometric).not.toBeCloseTo(oldLinear, 1)
   })
 
   it('is null when full, over-full, or not filling', () => {

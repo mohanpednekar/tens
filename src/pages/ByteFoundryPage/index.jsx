@@ -869,15 +869,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const speedUpgradeProgress = clampPercent(((intro.speedUpgradeProgress ?? 0) / speedUpgradeCost) * 100)
   const runningProgress = speedUpgradeQueued ? speedUpgradeProgress : capacityUpgradeProgress
   // The bar draws at base Speed × its own fill multiplier (getRunningUpgradeDraw), so the time left
-  // is the integral of that curve: (cost / rate) × ln((1.5 - fill) / 0.5) for fill = progress / cost.
+  // is the same geometric integral getBufferSecondsToFull uses for the tile "time to full".
   const runningDraw = getRunningUpgradeDraw(intro)
   const runningCost = runningDraw?.cost ?? 0
   const runningDone = runningDraw?.progress ?? 0
-  const runningFill = runningCost > 0 ? Math.min(1, runningDone / runningCost) : 1
   const runningMultiplierPercent = runningDraw?.multiplierPercent ?? 100
   const runningRateText = formatStreamRate(runningDraw?.rate ?? 0)
   const runningTimeLeftText = formatUpgradeTimeLeft(productionRate > 0 && runningCost > 0
-    ? (runningCost / productionRate) * Math.log((1.5 - runningFill) / 0.5)
+    ? getBufferSecondsToFull(runningDone, runningCost, productionRate)
     : Infinity)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
 
