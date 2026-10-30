@@ -2385,10 +2385,10 @@ export const getDataStreamBaseMultiplierPercent = intro =>
 // The Data Stream's currently active multiplier percent — fill-based value plus any live decaying
 // tap bonus (see tapIntroBit/tickFillMultiplierDecay). What ByteFoundryPage displays alongside the
 // Speed figure, and what getDataStreamEffectMultiplier below turns into the real production scale.
-// Combined fill-based + live tap bonus, hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (1100) — the
+// Fill-based value × (1 + live tap bonus %), hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000) — the
 // cap applies to this CUMULATIVE total, not to dataStreamTapBonusPercent alone (see layers.js).
 export const getDataStreamMultiplierPercent = intro =>
-  Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getDataStreamBaseMultiplierPercent(intro) + (intro.dataStreamTapBonusPercent ?? 0))
+  Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getDataStreamBaseMultiplierPercent(intro) * (1 + (intro.dataStreamTapBonusPercent ?? 0) / 100))
 
 export const getDataStreamEffectMultiplier = intro => getDataStreamMultiplierPercent(intro) / 100
 
@@ -2785,10 +2785,10 @@ export const getPoolTapBonusPercent = (state, poolIndex) =>
 // bonus (see tapPoolBuffer/tickFillMultiplierDecay below). What ByteFoundryPage displays alongside
 // that pool's Bandwidth figure, and what getPoolEffectMultiplier below turns into the real
 // buffer-fill scale (see tickPoolBufferFill).
-// Combined fill-based + live tap bonus, hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (1100) — same
+// Fill-based value × (1 + live tap bonus %), hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000) — same
 // "cumulative total, not the bonus alone" cap the Data Stream's own getDataStreamMultiplierPercent uses.
 export const getPoolMultiplierPercent = (state, poolIndex) =>
-  Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getPoolBaseMultiplierPercent(state, poolIndex) + getPoolTapBonusPercent(state, poolIndex))
+  Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getPoolBaseMultiplierPercent(state, poolIndex) * (1 + getPoolTapBonusPercent(state, poolIndex) / 100))
 
 // The boost's pool bonus (getComputeBoostPoolMultiplier) scales the real buffer fill on top of the
 // capped fill-based percent; the displayed percent/Bandwidth stay unboosted.

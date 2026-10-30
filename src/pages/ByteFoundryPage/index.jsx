@@ -987,7 +987,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   )
 
   const formatMultiplierValue = (totalPercent, basePercent, tapPercent) =>
-    basePercent + tapPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT
+    basePercent * (1 + tapPercent / 100) >= FILL_MULTIPLIER_TAP_CAP_PERCENT
       ? `${Math.round(totalPercent)}% (capped)`
       : `${Math.round(totalPercent)}%`
   // Drop an open key whose speed button has gone (an upgrade finished, a pool hidden by a reset), so

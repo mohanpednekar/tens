@@ -827,6 +827,11 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(getDataStreamEffectMultiplier(intro)).toBeCloseTo(1.05)
     })
 
+    it('applies the tap bonus multiplicatively: base × (1 + bonus%)', () => {
+      const intro = { bits: 0, capacity: 100, dataStreamTapBonusPercent: 50 }
+      expect(getDataStreamMultiplierPercent(intro)).toBe(FILL_MULTIPLIER_MAX_PERCENT * 1.5)
+    })
+
     it('caps the combined total at FILL_MULTIPLIER_TAP_CAP_PERCENT, not the tap bonus alone', () => {
       const intro = { bits: 0, capacity: 100, dataStreamTapBonusPercent: 1_000 }
       expect(getDataStreamBaseMultiplierPercent(intro)).toBe(FILL_MULTIPLIER_MAX_PERCENT)
@@ -945,7 +950,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       })
       const after = tickFillMultiplierDecay(0)(state)
       expect(after.intro.dataStreamTapBonusPercent).toBe(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT)
-      // base 1000 (empty buffer) + bonus 100 = 1100 → combined cap 1100.
+      // base 1000 (empty buffer) × (1 + 100%) = 2000 → combined cap 2000.
       expect(getDataStreamMultiplierPercent(after.intro)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
     })
 

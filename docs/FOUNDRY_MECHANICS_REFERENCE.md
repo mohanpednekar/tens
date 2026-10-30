@@ -122,7 +122,7 @@ each cycle. Nothing here ever fully freezes — every action stays live indefini
 `getDataStreamEffectMultiplier`/`getPoolEffectMultiplier`/`tickFillMultiplierDecay`/`tapPoolBuffer` in
 `engine.js`) — the displayed Speed/Bandwidth never change; a separate fill-dependent multiplier (1000%
 empty → 100% at 50% full → 10% at full buffer, log-linear) scales only the real per-tick amount delivered into the
-buffer, boosted temporarily by tapping (+5%, decaying 1%/sec, hard-capped at 1100% total).
+buffer, boosted temporarily by tapping (+5%, decaying 1%/sec, multiplicative, ×(1 + bonus%), hard-capped at 2000% total).
 `ByteFoundryPage` no longer draws a multiplier bar: the Data Stream's Speed and each pool's Bandwidth
 show the EFFECTIVE value (base × multiplier, 3 significant digits, `formatSpeedText`), tinted
 red (10%) → blue (100%) → green (1000%) by `getSpeedColor`; each tile also gets a `CapacityBonusRow` (📦 Capacity under the name, a narrow tap-bonus bar, and "+x% 👆" under the speed — or, while no bonus is active, "⏳ time to full" (`getBufferSecondsToFull`: (capacity/rate)·ln((1.5−fill)/0.5), the integral of the fill-multiplier curve, assuming nothing else draws from the buffer) — or, while no bonus is active, "⏳ time to full" (`getBufferSecondsToFull`: (capacity/rate)·ln((1.5−fill)/0.5), the integral of the fill-multiplier curve, assuming no other draw); bar and bonus text auto-hide at 0).

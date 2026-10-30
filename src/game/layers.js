@@ -212,7 +212,7 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // at 50% full and FILL_MULTIPLIER_MIN_PERCENT once completely full (getFillMultiplierPercent). A manual tap on the
 // Data Stream (once Storage pools are revealed at 1 KiB — see getVisibleStoragePoolCount/
 // tapIntroBit) or on a specific pool's own Memory tile (tapPoolBuffer) adds
-// FILL_MULTIPLIER_TAP_BONUS_PERCENT on top of that fill-based value for that one Data Stream/pool
+// FILL_MULTIPLIER_TAP_BONUS_PERCENT as a multiplier (×(1 + bonus%)) on that fill-based value for that one Data Stream/pool
 // only, decaying back down at FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND per second
 // (tickFillMultiplierDecay) until only the fill-based value remains — never below it. Before
 // Storage pools are revealed, tapping the Data Stream keeps its original flat "one second's worth
@@ -225,10 +225,11 @@ export const FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND = 1
 // dataStreamTapBonusPercent/poolTapBonusPercents in engine.js and the dedicated bonus bar on
 // ByteFoundryPage). Clamped to 0..this; a tap at the cap is a no-op.
 export const FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT = 100
-// Hard ceiling on the CUMULATIVE effect (fill-based value + live tap bonus combined), not on the
+// Hard ceiling on the CUMULATIVE effect (fill-based value × (1 + live tap bonus %), i.e. the tap bonus
+// is MULTIPLICATIVE: +5% tap = ×1.05, +100% = ×2), not on the
 // tap bonus alone — see getDataStreamMultiplierPercent/getPoolMultiplierPercent in engine.js, which
 // clamp their combined total to this.
-export const FILL_MULTIPLIER_TAP_CAP_PERCENT = 1100
+export const FILL_MULTIPLIER_TAP_CAP_PERCENT = 2000
 
 // --- Byte Foundry Storage (Disks) --- see provisionDisk/tickProvisionDisk/tickDiskAutoFill/
 // tickDiskPull/getDiskSize in engine.js and intro.disks/disksBuiltTotal/diskCache/diskBuild/

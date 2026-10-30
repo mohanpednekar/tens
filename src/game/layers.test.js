@@ -301,8 +301,8 @@ describe('constants', () => {
     expect(FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND).toBe(1)
   })
 
-  it('FILL_MULTIPLIER_TAP_CAP_PERCENT is 1100 (the cumulative fill + tap-bonus ceiling)', () => {
-    expect(FILL_MULTIPLIER_TAP_CAP_PERCENT).toBe(1100)
+  it('FILL_MULTIPLIER_TAP_CAP_PERCENT is 2000 (the cumulative fill + tap-bonus ceiling)', () => {
+    expect(FILL_MULTIPLIER_TAP_CAP_PERCENT).toBe(2000)
   })
 
   it('getStoragePoolMemoryBounds delimits pool Memory Capacity start/end on the shared SI-aligned ladder', () => {
