@@ -2374,6 +2374,36 @@ export const getFillMultiplierPercent = fillFraction => {
   return 10 ** (maxLog - clampedFraction * (maxLog - minLog))
 }
 
+// Natural-log form of the same curve: m(f) = e^(a − b·f) with a = ln(MAX/100), b = ln(MAX/MIN).
+// Instantaneous Euler (rate × m(start) × dt) overstates a 1s offline tick vs live 0.1s ticks once
+// MAX/MIN is this steep; these two invert each other so production, upgrade drains, pool fill, and
+// the on-screen ETA all follow the continuous ODE. ByteFoundryPage's getBufferSecondsToFull is the
+// start→cap special case of getFillCurveSeconds.
+const FILL_CURVE_LN_A = Math.log(FILL_MULTIPLIER_MAX_PERCENT / 100)
+const FILL_CURVE_LN_B = Math.log(FILL_MULTIPLIER_MAX_PERCENT / FILL_MULTIPLIER_MIN_PERCENT)
+
+export const getFillCurveSeconds = (startAmount, endAmount, capAmount, unmultipliedRate) => {
+  if (!(capAmount > 0) || !(unmultipliedRate > 0)) return null
+  const start = Math.max(0, startAmount)
+  const end = Math.min(capAmount, endAmount)
+  if (end <= start) return null
+  const fill0 = start / capAmount
+  const fill1 = end / capAmount
+  return (capAmount / unmultipliedRate) * Math.exp(-FILL_CURVE_LN_A)
+    * (Math.exp(FILL_CURVE_LN_B * fill1) - Math.exp(FILL_CURVE_LN_B * fill0)) / FILL_CURVE_LN_B
+}
+
+export const getFillCurveDelta = (startAmount, capAmount, unmultipliedRate, elapsedSeconds) => {
+  if (!(capAmount > 0) || !(unmultipliedRate > 0) || !(elapsedSeconds > 0)) return 0
+  const start = Math.max(0, startAmount)
+  if (start >= capAmount) return 0
+  const fill0 = start / capAmount
+  const inside = Math.exp(FILL_CURVE_LN_B * fill0)
+    + (FILL_CURVE_LN_B * unmultipliedRate / capAmount) * Math.exp(FILL_CURVE_LN_A) * elapsedSeconds
+  const next = capAmount / FILL_CURVE_LN_B * Math.log(inside)
+  return Math.min(capAmount, next) - start
+}
+
 // The Data Stream Buffer's own fill fraction (0..1) — intro.bits over intro.capacity.
 export const getDataStreamFillFraction = intro =>
   intro.capacity > 0 ? Math.min(1, intro.bits / intro.capacity) : 0
@@ -2921,8 +2951,10 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     if (fillRate <= 0 || bits <= 0) continue
 
     const current = poolBuffers[poolIndex] ?? 0
-    const room = Math.max(0, getPoolBufferCapacity(state, poolIndex) - current)
-    const multiplier = getPoolEffectMultiplier(state, poolIndex)
+    const bufferCap = getPoolBufferCapacity(state, poolIndex)
+    const room = Math.max(0, bufferCap - current)
+    const tapK = 1 + getPoolTapBonusPercent(state, poolIndex) / 100
+    const unmultipliedRate = fillRate * tapK * getComputeBoostPoolMultiplier(state.intro, poolIndex)
 
     // How much of this tick's own elapsedSeconds interval is left over for lake overflow, once
     // the buffer-fill above has taken whatever it needed — 0 unless the buffer is (or just
@@ -2937,7 +2969,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     // docs/DESIGN_HISTORY.md.
     let overflowSeconds = elapsedSeconds
     if (room > 0) {
-      const rawTransfer = fillRate * elapsedSeconds * multiplier
+      const rawTransfer = getFillCurveDelta(current, bufferCap, unmultipliedRate, elapsedSeconds)
       const transfer = Math.min(rawTransfer, room, bits)
       if (transfer > 0) {
         bits -= transfer
@@ -2947,12 +2979,10 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
       // The buffer didn't actually reach full capacity this tick (either `rawTransfer` itself
       // fell short of `room`, or `bits` ran out first) — nothing left to overflow either way.
       if (transfer < room || bits <= 0) continue
-      // Convert how much of the (multiplier-scaled) buffer-fill this tick's own reserved rate
-      // already spent back into a plain elapsedSeconds fraction, so the overflow formula below —
-      // deliberately UNmultiplied, see this function's own doc comment above — applies to the
-      // genuinely-leftover portion of the interval exactly as it would to any other
-      // already-full-buffer tick.
-      const usedSeconds = multiplier > 0 ? transfer / (fillRate * multiplier) : elapsedSeconds
+      // Time along the fill curve to actually fill the remaining room, so the overflow formula
+      // below — deliberately UNmultiplied, see this function's own doc comment above — applies to
+      // the genuinely-leftover portion of the interval.
+      const usedSeconds = getFillCurveSeconds(current, bufferCap, bufferCap, unmultipliedRate) ?? elapsedSeconds
       overflowSeconds = Math.max(0, elapsedSeconds - usedSeconds)
     }
     if (overflowSeconds <= 0) continue
@@ -3441,7 +3471,11 @@ export const tickSpeedUpgradeDrain = elapsedSeconds => state => {
   const stored = state.intro.speedUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
   const cost = getSpeedUpgradeCostBits(state.intro)
-  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds * getFillMultiplierPercent(cost > 0 ? progress / cost : 1) / 100, cost - progress)
+  const pull = Math.min(
+    state.intro.bits,
+    getFillCurveDelta(progress, cost, getIntroProductionRate(state.intro), elapsedSeconds),
+    cost - progress,
+  )
   const intro = { ...state.intro, bits: state.intro.bits - pull, speedUpgradeProgress: progress + pull }
   if (intro.speedUpgradeProgress >= cost) {
     return { ...state, intro: { ...intro, speedCapacity: (state.intro.speedCapacity ?? state.intro.capacity) * INTRO_CAPACITY_DOUBLING_STEP, speedUpgradeQueued: false, speedUpgradeProgress: 0 } }
@@ -3466,7 +3500,11 @@ export const tickCapacityUpgradeDrain = elapsedSeconds => state => {
   if (isMemoryCapacityAtCap(state)) return clearIntroCapacityUpgradeQueue(state)
   const stored = state.intro.capacityUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
-  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds * getFillMultiplierPercent(state.intro.capacity > 0 ? progress / state.intro.capacity : 1) / 100, state.intro.capacity - progress)
+  const pull = Math.min(
+    state.intro.bits,
+    getFillCurveDelta(progress, state.intro.capacity, getIntroProductionRate(state.intro), elapsedSeconds),
+    state.intro.capacity - progress,
+  )
   const next = {
     ...state,
     intro: { ...state.intro, bits: state.intro.bits - pull, capacityUpgradeProgress: progress + pull },
@@ -3758,11 +3796,13 @@ export const tickIntroProduction = elapsedSeconds => state => {
   if (!state.intro.byteCreated) return state
 
   // Continuous delivery at the capacity-derived rate (see getIntroProductionRate) — no batching.
-  // getDataStreamEffectMultiplier applies the fill-based multiplier (see FILL_MULTIPLIER_* in
-  // layers.js) to this real per-tick delivery only — getIntroProductionRate's own displayed rate
-  // never includes it. Evaluated against the Buffer's fill level BEFORE this batch is added, same
-  // "read state, then derive the delta" order every other multiplier factor here already follows.
-  const bitsToAdd = getDataStreamDeliveredRate(state.intro) * elapsedSeconds
+  // Integrates the log-linear fill curve (getFillCurveDelta) so a 1s offline tick matches ten
+  // live 0.1s ticks; tap bonus and Compute Boost are constant over the tick (decay already ran)
+  // and scale the unmultiplied rate. getDataStreamDeliveredRate remains the instantaneous reading
+  // ByteFoundryPage displays.
+  const tapK = 1 + (state.intro.dataStreamTapBonusPercent ?? 0) / 100
+  const unmultipliedRate = getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro) * tapK
+  const bitsToAdd = getFillCurveDelta(state.intro.bits, state.intro.capacity, unmultipliedRate, elapsedSeconds)
 
   if (bitsToAdd <= 0) return state
 

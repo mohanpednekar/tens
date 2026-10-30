@@ -11,6 +11,12 @@ log interpolation; the running Upgrade Capacity/Speed ETA must use that same int
 kept the old `ln((1.5 − fill) / 0.5)` closed form, which would have understated an empty bar by
 about 2×).
 
+Sampling the empty-buffer 10× once and applying it for a whole `elapsedSeconds` (the old Euler
+snapshot) was close enough on the 150%→50% curve even at `applyOfflineProgress`'s 1s ticks. At
+10× it finishes a 256-bit Capacity upgrade in one offline second vs ~12 live seconds. Production,
+upgrade drains, and pool fill now integrate the same closed form as `getBufferSecondsToFull`
+(`getFillCurveDelta` / `getFillCurveSeconds`).
+
 The tap bonus stayed a stored 0–100 percentage-point value (+5 per tap, −1/s) but is now applied as
 `base × (1 + bonus%)` rather than `base + bonus`. Additive +5 on a 1000% empty reading was a 0.5%
 relative bump; multiplicative ×1.05 is an actual 5%. The combined cap moved with the range, 200 →
