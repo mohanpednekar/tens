@@ -406,7 +406,8 @@ export const COMPUTE_MERGE_RATIO = 8
 // batch from 10 back up toward 18. Before a boundary's auto-merge is unlocked, merging that tier is
 // still the old-style instant, untimed action (see mergeComputeCoresIntoNode/
 // mergeComputeNodesIntoCluster/… — each becomes a same-reference no-op once its own auto-merge flag
-// flips true, since merging fully transitions to the timed reserve system from then on). An earlier
+// flips true, since merging then moves to the reserve system: the automatic merge is timed, a manual
+// tap on the auto-merge slots stays instant). An earlier
 // version filled the reserve in one atomic, all-8-at-once instant pull rather than gradually via
 // continued purchases — reversed; see docs/DESIGN_HISTORY.md.
 export const COMPUTE_MERGE_RESERVE_CAP = 8
@@ -448,10 +449,13 @@ export const COMPUTE_MERGE_BOUNDARIES = [
 // by design (190 / 240 / 600 at tier 1) — the earlier 32×/60s, 8×/600s, 2×/3600s values violated
 // this (70 for Standard vs. only 60 for Sustain, i.e. Sustain gave LESS extra output than
 // Standard despite its longer commitment); see docs/DESIGN_HISTORY.md.
+// `poolBonusPercent` is the preset's separate, smaller bonus to the pool buffer-fill speed of the
+// pools it covers (pool N ↔ Factory tier N; see getComputeBoostPoolMultiplier in engine.js): +200% /
+// +50% / +10%, i.e. ×3 / ×1.5 / ×1.1, instead of the production multiplier above.
 export const COMPUTE_BOOST_PRESETS = {
-  burst: { multiplier: 20, durationSeconds: 600 },
-  standard: { multiplier: 5, durationSeconds: 3600 },
-  sustain: { multiplier: 2, durationSeconds: 36000 },
+  burst: { multiplier: 20, durationSeconds: 600, poolBonusPercent: 200 },
+  standard: { multiplier: 5, durationSeconds: 3600, poolBonusPercent: 50 },
+  sustain: { multiplier: 2, durationSeconds: 36000, poolBonusPercent: 10 },
 }
 // A boost's multiplier and duration are the preset's own values whichever compute-ladder tier funds
 // it; the funding tier's index instead sets how many Factory tiers it applies to (engine.js's

@@ -116,6 +116,7 @@ import {
   getAutomationUnlockCost,
   buyAutoOverclock,
   getComputeBoostCoveredTierCount,
+  getComputeBoostPoolMultiplier,
   getComputeBoostMultiplier,
   getComputeBoostTierDurationSeconds,
   getComputeBoostTierMultiplier,
@@ -132,7 +133,10 @@ import {
   getStoragePoolCount,
   getNextSiDoubledValue,
   getStoragePoolBandwidth,
+  getUnusedComputeBoostStacks,
   getPoolAvailableFillRate,
+  getDataStreamDeliveredRate,
+  getRunningUpgradeDraw,
   getStoragePoolCapacity,
   getUnlockedStoragePoolCount,
   getVisibleStoragePoolCount,
@@ -992,6 +996,36 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(after.intro.poolBuffers[1]).toBeGreaterThan(rawRate)
       expect(after.intro.poolBuffers[1]).toBeCloseTo(rawRate * 1.5)
     })
+  })
+})
+
+describe('getDataStreamDeliveredRate', () => {
+  it('is base Speed × Compute Boost × fill multiplier — exactly what tickIntroProduction adds per second', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true, bits: 0, capacity: 1000,
+      computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 600,
+    })
+    expect(getComputeBoostMultiplier(state.intro)).toBeGreaterThan(1)
+    const delivered = getDataStreamDeliveredRate(state.intro)
+    expect(delivered).toBeCloseTo(getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro) * 1.5)
+    expect(tickIntroProduction(1)(state).intro.bits).toBeCloseTo(Math.min(1000, delivered))
+  })
+})
+
+describe('getRunningUpgradeDraw', () => {
+  it('is null while no upgrade runs', () => {
+    expect(getRunningUpgradeDraw(withIntro(createInitialGameState(), { byteCreated: true }).intro)).toBeNull()
+  })
+
+  it('matches what tickCapacityUpgradeDrain pulls in a second from a banked Buffer', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true, bits: 1_000_000, capacity: 32_000_000, capacityUpgradeQueued: true, capacityUpgradeProgress: 16_000_000,
+    })
+    const draw = getRunningUpgradeDraw(state.intro)
+    expect(draw).toMatchObject({ kind: 'capacity', cost: 32_000_000, progress: 16_000_000, multiplierPercent: 100 })
+    expect(draw.rate).toBeCloseTo(getIntroProductionRate(state.intro))
+    const after = tickCapacityUpgradeDrain(1)(state)
+    expect(after.intro.capacityUpgradeProgress - 16_000_000).toBeCloseTo(draw.rate)
   })
 })
 
@@ -4916,7 +4950,7 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(reclaimComputeBoost(state).intro.computeCores).toBe(COMPUTE_ENTITY_CAP + 6)
   })
 
-  it('refund never exceeds COMPUTE_ENTITY_CAP even if more tokens were earned while the boost was running', () => {
+  it('refund is never lost into a full tier — it may exceed COMPUTE_ENTITY_CAP', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: COMPUTE_ENTITY_CAP,
       computeBoostType: 'sustain',
@@ -4925,7 +4959,7 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
       computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds('sustain', 1) * 2,
     })
     const after = reclaimComputeBoost(state)
-    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP)
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP + 1)
   })
 
   it('is blocked once ticking has eaten into pooled time far enough, even with 3 stacks held — stack count alone is never sufficient', () => {
@@ -5019,11 +5053,11 @@ describe.each([
     expect(after.intro[timerField]).toBe(0)
   })
 
-  it('isStartAvailable requires the auto flag unlocked, no merge already in flight, at least COMPUTE_MERGE_RATIO of the input, and room under COMPUTE_ENTITY_CAP on the output', () => {
+  it('isStartAvailable requires the auto flag unlocked, at least COMPUTE_MERGE_RATIO of the input, and room under COMPUTE_ENTITY_CAP on the output — not blocked by an in-flight auto-merge', () => {
     expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true }))).toBe(true)
     expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO }))).toBe(false) // not unlocked
     expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO - 1, [autoFlagField]: true }))).toBe(false) // below threshold
-    expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [timerField]: durationOf() }))).toBe(false) // already in flight
+    expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [timerField]: durationOf() }))).toBe(true) // auto-merge in flight
     expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [outputField]: COMPUTE_ENTITY_CAP }))).toBe(false) // output capped
   })
 
@@ -5032,12 +5066,12 @@ describe.each([
     expect(start(state)).toBe(state)
   })
 
-  it('start (manual click) fires at the lower COMPUTE_MERGE_RATIO (8) threshold — "the button is enabled only when there are at least 8 tokens available"', () => {
+  it('start (manual click) instantly merges 8 → 1 at the COMPUTE_MERGE_RATIO threshold, with no timer', () => {
     const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true })
     const after = start(state)
     expect(after.intro[inputField]).toBe(0)
-    expect(after.intro[timerField]).toBe(durationOf())
-    expect(after.intro[outputField]).toBe(0)
+    expect(after.intro[timerField] ?? 0).toBe(0)
+    expect(after.intro[outputField]).toBe(1)
   })
 
   it('isUnlockAvailable requires COMPUTE_ENTITY_CAP of the OUTPUT entity held and not already enabled', () => {
@@ -5178,11 +5212,11 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(getComputeMergeDurationSeconds(state, lastBoundary)).toBe(0)
   })
 
-  it('refuses to start a merge while the input tier\'s pool has no Bandwidth', () => {
+  it('a manual (instant) merge does not depend on the input tier\'s pool Bandwidth', () => {
     const state = poolVisible({ autoMergeNodesIntoCluster: true, computeNodes: COMPUTE_MERGE_RATIO })
     expect(getComputeMergeDurationSeconds(state, 1)).toBe(0)
-    expect(isComputeNodesMergeStartAvailable(state)).toBe(false)
-    expect(startComputeNodesMerge(state)).toBe(state)
+    expect(isComputeNodesMergeStartAvailable(state)).toBe(true)
+    expect(startComputeNodesMerge(state).intro.computeClusters).toBe(1)
   })
 
   it('an in-flight timer is clamped down to the live duration on tick (legacy/Bandwidth growth), never lengthened', () => {
@@ -5196,11 +5230,19 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(tickAutoMergeNodesIntoCluster(1)(hidden).intro.computeNodesMergeRemainingSeconds).toBe(5e6 - 1)
   })
 
-  it('a newly started Core→Node merge snapshots the live duration', () => {
-    const state = poolVisible({ autoMergeCoresIntoNode: true, computeCores: COMPUTE_MERGE_RATIO })
+  it('a manual merge is refused when it would fill the cap an in-flight auto-merge still owes a unit to', () => {
+    const state = poolVisible({ autoMergeCoresIntoNode: true, computeCores: COMPUTE_ENTITY_CAP, computeNodes: COMPUTE_ENTITY_CAP - 1, computeCoresMergeRemainingSeconds: 5 })
+    expect(isComputeCoresMergeStartAvailable(state)).toBe(false)
+    expect(startComputeCoresMerge(state)).toBe(state)
+    // Same output count with no merge in flight: the instant merge is allowed.
+    expect(isComputeCoresMergeStartAvailable(withIntro(state, { computeCoresMergeRemainingSeconds: 0 }))).toBe(true)
+  })
+
+  it('a manual Core→Node merge leaves an in-flight auto-merge timer untouched', () => {
+    const state = poolVisible({ autoMergeCoresIntoNode: true, computeCores: COMPUTE_MERGE_RATIO, computeCoresMergeRemainingSeconds: 42 })
     const after = startComputeCoresMerge(state)
-    expect(after.intro.computeCoresMergeRemainingSeconds).toBe(getComputeMergeDurationSeconds(state, 0))
-    expect(after.intro.computeCoresMergeRemainingSeconds).toBeGreaterThan(0)
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBe(42)
+    expect(after.intro.computeNodes).toBe(1)
   })
 
   it('manual merge fills the output tier\'s reserve once its own auto-merge is unlocked (#740)', () => {
@@ -5214,7 +5256,7 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(mergeComputeCoresIntoNode(full)).toBe(full)
   })
 
-  it('reserve merge starts into, and completes into, the output tier\'s reserve (#740)', () => {
+  it('an instant manual merge on an automated boundary fills the output tier\'s reserve (#740)', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       byteCreated: true,
@@ -5224,11 +5266,9 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
       computeNodes: COMPUTE_ENTITY_CAP,
     })
     expect(isComputeCoresMergeStartAvailable(state)).toBe(true)
-    const started = startComputeCoresMerge(state)
-    expect(started).not.toBe(state)
-    const remaining = started.intro.computeCoresMergeRemainingSeconds
-    const done = tickAutoMergeCoresIntoNode(remaining)(started)
-    expect(done.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP + 1)
+    const merged = startComputeCoresMerge(state)
+    expect(merged.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP + 1)
+    expect(merged.intro.computeCores).toBe(0)
   })
 
   it('completing a reserve merge never lowers an output that grew past its cap mid-merge (#740)', () => {
@@ -5239,14 +5279,14 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(tickAutoMergeCoresIntoNode(1)(state).intro.computeNodes).toBe(COMPUTE_ENTITY_CAP + 5)
   })
 
-  it('manual reserve start is unavailable while the live merge duration is 0 (#740)', () => {
+  it('manual instant merge stays available while the live auto-merge duration is 0', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: 0,
       autoMergeCoresIntoNode: true,
       computeCores: COMPUTE_MERGE_RATIO,
     })
-    expect(isComputeCoresMergeStartAvailable(state)).toBe(false)
-    expect(startComputeCoresMerge(state)).toBe(state)
+    expect(isComputeCoresMergeStartAvailable(state)).toBe(true)
+    expect(startComputeCoresMerge(state).intro.computeNodes).toBe(1)
   })
 
 })
@@ -5496,6 +5536,24 @@ describe('getComputeBoostTierMultiplier / getComputeBoostTierDurationSeconds', (
   })
 })
 
+describe('getComputeBoostPoolMultiplier', () => {
+  it('gives covered pools +200% / +50% / +10% (not the production multiplier) and others ×1', () => {
+    expect(getComputeBoostPoolMultiplier({ computeBoostType: 'burst', computeBoostTierIndex: 2 }, 1)).toBe(3)
+    expect(getComputeBoostPoolMultiplier({ computeBoostType: 'burst', computeBoostTierIndex: 2 }, 2)).toBe(3)
+    expect(getComputeBoostPoolMultiplier({ computeBoostType: 'burst', computeBoostTierIndex: 2 }, 3)).toBe(1)
+    expect(getComputeBoostPoolMultiplier({ computeBoostType: 'standard', computeBoostTierIndex: 1 }, 1)).toBeCloseTo(1.5)
+    expect(getComputeBoostPoolMultiplier({ computeBoostType: 'sustain', computeBoostTierIndex: 1 }, 1)).toBeCloseTo(1.1)
+    expect(getComputeBoostPoolMultiplier({ computeBoostType: null }, 1)).toBe(1)
+  })
+
+  it('scales a covered pool\'s real buffer-fill multiplier but not an uncovered one\'s', () => {
+    const base = createInitialGameState()
+    const boosted = { ...base, intro: { ...base.intro, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 60 } }
+    expect(getPoolEffectMultiplier(boosted, 1)).toBeCloseTo(getPoolEffectMultiplier(base, 1) * 3)
+    expect(getPoolEffectMultiplier(boosted, 2)).toBeCloseTo(getPoolEffectMultiplier(base, 2))
+  })
+})
+
 describe('getComputeBoostCoveredTierCount', () => {
   it('is 0 with no boost active', () => {
     expect(getComputeBoostCoveredTierCount(createInitialGameState().intro)).toBe(0)
@@ -5552,10 +5610,12 @@ describe('canActivateComputeBoost', () => {
     expect(canActivateComputeBoost(state, 'burst', 1, true)).toBe(false) // same type+tier still blocked
   })
 
-  it('forfeit-replace of a different boost is blocked while more than 1 stack is held, even with forfeitConfirmed — Reclaim down to the last stack first (Devin Review finding)', () => {
-    const state = withIntro(createInitialGameState(), { computeCores: 5, computeNodes: 5, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2 })
-    expect(canActivateComputeBoost(state, 'standard', 1, true)).toBe(false)
-    expect(canActivateComputeBoost(state, 'burst', 2, true)).toBe(false)
+  it('forfeit-replace of a different boost is allowed at any stack count with forfeitConfirmed, funded after refunding unused stacks', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
+    const state = withIntro(createInitialGameState(), { computeCores: 0, computeNodes: 5, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: D * 1.5 })
+    expect(canActivateComputeBoost(state, 'standard', 1, true)).toBe(true) // the refunded Core funds it
+    expect(canActivateComputeBoost(state, 'burst', 2, true)).toBe(true)
+    expect(canActivateComputeBoost(state, 'standard', 1, false)).toBe(false)
   })
 
   it('is false for an unrecognized preset name', () => {
@@ -5625,15 +5685,47 @@ describe('activateComputeBoost', () => {
     expect(after.intro.computeCores).toBe(4) // spent 1 for the new boost; no refund of the forfeited burst stack
   })
 
-  it('is a same-reference no-op when replacing a different boost with forfeitConfirmed while more than 1 stack is held (Devin Review finding)', () => {
+  it('replacing a multi-stack boost refunds its unused stacks and forfeits only the running one', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
     const state = withIntro(createInitialGameState(), {
       computeCores: 5,
+      computeNodes: 2,
       computeBoostType: 'burst',
       computeBoostTierIndex: 1,
-      computeBoostStacks: 2,
-      computeBoostRemainingSeconds: 90,
+      computeBoostStacks: 3,
+      computeBoostRemainingSeconds: D * 2.5, // running stack half-used, 2 unused
     })
-    expect(activateComputeBoost('standard', 1, true)(state)).toBe(state)
+    expect(getUnusedComputeBoostStacks(state)).toBe(2)
+    const after = activateComputeBoost('standard', 2, true)(state)
+    expect(after.intro.computeCores).toBe(7) // 2 unused Cores refunded
+    expect(after.intro.computeNodes).toBe(1) // 1 Node spent on the new boost
+    expect(after.intro.computeBoostType).toBe('standard')
+    expect(after.intro.computeBoostStacks).toBe(1)
+  })
+
+  it('switching away from a stacked boost refunds unused stacks even into a full funding tier', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
+    const state = withIntro(createInitialGameState(), {
+      computeCores: COMPUTE_ENTITY_CAP,
+      computeNodes: 1,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 3,
+      computeBoostRemainingSeconds: D * 3,
+    })
+    const after = activateComputeBoost('standard', 2, true)(state)
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP + 2)
+    expect(after.intro.computeNodes).toBe(0)
+  })
+
+  it('getUnusedComputeBoostStacks counts only stacks whose whole duration is still ahead', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
+    const at = (stacks, remaining) => getUnusedComputeBoostStacks(withIntro(createInitialGameState(), { computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: stacks, computeBoostRemainingSeconds: remaining }))
+    expect(at(1, D)).toBe(0)
+    expect(at(3, D * 3)).toBe(2)
+    expect(at(3, D * 2)).toBe(1)
+    expect(at(3, D * 0.5)).toBe(0)
+    expect(getUnusedComputeBoostStacks(createInitialGameState())).toBe(0)
   })
 
   it('forfeitComputeBoost clears the active boost with no token refund', () => {
@@ -5657,16 +5749,19 @@ describe('activateComputeBoost', () => {
     expect(forfeitComputeBoost(state)).toBe(state)
   })
 
-  it('forfeitComputeBoost is a same-reference no-op while more than 1 stack is held — a multi-stack boost must be Reclaimed down first (Devin Review finding)', () => {
+  it('forfeitComputeBoost is a same-reference no-op while an unused stack remains (Pop is offered instead)', () => {
+    const D = COMPUTE_BOOST_PRESETS.burst.durationSeconds
     const state = withIntro(createInitialGameState(), {
       computeCores: 3,
       computeBoostType: 'burst',
       computeBoostTierIndex: 1,
       computeBoostStacks: 2,
-      computeBoostRemainingSeconds: 40,
+      computeBoostRemainingSeconds: D + 40,
     })
     expect(canForfeitComputeBoost(state)).toBe(false)
     expect(forfeitComputeBoost(state)).toBe(state)
+    // Once the extra stack's time has started running, nothing is unused → forfeit allowed.
+    expect(canForfeitComputeBoost(withIntro(state, { computeBoostRemainingSeconds: 40 }))).toBe(true)
   })
 
 
@@ -7691,7 +7786,7 @@ describe('tickGame', () => {
   })
 
   it('lets an unlocked autobuyer buy when autobuyersEnabled is missing from state entirely (defaults to active)', () => {
-    const state = omit(withMoney(withAutobuyer(createInitialGameState(), tensTier.id, 1), 1000), 'autobuyersEnabled')
+    const state = omit(withMoney(withAutobuyer(createInitialGameState(), tensTier.id, 1), 10000), 'autobuyersEnabled')
     const after = tickGame(1)(state)
     expect(after.owned[tensTier.id]).toBeGreaterThan(0)
   })
@@ -7856,38 +7951,32 @@ describe('tickGame', () => {
     expect(after.prestige.highestMilestone).toBe(2)
   })
 
-  it('an unlocked-but-not-upgraded autobuyer (level 0) already buys 1 generator per tick', () => {
+  it('an unlocked-but-not-upgraded autobuyer (level 0) already buys 1 full level per tick', () => {
     const state = withAutobuyer(
-      withMoney(createInitialGameState(), 1000),
+      withMoney(createInitialGameState(), 8000),
       tensTier.id,
       0
     )
     const after = tickGame(1)(state)
-    // Level 0 = 1 purchase attempt per tick (the flat baseline rate) — unlocking alone already
-    // enables purchasing, with no tickspeed level needed.
-    expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.purchased[tensTier.id]).toBe(1)
-    // Production depends only on purchased milestones now (see getPurchaseMilestoneMultiplier) —
-    // the tickspeed multiplier at level 0/1 is still ×1, no bonus yet (see
-    // getTickspeedProductionMultiplier): per-unit cost at level 1, blockSize 8, is 1000 —
-    // 1000 - 1000 (cost) = 0, and tensTier's own 1s tickspeed exactly completes one period within
-    // this same 1s tick, so the freshly-bought unit already produces once this tick, landing 1 Byte
-    // plus 1 × BITS_PER_BYTE Bits mirrored for MoneyHero / Prestige.
-    expect(after.resources[MONEY_ID]).toBe(BITS_PER_BYTE)
-    expect(bytesOf(after)).toBe(1)
+    // Level 0 = 1 purchase attempt per tick (the flat baseline rate); each attempt buys one whole
+    // level (8 blocks at 1000 each).
+    expect(after.owned[tensTier.id]).toBe(8)
+    expect(after.purchased[tensTier.id]).toBe(8)
+    expect(after.purchaseLevels[tensTier.id]).toBe(2)
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
   })
 
-  it('the tickspeed multiplier level has no effect on purchase-attempt frequency — every unlocked level buys exactly 1 per tick', () => {
+  it('the tickspeed multiplier level has no effect on purchase-attempt frequency — every unlocked level buys exactly 1 level per tick', () => {
     const runTicks = (level, ticks) => {
-      let result = withAutobuyer(withMoney(createInitialGameState(), 1_000_000), tensTier.id, level)
+      let result = withAutobuyer(withMoney(createInitialGameState(), 1e60), tensTier.id, level)
       for (let i = 0; i < ticks; i++) result = tickGame(1)(result)
       return result
     }
     // Purchase-attempt rate is now flat regardless of tickspeed level — level 1 and level 2 both
-    // fire exactly 1 attempt/tick, 10 purchases over 10 ticks (the level 2+ production bonus is
-    // covered separately, see the production-multiplier tests below).
-    expect(runTicks(1, 10).purchased[tensTier.id]).toBe(10)
-    expect(runTicks(2, 10).purchased[tensTier.id]).toBe(10)
+    // fire exactly 1 attempt/tick, 10 levels (80 blocks) over 10 ticks (the level 2+ production
+    // bonus is covered separately, see the production-multiplier tests below).
+    expect(runTicks(1, 10).purchased[tensTier.id]).toBe(80)
+    expect(runTicks(2, 10).purchased[tensTier.id]).toBe(80)
   })
 
   it('scales the autobuyer attempt budget by elapsedSeconds, so real-world purchase cadence is unaffected by tick granularity', () => {
@@ -7909,18 +7998,33 @@ describe('tickGame', () => {
     expect(after.owned[tensTier.id]).toBe(0)
   })
 
-  it('an autobuyer buys one unit per attempt, ignoring the batch size argument and Buy max', () => {
-    const state = withAutobuyer(withMoney(createInitialGameState(), 9000), tensTier.id)
+  it('an autobuyer buys one full level per attempt, ignoring the batch size argument and Buy max', () => {
+    const state = withAutobuyer(withMoney(createInitialGameState(), 90000), tensTier.id)
     const after = tickGame(1, 10)(state)
-    expect(after.purchased[tensTier.id]).toBe(1)
-    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.purchased[tensTier.id]).toBe(8)
+    expect(after.owned[tensTier.id]).toBe(8)
   })
 
-  it('an autobuyer never stalls on a partly affordable block — it buys the single unit it can afford', () => {
+  it('an autobuyer never buys a partial level from a clean slate when the whole level is unaffordable', () => {
     const state = withAutobuyer(createInitialGameState(), tensTier.id)
-    const after = tickGame(1)(withMoney(state, 1000))
-    expect(after.purchased[tensTier.id]).toBe(1)
-    expect(after.resources[MONEY_ID]).toBe(BITS_PER_BYTE)
+    const after = tickGame(1)(withMoney(state, 7999))
+    expect(after.purchased[tensTier.id]).toBe(0)
+    expect(after.resources[MONEY_ID]).toBe(7999)
+  })
+
+  it('an autobuyer completes a partly bought level when the rest of it is fully affordable', () => {
+    const state = withAutobuyer(withMoney(withPurchaseLevelProgress(createInitialGameState(), tensTier.id, 3), 5000), tensTier.id)
+    const after = tickGame(1)(state)
+    expect(after.purchased[tensTier.id]).toBe(5)
+    expect(after.purchaseLevels[tensTier.id]).toBe(2)
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
+  })
+
+  it('an autobuyer does not buy a partial remainder of a started level when it is not fully affordable', () => {
+    const state = withAutobuyer(withMoney(withPurchaseLevelProgress(createInitialGameState(), tensTier.id, 3), 4999), tensTier.id)
+    const after = tickGame(1)(state)
+    expect(after.purchased[tensTier.id]).toBe(0)
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(3)
   })
 
   it('bulk mode 1 buys 10 full levels in one attempt when affordable', () => {
@@ -7930,40 +8034,40 @@ describe('tickGame', () => {
     expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
   })
 
-  it('bulk mode falls back to a single unit when 10 levels are not affordable', () => {
-    const state = withBulkLevel(withAutobuyer(withMoney(createInitialGameState(), 1000), tensTier.id), tensTier.id, 1)
+  it('bulk mode falls back to a single level when 10 levels are not affordable', () => {
+    const state = withBulkLevel(withAutobuyer(withMoney(createInitialGameState(), 10000), tensTier.id), tensTier.id, 1)
     const after = tickGame(1)(state)
-    expect(after.purchased[tensTier.id]).toBe(1)
-    expect(after.purchaseLevels[tensTier.id]).toBe(1)
+    expect(after.purchased[tensTier.id]).toBe(8)
+    expect(after.purchaseLevels[tensTier.id]).toBe(2)
   })
 
-  it('bulk mode only buys whole levels from a clean slate — partial progress finishes one unit at a time', () => {
+  it('bulk mode only buys whole levels from a clean slate — partial progress completes the rest of the level', () => {
     const state = withBulkLevel(
       withAutobuyer(withMoney(withPurchaseLevelProgress(createInitialGameState(), tensTier.id, 3), 1e60), tensTier.id),
       tensTier.id,
       1,
     )
     const after = tickGame(1)(state)
-    expect(after.purchaseLevelProgress[tensTier.id]).toBe(4)
-    expect(after.purchaseLevels[tensTier.id]).toBe(1)
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
+    expect(after.purchaseLevels[tensTier.id]).toBe(2)
   })
 
   it('when multiple autobuyers compete for the same money, the higher tier is bought first', () => {
-    // $1,000,000 affords exactly 1 Megabyte (per-unit cost $1,000,000), leaving nothing for a
-    // Kilobyte purchase ($1,000 per unit).
+    // $8,000,000 affords exactly 1 Megabyte level (8 × $1,000,000), leaving nothing for a
+    // Kilobyte purchase.
     const state = withAutobuyer(
       withAutobuyer(
         withMoney(
           // Predecessor needs 2 completed levels (purchaseLevels 3) for the recorded tier to re-reveal.
       withEverUnlockedTierIds(withPurchaseLevel(withOwned(createInitialGameState(), tensTier.id, 16), tensTier.id, 3), thousandsTier.id, true),
-          1_000_000
+          8_000_000
         ),
         tensTier.id
       ),
       thousandsTier.id
     )
     const after = tickGame(2)(state)
-    expect(after.purchased[thousandsTier.id]).toBe(1)
+    expect(after.purchased[thousandsTier.id]).toBe(8)
     expect(after.purchased[tensTier.id]).toBe(0)
   })
 
@@ -8317,13 +8421,13 @@ describe('tickGame', () => {
     )
     const resumed = setAutobuyerEnabled(tensTier.id, true)(paused)
     const after = tickGame(1)(resumed)
-    expect(after.owned[tensTier.id]).toBe(1)
+    expect(after.owned[tensTier.id]).toBe(8)
   })
 
   it('pausing one tier\'s autobuyer does not affect a different tier\'s autobuyer', () => {
     const state = withAutobuyerEnabled(
       withAutobuyer(
-        withAutobuyer(withMoney(withOwned(createInitialGameState(), thousandsTier.id, 1), 2_000_000), tensTier.id),
+        withAutobuyer(withMoney(withOwned(createInitialGameState(), thousandsTier.id, 1), 20_000_000), tensTier.id),
         thousandsTier.id
       ),
       tensTier.id,
@@ -8487,12 +8591,15 @@ describe('applyOfflineProgress', () => {
   })
 
   it('runs an active autobuyer across each simulated second, not just once', () => {
-    const state = withAutobuyer(withMoney(createInitialGameState(), 1000000), tensTier.id, 2)
+    const state = withAutobuyer(withMoney(createInitialGameState(), 1e95), tensTier.id, 2)
     const after = applyOfflineProgress(20)(state) // 20s real, below threshold → 20 simulated seconds/ticks
     // The autobuyer attempt rate is flat (1/tick) regardless of tickspeed level (see tickGame) —
-    // 20 simulated ticks fire exactly 20 purchases, one per tick, rather than bought in one lump
-    // sum.
-    expect(after.purchased[tensTier.id]).toBe(20)
+    // Each tick buys at most one whole level (8 blocks); level prices escalate steeply, so the
+    // balance — not the 20 attempts — bounds the count. Many more than one level proves the
+    // per-second loop ran, and only whole levels are ever bought.
+    expect(after.purchased[tensTier.id]).toBeGreaterThan(8)
+    expect(after.purchased[tensTier.id] % 8).toBe(0)
+    expect(after.purchased[tensTier.id]).toBeLessThanOrEqual(160)
   })
 })
 

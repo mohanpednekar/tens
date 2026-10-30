@@ -28533,6 +28533,29 @@
       "norm_label": "leadicon",
       "source_file": "src/components/LeadIcon/index.js",
       "source_location": "L6"
+    },
+    {
+      "id": "src_components_boosttimerbar_index",
+      "label": "BoostTimerBar/index.jsx",
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "BoostBadge/index.jsx",
+      "file_type": "code",
+      "norm_label": "boosttimerbar/index.jsx",
+      "source_file": "src/components/BoostTimerBar/index.jsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_components_boosttimerbar_index_boosttimerbar",
+      "label": "BoostTimerBar()",
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "BoostBadge/index.jsx",
+      "file_type": "code",
+      "norm_label": "boosttimerbar()",
+      "source_file": "src/components/BoostTimerBar/index.jsx",
+      "source_location": "L72",
+      "_callable": true
     }
   ],
   "links": [
