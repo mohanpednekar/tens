@@ -159,8 +159,7 @@ const formatUpgradeTimeLeft = totalSeconds => {
 // Seconds until a buffer is full (null when already full or not filling). The fill multiplier falls
 // geometrically from FILL_MULTIPLIER_MAX_PERCENT (empty) to FILL_MULTIPLIER_MIN_PERCENT (full), m(f) =
 // e^(a − b·f) with a = ln(MAX/100), b = ln(MAX/MIN), so dx/dt = rate × m(x/capacity) and the time from
-// `bits` is (capacity / rate) × e^−a × (e^b − e^(b·fill)) / b — the same integral the running-upgrade
-// bar uses. `baseRate` is the Speed/Bandwidth before the fill multiplier; assumes nothing else draws
+// `bits` is (capacity / rate) × e^−a × (e^b − e^(b·fill)) / b (tiles only; the upgrade bar draws at a constant 1×). `baseRate` is the Speed/Bandwidth before the fill multiplier; assumes nothing else draws
 // from the buffer.
 export const getBufferSecondsToFull = (bits, capacity, baseRate) => {
   if (!(capacity > 0) || bits >= capacity || !(baseRate > 0)) return null

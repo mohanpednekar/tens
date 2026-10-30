@@ -2400,7 +2400,7 @@ export const getDataStreamDeliveredRate = intro =>
 
 // The running Upgrade Capacity / Upgrade Speed bar's draw (null when none runs), mirroring
 // tickCapacityUpgradeDrain/tickSpeedUpgradeDrain: base Speed at a constant 1x (the fill multiplier
-// does not apply to upgrades). The Buffer can still run dry, which only slows the real draw.
+// does not apply to upgrades). The drains run right after production, so the draw is never supply-limited.
 const UPGRADE_DRAW_MULTIPLIER_PERCENT = 100
 
 export const getRunningUpgradeDraw = intro => {

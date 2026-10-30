@@ -12025,6 +12025,15 @@ describe('Upgrade Speed (separate from Capacity)', () => {
     expect(isSpeedUpgradeArmable(doubled)).toBe(true)
   })
 
+  it('draws the Speed bar at a constant 1x base Speed per second, regardless of bar fill', () => {
+    const state = queueIntroSpeedUpgrade({ ...base(), intro: { ...base().intro, capacity: 128, speedCapacity: 64, bits: 128 } })
+    const rate = getIntroProductionRate(state.intro)
+    expect(tickSpeedUpgradeDrain(1)(state).intro.speedUpgradeProgress).toBeCloseTo(rate)
+    const partway = { ...state, intro: { ...state.intro, speedUpgradeProgress: 8 } }
+    expect(rate).toBeLessThan(56)
+    expect(tickSpeedUpgradeDrain(1)(partway).intro.speedUpgradeProgress - 8).toBeCloseTo(rate)
+  })
+
   it('fills its bar from the stream, then raises Speed and clears the queue', () => {
     let state = { ...base(), intro: { ...base().intro, capacity: 128, speedCapacity: 64, bits: 128 } }
     const before = getIntroProductionRate(state.intro)

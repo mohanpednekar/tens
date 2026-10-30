@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - **Upgrade Capacity / Upgrade Speed draw at a constant 1× Speed.** The running upgrade bar no longer follows the fill multiplier.
-- **Fill speed multiplier now spans 10× → 0.1×.** The Data Stream / pool fill multiplier falls geometrically from 10× (empty buffer) through exactly 1× at 50% full to 0.1× (full), instead of 150% → 50%. The tap bonus is now multiplicative (×(1 + bonus%)) and the combined cap is 2000%. Tile and Upgrade Capacity/Speed time-to-full ETAs use the matching log integral.
+- **Fill speed multiplier now spans 10× → 0.1×.** The Data Stream / pool fill multiplier falls geometrically from 10× (empty buffer) through exactly 1× at 50% full to 0.1× (full), instead of 150% → 50%. The tap bonus is now multiplicative (×(1 + bonus%)) and the combined cap is 2000%. Tile time-to-full ETAs use the matching log integral.
 - **Compute Boosts also speed up Storage pools.** A boost now boosts the buffer-fill speed of the pools matching the Factory tiers it covers (pool N ↔ tier N) by +200% (Burst), +50% (Standard) or +10% (Sustain), instead of the production multiplier; covered pool cards glow.
 - Removed the 🌟×N boost badge from Factory tiers and the Data Stream (the glow remains). On Boosters the active-boost status is no longer boxed in a card — it matches the Byte Factory's timer bar.
 - **Tier autobuyers buy whole levels.** Each attempt now buys one full level (8 blocks) only when it is
