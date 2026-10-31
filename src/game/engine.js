@@ -2813,8 +2813,8 @@ export const getPoolTapBonusPercent = (state, poolIndex) =>
 
 // The pool's currently active multiplier percent — fill-based value times (1 + live decaying tap
 // bonus %) (see tapPoolBuffer/tickFillMultiplierDecay below). What ByteFoundryPage displays alongside
-// that pool's Bandwidth figure, and what getPoolEffectMultiplier below turns into the real
-// buffer-fill scale (see tickPoolBufferFill).
+// that pool's Bandwidth figure. getPoolEffectMultiplier is the instantaneous scale;
+// tickPoolBufferFill integrates the curve via getFillCurveDelta.
 // Fill-based value × (1 + live tap bonus %), hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000) — same
 // "cumulative total, not the bonus alone" cap the Data Stream's own getDataStreamMultiplierPercent uses.
 export const getPoolMultiplierPercent = (state, poolIndex) =>
@@ -2923,9 +2923,10 @@ export const tickFillMultiplierDecay = elapsedSeconds => state => {
 // topped up this tick isn't visible to that same tick's own cache fill (tickDiskAutoFill, which
 // runs earlier in the pipeline) until the next tick — imperceptible at TICK_RATE_MS. The
 // reservation bookkeeping above (poolRate/fillRate/remainingRate) stays on each pool's RAW
-// Bandwidth throughout — only the actual bits transferred into a pool's buffer at the end of its
-// own iteration are scaled by that pool's own fill-based multiplier (getPoolEffectMultiplier),
-// "primary fill only" per FILL_MULTIPLIER_* in layers.js. Once a pool's own buffer is completely
+// Bandwidth throughout — the actual bits transferred into a pool's buffer at the end of its own
+// iteration integrate that reserved rate × tap-bonus × pool Compute Boost via getFillCurveDelta
+// ("primary fill only" per FILL_MULTIPLIER_* in layers.js). getPoolEffectMultiplier remains the
+// instantaneous UI reading. Once a pool's own buffer is completely
 // full, its reserved share feeds that pool's own matching Data Lake instead, at a fill-based rate
 // (see getDataLakeOverflowRatePercent/fillDataLakeDisks in the "Data Lakes" section below) rather
 // than going to waste.

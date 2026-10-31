@@ -2697,7 +2697,7 @@ test('Upgrade Data Stream fills its bar from the stream and doubles Capacity', (
   expect(upgradeButton).toBeEnabled()
 
   fireEvent.click(upgradeButton)
-  // Empty-bar draw is 10× base Speed, so the 1 B bar completes in well under a second of ticks.
+  // Upgrade bar draws at constant 1× base Speed; 2.5s is enough for the 1 B cost.
   act(() => { vi.advanceTimersByTime(2_500) })
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })

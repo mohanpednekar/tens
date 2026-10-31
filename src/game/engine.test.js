@@ -1031,7 +1031,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
 })
 
 describe('getDataStreamDeliveredRate', () => {
-  it('is base Speed × Compute Boost × fill multiplier — exactly what tickIntroProduction adds per second', () => {
+  it('is the instantaneous displayed reading (base Speed × Compute Boost × fill multiplier)', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true, bits: 0, capacity: 1000,
       computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 600,
