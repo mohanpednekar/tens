@@ -536,6 +536,8 @@ viteConfigFactory.js          ← the real Vite config — path aliases, dev/tes
                                base). Extracted from `vite.config.js` so `capacitorConfig.test.js` can
                                pin the CAPACITOR=1 behavior (`import.meta.url` isn't a `file:` URL under
                                Vitest). Full PWA reference: `docs/PWA_REFERENCE.md`
+stryker.config.json          ← Stryker mutation-testing config for `engine.js` (weekly, non-blocking
+                               `mutation-testing.yml`; `yarn stryker run` — see docs/AUTOMATION.md)
 playwright.config.js         ← Playwright e2e config (see "End-to-end testing") — separate from
                                vite.config.js's own `test` block, which only configures Vitest
 e2e/

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Weekly Stryker mutation-testing baseline for `engine.js` (`mutation-testing.yml`, non-blocking; score in the job summary).
+
 ### Changed
 
 - Data Lake filled balance now floors to 3 significant digits like Foundry speeds; the running-upgrade "from → to" readout now uses the left (from) value's unit.
