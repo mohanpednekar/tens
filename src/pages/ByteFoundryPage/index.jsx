@@ -949,7 +949,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     : diskBitsStillNeeded <= 0
       ? 'now'
       : formatUpgradeTimeLeft(diskFundingRate > 0 ? diskBitsStillNeeded / diskFundingRate : Infinity)
-  const diskShowsFundingStats = storageRevealed && !diskLadderExhausted && !lowerDiskSizePending && (diskBuildInProgress || (diskBuildQueued && diskFundingRate > 0))
+  const diskShowsFundingStats = storageRevealed && !diskLadderExhausted && !lowerDiskSizePending && diskBuildQueued && !diskBuildInProgress && diskFundingRate > 0
   const unlockDiskSizeButton = (
     <Button
       aria-label="foundry reset to unlock disk size"
