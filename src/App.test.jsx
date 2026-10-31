@@ -5795,7 +5795,7 @@ describe('formatBitsTransition (running-upgrade from → to)', () => {
   })
 
   it('re-expresses a from-value that would have read in a smaller unit in the target unit', () => {
-    expect(formatBitsTransition(512 * 8, 1 * KIB, '/s')).toBe('0.5 → 1 KiB/s')
-    expect(formatBitsTransition(512 * KIB, 1024 * KIB)).toBe('0.5 → 1 MiB')
+    expect(formatBitsTransition(512 * 8, 1 * KIB, '/s')).toBe('512 → 1,024 B/s')
+    expect(formatBitsTransition(512 * KIB, 1024 * KIB)).toBe('512 → 1,024 KiB')
   })
 })

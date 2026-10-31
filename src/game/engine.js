@@ -3720,6 +3720,20 @@ export const formatMemoryAmountStable = (bits, unit) => {
   return `${fixedMemoryAmountFormatters[decimals].format(scaled)} ${unit.symbol}`
 }
 
+// Floors to at most 3 significant digits (never overstates), no unit. Integer digits are never
+// dropped (1,024 stays 1,024, not 1,020); only decimals are trimmed.
+export const formatThreeSignificant = value => {
+  if (!(value > 0)) return '0'
+  const scale = Math.min(1, 10 ** (Math.floor(Math.log10(value)) - 2))
+  const floored = Number((Math.floor(value / scale + 1e-9) * scale).toPrecision(12))
+  return floored.toLocaleString('en-US', { maximumFractionDigits: 2 })
+}
+
+// Truncates (never overstates) the leading number of an already-unit-formatted amount to 3
+// significant digits, e.g. "1.2345 KB" -> "1.23 KB".
+export const formatSpeedText = formatted =>
+  formatted.replace(/^[\d,]*\.?\d+/, match => formatThreeSignificant(Number(match.replace(/,/g, ''))))
+
 // Any Memory-denominated amount (capacity, balance, Upgrade Data Stream cost, transfer-block cost, the
 // Sacrifice confirm line — NOT Disk build cost, which renders via formatDiskSize/SI instead, since
 // it's a fixed multiple of the Disk's own SI-scaled size) reads in whatever binary B/KiB/MiB/…
