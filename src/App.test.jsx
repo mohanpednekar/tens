@@ -3765,6 +3765,17 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('progressbar', { name: /disk build progress/i })).toHaveAttribute('aria-valuenow', '33')
   })
 
+  test('a multi-size rebuild names the size being rebuilt and the largest size it will reach', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 3,
+      disks: { [currentBankSize]: 3 },
+      disksBuiltTotal: { [currentBankSize]: 3 },
+    })
+    render(<App />)
+    expect(screen.getByRole('button', { name: /provision disk/i })).toHaveTextContent(/Rebuilding.*1 KB → 10 KB/)
+  })
+
   test('a full unlocked Disk array offers a confirm-guarded Foundry reset instead of Provision Disk, which unlocks the next size and raises the exponent', async () => {
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
