@@ -65,6 +65,10 @@ const createEmptyDataLakeTier = () => ({
   // How many times this lake's own deposit capacity has been advanced — see getDataLakeCapacity
   // below. 0 = the starting 1-unit capacity; DATA_LAKE_CAPACITY_MAX_LEVEL is a permanent hard cap.
   capacityLevel: 0,
+  // Permanent (for the era) latch: once this lake's pool has been fully built (9/9/9) its Boosters
+  // auto-buy, and that status survives pool resets, Foundry resets and Prestige. Only Era
+  // ascension (fresh lakes) clears it.
+  boosterAuto: false,
   // Pool-local end-game loop. Resets permanently expand only this lake and temporarily put the
   // matching Storage pool into its free, sequential rebuild mode.
   resetCount: 0,
@@ -5516,7 +5520,17 @@ export const tickDataLakeAutoConvert = state => {
     // A completed 9/9/9 pool permanently automates every reachable Booster. Before completion,
     // the lake retains its explicit one-shot conversion control; once complete there is no
     // conversion button to press and each affordable Booster is obtained automatically.
-    if (isStoragePoolFullyBuilt(nextState, tierIndex) &&
+    if (isStoragePoolFullyBuilt(nextState, tierIndex) && !getDataLakeTier(nextState, tierIndex)?.boosterAuto) {
+      const lake = getDataLakeTier(nextState, tierIndex)
+      nextState = {
+        ...nextState,
+        intro: {
+          ...nextState.intro,
+          dataLakes: { ...nextState.intro.dataLakes, [tierIndex]: { ...lake, boosterAuto: true } },
+        },
+      }
+    }
+    if (getDataLakeTier(nextState, tierIndex)?.boosterAuto &&
         getBoosterPurchaseCost(tierIndex)(nextState) <= getDataLakeCapacity(nextState, tierIndex) &&
         isBoosterPurchaseAvailable(nextState, tierIndex)) {
       nextState = buyBooster(tierIndex, 1)(nextState)
@@ -6863,7 +6877,14 @@ export const captureFoundryUpgradeCaps = intro => {
     const n = Math.max(0, Math.floor(clampNonNegative(passes)))
     if (n > 0) diskProvisionPassCaps[sizeKey] = n
   }
+  const lakes = {}
+  for (const [tierKey, lake] of Object.entries(intro?.dataLakes ?? {})) {
+    const capacityLevel = Math.max(0, Math.floor(clampNonNegative(lake?.capacityLevel ?? 0)))
+    const purchased = Math.max(0, Math.floor(clampNonNegative(lake?.purchased ?? 0)))
+    if (capacityLevel > 0 || purchased > 0) lakes[tierKey] = { capacityLevel, purchased }
+  }
   return {
+    lakes,
     byteCreated: intro?.byteCreated === true,
     disksBuiltTotal: diskCaps,
     diskProvisionPasses: diskProvisionPassCaps,
@@ -6903,7 +6924,15 @@ export const mergeFoundryUpgradeCaps = (a, b) => {
     if (built > 0) diskCaps[sizeKey] = built
     if (passes > 0) diskProvisionPassCaps[sizeKey] = passes
   }
+  const lakes = {}
+  for (const tierKey of new Set([...Object.keys(left.lakes ?? {}), ...Object.keys(right.lakes ?? {})])) {
+    lakes[tierKey] = {
+      capacityLevel: Math.max(left.lakes?.[tierKey]?.capacityLevel ?? 0, right.lakes?.[tierKey]?.capacityLevel ?? 0),
+      purchased: Math.max(left.lakes?.[tierKey]?.purchased ?? 0, right.lakes?.[tierKey]?.purchased ?? 0),
+    }
+  }
   return {
+    lakes,
     byteCreated: left.byteCreated || right.byteCreated,
     disksBuiltTotal: diskCaps,
     diskProvisionPasses: diskProvisionPassCaps,
@@ -7005,6 +7034,27 @@ export const tickFoundryResetConvenience = state => {
     }
   }
 
+  // Data Lake operations (capacity upgrades, Booster purchases) replay automatically up to their
+  // prior highs; each goes through its ordinary availability gate and engine action.
+  for (const [tierKey, lakeCaps] of Object.entries(caps.lakes ?? {})) {
+    const tierIndex = Number(tierKey)
+    if (getDataLakeCapacityLevel(next, tierIndex) < (lakeCaps.capacityLevel ?? 0)) {
+      const doubled = doubleDataLakeCapacity(tierIndex)(next)
+      if (doubled !== next) {
+        next = doubled
+        changed = true
+      }
+    }
+    if ((getDataLakeTier(next, tierIndex)?.purchased ?? 0) < (lakeCaps.purchased ?? 0) &&
+        isBoosterPurchaseAvailable(next, tierIndex)) {
+      const bought = buyBooster(tierIndex, 1)(next)
+      if (bought !== next) {
+        next = bought
+        changed = true
+      }
+    }
+  }
+
   return changed ? next : state
 }
 
@@ -7019,11 +7069,17 @@ export const resetByteFoundry = state => {
   const prev = state.intro ?? {}
   const keepMainUnlocked = prev.mainGameUnlocked === true
   const foundryResetCaps = mergeFoundryUpgradeCaps(prev.foundryResetCaps, captureFoundryUpgradeCaps(prev))
+  // Booster auto status is kept for the whole era, even through a Foundry reset.
+  const dataLakes = { ...initialIntro.dataLakes }
+  for (const [tierKey, lake] of Object.entries(prev.dataLakes ?? {})) {
+    if (lake?.boosterAuto && dataLakes[tierKey]) dataLakes[tierKey] = { ...dataLakes[tierKey], boosterAuto: true }
+  }
 
   return {
     ...state,
     intro: {
       ...initialIntro,
+      dataLakes,
       mainGameUnlocked: keepMainUnlocked,
       foundryResetCaps,
       // Unlocked disk sizes (and so the speed exponent) survive a Foundry reset.

@@ -240,6 +240,8 @@ source (Factory gets first crack at a disk it could pull this exact tick); see
 waits for the next real Prestige to reopen its pull window. Full overflow-segment math, the
 disk-breakdown mixed-radix proof, and every gating predicate: `docs/ECONOMY_REFERENCE.md`.
 
+**Booster auto latch & lake replay.** `dataLakes[n].boosterAuto` latches (in `tickDataLakeAutoConvert`) the first time the pool is fully built (9/9/9); the lake then auto-buys every affordable Booster for the whole Era, through pool resets, `resetByteFoundry` (carried into the fresh lakes) and Prestige; only Era ascension clears it. `foundryResetCaps.lakes[n] = { capacityLevel, purchased }` records lake highs, and `tickFoundryResetConvenience` replays capacity upgrades and Booster buys up to them.
+
 **Display conventions.** A Disk's in-square size label is a bare number (`formatDiskSizeBare`;
 aria-labels/tooltips keep unit-suffixed `formatDiskSize`). A pool's/Data Lake's CAPACITY (and a lake's
 balance) always renders in its own fixed unit (`formatDiskSizeInPoolUnit`) — a maxed KB lake reads

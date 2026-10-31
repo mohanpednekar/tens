@@ -2355,6 +2355,7 @@ describe('resetByteFoundry', () => {
     expect(after.intro.computeCores).toBe(0)
     expect(after.intro.mainGameUnlocked).toBe(true)
     expect(after.intro.foundryResetCaps).toEqual({
+      lakes: {},
       byteCreated: true,
       speedCapacity: 400000,
       disksBuiltTotal: { [String(diskSize)]: 5 },
@@ -11355,6 +11356,39 @@ describe('Data Lakes', () => {
     })
   })
 
+  describe('boosterAuto latch and Foundry-reset lake replay', () => {
+    const built = () => withIntro(createInitialGameState(), {
+      byteCreated: true,
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+    })
+
+    it('latches boosterAuto once the pool is fully built and keeps it through a Foundry reset', () => {
+      const latched = tickDataLakeAutoConvert(built())
+      expect(latched.intro.dataLakes[1].boosterAuto).toBe(true)
+      expect(resetByteFoundry(latched).intro.dataLakes[1].boosterAuto).toBe(true)
+      expect(createInitialGameState().intro.dataLakes[1].boosterAuto).toBe(false)
+    })
+
+    it('replays lake capacity upgrades and Boosters up to prior highs after a Foundry reset', () => {
+      const state = built()
+      const withLakeHighs = {
+        ...state,
+        intro: {
+          ...state.intro,
+          dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], capacityLevel: 1, purchased: 1 } },
+        },
+      }
+      const reset = resetByteFoundry(withLakeHighs)
+      expect(reset.intro.foundryResetCaps.lakes[1]).toEqual({ capacityLevel: 1, purchased: 1 })
+      const rebuilt = {
+        ...reset,
+        intro: { ...reset.intro, disksBuiltTotal: state.intro.disksBuiltTotal },
+      }
+      const after = tickFoundryResetConvenience(rebuilt)
+      expect(after.intro.dataLakes[1].capacityLevel).toBe(1)
+    })
+  })
+
   describe('capacity upgrade (available once the corresponding Storage array is fully built)', () => {
     const withLake = (state, tierIndex, overrides) => ({
       ...state,
@@ -11856,6 +11890,7 @@ describe('Data Lakes', () => {
       resetCount: 0,
       rebuilding: false,
       bandwidthSteps: 0,
+      boosterAuto: false,
     })
   })
 
