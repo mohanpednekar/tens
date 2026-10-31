@@ -408,7 +408,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               <span>
                 {/* Owned bulk mode always shows (history); buying the next needs the tier reachable this run. */}
                 {!isAutobuyerLocked && bulkMode > 0 && (
-                  <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer buys ${AUTOBUYER_BULK_LEVELS_BASE ** bulkMode} levels at once`}>🤖 Buys ×{AUTOBUYER_BULK_LEVELS_BASE ** bulkMode} levels</Badge>
+                  <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer buys ${AUTOBUYER_BULK_LEVELS_BASE ** bulkMode} levels at once`}>🤖 {AUTOBUYER_BULK_LEVELS_BASE ** bulkMode}/buy</Badge>
                 )}
                 {!isAutobuyerLocked && hasNextBulk && unlocked && (
                   <PpPurchaseButton
@@ -417,7 +417,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                     cost={bulkCost}
                     disabled={!canBuyBulk}
                     icon="⏫"
-                    label={`Autobuyer: ${bulkLevels} levels at once · ${formatAmount(bulkCost)} PP`}
+                    label={`${bulkLevels}/buy · ${formatAmount(bulkCost)} PP`}
                     onClick={() => actions.buyAutobuyerBulkMode(tier.id)}
                     points={points}
                     progressLabel={`${tier.name} bulk autobuyer Prestige Point progress`}
@@ -618,9 +618,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             <RowLabel title="Earn past 1 Googol Bytes without freezing; Prestige voluntarily to claim PP">♾ DeGoogol</RowLabel>
             {!isUnboundedPrestigeUnlocked(state) && (
               <SubText>
-                {isAutoPrestigeActive
-                  ? `Upgrade Auto-Prestige to ${UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s or faster (now every ${formatInterval(getAutomationIntervalSeconds(state, 'prestige') * 1000)})`
-                  : `Unlock Auto-Prestige, then upgrade it to ${UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s or faster`}
+                Auto-Prestige ≤ {UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s
               </SubText>
             )}
           </RowLabelStack>

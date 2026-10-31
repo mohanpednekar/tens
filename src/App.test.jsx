@@ -5368,7 +5368,7 @@ test('Chapters track Compute, DeGoogol, and Era milestones', async () => {
   await user.click(screen.getByRole('button', { name: /open milestones/i }))
 
   expect(screen.getByLabelText(/^open compute chapter$/i)).toHaveTextContent('✅')
-  expect(screen.getByLabelText(/^go degoogol chapter$/i)).toHaveTextContent('✅')
+  expect(screen.getByLabelText(/^degoogoled chapter$/i)).toHaveTextContent('✅')
   expect(screen.getByLabelText(/^ascend an era chapter$/i)).toHaveTextContent('✅')
   expect(screen.queryByLabelText(/^coming soon/i)).not.toBeInTheDocument()
 })

@@ -624,10 +624,9 @@ const InfoPage = () => {
         <h2>Prestige</h2>
         <ul>
           <li>
-            Available once Bits reach 1 Googol Bytes (8×10^100 Bits). Until DeGoogol,
-            production freezes until you Prestige. Upgrade Auto-Prestige to{' '}
-            {UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s or faster to unlock DeGoogol
-            permanently: production then continues and Prestige is optional.
+            Available at 1 Googol Bytes (8×10^100 Bits); production freezes there until you Prestige.
+            Auto-Prestige at {UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s or faster unlocks DeGoogol:
+            production keeps running and Prestige is optional.
           </li>
           <li>
             Awards Prestige Points from how far your money exponent climbed beyond Googol — 1 base
