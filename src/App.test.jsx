@@ -3758,11 +3758,37 @@ describe('Byte Foundry Storage', () => {
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toBeDisabled()
     // Rebuild layout: the time/percent cover the auto-rebuild of every smaller size up to the prior highs.
-    expect(provisionButton).toHaveTextContent(/Rebuilding….*1 KB · to prior highs/)
-    expect(provisionButton).toHaveTextContent(/⏳/)
+    expect(provisionButton).toHaveTextContent(/Rebuilding.*1 KB disks/)
+    expect(provisionButton).toHaveTextContent(/⏳\s*\d/)  // always a time, from the pool's current speed
     expect(provisionButton).toHaveTextContent('⚡')
     expect(provisionButton).toHaveTextContent('33%')
     expect(screen.getByRole('progressbar', { name: /disk build progress/i })).toHaveAttribute('aria-valuenow', '33')
+  })
+
+  test('a queued Provision Disk waiting behind Disk Fill never claims "now" for its time', () => {
+    seedIntroState({
+      bits: 0, capacity: currentBankCost * 1024, byteCreated: true,
+      disks: { [currentBankSize]: 1 },
+      disksBuiltTotal: { [currentBankSize]: 1 },
+      poolBuffers: { 1: currentBankSize * 4 },
+      diskBuildQueued: true,
+    })
+    render(<App />)
+    const button = screen.getByRole('button', { name: /provision disk/i })
+    expect(button).toHaveAttribute('aria-description', expect.stringMatching(/after disk fill/))
+    expect(button).not.toHaveTextContent('now')
+    expect(button).not.toHaveTextContent('—')
+  })
+
+  test('a multi-size rebuild names the size being rebuilt and the largest size it will reach', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 3,
+      disks: { [currentBankSize]: 3 },
+      disksBuiltTotal: { [currentBankSize]: 3 },
+    })
+    render(<App />)
+    expect(screen.getByRole('button', { name: /provision disk/i })).toHaveTextContent(/Rebuilding.*1 KB → 10 KB/)
   })
 
   test('a full unlocked Disk array offers a confirm-guarded Foundry reset instead of Provision Disk, which unlocks the next size and raises the exponent', async () => {
@@ -5795,7 +5821,7 @@ describe('formatBitsTransition (running-upgrade from → to)', () => {
   })
 
   it('re-expresses a from-value that would have read in a smaller unit in the target unit', () => {
-    expect(formatBitsTransition(512 * 8, 1 * KIB, '/s')).toBe('0.5 → 1 KiB/s')
-    expect(formatBitsTransition(512 * KIB, 1024 * KIB)).toBe('0.5 → 1 MiB')
+    expect(formatBitsTransition(512 * 8, 1 * KIB, '/s')).toBe('512 → 1,024 B/s')
+    expect(formatBitsTransition(512 * KIB, 1024 * KIB)).toBe('512 → 1,024 KiB')
   })
 })

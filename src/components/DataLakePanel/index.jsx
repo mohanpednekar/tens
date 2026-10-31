@@ -7,6 +7,7 @@ import {
   formatDiskSizeBare,
   formatDiskSizeInPoolUnit,
   formatPoolBalance,
+  formatSpeedText,
   formatOfflineDuration,
   getBoosterPurchaseCost,
   getDataLakeCapacity,
@@ -477,7 +478,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               ) : null}
 
                 </LakeSubRow>
-                <LakeFilledText title="Currently filled">{formatPoolBalance(filledBits, tierIndex)}</LakeFilledText>
+                <LakeFilledText title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>
               </LakeHeader>
             )}
 
