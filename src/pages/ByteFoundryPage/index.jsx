@@ -958,7 +958,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // the fill-multiplier curve (not that snapshot held constant). A queued build waiting behind Disk
   // Fill has no meaningful time, so its ⏳ is hidden rather than showing a misleading "now". A rebuild
   // after a Foundry reset instead runs at each pool's BASE Bandwidth (no fill multiplier), so its ⚡ is
-  // that base speed and its ⏳ is the total (getLowerRebuildSummary) — a projection from the Data Stream Speed while the size's pool isn't live yet.
+  // that base speed and its ⏳ is the total (getLowerRebuildSummary) — a projection from the Bandwidth the pool will have once live while the size's pool isn't live yet.
   const getPoolDeliveredRate = poolIndex =>
     getPoolAvailableFillRate(state, poolIndex) * getPoolMultiplierPercent(state, poolIndex) / 100 * getComputeBoostPoolMultiplier(intro, poolIndex)
   const rebuildPoolIndex = getPoolIndexForDiskSize(autoDiskSize)

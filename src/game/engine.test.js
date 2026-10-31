@@ -12425,11 +12425,16 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
     expect(getLowerRebuildSummary(createInitialGameState())).toEqual({ seconds: 0, disksDone: 0, disksTotal: 0 })
   })
 
-  it('getLowerRebuildSummary stays finite while a pool is not live yet (projected from the Data Stream Speed)', () => {
-    const notLive = withIntro(afterReset(), { capacity: INTRO_STARTING_CAPACITY, unlockedDiskSteps: 6 })
+  it('projects a not-live pool from the Bandwidth it will have once live (threshold Capacity, Speed trailing one doubling)', () => {
+    const notLive = withIntro(afterReset(), { capacity: INTRO_STARTING_CAPACITY, speedCapacity: INTRO_STARTING_CAPACITY, unlockedDiskSteps: 6 })
     const deadPool = getVisibleStoragePoolCount(notLive) + 1
     expect(getStoragePoolBandwidth(notLive, deadPool)).toBe(0)
-    expect(getProjectedPoolBandwidth(notLive, deadPool)).toBeGreaterThan(0)
+    const threshold = getPoolCapacityUnlockThresholdBits(deadPool)
+    const live = withIntro(notLive, { capacity: threshold, speedCapacity: threshold / INTRO_CAPACITY_DOUBLING_STEP })
+    expect(getStoragePoolBandwidth(live, deadPool)).toBeGreaterThan(0)
+    expect(getProjectedPoolBandwidth(notLive, deadPool)).toBe(getStoragePoolBandwidth(live, deadPool))
+    // far above the current Data Stream Speed — the old stand-in
+    expect(getProjectedPoolBandwidth(notLive, deadPool)).toBeGreaterThan(getStoragePoolBandwidth(notLive, 1))
     const summary = getLowerRebuildSummary(notLive)
     expect(Number.isFinite(summary.seconds)).toBe(true)
     expect(summary.seconds).toBeGreaterThan(0)

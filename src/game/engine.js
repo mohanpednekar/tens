@@ -2737,7 +2737,9 @@ export const getProjectedPoolBandwidth = (state, poolIndex) => {
   // Bandwidth the pool will have the moment it goes live (Capacity at its unlock threshold) — far closer to
   // the real rebuild pace than the Data Stream's current Speed.
   const capacity = Math.max(state.intro?.capacity ?? 0, getPoolCapacityUnlockThresholdBits(poolIndex))
-  const atThreshold = getStoragePoolBandwidth({ ...state, intro: { ...state.intro, capacity } }, poolIndex)
+  // Speed's own basis trails Capacity by at most one doubling, so project it too (a real post-reset save always has speedCapacity set).
+  const speedCapacity = Math.max(state.intro?.speedCapacity ?? state.intro?.capacity ?? 0, capacity / INTRO_CAPACITY_DOUBLING_STEP)
+  const atThreshold = getStoragePoolBandwidth({ ...state, intro: { ...state.intro, capacity, speedCapacity } }, poolIndex)
   if (atThreshold > 0) return atThreshold
   return getSiCleanEquivalentBits(getIntroProductionRate(state.intro ?? {}))
 }
