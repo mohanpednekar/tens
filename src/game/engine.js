@@ -5418,6 +5418,11 @@ const setDataLakeAutoConvertActive = (tierIndex, active) => state => {
 export const isDataLakeAutoConvertActive = (state, tierIndex) =>
   getDataLakeTier(state, tierIndex)?.autoConvertActive ?? false
 
+// Whether this lake's Boosters auto-buy: the latched per-era boosterAuto flag, or its pool being
+// fully built right now (the latch is set on the next tick).
+export const isDataLakeBoosterAuto = (state, tierIndex) =>
+  Boolean(getDataLakeTier(state, tierIndex)?.boosterAuto) || isStoragePoolFullyBuilt(state, tierIndex)
+
 // Whether clicking this lake's own conversion control right now would do anything: unlocked, not
 // already mid-conversion, its matching Storage pool can actually feed it, and the matching
 // compute-ladder entity has room (see getComputeEntityFieldRoom) — a manual conversion is never
@@ -5429,11 +5434,6 @@ export const isDataLakeAutoConvertActive = (state, tierIndex) =>
 // fillDataLakeManually permanently unable to ever bank anything (isDataLakeManualFillAvailable
 // gates on isDataLakePoolReady too), leaving the control stuck showing "converting" forever with
 // no way to cancel — see docs/DESIGN_HISTORY.md.
-// Whether this lake's Boosters auto-buy: the latched per-era boosterAuto flag, or its pool being
-// fully built right now (the latch is set on the next tick).
-export const isDataLakeBoosterAuto = (state, tierIndex) =>
-  Boolean(getDataLakeTier(state, tierIndex)?.boosterAuto) || isStoragePoolFullyBuilt(state, tierIndex)
-
 export const isDataLakeAutoConvertStartAvailable = (state, tierIndex) => {
   const lake = getDataLakeTier(state, tierIndex)
   if (!lake || (lake.autoConvertActive ?? false)) return false
@@ -7047,13 +7047,17 @@ export const tickFoundryResetConvenience = state => {
     const tierIndex = Number(tierKey)
     if ((getDataLakeTier(next, tierIndex)?.purchased ?? 0) < (lakeCaps.purchased ?? 0) &&
         isBoosterPurchaseAvailable(next, tierIndex)) {
-      const bought = buyBooster(tierIndex, 1)(next)
+      const bought = buyBooster(tierIndex, (lakeCaps.purchased ?? 0) - (getDataLakeTier(next, tierIndex)?.purchased ?? 0))(next)
       if (bought !== next) {
         next = bought
         changed = true
       }
     }
-    if (getDataLakeCapacityLevel(next, tierIndex) < (lakeCaps.capacityLevel ?? 0)) {
+    // The upgrade empties the lake, so it waits until the Booster target is met, or until the next
+    // Booster costs more than the lake can currently hold (so the upgrade is what unblocks it).
+    const boostersDone = (getDataLakeTier(next, tierIndex)?.purchased ?? 0) >= (lakeCaps.purchased ?? 0) ||
+      getBoosterPurchaseCost(tierIndex)(next) > getDataLakeCapacity(next, tierIndex)
+    if (boostersDone && getDataLakeCapacityLevel(next, tierIndex) < (lakeCaps.capacityLevel ?? 0)) {
       const doubled = doubleDataLakeCapacity(tierIndex)(next)
       if (doubled !== next) {
         next = doubled

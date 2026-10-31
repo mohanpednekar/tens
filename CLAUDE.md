@@ -785,7 +785,7 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
   fully automatic (no click, no autobuyer gate). Disks/caches/builds are PERMANENT across Prestige.
   Stranded disks are never destroyed or swept into Bits; merges never cross a pool boundary.
 - **Data Lakes** (`intro.dataLakes`): Booster control is "one click, one full fill-then-buy conversion,
-  then stop" — never a persistent auto-buy loop; `buyBooster` spends only banked lake units, outside the
+  then stop" until the pool's era-long `boosterAuto` latch is set (then it auto-buys); `buyBooster` spends only banked lake units, outside the
   forced priority order; sub-sizes capped 9/9/9 (`DATA_LAKE_SUB_SIZE_DISK_CAPS`).
 - **Display**: Disk labels bare numbers; pool/lake CAPACITY in its fixed unit
   (`formatDiskSizeInPoolUnit`); buffer BALANCE self-sizes (`formatPoolBalance`).
@@ -951,7 +951,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2137 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2138 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

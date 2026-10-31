@@ -1048,7 +1048,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    standalone Fill click always used — to make one tick's worth of progress and tries again next
    tick. The net effect: one click "fully automates the sequence to fill up and then convert it into
    a Booster, then stop" — always exactly 1 conversion per activation, never a persistent bulk
-   auto-buy loop while Storage is incomplete. Once the matching Storage pool reaches 9/9/9 (latched as `dataLakes[n].boosterAuto` for the whole Era —
+   auto-buy loop until the lake's `boosterAuto` latch is set. Once the matching Storage pool reaches 9/9/9 (latched as `dataLakes[n].boosterAuto` for the whole Era —
    kept through pool reset, Reset Byte Foundry and Prestige; only Era ascension clears it),
    `DataLakePanel` permanently renders the next cost as an inert label instead of a conversion
    button, and `tickDataLakeAutoConvert` buys each affordable Booster automatically even when

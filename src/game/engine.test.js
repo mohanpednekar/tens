@@ -11376,17 +11376,33 @@ describe('Data Lakes', () => {
         ...state,
         intro: {
           ...state.intro,
-          dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], capacityLevel: 1, purchased: 1 } },
+          dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], capacityLevel: 1, purchased: 0 } },
         },
       }
       const reset = resetByteFoundry(withLakeHighs)
-      expect(reset.intro.foundryResetCaps.lakes[1]).toEqual({ capacityLevel: 1, purchased: 1 })
+      expect(reset.intro.foundryResetCaps.lakes[1]).toEqual({ capacityLevel: 1, purchased: 0 })
       const rebuilt = {
         ...reset,
         intro: { ...reset.intro, disksBuiltTotal: state.intro.disksBuiltTotal },
       }
       const after = tickFoundryResetConvenience(rebuilt)
       expect(after.intro.dataLakes[1].capacityLevel).toBe(1)
+    })
+
+    it('replay buys every affordable Booster before a capacity upgrade can empty the lake', () => {
+      const state = built()
+      const seeded = {
+        ...state,
+        intro: {
+          ...state.intro,
+          dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], boostersUnlocked: true, capacityLevel: 1, purchased: 3, depositedUnits: 9 } },
+          foundryResetCaps: { lakes: { 1: { capacityLevel: 2, purchased: 10 } } },
+        },
+      }
+      const after = tickFoundryResetConvenience(seeded)
+      expect(after.intro.dataLakes[1].purchased).toBe(5)
+      expect(after.intro.dataLakes[1].capacityLevel).toBe(1)
+      expect(after.intro.dataLakes[1].depositedUnits).toBe(0)
     })
 
     it('keeps the latch through Prestige and a pool reset, clears it on Era ascension, and merges lake highs by max', () => {
