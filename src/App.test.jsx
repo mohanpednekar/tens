@@ -3780,6 +3780,20 @@ describe('Byte Foundry Storage', () => {
     expect(button).not.toHaveTextContent('—')
   })
 
+  test('a rebuild whose current size is in a pool that is not live yet still shows ⚡ and ⏳ (projected)', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 8,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+      disks: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+    })
+    render(<App />)
+    const button = screen.getByRole('button', { name: /provision disk/i })
+    expect(button).toHaveTextContent(/Rebuilding/)
+    expect(button).toHaveTextContent(/⚡.*\/s/)
+    expect(button).toHaveTextContent(/⏳\s*\d/)
+  })
+
   test('a multi-size rebuild names the size being rebuilt and the largest size it will reach', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,

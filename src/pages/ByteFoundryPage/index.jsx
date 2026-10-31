@@ -958,13 +958,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // the fill-multiplier curve (not that snapshot held constant). A queued build waiting behind Disk
   // Fill has no meaningful time, so its ⏳ is hidden rather than showing a misleading "now". A rebuild
   // after a Foundry reset instead runs at each pool's BASE Bandwidth (no fill multiplier), so its ⚡ is
-  // that base speed and its ⏳ is the exact total (getLowerRebuildSummary).
+  // that base speed and its ⏳ is the total (getLowerRebuildSummary) — a projection from the Data Stream Speed while the size's pool isn't live yet.
   const getPoolDeliveredRate = poolIndex =>
     getPoolAvailableFillRate(state, poolIndex) * getPoolMultiplierPercent(state, poolIndex) / 100 * getComputeBoostPoolMultiplier(intro, poolIndex)
   const rebuildPoolIndex = getPoolIndexForDiskSize(autoDiskSize)
   const diskFundingMultiplierPercent = lowerDiskSizePending ? 100 : getPoolMultiplierPercent(state, diskPoolIndex)
   const diskFundingRate = lowerDiskSizePending ? getProjectedPoolBandwidth(state, rebuildPoolIndex) : getPoolDeliveredRate(diskPoolIndex)
   const diskFundingSpeedText = `${formatSpeedText(formatDiskSize(diskFundingRate))}/s`
+  const rebuildPoolNotLive = lowerDiskSizePending && getStoragePoolBandwidth(state, rebuildPoolIndex) <= 0
   const rebuildSummary = getLowerRebuildSummary(state)
   const rebuildProgress = rebuildSummary.disksTotal > 0 ? clampPercent((rebuildSummary.disksDone / rebuildSummary.disksTotal) * 100) : 0
   const rebuildSeconds = rebuildSummary.seconds
@@ -1028,7 +1029,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             return maxRebuildSize > autoDiskSize ? `${formatDiskSize(autoDiskSize)} → ${formatDiskSize(maxRebuildSize)}` : `${formatDiskSize(autoDiskSize)} disks`
           })() : diskPassesCollected > 0 ? diskPassesFraction : 'Queued'}</RunningChange>
           <RunningPercent>{Math.floor(diskDisplayedProgress)}%</RunningPercent>
-          <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent) }} title="Pool fill speed funding this disk">⚡ {diskFundingSpeedText}</ProvisionSpeed>
+          <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent) }} title={rebuildPoolNotLive ? "Projected speed — this rebuild waits for the pool's Capacity" : "Pool fill speed funding this disk"}>⚡ {diskFundingSpeedText}</ProvisionSpeed>
           {diskFundingTimeText !== '—' && <RunningTime>⏳ {diskFundingTimeText}</RunningTime>}
         </RunningUpgradeContent>
       ) : (
