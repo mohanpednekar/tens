@@ -1048,7 +1048,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    standalone Fill click always used — to make one tick's worth of progress and tries again next
    tick. The net effect: one click "fully automates the sequence to fill up and then convert it into
    a Booster, then stop" — always exactly 1 conversion per activation, never a persistent bulk
-   auto-buy loop while Storage is incomplete. Once the matching Storage pool reaches 9/9/9,
+   auto-buy loop until the lake's `boosterAuto` latch is set. Once the matching Storage pool reaches 9/9/9 (latched as `dataLakes[n].boosterAuto` for the whole Era —
+   kept through pool reset, Reset Byte Foundry and Prestige; only Era ascension clears it),
    `DataLakePanel` permanently renders the next cost as an inert label instead of a conversion
    button, and `tickDataLakeAutoConvert` buys each affordable Booster automatically even when
    `autoConvertActive` is false. It stops naturally when the entity is full or the next cost is
@@ -2283,7 +2284,7 @@ A second Danger-zone control, **"↺ Reset Byte Foundry…"**, calls `resetByteF
 Combine / Speed multipliers and Disks/Storage and every Compute ladder entity / boost /
 auto-claim / auto-merge unlock / reveal latch wiped — so Foundry progress genuinely restarts from
 scratch. It records high-water marks in `intro.foundryResetCaps` (Combine, Speed/Invest ladder
-progress, per-size `disksBuiltTotal`, and Capacity itself for merge compatibility).
+progress, per-size `disksBuiltTotal`, Capacity itself for merge compatibility, and per-lake `lakes[n] = { capacityLevel, purchased }`).
 `tickFoundryResetConvenience` (from `tickGame`, after Disk auto-fill) then auto-presses Combine,
    bit-funded Speed / Invest, and Provision Disk whenever their normal turn gates allow, capped at those
 highs — Combine leaves Capacity on its doubling ladder; Capacity ×2 remains available up to the
@@ -2645,7 +2646,8 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // One lake per storage denomination (KB … QB), fed by
                                                           // that pool's own overflow (see tickPoolBufferFill):
                                                           // { depositedUnits, fillBits, purchased,
-                                                          // boostersUnlocked, autoConvertActive, capacityLevel }.
+                                                          // boostersUnlocked, autoConvertActive, capacityLevel,
+                                                          // boosterAuto (era-long auto-buy latch) }.
                                                           // Era ascension resets with the
                                                           // rest of the Foundry via buildEraIntroReset
                                                           // (...initial.intro) — see "Era ascension" above
@@ -2855,7 +2857,7 @@ purchases were manual or automatic.
 | `clearIntroCapacityUpgradeQueue` | `state → state` | Clears a running upgrade (flag + progress), returning the progress bits to the Buffer; used internally (cap reached). Exposed as `actions.clearIntroCapacityUpgradeQueue` but no UI calls it. Same-reference no-op when not running |
 | `eraseAllComputeTokens` | `state → state` | Zeros every `COMPUTE_BOOST_TIER_FIELDS` balance, clears active Boost fields, and zeros in-flight merge timers. Does **not** touch permanent auto-claim/auto-merge unlocks or `computeCoresEverEarned`/`computeMergePageUnlocked` |
 | `resetByteFoundry` | `state → state` | Settings → Danger zone: fresh `intro` (Data Stream Buffer/upgrades/Disks/Compute wiped to scratch), records `foundryResetCaps` high-water marks. Preserves `mainGameUnlocked` when already true. Leaves every non-`intro` field untouched |
-| `tickFoundryResetConvenience` | `state → state` | While `foundryResetCaps` is set: auto-press Combine, queue the cheapest pending Capacity / Speed upgrade through the ordinary progress-bar mechanism (`queueIntroCapacityUpgrade` / `queueIntroSpeedUpgrade`, one at a time, increasing cost; the bar pulls at a constant 1× Speed like any other upgrade, ahead of the other consumers), and Provision Disk up to those caps (sizes below the newest unlocked one re-provision for free instead, via `tickAutoProvisionLowerDiskSizes`). Its own Provision Disk call passes a `getDiskReplayPassAllowance`-derived `maxPasses` so it can't overshoot the cap in one call, and re-marks `intro.diskBuildQueuedByReplay` true on a partial result (overriding `provisionDisk`'s own default `false`) so `tickQueuedDiskBuild` keeps enforcing this same cap on later ticks |
+| `tickFoundryResetConvenience` | `state → state` | While `foundryResetCaps` is set: auto-press Combine, queue the cheapest pending Capacity / Speed upgrade through the ordinary progress-bar mechanism (`queueIntroCapacityUpgrade` / `queueIntroSpeedUpgrade`, one at a time, increasing cost; the bar pulls at a constant 1× Speed like any other upgrade, ahead of the other consumers), Provision Disk up to those caps, and Data Lake Booster buys / capacity upgrades up to the recorded lake highs (all affordable Boosters are bought first, since an upgrade empties the lake; the upgrade waits until the Booster target is met, the entity is at its cap, or the next Booster cost exceeds lake capacity) (sizes below the newest unlocked one re-provision for free instead, via `tickAutoProvisionLowerDiskSizes`). Its own Provision Disk call passes a `getDiskReplayPassAllowance`-derived `maxPasses` so it can't overshoot the cap in one call, and re-marks `intro.diskBuildQueuedByReplay` true on a partial result (overriding `provisionDisk`'s own default `false`) so `tickQueuedDiskBuild` keeps enforcing this same cap on later ticks |
 | `getDiskReplayPassAllowance` | `(state, size) → number` | How many more whole passes toward `size`'s in-progress disk an active `foundryResetCaps` replay may still fund for free — `Infinity` unless `size` sits exactly at the boundary between a fully pre-earned run of completed disks and a next disk only partially paid before the reset, in which case `max(0, passesCap - passesCollected)`. Used by `tickFoundryResetConvenience` (as `provisionDisk`'s `maxPasses`), by `normalizePoolMemoryCapacity`'s load-time `diskBuildQueued` auto-arm, and by `tickQueuedDiskBuild` when `diskBuildQueuedByReplay` is set |
 | `isIntroConversionUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_CONVERSION_UNLOCK_CAPACITY` (8000). No longer wired into any UI (the manual transfer-block row it used to gate was removed — see `docs/DESIGN_HISTORY.md`) — kept as a pure, tested export only |
 | `isStorageUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (8,192 bits, "1 KiB" in Memory's own binary display scale, equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)`) — reveals Foundry's Provision Disk control and continuous DiskArrayRow sections |

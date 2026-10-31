@@ -311,6 +311,7 @@ import {
   buyBooster,
   startDataLakeAutoConvert,
   tickDataLakeAutoConvert,
+  isDataLakeBoosterAuto,
   isStoragePoolResetAvailable,
   isLaterPoolProvisioningLocked,
   isStoragePoolRebuilding,
@@ -2355,6 +2356,7 @@ describe('resetByteFoundry', () => {
     expect(after.intro.computeCores).toBe(0)
     expect(after.intro.mainGameUnlocked).toBe(true)
     expect(after.intro.foundryResetCaps).toEqual({
+      lakes: {},
       byteCreated: true,
       speedCapacity: 400000,
       disksBuiltTotal: { [String(diskSize)]: 5 },
@@ -11355,6 +11357,106 @@ describe('Data Lakes', () => {
     })
   })
 
+  describe('boosterAuto latch and Foundry-reset lake replay', () => {
+    const built = () => withIntro(createInitialGameState(), {
+      byteCreated: true,
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+    })
+
+    it('latches boosterAuto once the pool is fully built and keeps it through a Foundry reset', () => {
+      const latched = tickDataLakeAutoConvert(built())
+      expect(latched.intro.dataLakes[1].boosterAuto).toBe(true)
+      expect(resetByteFoundry(latched).intro.dataLakes[1].boosterAuto).toBe(true)
+      expect(createInitialGameState().intro.dataLakes[1].boosterAuto).toBe(false)
+    })
+
+    it('replays a lake capacity upgrade after a Foundry reset', () => {
+      const state = built()
+      const withLakeHighs = {
+        ...state,
+        intro: {
+          ...state.intro,
+          dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], capacityLevel: 1, purchased: 0 } },
+        },
+      }
+      const reset = resetByteFoundry(withLakeHighs)
+      expect(reset.intro.foundryResetCaps.lakes[1]).toEqual({ capacityLevel: 1, purchased: 0 })
+      const rebuilt = {
+        ...reset,
+        intro: { ...reset.intro, disksBuiltTotal: state.intro.disksBuiltTotal },
+      }
+      const after = tickFoundryResetConvenience(rebuilt)
+      expect(after.intro.dataLakes[1].capacityLevel).toBe(1)
+    })
+
+    it('replay buys every affordable Booster before a capacity upgrade can empty the lake', () => {
+      const state = built()
+      const seeded = {
+        ...state,
+        intro: {
+          ...state.intro,
+          dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], boostersUnlocked: true, capacityLevel: 1, purchased: 3, depositedUnits: 9 } },
+          foundryResetCaps: { lakes: { 1: { capacityLevel: 2, purchased: 10 } } },
+        },
+      }
+      const after = tickFoundryResetConvenience(seeded)
+      expect(after.intro.dataLakes[1].purchased).toBe(5)
+      expect(after.intro.dataLakes[1].capacityLevel).toBe(1)
+      expect(after.intro.dataLakes[1].depositedUnits).toBe(0)
+    })
+
+    it('defers the capacity upgrade while Boosters remain, and runs it once the next Booster cannot fit or the entity is capped', () => {
+      const state = built()
+      const seed = (lake, intro = {}) => ({
+        ...state,
+        intro: {
+          ...state.intro,
+          ...intro,
+          dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], boostersUnlocked: true, capacityLevel: 1, ...lake } },
+          foundryResetCaps: { lakes: { 1: { capacityLevel: 2, purchased: 20 } } },
+        },
+      })
+      // Empty lake, next cost fits capacity: wait for a refill and a buy first.
+      expect(tickFoundryResetConvenience(seed({ purchased: 1, depositedUnits: 0 })).intro.dataLakes[1].capacityLevel).toBe(1)
+      // Next cost exceeds the lake's capacity: the upgrade unblocks it.
+      expect(tickFoundryResetConvenience(seed({ purchased: 10, depositedUnits: 10 })).intro.dataLakes[1].capacityLevel).toBe(2)
+      // Entity at its cap: no Booster can be bought, so the upgrade still replays.
+      const capped = seed({ purchased: 3, depositedUnits: 10 }, { computeCores: COMPUTE_ENTITY_CAP })
+      expect(tickFoundryResetConvenience(capped).intro.dataLakes[1].capacityLevel).toBe(2)
+    })
+
+    it('keeps the latch through Prestige and a pool reset, clears it on Era ascension, and merges lake highs by max', () => {
+      const latched = tickDataLakeAutoConvert(built())
+      expect(latched.intro.dataLakes[1].boosterAuto).toBe(true)
+      const withHighs = { ...latched, intro: { ...latched.intro, dataLakes: { ...latched.intro.dataLakes, 1: { ...latched.intro.dataLakes[1], capacityLevel: 2, purchased: 3 } } } }
+      const prestiged = prestigeGame({ ...withHighs, resources: { ...withHighs.resources, [MONEY_ID]: PRESTIGE_THRESHOLD } })
+      expect(prestiged.intro.dataLakes[1].boosterAuto).toBe(true)
+      const merged = mergeFoundryUpgradeCaps(
+        { lakes: { 1: { capacityLevel: 2, purchased: 1 } } },
+        { lakes: { 1: { capacityLevel: 1, purchased: 4 } } },
+      )
+      expect(merged.lakes[1]).toEqual({ capacityLevel: 2, purchased: 4 })
+      const eraReady = { ...withHighs, prestige: { ...withHighs.prestige, points: ERA_ELIGIBILITY_PP } }
+      expect(eraGame(eraReady).intro.dataLakes[1].boosterAuto).toBe(false)
+    })
+
+    it('treats a latched lake as auto: no manual conversion start, and it buys when its pool is no longer fully built', () => {
+      const latched = tickDataLakeAutoConvert(built())
+      const rebuilding = {
+        ...latched,
+        intro: {
+          ...latched.intro,
+          disksBuiltTotal: { [kb1]: 1 },
+          dataLakes: { ...latched.intro.dataLakes, 1: { ...latched.intro.dataLakes[1], depositedUnits: 1, boostersUnlocked: true } },
+        },
+      }
+      expect(isStoragePoolFullyBuilt(rebuilding, 1)).toBe(false)
+      expect(isDataLakeBoosterAuto(rebuilding, 1)).toBe(true)
+      expect(isDataLakeAutoConvertStartAvailable(rebuilding, 1)).toBe(false)
+      expect(tickDataLakeAutoConvert(rebuilding).intro.dataLakes[1].purchased).toBe(1)
+    })
+  })
+
   describe('capacity upgrade (available once the corresponding Storage array is fully built)', () => {
     const withLake = (state, tierIndex, overrides) => ({
       ...state,
@@ -11856,6 +11958,7 @@ describe('Data Lakes', () => {
       resetCount: 0,
       rebuilding: false,
       bandwidthSteps: 0,
+      boosterAuto: false,
     })
   })
 
