@@ -220,7 +220,7 @@ describe('schema merge on load', () => {
     expect(loaded.owned[tensTier.id]).toBe(5) // existing value preserved
   })
 
-  it('defaults prestige.points to 0, autobuyerBulkLevels to 0, tierTickspeedAutobuyer to false, and autoPrestige to null for saves missing those fields', () => {
+  it('defaults prestige.points to 0, tierTickspeedAutobuyer to false, and autoPrestige to null for saves missing those fields', () => {
     const oldSave = {
       intro: { mainGameUnlocked: true },
       resources: { [MONEY_ID]: 10 },
@@ -232,9 +232,7 @@ describe('schema merge on load', () => {
     expect(loaded.prestige.points).toBe(0)
     expect(loaded.autoPrestige).toBeNull()
     TIER_DEFINITIONS.forEach(tier => {
-      expect(loaded.autobuyerBulkLevels[tier.id]).toBe(0)
-      // Even for tensTier, already unlocked above — no backward-compat grandfathering, same as
-      // autobuyerBulkLevels: this is a new purchase requirement for every save going forward.
+      // Even for tensTier, already unlocked above — no backward-compat grandfathering.
       expect(loaded.tierTickspeedAutobuyer[tier.id]).toBe(false)
     })
   })
@@ -374,15 +372,6 @@ describe('schema merge on load', () => {
     const loaded = loadGameState()
     expect(loaded.autobuyersEnabled[tensTier.id]).toBe(false)
     expect(loaded.tierTickspeedAutobuyerEnabled[tensTier.id]).toBe(false)
-  })
-
-  it('preserves a saved autobuyerBulkLevels value', () => {
-    const state = {
-      ...createInitialGameState(),
-      autobuyerBulkLevels: { ...createInitialGameState().autobuyerBulkLevels, [tensTier.id]: 2 },
-    }
-    saveGameState(state)
-    expect(loadGameState().autobuyerBulkLevels[tensTier.id]).toBe(2)
   })
 
   it('preserves a saved tierTickspeedAutobuyer flag', () => {

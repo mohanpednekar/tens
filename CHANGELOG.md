@@ -13,9 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- **Autobuyer bulk (10/100/1000 per buy) is now a Perks → Upgrades purchase** (new "Autobuyer Bulk" section) instead of an Unlocks one; its nav dot moves to the Upgrades tab.
-- **Global Automation is a strict sequence**: Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Prestige → Auto-Prestige Autobuyer. Every step is always listed and each needs the previous one (also enforced in the engine). Auto-Prestige is now an Unlocks purchase rather than an Upgrades one.
-- Autobuyer bulk mode (10/100/1000 per buy) is now an upper limit: each attempt buys as many whole levels as are affordable, up to the limit, instead of falling back to a single level when the full amount isn't affordable.
+- **Autobuyer bulk reworked into the speed upgrades**: the separate 10/100/1000 per-buy purchase is gone. A tier autobuyer's speed upgrades now continue past the 10 ms floor, and each extra level doubles how many whole levels one attempt may buy (2, 4, … 1024; always only an upper limit — as many as are affordable). Previously bought bulk modes no longer apply.
+- **Auto-Prestige Autobuyer removed** (the 100 PP convenience that auto-bought Auto-Prestige's speed upgrades) — its PP are not refunded.
+- **Global Automation is a strict sequence**: Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Prestige. Every step is always listed and each needs the previous one (also enforced in the engine). Auto-Prestige is now an Unlocks purchase rather than an Upgrades one.
 - **"Unbounded Prestige" renamed to DeGoogol (the chapter is now "DeGoogoled").**
 
 - **Auto-Prestige moved to Perks → Unlocks → Global Automation; Auto-Boost has its own "Compute Automation" section.** The redundant Upgrades → Automation category was removed (Auto-Prestige's speed upgrade stays under Upgrades).

@@ -1,6 +1,4 @@
 import {
-  AUTO_PRESTIGE_AUTOBUYER_COST,
-  AUTOBUYER_BULK_MAX_MODE,
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   COMPUTE_MERGE_RATIO,
@@ -22,7 +20,6 @@ import {
   getOverclockRequirement,
   getPrestigeDoublePpUpgradeCost,
   getPurchaseBlockSize,
-  getAutobuyerBulkModeCost,
   getScaleUpRequirement,
   getScaleUpTargetTier,
   getTierAffordableQuantity,
@@ -184,8 +181,7 @@ export const hasAffordablePpUnlock = state => {
     (isComputeCoreConversionUnlocked(state) && !(state.computeAutoBoostUnlocked ?? false) && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST) ||
     (Boolean(state.autoScaleUp) && !(state.autoOverclock ?? false) && points >= getAutomationUnlockCost('overclock')) ||
     (!(state.autoGlobalTickspeed ?? false) && points >= getAutomationUnlockCost('latency')) ||
-    (Boolean(state.autoOverclock) && state.autoPrestige == null && points >= getAutomationUnlockCost('prestige')) ||
-    (state.autoPrestige != null && !(state.autoPrestigeAutobuyer ?? false) && points >= AUTO_PRESTIGE_AUTOBUYER_COST)
+    (Boolean(state.autoOverclock) && state.autoPrestige == null && points >= getAutomationUnlockCost('prestige'))
   )
 }
 
@@ -194,13 +190,6 @@ export const hasAffordablePpLevelUpgrade = state => {
   const points = state.prestige?.points ?? 0
   if (points >= getPrestigeDoublePpUpgradeCost(state.prestigeDoublePpLevel ?? 0)) return true
   if (isProductionFrozen(state)) return false
-  const bulkAffordable = TIER_DEFINITIONS.some(tier =>
-    isTierUnlocked(state)(tier) &&
-    (state.autobuyers[tier.id] ?? null) !== null &&
-    (state.autobuyerBulkLevels?.[tier.id] ?? 0) < AUTOBUYER_BULK_MAX_MODE &&
-    points >= getAutobuyerBulkModeCost(tier.id, (state.autobuyerBulkLevels?.[tier.id] ?? 0) + 1),
-  )
-  if (bulkAffordable) return true
   if (state.autoPrestige == null) return false
   const level = state.automationIntervalLevels?.prestige ?? 0
   return level < getAutomationIntervalMaxLevel('prestige') && points >= getAutomationIntervalUpgradeCost('prestige', level)
