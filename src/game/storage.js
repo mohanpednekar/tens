@@ -515,6 +515,10 @@ const mergeState = saved => {
   // forward via the explicit fallbacks below instead of silently lost to fresh's defaults.
   const {
     lastTierTickspeedXpUnlocked: _removed,
+    // Removed mechanics (autobuyer bulk modes, Auto-Prestige Autobuyer) — stripped so legacy saves don't keep dead keys.
+    autobuyerBulkLevels: _removedBulk,
+    autoPrestigeAutobuyer: _removedAutoPrestigeAutobuyer,
+    autoPrestigeAutobuyerEnabled: _removedAutoPrestigeAutobuyerEnabled,
     speedUpCount: legacySpeedUpCount,
     autoSpeedUp: legacyAutoSpeedUp,
     autoSpeedUpEnabled: legacyAutoSpeedUpEnabled,
@@ -562,7 +566,6 @@ const mergeState = saved => {
     tickspeedLevels: mergeTierMap(fresh.tickspeedLevels, saved.tickspeedLevels),
     autobuyerAttemptBudgets: mergeTierMap(fresh.autobuyerAttemptBudgets, saved.autobuyerAttemptBudgets),
     tierProductionAccumulators: mergeTierMap(fresh.tierProductionAccumulators, saved.tierProductionAccumulators),
-    autobuyerBulkLevels: mergeTierMap(fresh.autobuyerBulkLevels, saved.autobuyerBulkLevels),
     autobuyerIntervalLevels: mergeTierMap(fresh.autobuyerIntervalLevels, saved.autobuyerIntervalLevels),
     automationIntervalLevels: { ...fresh.automationIntervalLevels, ...(saved.automationIntervalLevels ?? {}) },
     tierTickspeedIntervalLevels: mergeTierMap(fresh.tierTickspeedIntervalLevels, saved.tierTickspeedIntervalLevels),
