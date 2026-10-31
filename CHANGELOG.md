@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Foundry-reset rebuild runs at each pool's base Bandwidth.** Smaller disk sizes now rebuild one disk at a time, each in exactly size ÷ base Bandwidth, independent of the fill multiplier, so the Provision Disk tile's ⚡ is the base speed and its ⏳ is the exact total time.
 - Data Lake filled balance now floors to 3 significant digits like Foundry speeds; the running-upgrade "from → to" readout now uses the left (from) value's unit.
 
 - Data Lake Boosters keep their auto-buy status for the whole Era once a pool has been fully built, through pool resets, Reset Byte Foundry and Prestige. Reset Byte Foundry now also auto-replays Data Lake capacity upgrades and Booster purchases up to their previous highs.
