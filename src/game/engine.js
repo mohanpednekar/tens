@@ -7053,9 +7053,10 @@ export const tickFoundryResetConvenience = state => {
         changed = true
       }
     }
-    // The upgrade empties the lake, so it waits until the Booster target is met, or until the next
-    // Booster costs more than the lake can currently hold (so the upgrade is what unblocks it).
+    // The upgrade empties the lake, so it waits until the Booster target is met, the entity is at its cap
+    // (no more Boosters can be bought), or until the next Booster costs more than the lake can hold (so the upgrade is what unblocks it).
     const boostersDone = (getDataLakeTier(next, tierIndex)?.purchased ?? 0) >= (lakeCaps.purchased ?? 0) ||
+      isBoosterEntityAtCap(next, tierIndex) ||
       getBoosterPurchaseCost(tierIndex)(next) > getDataLakeCapacity(next, tierIndex)
     if (boostersDone && getDataLakeCapacityLevel(next, tierIndex) < (lakeCaps.capacityLevel ?? 0)) {
       const doubled = doubleDataLakeCapacity(tierIndex)(next)

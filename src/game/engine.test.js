@@ -11370,7 +11370,7 @@ describe('Data Lakes', () => {
       expect(createInitialGameState().intro.dataLakes[1].boosterAuto).toBe(false)
     })
 
-    it('replays lake capacity upgrades and Boosters up to prior highs after a Foundry reset', () => {
+    it('replays a lake capacity upgrade after a Foundry reset', () => {
       const state = built()
       const withLakeHighs = {
         ...state,
@@ -11403,6 +11403,26 @@ describe('Data Lakes', () => {
       expect(after.intro.dataLakes[1].purchased).toBe(5)
       expect(after.intro.dataLakes[1].capacityLevel).toBe(1)
       expect(after.intro.dataLakes[1].depositedUnits).toBe(0)
+    })
+
+    it('defers the capacity upgrade while Boosters remain, and runs it once the next Booster cannot fit or the entity is capped', () => {
+      const state = built()
+      const seed = (lake, intro = {}) => ({
+        ...state,
+        intro: {
+          ...state.intro,
+          ...intro,
+          dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], boostersUnlocked: true, capacityLevel: 1, ...lake } },
+          foundryResetCaps: { lakes: { 1: { capacityLevel: 2, purchased: 20 } } },
+        },
+      })
+      // Empty lake, next cost fits capacity: wait for a refill and a buy first.
+      expect(tickFoundryResetConvenience(seed({ purchased: 1, depositedUnits: 0 })).intro.dataLakes[1].capacityLevel).toBe(1)
+      // Next cost exceeds the lake's capacity: the upgrade unblocks it.
+      expect(tickFoundryResetConvenience(seed({ purchased: 10, depositedUnits: 10 })).intro.dataLakes[1].capacityLevel).toBe(2)
+      // Entity at its cap: no Booster can be bought, so the upgrade still replays.
+      const capped = seed({ purchased: 3, depositedUnits: 10 }, { computeCores: COMPUTE_ENTITY_CAP })
+      expect(tickFoundryResetConvenience(capped).intro.dataLakes[1].capacityLevel).toBe(2)
     })
 
     it('keeps the latch through Prestige and a pool reset, clears it on Era ascension, and merges lake highs by max', () => {
