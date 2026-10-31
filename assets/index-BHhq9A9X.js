@@ -2212,6 +2212,12 @@ Error generating stack: `+e.message+`
 
   a {
     color: ${e=>e.theme.color.accent};
+    border-radius: ${e=>e.theme.radius.sm};
+
+    &:focus-visible {
+      outline: 2px solid ${e=>e.theme.color.accent};
+      outline-offset: 2px;
+    }
   }
 `,hb=()=>(0,R.jsxs)(ob,{"aria-label":`legal section`,children:[(0,R.jsx)(`h2`,{children:`Legal`}),(0,R.jsxs)(mb,{children:[(0,R.jsx)(`a`,{href:tb,rel:`noopener noreferrer`,target:`_blank`,children:`Privacy Policy`}),(0,R.jsx)(`a`,{href:nb,rel:`noopener noreferrer`,target:`_blank`,children:`Terms of Use`})]})]}),gb={removeAds:`Ads removed — rewards are now granted instantly. Thank you!`,supportTip:`Thank you for supporting Tens!`},_b=({service:e=om()})=>{let[t,n]=(0,F.useState)({removeAds:!1}),[r,i]=(0,F.useState)(!1),[a,o]=(0,F.useState)(null);if((0,F.useEffect)(()=>{if(!e.iapAvailable)return;let t=!0;return e.getEntitlements().then(e=>{t&&n(e)}),()=>{t=!1}},[e]),!e.iapAvailable)return null;let s=async(e,t)=>{i(!0),o(null);let r=await e();i(!1),r.entitlements&&n(r.entitlements),r.ok?o({error:!1,text:t}):r.cancelled||o({error:!0,text:`The store could not complete that. Please try again.`})};return(0,R.jsxs)(ob,{"aria-label":`store section`,children:[(0,R.jsx)(`h2`,{children:`Store`}),(0,R.jsx)(`p`,{children:`Optional extras. Every part of the game stays free to play.`}),(0,R.jsxs)(sb,{children:[(0,R.jsx)(Z,{"aria-label":`buy remove ads`,disabled:r||t.removeAds,onClick:()=>s(()=>e.purchase(`removeAds`),gb.removeAds),type:`button`,variant:`primary`,children:(0,R.jsx)($,{children:t.removeAds?`Ads removed`:`Remove ads`})}),(0,R.jsx)(Z,{"aria-label":`buy support tip`,disabled:r,onClick:()=>s(()=>e.purchase(`supportTip`),gb.supportTip),type:`button`,variant:`neutral`,children:(0,R.jsx)($,{children:`Leave a tip`})}),(0,R.jsx)(Z,{"aria-label":`restore purchases`,disabled:r,onClick:()=>s(()=>e.restore(),`Purchases restored.`),type:`button`,variant:`ghost`,children:(0,R.jsx)($,{children:`Restore purchases`})})]}),a&&(0,R.jsx)(ub,{$error:a.error,children:a.text})]})},vb=L.main`
   width: min(520px, calc(100vw - 2rem));
