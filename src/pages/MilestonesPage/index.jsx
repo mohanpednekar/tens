@@ -80,7 +80,7 @@ const MilestonesPage = ({ game }) => {
     { label: 'The first KiloByte', reached: !!state.intro?.mainGameUnlocked },
     { label: 'Go Googol', reached: (prestige.count ?? 0) > 0 },
     { label: 'Open Compute', reached: !!state.computeFlops?.pageUnlocked },
-    { label: 'Go Unbounded', reached: isUnboundedPrestigeUnlocked(state) },
+    { label: 'DeGoogoled', reached: isUnboundedPrestigeUnlocked(state) },
     { label: 'Ascend an Era', reached: eraCount > 0 },
   ]
 

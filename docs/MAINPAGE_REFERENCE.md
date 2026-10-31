@@ -146,7 +146,7 @@ Storage is continuous on this same page: **Provision Disk** — the common disk-
 hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary
 scale, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and
 pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-bit ("1,000 B") one above).
-Presents only the newest unlocked size (`getPresentedDiskSize`); smaller incomplete sizes (after a Foundry reset) rebuild by themselves (`tickAutoProvisionLowerDiskSizes`) while the button is disabled — Storage-revealed rebuilds with a pool fill rate use the same speed/time tile as a queued build (`Rebuilding`, `{current} → {largest}`, percent of smaller-size disks done (`getLowerRebuildSummary`), ⚡ the pool's BASE Bandwidth, ⏳ the exact total rebuild time at that speed); otherwise the original `Rebuilding {size} first · automatic` status line. Renders as soon as the Byte exists (`intro.byteCreated`, no Storage-reveal gate — a click before pool 1 can fund a pass simply queues the build) in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
+Presents only the newest unlocked size (`getPresentedDiskSize`); smaller incomplete sizes (after a Foundry reset) rebuild by themselves (`tickAutoProvisionLowerDiskSizes`) while the button is disabled — Storage-revealed rebuilds with a pool fill rate use the same speed/time tile as a queued build (`Rebuilding`, `{current} → {largest}`, percent of smaller-size disks done (`getLowerRebuildSummary`), ⚡ the pool's BASE Bandwidth, ⏳ the total rebuild time at that speed — for a pool not live yet the Bandwidth the pool will have once live stands in (`getProjectedPoolBandwidth`), so the time is never unknown); otherwise (Storage not revealed, or Data Stream Speed 0) the original `Rebuilding {size} first · automatic` status line; the ⏳ is toned down (italic, prefixed `~`) whenever any remaining size's pool isn't live yet (`getLowerRebuildSummary().projected`), and so is the ⚡ (title "Projected speed" when the current size's pool isn't live). Renders as soon as the Byte exists (`intro.byteCreated`, no Storage-reveal gate — a click before pool 1 can fund a pass simply queues the build) in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
 location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
 only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows only
 relative gains (current values are on the tile): `🏷️ <current Capacity (= cost)> · 📦 ×2 · ⚡ ×<speed
@@ -527,7 +527,7 @@ live inside the selected tier):
    a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cores:
-   The timer bar / idle status line and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Global Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
+   The timer bar / idle status line and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Compute Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
    a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
@@ -832,11 +832,11 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
     milestone progressbar) and, once the autobuyer is unlocked and the tier reachable, the 📦 bulk-mode
     purchase (or a `"<tier>'s autobuyer buys N levels at once"` badge). Rows never disappear, so reached milestones
     stay visible as unlock history.
-  - *Global Automation*: Tickspeed Autobuyer, Auto Scale Up, Auto-Prestige Autobuyer (the last only once
-    every tier's tickspeed autobuyer is active and Auto-Prestige is active) — PP button, or an `UnlockedBadge`
+  - *Global Automation*: Tickspeed Autobuyer, Auto Scale Up, Auto Overclock, Auto-Prestige (once every tier's
+    tickspeed autobuyer is active), Auto-Prestige Autobuyer (once Auto-Prestige is active) — PP button, or an `UnlockedBadge`
     (`"<name> unlocked"`) once bought; never a pause control here.
-  - *Production Bonuses* (until bought), *Compute Autobuyers* (Era-milestone badges, once the Flops page
-    is unlocked), and *Prestige* (Unbounded Prestige milestone badge at `PRESTIGE_UNBOUNDED_MIN_COUNT`).
+  - *Compute Automation* (Auto-Boost, once Foundry Compute unlocks), *Production Bonuses* (until bought), *Compute Autobuyers* (Era-milestone badges, once the Flops page
+    is unlocked), and *Prestige* (DeGoogol: locked until Auto-Prestige's interval ≤ `UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS`).
   Each milestone appears only here — `MilestonesPage` no longer repeats them.
 - ⏫ **Upgrades** (`open upgrades`, `aria-label="PP upgrades page"`) — repeatable leveled purchases:
   Double PP, and Auto-Prestige (category hidden until every tier's tickspeed autobuyer is active).

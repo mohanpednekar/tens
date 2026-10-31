@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **"Unbounded Prestige" renamed to DeGoogol (the chapter is now "DeGoogoled").**
+
+- **Auto-Prestige moved to Perks → Unlocks → Global Automation; Auto-Boost has its own "Compute Automation" section.** The redundant Upgrades → Automation category was removed (Auto-Prestige's speed upgrade stays under Upgrades).
+- **DeGoogol now unlocks when Auto-Prestige is upgraded to 1 s or faster** (previously 100 lifetime prestiges). Saves that already earned it keep it.
+- Perks → Unlocks: the autobuyer bulk-mode purchase now reads "N/buy · cost PP" (⏫ icon) and the owned badge "N/buy", replacing the ambiguous 📦 ×N label.
+- Tier tickspeed autobuyers now unlock at Prestige 11–20 (one per Prestige, tier01 at 11 through tier10 at 20) instead of 12–30.
 - **Foundry-reset rebuild runs at each pool's base Bandwidth.** Smaller disk sizes now rebuild one disk at a time, each in exactly size ÷ base Bandwidth, independent of the fill multiplier, so the Provision Disk tile's ⚡ is the base speed and its ⏳ is the exact total time.
 - Data Lake filled balance now floors to 3 significant digits like Foundry speeds; the running-upgrade "from → to" readout now uses the left (from) value's unit.
 
@@ -120,6 +126,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Rebuild tile always shows a time.** While a rebuilding size's pool is not live yet, the time (and ⚡ speed) are projected from the Bandwidth the pool will have once live instead of being hidden.
 - **Legal links show a keyboard focus ring.** Settings → Legal Privacy Policy and Terms of Use now use the same accent `:focus-visible` outline as other interactive controls.
 
 ### Changed

@@ -87,8 +87,12 @@ export const BITS_PER_BYTE = 8
 // keep keying off GOOGOL's own clean 10^100 rather than this messier ~10^100.9 value, since an 8x
 // constant factor is negligible at that scale — see docs/DESIGN_HISTORY.md.
 export const PRESTIGE_THRESHOLD = GOOGOL * BITS_PER_BYTE
-// After this many lifetime prestiges, Money may exceed PRESTIGE_THRESHOLD without freezing
-// production — the player keeps earning and may Prestige voluntarily to claim accumulated PP.
+// DeGoogol: once Auto-Prestige's interval is upgraded to this many seconds or less, Money may
+// exceed PRESTIGE_THRESHOLD without freezing production — the player keeps earning and may Prestige
+// voluntarily to claim accumulated PP. Permanent once reached (prestige.unboundedUnlocked latch).
+export const UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS = 1
+// Legacy rule (lifetime prestige count), kept only so storage.js can grandfather saves that reached
+// it before DeGoogol moved to the Auto-Prestige interval above.
 export const PRESTIGE_UNBOUNDED_MIN_COUNT = 100
 // Base PP earning rate beyond Googol: 1 PP per this many additional money-exponent "powers"
 // (orders of magnitude above GOOGOL's own 10^100 exponent). Each Double PP upgrade halves this
@@ -674,11 +678,11 @@ export const AUTOBUYER_UNLOCK_MILESTONE_START = 1
 export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 1
 // Same milestone-based automatic-unlock mechanism as the autobuyer unlock above, but for a tier's
 // own tickspeed-multiplier autobuyer (see engine.js's getTierTickspeedAutobuyerMilestone) — starts
-// later (prestige 12 for tier01) and spaces out twice as slowly (every 2 prestiges: 12, 14, 16, …
-// 30 for tier10), reflecting that it's a later-game convenience layered on top of the (now free)
+// later (prestige 11 for tier01) and spaces out one prestige per tier (11, 12, 13, … 20 for tier10),
+// reflecting that it's a later-game convenience layered on top of the (now free)
 // unit-buying autobuyer above. Also no longer PP-funded.
-export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 12
-export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 2
+export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 11
+export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 1
 // Latency (the global tickspeed multiplier — see engine.js's
 // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) speeds up *every* tier's
 // production at once. Every level compounds by the same rate.
