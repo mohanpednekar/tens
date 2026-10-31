@@ -282,6 +282,8 @@ outright), saying so when it deviates from lowest-number order.
   `claude/auto-*`/`devin/auto-*` the comment triggers the follow-up agent to merge-and-resolve.
 - `release.yml` — deterministic: on a `package.json` push to `main`, tags `v<x.y.z>` if absent and
   creates the GitHub Release from that version's `CHANGELOG.md` section (see "Changelog convention").
+- `revert-deploy.yml` — manual `workflow_dispatch` only (#594): given a known-good `target_sha`, opens a PR
+  restoring `main`'s tree to it (never pushes to `main`); merging it makes `deploy.yml` redeploy.
 - `autonomous-pr-followup.yml` — review comments/CI failures on `claude/auto-*`/`devin/auto-*` PRs;
   `dependabot-pr-followup.yml` — failing checks on `dependabot/*` PRs when the bump broke call sites
   (Phase 0 owns `@dependabot rebase` for merely-behind branches).
