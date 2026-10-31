@@ -249,7 +249,10 @@ a fill from whatever the pool buffer happens to be holding for unrelated reasons
 fill) before the player has ever engaged this specific build; see `docs/DESIGN_HISTORY.md`. Paired
 with a hidden
 `role="progressbar"` (`aria-label="byte foundry disk build progress"`,
-`aria-valuenow={round(diskBuildProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`). Both the
+`aria-valuenow={round(diskDisplayedProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`).
+`$progress` and that `aria-valuenow` share `diskDisplayedProgress`: rebuild of smaller sizes uses
+the percent of those disks already full (`rebuildProgress`); every other state keeps `diskBuildProgress`.
+Both the
 label and `title` render the disk's size AND its cost via `formatDiskSize` (see "Numbers are
 formatted" below) — the cost is a Disk-denominated amount (`getDiskCost` = `getDiskProvisionPassesRequired`
 × the array's own SI face value), so it renders on the same SI scale as the disk's own size right

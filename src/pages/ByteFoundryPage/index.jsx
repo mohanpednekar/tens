@@ -962,6 +962,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     }
   }
   const rebuildProgress = rebuildDisksTotal > 0 ? clampPercent((rebuildDisksFull / rebuildDisksTotal) * 100) : 0
+  const diskDisplayedProgress = lowerDiskSizePending ? rebuildProgress : diskBuildProgress
   const diskBitsStillNeeded = Math.max(0, diskCost - diskPassesCollected * diskSize - diskPoolSpendableBufferBits)
   const diskFundingTimeText = lowerDiskSizePending
     ? formatUpgradeTimeLeft(rebuildSeconds)
@@ -1008,14 +1009,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       }
       type="button"
       variant={diskLadderExhausted || lowerDiskSizePending ? 'neutral' : diskBuildQueued ? 'smart' : canStartDiskBuild ? 'info' : 'neutral'}
-      $progress={diskBuildProgress}
+      $progress={diskDisplayedProgress}
       $pulse={diskProvisioningActive}
     >
       {diskShowsFundingStats ? (
         <ProvisionContent>
           <RunningTitle>{diskBuildStatus.icon} {lowerDiskSizePending ? 'Rebuilding…' : `${formatDiskSize(diskSize)} Disk…`}</RunningTitle>
           <RunningChange>{lowerDiskSizePending ? `${formatDiskSize(autoDiskSize)} · to prior highs` : diskPassesCollected > 0 ? diskPassesFraction : 'Queued'}</RunningChange>
-          <RunningPercent>{Math.floor(lowerDiskSizePending ? rebuildProgress : diskBuildProgress)}%</RunningPercent>
+          <RunningPercent>{Math.floor(diskDisplayedProgress)}%</RunningPercent>
           <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent) }} title="Pool fill speed funding this disk">⚡ {diskFundingSpeedText}</ProvisionSpeed>
           <RunningTime>⏳ {diskFundingTimeText}</RunningTime>
         </ProvisionContent>
@@ -1028,7 +1029,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       <VisuallyHidden
         role="progressbar"
         aria-label="byte foundry disk build progress"
-        aria-valuenow={Math.round(diskBuildProgress)}
+        aria-valuenow={Math.round(diskDisplayedProgress)}
         aria-valuemin={0}
         aria-valuemax={100}
       />
