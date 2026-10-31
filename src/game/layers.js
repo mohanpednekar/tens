@@ -642,7 +642,7 @@ export const TICKSPEED_PRODUCTION_STEP = 0.1
 export const AUTOBUYER_UNLOCK_BASE_COST = 1
 // Autobuyer bulk mode (engine.js's getAutobuyerBulkModeCost/buyAutobuyerBulkMode): without it a tier's
 // autobuyer buys one unit per attempt. Mode m (1..AUTOBUYER_BULK_MAX_MODE) lets each attempt buy
-// AUTOBUYER_BULK_LEVELS_BASE^m full levels at once when that many are affordable (else one unit).
+// AUTOBUYER_BULK_LEVELS_BASE^m full levels at once as an upper limit — as many as are affordable, down to one.
 // Cost = the tier's autobuyer base cost × levels^3 (1000×, 1e6×, 1e9×). Buy max mode never applies to autobuyers.
 export const AUTOBUYER_BULK_LEVELS_BASE = 10
 export const AUTOBUYER_BULK_MAX_MODE = 3

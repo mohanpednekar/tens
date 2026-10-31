@@ -408,11 +408,11 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               <span>
                 {/* Owned bulk mode always shows (history); buying the next needs the tier reachable this run. */}
                 {!isAutobuyerLocked && bulkMode > 0 && (
-                  <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer buys ${AUTOBUYER_BULK_LEVELS_BASE ** bulkMode} levels at once`}>🤖 {AUTOBUYER_BULK_LEVELS_BASE ** bulkMode}/buy</Badge>
+                  <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer buys up to ${AUTOBUYER_BULK_LEVELS_BASE ** bulkMode} levels at once`}>🤖 {AUTOBUYER_BULK_LEVELS_BASE ** bulkMode}/buy</Badge>
                 )}
                 {!isAutobuyerLocked && hasNextBulk && unlocked && (
                   <PpPurchaseButton
-                    ariaLabel={`Let ${tier.name}'s autobuyer buy ${bulkLevels} levels at once when affordable for ${formatAmount(bulkCost)} Prestige Points`}
+                    ariaLabel={`Let ${tier.name}'s autobuyer buy up to ${bulkLevels} levels at once for ${formatAmount(bulkCost)} Prestige Points`}
                     color="#a78bfa"
                     cost={bulkCost}
                     disabled={!canBuyBulk}
@@ -421,7 +421,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                     onClick={() => actions.buyAutobuyerBulkMode(tier.id)}
                     points={points}
                     progressLabel={`${tier.name} bulk autobuyer Prestige Point progress`}
-                    title={`Each autobuyer attempt buys ${bulkLevels} full levels when that many are affordable (otherwise one unit). Without bulk mode an autobuyer buys one unit per attempt. Buy max mode never applies to autobuyers.`}
+                    title={`Each autobuyer attempt buys as many full levels as are affordable, up to ${bulkLevels} (at least one unit). Without bulk mode an autobuyer buys one unit per attempt. Buy max mode never applies to autobuyers.`}
                   />
                 )}
               </span>
