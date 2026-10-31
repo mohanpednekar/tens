@@ -1893,7 +1893,22 @@ test.each([
   expect(screen.getByRole('button', { name: pauseName })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('the Auto-Prestige option stays hidden until every tier is upgraded to Smart', async () => {
+test('Auto Overclock (32 PP) and Auto-Prestige (64 PP) are always listed in Global Automation, even before their prerequisites', async () => {
+  const user = userEvent.setup()
+
+  seedMainGameState({
+    resources: { base: 10 },
+    prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+  await openPerksTab(user, /open unlocks/i)
+
+  // Auto Scale Up isn't bought yet, so Auto Overclock is visible but not purchasable.
+  expect(screen.getByRole('button', { name: /enable auto overclock for 32 prestige points/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /enable auto-prestige for 64 prestige points/i })).toBeEnabled()
+})
+
+test('the Auto-Prestige option stays out of Upgrades until Auto-Prestige is bought', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
