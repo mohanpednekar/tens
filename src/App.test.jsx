@@ -1893,7 +1893,22 @@ test.each([
   expect(screen.getByRole('button', { name: pauseName })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('the Auto-Prestige option stays hidden until every tier is upgraded to Smart', async () => {
+test('Auto Overclock (32 PP) and Auto-Prestige (64 PP) are always listed in Global Automation, even before their prerequisites', async () => {
+  const user = userEvent.setup()
+
+  seedMainGameState({
+    resources: { base: 10 },
+    prestige: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+  await openPerksTab(user, /open unlocks/i)
+
+  // Auto Scale Up isn't bought yet, so Auto Overclock is visible but not purchasable.
+  expect(screen.getByRole('button', { name: /enable auto overclock for 32 prestige points/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /enable auto-prestige for 64 prestige points/i })).toBeEnabled()
+})
+
+test('the Auto-Prestige option stays out of Upgrades until Auto-Prestige is bought', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -3778,6 +3793,25 @@ describe('Byte Foundry Storage', () => {
     expect(button).toHaveAttribute('aria-description', expect.stringMatching(/after disk fill/))
     expect(button).not.toHaveTextContent('now')
     expect(button).not.toHaveTextContent('—')
+  })
+
+  test('a rebuild whose current size is in a pool that is not live yet still shows ⚡ and ⏳ (projected, labelled)', () => {
+    // Every pool-1 size full → the size being rebuilt (1 MB) sits in pool 2, which is not live at this Capacity.
+    const pool1Sizes = [currentBankSize, currentBankSize * 10, currentBankSize * 100]
+    const full = Object.fromEntries(pool1Sizes.map(size => [size, DISK_ARRAY_LADDER_CAP]))
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 8,
+      disksBuiltTotal: full,
+      disks: full,
+    })
+    render(<App />)
+    const button = screen.getByRole('button', { name: /provision disk/i })
+    expect(button).toHaveTextContent(/Rebuilding/)
+    expect(button).toHaveTextContent(/⚡.*\/s/)
+    expect(button).toHaveTextContent(/⚡\s*~/) // the projected speed is marked with ~ too
+    expect(button).toHaveTextContent(/⏳\s*~\d/) // projected time is marked with ~ (and toned down)
+    expect(button.querySelector('[title^="Projected speed"]')).not.toBeNull()
   })
 
   test('a multi-size rebuild names the size being rebuilt and the largest size it will reach', () => {

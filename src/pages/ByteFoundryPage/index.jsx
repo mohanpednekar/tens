@@ -7,7 +7,7 @@ import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
-import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatSpeedText, formatThreeSignificant, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getLowerRebuildSummary, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatSpeedText, formatThreeSignificant, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getLowerRebuildSummary, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getProjectedPoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
@@ -958,13 +958,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // the fill-multiplier curve (not that snapshot held constant). A queued build waiting behind Disk
   // Fill has no meaningful time, so its ⏳ is hidden rather than showing a misleading "now". A rebuild
   // after a Foundry reset instead runs at each pool's BASE Bandwidth (no fill multiplier), so its ⚡ is
-  // that base speed and its ⏳ is the exact total (getLowerRebuildSummary).
+  // that base speed and its ⏳ is the total (getLowerRebuildSummary) — a projection from the Bandwidth the pool will have once live while the size's pool isn't live yet.
   const getPoolDeliveredRate = poolIndex =>
     getPoolAvailableFillRate(state, poolIndex) * getPoolMultiplierPercent(state, poolIndex) / 100 * getComputeBoostPoolMultiplier(intro, poolIndex)
   const rebuildPoolIndex = getPoolIndexForDiskSize(autoDiskSize)
   const diskFundingMultiplierPercent = lowerDiskSizePending ? 100 : getPoolMultiplierPercent(state, diskPoolIndex)
-  const diskFundingRate = lowerDiskSizePending ? getStoragePoolBandwidth(state, rebuildPoolIndex) : getPoolDeliveredRate(diskPoolIndex)
+  const diskFundingRate = lowerDiskSizePending ? getProjectedPoolBandwidth(state, rebuildPoolIndex) : getPoolDeliveredRate(diskPoolIndex)
   const diskFundingSpeedText = `${formatSpeedText(formatDiskSize(diskFundingRate))}/s`
+  const rebuildPoolNotLive = lowerDiskSizePending && getStoragePoolBandwidth(state, rebuildPoolIndex) <= 0
   const rebuildSummary = getLowerRebuildSummary(state)
   const rebuildProgress = rebuildSummary.disksTotal > 0 ? clampPercent((rebuildSummary.disksDone / rebuildSummary.disksTotal) * 100) : 0
   const rebuildSeconds = rebuildSummary.seconds
@@ -1028,8 +1029,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             return maxRebuildSize > autoDiskSize ? `${formatDiskSize(autoDiskSize)} → ${formatDiskSize(maxRebuildSize)}` : `${formatDiskSize(autoDiskSize)} disks`
           })() : diskPassesCollected > 0 ? diskPassesFraction : 'Queued'}</RunningChange>
           <RunningPercent>{Math.floor(diskDisplayedProgress)}%</RunningPercent>
-          <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent) }} title="Pool fill speed funding this disk">⚡ {diskFundingSpeedText}</ProvisionSpeed>
-          {diskFundingTimeText !== '—' && <RunningTime>⏳ {diskFundingTimeText}</RunningTime>}
+          <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent), ...(lowerDiskSizePending && rebuildSummary.projected ? { opacity: 0.55 } : null) }} title={rebuildPoolNotLive ? "Projected speed — this rebuild waits for the pool's Capacity" : lowerDiskSizePending && rebuildSummary.projected ? "Pool speed — a later pool is not live yet, so the total time is an estimate" : "Pool fill speed funding this disk"}>⚡ {lowerDiskSizePending && rebuildSummary.projected ? '~' : ''}{diskFundingSpeedText}</ProvisionSpeed>
+          {diskFundingTimeText !== '—' && (
+            <RunningTime
+              style={rebuildSummary.projected ? { opacity: 0.5, fontStyle: 'italic' } : undefined}
+              title={rebuildSummary.projected ? "Estimate — part of this rebuild waits for a pool's Capacity" : undefined}
+            >
+              ⏳ {rebuildSummary.projected ? '~' : ''}{diskFundingTimeText}
+            </RunningTime>
+          )}
         </RunningUpgradeContent>
       ) : (
         <MilestoneButtonContent>

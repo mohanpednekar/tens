@@ -54,6 +54,7 @@ import {
   tickAutoProvisionLowerDiskSizes,
   getLowerRebuildDiskSeconds,
   getLowerRebuildSummary,
+  getProjectedPoolBandwidth,
   getDataStreamSpeedExponent,
   isDiskSizeUnlockAvailable,
   unlockNextDiskSizeByFoundryReset,
@@ -12431,12 +12432,29 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
   it('getLowerRebuildSummary totals the exact remaining time and counts in-flight progress', () => {
     const base = afterReset()
     const diskSeconds = getLowerRebuildDiskSeconds(base, FIRST_DISK_SIZE)
-    expect(getLowerRebuildSummary(base)).toEqual({ seconds: DISK_ARRAY_LADDER_CAP * diskSeconds, disksDone: 0, disksTotal: DISK_ARRAY_LADDER_CAP })
+    expect(getLowerRebuildSummary(base)).toEqual({ seconds: DISK_ARRAY_LADDER_CAP * diskSeconds, disksDone: 0, disksTotal: DISK_ARRAY_LADDER_CAP, projected: false })
     const part = tickAutoProvisionLowerDiskSizes(diskSeconds * 2.5)(base)
     const summary = getLowerRebuildSummary(part)
     expect(summary.seconds).toBeCloseTo((DISK_ARRAY_LADDER_CAP - 2.5) * diskSeconds, 6)
     expect(summary.disksDone).toBeCloseTo(2.5, 6)
-    expect(getLowerRebuildSummary(createInitialGameState())).toEqual({ seconds: 0, disksDone: 0, disksTotal: 0 })
+    expect(getLowerRebuildSummary(createInitialGameState())).toEqual({ seconds: 0, disksDone: 0, disksTotal: 0, projected: false })
+  })
+
+  it('projects a not-live pool from the Bandwidth it will have once live (threshold Capacity, Speed trailing one doubling)', () => {
+    const notLive = withIntro(afterReset(), { capacity: INTRO_STARTING_CAPACITY, speedCapacity: INTRO_STARTING_CAPACITY, unlockedDiskSteps: 6 })
+    const deadPool = getVisibleStoragePoolCount(notLive) + 1
+    expect(getStoragePoolBandwidth(notLive, deadPool)).toBe(0)
+    const threshold = getPoolCapacityUnlockThresholdBits(deadPool)
+    const live = withIntro(notLive, { capacity: threshold, speedCapacity: threshold / INTRO_CAPACITY_DOUBLING_STEP })
+    expect(getStoragePoolBandwidth(live, deadPool)).toBeGreaterThan(0)
+    expect(getProjectedPoolBandwidth(notLive, deadPool)).toBe(getStoragePoolBandwidth(live, deadPool))
+    // far above the current Data Stream Speed — the old stand-in
+    expect(getProjectedPoolBandwidth(notLive, deadPool)).toBeGreaterThan(getStoragePoolBandwidth(notLive, 1))
+    const summary = getLowerRebuildSummary(notLive)
+    expect(Number.isFinite(summary.seconds)).toBe(true)
+    expect(summary.seconds).toBeGreaterThan(0)
+    expect(summary.projected).toBe(true)
+    expect(getLowerRebuildSummary(afterReset()).projected).toBe(false)
   })
 
   it('keeps going until the smaller array is full, then presents/offers the newest size', () => {

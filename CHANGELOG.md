@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Perks → Unlocks → Global Automation now always lists Auto Overclock (32 PP; needs Auto Scale Up first) and Auto-Prestige (64 PP); they were hidden until their prerequisites were met.
+
 ### Changed
 
 - Autobuyer bulk mode (10/100/1000 per buy) is now an upper limit: each attempt buys as many whole levels as are affordable, up to the limit, instead of falling back to a single level when the full amount isn't affordable.
@@ -127,6 +131,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Rebuild tile always shows a time.** While a rebuilding size's pool is not live yet, the time (and ⚡ speed) are projected from the Bandwidth the pool will have once live instead of being hidden.
 - **Legal links show a keyboard focus ring.** Settings → Legal Privacy Policy and Terms of Use now use the same accent `:focus-visible` outline as other interactive controls.
 
 ### Changed

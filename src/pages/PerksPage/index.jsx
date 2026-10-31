@@ -470,53 +470,49 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             />
           )}
         </Row>
-        {isAutoScaleUpActive && (
-          <Row aria-label="auto overclock upgrade">
-            <RowLabel>🚀 Auto Overclock</RowLabel>
-            {isAutoOverclockActive ? (
-              <UnlockedBadge icon="🚀" name="Auto Overclock" />
-            ) : (
-              <PpPurchaseButton
-                ariaLabel={`Enable Auto Overclock for ${overclockUnlockCost} Prestige Points`}
-                color="#38bdf8"
-                cost={overclockUnlockCost}
-                disabled={!canBuyAutoOverclock}
-                icon="🔓"
-                label={`${overclockUnlockCost} PP`}
-                onClick={actions.buyAutoOverclock}
-                points={points}
-                progressLabel="Auto Overclock Prestige Point progress"
-                title="Spend Prestige Points so Overclock is claimed automatically whenever it is eligible"
-              />
+        <Row aria-label="auto overclock upgrade">
+          <RowLabel>🚀 Auto Overclock</RowLabel>
+          {isAutoOverclockActive ? (
+            <UnlockedBadge icon="🚀" name="Auto Overclock" />
+          ) : (
+            <PpPurchaseButton
+              ariaLabel={`Enable Auto Overclock for ${overclockUnlockCost} Prestige Points`}
+              color="#38bdf8"
+              cost={overclockUnlockCost}
+              disabled={!canBuyAutoOverclock}
+              icon="🔓"
+              label={`${overclockUnlockCost} PP`}
+              onClick={actions.buyAutoOverclock}
+              points={points}
+              progressLabel="Auto Overclock Prestige Point progress"
+              title="Spend Prestige Points so Overclock is claimed automatically whenever it is eligible"
+            />
+          )}
+        </Row>
+        <Row aria-label="auto-prestige upgrade">
+          <RowLabelStack>
+            <RowLabel>✦ Auto-Prestige</RowLabel>
+            {isAutoPrestigeActive && (
+              <SubText>every {formatInterval(getAutomationIntervalSeconds(state, 'prestige') * 1000)}</SubText>
             )}
-          </Row>
-        )}
-        {allTiersFullyAutomated && (
-          <Row aria-label="auto-prestige upgrade">
-            <RowLabelStack>
-              <RowLabel>✦ Auto-Prestige</RowLabel>
-              {isAutoPrestigeActive && (
-                <SubText>every {formatInterval(getAutomationIntervalSeconds(state, 'prestige') * 1000)}</SubText>
-              )}
-            </RowLabelStack>
-            {isAutoPrestigeActive ? (
-              <UnlockedBadge icon="✦" name="Auto-Prestige" />
-            ) : (
-              <PpPurchaseButton
-                ariaLabel={`Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`}
-                color="#38bdf8"
-                cost={autoPrestigeCost}
-                disabled={!canBuyAutoPrestige}
-                icon="🔓"
-                label={`${autoPrestigeCost} PP`}
-                onClick={actions.buyAutoPrestige}
-                points={points}
-                progressLabel="Auto-Prestige Prestige Point progress"
-                title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol Bytes"
-              />
-            )}
-          </Row>
-        )}
+          </RowLabelStack>
+          {isAutoPrestigeActive ? (
+            <UnlockedBadge icon="✦" name="Auto-Prestige" />
+          ) : (
+            <PpPurchaseButton
+              ariaLabel={`Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`}
+              color="#38bdf8"
+              cost={autoPrestigeCost}
+              disabled={!canBuyAutoPrestige}
+              icon="🔓"
+              label={`${autoPrestigeCost} PP`}
+              onClick={actions.buyAutoPrestige}
+              points={points}
+              progressLabel="Auto-Prestige Prestige Point progress"
+              title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol Bytes"
+            />
+          )}
+        </Row>
         {allTiersFullyAutomated && isAutoPrestigeActive && (
           <Row aria-label="auto-prestige autobuyer upgrade">
             <RowLabel>🔁 Auto-Prestige Autobuyer</RowLabel>
