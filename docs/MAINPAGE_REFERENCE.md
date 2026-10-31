@@ -146,7 +146,7 @@ Storage is continuous on this same page: **Provision Disk** — the common disk-
 hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary
 scale, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and
 pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-bit ("1,000 B") one above).
-Presents only the newest unlocked size (`getPresentedDiskSize`); smaller incomplete sizes (after a Foundry reset) rebuild by themselves (`tickAutoProvisionLowerDiskSizes`) while the button is disabled with a "Rebuilding … first" note. Renders as soon as the Byte exists (`intro.byteCreated`, no Storage-reveal gate — a click before pool 1 can fund a pass simply queues the build) in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
+Presents only the newest unlocked size (`getPresentedDiskSize`); smaller incomplete sizes (after a Foundry reset) rebuild by themselves (`tickAutoProvisionLowerDiskSizes`) while the button is disabled — Storage-revealed rebuilds with a pool fill rate use the same speed/time tile as a queued build (`Rebuilding…`, percent of smaller-size disks already full, ⏳ until prior highs); otherwise the original `Rebuilding {size} first · automatic` status line. Renders as soon as the Byte exists (`intro.byteCreated`, no Storage-reveal gate — a click before pool 1 can fund a pass simply queues the build) in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
 location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
 only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows only
 relative gains (current values are on the tile): `🏷️ <current Capacity (= cost)> · 📦 ×2 · ⚡ ×<speed
@@ -194,11 +194,7 @@ spent funding it" entry). An earlier version DID impose a real timed countdown h
 solely to finish out a countdown a save from before that change may still be carrying; a build
 `provisionDisk` starts today never creates one. While a legacy countdown IS in flight, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
-disallowed, "the array provisioning." The button renders two lines (`diskBuildStatus`): a label
-(`"{icon} Provision {size} Disk"`) and one terse status line per state, so ready/queued/waiting
-never read alike — `Ready · 🏷️ {cost}`; `🏷️ {cost} · tap to queue` (not affordable or outranked; the
-`title` and `aria-description` name which); `Queued · funding|after disk fill|needs buffer` (or the banked passes, `2/9 · …`, once any are collected). A queued build is the only state that reads `⏳ Provisioning {size} Disk…` (progressive title, purple `smart` variant, pulsing glow via `$pulse`, which honors reduced motion); idle states keep the imperative `🏦 Provision {size} Disk`; `{n}s left` (legacy
-countdown). Ladder exhausted shows only `✅ All Pools Complete ({size})`, no status line. A
+disallowed, "the array provisioning." When Storage is revealed and the funding pool has a delivered fill rate, a queued build (and a Foundry-reset auto-rebuild of smaller sizes) uses the running-upgrade tile (`ProvisionContent`): `{size} Disk…` plus `Queued` or `{collected}/{required}` (rebuild: `Rebuilding…` / `{autoSize} · to prior highs`), progress %, ⚡ delivered pool fill speed, and ⏳ remaining-cost time at that current rate (rebuild: empty-disk bits across lower sizes / each pool's delivered rate, summed). Idle, unaffordable, ladder-complete, and legacy `intro.diskBuild` countdown keep the original two-line `diskBuildStatus` layout — `Ready · 🏷️ {cost}`; `🏷️ {cost} · tap to queue` (the `title` / `aria-description` still name which blocker); `{n}s left` (legacy countdown). A queued build still uses the purple `smart` variant and `$pulse` (honors reduced motion); idle states keep the imperative `🏦 Provision {size} Disk`. Ladder exhausted shows only `✅ All Pools Complete ({size})`, no status line. A
 ` · {collected}/{required}` segment appears whenever
 `diskPassesRequired > 1` or any pass is banked (`diskPassesCollected`, clamped at
 `diskPassesRequired` for display — see `docs/DESIGN_HISTORY.md`), so a single-pass disk never shows a
@@ -253,7 +249,10 @@ a fill from whatever the pool buffer happens to be holding for unrelated reasons
 fill) before the player has ever engaged this specific build; see `docs/DESIGN_HISTORY.md`. Paired
 with a hidden
 `role="progressbar"` (`aria-label="byte foundry disk build progress"`,
-`aria-valuenow={round(diskBuildProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`). Both the
+`aria-valuenow={round(diskDisplayedProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`).
+`$progress` and that `aria-valuenow` share `diskDisplayedProgress`: rebuild of smaller sizes uses
+the percent of those disks already full (`rebuildProgress`); every other state keeps `diskBuildProgress`.
+Both the
 label and `title` render the disk's size AND its cost via `formatDiskSize` (see "Numbers are
 formatted" below) — the cost is a Disk-denominated amount (`getDiskCost` = `getDiskProvisionPassesRequired`
 × the array's own SI face value), so it renders on the same SI scale as the disk's own size right
