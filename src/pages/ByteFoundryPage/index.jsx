@@ -991,13 +991,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         + rebuildRemaining * getDiskReadCacheFlushSeconds(state, autoDiskSize)
     }
   }
+  if (lowerDiskSizePending && !Number.isFinite(rebuildSeconds) && diskFundingRate > 0) {
+    // No curve model for this size: remaining disks' bits at the pool's current delivered speed.
+    rebuildSeconds = (rebuildRemaining * autoDiskSize) / diskFundingRate
+  }
   const diskDisplayedProgress = lowerDiskSizePending ? rebuildProgress : diskBuildProgress
   const diskBitsStillNeeded = Math.max(0, diskCost - diskPassesCollected * diskSize - diskPoolSpendableBufferBits)
   const diskFundingTimeText = lowerDiskSizePending
     ? formatUpgradeTimeLeft(rebuildSeconds)
-    : diskBuildBlockedByPriority
-      ? '—'
-      : diskBitsStillNeeded <= 0
+    : diskBitsStillNeeded <= 0
       ? 'now'
       : formatUpgradeTimeLeft(secondsToBankPoolBits(state, diskPoolIndex, diskSize, diskBitsStillNeeded))
   const diskShowsFundingStats = storageRevealed && !diskLadderExhausted && !diskBuildInProgress && diskFundingRate > 0 && (lowerDiskSizePending || diskBuildQueued)
