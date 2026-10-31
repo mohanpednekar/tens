@@ -279,12 +279,6 @@ const RunningTime = styled.span`
   white-space: nowrap;
 `
 
-// Provision Disk's variant: the title column takes the slack and the stats column sizes to content, so
-// a long "Provisioning 1 KB Disk…" title isn't clipped.
-const ProvisionContent = styled(RunningUpgradeContent)`
-  grid-template-columns: minmax(0, 1fr) auto auto;
-`
-
 // Top-right ⚡ figure on the Provision Disk button (plain text — a nested button inside the button is invalid).
 const ProvisionSpeed = styled.span`
   grid-column: 3;
@@ -1012,13 +1006,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       $pulse={diskProvisioningActive}
     >
       {diskShowsFundingStats ? (
-        <ProvisionContent>
+        <RunningUpgradeContent>
           <RunningTitle>{diskBuildStatus.icon} {lowerDiskSizePending ? 'Rebuilding…' : `${formatDiskSize(diskSize)} Disk…`}</RunningTitle>
           <RunningChange>{lowerDiskSizePending ? `${formatDiskSize(autoDiskSize)} · to prior highs` : diskPassesCollected > 0 ? diskPassesFraction : 'Queued'}</RunningChange>
           <RunningPercent>{Math.floor(lowerDiskSizePending ? rebuildProgress : diskBuildProgress)}%</RunningPercent>
           <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent) }} title="Pool fill speed funding this disk">⚡ {diskFundingSpeedText}</ProvisionSpeed>
           <RunningTime>⏳ {diskFundingTimeText}</RunningTime>
-        </ProvisionContent>
+        </RunningUpgradeContent>
       ) : (
         <MilestoneButtonContent>
           <span>{diskBuildStatus.icon} {diskBuildStatus.label}{diskProvisioningActive ? '…' : ''}</span>
