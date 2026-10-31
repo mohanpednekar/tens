@@ -251,7 +251,7 @@ with a hidden
 `role="progressbar"` (`aria-label="byte foundry disk build progress"`,
 `aria-valuenow={round(diskDisplayedProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`).
 `$progress` and that `aria-valuenow` share `diskDisplayedProgress`: rebuild of smaller sizes uses
-the percent of those disks already full (`rebuildProgress`); every other state keeps `diskBuildProgress`.
+the percent of those disks already built (`rebuildProgress`, from `disksBuiltTotal`); every other state keeps `diskBuildProgress`.
 Both the
 label and `title` render the disk's size AND its cost via `formatDiskSize` (see "Numbers are
 formatted" below) — the cost is a Disk-denominated amount (`getDiskCost` = `getDiskProvisionPassesRequired`
