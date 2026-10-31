@@ -7,15 +7,16 @@ half, 50% full (`MAX − 100·fill`). That range was too mild to feel — empty 
 full ones barely slowed. The replacement is log-linear in the percent: `10 ** (log10(MAX) − fill ·
 (log10(MAX) − log10(MIN)))` with `MAX = 1000` / `MIN = 10`, so 10× empty, exactly 1× at 50%, 0.1×
 full. `getBufferSecondsToFull` and the speed-color ramp switched to the matching log integral /
-log interpolation; the running Upgrade Capacity/Speed ETA must use that same integral (it originally
-kept the old `ln((1.5 − fill) / 0.5)` closed form, which would have understated an empty bar by
-about 2×).
+log interpolation. The running Upgrade Capacity/Speed bar first followed the same multiplier, then
+(same day, maintainer request) was made a constant 1× base Speed draw — its ETA is the linear
+`(cost − done) / Speed`, and a well-stocked upgrade takes ≈2.15× less time than under the log curve.
 
 Sampling the empty-buffer 10× once and applying it for a whole `elapsedSeconds` (the old Euler
 snapshot) was close enough on the 150%→50% curve even at `applyOfflineProgress`'s 1s ticks. At
-10× it finishes a 256-bit Capacity upgrade in one offline second vs ~12 live seconds. Production,
-upgrade drains, and pool fill now integrate the same closed form as `getBufferSecondsToFull`
-(`getFillCurveDelta` / `getFillCurveSeconds`).
+10× the same snapshot finished a 256-bit empty buffer in one offline second vs ~12 live seconds.
+Production, pool fill, and tile ETAs now integrate the same closed form as `getBufferSecondsToFull`
+(`getFillCurveDelta` / `getFillCurveSeconds`). Upgrade drains stay the constant 1× Speed from the
+same-day change above — they do not use the integral.
 
 The tap bonus stayed a stored 0–100 percentage-point value (+5 per tap, −1/s) but is now applied as
 `base × (1 + bonus%)` rather than `base + bonus`. Additive +5 on a 1000% empty reading was a 0.5%

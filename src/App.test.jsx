@@ -3274,7 +3274,7 @@ describe('Data Stream and upgrade speed details popovers', () => {
     seedStream({ bits: 100, capacityUpgradeQueued: true, capacityUpgradeProgress: 0 })
     fireEvent.click(screen.getByRole('button', { name: /^upgrade draw speed .*show speed details$/ }))
     const dialog = screen.getByRole('dialog', { name: 'Upgrade Capacity draw' })
-    for (const label of ['Draw now', 'Base Speed', 'Bar fill multiplier', 'Data Stream delivers', 'Progress', 'Time left', 'Capacity after']) {
+    for (const label of ['Draw now', 'Base Speed', 'Data Stream delivers', 'Progress', 'Time left', 'Capacity after']) {
       expect(within(dialog).getByText(label)).toBeInTheDocument()
     }
     fireEvent.click(screen.getByRole('button', { name: /^data stream speed .*show speed details$/ }))
@@ -5727,14 +5727,13 @@ test('a running Capacity upgrade shows percent on the first line, from → to ca
   expect(running).toHaveTextContent(/⏫Upgrading…/)
   expect(running).toHaveTextContent(/→/)
   expect(running).toHaveTextContent(/⏳ \d+[smhd]/)
-  // The draw rate (base Speed × the bar's fill multiplier) shows at the right, like the other speed readouts.
+  // The draw rate (base Speed, constant 1x) shows at the right, like the other speed readouts.
   expect(running).toHaveTextContent(/⚡ [\d.]+ \w+\/s/)
-  expect(running.querySelector('[title^="Upgrade draw at 1000%"]')).not.toBeNull()
-  // Empty-bar ETA uses the geometric 10×→0.1× integral, not the old linear ln((1.5−fill)/0.5).
-  const emptyBarSeconds = getBufferSecondsToFull(0, 1000, getIntroProductionRate({ capacity: 1000, byteCreated: true }))
+  expect(running.querySelector('[title^="Upgrade draw at a constant 1x"]')).not.toBeNull()
+  // Empty-bar ETA is linear: cost / base Speed (constant 1x, no fill multiplier).
+  const emptyBarSeconds = 1000 / getIntroProductionRate({ capacity: 1000, byteCreated: true })
   const expectedTimeText = formatOfflineDuration(Math.max(1, Math.ceil(emptyBarSeconds)))
   expect(running).toHaveTextContent(`⏳ ${expectedTimeText}`)
-  expect(emptyBarSeconds).not.toBeCloseTo((1000 / getIntroProductionRate({ capacity: 1000, byteCreated: true })) * Math.log(1.5 / 0.5), 1)
 
   unmount()
   vi.useRealTimers()
