@@ -8739,12 +8739,12 @@ describe('buyAutoPrestige', () => {
   })
 
   it('returns the same state when there are not enough points to activate', () => {
-    const state = withPrestigePoints(createInitialGameState(), 63)
+    const state = withPrestigePoints({ ...createInitialGameState(), autoOverclock: true }, 63)
     expect(buyAutoPrestige(state)).toBe(state)
   })
 
   it('refuses to spend once production is frozen at PRESTIGE_THRESHOLD', () => {
-    const state = withMoney(withPrestigePoints(createInitialGameState(), 64), PRESTIGE_THRESHOLD)
+    const state = withMoney(withPrestigePoints({ ...createInitialGameState(), autoOverclock: true }, 64), PRESTIGE_THRESHOLD)
     expect(buyAutoPrestige(state)).toBe(state)
   })
 })
@@ -10070,20 +10070,20 @@ describe('buyAutoScaleUp', () => {
   })
 
   it('returns the same state when there are not enough points', () => {
-    const state = withPrestigePoints(createInitialGameState(), AUTO_SCALE_UP_COST - 1)
+    const state = withPrestigePoints({ ...createInitialGameState(), autoGlobalTickspeed: true }, AUTO_SCALE_UP_COST - 1)
     expect(buyAutoScaleUp(state)).toBe(state)
   })
 
   it('returns the same state when already enabled (one-time purchase)', () => {
     const state = withAutoScaleUp(
-      withPrestigePoints(createInitialGameState(), AUTO_SCALE_UP_COST)
+      withPrestigePoints({ ...createInitialGameState(), autoGlobalTickspeed: true }, AUTO_SCALE_UP_COST)
     )
     expect(buyAutoScaleUp(state)).toBe(state)
   })
 
   it('refuses to spend once production is frozen at PRESTIGE_THRESHOLD', () => {
     const state = withMoney(
-      withPrestigePoints(createInitialGameState(), AUTO_SCALE_UP_COST),
+      withPrestigePoints({ ...createInitialGameState(), autoGlobalTickspeed: true }, AUTO_SCALE_UP_COST),
       PRESTIGE_THRESHOLD
     )
     expect(buyAutoScaleUp(state)).toBe(state)
@@ -12366,7 +12366,7 @@ describe('autobuyer interval upgrade', () => {
   })
 
   it('getAutobuyerBulkLevels is 1 at/below the floor, then doubles per level up to 2**AUTOBUYER_BULK_MAX_EXTRA_LEVELS', () => {
-    expect(AUTOBUYER_BULK_MAX_EXTRA_LEVELS).toBe(10)
+    expect(AUTOBUYER_BULK_MAX_EXTRA_LEVELS).toBe(9)
     const base = createInitialGameState()
     const maxLevel = getAutobuyerIntervalMaxLevel('tier01')
     const at = level => ({ ...base, autobuyerIntervalLevels: { ...base.autobuyerIntervalLevels, tier01: level } })

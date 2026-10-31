@@ -643,8 +643,8 @@ export const AUTOBUYER_UNLOCK_BASE_COST = 1
 // Autobuyer bulk: a tier autobuyer's speed upgrades continue past the interval floor
 // (AUTOBUYER_MIN_INTERVAL_SECONDS); each such extra level doubles how many whole levels one attempt may buy
 // (2, 4, 8, … — an upper limit, fewer when fewer are affordable; see engine.js's getAutobuyerBulkLevels).
-// Capped where doubling reaches BUY_MAX_ITERATION_CAP, the most levels one attempt can buy.
-export const AUTOBUYER_BULK_MAX_EXTRA_LEVELS = Math.ceil(Math.log2(BUY_MAX_ITERATION_CAP))
+// Capped so the doubling never exceeds BUY_MAX_ITERATION_CAP (1000), the most levels one attempt can buy: 2^9 = 512.
+export const AUTOBUYER_BULK_MAX_EXTRA_LEVELS = Math.floor(Math.log2(BUY_MAX_ITERATION_CAP))
 // Tier autobuyer interval upgrade (PP-funded, per tier, permanent): each level multiplies the
 // autobuyer's purchase-attempt interval by AUTOBUYER_INTERVAL_MULTIPLIER, from the tier's base (tier N =
 // N × AUTOBUYER_BASE_INTERVAL_SECONDS, i.e. 1 s … 10 s) down to

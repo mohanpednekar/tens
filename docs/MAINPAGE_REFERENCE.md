@@ -483,7 +483,7 @@ automatically now (`tickDiskPull`/`tickDiskLevelOneCachePull`), not through a pl
 There is no pause/resume control for Disk Fill on this page, and no
 `storageAutoRedeemEnabled`-style toggle (or any autobuyer gate at all) exists in state — pulling is
 unconditional: `tickDiskPull` and `tickDiskLevelOneCachePull` run every tick regardless of any
-tier's own autobuyer/bulk-mode state. Filling itself (`tickDiskAutoFill`) has no UI control at all
+tier's own autobuyer state. Filling itself (`tickDiskAutoFill`) has no UI control at all
 either — it's fully automatic, every tick, no toggle: Memory first keeps every array's Cache full
 (whole-block transfers), then flushes a full read cache into an empty disk over one cache-block
 production duration when no tier claim blocks that size, smallest size first, whenever that size
@@ -849,7 +849,7 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
   automation"`, `"<tier>'s autobuyer"`). A `no toggles notice` empty state covers the (practically
   unreachable) nothing-owned case.
 Layout: every Perks row is a CSS grid (default `label | control`; tier rows `$tier="unlocks"` = symbol | ⚙ |
-🤖 | fixed 5.75rem bulk-mode cell, `$tier="toggles"` = symbol | ⚙ | 🤖; no content-sized tracks, fits 320px) so columns align row-to-row on both Unlocks and Toggles. Factory's Latency /
+🤖 | `$tier="toggles"`/`"unlocks"` = symbol | ⚙ | 🤖; no content-sized tracks, fits 320px) so columns align row-to-row on both Unlocks and Toggles. Factory's Latency /
 Scale Up / Overclock cards share `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem
 heading); Auto Scale Up's status is an `AutoChip` in the Scale Up card header.
 Tab dots: Unlocks `PP unlock available` (`hasAffordablePpUnlock`),

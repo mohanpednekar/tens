@@ -599,7 +599,7 @@ const InfoPage = () => {
             whole level is affordable, or the rest of a partly bought level is (Buy max mode never
             applies to it). Its <strong>speed upgrades</strong> (Perks → Upgrades) shorten the interval
             down to 10 ms; every level after that doubles how many levels one attempt buys — as many as
-            are affordable, up to 2, 4, 8 … 1024.
+            are affordable, up to 2, 4, 8 … 512.
           </li>
         </ul>
       </Section>

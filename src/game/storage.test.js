@@ -383,6 +383,21 @@ describe('schema merge on load', () => {
     expect(loadGameState().tierTickspeedAutobuyer[tensTier.id]).toBe(true)
   })
 
+  it('strips removed mechanics (autobuyer bulk modes, Auto-Prestige Autobuyer) from a legacy save on load', () => {
+    const legacy = {
+      ...createInitialGameState(),
+      autobuyerBulkLevels: { [tensTier.id]: 2 },
+      autoPrestigeAutobuyer: true,
+      autoPrestigeAutobuyerEnabled: false,
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(legacy))
+    const loaded = loadGameState()
+    expect(loaded).not.toBeNull()
+    expect(loaded).not.toHaveProperty('autobuyerBulkLevels')
+    expect(loaded).not.toHaveProperty('autoPrestigeAutobuyer')
+    expect(loaded).not.toHaveProperty('autoPrestigeAutobuyerEnabled')
+  })
+
   it('defaults everUnlockedTierIds to the fresh-state default (only the first tier true) on a save that predates it', () => {
     const { everUnlockedTierIds: _dropped, ...oldSave } = createInitialGameState()
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))

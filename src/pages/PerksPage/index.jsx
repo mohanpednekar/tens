@@ -122,20 +122,17 @@ const CategoryHeading = styled.h2`
 
 // Every row is a CSS grid so columns line up row-to-row regardless of content width (a flex
 // `space-between` row let each badge drift with its siblings' widths). Default: label | control.
-// `$tier`: symbol | ⚙ cell | 🤖 cell (| Smart cell on Unlocks) — shared by the Unlocks and Toggles
+// `$tier`: symbol | ⚙ cell | 🤖 cell — shared by the Unlocks and Toggles
 // tier lists so both tabs read as the same table.
 const Row = styled.div`
   align-items: center;
   column-gap: 0.6rem;
   display: grid;
   /* Every track is fixed or fr-based (never content-sized) so separate rows' columns line up, and
-     the whole row still fits a 320px-wide phone. $tier="unlocks" keeps a fixed trailing Smart cell;
-     $tier="toggles" has no trailing cell. */
-  grid-template-columns: ${props => (props.$tier === 'unlocks'
-    ? '2.25rem minmax(0, 1fr) minmax(0, 1fr) 5.75rem'
-    : props.$tier === 'toggles'
-      ? '2.25rem minmax(0, 1fr) minmax(0, 1fr)'
-      : 'minmax(0, 1fr) auto')};
+     the whole row still fits a 320px-wide phone. */
+  grid-template-columns: ${props => (props.$tier === 'unlocks' || props.$tier === 'toggles'
+    ? '2.25rem minmax(0, 1fr) minmax(0, 1fr)'
+    : 'minmax(0, 1fr) auto')};
   min-height: 2.75rem;
   padding: 0.35rem 0;
 
@@ -144,7 +141,7 @@ const Row = styled.div`
   }
 
   & > :last-child {
-    justify-self: ${props => (props.$tier === 'toggles' ? 'start' : 'end')};
+    justify-self: ${props => (props.$tier === 'toggles' || props.$tier === 'unlocks' ? 'start' : 'end')};
   }
 `
 

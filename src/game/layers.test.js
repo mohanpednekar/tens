@@ -246,9 +246,9 @@ describe('constants', () => {
     expect(TICKSPEED_PRODUCTION_STEP).toBe(0.1)
   })
 
-  it('AUTOBUYER_BULK_MAX_EXTRA_LEVELS is ceil(log2(BUY_MAX_ITERATION_CAP)) = 10', () => {
-    expect(AUTOBUYER_BULK_MAX_EXTRA_LEVELS).toBe(10)
-    expect(AUTOBUYER_BULK_MAX_EXTRA_LEVELS).toBe(Math.ceil(Math.log2(BUY_MAX_ITERATION_CAP)))
+  it('AUTOBUYER_BULK_MAX_EXTRA_LEVELS is floor(log2(BUY_MAX_ITERATION_CAP)) = 9', () => {
+    expect(AUTOBUYER_BULK_MAX_EXTRA_LEVELS).toBe(9)
+    expect(AUTOBUYER_BULK_MAX_EXTRA_LEVELS).toBe(Math.floor(Math.log2(BUY_MAX_ITERATION_CAP)))
   })
 
   it('PRESTIGE_SPEED_BONUS_UNLOCK_COST is 10000', () => {
