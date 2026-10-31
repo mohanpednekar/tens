@@ -670,7 +670,7 @@ Strict three-layer separation:
    import) — the **only** in-app version surface. Reached via AppNav's Guide item.
 6. **`MilestonesPage/index.jsx`** — Chapters / Era ascension status screen (autobuyer unlock
    milestones live once, on Perks → Unlocks — not repeated here). Chapters: the first KiloByte, Go Googol, Open
-   Compute, Go Unbounded, Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always
+   Compute, DeGoogoled, Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always
    reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
     Supporter pack (unlock code / dummy checkout), Cloud save (`CloudSaveSection.jsx`, only when
@@ -728,8 +728,8 @@ initial activation costs **10 Bytes (80 Bits)**. It unlocks once level 1 of tier
 are no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
 Reaching Money ≥ `PRESTIGE_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
 since a Byte is 8 Bits) freezes the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)`
-is true (permanent `prestige.unboundedUnlocked` latch set the first time `prestige.count` reaches
-`PRESTIGE_UNBOUNDED_MIN_COUNT` (100), or carried through Era ascension), in which case production
+is true (permanent `prestige.unboundedUnlocked` latch; unlocked once Auto-Prestige's interval is upgraded to
+`UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS` (1 s) or less, carried through Era ascension), in which case production
 continues and Prestige is optional (see `isProductionFrozen`). **Era ascension** (`eraGame`) is a separate voluntary meta-prestige at **1 Googol unspent PP**
 (`ERA_ELIGIBILITY_PP`): it awards **Eons** (+1 base, +1 per Eon Amplifier level — shop deferred to #414),
 increments `era.count`, resets the full Foundry (generator upgrades, Disks, Data Lakes, compute ladder

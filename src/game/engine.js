@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, AUTO_PRESTIGE_AUTOBUYER_COST, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_LEVELS_BASE, AUTOBUYER_BULK_MAX_MODE } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, AUTO_PRESTIGE_AUTOBUYER_COST, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_LEVELS_BASE, AUTOBUYER_BULK_MAX_MODE } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -355,7 +355,7 @@ export const createInitialGameState = () => ({
     // grants points instead of directly doubling production.
     count: 0,
     highestMilestone: Math.floor(Math.log10(MONEY_STARTING_AMOUNT)),
-    // Permanent latch: once true (first prestige.count >= PRESTIGE_UNBOUNDED_MIN_COUNT, or carried
+    // Permanent latch: once true (first prestige/Era while Auto-Prestige interval ≤ UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS, or carried
     // through Era ascension), production never freezes at PRESTIGE_THRESHOLD again — see
     // isUnboundedPrestigeUnlocked. Full save Reset only.
     unboundedUnlocked: false,
@@ -880,9 +880,9 @@ export const getAutobuyerUnlockMilestone = tierId => {
 }
 
 // Number of prestiges required before a tier's own tickspeed autobuyer unlocks automatically (see
-// applyAutobuyerMilestones) — starts at TIER_TICKSPEED_AUTOBUYER_MILESTONE_START (prestige 12 for
-// tier01) and adds TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP (2) per tier after that, up through
-// prestige 30 for tier10. Also no PP cost.
+// applyAutobuyerMilestones) — starts at TIER_TICKSPEED_AUTOBUYER_MILESTONE_START (prestige 11 for
+// tier01) and adds TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP (1) per tier after that, up through
+// prestige 20 for tier10. Also no PP cost.
 export const getTierTickspeedAutobuyerMilestone = tierId => {
   const tierIndex = Math.max(0, (TIER_INDEX_BY_ID[tierId] ?? -1))
   return TIER_TICKSPEED_AUTOBUYER_MILESTONE_START + tierIndex * TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP
@@ -1306,8 +1306,7 @@ export const eraGame = state => {
   const initial = createInitialGameState()
   const eonsAwarded = getEonsAwarded(state)
   const nextEraCount = clampNonNegative(state.era?.count ?? 0) + 1
-  const unboundedUnlocked = Boolean(state.prestige?.unboundedUnlocked)
-    || clampNonNegative(state.prestige?.count ?? 0) >= PRESTIGE_UNBOUNDED_MIN_COUNT
+  const unboundedUnlocked = isUnboundedPrestigeUnlocked(state)
 
   const base = {
     ...initial,
@@ -1462,13 +1461,14 @@ export const getAutoPrestigeAttemptRate = state => 1 / getAutomationIntervalSeco
 
 // Once Money reaches PRESTIGE_THRESHOLD ("1 Googol Bytes," expressed in Bits — see layers.js), all
 // production and purchasing (manual and automatic) freezes — the only action left is to Prestige —
-// unless the player has prestiged at least PRESTIGE_UNBOUNDED_MIN_COUNT times, in which case
-// production continues and Prestige is optional (see isUnboundedPrestigeUnlocked). Exported so the
+// unless Auto-Prestige has been upgraded to UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS or faster, in which
+// case production continues and Prestige is optional (see isUnboundedPrestigeUnlocked). Exported so the
 // UI can drive the same gate (disabling every other control) that the engine itself enforces on
 // tickGame/buyTier/buyAutobuyer below.
 export const isUnboundedPrestigeUnlocked = state =>
   Boolean(state.prestige?.unboundedUnlocked)
-  || clampNonNegative(state.prestige?.count ?? 0) >= PRESTIGE_UNBOUNDED_MIN_COUNT
+  || ((state.autoPrestige ?? null) !== null
+    && getAutomationIntervalSeconds(state, 'prestige') <= UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS)
 
 export const isProductionFrozen = state =>
   !isUnboundedPrestigeUnlocked(state) && clampNonNegative(state.resources[MONEY_ID]) >= PRESTIGE_THRESHOLD
@@ -1933,8 +1933,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // Auto-Prestige's attempt budget keeps accumulating during ordinary (non-frozen) play too —
     // "every 1000 seconds once unlocked" runs continuously in the background, it doesn't only
     // start counting once Money first reaches PRESTIGE_THRESHOLD — but it can only ever actually fire from
-    // the frozen branch above once Money has actually gotten there, or from the unbounded branch below
-    // when prestige.count >= PRESTIGE_UNBOUNDED_MIN_COUNT. Paused (autoPrestigeActive
+    // the frozen branch above once Money has actually gotten there, or from the DeGoogol branch below
+    // once DeGoogol is unlocked. Paused (autoPrestigeActive
     // false) stops this accumulation too, same as the frozen branch above.
     ...(autoPrestigeActive ? {
       autoPrestigeAttemptBudget: (stateAfterAutobuyers.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(stateAfterAutobuyers) * elapsedSeconds,
@@ -2013,7 +2013,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // tickStorage above (auto-fill itself already ran earlier, as part of stateAfterIntro).
   let stateBeforeStorage = stateAfterScaleUp
 
-  // Unbounded Prestige (PRESTIGE_UNBOUNDED_MIN_COUNT+ lifetime prestiges): Auto-Prestige fires
+  // DeGoogol (Auto-Prestige interval ≤ UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS): Auto-Prestige fires
   // here while production keeps running — the frozen branch above is skipped entirely.
   if (
     isUnboundedPrestigeUnlocked(stateBeforeStorage)
@@ -7202,8 +7202,7 @@ export const prestigeGame = state => {
   const pointsAwarded = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel)
   const initial = createInitialGameState()
   const nextPrestigeNumber = state.prestige.count + 1
-  const unboundedUnlocked = Boolean(state.prestige?.unboundedUnlocked)
-    || nextPrestigeNumber >= PRESTIGE_UNBOUNDED_MIN_COUNT
+  const unboundedUnlocked = isUnboundedPrestigeUnlocked(state)
   const museumEntry = {
     id: `p${nextPrestigeNumber}-${Date.now()}`,
     at: Date.now(),

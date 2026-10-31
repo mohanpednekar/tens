@@ -1798,7 +1798,6 @@ test.each([
     name: 'Auto-Prestige',
     seed: { ...allTiersSmartSeed(), prestige: { xp: 0, points: 63, count: 1, highestMilestone: 1 } },
     buttonName: /enable auto-prestige for 64 prestige points/i,
-    tab: /open upgrades/i,
   },
   {
     name: 'Auto-Prestige Autobuyer',
@@ -1908,7 +1907,7 @@ test('the Auto-Prestige option stays hidden until every tier is upgraded to Smar
   expect(screen.queryByText(/auto-prestige/i)).not.toBeInTheDocument()
 })
 
-test('an Auto-Prestige button appears on the PP Upgrades page once every tier is Smart, and spends 64 PP to activate it', async () => {
+test('an Auto-Prestige button appears in Perks → Unlocks (Global Automation) once every tier is Smart, and spends 64 PP to activate it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1917,7 +1916,7 @@ test('an Auto-Prestige button appears on the PP Upgrades page once every tier is
     prestige: { xp: 0, points: 64, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open upgrades/i)
+  await openPerksTab(user, /open unlocks/i)
 
   const autoPrestigeButton = screen.getByRole('button', { name: /enable auto-prestige for 64 prestige points/i })
   expect(autoPrestigeButton).toBeEnabled()
@@ -1925,6 +1924,7 @@ test('an Auto-Prestige button appears on the PP Upgrades page once every tier is
   await user.click(autoPrestigeButton)
 
   expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/every 1024 s/i)
+  await openPerksTab(user, /open upgrades/i)
   expect(screen.getByRole('button', { name: /upgrade prestige automation speed to level 1 for 64 prestige points/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
@@ -1955,7 +1955,7 @@ test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled withou
   render(<App />)
   await openPerksTab(user, /open upgrades/i)
 
-  expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/every 1024 s/i)
+  expect(screen.getByLabelText(/^prestige automation speed upgrade$/i)).toHaveTextContent(/every 1024 s/i)
   expect(screen.getByRole('button', { name: /upgrade prestige automation speed to level 1 for 64 prestige points/i })).toBeDisabled()
 })
 
@@ -2144,12 +2144,12 @@ test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) p
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 }, // the unit-buying autobuyer is already unlocked
-    prestige: { xp: 0, points: 1000, count: 11, highestMilestone: 1 }, // one short of Kilobytes's tickspeed milestone (12)
+    prestige: { xp: 0, points: 1000, count: 10, highestMilestone: 1 }, // one short of Kilobytes's tickspeed milestone (11)
   })
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 12$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 11$/i)).toBeInTheDocument()
   // Bulk mode is independent of the tickspeed autobuyer and already purchasable (autobuyer unlocked, 1000 PP held).
   expect(screen.getByRole('button', { name: /let kilobytes's autobuyer buy 10 levels at once/i })).toBeEnabled()
 })
@@ -2158,13 +2158,13 @@ test('a tier\'s tickspeed autobuyer auto-unlocks (no PP spent) once its own pres
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 },
-    prestige: { xp: 0, points: 10, count: 12, highestMilestone: 1 }, // meets Kilobytes's tickspeed milestone (12)
+    prestige: { xp: 0, points: 10, count: 11, highestMilestone: 1 }, // meets Kilobytes's tickspeed milestone (11)
   })
   render(<App />)
   await openPerksTab(userEvent.setup(), /open unlocks/i)
 
   expect(screen.queryByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige/i)).not.toBeInTheDocument()
-  expect(screen.getByLabelText("Kilobytes's tickspeed autobuyer unlocked at Prestige 12")).toBeInTheDocument()
+  expect(screen.getByLabelText("Kilobytes's tickspeed autobuyer unlocked at Prestige 11")).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('10 PP')
 })
 
@@ -2174,14 +2174,14 @@ test('a tier\'s Unlocks row stays listed (as unlock history) once bulk mode and 
     autobuyers: { tier01: 1 },
     autobuyerBulkLevels: { tier01: 1 },
     tierTickspeedAutobuyer: { tier01: true },
-    prestige: { xp: 0, points: 0, count: 12, highestMilestone: 1 },
+    prestige: { xp: 0, points: 0, count: 11, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(userEvent.setup(), /open unlocks/i)
 
   const row = screen.getByLabelText(/^kilobytes pp unlocks$/i)
   expect(within(row).getByLabelText("Kilobytes's autobuyer unlocked at Prestige 1")).toBeInTheDocument()
-  expect(within(row).getByLabelText("Kilobytes's tickspeed autobuyer unlocked at Prestige 12")).toBeInTheDocument()
+  expect(within(row).getByLabelText("Kilobytes's tickspeed autobuyer unlocked at Prestige 11")).toBeInTheDocument()
   expect(within(row).getByLabelText("Kilobytes's autobuyer buys 10 levels at once")).toBeInTheDocument()
 })
 test('an owned bulk-mode marker stays on a tier\'s Unlocks row even before that tier is reachable again this run', async () => {
@@ -2310,11 +2310,11 @@ test('Perks → Unlocks lists every tier\'s autobuyer/tier-tickspeed-autobuyer u
   expect(screen.getByLabelText(/^gigabytes's autobuyer unlocked at prestige 3$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^terabytes's autobuyer unlocks at prestige 4$/i)).toBeInTheDocument()
 
-  // None of the tier tickspeed autobuyer milestones (12+) are anywhere close yet.
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 12$/i)).toBeInTheDocument()
+  // None of the tier tickspeed autobuyer milestones (11+) are anywhere close yet.
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 11$/i)).toBeInTheDocument()
   const tickspeedProgress = screen.getByRole('progressbar', { name: /^kilobytes tickspeed autobuyer milestone progress$/i })
   expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '3')
-  expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '12')
+  expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '11')
 
   // Milestones no longer repeats these — it keeps only Chapters / Era ascension.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
@@ -2457,7 +2457,7 @@ test('a tier at max bulk mode but not yet tickspeed-automated still offers its t
   render(<App />)
   await openPerksTab(userEvent.setup(), /open unlocks/i)
 
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 12$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 11$/i)).toBeInTheDocument()
 })
 
 test('clicking the money balance expands a breakdown of every global production multiplier currently in effect, and collapses again on a second click', async () => {
@@ -5349,7 +5349,7 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry leaves Factor
 // Chapter rows read intro.mainGameUnlocked, prestige.count, computeFlops.pageUnlocked,
 // isUnboundedPrestigeUnlocked, and era.count — see CLAUDE.md / MAINPAGE_REFERENCE. "The first KiloByte"
 // is always ✅ once this view is reachable; Go Googol varies with prestige.count; separate tests cover
-// Open Compute / Go Unbounded / Ascend an Era and the Compute autobuyer category.
+// Open Compute / Go DeGoogol / Ascend an Era and the Compute autobuyer category.
 test.each([
   { prestigeCount: 0, reached: false },
   { prestigeCount: 1, reached: true },
@@ -5373,7 +5373,7 @@ test.each([
   expect(goGoogolRow).toHaveTextContent(reached ? '✅' : '🔒')
 })
 
-test('Chapters track Compute, Unbounded, and Era milestones', async () => {
+test('Chapters track Compute, DeGoogol, and Era milestones', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -5387,7 +5387,7 @@ test('Chapters track Compute, Unbounded, and Era milestones', async () => {
   await user.click(screen.getByRole('button', { name: /open milestones/i }))
 
   expect(screen.getByLabelText(/^open compute chapter$/i)).toHaveTextContent('✅')
-  expect(screen.getByLabelText(/^go unbounded chapter$/i)).toHaveTextContent('✅')
+  expect(screen.getByLabelText(/^degoogoled chapter$/i)).toHaveTextContent('✅')
   expect(screen.getByLabelText(/^ascend an era chapter$/i)).toHaveTextContent('✅')
   expect(screen.queryByLabelText(/^coming soon/i)).not.toBeInTheDocument()
 })
