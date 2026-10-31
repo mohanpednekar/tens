@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Tier tickspeed autobuyers now unlock at Prestige 11–20 (one per Prestige, tier01 at 11 through tier10 at 20) instead of 12–30.
 - **Foundry-reset rebuild runs at each pool's base Bandwidth.** Smaller disk sizes now rebuild one disk at a time, each in exactly size ÷ base Bandwidth, independent of the fill multiplier, so the Provision Disk tile's ⚡ is the base speed and its ⏳ is the exact total time.
 - Data Lake filled balance now floors to 3 significant digits like Foundry speeds; the running-upgrade "from → to" readout now uses the left (from) value's unit.
 

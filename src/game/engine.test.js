@@ -6602,17 +6602,17 @@ describe('getAutobuyerUnlockMilestone', () => {
 })
 
 describe('getTierTickspeedAutobuyerMilestone', () => {
-  it('requires 12 prestiges for the first tier', () => {
-    expect(getTierTickspeedAutobuyerMilestone(tensTier.id)).toBe(12)
+  it('requires 11 prestiges for the first tier', () => {
+    expect(getTierTickspeedAutobuyerMilestone(tensTier.id)).toBe(11)
   })
 
-  it('increases by 2 prestiges per subsequent tier, up to 30 for the 10th/last tier', () => {
-    expect(getTierTickspeedAutobuyerMilestone(thousandsTier.id)).toBe(14)
-    expect(getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[9].id)).toBe(30)
+  it('increases by 1 prestige per subsequent tier, up to 20 for the 10th/last tier', () => {
+    expect(getTierTickspeedAutobuyerMilestone(thousandsTier.id)).toBe(12)
+    expect(getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[9].id)).toBe(20)
   })
 
   it('treats an unrecognized tier id as index 0 (the earliest milestone)', () => {
-    expect(getTierTickspeedAutobuyerMilestone('does_not_exist')).toBe(12)
+    expect(getTierTickspeedAutobuyerMilestone('does_not_exist')).toBe(11)
   })
 })
 
@@ -6631,14 +6631,14 @@ describe('applyAutobuyerMilestones', () => {
     expect(after.autobuyers[TIER_DEFINITIONS[3].id]).toBeNull()
   })
 
-  it('never unlocks a tier tickspeed autobuyer before prestige 12', () => {
-    const state = withPrestigeCount(createInitialGameState(), 11)
+  it('never unlocks a tier tickspeed autobuyer before prestige 11', () => {
+    const state = withPrestigeCount(createInitialGameState(), 10)
     const after = applyAutobuyerMilestones(state)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[0].id]).toBe(false)
   })
 
-  it('unlocks the first tier tickspeed autobuyer at prestige 12, the second at 14', () => {
-    const state = withPrestigeCount(createInitialGameState(), 14)
+  it('unlocks the first tier tickspeed autobuyer at prestige 11, the second at 12', () => {
+    const state = withPrestigeCount(createInitialGameState(), 12)
     const after = applyAutobuyerMilestones(state)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[0].id]).toBe(true)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[1].id]).toBe(true)

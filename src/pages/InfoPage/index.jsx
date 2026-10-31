@@ -615,7 +615,7 @@ const InfoPage = () => {
           <li>
             <strong>Tier Tickspeed Autobuyers:</strong> start at Prestige{' '}
             {firstTierTickspeedAutobuyerMilestone}, then every{' '}
-            {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Prestiges after that.
+            {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP === 1 ? 'Prestige' : `${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Prestiges`} after that.
           </li>
         </ul>
       </Section>

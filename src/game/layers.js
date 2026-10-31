@@ -674,11 +674,11 @@ export const AUTOBUYER_UNLOCK_MILESTONE_START = 1
 export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 1
 // Same milestone-based automatic-unlock mechanism as the autobuyer unlock above, but for a tier's
 // own tickspeed-multiplier autobuyer (see engine.js's getTierTickspeedAutobuyerMilestone) — starts
-// later (prestige 12 for tier01) and spaces out twice as slowly (every 2 prestiges: 12, 14, 16, …
-// 30 for tier10), reflecting that it's a later-game convenience layered on top of the (now free)
+// later (prestige 11 for tier01) and spaces out one prestige per tier (11, 12, 13, … 20 for tier10),
+// reflecting that it's a later-game convenience layered on top of the (now free)
 // unit-buying autobuyer above. Also no longer PP-funded.
-export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 12
-export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 2
+export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 11
+export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 1
 // Latency (the global tickspeed multiplier — see engine.js's
 // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) speeds up *every* tier's
 // production at once. Every level compounds by the same rate.

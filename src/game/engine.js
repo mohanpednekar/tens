@@ -880,9 +880,9 @@ export const getAutobuyerUnlockMilestone = tierId => {
 }
 
 // Number of prestiges required before a tier's own tickspeed autobuyer unlocks automatically (see
-// applyAutobuyerMilestones) — starts at TIER_TICKSPEED_AUTOBUYER_MILESTONE_START (prestige 12 for
-// tier01) and adds TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP (2) per tier after that, up through
-// prestige 30 for tier10. Also no PP cost.
+// applyAutobuyerMilestones) — starts at TIER_TICKSPEED_AUTOBUYER_MILESTONE_START (prestige 11 for
+// tier01) and adds TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP (1) per tier after that, up through
+// prestige 20 for tier10. Also no PP cost.
 export const getTierTickspeedAutobuyerMilestone = tierId => {
   const tierIndex = Math.max(0, (TIER_INDEX_BY_ID[tierId] ?? -1))
   return TIER_TICKSPEED_AUTOBUYER_MILESTONE_START + tierIndex * TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP
