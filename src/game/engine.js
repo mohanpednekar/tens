@@ -2727,6 +2727,16 @@ export const getStoragePoolBandwidth = (state, poolIndex) => {
   return Math.max(base, Math.min(advanced, nextBandwidth / 2))
 }
 
+// The Bandwidth a pool has now, or — while its pool is not live yet (Capacity still rebuilding after a
+// Foundry reset, so getStoragePoolBandwidth is 0) — the Data Stream's current SI-clean Speed as a stand-in,
+// so rebuild time estimates (getLowerRebuildSummary) never read as unknown. The rebuild itself still waits
+// for the pool to go live (tickAutoProvisionLowerDiskSizes).
+export const getProjectedPoolBandwidth = (state, poolIndex) => {
+  const live = getStoragePoolBandwidth(state, poolIndex)
+  if (live > 0) return live
+  return getSiCleanEquivalentBits(getIntroProductionRate(state.intro ?? {}))
+}
+
 // The raw Capacity derivation for a given raw Data Stream capacity value (in bits), with no
 // visibility gate — getStoragePoolCapacity (below) calls this with the LIVE state.intro.capacity
 // plus a visibility early-return; getPoolBufferClampCeilingBits (below) calls this with a
@@ -4239,6 +4249,8 @@ export const tickQueuedDiskBuild = state => {
 const LOWER_REBUILD_MAX_STEPS = 200
 export const getLowerRebuildDiskSeconds = (state, size) =>
   size / Math.max(getStoragePoolBandwidth(state, getPoolIndexForDiskSize(size)), Number.MIN_VALUE)
+const getLowerRebuildProjectedDiskSeconds = (state, size) =>
+  size / Math.max(getProjectedPoolBandwidth(state, getPoolIndexForDiskSize(size)), Number.MIN_VALUE)
 
 export const tickAutoProvisionLowerDiskSizes = (elapsedSeconds = 0) => state => {
   if (!state.intro?.byteCreated) return state
@@ -4301,7 +4313,7 @@ export const getLowerRebuildSummary = state => {
     }
     const partial = state.intro.lowerRebuild?.size === size ? state.intro.lowerRebuild.progress : 0
     summary.disksDone += full + partial
-    const diskSeconds = getLowerRebuildDiskSeconds(state, size)
+    const diskSeconds = getLowerRebuildProjectedDiskSeconds(state, size)
     summary.seconds += (DISK_ARRAY_LADDER_CAP - full - partial) * diskSeconds
   }
   return summary

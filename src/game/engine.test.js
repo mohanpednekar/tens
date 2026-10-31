@@ -54,6 +54,7 @@ import {
   tickAutoProvisionLowerDiskSizes,
   getLowerRebuildDiskSeconds,
   getLowerRebuildSummary,
+  getProjectedPoolBandwidth,
   getDataStreamSpeedExponent,
   isDiskSizeUnlockAvailable,
   unlockNextDiskSizeByFoundryReset,
@@ -12422,6 +12423,16 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
     expect(summary.seconds).toBeCloseTo((DISK_ARRAY_LADDER_CAP - 2.5) * diskSeconds, 6)
     expect(summary.disksDone).toBeCloseTo(2.5, 6)
     expect(getLowerRebuildSummary(createInitialGameState())).toEqual({ seconds: 0, disksDone: 0, disksTotal: 0 })
+  })
+
+  it('getLowerRebuildSummary stays finite while a pool is not live yet (projected from the Data Stream Speed)', () => {
+    const notLive = withIntro(afterReset(), { capacity: INTRO_STARTING_CAPACITY, unlockedDiskSteps: 6 })
+    const deadPool = getVisibleStoragePoolCount(notLive) + 1
+    expect(getStoragePoolBandwidth(notLive, deadPool)).toBe(0)
+    expect(getProjectedPoolBandwidth(notLive, deadPool)).toBeGreaterThan(0)
+    const summary = getLowerRebuildSummary(notLive)
+    expect(Number.isFinite(summary.seconds)).toBe(true)
+    expect(summary.seconds).toBeGreaterThan(0)
   })
 
   it('keeps going until the smaller array is full, then presents/offers the newest size', () => {
