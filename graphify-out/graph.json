@@ -96,6 +96,28 @@
       "source_location": "L5"
     },
     {
+      "label": "lint-conflict-markers.mjs",
+      "file_type": "code",
+      "source_file": "scripts/lint-conflict-markers.mjs",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "scripts_lint_conflict_markers_mjs",
+      "community": 0,
+      "community_name": "lint-workflow-shell.mjs",
+      "norm_label": "lint-conflict-markers.mjs"
+    },
+    {
+      "label": "lint-conflict-markers.test.js",
+      "file_type": "code",
+      "source_file": "scripts/lint-conflict-markers.test.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "scripts_lint_conflict_markers_test_js",
+      "community": 0,
+      "community_name": "lint-workflow-shell.mjs",
+      "norm_label": "lint-conflict-markers.test.js"
+    },
+    {
       "id": "scripts_lint_workflow_shell_bashsyntaxerror",
       "label": "bashSyntaxError()",
       "_callable": true,
