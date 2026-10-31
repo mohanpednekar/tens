@@ -3765,6 +3765,21 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('progressbar', { name: /disk build progress/i })).toHaveAttribute('aria-valuenow', '33')
   })
 
+  test('a queued Provision Disk waiting behind Disk Fill never claims "now" for its time', () => {
+    seedIntroState({
+      bits: 0, capacity: currentBankCost * 1024, byteCreated: true,
+      disks: { [currentBankSize]: 1 },
+      disksBuiltTotal: { [currentBankSize]: 1 },
+      poolBuffers: { 1: currentBankSize * 4 },
+      diskBuildQueued: true,
+    })
+    render(<App />)
+    const button = screen.getByRole('button', { name: /provision disk/i })
+    expect(button).toHaveAttribute('aria-description', expect.stringMatching(/after disk fill/))
+    expect(button).not.toHaveTextContent('now')
+    expect(button).not.toHaveTextContent('—')
+  })
+
   test('a multi-size rebuild names the size being rebuilt and the largest size it will reach', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,

@@ -955,8 +955,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               reason: diskBuildBlockedByPriority ? 'disk fill comes first' : 'pool buffer too low',
             }
   // Same stat layout as the running-upgrade tile: ⚡ the pool's live delivered fill speed, ⏳ along
-  // the fill-multiplier curve (not that snapshot held constant). Rebuild ⏳ is only the size
-  // currently auto-filling — later write-cache sizes have no exported duration helper.
+  // the fill-multiplier curve (not that snapshot held constant). A queued build waiting behind Disk
+  // Fill has no meaningful time, so its ⏳ is hidden rather than showing a misleading "now". Rebuild ⏳
+  // is only the size currently auto-filling.
   const getPoolDeliveredRate = poolIndex =>
     getPoolAvailableFillRate(state, poolIndex) * getPoolMultiplierPercent(state, poolIndex) / 100 * getComputeBoostPoolMultiplier(intro, poolIndex)
   const diskFundingMultiplierPercent = getPoolMultiplierPercent(state, lowerDiskSizePending ? getPoolIndexForDiskSize(autoDiskSize) : diskPoolIndex)
@@ -964,7 +965,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskFundingSpeedText = `${formatSpeedText(formatDiskSize(diskFundingRate))}/s`
   // Percent: disks already built across every smaller size (disksBuiltTotal — monotonic). Time: the
   // current auto-size only, via cache refill (fill curve into the pool) plus one read-cache flush
-  // per remaining disk. Write-cache sizes and pools with no bandwidth yet read as —.
+  // per remaining disk. Where that model has no figure (write-cache sizes) it falls back to the
+  // remaining bits at the pool's current delivered speed.
   let rebuildDisksFull = 0
   let rebuildDisksTotal = 0
   if (lowerDiskSizePending) {
@@ -999,7 +1001,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskBitsStillNeeded = Math.max(0, diskCost - diskPassesCollected * diskSize - diskPoolSpendableBufferBits)
   const diskFundingTimeText = lowerDiskSizePending
     ? formatUpgradeTimeLeft(rebuildSeconds)
-    : diskBitsStillNeeded <= 0
+    : diskBuildBlockedByPriority
+      ? '—'
+      : diskBitsStillNeeded <= 0
       ? 'now'
       : formatUpgradeTimeLeft(secondsToBankPoolBits(state, diskPoolIndex, diskSize, diskBitsStillNeeded))
   const diskShowsFundingStats = storageRevealed && !diskLadderExhausted && !diskBuildInProgress && diskFundingRate > 0 && (lowerDiskSizePending || diskBuildQueued)
