@@ -52,6 +52,8 @@ import {
   getPresentedDiskSize,
   isLowerDiskSizePending,
   tickAutoProvisionLowerDiskSizes,
+  getLowerRebuildDiskSeconds,
+  getLowerRebuildSummary,
   getDataStreamSpeedExponent,
   isDiskSizeUnlockAvailable,
   unlockNextDiskSizeByFoundryReset,
@@ -12387,35 +12389,56 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
     const state = createInitialGameState()
     expect(getPresentedDiskSize(state)).toBe(FIRST_DISK_SIZE)
     expect(isLowerDiskSizePending(state)).toBe(false)
-    expect(tickAutoProvisionLowerDiskSizes(state)).toBe(state)
+    expect(tickAutoProvisionLowerDiskSizes(1)(state)).toBe(state)
   })
 
-  it('provisions the smaller size for free, one disk at a time, each waiting for the previous to fill', () => {
+  it('rebuilds each smaller-size disk for free at the pool\'s BASE Bandwidth, one at a time, ignoring the fill multiplier', () => {
     const base = afterReset()
+    const diskSeconds = getLowerRebuildDiskSeconds(base, FIRST_DISK_SIZE)
+    expect(diskSeconds).toBe(FIRST_DISK_SIZE / getStoragePoolBandwidth(base, 1))
     expect(base.intro.poolBuffers?.[1] ?? 0).toBe(0) // nothing to pay with
-    const first = tickAutoProvisionLowerDiskSizes(base)
-    expect(first.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(1)
-    expect(first.intro.poolBuffers?.[1] ?? 0).toBe(0) // free
-    expect(tickAutoProvisionLowerDiskSizes(first)).toBe(first) // first disk still empty
-    const filled = withIntro(first, { disks: { [FIRST_DISK_SIZE]: 1 } })
-    expect(tickAutoProvisionLowerDiskSizes(filled).intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(2)
+    const half = tickAutoProvisionLowerDiskSizes(diskSeconds / 2)(base)
+    expect(half.intro.lowerRebuild).toEqual({ size: FIRST_DISK_SIZE, progress: 0.5 })
+    expect(half.intro.disksBuiltTotal[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    const one = tickAutoProvisionLowerDiskSizes(diskSeconds / 2)(half)
+    expect(one.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(1)
+    expect(one.intro.disks[FIRST_DISK_SIZE]).toBe(1) // lands full
+    expect(one.intro.lowerRebuild).toBeNull()
+    expect(one.intro.poolBuffers?.[1] ?? 0).toBe(0) // free
+    // an offline-sized gap rebuilds several disks in one call
+    const three = tickAutoProvisionLowerDiskSizes(diskSeconds * 3)(base)
+    expect(three.intro.disks[FIRST_DISK_SIZE]).toBe(3)
+    // the fill multiplier (a full vs empty tap bonus) never changes the pace
+    const boosted = withIntro(base, { dataStreamTapBonusPercent: 500 })
+    expect(tickAutoProvisionLowerDiskSizes(diskSeconds)(boosted).intro.disks[FIRST_DISK_SIZE]).toBe(1)
+  })
+
+  it('getLowerRebuildSummary totals the exact remaining time and counts in-flight progress', () => {
+    const base = afterReset()
+    const diskSeconds = getLowerRebuildDiskSeconds(base, FIRST_DISK_SIZE)
+    expect(getLowerRebuildSummary(base)).toEqual({ seconds: DISK_ARRAY_LADDER_CAP * diskSeconds, disksDone: 0, disksTotal: DISK_ARRAY_LADDER_CAP })
+    const part = tickAutoProvisionLowerDiskSizes(diskSeconds * 2.5)(base)
+    const summary = getLowerRebuildSummary(part)
+    expect(summary.seconds).toBeCloseTo((DISK_ARRAY_LADDER_CAP - 2.5) * diskSeconds, 6)
+    expect(summary.disksDone).toBeCloseTo(2.5, 6)
+    expect(getLowerRebuildSummary(createInitialGameState())).toEqual({ seconds: 0, disksDone: 0, disksTotal: 0 })
   })
 
   it('keeps going until the smaller array is full, then presents/offers the newest size', () => {
     let state = withIntro(afterReset(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP } })
     expect(getDiskSize(state)).toBe(size10KB)
     expect(isLowerDiskSizePending(state)).toBe(false)
-    expect(tickAutoProvisionLowerDiskSizes(state)).toBe(state)
+    expect(tickAutoProvisionLowerDiskSizes(1)(state)).toBe(state)
   })
 
   it('skips while its pool is rebuilding, while a legacy build is in flight, and before the Byte exists', () => {
     const base = afterReset()
     const rebuilding = withIntro(base, { dataLakes: { 1: { rebuilding: true } } })
-    expect(tickAutoProvisionLowerDiskSizes(rebuilding)).toBe(rebuilding)
+    expect(tickAutoProvisionLowerDiskSizes(1)(rebuilding)).toBe(rebuilding)
     const building = withIntro(base, { diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 5, totalSeconds: 10 } })
-    expect(tickAutoProvisionLowerDiskSizes(building)).toBe(building)
+    expect(tickAutoProvisionLowerDiskSizes(1)(building)).toBe(building)
     const noByte = withIntro(base, { byteCreated: false })
-    expect(tickAutoProvisionLowerDiskSizes(noByte)).toBe(noByte)
+    expect(tickAutoProvisionLowerDiskSizes(1)(noByte)).toBe(noByte)
   })
 
   it('the paid manual / queued / replay paths do nothing while a lower size is pending', () => {

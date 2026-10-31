@@ -9054,3 +9054,6 @@ Pop as the main control and a switch refunding several stacks at once, a full ti
 Boosters keep it topped up) would otherwise silently destroy the refunded tokens. Counts above the cap
 were already tolerated (slot/reserve displays clamp, Booster purchases stop).
 
+## Foundry-reset rebuild moved off the fill multiplier (2026-10)
+
+Smaller disk sizes used to rebuild by adding an empty disk and waiting for the ordinary cache fill, which runs through the pool buffer and the 10×→0.1× fill multiplier, so the Provision Disk tile could only show a rough, curve-dependent ETA (and larger lower sizes depended on write-cache ripple from the size below). Now `tickAutoProvisionLowerDiskSizes(elapsedSeconds)` rebuilds each disk in exactly `size / getStoragePoolBandwidth` (progress in `intro.lowerRebuild`), landing full, so the time is exact (`getLowerRebuildSummary`). The pool-local reset reprovision (`tickPoolResetReprovision`) is unchanged and still uses ordinary fill.

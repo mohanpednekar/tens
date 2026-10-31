@@ -428,6 +428,10 @@ export const createInitialGameState = () => ({
     // Disk, Capacity) after a Foundry wipe. null when inactive. Survives Prestige like other
     // permanent intro fields; cleared only by a full save Reset.
     foundryResetCaps: null,
+    // Progress (0..1) of the one lower-size disk currently being rebuilt for free after a Foundry reset
+    // (tickAutoProvisionLowerDiskSizes): { size, progress } or null. Advances at the pool's BASE
+    // Bandwidth, never the fill multiplier. Wiped with the rest of the Foundry.
+    lowerRebuild: null,
     // PERMANENT — a one-time-ever latch, never reset by a real Prestige or an Era ascension (see
     // prestigeGame/buildEraIntroReset). True the instant Storage's own capacity threshold is
     // crossed (isStorageUnlocked — the same "1 KiB" threshold that reveals pool 1's card and
@@ -1761,7 +1765,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     const afterCache = tickDiskLevelOneCachePull(afterPull)
     // A queued Provision Disk build (see queueDiskBuild) takes its turn here, once this tick's own
     // disk pull/cache pull have had first claim on the forced-priority state.
-    const afterQueuedBuild = tickQueuedDiskBuild(tickAutoProvisionLowerDiskSizes(afterCache))
+    const afterQueuedBuild = tickQueuedDiskBuild(tickAutoProvisionLowerDiskSizes(elapsedSeconds)(afterCache))
     // 0 elapsed: start any newly eligible read-cache flushes after a pull emptied a slot;
     // countdown continues on the next ordinary tickGame pass. A queued build firing this tick
     // doesn't add any newly-fillable slot itself (its size stays IO-locked until the build
@@ -4226,24 +4230,81 @@ export const tickQueuedDiskBuild = state => {
 }
 
 // Sizes below the newest unlocked one (rebuilt after a Foundry reset) provision themselves FOR FREE, one
-// disk at a time (same shape as tickPoolResetReprovision): while the size Provision Disk would build is
-// smaller than the presented (newest unlocked) size, add one empty disk to that array, then wait for it
-// to fill (the ordinary cache fill) before adding the next — a disk counts as provisioned again once it
-// is full. Same-reference no-op otherwise.
-export const tickAutoProvisionLowerDiskSizes = state => {
+// disk at a time, smallest size first. Each disk takes exactly size / the pool's BASE Bandwidth
+// (getStoragePoolBandwidth) — independent of the fill multiplier, the pool buffer and the caches — so the
+// total time is predictable (getLowerRebuildSummary). Progress lives in intro.lowerRebuild ({ size,
+// progress 0..1 }); a finished disk lands full (a drained built disk is refilled before a new one is built).
+// A size counts as done once DISK_ARRAY_LADDER_CAP disks are built (getDiskSize advances). `elapsedSeconds`
+// may span many disks (offline gaps). Same-reference no-op when nothing changed.
+const LOWER_REBUILD_MAX_STEPS = 200
+export const getLowerRebuildDiskSeconds = (state, size) =>
+  size / Math.max(getStoragePoolBandwidth(state, getPoolIndexForDiskSize(size)), Number.MIN_VALUE)
+
+export const tickAutoProvisionLowerDiskSizes = (elapsedSeconds = 0) => state => {
   if (!state.intro?.byteCreated) return state
-  if (!isLowerDiskSizePending(state)) return state
-  const size = getDiskSize(state)
-  const poolIndex = getPoolIndexForDiskSize(size)
-  if (isStoragePoolRebuilding(state, poolIndex) || isLaterPoolProvisioningLocked(state, poolIndex)) return state
-  if (state.intro.diskBuild) return state
-  const built = state.intro.disksBuiltTotal?.[size] ?? 0
-  const full = state.intro.disks?.[size] ?? 0
-  if (built > 0 && full < built) return state
-  return {
-    ...state,
-    intro: { ...state.intro, disksBuiltTotal: { ...state.intro.disksBuiltTotal, [size]: built + 1 } },
+  if (!isLowerDiskSizePending(state)) {
+    return state.intro.lowerRebuild ? { ...state, intro: { ...state.intro, lowerRebuild: null } } : state
   }
+  let intro = state.intro
+  let left = Math.max(0, elapsedSeconds)
+  let changed = false
+  for (let step = 0; step < LOWER_REBUILD_MAX_STEPS; step += 1) {
+    const current = { ...state, intro }
+    if (!isLowerDiskSizePending(current)) break
+    const size = getDiskSize(current)
+    const poolIndex = getPoolIndexForDiskSize(size)
+    if (isStoragePoolRebuilding(current, poolIndex) || isLaterPoolProvisioningLocked(current, poolIndex)) break
+    if (intro.diskBuild) break
+    const built = intro.disksBuiltTotal?.[size] ?? 0
+    const full = intro.disks?.[size] ?? 0
+    if (built >= DISK_ARRAY_LADDER_CAP && full >= built) break
+    const diskSeconds = getLowerRebuildDiskSeconds(current, size)
+    if (!Number.isFinite(diskSeconds) || getStoragePoolBandwidth(current, poolIndex) <= 0) break
+    const progress = intro.lowerRebuild?.size === size ? intro.lowerRebuild.progress : 0
+    const gained = left / diskSeconds
+    if (progress + gained < 1 - TICK_ACCUMULATION_EPSILON) {
+      if (gained > 0) {
+        intro = { ...intro, lowerRebuild: { size, progress: progress + gained } }
+        changed = true
+      }
+      left = 0
+      break
+    }
+    left = Math.max(0, left - (1 - progress) * diskSeconds)
+    intro = {
+      ...intro,
+      disks: { ...intro.disks, [size]: full + 1 },
+      disksBuiltTotal: { ...intro.disksBuiltTotal, [size]: Math.max(built, full + 1) },
+      lowerRebuild: null,
+    }
+    changed = true
+  }
+  return changed ? { ...state, intro } : state
+}
+
+// Time and progress of the whole post-Foundry-reset rebuild: every size below the presented one still short
+// of a full array, each remaining disk at size / its pool's base Bandwidth (the in-flight disk's progress
+// already deducted). `seconds` is Infinity when a pool has no Bandwidth. `disksDone`/`disksTotal` count disks
+// (the in-flight one fractionally). Zeros when nothing is pending.
+export const getLowerRebuildSummary = state => {
+  const summary = { seconds: 0, disksDone: 0, disksTotal: 0 }
+  if (!isLowerDiskSizePending(state)) return summary
+  const unlocked = getUnlockedDiskSteps(state.intro)
+  for (let step = 1; step < unlocked; step += 1) {
+    const size = getDiskLadderSizeBits(step)
+    const built = state.intro.disksBuiltTotal?.[size] ?? 0
+    const full = Math.min(DISK_ARRAY_LADDER_CAP, state.intro.disks?.[size] ?? 0)
+    summary.disksTotal += DISK_ARRAY_LADDER_CAP
+    if (built >= DISK_ARRAY_LADDER_CAP) {
+      summary.disksDone += DISK_ARRAY_LADDER_CAP
+      continue
+    }
+    const partial = state.intro.lowerRebuild?.size === size ? state.intro.lowerRebuild.progress : 0
+    summary.disksDone += full + partial
+    const diskSeconds = getLowerRebuildDiskSeconds(state, size)
+    summary.seconds += (DISK_ARRAY_LADDER_CAP - full - partial) * diskSeconds
+  }
+  return summary
 }
 
 // Counts down intro.diskBuild's remainingSeconds every tick — a no-op when no build is in
