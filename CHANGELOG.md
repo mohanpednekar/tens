@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Data Lake filled balance now floors to 3 significant digits like Foundry speeds; the running-upgrade "from → to" readout now uses the left (from) value's unit.
+
 - Data Lake Boosters keep their auto-buy status for the whole Era once a pool has been fully built, through pool resets, Reset Byte Foundry and Prestige. Reset Byte Foundry now also auto-replays Data Lake capacity upgrades and Booster purchases up to their previous highs.
 - **Provision Disk button shows pool speed and time left.** Once Storage is revealed and the pool has a fill speed, a queued build uses the running-upgrade tile: disk size and pass count on the left, progress percent in the middle, ⚡ live pool fill speed and ⏳ time until the remaining cost is banked along the fill-multiplier curve (`—` while Disk Fill outranks it). While smaller sizes auto-rebuild after a Foundry reset the same tile reads "Rebuilding…" with the percent of smaller-size disks already built and ⏳ for the size currently refilling (pool fill + read-cache flush). Other states keep the original button.
 - **Upgrade Capacity / Upgrade Speed draw at a constant 1× Speed.** The running upgrade bar no longer follows the fill multiplier.

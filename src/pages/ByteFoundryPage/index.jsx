@@ -7,7 +7,7 @@ import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
-import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getDiskReadCacheFlushSeconds, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isDiskReadCacheEligible, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatSpeedText, formatThreeSignificant, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getDiskReadCacheFlushSeconds, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isDiskReadCacheEligible, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, DISK_ARRAY_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
@@ -589,18 +589,11 @@ const formatMemoryBalanceValue = (bits, capacityBits, byteCreated, stable = true
   return stable ? formatMemoryAmountStable(bits, balanceUnit) : formatMemoryAmount(bits, balanceUnit)
 }
 
-// Floors to at most 3 significant digits (never overstates), no unit — the number half of formatSpeedText.
-const formatThreeSignificant = value => {
-  if (!(value > 0)) return '0'
-  const scale = 10 ** (Math.floor(Math.log10(value)) - 2)
-  return String(Number((Math.floor(value / scale + 1e-9) * scale).toPrecision(12)))
-}
-
-// "from → to" for the running-upgrade bar: both numbers in the TARGET's binary unit (so a from-value that
-// would have read in a smaller unit becomes a fraction of it, e.g. "0.5 → 1 KiB/s"), max 3 significant
-// digits, and the unit (plus `suffix`) shown once, on the right-hand number only.
+// "from → to" for the running-upgrade bar: both numbers in the FROM value's binary unit (so a larger
+// to-value can exceed 1,000, e.g. "512 → 1,024 B/s"), max 3 significant digits, and the unit (plus
+// `suffix`) shown once, on the right-hand number only.
 export const formatBitsTransition = (fromBits, toBits, suffix = '') => {
-  const unit = getMemoryUnit(toBits, true)
+  const unit = getMemoryUnit(fromBits, true)
   return `${formatThreeSignificant(fromBits / unit.divisor)} → ${formatThreeSignificant(toBits / unit.divisor)} ${unit.symbol}${suffix}`
 }
 
@@ -766,16 +759,6 @@ const getSpeedColor = percent => {
   const t = Math.log(percent / fromStop) / Math.log(toStop / fromStop)
   return `rgb(${fromRgb.map((c, i) => Math.round(c + (toRgb[i] - c) * t)).join(',')})`
 }
-
-// Truncates (never overstates) the leading number of an already-unit-formatted amount to 3
-// significant digits, e.g. "1.2345 KB" -> "1.23 KB".
-const formatSpeedText = formatted =>
-  formatted.replace(/^[\d,]*\.?\d+/, match => {
-    const value = Number(match.replace(/,/g, ''))
-    if (value <= 0) return '0'
-    const scale = 10 ** (Math.floor(Math.log10(value)) - 2)
-    return String(Number((Math.floor(value / scale + 1e-9) * scale).toPrecision(12)))
-  })
 
 // Before intro.mainGameUnlocked this page is a mandatory gate with no way out via Tiers (AppNav
 // still shows Guide/More). Once unlocked, AppNav's Foundry item reopens it at any time — nothing
