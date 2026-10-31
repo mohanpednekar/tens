@@ -3794,6 +3794,7 @@ describe('Byte Foundry Storage', () => {
     const button = screen.getByRole('button', { name: /provision disk/i })
     expect(button).toHaveTextContent(/Rebuilding/)
     expect(button).toHaveTextContent(/⚡.*\/s/)
+    expect(button).toHaveTextContent(/⚡\s*~/) // the projected speed is marked with ~ too
     expect(button).toHaveTextContent(/⏳\s*~\d/) // projected time is marked with ~ (and toned down)
     expect(button.querySelector('[title^="Projected speed"]')).not.toBeNull()
   })
