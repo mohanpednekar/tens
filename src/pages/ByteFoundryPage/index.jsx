@@ -1045,11 +1045,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     >
       {diskShowsFundingStats ? (
         <RunningUpgradeContent>
-          <RunningTitle>{diskBuildStatus.icon} {lowerDiskSizePending ? 'Rebuilding…' : `${formatDiskSize(diskSize)} Disk…`}</RunningTitle>
-          <RunningChange>{lowerDiskSizePending ? `${formatDiskSize(autoDiskSize)} · to prior highs` : diskPassesCollected > 0 ? diskPassesFraction : 'Queued'}</RunningChange>
+          <RunningTitle>{diskBuildStatus.icon} {lowerDiskSizePending ? 'Rebuilding' : `${formatDiskSize(diskSize)} Disk…`}</RunningTitle>
+          <RunningChange>{lowerDiskSizePending ? `${formatDiskSize(autoDiskSize)} disks` : diskPassesCollected > 0 ? diskPassesFraction : 'Queued'}</RunningChange>
           <RunningPercent>{Math.floor(diskDisplayedProgress)}%</RunningPercent>
           <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent) }} title="Pool fill speed funding this disk">⚡ {diskFundingSpeedText}</ProvisionSpeed>
-          <RunningTime>⏳ {diskFundingTimeText}</RunningTime>
+          {diskFundingTimeText !== '—' && <RunningTime>⏳ {diskFundingTimeText}</RunningTime>}
         </RunningUpgradeContent>
       ) : (
         <MilestoneButtonContent>

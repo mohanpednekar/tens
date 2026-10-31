@@ -3758,8 +3758,8 @@ describe('Byte Foundry Storage', () => {
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toBeDisabled()
     // Rebuild layout: the time/percent cover the auto-rebuild of every smaller size up to the prior highs.
-    expect(provisionButton).toHaveTextContent(/Rebuilding….*1 KB · to prior highs/)
-    expect(provisionButton).toHaveTextContent(/⏳/)
+    expect(provisionButton).toHaveTextContent(/Rebuilding.*1 KB disks/)
+    expect(provisionButton).not.toHaveTextContent('—')  // no finite estimate for this size, so no ⏳ row
     expect(provisionButton).toHaveTextContent('⚡')
     expect(provisionButton).toHaveTextContent('33%')
     expect(screen.getByRole('progressbar', { name: /disk build progress/i })).toHaveAttribute('aria-valuenow', '33')
