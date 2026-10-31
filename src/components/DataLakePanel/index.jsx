@@ -30,6 +30,7 @@ import {
   isDataLakeCapacityMaxed,
   isDataLakePoolDrainAvailable,
   isDataLakePoolReady,
+  isDataLakeBoosterAuto,
   isStoragePoolFullyBuilt,
   isStoragePoolResetAvailable,
 } from 'game/engine'
@@ -363,6 +364,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
         // fund anything here (see docs/DESIGN_HISTORY.md).
         const poolReady = isDataLakePoolReady(state, tierIndex)
         const poolComplete = isStoragePoolFullyBuilt(state, tierIndex)
+        const boosterAuto = isDataLakeBoosterAuto(state, tierIndex)
         const canBuy = isBoosterPurchaseAvailable(state, tierIndex)
         // Purchases pause once the matching compute-ladder entity is already at its own
         // COMPUTE_ENTITY_CAP — distinct from simply not having enough banked yet, so the disabled
@@ -421,7 +423,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                   <StatusText title={`${boosterLabel} is already at the max — spend or merge it down first`}>
                     {costLabel}
                   </StatusText>
-                ) : poolComplete ? (
+                ) : boosterAuto ? (
                   <StatusText title={`Automatically buys the next ${boosterLabel} for ${nextCostSize} whenever this lake has enough stored`}>
                     {costLabel}
                   </StatusText>

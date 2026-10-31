@@ -710,7 +710,7 @@ advance the pool through the existing bandwidth steps, non-final reward growth l
 half the following pool's bandwidth. After reset the pool provisions its disks automatically and for
 free, one at a time smallest-first, waiting for each disk to fill; while it rebuilds, later pools cannot
 start new provisioning (already-active work may finish). Whenever all 9/9/9 disks are provisioned
-(including before the first reset), the lake's Booster control becomes a non-clickable cost label and
+(including before the first reset) — a status latched per lake (`boosterAuto`) for the whole Era, surviving pool resets, Reset Byte Foundry and Prestige — the lake's Booster control becomes a non-clickable cost label and
 the lake automatically buys every affordable Booster until slots fill or the next cost exceeds capacity;
 filling the lake at that wall enables the next reset. Pools never transfer or share resources through
 this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop".
@@ -786,7 +786,7 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
   fully automatic (no click, no autobuyer gate). Disks/caches/builds are PERMANENT across Prestige.
   Stranded disks are never destroyed or swept into Bits; merges never cross a pool boundary.
 - **Data Lakes** (`intro.dataLakes`): Booster control is "one click, one full fill-then-buy conversion,
-  then stop" — never a persistent auto-buy loop; `buyBooster` spends only banked lake units, outside the
+  then stop" until the pool's era-long `boosterAuto` latch is set (then it auto-buys); `buyBooster` spends only banked lake units, outside the
   forced priority order; sub-sizes capped 9/9/9 (`DATA_LAKE_SUB_SIZE_DISK_CAPS`).
 - **Display**: Disk labels bare numbers; pool/lake CAPACITY in its fixed unit
   (`formatDiskSizeInPoolUnit`); buffer BALANCE self-sizes (`formatPoolBalance`).
@@ -952,7 +952,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2137 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2143 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

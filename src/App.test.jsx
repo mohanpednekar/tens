@@ -3595,12 +3595,12 @@ describe('Byte Foundry Storage', () => {
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(savedState.intro.diskBuildQueued).toBe(true)
-    expect(buildButton).toHaveTextContent(/⏳.*Provisioning 1 KB Disk….*Queued · needs buffer/)
+    expect(buildButton).toHaveTextContent(/⏳.*1 KB Disk….*Queued/)
     expect(buildButton).not.toHaveTextContent(/tap to queue/)
     expect(savedState.intro.diskProvisionPasses ?? {}).toEqual({})
   })
 
-  test('a queued Provision Disk reads "Provisioning …" with its banked passes, unlike the idle "Provision …" label', () => {
+  test('a queued Provision Disk reads the speed/time tile with its banked passes, unlike the idle "Provision …" label', () => {
     // 8 built → this is the 9th disk (9 passes); 2 already banked and the queue is armed.
     seedIntroState({
       bits: 0, capacity: currentBankCost, byteCreated: true,
@@ -3611,9 +3611,13 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
-    expect(buildButton).toHaveTextContent(/⏳.*Provisioning 1 KB Disk…/)
-    expect(buildButton).toHaveTextContent('2/9 · needs buffer')
+    expect(buildButton).toHaveTextContent(/⏳.*1 KB Disk…/)
+    expect(buildButton).toHaveTextContent('2/9')
+    expect(buildButton).toHaveTextContent(/⚡.*\/s/)
+    expect(buildButton).toHaveTextContent('⚡')
+    expect(buildButton).toHaveTextContent('22%')
     expect(buildButton).not.toHaveTextContent(/tap to queue|Ready/)
+    expect(screen.getByRole('progressbar', { name: /disk build progress/i })).toHaveAttribute('aria-valuenow', '22')
   })
 
   test('Provision Disk shows its cost in the nearest fitting SI unit (matching the Disk\'s own SI size), not a raw unitless bit count', () => {
@@ -3747,12 +3751,18 @@ describe('Byte Foundry Storage', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
       unlockedDiskSteps: 2,
+      disks: { [currentBankSize]: 3 },
+      disksBuiltTotal: { [currentBankSize]: 3 },
     })
     render(<App />)
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toBeDisabled()
-    expect(provisionButton).toHaveTextContent('10 KB')
-    expect(provisionButton).toHaveTextContent(/Rebuilding 1 KB first/)
+    // Rebuild layout: the time/percent cover the auto-rebuild of every smaller size up to the prior highs.
+    expect(provisionButton).toHaveTextContent(/Rebuilding….*1 KB · to prior highs/)
+    expect(provisionButton).toHaveTextContent(/⏳/)
+    expect(provisionButton).toHaveTextContent('⚡')
+    expect(provisionButton).toHaveTextContent('33%')
+    expect(screen.getByRole('progressbar', { name: /disk build progress/i })).toHaveAttribute('aria-valuenow', '33')
   })
 
   test('a full unlocked Disk array offers a confirm-guarded Foundry reset instead of Provision Disk, which unlocks the next size and raises the exponent', async () => {
