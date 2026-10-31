@@ -940,15 +940,17 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskFundingRate = getPoolDeliveredRate(lowerDiskSizePending ? getPoolIndexForDiskSize(autoDiskSize) : diskPoolIndex)
   const diskFundingSpeedText = `${formatSpeedText(formatDiskSize(diskFundingRate))}/s`
   // Auto-rebuild after a Foundry reset: every size below the presented one refills to a full array (free,
-  // one disk at a time, each filled by its own pool's cache), so the time left is the bits still missing
-  // across those arrays at each pool's delivered speed, and the percent is the disks already full.
+  // one disk at a time, each filled by its own pool's cache), so the time left is the bits of the disks
+  // still to build across those arrays at each pool's delivered speed (approximate: each disk also waits on its
+  // own fill), and the percent is the disks already built — the engine's own done-check, so it never runs backwards
+  // when merges or Factory pulls drain full disks.
   let rebuildDisksFull = 0
   let rebuildDisksTotal = 0
   let rebuildSeconds = 0
   if (lowerDiskSizePending) {
     for (let step = 1; step < getUnlockedDiskSteps(intro); step += 1) {
       const lowerSize = getDiskLadderSizeBits(step)
-      const full = Math.min(DISK_ARRAY_LADDER_CAP, intro.disks?.[lowerSize] ?? 0)
+      const full = Math.min(DISK_ARRAY_LADDER_CAP, intro.disksBuiltTotal?.[lowerSize] ?? 0)
       rebuildDisksFull += full
       rebuildDisksTotal += DISK_ARRAY_LADDER_CAP
       const rate = getPoolDeliveredRate(getPoolIndexForDiskSize(lowerSize))
@@ -960,7 +962,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskBitsStillNeeded = Math.max(0, diskCost - diskPassesCollected * diskSize - diskPoolSpendableBufferBits)
   const diskFundingTimeText = lowerDiskSizePending
     ? formatUpgradeTimeLeft(rebuildSeconds)
-    : diskBitsStillNeeded <= 0
+    : diskBuildBlockedByPriority
+      ? '—'
+      : diskBitsStillNeeded <= 0
       ? 'now'
       : formatUpgradeTimeLeft(diskFundingRate > 0 ? diskBitsStillNeeded / diskFundingRate : Infinity)
   const diskShowsFundingStats = storageRevealed && !diskLadderExhausted && !diskBuildInProgress && diskFundingRate > 0 && (lowerDiskSizePending || diskBuildQueued)

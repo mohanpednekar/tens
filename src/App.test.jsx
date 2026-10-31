@@ -3613,6 +3613,7 @@ describe('Byte Foundry Storage', () => {
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
     expect(buildButton).toHaveTextContent(/⏳.*1 KB Disk…/)
     expect(buildButton).toHaveTextContent('2/9')
+    expect(buildButton).toHaveTextContent(/⚡.*\/s/)
     expect(buildButton).toHaveTextContent('⚡')
     expect(buildButton).toHaveTextContent('22%')
     expect(buildButton).not.toHaveTextContent(/tap to queue|Ready/)
@@ -3751,6 +3752,7 @@ describe('Byte Foundry Storage', () => {
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
       unlockedDiskSteps: 2,
       disks: { [currentBankSize]: 3 },
+      disksBuiltTotal: { [currentBankSize]: 3 },
     })
     render(<App />)
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
