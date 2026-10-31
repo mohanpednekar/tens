@@ -81,7 +81,7 @@ this hook could only be added from an interactive session.
 
 There is no general code lint (`yarn lint` does not exist). CI's required `test` job runs `yarn
 lint:workflows` (`scripts/lint-workflow-shell.mjs` — `bash -n` over every workflow/action `run:` block,
-#738) and then `yarn test`. `.github/workflows/deploy.yml` runs `yarn build` and publishes `dist/` to GitHub Pages on
+#738 — then `scripts/lint-conflict-markers.mjs`, #945) and then `yarn test`. `.github/workflows/deploy.yml` runs `yarn build` and publishes `dist/` to GitHub Pages on
 push to `main`. Automated Copilot review on PRs is configured through GitHub's repository settings, not
 an explicit workflow file.
 
