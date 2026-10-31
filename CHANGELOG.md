@@ -132,6 +132,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Rebuild tile always shows a time.** While a rebuilding size's pool is not live yet, the time (and ⚡ speed) are projected from the Bandwidth the pool will have once live instead of being hidden.
 - **Legal links show a keyboard focus ring.** Settings → Legal Privacy Policy and Terms of Use now use the same accent `:focus-visible` outline as other interactive controls.
 
 ### Changed

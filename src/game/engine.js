@@ -2690,6 +2690,23 @@ export const getStoragePoolBandwidth = (state, poolIndex) => {
   return Math.max(base, Math.min(advanced, nextBandwidth / 2))
 }
 
+// The Bandwidth a pool has now, or — while its pool is not live yet (Capacity still rebuilding after a
+// Foundry reset, so getStoragePoolBandwidth is 0) — the Bandwidth it will have once live (Capacity at its unlock threshold; the Data Stream's SI-clean Speed if that is 0) as a stand-in,
+// so rebuild time estimates (getLowerRebuildSummary) never read as unknown. The rebuild itself still waits
+// for the pool to go live (tickAutoProvisionLowerDiskSizes).
+export const getProjectedPoolBandwidth = (state, poolIndex) => {
+  const live = getStoragePoolBandwidth(state, poolIndex)
+  if (live > 0) return live
+  // Bandwidth the pool will have the moment it goes live (Capacity at its unlock threshold) — far closer to
+  // the real rebuild pace than the Data Stream's current Speed.
+  const capacity = Math.max(state.intro?.capacity ?? 0, getPoolCapacityUnlockThresholdBits(poolIndex))
+  // Speed's own basis trails Capacity by at most one doubling, so project it too (a real post-reset save always has speedCapacity set).
+  const speedCapacity = Math.max(state.intro?.speedCapacity ?? state.intro?.capacity ?? 0, capacity / INTRO_CAPACITY_DOUBLING_STEP)
+  const atThreshold = getStoragePoolBandwidth({ ...state, intro: { ...state.intro, capacity, speedCapacity } }, poolIndex)
+  if (atThreshold > 0) return atThreshold
+  return getSiCleanEquivalentBits(getIntroProductionRate(state.intro ?? {}))
+}
+
 // The raw Capacity derivation for a given raw Data Stream capacity value (in bits), with no
 // visibility gate — getStoragePoolCapacity (below) calls this with the LIVE state.intro.capacity
 // plus a visibility early-return; getPoolBufferClampCeilingBits (below) calls this with a
@@ -4202,6 +4219,8 @@ export const tickQueuedDiskBuild = state => {
 const LOWER_REBUILD_MAX_STEPS = 200
 export const getLowerRebuildDiskSeconds = (state, size) =>
   size / Math.max(getStoragePoolBandwidth(state, getPoolIndexForDiskSize(size)), Number.MIN_VALUE)
+const getLowerRebuildProjectedDiskSeconds = (state, size) =>
+  size / Math.max(getProjectedPoolBandwidth(state, getPoolIndexForDiskSize(size)), Number.MIN_VALUE)
 
 export const tickAutoProvisionLowerDiskSizes = (elapsedSeconds = 0) => state => {
   if (!state.intro?.byteCreated) return state
@@ -4247,10 +4266,10 @@ export const tickAutoProvisionLowerDiskSizes = (elapsedSeconds = 0) => state => 
 
 // Time and progress of the whole post-Foundry-reset rebuild: every size below the presented one still short
 // of a full array, each remaining disk at size / its pool's base Bandwidth (the in-flight disk's progress
-// already deducted). `seconds` is Infinity when a pool has no Bandwidth. `disksDone`/`disksTotal` count disks
-// (the in-flight one fractionally). Zeros when nothing is pending.
+// already deducted). For a pool not live yet the Bandwidth is projected (getProjectedPoolBandwidth), so `seconds` is only Infinity if the Data Stream Speed is 0. `disksDone`/`disksTotal` count disks
+// (the in-flight one fractionally); `projected` is true when any remaining size's pool is not live yet (its part of `seconds` is an estimate). Zeros when nothing is pending.
 export const getLowerRebuildSummary = state => {
-  const summary = { seconds: 0, disksDone: 0, disksTotal: 0 }
+  const summary = { seconds: 0, disksDone: 0, disksTotal: 0, projected: false }
   if (!isLowerDiskSizePending(state)) return summary
   const unlocked = getUnlockedDiskSteps(state.intro)
   for (let step = 1; step < unlocked; step += 1) {
@@ -4264,7 +4283,8 @@ export const getLowerRebuildSummary = state => {
     }
     const partial = state.intro.lowerRebuild?.size === size ? state.intro.lowerRebuild.progress : 0
     summary.disksDone += full + partial
-    const diskSeconds = getLowerRebuildDiskSeconds(state, size)
+    if (getStoragePoolBandwidth(state, getPoolIndexForDiskSize(size)) <= 0) summary.projected = true
+    const diskSeconds = getLowerRebuildProjectedDiskSeconds(state, size)
     summary.seconds += (DISK_ARRAY_LADDER_CAP - full - partial) * diskSeconds
   }
   return summary
