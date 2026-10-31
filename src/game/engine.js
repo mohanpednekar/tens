@@ -2728,12 +2728,17 @@ export const getStoragePoolBandwidth = (state, poolIndex) => {
 }
 
 // The Bandwidth a pool has now, or — while its pool is not live yet (Capacity still rebuilding after a
-// Foundry reset, so getStoragePoolBandwidth is 0) — the Data Stream's current SI-clean Speed as a stand-in,
+// Foundry reset, so getStoragePoolBandwidth is 0) — the Bandwidth it will have once live (Capacity at its unlock threshold; the Data Stream's SI-clean Speed if that is 0) as a stand-in,
 // so rebuild time estimates (getLowerRebuildSummary) never read as unknown. The rebuild itself still waits
 // for the pool to go live (tickAutoProvisionLowerDiskSizes).
 export const getProjectedPoolBandwidth = (state, poolIndex) => {
   const live = getStoragePoolBandwidth(state, poolIndex)
   if (live > 0) return live
+  // Bandwidth the pool will have the moment it goes live (Capacity at its unlock threshold) — far closer to
+  // the real rebuild pace than the Data Stream's current Speed.
+  const capacity = Math.max(state.intro?.capacity ?? 0, getPoolCapacityUnlockThresholdBits(poolIndex))
+  const atThreshold = getStoragePoolBandwidth({ ...state, intro: { ...state.intro, capacity } }, poolIndex)
+  if (atThreshold > 0) return atThreshold
   return getSiCleanEquivalentBits(getIntroProductionRate(state.intro ?? {}))
 }
 
