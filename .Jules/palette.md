@@ -31,3 +31,6 @@
 ## 2026-10-28 - Interactive Elements and Focus Visibility
 **Learning:** Custom interactive elements created with `styled-components` (like `styled.input`, `styled.textarea`, or ones using `as="button"`, `$tappable`, `cursor: pointer`) might lack explicit `&:focus-visible` styles, leading to poor keyboard accessibility as users cannot see which element has focus.
 **Action:** When creating or modifying custom interactive elements with styled-components, always explicitly define `&:focus-visible` styles using the app's established pattern (e.g., `outline: 2px solid ${props => props.theme.color.accent}; outline-offset: 2px;`) to maintain keyboard accessibility.
+## 2026-10-30 - Settings LegalSection Keyboard Accessibility
+**Learning:** Native anchor (`<a>`) tags within styled-components structures (like `LinkRow` in `LegalSection`) do not automatically inherit global keyboard focus styles if they aren't using the core `Button` component, leading to hidden focus states.
+**Action:** When styling layout containers for native links, explicitly declare `&:focus-visible` on the nested `a` selector using `props.theme.color.accent` to guarantee keyboard accessibility.

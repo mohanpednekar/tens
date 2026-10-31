@@ -9,6 +9,12 @@ const LinkRow = styled.div`
 
   a {
     color: ${props => props.theme.color.accent};
+    border-radius: ${props => props.theme.radius.sm};
+
+    &:focus-visible {
+      outline: 2px solid ${props => props.theme.color.accent};
+      outline-offset: 2px;
+    }
   }
 `
 
