@@ -3780,6 +3780,25 @@ describe('Byte Foundry Storage', () => {
     expect(button).not.toHaveTextContent('—')
   })
 
+  test('a rebuild whose current size is in a pool that is not live yet still shows ⚡ and ⏳ (projected, labelled)', () => {
+    // Every pool-1 size full → the size being rebuilt (1 MB) sits in pool 2, which is not live at this Capacity.
+    const pool1Sizes = [currentBankSize, currentBankSize * 10, currentBankSize * 100]
+    const full = Object.fromEntries(pool1Sizes.map(size => [size, DISK_ARRAY_LADDER_CAP]))
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 8,
+      disksBuiltTotal: full,
+      disks: full,
+    })
+    render(<App />)
+    const button = screen.getByRole('button', { name: /provision disk/i })
+    expect(button).toHaveTextContent(/Rebuilding/)
+    expect(button).toHaveTextContent(/⚡.*\/s/)
+    expect(button).toHaveTextContent(/⚡\s*~/) // the projected speed is marked with ~ too
+    expect(button).toHaveTextContent(/⏳\s*~\d/) // projected time is marked with ~ (and toned down)
+    expect(button.querySelector('[title^="Projected speed"]')).not.toBeNull()
+  })
+
   test('a multi-size rebuild names the size being rebuilt and the largest size it will reach', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
