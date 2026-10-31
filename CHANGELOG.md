@@ -113,6 +113,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Completed 9/9/9 pools now show the next Booster cost as a label and convert affordable Lake
   contents automatically, without a conversion button.
 
+### Fixed
+
+- **Legal links show a keyboard focus ring.** Settings → Legal Privacy Policy and Terms of Use now use the same accent `:focus-visible` outline as other interactive controls.
+
 ### Changed
 
 - **Automation unlock costs now match their first speed upgrade.** Latency autobuyer 8 PP (was 10), Auto Scale Up 16 PP (was 20), Auto-Prestige 64 PP (was 1000, with its levels already replaced by the speed chain), and Auto Overclock is now its own 32 PP unlock (needs Auto Scale Up) instead of unlocking with its first speed level. Milestone-unlocked automations (tier autobuyers, tier tickspeed autobuyers) have no unlock cost, only upgrades.
