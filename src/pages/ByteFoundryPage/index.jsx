@@ -279,6 +279,23 @@ const RunningTime = styled.span`
   white-space: nowrap;
 `
 
+// Provision Disk's variant: the title column takes the slack and the stats column sizes to content, so
+// a long "Provisioning 1 KB Disk…" title isn't clipped.
+const ProvisionContent = styled(RunningUpgradeContent)`
+  grid-template-columns: minmax(0, 1fr) auto auto;
+`
+
+// Top-right ⚡ figure on the Provision Disk button (plain text — a nested button inside the button is invalid).
+const ProvisionSpeed = styled.span`
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  font-size: ${props => props.theme.type.scale.sm.size};
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+`
+
 const MilestoneCostLine = styled.span`
   font-size: 0.75em;
   font-weight: 500;
@@ -921,6 +938,18 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               status: `${COST_ICON} ${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
               reason: diskBuildBlockedByPriority ? 'disk fill comes first' : 'pool buffer too low',
             }
+  // Same stat layout as the running-upgrade tile: ⚡ the pool's delivered fill speed (what actually
+  // funds the passes) and ⏳ time until the remaining cost is banked at that speed.
+  const diskFundingMultiplierPercent = getPoolMultiplierPercent(state, diskPoolIndex)
+  const diskFundingRate = getPoolAvailableFillRate(state, diskPoolIndex) * diskFundingMultiplierPercent / 100 * getComputeBoostPoolMultiplier(intro, diskPoolIndex)
+  const diskFundingSpeedText = `${formatSpeedText(formatDiskSize(diskFundingRate))}/s`
+  const diskBitsStillNeeded = Math.max(0, diskCost - diskPassesCollected * diskSize - diskPoolSpendableBufferBits)
+  const diskFundingTimeText = diskBuildInProgress
+    ? formatUpgradeTimeLeft(diskBuildInProgress.remainingSeconds)
+    : diskBitsStillNeeded <= 0
+      ? 'now'
+      : formatUpgradeTimeLeft(diskFundingRate > 0 ? diskBitsStillNeeded / diskFundingRate : Infinity)
+  const diskShowsFundingStats = storageRevealed && !diskLadderExhausted && !lowerDiskSizePending && (diskBuildInProgress || diskFundingRate > 0)
   const unlockDiskSizeButton = (
     <Button
       aria-label="foundry reset to unlock disk size"
@@ -963,10 +992,20 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       $progress={diskBuildProgress}
       $pulse={diskProvisioningActive}
     >
-      <MilestoneButtonContent>
-        <span>{diskBuildStatus.icon} {diskBuildStatus.label}{diskProvisioningActive ? '…' : ''}</span>
-        {diskBuildStatus.status && <MilestoneCostLine>{diskBuildStatus.status}</MilestoneCostLine>}
-      </MilestoneButtonContent>
+      {diskShowsFundingStats ? (
+        <ProvisionContent>
+          <RunningTitle>{diskBuildStatus.icon} {diskBuildStatus.label}{diskProvisioningActive ? '…' : ''}</RunningTitle>
+          {diskBuildStatus.status && <RunningChange>{diskBuildStatus.status}</RunningChange>}
+          {(diskBuildEngaged || diskBuildInProgress) && <RunningPercent>{Math.floor(diskBuildProgress)}%</RunningPercent>}
+          <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent) }} title="Pool fill speed funding this disk">⚡ {diskFundingSpeedText}</ProvisionSpeed>
+          <RunningTime>⏳ {diskFundingTimeText}</RunningTime>
+        </ProvisionContent>
+      ) : (
+        <MilestoneButtonContent>
+          <span>{diskBuildStatus.icon} {diskBuildStatus.label}{diskProvisioningActive ? '…' : ''}</span>
+          {diskBuildStatus.status && <MilestoneCostLine>{diskBuildStatus.status}</MilestoneCostLine>}
+        </MilestoneButtonContent>
+      )}
       <VisuallyHidden
         role="progressbar"
         aria-label="byte foundry disk build progress"
