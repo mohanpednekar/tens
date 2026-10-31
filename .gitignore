@@ -115,3 +115,7 @@ graphify-out/.graphify_uncached.txt
 android/keystore.properties
 *.p12
 *.mobileprovision
+
+# Stryker mutation-testing scratch + reports (mutation-testing.yml uploads reports as an artifact)
+.stryker-tmp/
+reports/
