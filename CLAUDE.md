@@ -273,25 +273,23 @@ code/secret-scanning alerts not already tracked get the same (Dependabot alerts 
 outright), saying so when it deviates from lowest-number order.
 
 - `devin-autonomous-maintenance.yml` — Devin-CLI counterpart, every 4h (UTC :17), opens `devin/auto-*`
-  PRs; agent auth via `DEVIN_CLI_CREDENTIALS`, git/`gh` via `GH_AUTOMATION_PAT`. 5-open-PR ceiling counts
-  `devin/auto-*` + `claude/auto-*` together. No file-scope restriction (may edit workflows incl. its own
-  file); every change still lands via PR, and workflow-file changes stay human-gated (`pr-auto-merge.yml`
-  excludes `.github/workflows/**` from green-checks auto-merge). Applies the Pull-requests convention to its own
-  PRs; post-run feedback stays `autonomous-pr-followup.yml`'s job.
-- `devin-workflow-health.yml` — daily 00:00 UTC; files an `automation-failure` issue if the workflow
-  doesn't parse, hasn't started in 26h, or its latest completed run didn't succeed (any non-`success`
-  conclusion, incl. cancelled/timed out).
+  PRs (auth `DEVIN_CLI_CREDENTIALS`; git/`gh` via `GH_AUTOMATION_PAT`). 5-open-PR ceiling counts
+  `devin/auto-*` + `claude/auto-*` together. No file-scope restriction (may edit workflows incl. its own);
+  every change still lands via PR, and workflow-file changes stay human-gated (`pr-auto-merge.yml` excludes `.github/workflows/**` from green-checks auto-merge).
+  Follows the Pull-requests convention; post-run feedback stays `autonomous-pr-followup.yml`'s job.
+- `devin-workflow-health.yml` — daily 00:00 UTC; files an `automation-failure` issue if the Devin workflow
+  doesn't parse, hasn't started in 26h, or its latest completed run wasn't `success`.
 - `pr-conflict-sweep.yml` — on every push to `main`, flags newly conflicted open PRs; on
   `claude/auto-*`/`devin/auto-*` the comment triggers the follow-up agent to merge-and-resolve.
 - `release.yml` — deterministic: on a `package.json` push to `main`, tags `v<x.y.z>` if absent and
   creates the GitHub Release from that version's `CHANGELOG.md` section (see "Changelog convention").
-- `autonomous-pr-followup.yml` — review comments/CI failures on `claude/auto-*`/`devin/auto-*` PRs.
+- `autonomous-pr-followup.yml` — review comments/CI failures on `claude/auto-*`/`devin/auto-*` PRs;
   `dependabot-pr-followup.yml` — failing checks on `dependabot/*` PRs when the bump broke call sites
-  (Phase 0 still owns `@dependabot rebase` for merely-behind branches).
+  (Phase 0 owns `@dependabot rebase` for merely-behind branches).
 - `pr-auto-merge.yml` — native auto-merge on human approval (any PR) or green checks alone for
   `claude/*`/`devin/auto-*` when the diff meets the conservative low-risk bar.
-- `automation-self-heal.yml` — watches the orchestration workflows for failed runs; opens a draft
-  `claude/self-heal-*` fix or an `automation-failure` issue; never edits `ci.yml`/`deploy.yml`/itself.
+- `automation-self-heal.yml` — opens a draft `claude/self-heal-*` fix or an `automation-failure` issue
+  for failed orchestration runs; never edits `ci.yml`/`deploy.yml`/itself.
 
 **Maintainer checklist (#62) verification (#63).** `scripts/verify-maintainer-checklist.mjs` runs each
 `autonomous-maintenance.yml` invocation and strikes through API-verifiable #62 items that now pass.
@@ -470,23 +468,18 @@ src/
     StatCard/index.js       ← styled card container used for every panel, fully token-driven
                                (every component's full prop/styling contract: `docs/COMPONENTS_REFERENCE.md`)
   pages/
-    ByteFoundryPage/index.jsx ← the "Byte Foundry" tap screen (Architecture 4, "Economy model"). Takes
-                               `{ game, focusNonce }`; Data Stream + every DiskArrayRow as continuous
-                               sections, Upgrade Capacity / Upgrade Speed actions. Pool Memory derives from the
-                               shared Data Stream Capacity, which doubles up to the FINAL pool's end bound
-                               (`isMemoryCapacityAtCap`) — see "Pool liveness is Capacity-only"
+    ByteFoundryPage/index.jsx ← the "Byte Foundry" tap screen (Architecture 4). Takes `{ game, focusNonce }`.
+                               Pool Memory derives from the shared Data Stream Capacity, which doubles up to
+                               the FINAL pool's end bound (`isMemoryCapacityAtCap`) — see "Pool liveness is Capacity-only"
     StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow list (Architecture 4a)
     ComputePage/index.jsx   ← Foundry Boosters screen: merge chain + Boost (Architecture 4b)
-    ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen; page id `'compute'`. Takes `{ game }`
-                               (Architecture 4c / "Economy model")
+    ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen; page id `'compute'`. Takes `{ game }` (Architecture 4c)
     MainPage/index.jsx      ← the tier ladder (see "Architecture"). Takes `{ game }`.
                                No second-level tabs. Full reference: `docs/MAINPAGE_REFERENCE.md`
     PerksPage/index.jsx     ← page id `'perks'`, AppNav item once `isPerksPageRevealed` (first Prestige/
                                Era). Takes `{ game, focusNonce }`. Icon tabs 🔓 Unlocks / ⏫ Upgrades / 🎛
                                Toggles — detail + tab dots: `docs/MAINPAGE_REFERENCE.md`
-    InfoPage/index.jsx      ← the Guide page (Architecture 5), including Byte Foundry/Storage/Compute
-                               sections. Reached via AppNav's Guide item; takes no navigation props
-                               (AppNav is the exit)
+    InfoPage/index.jsx      ← the Guide page (Architecture 5); takes no navigation props (AppNav is the exit)
     MilestonesPage/index.jsx ← Chapters / Era ascension status (Architecture 6)
     SettingsPage/index.jsx  ← Supporter pack, save slots, Prestige museum, Era ascension, Appearance,
                                Ops dashboard, Danger zone (Architecture 7)
