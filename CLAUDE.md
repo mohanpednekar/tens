@@ -779,7 +779,7 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
 **Hard rules (full text and the rest of the Foundry mechanics: `docs/FOUNDRY_MECHANICS_REFERENCE.md`):**
 - **Fill multiplier** (`FILL_MULTIPLIER_*`, `getFillMultiplierPercent`): displayed Speed/Bandwidth never
   change; a fill-dependent multiplier (1000% empty → 100% at 50% → 10% full (log-linear), ×(1 + tap bonus%) decaying
-  1%/s, capped 2000%) scales only the real per-tick amount delivered.
+  1%/s, capped 2000%) scales only the real per-tick amount delivered (`getFillCurveDelta` integrates the curve so a 1s offline tick matches live 0.1s ticks).
 - **Standing rule — `intro.capacity` keeps doubling plainly in binary** (IEC `KiB`/`MiB`, step 1024);
   non-binary (SI-clean/decade-power) transforms are for storage-pool-scoped values only
   (`getStoragePoolCapacity`, `getDecadePowerEquivalentBits`, `getSiCleanEquivalentBits`) — two earlier
@@ -959,7 +959,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2135 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2137 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

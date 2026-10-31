@@ -141,6 +141,8 @@ import {
   getUnlockedStoragePoolCount,
   getVisibleStoragePoolCount,
   getFillMultiplierPercent,
+  getFillCurveSeconds,
+  getFillCurveDelta,
   getDataStreamFillFraction,
   getDataStreamBaseMultiplierPercent,
   getDataStreamMultiplierPercent,
@@ -811,6 +813,17 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(getFillMultiplierPercent(-1)).toBe(FILL_MULTIPLIER_MAX_PERCENT)
       expect(getFillMultiplierPercent(2)).toBe(FILL_MULTIPLIER_MIN_PERCENT)
     })
+
+    it('getFillCurveDelta and getFillCurveSeconds invert each other', () => {
+      const cap = 1000
+      const rate = 10
+      const start = 100
+      const dt = getFillCurveSeconds(start, 400, cap, rate)
+      expect(dt).toBeGreaterThan(0)
+      expect(start + getFillCurveDelta(start, cap, rate, dt)).toBeCloseTo(400, 6)
+      expect(getFillCurveSeconds(cap, cap, cap, rate)).toBeNull()
+      expect(getFillCurveDelta(cap, cap, rate, 1)).toBe(0)
+    })
   })
 
   describe('Data Stream multiplier', () => {
@@ -977,17 +990,19 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
   })
 
   describe('applied to the real per-tick delivery, never to the displayed rate', () => {
-    it('tickIntroProduction delivers 1.5x at an empty Buffer (FILL_MULTIPLIER_MAX_PERCENT)', () => {
-      const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 0, capacity: 1000 })
-      const after = tickIntroProduction(1)(state)
-      // The displayed rate is unaffected — the multiplier scales only real delivery.
-      expect(after.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 10)
+    it('tickIntroProduction delivers 10x at an empty Buffer (FILL_MULTIPLIER_MAX_PERCENT)', () => {
+      const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 0, capacity: 1_000_000 })
+      const after = tickIntroProduction(0.01)(state)
+      expect(after.intro.bits).toBeCloseTo(getFillCurveDelta(0, 1_000_000, getIntroProductionRate(state.intro), 0.01))
+      expect(after.intro.bits).toBeGreaterThan(getIntroProductionRate(state.intro) * 0.01)
     })
 
     it('tickIntroProduction delivers exactly the displayed rate at a half-full Buffer (100%)', () => {
-      const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 500, capacity: 1000 })
-      const after = tickIntroProduction(1)(state)
-      expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro), 6)
+      const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 500_000, capacity: 1_000_000 })
+      const after = tickIntroProduction(0.01)(state)
+      expect(after.intro.bits - state.intro.bits).toBeCloseTo(
+        getFillCurveDelta(500_000, 1_000_000, getIntroProductionRate(state.intro), 0.01),
+      )
     })
 
     it('tickPoolBufferFill transfers more than the raw rate into an empty pool buffer (near FILL_MULTIPLIER_MAX_PERCENT)', () => {
@@ -995,15 +1010,28 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
         byteCreated: true, bits: 1_000_000, capacity: 32_000_000,
       })
       const rawRate = getStoragePoolBandwidth(state, 1)
-      const after = tickPoolBufferFill(1)(state)
-      expect(after.intro.poolBuffers[1]).toBeGreaterThan(rawRate)
-      expect(after.intro.poolBuffers[1]).toBeCloseTo(rawRate * 10)
+      const bufferCap = getPoolBufferCapacity(state, 1)
+      const after = tickPoolBufferFill(0.01)(state)
+      expect(after.intro.poolBuffers[1]).toBeGreaterThan(rawRate * 0.01)
+      expect(after.intro.poolBuffers[1]).toBeCloseTo(getFillCurveDelta(0, bufferCap, rawRate, 0.01))
+    })
+
+    it('a 1s tickIntroProduction matches ten 0.1s ticks on an empty small buffer', () => {
+      const start = withIntro(createInitialGameState(), { byteCreated: true, bits: 0, capacity: 256, speedCapacity: 256 })
+      let fine = start
+      for (let i = 0; i < 10; i += 1) fine = tickIntroProduction(0.1)(fine)
+      const coarse = tickIntroProduction(1)(start)
+      expect(coarse.intro.bits).toBeCloseTo(fine.intro.bits, 6)
+      expect(coarse.intro.bits).toBeCloseTo(
+        getFillCurveDelta(0, 256, getIntroProductionRate(start.intro), 1),
+        6,
+      )
     })
   })
 })
 
 describe('getDataStreamDeliveredRate', () => {
-  it('is base Speed × Compute Boost × fill multiplier — exactly what tickIntroProduction adds per second', () => {
+  it('is the instantaneous displayed reading (base Speed × Compute Boost × fill multiplier)', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true, bits: 0, capacity: 1000,
       computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 600,
@@ -1011,7 +1039,10 @@ describe('getDataStreamDeliveredRate', () => {
     expect(getComputeBoostMultiplier(state.intro)).toBeGreaterThan(1)
     const delivered = getDataStreamDeliveredRate(state.intro)
     expect(delivered).toBeCloseTo(getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro) * 10)
-    expect(tickIntroProduction(1)(state).intro.bits).toBeCloseTo(Math.min(1000, delivered))
+    const unmultiplied = getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro)
+    expect(tickIntroProduction(0.01)(state).intro.bits).toBeCloseTo(
+      Math.min(1000, getFillCurveDelta(0, 1000, unmultiplied, 0.01)),
+    )
   })
 })
 
@@ -1053,7 +1084,10 @@ describe('getPoolAvailableFillRate', () => {
     expect(available).toBe(getIntroProductionRate(state.intro))
     expect(available).toBeLessThan(getStoragePoolBandwidth(state, 1))
     const after = tickPoolBufferFill(1)(state)
-    expect(after.intro.poolBuffers[1]).toBeCloseTo(available * getPoolMultiplierPercent(state, 1) / 100)
+    const tapK = 1 + getPoolTapBonusPercent(state, 1) / 100
+    expect(after.intro.poolBuffers[1]).toBeCloseTo(
+      getFillCurveDelta(0, getPoolBufferCapacity(state, 1), available * tapK, 1),
+    )
   })
 })
 
@@ -1991,7 +2025,9 @@ describe('pool buffers', () => {
     // its own Bandwidth cap and buffer room.
     const pool1Transfer = after.intro.poolBuffers[1] - 400_000
     const pool2Transfer = after.intro.poolBuffers[2]
-    expect(pool1Transfer).toBe(2_000)
+    const pool1Cap = getPoolBufferCapacity(state, 1)
+    const pool1Rate = getPoolAvailableFillRate(state, 1)
+    expect(pool1Transfer).toBeCloseTo(getFillCurveDelta(400_000, pool1Cap, pool1Rate, 1))
     expect(pool2Transfer).toBeGreaterThan(0)
     expect(after.intro.bits).toBe(1_000_000 - pool1Transfer - pool2Transfer)
   })
@@ -3084,12 +3120,10 @@ describe('tickIntroProduction', () => {
   })
 
   it('keeps producing after mainGameUnlocked — nothing about passive production ever freezes', () => {
-    // bits seeded at exactly 50% of capacity so the fill-based Speed multiplier (see
-    // FILL_MULTIPLIER_* in layers.js) is neutral (100%) — this test is about production not
-    // freezing, not about the multiplier itself.
-    const state = withIntro(createInitialGameState(), { byteCreated: true, mainGameUnlocked: true, bits: 50, capacity: 100, speedCapacity: 8 })
-    const after = tickIntroProduction(1)(state)
-    expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro))
+    const state = withIntro(createInitialGameState(), { byteCreated: true, mainGameUnlocked: true, bits: 500_000, capacity: 1_000_000, speedCapacity: 8 })
+    const after = tickIntroProduction(0.01)(state)
+    expect(after.intro.bits).toBeGreaterThan(state.intro.bits)
+    expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 0.01, 5)
   })
 
   it('returns the same state reference for a true zero-delta tick, not just an equal-valued one', () => {
@@ -3098,34 +3132,34 @@ describe('tickIntroProduction', () => {
   })
 
   it('delivers continuously — a fractional second banks a fractional share of the rate, with no separate accumulator', () => {
-    // An empty buffer's 1000% fill multiplier lifts the real delivery to 10x the derived rate, so
-    // 0.4s delivers 0.4 x 1.5 x rate bits.
+    // An empty buffer's 1000% fill multiplier lifts the real delivery to 10x the derived rate;
+    // a large capacity keeps fill nearly 0 over 0.4s so the instantaneous 10× still holds.
     const state = withIntro(createInitialGameState(), { byteCreated: true, capacity: 100000 })
     const after = tickIntroProduction(0.4)(state)
-    expect(after.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 0.4 * 10)
+    expect(after.intro.bits).toBeCloseTo(getFillCurveDelta(0, 100000, getIntroProductionRate(state.intro), 0.4))
     expect(after.intro.productionAccumulator).toBeUndefined()
   })
 
-  it('delivers proportionally over a longer elapsed window too, evaluated against the pre-tick fill level', () => {
-    // bits seeded at exactly 50% of capacity to neutralize the fill-based Speed multiplier (see
-    // the previous test's comment): rate x 1.4s bits.
-    const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 50, capacity: 100, speedCapacity: 8 })
-    const after = tickIntroProduction(1.4)(state)
-    expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 1.4)
+  it('integrates the fill curve so a longer elapsed window matches stepped live ticks', () => {
+    const start = withIntro(createInitialGameState(), { byteCreated: true, bits: 50, capacity: 100, speedCapacity: 8 })
+    let fine = start
+    for (let i = 0; i < 14; i += 1) fine = tickIntroProduction(0.1)(fine)
+    const coarse = tickIntroProduction(1.4)(start)
+    expect(coarse.intro.bits).toBeCloseTo(fine.intro.bits, 6)
   })
 
   it('delivers multiple seconds of production in one call', () => {
-    // bits seeded at exactly 50% of capacity to neutralize the fill-based Speed multiplier (see
-    // the earlier "keeps producing after mainGameUnlocked" test's comment): rate x 2s bits.
-    const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 500, capacity: 1000, speedCapacity: 8 })
-    const after = tickIntroProduction(2)(state)
-    expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * 2)
+    const start = withIntro(createInitialGameState(), { byteCreated: true, bits: 500, capacity: 1000, speedCapacity: 8 })
+    let fine = start
+    for (let i = 0; i < 20; i += 1) fine = tickIntroProduction(0.1)(fine)
+    const coarse = tickIntroProduction(2)(start)
+    expect(coarse.intro.bits).toBeCloseTo(fine.intro.bits, 6)
   })
 
   it('caps delivered bits at capacity rather than overshooting', () => {
     const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 5, capacity: 8})
-    const after = tickIntroProduction(1)(state)
-    expect(after.intro.bits).toBe(8)
+    expect(tickIntroProduction(1)(state).intro.bits).toBeLessThanOrEqual(8)
+    expect(tickIntroProduction(1000)(state).intro.bits).toBe(8)
   })
 })
 
@@ -5902,8 +5936,10 @@ describe('tickGame Compute Boost integration', () => {
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 10,
     })
     const after = tickIntroProduction(1)(state)
-    // Burst (tier 1 / Core) multiplies the derived rate ×20.
-    expect(after.intro.bits - state.intro.bits).toBeCloseTo(getIntroProductionRate(state.intro) * COMPUTE_BOOST_PRESETS.burst.multiplier)
+    const unmultiplied = getIntroProductionRate(state.intro) * COMPUTE_BOOST_PRESETS.burst.multiplier
+    expect(after.intro.bits - state.intro.bits).toBeCloseTo(
+      getFillCurveDelta(500_000, 1_000_000, unmultiplied, 1),
+    )
   })
 
   it('multiplies tier01\'s own production while a boost is active, leaving every other tier unaffected', () => {

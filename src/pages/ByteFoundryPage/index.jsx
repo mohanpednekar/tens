@@ -7,7 +7,7 @@ import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
-import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getFillMultiplierPercent, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
@@ -156,18 +156,12 @@ const formatUpgradeTimeLeft = totalSeconds => {
   return formatOfflineDuration(seconds)
 }
 
-// Seconds until a buffer is full (null when already full or not filling). The fill multiplier falls
-// geometrically from FILL_MULTIPLIER_MAX_PERCENT (empty) to FILL_MULTIPLIER_MIN_PERCENT (full), m(f) =
-// e^(a − b·f) with a = ln(MAX/100), b = ln(MAX/MIN), so dx/dt = rate × m(x/capacity) and the time from
-// `bits` is (capacity / rate) × e^−a × (e^b − e^(b·fill)) / b (tiles only; the upgrade bar draws at a constant 1×). `baseRate` is the Speed/Bandwidth before the fill multiplier; assumes nothing else draws
-// from the buffer.
-export const getBufferSecondsToFull = (bits, capacity, baseRate) => {
-  if (!(capacity > 0) || bits >= capacity || !(baseRate > 0)) return null
-  const fill = Math.max(0, bits) / capacity
-  const a = Math.log(FILL_MULTIPLIER_MAX_PERCENT / 100)
-  const b = Math.log(FILL_MULTIPLIER_MAX_PERCENT / FILL_MULTIPLIER_MIN_PERCENT)
-  return (capacity / baseRate) * Math.exp(-a) * (Math.exp(b) - Math.exp(b * fill)) / b
-}
+// Seconds until a buffer is full (null when already full or not filling). Wrapper around
+// engine.getFillCurveSeconds so tile ETAs share the same closed form as production/pool fill.
+// Tiles only — the upgrade bar draws at a constant 1×. `baseRate` is Speed/Bandwidth before the
+// fill multiplier; assumes nothing else draws from the buffer.
+export const getBufferSecondsToFull = (bits, capacity, baseRate) =>
+  getFillCurveSeconds(bits, capacity, capacity, baseRate)
 
 const formatBufferTimeToFull = (bits, capacity, baseRate) => {
   const seconds = getBufferSecondsToFull(bits, capacity, baseRate)
