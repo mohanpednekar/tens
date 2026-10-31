@@ -5429,9 +5429,15 @@ export const isDataLakeAutoConvertActive = (state, tierIndex) =>
 // fillDataLakeManually permanently unable to ever bank anything (isDataLakeManualFillAvailable
 // gates on isDataLakePoolReady too), leaving the control stuck showing "converting" forever with
 // no way to cancel — see docs/DESIGN_HISTORY.md.
+// Whether this lake's Boosters auto-buy: the latched per-era boosterAuto flag, or its pool being
+// fully built right now (the latch is set on the next tick).
+export const isDataLakeBoosterAuto = (state, tierIndex) =>
+  Boolean(getDataLakeTier(state, tierIndex)?.boosterAuto) || isStoragePoolFullyBuilt(state, tierIndex)
+
 export const isDataLakeAutoConvertStartAvailable = (state, tierIndex) => {
   const lake = getDataLakeTier(state, tierIndex)
   if (!lake || (lake.autoConvertActive ?? false)) return false
+  if (lake.boosterAuto) return false
   if (!isDataLakeBoosterUnlocked(state, tierIndex)) return false
   if (!isDataLakePoolReady(state, tierIndex)) return false
   return getComputeEntityFieldRoom(state, tierIndex) > 0
@@ -7035,21 +7041,22 @@ export const tickFoundryResetConvenience = state => {
   }
 
   // Data Lake operations (capacity upgrades, Booster purchases) replay automatically up to their
-  // prior highs; each goes through its ordinary availability gate and engine action.
+  // prior highs; each goes through its ordinary availability gate and engine action. Boosters are
+  // bought before a capacity upgrade, since the upgrade empties the lake.
   for (const [tierKey, lakeCaps] of Object.entries(caps.lakes ?? {})) {
     const tierIndex = Number(tierKey)
-    if (getDataLakeCapacityLevel(next, tierIndex) < (lakeCaps.capacityLevel ?? 0)) {
-      const doubled = doubleDataLakeCapacity(tierIndex)(next)
-      if (doubled !== next) {
-        next = doubled
-        changed = true
-      }
-    }
     if ((getDataLakeTier(next, tierIndex)?.purchased ?? 0) < (lakeCaps.purchased ?? 0) &&
         isBoosterPurchaseAvailable(next, tierIndex)) {
       const bought = buyBooster(tierIndex, 1)(next)
       if (bought !== next) {
         next = bought
+        changed = true
+      }
+    }
+    if (getDataLakeCapacityLevel(next, tierIndex) < (lakeCaps.capacityLevel ?? 0)) {
+      const doubled = doubleDataLakeCapacity(tierIndex)(next)
+      if (doubled !== next) {
+        next = doubled
         changed = true
       }
     }

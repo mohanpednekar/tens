@@ -157,7 +157,7 @@ redeem step, and each Storage pool's overflow feeds its own Data Lake automatica
 which spend banked Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**), only
 buy via a single per-lake "🏷️ `<cost>`" control: it buys immediately if affordable, or arms a one-shot
 `autoConvertActive` flag that fills-then-buys exactly 1 over subsequent ticks and stops (never a
-persistent auto-buy loop) while its Storage pool is incomplete. Once that pool reaches 9/9/9, the control
+persistent auto-buy loop) while its Storage pool is incomplete. Once that pool reaches 9/9/9 (latched per lake for the Era via `boosterAuto`, surviving resets), the control
 becomes a non-clickable cost label and every affordable Booster converts automatically. Each
 compute-ladder entity caps at 10 normally, or 18 (10 primary + a gradually-filled 8-slot reserve) once
 that tier's outbound merge boundary has auto-merge unlocked. A separate PP **Compute (Flops)** screen

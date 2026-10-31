@@ -311,6 +311,7 @@ import {
   buyBooster,
   startDataLakeAutoConvert,
   tickDataLakeAutoConvert,
+  isDataLakeBoosterAuto,
   isStoragePoolResetAvailable,
   isLaterPoolProvisioningLocked,
   isStoragePoolRebuilding,
@@ -11386,6 +11387,37 @@ describe('Data Lakes', () => {
       }
       const after = tickFoundryResetConvenience(rebuilt)
       expect(after.intro.dataLakes[1].capacityLevel).toBe(1)
+    })
+
+    it('keeps the latch through Prestige and a pool reset, clears it on Era ascension, and merges lake highs by max', () => {
+      const latched = tickDataLakeAutoConvert(built())
+      expect(latched.intro.dataLakes[1].boosterAuto).toBe(true)
+      const withHighs = { ...latched, intro: { ...latched.intro, dataLakes: { ...latched.intro.dataLakes, 1: { ...latched.intro.dataLakes[1], capacityLevel: 2, purchased: 3 } } } }
+      const prestiged = prestigeGame({ ...withHighs, resources: { ...withHighs.resources, [MONEY_ID]: PRESTIGE_THRESHOLD } })
+      expect(prestiged.intro.dataLakes[1].boosterAuto).toBe(true)
+      const merged = mergeFoundryUpgradeCaps(
+        { lakes: { 1: { capacityLevel: 2, purchased: 1 } } },
+        { lakes: { 1: { capacityLevel: 1, purchased: 4 } } },
+      )
+      expect(merged.lakes[1]).toEqual({ capacityLevel: 2, purchased: 4 })
+      const eraReady = { ...withHighs, prestige: { ...withHighs.prestige, points: ERA_ELIGIBILITY_PP } }
+      expect(eraGame(eraReady).intro.dataLakes[1].boosterAuto).toBe(false)
+    })
+
+    it('treats a latched lake as auto: no manual conversion start, and it buys when its pool is no longer fully built', () => {
+      const latched = tickDataLakeAutoConvert(built())
+      const rebuilding = {
+        ...latched,
+        intro: {
+          ...latched.intro,
+          disksBuiltTotal: { [kb1]: 1 },
+          dataLakes: { ...latched.intro.dataLakes, 1: { ...latched.intro.dataLakes[1], depositedUnits: 1, boostersUnlocked: true } },
+        },
+      }
+      expect(isStoragePoolFullyBuilt(rebuilding, 1)).toBe(false)
+      expect(isDataLakeBoosterAuto(rebuilding, 1)).toBe(true)
+      expect(isDataLakeAutoConvertStartAvailable(rebuilding, 1)).toBe(false)
+      expect(tickDataLakeAutoConvert(rebuilding).intro.dataLakes[1].purchased).toBe(1)
     })
   })
 

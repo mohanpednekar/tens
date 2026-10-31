@@ -373,8 +373,10 @@ const InfoPage = () => {
             on, the nth Booster ever bought from that lake costs n banked units, spent instantly (no
             live transfer or waiting period). A single control shows the next Booster's cost — click
             it to buy immediately if already banked, or to start automatically drawing from the
-            pool's own buffer until it is, then buy 1 and stop (never a standing auto-buy loop; it
-            can't be started while that tier's compute entity is already full).
+            pool's own buffer until it is, then buy 1 and stop (it can't be started while that tier's
+            compute entity is already full). Once a lake's Storage pool has been fully built, its
+            Boosters auto-buy for the rest of the Era, even through resets, and Reset Byte Foundry
+            replays lake upgrades and Boosters back to their previous highs.
           </li>
         </ul>
 
