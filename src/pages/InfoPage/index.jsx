@@ -597,9 +597,9 @@ const InfoPage = () => {
           <li>
             A tier’s autobuyer buys <strong>one full level per attempt</strong> — only when the
             whole level is affordable, or the rest of a partly bought level is (Buy max mode never
-            applies to it). <strong>Bulk mode</strong> is a Prestige Point purchase per tier: each
-            attempt then buys up to 10 levels at once — as many as are affordable (1000× the
-            autobuyer’s base PP), then up to 100 (1e6×), then up to 1000 (1e9×).
+            applies to it). Its <strong>speed upgrades</strong> (Perks → Upgrades) shorten the interval
+            down to 10 ms; every level after that doubles how many levels one attempt buys — as many as
+            are affordable, up to 2, 4, 8 … 512.
           </li>
         </ul>
       </Section>
