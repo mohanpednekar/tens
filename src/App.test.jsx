@@ -3751,8 +3751,9 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toBeDisabled()
-    expect(provisionButton).toHaveTextContent('10 KB')
-    expect(provisionButton).toHaveTextContent(/Rebuilding 1 KB first/)
+    // Rebuild layout: the time/percent cover the auto-rebuild of every smaller size up to the prior highs.
+    expect(provisionButton).toHaveTextContent(/Rebuilding….*1 KB · to prior highs/)
+    expect(provisionButton).toHaveTextContent(/⏳/)
   })
 
   test('a full unlocked Disk array offers a confirm-guarded Foundry reset instead of Provision Disk, which unlocks the next size and raises the exponent', async () => {

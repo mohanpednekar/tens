@@ -8,7 +8,7 @@ import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
 import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
-import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
+import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, DISK_ARRAY_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 
@@ -940,16 +940,35 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             }
   // Same stat layout as the running-upgrade tile: ⚡ the pool's delivered fill speed (what actually
   // funds the passes) and ⏳ time until the remaining cost is banked at that speed.
-  const diskFundingMultiplierPercent = getPoolMultiplierPercent(state, diskPoolIndex)
-  const diskFundingRate = getPoolAvailableFillRate(state, diskPoolIndex) * diskFundingMultiplierPercent / 100 * getComputeBoostPoolMultiplier(intro, diskPoolIndex)
+  const getPoolDeliveredRate = poolIndex =>
+    getPoolAvailableFillRate(state, poolIndex) * getPoolMultiplierPercent(state, poolIndex) / 100 * getComputeBoostPoolMultiplier(intro, poolIndex)
+  const diskFundingMultiplierPercent = getPoolMultiplierPercent(state, lowerDiskSizePending ? getPoolIndexForDiskSize(autoDiskSize) : diskPoolIndex)
+  const diskFundingRate = getPoolDeliveredRate(lowerDiskSizePending ? getPoolIndexForDiskSize(autoDiskSize) : diskPoolIndex)
   const diskFundingSpeedText = `${formatSpeedText(formatDiskSize(diskFundingRate))}/s`
+  // Auto-rebuild after a Foundry reset: every size below the presented one refills to a full array (free,
+  // one disk at a time, each filled by its own pool's cache), so the time left is the bits still missing
+  // across those arrays at each pool's delivered speed, and the percent is the disks already full.
+  let rebuildDisksFull = 0
+  let rebuildDisksTotal = 0
+  let rebuildSeconds = 0
+  if (lowerDiskSizePending) {
+    for (let step = 1; step < getUnlockedDiskSteps(intro); step += 1) {
+      const lowerSize = getDiskLadderSizeBits(step)
+      const full = Math.min(DISK_ARRAY_LADDER_CAP, intro.disks?.[lowerSize] ?? 0)
+      rebuildDisksFull += full
+      rebuildDisksTotal += DISK_ARRAY_LADDER_CAP
+      const rate = getPoolDeliveredRate(getPoolIndexForDiskSize(lowerSize))
+      if (full < DISK_ARRAY_LADDER_CAP) rebuildSeconds += rate > 0 ? ((DISK_ARRAY_LADDER_CAP - full) * lowerSize) / rate : Infinity
+    }
+  }
+  const rebuildProgress = rebuildDisksTotal > 0 ? clampPercent((rebuildDisksFull / rebuildDisksTotal) * 100) : 0
   const diskBitsStillNeeded = Math.max(0, diskCost - diskPassesCollected * diskSize - diskPoolSpendableBufferBits)
-  const diskFundingTimeText = diskBuildInProgress
-    ? formatUpgradeTimeLeft(diskBuildInProgress.remainingSeconds)
+  const diskFundingTimeText = lowerDiskSizePending
+    ? formatUpgradeTimeLeft(rebuildSeconds)
     : diskBitsStillNeeded <= 0
       ? 'now'
       : formatUpgradeTimeLeft(diskFundingRate > 0 ? diskBitsStillNeeded / diskFundingRate : Infinity)
-  const diskShowsFundingStats = storageRevealed && !diskLadderExhausted && !lowerDiskSizePending && diskBuildQueued && !diskBuildInProgress && diskFundingRate > 0
+  const diskShowsFundingStats = storageRevealed && !diskLadderExhausted && !diskBuildInProgress && diskFundingRate > 0 && (lowerDiskSizePending || diskBuildQueued)
   const unlockDiskSizeButton = (
     <Button
       aria-label="foundry reset to unlock disk size"
@@ -994,9 +1013,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     >
       {diskShowsFundingStats ? (
         <ProvisionContent>
-          <RunningTitle>{diskBuildStatus.icon} {formatDiskSize(diskBuildInProgress?.size ?? diskSize)} Disk…</RunningTitle>
-          <RunningChange>{diskBuildInProgress ? 'Building' : diskPassesCollected > 0 ? diskPassesFraction : 'Queued'}</RunningChange>
-          {<RunningPercent>{Math.floor(diskBuildProgress)}%</RunningPercent>}
+          <RunningTitle>{diskBuildStatus.icon} {lowerDiskSizePending ? 'Rebuilding…' : `${formatDiskSize(diskSize)} Disk…`}</RunningTitle>
+          <RunningChange>{lowerDiskSizePending ? `${formatDiskSize(autoDiskSize)} · to prior highs` : diskPassesCollected > 0 ? diskPassesFraction : 'Queued'}</RunningChange>
+          <RunningPercent>{Math.floor(lowerDiskSizePending ? rebuildProgress : diskBuildProgress)}%</RunningPercent>
           <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent) }} title="Pool fill speed funding this disk">⚡ {diskFundingSpeedText}</ProvisionSpeed>
           <RunningTime>⏳ {diskFundingTimeText}</RunningTime>
         </ProvisionContent>
