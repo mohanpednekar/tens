@@ -1499,12 +1499,12 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     expect(isMemoryCapacityUpgradeArmable(after)).toBe(false)
   })
 
-  it("pulls base Speed scaled by the bar's own fill multiplier (1000% empty) from the Buffer into the bar", () => {
+  it("pulls base Speed at a constant 1x (no fill multiplier) from the Buffer into the bar", () => {
     const started = pickIntroCapacityMilestone(armState(capacity / 2))
     const rate = getIntroProductionRate(started.intro)
     const after = tickCapacityUpgradeDrain(1)(started)
-    expect(after.intro.capacityUpgradeProgress).toBeCloseTo(rate * 10)
-    expect(after.intro.bits).toBeCloseTo(capacity / 2 - rate * 10)
+    expect(after.intro.capacityUpgradeProgress).toBeCloseTo(rate)
+    expect(after.intro.bits).toBeCloseTo(capacity / 2 - rate)
   })
 
   it('pulls only what the Buffer holds', () => {
@@ -12023,6 +12023,15 @@ describe('Upgrade Speed (separate from Capacity)', () => {
     expect(doubled.intro.speedCapacity).toBe(64)
     expect(getIntroProductionRate(doubled.intro)).toBe(getIntroProductionRate(state.intro))
     expect(isSpeedUpgradeArmable(doubled)).toBe(true)
+  })
+
+  it('draws the Speed bar at a constant 1x base Speed per second, regardless of bar fill', () => {
+    const state = queueIntroSpeedUpgrade({ ...base(), intro: { ...base().intro, capacity: 128, speedCapacity: 64, bits: 128 } })
+    const rate = getIntroProductionRate(state.intro)
+    expect(tickSpeedUpgradeDrain(1)(state).intro.speedUpgradeProgress).toBeCloseTo(rate)
+    const partway = { ...state, intro: { ...state.intro, speedUpgradeProgress: 8 } }
+    expect(rate).toBeLessThan(56)
+    expect(tickSpeedUpgradeDrain(1)(partway).intro.speedUpgradeProgress - 8).toBeCloseTo(rate)
   })
 
   it('fills its bar from the stream, then raises Speed and clears the queue', () => {
