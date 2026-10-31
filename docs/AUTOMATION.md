@@ -114,7 +114,8 @@ which silently failed every scheduled run for two days (#738) — is closed by a
 `scripts/lint-workflow-shell.mjs` (`yarn lint:workflows`) extracts every `run:` block in
 `.github/workflows/*.yml` and `.github/actions/**` (composite actions included — a broken one takes
 every workflow down identically) and runs `bash -n` on each, wired as a step in `ci.yml`'s required
-`test` job. It lives inside that job (not as its own job) so the check is merge-blocking under the
+`test` job. The same script chains `scripts/lint-conflict-markers.mjs` (#945), which fails on committed
+git conflict markers. It lives inside that job (not as its own job) so the check is merge-blocking under the
 existing branch-protection requirement without a settings change. Extraction uses the `yaml`
 package's parser (an earlier hand-written indentation scanner kept missing YAML edge cases — ~48
 review findings on #739), linting only the scalar `run` value of steps on paths Actions executes (`jobs.<id>.steps`, composite `runs.steps`, nested `parallel:` groups), aliases resolved, so `with.run`,
