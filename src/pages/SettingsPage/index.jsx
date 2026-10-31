@@ -568,7 +568,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           owned units.
         </p>
         <p>
-          <strong>Keeps:</strong> automation unlocks and pause flags, Unbounded Prestige latch,
+          <strong>Keeps:</strong> automation unlocks and pause flags, DeGoogol latch,
           museum, Compute page reveal, Flops autobuyer unlocks, Eons (+ award), and hyperscalers.
         </p>
       </ConfirmDialog>

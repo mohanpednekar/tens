@@ -670,7 +670,7 @@ Strict three-layer separation:
    import) — the **only** in-app version surface. Reached via AppNav's Guide item.
 6. **`MilestonesPage/index.jsx`** — Chapters / Era ascension status screen (autobuyer unlock
    milestones live once, on Perks → Unlocks — not repeated here). Chapters: the first KiloByte, Go Googol, Open
-   Compute, Go Unbounded, Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always
+   Compute, Go DeGoogol, Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always
    reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
     Supporter pack (unlock code / dummy checkout), Cloud save (`CloudSaveSection.jsx`, only when

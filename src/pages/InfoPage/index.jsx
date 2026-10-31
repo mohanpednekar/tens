@@ -624,9 +624,9 @@ const InfoPage = () => {
         <h2>Prestige</h2>
         <ul>
           <li>
-            Available once Bits reach 1 Googol Bytes (8×10^100 Bits). Until Unbounded Prestige,
+            Available once Bits reach 1 Googol Bytes (8×10^100 Bits). Until DeGoogol,
             production freezes until you Prestige. Upgrade Auto-Prestige to{' '}
-            {UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s or faster to unlock Unbounded Prestige
+            {UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s or faster to unlock DeGoogol
             permanently: production then continues and Prestige is optional.
           </li>
           <li>
@@ -677,7 +677,7 @@ const InfoPage = () => {
             and prestige count, and Compute owned units.
           </li>
           <li>
-            <strong>Keeps:</strong> automation unlocks and pause flags, Unbounded Prestige latch,
+            <strong>Keeps:</strong> automation unlocks and pause flags, DeGoogol latch,
             the main-game unlock gate (once it has ever triggered), museum, Compute page reveal,
             Flops autobuyer unlock flags, Eons (+ award), and hyperscalers. Era <em>N</em>
             free-unlocks the <em>N</em>th Compute tier&apos;s autobuyer.

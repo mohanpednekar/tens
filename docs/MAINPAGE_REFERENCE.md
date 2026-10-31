@@ -836,7 +836,7 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
     tickspeed autobuyer is active), Auto-Prestige Autobuyer (once Auto-Prestige is active) — PP button, or an `UnlockedBadge`
     (`"<name> unlocked"`) once bought; never a pause control here.
   - *Compute Automation* (Auto-Boost, once Foundry Compute unlocks), *Production Bonuses* (until bought), *Compute Autobuyers* (Era-milestone badges, once the Flops page
-    is unlocked), and *Prestige* (Unbounded Prestige: locked until Auto-Prestige's interval ≤ `UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS`).
+    is unlocked), and *Prestige* (DeGoogol: locked until Auto-Prestige's interval ≤ `UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS`).
   Each milestone appears only here — `MilestonesPage` no longer repeats them.
 - ⏫ **Upgrades** (`open upgrades`, `aria-label="PP upgrades page"`) — repeatable leveled purchases:
   Double PP, and Auto-Prestige (category hidden until every tier's tickspeed autobuyer is active).

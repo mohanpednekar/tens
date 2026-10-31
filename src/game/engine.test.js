@@ -412,7 +412,7 @@ const withPrestigePoints = (state, points) => ({
   prestige: { ...state.prestige, points },
 })
 
-// Unbounded Prestige needs Auto-Prestige upgraded to <= 1 s (level 66+ of the 1024 s base × 0.9 chain).
+// DeGoogol needs Auto-Prestige upgraded to <= 1 s (level 66+ of the 1024 s base × 0.9 chain).
 const withUnboundedPrestige = (state, level = 70) => ({
   ...state,
   autoPrestige: 1,
@@ -7002,7 +7002,7 @@ describe('isProductionFrozen', () => {
     expect(isProductionFrozen(state)).toBe(true)
   })
 
-  it('is false at/above PRESTIGE_THRESHOLD once unbounded Prestige is unlocked (Auto-Prestige <= 1 s)', () => {
+  it('is false at/above PRESTIGE_THRESHOLD once DeGoogol is unlocked (Auto-Prestige <= 1 s)', () => {
     const state = withUnboundedPrestige(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 2))
     expect(isProductionFrozen(state)).toBe(false)
     expect(isUnboundedPrestigeUnlocked(state)).toBe(true)
@@ -7732,14 +7732,14 @@ describe('tickGame', () => {
     expect(after.autoPrestigeAttemptBudget).toBeCloseTo(1 / 1000)
   })
 
-  it('does not freeze production at PRESTIGE_THRESHOLD when unbounded Prestige is unlocked', () => {
+  it('does not freeze production at PRESTIGE_THRESHOLD when DeGoogol is unlocked', () => {
     const state = { ...withUnboundedPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5)), autoPrestigeEnabled: false }
     const after = tickGame(1)(state)
     expect(after).not.toBe(state)
     expect(after.resources[MONEY_ID]).toBeGreaterThanOrEqual(PRESTIGE_THRESHOLD)
   })
 
-  it('automatically prestiges in unbounded mode when Auto-Prestige budget crosses 1 at PRESTIGE_THRESHOLD', () => {
+  it('automatically prestiges in DeGoogol mode when Auto-Prestige budget crosses 1 at PRESTIGE_THRESHOLD', () => {
     const state = withPrestigeCount(
       withAutoPrestigeBudget(
         withAutoPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5)),

@@ -5330,7 +5330,7 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry leaves Factor
 // Chapter rows read intro.mainGameUnlocked, prestige.count, computeFlops.pageUnlocked,
 // isUnboundedPrestigeUnlocked, and era.count — see CLAUDE.md / MAINPAGE_REFERENCE. "The first KiloByte"
 // is always ✅ once this view is reachable; Go Googol varies with prestige.count; separate tests cover
-// Open Compute / Go Unbounded / Ascend an Era and the Compute autobuyer category.
+// Open Compute / Go DeGoogol / Ascend an Era and the Compute autobuyer category.
 test.each([
   { prestigeCount: 0, reached: false },
   { prestigeCount: 1, reached: true },
@@ -5354,7 +5354,7 @@ test.each([
   expect(goGoogolRow).toHaveTextContent(reached ? '✅' : '🔒')
 })
 
-test('Chapters track Compute, Unbounded, and Era milestones', async () => {
+test('Chapters track Compute, DeGoogol, and Era milestones', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -5368,7 +5368,7 @@ test('Chapters track Compute, Unbounded, and Era milestones', async () => {
   await user.click(screen.getByRole('button', { name: /open milestones/i }))
 
   expect(screen.getByLabelText(/^open compute chapter$/i)).toHaveTextContent('✅')
-  expect(screen.getByLabelText(/^go unbounded chapter$/i)).toHaveTextContent('✅')
+  expect(screen.getByLabelText(/^go degoogol chapter$/i)).toHaveTextContent('✅')
   expect(screen.getByLabelText(/^ascend an era chapter$/i)).toHaveTextContent('✅')
   expect(screen.queryByLabelText(/^coming soon/i)).not.toBeInTheDocument()
 })

@@ -46,7 +46,7 @@ import styled, { useTheme } from 'styled-components'
 // Perks — its own AppNav destination (page id 'perks', revealed by isPerksPageRevealed) holding every
 // permanent progression feature in three icon tabs:
 // - 🔓 Unlocks: one-time permanent PP purchases AND free milestone unlocks (tier autobuyers, tier
-//   tickspeed autobuyers, Compute autobuyers, Unbounded Prestige) — each milestone shown exactly once
+//   tickspeed autobuyers, Compute autobuyers, DeGoogol) — each milestone shown exactly once
 //   here, not also on MilestonesPage (which keeps only Chapters / Era ascension).
 // - ⏫ Upgrades: repeatable leveled PP purchases (Double PP, Auto-Prestige).
 // - 🎛 Toggles: Buy max mode plus every owned automation's pause/resume (Factory tiers, global
@@ -613,9 +613,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
 
       <Category aria-label="prestige unlocks category">
         <CategoryHeading>Prestige</CategoryHeading>
-        <Row aria-label="unbounded prestige unlock">
+        <Row aria-label="degoogol unlock">
           <RowLabelStack>
-            <RowLabel title="Earn past 1 Googol Bytes without freezing; Prestige voluntarily to claim PP">♾ Unbounded Prestige</RowLabel>
+            <RowLabel title="Earn past 1 Googol Bytes without freezing; Prestige voluntarily to claim PP">♾ DeGoogol</RowLabel>
             {!isUnboundedPrestigeUnlocked(state) && (
               <SubText>
                 {isAutoPrestigeActive
@@ -625,9 +625,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             )}
           </RowLabelStack>
           {isUnboundedPrestigeUnlocked(state) ? (
-            <UnlockedBadge icon="♾" name="Unbounded Prestige" />
+            <UnlockedBadge icon="♾" name="DeGoogol" />
           ) : (
-            <Badge $color={theme.color.disabled} $dimmed aria-label="Unbounded Prestige locked" title="Unlocks when Auto-Prestige's interval reaches 1 s or less">
+            <Badge $color={theme.color.disabled} $dimmed aria-label="DeGoogol locked" title="Unlocks when Auto-Prestige's interval reaches 1 s or less">
               ♾ 🔒
             </Badge>
           )}

@@ -1933,8 +1933,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // Auto-Prestige's attempt budget keeps accumulating during ordinary (non-frozen) play too —
     // "every 1000 seconds once unlocked" runs continuously in the background, it doesn't only
     // start counting once Money first reaches PRESTIGE_THRESHOLD — but it can only ever actually fire from
-    // the frozen branch above once Money has actually gotten there, or from the unbounded branch below
-    // once Unbounded Prestige is unlocked. Paused (autoPrestigeActive
+    // the frozen branch above once Money has actually gotten there, or from the DeGoogol branch below
+    // once DeGoogol is unlocked. Paused (autoPrestigeActive
     // false) stops this accumulation too, same as the frozen branch above.
     ...(autoPrestigeActive ? {
       autoPrestigeAttemptBudget: (stateAfterAutobuyers.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(stateAfterAutobuyers) * elapsedSeconds,
@@ -2013,7 +2013,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // tickStorage above (auto-fill itself already ran earlier, as part of stateAfterIntro).
   let stateBeforeStorage = stateAfterScaleUp
 
-  // Unbounded Prestige (Auto-Prestige interval ≤ UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS): Auto-Prestige fires
+  // DeGoogol (Auto-Prestige interval ≤ UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS): Auto-Prestige fires
   // here while production keeps running — the frozen branch above is skipped entirely.
   if (
     isUnboundedPrestigeUnlocked(stateBeforeStorage)
