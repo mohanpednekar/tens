@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Perks → Unlocks → Global Automation now always lists Auto Overclock (32 PP; needs Auto Scale Up first) and Auto-Prestige (64 PP); they were hidden until their prerequisites were met.
+
 ### Changed
 
 - Autobuyer bulk mode (10/100/1000 per buy) is now an upper limit: each attempt buys as many whole levels as are affordable, up to the limit, instead of falling back to a single level when the full amount isn't affordable.

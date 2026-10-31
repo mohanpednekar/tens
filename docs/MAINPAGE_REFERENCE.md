@@ -832,8 +832,8 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
     milestone progressbar) and, once the autobuyer is unlocked and the tier reachable, the 📦 bulk-mode
     purchase (or a `"<tier>'s autobuyer buys up to N levels at once"` badge). Rows never disappear, so reached milestones
     stay visible as unlock history.
-  - *Global Automation*: Tickspeed Autobuyer, Auto Scale Up, Auto Overclock, Auto-Prestige (once every tier's
-    tickspeed autobuyer is active), Auto-Prestige Autobuyer (once Auto-Prestige is active) — PP button, or an `UnlockedBadge`
+  - *Global Automation*: Tickspeed Autobuyer, Auto Scale Up, Auto Overclock, Auto-Prestige (both always listed;
+    Auto Overclock is disabled until Auto Scale Up is bought), Auto-Prestige Autobuyer (once every tier's tickspeed autobuyer and Auto-Prestige are active) — PP button, or an `UnlockedBadge`
     (`"<name> unlocked"`) once bought; never a pause control here.
   - *Compute Automation* (Auto-Boost, once Foundry Compute unlocks), *Production Bonuses* (until bought), *Compute Autobuyers* (Era-milestone badges, once the Flops page
     is unlocked), and *Prestige* (DeGoogol: locked until Auto-Prestige's interval ≤ `UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS`).
