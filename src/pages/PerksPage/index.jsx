@@ -408,7 +408,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               <span>
                 {/* Owned bulk mode always shows (history); buying the next needs the tier reachable this run. */}
                 {!isAutobuyerLocked && bulkMode > 0 && (
-                  <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer buys ${AUTOBUYER_BULK_LEVELS_BASE ** bulkMode} levels at once`}>📦 ×{AUTOBUYER_BULK_LEVELS_BASE ** bulkMode}</Badge>
+                  <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer buys ${AUTOBUYER_BULK_LEVELS_BASE ** bulkMode} levels at once`}>🤖 Buys ×{AUTOBUYER_BULK_LEVELS_BASE ** bulkMode} levels</Badge>
                 )}
                 {!isAutobuyerLocked && hasNextBulk && unlocked && (
                   <PpPurchaseButton
@@ -416,8 +416,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                     color="#a78bfa"
                     cost={bulkCost}
                     disabled={!canBuyBulk}
-                    icon="📦"
-                    label={`×${bulkLevels} · ${formatAmount(bulkCost)} PP`}
+                    icon="⏫"
+                    label={`Autobuyer: ${bulkLevels} levels at once · ${formatAmount(bulkCost)} PP`}
                     onClick={() => actions.buyAutobuyerBulkMode(tier.id)}
                     points={points}
                     progressLabel={`${tier.name} bulk autobuyer Prestige Point progress`}
