@@ -36,7 +36,7 @@ import {
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
-  PRESTIGE_UNBOUNDED_MIN_COUNT,
+  UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
 } from 'game/layers'
 import { hasAffordablePpLevelUpgrade, hasAffordablePpUnlock } from 'game/navAttention'
@@ -491,23 +491,28 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             )}
           </Row>
         )}
-        {showComputeAutoBoost && (
-          <Row aria-label="compute auto boost upgrade">
-            <RowLabel>🤖 Auto-Boost</RowLabel>
-            {isComputeAutoBoostActive ? (
-              <UnlockedBadge icon="🤖" name="Auto-Boost" />
+        {allTiersFullyAutomated && (
+          <Row aria-label="auto-prestige upgrade">
+            <RowLabelStack>
+              <RowLabel>✦ Auto-Prestige</RowLabel>
+              {isAutoPrestigeActive && (
+                <SubText>every {formatInterval(getAutomationIntervalSeconds(state, 'prestige') * 1000)}</SubText>
+              )}
+            </RowLabelStack>
+            {isAutoPrestigeActive ? (
+              <UnlockedBadge icon="✦" name="Auto-Prestige" />
             ) : (
               <PpPurchaseButton
-                ariaLabel={`Unlock compute auto boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} Prestige Points`}
+                ariaLabel={`Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`}
                 color="#38bdf8"
-                cost={COMPUTE_AUTO_BOOST_UNLOCK_COST}
-                disabled={!canBuyComputeAutoBoost}
+                cost={autoPrestigeCost}
+                disabled={!canBuyAutoPrestige}
                 icon="🔓"
-                label={`${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP`}
-                onClick={actions.buyComputeAutoBoost}
+                label={`${autoPrestigeCost} PP`}
+                onClick={actions.buyAutoPrestige}
                 points={points}
-                progressLabel="Auto-Boost Prestige Point progress"
-                title="Spend Prestige Points so a full tier waiting on its own in-flight merge automatically activates your preferred Boost preset (choose it on Boosters)"
+                progressLabel="Auto-Prestige Prestige Point progress"
+                title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol Bytes"
               />
             )}
           </Row>
@@ -534,6 +539,33 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           </Row>
         )}
       </Category>
+
+      {showComputeAutoBoost && (
+        <Category aria-label="compute automation category">
+          <CategoryHeading>Compute Automation</CategoryHeading>
+{showComputeAutoBoost && (
+    <Row aria-label="compute auto boost upgrade">
+      <RowLabel>🤖 Auto-Boost</RowLabel>
+      {isComputeAutoBoostActive ? (
+        <UnlockedBadge icon="🤖" name="Auto-Boost" />
+      ) : (
+        <PpPurchaseButton
+          ariaLabel={`Unlock compute auto boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} Prestige Points`}
+          color="#38bdf8"
+          cost={COMPUTE_AUTO_BOOST_UNLOCK_COST}
+          disabled={!canBuyComputeAutoBoost}
+          icon="🔓"
+          label={`${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP`}
+          onClick={actions.buyComputeAutoBoost}
+          points={points}
+          progressLabel="Auto-Boost Prestige Point progress"
+          title="Spend Prestige Points so a full tier waiting on its own in-flight merge automatically activates your preferred Boost preset (choose it on Boosters)"
+        />
+      )}
+    </Row>
+  )}
+        </Category>
+      )}
 
       {!state.prestigeSpeedBonusUnlocked && (
         <Category aria-label="production bonuses category">
@@ -582,16 +614,23 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
       <Category aria-label="prestige unlocks category">
         <CategoryHeading>Prestige</CategoryHeading>
         <Row aria-label="unbounded prestige unlock">
-          <RowLabel title="Earn past 1 Googol Bytes without freezing; Prestige voluntarily to claim PP">♾ Unbounded Prestige</RowLabel>
-          <MilestoneBadge
-            current={prestigeCount}
-            icon="♾"
-            milestone={PRESTIGE_UNBOUNDED_MIN_COUNT}
-            progressLabel="Unbounded Prestige milestone progress"
-            reached={isUnboundedPrestigeUnlocked(state)}
-            subject="Unbounded Prestige"
-            unit="Prestige"
-          />
+          <RowLabelStack>
+            <RowLabel title="Earn past 1 Googol Bytes without freezing; Prestige voluntarily to claim PP">♾ Unbounded Prestige</RowLabel>
+            {!isUnboundedPrestigeUnlocked(state) && (
+              <SubText>
+                {isAutoPrestigeActive
+                  ? `Upgrade Auto-Prestige to ${UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s or faster (now every ${formatInterval(getAutomationIntervalSeconds(state, 'prestige') * 1000)})`
+                  : `Unlock Auto-Prestige, then upgrade it to ${UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s or faster`}
+              </SubText>
+            )}
+          </RowLabelStack>
+          {isUnboundedPrestigeUnlocked(state) ? (
+            <UnlockedBadge icon="♾" name="Unbounded Prestige" />
+          ) : (
+            <Badge $color={theme.color.disabled} $dimmed aria-label="Unbounded Prestige locked" title="Unlocks when Auto-Prestige's interval reaches 1 s or less">
+              ♾ 🔒
+            </Badge>
+          )}
         </Row>
       </Category>
     </List>
@@ -728,35 +767,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           )
         })}
       </Category>
-
-      {/* Auto-Prestige stays hidden entirely until every tier's tickspeed autobuyer is active (allTiersFullyAutomated). */}
-      {allTiersFullyAutomated && (
-        <Category aria-label="automation upgrades category">
-          <CategoryHeading>Automation</CategoryHeading>
-          <Row aria-label="auto-prestige upgrade">
-            <RowLabelStack>
-              <RowLabel>✦ Auto-Prestige</RowLabel>
-              {isAutoPrestigeActive && (
-                <SubText>every {formatInterval(getAutomationIntervalSeconds(state, 'prestige') * 1000)}</SubText>
-              )}
-            </RowLabelStack>
-            {!isAutoPrestigeActive && (
-              <PpPurchaseButton
-                ariaLabel={`Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`}
-                color="#38bdf8"
-                cost={autoPrestigeCost}
-                disabled={!canBuyAutoPrestige}
-                icon="🔓"
-                label={`${autoPrestigeCost} PP`}
-                onClick={actions.buyAutoPrestige}
-                points={points}
-                progressLabel="Auto-Prestige Prestige Point progress"
-                title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol Bytes"
-              />
-            )}
-          </Row>
-        </Category>
-      )}
     </List>
   )
 

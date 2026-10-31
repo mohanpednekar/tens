@@ -412,6 +412,13 @@ const withPrestigePoints = (state, points) => ({
   prestige: { ...state.prestige, points },
 })
 
+// Unbounded Prestige needs Auto-Prestige upgraded to <= 1 s (level 66+ of the 1024 s base × 0.9 chain).
+const withUnboundedPrestige = (state, level = 70) => ({
+  ...state,
+  autoPrestige: 1,
+  automationIntervalLevels: { ...(state.automationIntervalLevels ?? {}), prestige: level },
+})
+
 const withPrestigeCount = (state, count) => ({
   ...state,
   prestige: { ...state.prestige, count },
@@ -6995,8 +7002,8 @@ describe('isProductionFrozen', () => {
     expect(isProductionFrozen(state)).toBe(true)
   })
 
-  it('is false at/above PRESTIGE_THRESHOLD once unbounded Prestige is unlocked (100+ prestiges)', () => {
-    const state = withPrestigeCount(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 2), 100)
+  it('is false at/above PRESTIGE_THRESHOLD once unbounded Prestige is unlocked (Auto-Prestige <= 1 s)', () => {
+    const state = withUnboundedPrestige(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 2))
     expect(isProductionFrozen(state)).toBe(false)
     expect(isUnboundedPrestigeUnlocked(state)).toBe(true)
   })
@@ -7726,7 +7733,7 @@ describe('tickGame', () => {
   })
 
   it('does not freeze production at PRESTIGE_THRESHOLD when unbounded Prestige is unlocked', () => {
-    const state = withPrestigeCount(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5), 100)
+    const state = { ...withUnboundedPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5)), autoPrestigeEnabled: false }
     const after = tickGame(1)(state)
     expect(after).not.toBe(state)
     expect(after.resources[MONEY_ID]).toBeGreaterThanOrEqual(PRESTIGE_THRESHOLD)
@@ -10792,11 +10799,11 @@ describe('eraGame', () => {
     expect(after.era.count).toBe(1)
   })
 
-  it('latches unboundedUnlocked from prestige.count before reset', () => {
-    const below = eraEligibleState({ prestige: { ...eraEligibleState().prestige, count: 50 } })
+  it('latches unboundedUnlocked from the Auto-Prestige interval before reset', () => {
+    const below = withUnboundedPrestige(eraEligibleState(), 10)
     expect(eraGame(below).prestige.unboundedUnlocked).toBe(false)
 
-    const atThreshold = eraEligibleState({ prestige: { ...eraEligibleState().prestige, count: 100 } })
+    const atThreshold = withUnboundedPrestige(eraEligibleState())
     expect(eraGame(atThreshold).prestige.unboundedUnlocked).toBe(true)
   })
 
@@ -12080,13 +12087,13 @@ describe('Data Lakes', () => {
 })
 
 describe('prestigeGame unboundedUnlocked latch', () => {
-  it('sets prestige.unboundedUnlocked when count crosses PRESTIGE_UNBOUNDED_MIN_COUNT', () => {
-    const state = withMoney(
-      withPrestigeCount(createInitialGameState(), PRESTIGE_UNBOUNDED_MIN_COUNT - 1),
-      PRESTIGE_THRESHOLD,
-    )
+  it('sets prestige.unboundedUnlocked when Auto-Prestige is upgraded to 1 s or less', () => {
+    const slow = withMoney(withUnboundedPrestige(createInitialGameState(), 10), PRESTIGE_THRESHOLD)
+    expect(prestigeGame(slow).prestige.unboundedUnlocked).toBe(false)
+    expect(isUnboundedPrestigeUnlocked(slow)).toBe(false)
+
+    const state = withMoney(withUnboundedPrestige(createInitialGameState()), PRESTIGE_THRESHOLD)
     const after = prestigeGame(state)
-    expect(after.prestige.count).toBe(PRESTIGE_UNBOUNDED_MIN_COUNT)
     expect(after.prestige.unboundedUnlocked).toBe(true)
     expect(isUnboundedPrestigeUnlocked(after)).toBe(true)
   })

@@ -38,7 +38,7 @@ import {
   DISK_CACHE_BLOCK_COUNT,
   DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER,
   INTRO_DISK_UNLOCK_CAPACITY,
-  PRESTIGE_UNBOUNDED_MIN_COUNT,
+  UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
   getStoragePoolMemoryBounds,
@@ -624,10 +624,10 @@ const InfoPage = () => {
         <h2>Prestige</h2>
         <ul>
           <li>
-            Available once Bits reach 1 Googol Bytes (8×10^100 Bits). Before Prestige{' '}
-            {PRESTIGE_UNBOUNDED_MIN_COUNT}, production freezes until you Prestige; after{' '}
-            {PRESTIGE_UNBOUNDED_MIN_COUNT} lifetime prestiges, production continues and Prestige
-            is optional.
+            Available once Bits reach 1 Googol Bytes (8×10^100 Bits). Until Unbounded Prestige,
+            production freezes until you Prestige. Upgrade Auto-Prestige to{' '}
+            {UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s or faster to unlock Unbounded Prestige
+            permanently: production then continues and Prestige is optional.
           </li>
           <li>
             Awards Prestige Points from how far your money exponent climbed beyond Googol — 1 base

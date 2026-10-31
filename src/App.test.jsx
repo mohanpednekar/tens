@@ -1798,7 +1798,6 @@ test.each([
     name: 'Auto-Prestige',
     seed: { ...allTiersSmartSeed(), prestige: { xp: 0, points: 63, count: 1, highestMilestone: 1 } },
     buttonName: /enable auto-prestige for 64 prestige points/i,
-    tab: /open upgrades/i,
   },
   {
     name: 'Auto-Prestige Autobuyer',
@@ -1908,7 +1907,7 @@ test('the Auto-Prestige option stays hidden until every tier is upgraded to Smar
   expect(screen.queryByText(/auto-prestige/i)).not.toBeInTheDocument()
 })
 
-test('an Auto-Prestige button appears on the PP Upgrades page once every tier is Smart, and spends 64 PP to activate it', async () => {
+test('an Auto-Prestige button appears in Perks → Unlocks (Global Automation) once every tier is Smart, and spends 64 PP to activate it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1917,7 +1916,7 @@ test('an Auto-Prestige button appears on the PP Upgrades page once every tier is
     prestige: { xp: 0, points: 64, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await openPerksTab(user, /open upgrades/i)
+  await openPerksTab(user, /open unlocks/i)
 
   const autoPrestigeButton = screen.getByRole('button', { name: /enable auto-prestige for 64 prestige points/i })
   expect(autoPrestigeButton).toBeEnabled()
@@ -1925,6 +1924,7 @@ test('an Auto-Prestige button appears on the PP Upgrades page once every tier is
   await user.click(autoPrestigeButton)
 
   expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/every 1024 s/i)
+  await openPerksTab(user, /open upgrades/i)
   expect(screen.getByRole('button', { name: /upgrade prestige automation speed to level 1 for 64 prestige points/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
@@ -1955,7 +1955,7 @@ test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled withou
   render(<App />)
   await openPerksTab(user, /open upgrades/i)
 
-  expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/every 1024 s/i)
+  expect(screen.getByLabelText(/^prestige automation speed upgrade$/i)).toHaveTextContent(/every 1024 s/i)
   expect(screen.getByRole('button', { name: /upgrade prestige automation speed to level 1 for 64 prestige points/i })).toBeDisabled()
 })
 
