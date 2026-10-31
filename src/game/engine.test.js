@@ -8823,10 +8823,15 @@ describe('buyAutobuyerBulkMode', () => {
 
 describe('buyAutoPrestige', () => {
   it('spends 64 PP to activate Auto-Prestige at level 1', () => {
-    const state = withPrestigePoints(createInitialGameState(), 64)
+    const state = withPrestigePoints({ ...createInitialGameState(), autoOverclock: true }, 64)
     const after = buyAutoPrestige(state)
     expect(after.autoPrestige).toBe(1)
     expect(after.prestige.points).toBe(0)
+  })
+
+  it('requires Auto Overclock first (sequential global automation)', () => {
+    const state = withPrestigePoints(createInitialGameState(), 64)
+    expect(buyAutoPrestige(state)).toBe(state)
   })
 
   it('is activation-only: an already-active Auto-Prestige is a no-op (cadence upgrades are a separate chain)', () => {
@@ -10256,10 +10261,15 @@ describe('overclockGame', () => {
 
 describe('buyAutoScaleUp', () => {
   it(`spends ${AUTO_SCALE_UP_COST} PP to permanently enable Auto Scale Up`, () => {
-    const state = withPrestigePoints(createInitialGameState(), AUTO_SCALE_UP_COST)
+    const state = withPrestigePoints({ ...createInitialGameState(), autoGlobalTickspeed: true }, AUTO_SCALE_UP_COST)
     const after = buyAutoScaleUp(state)
     expect(after.autoScaleUp).toBe(true)
     expect(after.prestige.points).toBe(0)
+  })
+
+  it('requires the Tickspeed Autobuyer first (sequential global automation)', () => {
+    const state = withPrestigePoints(createInitialGameState(), AUTO_SCALE_UP_COST)
+    expect(buyAutoScaleUp(state)).toBe(state)
   })
 
   it('returns the same state when there are not enough points', () => {

@@ -6821,7 +6821,8 @@ export const setTierTickspeedAutobuyerEnabled = (tierId, enabled) => state => {
 export const buyAutoPrestige = state => {
   if (isProductionFrozen(state)) return state
   // Activation only — the cadence is upgraded separately (buyAutomationIntervalUpgrade('prestige')).
-  if ((state.autoPrestige ?? null) !== null) return state
+  // Global automations unlock sequentially: Auto-Prestige needs Auto Overclock.
+  if ((state.autoPrestige ?? null) !== null || !state.autoOverclock) return state
 
   const cost = getAutomationUnlockCost('prestige')
   if (clampNonNegative(state.prestige.points) < cost) return state
@@ -7647,7 +7648,7 @@ export const overclockGame = state => {
 // buyPrestigeSpeedBonus/buyAutobuyerBulkMode.
 export const buyAutoScaleUp = state => {
   if (isProductionFrozen(state)) return state
-  if (state.autoScaleUp) return state
+  if (state.autoScaleUp || !state.autoGlobalTickspeed) return state
   if (clampNonNegative(state.prestige.points) < getAutomationUnlockCost('scaleUp')) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)

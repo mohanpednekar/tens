@@ -829,17 +829,17 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
   - *Tier Autobuyers*: one row per tier (`"<tier> PP unlocks"`, all ten, even before the tier is
     reachable this run) with a `MilestoneBadge` for its ⚙ tickspeed autobuyer and 🤖 autobuyer
     (`"<tier>'s … unlocked at Prestige N"` once reached, else `"… unlocks at Prestige N"` + hidden
-    milestone progressbar) and, once the autobuyer is unlocked and the tier reachable, the 📦 bulk-mode
-    purchase (or a `"<tier>'s autobuyer buys up to N levels at once"` badge). Rows never disappear, so reached milestones
-    stay visible as unlock history.
-  - *Global Automation*: Tickspeed Autobuyer, Auto Scale Up, Auto Overclock, Auto-Prestige (both always listed;
-    Auto Overclock is disabled until Auto Scale Up is bought), Auto-Prestige Autobuyer (once every tier's tickspeed autobuyer and Auto-Prestige are active) — PP button, or an `UnlockedBadge`
+    milestone progressbar). Rows never disappear, so reached milestones stay visible as unlock history.
+  - *Global Automation* — a strict sequence, every row always listed, each purchasable only once the previous is
+    owned (engine-enforced): Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Prestige → Auto-Prestige
+    Autobuyer. PP button (disabled until the previous step is bought), or an `UnlockedBadge`
     (`"<name> unlocked"`) once bought; never a pause control here.
   - *Compute Automation* (Auto-Boost, once Foundry Compute unlocks), *Production Bonuses* (until bought), *Compute Autobuyers* (Era-milestone badges, once the Flops page
     is unlocked), and *Prestige* (DeGoogol: locked until Auto-Prestige's interval ≤ `UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS`).
   Each milestone appears only here — `MilestonesPage` no longer repeats them.
 - ⏫ **Upgrades** (`open upgrades`, `aria-label="PP upgrades page"`) — repeatable leveled purchases:
-  Double PP, and Auto-Prestige (category hidden until every tier's tickspeed autobuyer is active).
+  Double PP, *Autobuyer Bulk* (per tier with an unlocked autobuyer: the next `N/buy` purchase, 10/100/1000 — an
+  upper limit; or the owned `"<tier>'s autobuyer buys up to N levels at once"` badge), and the speed chains.
 - 🎛 **Toggles** (`open toggles`, `aria-label="automation toggles page"`) — *Purchasing* (the Buy max
   button, `components/BuyMaxToggle`, removed from MainPage/ComputeFlopsPage), *Tier Autobuyers* (each
   reachable tier's ⚙/🤖 `AutomationToggle`, kept even for fully-automated tiers), *Global Automation*

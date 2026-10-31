@@ -355,26 +355,25 @@ describe('navAttention', () => {
       autoScaleUp: true,
       autoOverclock: true,
       autoGlobalTickspeed: true,
+      autoPrestige: 1,
+      autoPrestigeAutobuyer: true,
+      automationIntervalLevels: { prestige: 1e9 },
       autobuyerBulkLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 3])),
     }
     expect(hasAffordablePpUnlock(levelOnly)).toBe(false)
     expect(hasAffordablePpLevelUpgrade(levelOnly)).toBe(true)
     expect(hasAffordablePpUpgrade(levelOnly)).toBe(true)
 
-    // The Auto-Prestige Autobuyer (an Unlocks purchase) counts only once every tier is fully
-    // automated and Auto-Prestige is active.
-    const allDone = Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true]))
+    // Global automations are sequential: each counts only once the previous one is owned.
     const autoPrestigeAutobuyerOnly = {
       ...levelOnly,
       prestige: { count: 1, points: AUTO_PRESTIGE_AUTOBUYER_COST },
       prestigeDoublePpLevel: 5,
-      tierTickspeedAutobuyer: allDone,
-      autoPrestige: 30,
       autoPrestigeAutobuyer: false,
     }
     expect(hasAffordablePpUnlock(autoPrestigeAutobuyerOnly)).toBe(true)
     expect(hasAffordablePpUnlock({ ...autoPrestigeAutobuyerOnly, autoPrestigeAutobuyer: true })).toBe(false)
-    expect(hasAffordablePpUnlock({ ...autoPrestigeAutobuyerOnly, autoPrestige: null })).toBe(false)
+    expect(hasAffordablePpUnlock({ ...autoPrestigeAutobuyerOnly, prestige: { count: 1, points: getAutomationUnlockCost('prestige') - 1 }, autoPrestige: null })).toBe(false)
   })
 
   it('lights the Perks unlocks dot for an affordable Auto-Boost only once Boosters is available and it is not owned', () => {
