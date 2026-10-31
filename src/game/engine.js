@@ -4304,9 +4304,9 @@ export const tickAutoProvisionLowerDiskSizes = (elapsedSeconds = 0) => state => 
 // Time and progress of the whole post-Foundry-reset rebuild: every size below the presented one still short
 // of a full array, each remaining disk at size / its pool's base Bandwidth (the in-flight disk's progress
 // already deducted). For a pool not live yet the Bandwidth is projected (getProjectedPoolBandwidth), so `seconds` is only Infinity if the Data Stream Speed is 0. `disksDone`/`disksTotal` count disks
-// (the in-flight one fractionally). Zeros when nothing is pending.
+// (the in-flight one fractionally); `projected` is true when any remaining size's pool is not live yet (its part of `seconds` is an estimate). Zeros when nothing is pending.
 export const getLowerRebuildSummary = state => {
-  const summary = { seconds: 0, disksDone: 0, disksTotal: 0 }
+  const summary = { seconds: 0, disksDone: 0, disksTotal: 0, projected: false }
   if (!isLowerDiskSizePending(state)) return summary
   const unlocked = getUnlockedDiskSteps(state.intro)
   for (let step = 1; step < unlocked; step += 1) {
@@ -4320,6 +4320,7 @@ export const getLowerRebuildSummary = state => {
     }
     const partial = state.intro.lowerRebuild?.size === size ? state.intro.lowerRebuild.progress : 0
     summary.disksDone += full + partial
+    if (getStoragePoolBandwidth(state, getPoolIndexForDiskSize(size)) <= 0) summary.projected = true
     const diskSeconds = getLowerRebuildProjectedDiskSeconds(state, size)
     summary.seconds += (DISK_ARRAY_LADDER_CAP - full - partial) * diskSeconds
   }

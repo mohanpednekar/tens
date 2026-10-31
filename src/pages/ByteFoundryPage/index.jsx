@@ -1029,8 +1029,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             return maxRebuildSize > autoDiskSize ? `${formatDiskSize(autoDiskSize)} → ${formatDiskSize(maxRebuildSize)}` : `${formatDiskSize(autoDiskSize)} disks`
           })() : diskPassesCollected > 0 ? diskPassesFraction : 'Queued'}</RunningChange>
           <RunningPercent>{Math.floor(diskDisplayedProgress)}%</RunningPercent>
-          <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent) }} title={rebuildPoolNotLive ? "Projected speed — this rebuild waits for the pool's Capacity" : "Pool fill speed funding this disk"}>⚡ {diskFundingSpeedText}</ProvisionSpeed>
-          {diskFundingTimeText !== '—' && <RunningTime>⏳ {diskFundingTimeText}</RunningTime>}
+          <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent), ...(rebuildPoolNotLive ? { opacity: 0.55 } : null) }} title={rebuildPoolNotLive ? "Projected speed — this rebuild waits for the pool's Capacity" : "Pool fill speed funding this disk"}>⚡ {diskFundingSpeedText}</ProvisionSpeed>
+          {diskFundingTimeText !== '—' && (
+            <RunningTime
+              style={rebuildSummary.projected ? { opacity: 0.5, fontStyle: 'italic' } : undefined}
+              title={rebuildSummary.projected ? "Estimate — part of this rebuild waits for a pool's Capacity" : undefined}
+            >
+              ⏳ {rebuildSummary.projected ? '~' : ''}{diskFundingTimeText}
+            </RunningTime>
+          )}
         </RunningUpgradeContent>
       ) : (
         <MilestoneButtonContent>

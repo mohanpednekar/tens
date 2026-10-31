@@ -12417,12 +12417,12 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
   it('getLowerRebuildSummary totals the exact remaining time and counts in-flight progress', () => {
     const base = afterReset()
     const diskSeconds = getLowerRebuildDiskSeconds(base, FIRST_DISK_SIZE)
-    expect(getLowerRebuildSummary(base)).toEqual({ seconds: DISK_ARRAY_LADDER_CAP * diskSeconds, disksDone: 0, disksTotal: DISK_ARRAY_LADDER_CAP })
+    expect(getLowerRebuildSummary(base)).toEqual({ seconds: DISK_ARRAY_LADDER_CAP * diskSeconds, disksDone: 0, disksTotal: DISK_ARRAY_LADDER_CAP, projected: false })
     const part = tickAutoProvisionLowerDiskSizes(diskSeconds * 2.5)(base)
     const summary = getLowerRebuildSummary(part)
     expect(summary.seconds).toBeCloseTo((DISK_ARRAY_LADDER_CAP - 2.5) * diskSeconds, 6)
     expect(summary.disksDone).toBeCloseTo(2.5, 6)
-    expect(getLowerRebuildSummary(createInitialGameState())).toEqual({ seconds: 0, disksDone: 0, disksTotal: 0 })
+    expect(getLowerRebuildSummary(createInitialGameState())).toEqual({ seconds: 0, disksDone: 0, disksTotal: 0, projected: false })
   })
 
   it('projects a not-live pool from the Bandwidth it will have once live (threshold Capacity, Speed trailing one doubling)', () => {
@@ -12438,6 +12438,8 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
     const summary = getLowerRebuildSummary(notLive)
     expect(Number.isFinite(summary.seconds)).toBe(true)
     expect(summary.seconds).toBeGreaterThan(0)
+    expect(summary.projected).toBe(true)
+    expect(getLowerRebuildSummary(afterReset()).projected).toBe(false)
   })
 
   it('keeps going until the smaller array is full, then presents/offers the newest size', () => {
