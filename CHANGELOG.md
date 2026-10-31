@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Autobuyer bulk mode (10/100/1000 per buy) is now an upper limit: each attempt buys as many whole levels as are affordable, up to the limit, instead of falling back to a single level when the full amount isn't affordable.
 - **"Unbounded Prestige" renamed to DeGoogol (the chapter is now "DeGoogoled").**
 
 - **Auto-Prestige moved to Perks → Unlocks → Global Automation; Auto-Boost has its own "Compute Automation" section.** The redundant Upgrades → Automation category was removed (Auto-Prestige's speed upgrade stays under Upgrades).

@@ -8084,11 +8084,19 @@ describe('tickGame', () => {
     expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
   })
 
-  it('bulk mode falls back to a single level when 10 levels are not affordable', () => {
+  it('bulk mode falls back to a single level when only one level is affordable', () => {
     const state = withBulkLevel(withAutobuyer(withMoney(createInitialGameState(), 10000), tensTier.id), tensTier.id, 1)
     const after = tickGame(1)(state)
     expect(after.purchased[tensTier.id]).toBe(8)
     expect(after.purchaseLevels[tensTier.id]).toBe(2)
+  })
+
+  it('bulk mode is only an upper limit: with 2-9 levels affordable it buys exactly those, not one', () => {
+    const state = withBulkLevel(withAutobuyer(withMoney(createInitialGameState(), 1e7), tensTier.id), tensTier.id, 1)
+    const after = tickGame(1)(state)
+    expect(after.purchaseLevels[tensTier.id]).toBeGreaterThan(2)
+    expect(after.purchaseLevels[tensTier.id]).toBeLessThan(11)
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
   })
 
   it('bulk mode only buys whole levels from a clean slate — partial progress completes the rest of the level', () => {

@@ -2363,7 +2363,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // tickspeed level) and drained
                                                           // by 1 per successful autobuyer purchase — see tickGame
   autobuyerBulkLevels: { tier01: 0, tier02: 0, … },      // permanent per-tier bulk mode 0..3: each autobuyer
-                                                          // attempt buys 10^mode levels when affordable
+                                                          // attempt buys up to 10^mode levels (as many as are affordable, at least one)
                                                           // (see buyAutobuyerBulkMode) — never reset by prestige
   tierTickspeedAutobuyer: { tier01: false, tier02: false, … }, // permanent per-tier flag: whether this
                                                           // tier's own tickspeed multiplier upgrades
@@ -3022,7 +3022,7 @@ purchases were manual or automatic.
 - `TICKSPEED_MULTIPLIER_BASE_EXPONENT = 10` — exponent driving the (Money-funded) tickspeed multiplier's per-tier base cost (see `getTickspeedMultiplierBaseCost`): 10^10 for the first tier, down to 10^1 for the 10th/last tier
 - `TICKSPEED_PRODUCTION_STEP = 0.1` — each tickspeed multiplier level speeds up a tier's delivery frequency by another 10%, not the amount delivered (see `getTickspeedProductionMultiplier`/`getEffectiveTierTickSpeedSeconds`)
 - `AUTOBUYER_UNLOCK_BASE_COST = 1` — no longer an actual PP cost (see `getAutobuyerUnlockCost`'s doc above) — kept only as the pricing benchmark `getAutobuyerBulkModeCost` multiplies: 1 through 10 across the ten tiers
-- `AUTOBUYER_BULK_LEVELS_BASE = 10`, `AUTOBUYER_BULK_MAX_MODE = 3` — autobuyer bulk mode `m` buys `10^m` levels per attempt (see `buyAutobuyerBulkMode`).
+- `AUTOBUYER_BULK_LEVELS_BASE = 10`, `AUTOBUYER_BULK_MAX_MODE = 3` — autobuyer bulk mode `m` buys up to `10^m` levels per attempt (fewer when fewer are affordable) (see `buyAutobuyerBulkMode`).
 - `AUTOBUYER_UNLOCK_MILESTONE_START = 1` / `AUTOBUYER_UNLOCK_MILESTONE_STEP = 1` — how many prestiges a tier's unit-buying autobuyer requires before it unlocks automatically (see `getAutobuyerUnlockMilestone`): 1 for the first tier, up through 10 for the 10th/last, one tier per prestige across the first 10
 - `TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 11` / `TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 1` — how many prestiges a tier's own tickspeed autobuyer requires before it unlocks automatically (see `getTierTickspeedAutobuyerMilestone`): 11 for the first tier, spacing out by 1 more per tier after that, up through 20 for the 10th/last — later than the unit-buying autobuyer above, since it's a further-out convenience
 - `GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01` — the uniform per-level compounding rate for the global tickspeed multiplier; milestone levels use the same rate. The global tickspeed multiplier's *cost* (`getGlobalTickspeedMultiplierCost`, see the engine functions table above) is Money-funded, not PP-funded — it has no dedicated cost constant here, using an inline `10 ** (level + 1)` formula against `resources[MONEY_ID]` instead

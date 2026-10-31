@@ -1838,11 +1838,12 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
       if (attempts <= 0) break
 
       const levelProgress = result.purchaseLevelProgress?.[tier.id] ?? 0
-      // Bulk mode: when a whole clean level is affordable (and the requested number of levels), one
-      // attempt buys them all; otherwise fall through to a single level. Buy max never applies here.
+      // Bulk mode: one attempt buys as many whole clean levels as are affordable, up to the mode's
+      // limit (10/100/1000); with none affordable it falls through to the ordinary single-level path.
+      // Buy max never applies here.
       const bulkMode = result.autobuyerBulkLevels?.[tier.id] ?? 0
       if (bulkMode >= 1 && levelProgress === 0) {
-        const bulked = buyTierExactLevels(tier.id, AUTOBUYER_BULK_LEVELS_BASE ** bulkMode)(result)
+        const bulked = buyTierUpToLevels(tier.id, AUTOBUYER_BULK_LEVELS_BASE ** bulkMode)(result)
         if (bulked !== result) {
           result = bulked
           budget -= 1
@@ -2253,17 +2254,18 @@ export const buyTierMaxLevels = tierId => state => {
   return current
 }
 
-// Buys exactly `levels` FULL levels from a clean slate (zero progress), or nothing (same state) if
-// that many aren't all affordable — used by autobuyer bulk mode.
-const buyTierExactLevels = (tierId, levels) => state => {
+// Buys up to `levels` FULL levels from a clean slate (zero progress) — as many as are affordable,
+// fewer than `levels` included — or nothing (same state) if not even one is. Used by autobuyer bulk
+// mode, where the mode's level count is only an upper limit.
+const buyTierUpToLevels = (tierId, levels) => state => {
   if (isProductionFrozen(state)) return state
   const tier = TIER_BY_ID[tierId]
   if (!tier || !isTierUnlocked(state)(tier)) return state
   let current = state
   for (let i = 0; i < Math.min(levels, BUY_MAX_ITERATION_CAP); i++) {
-    if (!canAffordFullTierLevel(current, tier)) return state
+    if (!canAffordFullTierLevel(current, tier)) break
     const next = buyTierQuantity(tierId, Number.MAX_SAFE_INTEGER)(current)
-    if (next === current) return state
+    if (next === current) break
     current = next
   }
   return current
