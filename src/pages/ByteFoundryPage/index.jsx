@@ -949,7 +949,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     : diskBitsStillNeeded <= 0
       ? 'now'
       : formatUpgradeTimeLeft(diskFundingRate > 0 ? diskBitsStillNeeded / diskFundingRate : Infinity)
-  const diskShowsFundingStats = storageRevealed && !diskLadderExhausted && !lowerDiskSizePending && (diskBuildInProgress || diskFundingRate > 0)
+  const diskShowsFundingStats = storageRevealed && !diskLadderExhausted && !lowerDiskSizePending && (diskBuildInProgress || (diskBuildQueued && diskFundingRate > 0))
   const unlockDiskSizeButton = (
     <Button
       aria-label="foundry reset to unlock disk size"
@@ -994,9 +994,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     >
       {diskShowsFundingStats ? (
         <ProvisionContent>
-          <RunningTitle>{diskBuildStatus.icon} {diskBuildStatus.label}{diskProvisioningActive ? '…' : ''}</RunningTitle>
-          {diskBuildStatus.status && <RunningChange>{diskBuildStatus.status}</RunningChange>}
-          {(diskBuildEngaged || diskBuildInProgress) && <RunningPercent>{Math.floor(diskBuildProgress)}%</RunningPercent>}
+          <RunningTitle>{diskBuildStatus.icon} {formatDiskSize(diskBuildInProgress?.size ?? diskSize)} Disk…</RunningTitle>
+          <RunningChange>{diskBuildInProgress ? 'Building' : diskPassesCollected > 0 ? diskPassesFraction : 'Queued'}</RunningChange>
+          {<RunningPercent>{Math.floor(diskBuildProgress)}%</RunningPercent>}
           <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent) }} title="Pool fill speed funding this disk">⚡ {diskFundingSpeedText}</ProvisionSpeed>
           <RunningTime>⏳ {diskFundingTimeText}</RunningTime>
         </ProvisionContent>

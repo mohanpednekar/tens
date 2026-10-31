@@ -3595,7 +3595,7 @@ describe('Byte Foundry Storage', () => {
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(savedState.intro.diskBuildQueued).toBe(true)
-    expect(buildButton).toHaveTextContent(/⏳.*Provisioning 1 KB Disk….*Queued · needs buffer/)
+    expect(buildButton).toHaveTextContent(/⏳.*1 KB Disk….*Queued/)
     expect(buildButton).not.toHaveTextContent(/tap to queue/)
     expect(savedState.intro.diskProvisionPasses ?? {}).toEqual({})
   })
@@ -3611,8 +3611,8 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
-    expect(buildButton).toHaveTextContent(/⏳.*Provisioning 1 KB Disk…/)
-    expect(buildButton).toHaveTextContent('2/9 · needs buffer')
+    expect(buildButton).toHaveTextContent(/⏳.*1 KB Disk…/)
+    expect(buildButton).toHaveTextContent('2/9')
     expect(buildButton).not.toHaveTextContent(/tap to queue|Ready/)
   })
 
