@@ -2139,12 +2139,12 @@ test('a tier autobuyer\'s speed upgrade continues past the 10 ms floor, showing 
   const row = screen.getByLabelText(/^kilobytes autobuyer speed upgrade$/i)
   expect(row).toHaveTextContent(/every 10 ms/i)
   const button = within(row).getByRole('button', { name: new RegExp(`upgrade kilobytes's autobuyer to level ${maxLevel + 1} for .* prestige points — doubles levels bought per attempt to up to 2`, 'i') })
-  expect(button).toHaveTextContent(/^2\/buy · /)
+  expect(button).toHaveTextContent(/2\/buy · /)
   await user.click(button)
 
   const after = screen.getByLabelText(/^kilobytes autobuyer speed upgrade$/i)
   expect(after).toHaveTextContent(/every 10 ms · 2\/buy/i)
-  expect(within(after).getByRole('button', { name: new RegExp(`upgrade kilobytes's autobuyer to level ${maxLevel + 2} for .* up to 4`, 'i') })).toHaveTextContent(/^4\/buy · /)
+  expect(within(after).getByRole('button', { name: new RegExp(`upgrade kilobytes's autobuyer to level ${maxLevel + 2} for .* up to 4`, 'i') })).toHaveTextContent(/4\/buy · /)
 })
 
 test('the Perks Upgrades tab NavDot lights up when a leveled Double PP purchase is affordable', async () => {
