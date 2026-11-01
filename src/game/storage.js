@@ -773,9 +773,17 @@ export const serializeSaveForExport = state => JSON.stringify({ saveSchemaVersio
  * Replaces the active slot's save with an exported payload (a cloud-save download). The payload goes
  * through the same adaptSaveForLoad (save-migration, unless Dev Mode / the dev build) + mergeState
  * pipeline as an ordinary load, so an older or partial save is upgraded or refused exactly like one
- * read from localStorage. Outside the exempt modes it must also look like a save at all (numeric
- * `resources.base`), so pasting the wrong JSON is refused instead of silently overwriting the slot.
+ * read from localStorage. Outside the exempt modes it must also look like a save at all (see looksLikeSave), so pasting the wrong JSON is refused instead of silently overwriting the slot.
  */
+// Partial saves are fine (mergeState fills the rest), but the payload must share at least one
+// top-level field with a real game state, and `resources`/`resources.base` must be well-formed.
+const looksLikeSave = payload => {
+  if (!Object.keys(payload).some(key => key in createInitialGameState())) return false
+  if (payload.resources !== undefined && !isPlainObject(payload.resources)) return false
+  const base = payload.resources?.base
+  return base === undefined || Number.isFinite(base)
+}
+
 export const importSaveJson = jsonText => {
   let parsed
   try {
@@ -786,7 +794,7 @@ export const importSaveJson = jsonText => {
   if (!isPlainObject(parsed)) return { ok: false, reason: 'invalid_json' }
   const adapted = adaptSaveForLoad(parsed)
   if (!adapted.ok) return { ok: false, reason: 'incompatible_save' }
-  if (!isBackwardCompatExempt() && !Number.isFinite(adapted.payload.resources?.base)) return { ok: false, reason: 'invalid_state' }
+  if (!isBackwardCompatExempt() && !looksLikeSave(adapted.payload)) return { ok: false, reason: 'invalid_state' }
   const state = mergeState(adapted.payload)
   saveGameState(state)
   return { ok: true, state }
