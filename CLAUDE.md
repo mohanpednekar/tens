@@ -674,7 +674,8 @@ Strict three-layer separation:
    reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
     Supporter pack (unlock code / dummy checkout), Cloud save (`CloudSaveSection.jsx`, only when
-    `CLOUD_SAVE_ENABLED`: sign-in, upload/download, Delete account and data), Store
+    `CLOUD_SAVE_ENABLED`: sign-in, upload/download, Delete account and data), Import / export save
+    (`ManualSaveSection.jsx`, always: copy/download/paste/file → `applyCloudSave`), Store
     (`StoreSection.jsx`, only when IAP is on), multi-slot saves, Prestige museum, Era ascension
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
     dashboard, Legal (`LegalSection.jsx`: Privacy Policy / Terms links), and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /

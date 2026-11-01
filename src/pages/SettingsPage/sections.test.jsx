@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ThemeProvider } from 'theme'
 import CloudSaveSection from './CloudSaveSection'
 import LegalSection from './LegalSection'
+import ManualSaveSection from './ManualSaveSection'
 import StoreSection from './StoreSection'
 
 const renderInTheme = ui => render(<ThemeProvider mode="dark">{ui}</ThemeProvider>)
@@ -118,5 +119,28 @@ describe('CloudSaveSection delete re-entry', () => {
     expect(screen.getByRole('button', { name: 'Delete forever' })).toBeDisabled()
     await act(async () => finish({ ok: true }))
     expect(backend.deleteAccount).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('ManualSaveSection', () => {
+  it('imports pasted JSON into the active slot after confirmation', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const game = fakeGame()
+    renderInTheme(<ManualSaveSection game={game} />)
+    await userEvent.click(screen.getByRole('textbox', { name: 'save JSON' }))
+    await userEvent.paste('{"a":1}')
+    await userEvent.click(screen.getByRole('button', { name: /import/i }))
+    expect(game.applyCloudSave).toHaveBeenCalledWith('{"a":1}')
+    expect(screen.getByText('Save imported.')).toBeInTheDocument()
+  })
+
+  it('shows an error for an invalid save', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const game = { ...fakeGame(), applyCloudSave: vi.fn(() => ({ ok: false, reason: 'invalid_json' })) }
+    renderInTheme(<ManualSaveSection game={game} />)
+    await userEvent.click(screen.getByRole('textbox', { name: 'save JSON' }))
+    await userEvent.paste('nope')
+    await userEvent.click(screen.getByRole('button', { name: /import/i }))
+    expect(screen.getByText('That is not valid save JSON.')).toBeInTheDocument()
   })
 })

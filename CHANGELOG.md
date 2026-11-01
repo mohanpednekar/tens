@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Settings → Import / export save: copy, download, paste or choose a save file to replace the active slot — hand-built test saves can now be loaded directly on a phone/PWA, no second computer or dev build needed.
+
 ### Fixed
 
 - Perks → Unlocks → Global Automation now always lists Auto Overclock (32 PP; needs Auto Scale Up first) and Auto-Prestige (64 PP); they were hidden until their prerequisites were met.
