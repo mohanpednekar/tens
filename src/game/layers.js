@@ -620,7 +620,7 @@ export const PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10
 export const PRESTIGE_POINT_SPEED_BONUS = 0.01
 // One-time PP cost to unlock the passive production-speed bonus above (see engine.js's
 // buyPrestigeSpeedBonus) — before this is bought, unspent Prestige Points grant no production
-// bonus at all, regardless of balance. Permanent once bought, like autobuyer automation/bulk mode/
+// bonus at all, regardless of balance. Permanent once bought, like autobuyer automation/
 // Auto-Prestige. Priced well above the global automation unlocks (see AUTOMATION_INTERVAL_CONFIG),
 // since it's a passive, always-on bonus rather than a one-shot action.
 export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000
@@ -637,15 +637,14 @@ export const TICKSPEED_PRODUCTION_STEP = 0.1
 // Historical per-tier PP-cost formula (see engine.js's getAutobuyerUnlockCost) — no longer an
 // actual purchase (a tier's autobuyer now unlocks automatically at a prestige-count milestone
 // instead, see AUTOBUYER_UNLOCK_MILESTONE_START below), kept only as the pricing benchmark
-// getAutobuyerBulkModeCost multiplies: 1 "PP-equivalent" for the first tier, up
+// the per-tier price scale of the PP-funded upgrades: 1 "PP-equivalent" for the first tier, up
 // through 10 for the 10th/last tier.
 export const AUTOBUYER_UNLOCK_BASE_COST = 1
-// Autobuyer bulk mode (engine.js's getAutobuyerBulkModeCost/buyAutobuyerBulkMode): without it a tier's
-// autobuyer buys one unit per attempt. Mode m (1..AUTOBUYER_BULK_MAX_MODE) lets each attempt buy
-// AUTOBUYER_BULK_LEVELS_BASE^m full levels at once as an upper limit — as many as are affordable, down to one.
-// Cost = the tier's autobuyer base cost × levels^3 (1000×, 1e6×, 1e9×). Buy max mode never applies to autobuyers.
-export const AUTOBUYER_BULK_LEVELS_BASE = 10
-export const AUTOBUYER_BULK_MAX_MODE = 3
+// Autobuyer bulk: a tier autobuyer's speed upgrades continue past the interval floor
+// (AUTOBUYER_MIN_INTERVAL_SECONDS); each such extra level doubles how many whole levels one attempt may buy
+// (2, 4, 8, … — an upper limit, fewer when fewer are affordable; see engine.js's getAutobuyerBulkLevels).
+// Capped so the doubling never exceeds BUY_MAX_ITERATION_CAP (1000), the most levels one attempt can buy: 2^9 = 512.
+export const AUTOBUYER_BULK_MAX_EXTRA_LEVELS = Math.floor(Math.log2(BUY_MAX_ITERATION_CAP))
 // Tier autobuyer interval upgrade (PP-funded, per tier, permanent): each level multiplies the
 // autobuyer's purchase-attempt interval by AUTOBUYER_INTERVAL_MULTIPLIER, from the tier's base (tier N =
 // N × AUTOBUYER_BASE_INTERVAL_SECONDS, i.e. 1 s … 10 s) down to
@@ -717,16 +716,6 @@ export const OVERCLOCK_REQUIREMENT_STEP = 3
 // preferred Boost preset (default Standard). A mid-early automation that only
 // matters once Compute merges are timed.
 export const COMPUTE_AUTO_BOOST_UNLOCK_COST = 30
-// One-time PP cost to permanently automate RE-LEVELING Auto-Prestige itself (see engine.js's
-// buyAutoPrestigeAutobuyer) — once bought, tickGame calls buyAutoPrestige automatically every
-// tick once affordable, so a level-up beyond the first no longer needs a manual click. This is a
-// "meta-automation" (it automates re-buying an already-PP-funded track, not a Money-funded one
-// like the other two autobuyer toggles above), and only ever does anything once Auto-Prestige has
-// already been activated once — so it's priced below the Auto-Prestige unlock's own
-// cost (the clicks it saves are already rare, since each Auto-Prestige level doubles in cost) but
-// well above the two cheaper Money-funded autobuyer toggles above, since this row is gated behind
-// allTiersFullyAutomated — a genuinely late-game convenience, not an early one.
-export const AUTO_PRESTIGE_AUTOBUYER_COST = 100
 // Once the last tier has ever been the target of a successful Scale Up this cycle (see engine.js's
 // isLastTierTickspeedXpUnlocked — a scaleUpTierCounts-based latch, NOT a live owned check), its
 // Money-funded tickspeed multiplier (see TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier

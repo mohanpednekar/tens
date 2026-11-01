@@ -6,7 +6,6 @@ import {
   getPrestigeDoublePpUpgradeCost,
 } from 'game/engine'
 import {
-  AUTO_PRESTIGE_AUTOBUYER_COST,
   COMPUTE_FLOPS_FIRST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_MERGE_RATIO,
@@ -355,26 +354,22 @@ describe('navAttention', () => {
       autoScaleUp: true,
       autoOverclock: true,
       autoGlobalTickspeed: true,
-      autobuyerBulkLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 3])),
+      autoPrestige: 1,
+      automationIntervalLevels: { prestige: 1e9 },
     }
     expect(hasAffordablePpUnlock(levelOnly)).toBe(false)
     expect(hasAffordablePpLevelUpgrade(levelOnly)).toBe(true)
     expect(hasAffordablePpUpgrade(levelOnly)).toBe(true)
 
-    // The Auto-Prestige Autobuyer (an Unlocks purchase) counts only once every tier is fully
-    // automated and Auto-Prestige is active.
-    const allDone = Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true]))
-    const autoPrestigeAutobuyerOnly = {
+    // Global automations are sequential: each counts only once the previous one is owned.
+    const autoPrestigeUnlockOnly = {
       ...levelOnly,
-      prestige: { count: 1, points: AUTO_PRESTIGE_AUTOBUYER_COST },
+      prestige: { count: 1, points: getAutomationUnlockCost('prestige') },
       prestigeDoublePpLevel: 5,
-      tierTickspeedAutobuyer: allDone,
-      autoPrestige: 30,
-      autoPrestigeAutobuyer: false,
+      autoPrestige: null,
     }
-    expect(hasAffordablePpUnlock(autoPrestigeAutobuyerOnly)).toBe(true)
-    expect(hasAffordablePpUnlock({ ...autoPrestigeAutobuyerOnly, autoPrestigeAutobuyer: true })).toBe(false)
-    expect(hasAffordablePpUnlock({ ...autoPrestigeAutobuyerOnly, autoPrestige: null })).toBe(false)
+    expect(hasAffordablePpUnlock(autoPrestigeUnlockOnly)).toBe(true)
+    expect(hasAffordablePpUnlock({ ...autoPrestigeUnlockOnly, prestige: { count: 1, points: getAutomationUnlockCost('prestige') - 1 } })).toBe(false)
   })
 
   it('lights the Perks unlocks dot for an affordable Auto-Boost only once Boosters is available and it is not owned', () => {
@@ -386,7 +381,6 @@ describe('navAttention', () => {
       prestigeSpeedBonusUnlocked: true,
       autoScaleUp: true,
       autoGlobalTickspeed: true,
-      autobuyerBulkLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 3])),
     }
     const withBoosters = capacity => ({
       ...ownedEverythingElse,
