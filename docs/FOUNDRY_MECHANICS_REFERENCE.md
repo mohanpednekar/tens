@@ -46,8 +46,7 @@ commit as any change to the mechanics it describes.
    array shows every size from `getDiskSizesToShow`, all `DISK_ARRAY_LADDER_CAP` (9) slots in one row.
    The "queue next build" pin-icon toggle was removed from the UI, but the auto-arming queue stays wired
    and live (see "Disks"; `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section);
-   `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but unexposed (unlike Capacity's
-   `queueIntroCapacityUpgrade`, which the Upgrade Capacity button drives). Every action here or on
+   `queueDiskBuild` arms a build directly when `provisionDisk` can't start it (called by ByteFoundryPage). Every action here or on
    either dedicated screen is gated by the forced priority order (see "Economy model") — Data Lake
    Booster purchases, its capacity Upgrade, and Upgrade Capacity / Speed are the three exceptions, each
    arbitrated on its own eligibility. Full UI layout: `docs/MAINPAGE_REFERENCE.md`; mechanic/formula

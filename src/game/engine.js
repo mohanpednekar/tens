@@ -496,18 +496,12 @@ export const createInitialGameState = () => ({
     // actively accumulating passes at a time (getDiskSize's single-size ladder). Cleared for that
     // size the instant the final pass lands and the disk completes.
     diskProvisionPasses: {},
-    // PERMANENT — true once a build's own first pass (manual click, always — see provisionDisk)
-    // hasn't yet finished funding the whole disk: the remaining passes then fire themselves
-    // (tickQueuedDiskBuild) the instant its own pool buffer can afford one and nothing outranks it
-    // in the forced priority order, with no further click needed — and keeps re-firing, pass after
-    // pass, as the buffer refills, until the disk is fully funded. Also settable directly via
-    // queueDiskBuild, to commit to the NEXT build before its own pool buffer can afford even the
-    // first pass (unlike provisionDisk's own auto-arm, which only ever applies to a build already
-    // begun). Clears once a disk actually completes (diskProvisionPasses reaches
-    // getDiskProvisionPassesRequired and provisionDisk increments disksBuiltTotal), whether that
-    // final pass was fired by the queue or an ordinary manual click; re-arm — automatically on the
-    // next click, or via queueDiskBuild again — for the next one. Same shape as
-    // disks/disksBuiltTotal/diskBuild above.
+    // PERMANENT — true while a Provision Disk build is ARMED (provisionDisk / queueDiskBuild):
+    // tickQueuedDiskBuild then draws bits from the pool buffer every tick at the pool's fixed base
+    // Bandwidth (no fill multiplier), into fractional diskProvisionPasses, until the disk is fully
+    // funded. An empty buffer or a higher-priority action only pauses it. On completion
+    // tickQueuedDiskBuild increments disksBuiltTotal, clears the passes and disarms; each disk
+    // needs a fresh click (or the replay re-arm). Same shape as disks/disksBuiltTotal/diskBuild above.
     diskBuildQueued: false,
     // True only while diskBuildQueued was armed by normalizePoolMemoryCapacity's own load-time
     // wake-up for a save reloaded mid-Reset-Byte-Foundry-replay (see there) — distinguishes that
@@ -3337,8 +3331,7 @@ export const tickPoolResetReprovision = state => {
 // here. Currently unused by any production caller — Data Lake capacity doubling no longer composes
 // against it (removed; array completion is its only gate now, see DESIGN_HISTORY.md), and Memory
 // ×2 never did — kept as a named export/tested unit for API stability and potential future reuse,
-// same posture as this file's other implemented-but-currently-unwired predicates (e.g.
-// queueDiskBuild).
+// same posture as this file's other implemented-but-currently-unwired predicates.
 export const isComputeUpgradeAvailable = state =>
   isComputeCoreConversionUnlocked(state) &&
   COMPUTE_BOOST_TIER_FIELDS.some((field, index) =>
@@ -6917,18 +6910,12 @@ const isDiskBuildBelowCap = (state, caps) => {
   return passesCollected < passesCap
 }
 
-// How many more whole passes toward `size`'s CURRENTLY in-progress disk an active
-// foundryResetCaps replay is still entitled to hand out for free — Infinity (unrestricted) unless
-// this exact size is sitting at the boundary between a fully pre-earned run of completed disks and
-// a NEXT disk that was only partially paid before the reset (the same "matched exactly" case
-// isDiskBuildBelowCap treats specially above). A whole earlier disk still owed (built < cap) is
-// unrestricted too — provisionDisk only ever advances ONE size per call regardless (it never loops
-// on to fund a newly-current disk after completing the one it started with), so there's no
-// overshoot risk funding the rest of an already-fully-earned disk in one shot. Used to stop a
-// single provisionDisk call from collecting more passes than the cap allows
-// when the pool buffer can afford more than that in one go (Devin Review finding on PR #608) —
-// without this, clearing diskBuildQueued after the call (see tickFoundryResetConvenience) closes
-// the multi-tick overshoot but not a single-call one.
+// How many more (fractional) passes toward `size`'s CURRENTLY in-progress disk an active
+// foundryResetCaps replay is still entitled to fund — Infinity (unrestricted) unless this exact
+// size is at the boundary between a fully pre-earned run of completed disks and a NEXT disk that
+// was only partially paid before the reset (the same "matched exactly" case isDiskBuildBelowCap
+// treats specially above). A whole earlier disk still owed (built < cap) is unrestricted. Consumed
+// by tickQueuedDiskBuild (caps the draw) and normalizePoolMemoryCapacity (load-time re-arm).
 const getDiskReplayPassAllowance = (state, size) => {
   const caps = state.intro?.foundryResetCaps
   if (!caps) return Infinity

@@ -182,22 +182,14 @@ drawn the disk completes (empty container) and the queue disarms, so only starti
 
 The pin-icon `QueueToggleButton` that used to sit beside the Provision Disk button
 (`ProvisionDiskRow` wrapping the pair) has been removed from the page — `provisionDiskButton` now
-renders the plain `Button` directly, with no wrapper. an armed build keeps drawing on every tick with no further clicks. The button's own click
-handler (`handleProvisionDiskClick`) now covers the one remaining case that mechanic didn't —
-STARTING a build whose first pass isn't affordable yet, or that's currently outranked by a
-higher-priority action: `canStartDiskBuild` (turn-available right now) fires `actions.provisionDisk()`
-directly, exactly as before; otherwise it calls `actions.queueDiskBuild()`, so
-`tickQueuedDiskBuild` fires the very first pass itself the instant it can, the same "click once,
-then it just happens" treatment every later pass already had. `disabled` dropped its own
-affordability/priority checks — the button refuses input only while a build's own timed countdown
-is running or the ladder is exhausted for active pools, since a click in every other state now does
+renders the plain `Button` directly, with no wrapper. Its click handler (`handleProvisionDiskClick`) only ARMS the build: `actions.provisionDisk()` when it can start now, else `actions.queueDiskBuild()`. An armed build then draws bits from the pool buffer every tick at the pool's fixed base Bandwidth (`tickQueuedDiskBuild`), with no further clicks. `disabled` drops affordability/priority checks — the button refuses input only while the build is armed (it is already running) or the ladder is exhausted for active pools, since a click in every other state now does
 something useful. Variant/icon reflect the live state: `'smart'`/⏳ whenever queued (checked first),
 else `'info'`/🏦 while turn-available (fires now), else `'neutral'`/🏦 (clickable to arm); `aria-label` stays anchored on "provision disk" in every one of them
 so the control's identity never changes out from under assistive tech or a `getByRole` query.
 `actions.clearDiskBuildQueue` remains implemented/tested with no UI control of its own — the same
 posture Capacity's own `queueIntroCapacityUpgrade` still has. See docs/ECONOMY_REFERENCE.md's
 "Disks" section for the full queue mechanic, and docs/DESIGN_HISTORY.md for why the first pass
-needed this and later passes didn't.
+replaced per-pass firing with the fixed-speed draw.
 
 Below its own disk-array rows, each pool card renders `components/DataLakePanel` with both `bare`
 and `tierIndex={poolIndex}` set (`<DataLakePanel actions={actions} state={state} bare

@@ -482,7 +482,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    > (`disksBuiltTotal[size]` +1, empty container, queue disarmed — the next disk needs a click) when passes reach
    > `getDiskProvisionPassesRequired`. Progress is never lost: Disk Fill outranking it, an empty buffer or an offline
    > pool only pause it. Provision Disk is OFFERED once the pool is live and its buffer capacity can hold one pass
-   > (`getPoolBufferCapacity >= size`); it outranks Compute only while running or part-way
+   > (`getPoolBufferCapacity >= size`); it outranks Compute only while ARMED
    > (`isProvisionDiskInProgress`). The Foundry-reset replay arms the same build, replay-owned
    > (`diskBuildQueuedByReplay`), stopping at `getDiskReplayPassAllowance`. The post-Foundry-reset rebuild is FREE (no
    > buffer) at the same fixed base Bandwidth (`tickAutoProvisionLowerDiskSizes`). UI: the disk being built is drawn as
@@ -507,7 +507,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    "Disks" permanence note above) and are only cleared for that size once the final pass lands. Every pass is spent out of the disk's own
    POOL's local buffer (`intro.poolBuffers`, `getPoolBufferBits`/`getPoolBufferCapacity`), not the
    shared Data Stream Buffer directly — see the "Pool buffers" entry further down. Once the final
-   pass lands, `disksBuiltTotal[size]` increments in that SAME call — the container immediately
+   bits are drawn, `tickQueuedDiskBuild` increments `disksBuiltTotal[size]` in that SAME tick — the container immediately
    exists, empty, ready for `tickDiskAutoFill` — with no further, separate timed construction
    afterward. An earlier version DID impose a real TIMED countdown here (`intro.diskBuild = { size,
    remainingSeconds, totalSeconds }`, `totalSeconds = getProvisionDiskBaseSeconds(state, size) *
@@ -530,13 +530,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    whenever a pull-eligible Disk Fill or an affordable Bandwidth claim is currently available even if
    this size's own build cost is affordable. Unlike the `isStorageUnlocked` reveal gate above,
    `provisionDisk` itself has never required that threshold — only the nav button's own reveal does
-   — so `isProvisionDiskAvailable` (the base predicate, ignoring priority) checks only `!diskBuild &&
-   at least one pass (size bits) affordable` — not the full cost. "Affordable" is against the
-   buffer's SPENDABLE remainder, not its raw balance: `getPoolCacheReservationBits(state, poolIndex)`
+   — so `isProvisionDiskAvailable` (the base predicate, ignoring priority) checks only a live pool
+   (`getStoragePoolBandwidth > 0`) whose buffer capacity can hold one pass — not buffer contents. Funding is drawn
+   from the buffer's SPENDABLE remainder, not its raw balance: `getPoolCacheReservationBits(state, poolIndex)`
    (however many bits the pool's own read cache still needs to reach full) is subtracted first, so
    the read cache always keeps first claim over Provision Disk funding and can keep actively filling
-   even while a build is queued — both `isProvisionDiskAvailable` and `provisionDisk` itself apply
-   this same reservation before checking/spending against the buffer; see `docs/DESIGN_HISTORY.md`.
+   even while a build is queued — `tickQueuedDiskBuild` applies this reservation before drawing from the buffer; see `docs/DESIGN_HISTORY.md`.
 
    **Migration — orphaned tenth-disk passes.** A save written before `DISK_ARRAY_LADDER_CAP` dropped
    from 10 to 9 (see `docs/DESIGN_HISTORY.md`) can carry `disksBuiltTotal[size] === 9` with
