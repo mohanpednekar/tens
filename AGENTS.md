@@ -24,7 +24,7 @@ each wipes/keeps). No backend — state lives in React and persists to `localSto
 |------|---------|-------|
 | React | 19 | JSX transform enabled |
 | Vite | 8 | OXC-based; JSX files **must** use the `.jsx` extension |
-| Vitest | 4 | Runs via `yarn test` |
+| Vitest | 5 | Runs via `yarn test` |
 | Playwright | 1 | Real-browser e2e suite, `yarn test:e2e`, chromium only |
 | styled-components | 6 | All component styling |
 | Yarn | 1 (Classic) | `yarn@1.22.22` via Corepack; lockfile is v1 format |

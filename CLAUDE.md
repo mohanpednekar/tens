@@ -27,7 +27,7 @@ Byte Foundry gate; only Factory stays progress-gated. A third More entry, **Dev 
 |------|---------|-------|
 | React | 19 | JSX transform enabled |
 | Vite | 8 | OXC-based; JSX files **must** use the `.jsx` extension |
-| Vitest | 4 | jsdom environment, globals enabled |
+| Vitest | 5 | jsdom environment, globals enabled |
 | Playwright | 1 | Real-browser end-to-end suite (`yarn test:e2e`), chromium only — see "Testing" below |
 | styled-components | 6 | All component styling |
 | @fontsource/inter, @fontsource/space-grotesk | 5 | Locally-bundled font faces (see `theme/fonts.js`, "Theming" below) — no runtime CDN fetch |
