@@ -1,6 +1,6 @@
 import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration } from 'components/BoostTimerBar'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
-import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
+import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress, isStackComputeBoostTurnAvailable } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -515,7 +515,7 @@ const ComputePage = ({ game }) => {
     return () => document.removeEventListener('click', deselectOnOutsideClick, true)
   }, [selectedBoostTierIndex])
 
-  const blockedByPriority = isDiskFillAvailable(state) || isProvisionDiskAvailable(state)
+  const blockedByPriority = isDiskFillAvailable(state) || isProvisionDiskInProgress(state)
   const boostActive = Boolean(intro.computeBoostType)
   // Once a boost is active, its own funding tier is what Stack/Pop act on, regardless of which
   // row a player clicks next (issue #326 — Stack always extends the currently active boost).
