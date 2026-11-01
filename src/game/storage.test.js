@@ -1192,7 +1192,7 @@ describe('cloud save export / import', () => {
 describe('importSaveJson (production shape check)', () => {
   beforeEach(() => localStorage.clear())
   it('refuses JSON that is not a save instead of overwriting the slot', () => {
-    for (const text of ['{}', '{"foo":1}', '{"saveSchemaVersion":2,"resources":{"base":"abc"}}', '{"saveSchemaVersion":2,"resources":"x"}']) {
+    for (const text of ['{}', '{"foo":1}', '{"toString":1}', '{"saveSchemaVersion":2,"resources":{"base":"abc"}}', '{"saveSchemaVersion":2,"resources":"x"}']) {
       expect(importSaveJson(text)).toEqual({ ok: false, reason: 'invalid_state' })
     }
     expect(loadGameState()).toBeNull()

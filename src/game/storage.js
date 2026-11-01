@@ -778,7 +778,7 @@ export const serializeSaveForExport = state => JSON.stringify({ saveSchemaVersio
 // Partial saves are fine (mergeState fills the rest), but the payload must share at least one
 // top-level field with a real game state, and `resources`/`resources.base` must be well-formed.
 const looksLikeSave = payload => {
-  if (!Object.keys(payload).some(key => key in createInitialGameState())) return false
+  if (!Object.keys(payload).some(key => Object.hasOwn(createInitialGameState(), key))) return false
   if (payload.resources !== undefined && !isPlainObject(payload.resources)) return false
   const base = payload.resources?.base
   return base === undefined || Number.isFinite(base)
