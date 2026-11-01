@@ -3157,8 +3157,7 @@ export const normalizePoolMemoryCapacity = state => {
     }
   }
   // Auto-arm the disk-build queue for a genuinely partial diskProvisionPasses entry that predates
-  // provisionDisk's own auto-arm-on-partial-funding behavior (added alongside ordinal-scaled pass
-  // counts — see docs/DESIGN_HISTORY.md): without this, such a save would sit on a partially funded
+  // the fixed-speed buffer-funded model (a partially funded disk left disarmed): without this, such a save would sit on a partially funded
   // disk with diskBuildQueued still false, needing one extra manual Provision Disk click to resume
   // auto-continuing. Only ever touches the CURRENTLY offered ladder size — a stale entry for some
   // other, no-longer-current size isn't queueable anyway, since provisionDisk/tickQueuedDiskBuild

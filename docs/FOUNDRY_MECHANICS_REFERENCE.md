@@ -44,7 +44,7 @@ commit as any change to the mechanics it describes.
    rebuilding); Upgrade Capacity / Speed preview their post-upgrade value
    (`docs/DESIGN_HISTORY.md`: "Provision Disk moved into the Data Stream card"). Each disk
    array shows every size from `getDiskSizesToShow`, all `DISK_ARRAY_LADDER_CAP` (9) slots in one row.
-   The "queue next build" pin-icon toggle was removed from the UI, but the auto-arming queue stays wired
+   The "queue next build" pin-icon toggle was removed from the UI, but the arm-on-click build queue stays wired
    and live (see "Disks"; `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section);
    `queueDiskBuild` arms a build directly when `provisionDisk` can't start it (called by ByteFoundryPage). Every action here or on
    either dedicated screen is gated by the forced priority order (see "Economy model") — Data Lake

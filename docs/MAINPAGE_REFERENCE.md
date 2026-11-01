@@ -182,9 +182,8 @@ drawn the disk completes (empty container) and the queue disarms, so only starti
 
 The pin-icon `QueueToggleButton` that used to sit beside the Provision Disk button
 (`ProvisionDiskRow` wrapping the pair) has been removed from the page — `provisionDiskButton` now
-renders the plain `Button` directly, with no wrapper. Its click handler (`handleProvisionDiskClick`) only ARMS the build: `actions.provisionDisk()` when it can start now, else `actions.queueDiskBuild()`. An armed build then draws bits from the pool buffer every tick at the pool's fixed base Bandwidth (`tickQueuedDiskBuild`), with no further clicks. `disabled` drops affordability/priority checks — the button refuses input only while the build is armed (it is already running) or the ladder is exhausted for active pools, since a click in every other state now does
-something useful. Variant/icon reflect the live state: `'smart'`/⏳ whenever queued (checked first),
-else `'info'`/🏦 while turn-available (fires now), else `'neutral'`/🏦 (clickable to arm); `aria-label` stays anchored on "provision disk" in every one of them
+renders the plain `Button` directly, with no wrapper. Its click handler (`handleProvisionDiskClick`) only ARMS the build: `actions.provisionDisk()` when it can start now, else `actions.queueDiskBuild()`. An armed build then draws bits from the pool buffer every tick at the pool's fixed base Bandwidth (`tickQueuedDiskBuild`), with no further clicks. `disabled` drops affordability/priority checks — the button refuses input only while a legacy `intro.diskBuild` is in flight, the ladder is exhausted for active pools, or a lower-size rebuild is pending; clicking while already armed is an idempotent no-op. Variant/icon reflect the live state: `'smart'`/⏳ whenever queued (checked first),
+else `'info'`/🏦 while turn-available (a click arms it), else `'neutral'`/🏦 (clickable to arm); `aria-label` stays anchored on "provision disk" in every one of them
 so the control's identity never changes out from under assistive tech or a `getByRole` query.
 `actions.clearDiskBuildQueue` remains implemented/tested with no UI control of its own — the same
 posture Capacity's own `queueIntroCapacityUpgrade` still has. See docs/ECONOMY_REFERENCE.md's
