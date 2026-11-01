@@ -13,11 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Autobuyer bulk reworked into the speed upgrades**: the separate 10/100/1000 per-buy purchase is gone. A tier autobuyer's speed upgrades now continue past the 10 ms floor, and each extra level doubles how many whole levels one attempt may buy (2, 4, … 512; always only an upper limit — as many as are affordable). Previously bought bulk modes no longer apply.
+- **Auto-Prestige Autobuyer removed** (the 100 PP convenience that auto-bought Auto-Prestige's speed upgrades) — its PP are not refunded.
+- **Global Automation is a strict sequence**: Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Prestige. Every step is always listed and each needs the previous one (also enforced in the engine). Auto-Prestige is now an Unlocks purchase rather than an Upgrades one.
 - **"Unbounded Prestige" renamed to DeGoogol (the chapter is now "DeGoogoled").**
 
 - **Auto-Prestige moved to Perks → Unlocks → Global Automation; Auto-Boost has its own "Compute Automation" section.** The redundant Upgrades → Automation category was removed (Auto-Prestige's speed upgrade stays under Upgrades).
 - **DeGoogol now unlocks when Auto-Prestige is upgraded to 1 s or faster** (previously 100 lifetime prestiges). Saves that already earned it keep it.
-- Perks → Unlocks: the autobuyer bulk-mode purchase now reads "N/buy · cost PP" (⏫ icon) and the owned badge "N/buy", replacing the ambiguous 📦 ×N label.
 - Tier tickspeed autobuyers now unlock at Prestige 11–20 (one per Prestige, tier01 at 11 through tier10 at 20) instead of 12–30.
 - **Foundry-reset rebuild runs at each pool's base Bandwidth.** Smaller disk sizes now rebuild one disk at a time, each in exactly size ÷ base Bandwidth, independent of the fill multiplier, so the Provision Disk tile's ⚡ is the base speed and its ⏳ is the exact total time.
 - Data Lake filled balance now floors to 3 significant digits like Foundry speeds; the running-upgrade "from → to" readout now uses the left (from) value's unit.

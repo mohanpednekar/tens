@@ -162,6 +162,7 @@ describe('Compute Flops screen', () => {
   it('buyAutoScaleUp latches pageUnlocked so reveal survives spending below reveal PP', () => {
     let state = {
       ...createInitialGameState(),
+      autoGlobalTickspeed: true, // Auto Scale Up needs the Tickspeed Autobuyer first
       prestige: { xp: 0, points: COMPUTE_FLOPS_REVEAL_PP, count: 1, highestMilestone: 1 },
     }
     expect(isComputeFlopsPageRevealed(state)).toBe(true)

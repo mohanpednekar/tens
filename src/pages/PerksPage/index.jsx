@@ -5,6 +5,8 @@ import Switch from 'components/Switch'
 import {
   formatAmount,
   getAutobuyerIntervalMaxLevel,
+  getAutobuyerSpeedUpgradeMaxLevel,
+  getAutobuyerBulkLevels,
   getAutomationIntervalMaxLevel,
   getAutomationIntervalSeconds,
   getAutomationIntervalUpgradeCost,
@@ -21,7 +23,6 @@ import {
   getPrestigePowersPerPp,
   getPrestigePpPerPower,
   getPurchaseBlockSize,
-  getAutobuyerBulkModeCost,
   getTierTickspeedAutobuyerMilestone,
   isBuyMaxUnlocked,
   isComputeCoreConversionUnlocked,
@@ -30,9 +31,6 @@ import {
   isUnboundedPrestigeUnlocked,
 } from 'game/engine'
 import {
-  AUTO_PRESTIGE_AUTOBUYER_COST,
-  AUTOBUYER_BULK_LEVELS_BASE,
-  AUTOBUYER_BULK_MAX_MODE,
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
@@ -124,20 +122,17 @@ const CategoryHeading = styled.h2`
 
 // Every row is a CSS grid so columns line up row-to-row regardless of content width (a flex
 // `space-between` row let each badge drift with its siblings' widths). Default: label | control.
-// `$tier`: symbol | ⚙ cell | 🤖 cell (| Smart cell on Unlocks) — shared by the Unlocks and Toggles
+// `$tier`: symbol | ⚙ cell | 🤖 cell — shared by the Unlocks and Toggles
 // tier lists so both tabs read as the same table.
 const Row = styled.div`
   align-items: center;
   column-gap: 0.6rem;
   display: grid;
   /* Every track is fixed or fr-based (never content-sized) so separate rows' columns line up, and
-     the whole row still fits a 320px-wide phone. $tier="unlocks" keeps a fixed trailing Smart cell;
-     $tier="toggles" has no trailing cell. */
-  grid-template-columns: ${props => (props.$tier === 'unlocks'
-    ? '2.25rem minmax(0, 1fr) minmax(0, 1fr) 5.75rem'
-    : props.$tier === 'toggles'
-      ? '2.25rem minmax(0, 1fr) minmax(0, 1fr)'
-      : 'minmax(0, 1fr) auto')};
+     the whole row still fits a 320px-wide phone. */
+  grid-template-columns: ${props => (props.$tier === 'unlocks' || props.$tier === 'toggles'
+    ? '2.25rem minmax(0, 1fr) minmax(0, 1fr)'
+    : 'minmax(0, 1fr) auto')};
   min-height: 2.75rem;
   padding: 0.35rem 0;
 
@@ -146,7 +141,7 @@ const Row = styled.div`
   }
 
   & > :last-child {
-    justify-self: ${props => (props.$tier === 'toggles' ? 'start' : 'end')};
+    justify-self: ${props => (props.$tier === 'toggles' || props.$tier === 'unlocks' ? 'start' : 'end')};
   }
 `
 
@@ -320,7 +315,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   }, [focusNonce])
 
   const purchaseBlockSize = getPurchaseBlockSize(state)
-  const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier => state.tierTickspeedAutobuyer?.[tier.id])
 
   const latencyUnlockCost = getAutomationUnlockCost('latency')
   const scaleUpUnlockCost = getAutomationUnlockCost('scaleUp')
@@ -328,7 +322,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const isAutoScaleUpActive = state.autoScaleUp ?? false
   const isAutoOverclockActive = state.autoOverclock ?? false
   const canBuyAutoOverclock = !isFrozen && isAutoScaleUpActive && !isAutoOverclockActive && !isFirstRun && points >= overclockUnlockCost
-  const canBuyAutoScaleUp = !isFrozen && !isAutoScaleUpActive && !isFirstRun && points >= scaleUpUnlockCost
+  const canBuyAutoScaleUp = !isFrozen && state.autoGlobalTickspeed && !isAutoScaleUpActive && !isFirstRun && points >= scaleUpUnlockCost
   const autoScaleUpEnabled = state.autoScaleUpEnabled ?? true
 
   const isTickspeedAutobuyerActive = state.autoGlobalTickspeed ?? false
@@ -349,12 +343,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const autoPrestigeLevel = state.autoPrestige ?? null
   const isAutoPrestigeActive = autoPrestigeLevel !== null
   const autoPrestigeCost = getAutomationUnlockCost('prestige')
-  const canBuyAutoPrestige = !isFrozen && !isAutoPrestigeActive && points >= autoPrestigeCost
+  const canBuyAutoPrestige = !isFrozen && isAutoOverclockActive && !isAutoPrestigeActive && points >= autoPrestigeCost
   const autoPrestigeEnabled = state.autoPrestigeEnabled ?? true
 
-  const isAutoPrestigeAutobuyerActive = state.autoPrestigeAutobuyer ?? false
-  const canBuyAutoPrestigeAutobuyer = !isFrozen && isAutoPrestigeActive && !isAutoPrestigeAutobuyerActive && points >= AUTO_PRESTIGE_AUTOBUYER_COST
-  const autoPrestigeAutobuyerEnabled = state.autoPrestigeAutobuyerEnabled ?? true
 
   const isComputeAutoBoostActive = state.computeAutoBoostUnlocked ?? false
   // Stays listed once bought, even after Era ascension / Reset Byte Foundry drops Capacity back below the Boosters threshold.
@@ -372,16 +363,10 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <CategoryHeading>Tier Autobuyers</CategoryHeading>
         {/* Every tier's row stays listed (reached milestones included) so unlock history is never lost. */}
         {TIER_DEFINITIONS.map(tier => {
-          const bulkMode = state.autobuyerBulkLevels?.[tier.id] ?? 0
-          const bulkLevels = AUTOBUYER_BULK_LEVELS_BASE ** (bulkMode + 1)
-          const hasNextBulk = bulkMode < AUTOBUYER_BULK_MAX_MODE
           const isTierTickspeedAutobuyerActive = state.tierTickspeedAutobuyer?.[tier.id] ?? false
-          const unlocked = isTierUnlocked(state)(tier)
           const isAutobuyerLocked = (state.autobuyers[tier.id] ?? null) === null
           const autobuyerMilestone = getAutobuyerUnlockMilestone(tier.id)
           const tickspeedMilestone = getTierTickspeedAutobuyerMilestone(tier.id)
-          const bulkCost = hasNextBulk ? getAutobuyerBulkModeCost(tier.id, bulkMode + 1) : 0
-          const canBuyBulk = unlocked && !isFrozen && !isAutobuyerLocked && points >= bulkCost
           return (
             <Row key={tier.id} $tier="unlocks" aria-label={`${tier.name} PP unlocks`}>
               <TierSymbol tier={tier} />
@@ -404,26 +389,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   subject={`${tier.name}'s autobuyer`}
                   unit="Prestige"
                 />
-              </span>
-              <span>
-                {/* Owned bulk mode always shows (history); buying the next needs the tier reachable this run. */}
-                {!isAutobuyerLocked && bulkMode > 0 && (
-                  <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer buys ${AUTOBUYER_BULK_LEVELS_BASE ** bulkMode} levels at once`}>🤖 {AUTOBUYER_BULK_LEVELS_BASE ** bulkMode}/buy</Badge>
-                )}
-                {!isAutobuyerLocked && hasNextBulk && unlocked && (
-                  <PpPurchaseButton
-                    ariaLabel={`Let ${tier.name}'s autobuyer buy ${bulkLevels} levels at once when affordable for ${formatAmount(bulkCost)} Prestige Points`}
-                    color="#a78bfa"
-                    cost={bulkCost}
-                    disabled={!canBuyBulk}
-                    icon="⏫"
-                    label={`${bulkLevels}/buy · ${formatAmount(bulkCost)} PP`}
-                    onClick={() => actions.buyAutobuyerBulkMode(tier.id)}
-                    points={points}
-                    progressLabel={`${tier.name} bulk autobuyer Prestige Point progress`}
-                    title={`Each autobuyer attempt buys ${bulkLevels} full levels when that many are affordable (otherwise one unit). Without bulk mode an autobuyer buys one unit per attempt. Buy max mode never applies to autobuyers.`}
-                  />
-                )}
               </span>
             </Row>
           )
@@ -513,27 +478,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             />
           )}
         </Row>
-        {allTiersFullyAutomated && isAutoPrestigeActive && (
-          <Row aria-label="auto-prestige autobuyer upgrade">
-            <RowLabel>🔁 Auto-Prestige Autobuyer</RowLabel>
-            {isAutoPrestigeAutobuyerActive ? (
-              <UnlockedBadge icon="🔁" name="Auto-Prestige Autobuyer" />
-            ) : (
-              <PpPurchaseButton
-                ariaLabel={`Enable Auto-Prestige Autobuyer for ${AUTO_PRESTIGE_AUTOBUYER_COST} Prestige Points`}
-                color="#38bdf8"
-                cost={AUTO_PRESTIGE_AUTOBUYER_COST}
-                disabled={!canBuyAutoPrestigeAutobuyer}
-                icon="🔓"
-                label={`${AUTO_PRESTIGE_AUTOBUYER_COST} PP`}
-                onClick={actions.buyAutoPrestigeAutobuyer}
-                points={points}
-                progressLabel="Auto-Prestige Autobuyer Prestige Point progress"
-                title="Spend Prestige Points so Auto-Prestige keeps re-leveling itself automatically, forever, whenever affordable"
-              />
-            )}
-          </Row>
-        )}
       </Category>
 
       {showComputeAutoBoost && (
@@ -664,7 +608,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         {TIER_DEFINITIONS.map(tier => {
           if ((state.autobuyers[tier.id] ?? null) === null) return null
           const level = state.autobuyerIntervalLevels?.[tier.id] ?? 0
-          const maxed = level >= getAutobuyerIntervalMaxLevel(tier.id)
+          const maxed = level >= getAutobuyerSpeedUpgradeMaxLevel(tier.id)
+          const atFloor = level >= getAutobuyerIntervalMaxLevel(tier.id)
+          const bulkLevels = getAutobuyerBulkLevels(state, tier.id)
           const cost = getAutobuyerIntervalUpgradeCost(level)
           const intervalMs = getAutobuyerIntervalSeconds(state, tier.id) * 1000
           return (
@@ -674,20 +620,28 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   ⏱ {tier.name}
                   {level > 0 && ` (Lv.${level})`}
                 </RowLabel>
-                <SubText>every {formatInterval(intervalMs)}{maxed ? ' (max)' : ''}</SubText>
+                <SubText>
+                  every {formatInterval(intervalMs)}
+                  {bulkLevels > 1 && ` · ${bulkLevels}/buy`}
+                  {maxed ? ' (max)' : ''}
+                </SubText>
               </RowLabelStack>
               {!maxed && (
                 <PpPurchaseButton
-                  ariaLabel={`Upgrade ${tier.name}'s autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Prestige Points — interval ×0.9`}
+                  ariaLabel={atFloor
+                    ? `Upgrade ${tier.name}'s autobuyer to level ${level + 1} for ${formatAmount(cost)} Prestige Points — doubles levels bought per attempt to up to ${bulkLevels * 2}`
+                    : `Upgrade ${tier.name}'s autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Prestige Points — interval ×0.9`}
                   color="#34d399"
                   cost={cost}
                   disabled={isFrozen || points < cost}
                   icon="⏫"
-                  label={`${formatAmount(cost)} PP`}
+                  label={atFloor ? `${bulkLevels * 2}/buy · ${formatAmount(cost)} PP` : `${formatAmount(cost)} PP`}
                   onClick={() => actions.buyAutobuyerIntervalUpgrade(tier.id)}
                   points={points}
                   progressLabel={`${tier.name} autobuyer speed Prestige Point progress`}
-                  title="Spend Prestige Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); cost doubles each level"
+                  title={atFloor
+                    ? 'At the 10 ms floor, each further level doubles how many full levels one autobuyer attempt can buy (as many as are affordable, at least one); cost keeps rising'
+                    : "Spend Prestige Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); past the floor, levels double how many levels it buys per attempt"}
                 />
               )}
             </Row>
@@ -845,18 +799,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             name="Auto-Prestige"
             onToggle={() => actions.setAutoPrestigeEnabled(!autoPrestigeEnabled)}
             toggleLabel="Auto-Prestige automation"
-          />
-        </Row>
-      ),
-      isAutoPrestigeAutobuyerActive && (
-        <Row key="auto-prestige-autobuyer" aria-label="auto-prestige autobuyer toggle">
-          <RowLabel>🔁 Auto-Prestige Autobuyer</RowLabel>
-          <AutomationToggle
-            enabled={autoPrestigeAutobuyerEnabled}
-            icon="🔁"
-            name="Auto-Prestige Autobuyer"
-            onToggle={() => actions.setAutoPrestigeAutobuyerEnabled(!autoPrestigeAutobuyerEnabled)}
-            toggleLabel="Auto-Prestige Autobuyer automation"
           />
         </Row>
       ),
