@@ -500,21 +500,11 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    72,000 bits ("9 KB") — the array's own cache economically substitutes for what would have been a
    10th, most-expensive disk (see `docs/DESIGN_HISTORY.md`). That total is paid in `getDiskProvisionPassesRequired(state,
    size)` installments — "passes" — of exactly `size` bits each (`intro.diskProvisionPasses`,
-   `getDiskProvisionPassesCollected`), rather than the whole cost in one lump sum: each call to
-   `provisionDisk` collects as many WHOLE passes as the pool's own local buffer currently affords
-   (capped at however many remain — clamped at 0, never negative, so a save carrying a stale,
-   already-over-required pass count from an earlier flat-multiplier version of this ladder
-   self-heals by completing immediately on its next call rather than refunding bits into the
-   buffer), so a buffer already holding the full cost still completes every pass — and starts the
-   timed build — in one call exactly as a single-payment build always has, but a smaller buffer only
-   needs to hold ONE pass at a time, refilling between calls rather than needing to accumulate the
-   entire cost before Provision Disk becomes usable at all. A manual click that doesn't finish the
-   build in that one call also auto-arms `intro.diskBuildQueued` (see the "queue next build"
-   mechanism below) so every remaining pass for THAT disk fires itself — `tickQueuedDiskBuild`,
-   unconditionally wired into `tickGame`'s own storage pipeline — as the buffer refills, with no
-   further clicks needed; only STARTING a new disk's build still needs one click. Passes are
-   permanent progress — they survive a real Prestige (see the "Disks" permanence note above) and are
-   only cleared for that size once the final pass lands. Every pass is spent out of the disk's own
+   `getDiskProvisionPassesCollected`), as fractional passes: `provisionDisk` only ARMS the build (`intro.diskBuildQueued`), and each tick
+   `tickQueuedDiskBuild` draws bits from the pool buffer at the pool's fixed base Bandwidth into
+   `intro.diskProvisionPasses[size]` (see the Updated note above); the queue disarms when the disk completes, so only
+   STARTING a new disk's build needs a click. Passes are permanent progress — they survive a real Prestige (see the
+   "Disks" permanence note above) and are only cleared for that size once the final pass lands. Every pass is spent out of the disk's own
    POOL's local buffer (`intro.poolBuffers`, `getPoolBufferBits`/`getPoolBufferCapacity`), not the
    shared Data Stream Buffer directly — see the "Pool buffers" entry further down. Once the final
    pass lands, `disksBuiltTotal[size]` increments in that SAME call — the container immediately
@@ -2285,16 +2275,10 @@ progress, per-size `disksBuiltTotal`, Capacity itself for merge compatibility, a
 `tickFoundryResetConvenience` (from `tickGame`, after Disk auto-fill) then auto-presses Combine,
    bit-funded Speed / Invest, and Provision Disk whenever their normal turn gates allow, capped at those
 highs — Combine leaves Capacity on its doubling ladder; Capacity ×2 remains available up to the
-FINAL pool's own end bound (`isMemoryCapacityAtCap`), not any one pool's own. Its own Provision Disk call passes `provisionDisk` an
-explicit `maxPasses` (via `getDiskReplayPassAllowance`) whenever the currently-offered size sits
-exactly at its own `foundryResetCaps` boundary — a fully pre-earned run of completed disks, now
-partially paid toward the next one — so a buffer that can afford more than the cap allows (e.g.
-after a long offline gap) can't overshoot it in one call; any excess stays banked for a later,
-genuine call. Since `provisionDisk` itself always marks a partial-funding result as NOT
-replay-owned (`intro.diskBuildQueuedByReplay = false` — correct for its other caller, a genuine
-manual click), this call re-marks it `true` on its own result whenever it leaves the queue armed, so
-`tickQueuedDiskBuild`'s own provenance check (see below) keeps applying this same cap on later ticks
-instead of treating it as an unrestricted manual continuation. `normalizePoolMemoryCapacity`'s own
+FINAL pool's own end bound (`isMemoryCapacityAtCap`), not any one pool's own. Its Provision Disk step just ARMS the ordinary buffer-funded build (`provisionDisk`) and marks it replay-owned
+(`intro.diskBuildQueuedByReplay = true`), so `tickQueuedDiskBuild` stops at the pre-reset boundary
+(`getDiskReplayPassAllowance` — a fully pre-earned run of completed disks, now partially paid toward the next one) instead of
+treating it as an unrestricted manual continuation. `normalizePoolMemoryCapacity`'s own
 load-time `diskBuildQueued` auto-arm (see below) sets the same flag under the identical condition,
 so reloading a save mid-replay can't reach the same gap via the save-load path instead.
 `intro.mainGameUnlocked` is preserved when already true. Every non-`intro` field (Tiers, Prestige,
@@ -2600,23 +2584,18 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // Only one size is ever buildable at a time.
                                                           // While set, every IO operation against that
                                                           // size's array is disallowed ("the array rebuild")
-    diskProvisionPasses: {},                              // PERMANENT. { [capacityBits]: passes collected }
-                                                          // toward that size's build cost — each pass is
-                                                          // exactly `size` bits, getDiskProvisionPassesRequired
-                                                          // (N for the Nth disk, capped at 10) passes fund the
-                                                          // full cost. Cleared for that size the instant the
-                                                          // final pass lands and
-                                                          // diskBuild's own timed countdown starts.
-    diskBuildQueued: false,                               // PERMANENT. true once "queue next build" is
-                                                          // armed — automatically by provisionDisk itself
-                                                          // whenever a manual click doesn't finish the build
-                                                          // in one call, or explicitly via queueDiskBuild — the
-                                                          // next Provision Disk pass fires itself
-                                                          // (tickQueuedDiskBuild) once affordable and nothing
-                                                          // outranks it, re-firing
-                                                          // pass after pass as the buffer refills; clears
-                                                          // only once a build FULLY starts (diskBuild set),
-                                                          // queued or manual.
+    diskProvisionPasses: {},                              // PERMANENT. { [capacityBits]: passes banked } toward
+                                                          // that size's next disk — FRACTIONAL; each pass is
+                                                          // exactly `size` bits drawn from the pool buffer at the
+                                                          // pool's fixed base Bandwidth (tickQueuedDiskBuild).
+                                                          // getDiskProvisionPassesRequired (N for the Nth disk)
+                                                          // passes complete a disk; cleared for that size then.
+    diskBuildQueued: false,                               // PERMANENT. true while a Provision Disk build is ARMED
+                                                          // (provisionDisk / queueDiskBuild): tickQueuedDiskBuild
+                                                          // draws from the pool buffer every tick while it is
+                                                          // Provision Disk's turn; clears when the disk completes
+                                                          // (or a replay cap is reached). Outranks Compute only
+                                                          // while armed (isProvisionDiskInProgress).
     diskWriteCache: {},                                   // PERMANENT. Carried through a real Prestige
                                                           // unchanged, same as diskBuild above.
                                                           // In-flight upward merges; empty at rest.
@@ -2804,7 +2783,7 @@ purchases were manual or automatic.
 | `isBitFundedBandwidthAvailable` | `state → bool` | Bit-cost Invest affordable and claims remain |
 | `isProvisionDiskAvailable` | `state → bool` | (Buffer-funded fixed-speed build, 2026-11: needs a live pool whose buffer capacity can hold one pass — NOT buffer bits in hand; see the Updated note under Provision Disk.) Earlier definition: Byte Foundry forced-priority base predicate for the common Provision Disk operation: no in-flight `intro.diskBuild`, active ladder remains, and that size's own pool buffer — MINUS `getPoolCacheReservationBits` (see its own row below), so the read cache always keeps first claim — covers at least ONE funding pass (`size` bits) — not the current ordinal's own whole `getDiskCost` |
 | `isProvisionDiskInProgress` | `state → bool` | True while a Provision Disk build is ARMED (`diskBuildQueued`) and Provision Disk is available — the only state in which it outranks Compute Boost (a merely startable, or disarmed part-way, build does not). |
-| `getPoolCacheReservationBits` | `(state, poolIndex) → bits` | Byte Foundry Disks: however many more bits that pool's own smallest-size read cache still needs to reach full (8 blocks) — subtracted from `getPoolBufferBits` before checking/spending against it in both `tickQueuedDiskBuild`, so the cache keeps actively filling (via `tickDiskAutoFill`) even while a Provision Disk build is queued, rather than Provision Disk claiming the whole buffer first. `0` for a locked/invalid pool or once the cache is already full |
+| `getPoolCacheReservationBits` | `(state, poolIndex) → bits` | Byte Foundry Disks: however many more bits that pool's own smallest-size read cache still needs to reach full (8 blocks) — subtracted from `getPoolBufferBits` before checking/spending against it in `tickQueuedDiskBuild`, so the cache keeps actively filling (via `tickDiskAutoFill`) even while a Provision Disk build is queued, rather than Provision Disk claiming the whole buffer first. `0` for a locked/invalid pool or once the cache is already full |
 | `isProvisionDiskTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `isProvisionDiskAvailable(state) && !isDiskFillAvailable(state)` — `provisionDisk`'s own gate |
 | `isComputeUpgradeAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer): `isComputeCoreConversionUnlocked(state)` AND (`canStackComputeBoost(state)` OR — while no boost is active — some `(boostType, tierIndex)` combo across all `COMPUTE_BOOST_TIER_FIELDS` is currently activatable via `canActivateComputeBoost`) — issue #326 |
 | `isComputeBoostTurnAvailable` | `(state, boostType, tierIndex) → bool` | Byte Foundry forced-priority composite (not a reducer): `canActivateComputeBoost(state, boostType, tierIndex) && !isDiskFillAvailable(state) && !isProvisionDiskInProgress(state)` — `activateComputeBoost`'s own actual gate |
@@ -2862,7 +2841,7 @@ purchases were manual or automatic.
 | `getRelevantDiskSizesForFoundry` | `state → number[]` | Helper: every size from `getDiskSizesToShow` whose own fixed corresponding tier is currently at that size's required level, plus always the highest shown size even when unmatched (issue #389), ascending. Foundry UI now lists every `getDiskSizesToShow` size as continuous sections; this helper remains for callers that want the narrower matching subset |
 | `provisionDisk` | `state → state` | (2026-11: only ARMS the buffer-funded fixed-speed build when `isProvisionDiskTurnAvailable`; `tickQueuedDiskBuild(elapsedSeconds)` does the work.) Earlier definition: Common Byte Foundry Provision Disk operation: requires `isProvisionDiskTurnAvailable`, then collects as many WHOLE `size`-bit passes as that size's own POOL buffer (`intro.poolBuffers`, not the shared Data Stream Buffer directly) currently affords, capped at whichever is smallest of the buffer's own affordability, however many of `getDiskProvisionPassesRequired`'s own total remain (clamped at 0, so a stale over-collected count self-heals rather than going negative), and `maxPasses` — banking a partial installment in `intro.diskProvisionPasses[size]` when fewer than the full remaining requirement lands — and, on a partial installment, auto-arming `intro.diskBuildQueued` (always with `intro.diskBuildQueuedByReplay` reset to `false` — correct for its two direct callers, a manual click or `queueDiskBuild`'s own arm; its two OTHER callers, `tickFoundryResetConvenience` and `tickQueuedDiskBuild`, each re-mark it `true` on their own result when appropriate — see there) so the remaining passes fire themselves as the buffer refills, with no further click needed. Once the final pass lands, clears that counter, resets both queue flags, and increments `disksBuiltTotal[size]` in this SAME call — no separate timed construction any more (an earlier version set a persisted `intro.diskBuild` timer instead, duplicating the wait already spent funding the passes — see `docs/DESIGN_HISTORY.md`; `provisionDisk` itself never populates that field any more). `maxPasses` is passed only by `tickFoundryResetConvenience` and `tickQueuedDiskBuild` (both via `getDiskReplayPassAllowance`), never by a manual click |
 | `tickProvisionDisk` | `elapsedSeconds → state → state` | Counts down the persisted `intro.diskBuild` timer and, on completion, increments that size's cumulative built count and clears the timer; unconditional in `tickGame`, but a no-op for any build `provisionDisk` starts today — only relevant to finish out a countdown a save from before this change may still be carrying |
-| `queueDiskBuild` | `state → state` | Arms `intro.diskBuildQueued` so the next Provision Disk pass fires itself once affordable — for committing to a build BEFORE its own first pass is even affordable; `provisionDisk` itself also auto-arms this same flag whenever a manual click leaves a build already begun mid-funded (see `provisionDisk` above). Called directly by `ByteFoundryPage`'s Provision Disk button (`handleProvisionDiskClick`, see `docs/MAINPAGE_REFERENCE.md`) whenever a click isn't currently turn-available — the pin-icon toggle this used to require was removed, then this action was folded into the primary button's own click handler instead of reintroducing a separate control (see `docs/DESIGN_HISTORY.md`). Same-reference no-op while already queued, mid-build, or the ladder is exhausted for active pools |
+| `queueDiskBuild` | `state → state` | Arms `intro.diskBuildQueued` directly — for committing to a build when `provisionDisk` can't start it yet (Disk Fill outranks it, pool offline/too small); the build then draws from the pool buffer as soon as it can. Called by `ByteFoundryPage`'s Provision Disk click whenever `provisionDisk` isn't turn-available. Same-reference no-op while a legacy `diskBuild` is in flight, a smaller size is being rebuilt, or the ladder is exhausted. |
 | `clearDiskBuildQueue` | `state → state` | Clears `intro.diskBuildQueued`. Same-reference no-op when already false. Implemented/tested but not wired to any UI control (same posture as `queueIntroCapacityUpgrade`) |
 | `tickQueuedDiskBuild` | `(elapsedSeconds = 0) → state → state` | Advances an ARMED Provision Disk build: on Provision Disk's turn (`isProvisionDiskTurnAvailable`) draws up to `elapsed × getStoragePoolBandwidth` bits (fixed base speed, re-read each tick) from the pool buffer minus `getPoolCacheReservationBits`, banking them as fractional passes in `diskProvisionPasses[size]`; completes one disk per call (`disksBuiltTotal[size]` +1, queue disarmed). A replay-owned arm is capped by `getDiskReplayPassAllowance`. Same-reference no-op when not armed, not its turn, or nothing could be drawn. |
 | `getPoolBufferCapacity` | `(state, poolIndex) → number` | Byte Foundry Storage: a pool's own local buffer ceiling — equals `getStoragePoolCapacity(state, poolIndex)` exactly (see the "Pool buffers" entry below for why the fraction is 1, not smaller) |

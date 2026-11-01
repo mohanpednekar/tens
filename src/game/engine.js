@@ -4069,14 +4069,11 @@ export const provisionDisk = state => {
   return { ...state, intro: { ...state.intro, diskBuildQueued: true, diskBuildQueuedByReplay: false } }
 }
 
-// Commit to the NEXT Provision Disk build before its own pool buffer can afford even its first
-// pass — the same "arm it once, it fires itself" aid as Capacity's own queueIntroCapacityUpgrade,
-// and implemented/tested but likewise not exposed as its own UI control (see docs/DESIGN_HISTORY.md
-// for why); `provisionDisk` itself now auto-arms this same flag for a build already begun (see
-// there), so this standalone action only matters for the narrower "queue up before the first pass
-// is even affordable" case. Especially useful there since a size's array never advances the disk
-// ladder until DISK_ARRAY_LADDER_CAP (9) builds have completed at that size — up to 9 separate
-// affordability instants to catch by hand otherwise, one per disk.
+// Arms the NEXT Provision Disk build directly — for when provisionDisk can't start it yet (Disk Fill outranks it, the
+// offer's pool is rebuilding/offline). ByteFoundryPage's Provision Disk click calls it whenever provisionDisk isn't
+// turn-available; the armed build then draws from the pool buffer at the fixed base Bandwidth as soon as it can
+// (tickQueuedDiskBuild). Same-reference no-op once armed, during a legacy diskBuild, a lower-size rebuild, or an
+// exhausted ladder.
 export const queueDiskBuild = state => {
   if (state.intro?.diskBuildQueued) return state
   if (isLowerDiskSizePending(state)) return state

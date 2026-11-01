@@ -12077,7 +12077,7 @@ describe('Provision Disk (buffer-funded, fixed speed)', () => {
     expect(tickQueuedDiskBuild(100)(queued)).toBe(queued)
   })
 
-  it('isProvisionDiskInProgress is true only for an armed or part-way build (so Compute is not starved)', () => {
+  it('isProvisionDiskInProgress is true only while a build is armed (a startable or disarmed part-way build does not starve Compute)', () => {
     const state = provBase()
     expect(isProvisionDiskInProgress(state)).toBe(false)
     expect(isProvisionDiskInProgress(provisionDisk(state))).toBe(true)

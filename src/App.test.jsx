@@ -3802,7 +3802,7 @@ describe('Byte Foundry Storage', () => {
     expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.diskBuildQueued).toBe(true)
   })
 
-  test('Provision Disk arms its timed build on click — the consolidated Upgrade Data Stream is the LOWER-priority action', () => {
+  test('Provision Disk arms its buffer-funded build on click — the consolidated Upgrade Data Stream is the LOWER-priority action', () => {
     seedIntroState({ bits: 0, capacity: currentBankCost, byteCreated: true })
     render(<App />)
 

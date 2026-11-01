@@ -93,7 +93,7 @@ const pullPulse = keyframes`
 // early," or stranded past its tier's current level).
 // The ONE disk currently being provisioned or rebuilt ($activeKind 'provision' | 'rebuild') is drawn distinctly:
 // it fills RADIALLY (a conic sweep from 12 o'clock to $progress, 0..1), in its own colour (violet =
-// provisioning, amber = rebuilding) with a pulsing glow ring; a paused build (Disk Fill outranks it) keeps
+// provisioning, amber = rebuilding) with a pulsing glow ring; a paused build (disarmed, outranked by Disk Fill / a rebuilding pool, or waiting on an empty buffer) keeps
 // its sweep and glow but stops pulsing. Both operations run at the pool's base Bandwidth (see
 // tickQueuedDiskBuild / tickAutoProvisionLowerDiskSizes) and never lose progress.
 const activeDiskColor = props => (props.$activeKind === 'rebuild' ? props.theme.color.warn : props.theme.color.violet)
