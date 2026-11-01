@@ -21,6 +21,18 @@ const safeJsonParse = jsonString =>
 
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
 // ever wrote a single save keep working without a forced rewrite of every consumer.
+// Dev build (`yarn build:dev`): saves are edited live and never need backward compatibility, so any
+// plain-object payload is accepted as-is (mergeState fills in whatever is missing) instead of going
+// through save-migration, and an unreadable one is dropped silently — no IncompatibleSaveNotice.
+export const IS_DEV_BUILD = import.meta.env.VITE_TENS_DEV_BUILD === '1'
+
+export const adaptSaveForLoad = (raw, devBuild = IS_DEV_BUILD) => {
+  if (!devBuild) return adaptSaveForCurrentSchema(raw)
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, reason: 'invalid_payload' }
+  const { saveSchemaVersion: _version, ...payload } = raw
+  return { ok: true, payload }
+}
+
 const STORAGE_KEY = 'tens_game_state'
 const LAST_SAVE_TIMESTAMP_KEY = 'tens_last_save_timestamp'
 const SAVES_META_KEY = 'tens_saves_meta'
@@ -403,10 +415,10 @@ export const discardIncompatibleActiveSaveIfNeeded = () => {
   const slotId = getActiveSlotId()
   const parsed = readActiveSavePayload()
   if (!parsed) return null
-  const result = adaptSaveForCurrentSchema(parsed)
+  const result = adaptSaveForLoad(parsed)
   if (result.ok) return null
   removeSlotStorage(slotId)
-  return result.reason
+  return IS_DEV_BUILD ? null : result.reason
 }
 
 const mergeTierMap = (freshMap, savedMap) => ({ ...freshMap, ...(savedMap ?? {}) })
@@ -631,7 +643,7 @@ export const loadGameState = storage => {
   try {
     const parsed = readActiveSavePayload(storage)
     if (!parsed) return null
-    const result = adaptSaveForCurrentSchema(parsed)
+    const result = adaptSaveForLoad(parsed)
     if (!result.ok) return null
     return mergeState(result.payload)
   } catch {
@@ -768,7 +780,7 @@ export const importSaveJson = jsonText => {
     return { ok: false, reason: 'invalid_json' }
   }
   if (!isPlainObject(parsed)) return { ok: false, reason: 'invalid_json' }
-  const adapted = adaptSaveForCurrentSchema(parsed)
+  const adapted = adaptSaveForLoad(parsed)
   if (!adapted.ok) return { ok: false, reason: 'incompatible_save' }
   const state = mergeState(adapted.payload)
   saveGameState(state)

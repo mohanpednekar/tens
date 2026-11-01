@@ -67,7 +67,7 @@ export function createViteConfig({
   // is prefixed `dev:` (game/storagePrefix.js) so its saves are fully separate from the main game's.
   return {
     base: capacitor ? './' : devBuild ? '/tens/dev/' : '/tens/',
-    ...(devBuild ? { define: { 'import.meta.env.DEV': 'true', 'import.meta.env.VITE_TENS_STORAGE_PREFIX': '"dev:"' } } : {}),
+    ...(devBuild ? { define: { 'import.meta.env.DEV': 'true', 'import.meta.env.VITE_TENS_STORAGE_PREFIX': '"dev:"', 'import.meta.env.VITE_TENS_DEV_BUILD': '"1"' } } : {}),
     plugins: [
       react(),
       tensFeaturesPlugin(features, srcPath),
