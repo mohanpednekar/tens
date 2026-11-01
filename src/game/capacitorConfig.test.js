@@ -94,7 +94,7 @@ describe('Dev build config', () => {
   it('serves from /tens/dev/, forces DEV on, and skips the service worker', () => {
     const dev = createViteConfig({ capacitor: false, devBuild: true })
     expect(dev.base).toBe('/tens/dev/')
-    expect(dev.define).toEqual({ 'import.meta.env.DEV': 'true' })
+    expect(dev.define).toEqual({ 'import.meta.env.DEV': 'true', 'import.meta.env.VITE_TENS_STORAGE_PREFIX': '"dev:"' })
     expect(pluginNames(dev)).not.toContain('vite-plugin-pwa')
   })
 

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Dev build published beside production**: `yarn build:dev` produces a build with Dev Mode enabled (presets, Variables tree, state-JSON editor), and the Pages deploy now serves it at `/tens/dev/` while production stays at `/tens/`.
+- **Dev build published beside production**: `yarn build:dev` produces a build with Dev Mode enabled (presets, Variables tree, state-JSON editor), and the Pages deploy now serves it at `/tens/dev/` while production stays at `/tens/`. The dev build keeps its own separate saves (every storage key is `dev:`-prefixed), invisible to the main game.
 - Settings → Import / export save: copy, download, paste or choose a save file to replace the active slot — hand-built test saves can now be loaded directly on a phone/PWA, no second computer or dev build needed.
 
 ### Fixed

@@ -63,10 +63,11 @@ export function createViteConfig({
   const features = resolveFeatureFlags({ capacitor, env })
   // Dev build (`yarn build:dev`): a production-optimized bundle with `import.meta.env.DEV` forced
   // true, so Dev Mode ships in it. Served from `/tens/dev/` beside the production site; no service
-  // worker, so it can never cache-shadow or be shadowed by the production PWA.
+  // worker, so it can never cache-shadow or be shadowed by the production PWA. Every localStorage key
+  // is prefixed `dev:` (game/storagePrefix.js) so its saves are fully separate from the main game's.
   return {
     base: capacitor ? './' : devBuild ? '/tens/dev/' : '/tens/',
-    ...(devBuild ? { define: { 'import.meta.env.DEV': 'true' } } : {}),
+    ...(devBuild ? { define: { 'import.meta.env.DEV': 'true', 'import.meta.env.VITE_TENS_STORAGE_PREFIX': '"dev:"' } } : {}),
     plugins: [
       react(),
       tensFeaturesPlugin(features, srcPath),
