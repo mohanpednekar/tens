@@ -3254,32 +3254,19 @@ export const isDiskFillAvailable = state =>
     .map(Number)
     .some(size => isDiskPullEligible(state, size))
 
-// "Provision Disk" — true whenever no array is already mid-build (intro.diskBuild — only one build
-// slot exists at a time, since only one size is ever buildable) and the current ladder size's build
-// cost is at least PARTIALLY affordable OUT OF THAT SIZE'S OWN POOL BUFFER: one pass's worth (the
-// disk's own face-value size), not the full DISK_BUILD_COST_MULTIPLIER-times cost in one lump sum
-// — see getDiskSize/getDiskCost/getDiskProvisionPassesCollected, defined further down this file,
-// and getPoolBufferBits — the shared Data Stream Buffer no longer funds this directly; it only
-// tops up the pool buffer, bandwidth-limited, via tickPoolBufferFill) — matches provisionDisk's own
-// actual gate, which (like every other Byte Foundry reducer) has never itself required
-// isStorageUnlocked; that threshold only governs the button's own UI reveal. Also false once
-// isDiskLadderExhaustedForActivePools — there is no active-pool size left to build, so there is no
-// cost to become newly affordable towards; that's a distinct, permanent state from "not affordable
-// yet" (see ByteFoundryPage, which renders the two differently). Also true — regardless of buffer
-// balance — whenever the current size already has enough banked passes to finish outright (a stale
-// over-required diskProvisionPasses entry, e.g. left over from a since-lowered pass requirement):
-// without this, provisionDisk's own self-heal clamp (Math.max(0, passesRequired - alreadyCollected))
-// would be unreachable behind an empty buffer, since this gate runs before that clamp ever executes.
-// The pool's own read cache (its smallest denomination, once currently unlocked by Capacity — see
-// isDiskReadCacheEligible/getVisibleStoragePoolCount) always gets first claim on that pool's
-// shared buffer over Provision Disk funding: however many more bits it needs to reach full are
-// reserved and never counted as available to fund a provisioning pass, so the cache keeps actively
-// filling even while a build is queued/in flight, rather than being starved every tick by
-// provisioning claiming each tick's fresh production ahead of it (see
-// docs/DESIGN_HISTORY.md). Zero once the cache is already full (or the pool isn't currently
-// unlocked / has no cache-eligible size at all) — provisioning then draws on the buffer exactly as
-// before. Deliberately keyed on the Capacity-only unlock count, not the disk-build-only
-// getUnlockedStoragePoolCount, so the cache reservation always matches actual cache eligibility.
+// "Provision Disk" — true whenever no array is already mid-build (intro.diskBuild — only one build slot exists at a
+// time), no smaller size is still being rebuilt for free, the disk ladder isn't exhausted for the active pools, that
+// size's pool isn't rebuilding, and the pool is LIVE (getStoragePoolBandwidth > 0) with a buffer whose CAPACITY can hold
+// one pass of this size (getPoolBufferCapacity >= size — the old implicit unlock, so the early game before Storage is
+// unchanged). It does NOT require bits in hand: provisioning is buffer-funded at a fixed speed (see
+// provisionDisk/tickQueuedDiskBuild), so an armed build simply waits for the buffer. Also true — regardless of any of
+// that — when the current size already has enough banked passes to finish outright (a stale over-required
+// diskProvisionPasses entry): the next tick then completes it without spending. The pool's own read cache (its smallest
+// denomination, once unlocked by Capacity — see isDiskReadCacheEligible/getVisibleStoragePoolCount) always gets first
+// claim on the pool buffer: however many more bits it needs to reach full are reserved and never drawn by
+// provisioning (tickQueuedDiskBuild), so the cache keeps filling while a build runs. Zero once the cache is full (or
+// the pool has no cache-eligible size). Keyed on the Capacity-only unlock count, so the reservation always matches
+// actual cache eligibility.
 export const getPoolCacheReservationBits = (state, poolIndex) => {
   if (!poolIndex || poolIndex > getVisibleStoragePoolCount(state)) return 0
   const cacheSize = getDataLakeUnitBits(poolIndex)
@@ -3287,11 +3274,10 @@ export const getPoolCacheReservationBits = (state, poolIndex) => {
   return Math.max(0, cacheSize - cached)
 }
 
-// Provision Disk outranks Compute only while a build is actually running or paused part-way (armed, or banked
-// passes) — a merely startable build must not starve Compute until the whole disk ladder is done.
+// Provision Disk outranks Compute only while a build is ARMED (running, or waiting for buffer/its turn) — a merely
+// startable build, or a part-way one that was disarmed (e.g. stopped at a replay cap), must not starve Compute.
 export const isProvisionDiskInProgress = state =>
-  isProvisionDiskAvailable(state) &&
-  (Boolean(state.intro?.diskBuildQueued) || getDiskProvisionPassesCollected(state, getDiskSize(state)) > 0)
+  isProvisionDiskAvailable(state) && Boolean(state.intro?.diskBuildQueued)
 
 export const isProvisionDiskAvailable = state => {
   if (state.intro.diskBuild) return false
@@ -4076,7 +4062,7 @@ export const isProvisionDiskTurnAvailable = state =>
 // diskProvisionPasses[size] (fractional passes) and is never lost — a pause (Disk Fill outranks it, empty buffer,
 // offline pool) just holds it. Arming is idempotent. No-op unless it is
 // Provision Disk's turn (isProvisionDiskTurnAvailable). Only ever one build at a time — only one size is ever
-// offered on the ladder. See docs/DESIGN_HISTORY.md ("Provision Disk became a timed 1x build").
+// offered on the ladder. See docs/DESIGN_HISTORY.md ("Provision Disk: buffer-funded at a fixed speed, never fill-multiplied").
 export const provisionDisk = state => {
   if (!isProvisionDiskTurnAvailable(state)) return state
   if (state.intro.diskBuildQueued) return state

@@ -13,6 +13,7 @@ import {
   getDiskWriteCacheMerge,
   getDiskWriteCacheSegmentFill,
   getPoolBufferBits,
+  getPoolCacheReservationBits,
   getPoolIndexForDiskSize,
   isDiskPullEligible,
   isDiskReadCacheEligible,
@@ -102,7 +103,14 @@ const diskGlowPulse = keyframes`
   50% { box-shadow: 0 0 0 1px var(--disk-glow), 0 0 14px 4px var(--disk-glow); }
 `
 
-const DiskSquare = styled.div`
+const DiskSquare = styled.div.attrs(props => ({
+  // Radial fill as an inline style: a styled-components prop per degree would mint a class per distinct progress.
+  style: props.$activeKind
+    ? {
+        background: `conic-gradient(from 0deg, color-mix(in srgb, ${activeDiskColor(props)} 70%, transparent) ${Math.round((props.$progress ?? 0) * 360)}deg, ${props.theme.color.surfaceSunken} 0deg)`,
+      }
+    : undefined,
+}))`
   flex: 1 1 1.2rem;
   min-width: 0;
   aspect-ratio: 1;
@@ -121,15 +129,13 @@ const DiskSquare = styled.div`
           ? props.theme.color.textMuted
           : props.theme.color.surfaceSunken};
   background: ${props =>
-    props.$activeKind
-      ? `conic-gradient(from 0deg, color-mix(in srgb, ${activeDiskColor(props)} 70%, transparent) ${Math.round((props.$progress ?? 0) * 360)}deg, ${props.theme.color.surfaceSunken} 0deg)`
-      : props.$full
-        ? (props.$pullEligible
-          ? props.theme.color.good
-          : props.theme.color.surfaceRaised)
-        : props.$empty
-          ? props.theme.color.surfaceSunken
-          : 'transparent'};
+    props.$full
+      ? (props.$pullEligible
+        ? props.theme.color.good
+        : props.theme.color.surfaceRaised)
+      : props.$empty
+        ? props.theme.color.surfaceSunken
+        : 'transparent'};
   ${props => (props.$activeKind
     ? `--disk-glow: ${activeDiskColor(props)}; box-shadow: 0 0 0 1px var(--disk-glow), 0 0 10px 2px var(--disk-glow);`
     : '')}
@@ -281,7 +287,12 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
     : rebuildActive && intro.lowerRebuild?.size === size
       ? Math.min(1, intro.lowerRebuild.progress ?? 0)
       : 0
-  const activePaused = provisionActive && !isProvisionDiskTurnAvailable(state)
+  // Paused = not currently drawing: disarmed, outranked (Disk Fill / rebuilding pool) or an empty buffer.
+  const activePaused = provisionActive && (
+    !intro.diskBuildQueued ||
+    !isProvisionDiskTurnAvailable(state) ||
+    Math.max(0, (getPoolBufferBits(state, getPoolIndexForDiskSize(size)) ?? 0) - getPoolCacheReservationBits(state, getPoolIndexForDiskSize(size))) <= 0
+  )
   const activePercent = Math.round(activeProgress * 100)
   const writeMerge = getDiskWriteCacheMerge(state, size)
   const writeCollectPaused = writeMerge ? isDiskWriteCacheCollectPaused(state, size) : false
@@ -427,7 +438,7 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
               }
               title={
                 isActive
-                  ? `${activeKind === 'provision' ? 'Provisioning' : 'Rebuilding'} this disk — ${activePercent}%${activePaused ? ' (paused — Disk Fill goes first)' : ''}`
+                  ? `${activeKind === 'provision' ? 'Provisioning' : 'Rebuilding'} this disk — ${activePercent}%${activePaused ? ' (paused)' : ''}`
                   : rebuilding
                   ? 'This array is offline while it rebuilds'
                   : isFull

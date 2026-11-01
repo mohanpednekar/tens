@@ -763,7 +763,7 @@ Speed is derived (`getDataStreamSpeedBytesPerSecond`, exponent `getDataStreamSpe
 sizes need a Foundry reset (`unlockNextDiskSizeByFoundryReset`). Era ascension keeps the generator and
 gate latch but resets Capacity (`buildEraIntroReset`). Recurring actions follow a **forced priority
 order** Disk Fill > Provision Disk > Compute Boost (a lower one is disabled, in UI and engine, while a
-higher one is available). An always-on auto-convert (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`)
+higher one is available; Provision Disk outranks Compute only while ARMED — `isProvisionDiskInProgress`). An always-on auto-convert (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`)
 turns Data Stream bits into free `tier01` units. Generator, Disks, Data Lakes, and every compute-ladder
 entity (Core → … → Megacomputer) are PERMANENT across real Prestige; only Data Stream balance and
 tier01's purchase-block progress reset per cycle. Nothing here ever fully freezes.
@@ -951,7 +951,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2119 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2113 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

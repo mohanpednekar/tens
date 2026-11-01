@@ -130,6 +130,19 @@ describe('navAttention', () => {
     expect(hasFoundryAttention(state)).toBe(false)
   })
 
+  it('lights Foundry for a startable Provision Disk, but not once it is armed (nothing left to click)', () => {
+    const FIRST = 8000
+    const state = withIntro({
+      bits: 0,
+      capacity: 8192,
+      byteCreated: true,
+      poolBuffers: { 1: 0 },
+      diskCache: { [FIRST]: FIRST },
+    })
+    expect(hasFoundryAttention(state)).toBe(true)
+    expect(hasFoundryAttention({ ...state, intro: { ...state.intro, diskBuildQueued: true } })).toBe(false)
+  })
+
   it('lights Factory when a full purchase level is affordable', () => {
     const tier01 = TIER_DEFINITIONS[0]
     const unitCost = 1000 // tier01 baseCost

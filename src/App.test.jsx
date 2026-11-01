@@ -3705,6 +3705,31 @@ describe('Byte Foundry Storage', () => {
     expect(button.querySelector('[title^="Projected speed"]')).not.toBeNull()
   })
 
+  test('the disk being provisioned is drawn as a radial progressbar; a rebuild is labelled distinctly', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: 4 }, disks: { [currentBankSize]: 2 },
+      diskBuildQueued: true, diskProvisionPasses: { [currentBankSize]: 2.4 },
+    })
+    const { unmount } = render(<App />)
+    const active = screen.getByRole('progressbar', { name: /provisioning 1 kb disk/i })
+    expect(active).toHaveAttribute('aria-valuenow', '48') // 2.4 of 5 passes
+    expect(active.getAttribute('style')).toMatch(/conic-gradient/)
+    unmount()
+  })
+
+  test('the disk being rebuilt after a Foundry reset is labelled and shows its progress', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 2,
+      disksBuiltTotal: { [currentBankSize]: 3 }, disks: { [currentBankSize]: 3 },
+      lowerRebuild: { size: currentBankSize, progress: 0.5 },
+    })
+    render(<App />)
+    const active = screen.getByRole('progressbar', { name: /rebuilding 1 kb disk/i })
+    expect(active).toHaveAttribute('aria-valuenow', '50')
+  })
+
   test('a multi-size rebuild names the size being rebuilt and the largest size it will reach', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,

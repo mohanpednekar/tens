@@ -160,21 +160,19 @@ Capacity threshold." Folding the two into one shared primitive was tried once al
 `engine.js`) are a real storage medium, not tier01-only: a size's ladder (1 KB → 10 KB → 100 KB, …,
 `DISK_LADDER_SIZE_MULTIPLIER`) advances every `DISK_ARRAY_LADDER_CAP` (9 — the array's always-full cache
 substitutes for a 10th disk) disks built at that size, up to the highest size any unlocked pool can fund.
-`provisionDisk` collects the cost in `getDiskProvisionPassesCollected`/`getDiskProvisionPassesRequired`
-passes of the disk's own face-value size — N for the array's Nth disk (1…9; `DISK_BUILD_COST_MULTIPLIER`'s
-10 is no longer reached) — so a pool's buffer only ever needs to hold one pass at a time, and completes the
-instant the final pass lands, with no separate build-time delay (see `docs/DESIGN_HISTORY.md`).
-`diskBuild`/`tickProvisionDisk` and every "IO blocked mid-build" guard remain solely to finish a countdown
-an older save may still carry — a new build never creates one. A manual click that doesn't finish the
-build in one call auto-arms the **queue** (`diskBuildQueued`/`queueDiskBuild`/`tickQueuedDiskBuild`,
-unconditionally wired into `tickGame`) so remaining passes fire as the buffer refills; only starting a
-NEW disk's build needs a click. `queueDiskBuild` also arms the queue directly when the first pass isn't
-affordable yet (or a higher-priority action outranks it) — the button's `disabled` prop requires only
-that no build is in flight and the ladder isn't exhausted (see `docs/DESIGN_HISTORY.md` for the gap this
-closed). The smallest size per pool has an always-full **read cache** (8 blocks) with first claim on that
-pool's buffer over Provision Disk funding (`getPoolCacheReservationBits`, used by both
-`isProvisionDiskAvailable` and `provisionDisk`), so it keeps filling while a build is queued (see
-`docs/DESIGN_HISTORY.md`); every larger size fills via **write cache** — both at their own
+Provision Disk is **buffer-funded at a fixed speed**: its cost is `getDiskProvisionPassesRequired` passes of the disk's
+own face-value size (N for the array's Nth disk, 1…9), banked as fractional passes in
+`diskProvisionPasses[size]`. `provisionDisk` only ARMS the build (`diskBuildQueued`; `queueDiskBuild` arms it directly
+even when it can't start yet); each tick `tickQueuedDiskBuild(elapsedSeconds)` (wired into `tickGame`) draws up to
+`elapsed × getStoragePoolBandwidth` bits from the pool buffer — the pool's BASE Bandwidth, never the fill multiplier,
+re-read every tick so a Speed/Capacity upgrade applies at once. An empty buffer pauses it (nothing lost); a full one
+never makes it faster. The disk completes (empty container) when the passes reach the requirement, with no separate
+build-time delay, and disarms the queue — only starting a NEW disk's build needs a click. Provision Disk is offered once
+the pool is live and its buffer capacity can hold a pass, and outranks Compute only while armed
+(`isProvisionDiskInProgress`). `diskBuild`/`tickProvisionDisk` and every "IO blocked mid-build" guard remain solely to
+finish a countdown an older save may still carry. The smallest size per pool has an always-full **read cache** (8
+blocks) with first claim on that pool's buffer (`getPoolCacheReservationBits`, honoured by `tickQueuedDiskBuild`), so
+it keeps filling while a build runs; every larger size fills via **write cache** — both at their own
 bandwidth-multiplier rates. Byte Foundry funds Byte Factory **pull-based**, with no proactive knowledge
 of tier state: every tick `tickDiskPull` pulls one FULL, clean-slate (zero purchase-level progress) disk
 into its fixed (tier, level) correspondence (`getDataLakeTierIndex` grouping) whenever that tier sits at

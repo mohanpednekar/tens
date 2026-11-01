@@ -12081,7 +12081,8 @@ describe('Provision Disk (buffer-funded, fixed speed)', () => {
     const state = provBase()
     expect(isProvisionDiskInProgress(state)).toBe(false)
     expect(isProvisionDiskInProgress(provisionDisk(state))).toBe(true)
-    expect(isProvisionDiskInProgress(withIntro(state, { diskProvisionPasses: { [PROV_FIRST]: 0.3 } }))).toBe(true)
+    // a part-way build that was disarmed (e.g. stopped at a replay cap) does not outrank Compute
+    expect(isProvisionDiskInProgress(withIntro(state, { diskProvisionPasses: { [PROV_FIRST]: 0.3 } }))).toBe(false)
   })
 
   it('a replay-owned arm stops exactly at the foundryResetCaps allowance', () => {
@@ -12093,6 +12094,29 @@ describe('Provision Disk (buffer-funded, fixed speed)', () => {
     const after = tickQueuedDiskBuild(provDiskSeconds(state) * 10)(armed)
     expect(getDiskProvisionPassesCollected(after, PROV_FIRST)).toBeCloseTo(1.5, 9)
     expect(after.intro.diskBuildQueued).toBe(false)
+  })
+
+  it('leaves the read cache its own claim: only the buffer beyond the cache reservation is drawn', () => {
+    const seconds = provDiskSeconds(provBase())
+    const reserved = withIntro(provBase(PROV_FIRST * 1.25), { diskCache: { [PROV_FIRST]: PROV_FIRST * 0.5 } }) // cache needs 0.5 size
+    const after = tickQueuedDiskBuild(seconds * 10)(provisionDisk(reserved))
+    // only 1.25 - 0.5 = 0.75 size of the buffer is spendable
+    expect(getDiskProvisionPassesCollected(after, PROV_FIRST)).toBeCloseTo(0.75, 9)
+    expect(after.intro.poolBuffers[1]).toBeCloseTo(PROV_FIRST * 0.5, 6)
+  })
+
+  it('a manual arm is not capped by an old foundryResetCaps entry covering the same size/count', () => {
+    const caps = { disksBuiltTotal: { [PROV_FIRST]: 2 }, diskProvisionPasses: { [PROV_FIRST]: 1 } }
+    const state = withIntro(provBase(), { foundryResetCaps: caps, disksBuiltTotal: { [PROV_FIRST]: 2 }, disks: {} })
+    const armed = provisionDisk(state) // manual: diskBuildQueuedByReplay stays false
+    expect(armed.intro.diskBuildQueuedByReplay).toBe(false)
+    const after = tickQueuedDiskBuild(provDiskSeconds(state) * 10)(armed)
+    expect(after.intro.disksBuiltTotal[PROV_FIRST]).toBe(3) // ran the full 3 passes, past the caps' 1
+  })
+
+  it('is not offered while the pool buffer cannot hold even one pass', () => {
+    const state = withIntro(provBase(), { capacity: INTRO_STARTING_CAPACITY })
+    expect(isProvisionDiskAvailable(state)).toBe(false)
   })
 
   it('tickGame drives a first disk to completion end to end', () => {

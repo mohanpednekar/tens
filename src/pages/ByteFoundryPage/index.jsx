@@ -801,8 +801,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
   const canStartDiskBuild = !lowerDiskSizePending && isProvisionDiskTurnAvailable(state)
   const diskBuildInProgress = intro.diskBuild
-  // Provisioning is a timed build at the pool's BASE Bandwidth (no fill multiplier, no buffer): its cost is
-  // diskPassesRequired passes of the disk's face-value size, each taking size / Bandwidth seconds, and the
+  // Provisioning is buffer-funded at the pool's fixed BASE Bandwidth (no fill multiplier): its cost is
+  // diskPassesRequired passes of the disk's face-value size, drawn from the pool buffer each tick, and the
   // progress (fractional passes in diskProvisionPasses) is never lost — see provisionDisk/tickQueuedDiskBuild.
   // "Blocked by priority" = startable in principle but Disk Fill (higher priority) is pending.
   const diskBuildBlockedByPriority = !lowerDiskSizePending && !diskLadderExhausted && isProvisionDiskAvailable(state) && !canStartDiskBuild && !diskBuildInProgress
@@ -851,15 +851,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // The shared Provision Disk control (one ladder spanning every pool, not per-pool) — rendered
   // in the Data Stream card's own actions, directly below Upgrade Data Stream; hidden only while
   // the pool its current offer belongs to is rebuilding after a pool-local reset.
-  // Clicking no longer requires this disk's very FIRST pass to already be banked. Once at least one
-  // pass has ever been collected, provisionDisk itself already auto-arms intro.diskBuildQueued so
-  // every later pass fires on its own as the buffer refills — but getting that auto-continuation
-  // started still required the button's own turn-availability (a full pass banked, nothing
-  // outranking it) before it would even accept the FIRST click. queueDiskBuild (implemented for
-  // exactly this "queue up before the first pass is even affordable" case — see its own doc
-  // comment in engine.js) was never wired to a control. Clicking now calls it whenever the build
-  // isn't already turn-available, so the very first pass gets the same "click once, then it just
-  // happens" treatment every later pass already has — see docs/DESIGN_HISTORY.md.
+  // Clicking arms the build (provisionDisk when it is Provision Disk's turn, otherwise queueDiskBuild so it starts the
+  // instant it can); an armed build then draws from the pool buffer at the pool's fixed speed on every tick.
   const handleProvisionDiskClick = () => {
     if (canStartDiskBuild) {
       actions.provisionDisk()
@@ -873,7 +866,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskPassesFraction = `${diskPassesCollected}/${diskPassesRequired}`
   const diskPassesText = diskPassesRequired > 1 || diskPassesCollected > 0 ? ` · ${diskPassesFraction}` : ''
   const diskOfferLabel = `Provision ${formatDiskSize(diskSize)} Disk`
-  // A queued build is the only state where provisioning is actually progressing (it fires itself as
+  // An armed build is the only state where provisioning is actually progressing (it draws as
   // the buffer allows), so it alone gets the progressive title, the pulse and the hourglass — idle
   // states keep the imperative "Provision …" so the two never read alike.
   const diskProvisioningActive = Boolean(diskBuildQueued) && !diskBuildInProgress && !diskLadderExhausted && !lowerDiskSizePending
@@ -895,7 +888,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               icon: '🏦',
               label: diskOfferLabel,
               status: `${COST_ICON} ${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
-              reason: diskBuildBlockedByPriority ? 'disk fill comes first' : 'pool not live yet',
+              reason: diskBuildBlockedByPriority ? 'disk fill comes first' : 'pool not ready (offline, rebuilding or too small)',
             }
   // Same stat layout as the running-upgrade tile. Provisioning (buffer-funded) and the post-Foundry-reset rebuild (free) both run at
   // the pool's fixed BASE Bandwidth (no fill multiplier), so ⚡ is that base speed; ⏳ is the time left
@@ -951,14 +944,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             : lowerDiskSizePending
               ? `Smaller sizes are re-provisioned for free first (${formatDiskSize(autoDiskSize)} now); ${formatDiskSize(diskSize)} unlocks for provisioning once they are done`
             : diskBuildQueued
-              ? `Queued — fires itself the instant ${diskBuildBlockedByPriority ? 'it is your turn' : 'enough is banked'} (${diskPassesCollected}/${diskPassesRequired} passes so far)`
+              ? `Armed — draws from the pool buffer at the pool's fixed speed${diskBuildBlockedByPriority ? ' once Disk Fill is done' : ''} (${diskPassesCollected}/${diskPassesRequired} passes so far)`
               : canStartDiskBuild
                 ? (diskRedeemTierName
                   ? `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
                   : `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`)
                 : diskBuildBlockedByPriority
-                  ? 'Redeem a full Disk first — click to queue this build so it fires itself the instant it is your turn'
-                  : `Not enough banked yet for the next pass (${diskPassesCollected}/${diskPassesRequired} collected) — click to queue this build so it fires itself as the buffer fills`
+                  ? 'Disk Fill comes first — click to arm this build so it starts the instant it is your turn'
+                  : `The pool isn't ready yet (offline, rebuilding or too small) — click to arm this build so it starts as soon as it is (${diskPassesCollected}/${diskPassesRequired} passes so far)`
       }
       type="button"
       variant={diskLadderExhausted || lowerDiskSizePending ? 'neutral' : diskBuildQueued ? 'smart' : canStartDiskBuild ? 'info' : 'neutral'}
