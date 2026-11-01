@@ -28556,6 +28556,17 @@
       "source_file": "src/components/BoostTimerBar/index.jsx",
       "source_location": "L72",
       "_callable": true
+    },
+    {
+      "label": "ManualSaveSection.jsx",
+      "file_type": "code",
+      "source_file": "src/pages/SettingsPage/ManualSaveSection.jsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_pages_settingspage_manualsavesection_jsx",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
+      "norm_label": "manualsavesection.jsx"
     }
   ],
   "links": [
