@@ -21,12 +21,14 @@ const safeJsonParse = jsonString =>
 
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
 // ever wrote a single save keep working without a forced rewrite of every consumer.
-// Dev build (`yarn build:dev`): saves are edited live and never need backward compatibility, so any
-// plain-object payload is accepted as-is (mergeState fills in whatever is missing) instead of going
+// Dev Mode (the toggle's isolated 'dev' slot, in any build) and the dev build (`yarn build:dev`):
+// saves are edited live and never need backward compatibility, so any plain-object payload is accepted as-is (mergeState fills in whatever is missing) instead of going
 // through save-migration, and an unreadable one is dropped silently — no IncompatibleSaveNotice.
 export const IS_DEV_BUILD = import.meta.env.VITE_TENS_DEV_BUILD === '1'
 
-export const adaptSaveForLoad = (raw, devBuild = IS_DEV_BUILD) => {
+export const isBackwardCompatExempt = () => IS_DEV_BUILD || isDevModeActive()
+
+export const adaptSaveForLoad = (raw, devBuild = isBackwardCompatExempt()) => {
   if (!devBuild) return adaptSaveForCurrentSchema(raw)
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, reason: 'invalid_payload' }
   const { saveSchemaVersion: _version, ...payload } = raw
@@ -418,7 +420,7 @@ export const discardIncompatibleActiveSaveIfNeeded = () => {
   const result = adaptSaveForLoad(parsed)
   if (result.ok) return null
   removeSlotStorage(slotId)
-  return IS_DEV_BUILD ? null : result.reason
+  return isBackwardCompatExempt() ? null : result.reason
 }
 
 const mergeTierMap = (freshMap, savedMap) => ({ ...freshMap, ...(savedMap ?? {}) })

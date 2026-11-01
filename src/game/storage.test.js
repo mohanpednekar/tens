@@ -1194,6 +1194,14 @@ describe('adaptSaveForLoad (dev build: no backward compatibility)', () => {
     expect(adaptSaveForLoad([1], true).ok).toBe(false)
   })
 
+  it('is also lenient whenever Dev Mode is active, in any build', () => {
+    const legacy = { resources: { Ones: 5 } }
+    expect(adaptSaveForLoad(legacy).ok).toBe(false)
+    setDevModeActive(true)
+    expect(adaptSaveForLoad(legacy).ok).toBe(true)
+    setDevModeActive(false)
+  })
+
   it('production path still delegates to save-migration (rejects an unmigratable legacy payload)', () => {
     const legacy = { resources: { Ones: 5 } }
     expect(adaptSaveForLoad(legacy, false).ok).toBe(false)
