@@ -44,6 +44,10 @@ const tensFeaturesPlugin = (flags, srcPath) => ({
   load: id => (id === `\0${FEATURES_MODULE_ID}` ? buildFeaturesModule(flags, srcPath) : null),
 })
 
+/** Paths under the dev build; the production service worker must never answer navigations for them
+ * (matched against path + query, so `/tens/dev` without the trailing slash counts too). */
+export const DEV_BUILD_PATH_PATTERN = /^\/tens\/dev(\/|$|\?)/
+
 /**
  * Build the Vite config object. Kept separate from `vite.config.js` so tests can
  * pin the CAPACITOR=1 behavior (relative base, no VitePWA) without loading Vite's
@@ -79,7 +83,7 @@ export function createViteConfig({
               includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'robots.txt'],
               // The policy pages are standalone documents, never the SPA shell.
               workbox: {
-                navigateFallbackDenylist: [/\/privacy\.html$/, /\/terms\.html$/, /^\/tens\/dev\//],
+                navigateFallbackDenylist: [/\/privacy\.html$/, /\/terms\.html$/, DEV_BUILD_PATH_PATTERN],
               },
               manifest: {
                 name: 'Tens',

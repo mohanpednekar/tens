@@ -19,8 +19,6 @@ const safeJsonParse = jsonString =>
     return value
   })
 
-// Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
-// ever wrote a single save keep working without a forced rewrite of every consumer.
 // Dev Mode (the toggle's isolated 'dev' slot, in any build) and the dev build (`yarn build:dev`):
 // saves are edited live and never need backward compatibility, so any plain-object payload is accepted as-is (mergeState fills in whatever is missing) instead of going
 // through save-migration, and an unreadable one is dropped silently — no IncompatibleSaveNotice.
@@ -35,6 +33,8 @@ export const adaptSaveForLoad = (raw, devBuild = isBackwardCompatExempt()) => {
   return { ok: true, payload }
 }
 
+// Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
+// ever wrote a single save keep working without a forced rewrite of every consumer.
 const STORAGE_KEY = 'tens_game_state'
 const LAST_SAVE_TIMESTAMP_KEY = 'tens_last_save_timestamp'
 const SAVES_META_KEY = 'tens_saves_meta'
@@ -771,8 +771,10 @@ export const serializeSaveForExport = state => JSON.stringify({ saveSchemaVersio
 
 /**
  * Replaces the active slot's save with an exported payload (a cloud-save download). The payload goes
- * through the same adaptSaveForCurrentSchema + mergeState pipeline as an ordinary load, so an older
- * or partial save is upgraded or refused exactly like one read from localStorage.
+ * through the same adaptSaveForLoad (save-migration, unless Dev Mode / the dev build) + mergeState
+ * pipeline as an ordinary load, so an older or partial save is upgraded or refused exactly like one
+ * read from localStorage. Outside the exempt modes it must also look like a save at all (numeric
+ * `resources.base`), so pasting the wrong JSON is refused instead of silently overwriting the slot.
  */
 export const importSaveJson = jsonText => {
   let parsed
@@ -784,6 +786,7 @@ export const importSaveJson = jsonText => {
   if (!isPlainObject(parsed)) return { ok: false, reason: 'invalid_json' }
   const adapted = adaptSaveForLoad(parsed)
   if (!adapted.ok) return { ok: false, reason: 'incompatible_save' }
+  if (!isBackwardCompatExempt() && !Number.isFinite(adapted.payload.resources?.base)) return { ok: false, reason: 'invalid_state' }
   const state = mergeState(adapted.payload)
   saveGameState(state)
   return { ok: true, state }

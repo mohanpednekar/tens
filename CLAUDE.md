@@ -954,7 +954,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2113 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2131 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -970,9 +970,9 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   both themes, see `docs/THEMING_REFERENCE.md`. `engine.computeFlops.test.js` covers the PP Compute
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
-  (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). The rest of the 30 test files (`yarn test` total) sit beside their source — `save-migration/`, `navAttention`,
+  (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). The rest of the 31 test files (`yarn test` total) sit beside their source — `save-migration/`, `navAttention`,
   `components/*` (Button, BoostBadge, OfflineProgressNotice), `services/*` (config, monetization, rewardedAdCache,
-  cloudSave/deleteAccount), `game/useIncrementalGame.offlineReward.test.jsx`, `pages/SettingsPage/sections.test.jsx`,
+  cloudSave/deleteAccount), `game/useIncrementalGame.offlineReward.test.jsx`, `game/storagePrefix.test.js`, `pages/SettingsPage/sections.test.jsx`,
   and `scripts/*.test.js` (maintainer checklist, iOS plist, adversarial marker, low-risk bar, bump-version,
   graphify freshness, failure classifier, workflow-shell lint, stalled-PR sweep, autonomous-maintenance workflow) —
   all picked up by Vitest's default glob since `vite.config.js`'s `test` block sets no custom `include`.

@@ -1184,6 +1184,16 @@ describe('cloud save export / import', () => {
   })
 })
 
+describe('importSaveJson (production shape check)', () => {
+  beforeEach(() => localStorage.clear())
+  it('refuses JSON that is not a save instead of overwriting the slot', () => {
+    for (const text of ['{}', '{"saveSchemaVersion":2,"resources":{"base":"abc"}}', '{"saveSchemaVersion":2,"resources":"x"}']) {
+      expect(importSaveJson(text)).toEqual({ ok: false, reason: 'invalid_state' })
+    }
+    expect(loadGameState()).toBeNull()
+  })
+})
+
 describe('adaptSaveForLoad (dev build: no backward compatibility)', () => {
   it('accepts any plain-object save as-is, dropping only the schema envelope', () => {
     expect(adaptSaveForLoad({ saveSchemaVersion: 0, legacy: true, x: 1 }, true)).toEqual({ ok: true, payload: { legacy: true, x: 1 } })

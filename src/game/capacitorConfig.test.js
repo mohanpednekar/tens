@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import capacitorConfig, { ADS_PLUGIN, IAP_PLUGIN, buildIncludePlugins } from '../../capacitor.config.js'
-import { buildFeaturesModule, createViteConfig, resolveFeatureFlags } from '../../viteConfigFactory.js'
+import { DEV_BUILD_PATH_PATTERN, buildFeaturesModule, createViteConfig, resolveFeatureFlags } from '../../viteConfigFactory.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
@@ -103,5 +103,14 @@ describe('Dev build config', () => {
     expect(prod.base).toBe('/tens/')
     expect(prod.define).toBeUndefined()
     expect(pluginNames(prod)).toContain('vite-plugin-pwa')
+  })
+})
+
+describe('production service worker vs the dev build', () => {
+  it.each(['/tens/dev', '/tens/dev/', '/tens/dev/index.html', '/tens/dev?x=1'])('denylists %s', path => {
+    expect(DEV_BUILD_PATH_PATTERN.test(path)).toBe(true)
+  })
+  it.each(['/tens/', '/tens/developer', '/tens/index.html'])('still serves %s from the production shell', path => {
+    expect(DEV_BUILD_PATH_PATTERN.test(path)).toBe(false)
   })
 })
