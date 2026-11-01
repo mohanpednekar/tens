@@ -42,6 +42,7 @@ Use Yarn for all dependency work, not npm. `package-lock.json` is gitignored so 
 yarn install --frozen-lockfile   # CI does this; use plain `yarn install` locally after lockfile changes
 yarn dev          # dev server → http://127.0.0.1:<port>/tens/
 yarn build        # production build → dist/ (GitHub Pages base `/tens/` + PWA service worker)
+yarn build:dev    # dev build (Dev Mode enabled, base /tens/dev/, no SW) → dist/dev/; deploy.yml publishes it beside prod
 yarn build:capacitor # CAPACITOR=1 vite build → dist/ with relative base, no PWA plugin (for native wrap)
 yarn cap:sync     # cap sync (copies dist/ into the android/ + ios/ native projects — #70)
 yarn cap:android  # build:capacitor + cap sync android + open Android Studio (`yarn cap:ios` → Xcode)
@@ -690,7 +691,8 @@ Strict three-layer separation:
 ## Dev Mode
 
 A dev-build-only testing sandbox (`DevModePage`, reached via AppNav → More; entry and route render only
-when `import.meta.env.DEV`, so production bundles contain neither). Toggling it first saves the loaded
+when `import.meta.env.DEV`, so production bundles contain neither; `yarn build:dev` forces it on and is
+deployed at `/tens/dev/`). Toggling it first saves the loaded
 state to the active slot, then redirects every save read/write to an isolated `'dev'` slot in
 `game/storage.js` (`getActiveSlotId`/`isDevModeActive`), so dev edits never touch real progress. **Always: real-slot isolation is enforced at the storage layer** —
 `setActiveSaveSlot`/`clearSaveSlot`/`clearAllSaveProgress` refuse (`{ ok: false, reason:

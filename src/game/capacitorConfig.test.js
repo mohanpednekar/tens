@@ -89,3 +89,19 @@ describe('Android release configuration', () => {
   })
 })
 
+
+describe('Dev build config', () => {
+  it('serves from /tens/dev/, forces DEV on, and skips the service worker', () => {
+    const dev = createViteConfig({ capacitor: false, devBuild: true })
+    expect(dev.base).toBe('/tens/dev/')
+    expect(dev.define).toEqual({ 'import.meta.env.DEV': 'true' })
+    expect(pluginNames(dev)).not.toContain('vite-plugin-pwa')
+  })
+
+  it('leaves the production build untouched and keeps its service worker off /tens/dev/', () => {
+    const prod = createViteConfig({ capacitor: false, devBuild: false })
+    expect(prod.base).toBe('/tens/')
+    expect(prod.define).toBeUndefined()
+    expect(pluginNames(prod)).toContain('vite-plugin-pwa')
+  })
+})

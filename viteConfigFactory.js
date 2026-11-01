@@ -56,16 +56,21 @@ const tensFeaturesPlugin = (flags, srcPath) => ({
  */
 export function createViteConfig({
   capacitor = process.env.CAPACITOR === '1',
+  devBuild = process.env.TENS_DEV_BUILD === '1',
   srcPath = path.resolve('src'),
   env = process.env,
 } = {}) {
   const features = resolveFeatureFlags({ capacitor, env })
+  // Dev build (`yarn build:dev`): a production-optimized bundle with `import.meta.env.DEV` forced
+  // true, so Dev Mode ships in it. Served from `/tens/dev/` beside the production site; no service
+  // worker, so it can never cache-shadow or be shadowed by the production PWA.
   return {
-    base: capacitor ? './' : '/tens/',
+    base: capacitor ? './' : devBuild ? '/tens/dev/' : '/tens/',
+    ...(devBuild ? { define: { 'import.meta.env.DEV': 'true' } } : {}),
     plugins: [
       react(),
       tensFeaturesPlugin(features, srcPath),
-      ...(capacitor
+      ...(capacitor || devBuild
         ? []
         : [
             VitePWA({
@@ -73,7 +78,7 @@ export function createViteConfig({
               includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'robots.txt'],
               // The policy pages are standalone documents, never the SPA shell.
               workbox: {
-                navigateFallbackDenylist: [/\/privacy\.html$/, /\/terms\.html$/],
+                navigateFallbackDenylist: [/\/privacy\.html$/, /\/terms\.html$/, /^\/tens\/dev\//],
               },
               manifest: {
                 name: 'Tens',

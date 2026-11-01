@@ -8,6 +8,12 @@ its entry point (`AppMenu`'s "Dev Mode" button) and page route both render only 
 grepping `dist/assets/*.js` for page-specific strings — see this feature's own PR). `yarn dev`/`yarn
 test` (Vitest defaults `import.meta.env.DEV` to true) both expose it.
 
+**Dev build.** `yarn build:dev` (`TENS_DEV_BUILD=1`, `viteConfigFactory.js`'s `devBuild`) is a minified
+production bundle with `import.meta.env.DEV` forced true, base `/tens/dev/`, and no service worker, so
+Dev Mode works on a phone. `deploy.yml` builds prod into `dist/` then dev into `dist/dev/`, so Pages
+serves prod at `/tens/` and dev at `/tens/dev/`. Both share one origin, hence one `localStorage`
+(Dev Mode's isolated `'dev'` slot keeps edits off real slots; the prod SW denylists `/tens/dev/`).
+
 Dev Mode edits never touch real player progress. Toggling it (`game.toggleDevMode()`) first saves the
 currently loaded state to whichever slot is active, exactly as `switchSaveSlot` does, so enabling it
 writes the real slot one last time before switching away. After that, `game/storage.js`
