@@ -1,3 +1,4 @@
+import 'game/storagePrefix' // must run first: namespaces localStorage in the dev build
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'

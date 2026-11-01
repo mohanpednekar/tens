@@ -13,8 +13,8 @@ is under Foundry as continuous **Data Stream + Disk** sections on the same scree
 item, and no second-level Memory | Storage tabs). **Perks** (after the first Prestige) has icon tabs 🔓 Unlocks / ⏫ Upgrades / 🎛 Toggles (one-time PP
 unlocks + autobuyer milestones / leveled PP upgrades / Buy max + automation pause toggles). Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
-dev build (`import.meta.env.DEV`) — a local sandbox for seeding/experimenting with an isolated save,
-never a player-facing feature; see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
+dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
+production bundle; `yarn build:dev` builds a Dev-Mode-enabled variant published at `/tens/dev/` (own `dev:`-prefixed saves, no backward-compat); see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
 Reset Byte Foundry live under Settings → Danger zone (see CLAUDE.md's SettingsPage entry for what
 each wipes/keeps). No backend — state lives in React and persists to `localStorage`.
 
