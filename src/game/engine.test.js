@@ -11952,21 +11952,26 @@ describe('automation interval chains', () => {
   })
 })
 
-// Provision Disk is a TIMED build at the pool's BASE Bandwidth (no fill multiplier, no pool buffer) — see
-// provisionDisk / tickQueuedDiskBuild in engine.js and docs/DESIGN_HISTORY.md.
+// Provision Disk is BUFFER-FUNDED at a FIXED speed: each tick draws up to elapsed x the pool's BASE Bandwidth from the
+// pool buffer (never the fill multiplier) — see provisionDisk / tickQueuedDiskBuild in engine.js.
 const PROV_FIRST = getDiskLadderSizeBits(1)
-const provBase = () => withIntro(createInitialGameState(), { byteCreated: true, capacity: 8192 })
+// A full read cache keeps the cache reservation out of the way of the buffer under test.
+const provBase = (buffer = 1e9) => withIntro(createInitialGameState(), {
+  byteCreated: true,
+  capacity: 8192,
+  poolBuffers: { 1: buffer },
+  diskCache: { [PROV_FIRST]: PROV_FIRST },
+})
 const provDiskSeconds = state => PROV_FIRST / getStoragePoolBandwidth(state, 1)
 
-describe('Provision Disk (timed 1x build)', () => {
-  it('is available whenever pool 1 is live — no pool-buffer affordability involved', () => {
-    const state = provBase()
-    expect(state.intro.poolBuffers?.[1] ?? 0).toBe(0)
+describe('Provision Disk (buffer-funded, fixed speed)', () => {
+  it('is available whenever pool 1 is live and can hold a pass — even with an empty buffer (it just waits for bits)', () => {
+    const state = provBase(0)
     expect(isProvisionDiskAvailable(state)).toBe(true)
     expect(isProvisionDiskTurnAvailable(state)).toBe(true)
   })
 
-  it('provisionDisk arms the build, is idempotent, and spends nothing', () => {
+  it('provisionDisk arms the build, is idempotent, and spends nothing by itself', () => {
     const state = provBase()
     const armed = provisionDisk(state)
     expect(armed.intro.diskBuildQueued).toBe(true)
@@ -11981,11 +11986,12 @@ describe('Provision Disk (timed 1x build)', () => {
     expect(provisionDisk(state)).toBe(state)
   })
 
-  it('advances at base Bandwidth and completes one disk (empty container), disarming the queue', () => {
+  it('draws bits from the pool buffer at the base Bandwidth and completes one disk, disarming the queue', () => {
     const state = provBase()
     const seconds = provDiskSeconds(state)
     const half = tickQueuedDiskBuild(seconds / 2)(provisionDisk(state))
     expect(getDiskProvisionPassesCollected(half, PROV_FIRST)).toBeCloseTo(0.5, 9)
+    expect(half.intro.poolBuffers[1]).toBeCloseTo(1e9 - PROV_FIRST / 2, 3)
     expect(half.intro.diskBuildQueued).toBe(true)
     const done = tickQueuedDiskBuild(seconds / 2)(half)
     expect(done.intro.disksBuiltTotal[PROV_FIRST]).toBe(1)
@@ -11994,26 +12000,48 @@ describe('Provision Disk (timed 1x build)', () => {
     expect(done.intro.disks?.[PROV_FIRST] ?? 0).toBe(0) // the container is empty; the cache fills it
   })
 
-  it('ignores the fill multiplier and the pool buffer entirely', () => {
-    const state = provBase()
-    const seconds = provDiskSeconds(state)
-    const boosted = withIntro(state, { poolTapBonusPercents: { 1: 100 }, poolBuffers: { 1: 0 } })
-    const full = withIntro(state, { poolBuffers: { 1: 1e9 }, bits: 0 })
-    for (const variant of [state, boosted, full]) {
-      const after = tickQueuedDiskBuild(seconds / 4)(provisionDisk(variant))
+  it('runs at the fixed speed regardless of the fill multiplier and of how full the buffer is', () => {
+    const seconds = provDiskSeconds(provBase())
+    for (const patch of [{}, { poolTapBonusPercents: { 1: 100 } }, { poolBuffers: { 1: 5e6 } }]) {
+      const state = withIntro(provBase(), patch)
+      const after = tickQueuedDiskBuild(seconds / 4)(provisionDisk(state))
       expect(getDiskProvisionPassesCollected(after, PROV_FIRST)).toBeCloseTo(0.25, 9)
     }
   })
 
-  it('a multi-pass disk takes passesRequired x the per-pass time, and keeps fractional progress', () => {
+  it('stalls on an empty buffer (same reference) and is limited by what the buffer holds', () => {
+    const empty = provisionDisk(provBase(0))
+    expect(tickQueuedDiskBuild(100)(empty)).toBe(empty)
+    const seconds = provDiskSeconds(provBase())
+    const scarce = provisionDisk(provBase(PROV_FIRST / 10))
+    const after = tickQueuedDiskBuild(seconds)(scarce)
+    expect(getDiskProvisionPassesCollected(after, PROV_FIRST)).toBeCloseTo(0.1, 9)
+    expect(after.intro.poolBuffers[1]).toBeCloseTo(0, 9)
+    expect(after.intro.diskBuildQueued).toBe(true) // armed, waiting for the buffer to refill
+  })
+
+  it('a pool Speed/Capacity upgrade mid-build speeds up the remaining progress immediately', () => {
+    const state = provisionDisk(provBase())
+    const slowRate = getStoragePoolBandwidth(state, 1)
+    const slow = tickQueuedDiskBuild(1)(state)
+    const upgraded = withIntro(slow, { capacity: 2 ** 20, speedCapacity: 2 ** 20 })
+    const fastRate = getStoragePoolBandwidth(upgraded, 1)
+    expect(fastRate).toBeGreaterThan(slowRate)
+    const before = getDiskProvisionPassesCollected(upgraded, PROV_FIRST)
+    const after = tickQueuedDiskBuild(0.001)(upgraded)
+    const gained = getDiskProvisionPassesCollected(after, PROV_FIRST) - before
+    expect(gained * PROV_FIRST).toBeCloseTo(0.001 * fastRate, 6) // draws at the NEW rate
+  })
+
+  it('a multi-pass disk draws passesRequired x size bits in total and keeps fractional progress', () => {
     const state = withIntro(provBase(), { disksBuiltTotal: { [PROV_FIRST]: 2 }, disks: {} })
-    const required = getDiskProvisionPassesRequired(state, PROV_FIRST)
-    expect(required).toBe(3)
+    expect(getDiskProvisionPassesRequired(state, PROV_FIRST)).toBe(3)
     const seconds = provDiskSeconds(state)
     const mid = tickQueuedDiskBuild(seconds * 1.5)(provisionDisk(state))
     expect(getDiskProvisionPassesCollected(mid, PROV_FIRST)).toBeCloseTo(1.5, 9)
     const end = tickQueuedDiskBuild(seconds * 1.5)(mid)
     expect(end.intro.disksBuiltTotal[PROV_FIRST]).toBe(3)
+    expect(end.intro.poolBuffers[1]).toBeCloseTo(1e9 - 3 * PROV_FIRST, 3)
   })
 
   it('never loses progress: Disk Fill pauses the build (same reference) and it resumes where it was', () => {
@@ -12035,16 +12063,16 @@ describe('Provision Disk (timed 1x build)', () => {
     expect(tickQueuedDiskBuild(0)(armed)).toBe(armed)
   })
 
-  it('completes a stale over-required entry immediately', () => {
+  it('completes a stale over-required entry immediately, spending nothing', () => {
     const stale = withIntro(provBase(), { diskProvisionPasses: { [PROV_FIRST]: 5 }, diskBuildQueued: true })
     const after = tickQueuedDiskBuild(0)(stale)
     expect(after.intro.disksBuiltTotal[PROV_FIRST]).toBe(1)
     expect(after.intro.diskBuildQueued).toBe(false)
+    expect(after.intro.poolBuffers[1]).toBe(1e9)
   })
 
-  it('queueDiskBuild still arms while the pool waits; the tick holds until it can run', () => {
-    const state = provBase()
-    const queued = queueDiskBuild(withIntro(state, { dataLakes: { 1: { rebuilding: true } } }))
+  it('queueDiskBuild still arms while the pool rebuilds; the tick holds until it can run', () => {
+    const queued = queueDiskBuild(withIntro(provBase(), { dataLakes: { 1: { rebuilding: true } } }))
     expect(queued.intro.diskBuildQueued).toBe(true)
     expect(tickQueuedDiskBuild(100)(queued)).toBe(queued)
   })

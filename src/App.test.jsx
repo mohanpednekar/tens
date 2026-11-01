@@ -3487,7 +3487,7 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   })
 
-  test('Provision Disk is startable with an empty pool buffer — clicking arms a timed build that spends nothing', () => {
+  test('Provision Disk is startable with an empty pool buffer — clicking arms a buffer-funded build that spends nothing yet', () => {
     seedIntroState({ bits: 0, capacity: currentBankCost, byteCreated: true })
     render(<App />)
 
@@ -3502,7 +3502,7 @@ describe('Byte Foundry Storage', () => {
     expect(savedState.intro.diskBuildQueued).toBe(true)
     expect(buildButton).toHaveTextContent(/⏳.*1 KB Disk…/)
     expect(buildButton).not.toHaveTextContent(/Ready/)
-    expect(savedState.intro.disksBuiltTotal?.[currentBankSize] ?? 0).toBe(0) // it takes time, not buffer bits
+    expect(savedState.intro.disksBuiltTotal?.[currentBankSize] ?? 0).toBe(0) // the build progresses on later ticks
     expect(savedState.intro.poolBuffers?.[1] ?? 0).toBe(0)
   })
 
@@ -3921,7 +3921,7 @@ describe('Byte Foundry Storage', () => {
     })
   })
 
-  test('starting a build arms a timed 1x build: nothing is spent from the pool buffer and no disk appears until it finishes', () => {
+  test('starting a build only arms it: nothing is drawn from the pool buffer or built until the next ticks', () => {
     seedIntroState({
       poolBuffers: { 1: currentBankSize },
       capacity: BITS_PER_BYTE * (2 ** 14),
@@ -3934,7 +3934,7 @@ describe('Byte Foundry Storage', () => {
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.diskBuildQueued).toBe(true)
-    expect(saved.intro.poolBuffers['1']).toBe(currentBankSize) // the buffer is untouched
+    expect(saved.intro.poolBuffers['1']).toBe(currentBankSize) // the click itself draws nothing
     expect(saved.intro.disksBuiltTotal?.[currentBankSize] ?? 0).toBe(0)
     unmount()
   })

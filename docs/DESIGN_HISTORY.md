@@ -9058,16 +9058,16 @@ were already tolerated (slot/reserve displays clamp, Booster purchases stop).
 
 Smaller disk sizes used to rebuild by adding an empty disk and waiting for the ordinary cache fill, which runs through the pool buffer and the 10×→0.1× fill multiplier, so the Provision Disk tile could only show a rough, curve-dependent ETA (and larger lower sizes depended on write-cache ripple from the size below). Now `tickAutoProvisionLowerDiskSizes(elapsedSeconds)` rebuilds each disk in exactly `size / getStoragePoolBandwidth` (progress in `intro.lowerRebuild`), landing full, so the time is exact (`getLowerRebuildSummary`). The pool-local reset reprovision (`tickPoolResetReprovision`) is unchanged and still uses ordinary fill.
 
-## Provision Disk became a timed 1× build (2026-11)
+## Provision Disk: buffer-funded at a fixed speed, never fill-multiplied (2026-11)
 
 Provisioning used to be funded by banking whole passes (`size` bits each) out of the pool buffer, which fills at the fill
-multiplier (10× empty → 0.1× full) — so a disk's build time was unpredictable, and a pass could be "lost" when the cache or
-a pull drained the buffer. Both Provision Disk and the post-Foundry-reset rebuild now run at the pool's BASE Bandwidth (1×),
-independent of the multiplier and the buffer: `provisionDisk` only arms the build, `tickQueuedDiskBuild(elapsedSeconds)`
-advances `diskProvisionPasses[size]` by `elapsed × Bandwidth / size`, the rebuild advances `intro.lowerRebuild.progress`,
-and both persist so progress is never lost. Consequences decided: provisioning no longer spends buffer bits (its cost is
-time); it is offered once a pass fits the pool's buffer capacity (keeps the early game unchanged); it outranks Compute only
-while running (`isProvisionDiskInProgress`) so a merely-startable build can't starve Compute; the Foundry-reset replay arms
-the same build with the existing allowance cap. The pool-local reset reprovision (`tickPoolResetReprovision`) is unchanged.
+multiplier (10× empty → 0.1× full), so the build's pace swung with the multiplier. A first attempt made it a pure timed
+build (no buffer) — rejected: provisioning must still cost buffer bits. Final rule: `provisionDisk` only arms the build;
+`tickQueuedDiskBuild(elapsedSeconds)` draws up to `elapsed × getStoragePoolBandwidth` bits per tick (the pool's BASE
+Bandwidth, re-read each tick so a mid-build Speed/Capacity upgrade applies immediately) from the pool buffer (minus the read
+cache's claim) into `diskProvisionPasses[size]` as fractional passes. The buffer refills at the multiplied pace, so an empty
+buffer stalls the build while a full one never exceeds the fixed speed; progress is stored in bits and never lost. It is
+offered once a pass fits the pool's buffer capacity (early game unchanged) and outranks Compute only while running
+(`isProvisionDiskInProgress`); the Foundry-reset replay arms the same build with the existing allowance cap. The post-Foundry-reset
+rebuild (`tickAutoProvisionLowerDiskSizes`) is free at the same fixed base Bandwidth; `tickPoolResetReprovision` is unchanged.
 The disk under construction is drawn radially with a glow — violet for provisioning, amber for rebuilding.
-
