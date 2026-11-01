@@ -146,7 +146,7 @@ Storage is continuous on this same page: **Provision Disk** — the common disk-
 hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary
 scale, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and
 pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-bit ("1,000 B") one above).
-Presents only the newest unlocked size (`getPresentedDiskSize`); smaller incomplete sizes (after a Foundry reset) rebuild by themselves (`tickAutoProvisionLowerDiskSizes`) while the button is disabled — Storage-revealed rebuilds with a pool fill rate use the same speed/time tile as a queued build (`Rebuilding…`, percent of smaller-size disks already built (`disksBuiltTotal`, monotonic), ⏳ for the current auto-size via pool fill-curve + read-cache flush; write-cache sizes read `—`); otherwise the original `Rebuilding {size} first · automatic` status line. Renders as soon as the Byte exists (`intro.byteCreated`, no Storage-reveal gate — a click before pool 1 can fund a pass simply queues the build) in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
+Presents only the newest unlocked size (`getPresentedDiskSize`); smaller incomplete sizes (after a Foundry reset) rebuild by themselves (`tickAutoProvisionLowerDiskSizes`) while the button is disabled — Storage-revealed rebuilds with a pool fill rate use the same speed/time tile as a queued build (`Rebuilding`, `{current} → {largest}`, percent of smaller-size disks done (`getLowerRebuildSummary`), ⚡ the pool's BASE Bandwidth, ⏳ the total rebuild time at that speed — for a pool not live yet the Bandwidth the pool will have once live stands in (`getProjectedPoolBandwidth`), so the time is never unknown); otherwise (Storage not revealed, or Data Stream Speed 0) the original `Rebuilding {size} first · automatic` status line; the ⏳ is toned down (italic, prefixed `~`) whenever any remaining size's pool isn't live yet (`getLowerRebuildSummary().projected`), and so is the ⚡ (title "Projected speed" when the current size's pool isn't live). Renders as soon as the Byte exists (`intro.byteCreated`, no Storage-reveal gate — a click before pool 1 can fund a pass simply queues the build) in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
 location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
 only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows only
 relative gains (current values are on the tile): `🏷️ <current Capacity (= cost)> · 📦 ×2 · ⚡ ×<speed
@@ -194,7 +194,7 @@ spent funding it" entry). An earlier version DID impose a real timed countdown h
 solely to finish out a countdown a save from before that change may still be carrying; a build
 `provisionDisk` starts today never creates one. While a legacy countdown IS in flight, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
-disallowed, "the array provisioning." When Storage is revealed and the funding pool has a delivered fill rate, a queued build (and a Foundry-reset auto-rebuild of smaller sizes) uses the running-upgrade tile (`RunningUpgradeContent`, equal columns so the percent is centred): `{size} Disk…` plus `Queued` or `{collected}/{required}` (rebuild: `Rebuilding…` / `{autoSize} · to prior highs`), progress %, ⚡ live delivered pool fill speed, and ⏳ remaining-cost time along the fill-multiplier curve (`secondsToBankPoolBits` / `getFillCurveSeconds`, same closed form as pool tiles), `—` while the build waits behind Disk Fill (rebuild: current auto-size only — cache refill + `getDiskReadCacheFlushSeconds` per remaining disk; later write-cache sizes are `—`). Idle, unaffordable, ladder-complete, and legacy `intro.diskBuild` countdown keep the original two-line `diskBuildStatus` layout — `Ready · 🏷️ {cost}`; `🏷️ {cost} · tap to queue` (the `title` / `aria-description` still name which blocker); `{n}s left` (legacy countdown). A queued build still uses the purple `smart` variant and `$pulse` (honors reduced motion); idle states keep the imperative `🏦 Provision {size} Disk`. Ladder exhausted shows only `✅ All Pools Complete ({size})`, no status line. A
+disallowed, "the array provisioning." When Storage is revealed and the funding pool has a delivered fill rate, a queued build (and a Foundry-reset auto-rebuild of smaller sizes) uses the running-upgrade tile (`RunningUpgradeContent`, equal columns so the percent is centred): `{size} Disk…` plus `Queued` or `{collected}/{required}` (rebuild: `Rebuilding` / `{autoSize} → {largest rebuilt size}` (or `{autoSize} disks` when it is the last)), progress %, ⚡ live delivered pool fill speed, and ⏳ remaining-cost time along the fill-multiplier curve (`secondsToBankPoolBits` / `getFillCurveSeconds`, same closed form as pool tiles), ⏳ hidden while the build waits behind Disk Fill (rebuild: current auto-size only — cache refill + `getDiskReadCacheFlushSeconds` per remaining disk; write-cache sizes use remaining bits at the pool's current delivered speed). Idle, unaffordable, ladder-complete, and legacy `intro.diskBuild` countdown keep the original two-line `diskBuildStatus` layout — `Ready · 🏷️ {cost}`; `🏷️ {cost} · tap to queue` (the `title` / `aria-description` still name which blocker); `{n}s left` (legacy countdown). A queued build still uses the purple `smart` variant and `$pulse` (honors reduced motion); idle states keep the imperative `🏦 Provision {size} Disk`. Ladder exhausted shows only `✅ All Pools Complete ({size})`, no status line. A
 ` · {collected}/{required}` segment appears whenever
 `diskPassesRequired > 1` or any pass is banked (`diskPassesCollected`, clamped at
 `diskPassesRequired` for display — see `docs/DESIGN_HISTORY.md`), so a single-pass disk never shows a
@@ -483,7 +483,7 @@ automatically now (`tickDiskPull`/`tickDiskLevelOneCachePull`), not through a pl
 There is no pause/resume control for Disk Fill on this page, and no
 `storageAutoRedeemEnabled`-style toggle (or any autobuyer gate at all) exists in state — pulling is
 unconditional: `tickDiskPull` and `tickDiskLevelOneCachePull` run every tick regardless of any
-tier's own autobuyer/bulk-mode state. Filling itself (`tickDiskAutoFill`) has no UI control at all
+tier's own autobuyer state. Filling itself (`tickDiskAutoFill`) has no UI control at all
 either — it's fully automatic, every tick, no toggle: Memory first keeps every array's Cache full
 (whole-block transfers), then flushes a full read cache into an empty disk over one cache-block
 production duration when no tier claim blocks that size, smallest size first, whenever that size
@@ -527,7 +527,7 @@ live inside the selected tier):
    a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cores:
-   The timer bar / idle status line and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Global Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
+   The timer bar / idle status line and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Compute Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
    a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
@@ -800,7 +800,7 @@ live inside the selected tier):
   on-button gradient fill via `Button`'s `$progress`/`$secondaryProgress` props (green = units already
   bought this level, amber = units affordable now but not yet bought). Prestige gets the same single-tone fill
   treatment (spendable ÷ cost, or `prestigeProgressPercent`), and both pulse (`$pulse`) when
-  actionable. Every PP-spending button (per-tier Unlock/bulk mode, Auto Scale Up, Unlock Speed Bonus,
+  actionable. Every PP-spending button (per-tier speed upgrades, Auto Scale Up, Unlock Speed Bonus,
   Auto-Prestige — all on the Perks page) carries the same single-tone fill (unspent PP ÷ that
   button's cost, `ppProgressPercent`), each nesting a `VisuallyHidden` `role="progressbar"`
   (`aria-valuenow` = PP balance capped at cost, `aria-valuemax` = cost).
@@ -829,30 +829,30 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
   - *Tier Autobuyers*: one row per tier (`"<tier> PP unlocks"`, all ten, even before the tier is
     reachable this run) with a `MilestoneBadge` for its ⚙ tickspeed autobuyer and 🤖 autobuyer
     (`"<tier>'s … unlocked at Prestige N"` once reached, else `"… unlocks at Prestige N"` + hidden
-    milestone progressbar) and, once the autobuyer is unlocked and the tier reachable, the 📦 bulk-mode
-    purchase (or a `"<tier>'s autobuyer buys N levels at once"` badge). Rows never disappear, so reached milestones
-    stay visible as unlock history.
-  - *Global Automation*: Tickspeed Autobuyer, Auto Scale Up, Auto-Prestige Autobuyer (the last only once
-    every tier's tickspeed autobuyer is active and Auto-Prestige is active) — PP button, or an `UnlockedBadge`
+    milestone progressbar). Rows never disappear, so reached milestones stay visible as unlock history.
+  - *Global Automation* — a strict sequence, every row always listed, each purchasable only once the previous is
+    owned (engine-enforced): Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Prestige. PP button (disabled until the previous step is bought), or an `UnlockedBadge`
     (`"<name> unlocked"`) once bought; never a pause control here.
-  - *Production Bonuses* (until bought), *Compute Autobuyers* (Era-milestone badges, once the Flops page
-    is unlocked), and *Prestige* (Unbounded Prestige milestone badge at `PRESTIGE_UNBOUNDED_MIN_COUNT`).
+  - *Compute Automation* (Auto-Boost, once Foundry Compute unlocks), *Production Bonuses* (until bought), *Compute Autobuyers* (Era-milestone badges, once the Flops page
+    is unlocked), and *Prestige* (DeGoogol: locked until Auto-Prestige's interval ≤ `UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS`).
   Each milestone appears only here — `MilestonesPage` no longer repeats them.
 - ⏫ **Upgrades** (`open upgrades`, `aria-label="PP upgrades page"`) — repeatable leveled purchases:
-  Double PP, and Auto-Prestige (category hidden until every tier's tickspeed autobuyer is active).
+  Double PP, and the speed chains. A tier autobuyer's *Autobuyer Speed* row shows `every <interval>`, and once
+  past the 10 ms floor `· N/buy` (each further level doubles the levels one attempt may buy; button label
+  `M/buy · <cost> PP`).
 - 🎛 **Toggles** (`open toggles`, `aria-label="automation toggles page"`) — *Purchasing* (the Buy max
   button, `components/BuyMaxToggle`, removed from MainPage/ComputeFlopsPage), *Tier Autobuyers* (each
   reachable tier's ⚙/🤖 `AutomationToggle`, kept even for fully-automated tiers), *Global Automation*
-  (Tickspeed Autobuyer, Auto Scale Up, Auto-Prestige, Auto-Prestige Autobuyer), *Compute Autobuyers*
+  (Tickspeed Autobuyer, Auto Scale Up, Auto-Prestige), *Compute Autobuyers*
   (each Era-unlocked Flops autobuyer, `setComputeFlopsAutobuyerEnabled`). Each toggle is a status
   badge (`"<name> active|paused"`) + `components/Switch` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up
   automation"`, `"<tier>'s autobuyer"`). A `no toggles notice` empty state covers the (practically
   unreachable) nothing-owned case.
 Layout: every Perks row is a CSS grid (default `label | control`; tier rows `$tier="unlocks"` = symbol | ⚙ |
-🤖 | fixed 5.75rem bulk-mode cell, `$tier="toggles"` = symbol | ⚙ | 🤖; no content-sized tracks, fits 320px) so columns align row-to-row on both Unlocks and Toggles. Factory's Latency /
+🤖 | `$tier="toggles"`/`"unlocks"` = symbol | ⚙ | 🤖; no content-sized tracks, fits 320px) so columns align row-to-row on both Unlocks and Toggles. Factory's Latency /
 Scale Up / Overclock cards share `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem
 heading); Auto Scale Up's status is an `AutoChip` in the Scale Up card header.
-Tab dots: Unlocks `PP unlock available` (`hasAffordablePpUnlock`, incl. the Auto-Prestige Autobuyer),
+Tab dots: Unlocks `PP unlock available` (`hasAffordablePpUnlock`),
 Upgrades `PP upgrade available` (`hasAffordablePpLevelUpgrade`). Every PP button keeps the shared live
 progress fill + hidden `role="progressbar"` (`PpPurchaseButton`); see "Accessibility" below.
 
@@ -947,7 +947,7 @@ same first line, right-aligned to the row center — no tickspeed-bonus badge (s
 above) and no autobuyer status icon. An earlier version showed an always-visible, read-only
 `PpUpgradeBadge` here (a single 🤖 glyph, full opacity while active / dimmed `$dimmed` while paused,
 via the same icon-instead-of-text convention every other automation status badge in the app still
-uses — the tier tickspeed/global tickspeed/Auto Scale Up/Auto-Prestige Autobuyer badges on Perks →
+uses — the tier tickspeed/global tickspeed/Auto Scale Up badges on Perks →
 Toggles, and the Auto-Prestige/Auto Scale Up status lines — see their own sections below) once
 a tier's unit-buying autobuyer was unlocked (`autobuyers`/`applyAutobuyerMilestones` — a free,
 prestige-count-milestone-triggered unlock, not a PP purchase). Both removed to keep the Factory view
@@ -956,7 +956,7 @@ autobuyer active/paused status is still visible (and, unlike the old read-only G
 directly toggleable) on Perks → 🎛 Toggles' Tier Autobuyers category, via the same
 `autobuyersEnabled`/`setAutobuyerEnabled` state (see "Perks page" above).
 
-**PP purchase rationale.** Bulk mode, the global automations, Auto-Prestige and Double PP mechanics are
+**PP purchase rationale.** The global automations, Auto-Prestige and Double PP mechanics are
 unchanged by the move to Perks — see `docs/ECONOMY_REFERENCE.md` for costs/effects and
 `docs/DESIGN_HISTORY.md` ("PP Upgrades tab split…") for why the page is split three ways.
 

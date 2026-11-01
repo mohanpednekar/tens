@@ -11,12 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Weekly Stryker mutation-testing baseline for `engine.js` (`mutation-testing.yml`, non-blocking; score in the job summary).
 
+### Fixed
+
+- Perks → Unlocks → Global Automation now always lists Auto Overclock (32 PP; needs Auto Scale Up first) and Auto-Prestige (64 PP); they were hidden until their prerequisites were met.
+
 ### Changed
 
+- **Autobuyer bulk reworked into the speed upgrades**: the separate 10/100/1000 per-buy purchase is gone. A tier autobuyer's speed upgrades now continue past the 10 ms floor, and each extra level doubles how many whole levels one attempt may buy (2, 4, … 512; always only an upper limit — as many as are affordable). Previously bought bulk modes no longer apply.
+- **Auto-Prestige Autobuyer removed** (the 100 PP convenience that auto-bought Auto-Prestige's speed upgrades) — its PP are not refunded.
+- **Global Automation is a strict sequence**: Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Prestige. Every step is always listed and each needs the previous one (also enforced in the engine). Auto-Prestige is now an Unlocks purchase rather than an Upgrades one.
+- **"Unbounded Prestige" renamed to DeGoogol (the chapter is now "DeGoogoled").**
+
+- **Auto-Prestige moved to Perks → Unlocks → Global Automation; Auto-Boost has its own "Compute Automation" section.** The redundant Upgrades → Automation category was removed (Auto-Prestige's speed upgrade stays under Upgrades).
+- **DeGoogol now unlocks when Auto-Prestige is upgraded to 1 s or faster** (previously 100 lifetime prestiges). Saves that already earned it keep it.
+- Tier tickspeed autobuyers now unlock at Prestige 11–20 (one per Prestige, tier01 at 11 through tier10 at 20) instead of 12–30.
+- **Foundry-reset rebuild runs at each pool's base Bandwidth.** Smaller disk sizes now rebuild one disk at a time, each in exactly size ÷ base Bandwidth, independent of the fill multiplier, so the Provision Disk tile's ⚡ is the base speed and its ⏳ is the exact total time.
 - Data Lake filled balance now floors to 3 significant digits like Foundry speeds; the running-upgrade "from → to" readout now uses the left (from) value's unit.
 
 - Data Lake Boosters keep their auto-buy status for the whole Era once a pool has been fully built, through pool resets, Reset Byte Foundry and Prestige. Reset Byte Foundry now also auto-replays Data Lake capacity upgrades and Booster purchases up to their previous highs.
-- **Provision Disk button shows pool speed and time left.** Once Storage is revealed and the pool has a fill speed, a queued build uses the running-upgrade tile: disk size and pass count on the left, progress percent in the middle, ⚡ live pool fill speed and ⏳ time until the remaining cost is banked along the fill-multiplier curve (`—` while Disk Fill outranks it). While smaller sizes auto-rebuild after a Foundry reset the same tile reads "Rebuilding…" with the percent of smaller-size disks already built and ⏳ for the size currently refilling (pool fill + read-cache flush). Other states keep the original button.
+- **Provision Disk button shows pool speed and time left.** Once Storage is revealed and the pool has a fill speed, a queued build uses the running-upgrade tile: disk size and pass count on the left, progress percent in the middle, ⚡ live pool fill speed and ⏳ time until the remaining cost is banked along the fill-multiplier curve (hidden while Disk Fill outranks it). While smaller sizes auto-rebuild after a Foundry reset the same tile reads "Rebuilding" with the size being rebuilt → the largest size it will reach, the percent of smaller-size disks already built, and ⏳ for the size currently refilling (pool fill + read-cache flush, or remaining bits at current pool speed). Other states keep the original button.
 - **Upgrade Capacity / Upgrade Speed draw at a constant 1× Speed.** The running upgrade bar no longer follows the fill multiplier.
 - **Fill speed multiplier now spans 10× → 0.1×.** The Data Stream / pool fill multiplier falls geometrically from 10× (empty buffer) through exactly 1× at 50% full to 0.1× (full), instead of 150% → 50%. The tap bonus is now multiplicative (×(1 + bonus%)) and the combined cap is 2000%. Production, pool fill, and tile time-to-full ETAs use the matching log integral, so a 1s offline tick matches live 0.1s play.
 - **Compute Boosts also speed up Storage pools.** A boost now boosts the buffer-fill speed of the pools matching the Factory tiers it covers (pool N ↔ tier N) by +200% (Burst), +50% (Standard) or +10% (Sustain), instead of the production multiplier; covered pool cards glow.
@@ -123,6 +136,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Rebuild tile always shows a time.** While a rebuilding size's pool is not live yet, the time (and ⚡ speed) are projected from the Bandwidth the pool will have once live instead of being hidden.
 - **Legal links show a keyboard focus ring.** Settings → Legal Privacy Policy and Terms of Use now use the same accent `:focus-visible` outline as other interactive controls.
 
 ### Changed

@@ -672,7 +672,7 @@ Strict three-layer separation:
    import) — the **only** in-app version surface. Reached via AppNav's Guide item.
 6. **`MilestonesPage/index.jsx`** — Chapters / Era ascension status screen (autobuyer unlock
    milestones live once, on Perks → Unlocks — not repeated here). Chapters: the first KiloByte, Go Googol, Open
-   Compute, Go Unbounded, Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always
+   Compute, DeGoogoled, Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always
    reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
     Supporter pack (unlock code / dummy checkout), Cloud save (`CloudSaveSection.jsx`, only when
@@ -730,8 +730,8 @@ initial activation costs **10 Bytes (80 Bits)**. It unlocks once level 1 of tier
 are no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
 Reaching Money ≥ `PRESTIGE_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
 since a Byte is 8 Bits) freezes the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)`
-is true (permanent `prestige.unboundedUnlocked` latch set the first time `prestige.count` reaches
-`PRESTIGE_UNBOUNDED_MIN_COUNT` (100), or carried through Era ascension), in which case production
+is true (permanent `prestige.unboundedUnlocked` latch; unlocked once Auto-Prestige's interval is upgraded to
+`UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS` (1 s) or less, carried through Era ascension), in which case production
 continues and Prestige is optional (see `isProductionFrozen`). **Era ascension** (`eraGame`) is a separate voluntary meta-prestige at **1 Googol unspent PP**
 (`ERA_ELIGIBILITY_PP`): it awards **Eons** (+1 base, +1 per Eon Amplifier level — shop deferred to #414),
 increments `era.count`, resets the full Foundry (generator upgrades, Disks, Data Lakes, compute ladder
@@ -931,7 +931,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   rather than test IDs; `StatCard` panels carry `aria-label="<tier name> layer"` for this purpose, and
   each tier row's Buy button nests a visually-hidden `role="progressbar"` (via `VisuallyHidden`) with
   `aria-label="<tier name> cost-block progress"` plus `aria-valuenow`/`aria-valuemin`/`aria-valuemax` —
-  the Buy/tickspeed-multiplier/Unlock/bulk-mode/Prestige buttons also carry an explicit `aria-label` with the
+  the Buy/tickspeed-multiplier/Unlock/Prestige buttons also carry an explicit `aria-label` with the
   full descriptive sentence (independent of their compact icon-based visible text), so
   `getByRole('button', { name: … })` still matches despite the nested labeled node.
 - Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`). Tests for
@@ -953,7 +953,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2139 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2119 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

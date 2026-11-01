@@ -38,7 +38,7 @@ import {
   DISK_CACHE_BLOCK_COUNT,
   DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER,
   INTRO_DISK_UNLOCK_CAPACITY,
-  PRESTIGE_UNBOUNDED_MIN_COUNT,
+  UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
   getStoragePoolMemoryBounds,
@@ -597,9 +597,9 @@ const InfoPage = () => {
           <li>
             A tier’s autobuyer buys <strong>one full level per attempt</strong> — only when the
             whole level is affordable, or the rest of a partly bought level is (Buy max mode never
-            applies to it). <strong>Bulk mode</strong> is a Prestige Point purchase per tier: each
-            attempt then buys 10 levels at once when that many are affordable (1000× the
-            autobuyer’s base PP), then 100 levels (1e6×), then 1000 (1e9×).
+            applies to it). Its <strong>speed upgrades</strong> (Perks → Upgrades) shorten the interval
+            down to 10 ms; every level after that doubles how many levels one attempt buys — as many as
+            are affordable, up to 2, 4, 8 … 512.
           </li>
         </ul>
       </Section>
@@ -615,7 +615,7 @@ const InfoPage = () => {
           <li>
             <strong>Tier Tickspeed Autobuyers:</strong> start at Prestige{' '}
             {firstTierTickspeedAutobuyerMilestone}, then every{' '}
-            {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Prestiges after that.
+            {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP === 1 ? 'Prestige' : `${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Prestiges`} after that.
           </li>
         </ul>
       </Section>
@@ -624,10 +624,9 @@ const InfoPage = () => {
         <h2>Prestige</h2>
         <ul>
           <li>
-            Available once Bits reach 1 Googol Bytes (8×10^100 Bits). Before Prestige{' '}
-            {PRESTIGE_UNBOUNDED_MIN_COUNT}, production freezes until you Prestige; after{' '}
-            {PRESTIGE_UNBOUNDED_MIN_COUNT} lifetime prestiges, production continues and Prestige
-            is optional.
+            Available at 1 Googol Bytes (8×10^100 Bits); production freezes there until you Prestige.
+            Auto-Prestige at {UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s or faster unlocks DeGoogol:
+            production keeps running and Prestige is optional.
           </li>
           <li>
             Awards Prestige Points from how far your money exponent climbed beyond Googol — 1 base
@@ -677,7 +676,7 @@ const InfoPage = () => {
             and prestige count, and Compute owned units.
           </li>
           <li>
-            <strong>Keeps:</strong> automation unlocks and pause flags, Unbounded Prestige latch,
+            <strong>Keeps:</strong> automation unlocks and pause flags, DeGoogol latch,
             the main-game unlock gate (once it has ever triggered), museum, Compute page reveal,
             Flops autobuyer unlock flags, Eons (+ award), and hyperscalers. Era <em>N</em>
             free-unlocks the <em>N</em>th Compute tier&apos;s autobuyer.

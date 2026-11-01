@@ -7,8 +7,8 @@ import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
-import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatSpeedText, formatThreeSignificant, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getDiskReadCacheFlushSeconds, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getPresentedDiskSize, isDiskReadCacheEligible, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
-import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, DISK_ARRAY_LADDER_CAP, TIER_DEFINITIONS } from 'game/layers'
+import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatSpeedText, formatThreeSignificant, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getLowerRebuildSummary, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getProjectedPoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 
@@ -955,42 +955,20 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               reason: diskBuildBlockedByPriority ? 'disk fill comes first' : 'pool buffer too low',
             }
   // Same stat layout as the running-upgrade tile: ⚡ the pool's live delivered fill speed, ⏳ along
-  // the fill-multiplier curve (not that snapshot held constant). Rebuild ⏳ is only the size
-  // currently auto-filling — later write-cache sizes have no exported duration helper.
+  // the fill-multiplier curve (not that snapshot held constant). A queued build waiting behind Disk
+  // Fill has no meaningful time, so its ⏳ is hidden rather than showing a misleading "now". A rebuild
+  // after a Foundry reset instead runs at each pool's BASE Bandwidth (no fill multiplier), so its ⚡ is
+  // that base speed and its ⏳ is the total (getLowerRebuildSummary) — a projection from the Bandwidth the pool will have once live while the size's pool isn't live yet.
   const getPoolDeliveredRate = poolIndex =>
     getPoolAvailableFillRate(state, poolIndex) * getPoolMultiplierPercent(state, poolIndex) / 100 * getComputeBoostPoolMultiplier(intro, poolIndex)
-  const diskFundingMultiplierPercent = getPoolMultiplierPercent(state, lowerDiskSizePending ? getPoolIndexForDiskSize(autoDiskSize) : diskPoolIndex)
-  const diskFundingRate = getPoolDeliveredRate(lowerDiskSizePending ? getPoolIndexForDiskSize(autoDiskSize) : diskPoolIndex)
+  const rebuildPoolIndex = getPoolIndexForDiskSize(autoDiskSize)
+  const diskFundingMultiplierPercent = lowerDiskSizePending ? 100 : getPoolMultiplierPercent(state, diskPoolIndex)
+  const diskFundingRate = lowerDiskSizePending ? getProjectedPoolBandwidth(state, rebuildPoolIndex) : getPoolDeliveredRate(diskPoolIndex)
   const diskFundingSpeedText = `${formatSpeedText(formatDiskSize(diskFundingRate))}/s`
-  // Percent: disks already built across every smaller size (disksBuiltTotal — monotonic). Time: the
-  // current auto-size only, via cache refill (fill curve into the pool) plus one read-cache flush
-  // per remaining disk. Write-cache sizes and pools with no bandwidth yet read as —.
-  let rebuildDisksFull = 0
-  let rebuildDisksTotal = 0
-  if (lowerDiskSizePending) {
-    for (let step = 1; step < getUnlockedDiskSteps(intro); step += 1) {
-      const lowerSize = getDiskLadderSizeBits(step)
-      rebuildDisksFull += Math.min(DISK_ARRAY_LADDER_CAP, intro.disksBuiltTotal?.[lowerSize] ?? 0)
-      rebuildDisksTotal += DISK_ARRAY_LADDER_CAP
-    }
-  }
-  const rebuildProgress = rebuildDisksTotal > 0 ? clampPercent((rebuildDisksFull / rebuildDisksTotal) * 100) : 0
-  const rebuildRemaining = lowerDiskSizePending
-    ? Math.max(0, DISK_ARRAY_LADDER_CAP - Math.min(DISK_ARRAY_LADDER_CAP, intro.disksBuiltTotal?.[autoDiskSize] ?? 0))
-    : 0
-  let rebuildSeconds = 0
-  if (lowerDiskSizePending) {
-    if (rebuildRemaining <= 0) {
-      rebuildSeconds = 0
-    } else if (!isDiskReadCacheEligible(autoDiskSize)) {
-      rebuildSeconds = Infinity
-    } else {
-      const cached = intro.diskCache?.[autoDiskSize] ?? 0
-      const bitsNeeded = Math.max(0, rebuildRemaining * autoDiskSize - cached)
-      rebuildSeconds = secondsToBankPoolBits(state, getPoolIndexForDiskSize(autoDiskSize), autoDiskSize, bitsNeeded)
-        + rebuildRemaining * getDiskReadCacheFlushSeconds(state, autoDiskSize)
-    }
-  }
+  const rebuildPoolNotLive = lowerDiskSizePending && getStoragePoolBandwidth(state, rebuildPoolIndex) <= 0
+  const rebuildSummary = getLowerRebuildSummary(state)
+  const rebuildProgress = rebuildSummary.disksTotal > 0 ? clampPercent((rebuildSummary.disksDone / rebuildSummary.disksTotal) * 100) : 0
+  const rebuildSeconds = rebuildSummary.seconds
   const diskDisplayedProgress = lowerDiskSizePending ? rebuildProgress : diskBuildProgress
   const diskBitsStillNeeded = Math.max(0, diskCost - diskPassesCollected * diskSize - diskPoolSpendableBufferBits)
   const diskFundingTimeText = lowerDiskSizePending
@@ -1045,11 +1023,21 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     >
       {diskShowsFundingStats ? (
         <RunningUpgradeContent>
-          <RunningTitle>{diskBuildStatus.icon} {lowerDiskSizePending ? 'Rebuilding…' : `${formatDiskSize(diskSize)} Disk…`}</RunningTitle>
-          <RunningChange>{lowerDiskSizePending ? `${formatDiskSize(autoDiskSize)} · to prior highs` : diskPassesCollected > 0 ? diskPassesFraction : 'Queued'}</RunningChange>
+          <RunningTitle>{diskBuildStatus.icon} {lowerDiskSizePending ? 'Rebuilding' : `${formatDiskSize(diskSize)} Disk…`}</RunningTitle>
+          <RunningChange>{lowerDiskSizePending ? (() => {
+            const maxRebuildSize = getDiskLadderSizeBits(getUnlockedDiskSteps(intro) - 1)
+            return maxRebuildSize > autoDiskSize ? `${formatDiskSize(autoDiskSize)} → ${formatDiskSize(maxRebuildSize)}` : `${formatDiskSize(autoDiskSize)} disks`
+          })() : diskPassesCollected > 0 ? diskPassesFraction : 'Queued'}</RunningChange>
           <RunningPercent>{Math.floor(diskDisplayedProgress)}%</RunningPercent>
-          <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent) }} title="Pool fill speed funding this disk">⚡ {diskFundingSpeedText}</ProvisionSpeed>
-          <RunningTime>⏳ {diskFundingTimeText}</RunningTime>
+          <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent), ...(lowerDiskSizePending && rebuildSummary.projected ? { opacity: 0.55 } : null) }} title={rebuildPoolNotLive ? "Projected speed — this rebuild waits for the pool's Capacity" : lowerDiskSizePending && rebuildSummary.projected ? "Pool speed — a later pool is not live yet, so the total time is an estimate" : "Pool fill speed funding this disk"}>⚡ {lowerDiskSizePending && rebuildSummary.projected ? '~' : ''}{diskFundingSpeedText}</ProvisionSpeed>
+          {diskFundingTimeText !== '—' && (
+            <RunningTime
+              style={rebuildSummary.projected ? { opacity: 0.5, fontStyle: 'italic' } : undefined}
+              title={rebuildSummary.projected ? "Estimate — part of this rebuild waits for a pool's Capacity" : undefined}
+            >
+              ⏳ {rebuildSummary.projected ? '~' : ''}{diskFundingTimeText}
+            </RunningTime>
+          )}
         </RunningUpgradeContent>
       ) : (
         <MilestoneButtonContent>
