@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Provision Disk is a timed 1× build; the disk being built or rebuilt is shown distinctly.** Provisioning no longer banks pool-buffer bits at the fill multiplier: it runs at the pool's base Bandwidth (like the post-Foundry-reset rebuild), progress is never lost (Disk Fill only pauses it), and it is offered once a pass fits the pool's buffer. The disk under construction fills radially with a glow — violet while provisioning, amber while rebuilding. The tile's ⚡/⏳ are the exact base speed and time left.
 - **Autobuyer bulk reworked into the speed upgrades**: the separate 10/100/1000 per-buy purchase is gone. A tier autobuyer's speed upgrades now continue past the 10 ms floor, and each extra level doubles how many whole levels one attempt may buy (2, 4, … 512; always only an upper limit — as many as are affordable). Previously bought bulk modes no longer apply.
 - **Auto-Prestige Autobuyer removed** (the 100 PP convenience that auto-bought Auto-Prestige's speed upgrades) — its PP are not refunded.
 - **Global Automation is a strict sequence**: Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Prestige. Every step is always listed and each needs the previous one (also enforced in the engine). Auto-Prestige is now an Unlocks purchase rather than an Upgrades one.

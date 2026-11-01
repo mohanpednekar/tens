@@ -1737,7 +1737,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     const afterCache = tickDiskLevelOneCachePull(afterPull)
     // A queued Provision Disk build (see queueDiskBuild) takes its turn here, once this tick's own
     // disk pull/cache pull have had first claim on the forced-priority state.
-    const afterQueuedBuild = tickQueuedDiskBuild(tickAutoProvisionLowerDiskSizes(elapsedSeconds)(afterCache))
+    const afterQueuedBuild = tickQueuedDiskBuild(elapsedSeconds)(tickAutoProvisionLowerDiskSizes(elapsedSeconds)(afterCache))
     // 0 elapsed: start any newly eligible read-cache flushes after a pull emptied a slot;
     // countdown continues on the next ordinary tickGame pass. A queued build firing this tick
     // doesn't add any newly-fillable slot itself (its size stays IO-locked until the build
@@ -3287,6 +3287,12 @@ export const getPoolCacheReservationBits = (state, poolIndex) => {
   return Math.max(0, cacheSize - cached)
 }
 
+// Provision Disk outranks Compute only while a build is actually running or paused part-way (armed, or banked
+// passes) — a merely startable build must not starve Compute until the whole disk ladder is done.
+export const isProvisionDiskInProgress = state =>
+  isProvisionDiskAvailable(state) &&
+  (Boolean(state.intro?.diskBuildQueued) || getDiskProvisionPassesCollected(state, getDiskSize(state)) > 0)
+
 export const isProvisionDiskAvailable = state => {
   if (state.intro.diskBuild) return false
   // Smaller sizes below the newest unlocked one are provisioned automatically and for free instead.
@@ -3297,8 +3303,10 @@ export const isProvisionDiskAvailable = state => {
   const poolIndex = getPoolIndexForDiskSize(size)
   if (isStoragePoolRebuilding(state, poolIndex)) return false
   if (isLaterPoolProvisioningLocked(state, poolIndex)) return false
-  const reserved = getPoolCacheReservationBits(state, poolIndex)
-  return getPoolBufferBits(state, poolIndex) - reserved >= size
+  // Provisioning is a timed build at the pool's base Bandwidth (tickQueuedDiskBuild) — it needs a live pool, not
+  // buffer bits. It is only OFFERED once the pool's buffer could hold one pass of this size (the old implicit
+  // unlock: a pass had to fit the pool), so the early game before Storage is unchanged.
+  return getStoragePoolBandwidth(state, poolIndex) > 0 && getPoolBufferCapacity(state, poolIndex) >= size
 }
 
 // Free reset recovery provisions one container at a time. The next container appears only after
@@ -4062,92 +4070,17 @@ export const getDiskSizesToShow = state => {
 export const isProvisionDiskTurnAvailable = state =>
   isProvisionDiskAvailable(state) && !isDiskFillAvailable(state)
 
-// Funds one or more PASSES toward building one EMPTY disk sized to getDiskSize(state): the full
-// getDiskCost(that size) is paid in getDiskProvisionPassesRequired(state, size) installments of the
-// disk's own face-value size each — see getDiskProvisionPassesCollected above — rather than the
-// whole cost at once, so the pool buffer only ever needs to hold one pass at a time, not the full
-// lump sum. Each call collects as many WHOLE passes as the pool buffer currently affords (capped at
-// however many remain) — a buffer already holding the full cost completes every pass, and starts
-// the timed build, in one call, exactly as a single-payment build always has; a smaller buffer
-// collects a partial installment and leaves the rest for a later call. `passesRemaining` is clamped
-// at 0 (never negative) so a save carrying a stale, already-over-required `diskProvisionPasses`
-// entry (e.g. one banked under an earlier flat-multiplier version of this ladder, now exceeding the
-// current ordinal's own smaller requirement) self-heals by completing immediately on its next call
-// rather than reading as a negative "passes remaining" and refunding bits back into the buffer.
-// Once the final pass lands, the disk completes IMMEDIATELY — disksBuiltTotal[size] increments in
-// this same call, with no additional timed countdown afterward. An earlier version funded the
-// passes progressively but then STILL made the array sit through a separate
-// ordinal-scaled-by-production-rate build timer (intro.diskBuild) once funding finished — but
-// gathering the passes already consumes exactly that much real time (each pass only banks once the
-// pool buffer accumulates a full face-value's worth of bits, at the same production rate the old
-// timer scaled by), so the post-funding countdown was pure duplicate wait, not a second, distinct
-// cost. Removed entirely — see docs/DESIGN_HISTORY.md's "Provision Disk's post-funding build timer
-// duplicated the wait already spent funding it" entry. `intro.diskBuild`/`tickProvisionDisk` and
-// every "IO blocked mid-build" guard remain, purely to finish out a countdown a save from before
-// this change may still be carrying — provisionDisk itself never creates one any more. No-op below
-// a single pass's cost, or if an array is already mid-build (isProvisionDiskAvailable, which a
-// pre-existing legacy countdown can still trigger). Only ever queues ONE build at a time — only one
-// size is ever offered on the ladder, so there's nothing to parallelize.
-// `maxPasses` (default unlimited) caps how many WHOLE passes this single call may collect
-// regardless of buffer/requirement headroom — used exclusively by tickFoundryResetConvenience's
-// own replay call, to stop a buffer that can afford more than the pre-reset high-water mark allows
-// from funding past it in one shot (Devin Review finding on PR #608); any excess buffer beyond the
-// cap is simply left banked for a later, genuine call to spend. Never passed by a normal manual
-// click or tickQueuedDiskBuild.
-export const provisionDisk = (state, maxPasses = Infinity) => {
+// Starts (arms) the next Provision Disk build. Provisioning is a TIMED build at the pool's BASE Bandwidth
+// (getStoragePoolBandwidth — never the fill multiplier, never the pool buffer): the disk's cost is
+// getDiskProvisionPassesRequired(size) passes of `size` bits each, and each pass takes size / base Bandwidth
+// seconds (tickQueuedDiskBuild). Progress lives in diskProvisionPasses[size] (fractional passes) and is never
+// lost — a pause (Disk Fill outranks it, pool offline) just holds it. Arming is idempotent. No-op unless it is
+// Provision Disk's turn (isProvisionDiskTurnAvailable). Only ever one build at a time — only one size is ever
+// offered on the ladder. See docs/DESIGN_HISTORY.md ("Provision Disk became a timed 1x build").
+export const provisionDisk = state => {
   if (!isProvisionDiskTurnAvailable(state)) return state
-
-  const size = getDiskSize(state)
-  const poolIndex = getPoolIndexForDiskSize(size)
-  const alreadyCollected = getDiskProvisionPassesCollected(state, size)
-  const passesRequired = getDiskProvisionPassesRequired(state, size)
-  const passesRemaining = Math.max(0, passesRequired - alreadyCollected)
-  const bufferBits = getPoolBufferBits(state, poolIndex)
-  // Never spends bits reserved for topping up this pool's own read cache — see
-  // getPoolCacheReservationBits — so the cache keeps filling ahead of provisioning, not the reverse.
-  const spendableBufferBits = Math.max(0, bufferBits - getPoolCacheReservationBits(state, poolIndex))
-  // isProvisionDiskTurnAvailable already guarantees at least one whole pass is affordable.
-  const affordablePasses = Math.min(passesRemaining, Math.floor(spendableBufferBits / size), maxPasses)
-  const passesCollected = alreadyCollected + affordablePasses
-  const poolBuffers = { ...state.intro.poolBuffers, [poolIndex]: bufferBits - affordablePasses * size }
-
-  if (passesCollected >= passesRequired) {
-    const { [size]: _cleared, ...diskProvisionPasses } = state.intro.diskProvisionPasses ?? {}
-    return {
-      ...state,
-      intro: {
-        ...state.intro,
-        poolBuffers,
-        diskProvisionPasses,
-        disksBuiltTotal: { ...state.intro.disksBuiltTotal, [size]: (state.intro.disksBuiltTotal?.[size] ?? 0) + 1 },
-        // The build just fully completed (whether the last pass was fired by a manual click or a
-        // queued fire below) — the queue's job for this disk is done; re-arm for the next one.
-        diskBuildQueued: false,
-        diskBuildQueuedByReplay: false,
-      },
-    }
-  }
-
-  return {
-    ...state,
-    intro: {
-      ...state.intro,
-      poolBuffers,
-      diskProvisionPasses: { ...state.intro.diskProvisionPasses, [size]: passesCollected },
-      // Funding isn't complete yet — auto-arm the queue so the remaining passes fire themselves
-      // (tickQueuedDiskBuild, unconditionally wired into tickGame's own tickStorage) as the buffer
-      // refills, with no further clicks needed — "no manual action between passes." Only STARTING a
-      // new disk's build still needs one click; this stays armed only for the disk already begun.
-      diskBuildQueued: true,
-      // provisionDisk's own default is always "not replay-owned" — a genuine manual click needs
-      // exactly this (see diskBuildQueuedByReplay's own comment in createInitialGameState: a
-      // manual click always auto-continues unrestricted, even at the same size/count an old
-      // foundryResetCaps entry covers). tickFoundryResetConvenience and tickQueuedDiskBuild — the
-      // two OTHER callers that pass a finite maxPasses — each explicitly re-mark this true on their
-      // own result right after calling this function, since a capped call needs the opposite.
-      diskBuildQueuedByReplay: false,
-    },
-  }
+  if (state.intro.diskBuildQueued) return state
+  return { ...state, intro: { ...state.intro, diskBuildQueued: true, diskBuildQueuedByReplay: false } }
 }
 
 // Commit to the NEXT Provision Disk build before its own pool buffer can afford even its first
@@ -4174,39 +4107,52 @@ export const clearDiskBuildQueue = state => {
   return { ...state, intro: { ...state.intro, diskBuildQueued: false, diskBuildQueuedByReplay: false } }
 }
 
-// Fires a queued Provision Disk build once its own pool buffer can afford it and nothing else
-// outranks it in the forced priority order (isProvisionDiskTurnAvailable, checked by provisionDisk
-// itself) — a same-reference no-op otherwise, leaving the queue armed for a later tick.
-//
-// Only when diskBuildQueuedByReplay is set (normalizePoolMemoryCapacity's own load-time wake-up for
-// a save reloaded mid-Reset-Byte-Foundry-replay — see there) does this also resolve
-// getDiskReplayPassAllowance and pass it as provisionDisk's own maxPasses, so that narrow case can't
-// fund past what the replay was ever entitled to hand out for free; at the exact allowance boundary
-// (0) it clears the queue directly instead of calling provisionDisk with a zero maxPasses, which
-// would otherwise re-arm it every tick for no funding progress. Every OTHER way the queue gets armed
-// — a genuine manual click's own partial funding, or the standalone (currently UI-unwired)
-// queueDiskBuild — always sets diskBuildQueuedByReplay false, so it stays unrestricted here even if
-// it happens to land on the same size/count some old foundryResetCaps entry covers: a deliberate
-// player action always continues at full, unattended speed once armed, regardless of history (Devin
-// Review finding on PR #608 — an earlier version of this function applied the allowance
-// unconditionally, which incorrectly throttled a genuine manual continuation too).
-export const tickQueuedDiskBuild = state => {
+// Advances an armed Provision Disk build: progress (fractional passes in diskProvisionPasses[size]) grows at
+// the pool's BASE Bandwidth — elapsed × Bandwidth / size passes — whenever it is Provision Disk's turn
+// (isProvisionDiskTurnAvailable; Disk Fill outranks it and merely pauses, never resets, progress). Completes
+// one disk per call (disksBuiltTotal[size] +1, passes cleared, queue disarmed — the next disk needs a fresh
+// click). When the arm is replay-owned (diskBuildQueuedByReplay, set by tickFoundryResetConvenience) progress
+// is capped at what the foundryResetCaps replay is entitled to (getDiskReplayPassAllowance) and disarms there.
+// Same-reference no-op when nothing changed.
+export const tickQueuedDiskBuild = (elapsedSeconds = 0) => state => {
   if (!(state.intro?.diskBuildQueued ?? false)) return state
-  if (!state.intro?.diskBuildQueuedByReplay) return provisionDisk(state)
+  if (!isProvisionDiskTurnAvailable(state)) return state
   const size = getDiskSize(state)
-  const maxPasses = getDiskReplayPassAllowance(state, size)
-  if (maxPasses <= 0) return { ...state, intro: { ...state.intro, diskBuildQueued: false, diskBuildQueuedByReplay: false } }
-  const built = provisionDisk(state, maxPasses)
-  // Same-reference no-op (e.g. the allowance-limited buffer still can't afford even one pass) —
-  // return it as-is rather than constructing an equal-but-new object, so the tick pipeline's own
-  // reference-equality no-op checks upstream still see nothing changed (Devin Review finding on
-  // PR #614).
-  if (built === state) return state
-  // provisionDisk itself always marks a partial-funding result as NOT replay-owned (correct for its
-  // other caller, a genuine manual click) — but THIS call was itself replay-restricted, so a build
-  // it leaves only partially funded must stay marked replay-owned, or the very next tick would treat
-  // it as an unrestricted manual continuation and fund straight past this same allowance.
-  return built.intro?.diskBuildQueued ? { ...built, intro: { ...built.intro, diskBuildQueuedByReplay: true } } : built
+  const poolIndex = getPoolIndexForDiskSize(size)
+  const collected = getDiskProvisionPassesCollected(state, size)
+  const required = getDiskProvisionPassesRequired(state, size)
+  const replayOwned = Boolean(state.intro?.diskBuildQueuedByReplay)
+  const allowance = replayOwned ? getDiskReplayPassAllowance(state, size) : Infinity
+  if (allowance <= 0) return { ...state, intro: { ...state.intro, diskBuildQueued: false, diskBuildQueuedByReplay: false } }
+  const bandwidth = getStoragePoolBandwidth(state, poolIndex)
+  const stale = collected >= required
+  if (!stale && (!(bandwidth > 0) || !(elapsedSeconds > 0))) return state
+  const gained = stale ? 0 : (Math.max(0, elapsedSeconds) * bandwidth) / size
+  const headroom = Math.max(0, required - collected)
+  const advanced = Math.min(gained, headroom, allowance)
+  const next = collected + advanced
+  if (stale || next >= required - TICK_ACCUMULATION_EPSILON) {
+    const { [size]: _cleared, ...diskProvisionPasses } = state.intro.diskProvisionPasses ?? {}
+    return {
+      ...state,
+      intro: {
+        ...state.intro,
+        diskProvisionPasses,
+        disksBuiltTotal: { ...state.intro.disksBuiltTotal, [size]: (state.intro.disksBuiltTotal?.[size] ?? 0) + 1 },
+        diskBuildQueued: false,
+        diskBuildQueuedByReplay: false,
+      },
+    }
+  }
+  const hitReplayCap = replayOwned && Number.isFinite(allowance) && advanced >= allowance - TICK_ACCUMULATION_EPSILON
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      diskProvisionPasses: { ...state.intro.diskProvisionPasses, [size]: next },
+      ...(hitReplayCap ? { diskBuildQueued: false, diskBuildQueuedByReplay: false } : null),
+    },
+  }
 }
 
 // Sizes below the newest unlocked one (rebuilt after a Foundry reset) provision themselves FOR FREE, one
@@ -6317,7 +6263,7 @@ export const canActivateComputeBoost = (state, boostType, tierIndex, forfeitConf
 // explicitly confirmed forfeiting an active boost (no refund).
 export const isComputeBoostTurnAvailable = (state, boostType, tierIndex, forfeitConfirmed = false) =>
   canActivateComputeBoost(state, boostType, tierIndex, forfeitConfirmed) &&
-  !isDiskFillAvailable(state) && !isProvisionDiskAvailable(state)
+  !isDiskFillAvailable(state) && !isProvisionDiskInProgress(state)
 
 // Whether stackComputeBoost below would do anything right now: a boost IS currently active, it
 // hasn't already hit COMPUTE_BOOST_MAX_STACKS, and at least 1 more token of the ACTIVE boost's OWN
@@ -6340,7 +6286,7 @@ export const canStackComputeBoost = state => {
 // Stack's own forced-priority turn — same shape as isComputeBoostTurnAvailable above.
 export const isStackComputeBoostTurnAvailable = state =>
   canStackComputeBoost(state) &&
-  !isDiskFillAvailable(state) && !isProvisionDiskAvailable(state)
+  !isDiskFillAvailable(state) && !isProvisionDiskInProgress(state)
 
 // Whether ANY Compute Boost action currently has its turn — either starting a brand new boost from
 // some tier (canActivateComputeBoost, only possible while none is active — forfeit-replace is a
@@ -7025,18 +6971,11 @@ export const tickFoundryResetConvenience = state => {
   // Sizes below the newest unlocked one are re-provisioned for free by tickAutoProvisionLowerDiskSizes —
   // the paid replay must not also fund them (it would bank passes the free loop then ignores).
   if (!isLowerDiskSizePending(next) && isDiskBuildBelowCap(next, caps)) {
-    // getDiskReplayPassAllowance stops a single call from collecting more passes than the cap
-    // allows even when the pool buffer (e.g. after a long offline gap) can afford more than that in
-    // one go — Infinity everywhere except the exact "matched a fully pre-earned run of completed
-    // disks, now partially paid toward the next one" boundary (Devin Review finding on PR #608).
-    const built = provisionDisk(next, getDiskReplayPassAllowance(next, getDiskSize(next)))
-    if (built !== next) {
-      // provisionDisk itself always marks a partial-funding arm as NOT replay-owned (correct for a
-      // genuine manual click, its only other caller) — but THIS call is the replay itself, so a
-      // build it leaves only partially funded must be marked replay-owned instead, or
-      // tickQueuedDiskBuild would apply no restriction at all on later ticks and let an abundant
-      // buffer fund straight past this same cap (Devin Review finding on PR #608, round 5).
-      next = built.intro?.diskBuildQueued ? { ...built, intro: { ...built.intro, diskBuildQueuedByReplay: true } } : built
+    // The replay just arms the ordinary timed build, marked replay-owned so tickQueuedDiskBuild stops at the
+    // pre-reset high-water mark (getDiskReplayPassAllowance) instead of running past it.
+    const armed = provisionDisk(next)
+    if (armed !== next) {
+      next = armed.intro?.diskBuildQueued ? { ...armed, intro: { ...armed.intro, diskBuildQueuedByReplay: true } } : armed
       changed = true
     }
   }

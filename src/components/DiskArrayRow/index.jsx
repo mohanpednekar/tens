@@ -5,7 +5,10 @@ import {
   formatDiskSizeBare,
   getDiskReadCacheFlush,
   getDiskReadCacheFlushFill,
+  getDiskProvisionPassesCollected,
+  getDiskProvisionPassesRequired,
   getDiskRedeemTierName,
+  getDiskSize,
   getDiskWriteCacheFlushFill,
   getDiskWriteCacheMerge,
   getDiskWriteCacheSegmentFill,
@@ -16,6 +19,8 @@ import {
   isDiskReadCacheFlushPaused,
   isDiskStrandedByAdvancedTier,
   isDiskWriteCacheCollectPaused,
+  isLowerDiskSizePending,
+  isProvisionDiskTurnAvailable,
 } from 'game/engine'
 import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_SIZE_MULTIPLIER } from 'game/layers'
 import styled, { keyframes } from 'styled-components'
@@ -85,6 +90,18 @@ const pullPulse = keyframes`
 // not-yet-built placeholder. Among full disks: $pullEligible (good/green + pulse — about to be
 // auto-pulled this tick) vs merely full-and-waiting (blocked by partial tier progress, "too
 // early," or stranded past its tier's current level).
+// The ONE disk currently being provisioned or rebuilt ($activeKind 'provision' | 'rebuild') is drawn distinctly:
+// it fills RADIALLY (a conic sweep from 12 o'clock to $progress, 0..1), in its own colour (violet =
+// provisioning, amber = rebuilding) with a pulsing glow ring; a paused build (Disk Fill outranks it) keeps
+// its sweep and glow but stops pulsing. Both operations run at the pool's base Bandwidth (see
+// tickQueuedDiskBuild / tickAutoProvisionLowerDiskSizes) and never lose progress.
+const activeDiskColor = props => (props.$activeKind === 'rebuild' ? props.theme.color.warn : props.theme.color.violet)
+
+const diskGlowPulse = keyframes`
+  0%, 100% { box-shadow: 0 0 0 1px var(--disk-glow), 0 0 6px 1px var(--disk-glow); }
+  50% { box-shadow: 0 0 0 1px var(--disk-glow), 0 0 14px 4px var(--disk-glow); }
+`
+
 const DiskSquare = styled.div`
   flex: 1 1 1.2rem;
   min-width: 0;
@@ -94,21 +111,33 @@ const DiskSquare = styled.div`
   justify-content: center;
   padding: 0;
   border-radius: 50%;
+  position: relative;
   border: 1.5px solid ${props =>
-    props.$full
-      ? props.theme.color.accent
-      : props.$empty
-        ? props.theme.color.textMuted
-        : props.theme.color.surfaceSunken};
+    props.$activeKind
+      ? activeDiskColor(props)
+      : props.$full
+        ? props.theme.color.accent
+        : props.$empty
+          ? props.theme.color.textMuted
+          : props.theme.color.surfaceSunken};
   background: ${props =>
-    props.$full
-      ? (props.$pullEligible
-        ? props.theme.color.good
-        : props.theme.color.surfaceRaised)
-      : props.$empty
-        ? props.theme.color.surfaceSunken
-        : 'transparent'};
-  animation: ${props => (props.$pullEligible ? pullPulse : 'none')} 1.4s ease-in-out infinite;
+    props.$activeKind
+      ? `conic-gradient(from 0deg, color-mix(in srgb, ${activeDiskColor(props)} 70%, transparent) ${Math.round((props.$progress ?? 0) * 360)}deg, ${props.theme.color.surfaceSunken} 0deg)`
+      : props.$full
+        ? (props.$pullEligible
+          ? props.theme.color.good
+          : props.theme.color.surfaceRaised)
+        : props.$empty
+          ? props.theme.color.surfaceSunken
+          : 'transparent'};
+  ${props => (props.$activeKind
+    ? `--disk-glow: ${activeDiskColor(props)}; box-shadow: 0 0 0 1px var(--disk-glow), 0 0 10px 2px var(--disk-glow);`
+    : '')}
+  animation: ${props => (props.$activeKind && !props.$paused ? diskGlowPulse : props.$pullEligible ? pullPulse : 'none')} 1.4s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 `
 
 // The array's own always-full cache row — DISK_CACHE_BLOCK_COUNT blocks, each worth
@@ -236,6 +265,24 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
   const rebuildReadySeconds = rebuilding
     ? Math.ceil(intro.diskBuild.remainingSeconds)
     : null
+  // The disk under construction right now (never lost progress — it is stored in the engine state):
+  // provisioning = the next, not-yet-built slot at the offered size; rebuilding = the first non-full slot
+  // of the size a Foundry reset is refilling. Mutually exclusive.
+  const offeredSize = getDiskSize(state)
+  const lowerPending = isLowerDiskSizePending(state)
+  const provisionPasses = size === offeredSize ? getDiskProvisionPassesCollected(state, size) : 0
+  const provisionActive = size === offeredSize && !lowerPending && builtTotal < DISK_ARRAY_LADDER_CAP &&
+    (Boolean(intro.diskBuildQueued) || provisionPasses > 0)
+  const rebuildActive = size === offeredSize && lowerPending && full < DISK_ARRAY_LADDER_CAP && builtTotal < DISK_ARRAY_LADDER_CAP
+  const activeKind = provisionActive ? 'provision' : rebuildActive ? 'rebuild' : null
+  const activeIndex = provisionActive ? builtTotal : rebuildActive ? full : -1
+  const activeProgress = provisionActive
+    ? Math.min(1, provisionPasses / getDiskProvisionPassesRequired(state, size))
+    : rebuildActive && intro.lowerRebuild?.size === size
+      ? Math.min(1, intro.lowerRebuild.progress ?? 0)
+      : 0
+  const activePaused = provisionActive && !isProvisionDiskTurnAvailable(state)
+  const activePercent = Math.round(activeProgress * 100)
   const writeMerge = getDiskWriteCacheMerge(state, size)
   const writeCollectPaused = writeMerge ? isDiskWriteCacheCollectPaused(state, size) : false
   const writeCollectFill = writeMerge ? getDiskWriteCacheSegmentFill(writeMerge) : 0
@@ -360,11 +407,17 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
         {Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {
           const isFull = index < full
           const isEmpty = !isFull && index < full + emptyCount
+          const isActive = activeKind !== null && index === activeIndex
           return (
             <DiskSquare
               key={index}
+              {...(isActive
+                ? { role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': activePercent }
+                : null)}
               aria-label={
-                isFull
+                isActive
+                  ? `${activeKind === 'provision' ? 'provisioning' : 'rebuilding'} ${sizeLabel} disk`
+                  : isFull
                   ? (pullEligible
                     ? `${sizeLabel} disk pulling into ${redeemTierName}`
                     : `full ${sizeLabel} disk`)
@@ -373,7 +426,9 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
                     : `not yet built ${sizeLabel} disk`
               }
               title={
-                rebuilding
+                isActive
+                  ? `${activeKind === 'provision' ? 'Provisioning' : 'Rebuilding'} this disk — ${activePercent}%${activePaused ? ' (paused — Disk Fill goes first)' : ''}`
+                  : rebuilding
                   ? 'This array is offline while it rebuilds'
                   : isFull
                     ? (pullEligible
@@ -390,6 +445,9 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
               $full={isFull}
               $empty={isEmpty}
               $pullEligible={isFull && pullEligible}
+              $activeKind={isActive ? activeKind : null}
+              $progress={isActive ? activeProgress : 0}
+              $paused={isActive && activePaused}
             >
               <CellLabel $emphasis={isFull || isEmpty}>{bareSizeLabel}</CellLabel>
             </DiskSquare>
