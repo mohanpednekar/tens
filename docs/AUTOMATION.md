@@ -638,6 +638,18 @@ always-open-a-PR + CODEOWNERS human-review gate instead. Failures are not watche
 `automation-self-heal.yml` (a red run is visible on the Actions tab / commit status like any
 other main-branch workflow).
 
+### Revert deploy (`revert-deploy.yml`, #594)
+
+A manual safety net for a bad change that reached `main` (and therefore GitHub Pages). Run it from
+the Actions tab via **Run workflow**, passing `target_sha` — the last known-good commit on `main`.
+It is `workflow_dispatch`-only (never auto-triggered) and **never pushes to `main`**: it validates
+the SHA is a real ancestor of `main`'s HEAD, creates a `revert-deploy/to-<sha>-<timestamp>` branch
+whose single commit replaces the whole tree with the target's (deletions included — plain
+`git revert` breaks on merge commits), and opens a PR. A human reviews and merges it; as a normal
+commit on `main`, it makes `deploy.yml` redeploy with no changes there. Use it when a forward fix
+would be slower than restoring the previous state; the PR still waits for the usual required
+checks. Writes use `GH_AUTOMATION_PAT`. Automatic rollback detection is out of scope.
+
 ### PR review & testing cadence
 
 Applies to every PR (interactive or autonomous), on top of the general "Pull requests" rules in
