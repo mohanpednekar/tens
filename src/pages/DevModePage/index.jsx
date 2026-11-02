@@ -504,7 +504,7 @@ const DevModePage = ({ game }) => {
   const [query, setQuery] = useState('')
   const [jsonDraft, setJsonDraft] = useState(() => safeStringify(game.state))
   const [jsonStatus, setJsonStatus] = useState(null)
-  // Bumped when the save is replaced wholesale (JSON apply, reset) to remount the Variables fields,
+  // Bumped when the save is changed from outside the fields (JSON apply, reset, quick seed) to remount the Variables fields,
   // dropping their uncommitted drafts so a later Enter can't overwrite the new value with a stale one.
   const [fieldsEpoch, setFieldsEpoch] = useState(0)
 
@@ -616,7 +616,10 @@ const DevModePage = ({ game }) => {
                     <Button
                       aria-label={preset.label}
                       key={preset.id}
-                      onClick={() => game.setDevState(preset.apply)}
+                      onClick={() => {
+                        game.setDevState(preset.apply)
+                        setFieldsEpoch(epoch => epoch + 1)
+                      }}
                       type="button"
                       variant="neutral"
                     >

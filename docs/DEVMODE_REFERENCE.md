@@ -63,7 +63,7 @@ no-op outside Dev Mode as a defense-in-depth guard, though the UI only renders t
   and an armed Upgrade Data Stream that can't fire is cleared. A value that "doesn't stick" was
   normalized, not ignored.
 - **Raw state JSON** — collapsed under "Advanced"; a textarea pre-filled with
-  `JSON.stringify(game.state, null, 2)` (reloaded whenever Dev Mode toggles; a successful Apply or Reset also remounts the Variables fields,
+  `JSON.stringify(game.state, null, 2)` (reloaded whenever Dev Mode toggles; a successful Apply, Reset or quick-seed preset also remounts the Variables fields,
   dropping uncommitted drafts), with live parse
   validation (Apply disabled on invalid JSON or a non-object), ↻ Load live state, and ⧉ Copy. Apply
   calls `game.applyDevStateJson(text)` → `storage.js`'s `applyDevGameStateJson(jsonText, currentState)`.
