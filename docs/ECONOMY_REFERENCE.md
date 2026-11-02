@@ -1808,7 +1808,8 @@ per-tier milestone, no PP spent, no button to click:
 #### Pause/resume for the global automations
 
 Each of the automations above (Auto Scale Up, the global Tickspeed Autobuyer, Auto Overclock,
-Auto-Prestige) splits "has this ever been bought" (the permanent fields documented above —
+Auto-Prestige — and Auto Restage, via `autoXpTickspeed`/`autoXpTickspeedEnabled`/
+`setAutoXpTickspeedEnabled`, same convention) splits "has this ever been bought" (the permanent fields documented above —
 `autoScaleUp`/`autoGlobalTickspeed`/`autoPrestige`, all unaffected by this
 feature) from a separate, independently toggleable "is this currently allowed to act" bit:
 `autoScaleUpEnabled`/`autoGlobalTickspeedEnabled`/`autoOverclockEnabled`/`autoPrestigeEnabled`
@@ -2378,6 +2379,8 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // unchanged, unlike scaleUpCount) — only by a real
                                                           // Prestige or by Overclock itself resetting scaleUpCount
                                                           // (not overclockCount) — see "Overclock" below
+  autoXpTickspeed: false,                                // permanent GLOBAL flag: Auto Restage bought (8 PP); survives Prestige/Scale Up/Overclock/Era
+  autoXpTickspeedEnabled: true,                          // permanent pause/resume preference for Auto Restage
   autoScaleUp: false,                                    // permanent GLOBAL flag: PP spent to make eligible Scale Up
                                                           // claims automatic at every target, including the final tier
                                                           // (see buyAutoScaleUp)
@@ -2939,7 +2942,7 @@ purchases were manual or automatic.
 - `SCALE_UP_MULTIPLIER_BASE = 2` — per-eligible-tier activation production multiplier base for Scale Up (see `getTierScaleUpMultiplier`/`scaleUpGame`, "Scale Up" above) — no PP unlock needed, unlike `PRESTIGE_POINT_SPEED_BONUS`
 - `OVERCLOCK_MULTIPLIER_STEP = 0.1` — per-level growth factor for Overclock's own reward (see `getOverclockMultiplier`/`getGlobalTickspeedProductionMultiplier`/`overclockGame`, "Overclock" above) — each claimed level multiplies the global tickspeed multiplier's single per-level step by a further ×1.1, folded directly into that existing track's own step rather than a separate multiplier stacked alongside it; unconditional, no PP unlock needed
 - `OVERCLOCK_REQUIREMENT_STEP = 3` — completed-level growth required between Overclock uses; the first use has a fixed 5-completed-level floor (`getOverclockRequirement` reads `overclockLastClaimCompletedLevels`, falling back to `overclockCount` for older saves)
-- `LAST_TIER_XP_TICKSPEED_STEP = 0.01` — each XP consumed via `consumeXpForLastTierTickspeed` within the current run compounds another 1% into the last tier's own delivery frequency (see `getLastTierXpTickspeedMultiplier`) — the mechanic that replaces that tier's Money-funded tickspeed multiplier once it has ever been the target of a successful Scale Up this cycle (`isLastTierTickspeedXpUnlocked`); both the XP spent and the bonus it drives reset to 0 on Prestige/Scale Up (see "The last tier's XP-funded tickspeed" above)
+- `LAST_TIER_XP_TICKSPEED_STEP = 0.01` — each XP consumed via `consumeXpForLastTierTickspeed` within the current run compounds another 1% into the last tier's own delivery frequency (see `getLastTierXpTickspeedMultiplier`) — the separate Restage upgrade (beside Latency, available once `isLastTierTickspeedXpUnlocked`), which stacks with that tier's own tickspeed level
 - `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = 8` — one-time PP cost of the Auto Restage (`buyXpTickspeedAutobuyer`)
 - `LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1` — the last tier's resource-funded tickspeed upgrade spends only this fraction of its requirement (see `getTickspeedMultiplierSpend`)
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1` — a single `consumeXpForLastTierTickspeed` call must spend at least this fraction of the XP already consumed this way (see `getLastTierXpTickspeedMinConsumption`), so repeat consumptions can't trickle in one XP at a time forever
