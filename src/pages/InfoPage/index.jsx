@@ -223,9 +223,9 @@ const InfoPage = () => {
           </li>
           <li>
             <strong>Auto-convert</strong> turns Data Stream bits into free {firstTierName} at their
-            current per-unit cost, automatically, every cycle. On your first save this is how you
-            reach Storage’s {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)} threshold, which
-            permanently unlocks the main game.
+            current per-unit cost, automatically, every cycle. The main game itself unlocks
+            (permanently) once Upgrade Capacity raises Capacity to Storage’s{' '}
+            {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)} threshold.
           </li>
         </ul>
 

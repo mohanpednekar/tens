@@ -666,7 +666,7 @@ Strict three-layer separation:
 5. **`InfoPage/index.jsx`** — a static Guide page holding every mechanic's evergreen explanation in
    short bullets/sub-headings (what used to be MainPage's click-to-expand `InfoDetails` disclosures —
    Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Latency, Scale Up, Overclock, Tier
-   Autobuyers, Milestones, Prestige, Era ascension). Numbers come from the same `engine.js`/`layers.js`
+   Autobuyers, Milestones, Prestige, Offline progress, Era ascension). Numbers come from the same `engine.js`/`layers.js`
    constants the game uses, so they can't drift. Reads no `useIncrementalGame` state — only pure
    constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
    import) — the **only** in-app version surface. Reached via AppNav's Guide item.
