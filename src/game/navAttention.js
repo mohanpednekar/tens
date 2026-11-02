@@ -5,6 +5,7 @@ import {
   INTRO_BYTE_COMBINE_COST,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   TIER_DEFINITIONS,
+  XP_TICKSPEED_AUTOBUYER_UNLOCK_COST,
 } from 'game/layers'
 import {
   canBuyComputeFlopsTier,
@@ -181,6 +182,7 @@ export const hasAffordablePpUnlock = state => {
     (isComputeCoreConversionUnlocked(state) && !(state.computeAutoBoostUnlocked ?? false) && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST) ||
     (Boolean(state.autoScaleUp) && !(state.autoOverclock ?? false) && points >= getAutomationUnlockCost('overclock')) ||
     (!(state.autoGlobalTickspeed ?? false) && points >= getAutomationUnlockCost('latency')) ||
+    (!(state.autoXpTickspeed ?? false) && points >= XP_TICKSPEED_AUTOBUYER_UNLOCK_COST) ||
     (Boolean(state.autoOverclock) && state.autoPrestige == null && points >= getAutomationUnlockCost('prestige'))
   )
 }

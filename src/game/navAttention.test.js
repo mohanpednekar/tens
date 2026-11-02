@@ -367,6 +367,7 @@ describe('navAttention', () => {
       autoScaleUp: true,
       autoOverclock: true,
       autoGlobalTickspeed: true,
+      autoXpTickspeed: true,
       autoPrestige: 1,
       automationIntervalLevels: { prestige: 1e9 },
     }
@@ -394,6 +395,7 @@ describe('navAttention', () => {
       prestigeSpeedBonusUnlocked: true,
       autoScaleUp: true,
       autoGlobalTickspeed: true,
+      autoXpTickspeed: true,
     }
     const withBoosters = capacity => ({
       ...ownedEverythingElse,

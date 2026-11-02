@@ -11,7 +11,6 @@ import {
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_BOOST_MAX_STACKS,
   COMPUTE_BOOST_PRESETS,
-  COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
   COMPUTE_ENTITY_AUTO_MERGE_CAP,
   COMPUTE_MERGE_RATIO,
@@ -34,10 +33,15 @@ import {
   INTRO_BYTE_COMBINE_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   DISK_ARRAY_LADDER_CAP,
-  DISK_BUILD_COST_MULTIPLIER,
   DISK_CACHE_BLOCK_COUNT,
   DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER,
   INTRO_DISK_UNLOCK_CAPACITY,
+  MAX_OFFLINE_SECONDS,
+  OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS,
+  OFFLINE_PROGRESS_SPEED_MULTIPLIER,
+  PRESTIGE_POINT_SPEED_BONUS,
+  PRESTIGE_POWERS_PER_PP_BASE,
+  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
@@ -146,19 +150,24 @@ const InfoPage = () => {
       <Section aria-label="overview section">
         <h2>Overview</h2>
         <ul>
-          <li>Everything scales by powers of ten — costs, production, and many upgrades.</li>
-          <li>Buy every tier with <strong>Bits</strong> (the base currency).</li>
-          <li>Each owned tier produces the tier below it; production cascades down to Bits.</li>
+          <li>Everything scales by powers of ten — costs, production, and most upgrades.</li>
+          <li>Buy every tier with <strong>Bits</strong> (the base currency; 8 Bits = 1 Byte).</li>
           <li>
-            The main balance switches from Bits to whole Bytes once you hit 8000 Bits (1000 Bytes).
-            Costs and other production numbers still show in Bits.
+            Each owned tier produces the tier below it, so production cascades down the ladder;{' '}
+            {firstTierName} produce Bytes, which are added to your Bits.
           </li>
           <li>
-            Hitting <strong>1 Googol Bytes</strong> (8×10^100 Bits) freezes production until you Prestige.
+            The main balance switches from Bits to whole Bytes once you reach 8,000 Bits (1,000 Bytes).
+            Costs and production rates still show in Bits.
           </li>
           <li>
-            After your first Prestige, the <strong>Buy max</strong> toggle makes each purchase buy as many
-            levels as you can afford. Tiers buy full levels only — a partially-filled level takes its own click.
+            Reaching <strong>1 Googol Bytes</strong> (8×10^100 Bits) freezes production until you
+            Prestige — unless you have unlocked DeGoogol (see Prestige).
+          </li>
+          <li>
+            After your first Prestige, the <strong>Buy max</strong> toggle (Perks → 🎛 Toggles) makes
+            each purchase buy as many levels as you can afford. Tiers buy full levels only — a
+            partly bought level takes its own click.
           </li>
         </ul>
       </Section>
@@ -166,85 +175,81 @@ const InfoPage = () => {
       <Section aria-label="byte foundry section">
         <h2>Byte Foundry</h2>
         <p>
-          Every fresh save starts here, once, before {firstTierName} exist — unlocking the main
-          game is permanent, so a Prestige never sends you back here again. Reopen any time from the
-          bottom nav’s Foundry item. Data Stream Buffer / pool Memory
-          Capacity reads in binary units (KiB, MiB, …, 1 KiB = 1024 Bytes) — Storage (Disk sizes,
-          Data Lake, caches) stays SI (KB, MB, …, 1 KB = 1000 Bytes) throughout.
+          Every new save starts here, before any {firstTierName} exist. Unlocking the main game is
+          permanent — no Prestige or Era ascension sends you back through this gate. Reopen the
+          Foundry any time from the bottom nav. The Data Stream’s Capacity uses binary units (KiB,
+          MiB, …; 1 KiB = 1,024 Bytes); Storage pools, Disks and Data Lakes use decimal units (KB,
+          MB, …; 1 KB = 1,000 Bytes).
         </p>
 
         <h3>The loop</h3>
         <ul>
           <li>
-            <strong>Tap</strong> fills the Data Stream with bits (one second of production per tap
-            at the current rate) — until Storage pools reveal (see below), after which tapping the
-            Data Stream instead boosts its own Speed multiplier (next bullet). After the main game
-            unlocks, the Data Stream tile is the tap target — the standalone Tap button goes away.
+            <strong>Tap</strong> the Data Stream to add one second of its production. Once Storage
+            appears (at {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)} Capacity), a tap
+            instead adds a temporary tap bonus to its speed (below).
           </li>
           <li>
-            Combine the first {INTRO_BYTE_COMBINE_COST} bits into a permanent Byte generator that
-            produces passively forever after. Capacity starts at{' '}
-            {formatBitsInNearestUnit(getStoragePoolMemoryBounds(1).startBits)} and grows through a
-            full-Buffer Capacity ×2 ladder; its ceiling follows the highest unlocked storage pool.
+            <strong>Combine</strong> the first {INTRO_BYTE_COMBINE_COST} bits into a permanent Byte
+            generator that produces on its own from then on. Capacity starts at{' '}
+            {formatBitsInNearestUnit(getStoragePoolMemoryBounds(1).startBits)} and doubles with each
+            Capacity upgrade, up to the last storage pool’s limit.
           </li>
           <li>
-            <strong>Speed/Bandwidth multiplier</strong> — the displayed Data Stream Speed and each
-            pool’s own Bandwidth never change; they’re always what applies at 100% of a separate
-            multiplier shown alongside them. That multiplier starts at{' '}
-            {FILL_MULTIPLIER_MAX_PERCENT / 100}× when its own Buffer (Data Stream, or a pool’s own Memory)
-            is empty, falls geometrically to exactly 1× at 50% full, and bottoms out at{' '}
-            {FILL_MULTIPLIER_MIN_PERCENT / 100}× once completely full. Tapping the Data Stream (once
-            Storage pools are revealed at 1 KiB) or a pool’s own Memory tile multiplies{' '}
-            that one Data Stream/pool’s own multiplier by (1 + {FILL_MULTIPLIER_TAP_BONUS_PERCENT}%),
-            decaying back down at {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}%/sec. The tap
-            bonus is its own 0–{FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% value shown as a separate
-            yellow bar directly below the blue base-multiplier bar (visible only while it’s above
-            0); the combined total (base multiplier × any live tap bonus) is capped at{' '}
-            {FILL_MULTIPLIER_TAP_CAP_PERCENT}%.
+            <strong>Fill multiplier</strong> — the Data Stream’s Speed and each pool’s speed are shown
+            as the rate actually delivered: the base rate times a multiplier that depends on how full
+            that buffer is. It is {FILL_MULTIPLIER_MAX_PERCENT / 100}× when empty, 1× at half full and{' '}
+            {FILL_MULTIPLIER_MIN_PERCENT / 100}× when full; the color runs red (slow) → blue → green
+            (fast). Tapping the Data Stream (once Storage appears) or a pool’s Memory tile adds a +
+            {FILL_MULTIPLIER_TAP_BONUS_PERCENT}% tap bonus (up to {FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}%),
+            which fades by {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}% per second and shows as a
+            thin bar and “+x% 👆”. The combined multiplier is capped at {FILL_MULTIPLIER_TAP_CAP_PERCENT}%.
           </li>
           <li>
-            <strong>Upgrade Capacity</strong> costs your current Capacity in bits and doubles it.{' '}
-            <strong>Upgrade Speed</strong> costs your current Speed level (in Bytes), which equals the Capacity cost when Speed is at its cap. Only
-            one runs at a time: pressing either replaces both buttons with a progress bar while a
-            constant 100% of the Data Stream&apos;s base Speed is pulled from the Buffer into it,
-            ahead of everything else. When the bar fills the upgrade applies and both buttons return.
-            Base Speed is (Speed level in Bytes)<sup>exponent</sup> per second and can never exceed
-            Capacity<sup>exponent</sup>, so upgrade Capacity to unlock more Speed. The exponent starts
-            at {DATA_STREAM_SPEED_EXPONENT_BASE} (a square root) and rises by {DATA_STREAM_SPEED_EXPONENT_STEP} each time a Foundry reset
-            unlocks the next disk size — when an array is full, a <strong>Foundry reset</strong> button replaces
-            Provision Disk; everything you built is auto-rebuilt up to your prior highs. Pool Bandwidth
-            is capped by the same exponent.
+            <strong>Upgrade Capacity</strong> costs your current Capacity and doubles it.{' '}
+            <strong>Upgrade Speed</strong> costs your current Speed level. Only one runs at a time: it
+            becomes a progress bar that draws the Data Stream’s base Speed from the Buffer, ahead of
+            everything else, and applies when full. Base Speed is (Speed level in Bytes)
+            <sup>exponent</sup> per second and can never exceed Capacity<sup>exponent</sup>, so raise
+            Capacity to unlock more Speed. The exponent starts at {DATA_STREAM_SPEED_EXPONENT_BASE} (a
+            square root); pool speed is capped by the same exponent.
           </li>
           <li>
-            <strong>Transfer blocks</strong> convert Data Stream bits into free {firstTierName} at
-            {firstTierName}’ current per-unit cost, with no per-cycle cap, every cycle. Auto-convert
-            keeps running even when the manual row is hidden — it doesn’t itself gate the main game;
-            crossing Storage’s own capacity threshold does that (next section), a one-time-ever
-            unlock on your very first cycle.
+            <strong>Foundry reset</strong> — when every unlocked disk size is complete, this button
+            replaces Provision Disk. It unlocks the next disk size and raises the exponent by{' '}
+            {DATA_STREAM_SPEED_EXPONENT_STEP}. The Foundry restarts from scratch, then Combine,
+            Capacity, Speed, Disks and Data Lake upgrades/Boosters are replayed automatically up to
+            your previous highs.
+          </li>
+          <li>
+            <strong>Auto-convert</strong> turns Data Stream bits into free {firstTierName} at their
+            current per-unit cost, automatically, every cycle. The main game itself unlocks
+            (permanently) once Upgrade Capacity raises Capacity to Storage’s{' '}
+            {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)} threshold.
           </li>
         </ul>
 
         <h3>What resets vs. what stays</h3>
         <ul>
           <li>
-            <strong>Resets each Prestige:</strong> Data Stream balance.
+            <strong>Resets each Prestige:</strong> the Data Stream balance and any partly bought{' '}
+            {firstTierName} level.
           </li>
           <li>
-            <strong>Permanent:</strong> the Byte generator, Buffer/production upgrades, Disks,
-            every Compute entity, and the main-game unlock gate itself — once it has ever
-            triggered, no Prestige re-gates you behind the Byte Foundry again.
+            <strong>Kept through Prestige:</strong> the Byte generator, Capacity/Speed upgrades,
+            Disks, Data Lakes, every Compute entity, and the main-game unlock. Era ascension resets
+            most of this (see Era ascension).
           </li>
-          <li>Later cycles are a fast pit-stop, not a full replay.</li>
+          <li>Later cycles are a quick pit stop, not a full replay.</li>
         </ul>
 
         <h3>Forced priority</h3>
-        <p>When more than one upgrade is affordable, only the highest-ranked action is available:</p>
+        <p>When more than one of these is available, only the highest-ranked one can be used:</p>
         <ul>
           <li>Disk Fill → Provision Disk → Compute Boost</li>
           <li>
-            <strong>Upgrade Data Stream</strong>, Data Lake Booster purchases, and the Data Lake's own
-            Capacity Upgrade sit OUTSIDE this order entirely — each is available purely on its own
-            eligibility, never disabled just because a higher-ranked action above is also available.
+            Upgrade Capacity / Upgrade Speed, Data Lake Booster purchases and Data Lake capacity
+            upgrades are outside this order — they are never blocked by it.
           </li>
         </ul>
       </Section>
@@ -252,82 +257,63 @@ const InfoPage = () => {
       <Section aria-label="storage section">
         <h2>Storage</h2>
         <p>
-          Unlocks once Data Stream Buffer reaches {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}.
-          Disk arrays live under Foundry as continuous sections (not a separate top-level nav item);
-          pools 1–10 are derived from the shared Data Stream, with earlier pools dividing Bandwidth
-          and Capacity by 1024 per step and clamping Capacity to their chained bounds.
+          Appears on the Foundry screen once the Data Stream’s Capacity reaches{' '}
+          {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}. There are ten pools (KB … QB), all fed
+          by the shared Data Stream — earlier pools take their share of its speed first. Pool N
+          appears once Capacity reaches 1024<sup>N</sup> Bytes (1 KiB, 1 MiB, …), whatever disks you
+          have built.
         </p>
 
         <h3>Provisioning Disks</h3>
         <ul>
           <li>
-            Each array costs {DISK_BUILD_COST_MULTIPLIER}× its size in bits (paid up front).
+            Click Provision Disk once to start a build; it draws its cost from the pool’s buffer at
+            the pool’s base speed and pauses (losing nothing) whenever the buffer is empty. The Nth
+            disk of an array costs N× the disk’s size.
           </li>
           <li>
-            Provision time is real: the first disk of a size takes exactly as long as filling it would
-            at your current Byte Foundry production rate (Memory bandwidth); the Nth disk of the
-            same array takes N× that base time.
+            Up to {DISK_ARRAY_LADDER_CAP} disks can be built at each size before the next size opens,
+            stepping through every power of ten (1 KB → 10 KB → 100 KB → 1 MB …). Each pool holds
+            three sizes; to build in a pool, every array in the earlier pools must be complete. Sizes
+            beyond those already unlocked need a Foundry reset.
           </li>
-          <li>
-            While an array rebuilds, every disk in it is offline — no filling or pulling — until
-            provisioning finishes.
-          </li>
-          <li>
-            Up to {DISK_ARRAY_LADDER_CAP} disks can be provisioned at the current size before the
-            ladder advances, through every Byte power of ten (1 KB → 10 KB → 100 KB → 1 MB …) with
-            no gaps.
-          </li>
-          <li>
-            Completing all three arrays in a pool unlocks the next derived pool; only the largest
-            disk size in pool 10 is terminal.
-          </li>
-          <li>The Provision Disk button stays on Byte Foundry; Storage shows every size you’ve reached.</li>
         </ul>
 
         <h3>Cache and automatic pulling</h3>
         <ul>
           <li>
-            Only the pool's smallest array — the one that actually draws from Memory — keeps a
-            Cache of {DISK_CACHE_BLOCK_COUNT} blocks totaling one disk’s worth of bits (e.g. a
-            1 MB array → 8 × 1 Mb). Cache stays full as its steady state; Memory refills whole
-            blocks when a block was just spent by the tier's own automatic pull below or the size
-            was just unlocked — Memory fills visibly between transfers rather than draining
-            bit-by-bit: the moment Memory holds a full block, that block lands in the Cache
-            instantly and is subtracted from Memory.
+            Each pool’s smallest array keeps a read Cache of {DISK_CACHE_BLOCK_COUNT} blocks that
+            together hold one disk’s worth of bits (e.g. a 1 MB array → 8 × 1 Mb). Whenever the
+            pool’s Memory holds a full block and the Cache has room, the block moves into the Cache
+            instantly.
           </li>
           <li>
-            That smallest array's empty disks fill from its full read cache when no tier claim
-            blocks that size — the flush takes as long as filling one cache block at
-            {' '}{DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}× your current Byte Foundry production
-            rate (not instant). Every larger size fills exclusively via write-cache merges from the
-            size below — collecting from those built Disks at {CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER}×
-            your rate, then flushing into the next size's own empty disk at
-            {' '}{DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}× — it has no read cache of its own.
+            That array’s empty disks fill from its read Cache, taking as long as one cache block
+            would at {DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}× your Foundry production rate. Every
+            larger size fills only by merging full disks from the size below — collected at{' '}
+            {CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER}× your rate, then written at{' '}
+            {DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}×. Merges never cross from one pool into another.
           </li>
           <li>
-            Every disk size has one fixed, permanent tier and level it corresponds to (KB-scale
-            sizes to Kilobytes, MB-scale to Megabytes, and so on — the 1st/2nd/3rd size within each
-            maps to that tier’s own level 1/2/3). Byte Foundry <strong>pulls</strong> a full,
-            clean-slate disk automatically — every tick, with no click and no autobuyer needed —
-            the instant its tier sits at exactly that level <strong>and</strong> that level has no
-            progress toward it yet, completing the tier’s whole current level in one shot rather
-            than granting a single unit. A level with partial progress already (bought by hand or
-            by an autobuyer) is never later topped off by a disk — the disk simply waits for that
-            tier's next fresh level.
+            Every disk size matches one tier and level (KB sizes → Kilobytes, MB sizes → Megabytes, …;
+            the 1st/2nd/3rd size in a pool → that tier’s level 1/2/3). A full, clean-slate disk is{' '}
+            <strong>pulled</strong> automatically — no click or autobuyer needed — the moment its tier
+            is at exactly that level with no purchases toward it yet, completing the whole level at
+            once. A level you have already started buying is never topped off by a disk; the disk
+            waits for that tier’s next fresh level.
           </li>
           <li>
-            A tier still sitting at its own level 1 with no fresh disk to pull draws instead from
-            its pool's own Cache directly, in bulk — an automatic fallback for that tier's entry
-            point only; a tier's later levels only ever pull from a whole disk.
+            A tier still on its level 1 with no disk to pull draws from its pool’s Cache directly
+            instead. Later levels only ever come from whole disks.
           </li>
-          <li>Disks are reusable and permanent across Prestige; a full disk stays full through Prestige.</li>
+          <li>Disks are permanent across Prestige; a full disk stays full.</li>
         </ul>
       </Section>
 
       <Section aria-label="boosters section">
         <h2>Boosters</h2>
         <p>
-          Unlocks once Memory capacity reaches{' '}
+          Unlocks once the Data Stream’s Capacity reaches{' '}
           {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}. Open it from the bottom
           nav’s Boosters item.
         </p>
@@ -335,117 +321,89 @@ const InfoPage = () => {
         <h3>Data Lakes</h3>
         <ul>
           <li>
-            Ten permanent lakes (one per storage denomination, KB … QB), gated on that pool having
-            built at least one real disk. Until that pool's Storage array is entirely complete (all
-            three ×1/×10/×100 sizes fully built), the lake only fills when its own conversion control
-            is drawing toward a Booster (see below) — spending directly from that pool's own Memory
-            buffer, capped at just enough for the lake's own next Booster, so a click never wastes a
-            deposit. Once the pool is entirely complete, filling switches to AUTOMATIC regardless of
-            that control: whatever the pool can't put toward its fill-based multiplier bonus (see
-            Storage above) overflows straight into that pool's own lake, at the plain available
-            rate — no taper, the same posture Storage's own disk provisioning uses. Disks are no
-            longer deposited from Storage — Data Lakes have their own separate disk ladder now.
+            Each pool has its own Data Lake (KB … QB), shown in its pool card. A lake unlocks once its
+            pool has built at least one disk, and turns stored data into Boosters.
           </li>
           <li>
-            A lake fills its own disks smallest-size-first (×1, then ×10, then ×100 of that lake's
-            denomination), one at a time, showing each completed disk as a filled square — the same
-            disk-array visual Storage pools use. Each sub-size caps one short of that level's own
-            capacity ({DATA_LAKE_SUB_SIZE_DISK_CAPS.join('/')}, not a flat 10/10/10) — a level's own
-            last unit fills through the lake's own retained buffer instead of a disk square, the
-            same way a Storage array's own cache substitutes for its would-be 10th disk.
+            A lake fills from its own pool’s buffer at the pool’s speed whenever every built disk in
+            that pool is full and nothing is being provisioned there. Clicking its 🏷️ cost control
+            also draws from the pool’s buffer until the next Booster is affordable, buys one, then
+            stops. Once all of the pool’s disks are built, its overflow also pours into the lake.
           </li>
           <li>
-            A lake holds at most {DATA_LAKE_SUB_SIZE_DISK_CAPS[0]} of its ×1 disks and{' '}
-            {DATA_LAKE_SUB_SIZE_DISK_CAPS[1]} each of its ×10 and ×100 disks —{' '}
-            {DATA_LAKE_SUB_SIZE_DISK_CAPS.reduce((sum, count) => sum + count, 0)} disks in total,
-            matching the lake's own capacity ladder (below) at its max level.
+            A lake shows its contents as disk squares, filled smallest first: up to{' '}
+            {DATA_LAKE_SUB_SIZE_DISK_CAPS.join('/')} disks of ×1/×10/×100 its unit. The last unit of
+            each capacity level sits in the lake’s own buffer instead of a square, just as a Storage
+            array’s Cache stands in for a 10th disk.
           </li>
           <li>
-            A lake's own deposit capacity is purchasable: it starts at 1 unit and climbs a plain
-            ×10-per-level ladder (1, 10, 100, 1,000) — the same decade-power-of-10 shape a Storage
-            pool's own Capacity uses, permanently hard-capped at{' '}
-            {DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_BY_LEVEL.length - 1]} units. It only
-            becomes available once the corresponding Storage disk array for that capacity level is
-            fully built — advancing a level drains every banked disk back to zero to pay for it.
+            Lake capacity starts at 1 unit and can be raised ×10 per level (
+            {DATA_LAKE_CAPACITY_BY_LEVEL.map(units => units.toLocaleString()).join(', ')}). Each level
+            unlocks once the matching Storage array is fully built, and buying it empties the lake.
           </li>
           <li>
-            Boosters unlock permanently for a lake the first time it fills even one disk. From then
-            on, the nth Booster ever bought from that lake costs n banked units, spent instantly (no
-            live transfer or waiting period). A single control shows the next Booster's cost — click
-            it to buy immediately if already banked, or to start automatically drawing from the
-            pool's own buffer until it is, then buy 1 and stop (it can't be started while that tier's
-            compute entity is already full). Once a lake's Storage pool has been fully built, its
-            Boosters auto-buy for the rest of the Era, even through resets, and Reset Byte Foundry
-            replays lake upgrades and Boosters back to their previous highs.
+            The nth Booster bought from a lake costs n units and instantly grants 1 compute entity of
+            that lake’s tier (KB → Core, MB → Node, …). Once a pool has all of its disks built, its
+            lake buys every affordable Booster automatically for the rest of the Era — through pool
+            resets, Foundry resets and Prestige.
           </li>
         </ul>
 
-        <h3>Cores</h3>
+        <h3>Pool resets</h3>
         <ul>
           <li>
-            Bought from the matching Data Lake's own cost/conversion control (on the Byte Foundry
-            screen) — there is no other way to obtain a Core.
+            When a pool has every disk built, its lake is completely full, and the next Booster costs
+            more than the lake can hold, a <strong>↻ Reset Pool</strong> button appears. It never
+            fires on its own.
           </li>
           <li>
-            Every {COMPUTE_CORES_PER_NODE} Cores convert toward 1 Node (via the Core → Node merge
-            boundary).
+            A reset empties that pool’s disks, buffer and lake (Boosters bought and earlier reset
+            rewards stay) and permanently adds 1,000 units of lake capacity. The first reset also
+            locks lake filling at 50% speed; later resets raise the pool’s speed.
           </li>
           <li>
-            Every compute entity caps at {COMPUTE_ENTITY_CAP} held — including Data Lake Booster
-            purchases (any of the ten tiers, not just Cores), which pause once that tier's held
-            count reaches the cap and resume once it's spent back down (a merge, or a Compute
-            Boost activation/stack) — EXCEPT for a tier whose own outbound merge boundary already
-            has auto-merge unlocked, where the cap instead rises to {COMPUTE_ENTITY_AUTO_MERGE_CAP}{' '}
-            (the extra {COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_ENTITY_CAP} being that boundary's own
-            gradually-filling reserve — see "Merge chain" below).
+            Afterwards the pool rebuilds its disks for free, one at a time, smallest first. Until it
+            is complete again, later pools can’t start new disk builds.
           </li>
         </ul>
 
-        <h3>Merge chain</h3>
+        <h3>Cores and the merge chain</h3>
         <ul>
           <li>
             Chain: Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter →
-            Supercomputer → Megacomputer.
+            Supercomputer → Megacomputer. Cores only come from KB Data Lake Boosters.
           </li>
           <li>
-            Manual merge: convert {COMPUTE_MERGE_RATIO} of one tier into 1 of the next (enabled at
-            {COMPUTE_MERGE_RATIO} held).
+            Each entity caps at {COMPUTE_ENTITY_CAP} held; Booster purchases pause at the cap until
+            you spend some (a merge or a Compute Boost).
           </li>
           <li>
-            Sacrifice {COMPUTE_ENTITY_CAP} held units of the produced tier to unlock auto-merge for
-            that boundary.
+            Manual merge: turn {COMPUTE_MERGE_RATIO} of one entity into 1 of the next (needs{' '}
+            {COMPUTE_MERGE_RATIO} held). It is instant.
           </li>
           <li>
-            After unlock: merging uses an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve, alongside the
-            input tier's own {COMPUTE_ENTITY_CAP} normal slots ({COMPUTE_ENTITY_AUTO_MERGE_CAP} total
-            held). The reserve fills gradually as that tier keeps growing past its normal 10 — via
-            continued Booster purchases or a lower-tier merge — rather than all at once. Tapping
-            the auto-merge slots merges {COMPUTE_MERGE_RATIO} → 1 instantly. An automatic merge runs
-            a timed countdown: the time {COMPUTE_MERGE_RATIO} of the
-            smallest disks in that tier’s own Storage pool take to fill from their read cache
-            (Cores use the KB pool, Nodes the MB pool, and so on). The pool’s larger disks don’t
-            count, so the timer never escalates within a pool. A tier’s automatic merges wait until
-            its pool is visible. A running automatic merge never takes longer than the current merge
-            time, so it speeds up as the pool’s Bandwidth grows.
+            Sacrifice {COMPUTE_ENTITY_CAP} of the next entity to unlock auto-merge for that step. This
+            adds an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve ({COMPUTE_ENTITY_AUTO_MERGE_CAP} held in
+            total) that fills as the entity keeps growing past {COMPUTE_ENTITY_CAP}. Tapping the
+            reserve slots merges {COMPUTE_MERGE_RATIO} → 1 instantly.
           </li>
           <li>
-            Auto-merge starts only once the input tier reaches the FULL extended cap (
-            {COMPUTE_ENTITY_AUTO_MERGE_CAP} — the normal slots plus the whole reserve) — a stricter
-            bar than merging manually, which only needs {COMPUTE_MERGE_RATIO} held across the
-            normal + reserve slots and is instant.
+            An automatic merge starts only when all {COMPUTE_ENTITY_AUTO_MERGE_CAP} slots are full and
+            runs on a timer: the time {COMPUTE_MERGE_RATIO} of the smallest disks in that entity’s own
+            pool take to fill from its read Cache (Cores use the KB pool, Nodes the MB pool, …). It
+            waits until that pool is visible and speeds up as the pool gets faster.
           </li>
         </ul>
 
         <h3>Compute Boost</h3>
         <ul>
           <li>
-            Click any tier row to arm Burst / Standard / Sustain. Spend 1 token of the armed tier
-            to activate. The multiplier and duration are the same whichever tier you spend; a
-            higher tier boosts more Factory tiers instead (Core: Kilobytes only, Node: Kilobytes
-            and Megabytes, Cluster: the first three, …).
+            Select a tier on Boosters to show its Burst / Standard / Sustain presets; activating one
+            spends 1 of that entity. Every tier gives the same multiplier and duration — higher tiers
+            boost more Factory tiers (Core: Kilobytes only, Node: Kilobytes and Megabytes, Cluster:
+            the first three, …).
           </li>
           <li>
-            Presets (same for every funding tier):{' '}
             Burst ×{COMPUTE_BOOST_PRESETS.burst.multiplier} for{' '}
             {formatOfflineDuration(COMPUTE_BOOST_PRESETS.burst.durationSeconds)}; Standard ×
             {COMPUTE_BOOST_PRESETS.standard.multiplier} for{' '}
@@ -454,64 +412,58 @@ const InfoPage = () => {
             {formatOfflineDuration(COMPUTE_BOOST_PRESETS.sustain.durationSeconds)}.
           </li>
           <li>
-            A boost always multiplies Memory production too, plus as many Factory tiers (from{' '}
-            {firstTierName} up) as the funding tier’s number. It also speeds up the matching Storage
-            pools’ buffer fill (pool N for Factory tier N) by +{COMPUTE_BOOST_PRESETS.burst.poolBonusPercent}% /
-            +{COMPUTE_BOOST_PRESETS.standard.poolBonusPercent}% / +{COMPUTE_BOOST_PRESETS.sustain.poolBonusPercent}%
-            for Burst / Standard / Sustain.
+            A boost also multiplies the Byte generator’s production and speeds up the matching
+            Storage pools’ buffers (pool N for Factory tier N) by +
+            {COMPUTE_BOOST_PRESETS.burst.poolBonusPercent}% / +
+            {COMPUTE_BOOST_PRESETS.standard.poolBonusPercent}% / +
+            {COMPUTE_BOOST_PRESETS.sustain.poolBonusPercent}% for Burst / Standard / Sustain.
           </li>
           <li>
-            Only one boost runs at a time. Picking the same preset + tier again{' '}
-            <strong>Stacks</strong> it. Picking a different one switches after a confirmation: any
-            unused stacks are refunded and the running one is forfeited.
+            Only one boost runs at a time. Picking the same preset and tier again{' '}
+            <strong>stacks</strong> it (up to {COMPUTE_BOOST_MAX_STACKS} stacks; each adds time, the
+            multiplier doesn’t compound). Picking a different one asks first, then refunds unused
+            stacks and forfeits the running one.
           </li>
           <li>
-            While active, a timer bar shows the time left. <strong>+</strong> on its right stacks
-            another token of the active boost’s own funding tier to extend it (up to{' '}
-            {COMPUTE_BOOST_MAX_STACKS} stacks; multiplier doesn’t compound).{' '}
-            <strong>Pop</strong> (↩) on its left refunds the most recent unused stack instantly.
-            Once no unused stack remains it becomes <strong>Forfeit</strong> (✕), which ends the
-            boost with no refund after a confirmation.
+            While a boost runs, a timer bar shows the time left. <strong>+</strong> on its right adds
+            a stack. <strong>Pop</strong> (↩) on its left refunds the most recent unused stack; once
+            none are left it becomes <strong>Forfeit</strong> (✕), which ends the boost with no refund
+            after a confirmation.
           </li>
           <li>
-            <strong>Auto-Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time): when a
-            tier is full and waiting on its own in-flight reserve merge, automatically activates
-            (or stacks) your preferred preset from the <strong>biggest</strong> such tier (default
-            Standard). Unlock it on Perks → Unlocks; the preference is selectable on Boosters afterwards. Never forfeits an active
-            boost to switch presets.
+            <strong>Auto-Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time, on Perks → 🔓
+            Unlocks): when a tier is full and waiting on its own automatic merge, activates (or
+            stacks) your preferred preset from the <strong>biggest</strong> such tier. Choose the
+            preset on Boosters (default Standard). It never forfeits a running boost.
           </li>
-          <li>Megacomputer’s only use is funding a Boost.</li>
+          <li>Megacomputers are used only to fund Boosts.</li>
         </ul>
       </Section>
 
       <Section aria-label="compute flops section">
         <h2>Compute</h2>
         <p>
-          A separate PP-funded screen (nav <strong>Compute</strong>) with ten tiers{' '}
-          <strong>KFlops → QFlops</strong>, each boosting the matching Factory tier. Reveals once
-          you hold {COMPUTE_FLOPS_REVEAL_PP} PP; the first tier costs{' '}
-          {COMPUTE_FLOPS_FIRST_TIER_COST_PP.toLocaleString()} PP, so the screen is visible before
-          you can buy anything.
+          A separate screen (nav <strong>Compute</strong>) with ten tiers,{' '}
+          <strong>KFlops → QFlops</strong>, bought with Prestige Points; each boosts the matching
+          Factory tier. It appears once you hold {COMPUTE_FLOPS_REVEAL_PP} PP; the first tier costs{' '}
+          {COMPUTE_FLOPS_FIRST_TIER_COST_PP.toLocaleString()} PP.
         </p>
         <ul>
           <li>
-            Base costs follow the same 10³ ladder as Factory tiers (
+            Base costs climb ×1,000 per tier like Factory tiers (
             {COMPUTE_FLOPS_FIRST_TIER_COST_PP.toLocaleString()} –{' '}
-            {COMPUTE_FLOPS_LAST_TIER_COST_PP.toExponential(0).replace('+', '')} PP). Per-unit price
-            then rises on <strong>every</strong> purchase via the linear-increment power-of-ten
-            epoch (same curve as the Factory, but not gated behind 8-purchase level blocks).
+            {COMPUTE_FLOPS_LAST_TIER_COST_PP.toExponential(0).replace('+', '')} PP), and the price
+            rises with <strong>every</strong> purchase rather than every 8.
           </li>
           <li>
-            Each owned unit adds{' '}
-            {(COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * 100).toFixed(2)}% per real second to its
-            matching Factory tier — linear in owned count, applied as production multiplier{' '}
-            <strong>(1 + cumulative boost)</strong>.
+            Each owned unit adds {(COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * 100).toFixed(2)}% per
+            second to its Factory tier’s boost, which multiplies production by{' '}
+            <strong>(1 + boost)</strong>.
           </li>
           <li>
-            Cumulative boost per tier displays in the hero as <strong>Flops</strong> using{' '}
-            <strong>E = k + 10M + 100G + 1000T + … + 10⁹Q</strong> (each tier's boost weighted by
-            10<sup>n</sup>, K = 10⁰ through Q = 10⁹). Production still uses the unweighted per-tier
-            boost. Totals reset each Prestige; owned unit counts are permanent.
+            The header’s <strong>Flops</strong> total weights each tier’s boost by 10<sup>n</sup>{' '}
+            (<strong>K + 10·M + 100·G + … + 10⁹·Q</strong>); production uses each tier’s own boost.
+            Boosts reset each Prestige; owned units are kept.
           </li>
         </ul>
       </Section>
@@ -520,14 +472,25 @@ const InfoPage = () => {
         <h2>Latency</h2>
         <ul>
           <li>
-            Spend Bytes to permanently speed up every tier’s production ticks by another 1% at once —
-            more frequent deliveries, not bigger ones.
+            Spend Bytes to make every tier’s production ticks 1% faster per level, compounding — more
+            frequent deliveries, not bigger ones.
           </li>
-          <li>Each level costs another exact power of ten (10 B, 100 B, 1,000 B, …).</li>
-          <li>Unlocks once {firstTierName} completes its first level.</li>
+          <li>Each level costs the next power of ten (10 B, 100 B, 1,000 B, …).</li>
+          <li>Unlocks once {firstTierName} complete their first level.</li>
           <li>
-            Kilobytes produce Bytes; there’s also a per-tier tickspeed track on each unlocked tier
-            row, funded from that tier’s own resource.
+            Each tier row also has its own tickspeed upgrade, paid for with units of that tier
+            itself — buying one lowers that tier’s owned count.
+          </li>
+          <li>
+            {lastTierName}’ tickspeed upgrade needs the usual amount owned but only spends a tenth of
+            it (the 2nd upgrade needs 100, spends 10).
+          </li>
+          <li>
+            After {TIER_DEFINITIONS.length} Scale Ups in a run (the first onto {lastTierName}), the
+            Restage upgrade appears beside Latency: spend XP for +1% faster {lastTierName} ticks per XP
+            (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
+            It resets every other tier’s owned quantity and your Bits. A 16 PP Auto Restage
+            (Perks → Unlocks) spends it for you.
           </li>
         </ul>
       </Section>
@@ -536,23 +499,23 @@ const InfoPage = () => {
         <h2>Scale Up</h2>
         <ul>
           <li>
-            Reach 3 completed levels on the tier Scale Up is currently
-            working through — starting with {firstTierName} — to trigger a Scale Up.
+            Reach 3 completed levels on the tier Scale Up is currently working through — starting
+            with {firstTierName} — to claim a Scale Up.
           </li>
           <li>
-            Resets tiers and resources and records the next tier. Recorded tiers reappear after
-            their predecessor reaches {scaleUpReRevealCompletedLevels} completed levels; first-time reveals happen only on a successful Scale Up.
+            Resets tiers and resources and unlocks the next tier. After a later reset, an
+            already-unlocked tier reappears once the tier before it reaches{' '}
+            {scaleUpReRevealCompletedLevels} completed levels.
           </li>
           <li>
-            Permanently doubles production for every tier already unlocked when you claim it.
-            Each tier stacks its own bonus (×2, ×4, ×8, …); a newly revealed tier starts at ×1.
+            Doubles production for every tier unlocked so far; the bonuses stack (×2, ×4, ×8, …) and
+            a newly unlocked tier starts at ×1. They last until the next Overclock or Prestige.
           </li>
           <li>
             Each of the first ten claims needs 3 completed levels on the last unlocked tier. After
-            every tier has received its first claim, repeated final-tier claims need 6, 9, 12, and
-            so on.
+            that, repeated claims on the final tier need 6, 9, 12, and so on.
           </li>
-          <li>Byte Foundry state (including Memory) is untouched — this is an intra-cycle soft reset.</li>
+          <li>Byte Foundry progress is untouched.</li>
         </ul>
       </Section>
 
@@ -560,26 +523,24 @@ const InfoPage = () => {
         <h2>Overclock</h2>
         <ul>
           <li>
-            Reach the required completed-level count on {lastTierName} to claim an Overclock.
+            Reach the required number of completed {lastTierName} levels to claim an Overclock.
           </li>
           <li>
-            Resets tiers and resources like Scale Up (keeps unlocked autobuyers and Prestige Points).
+            Resets tiers and resources like Scale Up and also clears Scale Up’s bonuses. Autobuyers
+            and Prestige Points are kept.
           </li>
           <li>
-            Also wipes Scale Up’s stacking bonus back to zero.
+            In exchange, permanently multiplies Latency’s per-level rate by ×1.1 for each completed
+            level banked (1% → 1.1% → 1.21% → …).
           </li>
           <li>
-            In exchange, permanently multiplies Latency’s per-level rate by ×1.1 for each
-            completed level banked (1% → 1.1% → 1.21% → …).
+            The first claim needs {overclockFirstRequirement} completed levels — a minimum; you can
+            keep climbing first. Each later claim needs three more completed levels than the previous
+            claim was taken at.
           </li>
           <li>
-            First claim needs {overclockFirstRequirement} completed levels — a minimum only; you
-            may keep climbing first. Each later claim needs three more completed levels than the
-            count the previous claim was actually taken at.
-          </li>
-          <li>
-            Claiming banks all completed levels already reached — claiming 3 levels then 3 more
-            gives exactly the same benefit as claiming 6 at once, so claim whenever you like.
+            Every completed level counts — claiming at 3 and then 3 more gives the same benefit as
+            claiming 6 at once, so claim whenever you like.
           </li>
         </ul>
       </Section>
@@ -588,18 +549,17 @@ const InfoPage = () => {
         <h2>Tier Autobuyers</h2>
         <ul>
           <li>
-            Each tier’s unit-buying autobuyer and its tickspeed autobuyer unlock automatically as
-            you Prestige more — see Perks → 🔓 Unlocks for exact thresholds.
+            Each tier’s autobuyer and its tickspeed autobuyer unlock automatically as your Prestige
+            count grows — see Perks → 🔓 Unlocks for the exact thresholds.
           </li>
           <li>
-            Once unlocked, its ⏸/▶ control on Perks → 🎛 Toggles pauses or resumes without losing the unlock.
+            Once unlocked, pause or resume each one on Perks → 🎛 Toggles without losing it.
           </li>
           <li>
-            A tier’s autobuyer buys <strong>one full level per attempt</strong> — only when the
-            whole level is affordable, or the rest of a partly bought level is (Buy max mode never
-            applies to it). Its <strong>speed upgrades</strong> (Perks → Upgrades) shorten the interval
-            down to 10 ms; every level after that doubles how many levels one attempt buys — as many as
-            are affordable, up to 2, 4, 8 … 512.
+            An autobuyer buys <strong>one full level per attempt</strong>, only when that whole level
+            (or the rest of a partly bought one) is affordable; Buy max never applies to it. Speed
+            upgrades on Perks → ⏫ Upgrades shorten its interval down to 10 ms; each level after that
+            doubles how many levels one attempt can buy, up to 512.
           </li>
         </ul>
       </Section>
@@ -608,15 +568,16 @@ const InfoPage = () => {
         <h2>Milestones</h2>
         <ul>
           <li>
-            <strong>Tier Autobuyer Unlocks:</strong> one tier per Prestige, from Prestige{' '}
+            <strong>Tier autobuyers:</strong> one tier per Prestige, from Prestige{' '}
             {firstTierAutobuyerMilestone} ({firstTierName}) through Prestige{' '}
             {lastTierAutobuyerMilestone} ({lastTierName}).
           </li>
           <li>
-            <strong>Tier Tickspeed Autobuyers:</strong> start at Prestige{' '}
+            <strong>Tier tickspeed autobuyers:</strong> start at Prestige{' '}
             {firstTierTickspeedAutobuyerMilestone}, then every{' '}
             {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP === 1 ? 'Prestige' : `${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Prestiges`} after that.
           </li>
+          <li>More → Milestones tracks your story chapters and Era progress.</li>
         </ul>
       </Section>
 
@@ -624,32 +585,44 @@ const InfoPage = () => {
         <h2>Prestige</h2>
         <ul>
           <li>
-            Available at 1 Googol Bytes (8×10^100 Bits); production freezes there until you Prestige.
-            Auto-Prestige at {UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s or faster unlocks DeGoogol:
-            production keeps running and Prestige is optional.
+            Available at 1 Googol Bytes (8×10^100 Bits), where production freezes until you
+            Prestige. Getting Auto-Prestige’s interval down to {UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s
+            or less unlocks <strong>DeGoogol</strong>: production keeps running past 1 Googol Bytes
+            and Prestige becomes optional.
           </li>
           <li>
-            Awards Prestige Points from how far your money exponent climbed beyond Googol — 1 base
-            PP at 1 Googol Bytes, then 1 PP per 64 additional money-exponent powers (halved by
-            each Double PP upgrade until 1 power per PP, then doubled PP per power). Claimable only
-            once you reach at least 1 Googol Bytes.
+            Awards 1 Prestige Point (PP) at 1 Googol Bytes, plus 1 PP for every{' '}
+            {PRESTIGE_POWERS_PER_PP_BASE} further powers of ten in your balance. Each Double PP
+            upgrade halves the powers needed per PP, and once that reaches 1, doubles the PP per power.
           </li>
           <li>
-            Double PP upgrades cost 100^(level+1) PP (100, 10,000, 1,000,000, …) on Perks →
-            ⏫ Upgrades — permanent across Prestige.
+            Double PP costs 100^(level+1) PP (100, 10,000, 1,000,000, …) on Perks → ⏫ Upgrades and
+            is permanent across Prestige.
           </li>
           <li>
-            Resets resources, owned counts, and run-scoped progress. Unlocked autobuyers stay
-            unlocked.
+            Spend PP on Perks for automation and bonuses — e.g. the one-time Production speed bonus
+            ({PRESTIGE_SPEED_BONUS_UNLOCK_COST.toLocaleString()} PP) gives +
+            {PRESTIGE_POINT_SPEED_BONUS * 100}% production speed per unspent PP.
           </li>
           <li>
-            The Byte Foundry gate is one-time-ever — once unlocked on your very first cycle, a
-            Prestige never sends you back through it again. Permanent Foundry / Storage / Compute
-            progress always carries over regardless.
+            Resets resources, owned tiers and this run’s progress. Unlocked autobuyers stay, and
+            Foundry, Storage and Boosters progress carries over.
           </li>
           <li>
-            The first Prestige of a save uses a full-screen overlay; later ones use the top bar /
-            PP header control.
+            Your first Prestige uses a full-screen prompt; after that, use the Prestige bar at the top
+            of the Factory or tap the PP display.
+          </li>
+        </ul>
+      </Section>
+
+      <Section aria-label="offline progress section">
+        <h2>Offline progress</h2>
+        <ul>
+          <li>
+            Time away (up to {formatOfflineDuration(MAX_OFFLINE_SECONDS)}) is simulated when you come
+            back. Absences of {formatOfflineDuration(OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS)}{' '}
+            or less run at full speed; longer ones run at{' '}
+            {OFFLINE_PROGRESS_SPEED_MULTIPLIER * 100}% speed and show a “Welcome back!” summary.
           </li>
         </ul>
       </Section>
@@ -658,28 +631,28 @@ const InfoPage = () => {
         <h2>Era ascension</h2>
         <ul>
           <li>
-            Voluntary meta-prestige when unspent PP reaches{' '}
-            {ERA_ELIGIBILITY_PP.toExponential(0).replace('+', '')} (1 Googol PP) — no production
-            freeze at the threshold.
+            An optional deeper reset once you hold{' '}
+            {ERA_ELIGIBILITY_PP.toExponential(0).replace('+', '')} (1 Googol) unspent PP. Nothing
+            freezes at that point.
           </li>
           <li>
-            Each ascension awards 1 Eon plus {EON_AMPLIFIER_AWARD_PER_LEVEL} per Eon Amplifier level
-            (shop upgrades deferred).
+            Each ascension awards 1 Eon plus {EON_AMPLIFIER_AWARD_PER_LEVEL} per Eon Amplifier level.
+            Ways to spend Eons are coming in a later update.
           </li>
           <li>
-            Trigger from Settings → Era ascension (with confirmation). Milestones shows Eras, Eons,
-            and eligibility.
+            Ascend from More → Settings → Era ascension (asks for confirmation). More → Milestones
+            shows your Eras, Eons and eligibility.
           </li>
           <li>
-            <strong>Resets:</strong> Foundry generator upgrades, Memory (Capacity), Disks, Compute
-            entities, ordinary Factory cycle (resources, owned tiers, Double PP level), unspent PP
-            and prestige count, and Compute owned units.
+            <strong>Resets:</strong> Foundry upgrades and Capacity, Disks, Data Lakes, Compute
+            entities, the Factory (resources, owned tiers, Double PP level), unspent PP, Prestige
+            count, and owned Compute (Flops) units.
           </li>
           <li>
-            <strong>Keeps:</strong> automation unlocks and pause flags, DeGoogol latch,
-            the main-game unlock gate (once it has ever triggered), museum, Compute page reveal,
-            Flops autobuyer unlock flags, Eons (+ award), and hyperscalers. Era <em>N</em>
-            free-unlocks the <em>N</em>th Compute tier&apos;s autobuyer.
+            <strong>Keeps:</strong> automation unlocks and pause settings, DeGoogol, the main-game
+            unlock, the Prestige museum, the Compute screen, Flops autobuyer unlocks, Eons and
+            hyperscalers. Era <em>N</em> also unlocks the <em>N</em>th Compute tier’s autobuyer for
+            free.
           </li>
         </ul>
       </Section>
