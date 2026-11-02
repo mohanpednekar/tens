@@ -38,7 +38,8 @@ seed/experiment, all going through `useIncrementalGame`'s `setDevState`/`applyDe
 no-op outside Dev Mode as a defense-in-depth guard, though the UI only renders them while active):
 - **Quick seed** — one-click presets (`PRESET_GROUPS` in `DevModePage`, grouped Foundry / Factory /
   Prestige / Era) applying a small delta onto the live state via `game.setDevState(updater)`, e.g.
-  unlocking the Byte Factory gate, Bits to the Prestige threshold, +1 Prestige count. They reference
+  unlocking the Byte Factory gate, Bits to the Prestige threshold, +1 Prestige count (run through
+  `applyAutobuyerMilestones`, as a real Prestige does, so count-gated autobuyers unlock). They reference
   the same `layers.js` constants (`PRESTIGE_THRESHOLD`/`ERA_ELIGIBILITY_PP`/etc.) the real game gates
   on, so they can't drift.
 - **Variables** — not a hand-maintained field list: `FieldNode` recursively walks `game.state`, one
@@ -62,7 +63,8 @@ no-op outside Dev Mode as a defense-in-depth guard, though the UI only renders t
   and an armed Upgrade Data Stream that can't fire is cleared. A value that "doesn't stick" was
   normalized, not ignored.
 - **Raw state JSON** — collapsed under "Advanced"; a textarea pre-filled with
-  `JSON.stringify(game.state, null, 2)` (reloaded whenever Dev Mode toggles), with live parse
+  `JSON.stringify(game.state, null, 2)` (reloaded whenever Dev Mode toggles; a successful Apply or Reset also remounts the Variables fields,
+  dropping uncommitted drafts), with live parse
   validation (Apply disabled on invalid JSON or a non-object), ↻ Load live state, and ⧉ Copy. Apply
   calls `game.applyDevStateJson(text)` → `storage.js`'s `applyDevGameStateJson(jsonText, currentState)`.
   A caller only specifies the fields they're changing (e.g. `{ "resources": { "base": 1e50 } }`) —

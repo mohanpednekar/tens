@@ -5598,6 +5598,23 @@ describe('Dev Mode', { timeout: 20000 }, () => {
     expect(screen.getByLabelText('owned.tier01')).toBeInTheDocument()
   })
 
+  it('applying JSON drops uncommitted Variables drafts so Enter cannot undo the apply', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
+    await user.type(screen.getByRole('searchbox', { name: /search variables/i }), 'prestige.points')
+    await user.clear(screen.getByLabelText('prestige.points'))
+    await user.type(screen.getByLabelText('prestige.points'), '5')
+
+    fireEvent.change(screen.getByLabelText(/dev save state json/i), { target: { value: JSON.stringify({ prestige: { points: 123 } }) } })
+    await user.click(screen.getByRole('button', { name: /^apply json to dev save$/i }))
+
+    expect(screen.getByLabelText('prestige.points')).toHaveValue('123')
+    expect(screen.getByRole('button', { name: /^set prestige\.points$/ })).toBeDisabled()
+  })
+
   it('the raw JSON editor blocks Apply on invalid JSON', async () => {
     const user = userEvent.setup()
     seedMainGameState()
@@ -5640,7 +5657,10 @@ describe('Dev Mode', { timeout: 20000 }, () => {
       expect(state.computeFlops.pageUnlocked).toBe(true)
     }],
     [/^🔧 Unlock Boosters \(Core\)$/, state => expect(state.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)],
-    [/^🏆 \+1 Prestige count$/, state => expect(state.prestige.count).toBe(1)],
+    [/^🏆 \+1 Prestige count$/, state => {
+      expect(state.prestige.count).toBe(1)
+      expect(state.autobuyers.tier01).not.toBeNull()
+    }],
   ])('quick-seed preset %s applies its documented effect to the dev save', async (buttonName, assertState) => {
     const user = userEvent.setup()
     seedMainGameState()

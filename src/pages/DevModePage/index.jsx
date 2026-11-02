@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Button, { ButtonContent } from 'components/Button'
 import StatCard from 'components/StatCard'
 import Switch from 'components/Switch'
-import { formatAmount, formatBitsInNearestUnit, formatCurrency } from 'game/engine'
+import { applyAutobuyerMilestones, formatAmount, formatBitsInNearestUnit, formatCurrency } from 'game/engine'
 import {
   COMPUTE_FLOPS_REVEAL_PP,
   ERA_ELIGIBILITY_PP,
@@ -452,7 +452,9 @@ const PRESET_GROUPS = [
       {
         id: 'add-prestige',
         label: '🏆 +1 Prestige count',
-        apply: state => ({
+        // Same milestone unlocks a real Prestige applies (prestigeGame), so the count-gated
+        // autobuyers this preset exists to test actually unlock.
+        apply: state => applyAutobuyerMilestones({
           ...state,
           prestige: { ...state.prestige, count: (state.prestige?.count ?? 0) + 1 },
         }),
@@ -502,6 +504,9 @@ const DevModePage = ({ game }) => {
   const [query, setQuery] = useState('')
   const [jsonDraft, setJsonDraft] = useState(() => safeStringify(game.state))
   const [jsonStatus, setJsonStatus] = useState(null)
+  // Bumped when the save is replaced wholesale (JSON apply, reset) to remount the Variables fields,
+  // dropping their uncommitted drafts so a later Enter can't overwrite the new value with a stale one.
+  const [fieldsEpoch, setFieldsEpoch] = useState(0)
 
   // The JSON editor follows the save it describes: toggling Dev Mode swaps saves, so reload it.
   useEffect(() => {
@@ -526,6 +531,7 @@ const DevModePage = ({ game }) => {
     if (!window.confirm('Wipe the dev save back to a fresh state?')) return
     game.resetDevState()
     setJsonStatus(null)
+    setFieldsEpoch(epoch => epoch + 1)
   }
 
   const handleCommit = (path, value) => {
@@ -537,6 +543,7 @@ const DevModePage = ({ game }) => {
     if (result.ok) {
       setJsonStatus({ error: false, text: 'Applied.' })
       setJsonDraft(safeStringify(result.state))
+      setFieldsEpoch(epoch => epoch + 1)
     } else {
       setJsonStatus({ error: true, text: `Could not apply (${result.reason}).` })
     }
@@ -638,7 +645,7 @@ const DevModePage = ({ game }) => {
               value={query}
             />
             {searchResults ? (
-              <div aria-label="variable search results" role="region">
+              <div aria-label="variable search results" key={fieldsEpoch} role="region">
                 {searchResults.length === 0 && <Hint>No field matches “{query.trim()}”.</Hint>}
                 {searchResults.slice(0, 60).map(leaf => (
                   <LeafField
@@ -671,7 +678,7 @@ const DevModePage = ({ game }) => {
                     </TabButton>
                   ))}
                 </TabBar>
-                <div aria-label={`${area} variables`} id="dev-variables-panel" role="tabpanel">
+                <div aria-label={`${area} variables`} id="dev-variables-panel" key={fieldsEpoch} role="tabpanel">
                   {areaKeys.map(key => (
                     <FieldNode key={key} onCommit={handleCommit} path={[key]} value={state[key]} />
                   ))}
