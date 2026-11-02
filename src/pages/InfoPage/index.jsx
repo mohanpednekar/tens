@@ -481,6 +481,15 @@ const InfoPage = () => {
             Each tier row also has its own tickspeed upgrade, paid for with units of that tier
             itself — buying one lowers that tier’s owned count.
           </li>
+          <li>
+            {lastTierName}’ tickspeed upgrade needs the usual amount owned but only spends a tenth of
+            it (the 2nd upgrade needs 100, spends 10).
+          </li>
+          <li>
+            After your first {lastTierName} Scale Up, an XP Tickspeed upgrade appears below Latency:
+            spend XP for +1% faster {lastTierName} ticks per XP (compounding). It resets every other
+            tier’s owned quantity and your Bits.
+          </li>
         </ul>
       </Section>
 

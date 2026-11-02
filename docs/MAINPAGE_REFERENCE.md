@@ -831,24 +831,13 @@ many for a row already carrying the tier's autobuyer state (see "Unit autobuyer 
 cumulative figure is still in the row's own Details disclosure (see "Tier row details disclosure"
 below).
 
-Once the **last tier** has ever been the target of a successful Scale Up this cycle
-(`isLastTierTickspeedXpUnlocked` — a `scaleUpTierCounts`-based latch, NOT a live read of its
-current owned count, see docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), this
-Money-funded `UpgradeButton` is replaced — in the same grid slot, for the rest of the cycle — by
-the manual XP-consume button instead (`🧬 {current unspent XP} XP`,
-`actions.consumeXpForLastTierTickspeed`, behind a `window.confirm`). It's disabled whenever the
-last tier's own current owned count is 0 (nothing left to speed up — see
-`consumeXpForLastTierTickspeed`'s matching engine-level guard), unspent XP is below
-`getLastTierXpTickspeedMinConsumption`, or production is frozen; its `title` explains which. The
-same underlying action also fires automatically once per tick via the tier tickspeed autobuyer once
-bought (see "Automation" in docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), and
-its current unspent-XP balance/next-consumption minimum also show in the row's Details disclosure
-(as an "XP Tickspeed" line). The Details disclosure keeps working unchanged for the last tier
-otherwise, still reading the XP-funded multiplier instead of the Money-funded one. Only a
-Prestige/Overclock (which reset `scaleUpTierCounts`) reverts this slot back to the normal
-Money-funded button — the last tier's owned count merely dropping (e.g. from a Scale Up on an
-earlier tier, or from consuming XP itself) does NOT revert it, only disables the button — see "The
-last tier's XP-funded tickspeed" below for why.
+The **last tier's** button stays the ordinary resource-funded tickspeed button for the whole cycle,
+but its requirement and spend differ: it needs `getTickspeedMultiplierRequirement` owned (e.g. 100 for
+the 2nd upgrade) and spends only `getTickspeedMultiplierSpend` (10% — e.g. 10); the visible label shows
+the spend, the aria-label/progress bar the requirement. Its XP-funded tickspeed is a **separate**
+**XP Tickspeed** card directly below the Latency card (`aria-label="xp tickspeed panel"`, shown once
+`isLastTierTickspeedXpUnlocked`) with a `🧬 Consume {XP} XP` button — see docs/ECONOMY_REFERENCE.md's
+"The last tier's XP-funded tickspeed". The row's Details "tier ×N" multiplier includes the XP bonus.
 
 **No per-tier automation icon on the Factory view row.** A tier row's `name` grid area (shared by
 `TierNameTrigger` / `TierName`) holds the tier's symbol on the left and the owned count on the
@@ -1033,9 +1022,7 @@ in the `<ul>`: the tier's base tickspeed (`getTierBaseTickSpeedSeconds`, from `l
 tickspeed (`getEffectiveTierTickSpeedSeconds`, with the contributing tier/global tickspeed multipliers
 named inline), the purchase milestone multiplier and the lifetime purchase count driving it
 (`getPurchaseMilestoneMultiplier`), the Scale Up multiplier (only shown once `scaleUpCount > 0`), for
-the last tier once `isLastTierTickspeedXpUnlocked` an extra line with its current unspent XP balance
-and the minimum needed for the next `consumeXpForLastTierTickspeed` call (see "The last tier's
-XP-funded tickspeed" below), and the tier's cost/produces resource symbols. This — plus the
+and the tier's cost/produces resource symbols. This — plus the
 tickspeed button's own `title` tooltip — is now the only place `MainPage` surfaces a tier's
 base/effective tickspeed numbers at all, now that the compact per-tier badge that used to show the
 cumulative bonus at a glance is gone (see "No per-tier automation icon on the Factory view row" above).

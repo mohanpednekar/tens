@@ -5,7 +5,7 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -1031,6 +1031,26 @@ const MainPage = ({ game }) => {
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
   const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && isGlobalTickspeedAffordable(state)
+  // The last tier's XP-funded tickspeed — a separate upgrade shown beside Latency once the last tier
+  // has been a Scale Up target this cycle (isLastTierTickspeedXpUnlocked). Always spends the entire
+  // XP balance in one action, since every consumption resets every other tier's owned quantity and
+  // Bits; disabled while the last tier owns nothing (nothing to speed up — see
+  // consumeXpForLastTierTickspeed's matching guard). The compounding bonus of spending N XP is
+  // getLastTierXpTickspeedMultiplier(N) regardless of XP already consumed.
+  const isLastTierXpUnlocked = isLastTierTickspeedXpUnlocked(state)
+  const lastTierOwned = state.owned[lastTier.id] ?? 0
+  const lastTierXpConsumed = state.lastTierXpConsumed ?? 0
+  const lastTierXpBalance = Math.floor(state.prestige.xp ?? 0)
+  const lastTierXpMinConsumption = getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)
+  const lastTierXpProgressPercent = progressPercent(lastTierXpBalance, lastTierXpMinConsumption)
+  const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && lastTierOwned > 0 && lastTierXpBalance >= lastTierXpMinConsumption
+  const lastTierXpConsumeBonusLabel = formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpBalance))
+  const handleConsumeLastTierXp = () => {
+    if (!canConsumeLastTierXp) return
+    if (window.confirm(`Consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} faster ${lastTier.name} ticks? This resets every other tier's owned quantity (not their level) and your Bits balance back to 0.`)) {
+      actions.consumeXpForLastTierTickspeed(lastTierXpBalance)
+    }
+  }
   const globalTickspeedProgressPercent = progressPercent(state.resources[MONEY_ID] ?? 0, getGlobalTickspeedMultiplierCostBits(globalTickspeedLevel ?? 0))
   // Progressive disclosure, same pattern as overclockEverRevealed above:
   // once the card has ever been relevant (tier02 owned, or the multiplier already active from a
@@ -1314,6 +1334,40 @@ const MainPage = ({ game }) => {
         </GlobalTickspeedCard>
       )}
 
+      {isLastTierXpUnlocked && (
+        <GlobalTickspeedCard aria-label="xp tickspeed panel">
+          <Disclosure>
+            <summary><h2>XP Tickspeed</h2></summary>
+            <MutedText>
+              {formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpConsumed), { precise: true })} faster {lastTier.name} ticks
+              {' '}from {formatAmount(lastTierXpConsumed)} XP consumed. Next consumption needs at least {formatAmount(lastTierXpMinConsumption)} XP.
+            </MutedText>
+          </Disclosure>
+          <Button
+            aria-label={`Consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`}
+            variant="smart"
+            disabled={!canConsumeLastTierXp}
+            onClick={handleConsumeLastTierXp}
+            title={lastTierOwned > 0
+              ? `Consume XP for a compounding +1% ${lastTier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`
+              : `No ${lastTier.name} owned right now — nothing to speed up, so this stays disabled until you own at least one again`}
+            type="button"
+            $progress={lastTierXpProgressPercent}
+            $pulse={canConsumeLastTierXp}
+          >
+            <ButtonIcon>🧬 </ButtonIcon>
+            <ButtonLabel>Consume {formatAmount(lastTierXpBalance)} XP</ButtonLabel>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label={`${lastTier.name} XP tickspeed progress`}
+              aria-valuenow={lastTierXpProgressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </Button>
+        </GlobalTickspeedCard>
+      )}
+
       <TierList>
         {TIER_DEFINITIONS.map((tier, tierIndex) => {
           const unlocked = isTierUnlocked(state)(tier)
@@ -1344,48 +1398,12 @@ const MainPage = ({ game }) => {
           // or PP prerequisite at all, see tickspeedLevels/buyTickspeedMultiplier in engine.js);
           // level 1 is the baseline ×1, no bonus yet, each further level speeds up this tier's own
           // delivery frequency by another 10% (see getEffectiveTierTickSpeedSeconds in engine.js) —
-          // it does NOT change how much lands per delivery, only how often one arrives. Once the
-          // last tier has ever been the target of a successful Scale Up this cycle (see
-          // isLastTierTickspeedXpUnlocked/getLastTierXpTickspeedMultiplier in engine.js and the
-          // last-tier-only controls below), this Money-funded ladder is replaced by an XP-funded
-          // one for the rest of the cycle — it does NOT revert back to this button just because
-          // owned later drops (e.g. after consuming XP resets every other tier); only a
-          // Prestige/Overclock (which reset scaleUpTierCounts) bring the Money-funded button back.
-          const isLastTier = tier.id === lastTier.id
-          const isLastTierXpUnlocked = isLastTier && isLastTierTickspeedXpUnlocked(state)
+          // it does NOT change how much lands per delivery, only how often one arrives. The last
+          // tier's separate XP-funded upgrade (beside Latency) multiplies on top of this.
           const tickspeedLevel = state.tickspeedLevels?.[tier.id] ?? 1
-          const lastTierXpConsumed = state.lastTierXpConsumed ?? 0
-          const tickspeedMultiplier = isLastTierXpUnlocked
-            ? getLastTierXpTickspeedMultiplier(lastTierXpConsumed)
-            : getTickspeedProductionMultiplier(tickspeedLevel)
+          const tickspeedMultiplier = getTickspeedProductionMultiplier(tickspeedLevel)
+            * (tier.id === lastTier.id ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0) : 1)
           const tickspeedBonusLabel = formatBonusOrMultiplier(tickspeedMultiplier)
-          // Consuming XP for the last tier's tickspeed always spends the player's entire current
-          // XP balance in one action (rather than a fixed minimum) — since every consumption,
-          // however small, resets every other tier's owned quantity (not their lifetime
-          // purchased/"level" count) plus the Money balance to 0, spending it all at once
-          // minimizes how often that side effect is paid for the same total investment.
-          const lastTierXpBalance = Math.floor(state.prestige.xp ?? 0)
-          const lastTierXpMinConsumption = getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)
-          const lastTierXpProgressPercent = progressPercent(lastTierXpBalance, lastTierXpMinConsumption)
-          // Consuming XP wipes every other tier's owned/resources for a bonus that speeds up THIS
-          // tier's own delivery — pointless (and purely destructive) once this tier's own owned
-          // count has dropped to 0, since there's nothing left to apply the bonus to (see
-          // consumeXpForLastTierTickspeed's own matching guard in engine.js).
-          const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && owned > 0 && lastTierXpBalance >= lastTierXpMinConsumption
-          const lastTierXpConsumeVisibleLabel = `🧬 ${formatAmount(lastTierXpBalance)} XP`
-          // getLastTierXpTickspeedMultiplier compounds, so the marginal speedup this consumption
-          // contributes is a ratio (new multiplier ÷ old), not the spent amount itself — and
-          // because it's multiplicative, that ratio is independent of how much XP was already
-          // consumed (the prior multiplier cancels out), so it's exactly
-          // getLastTierXpTickspeedMultiplier(amount) regardless of lastTierXpConsumed so far.
-          const lastTierXpConsumeBonusLabel = formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpBalance))
-          const lastTierXpConsumeLabel = `Consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${tier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`
-          const handleConsumeLastTierXp = () => {
-            if (!canConsumeLastTierXp) return
-            if (window.confirm(`Consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} faster ${tier.name} ticks? This resets every other tier's owned quantity (not their level) and your Bits balance back to 0.`)) {
-              actions.consumeXpForLastTierTickspeed(lastTierXpBalance)
-            }
-          }
           // Production no longer depends on autobuyer purchase frequency at all — completing
           // every level (manual or automatic) doubles a tier's own production (see
           // getPurchaseMilestoneMultiplier/getTierCost). This is the raw amount delivered in one
@@ -1406,18 +1424,18 @@ const MainPage = ({ game }) => {
           // multiplier.
           const baseTickSpeed = getTierBaseTickSpeedSeconds(tier.id)
           const effectiveTickSpeed = getEffectiveTierTickSpeedSeconds(state, tier.id)
-          const tickspeedCost = getTickspeedMultiplierCost(tier.id, tickspeedLevel + 1)
-          // Spends the tier's own resource (resources[tier.id] === owned[tier.id]), so the
-          // button must stay disabled until at least 1 generator would remain afterward —
-          // matching buyTickspeedMultiplier's own `available >= cost + 1` guard in engine.js.
-          const canUpgradeTickspeed = resources >= tickspeedCost + 1 && !isFrozen
+          // Spends the tier's own resource (resources[tier.id] === owned[tier.id]); the last tier
+          // spends only 10% of its requirement. Mirrors buyTickspeedMultiplier's guard in engine.js.
+          const tickspeedCost = getTickspeedMultiplierSpend(tier.id, tickspeedLevel + 1)
+          const tickspeedRequirement = getTickspeedMultiplierRequirement(tier.id, tickspeedLevel + 1)
+          const canUpgradeTickspeed = resources >= tickspeedRequirement && !isFrozen
           // Buy max mode (see BuyMaxToggle/buyTierMaxLevels): when a click would buy one or more
           // FULL levels, preview those instead of the single-level fill below.
           const maxLevelsPreview = buyMaxActive ? getTierMaxLevelsPreview(state, tier.id) : { levels: 0, cost: 0, lastLevelCost: 0, partialQuantity: 0, partialCost: 0 }
           const buyLabel = maxLevelsPreview.levels > 0
             ? `Buy ${formatAmount(maxLevelsPreview.levels)} full level${maxLevelsPreview.levels === 1 ? '' : 's'} for ${formatCurrency(maxLevelsPreview.cost)} total; highest level costs ${formatCurrency(maxLevelsPreview.partialQuantity > 0 ? maxLevelsPreview.partialCost : maxLevelsPreview.lastLevelCost)}${maxLevelsPreview.partialQuantity > 0 ? ` (${maxLevelsPreview.partialQuantity} of ${purchaseBlockSize} purchases toward the next level)` : ''} (${formatAmount(completedLevels)} completed levels)`
             : `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (${formatAmount(completedLevels)} completed levels, ${formatAmount(doneInBlock)} of ${purchaseBlockSize} purchased toward the next)`
-          const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}`
+          const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}${tickspeedRequirement > tickspeedCost + 1 ? ` (requires ${formatCost(tickspeedRequirement, tier.id)} owned)` : ''}`
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
           // (via formatCost) in place of its full name. The full sentence stays in aria-label/
           // title for assistive tech. The block progress ("5+3/8" — how many of the current
@@ -1447,7 +1465,7 @@ const MainPage = ({ game }) => {
           // anyone who expands the tooltip.
           const tickspeedVisibleLabel = `⚙ ${formatCost(tickspeedCost, tier.id)}`
           // Live "how close am I" meter for the tickspeed button, even while disabled.
-          const tickspeedProgressPercent = progressPercent(resources, tickspeedCost + 1)
+          const tickspeedProgressPercent = progressPercent(resources, tickspeedRequirement)
           const accent = theme.tierAccents[tierIndex % theme.tierAccents.length]
           const isDetailsOpen = openTierDetailIds.has(tier.id)
           const detailsId = `${tier.id}-details`
@@ -1500,12 +1518,6 @@ const MainPage = ({ game }) => {
                     </li>
                     {tierScaleUpMultiplier > 1 && <li>Scale Up bonus: ×{formatRate(tierScaleUpMultiplier)}</li>}
                     {isBoosted && <li>{getComputeBoostDescription(state.intro)}</li>}
-                    {isLastTierXpUnlocked && (
-                      <li>
-                        XP Tickspeed — unspent XP: {formatAmount(lastTierXpBalance)}
-                        {' '}(next auto-consumption needs at least {formatAmount(lastTierXpMinConsumption)})
-                      </li>
-                    )}
                     <li>Costs {RESOURCE_SYMBOL(tier.costResourceId)}, produces {RESOURCE_SYMBOL(tier.producesResourceId)}</li>
                   </ul>
                 </TierDetailsContent>
@@ -1517,28 +1529,7 @@ const MainPage = ({ game }) => {
                     ? formatBytes(production)
                     : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
               </ProductionText>
-              {isLastTierXpUnlocked ? (
-                <UpgradeButton
-                  aria-label={lastTierXpConsumeLabel}
-                  variant="smart"
-                  disabled={!canConsumeLastTierXp}
-                  onClick={handleConsumeLastTierXp}
-                  title={owned > 0
-                    ? `Consume XP for a compounding +1% ${tier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`
-                    : `No ${tier.name} owned right now — nothing to speed up, so this stays disabled until you own at least one again`}
-                  $progress={lastTierXpProgressPercent}
-                  $pulse={canConsumeLastTierXp}
-                >
-                  <ButtonContent>{lastTierXpConsumeVisibleLabel}</ButtonContent>
-                  <VisuallyHidden
-                    role="progressbar"
-                    aria-label={`${tier.name} XP tickspeed progress`}
-                    aria-valuenow={lastTierXpProgressPercent}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                  />
-                </UpgradeButton>
-              ) : (
+              {(
                 <UpgradeButton
                   aria-label={tickspeedLabel}
                   variant="success"
