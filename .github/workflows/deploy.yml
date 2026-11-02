@@ -16,8 +16,11 @@ jobs:
 
       - uses: ./.github/actions/setup-node-yarn
 
-      - name: Build
+      - name: Build (production → dist/)
         run: yarn build
+
+      - name: Build (dev build with Dev Mode → dist/dev/)
+        run: yarn build:dev
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4

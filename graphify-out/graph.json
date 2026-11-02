@@ -28578,6 +28578,36 @@
       "source_file": "src/components/BoostTimerBar/index.jsx",
       "source_location": "L72",
       "_callable": true
+    },
+    {
+      "id": "file:src/game/storagePrefix.js",
+      "file_type": "code",
+      "source_file": "src/game/storagePrefix.js",
+      "_file_checksum": "0000000000000000000000000000000000000000"
+    },
+    {
+      "id": "file:src/game/storagePrefix.test.js",
+      "file_type": "code",
+      "source_file": "src/game/storagePrefix.test.js",
+      "_file_checksum": "0000000000000000000000000000000000000000"
+    },
+    {
+      "id": "file:src/pages/SettingsPage/ManualSaveSection.jsx",
+      "file_type": "code",
+      "source_file": "src/pages/SettingsPage/ManualSaveSection.jsx",
+      "_file_checksum": "0000000000000000000000000000000000000000"
+    },
+    {
+      "id": "file:scripts/lint-conflict-markers.mjs",
+      "file_type": "code",
+      "source_file": "scripts/lint-conflict-markers.mjs",
+      "_file_checksum": "0000000000000000000000000000000000000000"
+    },
+    {
+      "id": "file:scripts/lint-conflict-markers.test.js",
+      "file_type": "code",
+      "source_file": "scripts/lint-conflict-markers.test.js",
+      "_file_checksum": "0000000000000000000000000000000000000000"
     }
   ],
   "links": [
@@ -120937,11 +120967,11 @@
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "call",
       "source_file": "src/components/SpeedDetailsPopover/index.jsx",
       "source_location": "L101",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_speeddetailspopover_index_speeddetailspopover",
@@ -120949,11 +120979,11 @@
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "call",
       "source_file": "src/components/SpeedDetailsPopover/index.jsx",
       "source_location": "L111",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_speeddetailspopover_index_speeddetailspopover",
@@ -120961,11 +120991,11 @@
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "call",
       "source_file": "src/components/SpeedDetailsPopover/index.jsx",
       "source_location": "L112",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_speeddetailspopover_index_speeddetailspopover",
@@ -120973,11 +121003,11 @@
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "call",
       "source_file": "src/components/SpeedDetailsPopover/index.jsx",
       "source_location": "L120",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
@@ -120985,11 +121015,11 @@
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
       "source_location": "L1260",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_pages_bytefoundrypage_index",
@@ -120997,11 +121027,11 @@
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "import",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
       "source_location": "L7",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_speeddetailspopover_index",
@@ -121009,11 +121039,11 @@
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "import",
       "source_file": "src/components/SpeedDetailsPopover/index.jsx",
       "source_location": "L1",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_speeddetailspopover_index",
@@ -121021,11 +121051,11 @@
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "import",
       "source_file": "src/components/SpeedDetailsPopover/index.jsx",
       "source_location": "L2",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_speeddetailspopover_index",
@@ -121033,11 +121063,11 @@
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "import",
       "source_file": "src/components/SpeedDetailsPopover/index.jsx",
       "source_location": "L3",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_pages_bytefoundrypage_index",
@@ -121045,11 +121075,11 @@
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "import",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
       "source_location": "L7",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_speeddetailspopover_index",
@@ -121057,10 +121087,10 @@
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "src/components/SpeedDetailsPopover/index.jsx",
       "source_location": "L27",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_speeddetailspopover_index",
@@ -121068,10 +121098,10 @@
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "src/components/SpeedDetailsPopover/index.jsx",
       "source_location": "L33",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_speeddetailspopover_index",
@@ -121079,10 +121109,10 @@
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "src/components/SpeedDetailsPopover/index.jsx",
       "source_location": "L51",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_speeddetailspopover_index",
@@ -121090,10 +121120,10 @@
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "src/components/SpeedDetailsPopover/index.jsx",
       "source_location": "L58",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_speeddetailspopover_index",
@@ -121101,10 +121131,10 @@
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "src/components/SpeedDetailsPopover/index.jsx",
       "source_location": "L9",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "docs_components_reference_bytefoundrypage_pool_layout",
@@ -121116,7 +121146,7 @@
       "context": "SpeedDetailsPopover",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L98",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_leadicon_index",
@@ -121124,11 +121154,11 @@
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "contains",
       "source_file": "src/components/LeadIcon/index.js",
       "source_location": "L6",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_leadicon_index",
@@ -121136,11 +121166,11 @@
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "import",
       "source_file": "src/components/LeadIcon/index.js",
       "source_location": "L1",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_pages_bytefoundrypage_index",
@@ -121148,11 +121178,11 @@
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "import",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
       "source_location": "L1",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_pages_bytefoundrypage_index",
@@ -121160,11 +121190,11 @@
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "import",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
       "source_location": "L1",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_datalakepanel_index",
@@ -121172,11 +121202,11 @@
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "import",
       "source_file": "src/components/DataLakePanel/index.jsx",
       "source_location": "L1",
-      "weight": 1.0
+      "weight": 1
     },
     {
       "source": "src_components_datalakepanel_index",
@@ -121184,11 +121214,11 @@
       "relation": "imports_from",
       "_origin": "ast",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "context": "import",
       "source_file": "src/components/DataLakePanel/index.jsx",
       "source_location": "L1",
-      "weight": 1.0
+      "weight": 1
     }
   ],
   "hyperedges": [],

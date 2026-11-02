@@ -48,6 +48,7 @@
     "start": "vite --host 127.0.0.1",
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
+    "build:dev": "TENS_DEV_BUILD=1 vite build --outDir dist/dev --emptyOutDir false",
     "build:capacitor": "CAPACITOR=1 vite build",
     "cap:sync": "cap sync",
     "cap:android": "yarn build:capacitor && cap sync android && cap open android",

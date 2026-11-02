@@ -27,7 +27,7 @@ Byte Foundry gate; only Factory stays progress-gated. A third More entry, **Dev 
 |------|---------|-------|
 | React | 19 | JSX transform enabled |
 | Vite | 8 | OXC-based; JSX files **must** use the `.jsx` extension |
-| Vitest | 4 | jsdom environment, globals enabled |
+| Vitest | 5 | jsdom environment, globals enabled |
 | Playwright | 1 | Real-browser end-to-end suite (`yarn test:e2e`), chromium only — see "Testing" below |
 | styled-components | 6 | All component styling |
 | @fontsource/inter, @fontsource/space-grotesk | 5 | Locally-bundled font faces (see `theme/fonts.js`, "Theming" below) — no runtime CDN fetch |
@@ -42,6 +42,7 @@ Use Yarn for all dependency work, not npm. `package-lock.json` is gitignored so 
 yarn install --frozen-lockfile   # CI does this; use plain `yarn install` locally after lockfile changes
 yarn dev          # dev server → http://127.0.0.1:<port>/tens/
 yarn build        # production build → dist/ (GitHub Pages base `/tens/` + PWA service worker)
+yarn build:dev    # dev build (Dev Mode enabled, base /tens/dev/, no SW) → dist/dev/; deploy.yml publishes it beside prod
 yarn build:capacitor # CAPACITOR=1 vite build → dist/ with relative base, no PWA plugin (for native wrap)
 yarn cap:sync     # cap sync (copies dist/ into the android/ + ios/ native projects — #70)
 yarn cap:android  # build:capacitor + cap sync android + open Android Studio (`yarn cap:ios` → Xcode)
@@ -52,8 +53,7 @@ yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
 yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--recursive flags; it
                   # already covers dependencies/devDependencies/optionalDependencies by default)
-yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml + .github/actions/** (#738),
-                  # then scripts/lint-conflict-markers.mjs: fails on committed git conflict markers (#945)
+yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml + .github/actions/** (#738)
 yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump package.json
                   # (minor if Added/Removed entries, else patch; no-op if Unreleased empty)
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png + favicon.ico from scripts/generate-pwa-icons.mjs
@@ -81,7 +81,7 @@ this hook could only be added from an interactive session.
 
 There is no general code lint (`yarn lint` does not exist). CI's required `test` job runs `yarn
 lint:workflows` (`scripts/lint-workflow-shell.mjs` — `bash -n` over every workflow/action `run:` block,
-#738 — then `scripts/lint-conflict-markers.mjs`, #945) and then `yarn test`. `.github/workflows/deploy.yml` runs `yarn build` and publishes `dist/` to GitHub Pages on
+#738) and then `yarn test`. `.github/workflows/deploy.yml` runs `yarn build` and publishes `dist/` to GitHub Pages on
 push to `main`. Automated Copilot review on PRs is configured through GitHub's repository settings, not
 an explicit workflow file.
 
@@ -675,7 +675,8 @@ Strict three-layer separation:
    reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
     Supporter pack (unlock code / dummy checkout), Cloud save (`CloudSaveSection.jsx`, only when
-    `CLOUD_SAVE_ENABLED`: sign-in, upload/download, Delete account and data), Store
+    `CLOUD_SAVE_ENABLED`: sign-in, upload/download, Delete account and data), Import / export save
+    (`ManualSaveSection.jsx`, always: copy/download/paste/file → `applyCloudSave`), Store
     (`StoreSection.jsx`, only when IAP is on), multi-slot saves, Prestige museum, Era ascension
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
     dashboard, Legal (`LegalSection.jsx`: Privacy Policy / Terms links), and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
@@ -690,7 +691,8 @@ Strict three-layer separation:
 ## Dev Mode
 
 A dev-build-only testing sandbox (`DevModePage`, reached via AppNav → More; entry and route render only
-when `import.meta.env.DEV`, so production bundles contain neither). Toggling it first saves the loaded
+when `import.meta.env.DEV`, so production bundles contain neither; `yarn build:dev` forces it on and is
+deployed at `/tens/dev/`). Toggling it first saves the loaded
 state to the active slot, then redirects every save read/write to an isolated `'dev'` slot in
 `game/storage.js` (`getActiveSlotId`/`isDevModeActive`), so dev edits never touch real progress. **Always: real-slot isolation is enforced at the storage layer** —
 `setActiveSaveSlot`/`clearSaveSlot`/`clearAllSaveProgress` refuse (`{ ok: false, reason:
@@ -952,7 +954,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2117 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2132 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -970,9 +972,9 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). The rest of the 31 test files (`yarn test` total) sit beside their source — `save-migration/`, `navAttention`,
   `components/*` (Button, BoostBadge, OfflineProgressNotice), `services/*` (config, monetization, rewardedAdCache,
-  cloudSave/deleteAccount), `game/useIncrementalGame.offlineReward.test.jsx`, `pages/SettingsPage/sections.test.jsx`,
+  cloudSave/deleteAccount), `game/useIncrementalGame.offlineReward.test.jsx`, `game/storagePrefix.test.js`, `pages/SettingsPage/sections.test.jsx`,
   and `scripts/*.test.js` (maintainer checklist, iOS plist, adversarial marker, low-risk bar, bump-version,
-  graphify freshness, failure classifier, workflow-shell lint, conflict-marker lint, stalled-PR sweep, autonomous-maintenance workflow) —
+  graphify freshness, failure classifier, workflow-shell lint, stalled-PR sweep, autonomous-maintenance workflow) —
   all picked up by Vitest's default glob since `vite.config.js`'s `test` block sets no custom `include`.
 
 ### End-to-end testing
