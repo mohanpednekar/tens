@@ -487,7 +487,8 @@ src/
                                when `import.meta.env.DEV`. Takes `{ game }`
       stateFields.js         ← pure helpers backing the Variables tree: prettifySegment (tier-id →
                                display-name label lookup), isEditableScalar, setValueAtPath (immutable
-                               set-by-path at any depth)
+                               set-by-path at any depth), VARIABLE_AREAS/getVariableAreaId (tab grouping),
+                               parseNumberDraft, collectLeaves/describePath/leafMatchesQuery (search)
   theme/
     tokens.js               ← design-token single source of truth: per-mode (dark/light) color, shadow &
                                tier-accent sets + mode-independent space/radius/motion/font/type scales;
@@ -696,8 +697,8 @@ deployed at `/tens/dev/`). Toggling it first saves the loaded
 state to the active slot, then redirects every save read/write to an isolated `'dev'` slot in
 `game/storage.js` (`getActiveSlotId`/`isDevModeActive`), so dev edits never touch real progress. **Always: real-slot isolation is enforced at the storage layer** —
 `setActiveSaveSlot`/`clearSaveSlot`/`clearAllSaveProgress` refuse (`{ ok: false, reason:
-'dev_mode_active' }`) while Dev Mode is active. Quick-seed presets, the auto-generated Variables tree,
-the raw state-JSON editor (`mergeStateForDevWrite`), and `SettingsPage`'s dev-gating:
+'dev_mode_active' }`) while Dev Mode is active. Quick-seed presets, the auto-generated Variables tree
+(AppNav-style area tabs + search; Switch / power-of-ten number inputs), the raw state-JSON editor (`mergeStateForDevWrite`), and `SettingsPage`'s dev-gating:
 `docs/DEVMODE_REFERENCE.md`.
 
 ## Economy model
@@ -954,7 +955,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2132 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2173 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -970,7 +971,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   both themes, see `docs/THEMING_REFERENCE.md`. `engine.computeFlops.test.js` covers the PP Compute
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
-  (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). The rest of the 31 test files (`yarn test` total) sit beside their source — `save-migration/`, `navAttention`,
+  (`prettifySegment`/`isEditableScalar`/`setValueAtPath`/`parseNumberDraft`/`getVariableAreaId`/search helpers). The rest of the 31 test files (`yarn test` total) sit beside their source — `save-migration/`, `navAttention`,
   `components/*` (Button, BoostBadge, OfflineProgressNotice), `services/*` (config, monetization, rewardedAdCache,
   cloudSave/deleteAccount), `game/useIncrementalGame.offlineReward.test.jsx`, `game/storagePrefix.test.js`, `pages/SettingsPage/sections.test.jsx`,
   and `scripts/*.test.js` (maintainer checklist, iOS plist, adversarial marker, low-risk bar, bump-version,
