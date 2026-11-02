@@ -769,7 +769,8 @@ progress fill + hidden `role="progressbar"` (`PpPurchaseButton`); see "Accessibi
 
 **Global Tickspeed card (Factory view).** Unlike every other automation upgrade, this one is
 Money-funded (not PP-funded) and lives on the Factory view as its own `GlobalTickspeedCard`, rendered
-alone at the very top of the Factory view — above `TierList`/tier 1, before anything else — since it's
+at the very top of the Factory view (side by side with the Restage card once that's revealed, in a
+`SpeedCardsRow`) — above `TierList`/tier 1, before anything else — since it's
 relevant from the very start of a run, well before Overclock or Prestige are, or even the tier list
 itself — `ScaleUpCard` is likewise always shown (unlike `OverclockCard`, still gated on the last
 tier having ever been unlocked — see below), but stays down in its own row below `TierList` rather
@@ -864,12 +865,9 @@ unchanged by the move to Perks — see `docs/ECONOMY_REFERENCE.md` for costs/eff
 together, in that order, inside a shared `SpeedCardsRow` flex row placed directly below `TierList` —
 not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why the three
 speed-related cards are split into a top card plus this separate bottom pair rather than one shared
-row). Above the 40rem mobile breakpoint, `SpeedCardsRow` uses the same layout mechanics the old top
-row did: each card shares the row equally (`flex: 1 1 8rem`). Below 40rem it switches to a single
-column instead (`flex-direction: column`) — Scale Up above Overclock, matching their JSX/render
-order — rather than staying side by side down to phone width (an earlier version's floor width was
-tuned specifically to keep the pair side by side down to ~360-430px, e.g. an iPhone 14's 393px; see
-`SpeedCardsRow`'s own comment for why that was superseded). `ScaleUpCard` always renders (see below),
+row). `SpeedCardsRow` keeps the pair side by side at every width, phone included (`flex: 1 1 0`,
+`min-width: 0`, no wrap) — the same row also holds Latency + Restage above the tier list. The earlier
+below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below),
 so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
 alongside it. Both soft-reset cards (and Latency) share `featureCard(accent)`: compact `0.6rem 0.75rem`
 padding, a `0.4rem` internal gap and a 3px left accent stripe; their headings have no default margin, their

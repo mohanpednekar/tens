@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Latency and Restage sit side by side, as do Scale Up and Overclock** — on every screen size, including phones (Scale Up / Overclock used to stack on narrow screens).
 - **Quettabytes keeps its own tickspeed upgrade at 10% of the price.** Its tickspeed button no longer turns into the XP button after the first Quettabytes Scale Up; each level still needs the usual amount owned (10, 100, …) but only spends a tenth of it (1, 10, …).
 - **The XP-funded tickspeed is now a separate upgrade, Restage, shown below Latency.** Its bonus stacks on top of Quettabytes' own tickspeed level, and the Quettabytes tickspeed autobuyer no longer spends XP — XP is spent manually, or by the new Auto Restage (below).
 

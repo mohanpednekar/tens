@@ -9087,3 +9087,9 @@ opt-in with its own pause toggle.
 The player-facing name became **Restage** (autobuyer: **Auto Restage**) at the maintainer's request —
 "Sacrifice" was considered and rejected. Engine identifiers (`consumeXpForLastTierTickspeed`,
 `autoXpTickspeed`, …) keep their descriptive names.
+
+## Feature-card pairs stay side by side on phones (2026-11)
+
+At the maintainer's request, Latency + Restage (above the tier list) and Scale Up + Overclock (below
+it) each share one `SpeedCardsRow` that stays side by side at every width (`flex: 1 1 0`, no wrap),
+superseding the earlier below-40rem single-column stack of Scale Up / Overclock.

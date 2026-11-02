@@ -192,41 +192,18 @@ const OverclockButton = styled(Button)`
   }
 `
 
-// Lays ScaleUpCard and OverclockCard side by side, below the tier list — both are compact "one
-// button" soft-reset cards, so sharing a row reads as a single cluster instead of stacked
-// full-width blocks. GlobalTickspeedCard renders separately, alone at the very top of the Game
-// view (see its own render site above) rather than sharing this row — it's the one control
-// relevant from the very start of a run, before the last tier (and so Overclock) is even
-// reachable; ScaleUpCard itself, unlike OverclockCard, is always shown (relevant from the very
-// first cycle — see its own comment above). Each card grows to share the row equally (flex: 1)
-// with a low floor width (8rem) on wider viewports. Below 40rem (the same mobile breakpoint every
-// other component in this file uses), the row switches to a single column instead — Scale Up
-// above Overclock, matching their JSX order — rather than staying side by side down to phone
-// width: on a narrow screen, two soft resets sharing a cramped row read as harder to tell apart at
-// a glance than a clear top-to-bottom stack, even though the pair still technically fits side by
-// side down to ~360px (an earlier version optimized for exactly that fit; see
-// docs/DESIGN_HISTORY.md for the reasoning that was superseded here). `flex: 1 1 auto` in the
-// column case lets each card's height come from its own content instead of the row layout's 8rem
-// basis (which would otherwise set every card's *height* once the main axis rotates to vertical);
-// `align-items: stretch`, flexbox's own default, is what makes each stacked card fill the row's
-// full width without an explicit `width: 100%`. Works unchanged if OverclockCard isn't currently
-// revealed yet (ScaleUpCard alone just fills the row/column).
+// Lays a pair of compact feature cards side by side at every width (maintainer request): Latency +
+// Restage above the tier list, Scale Up + Overclock below it. Each card shares the row equally
+// (flex: 1 1 0) and never wraps, so the pair stays side by side even at phone width; a lone card
+// (Restage / Overclock not yet revealed) fills the row. Supersedes the earlier below-40rem
+// single-column stack — see docs/DESIGN_HISTORY.md.
 const SpeedCardsRow = styled.div`
   display: flex;
-  flex-wrap: wrap;
   gap: 0.4rem;
 
   > * {
-    flex: 1 1 8rem;
+    flex: 1 1 0;
     min-width: 0;
-  }
-
-  @media (max-width: 40rem) {
-    flex-direction: column;
-
-    > * {
-      flex: 1 1 auto;
-    }
   }
 `
 
@@ -1296,6 +1273,8 @@ const MainPage = ({ game }) => {
       </StickyBalances>
 
 
+      {(globalTickspeedCardEverRevealed || isLastTierXpUnlocked) && (
+      <SpeedCardsRow>
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global latency panel">
           <Disclosure>
@@ -1366,6 +1345,8 @@ const MainPage = ({ game }) => {
             />
           </Button>
         </GlobalTickspeedCard>
+      )}
+      </SpeedCardsRow>
       )}
 
       <TierList>

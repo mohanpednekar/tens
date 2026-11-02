@@ -2086,8 +2086,7 @@ after a Prestige — it just starts re-accumulating `scaleUpCount`/`scaleUpTarge
 the next cycle. Can fire without a manual click once Auto Scale Up is bought.
 
 `MainPage` surfaces this as a `ScaleUpCard` (cyan accent; Factory view only), rendered directly below
-`TierList`, side by side with `OverclockCard` (inside a shared `SpeedCardsRow` flex row, wrapping to
-stacked on narrow viewports) — `GlobalTickspeedCard` renders separately, alone at the top of the Game
+`TierList`, side by side with `OverclockCard` (inside a shared `SpeedCardsRow` flex row, side by side at every width) — `GlobalTickspeedCard` renders separately, alone at the top of the Game
 view, since it's the one control relevant before the last tier is even reachable (see "Global Tickspeed
 card" in docs/MAINPAGE_REFERENCE.md). Unlike `OverclockCard` (still gated on `overclockEverRevealed`,
 the last tier having ever been unlocked — see docs/MAINPAGE_REFERENCE.md), `ScaleUpCard` is always
