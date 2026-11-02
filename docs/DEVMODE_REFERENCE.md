@@ -33,7 +33,7 @@ toggling on for the first time starts from a fresh `createInitialGameState()`.
 `tens_saves_meta`, so flipping it never touches player slot bookkeeping.
 
 `DevModePage` mirrors the real game's UI: a header card with a Perks-style `Switch` (`aria-label="dev
-mode"`) and HUD-style readouts (Bits, PP, Prestiges, Era · Eons, Capacity), then three ways to
+mode"`) and HUD-style readouts (Bits, PP, Prestiges, Era · Eons, Capacity in binary units), then three ways to
 seed/experiment, all going through `useIncrementalGame`'s `setDevState`/`applyDevStateJson` (both
 no-op outside Dev Mode as a defense-in-depth guard, though the UI only renders them while active):
 - **Quick seed** — one-click presets (`PRESET_GROUPS` in `DevModePage`, grouped Foundry / Factory /
@@ -50,9 +50,9 @@ no-op outside Dev Mode as a defense-in-depth guard, though the UI only renders t
   (`describePath`, e.g. "owned › Kilobytes"), capped at 60 rows. Input per type: booleans are a
   `Switch` (applies instantly); numbers are a `inputMode="decimal"` text input that shows the live
   value, commits on Enter or ✓ (`set <path>`), reverts on Escape, parses `1e100` / `1,000` / `10^6`
-  via `parseNumberDraft` (anything else is flagged `aria-invalid` and ✓ disabled — never coerced to 0),
+  via `parseNumberDraft` (decimal only — hex/binary literals rejected; anything else is flagged `aria-invalid` and ✓ disabled — never coerced to 0),
   echoes large values through `formatAmount`, and offers ÷10 / ×10 steppers (plus −1 / +1 for whole
-  numbers, floored at 0); strings are a plain text input with the same Enter/✓ commit. `null` and
+  numbers, floored at 0; a step that would go non-finite is disabled, and a step discards any uncommitted draft); strings are a plain text input with the same Enter/✓ commit. `null` and
   array leaves render read-only ("not set" / "[n items]") — only the raw JSON editor can touch them.
   `prettifySegment` relabels tier ids with display names (cosmetic only). `setValueAtPath` sets one
   leaf immutably by its full path array. `setDevState` then runs the result through

@@ -110,7 +110,7 @@ describe('parseNumberDraft', () => {
     expect(parseNumberDraft(draft)).toBe(expected)
   })
 
-  it.each(['', '   ', 'abc', '1e999', 'NaN', '1.2.3', undefined])('rejects %j', draft => {
+  it.each(['', '   ', 'abc', '1e999', 'NaN', '1.2.3', '0x1F', '0b11', 'Infinity', undefined])('rejects %j', draft => {
     expect(parseNumberDraft(draft)).toBeNull()
   })
 })

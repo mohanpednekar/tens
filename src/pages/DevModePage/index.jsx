@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Button, { ButtonContent } from 'components/Button'
 import StatCard from 'components/StatCard'
 import Switch from 'components/Switch'
-import { formatAmount, formatCurrency } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatCurrency } from 'game/engine'
 import {
   COMPUTE_FLOPS_REVEAL_PP,
   ERA_ELIGIBILITY_PP,
@@ -255,7 +255,7 @@ const getSteps = value => {
   const isWhole = Number.isInteger(value)
   const steps = [
     { id: 'div10', label: '÷10', apply: v => (isWhole ? Math.floor(v / 10) : v / 10) },
-    { id: 'mul10', label: '×10', apply: v => (v === 0 ? (isWhole ? 10 : 1) : v * 10) },
+    { id: 'mul10', label: '×10', apply: v => (v === 0 ? 10 : v * 10) },
   ]
   if (isWhole && Math.abs(value) < Number.MAX_SAFE_INTEGER) {
     steps.unshift({ id: 'minus1', label: '−1', apply: v => Math.max(0, v - 1) })
@@ -317,17 +317,26 @@ const ScalarField = ({ path, value, label, onCommit }) => {
         </InputLine>
         {isNumber && (
           <StepLine>
-            {getSteps(value).map(step => (
+            {getSteps(value).map(step => {
+              const next = step.apply(value)
+              return (
               <StepButton
                 aria-label={`${id} ${step.label}`}
+                disabled={!Number.isFinite(next)}
                 key={step.id}
-                onClick={() => onCommit(path, step.apply(value))}
+                onClick={() => {
+                  // A step acts on the live value, so drop any uncommitted draft — otherwise a
+                  // later Enter would silently overwrite the stepped value with the stale draft.
+                  setDraft(null)
+                  onCommit(path, next)
+                }}
                 type="button"
                 variant="neutral"
               >
                 <ButtonContent>{step.label}</ButtonContent>
               </StepButton>
-            ))}
+              )
+            })}
           </StepLine>
         )}
         {echo && <Hint $error={invalid}>{invalid ? echo : `= ${echo}`}</Hint>}
@@ -548,7 +557,7 @@ const DevModePage = ({ game }) => {
     ['Prestige Points', `✦ ${formatAmount(state.prestige?.points ?? 0)}`],
     ['Prestiges', formatAmount(state.prestige?.count ?? 0)],
     ['Era · Eons', `${formatAmount(state.era?.count ?? 0)} · ${formatAmount(state.eons?.balance ?? 0)}`],
-    ['Capacity', formatCurrency(state.intro?.capacity ?? 0)],
+    ['Capacity', formatBitsInNearestUnit(state.intro?.capacity ?? 0)],
   ]
 
   return (
@@ -570,7 +579,7 @@ const DevModePage = ({ game }) => {
         </ToggleRow>
         {active && (
           <>
-            <Readouts aria-label="dev save readouts">
+            <Readouts aria-label="dev save readouts" role="group">
               {readouts.map(([term, value]) => (
                 <Readout key={term}>
                   <dt>{term}</dt>
@@ -647,6 +656,7 @@ const DevModePage = ({ game }) => {
                 <TabBar role="tablist" aria-label="variable areas">
                   {VARIABLE_AREA_TABS.map(item => (
                     <TabButton
+                      aria-controls="dev-variables-panel"
                       aria-label={`show ${item.label} variables`}
                       aria-selected={area === item.id}
                       key={item.id}
@@ -661,7 +671,7 @@ const DevModePage = ({ game }) => {
                     </TabButton>
                   ))}
                 </TabBar>
-                <div role="tabpanel">
+                <div aria-label={`${area} variables`} id="dev-variables-panel" role="tabpanel">
                   {areaKeys.map(key => (
                     <FieldNode key={key} onCommit={handleCommit} path={[key]} value={state[key]} />
                   ))}

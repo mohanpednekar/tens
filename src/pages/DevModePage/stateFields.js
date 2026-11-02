@@ -30,7 +30,7 @@ export const setValueAtPath = (obj, path, value) => {
 
 // Variables-tree areas, mirroring AppNav's own destinations so a dev finds a field where the
 // real game shows it. Rule-based (by top-level key pattern), not a key list: first match wins,
-// and an unmatched new key falls through to 'other' — still rendered, never dropped.
+// and an unmatched new key falls through to the 'factory' catch-all — still rendered, never dropped.
 export const VARIABLE_AREAS = [
   { id: 'foundry', icon: '🔥', label: 'Foundry', match: key => /^intro$|^computeAutoBoost/.test(key) },
   { id: 'compute', icon: '🖥', label: 'Compute', match: key => /^computeFlops/.test(key) },
@@ -56,6 +56,8 @@ export const parseNumberDraft = draft => {
   const text = draft.trim().replace(/[,_\s]/g, '')
   if (text === '') return null
   const power = /^10\^(-?\d+(?:\.\d+)?)$/.exec(text)
+  // Decimal only — Number() would also accept 0x/0b/0o literals.
+  if (!power && !/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(text)) return null
   const n = power ? 10 ** Number(power[1]) : Number(text)
   return Number.isFinite(n) ? n : null
 }

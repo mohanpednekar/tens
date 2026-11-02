@@ -5572,6 +5572,14 @@ describe('Dev Mode', { timeout: 20000 }, () => {
     await user.click(screen.getByRole('button', { name: 'prestige.points +1' }))
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(10001)
 
+    // A stepper drops any uncommitted draft so a later Enter can't undo the step.
+    await user.clear(input)
+    await user.type(input, '5')
+    await user.click(screen.getByRole('button', { name: 'prestige.points −1' }))
+    expect(input).toHaveValue('10000')
+    await user.click(screen.getByRole('button', { name: 'prestige.points +1' }))
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(10001)
+
     await user.clear(input)
     await user.type(input, 'abc')
     expect(input).toHaveAttribute('aria-invalid', 'true')
