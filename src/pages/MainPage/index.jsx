@@ -1529,26 +1529,24 @@ const MainPage = ({ game }) => {
                     ? formatBytes(production)
                     : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
               </ProductionText>
-              {(
-                <UpgradeButton
-                  aria-label={tickspeedLabel}
-                  variant="success"
-                  disabled={!canUpgradeTickspeed}
-                  onClick={() => actions.buyTickspeedMultiplier(tier.id)}
-                  title={`Tickspeed multiplier level ${tickspeedLevel} (${tickspeedBonusLabel} faster ticks) — the next level makes it 10% more`}
-                  $progress={tickspeedProgressPercent}
-                  $pulse={canUpgradeTickspeed}
-                >
-                  <ButtonContent>{tickspeedVisibleLabel}</ButtonContent>
-                  <VisuallyHidden
-                    role="progressbar"
-                    aria-label={`${tier.name} tickspeed multiplier progress`}
-                    aria-valuenow={tickspeedProgressPercent}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                  />
-                </UpgradeButton>
-              )}
+              <UpgradeButton
+                aria-label={tickspeedLabel}
+                variant="success"
+                disabled={!canUpgradeTickspeed}
+                onClick={() => actions.buyTickspeedMultiplier(tier.id)}
+                title={`Tickspeed multiplier level ${tickspeedLevel} (${tickspeedBonusLabel} faster ticks) — the next level makes it 10% more`}
+                $progress={tickspeedProgressPercent}
+                $pulse={canUpgradeTickspeed}
+              >
+                <ButtonContent>{tickspeedVisibleLabel}</ButtonContent>
+                <VisuallyHidden
+                  role="progressbar"
+                  aria-label={`${tier.name} tickspeed multiplier progress`}
+                  aria-valuenow={tickspeedProgressPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+              </UpgradeButton>
               <BuyButton
                 aria-label={buyLabel}
                 variant="plain"

@@ -943,13 +943,12 @@ export const getGlobalTickspeedProductionMultiplier = (level, overclockCount = 0
   return (1 + step) ** lvl
 }
 
-// Whether the last tier's Money-funded tickspeed multiplier is currently replaced by the
-// XP-funded one (see getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) — a live
+// Whether the separate XP Tickspeed upgrade for the last tier (shown beside Latency — see
+// getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) is available — a live
 // check for the first Scale Up OF THE FINAL TIER (scaleUpTierCounts[last] >= 1). Simply revealing
 // the final tier is not enough. Deliberately live, not a permanent latch: Overclock/Prestige reset
 // scaleUpTierCounts back to 0 (and also reset lastTierXpConsumed/prestige.xp to 0 — see
-// overclockGame/prestigeGame), and this mechanic should revert to the Money-funded multiplier
-// along with it — re-Scaling-Up to the final tier re-engages it, from the fresh (0)
+// overclockGame/prestigeGame), hiding the upgrade again — re-Scaling-Up to the final tier re-engages it, from the fresh (0)
 // lastTierXpConsumed baseline a Prestige/Overclock left behind.
 export const isLastTierTickspeedXpUnlocked = state => (state.scaleUpTierCounts?.[getLastTierId()] ?? 0) >= 1
 

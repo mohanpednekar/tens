@@ -9071,3 +9071,14 @@ offered once a pass fits the pool's buffer capacity (early game unchanged) and o
 (`isProvisionDiskInProgress`); the Foundry-reset replay arms the same build with the existing allowance cap. The post-Foundry-reset
 rebuild (`tickAutoProvisionLowerDiskSizes`) is free at the same fixed base Bandwidth; `tickPoolResetReprovision` is unchanged.
 The disk under construction is drawn radially with a glow — violet for provisioning, amber for rebuilding.
+
+## Last tier: tickspeed kept at 10% spend; XP Tickspeed split out beside Latency (2026-11)
+
+Previously, once the last tier had been a Scale Up target, its resource-funded tickspeed button was
+replaced by an XP-consume button, and its tier tickspeed autobuyer was repurposed to auto-consume XP.
+Per the maintainer's request (PR #975), the last tier now keeps its own tickspeed upgrade all cycle —
+the normal owned requirement (10, 100, …) but spending only 10% of it (`LAST_TIER_TICKSPEED_SPEND_FRACTION`)
+— and the XP-funded upgrade became a separate card below Latency whose multiplier composes with the
+tier's level rather than replacing it. XP auto-consumption was dropped: with its own card it is no
+longer tied to the tier tickspeed autobuyer, and each consumption wipes every other tier plus Bits,
+so it stays a deliberate, confirmed manual action.

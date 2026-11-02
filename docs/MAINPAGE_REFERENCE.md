@@ -914,9 +914,7 @@ Like `ScaleUpButton`'s `Lv.{scaleUpTargetTierLevelDisplay}/{scaleUpRequirementDi
 uses the completed-level display offset while eligibility continues to use the raw engine values;
 see `getOverclockRequirement`'s own comment in `engine.js` and "Overclock" in
 docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock button — Overclock is meant
-to be a deliberate, occasional decision reached via this card, not a frequent one-tap action (unlike
-the last tier's own row, which does grow a dedicated XP-consume tickspeed button once XP-unlocked —
-see "Tickspeed multiplier" above — but that's a different action entirely, not a Scale Up shortcut).
+to be a deliberate, occasional decision reached via this card, not a frequent one-tap action.
 
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
 whose body renders once `overclockCount > 0`: collapsed by default, clicking "Overclock" reveals a
