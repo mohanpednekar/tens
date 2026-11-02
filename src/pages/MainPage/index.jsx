@@ -1301,7 +1301,7 @@ const MainPage = ({ game }) => {
             $pulse={canBuyGlobalTickspeed}
           >
             <ButtonIcon>🌐 </ButtonIcon>
-            <ButtonLabel>{isGlobalTickspeedActive ? 'Upgrade' : 'Enable'} for {formatBytes(globalTickspeedCost)}</ButtonLabel>
+            <ButtonLabel>{formatBytes(globalTickspeedCost)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Latency progress"
@@ -1335,7 +1335,7 @@ const MainPage = ({ game }) => {
             $pulse={canConsumeLastTierXp}
           >
             <ButtonIcon>🧬 </ButtonIcon>
-            <ButtonLabel>Restage ({formatAmount(lastTierXpBalance)} XP)</ButtonLabel>
+            <ButtonLabel>{formatAmount(lastTierXpBalance)} XP</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label={`${lastTier.name} Restage progress`}

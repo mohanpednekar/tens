@@ -799,8 +799,8 @@ tickspeed multiplier" below) lands on fractional values, so it shows up to 2 dec
 (trimming a trailing `.00`/trailing zero, same style as `formatRate`) while the cumulative bonus is
 still under 100%, then rounds to a whole percent once it reaches/crosses 100% (×2.00), matching
 every other multiplier badge in the app once the numbers get large. The button carries `$progress`
-(Money ÷ cost) the same way Buy does, reading `🌐 Enable for {cost}` before the first purchase or
-`🌐 Upgrade for {cost}` after — its `aria-label` alone still spells out the current cumulative bonus
+(Money ÷ cost) the same way Buy does, reading just `🌐 {cost}` (compact, since it shares a row with Restage; the
+Enable/Upgrade wording lives in `aria-label`) — its `aria-label` alone still spells out the current cumulative bonus
 (same `formatGlobalTickspeedBonusPercent` formatting) for assistive tech, independent of the
 collapsed/expanded visual state. A `globalTickspeedCardEverRevealed` flag (seeded from/latched to
 `isGlobalTickspeedMultiplierUnlocked(state)`) follows the same `everRevealed` pattern as
@@ -839,7 +839,7 @@ but its requirement and spend differ: it needs `getTickspeedMultiplierRequiremen
 the 2nd upgrade) and spends only `getTickspeedMultiplierSpend` (10% — e.g. 10); the visible label shows
 the spend, the aria-label/progress bar the requirement. Its XP-funded tickspeed is a **separate**
 **Restage** card directly below the Latency card (`aria-label="restage panel"`, shown once
-`isLastTierTickspeedXpUnlocked`) with a `🧬 Restage ({XP} XP)` button — see docs/ECONOMY_REFERENCE.md's
+`isLastTierTickspeedXpUnlocked`) with a `🧬 {XP} XP` button — see docs/ECONOMY_REFERENCE.md's
 "The last tier's XP-funded tickspeed". The row's Details "tier ×N" multiplier includes the XP bonus.
 
 **No per-tier automation icon on the Factory view row.** A tier row's `name` grid area (shared by
