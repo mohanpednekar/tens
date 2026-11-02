@@ -481,6 +481,17 @@ const InfoPage = () => {
             Each tier row also has its own tickspeed upgrade, paid for with units of that tier
             itself — buying one lowers that tier’s owned count.
           </li>
+          <li>
+            {lastTierName}’ tickspeed upgrade needs the usual amount owned but only spends a tenth of
+            it (the 2nd upgrade needs 100, spends 10).
+          </li>
+          <li>
+            After {TIER_DEFINITIONS.length} Scale Ups in a run (the first onto {lastTierName}), the
+            Restage upgrade appears beside Latency: spend XP for +1% faster {lastTierName} ticks per XP
+            (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
+            It resets every other tier’s owned quantity and your Bits. A 16 PP Auto Restage
+            (Perks → Unlocks) spends it for you.
+          </li>
         </ul>
       </Section>
 
