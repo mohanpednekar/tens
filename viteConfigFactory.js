@@ -44,6 +44,10 @@ const tensFeaturesPlugin = (flags, srcPath) => ({
   load: id => (id === `\0${FEATURES_MODULE_ID}` ? buildFeaturesModule(flags, srcPath) : null),
 })
 
+/** Paths under the dev build; the production service worker must never answer navigations for them
+ * (matched against path + query, so `/tens/dev` without the trailing slash counts too). */
+export const DEV_BUILD_PATH_PATTERN = /^\/tens\/dev(\/|$|\?)/
+
 /**
  * Build the Vite config object. Kept separate from `vite.config.js` so tests can
  * pin the CAPACITOR=1 behavior (relative base, no VitePWA) without loading Vite's
@@ -56,16 +60,22 @@ const tensFeaturesPlugin = (flags, srcPath) => ({
  */
 export function createViteConfig({
   capacitor = process.env.CAPACITOR === '1',
+  devBuild = process.env.TENS_DEV_BUILD === '1',
   srcPath = path.resolve('src'),
   env = process.env,
 } = {}) {
   const features = resolveFeatureFlags({ capacitor, env })
+  // Dev build (`yarn build:dev`): a production-optimized bundle with `import.meta.env.DEV` forced
+  // true, so Dev Mode ships in it. Served from `/tens/dev/` beside the production site; no service
+  // worker, so it can never cache-shadow or be shadowed by the production PWA. Every localStorage key
+  // is prefixed `dev:` (game/storagePrefix.js) so its saves are fully separate from the main game's.
   return {
-    base: capacitor ? './' : '/tens/',
+    base: capacitor ? './' : devBuild ? '/tens/dev/' : '/tens/',
+    ...(devBuild ? { define: { 'import.meta.env.DEV': 'true', 'import.meta.env.VITE_TENS_STORAGE_PREFIX': '"dev:"', 'import.meta.env.VITE_TENS_DEV_BUILD': '"1"' } } : {}),
     plugins: [
       react(),
       tensFeaturesPlugin(features, srcPath),
-      ...(capacitor
+      ...(capacitor || devBuild
         ? []
         : [
             VitePWA({
@@ -73,7 +83,7 @@ export function createViteConfig({
               includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'robots.txt'],
               // The policy pages are standalone documents, never the SPA shell.
               workbox: {
-                navigateFallbackDenylist: [/\/privacy\.html$/, /\/terms\.html$/],
+                navigateFallbackDenylist: [/\/privacy\.html$/, /\/terms\.html$/, DEV_BUILD_PATH_PATTERN],
               },
               manifest: {
                 name: 'Tens',

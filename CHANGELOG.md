@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Weekly Stryker mutation-testing baseline for `engine.js` (`mutation-testing.yml`, non-blocking; score in the job summary).
+- **Dev build published beside production**: `yarn build:dev` produces a build with Dev Mode enabled (presets, Variables tree, state-JSON editor), and the Pages deploy now serves it at `/tens/dev/` while production stays at `/tens/`. The dev build keeps its own separate saves (every storage key is `dev:`-prefixed), invisible to the main game, and, like Dev Mode itself, carries no backward-compatibility burden (any save loads; missing fields are filled in, no "incompatible save" notice).
+- Settings → Import / export save: copy, download, paste or choose a save file to replace the active slot — hand-built test saves can now be loaded directly on a phone/PWA, no second computer or dev build needed.
 
 ### Fixed
 
@@ -17,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Provision Disk runs at a fixed speed and the disk being built or rebuilt is shown distinctly.** Provisioning is still funded from the pool buffer, but it draws bits at the pool's base Bandwidth instead of waiting on the fill-multiplied buffer pace (an empty buffer still stalls it; a Speed/Capacity upgrade mid-build speeds it up at once; progress is never lost). The post-Foundry-reset rebuild runs at the same fixed speed. The disk under construction fills radially with a glow — violet while provisioning, amber while rebuilding. The tile's ⚡ is that fixed speed. Provision Disk now blocks Compute Boost / Auto-Boost only while a build is armed (not merely startable), and the Foundry nav dot lights only while a disk can be started and none is armed.
 - **Autobuyer bulk reworked into the speed upgrades**: the separate 10/100/1000 per-buy purchase is gone. A tier autobuyer's speed upgrades now continue past the 10 ms floor, and each extra level doubles how many whole levels one attempt may buy (2, 4, … 512; always only an upper limit — as many as are affordable). Previously bought bulk modes no longer apply.
 - **Auto-Prestige Autobuyer removed** (the 100 PP convenience that auto-bought Auto-Prestige's speed upgrades) — its PP are not refunded.
 - **Global Automation is a strict sequence**: Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Prestige. Every step is always listed and each needs the previous one (also enforced in the engine). Auto-Prestige is now an Unlocks purchase rather than an Upgrades one.

@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import capacitorConfig, { ADS_PLUGIN, IAP_PLUGIN, buildIncludePlugins } from '../../capacitor.config.js'
-import { buildFeaturesModule, createViteConfig, resolveFeatureFlags } from '../../viteConfigFactory.js'
+import { DEV_BUILD_PATH_PATTERN, buildFeaturesModule, createViteConfig, resolveFeatureFlags } from '../../viteConfigFactory.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
@@ -89,3 +89,28 @@ describe('Android release configuration', () => {
   })
 })
 
+
+describe('Dev build config', () => {
+  it('serves from /tens/dev/, forces DEV on, and skips the service worker', () => {
+    const dev = createViteConfig({ capacitor: false, devBuild: true })
+    expect(dev.base).toBe('/tens/dev/')
+    expect(dev.define).toEqual({ 'import.meta.env.DEV': 'true', 'import.meta.env.VITE_TENS_STORAGE_PREFIX': '"dev:"', 'import.meta.env.VITE_TENS_DEV_BUILD': '"1"' })
+    expect(pluginNames(dev)).not.toContain('vite-plugin-pwa')
+  })
+
+  it('leaves the production build untouched and keeps its service worker off /tens/dev/', () => {
+    const prod = createViteConfig({ capacitor: false, devBuild: false })
+    expect(prod.base).toBe('/tens/')
+    expect(prod.define).toBeUndefined()
+    expect(pluginNames(prod)).toContain('vite-plugin-pwa')
+  })
+})
+
+describe('production service worker vs the dev build', () => {
+  it.each(['/tens/dev', '/tens/dev/', '/tens/dev/index.html', '/tens/dev?x=1'])('denylists %s', path => {
+    expect(DEV_BUILD_PATH_PATTERN.test(path)).toBe(true)
+  })
+  it.each(['/tens/', '/tens/developer', '/tens/index.html'])('still serves %s from the production shell', path => {
+    expect(DEV_BUILD_PATH_PATTERN.test(path)).toBe(false)
+  })
+})

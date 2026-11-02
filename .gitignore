@@ -119,3 +119,5 @@ android/keystore.properties
 # Stryker mutation-testing scratch + reports (mutation-testing.yml uploads reports as an artifact)
 .stryker-tmp/
 reports/
+
+graphify-out/.graphify_build_state.json

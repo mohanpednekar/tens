@@ -28556,6 +28556,39 @@
       "source_file": "src/components/BoostTimerBar/index.jsx",
       "source_location": "L72",
       "_callable": true
+    },
+    {
+      "label": "ManualSaveSection.jsx",
+      "file_type": "code",
+      "source_file": "src/pages/SettingsPage/ManualSaveSection.jsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_pages_settingspage_manualsavesection_jsx",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
+      "norm_label": "manualsavesection.jsx"
+    },
+    {
+      "label": "storagePrefix.js",
+      "file_type": "code",
+      "source_file": "src/game/storagePrefix.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_game_storageprefix_js",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
+      "norm_label": "storageprefix.js"
+    },
+    {
+      "label": "storagePrefix.test.js",
+      "file_type": "code",
+      "source_file": "src/game/storagePrefix.test.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_game_storageprefix_test_js",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
+      "norm_label": "storageprefix.test.js"
     }
   ],
   "links": [
