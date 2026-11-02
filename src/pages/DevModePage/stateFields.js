@@ -65,7 +65,7 @@ export const parseNumberDraft = draft => {
 // Every scalar/null/array leaf under `value`, as `{ path, value }` — the flat list the Variables
 // search filters across all areas at once.
 export const collectLeaves = (value, path = []) => {
-  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+  if (value !== null && Object.prototype.toString.call(value) === '[object Object]' && (Object.getPrototypeOf(value) === null || Object.getPrototypeOf(value) === Object.prototype)) {
     return Object.entries(value).flatMap(([key, child]) => collectLeaves(child, [...path, key]))
   }
   return path.length === 0 ? [] : [{ path, value }]
