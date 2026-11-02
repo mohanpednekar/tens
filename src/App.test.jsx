@@ -1520,18 +1520,18 @@ test('an Enable Auto Scale Up button appears on the PP Upgrades page after the f
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('an Enable Auto Restage button on Perks → Unlocks spends 8 PP to enable it', async () => {
+test('an Enable Auto Restage button on Perks → Unlocks spends 16 PP to enable it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
-    prestige: { xp: 0, points: 8, count: 1, highestMilestone: 1 },
+    prestige: { xp: 0, points: 16, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  const button = screen.getByRole('button', { name: /enable auto restage for 8 prestige points/i })
+  const button = screen.getByRole('button', { name: /enable auto restage for 16 prestige points/i })
   expect(button).toBeEnabled()
   await user.click(button)
 
@@ -1810,8 +1810,8 @@ test.each([
   },
   {
     name: 'Enable Auto Restage',
-    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 7, count: 1, highestMilestone: 1 } },
-    buttonName: /enable auto restage for 8 prestige points/i,
+    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 15, count: 1, highestMilestone: 1 } },
+    buttonName: /enable auto restage for 16 prestige points/i,
   },
   {
     name: 'Auto-Prestige',

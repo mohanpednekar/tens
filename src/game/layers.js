@@ -730,7 +730,7 @@ export const LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1
 export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
 // One-time PP cost (Perks → Unlocks) for the Auto Restage — once bought, tickGame spends the
 // whole XP balance on the last tier's XP-funded tickspeed whenever consumeXpForLastTierTickspeed allows.
-export const XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = 8
+export const XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = 16
 // Each single XP-consumption action must be at least this fraction of the cumulative XP already
 // consumed this way (see engine.js's getLastTierXpTickspeedMinConsumption) — so repeat
 // consumptions can't trickle in one XP at a time forever; the required minimum grows alongside

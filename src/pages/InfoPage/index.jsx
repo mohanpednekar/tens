@@ -489,7 +489,7 @@ const InfoPage = () => {
             After {TIER_DEFINITIONS.length} Scale Ups in a run (the first onto {lastTierName}), the
             Restage upgrade appears below Latency: spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
-            It resets every other tier’s owned quantity and your Bits. An 8 PP Auto Restage
+            It resets every other tier’s owned quantity and your Bits. A 16 PP Auto Restage
             (Perks → Unlocks) spends it for you.
           </li>
         </ul>

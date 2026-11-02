@@ -9081,7 +9081,7 @@ the normal owned requirement (10, 100, …) but spending only 10% of it (`LAST_T
 — and the XP-funded upgrade became a separate card below Latency whose multiplier composes with the
 tier's level rather than replacing it. XP auto-consumption was dropped: with its own card it is no
 longer tied to the tier tickspeed autobuyer, and each consumption wipes every other tier plus Bits,
-so it stays a deliberate, confirmed manual action — unless the player buys the separate 8 PP XP
+so it stays a deliberate, confirmed manual action — unless the player buys the separate 16 PP XP
 Tickspeed Autobuyer (`autoXpTickspeed`, added at the maintainer's request in the same PR), an explicit
 opt-in with its own pause toggle.
 The player-facing name became **Restage** (autobuyer: **Auto Restage**) at the maintainer's request —

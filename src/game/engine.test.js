@@ -9568,14 +9568,14 @@ describe('buyTickspeedAutobuyer', () => {
 // ─── setAutoScaleUpEnabled / setAutoGlobalTickspeedEnabled / setAutoPrestigeEnabled ─────────────
 
 describe('buyXpTickspeedAutobuyer / setAutoXpTickspeedEnabled', () => {
-  it('spends 8 PP to unlock, with no prerequisite', () => {
-    const after = buyXpTickspeedAutobuyer(withPrestigePoints(createInitialGameState(), 10))
+  it('spends 16 PP to unlock, with no prerequisite', () => {
+    const after = buyXpTickspeedAutobuyer(withPrestigePoints(createInitialGameState(), 20))
     expect(after.autoXpTickspeed).toBe(true)
-    expect(after.prestige.points).toBe(2)
+    expect(after.prestige.points).toBe(4)
   })
 
-  it('is a no-op below 8 PP, when already bought, or while frozen', () => {
-    const poor = withPrestigePoints(createInitialGameState(), 7)
+  it('is a no-op below 16 PP, when already bought, or while frozen', () => {
+    const poor = withPrestigePoints(createInitialGameState(), 15)
     expect(buyXpTickspeedAutobuyer(poor)).toBe(poor)
     const owned = { ...withPrestigePoints(createInitialGameState(), 100), autoXpTickspeed: true }
     expect(buyXpTickspeedAutobuyer(owned)).toBe(owned)

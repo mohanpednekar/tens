@@ -7549,7 +7549,7 @@ export const buyComputeAutoBoost = state => {
   }
 }
 
-// One-time XP_TICKSPEED_AUTOBUYER_UNLOCK_COST (8) PP purchase of the Auto Restage (see
+// One-time XP_TICKSPEED_AUTOBUYER_UNLOCK_COST (16) PP purchase of the Auto Restage (see
 // autoXpTickspeed/tickGame). No prerequisite. A no-op if already bought, if there aren't enough
 // unspent points, or while production is frozen — same convention as buyAutoScaleUp.
 export const buyXpTickspeedAutobuyer = state => {
