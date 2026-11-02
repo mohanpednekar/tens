@@ -543,7 +543,7 @@ playwright.config.js         ← Playwright e2e config (see "End-to-end testing"
 e2e/
   golden-path.e2e.js          ← buying Kilobytes via the real Buy button; Owned/money-balance updates
   autobuyer-reload.e2e.js     ← an already-unlocked tier autobuyer survives a real page reload
-  prestige.e2e.js             ← prestiging from the first-time overlay resets resources, awards PP
+  reboot.e2e.js               ← rebooting from the first-time overlay resets resources, awards PP
   meta-prestige.e2e.js        ← Settings Era ascension from 1 Googol PP seed; era/Eons + Foundry gate
   data-lake.e2e.js            ← a seeded KB Data Lake renders its disk-square breakdown on Foundry, then a
                                manual Buy Booster click grants a Core (verified on the Boosters page)
@@ -720,10 +720,12 @@ this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop".
 
 ### Tiers, Prestige, Era ascension
 
-**Terminology (player-facing):** "Prestige" is the umbrella term for every reset-for-rewards (Reboot, Era
-ascension, Reset Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is called **Reboot**
-(Auto-Reboot, Reboot museum entries). Code identifiers, state keys and "Prestige Points (PP)" keep
-`prestige` naming — this rename is UI text only, so saves are unaffected.
+**Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Reboot, Era ascension,
+Reset Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Reboot** and the global
+tickspeed track is **Speed Up** (formerly Latency). Code follows suit — `state.reboot`, `rebootGame`,
+`REBOOT_THRESHOLD`, `autoReboot`, automation keys `'speedUp'`/`'reboot'` — while Prestige-Point,
+Double PP, speed-bonus, `prestigeMuseum` and `metaPrestige` identifiers keep `prestige`. Pre-rename
+saves were not migrated (maintainer decision).
 
 There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
 display names `Kilobytes` through `Quettabytes`. Every tier is bought directly with the base currency
@@ -732,19 +734,19 @@ cascading down the ladder; `tier01` (Kilobytes) is the special case where cost i
 production is a whole-Byte amount (`BYTES_ID = 'bytes'`, displayed as `B`) credited to Bits at
 `BITS_PER_BYTE` (8) per Byte. **Bytes and Bits are ONE pool** (`resources.base`) — there is no separate
 Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Speed Up** (the global
-tickspeed multiplier on MainPage, formerly "Latency"/"Tickspeed"/"Clock Speed"; code keys stay `latency`/`globalTickspeed`) is paid from that Bits balance —
+tickspeed multiplier on MainPage, formerly "Latency"/"Tickspeed"/"Clock Speed"; code: `globalTickspeed*`, automation key `speedUp`) is paid from that Bits balance —
 initial activation costs **10 Bytes (80 Bits)**. It unlocks once level 1 of tier01 is purchased; there
 are no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
-Reaching Money ≥ `PRESTIGE_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
-since a Byte is 8 Bits) freezes the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)`
-is true (permanent `prestige.unboundedUnlocked` latch; unlocked once Auto-Prestige's interval is upgraded to
-`UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS` (1 s) or less, carried through Era ascension), in which case production
+Reaching Money ≥ `REBOOT_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
+since a Byte is 8 Bits) freezes the economy except for Prestige — unless `isUnboundedRebootUnlocked(state)`
+is true (permanent `reboot.unboundedUnlocked` latch; unlocked once Auto-Prestige's interval is upgraded to
+`UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS` (1 s) or less, carried through Era ascension), in which case production
 continues and Prestige is optional (see `isProductionFrozen`). **Era ascension** (`eraGame`) is a separate voluntary meta-prestige at **1 Googol unspent PP**
 (`ERA_ELIGIBILITY_PP`): it awards **Eons** (+1 base, +1 per Eon Amplifier level — shop deferred to #414),
 increments `era.count`, resets the full Foundry (generator upgrades, Disks, Data Lakes, compute ladder
-entities, Memory/gate) plus the ordinary Factory cycle (`prestige.points`/`count`/`prestigeDoublePpLevel`
+entities, Memory/gate) plus the ordinary Factory cycle (`reboot.points`/`count`/`prestigeDoublePpLevel`
 → 0, `computeFlops.owned` → 0, `cumulativeBoost` fresh), while keeping automation unlocks/pause flags
-(except Double PP level), tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`,
+(except Double PP level), tier/tickspeed autobuyer milestone objects, `reboot.unboundedUnlocked`,
 museum, hyperscalers, Eon upgrade levels, Flops autobuyer unlock flags, and page latches. Era *N*
 free-unlocks the *N*th Flops tier's autobuyer (KFlops at Era 1, …). Hyperscalers (bought with Eons in
 #414) add permanent +0.01%/s each to every Factory tier's Flops multiplier via
@@ -755,8 +757,8 @@ a purchase control yet (deferred to #414, blocked pending maintainer-approved sp
 additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Double PP
 upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then doubles PP-per-power; cost
 `100^(level+1)` PP). `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
-(`getMoneyExponent`/`getPrestigeProgressPercent`) — only the live freeze/Prestige trigger moved to
-`PRESTIGE_THRESHOLD`; see `docs/DESIGN_HISTORY.md` for why. MainPage's headline balance (`MoneyHero`) switches from Bits to whole Bytes once the balance reaches
+(`getMoneyExponent`/`getRebootProgressPercent`) — only the live freeze/Prestige trigger moved to
+`REBOOT_THRESHOLD`; see `docs/DESIGN_HISTORY.md` for why. MainPage's headline balance (`MoneyHero`) switches from Bits to whole Bytes once the balance reaches
 8000 Bits (`formatMoneyBalance`, `MONEY_BYTES_DISPLAY_THRESHOLD`) — every other `formatCurrency` call
 (costs, production, the Prestige-threshold overlay) keeps reading in Bits.
 
@@ -1006,7 +1008,7 @@ base path.
   `intro: { mainGameUnlocked: true }`, needed by every spec that seeds state to land directly on MainPage
   rather than the Byte Foundry intro screen.
 - Current specs (see "Repo layout" `e2e/` for one-line descriptions): `golden-path`, `autobuyer-reload`,
-  `prestige` (seeding Money ≥ `PRESTIGE_THRESHOLD`; first-time `FullScreenOverlay`), `meta-prestige`
+  `reboot` (seeding Money ≥ `REBOOT_THRESHOLD`; first-time `FullScreenOverlay`), `meta-prestige`
   (seed at 1 Googol PP → Settings Era ascension → assert `era.count`, Eons award, and the permanent
   `intro.mainGameUnlocked` latch carrying forward), `data-lake`, and `visual-regression` (Linux-only
   full-page screenshot baselines of Byte Foundry/Byte Factory in both themes; see `e2e/README.md`).

@@ -142,7 +142,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
   const eonsBalance = game.state.eons?.balance ?? 0
   const eraEligible = isEraEligible(game.state)
   const eonsAwarded = getEonsAwarded(game.state)
-  const unspentPp = game.state.prestige?.points ?? 0
+  const unspentPp = game.state.reboot?.points ?? 0
   const eonWord = count => (count === 1 ? 'Eon' : 'Eons')
 
   const museum = game.state.prestigeMuseum ?? { history: [], pinnedIds: [] }
@@ -335,7 +335,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         {!supporter ? (
           <LockedNote>
             History still records in the background. Unlock Supporter to browse past reboots and pin up to {MUSEUM_PIN_CAP}.
-            {history.length > 0 && ` Latest: Reboot #${history[0].prestigeNumber} (+${history[0].pointsAwarded} PP).`}
+            {history.length > 0 && ` Latest: Reboot #${history[0].rebootNumber} (+${history[0].pointsAwarded} PP).`}
           </LockedNote>
         ) : (
           <>
@@ -343,17 +343,17 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
             {pinnedEntries.length > 0 && (
               <>
                 <LockedNote>Pinned</LockedNote>
-                <MuseumList aria-label="pinned prestige entries">
+                <MuseumList aria-label="pinned reboot entries">
                   {pinnedEntries.map(entry => (
                     <MuseumItem key={`pin-${entry.id}`}>
                       <div>
-                        <strong>Reboot #{entry.prestigeNumber}</strong>
+                        <strong>Reboot #{entry.rebootNumber}</strong>
                         <div>
                           <span>+{entry.pointsAwarded} PP · {formatMoneyBalance(entry.moneyBits)}</span>
                         </div>
                       </div>
                       <Button
-                        aria-label={`unpin prestige ${entry.prestigeNumber}`}
+                        aria-label={`unpin reboot ${entry.rebootNumber}`}
                         onClick={() => game.actions.unpinMuseumEntry(entry.id)}
                         type="button"
                         variant="neutral"
@@ -373,14 +373,14 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                 {visibleHistory.map(entry => (
                   <MuseumItem key={entry.id}>
                     <div>
-                      <strong>Reboot #{entry.prestigeNumber}</strong>
+                      <strong>Reboot #{entry.rebootNumber}</strong>
                       <div>
                         <span>+{entry.pointsAwarded} PP · {formatCurrency(entry.moneyBits)}</span>
                       </div>
                     </div>
                     {pinnedSet.has(entry.id) ? (
                       <Button
-                        aria-label={`unpin prestige ${entry.prestigeNumber}`}
+                        aria-label={`unpin reboot ${entry.rebootNumber}`}
                         onClick={() => game.actions.unpinMuseumEntry(entry.id)}
                         type="button"
                         variant="neutral"
@@ -389,7 +389,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                       </Button>
                     ) : (
                       <Button
-                        aria-label={`pin prestige ${entry.prestigeNumber}`}
+                        aria-label={`pin reboot ${entry.rebootNumber}`}
                         disabled={pinnedSet.size >= MUSEUM_PIN_CAP}
                         onClick={() => game.actions.pinMuseumEntry(entry.id)}
                         type="button"
@@ -446,7 +446,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           <LockedNote>Unlock Supporter for live Bits and Prestige Point sparklines. Information only — no production change.</LockedNote>
         ) : (
           <>
-            <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.prestige?.points ?? 0}</p>
+            <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.reboot?.points ?? 0}</p>
             <LockedNote>Bits</LockedNote>
             <SparklineSvg aria-label="bits sparkline" role="img" viewBox="0 0 100 40">
               <path d={moneyPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />

@@ -7,7 +7,7 @@ import {
   COMPUTE_FLOPS_REVEAL_PP,
   ERA_ELIGIBILITY_PP,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-  PRESTIGE_THRESHOLD,
+  REBOOT_THRESHOLD,
 } from 'game/layers'
 import {
   VARIABLE_AREAS,
@@ -428,17 +428,17 @@ const PRESET_GROUPS = [
       {
         id: 'near-prestige',
         label: '💰 Bits → 99% to Reboot',
-        apply: state => ({ ...state, resources: { ...state.resources, base: PRESTIGE_THRESHOLD * 0.99 } }),
+        apply: state => ({ ...state, resources: { ...state.resources, base: REBOOT_THRESHOLD * 0.99 } }),
       },
       {
         id: 'prestige-ready',
         label: '💰 Bits → Reboot threshold',
-        apply: state => ({ ...state, resources: { ...state.resources, base: PRESTIGE_THRESHOLD } }),
+        apply: state => ({ ...state, resources: { ...state.resources, base: REBOOT_THRESHOLD } }),
       },
     ],
   },
   {
-    id: 'prestige',
+    id: 'reboot',
     label: '🏆 Reboot',
     presets: [
       {
@@ -446,17 +446,17 @@ const PRESET_GROUPS = [
         label: '🏆 +1,000 PP',
         apply: state => ({
           ...state,
-          prestige: { ...state.prestige, points: (state.prestige?.points ?? 0) + 1000 },
+          reboot: { ...state.reboot, points: (state.reboot?.points ?? 0) + 1000 },
         }),
       },
       {
         id: 'add-prestige',
         label: '🏆 +1 Reboot count',
-        // Same milestone unlocks a real Prestige applies (prestigeGame), so the count-gated
+        // Same milestone unlocks a real Prestige applies (rebootGame), so the count-gated
         // autobuyers this preset exists to test actually unlock.
         apply: state => applyAutobuyerMilestones({
           ...state,
-          prestige: { ...state.prestige, count: (state.prestige?.count ?? 0) + 1 },
+          reboot: { ...state.reboot, count: (state.reboot?.count ?? 0) + 1 },
         }),
       },
       {
@@ -464,7 +464,7 @@ const PRESET_GROUPS = [
         label: '🖥️ Unlock Compute (Flops)',
         apply: state => ({
           ...state,
-          prestige: { ...state.prestige, points: Math.max(state.prestige?.points ?? 0, COMPUTE_FLOPS_REVEAL_PP) },
+          reboot: { ...state.reboot, points: Math.max(state.reboot?.points ?? 0, COMPUTE_FLOPS_REVEAL_PP) },
           computeFlops: { ...state.computeFlops, pageUnlocked: true },
         }),
       },
@@ -477,14 +477,14 @@ const PRESET_GROUPS = [
       {
         id: 'era-ready',
         label: '🏆 PP → Era-ready (1 Googol)',
-        apply: state => ({ ...state, prestige: { ...state.prestige, points: ERA_ELIGIBILITY_PP } }),
+        apply: state => ({ ...state, reboot: { ...state.reboot, points: ERA_ELIGIBILITY_PP } }),
       },
     ],
   },
 ]
 
 // Tabs follow AppNav's left-to-right order; VARIABLE_AREAS' own order is match priority.
-const VARIABLE_AREA_TABS = ['foundry', 'compute', 'factory', 'perks', 'prestige', 'era']
+const VARIABLE_AREA_TABS = ['foundry', 'compute', 'factory', 'perks', 'reboot', 'era']
   .map(id => VARIABLE_AREAS.find(area => area.id === id))
 
 const safeStringify = state => JSON.stringify(state, null, 2)
@@ -561,8 +561,8 @@ const DevModePage = ({ game }) => {
   const { state } = game
   const readouts = [
     ['Bits', formatCurrency(state.resources?.base ?? 0)],
-    ['Prestige Points', `✦ ${formatAmount(state.prestige?.points ?? 0)}`],
-    ['Reboots', formatAmount(state.prestige?.count ?? 0)],
+    ['Prestige Points', `✦ ${formatAmount(state.reboot?.points ?? 0)}`],
+    ['Reboots', formatAmount(state.reboot?.count ?? 0)],
     ['Era · Eons', `${formatAmount(state.era?.count ?? 0)} · ${formatAmount(state.eons?.balance ?? 0)}`],
     ['Capacity', formatBitsInNearestUnit(state.intro?.capacity ?? 0)],
   ]

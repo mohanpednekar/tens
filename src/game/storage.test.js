@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState, eraGame, getUnlockedStoragePoolCount } from './engine'
-import { BYTES_ID, ERA_ELIGIBILITY_PP, INTRO_CAPACITY_CAP_BITS, MONEY_ID, MONEY_STARTING_AMOUNT, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
+import { BYTES_ID, ERA_ELIGIBILITY_PP, INTRO_CAPACITY_CAP_BITS, MONEY_ID, MONEY_STARTING_AMOUNT, COMPUTE_FLOPS_TIER_DEFINITIONS, REBOOT_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
 import { adaptSaveForLoad, applyDevGameStateJson, importSaveJson, serializeSaveForExport, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, getActiveSlotId, isDevModeActive, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, setDevModeActive, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
@@ -84,13 +84,13 @@ describe('saveGameState / loadGameState round-trip', () => {
   it('preserves prestige count, points, and XP', () => {
     const state = {
       ...createInitialGameState(),
-      prestige: { xp: 7, points: 4, count: 3, highestMilestone: 5 },
+      reboot: { xp: 7, points: 4, count: 3, highestMilestone: 5 },
     }
     saveGameState(state)
     const loaded = loadGameState()
-    expect(loaded.prestige.count).toBe(3)
-    expect(loaded.prestige.points).toBe(4)
-    expect(loaded.prestige.xp).toBe(7)
+    expect(loaded.reboot.count).toBe(3)
+    expect(loaded.reboot.points).toBe(4)
+    expect(loaded.reboot.xp).toBe(7)
   })
 
   it('preserves autobuyer levels', () => {
@@ -220,17 +220,17 @@ describe('schema merge on load', () => {
     expect(loaded.owned[tensTier.id]).toBe(5) // existing value preserved
   })
 
-  it('defaults prestige.points to 0, tierTickspeedAutobuyer to false, and autoPrestige to null for saves missing those fields', () => {
+  it('defaults reboot.points to 0, tierTickspeedAutobuyer to false, and autoReboot to null for saves missing those fields', () => {
     const oldSave = {
       intro: { mainGameUnlocked: true },
       resources: { [MONEY_ID]: 10 },
       autobuyers: { [tensTier.id]: 1 },
-      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+      reboot: { xp: 0, count: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
-    expect(loaded.prestige.points).toBe(0)
-    expect(loaded.autoPrestige).toBeNull()
+    expect(loaded.reboot.points).toBe(0)
+    expect(loaded.autoReboot).toBeNull()
     TIER_DEFINITIONS.forEach(tier => {
       // Even for tensTier, already unlocked above — no backward-compat grandfathering.
       expect(loaded.tierTickspeedAutobuyer[tier.id]).toBe(false)
@@ -241,11 +241,11 @@ describe('schema merge on load', () => {
     localStorage.setItem('tens_game_state', JSON.stringify({
       saveSchemaVersion: 1,
       intro: { mainGameUnlocked: true },
-      prestige: { count: PRESTIGE_UNBOUNDED_MIN_COUNT, points: 0, xp: 0, highestMilestone: 0 },
+      reboot: { count: REBOOT_UNBOUNDED_MIN_COUNT, points: 0, xp: 0, highestMilestone: 0 },
       era: { count: 2 },
     }))
     const loaded = loadGameState()
-    expect(loaded.prestige.unboundedUnlocked).toBe(true)
+    expect(loaded.reboot.unboundedUnlocked).toBe(true)
     expect(loaded.era.count).toBe(2)
     expect(loaded.eons.balance).toBe(0)
     expect(loaded.computeFlopsAutobuyers[COMPUTE_FLOPS_TIER_DEFINITIONS[0].id]).toBe(1)
@@ -258,7 +258,7 @@ describe('schema merge on load', () => {
     state = {
       ...state,
       intro: { ...state.intro, mainGameUnlocked: true, byteCreated: true },
-      prestige: { ...state.prestige, points: ERA_ELIGIBILITY_PP, count: 3 },
+      reboot: { ...state.reboot, points: ERA_ELIGIBILITY_PP, count: 3 },
       autobuyers: { ...state.autobuyers, [tier0]: 1 },
       autobuyersEnabled: { ...state.autobuyersEnabled, [tier0]: false },
     }
@@ -275,37 +275,37 @@ describe('schema merge on load', () => {
     expect(loaded.intro.mainGameUnlocked).toBe(true)
   })
 
-  it('defaults autoScaleUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled to true for saves missing those fields', () => {
+  it('defaults autoScaleUpEnabled/autoGlobalTickspeedEnabled/autoRebootEnabled to true for saves missing those fields', () => {
     const oldSave = {
       intro: { mainGameUnlocked: true },
       resources: { [MONEY_ID]: 10 },
       autoScaleUp: true,
       autoGlobalTickspeed: true,
-      autoPrestige: 2,
-      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+      autoReboot: 2,
+      reboot: { xp: 0, count: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
     expect(loaded.autoScaleUpEnabled).toBe(true)
     expect(loaded.autoGlobalTickspeedEnabled).toBe(true)
-    expect(loaded.autoPrestigeEnabled).toBe(true)
+    expect(loaded.autoRebootEnabled).toBe(true)
   })
 
-  it('preserves an explicitly-paused (false) autoScaleUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled value', () => {
+  it('preserves an explicitly-paused (false) autoScaleUpEnabled/autoGlobalTickspeedEnabled/autoRebootEnabled value', () => {
     const state = {
       ...createInitialGameState(),
       autoScaleUp: true,
       autoScaleUpEnabled: false,
       autoGlobalTickspeed: true,
       autoGlobalTickspeedEnabled: false,
-      autoPrestige: 1,
-      autoPrestigeEnabled: false,
+      autoReboot: 1,
+      autoRebootEnabled: false,
     }
     saveGameState(state)
     const loaded = loadGameState()
     expect(loaded.autoScaleUpEnabled).toBe(false)
     expect(loaded.autoGlobalTickspeedEnabled).toBe(false)
-    expect(loaded.autoPrestigeEnabled).toBe(false)
+    expect(loaded.autoRebootEnabled).toBe(false)
   })
 
   it('migrates the pre-rename speedUpCount/autoSpeedUp/autoSpeedUpEnabled field names to scaleUpCount/autoScaleUp/autoScaleUpEnabled on load', () => {
@@ -315,7 +315,7 @@ describe('schema merge on load', () => {
       speedUpCount: 5,
       autoSpeedUp: true,
       autoSpeedUpEnabled: false,
-      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+      reboot: { xp: 0, count: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
@@ -336,7 +336,7 @@ describe('schema merge on load', () => {
       scaleUpCount: 9,
       autoSpeedUp: false,
       autoScaleUp: true,
-      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+      reboot: { xp: 0, count: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
@@ -350,7 +350,7 @@ describe('schema merge on load', () => {
       resources: { [MONEY_ID]: 10 },
       autobuyers: { [tensTier.id]: 1 },
       tierTickspeedAutobuyer: { [tensTier.id]: true },
-      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+      reboot: { xp: 0, count: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
@@ -387,15 +387,15 @@ describe('schema merge on load', () => {
     const legacy = {
       ...createInitialGameState(),
       autobuyerBulkLevels: { [tensTier.id]: 2 },
-      autoPrestigeAutobuyer: true,
-      autoPrestigeAutobuyerEnabled: false,
+      autoRebootAutobuyer: true,
+      autoRebootAutobuyerEnabled: false,
     }
     localStorage.setItem('tens_game_state', JSON.stringify(legacy))
     const loaded = loadGameState()
     expect(loaded).not.toBeNull()
     expect(loaded).not.toHaveProperty('autobuyerBulkLevels')
-    expect(loaded).not.toHaveProperty('autoPrestigeAutobuyer')
-    expect(loaded).not.toHaveProperty('autoPrestigeAutobuyerEnabled')
+    expect(loaded).not.toHaveProperty('autoRebootAutobuyer')
+    expect(loaded).not.toHaveProperty('autoRebootAutobuyerEnabled')
   })
 
   it('defaults everUnlockedTierIds to the fresh-state default (only the first tier true) on a save that predates it', () => {
@@ -427,14 +427,14 @@ describe('schema merge on load', () => {
   })
 
   it('preserves a saved Auto-Prestige level', () => {
-    const state = { ...createInitialGameState(), autoPrestige: 3 }
+    const state = { ...createInitialGameState(), autoReboot: 3 }
     saveGameState(state)
-    expect(loadGameState().autoPrestige).toBe(3)
+    expect(loadGameState().autoReboot).toBe(3)
   })
 
   it('does not crash when resources is missing from the save entirely, falling back to fresh defaults', () => {
     const oldSave = {
-      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+      reboot: { xp: 0, count: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
@@ -455,7 +455,7 @@ describe('schema merge on load', () => {
   it('discards legacy resources.Ones instead of loading them', () => {
     localStorage.setItem('tens_game_state', JSON.stringify({
       resources: { Ones: 12345 },
-      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+      reboot: { xp: 0, count: 0, highestMilestone: 1 },
     }))
     expect(discardIncompatibleActiveSaveIfNeeded()).toBe('legacy_money_id')
     expect(loadGameState()).toBeNull()
@@ -464,7 +464,7 @@ describe('schema merge on load', () => {
   it('discards intro.completed saves instead of backfilling mainGameUnlocked', () => {
     localStorage.setItem('tens_game_state', JSON.stringify({
       intro: { completed: true },
-      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+      reboot: { xp: 0, count: 0, highestMilestone: 1 },
     }))
     expect(discardIncompatibleActiveSaveIfNeeded()).toBe('legacy_intro_gate')
     expect(loadGameState()).toBeNull()
@@ -1043,14 +1043,14 @@ describe('Dev Mode', () => {
     setDevModeActive(true)
     const currentState = { ...createInitialGameState(), intro: { ...createInitialGameState().intro, mainGameUnlocked: true } }
     const result = applyDevGameStateJson(
-      JSON.stringify({ resources: { [MONEY_ID]: 5e50 }, prestige: { points: 1000 } }),
+      JSON.stringify({ resources: { [MONEY_ID]: 5e50 }, reboot: { points: 1000 } }),
       currentState,
     )
     expect(result.ok).toBe(true)
     expect(result.state.resources[MONEY_ID]).toBe(5e50)
-    expect(result.state.prestige.points).toBe(1000)
+    expect(result.state.reboot.points).toBe(1000)
     // A field the caller never mentioned (mainGameUnlocked) survives from currentState — a bare
-    // { resources, prestige } object alone (no intro at all) would otherwise trip
+    // { resources, reboot } object alone (no intro at all) would otherwise trip
     // getSaveIncompatibilityReason's 'missing_intro' legacy check and fail outright.
     expect(result.state.intro.mainGameUnlocked).toBe(true)
     // A sibling key inside the merged resources object (bytes) also survives, rather than being
@@ -1185,7 +1185,7 @@ describe('cloud save export / import', () => {
 
   it('accepts partial hand-built saves (only the fields a test cares about)', () => {
     expect(importSaveJson('{"intro":{"mainGameUnlocked":true}}').ok).toBe(true)
-    expect(importSaveJson('{"prestige":{"points":5},"era":{"count":1}}').ok).toBe(true)
+    expect(importSaveJson('{"reboot":{"points":5},"era":{"count":1}}').ok).toBe(true)
   })
 })
 

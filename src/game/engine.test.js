@@ -30,7 +30,7 @@ import {
   getBiggestComputeTierWaitingOnMerge,
   applyAutobuyerMilestones,
   applyOfflineProgress,
-  buyAutoPrestige,
+  buyAutoReboot,
   buyAutoScaleUp,
   buyGlobalTickspeedMultiplier,
   buyComputeFlopsTier,
@@ -96,7 +96,7 @@ import {
   eraseAllComputeTokens,
   setAutobuyerEnabled,
   setAutoGlobalTickspeedEnabled,
-  setAutoPrestigeEnabled,
+  setAutoRebootEnabled,
   setAutoScaleUpEnabled,
   buyXpTickspeedAutobuyer,
   setAutoXpTickspeedEnabled,
@@ -117,7 +117,7 @@ import {
   formatPoolBalanceStable,
   getAutobuyerUnlockCost,
   getAutobuyerUnlockMilestone,
-  getAutoPrestigeAttemptRate,
+  getAutoRebootAttemptRate,
   getAutomationUnlockCost,
   buyAutoOverclock,
   getComputeBoostCoveredTierCount,
@@ -186,7 +186,7 @@ import {
   getPrestigePowersPerPp,
   getPrestigePpPerPower,
   getPrestigeProductionMultiplier,
-  getPrestigeProgressPercent,
+  getRebootProgressPercent,
   getNextBytePowerProgressFraction,
   getPurchaseBlockSize,
   getPurchaseMilestoneMultiplier,
@@ -242,7 +242,7 @@ import {
   isMemoryCapacityUpgradeAvailable,
   isPoolCapacityUpgradeAvailable,
   isProductionFrozen,
-  isUnboundedPrestigeUnlocked,
+  isUnboundedRebootUnlocked,
   isTierUnlocked,
   TIER_UNLOCK_PREV_LEVEL_REQUIREMENT,
   captureFoundryUpgradeCaps,
@@ -259,7 +259,7 @@ import {
   overclockGame,
   pinMuseumEntry,
   reclaimComputeBoost,
-  prestigeGame,
+  rebootGame,
   resetByteFoundry,
   scaleUpGame,
   stackComputeBoost,
@@ -349,7 +349,7 @@ import {
   tickSpeedUpgradeDrain,
   isProvisionDiskInProgress,
 } from './engine'
-import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
+import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, REBOOT_THRESHOLD, REBOOT_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -399,7 +399,7 @@ const withPurchaseLevelProgress = (state, tierId, progress) => ({
 
 const withXP = (state, xp) => ({
   ...state,
-  prestige: { ...state.prestige, xp },
+  reboot: { ...state.reboot, xp },
 })
 
 const withAutobuyer = (state, tierId, level = 1) => ({
@@ -414,19 +414,19 @@ const withTickspeedLevel = (state, tierId, level) => ({
 
 const withPrestigePoints = (state, points) => ({
   ...state,
-  prestige: { ...state.prestige, points },
+  reboot: { ...state.reboot, points },
 })
 
 // DeGoogol needs Auto-Prestige upgraded to <= 1 s (level 66+ of the 1024 s base × 0.9 chain).
-const withUnboundedPrestige = (state, level = 70) => ({
+const withUnboundedReboot = (state, level = 70) => ({
   ...state,
-  autoPrestige: 1,
-  automationIntervalLevels: { ...(state.automationIntervalLevels ?? {}), prestige: level },
+  autoReboot: 1,
+  automationIntervalLevels: { ...(state.automationIntervalLevels ?? {}), reboot: level },
 })
 
-const withPrestigeCount = (state, count) => ({
+const withRebootCount = (state, count) => ({
   ...state,
-  prestige: { ...state.prestige, count },
+  reboot: { ...state.reboot, count },
 })
 
 const withTierTickspeedAutobuyer = (state, tierId, active = true) => ({
@@ -444,14 +444,14 @@ const withTierTickspeedAutobuyerEnabled = (state, tierId, enabled) => ({
   tierTickspeedAutobuyerEnabled: { ...state.tierTickspeedAutobuyerEnabled, [tierId]: enabled },
 })
 
-const withAutoPrestige = (state, level = 1) => ({
+const withAutoReboot = (state, level = 1) => ({
   ...state,
-  autoPrestige: level,
+  autoReboot: level,
 })
 
-const withAutoPrestigeBudget = (state, budget) => ({
+const withAutoRebootBudget = (state, budget) => ({
   ...state,
-  autoPrestigeAttemptBudget: budget,
+  autoRebootAttemptBudget: budget,
 })
 
 const withGlobalTickspeedMultiplier = (state, level = 1) => ({
@@ -495,9 +495,9 @@ const withAutoGlobalTickspeedEnabled = (state, enabled) => ({
   autoGlobalTickspeedEnabled: enabled,
 })
 
-const withAutoPrestigeEnabled = (state, enabled) => ({
+const withAutoRebootEnabled = (state, enabled) => ({
   ...state,
-  autoPrestigeEnabled: enabled,
+  autoRebootEnabled: enabled,
 })
 
 // The XP-funded last-tier boost unlocks once the last tier's first Scale Up lands (see
@@ -613,10 +613,10 @@ describe('createInitialGameState', () => {
   })
 
   it('starts at prestige count 0 with 0 points and 0 XP', () => {
-    const { prestige } = createInitialGameState()
-    expect(prestige.count).toBe(0)
-    expect(prestige.points).toBe(0)
-    expect(prestige.xp).toBe(0)
+    const { reboot } = createInitialGameState()
+    expect(reboot.count).toBe(0)
+    expect(reboot.points).toBe(0)
+    expect(reboot.xp).toBe(0)
   })
 
   it('initialises prestigeSpeedBonusUnlocked as false', () => {
@@ -624,10 +624,10 @@ describe('createInitialGameState', () => {
     expect(state.prestigeSpeedBonusUnlocked).toBe(false)
   })
 
-  it('initialises autoPrestige to null (not yet bought) and its attempt budget to 0', () => {
+  it('initialises autoReboot to null (not yet bought) and its attempt budget to 0', () => {
     const state = createInitialGameState()
-    expect(state.autoPrestige).toBeNull()
-    expect(state.autoPrestigeAttemptBudget).toBe(0)
+    expect(state.autoReboot).toBeNull()
+    expect(state.autoRebootAttemptBudget).toBe(0)
   })
 
   it('initialises scaleUpCount to 0', () => {
@@ -644,7 +644,7 @@ describe('createInitialGameState', () => {
     const state = createInitialGameState()
     expect(state.autoScaleUpEnabled).toBe(true)
     expect(state.autoGlobalTickspeedEnabled).toBe(true)
-    expect(state.autoPrestigeEnabled).toBe(true)
+    expect(state.autoRebootEnabled).toBe(true)
   })
 
   it('initialises with the last tier\'s XP tickspeed mechanic disengaged and lastTierXpConsumed at 0', () => {
@@ -1557,7 +1557,7 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
 
   it('an armed upgrade carries through a real Prestige', () => {
     const armed = pickIntroCapacityMilestone(armState(capacity / 2))
-    const after = prestigeGame(withMoney(armed, PRESTIGE_THRESHOLD))
+    const after = rebootGame(withMoney(armed, REBOOT_THRESHOLD))
     expect(after.intro.capacityUpgradeQueued).toBe(true)
     expect(after.intro.capacity).toBe(capacity)
   })
@@ -2084,15 +2084,15 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
   })
 
   it('diskBuildQueued is permanent — carried over unchanged by a real Prestige', () => {
-    const state = withMoney(withIntro(createInitialGameState(), { diskBuildQueued: true }), PRESTIGE_THRESHOLD)
-    expect(prestigeGame(state).intro.diskBuildQueued).toBe(true)
+    const state = withMoney(withIntro(createInitialGameState(), { diskBuildQueued: true }), REBOOT_THRESHOLD)
+    expect(rebootGame(state).intro.diskBuildQueued).toBe(true)
   })
 
   it('diskProvisionPasses is permanent — a partially-funded disk keeps its passes through a real Prestige', () => {
     const state = withMoney(withIntro(createInitialGameState(), {
       diskProvisionPasses: { [FIRST_DISK_SIZE]: 3 },
-    }), PRESTIGE_THRESHOLD)
-    expect(prestigeGame(state).intro.diskProvisionPasses).toEqual({ [FIRST_DISK_SIZE]: 3 })
+    }), REBOOT_THRESHOLD)
+    expect(rebootGame(state).intro.diskProvisionPasses).toEqual({ [FIRST_DISK_SIZE]: 3 })
   })
 })
 
@@ -2149,7 +2149,7 @@ describe('resetByteFoundry', () => {
       ...initial,
       resources: { ...initial.resources, base: 50_000, tier01: 3 },
       owned: { ...initial.owned, tier01: 12, tier02: 2 },
-      prestige: { ...initial.prestige, points: 42, count: 3, xp: 10 },
+      reboot: { ...initial.reboot, points: 42, count: 3, xp: 10 },
       autobuyers: { ...initial.autobuyers, tier01: true },
       intro: {
         ...initial.intro,
@@ -2185,7 +2185,7 @@ describe('resetByteFoundry', () => {
     })
     expect(after.resources).toEqual(state.resources)
     expect(after.owned).toEqual(state.owned)
-    expect(after.prestige).toEqual(state.prestige)
+    expect(after.reboot).toEqual(state.reboot)
   })
 
   it('merges caps across repeated Foundry resets', () => {
@@ -4160,7 +4160,7 @@ describe('isDiskPullEligible / tickDiskPull', () => {
   })
 
   it('bypasses isProductionFrozen, same as convertIntroBitsToKilobytes', () => {
-    const state = withMoney(withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }), PRESTIGE_THRESHOLD)
+    const state = withMoney(withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }), REBOOT_THRESHOLD)
     expect(isProductionFrozen(state)).toBe(true)
 
     const after = tickDiskPull(state)
@@ -4610,13 +4610,13 @@ describe.each([
   })
 
   it('the auto flag is permanent — carried over unchanged by a real Prestige', () => {
-    const state = withMoney(withIntro(allPoolsVisibleState(), { [autoFlagField]: true }), PRESTIGE_THRESHOLD)
-    expect(prestigeGame(state).intro[autoFlagField]).toBe(true)
+    const state = withMoney(withIntro(allPoolsVisibleState(), { [autoFlagField]: true }), REBOOT_THRESHOLD)
+    expect(rebootGame(state).intro[autoFlagField]).toBe(true)
   })
 
   it('an in-flight merge timer is permanent — carried over unchanged by a real Prestige rather than being cancelled', () => {
-    const state = withMoney(withIntro(allPoolsVisibleState(), { [autoFlagField]: true, [timerField]: durationOf() - 5 }), PRESTIGE_THRESHOLD)
-    expect(prestigeGame(state).intro[timerField]).toBe(durationOf() - 5)
+    const state = withMoney(withIntro(allPoolsVisibleState(), { [autoFlagField]: true, [timerField]: durationOf() - 5 }), REBOOT_THRESHOLD)
+    expect(rebootGame(state).intro[timerField]).toBe(durationOf() - 5)
   })
 
   it('is wired into tickGame — a real tick auto-starts a reserve merge once enabled and the input reaches the extended cap', () => {
@@ -4803,13 +4803,13 @@ describe('buyComputeAutoBoost / tickAutoComputeBoost (30 PP unlock)', () => {
     const state = withPrestigePoints(createInitialGameState(), COMPUTE_AUTO_BOOST_UNLOCK_COST)
     const after = buyComputeAutoBoost(state)
     expect(after.computeAutoBoostUnlocked).toBe(true)
-    expect(after.prestige.points).toBe(0)
+    expect(after.reboot.points).toBe(0)
   })
 
   it('is a same-reference no-op below cost or when already unlocked', () => {
     const tooFew = withPrestigePoints(createInitialGameState(), COMPUTE_AUTO_BOOST_UNLOCK_COST - 1)
     expect(buyComputeAutoBoost(tooFew)).toBe(tooFew)
-    const unlocked = { ...createInitialGameState(), computeAutoBoostUnlocked: true, prestige: { ...createInitialGameState().prestige, points: 100 } }
+    const unlocked = { ...createInitialGameState(), computeAutoBoostUnlocked: true, reboot: { ...createInitialGameState().reboot, points: 100 } }
     expect(buyComputeAutoBoost(unlocked)).toBe(unlocked)
   })
 
@@ -4817,8 +4817,8 @@ describe('buyComputeAutoBoost / tickAutoComputeBoost (30 PP unlock)', () => {
     const state = withMoney({
       ...withIntro(createInitialGameState(), { computeAutoBoostType: 'burst' }),
       computeAutoBoostUnlocked: true,
-    }, PRESTIGE_THRESHOLD)
-    const after = prestigeGame(state)
+    }, REBOOT_THRESHOLD)
+    const after = rebootGame(state)
     expect(after.computeAutoBoostUnlocked).toBe(true)
     expect(after.intro.computeAutoBoostType).toBe('burst')
   })
@@ -4975,9 +4975,9 @@ describe.each([
   it('is permanent — carried over unchanged by a real Prestige', () => {
     const state = withMoney(
       withIntro(createInitialGameState(), { [outputField]: 4 }),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.intro[outputField]).toBe(4)
   })
 })
@@ -4988,9 +4988,9 @@ describe('tickGame Compute Core/Node integration', () => {
       withIntro(createInitialGameState(), {
         computeCores: 5, computeCoresEverEarned: 13, computeNodes: 2, byteCreated: true, capacity: 800,
       }),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.intro.computeCores).toBe(5)
     expect(after.intro.computeCoresEverEarned).toBe(13)
     expect(after.intro.computeNodes).toBe(2)
@@ -5005,9 +5005,9 @@ describe('tickGame Compute Core/Node integration', () => {
         computeClouds: 1, computeDatacenters: 1, computeSupercomputers: 1, computeMegacomputers: 1,
         computeMergePageUnlocked: true, byteCreated: true, capacity: 800,
       }),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.intro.computeClusters).toBe(3)
     expect(after.intro.computeNetworks).toBe(2)
     expect(after.intro.computeGrids).toBe(1)
@@ -5466,9 +5466,9 @@ describe('tickGame Compute Boost integration', () => {
         computeCores: 5, computeNodes: 2,
         computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 3, computeBoostRemainingSeconds: 7,
       }),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.intro.computeCores).toBe(5) // permanent, carried over
     expect(after.intro.computeNodes).toBe(2) // permanent, carried over
     expect(after.intro.computeBoostType).toBeNull() // run-scoped, reset
@@ -5525,7 +5525,7 @@ describe('tickGame Disk pull integration', () => {
   it('pulls a matching disk even while production is frozen, with no Auto-Prestige bought', () => {
     const state = withMoney(
       withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
     expect(isProductionFrozen(state)).toBe(true)
 
@@ -5541,28 +5541,28 @@ describe('tickGame Disk pull integration', () => {
         withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }),
         0
       ),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
-    const frozenState = { ...state, autoPrestige: 1 }
+    const frozenState = { ...state, autoReboot: 1 }
     expect(isProductionFrozen(frozenState)).toBe(true)
 
     const after = tickGame(0.001)(frozenState) // tiny elapsed time — attempt budget stays well below 1
     // Completes tier01's whole level 1 (DEFAULT_PURCHASE_BLOCK_SIZE, 8), not just 1 unit.
     expect(after.owned[tensTier.id]).toBe(8)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
-    expect(after.resources[MONEY_ID]).toBe(PRESTIGE_THRESHOLD) // still frozen — no Prestige fired yet
+    expect(after.resources[MONEY_ID]).toBe(REBOOT_THRESHOLD) // still frozen — no Prestige fired yet
   })
 
   it('pulls against the fresh post-Prestige tier01 level when Auto-Prestige fires the same tick', () => {
     const state = withMoney(
       withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
-    const frozenState = { ...state, autoPrestige: 1, autoPrestigeAttemptBudget: 1 } // budget already full
+    const frozenState = { ...state, autoReboot: 1, autoRebootAttemptBudget: 1 } // budget already full
     expect(isProductionFrozen(frozenState)).toBe(true)
 
     const after = tickGame(1)(frozenState)
-    expect(after.resources[MONEY_ID]).toBeLessThan(PRESTIGE_THRESHOLD) // Prestige fired, resources reset
+    expect(after.resources[MONEY_ID]).toBeLessThan(REBOOT_THRESHOLD) // Prestige fired, resources reset
     // tier01 resets to level 1 (cost 1000) on Prestige — the level-1-sized disk is still
     // pull-eligible, completing that whole level (DEFAULT_PURCHASE_BLOCK_SIZE, 8), not just 1 unit.
     expect(after.owned[tensTier.id]).toBe(8)
@@ -5570,7 +5570,7 @@ describe('tickGame Disk pull integration', () => {
   })
 })
 
-describe('prestigeGame keeps Storage permanent', () => {
+describe('rebootGame keeps Storage permanent', () => {
   it('carries disks/disksBuiltTotal/diskCache/diskBuild through a real Prestige unchanged, like the Byte generator itself', () => {
     const state = withMoney(
       withIntro(createInitialGameState(), {
@@ -5579,10 +5579,10 @@ describe('prestigeGame keeps Storage permanent', () => {
         diskCache: { [FIRST_DISK_SIZE]: 250 },
         diskBuild: { size: FIRST_DISK_SIZE * 10, remainingSeconds: 4, totalSeconds: 10 },
       }),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
 
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(3)
     expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(5)
     expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(250)
@@ -5605,10 +5605,10 @@ describe('prestigeGame keeps Storage permanent', () => {
         diskWriteCache: { [level2Size]: merge },
         diskReadCacheFlush: { [FIRST_DISK_SIZE]: readFlush },
       }),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
 
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.intro.diskWriteCache[level2Size]).toEqual(merge)
     expect(after.intro.diskReadCacheFlush[FIRST_DISK_SIZE]).toEqual(readFlush)
   })
@@ -5634,11 +5634,11 @@ describe('prestigeGame keeps Storage permanent', () => {
         tensTier.id,
         2
       ),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
     expect(isDiskWriteCacheCollectPaused(state, level3Size)).toBe(true)
 
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     // Purchase levels reset to 1 on a real Prestige — level2Size (required level 2) is now "too
     // early" rather than exactly redeemable, clearing the contention, and the already-collected 3
     // segments are still exactly where they were, free to keep collecting again instead of being
@@ -5712,7 +5712,7 @@ describe('formatCurrency', () => {
 
   it('renders an exponential-range amount with a mantissa of exactly 8 (BITS_PER_BYTE) converted to Bytes instead of bits', () => {
     // 8e6 bits is exactly 1e6 Bytes — no precision lost dividing by 8 — so it reads as "1e6 B"
-    // rather than the arbitrary-looking "8e6 b". PRESTIGE_THRESHOLD (8e100) is a real live example
+    // rather than the arbitrary-looking "8e6 b". REBOOT_THRESHOLD (8e100) is a real live example
     // of this exact pattern — see docs/DESIGN_HISTORY.md.
     expect(formatCurrency(8e6)).toBe('1e6 B')
     expect(formatCurrency(8e21)).toBe('1e21 B')
@@ -6060,7 +6060,7 @@ describe('getAutobuyerUnlockMilestone', () => {
 })
 
 describe('getTierTickspeedAutobuyerMilestone', () => {
-  it('requires 11 prestiges for the first tier', () => {
+  it('requires 11 reboots for the first tier', () => {
     expect(getTierTickspeedAutobuyerMilestone(tensTier.id)).toBe(11)
   })
 
@@ -6076,12 +6076,12 @@ describe('getTierTickspeedAutobuyerMilestone', () => {
 
 describe('applyAutobuyerMilestones', () => {
   it('unlocks no tier autobuyers before the first prestige', () => {
-    const state = withPrestigeCount(createInitialGameState(), 0)
+    const state = withRebootCount(createInitialGameState(), 0)
     expect(applyAutobuyerMilestones(state)).toBe(state)
   })
 
   it('unlocks exactly the tiers whose milestone is met, and nothing else', () => {
-    const state = withPrestigeCount(createInitialGameState(), 3)
+    const state = withRebootCount(createInitialGameState(), 3)
     const after = applyAutobuyerMilestones(state)
     expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(1)
     expect(after.autobuyers[TIER_DEFINITIONS[1].id]).toBe(1)
@@ -6090,13 +6090,13 @@ describe('applyAutobuyerMilestones', () => {
   })
 
   it('never unlocks a tier tickspeed autobuyer before prestige 11', () => {
-    const state = withPrestigeCount(createInitialGameState(), 10)
+    const state = withRebootCount(createInitialGameState(), 10)
     const after = applyAutobuyerMilestones(state)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[0].id]).toBe(false)
   })
 
   it('unlocks the first tier tickspeed autobuyer at prestige 11, the second at 12', () => {
-    const state = withPrestigeCount(createInitialGameState(), 12)
+    const state = withRebootCount(createInitialGameState(), 12)
     const after = applyAutobuyerMilestones(state)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[0].id]).toBe(true)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[1].id]).toBe(true)
@@ -6104,7 +6104,7 @@ describe('applyAutobuyerMilestones', () => {
   })
 
   it('never revokes an already-unlocked tier, even if reached by other means', () => {
-    const state = withPrestigeCount(
+    const state = withRebootCount(
       withAutobuyer(createInitialGameState(), TIER_DEFINITIONS[5].id),
       0
     )
@@ -6113,7 +6113,7 @@ describe('applyAutobuyerMilestones', () => {
   })
 
   it('returns the same state reference when nothing newly qualifies', () => {
-    const state = withPrestigeCount(createInitialGameState(), 0)
+    const state = withRebootCount(createInitialGameState(), 0)
     expect(applyAutobuyerMilestones(state)).toBe(state)
   })
 
@@ -6216,39 +6216,39 @@ describe('getPrestigeProductionMultiplier', () => {
 // ─── getPrestigePointsAwarded ─────────────────────────────────────────────────
 
 describe('getPrestigePointsAwarded', () => {
-  it('awards exactly 1 point at exactly PRESTIGE_THRESHOLD', () => {
-    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD)).toBe(1)
+  it('awards exactly 1 point at exactly REBOOT_THRESHOLD', () => {
+    expect(getPrestigePointsAwarded(REBOOT_THRESHOLD)).toBe(1)
   })
 
   it('stays at 1 point until a full 64 excess money-exponent powers are reached', () => {
-    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 10)).toBe(1)
-    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e9)).toBe(1)
-    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e63)).toBe(1)
+    expect(getPrestigePointsAwarded(REBOOT_THRESHOLD * 10)).toBe(1)
+    expect(getPrestigePointsAwarded(REBOOT_THRESHOLD * 1e9)).toBe(1)
+    expect(getPrestigePointsAwarded(REBOOT_THRESHOLD * 1e63)).toBe(1)
   })
 
   it('awards 2 points once 64 excess powers beyond Googol are reached', () => {
-    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e64)).toBe(2)
+    expect(getPrestigePointsAwarded(REBOOT_THRESHOLD * 1e64)).toBe(2)
   })
 
   it('awards 4 points at 192 excess powers (three full 64-power blocks beyond base)', () => {
-    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e192)).toBe(4)
+    expect(getPrestigePointsAwarded(REBOOT_THRESHOLD * 1e192)).toBe(4)
   })
 
   it('halves powers-per-PP with each Double PP upgrade through level 6', () => {
-    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e64, 1)).toBe(3)
-    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e32, 1)).toBe(2)
-    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e64, 6)).toBe(65)
+    expect(getPrestigePointsAwarded(REBOOT_THRESHOLD * 1e64, 1)).toBe(3)
+    expect(getPrestigePointsAwarded(REBOOT_THRESHOLD * 1e32, 1)).toBe(2)
+    expect(getPrestigePointsAwarded(REBOOT_THRESHOLD * 1e64, 6)).toBe(65)
   })
 
   it('doubles PP-per-power after level 6 instead of halving further', () => {
-    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD, 7)).toBe(2)
-    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD * 1e64, 7)).toBe(130)
+    expect(getPrestigePointsAwarded(REBOOT_THRESHOLD, 7)).toBe(2)
+    expect(getPrestigePointsAwarded(REBOOT_THRESHOLD * 1e64, 7)).toBe(130)
   })
 
-  it('returns 0 below PRESTIGE_THRESHOLD, including at GOOGOL alone', () => {
+  it('returns 0 below REBOOT_THRESHOLD, including at GOOGOL alone', () => {
     expect(getPrestigePointsAwarded(0)).toBe(0)
     expect(getPrestigePointsAwarded(GOOGOL)).toBe(0)
-    expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD / 10)).toBe(0)
+    expect(getPrestigePointsAwarded(REBOOT_THRESHOLD / 10)).toBe(0)
   })
 })
 
@@ -6288,31 +6288,31 @@ describe('getPrestigePointsAwarded (property-based)', () => {
 
 describe('getAutomationUnlockCost', () => {
   it('is the same amount as each automation\'s first interval-upgrade level', () => {
-    expect(['latency', 'scaleUp', 'overclock', 'prestige'].map(getAutomationUnlockCost)).toEqual([8, 16, 32, 64])
-    for (const key of ['latency', 'scaleUp', 'overclock', 'prestige']) {
+    expect(['speedUp', 'scaleUp', 'overclock', 'reboot'].map(getAutomationUnlockCost)).toEqual([8, 16, 32, 64])
+    for (const key of ['speedUp', 'scaleUp', 'overclock', 'reboot']) {
       expect(getAutomationIntervalUpgradeCost(key, 0)).toBe(getAutomationUnlockCost(key))
     }
   })
 })
-// ─── getAutoPrestigeAttemptRate ───────────────────────────────────────────────
+// ─── getAutoRebootAttemptRate ───────────────────────────────────────────────
 
 const AUTO_SCALE_UP_COST = getAutomationUnlockCost('scaleUp')
-const TICKSPEED_AUTOBUYER_COST = getAutomationUnlockCost('latency')
+const TICKSPEED_AUTOBUYER_COST = getAutomationUnlockCost('speedUp')
 
 const withReadyIntervalBudgets = state => ({
   ...state,
-  automationAttemptBudgets: { latency: 1, scaleUp: 1, overclock: 1 },
+  automationAttemptBudgets: { speedUp: 1, scaleUp: 1, overclock: 1 },
   tierTickspeedAttemptBudgets: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 1])),
 })
 
-describe('getAutoPrestigeAttemptRate', () => {
+describe('getAutoRebootAttemptRate', () => {
   it('is 1/1024 at the base interval — fires roughly every 1024 seconds', () => {
-    expect(getAutoPrestigeAttemptRate(createInitialGameState())).toBeCloseTo(1 / 1024)
+    expect(getAutoRebootAttemptRate(createInitialGameState())).toBeCloseTo(1 / 1024)
   })
 
   it('speeds up by 1/0.9 per interval upgrade level', () => {
-    const state = { ...createInitialGameState(), automationIntervalLevels: { latency: 0, scaleUp: 0, overclock: 0, prestige: 2 } }
-    expect(getAutoPrestigeAttemptRate(state)).toBeCloseTo(1 / (1024 * 0.81))
+    const state = { ...createInitialGameState(), automationIntervalLevels: { speedUp: 0, scaleUp: 0, overclock: 0, reboot: 2 } }
+    expect(getAutoRebootAttemptRate(state)).toBeCloseTo(1 / (1024 * 0.81))
   })
 })
 
@@ -6441,22 +6441,22 @@ describe('getOverclockRequirement', () => {
 // ─── isProductionFrozen ──────────────────────────────────────────────────────
 
 describe('isProductionFrozen', () => {
-  it('is false below PRESTIGE_THRESHOLD', () => {
-    // PRESTIGE_THRESHOLD - 1 rounds back to PRESTIGE_THRESHOLD at this magnitude (float precision), so use a value
+  it('is false below REBOOT_THRESHOLD', () => {
+    // REBOOT_THRESHOLD - 1 rounds back to REBOOT_THRESHOLD at this magnitude (float precision), so use a value
     // that's meaningfully smaller instead of relying on an off-by-one difference.
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD / 10)
+    const state = withMoney(createInitialGameState(), REBOOT_THRESHOLD / 10)
     expect(isProductionFrozen(state)).toBe(false)
   })
 
-  it('is true at exactly PRESTIGE_THRESHOLD', () => {
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
+  it('is true at exactly REBOOT_THRESHOLD', () => {
+    const state = withMoney(createInitialGameState(), REBOOT_THRESHOLD)
     expect(isProductionFrozen(state)).toBe(true)
   })
 
-  it('is false at/above PRESTIGE_THRESHOLD once DeGoogol is unlocked (Auto-Prestige <= 1 s)', () => {
-    const state = withUnboundedPrestige(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 2))
+  it('is false at/above REBOOT_THRESHOLD once DeGoogol is unlocked (Auto-Prestige <= 1 s)', () => {
+    const state = withUnboundedReboot(withMoney(createInitialGameState(), REBOOT_THRESHOLD * 2))
     expect(isProductionFrozen(state)).toBe(false)
-    expect(isUnboundedPrestigeUnlocked(state)).toBe(true)
+    expect(isUnboundedRebootUnlocked(state)).toBe(true)
   })
 })
 
@@ -6535,7 +6535,7 @@ describe('getMoneyExponent', () => {
   })
 
   it('reaches 100 at a Googol', () => {
-    // Deliberately GOOGOL, not PRESTIGE_THRESHOLD — this formula keys off GOOGOL's own clean
+    // Deliberately GOOGOL, not REBOOT_THRESHOLD — this formula keys off GOOGOL's own clean
     // exponent (see the getPrestigePointsAwarded describe block above).
     expect(getMoneyExponent(GOOGOL)).toBe(100)
   })
@@ -6546,26 +6546,26 @@ describe('getMoneyExponent', () => {
   })
 })
 
-// ─── getPrestigeProgressPercent ─────────────────────────────────────────────────
+// ─── getRebootProgressPercent ─────────────────────────────────────────────────
 
-describe('getPrestigeProgressPercent', () => {
+describe('getRebootProgressPercent', () => {
   it('is 0% below an exponent of 1', () => {
-    expect(getPrestigeProgressPercent(0)).toBe(0)
-    expect(getPrestigeProgressPercent(5)).toBe(0)
+    expect(getRebootProgressPercent(0)).toBe(0)
+    expect(getRebootProgressPercent(5)).toBe(0)
   })
 
   it('is 100% at a Googol', () => {
-    // Deliberately GOOGOL, not PRESTIGE_THRESHOLD — same reasoning as getMoneyExponent above.
-    expect(getPrestigeProgressPercent(GOOGOL)).toBe(100)
+    // Deliberately GOOGOL, not REBOOT_THRESHOLD — same reasoning as getMoneyExponent above.
+    expect(getRebootProgressPercent(GOOGOL)).toBe(100)
   })
 
   it('never exceeds 100% beyond a Googol', () => {
-    expect(getPrestigeProgressPercent(GOOGOL * 1e10)).toBe(100)
+    expect(getRebootProgressPercent(GOOGOL * 1e10)).toBe(100)
   })
 
   it('scales linearly with the exponent (Googol is exponent 100)', () => {
-    expect(getPrestigeProgressPercent(1e50)).toBe(50)
-    expect(getPrestigeProgressPercent(1e25)).toBe(25)
+    expect(getRebootProgressPercent(1e50)).toBe(50)
+    expect(getRebootProgressPercent(1e25)).toBe(25)
   })
 })
 
@@ -6596,7 +6596,7 @@ describe('getNextBytePowerProgressFraction', () => {
   })
 
   it('never exceeds 1', () => {
-    expect(getNextBytePowerProgressFraction(PRESTIGE_THRESHOLD)).toBeLessThanOrEqual(1)
+    expect(getNextBytePowerProgressFraction(REBOOT_THRESHOLD)).toBeLessThanOrEqual(1)
   })
 })
 
@@ -6866,8 +6866,8 @@ describe('buyTier', () => {
     expect(buyTier('does_not_exist')(state)).toBe(state)
   })
 
-  it('refuses to buy once production is frozen at PRESTIGE_THRESHOLD, even with plenty of funds', () => {
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
+  it('refuses to buy once production is frozen at REBOOT_THRESHOLD, even with plenty of funds', () => {
+    const state = withMoney(createInitialGameState(), REBOOT_THRESHOLD)
     expect(buyTier(tensTier.id)(state)).toBe(state)
   })
 
@@ -7032,7 +7032,7 @@ describe('buyTier', () => {
 
 describe('buyTierQuantity', () => {
   it('is a same-reference no-op while production is frozen', () => {
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 2)
+    const state = withMoney(createInitialGameState(), REBOOT_THRESHOLD * 2)
     expect(buyTierQuantity(tensTier.id, 8)(state)).toBe(state)
   })
 
@@ -7170,120 +7170,120 @@ describe('tickGame', () => {
     expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(false)
   })
 
-  it('freezes entirely (returns the same state object) once Money reaches PRESTIGE_THRESHOLD', () => {
-    const state = withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5)
+  it('freezes entirely (returns the same state object) once Money reaches REBOOT_THRESHOLD', () => {
+    const state = withOwned(withMoney(createInitialGameState(), REBOOT_THRESHOLD), tensTier.id, 5)
     expect(tickGame(1)(state)).toBe(state)
   })
 
-  it('does not immediately auto-prestige at PRESTIGE_THRESHOLD if Auto-Prestige was just bought (attempt budget starts at 0, not yet crossed 1)', () => {
-    const state = withAutoPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5))
+  it('does not immediately auto-prestige at REBOOT_THRESHOLD if Auto-Prestige was just bought (attempt budget starts at 0, not yet crossed 1)', () => {
+    const state = withAutoReboot(withOwned(withMoney(createInitialGameState(), REBOOT_THRESHOLD), tensTier.id, 5))
     const after = tickGame(1)(state)
-    expect(after.prestige.count).toBe(0)
-    expect(after.resources[MONEY_ID]).toBe(PRESTIGE_THRESHOLD)
-    expect(after.autoPrestigeAttemptBudget).toBeCloseTo(1 / 1000)
+    expect(after.reboot.count).toBe(0)
+    expect(after.resources[MONEY_ID]).toBe(REBOOT_THRESHOLD)
+    expect(after.autoRebootAttemptBudget).toBeCloseTo(1 / 1000)
   })
 
-  it('does not freeze production at PRESTIGE_THRESHOLD when DeGoogol is unlocked', () => {
-    const state = { ...withUnboundedPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5)), autoPrestigeEnabled: false }
+  it('does not freeze production at REBOOT_THRESHOLD when DeGoogol is unlocked', () => {
+    const state = { ...withUnboundedReboot(withOwned(withMoney(createInitialGameState(), REBOOT_THRESHOLD), tensTier.id, 5)), autoRebootEnabled: false }
     const after = tickGame(1)(state)
     expect(after).not.toBe(state)
-    expect(after.resources[MONEY_ID]).toBeGreaterThanOrEqual(PRESTIGE_THRESHOLD)
+    expect(after.resources[MONEY_ID]).toBeGreaterThanOrEqual(REBOOT_THRESHOLD)
   })
 
-  it('automatically prestiges in DeGoogol mode when Auto-Prestige budget crosses 1 at PRESTIGE_THRESHOLD', () => {
-    const state = withPrestigeCount(
-      withAutoPrestigeBudget(
-        withAutoPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5)),
+  it('automatically reboots in DeGoogol mode when Auto-Prestige budget crosses 1 at REBOOT_THRESHOLD', () => {
+    const state = withRebootCount(
+      withAutoRebootBudget(
+        withAutoReboot(withOwned(withMoney(createInitialGameState(), REBOOT_THRESHOLD), tensTier.id, 5)),
         1,
       ),
       100,
     )
     const after = tickGame(0)(state)
-    expect(after.prestige.count).toBe(101)
+    expect(after.reboot.count).toBe(101)
   })
 
-  it('automatically prestiges the instant its attempt budget crosses 1, once Money is at PRESTIGE_THRESHOLD', () => {
-    const state = withAutoPrestigeBudget(
-      withAutoPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5)),
+  it('automatically reboots the instant its attempt budget crosses 1, once Money is at REBOOT_THRESHOLD', () => {
+    const state = withAutoRebootBudget(
+      withAutoReboot(withOwned(withMoney(createInitialGameState(), REBOOT_THRESHOLD), tensTier.id, 5)),
       0.9995 // + the level-1 rate (1/1000) crosses 1 this tick
     )
     const after = tickGame(1)(state)
-    expect(after.prestige.count).toBe(1)
+    expect(after.reboot.count).toBe(1)
     expect(after.resources[MONEY_ID]).toBe(1)
     expect(after.owned[tensTier.id]).toBe(0)
-    expect(after.autoPrestigeAttemptBudget).toBe(0)
+    expect(after.autoRebootAttemptBudget).toBe(0)
   })
 
-  it('does not accumulate or fire the Auto-Prestige attempt budget while paused (autoPrestigeEnabled false), even at PRESTIGE_THRESHOLD', () => {
-    const state = withAutoPrestigeEnabled(
-      withAutoPrestigeBudget(
-        withAutoPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5)),
+  it('does not accumulate or fire the Auto-Prestige attempt budget while paused (autoRebootEnabled false), even at REBOOT_THRESHOLD', () => {
+    const state = withAutoRebootEnabled(
+      withAutoRebootBudget(
+        withAutoReboot(withOwned(withMoney(createInitialGameState(), REBOOT_THRESHOLD), tensTier.id, 5)),
         0.9995
       ),
       false
     )
     const after = tickGame(1)(state)
     expect(after).toBe(state) // frozen + paused Auto-Prestige short-circuits to a same-reference no-op
-    expect(after.prestige.count).toBe(0)
-    expect(after.autoPrestigeAttemptBudget).toBe(0.9995)
+    expect(after.reboot.count).toBe(0)
+    expect(after.autoRebootAttemptBudget).toBe(0.9995)
   })
 
   it('does not accumulate the Auto-Prestige attempt budget during ordinary play while paused', () => {
-    const state = withAutoPrestigeEnabled(withAutoPrestige(createInitialGameState()), false)
+    const state = withAutoRebootEnabled(withAutoReboot(createInitialGameState()), false)
     const after = tickGame(1)(state)
-    expect(after.autoPrestigeAttemptBudget).toBe(0)
+    expect(after.autoRebootAttemptBudget).toBe(0)
   })
 
   it('resumes accumulating/firing the Auto-Prestige attempt budget once re-enabled', () => {
-    const paused = withAutoPrestigeEnabled(
-      withAutoPrestigeBudget(
-        withAutoPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5)),
+    const paused = withAutoRebootEnabled(
+      withAutoRebootBudget(
+        withAutoReboot(withOwned(withMoney(createInitialGameState(), REBOOT_THRESHOLD), tensTier.id, 5)),
         0.9995
       ),
       false
     )
-    const resumed = setAutoPrestigeEnabled(true)(paused)
+    const resumed = setAutoRebootEnabled(true)(paused)
     const after = tickGame(1)(resumed)
-    expect(after.prestige.count).toBe(1)
+    expect(after.reboot.count).toBe(1)
   })
 
   it('keeps banking the Auto-Prestige attempt budget tick after tick while frozen, without firing early', () => {
-    let state = withAutoPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5))
+    let state = withAutoReboot(withOwned(withMoney(createInitialGameState(), REBOOT_THRESHOLD), tensTier.id, 5))
     for (let i = 0; i < 512; i++) state = tickGame(1)(state)
     // 512 ticks at the base rate (1/1024) accumulates to 0.5 — still frozen, not yet fired.
-    expect(state.prestige.count).toBe(0)
-    expect(state.autoPrestigeAttemptBudget).toBeCloseTo(0.5)
+    expect(state.reboot.count).toBe(0)
+    expect(state.autoRebootAttemptBudget).toBeCloseTo(0.5)
     for (let i = 0; i < 512; i++) state = tickGame(1)(state)
     // Another 512 ticks crosses the 1.0 threshold — fires now, exactly once.
-    expect(state.prestige.count).toBe(1)
+    expect(state.reboot.count).toBe(1)
     expect(state.resources[MONEY_ID]).toBe(1)
   })
 
   it('accumulates the Auto-Prestige attempt budget during ordinary (non-frozen) play too, not only once frozen', () => {
-    const state = withAutoPrestige(createInitialGameState())
+    const state = withAutoReboot(createInitialGameState())
     const after = tickGame(1)(state)
-    expect(after.autoPrestigeAttemptBudget).toBeCloseTo(1 / 1000)
+    expect(after.autoRebootAttemptBudget).toBeCloseTo(1 / 1000)
   })
 
-  it('falls back to 0 attempt budget when autoPrestigeAttemptBudget is missing from state entirely (frozen branch)', () => {
+  it('falls back to 0 attempt budget when autoRebootAttemptBudget is missing from state entirely (frozen branch)', () => {
     const state = omit(
-      withAutoPrestige(withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 5)),
-      'autoPrestigeAttemptBudget'
+      withAutoReboot(withOwned(withMoney(createInitialGameState(), REBOOT_THRESHOLD), tensTier.id, 5)),
+      'autoRebootAttemptBudget'
     )
     const after = tickGame(1)(state)
-    expect(after.autoPrestigeAttemptBudget).toBeCloseTo(1 / 1000)
+    expect(after.autoRebootAttemptBudget).toBeCloseTo(1 / 1000)
   })
 
-  it('falls back to 0 attempt budget when autoPrestigeAttemptBudget is missing from state entirely (non-frozen accumulation)', () => {
-    const state = omit(withAutoPrestige(createInitialGameState()), 'autoPrestigeAttemptBudget')
+  it('falls back to 0 attempt budget when autoRebootAttemptBudget is missing from state entirely (non-frozen accumulation)', () => {
+    const state = omit(withAutoReboot(createInitialGameState()), 'autoRebootAttemptBudget')
     const after = tickGame(1)(state)
-    expect(after.autoPrestigeAttemptBudget).toBeCloseTo(1 / 1000)
+    expect(after.autoRebootAttemptBudget).toBeCloseTo(1 / 1000)
   })
 
-  it('accumulates the Auto-Prestige attempt budget when autoPrestigeEnabled is missing from state entirely (defaults to active)', () => {
-    const state = omit(withAutoPrestige(createInitialGameState()), 'autoPrestigeEnabled')
+  it('accumulates the Auto-Prestige attempt budget when autoRebootEnabled is missing from state entirely (defaults to active)', () => {
+    const state = omit(withAutoReboot(createInitialGameState()), 'autoRebootEnabled')
     const after = tickGame(1)(state)
-    expect(after.autoPrestigeAttemptBudget).toBeCloseTo(1 / 1000)
+    expect(after.autoRebootAttemptBudget).toBeCloseTo(1 / 1000)
   })
 
   it('lets an unlocked autobuyer buy when autobuyersEnabled is missing from state entirely (defaults to active)', () => {
@@ -7419,13 +7419,13 @@ describe('tickGame', () => {
     const state = {
       ...createInitialGameState(),
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 95 },
-      prestige: { xp: 0, points: 0, count: 0, highestMilestone: 1 },
+      reboot: { xp: 0, points: 0, count: 0, highestMilestone: 1 },
     }
     const after = tickGame(0)({
       ...state,
       resources: { ...state.resources, [MONEY_ID]: 1000 },
     })
-    expect(after.prestige.xp).toBeGreaterThan(0)
+    expect(after.reboot.xp).toBeGreaterThan(0)
   })
 
   it('does not reduce xp or highestMilestone when money is below the watermark exponent (e.g. just after spending it)', () => {
@@ -7436,11 +7436,11 @@ describe('tickGame', () => {
     const state = {
       ...createInitialGameState(),
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 50 },
-      prestige: { xp: 10, points: 0, count: 0, highestMilestone: 2 },
+      reboot: { xp: 10, points: 0, count: 0, highestMilestone: 2 },
     }
     const after = tickGame(1)(state)
-    expect(after.prestige.xp).toBe(10)
-    expect(after.prestige.highestMilestone).toBe(2)
+    expect(after.reboot.xp).toBe(10)
+    expect(after.reboot.highestMilestone).toBe(2)
   })
 
   it('an unlocked-but-not-upgraded autobuyer (level 0) already buys 1 full level per tick', () => {
@@ -7645,7 +7645,7 @@ describe('tickGame', () => {
 
     const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.lastTierXpConsumed).toBe(0)
-    expect(after.prestige.xp).toBe(50)
+    expect(after.reboot.xp).toBe(50)
     expect(after.owned[thousandsTier.id]).toBe(30)
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
     expect(after.resources[lastTier.id]).toBe(9)
@@ -7663,7 +7663,7 @@ describe('tickGame', () => {
 
     const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
-    expect(after.prestige.xp).toBe(50)
+    expect(after.reboot.xp).toBe(50)
     expect(after.lastTierXpConsumed).toBe(0)
   })
 
@@ -8119,10 +8119,10 @@ describe('buyTickspeedMultiplier', () => {
     expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
   })
 
-  it('refuses to level up once production is frozen at PRESTIGE_THRESHOLD, even with plenty of the tier\'s own resource', () => {
+  it('refuses to level up once production is frozen at REBOOT_THRESHOLD, even with plenty of the tier\'s own resource', () => {
     const state = withMoney(
       withResource(unlockedLastTierState(), lastTier.id, 11),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
     expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
   })
@@ -8164,34 +8164,34 @@ describe('getTickspeedMultiplierSpend / getTickspeedMultiplierRequirement', () =
   })
 })
 
-// ─── buyAutoPrestige ──────────────────────────────────────────────────────────
+// ─── buyAutoReboot ──────────────────────────────────────────────────────────
 
-describe('buyAutoPrestige', () => {
+describe('buyAutoReboot', () => {
   it('spends 64 PP to activate Auto-Prestige at level 1', () => {
     const state = withPrestigePoints({ ...createInitialGameState(), autoOverclock: true }, 64)
-    const after = buyAutoPrestige(state)
-    expect(after.autoPrestige).toBe(1)
-    expect(after.prestige.points).toBe(0)
+    const after = buyAutoReboot(state)
+    expect(after.autoReboot).toBe(1)
+    expect(after.reboot.points).toBe(0)
   })
 
   it('requires Auto Overclock first (sequential global automation)', () => {
     const state = withPrestigePoints(createInitialGameState(), 64)
-    expect(buyAutoPrestige(state)).toBe(state)
+    expect(buyAutoReboot(state)).toBe(state)
   })
 
   it('is activation-only: an already-active Auto-Prestige is a no-op (cadence upgrades are a separate chain)', () => {
-    const state = withPrestigePoints(withAutoPrestige(createInitialGameState(), 1), 5000)
-    expect(buyAutoPrestige(state)).toBe(state)
+    const state = withPrestigePoints(withAutoReboot(createInitialGameState(), 1), 5000)
+    expect(buyAutoReboot(state)).toBe(state)
   })
 
   it('returns the same state when there are not enough points to activate', () => {
     const state = withPrestigePoints({ ...createInitialGameState(), autoOverclock: true }, 63)
-    expect(buyAutoPrestige(state)).toBe(state)
+    expect(buyAutoReboot(state)).toBe(state)
   })
 
-  it('refuses to spend once production is frozen at PRESTIGE_THRESHOLD', () => {
-    const state = withMoney(withPrestigePoints({ ...createInitialGameState(), autoOverclock: true }, 64), PRESTIGE_THRESHOLD)
-    expect(buyAutoPrestige(state)).toBe(state)
+  it('refuses to spend once production is frozen at REBOOT_THRESHOLD', () => {
+    const state = withMoney(withPrestigePoints({ ...createInitialGameState(), autoOverclock: true }, 64), REBOOT_THRESHOLD)
+    expect(buyAutoReboot(state)).toBe(state)
   })
 })
 
@@ -8218,7 +8218,7 @@ describe('isGlobalTickspeedMultiplierUnlocked', () => {
 })
 
 describe('buyGlobalTickspeedMultiplier', () => {
-  it('spends 10 Bytes to activate Latency (global tickspeed multiplier) at level 1', () => {
+  it('spends 10 Bytes to activate Speed Up (global tickspeed multiplier) at level 1', () => {
     const state = withBytes(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)
     const after = buyGlobalTickspeedMultiplier(state)
     expect(after.globalTickspeedMultiplier).toBe(1)
@@ -8275,8 +8275,8 @@ describe('buyGlobalTickspeedMultiplier', () => {
     expect(after.globalTickspeedMultiplier).toBe(2)
   })
 
-  it('refuses to spend once production is frozen at PRESTIGE_THRESHOLD', () => {
-    const state = withPurchaseLevel(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), TIER_DEFINITIONS[0].id, 2)
+  it('refuses to spend once production is frozen at REBOOT_THRESHOLD', () => {
+    const state = withPurchaseLevel(withMoney(createInitialGameState(), REBOOT_THRESHOLD), TIER_DEFINITIONS[0].id, 2)
     expect(buyGlobalTickspeedMultiplier(state)).toBe(state)
   })
 
@@ -8293,13 +8293,13 @@ describe('buyPrestigeSpeedBonus', () => {
     const state = withPrestigePoints(createInitialGameState(), PRESTIGE_SPEED_BONUS_UNLOCK_COST)
     const after = buyPrestigeSpeedBonus(state)
     expect(after.prestigeSpeedBonusUnlocked).toBe(true)
-    expect(after.prestige.points).toBe(0)
+    expect(after.reboot.points).toBe(0)
   })
 
   it('leaves any points beyond the cost unspent', () => {
     const state = withPrestigePoints(createInitialGameState(), PRESTIGE_SPEED_BONUS_UNLOCK_COST + 50)
     const after = buyPrestigeSpeedBonus(state)
-    expect(after.prestige.points).toBe(50)
+    expect(after.reboot.points).toBe(50)
   })
 
   it('returns the same state when there are not enough points', () => {
@@ -8314,10 +8314,10 @@ describe('buyPrestigeSpeedBonus', () => {
     expect(buyPrestigeSpeedBonus(state)).toBe(state)
   })
 
-  it('refuses to spend once production is frozen at PRESTIGE_THRESHOLD', () => {
+  it('refuses to spend once production is frozen at REBOOT_THRESHOLD', () => {
     const state = withMoney(
       withPrestigePoints(createInitialGameState(), PRESTIGE_SPEED_BONUS_UNLOCK_COST),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
     expect(buyPrestigeSpeedBonus(state)).toBe(state)
   })
@@ -8355,7 +8355,7 @@ describe('buyPrestigeDoublePp', () => {
     const state = withPrestigePoints(createInitialGameState(), 100)
     const after = buyPrestigeDoublePp(state)
     expect(after.prestigeDoublePpLevel).toBe(1)
-    expect(after.prestige.points).toBe(0)
+    expect(after.reboot.points).toBe(0)
   })
 
   it('is a no-op without enough PP', () => {
@@ -8363,8 +8363,8 @@ describe('buyPrestigeDoublePp', () => {
     expect(buyPrestigeDoublePp(state)).toBe(state)
   })
 
-  it('is not blocked by production freeze at PRESTIGE_THRESHOLD', () => {
-    const state = withMoney(withPrestigePoints(createInitialGameState(), 100), PRESTIGE_THRESHOLD)
+  it('is not blocked by production freeze at REBOOT_THRESHOLD', () => {
+    const state = withMoney(withPrestigePoints(createInitialGameState(), 100), REBOOT_THRESHOLD)
     const after = buyPrestigeDoublePp(state)
     expect(after.prestigeDoublePpLevel).toBe(1)
   })
@@ -8374,48 +8374,48 @@ describe('buyPrestigeDoublePp', () => {
     expect(state.computeFlops.pageUnlocked).toBe(false)
     const after = buyPrestigeDoublePp(state)
     expect(after.computeFlops.pageUnlocked).toBe(true)
-    expect(after.prestige.points).toBe(0)
+    expect(after.reboot.points).toBe(0)
   })
 
   it('carries prestigeDoublePpLevel across prestige', () => {
     const state = withPrestigePoints(
-      { ...withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), prestigeDoublePpLevel: 2 },
+      { ...withMoney(createInitialGameState(), REBOOT_THRESHOLD), prestigeDoublePpLevel: 2 },
       0,
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.prestigeDoublePpLevel).toBe(2)
   })
 })
 
-// ─── prestigeGame ────────────────────────────────────────────────────────────
+// ─── rebootGame ────────────────────────────────────────────────────────────
 
-describe('prestigeGame', () => {
-  it('does nothing when money < PRESTIGE_THRESHOLD', () => {
-    // PRESTIGE_THRESHOLD - 1 rounds back to PRESTIGE_THRESHOLD at this magnitude (float precision), so use a value
+describe('rebootGame', () => {
+  it('does nothing when money < REBOOT_THRESHOLD', () => {
+    // REBOOT_THRESHOLD - 1 rounds back to REBOOT_THRESHOLD at this magnitude (float precision), so use a value
     // that's meaningfully smaller instead of relying on an off-by-one difference.
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD / 10)
-    expect(prestigeGame(state)).toBe(state)
+    const state = withMoney(createInitialGameState(), REBOOT_THRESHOLD / 10)
+    expect(rebootGame(state)).toBe(state)
   })
 
   it('does nothing when money is undefined or non-finite (corrupted save)', () => {
     const undefinedMoney = withMoney(createInitialGameState(), undefined)
-    expect(prestigeGame(undefinedMoney)).toBe(undefinedMoney)
+    expect(rebootGame(undefinedMoney)).toBe(undefinedMoney)
 
     const nanMoney = withMoney(createInitialGameState(), NaN)
-    expect(prestigeGame(nanMoney)).toBe(nanMoney)
+    expect(rebootGame(nanMoney)).toBe(nanMoney)
   })
 
   it('increments prestige count by 1', () => {
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
-    const after = prestigeGame(state)
-    expect(after.prestige.count).toBe(1)
+    const state = withMoney(createInitialGameState(), REBOOT_THRESHOLD)
+    const after = rebootGame(state)
+    expect(after.reboot.count).toBe(1)
   })
 
   it('appends a Prestige museum history entry and carries it across Scale Up', () => {
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
-    const after = prestigeGame(state)
+    const state = withMoney(createInitialGameState(), REBOOT_THRESHOLD)
+    const after = rebootGame(state)
     expect(after.prestigeMuseum.history).toHaveLength(1)
-    expect(after.prestigeMuseum.history[0].prestigeNumber).toBe(1)
+    expect(after.prestigeMuseum.history[0].rebootNumber).toBe(1)
     expect(after.prestigeMuseum.history[0].pointsAwarded).toBe(1)
 
     const firstTier = TIER_DEFINITIONS[0]
@@ -8434,8 +8434,8 @@ describe('prestigeGame', () => {
       ...createInitialGameState(),
       prestigeMuseum: {
         history: [
-          { id: 'a', at: 1, prestigeNumber: 1, pointsAwarded: 1, moneyBits: 1 },
-          { id: 'b', at: 2, prestigeNumber: 2, pointsAwarded: 1, moneyBits: 1 },
+          { id: 'a', at: 1, rebootNumber: 1, pointsAwarded: 1, moneyBits: 1 },
+          { id: 'b', at: 2, rebootNumber: 2, pointsAwarded: 1, moneyBits: 1 },
         ],
         pinnedIds: [],
       },
@@ -8450,7 +8450,7 @@ describe('prestigeGame', () => {
     const withHistory = {
       ...createInitialGameState(),
       prestigeMuseum: {
-        history: [{ id: 'a', at: 1, prestigeNumber: 1, pointsAwarded: 1, moneyBits: 1 }],
+        history: [{ id: 'a', at: 1, rebootNumber: 1, pointsAwarded: 1, moneyBits: 1 }],
         pinnedIds: ['a'],
       },
     }
@@ -8461,7 +8461,7 @@ describe('prestigeGame', () => {
     const history = Array.from({ length: 11 }, (_, i) => ({
       id: `entry${i}`,
       at: i,
-      prestigeNumber: i + 1,
+      rebootNumber: i + 1,
       pointsAwarded: 1,
       moneyBits: 1,
     }))
@@ -8476,35 +8476,35 @@ describe('prestigeGame', () => {
     expect(result.prestigeMuseum.pinnedIds).toHaveLength(MUSEUM_PIN_CAP)
   })
 
-  it('awards 1 Prestige Point at exactly PRESTIGE_THRESHOLD', () => {
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
-    const after = prestigeGame(state)
-    expect(after.prestige.points).toBe(1)
+  it('awards 1 Prestige Point at exactly REBOOT_THRESHOLD', () => {
+    const state = withMoney(createInitialGameState(), REBOOT_THRESHOLD)
+    const after = rebootGame(state)
+    expect(after.reboot.points).toBe(1)
   })
 
   it('awards more Prestige Points once 64 excess money-exponent powers beyond Googol are reached', () => {
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 1e64)
-    const after = prestigeGame(state)
-    expect(after.prestige.points).toBe(2)
+    const state = withMoney(createInitialGameState(), REBOOT_THRESHOLD * 1e64)
+    const after = rebootGame(state)
+    expect(after.reboot.points).toBe(2)
   })
 
   it('adds newly-awarded points on top of any already-unspent points', () => {
-    const state = withPrestigePoints(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), 10)
-    const after = prestigeGame(state)
-    expect(after.prestige.points).toBe(11)
+    const state = withPrestigePoints(withMoney(createInitialGameState(), REBOOT_THRESHOLD), 10)
+    const after = rebootGame(state)
+    expect(after.reboot.points).toBe(11)
   })
 
   it('keeps an unlocked autobuyer permanently active across prestige, resetting the tier\'s tickspeed level to baseline (1)', () => {
     const state = withTickspeedLevel(
       withAutobuyer(
-        withMoney(createInitialGameState(), PRESTIGE_THRESHOLD),
+        withMoney(createInitialGameState(), REBOOT_THRESHOLD),
         tensTier.id,
         1
       ),
       tensTier.id,
       3
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.autobuyers[tensTier.id]).not.toBeNull()
     expect(after.tickspeedLevels[tensTier.id]).toBe(1)
   })
@@ -8512,7 +8512,7 @@ describe('prestigeGame', () => {
   it('keeps era/eons/hyperscalerCount/eonsUpgrades/computeFlopsAutobuyers(Enabled) permanently, resetting only the attempt budget', () => {
     const flopId = COMPUTE_FLOPS_TIER_DEFINITIONS[0].id
     const state = {
-      ...withMoney(createInitialGameState(), PRESTIGE_THRESHOLD),
+      ...withMoney(createInitialGameState(), REBOOT_THRESHOLD),
       era: { count: 2 },
       eons: { balance: 7 },
       hyperscalerCount: 4,
@@ -8521,7 +8521,7 @@ describe('prestigeGame', () => {
       computeFlopsAutobuyersEnabled: { [flopId]: false },
       computeFlopsAutobuyerAttemptBudgets: { [flopId]: 0.5 },
     }
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.era).toEqual({ count: 2 })
     expect(after.eons).toEqual({ balance: 7 })
     expect(after.hyperscalerCount).toBe(4)
@@ -8535,10 +8535,10 @@ describe('prestigeGame', () => {
 
   it('keeps the tier tickspeed autobuyer flag permanently across prestige', () => {
     const state = withTierTickspeedAutobuyer(
-      withMoney(createInitialGameState(), PRESTIGE_THRESHOLD),
+      withMoney(createInitialGameState(), REBOOT_THRESHOLD),
       tensTier.id
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.tierTickspeedAutobuyer[tensTier.id]).toBe(true)
   })
 
@@ -8546,7 +8546,7 @@ describe('prestigeGame', () => {
     const state = withTierTickspeedAutobuyerEnabled(
       withAutobuyerEnabled(
         withTierTickspeedAutobuyer(
-          withAutobuyer(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id),
+          withAutobuyer(withMoney(createInitialGameState(), REBOOT_THRESHOLD), tensTier.id),
           tensTier.id
         ),
         tensTier.id,
@@ -8555,79 +8555,79 @@ describe('prestigeGame', () => {
       tensTier.id,
       false
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.autobuyersEnabled[tensTier.id]).toBe(false)
     expect(after.tierTickspeedAutobuyerEnabled[tensTier.id]).toBe(false)
   })
 
   it('keeps the Auto-Prestige level permanently across prestige', () => {
-    const state = withAutoPrestige(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), 3)
-    const after = prestigeGame(state)
-    expect(after.autoPrestige).toBe(3)
+    const state = withAutoReboot(withMoney(createInitialGameState(), REBOOT_THRESHOLD), 3)
+    const after = rebootGame(state)
+    expect(after.autoReboot).toBe(3)
   })
 
   it('resets the global tickspeed multiplier level to not-yet-bought across prestige, same as Scale Up', () => {
-    const state = withGlobalTickspeedMultiplier(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), 3)
-    const after = prestigeGame(state)
+    const state = withGlobalTickspeedMultiplier(withMoney(createInitialGameState(), REBOOT_THRESHOLD), 3)
+    const after = rebootGame(state)
     expect(after.globalTickspeedMultiplier).toBeNull()
   })
 
   it('keeps the prestige speed bonus unlock permanently across prestige', () => {
     const state = withPrestigeSpeedBonusUnlocked(
-      withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
+      withMoney(createInitialGameState(), REBOOT_THRESHOLD)
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.prestigeSpeedBonusUnlocked).toBe(true)
   })
 
   it('resets the Scale Up count to 0 across prestige', () => {
     const state = withScaleUpCount(
-      withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), 3
+      withMoney(createInitialGameState(), REBOOT_THRESHOLD), 3
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.scaleUpCount).toBe(0)
   })
 
   it('resets scaleUpTargetTierIndex to 0 across prestige, along with everUnlockedTierIds relocking the last tier', () => {
     const state = {
-      ...withMoney(createInitialGameState(), PRESTIGE_THRESHOLD),
+      ...withMoney(createInitialGameState(), REBOOT_THRESHOLD),
       scaleUpTargetTierIndex: 5,
     }
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.scaleUpTargetTierIndex).toBe(0)
   })
 
   it('resets the Overclock count to 0 across prestige, same as Scale Up', () => {
     const state = withOverclockCount(
-      withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), 3
+      withMoney(createInitialGameState(), REBOOT_THRESHOLD), 3
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.overclockCount).toBe(0)
   })
 
   it('keeps the Auto Scale Up flag permanently across prestige', () => {
     const state = withAutoScaleUp(
-      withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
+      withMoney(createInitialGameState(), REBOOT_THRESHOLD)
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.autoScaleUp).toBe(true)
   })
 
   it('keeps the Tickspeed Autobuyer flag permanently across prestige', () => {
     const state = withAutoGlobalTickspeed(
-      withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
+      withMoney(createInitialGameState(), REBOOT_THRESHOLD)
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.autoGlobalTickspeed).toBe(true)
   })
 
   it('keeps a paused (disabled) global automation permanently paused across prestige, same as the parent unlock flag', () => {
-    const state = withAutoPrestigeEnabled(
+    const state = withAutoRebootEnabled(
         withAutoGlobalTickspeedEnabled(
           withAutoScaleUpEnabled(
-            withAutoPrestige(
+            withAutoReboot(
                 withAutoGlobalTickspeed(
-                  withAutoScaleUp(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD))
+                  withAutoScaleUp(withMoney(createInitialGameState(), REBOOT_THRESHOLD))
                 ),
                 1
               ),
@@ -8637,30 +8637,30 @@ describe('prestigeGame', () => {
         ),
         false
       )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.autoScaleUpEnabled).toBe(false)
     expect(after.autoGlobalTickspeedEnabled).toBe(false)
-    expect(after.autoPrestigeEnabled).toBe(false)
+    expect(after.autoRebootEnabled).toBe(false)
   })
 
   it('resets the Auto-Prestige attempt budget to 0 on prestige', () => {
-    const state = withAutoPrestigeBudget(
-      withAutoPrestige(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)),
+    const state = withAutoRebootBudget(
+      withAutoReboot(withMoney(createInitialGameState(), REBOOT_THRESHOLD)),
       0.7
     )
-    const after = prestigeGame(state)
-    expect(after.autoPrestigeAttemptBudget).toBe(0)
+    const after = rebootGame(state)
+    expect(after.autoRebootAttemptBudget).toBe(0)
   })
 
   it('resets XP to 0, a run-scoped currency unlike Prestige Points', () => {
-    const state = withXP(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), 7)
-    const after = prestigeGame(state)
-    expect(after.prestige.xp).toBe(0)
+    const state = withXP(withMoney(createInitialGameState(), REBOOT_THRESHOLD), 7)
+    const after = rebootGame(state)
+    expect(after.reboot.xp).toBe(0)
   })
 
   it('resets money to starting amount', () => {
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD + 99999)
-    const after = prestigeGame(state)
+    const state = withMoney(createInitialGameState(), REBOOT_THRESHOLD + 99999)
+    const after = rebootGame(state)
     expect(after.resources[MONEY_ID]).toBe(1)
   })
 
@@ -8668,14 +8668,14 @@ describe('prestigeGame', () => {
     const state = withPurchaseLevelProgress(
       withPurchaseLevel(
         withOwned(
-          withMoney(createInitialGameState(), PRESTIGE_THRESHOLD),
+          withMoney(createInitialGameState(), REBOOT_THRESHOLD),
           tensTier.id, 50
         ),
         tensTier.id, 5
       ),
       tensTier.id, 3
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     TIER_DEFINITIONS.forEach(tier => {
       expect(after.owned[tier.id]).toBe(0)
       expect(after.purchaseLevels[tier.id]).toBe(1)
@@ -8687,42 +8687,42 @@ describe('prestigeGame', () => {
 
   it('keeps an unlocked tier\'s autobuyer flag active across prestige', () => {
     const state = withAutobuyer(
-      withMoney(createInitialGameState(), PRESTIGE_THRESHOLD),
+      withMoney(createInitialGameState(), REBOOT_THRESHOLD),
       tensTier.id, 1
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.autobuyers[tensTier.id]).not.toBeNull()
   })
 
   it('resets a tier\'s tickspeed level back to the baseline (1) on prestige', () => {
     const state = withTickspeedLevel(
-      withMoney(createInitialGameState(), PRESTIGE_THRESHOLD),
+      withMoney(createInitialGameState(), REBOOT_THRESHOLD),
       tensTier.id, 3
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.tickspeedLevels[tensTier.id]).toBe(1)
   })
 
   it('auto-unlocks the first tier\'s autobuyer on the very first prestige (milestone 1)', () => {
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
-    const after = prestigeGame(state)
+    const state = withMoney(createInitialGameState(), REBOOT_THRESHOLD)
+    const after = rebootGame(state)
     expect(after.autobuyers[tensTier.id]).toBe(1)
   })
 
   it('leaves a later tier\'s autobuyer locked (null) until its own milestone is reached', () => {
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)
-    const after = prestigeGame(state)
-    expect(after.prestige.count).toBe(1)
+    const state = withMoney(createInitialGameState(), REBOOT_THRESHOLD)
+    const after = rebootGame(state)
+    expect(after.reboot.count).toBe(1)
     expect(after.autobuyers[thousandsTier.id]).toBeNull()
   })
 
   it('resets the last tier\'s owned count and lastTierXpConsumed to 0 across prestige — its Scale Up count (the XP-tickspeed unlock driver) resets too', () => {
     const state = withLastTierXpConsumed(
-      withLastTierTickspeedXpUnlocked(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD)),
+      withLastTierTickspeedXpUnlocked(withMoney(createInitialGameState(), REBOOT_THRESHOLD)),
       42
     )
     expect(isLastTierTickspeedXpUnlocked(state)).toBe(true)
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.owned[lastTier.id]).toBe(0)
     expect(isLastTierTickspeedXpUnlocked(after)).toBe(false)
     expect(after.lastTierXpConsumed).toBe(0)
@@ -8735,11 +8735,11 @@ describe('prestigeGame', () => {
 
   it('resets everUnlockedTierIds on prestige, same as owned/purchased, so a tier relocks like it always has', () => {
     const state = withEverUnlockedTierIds(
-      withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), thousandsTier.id, 50),
+      withOwned(withMoney(createInitialGameState(), REBOOT_THRESHOLD), thousandsTier.id, 50),
       thousandsTier.id,
       true
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.owned[thousandsTier.id]).toBe(0)
     expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(false)
     expect(isTierUnlocked(after)(thousandsTier)).toBe(false)
@@ -8748,13 +8748,13 @@ describe('prestigeGame', () => {
   it('falls back to fresh-state defaults for every permanent automation flag when the incoming state predates them entirely (e.g. a state that never went through storage.js\'s schema-migration fallbacks)', () => {
     const fresh = createInitialGameState()
     const state = omit(
-      withMoney(fresh, PRESTIGE_THRESHOLD),
+      withMoney(fresh, REBOOT_THRESHOLD),
       'autobuyers', 'autobuyersEnabled', 'tierTickspeedAutobuyer',
-      'tierTickspeedAutobuyerEnabled', 'autoPrestige', 'autoPrestigeEnabled',
+      'tierTickspeedAutobuyerEnabled', 'autoReboot', 'autoRebootEnabled',
       'prestigeSpeedBonusUnlocked',
       'autoScaleUp', 'autoScaleUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     // The first tier's autobuyer auto-unlocks at milestone 1 (this prestige's count reaches 1) —
     // confirms the autobuyers fallback produced a real object (not undefined) applyAutobuyerMilestones
     // could safely build on, with every other tier still correctly null (not undefined).
@@ -8763,8 +8763,8 @@ describe('prestigeGame', () => {
     expect(after.autobuyersEnabled).toEqual(fresh.autobuyersEnabled)
     expect(after.tierTickspeedAutobuyer).toEqual(fresh.tierTickspeedAutobuyer)
     expect(after.tierTickspeedAutobuyerEnabled).toEqual(fresh.tierTickspeedAutobuyerEnabled)
-    expect(after.autoPrestige).toBe(fresh.autoPrestige)
-    expect(after.autoPrestigeEnabled).toBe(fresh.autoPrestigeEnabled)
+    expect(after.autoReboot).toBe(fresh.autoReboot)
+    expect(after.autoRebootEnabled).toBe(fresh.autoRebootEnabled)
     expect(after.prestigeSpeedBonusUnlocked).toBe(fresh.prestigeSpeedBonusUnlocked)
     expect(after.autoScaleUp).toBe(fresh.autoScaleUp)
     expect(after.autoScaleUpEnabled).toBe(fresh.autoScaleUpEnabled)
@@ -8773,13 +8773,13 @@ describe('prestigeGame', () => {
   })
 
   it('resets the Byte Foundry\'s Memory across prestige, but keeps the generator/its upgrades AND mainGameUnlocked permanent', () => {
-    const state = withIntro(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), {
+    const state = withIntro(withMoney(createInitialGameState(), REBOOT_THRESHOLD), {
       bits: 500,
       capacity: 8000,
       byteCreated: true,
       mainGameUnlocked: true,
     })
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     // Memory resets to fresh.
     expect(after.intro.bits).toBe(0)
     // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked) — a real Prestige never
@@ -8793,10 +8793,10 @@ describe('prestigeGame', () => {
 
   it('resets resources/owned together with the intro\'s Memory in the same prestige, with no stale Byte-Foundry-granted units left over', () => {
     const state = withIntro(
-      withOwned(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), tensTier.id, 8),
+      withOwned(withMoney(createInitialGameState(), REBOOT_THRESHOLD), tensTier.id, 8),
       { bits: 4000, capacity: 8000, byteCreated: true, mainGameUnlocked: true }
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.owned[tensTier.id]).toBe(0)
     expect(after.intro.bits).toBe(0)
     // mainGameUnlocked is permanent now — see latchMainGameUnlocked.
@@ -8809,8 +8809,8 @@ describe('prestigeGame', () => {
 
   it('falls back to fresh generator defaults when the incoming state predates the Byte Foundry intro field entirely', () => {
     const fresh = createInitialGameState()
-    const state = omit(withMoney(fresh, PRESTIGE_THRESHOLD), 'intro')
-    const after = prestigeGame(state)
+    const state = omit(withMoney(fresh, REBOOT_THRESHOLD), 'intro')
+    const after = rebootGame(state)
     expect(after.intro).toEqual(fresh.intro)
   })
 })
@@ -8838,8 +8838,8 @@ describe('scaleUpGame', () => {
     expect(scaleUpGame(state)).toBe(state)
   })
 
-  it('does nothing while production is frozen at PRESTIGE_THRESHOLD', () => {
-    const state = withMoney(eligibleState(), PRESTIGE_THRESHOLD)
+  it('does nothing while production is frozen at REBOOT_THRESHOLD', () => {
+    const state = withMoney(eligibleState(), REBOOT_THRESHOLD)
     expect(scaleUpGame(state)).toBe(state)
   })
 
@@ -8988,13 +8988,13 @@ describe('scaleUpGame', () => {
   })
 
   it('keeps the Auto-Prestige level permanently', () => {
-    const state = withAutoPrestige(eligibleState(), 3)
+    const state = withAutoReboot(eligibleState(), 3)
     const after = scaleUpGame(state)
-    expect(after.autoPrestige).toBe(3)
+    expect(after.autoReboot).toBe(3)
   })
 
   it('resets the global tickspeed multiplier level back to not-yet-bought (null)', () => {
-    // Unlike Prestige (see the prestigeGame describe block above), Scale Up is a much more
+    // Unlike Prestige (see the rebootGame describe block above), Scale Up is a much more
     // frequent soft-reset — the global tickspeed multiplier resets along with everything else
     // rather than carrying over, so a repeatedly-Scale-Up'd run can't keep stacking it for free.
     const state = withGlobalTickspeedMultiplier(eligibleState(), 3)
@@ -9054,10 +9054,10 @@ describe('scaleUpGame', () => {
   })
 
   it('keeps a paused (disabled) global automation permanently paused, same as the parent unlock flag', () => {
-    const state = withAutoPrestigeEnabled(
+    const state = withAutoRebootEnabled(
         withAutoGlobalTickspeedEnabled(
           withAutoScaleUpEnabled(
-            withAutoPrestige(
+            withAutoReboot(
                 withAutoGlobalTickspeed(withAutoScaleUp(eligibleState())),
                 1
               ),
@@ -9070,24 +9070,24 @@ describe('scaleUpGame', () => {
     const after = scaleUpGame(state)
     expect(after.autoScaleUpEnabled).toBe(false)
     expect(after.autoGlobalTickspeedEnabled).toBe(false)
-    expect(after.autoPrestigeEnabled).toBe(false)
+    expect(after.autoRebootEnabled).toBe(false)
   })
 
   it('leaves Prestige Points and count untouched, but resets XP to 0', () => {
     const state = withXP(withPrestigePoints(eligibleState(), 42), 7)
     const after = scaleUpGame(state)
-    expect(after.prestige.points).toBe(42)
-    expect(after.prestige.count).toBe(0)
-    expect(after.prestige.xp).toBe(0)
+    expect(after.reboot.points).toBe(42)
+    expect(after.reboot.count).toBe(0)
+    expect(after.reboot.xp).toBe(0)
   })
 
   it('resets the highestMilestone watermark to the fresh initial value, so the next run earns XP from scratch instead of only past the previous run\'s peak', () => {
     const state = {
       ...eligibleState(),
-      prestige: { ...eligibleState().prestige, highestMilestone: 30 },
+      reboot: { ...eligibleState().reboot, highestMilestone: 30 },
     }
     const after = scaleUpGame(state)
-    expect(after.prestige.highestMilestone).toBe(createInitialGameState().prestige.highestMilestone)
+    expect(after.reboot.highestMilestone).toBe(createInitialGameState().reboot.highestMilestone)
   })
 
   it('resets the last tier\'s owned count and lastTierXpConsumed to 0 on Scale Up — a final-tier claim is itself what flips the XP boost on', () => {
@@ -9122,7 +9122,7 @@ describe('scaleUpGame', () => {
     const state = omit(
       eligibleState(),
       'autobuyers', 'autobuyersEnabled', 'tierTickspeedAutobuyer',
-      'tierTickspeedAutobuyerEnabled', 'autoPrestige', 'autoPrestigeEnabled',
+      'tierTickspeedAutobuyerEnabled', 'autoReboot', 'autoRebootEnabled',
       'prestigeSpeedBonusUnlocked',
       'autoScaleUp', 'autoScaleUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
     )
@@ -9131,8 +9131,8 @@ describe('scaleUpGame', () => {
     expect(after.autobuyersEnabled).toEqual(fresh.autobuyersEnabled)
     expect(after.tierTickspeedAutobuyer).toEqual(fresh.tierTickspeedAutobuyer)
     expect(after.tierTickspeedAutobuyerEnabled).toEqual(fresh.tierTickspeedAutobuyerEnabled)
-    expect(after.autoPrestige).toBe(fresh.autoPrestige)
-    expect(after.autoPrestigeEnabled).toBe(fresh.autoPrestigeEnabled)
+    expect(after.autoReboot).toBe(fresh.autoReboot)
+    expect(after.autoRebootEnabled).toBe(fresh.autoRebootEnabled)
     expect(after.prestigeSpeedBonusUnlocked).toBe(fresh.prestigeSpeedBonusUnlocked)
     expect(after.autoScaleUp).toBe(fresh.autoScaleUp)
     expect(after.autoScaleUpEnabled).toBe(fresh.autoScaleUpEnabled)
@@ -9214,8 +9214,8 @@ describe('overclockGame', () => {
     expect(overclockGame(state)).toBe(state)
   })
 
-  it('does nothing while production is frozen at PRESTIGE_THRESHOLD', () => {
-    const state = withMoney(eligibleState(), PRESTIGE_THRESHOLD)
+  it('does nothing while production is frozen at REBOOT_THRESHOLD', () => {
+    const state = withMoney(eligibleState(), REBOOT_THRESHOLD)
     expect(overclockGame(state)).toBe(state)
   })
 
@@ -9334,9 +9334,9 @@ describe('overclockGame', () => {
   })
 
   it('keeps the Auto-Prestige level permanently', () => {
-    const state = withAutoPrestige(eligibleState(), 3)
+    const state = withAutoReboot(eligibleState(), 3)
     const after = overclockGame(state)
-    expect(after.autoPrestige).toBe(3)
+    expect(after.autoReboot).toBe(3)
   })
 
   it('keeps era/eons/hyperscalerCount/eonsUpgrades/computeFlopsAutobuyers(Enabled) permanently', () => {
@@ -9391,10 +9391,10 @@ describe('overclockGame', () => {
   })
 
   it('keeps a paused (disabled) global automation permanently paused, same as the parent unlock flag', () => {
-    const state = withAutoPrestigeEnabled(
+    const state = withAutoRebootEnabled(
         withAutoGlobalTickspeedEnabled(
           withAutoScaleUpEnabled(
-            withAutoPrestige(
+            withAutoReboot(
                 withAutoGlobalTickspeed(withAutoScaleUp(eligibleState())),
                 1
               ),
@@ -9407,24 +9407,24 @@ describe('overclockGame', () => {
     const after = overclockGame(state)
     expect(after.autoScaleUpEnabled).toBe(false)
     expect(after.autoGlobalTickspeedEnabled).toBe(false)
-    expect(after.autoPrestigeEnabled).toBe(false)
+    expect(after.autoRebootEnabled).toBe(false)
   })
 
   it('leaves Prestige Points and count untouched, but resets XP to 0', () => {
     const state = withXP(withPrestigePoints(eligibleState(), 42), 7)
     const after = overclockGame(state)
-    expect(after.prestige.points).toBe(42)
-    expect(after.prestige.count).toBe(0)
-    expect(after.prestige.xp).toBe(0)
+    expect(after.reboot.points).toBe(42)
+    expect(after.reboot.count).toBe(0)
+    expect(after.reboot.xp).toBe(0)
   })
 
   it('resets the highestMilestone watermark to the fresh initial value', () => {
     const state = {
       ...eligibleState(),
-      prestige: { ...eligibleState().prestige, highestMilestone: 30 },
+      reboot: { ...eligibleState().reboot, highestMilestone: 30 },
     }
     const after = overclockGame(state)
-    expect(after.prestige.highestMilestone).toBe(createInitialGameState().prestige.highestMilestone)
+    expect(after.reboot.highestMilestone).toBe(createInitialGameState().reboot.highestMilestone)
   })
 
   it('resets the last tier\'s owned count and lastTierXpConsumed to 0 across Overclock — its Scale Up count resets too, relocking the XP boost', () => {
@@ -9456,7 +9456,7 @@ describe('overclockGame', () => {
     const state = omit(
       eligibleState(),
       'autobuyers', 'autobuyersEnabled', 'tierTickspeedAutobuyer',
-      'tierTickspeedAutobuyerEnabled', 'autoPrestige', 'autoPrestigeEnabled',
+      'tierTickspeedAutobuyerEnabled', 'autoReboot', 'autoRebootEnabled',
       'prestigeSpeedBonusUnlocked',
       'autoScaleUp', 'autoScaleUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
     )
@@ -9465,8 +9465,8 @@ describe('overclockGame', () => {
     expect(after.autobuyersEnabled).toEqual(fresh.autobuyersEnabled)
     expect(after.tierTickspeedAutobuyer).toEqual(fresh.tierTickspeedAutobuyer)
     expect(after.tierTickspeedAutobuyerEnabled).toEqual(fresh.tierTickspeedAutobuyerEnabled)
-    expect(after.autoPrestige).toBe(fresh.autoPrestige)
-    expect(after.autoPrestigeEnabled).toBe(fresh.autoPrestigeEnabled)
+    expect(after.autoReboot).toBe(fresh.autoReboot)
+    expect(after.autoRebootEnabled).toBe(fresh.autoRebootEnabled)
     expect(after.prestigeSpeedBonusUnlocked).toBe(fresh.prestigeSpeedBonusUnlocked)
     expect(after.autoScaleUp).toBe(fresh.autoScaleUp)
     expect(after.autoScaleUpEnabled).toBe(fresh.autoScaleUpEnabled)
@@ -9507,7 +9507,7 @@ describe('buyAutoScaleUp', () => {
     const state = withPrestigePoints({ ...createInitialGameState(), autoGlobalTickspeed: true }, AUTO_SCALE_UP_COST)
     const after = buyAutoScaleUp(state)
     expect(after.autoScaleUp).toBe(true)
-    expect(after.prestige.points).toBe(0)
+    expect(after.reboot.points).toBe(0)
   })
 
   it('requires the Tickspeed Autobuyer first (sequential global automation)', () => {
@@ -9527,10 +9527,10 @@ describe('buyAutoScaleUp', () => {
     expect(buyAutoScaleUp(state)).toBe(state)
   })
 
-  it('refuses to spend once production is frozen at PRESTIGE_THRESHOLD', () => {
+  it('refuses to spend once production is frozen at REBOOT_THRESHOLD', () => {
     const state = withMoney(
       withPrestigePoints({ ...createInitialGameState(), autoGlobalTickspeed: true }, AUTO_SCALE_UP_COST),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
     expect(buyAutoScaleUp(state)).toBe(state)
   })
@@ -9541,7 +9541,7 @@ describe('buyTickspeedAutobuyer', () => {
     const state = withPrestigePoints(createInitialGameState(), TICKSPEED_AUTOBUYER_COST)
     const after = buyTickspeedAutobuyer(state)
     expect(after.autoGlobalTickspeed).toBe(true)
-    expect(after.prestige.points).toBe(0)
+    expect(after.reboot.points).toBe(0)
   })
 
   it('returns the same state when there are not enough points', () => {
@@ -9556,22 +9556,22 @@ describe('buyTickspeedAutobuyer', () => {
     expect(buyTickspeedAutobuyer(state)).toBe(state)
   })
 
-  it('refuses to spend once production is frozen at PRESTIGE_THRESHOLD', () => {
+  it('refuses to spend once production is frozen at REBOOT_THRESHOLD', () => {
     const state = withMoney(
       withPrestigePoints(createInitialGameState(), TICKSPEED_AUTOBUYER_COST),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
     expect(buyTickspeedAutobuyer(state)).toBe(state)
   })
 })
 
-// ─── setAutoScaleUpEnabled / setAutoGlobalTickspeedEnabled / setAutoPrestigeEnabled ─────────────
+// ─── setAutoScaleUpEnabled / setAutoGlobalTickspeedEnabled / setAutoRebootEnabled ─────────────
 
 describe('buyXpTickspeedAutobuyer / setAutoXpTickspeedEnabled', () => {
   it('spends 16 PP to unlock, with no prerequisite', () => {
     const after = buyXpTickspeedAutobuyer(withPrestigePoints(createInitialGameState(), 20))
     expect(after.autoXpTickspeed).toBe(true)
-    expect(after.prestige.points).toBe(4)
+    expect(after.reboot.points).toBe(4)
   })
 
   it('is a no-op below 16 PP, when already bought, or while frozen', () => {
@@ -9579,7 +9579,7 @@ describe('buyXpTickspeedAutobuyer / setAutoXpTickspeedEnabled', () => {
     expect(buyXpTickspeedAutobuyer(poor)).toBe(poor)
     const owned = { ...withPrestigePoints(createInitialGameState(), 100), autoXpTickspeed: true }
     expect(buyXpTickspeedAutobuyer(owned)).toBe(owned)
-    const frozen = withMoney(withPrestigePoints(createInitialGameState(), 100), PRESTIGE_THRESHOLD)
+    const frozen = withMoney(withPrestigePoints(createInitialGameState(), 100), REBOOT_THRESHOLD)
     expect(buyXpTickspeedAutobuyer(frozen)).toBe(frozen)
   })
 
@@ -9597,7 +9597,7 @@ describe('buyXpTickspeedAutobuyer / setAutoXpTickspeedEnabled', () => {
     state = withXP(state, 50)
     const after = tickGame(1)(state)
     expect(after.lastTierXpConsumed).toBe(50)
-    expect(after.prestige.xp).toBe(0)
+    expect(after.reboot.xp).toBe(0)
     expect(after.owned[thousandsTier.id]).toBe(0)
   })
 
@@ -9611,8 +9611,8 @@ describe('buyXpTickspeedAutobuyer / setAutoXpTickspeedEnabled', () => {
   })
 
   it('survives a real Prestige (permanent unlock and preference)', () => {
-    const state = withMoney({ ...createInitialGameState(), autoXpTickspeed: true, autoXpTickspeedEnabled: false }, PRESTIGE_THRESHOLD)
-    const after = prestigeGame(state)
+    const state = withMoney({ ...createInitialGameState(), autoXpTickspeed: true, autoXpTickspeedEnabled: false }, REBOOT_THRESHOLD)
+    const after = rebootGame(state)
     expect(after).not.toBe(state)
     expect(after.autoXpTickspeed).toBe(true)
     expect(after.autoXpTickspeedEnabled).toBe(false)
@@ -9634,7 +9634,7 @@ describe('setAutoScaleUpEnabled', () => {
   })
 
   it('is not gated by isProductionFrozen — toggling a preference is always possible', () => {
-    const state = withMoney(withAutoScaleUp(createInitialGameState()), PRESTIGE_THRESHOLD)
+    const state = withMoney(withAutoScaleUp(createInitialGameState()), REBOOT_THRESHOLD)
     const after = setAutoScaleUpEnabled(false)(state)
     expect(after.autoScaleUpEnabled).toBe(false)
   })
@@ -9655,30 +9655,30 @@ describe('setAutoGlobalTickspeedEnabled', () => {
   })
 
   it('is not gated by isProductionFrozen', () => {
-    const state = withMoney(withAutoGlobalTickspeed(createInitialGameState()), PRESTIGE_THRESHOLD)
+    const state = withMoney(withAutoGlobalTickspeed(createInitialGameState()), REBOOT_THRESHOLD)
     const after = setAutoGlobalTickspeedEnabled(false)(state)
     expect(after.autoGlobalTickspeedEnabled).toBe(false)
   })
 })
 
-describe('setAutoPrestigeEnabled', () => {
-  it('toggles autoPrestigeEnabled once Auto-Prestige is bought', () => {
-    const state = withAutoPrestige(createInitialGameState(), 1)
-    const paused = setAutoPrestigeEnabled(false)(state)
-    expect(paused.autoPrestigeEnabled).toBe(false)
-    const resumed = setAutoPrestigeEnabled(true)(paused)
-    expect(resumed.autoPrestigeEnabled).toBe(true)
+describe('setAutoRebootEnabled', () => {
+  it('toggles autoRebootEnabled once Auto-Prestige is bought', () => {
+    const state = withAutoReboot(createInitialGameState(), 1)
+    const paused = setAutoRebootEnabled(false)(state)
+    expect(paused.autoRebootEnabled).toBe(false)
+    const resumed = setAutoRebootEnabled(true)(paused)
+    expect(resumed.autoRebootEnabled).toBe(true)
   })
 
   it('returns the same state when Auto-Prestige has not been bought yet (still null)', () => {
     const state = createInitialGameState()
-    expect(setAutoPrestigeEnabled(false)(state)).toBe(state)
+    expect(setAutoRebootEnabled(false)(state)).toBe(state)
   })
 
   it('is not gated by isProductionFrozen', () => {
-    const state = withMoney(withAutoPrestige(createInitialGameState(), 1), PRESTIGE_THRESHOLD)
-    const after = setAutoPrestigeEnabled(false)(state)
-    expect(after.autoPrestigeEnabled).toBe(false)
+    const state = withMoney(withAutoReboot(createInitialGameState(), 1), REBOOT_THRESHOLD)
+    const after = setAutoRebootEnabled(false)(state)
+    expect(after.autoRebootEnabled).toBe(false)
   })
 })
 
@@ -9704,7 +9704,7 @@ describe('setAutobuyerEnabled', () => {
   })
 
   it('is not gated by isProductionFrozen — toggling a preference is always possible', () => {
-    const state = withMoney(withAutobuyer(createInitialGameState(), thousandsTier.id), PRESTIGE_THRESHOLD)
+    const state = withMoney(withAutobuyer(createInitialGameState(), thousandsTier.id), REBOOT_THRESHOLD)
     const after = setAutobuyerEnabled(thousandsTier.id, false)(state)
     expect(after.autobuyersEnabled[thousandsTier.id]).toBe(false)
   })
@@ -9732,7 +9732,7 @@ describe('setTierTickspeedAutobuyerEnabled', () => {
   })
 
   it('is not gated by isProductionFrozen', () => {
-    const state = withMoney(withTierTickspeedAutobuyer(createInitialGameState(), thousandsTier.id), PRESTIGE_THRESHOLD)
+    const state = withMoney(withTierTickspeedAutobuyer(createInitialGameState(), thousandsTier.id), REBOOT_THRESHOLD)
     const after = setTierTickspeedAutobuyerEnabled(thousandsTier.id, false)(state)
     expect(after.tierTickspeedAutobuyerEnabled[thousandsTier.id]).toBe(false)
   })
@@ -9849,7 +9849,7 @@ describe('consumeXpForLastTierTickspeed', () => {
       50
     )
     const after = consumeXpForLastTierTickspeed(20)(state)
-    expect(after.prestige.xp).toBe(30)
+    expect(after.reboot.xp).toBe(30)
     expect(after.lastTierXpConsumed).toBe(20)
     expect(after.owned[secondToLastTier.id]).toBe(0)
     expect(after.resources[secondToLastTier.id]).toBe(0)
@@ -9953,10 +9953,10 @@ describe('consumeXpForLastTierTickspeed', () => {
     expect(consumeXpForLastTierTickspeed(-5)(state)).toBe(state)
   })
 
-  it('refuses to spend once production is frozen at PRESTIGE_THRESHOLD', () => {
+  it('refuses to spend once production is frozen at REBOOT_THRESHOLD', () => {
     const state = withMoney(
       withXP(withLastTierTickspeedXpUnlocked(createInitialGameState()), 100),
-      PRESTIGE_THRESHOLD
+      REBOOT_THRESHOLD
     )
     expect(consumeXpForLastTierTickspeed(10)(state)).toBe(state)
   })
@@ -9986,7 +9986,7 @@ const eraEligibleState = (overrides = {}) => {
   })
   state = {
     ...state,
-    resources: { ...state.resources, [MONEY_ID]: PRESTIGE_THRESHOLD },
+    resources: { ...state.resources, [MONEY_ID]: REBOOT_THRESHOLD },
     owned: { ...state.owned, [TIER_DEFINITIONS[0].id]: 10 },
     autobuyers: { ...state.autobuyers, [TIER_DEFINITIONS[0].id]: 1 },
     prestigeDoublePpLevel: 2,
@@ -9999,7 +9999,7 @@ const eraEligibleState = (overrides = {}) => {
     eons: { balance: 3 },
     eonsUpgrades: { ...createInitialGameState().eonsUpgrades, eonAmplifierLevel: 1 },
     era: { count: 0 },
-    prestige: { ...state.prestige, count: 50 },
+    reboot: { ...state.reboot, count: 50 },
     ...overrides,
   }
   return state
@@ -10044,8 +10044,8 @@ describe('eraGame', () => {
     const after = eraGame(state)
     expect(after.resources[MONEY_ID]).toBe(1)
     expect(after.owned[TIER_DEFINITIONS[0].id]).toBe(0)
-    expect(after.prestige.points).toBe(0)
-    expect(after.prestige.count).toBe(0)
+    expect(after.reboot.points).toBe(0)
+    expect(after.reboot.count).toBe(0)
     expect(after.prestigeDoublePpLevel).toBe(0)
   })
 
@@ -10066,7 +10066,7 @@ describe('eraGame', () => {
     expect(after.intro.disks).toEqual({})
     expect(after.intro.foundryResetCaps).toEqual({})
     expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(1)
-    // Unlike a real Prestige (which now carries these through, see prestigeGame), Era ascension is
+    // Unlike a real Prestige (which now carries these through, see rebootGame), Era ascension is
     // its own, deliberately much bigger full-Foundry reset — diskWriteCache/diskReadCacheFlush wipe
     // along with everything else above.
     expect(after.intro.diskWriteCache).toEqual({})
@@ -10090,11 +10090,11 @@ describe('eraGame', () => {
   })
 
   it('latches unboundedUnlocked from the Auto-Prestige interval before reset', () => {
-    const below = withUnboundedPrestige(eraEligibleState(), 10)
-    expect(eraGame(below).prestige.unboundedUnlocked).toBe(false)
+    const below = withUnboundedReboot(eraEligibleState(), 10)
+    expect(eraGame(below).reboot.unboundedUnlocked).toBe(false)
 
-    const atThreshold = withUnboundedPrestige(eraEligibleState())
-    expect(eraGame(atThreshold).prestige.unboundedUnlocked).toBe(true)
+    const atThreshold = withUnboundedReboot(eraEligibleState())
+    expect(eraGame(atThreshold).reboot.unboundedUnlocked).toBe(true)
   })
 
   it('unlocks KFlops autobuyer at Era 1 via applyFlopsAutobuyerMilestones', () => {
@@ -10119,31 +10119,31 @@ describe('eraGame carry/reset matrix (#407)', () => {
   const tier0 = TIER_DEFINITIONS[0].id
 
   const richState = () => eraEligibleState({
-    autoPrestige: 2,
-    autoPrestigeEnabled: false,
+    autoReboot: 2,
+    autoRebootEnabled: false,
     tierTickspeedAutobuyer: { ...createInitialGameState().tierTickspeedAutobuyer, [tier0]: true },
     computeAutoBoostUnlocked: true,
-    prestigeMuseum: { history: [{ id: 'p1-1', at: 1, prestigeNumber: 1, pointsAwarded: 1, moneyBits: 1 }], pinnedIds: [] },
+    prestigeMuseum: { history: [{ id: 'p1-1', at: 1, rebootNumber: 1, pointsAwarded: 1, moneyBits: 1 }], pinnedIds: [] },
     intro: {
       byteCreated: true,
       mainGameUnlocked: true,
       autoMergeCoresIntoNode: true,
     },
-    prestige: {
-      ...eraEligibleState().prestige,
+    reboot: {
+      ...eraEligibleState().reboot,
       unboundedUnlocked: true,
     },
   })
 
   it.each([
     ['prestigeMuseum.history', s => s.prestigeMuseum.history],
-    ['autoPrestige level', s => s.autoPrestige],
-    ['autoPrestigeEnabled pause flag', s => s.autoPrestigeEnabled],
+    ['autoReboot level', s => s.autoReboot],
+    ['autoRebootEnabled pause flag', s => s.autoRebootEnabled],
     ['tierTickspeedAutobuyer unlock', s => s.tierTickspeedAutobuyer[tier0]],
     ['computeAutoBoostUnlocked', s => s.computeAutoBoostUnlocked],
     ['autoMergeCoresIntoNode', s => s.intro.autoMergeCoresIntoNode],
     ['hyperscalerCount', s => s.hyperscalerCount],
-    ['prestige.unboundedUnlocked latch', s => s.prestige.unboundedUnlocked],
+    ['reboot.unboundedUnlocked latch', s => s.reboot.unboundedUnlocked],
     ['computeFlops.pageUnlocked', s => s.computeFlops.pageUnlocked],
   ])('carries %s through Era ascension', (_label, pick) => {
     const state = richState()
@@ -10152,8 +10152,8 @@ describe('eraGame carry/reset matrix (#407)', () => {
   })
 
   it.each([
-    ['prestige.points', s => s.prestige.points, 0],
-    ['prestige.count', s => s.prestige.count, 0],
+    ['reboot.points', s => s.reboot.points, 0],
+    ['reboot.count', s => s.reboot.count, 0],
     ['prestigeDoublePpLevel', s => s.prestigeDoublePpLevel, 0],
     ['owned tier0', s => s.owned[tier0], 0],
     ['computeFlops owned', s => s.computeFlops.owned[flop0], 0],
@@ -10197,7 +10197,7 @@ describe('tickComputeFlopsAutobuyers via tickGame', () => {
     }
     const after = tickGame(0.1)(state)
     expect(after.computeFlops.owned[flopId]).toBe(1)
-    expect(after.prestige.points).toBeLessThan(5000)
+    expect(after.reboot.points).toBeLessThan(5000)
   })
 
   it('buys multiple units in a single tick when accumulated budget covers more than one attempt', () => {
@@ -10212,7 +10212,7 @@ describe('tickComputeFlopsAutobuyers via tickGame', () => {
     }
     const after = tickGame(3.5)(state)
     expect(after.computeFlops.owned[flopId]).toBe(3)
-    expect(after.prestige.points).toBe(0)
+    expect(after.reboot.points).toBe(0)
     expect(after.computeFlopsAutobuyerAttemptBudgets[flopId]).toBeCloseTo(0.5, 10)
   })
 
@@ -10227,7 +10227,7 @@ describe('tickComputeFlopsAutobuyers via tickGame', () => {
     }
     const after = tickGame(2)(state)
     expect(after.computeFlops.owned[flopId]).toBe(0)
-    expect(after.prestige.points).toBe(500)
+    expect(after.reboot.points).toBe(500)
     expect(after.computeFlopsAutobuyerAttemptBudgets[flopId]).toBeCloseTo(2, 10)
   })
 
@@ -10243,7 +10243,7 @@ describe('tickComputeFlopsAutobuyers via tickGame', () => {
     state = setComputeFlopsAutobuyerEnabled(flopId, false)(state)
     const after = tickGame(0.1)(state)
     expect(after.computeFlops.owned[flopId]).toBe(0)
-    expect(after.prestige.points).toBe(5000)
+    expect(after.reboot.points).toBe(5000)
   })
 
   it('setComputeFlopsAutobuyerEnabled is a no-op for an unknown flopId', () => {
@@ -10728,14 +10728,14 @@ describe('Data Lakes', () => {
       const latched = tickDataLakeAutoConvert(built())
       expect(latched.intro.dataLakes[1].boosterAuto).toBe(true)
       const withHighs = { ...latched, intro: { ...latched.intro, dataLakes: { ...latched.intro.dataLakes, 1: { ...latched.intro.dataLakes[1], capacityLevel: 2, purchased: 3 } } } }
-      const prestiged = prestigeGame({ ...withHighs, resources: { ...withHighs.resources, [MONEY_ID]: PRESTIGE_THRESHOLD } })
-      expect(prestiged.intro.dataLakes[1].boosterAuto).toBe(true)
+      const rebootd = rebootGame({ ...withHighs, resources: { ...withHighs.resources, [MONEY_ID]: REBOOT_THRESHOLD } })
+      expect(rebootd.intro.dataLakes[1].boosterAuto).toBe(true)
       const merged = mergeFoundryUpgradeCaps(
         { lakes: { 1: { capacityLevel: 2, purchased: 1 } } },
         { lakes: { 1: { capacityLevel: 1, purchased: 4 } } },
       )
       expect(merged.lakes[1]).toEqual({ capacityLevel: 2, purchased: 4 })
-      const eraReady = { ...withHighs, prestige: { ...withHighs.prestige, points: ERA_ELIGIBILITY_PP } }
+      const eraReady = { ...withHighs, reboot: { ...withHighs.reboot, points: ERA_ELIGIBILITY_PP } }
       expect(eraGame(eraReady).intro.dataLakes[1].boosterAuto).toBe(false)
     })
 
@@ -11309,9 +11309,9 @@ describe('Data Lakes', () => {
       expect(tickPoolResetReprovision(filled).intro.disksBuiltTotal[kb1]).toBe(2)
       expect(getDataLakeOverflowRatePercent(reset, 1)).toBe(50)
 
-      const prestiged = prestigeGame(withMoney(reset, PRESTIGE_THRESHOLD))
-      expect(prestiged.intro.poolResetRebuildingCount).toBe(1)
-      expect(tickPoolResetReprovision(prestiged).intro.disksBuiltTotal[kb1]).toBe(1)
+      const rebootd = rebootGame(withMoney(reset, REBOOT_THRESHOLD))
+      expect(rebootd.intro.poolResetRebuildingCount).toBe(1)
+      expect(tickPoolResetReprovision(rebootd).intro.disksBuiltTotal[kb1]).toBe(1)
     })
 
     it('auto-buys reachable Boosters only after rebuild and grants bandwidth from reset two onward', () => {
@@ -11319,9 +11319,9 @@ describe('Data Lakes', () => {
       rebuilt = updateLake(rebuilt, 1, { resetCount: 1, capacityLevel: 3, depositedUnits: 1, purchased: 0 })
       rebuilt = withIntro(rebuilt, { poolResetCount: 1 })
       expect(tickDataLakeAutoConvert(rebuilt).intro.dataLakes[1].purchased).toBe(1)
-      const afterPrestige = prestigeGame(withMoney(rebuilt, PRESTIGE_THRESHOLD))
-      expect(afterPrestige.intro.poolResetCount).toBe(1)
-      expect(tickDataLakeAutoConvert(updateLake(afterPrestige, 1, { depositedUnits: 1, purchased: 0 })).intro.dataLakes[1].purchased).toBe(1)
+      const afterReboot = rebootGame(withMoney(rebuilt, REBOOT_THRESHOLD))
+      expect(afterReboot.intro.poolResetCount).toBe(1)
+      expect(tickDataLakeAutoConvert(updateLake(afterReboot, 1, { depositedUnits: 1, purchased: 0 })).intro.dataLakes[1].purchased).toBe(1)
 
       let wall = updateLake(rebuilt, 1, { depositedUnits: 2000, purchased: 2000 })
       const second = resetStoragePool(1)(wall)
@@ -11335,7 +11335,7 @@ describe('Data Lakes', () => {
     })
   })
 
-  it('prestigeGame carries dataLakes (depositedUnits/fillBits/purchased/boostersUnlocked/autoConvertActive/capacityLevel) through a real Prestige unchanged', () => {
+  it('rebootGame carries dataLakes (depositedUnits/fillBits/purchased/boostersUnlocked/autoConvertActive/capacityLevel) through a real Prestige unchanged', () => {
     const seededLake = {
       depositedUnits: 3,
       fillBits: 456,
@@ -11348,9 +11348,9 @@ describe('Data Lakes', () => {
       withIntro(createInitialGameState(), {
         dataLakes: { ...createInitialGameState().intro.dataLakes, 1: seededLake },
       }),
-      PRESTIGE_THRESHOLD,
+      REBOOT_THRESHOLD,
     )
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.intro.dataLakes[1]).toEqual(seededLake)
     expect(after.intro.dataLakes[2]).toEqual(createInitialGameState().intro.dataLakes[2])
   })
@@ -11376,16 +11376,16 @@ describe('Data Lakes', () => {
   })
 })
 
-describe('prestigeGame unboundedUnlocked latch', () => {
-  it('sets prestige.unboundedUnlocked when Auto-Prestige is upgraded to 1 s or less', () => {
-    const slow = withMoney(withUnboundedPrestige(createInitialGameState(), 10), PRESTIGE_THRESHOLD)
-    expect(prestigeGame(slow).prestige.unboundedUnlocked).toBe(false)
-    expect(isUnboundedPrestigeUnlocked(slow)).toBe(false)
+describe('rebootGame unboundedUnlocked latch', () => {
+  it('sets reboot.unboundedUnlocked when Auto-Prestige is upgraded to 1 s or less', () => {
+    const slow = withMoney(withUnboundedReboot(createInitialGameState(), 10), REBOOT_THRESHOLD)
+    expect(rebootGame(slow).reboot.unboundedUnlocked).toBe(false)
+    expect(isUnboundedRebootUnlocked(slow)).toBe(false)
 
-    const state = withMoney(withUnboundedPrestige(createInitialGameState()), PRESTIGE_THRESHOLD)
-    const after = prestigeGame(state)
-    expect(after.prestige.unboundedUnlocked).toBe(true)
-    expect(isUnboundedPrestigeUnlocked(after)).toBe(true)
+    const state = withMoney(withUnboundedReboot(createInitialGameState()), REBOOT_THRESHOLD)
+    const after = rebootGame(state)
+    expect(after.reboot.unboundedUnlocked).toBe(true)
+    expect(isUnboundedRebootUnlocked(after)).toBe(true)
   })
 })
 
@@ -11395,7 +11395,7 @@ describe('Buy max mode', () => {
   it('unlocks only after the first Prestige (or any Era ascension)', () => {
     const state = createInitialGameState()
     expect(isBuyMaxUnlocked(state)).toBe(false)
-    expect(isBuyMaxUnlocked({ ...state, prestige: { ...state.prestige, count: 1 } })).toBe(true)
+    expect(isBuyMaxUnlocked({ ...state, reboot: { ...state.reboot, count: 1 } })).toBe(true)
     expect(isBuyMaxUnlocked({ ...state, era: { count: 1 } })).toBe(true)
   })
 
@@ -11426,7 +11426,7 @@ describe('Buy max mode', () => {
   })
 
   it('is a same-reference no-op while production is frozen', () => {
-    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 2)
+    const state = withMoney(createInitialGameState(), REBOOT_THRESHOLD * 2)
     expect(buyTierMaxLevels(tensTier.id)(state)).toBe(state)
     expect(getTierMaxLevelsPreview(state, tensTier.id)).toEqual({ levels: 0, cost: 0, lastLevelCost: 0, partialQuantity: 0, partialCost: 0 })
   })
@@ -11441,9 +11441,9 @@ describe('Buy max mode', () => {
   it('repeatPurchaseMax buys every affordable Double PP level', () => {
     const base = createInitialGameState()
     const points = getPrestigeDoublePpUpgradeCost(0) + getPrestigeDoublePpUpgradeCost(1)
-    const after = repeatPurchaseMax(buyPrestigeDoublePp)({ ...base, prestige: { ...base.prestige, points } })
+    const after = repeatPurchaseMax(buyPrestigeDoublePp)({ ...base, reboot: { ...base.reboot, points } })
     expect(after.prestigeDoublePpLevel).toBe(2)
-    expect(after.prestige.points).toBe(0)
+    expect(after.reboot.points).toBe(0)
   })
 })
 
@@ -11519,10 +11519,10 @@ describe('Upgrade Speed cross-system paths', () => {
     expect(upgradePoolSpeed(seeded({ capacity: 512, speedCapacity: 256, bits: 10 }))).toEqual(seeded({ capacity: 512, speedCapacity: 256, bits: 10 }))
   })
 
-  it('prestigeGame keeps speedCapacity; eraGame resets it with Capacity', () => {
-    const state = { ...seeded({ capacity: 512, speedCapacity: 256 }), resources: { ...createInitialGameState().resources, base: PRESTIGE_THRESHOLD } }
-    expect(prestigeGame(state).intro.speedCapacity).toBe(256)
-    const era = eraGame({ ...seeded({ capacity: 512, speedCapacity: 256 }), prestige: { ...createInitialGameState().prestige, points: ERA_ELIGIBILITY_PP } })
+  it('rebootGame keeps speedCapacity; eraGame resets it with Capacity', () => {
+    const state = { ...seeded({ capacity: 512, speedCapacity: 256 }), resources: { ...createInitialGameState().resources, base: REBOOT_THRESHOLD } }
+    expect(rebootGame(state).intro.speedCapacity).toBe(256)
+    const era = eraGame({ ...seeded({ capacity: 512, speedCapacity: 256 }), reboot: { ...createInitialGameState().reboot, points: ERA_ELIGIBILITY_PP } })
     expect(era.intro.speedCapacity).toBeUndefined()
   })
 
@@ -11618,9 +11618,9 @@ describe('Foundry-reset disk-size unlocks (rising Data Stream Speed exponent)', 
 
   it('unlocked steps survive Prestige and Reset Byte Foundry but reset on Era ascension', () => {
     const state = withIntro(createInitialGameState(), { byteCreated: true, unlockedDiskSteps: 5 })
-    expect(getUnlockedDiskSteps(prestigeGame(withMoney(state, PRESTIGE_THRESHOLD)).intro)).toBe(5)
+    expect(getUnlockedDiskSteps(rebootGame(withMoney(state, REBOOT_THRESHOLD)).intro)).toBe(5)
     expect(getUnlockedDiskSteps(resetByteFoundry(state).intro)).toBe(5)
-    const era = eraGame({ ...state, prestige: { ...state.prestige, points: ERA_ELIGIBILITY_PP } })
+    const era = eraGame({ ...state, reboot: { ...state.reboot, points: ERA_ELIGIBILITY_PP } })
     expect(getUnlockedDiskSteps(era.intro)).toBe(1)
   })
 
@@ -11851,7 +11851,7 @@ describe('Foundry-reset replay of Capacity / Speed upgrades (increasing cost ord
 
 const withPpForInterval = (points, autobuyer = 1) => {
   const s = createInitialGameState()
-  return { ...s, prestige: { ...s.prestige, points }, autobuyers: { ...s.autobuyers, tier01: autobuyer } }
+  return { ...s, reboot: { ...s.reboot, points }, autobuyers: { ...s.autobuyers, tier01: autobuyer } }
 }
 
 describe('autobuyer interval upgrade', () => {
@@ -11862,7 +11862,7 @@ describe('autobuyer interval upgrade', () => {
   it('multiplies the interval by 0.9 per level and caps at 10ms', () => {
     let s = withPpForInterval(1e30)
     s = buyAutobuyerIntervalUpgrade('tier01')(s)
-    expect(s.prestige.points).toBe(1e30 - 1)
+    expect(s.reboot.points).toBe(1e30 - 1)
     expect(getAutobuyerIntervalSeconds(s, 'tier01')).toBeCloseTo(0.9)
     const maxLevel = getAutobuyerIntervalMaxLevel('tier01')
     for (let i = 0; i < maxLevel; i++) s = buyAutobuyerIntervalUpgrade('tier01')(s)
@@ -11919,19 +11919,19 @@ describe('autobuyer interval upgrade', () => {
 
 describe('automation interval chains', () => {
   const base = () => createInitialGameState()
-  const withPoints = (state, points) => ({ ...state, prestige: { ...state.prestige, points } })
+  const withPoints = (state, points) => ({ ...state, reboot: { ...state.reboot, points } })
 
   it('start at the specified costs and intervals', () => {
     const s = base()
-    expect(['latency', 'scaleUp', 'overclock', 'prestige'].map(k => getAutomationIntervalUpgradeCost(k, 0))).toEqual([8, 16, 32, 64])
-    expect(['latency', 'scaleUp', 'overclock', 'prestige'].map(k => getAutomationIntervalSeconds(s, k))).toEqual([1, 64, 256, 1024])
+    expect(['speedUp', 'scaleUp', 'overclock', 'reboot'].map(k => getAutomationIntervalUpgradeCost(k, 0))).toEqual([8, 16, 32, 64])
+    expect(['speedUp', 'scaleUp', 'overclock', 'reboot'].map(k => getAutomationIntervalSeconds(s, k))).toEqual([1, 64, 256, 1024])
     expect(getTierTickspeedIntervalUpgradeCost(0)).toBe(2)
     expect(getTierTickspeedIntervalSeconds(s, 'tier01')).toBe(16)
   })
 
   it('double on the 125-based ladder and cap at 10ms', () => {
-    expect([6, 7, 8, 10].map(l => getAutomationIntervalUpgradeCost('latency', l))).toEqual([512, 1000, 2000, 8000])
-    for (const k of ['latency', 'scaleUp', 'overclock', 'prestige']) {
+    expect([6, 7, 8, 10].map(l => getAutomationIntervalUpgradeCost('speedUp', l))).toEqual([512, 1000, 2000, 8000])
+    for (const k of ['speedUp', 'scaleUp', 'overclock', 'reboot']) {
       const s = { ...base(), automationIntervalLevels: { ...base().automationIntervalLevels, [k]: getAutomationIntervalMaxLevel(k) } }
       expect(getAutomationIntervalSeconds(s, k)).toBe(0.01)
     }
@@ -11940,13 +11940,13 @@ describe('automation interval chains', () => {
 
   it('buying needs the automation unlocked and enough PP, then spends PP', () => {
     const locked = withPoints(base(), 100)
-    expect(buyAutomationIntervalUpgrade('latency')(locked)).toBe(locked)
+    expect(buyAutomationIntervalUpgrade('speedUp')(locked)).toBe(locked)
     const unlocked = withPoints({ ...base(), autoGlobalTickspeed: true }, 100)
-    const after = buyAutomationIntervalUpgrade('latency')(unlocked)
-    expect(after.prestige.points).toBe(92)
-    expect(after.automationIntervalLevels.latency).toBe(1)
+    const after = buyAutomationIntervalUpgrade('speedUp')(unlocked)
+    expect(after.reboot.points).toBe(92)
+    expect(after.automationIntervalLevels.speedUp).toBe(1)
     const poor = withPoints({ ...base(), autoGlobalTickspeed: true }, 7)
-    expect(buyAutomationIntervalUpgrade('latency')(poor)).toBe(poor)
+    expect(buyAutomationIntervalUpgrade('speedUp')(poor)).toBe(poor)
   })
 
   it('tier tickspeed chain needs the tier tickspeed autobuyer and costs 2 PP first', () => {
@@ -11954,7 +11954,7 @@ describe('automation interval chains', () => {
     expect(buyTierTickspeedIntervalUpgrade('tier01')(noAuto)).toBe(noAuto)
     const s = withPoints({ ...base(), tierTickspeedAutobuyer: { ...base().tierTickspeedAutobuyer, tier01: true } }, 10)
     const after = buyTierTickspeedIntervalUpgrade('tier01')(s)
-    expect(after.prestige.points).toBe(8)
+    expect(after.reboot.points).toBe(8)
     expect(after.tierTickspeedIntervalLevels.tier01).toBe(1)
   })
 
@@ -11966,17 +11966,17 @@ describe('automation interval chains', () => {
     expect(buyAutomationIntervalUpgrade('overclock')(withPoints({ ...base(), autoScaleUp: true }, 100)).automationIntervalLevels.overclock).toBe(0)
     const unlocked = buyAutoOverclock(withPoints({ ...base(), autoScaleUp: true }, 64))
     expect(unlocked.autoOverclock).toBe(true)
-    expect(unlocked.prestige.points).toBe(32)
+    expect(unlocked.reboot.points).toBe(32)
     const upgraded = buyAutomationIntervalUpgrade('overclock')(unlocked)
     expect(upgraded.automationIntervalLevels.overclock).toBe(1)
-    expect(upgraded.prestige.points).toBe(0)
+    expect(upgraded.reboot.points).toBe(0)
     expect(setAutoOverclockEnabled(false)(upgraded).autoOverclockEnabled).toBe(false)
   })
 
-  it('Latency autobuyer waits for its interval timer', () => {
-    const state = { ...base(), autoGlobalTickspeed: true, automationIntervalLevels: { ...base().automationIntervalLevels, latency: 0 } }
+  it('Speed Up autobuyer waits for its interval timer', () => {
+    const state = { ...base(), autoGlobalTickspeed: true, automationIntervalLevels: { ...base().automationIntervalLevels, speedUp: 0 } }
     const half = tickGame(0.5)(state)
-    expect(half.automationAttemptBudgets.latency).toBeCloseTo(0.5)
+    expect(half.automationAttemptBudgets.speedUp).toBeCloseTo(0.5)
   })
 })
 

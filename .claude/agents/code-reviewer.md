@@ -17,7 +17,7 @@ it. You are not the author's advocate, and the author's PR description/commit me
 to be falsified, not facts — verify each stated behavior against the code before believing it. A
 clean report must be earned by evidence ("I checked X, Y, Z and each holds because …"), never by
 running out of attention. For every changed behavior, actively construct the input, state, or
-sequence of events that would break it — locked tiers, frozen production, `prestige.count === 0`,
+sequence of events that would break it — locked tiers, frozen production, `reboot.count === 0`,
 a legacy save missing new state keys, tier01's special cases, StrictMode double-render, fractional
 0.1s ticks summing with float drift, an autobuyer with 0 owned generators — and check the code
 survives it.
@@ -67,11 +67,11 @@ documented invariants the diff could plausibly violate. The recurring high-value
   a possibly-fractional multiplier must be floored ("Multiplier outcomes are floored"), while
   attempt-budget accumulators are deliberately fractional and must **not** be floored.
 - **Frozen-state discipline**: once `isProductionFrozen`, every mutating action except
-  `prestigeGame` (and Auto-Prestige's budget accumulation) must no-op — check any new action
+  `rebootGame` (and Auto-Prestige's budget accumulation) must no-op — check any new action
   respects this in the engine, not just via a disabled button.
-- **Prestige reset boundary**: which state is wiped by `prestigeGame` vs. permanent
+- **Prestige reset boundary**: which state is wiped by `rebootGame` vs. permanent
   meta-progression is enumerated in `docs/ECONOMY_REFERENCE.md`'s "Game state shape" section — a new
-  state field must explicitly pick a side, and `prestigeGame`/`createInitialGameState`/`storage.js`
+  state field must explicitly pick a side, and `rebootGame`/`createInitialGameState`/`storage.js`
   migration must all agree.
 - **Save-data compatibility** (`src/game/storage.js`): renamed/removed/added state keys need
   migration coverage so an existing player's save loads without silently orphaning data.

@@ -1,5 +1,5 @@
 import { applyFlopsAutobuyerMilestones, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
-import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
+import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES, REBOOT_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 
@@ -531,8 +531,8 @@ const mergeState = saved => {
     lastTierTickspeedXpUnlocked: _removed,
     // Removed mechanics (autobuyer bulk modes, Auto-Prestige Autobuyer) — stripped so legacy saves don't keep dead keys.
     autobuyerBulkLevels: _removedBulk,
-    autoPrestigeAutobuyer: _removedAutoPrestigeAutobuyer,
-    autoPrestigeAutobuyerEnabled: _removedAutoPrestigeAutobuyerEnabled,
+    autoRebootAutobuyer: _removedAutoPrestigeAutobuyer,
+    autoRebootAutobuyerEnabled: _removedAutoPrestigeAutobuyerEnabled,
     speedUpCount: legacySpeedUpCount,
     autoSpeedUp: legacyAutoSpeedUp,
     autoSpeedUpEnabled: legacyAutoSpeedUpEnabled,
@@ -590,11 +590,11 @@ const mergeState = saved => {
     tierTickspeedAutobuyer: mergeTierMap(fresh.tierTickspeedAutobuyer, saved.tierTickspeedAutobuyer),
     tierTickspeedAutobuyerEnabled: mergeTierMap(fresh.tierTickspeedAutobuyerEnabled, saved.tierTickspeedAutobuyerEnabled),
     everUnlockedTierIds: mergeTierMap(fresh.everUnlockedTierIds, saved.everUnlockedTierIds),
-    prestige: {
-      ...fresh.prestige,
-      ...(saved.prestige ?? {}),
-      unboundedUnlocked: Boolean(saved.prestige?.unboundedUnlocked)
-        || Math.max(0, Number(saved.prestige?.count) || 0) >= PRESTIGE_UNBOUNDED_MIN_COUNT,
+    reboot: {
+      ...fresh.reboot,
+      ...(saved.reboot ?? {}),
+      unboundedUnlocked: Boolean(saved.reboot?.unboundedUnlocked)
+        || Math.max(0, Number(saved.reboot?.count) || 0) >= REBOOT_UNBOUNDED_MIN_COUNT,
     },
     era: { ...fresh.era, ...(saved.era ?? {}) },
     eons: { ...fresh.eons, ...(saved.eons ?? {}) },
@@ -617,7 +617,7 @@ const mergeState = saved => {
     }, pendingComputeGrants),
     computeFlops: {
       pageUnlocked: Boolean(saved.computeFlops?.pageUnlocked)
-        || Math.max(0, Number(saved.prestige?.points) || 0) >= COMPUTE_FLOPS_REVEAL_PP,
+        || Math.max(0, Number(saved.reboot?.points) || 0) >= COMPUTE_FLOPS_REVEAL_PP,
       owned: { ...fresh.computeFlops.owned, ...(saved.computeFlops?.owned ?? {}) },
       cumulativeBoost: { ...fresh.computeFlops.cumulativeBoost, ...(saved.computeFlops?.cumulativeBoost ?? {}) },
     },

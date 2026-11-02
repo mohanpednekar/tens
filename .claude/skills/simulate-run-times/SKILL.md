@@ -25,9 +25,9 @@ If unsure whether a change is significant, re-run and publish.
 
 ## What it does
 
-For each requested scenario it plays from `createInitialGameState()` (or a post-`prestigeGame`
+For each requested scenario it plays from `createInitialGameState()` (or a post-`rebootGame`
 carry in career mode) to the instant `isProductionFrozen` becomes true (Money reaches
-`PRESTIGE_THRESHOLD` = 1 Googol Bytes in Bits), counting simulated ticks (each tick = 1 real second
+`REBOOT_THRESHOLD` = 1 Googol Bytes in Bits), counting simulated ticks (each tick = 1 real second
 at the game's fixed `TICK_RATE_MS`). It uses the actual, current `src/game/engine.js`/
 `src/game/layers.js` source — not a reimplementation — so results automatically reflect any
 balance changes made to the engine.
@@ -74,7 +74,7 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   Default sweep: early-stop floor / true hard cap / `unlimited`. Reports end capacity, cores ever
   earned, and disks built alongside Foundry / Main / total times.
 - **Autobuyers wherever applicable:** tiers whose `autobuyers[tierId]` is non-null (from
-  `applyAutobuyerMilestones` keyed on `prestige.count` — 1 prestige for tier01, …, 10 for tier10)
+  `applyAutobuyerMilestones` keyed on `reboot.count` — 1 prestige for tier01, …, 10 for tier10)
   are left to `tickGame`'s autobuyer loop with the real `BUY_QUANTITY = Number.MAX_SAFE_INTEGER`
   batch (same sentinel `useIncrementalGame.js` uses — not a literal 10).
 - **Manual clicks where waiting would stall:** `buyTierQuantity` on any tier with no autobuyer yet,
@@ -96,7 +96,7 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   remainder. Other PP automations (Smart, Auto-Scale-Up, Auto-Prestige, tickspeed autobuyer) are
   **not** bought — those are separate levers; say so rather than silently enabling them if the
   user asks about those specifically.
-- Career mode calls `prestigeGame` between cycles so permanent Foundry upgrades and
+- Career mode calls `rebootGame` between cycles so permanent Foundry upgrades and
   prestige-count autobuyer milestones carry forward for real.
 
 ## Usage

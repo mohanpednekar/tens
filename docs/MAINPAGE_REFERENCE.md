@@ -319,7 +319,7 @@ through `formatDiskSize` (SI, since the cost is itself a fixed multiple of that 
 bit amount actually spent out of Memory's own binary-scaled balance renders through
 `formatBitsInNearestUnit` (binary) instead.
 A real Prestige resets Memory (`bits`/`productionAccumulator`) back to fresh — along with tier01's
-own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in docs/ECONOMY_REFERENCE.md) — but
+own `purchaseLevels`/`purchaseLevelProgress` (see `rebootGame` in docs/ECONOMY_REFERENCE.md) — but
 NOT the main-game-unlock gate (`mainGameUnlocked`) any more: that's now a PERMANENT, one-time-ever
 latch (`latchMainGameUnlocked`), never reset by a real Prestige or an Era ascension. So this page's
 gate only ever reappears once, on a save's very first cycle — every cycle after that starts with
@@ -579,8 +579,8 @@ live inside the selected tier):
   between the two cards): once scrolled past their normal position they pin to the viewport top and
   compress into a compact side-by-side bar, detected via an IntersectionObserver on a zero-height
   `BalancesSentinel` (falls back to always-expanded when IntersectionObserver is unavailable, e.g.
-  jsdom); the stick position drops below `TopPrestigeBar` when it's showing, by that bar's own
-  live-measured height (`topPrestigeBarHeight`, see below) rather than a guessed constant, to avoid
+  jsdom); the stick position drops below `TopRebootBar` when it's showing, by that bar's own
+  live-measured height (`topRebootBarHeight`, see below) rather than a guessed constant, to avoid
   underlap. There is no aggregate `+X/sec` line — each tier row's own `+X` figure is the per-tier
   replacement. In the compressed side-by-side layout, `CenteredCard`'s `align-items: center` (needed
   so its content centers when expanded) would otherwise let a flex-column child shrink-wrap to its own
@@ -594,17 +594,17 @@ live inside the selected tier):
   percentage below +100%, an `"Nx"` multiplier at/above it, see "Percentages vs. multipliers" below),
   but — being always-visible, sticky chrome rather than an expandable disclosure — omits the "production
   speed bonus locked" caveat before it's bought; that fuller wording used to also show in the bottom
-  `PrestigeCard`'s expandable description before that whole card was removed (see "Prestige and the
+  `RebootCard`'s expandable description before that whole card was removed (see "Prestige and the
   Googol freeze" below) as purely informational and redundant with this button. Once Prestige is
-  actually available (`canPrestige`, i.e. Money `>= PRESTIGE_THRESHOLD`), the PP display card itself doubles as a
+  actually available (`canReboot`, i.e. Money `>= REBOOT_THRESHOLD`), the PP display card itself doubles as a
   Prestige button — the whole card gets `role="button"`, `tabIndex={0}`, an Enter/Space `onKeyDown`
-  handler, `onClick={actions.prestige}`, and a `title` ("Awards Prestige Points and resets your
+  handler, `onClick={actions.reboot}`, and a `title` ("Awards Prestige Points and resets your
   resources", the same wording used on every other Prestige button), driven by a `$actionable` prop on
   `CenteredCard` (cursor/hover/focus-visible styling only — its outline color is `theme.color.warn`, the
   same "prestige gold" token `Button`'s own `prestige` variant resolves to — no visible border/color
   change otherwise, since the disabled/enabled convention used elsewhere in the app relies on button
   `color`, which this plain `<section>` doesn't have). It's an additional, optional way to trigger
-  Prestige alongside the `TopPrestigeBar`/`FullScreenOverlay` buttons. Before `canPrestige`, none of
+  Prestige alongside the `TopRebootBar`/`FullScreenOverlay` buttons. Before `canReboot`, none of
   these props are set, so the card stays a plain, non-interactive display exactly as before. The Money
   display card never gets `$actionable` — only the PP display can trigger Prestige.
 - **Money hero + byte-power / Prestige progress.** The Money `CenteredCard` renders a `MoneyHero`
@@ -633,17 +633,17 @@ live inside the selected tier):
   Bytes via `getNextBytePowerProgressFraction` (Bits toward `nextPowerBytes × BITS_PER_BYTE`; each
   segment is 12.5% and fills progressively within that band — e.g. 5e7 Bytes → 4/8 filled). Paired
   with a `VisuallyHidden role="progressbar"` (`aria-label="progress toward the next power of ten
-  Bytes"`). Prestige progress no longer lives in this card: a separate `PrestigeProgressBar` is
+  Bytes"`). Prestige progress no longer lives in this card: a separate `RebootProgressBar` is
   pinned via `position: fixed` just above `AppNav` (`bottom: APP_NAV_BOTTOM_PAD`, imported from
   `components/AppNav`), always visible regardless of scroll position — `RootDiv`'s own bottom
-  padding reserves a fixed `PRESTIGE_PROGRESS_BAR_HEIGHT` (2.5rem, single-line, never wraps) so
-  page content never scrolls out from underneath it. Its `PrestigeProgressTrack` renders the
-  `"N% to Prestige"` label (`PrestigeProgressLabel`) INSIDE the bar itself, centered over a
+  padding reserves a fixed `REBOOT_PROGRESS_BAR_HEIGHT` (2.5rem, single-line, never wraps) so
+  page content never scrolls out from underneath it. Its `RebootProgressTrack` renders the
+  `"N% to Reboot"` label (`RebootProgressLabel`) INSIDE the bar itself, centered over a
   `progressFill` gradient (imported from `components/Button`, `$progressColor:
   theme.color.accent`) — the same low-alpha progress-fill convention the Buy/Upgrade buttons use
   for their own cost-progress fills, already contrast-validated for `theme.color.text` on top of
   it (see `tokens.contrast.test.js`) — rather than a separate label rendered below a solid fill
-  bar. Its own `VisuallyHidden role="progressbar"` reuses `getPrestigeProgressPercent`.
+  bar. Its own `VisuallyHidden role="progressbar"` reuses `getRebootProgressPercent`.
 - **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
   `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
   `TierList`/`ScaleUpCard`/`GlobalTickspeedCard`) — token-driven
@@ -708,7 +708,7 @@ live inside the selected tier):
   affordable level per click in that mode (`repeatPurchaseMax`). Renders its cost-block progress as an
   on-button gradient fill via `Button`'s `$progress`/`$secondaryProgress` props (green = units already
   bought this level, amber = units affordable now but not yet bought). Prestige gets the same single-tone fill
-  treatment (spendable ÷ cost, or `prestigeProgressPercent`), and both pulse (`$pulse`) when
+  treatment (spendable ÷ cost, or `rebootProgressPercent`), and both pulse (`$pulse`) when
   actionable. Every PP-spending button (per-tier speed upgrades, Auto Scale Up, Unlock Speed Bonus,
   Auto-Reboot — all on the Perks page) carries the same single-tone fill (unspent PP ÷ that
   button's cost, `ppProgressPercent`), each nesting a `VisuallyHidden` `role="progressbar"`
@@ -737,7 +737,7 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
 - 🔓 **Unlocks** (`open unlocks`, `aria-label="PP unlocks page"`) — everything bought or earned once:
   - *Tier Autobuyers*: one row per tier (`"<tier> PP unlocks"`, all ten, even before the tier is
     reachable this run) with a `MilestoneBadge` for its ⚙ tickspeed autobuyer and 🤖 autobuyer
-    (`"<tier>'s … unlocked at Prestige N"` once reached, else `"… unlocks at Prestige N"` + hidden
+    (`"<tier>'s … unlocked at Reboot N"` once reached, else `"… unlocks at Reboot N"` + hidden
     milestone progressbar). Rows never disappear, so reached milestones stay visible as unlock history.
   - *Global Automation* — a strict sequence, every row always listed, each purchasable only once the previous is
     owned (engine-enforced): Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Reboot. PP button (disabled until the previous step is bought), or an `UnlockedBadge`
@@ -745,7 +745,7 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
     Autobuyer** row (`XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` = 16 PP, no prerequisite, `buyXpTickspeedAutobuyer`)
     sits between Auto Overclock and Auto-Reboot.
   - *Compute Automation* (Auto-Boost, once Foundry Compute unlocks), *Production Bonuses* (until bought), *Compute Autobuyers* (Era-milestone badges, once the Flops page
-    is unlocked), and *Prestige* (DeGoogol: locked until Auto-Reboot's interval ≤ `UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS`).
+    is unlocked), and *Prestige* (DeGoogol: locked until Auto-Reboot's interval ≤ `UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS`).
   Each milestone appears only here — `MilestonesPage` no longer repeats them.
 - ⏫ **Upgrades** (`open upgrades`, `aria-label="PP upgrades page"`) — repeatable leveled purchases:
   Double PP, and the speed chains. A tier autobuyer's *Autobuyer Speed* row shows `every <interval>`, and once
@@ -879,8 +879,8 @@ the first tier — see "Scale Up" in docs/ECONOMY_REFERENCE.md — rather than s
 tier the way it used to). `getScaleUpTargetTier(state)` (`engine.js`) determines which tier's name/
 level the card's button currently reads against; `getScaleUpRequirement(state)` determines the
 level it requires. There is no equivalent card for Prestige — the bottom Prestige panel that used to
-mirror this pattern (via a `prestigeCardEverRevealed` flag) was removed as purely informational and
-redundant with the `TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button ways to trigger Prestige
+mirror this pattern (via a `rebootCardEverRevealed` flag) was removed as purely informational and
+redundant with the `TopRebootBar`/`FullScreenOverlay`/PP-display-as-button ways to trigger Prestige
 (see "Prestige and the Googol freeze" below).
 
 Player-facing purchase levels on both reset cards are zero-indexed **completed-level** counts: the
@@ -1092,13 +1092,13 @@ Self-dismisses via a countdown (`OFFLINE_NOTICE_AUTO_DISMISS_MS`, 10s) driving t
 `dismissOfflineProgress` removes it.
 
 **Prestige surfaces (#139).** The first-run freeze uses `FullScreenOverlay` (`role="dialog"`
-`aria-modal="true"` `aria-label="Prestige required"`) with a dark scrim (`rgba(0,0,0,0.92)`) and a
+`aria-modal="true"` `aria-label="Reboot required"`) with a dark scrim (`rgba(0,0,0,0.92)`) and a
 token-driven `FullScreenCard` (`surfaceRaised` panel, `warn` heading via `font.display`/`type.scale.xl`,
-`PrestigeMutedText` body, `textMuted` bullet list). Repeat-run reminders use `TopPrestigeBar`
-(`surfaceRaised` + `warn` bottom border + `shadow.sm`) with the same `PrestigeMutedText` + a
+`RebootMutedText` body, `textMuted` bullet list). Repeat-run reminders use `TopRebootBar`
+(`surfaceRaised` + `warn` bottom border + `shadow.sm`) with the same `RebootMutedText` + a
 `variant="prestige"` `$pulse` button. Both prestige buttons keep their existing `aria-label`s; the
 full-screen button still auto-focuses on mount. Presentation gates (`showFullScreenPrompt` /
-`showTopPrestigeBar`) are unchanged.
+`showTopRebootBar`) are unchanged.
 
 Once `isProductionFrozen(state)` is true, every control except Prestige disables — see "Prestige and
 the Googol freeze" below.
