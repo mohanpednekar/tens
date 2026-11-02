@@ -594,7 +594,7 @@ live inside the selected tier):
   percentage below +100%, an `"Nx"` multiplier at/above it, see "Percentages vs. multipliers" below),
   but — being always-visible, sticky chrome rather than an expandable disclosure — omits the "production
   speed bonus locked" caveat before it's bought; that fuller wording used to also show in the bottom
-  `RebootCard`'s expandable description before that whole card was removed (see "Prestige and the
+  `PrestigeCard`'s expandable description before that whole card was removed (see "Prestige and the
   Googol freeze" below) as purely informational and redundant with this button. Once Prestige is
   actually available (`canReboot`, i.e. Money `>= REBOOT_THRESHOLD`), the PP display card itself doubles as a
   Prestige button — the whole card gets `role="button"`, `tabIndex={0}`, an Enter/Space `onKeyDown`

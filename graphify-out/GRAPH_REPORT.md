@@ -203,7 +203,7 @@ Nodes (48): types, concurrency, cancel-in-progress, group, CHECK_SUITE_BRANCH, C
 
 ### Community 12 - "run-simulation.mjs"
 Cohesion: 0.15
-Nodes (22): actMainBuys(), actPlayer(), actSpeedBonus(), actTickspeed(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerPrestiges, defaultPPValues (+14 more)
+Nodes (22): actMainBuys(), actPlayer(), actSpeedBonus(), actTickspeed(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerReboots, defaultPPValues (+14 more)
 
 ### Community 13 - "ComputePage"
 Cohesion: 0.20
@@ -211,7 +211,7 @@ Nodes (19): Compute Boost: Reclaim and Forfeit made mutually exclusive — 2026-
 
 ### Community 14 - "DevModePage/index.jsx"
 Cohesion: 0.14
-Nodes (22): COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_THRESHOLD, ButtonGrid, coerceDraft(), Details, DevModePage(), FieldLabel, FieldNode() (+14 more)
+Nodes (22): COMPUTE_FLOPS_REVEAL_PP, REBOOT_THRESHOLD, ButtonGrid, coerceDraft(), Details, DevModePage(), FieldLabel, FieldNode() (+14 more)
 
 ### Community 15 - "engine.js"
 Cohesion: 0.06
@@ -223,7 +223,7 @@ Nodes (39): concurrency, cancel-in-progress, group, GH_TOKEN, RUN_CONCLUSION, RU
 
 ### Community 17 - "App.test.jsx"
 Cohesion: 0.06
-Nodes (34): vitest@^5.0.4, vitest, ALL_TIER_IDS, allTiersSmartSeed(), derivePurchaseFieldsFromCounts(), seedMainGameState(), AUTO_PRESTIGE_AUTOBUYER_COST, BITS_PER_BYTE (+26 more)
+Nodes (34): vitest@^5.0.4, vitest, ALL_TIER_IDS, allTiersSmartSeed(), derivePurchaseFieldsFromCounts(), seedMainGameState(), AUTO_REBOOT_AUTOBUYER_COST, BITS_PER_BYTE (+26 more)
 
 ### Community 18 - "InfoPage/index.jsx"
 Cohesion: 0.10
@@ -439,7 +439,7 @@ Nodes (3): End-to-end specs (Playwright), Updating baselines when a PR intention
 
 ### Community 84 - "createInitialGameState"
 Cohesion: 0.14
-Nodes (36): 2. Load the repo's invariants, End-to-end testing, actSoftResets(), Testing, Byte Foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile — 2026-09-02, Era ascension and Eons — meta-prestige above Unbounded (#407 / #405), Migration in `src/save-migration/`, runs on every load — 2026-08-22, `prestigeGame` wiped era/eons/hyperscalerCount/eonsUpgrades/Flops-autobuyer state on every ordinary Prestige (#626) — 2026-09-09 (+28 more)
+Nodes (36): 2. Load the repo's invariants, End-to-end testing, actSoftResets(), Testing, Byte Foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile — 2026-09-02, Era ascension and Eons — meta-prestige above Unbounded (#407 / #405), Migration in `src/save-migration/`, runs on every load — 2026-08-22, `rebootGame` wiped era/eons/hyperscalerCount/eonsUpgrades/Flops-autobuyer state on every ordinary Prestige (#626) — 2026-09-09 (+28 more)
 
 ### Community 85 - "getPoolBufferBits"
 Cohesion: 0.12

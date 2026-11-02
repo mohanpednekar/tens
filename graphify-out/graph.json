@@ -1208,26 +1208,26 @@
       "source_location": "L6589"
     },
     {
-      "id": "src_game_engine_setautoprestigeautobuyerenabled",
-      "label": "setAutoPrestigeAutobuyerEnabled()",
+      "id": "src_game_engine_setautorebootautobuyerenabled",
+      "label": "setAutoRebootAutobuyerEnabled()",
       "_callable": true,
       "_origin": "ast",
       "community": 15,
       "community_name": "engine.js",
       "file_type": "code",
-      "norm_label": "setautoprestigeautobuyerenabled()",
+      "norm_label": "setautorebootautobuyerenabled()",
       "source_file": "src/game/engine.js",
       "source_location": "L6686"
     },
     {
-      "id": "src_game_engine_setautoprestigeenabled",
-      "label": "setAutoPrestigeEnabled()",
+      "id": "src_game_engine_setautorebootenabled",
+      "label": "setAutoRebootEnabled()",
       "_callable": true,
       "_origin": "ast",
       "community": 15,
       "community_name": "engine.js",
       "file_type": "code",
-      "norm_label": "setautoprestigeenabled()",
+      "norm_label": "setautorebootenabled()",
       "source_file": "src/game/engine.js",
       "source_location": "L6655"
     },
@@ -4578,14 +4578,14 @@
       "source_location": "L1479"
     },
     {
-      "id": "src_game_engine_isunboundedprestigeunlocked",
-      "label": "isUnboundedPrestigeUnlocked()",
+      "id": "src_game_engine_isunboundedrebootunlocked",
+      "label": "isUnboundedRebootUnlocked()",
       "_callable": true,
       "_origin": "ast",
       "community": 35,
       "community_name": "isProductionFrozen",
       "file_type": "code",
-      "norm_label": "isunboundedprestigeunlocked()",
+      "norm_label": "isunboundedrebootunlocked()",
       "source_file": "src/game/engine.js",
       "source_location": "L1461"
     },
@@ -6102,26 +6102,26 @@
       "source_location": "L6574"
     },
     {
-      "id": "src_game_engine_buyautoprestige",
-      "label": "buyAutoPrestige()",
+      "id": "src_game_engine_buyautoreboot",
+      "label": "buyAutoReboot()",
       "_callable": true,
       "_origin": "ast",
       "community": 46,
       "community_name": "Key engine functions (`src/game/engine.js`)",
       "file_type": "code",
-      "norm_label": "buyautoprestige()",
+      "norm_label": "buyautoreboot()",
       "source_file": "src/game/engine.js",
       "source_location": "L6634"
     },
     {
-      "id": "src_game_engine_buyautoprestigeautobuyer",
-      "label": "buyAutoPrestigeAutobuyer()",
+      "id": "src_game_engine_buyautorebootautobuyer",
+      "label": "buyAutoRebootAutobuyer()",
       "_callable": true,
       "_origin": "ast",
       "community": 46,
       "community_name": "Key engine functions (`src/game/engine.js`)",
       "file_type": "code",
-      "norm_label": "buyautoprestigeautobuyer()",
+      "norm_label": "buyautorebootautobuyer()",
       "source_file": "src/game/engine.js",
       "source_location": "L6668"
     },
@@ -6162,26 +6162,26 @@
       "source_location": "L1199"
     },
     {
-      "id": "src_game_engine_buyprestigedoublepp",
+      "id": "src_game_engine_buyrebootdoublepp",
       "label": "buyPrestigeDoublePp()",
       "_callable": true,
       "_origin": "ast",
       "community": 46,
       "community_name": "Key engine functions (`src/game/engine.js`)",
       "file_type": "code",
-      "norm_label": "buyprestigedoublepp()",
+      "norm_label": "buyrebootdoublepp()",
       "source_file": "src/game/engine.js",
       "source_location": "L1355"
     },
     {
-      "id": "src_game_engine_buyprestigespeedbonus",
+      "id": "src_game_engine_buyrebootspeedbonus",
       "label": "buyPrestigeSpeedBonus()",
       "_callable": true,
       "_origin": "ast",
       "community": 46,
       "community_name": "Key engine functions (`src/game/engine.js`)",
       "file_type": "code",
-      "norm_label": "buyprestigespeedbonus()",
+      "norm_label": "buyrebootspeedbonus()",
       "source_file": "src/game/engine.js",
       "source_location": "L994"
     },
@@ -6270,14 +6270,14 @@
       "source_location": "L1448"
     },
     {
-      "id": "src_game_engine_getautoprestigeattemptrate",
-      "label": "getAutoPrestigeAttemptRate()",
+      "id": "src_game_engine_getautorebootattemptrate",
+      "label": "getAutoRebootAttemptRate()",
       "_callable": true,
       "_origin": "ast",
       "community": 46,
       "community_name": "Key engine functions (`src/game/engine.js`)",
       "file_type": "code",
-      "norm_label": "getautoprestigeattemptrate()",
+      "norm_label": "getautorebootattemptrate()",
       "source_file": "src/game/engine.js",
       "source_location": "L1453"
     },
@@ -6330,86 +6330,86 @@
       "source_location": "L1491"
     },
     {
-      "id": "src_game_engine_getprestigedoublepphalvinglevels",
+      "id": "src_game_engine_getrebootdoublepphalvinglevels",
       "label": "getPrestigeDoublePpHalvingLevels()",
       "_callable": true,
       "_origin": "ast",
       "community": 46,
       "community_name": "Key engine functions (`src/game/engine.js`)",
       "file_type": "code",
-      "norm_label": "getprestigedoublepphalvinglevels()",
+      "norm_label": "getrebootdoublepphalvinglevels()",
       "source_file": "src/game/engine.js",
       "source_location": "L1566"
     },
     {
-      "id": "src_game_engine_getprestigepointsawarded",
+      "id": "src_game_engine_getrebootpointsawarded",
       "label": "getPrestigePointsAwarded()",
       "_callable": true,
       "_origin": "ast",
       "community": 46,
       "community_name": "Key engine functions (`src/game/engine.js`)",
       "file_type": "code",
-      "norm_label": "getprestigepointsawarded()",
+      "norm_label": "getrebootpointsawarded()",
       "source_file": "src/game/engine.js",
       "source_location": "L1583"
     },
     {
-      "id": "src_game_engine_getprestigepowersperpp",
+      "id": "src_game_engine_getrebootpowersperpp",
       "label": "getPrestigePowersPerPp()",
       "_callable": true,
       "_origin": "ast",
       "community": 46,
       "community_name": "Key engine functions (`src/game/engine.js`)",
       "file_type": "code",
-      "norm_label": "getprestigepowersperpp()",
+      "norm_label": "getrebootpowersperpp()",
       "source_file": "src/game/engine.js",
       "source_location": "L1568"
     },
     {
-      "id": "src_game_engine_getprestigeppearnprogresspercent",
+      "id": "src_game_engine_getrebootppearnprogresspercent",
       "label": "getPrestigePpEarnProgressPercent()",
       "_callable": true,
       "_origin": "ast",
       "community": 46,
       "community_name": "Key engine functions (`src/game/engine.js`)",
       "file_type": "code",
-      "norm_label": "getprestigeppearnprogresspercent()",
+      "norm_label": "getrebootppearnprogresspercent()",
       "source_file": "src/game/engine.js",
       "source_location": "L1597"
     },
     {
-      "id": "src_game_engine_getprestigeppperpower",
+      "id": "src_game_engine_getrebootppperpower",
       "label": "getPrestigePpPerPower()",
       "_callable": true,
       "_origin": "ast",
       "community": 46,
       "community_name": "Key engine functions (`src/game/engine.js`)",
       "file_type": "code",
-      "norm_label": "getprestigeppperpower()",
+      "norm_label": "getrebootppperpower()",
       "source_file": "src/game/engine.js",
       "source_location": "L1574"
     },
     {
-      "id": "src_game_engine_getprestigeproductionmultiplier",
+      "id": "src_game_engine_getrebootproductionmultiplier",
       "label": "getPrestigeProductionMultiplier()",
       "_callable": true,
       "_origin": "ast",
       "community": 46,
       "community_name": "Key engine functions (`src/game/engine.js`)",
       "file_type": "code",
-      "norm_label": "getprestigeproductionmultiplier()",
+      "norm_label": "getrebootproductionmultiplier()",
       "source_file": "src/game/engine.js",
       "source_location": "L987"
     },
     {
-      "id": "src_game_engine_getprestigeprogresspercent",
-      "label": "getPrestigeProgressPercent()",
+      "id": "src_game_engine_getrebootprogresspercent",
+      "label": "getRebootProgressPercent()",
       "_callable": true,
       "_origin": "ast",
       "community": 46,
       "community_name": "Key engine functions (`src/game/engine.js`)",
       "file_type": "code",
-      "norm_label": "getprestigeprogresspercent()",
+      "norm_label": "getrebootprogresspercent()",
       "source_file": "src/game/engine.js",
       "source_location": "L1497"
     },
@@ -6893,62 +6893,62 @@
       "source_location": "L474"
     },
     {
-      "id": "src_game_engine_test_withautoprestige",
-      "label": "withAutoPrestige()",
+      "id": "src_game_engine_test_withautoreboot",
+      "label": "withAutoReboot()",
       "_callable": true,
       "_origin": "ast",
       "community": 6,
       "community_name": "engine.test.js",
       "file_type": "code",
-      "norm_label": "withautoprestige()",
+      "norm_label": "withautoreboot()",
       "source_file": "src/game/engine.test.js",
       "source_location": "L428"
     },
     {
-      "id": "src_game_engine_test_withautoprestigeautobuyer",
-      "label": "withAutoPrestigeAutobuyer()",
+      "id": "src_game_engine_test_withautorebootautobuyer",
+      "label": "withAutoRebootAutobuyer()",
       "_callable": true,
       "_origin": "ast",
       "community": 6,
       "community_name": "engine.test.js",
       "file_type": "code",
-      "norm_label": "withautoprestigeautobuyer()",
+      "norm_label": "withautorebootautobuyer()",
       "source_file": "src/game/engine.test.js",
       "source_location": "L484"
     },
     {
-      "id": "src_game_engine_test_withautoprestigeautobuyerenabled",
-      "label": "withAutoPrestigeAutobuyerEnabled()",
+      "id": "src_game_engine_test_withautorebootautobuyerenabled",
+      "label": "withAutoRebootAutobuyerEnabled()",
       "_callable": true,
       "_origin": "ast",
       "community": 6,
       "community_name": "engine.test.js",
       "file_type": "code",
-      "norm_label": "withautoprestigeautobuyerenabled()",
+      "norm_label": "withautorebootautobuyerenabled()",
       "source_file": "src/game/engine.test.js",
       "source_location": "L489"
     },
     {
-      "id": "src_game_engine_test_withautoprestigebudget",
-      "label": "withAutoPrestigeBudget()",
+      "id": "src_game_engine_test_withautorebootbudget",
+      "label": "withAutoRebootBudget()",
       "_callable": true,
       "_origin": "ast",
       "community": 6,
       "community_name": "engine.test.js",
       "file_type": "code",
-      "norm_label": "withautoprestigebudget()",
+      "norm_label": "withautorebootbudget()",
       "source_file": "src/game/engine.test.js",
       "source_location": "L433"
     },
     {
-      "id": "src_game_engine_test_withautoprestigeenabled",
-      "label": "withAutoPrestigeEnabled()",
+      "id": "src_game_engine_test_withautorebootenabled",
+      "label": "withAutoRebootEnabled()",
       "_callable": true,
       "_origin": "ast",
       "community": 6,
       "community_name": "engine.test.js",
       "file_type": "code",
-      "norm_label": "withautoprestigeenabled()",
+      "norm_label": "withautorebootenabled()",
       "source_file": "src/game/engine.test.js",
       "source_location": "L479"
     },
@@ -7121,38 +7121,38 @@
       "source_location": "L12208"
     },
     {
-      "id": "src_game_engine_test_withprestigecount",
-      "label": "withPrestigeCount()",
+      "id": "src_game_engine_test_withrebootcount",
+      "label": "withRebootCount()",
       "_callable": true,
       "_origin": "ast",
       "community": 6,
       "community_name": "engine.test.js",
       "file_type": "code",
-      "norm_label": "withprestigecount()",
+      "norm_label": "withrebootcount()",
       "source_file": "src/game/engine.test.js",
       "source_location": "L403"
     },
     {
-      "id": "src_game_engine_test_withprestigepoints",
+      "id": "src_game_engine_test_withrebootpoints",
       "label": "withPrestigePoints()",
       "_callable": true,
       "_origin": "ast",
       "community": 6,
       "community_name": "engine.test.js",
       "file_type": "code",
-      "norm_label": "withprestigepoints()",
+      "norm_label": "withrebootpoints()",
       "source_file": "src/game/engine.test.js",
       "source_location": "L398"
     },
     {
-      "id": "src_game_engine_test_withprestigespeedbonusunlocked",
+      "id": "src_game_engine_test_withrebootspeedbonusunlocked",
       "label": "withPrestigeSpeedBonusUnlocked()",
       "_callable": true,
       "_origin": "ast",
       "community": 6,
       "community_name": "engine.test.js",
       "file_type": "code",
-      "norm_label": "withprestigespeedbonusunlocked()",
+      "norm_label": "withrebootspeedbonusunlocked()",
       "source_file": "src/game/engine.test.js",
       "source_location": "L443"
     },
@@ -7577,14 +7577,14 @@
       "source_location": "L6506"
     },
     {
-      "id": "src_game_engine_getprestigedoubleppupgradecost",
+      "id": "src_game_engine_getrebootdoubleppupgradecost",
       "label": "getPrestigeDoublePpUpgradeCost()",
       "_callable": true,
       "_origin": "ast",
       "community": 63,
       "community_name": "PerksPage/index.jsx",
       "file_type": "code",
-      "norm_label": "getprestigedoubleppupgradecost()",
+      "norm_label": "getrebootdoubleppupgradecost()",
       "source_file": "src/game/engine.js",
       "source_location": "L1580"
     },
@@ -8333,14 +8333,14 @@
       "source_location": "L7337"
     },
     {
-      "id": "src_game_engine_prestigegame",
-      "label": "prestigeGame()",
+      "id": "src_game_engine_rebootgame",
+      "label": "rebootGame()",
       "_callable": true,
       "_origin": "ast",
       "community": 84,
       "community_name": "createInitialGameState",
       "file_type": "code",
-      "norm_label": "prestigegame()",
+      "norm_label": "rebootgame()",
       "source_file": "src/game/engine.js",
       "source_location": "L6945"
     },
@@ -9216,46 +9216,46 @@
       "source_location": "L380"
     },
     {
-      "id": "src_pages_mainpage_index_prestigemutedtext",
-      "label": "PrestigeMutedText",
+      "id": "src_pages_mainpage_index_rebootmutedtext",
+      "label": "RebootMutedText",
       "_origin": "ast",
       "community": 1,
       "community_name": "MainPage/index.jsx",
       "file_type": "code",
-      "norm_label": "prestigemutedtext",
+      "norm_label": "rebootmutedtext",
       "source_file": "src/pages/MainPage/index.jsx",
       "source_location": "L604"
     },
     {
-      "id": "src_pages_mainpage_index_prestigeprogressbar",
-      "label": "PrestigeProgressBar",
+      "id": "src_pages_mainpage_index_rebootprogressbar",
+      "label": "RebootProgressBar",
       "_origin": "ast",
       "community": 1,
       "community_name": "MainPage/index.jsx",
       "file_type": "code",
-      "norm_label": "prestigeprogressbar",
+      "norm_label": "rebootprogressbar",
       "source_file": "src/pages/MainPage/index.jsx",
       "source_location": "L342"
     },
     {
-      "id": "src_pages_mainpage_index_prestigeprogresslabel",
-      "label": "PrestigeProgressLabel",
+      "id": "src_pages_mainpage_index_rebootprogresslabel",
+      "label": "RebootProgressLabel",
       "_origin": "ast",
       "community": 1,
       "community_name": "MainPage/index.jsx",
       "file_type": "code",
-      "norm_label": "prestigeprogresslabel",
+      "norm_label": "rebootprogresslabel",
       "source_file": "src/pages/MainPage/index.jsx",
       "source_location": "L369"
     },
     {
-      "id": "src_pages_mainpage_index_prestigeprogresstrack",
-      "label": "PrestigeProgressTrack",
+      "id": "src_pages_mainpage_index_rebootprogresstrack",
+      "label": "RebootProgressTrack",
       "_origin": "ast",
       "community": 1,
       "community_name": "MainPage/index.jsx",
       "file_type": "code",
-      "norm_label": "prestigeprogresstrack",
+      "norm_label": "rebootprogresstrack",
       "source_file": "src/pages/MainPage/index.jsx",
       "source_location": "L357"
     },
@@ -9403,24 +9403,24 @@
       "source_location": "L483"
     },
     {
-      "id": "src_pages_mainpage_index_topprestigebar",
-      "label": "TopPrestigeBar",
+      "id": "src_pages_mainpage_index_toprebootbar",
+      "label": "TopRebootBar",
       "_origin": "ast",
       "community": 1,
       "community_name": "MainPage/index.jsx",
       "file_type": "code",
-      "norm_label": "topprestigebar",
+      "norm_label": "toprebootbar",
       "source_file": "src/pages/MainPage/index.jsx",
       "source_location": "L572"
     },
     {
-      "id": "src_pages_mainpage_index_topprestigebarspacer",
-      "label": "TopPrestigeBarSpacer",
+      "id": "src_pages_mainpage_index_toprebootbarspacer",
+      "label": "TopRebootBarSpacer",
       "_origin": "ast",
       "community": 1,
       "community_name": "MainPage/index.jsx",
       "file_type": "code",
-      "norm_label": "topprestigebarspacer",
+      "norm_label": "toprebootbarspacer",
       "source_file": "src/pages/MainPage/index.jsx",
       "source_location": "L598"
     },
@@ -10999,13 +10999,13 @@
       "source_location": "L120"
     },
     {
-      "id": "claude_skills_simulate_run_times_run_simulation_defaultcareerprestiges",
-      "label": "defaultCareerPrestiges",
+      "id": "claude_skills_simulate_run_times_run_simulation_defaultcareerreboots",
+      "label": "defaultCareerReboots",
       "_origin": "ast",
       "community": 12,
       "community_name": "run-simulation.mjs",
       "file_type": "code",
-      "norm_label": "defaultcareerprestiges",
+      "norm_label": "defaultcareerreboots",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
       "source_location": "L484"
     },
@@ -11146,13 +11146,13 @@
       "source_location": "L748"
     },
     {
-      "id": "src_game_layers_prestige_threshold",
-      "label": "PRESTIGE_THRESHOLD",
+      "id": "src_game_layers_reboot_threshold",
+      "label": "REBOOT_THRESHOLD",
       "_origin": "ast",
       "community": 14,
       "community_name": "DevModePage/index.jsx",
       "file_type": "code",
-      "norm_label": "prestige_threshold",
+      "norm_label": "reboot_threshold",
       "source_file": "src/game/layers.js",
       "source_location": "L89"
     },
@@ -12268,13 +12268,13 @@
       "source_location": "L1772"
     },
     {
-      "id": "src_game_layers_auto_prestige_autobuyer_cost",
-      "label": "AUTO_PRESTIGE_AUTOBUYER_COST",
+      "id": "src_game_layers_auto_reboot_autobuyer_cost",
+      "label": "AUTO_REBOOT_AUTOBUYER_COST",
       "_origin": "ast",
       "community": 17,
       "community_name": "App.test.jsx",
       "file_type": "code",
-      "norm_label": "auto_prestige_autobuyer_cost",
+      "norm_label": "auto_reboot_autobuyer_cost",
       "source_file": "src/game/layers.js",
       "source_location": "L721"
     },
@@ -12851,13 +12851,13 @@
       "source_location": "L78"
     },
     {
-      "id": "src_game_layers_prestige_unbounded_min_count",
-      "label": "PRESTIGE_UNBOUNDED_MIN_COUNT",
+      "id": "src_game_layers_reboot_unbounded_min_count",
+      "label": "REBOOT_UNBOUNDED_MIN_COUNT",
       "_origin": "ast",
       "community": 19,
       "community_name": "storage.js",
       "file_type": "code",
-      "norm_label": "prestige_unbounded_min_count",
+      "norm_label": "reboot_unbounded_min_count",
       "source_file": "src/game/layers.js",
       "source_location": "L92"
     },
@@ -16024,35 +16024,35 @@
       "source_location": "L136"
     },
     {
-      "id": "src_game_layers_prestige_double_pp_upgrade_cost_base",
+      "id": "src_game_layers_reboot_double_pp_upgrade_cost_base",
       "label": "PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE",
       "_origin": "ast",
       "community": 3,
       "community_name": "layers.js",
       "file_type": "code",
-      "norm_label": "prestige_double_pp_upgrade_cost_base",
+      "norm_label": "reboot_double_pp_upgrade_cost_base",
       "source_file": "src/game/layers.js",
       "source_location": "L99"
     },
     {
-      "id": "src_game_layers_prestige_point_speed_bonus",
+      "id": "src_game_layers_reboot_point_speed_bonus",
       "label": "PRESTIGE_POINT_SPEED_BONUS",
       "_origin": "ast",
       "community": 3,
       "community_name": "layers.js",
       "file_type": "code",
-      "norm_label": "prestige_point_speed_bonus",
+      "norm_label": "reboot_point_speed_bonus",
       "source_file": "src/game/layers.js",
       "source_location": "L612"
     },
     {
-      "id": "src_game_layers_prestige_powers_per_pp_base",
+      "id": "src_game_layers_reboot_powers_per_pp_base",
       "label": "PRESTIGE_POWERS_PER_PP_BASE",
       "_origin": "ast",
       "community": 3,
       "community_name": "layers.js",
       "file_type": "code",
-      "norm_label": "prestige_powers_per_pp_base",
+      "norm_label": "reboot_powers_per_pp_base",
       "source_file": "src/game/layers.js",
       "source_location": "L97"
     },
@@ -18185,7 +18185,7 @@
       "source_location": "L1574"
     },
     {
-      "id": "docs_economy_reference_prestige_info_is_hidden_until_first_prestige",
+      "id": "docs_economy_reference_reboot_info_is_hidden_until_first_reboot",
       "label": "Prestige info is hidden until first prestige",
       "_origin": "ast",
       "community": 35,
@@ -18197,7 +18197,7 @@
       "source_location": "L2241"
     },
     {
-      "id": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
+      "id": "docs_economy_reference_reboot_points_autobuyer_unlock_and_the_tickspeed_multiplier",
       "label": "Prestige Points, autobuyer unlock, and the tickspeed multiplier",
       "_origin": "ast",
       "community": 35,
@@ -18816,13 +18816,13 @@
       "source_location": "L640"
     },
     {
-      "id": "src_game_layers_prestige_speed_bonus_unlock_cost",
+      "id": "src_game_layers_reboot_speed_bonus_unlock_cost",
       "label": "PRESTIGE_SPEED_BONUS_UNLOCK_COST",
       "_origin": "ast",
       "community": 4,
       "community_name": "navAttention.js",
       "file_type": "code",
-      "norm_label": "prestige_speed_bonus_unlock_cost",
+      "norm_label": "reboot_speed_bonus_unlock_cost",
       "source_file": "src/game/layers.js",
       "source_location": "L618"
     },
@@ -19974,7 +19974,7 @@
       "source_location": "L6971"
     },
     {
-      "id": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_prestige_fixed_by_making_diskwritecache_diskreadcacheflush_prestige_permanent",
+      "id": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_reboot_fixed_by_making_diskwritecache_diskreadcacheflush_reboot_permanent",
       "label": "A further Devin Review finding on the same area: pausing a stranded write-cache merge still lost its progress to Prestige — fixed by making diskWriteCache/diskReadCacheFlush Prestige-permanent",
       "_origin": "ast",
       "community": 42,
@@ -21097,19 +21097,19 @@
       "source_location": "L1"
     },
     {
-      "id": "claude_tiers_prestige_era_ascension",
+      "id": "claude_tiers_reboot_era_ascension",
       "label": "Tiers, Prestige, Era ascension",
       "_origin": "ast",
       "community": 46,
       "community_name": "Key engine functions (`src/game/engine.js`)",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "tiers, prestige, era ascension",
+      "norm_label": "tiers, reboot, era ascension",
       "source_file": "CLAUDE.md",
       "source_location": "L704"
     },
     {
-      "id": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_prestige_count_milestone_unlocks",
+      "id": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_reboot_count_milestone_unlocks",
       "label": "Tier autobuyer unlock/tier tickspeed autobuyer became free, prestige-count-milestone unlocks",
       "_origin": "ast",
       "community": 46,
@@ -21121,7 +21121,7 @@
       "source_location": "L2587"
     },
     {
-      "id": "docs_design_history_why_the_prestige_threshold_became_googol_bits_per_byte_not_a_round_new_number",
+      "id": "docs_design_history_why_the_reboot_threshold_became_googol_bits_per_byte_not_a_round_new_number",
       "label": "Why the Prestige threshold became `GOOGOL * BITS_PER_BYTE`, not a round new number",
       "_origin": "ast",
       "community": 46,
@@ -21169,7 +21169,7 @@
       "source_location": "L1475"
     },
     {
-      "id": "docs_economy_reference_prestige_and_the_googol_freeze",
+      "id": "docs_economy_reference_reboot_and_the_googol_freeze",
       "label": "Prestige and the Googol freeze",
       "_origin": "ast",
       "community": 46,
@@ -23324,7 +23324,7 @@
       "source_location": "L1"
     },
     {
-      "id": "e2e_prestige_e2e",
+      "id": "e2e_reboot_e2e",
       "label": "reboot.e2e.js",
       "_origin": "ast",
       "community": 62,
@@ -25393,7 +25393,7 @@
       "source_location": "L3131"
     },
     {
-      "id": "docs_design_history_prestige_history_why_pp_replaced_direct_production_doubling",
+      "id": "docs_design_history_reboot_history_why_pp_replaced_direct_production_doubling",
       "label": "Prestige history: why PP replaced direct production doubling",
       "_origin": "ast",
       "community": 8,
@@ -25525,7 +25525,7 @@
       "source_location": "L2446"
     },
     {
-      "id": "docs_design_history_why_prestige_pp_info_is_hidden_until_first_prestige",
+      "id": "docs_design_history_why_reboot_pp_info_is_hidden_until_first_reboot",
       "label": "Why Prestige/PP info is hidden until first prestige",
       "_origin": "ast",
       "community": 8,
@@ -25537,7 +25537,7 @@
       "source_location": "L2654"
     },
     {
-      "id": "docs_design_history_why_scaleupcount_now_resets_on_prestige_reversing_the_original_design",
+      "id": "docs_design_history_why_scaleupcount_now_resets_on_reboot_reversing_the_original_design",
       "label": "Why `scaleUpCount` now resets on Prestige, reversing the original design",
       "_origin": "ast",
       "community": 8,
@@ -26044,14 +26044,14 @@
       "source_location": "L3967"
     },
     {
-      "id": "docs_design_history_prestigegame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_prestige_626_2026_09_09",
-      "label": "`prestigeGame` wiped era/eons/hyperscalerCount/eonsUpgrades/Flops-autobuyer state on every ordinary Prestige (#626) — 2026-09-09",
+      "id": "docs_design_history_rebootgame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_reboot_626_2026_09_09",
+      "label": "`rebootGame` wiped era/eons/hyperscalerCount/eonsUpgrades/Flops-autobuyer state on every ordinary Prestige (#626) — 2026-09-09",
       "_origin": "ast",
       "community": 84,
       "community_name": "createInitialGameState",
       "file_type": "document",
       "node_kind": "heading",
-      "norm_label": "`prestigegame` wiped era/eons/hyperscalercount/eonsupgrades/flops-autobuyer state on every ordinary prestige (#626) — 2026-09-09",
+      "norm_label": "`rebootgame` wiped era/eons/hyperscalercount/eonsupgrades/flops-autobuyer state on every ordinary prestige (#626) — 2026-09-09",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L338"
     },
@@ -26092,7 +26092,7 @@
       "source_location": "L2980"
     },
     {
-      "id": "docs_design_history_the_byte_foundry_becomes_a_per_prestige_cycle_mechanic_not_a_one_time_gate",
+      "id": "docs_design_history_the_byte_foundry_becomes_a_per_reboot_cycle_mechanic_not_a_one_time_gate",
       "label": "The Byte Foundry becomes a per-Prestige-cycle mechanic, not a one-time gate",
       "_origin": "ast",
       "community": 84,
@@ -26104,7 +26104,7 @@
       "source_location": "L2100"
     },
     {
-      "id": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_prestige",
+      "id": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_reboot",
       "label": "The Byte generator becomes permanent — only \"Memory\" and the gate reset each Prestige",
       "_origin": "ast",
       "community": 84,
@@ -28954,7 +28954,7 @@
     },
     {
       "source": "claude_skills_simulate_run_times_run_simulation_actspeedbonus",
-      "target": "src_game_engine_buyprestigespeedbonus",
+      "target": "src_game_engine_buyrebootspeedbonus",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -32397,7 +32397,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_buyautoprestige",
+      "source": "src_game_engine_buyautoreboot",
       "target": "src_game_engine_isproductionfrozen",
       "relation": "calls",
       "_origin": "ast",
@@ -32409,7 +32409,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_buyautoprestige",
+      "source": "src_game_engine_buyautoreboot",
       "target": "src_game_engine_getautomationunlockcost",
       "relation": "calls",
       "_origin": "ast",
@@ -32421,7 +32421,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_buyautoprestige",
+      "source": "src_game_engine_buyautoreboot",
       "target": "src_game_engine_clampnonnegative",
       "relation": "calls",
       "_origin": "ast",
@@ -32433,7 +32433,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_buyautoprestige",
+      "source": "src_game_engine_buyautoreboot",
       "target": "src_game_engine_latchcomputeflopspageunlocked",
       "relation": "calls",
       "_origin": "ast",
@@ -32445,7 +32445,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_buyautoprestigeautobuyer",
+      "source": "src_game_engine_buyautorebootautobuyer",
       "target": "src_game_engine_isproductionfrozen",
       "relation": "calls",
       "_origin": "ast",
@@ -32457,7 +32457,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_buyautoprestigeautobuyer",
+      "source": "src_game_engine_buyautorebootautobuyer",
       "target": "src_game_engine_clampnonnegative",
       "relation": "calls",
       "_origin": "ast",
@@ -32469,7 +32469,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_buyautoprestigeautobuyer",
+      "source": "src_game_engine_buyautorebootautobuyer",
       "target": "src_game_engine_latchcomputeflopspageunlocked",
       "relation": "calls",
       "_origin": "ast",
@@ -32781,8 +32781,8 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_buyprestigedoublepp",
-      "target": "src_game_engine_getprestigedoubleppupgradecost",
+      "source": "src_game_engine_buyrebootdoublepp",
+      "target": "src_game_engine_getrebootdoubleppupgradecost",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -32793,7 +32793,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_buyprestigedoublepp",
+      "source": "src_game_engine_buyrebootdoublepp",
       "target": "src_game_engine_clampnonnegative",
       "relation": "calls",
       "_origin": "ast",
@@ -32805,7 +32805,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_buyprestigedoublepp",
+      "source": "src_game_engine_buyrebootdoublepp",
       "target": "src_game_engine_latchcomputeflopspageunlocked",
       "relation": "calls",
       "_origin": "ast",
@@ -32817,7 +32817,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_buyprestigespeedbonus",
+      "source": "src_game_engine_buyrebootspeedbonus",
       "target": "src_game_engine_isproductionfrozen",
       "relation": "calls",
       "_origin": "ast",
@@ -32829,7 +32829,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_buyprestigespeedbonus",
+      "source": "src_game_engine_buyrebootspeedbonus",
       "target": "src_game_engine_clampnonnegative",
       "relation": "calls",
       "_origin": "ast",
@@ -32841,7 +32841,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_buyprestigespeedbonus",
+      "source": "src_game_engine_buyrebootspeedbonus",
       "target": "src_game_engine_latchcomputeflopspageunlocked",
       "relation": "calls",
       "_origin": "ast",
@@ -34533,7 +34533,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getautoprestigeattemptrate",
+      "source": "src_game_engine_getautorebootattemptrate",
       "target": "src_game_engine_getautomationintervalseconds",
       "relation": "calls",
       "_origin": "ast",
@@ -36189,7 +36189,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigedoubleppupgradecost",
+      "source": "src_game_engine_getrebootdoubleppupgradecost",
       "target": "src_game_engine_clampnonnegative",
       "relation": "calls",
       "_origin": "ast",
@@ -36201,7 +36201,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigepointsawarded",
+      "source": "src_game_engine_getrebootpointsawarded",
       "target": "src_game_engine_clampnonnegative",
       "relation": "calls",
       "_origin": "ast",
@@ -36213,7 +36213,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigepointsawarded",
+      "source": "src_game_engine_getrebootpointsawarded",
       "target": "src_game_engine_getmoneyexponent",
       "relation": "calls",
       "_origin": "ast",
@@ -36225,8 +36225,8 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigepointsawarded",
-      "target": "src_game_engine_getprestigepowersperpp",
+      "source": "src_game_engine_getrebootpointsawarded",
+      "target": "src_game_engine_getrebootpowersperpp",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -36237,8 +36237,8 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigepointsawarded",
-      "target": "src_game_engine_getprestigeppperpower",
+      "source": "src_game_engine_getrebootpointsawarded",
+      "target": "src_game_engine_getrebootppperpower",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -36249,7 +36249,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigepowersperpp",
+      "source": "src_game_engine_getrebootpowersperpp",
       "target": "src_game_engine_clampnonnegative",
       "relation": "calls",
       "_origin": "ast",
@@ -36261,8 +36261,8 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigepowersperpp",
-      "target": "src_game_engine_getprestigedoublepphalvinglevels",
+      "source": "src_game_engine_getrebootpowersperpp",
+      "target": "src_game_engine_getrebootdoublepphalvinglevels",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -36273,7 +36273,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigeppearnprogresspercent",
+      "source": "src_game_engine_getrebootppearnprogresspercent",
       "target": "src_game_engine_clampnonnegative",
       "relation": "calls",
       "_origin": "ast",
@@ -36285,7 +36285,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigeppearnprogresspercent",
+      "source": "src_game_engine_getrebootppearnprogresspercent",
       "target": "src_game_engine_getmoneyexponent",
       "relation": "calls",
       "_origin": "ast",
@@ -36297,8 +36297,8 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigeppearnprogresspercent",
-      "target": "src_game_engine_getprestigeprogresspercent",
+      "source": "src_game_engine_getrebootppearnprogresspercent",
+      "target": "src_game_engine_getrebootprogresspercent",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -36309,8 +36309,8 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigeppearnprogresspercent",
-      "target": "src_game_engine_getprestigepowersperpp",
+      "source": "src_game_engine_getrebootppearnprogresspercent",
+      "target": "src_game_engine_getrebootpowersperpp",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -36321,7 +36321,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigeppperpower",
+      "source": "src_game_engine_getrebootppperpower",
       "target": "src_game_engine_clampnonnegative",
       "relation": "calls",
       "_origin": "ast",
@@ -36333,8 +36333,8 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigeppperpower",
-      "target": "src_game_engine_getprestigedoublepphalvinglevels",
+      "source": "src_game_engine_getrebootppperpower",
+      "target": "src_game_engine_getrebootdoublepphalvinglevels",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -36345,7 +36345,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigeproductionmultiplier",
+      "source": "src_game_engine_getrebootproductionmultiplier",
       "target": "src_game_engine_clampnonnegative",
       "relation": "calls",
       "_origin": "ast",
@@ -36357,7 +36357,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_getprestigeprogresspercent",
+      "source": "src_game_engine_getrebootprogresspercent",
       "target": "src_game_engine_getmoneyexponent",
       "relation": "calls",
       "_origin": "ast",
@@ -38074,7 +38074,7 @@
     },
     {
       "source": "src_game_engine_isproductionfrozen",
-      "target": "src_game_engine_isunboundedprestigeunlocked",
+      "target": "src_game_engine_isunboundedrebootunlocked",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -38457,7 +38457,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_isunboundedprestigeunlocked",
+      "source": "src_game_engine_isunboundedrebootunlocked",
       "target": "src_game_engine_clampnonnegative",
       "relation": "calls",
       "_origin": "ast",
@@ -38685,7 +38685,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_prestigegame",
+      "source": "src_game_engine_rebootgame",
       "target": "src_game_engine_clampnonnegative",
       "relation": "calls",
       "_origin": "ast",
@@ -38697,8 +38697,8 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_prestigegame",
-      "target": "src_game_engine_getprestigepointsawarded",
+      "source": "src_game_engine_rebootgame",
+      "target": "src_game_engine_getrebootpointsawarded",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -38709,7 +38709,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_prestigegame",
+      "source": "src_game_engine_rebootgame",
       "target": "src_game_engine_createinitialgamestate",
       "relation": "calls",
       "_origin": "ast",
@@ -38721,7 +38721,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_prestigegame",
+      "source": "src_game_engine_rebootgame",
       "target": "src_game_engine_applyautobuyermilestones",
       "relation": "calls",
       "_origin": "ast",
@@ -38733,7 +38733,7 @@
       "weight": 1
     },
     {
-      "source": "src_game_engine_prestigegame",
+      "source": "src_game_engine_rebootgame",
       "target": "src_game_engine_getunlockeddisksteps",
       "relation": "calls",
       "_origin": "ast",
@@ -39382,7 +39382,7 @@
     },
     {
       "source": "src_game_engine_test_eraeligiblestate",
-      "target": "src_game_engine_test_withprestigepoints",
+      "target": "src_game_engine_test_withrebootpoints",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -40762,7 +40762,7 @@
     },
     {
       "source": "src_game_engine_tickgame",
-      "target": "src_game_engine_getautoprestigeattemptrate",
+      "target": "src_game_engine_getautorebootattemptrate",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -40774,7 +40774,7 @@
     },
     {
       "source": "src_game_engine_tickgame",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -40786,7 +40786,7 @@
     },
     {
       "source": "src_game_engine_tickgame",
-      "target": "src_game_engine_getprestigeproductionmultiplier",
+      "target": "src_game_engine_getrebootproductionmultiplier",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -41074,7 +41074,7 @@
     },
     {
       "source": "src_game_engine_tickgame",
-      "target": "src_game_engine_isunboundedprestigeunlocked",
+      "target": "src_game_engine_isunboundedrebootunlocked",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -41842,7 +41842,7 @@
     },
     {
       "source": "src_game_navattention_hasaffordablepplevelupgrade",
-      "target": "src_game_engine_getprestigedoubleppupgradecost",
+      "target": "src_game_engine_getrebootdoubleppupgradecost",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -43642,7 +43642,7 @@
     },
     {
       "source": "src_game_useincrementalgame_useincrementalgame",
-      "target": "src_game_engine_setautoprestigeenabled",
+      "target": "src_game_engine_setautorebootenabled",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -43654,7 +43654,7 @@
     },
     {
       "source": "src_game_useincrementalgame_useincrementalgame",
-      "target": "src_game_engine_setautoprestigeautobuyerenabled",
+      "target": "src_game_engine_setautorebootautobuyerenabled",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -46642,7 +46642,7 @@
     },
     {
       "source": "src_pages_mainpage_index_mainpage",
-      "target": "src_pages_mainpage_index_prestigemutedtext",
+      "target": "src_pages_mainpage_index_rebootmutedtext",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -46702,7 +46702,7 @@
     },
     {
       "source": "src_pages_mainpage_index_mainpage",
-      "target": "src_pages_mainpage_index_topprestigebar",
+      "target": "src_pages_mainpage_index_toprebootbar",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -46738,7 +46738,7 @@
     },
     {
       "source": "src_pages_mainpage_index_mainpage",
-      "target": "src_pages_mainpage_index_topprestigebarspacer",
+      "target": "src_pages_mainpage_index_toprebootbarspacer",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -46750,7 +46750,7 @@
     },
     {
       "source": "src_pages_mainpage_index_mainpage",
-      "target": "src_pages_mainpage_index_prestigeprogressbar",
+      "target": "src_pages_mainpage_index_rebootprogressbar",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -46762,7 +46762,7 @@
     },
     {
       "source": "src_pages_mainpage_index_mainpage",
-      "target": "src_pages_mainpage_index_prestigeprogresstrack",
+      "target": "src_pages_mainpage_index_rebootprogresstrack",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -46786,7 +46786,7 @@
     },
     {
       "source": "src_pages_mainpage_index_mainpage",
-      "target": "src_pages_mainpage_index_prestigeprogresslabel",
+      "target": "src_pages_mainpage_index_rebootprogresslabel",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -47530,7 +47530,7 @@
     },
     {
       "source": "src_pages_mainpage_index_mainpage",
-      "target": "src_game_engine_isunboundedprestigeunlocked",
+      "target": "src_game_engine_isunboundedrebootunlocked",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -47542,7 +47542,7 @@
     },
     {
       "source": "src_pages_mainpage_index_mainpage",
-      "target": "src_game_engine_getprestigeproductionmultiplier",
+      "target": "src_game_engine_getrebootproductionmultiplier",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -47554,7 +47554,7 @@
     },
     {
       "source": "src_pages_mainpage_index_mainpage",
-      "target": "src_game_engine_getprestigepointsawarded",
+      "target": "src_game_engine_getrebootpointsawarded",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -47566,7 +47566,7 @@
     },
     {
       "source": "src_pages_mainpage_index_mainpage",
-      "target": "src_game_engine_getprestigeprogresspercent",
+      "target": "src_game_engine_getrebootprogresspercent",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -47709,7 +47709,7 @@
       "weight": 1
     },
     {
-      "source": "src_pages_mainpage_index_prestigeprogresstrack",
+      "source": "src_pages_mainpage_index_rebootprogresstrack",
       "target": "src_components_button_index_progressfill",
       "relation": "calls",
       "_origin": "ast",
@@ -47734,7 +47734,7 @@
     },
     {
       "source": "src_pages_milestonespage_index_milestonespage",
-      "target": "src_game_engine_isunboundedprestigeunlocked",
+      "target": "src_game_engine_isunboundedrebootunlocked",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -47938,7 +47938,7 @@
     },
     {
       "source": "src_pages_perkspage_index_perkspage",
-      "target": "src_game_engine_getprestigedoubleppupgradecost",
+      "target": "src_game_engine_getrebootdoubleppupgradecost",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -47950,7 +47950,7 @@
     },
     {
       "source": "src_pages_perkspage_index_perkspage",
-      "target": "src_game_engine_getprestigepowersperpp",
+      "target": "src_game_engine_getrebootpowersperpp",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -47962,7 +47962,7 @@
     },
     {
       "source": "src_pages_perkspage_index_perkspage",
-      "target": "src_game_engine_getprestigeppperpower",
+      "target": "src_game_engine_getrebootppperpower",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -48202,7 +48202,7 @@
     },
     {
       "source": "src_pages_perkspage_index_perkspage",
-      "target": "src_game_engine_isunboundedprestigeunlocked",
+      "target": "src_game_engine_isunboundedrebootunlocked",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49522,7 +49522,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_test_withprestigepoints",
+      "target": "src_game_engine_test_withrebootpoints",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49534,7 +49534,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_test_withprestigecount",
+      "target": "src_game_engine_test_withrebootcount",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49594,7 +49594,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_test_withautoprestige",
+      "target": "src_game_engine_test_withautoreboot",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49606,7 +49606,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_test_withautoprestigebudget",
+      "target": "src_game_engine_test_withautorebootbudget",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49630,7 +49630,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_test_withprestigespeedbonusunlocked",
+      "target": "src_game_engine_test_withrebootspeedbonusunlocked",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49714,7 +49714,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_test_withautoprestigeenabled",
+      "target": "src_game_engine_test_withautorebootenabled",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49726,7 +49726,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_test_withautoprestigeautobuyer",
+      "target": "src_game_engine_test_withautorebootautobuyer",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49738,7 +49738,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_test_withautoprestigeautobuyerenabled",
+      "target": "src_game_engine_test_withautorebootautobuyerenabled",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -50855,7 +50855,7 @@
     },
     {
       "source": "claude_skills_simulate_run_times_run_simulation",
-      "target": "src_game_engine_buyprestigespeedbonus",
+      "target": "src_game_engine_buyrebootspeedbonus",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -51107,7 +51107,7 @@
     },
     {
       "source": "claude_skills_simulate_run_times_run_simulation",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -51287,7 +51287,7 @@
     },
     {
       "source": "claude_skills_simulate_run_times_run_simulation",
-      "target": "src_game_layers_prestige_speed_bonus_unlock_cost",
+      "target": "src_game_layers_reboot_speed_bonus_unlock_cost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -52415,7 +52415,7 @@
     },
     {
       "source": "src_app_test",
-      "target": "src_game_layers_auto_prestige_autobuyer_cost",
+      "target": "src_game_layers_auto_reboot_autobuyer_cost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -52799,7 +52799,7 @@
     },
     {
       "source": "src_app_test",
-      "target": "src_game_layers_prestige_threshold",
+      "target": "src_game_layers_reboot_threshold",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -53843,7 +53843,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_layers_auto_prestige_autobuyer_cost",
+      "target": "src_game_layers_auto_reboot_autobuyer_cost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -54851,7 +54851,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_layers_prestige_double_pp_upgrade_cost_base",
+      "target": "src_game_layers_reboot_double_pp_upgrade_cost_base",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -54863,7 +54863,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_layers_prestige_point_speed_bonus",
+      "target": "src_game_layers_reboot_point_speed_bonus",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -54875,7 +54875,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_layers_prestige_powers_per_pp_base",
+      "target": "src_game_layers_reboot_powers_per_pp_base",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -54887,7 +54887,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_layers_prestige_speed_bonus_unlock_cost",
+      "target": "src_game_layers_reboot_speed_bonus_unlock_cost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -54899,7 +54899,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_layers_prestige_threshold",
+      "target": "src_game_layers_reboot_threshold",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -54911,7 +54911,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_layers_prestige_unbounded_min_count",
+      "target": "src_game_layers_reboot_unbounded_min_count",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -55223,7 +55223,7 @@
     },
     {
       "source": "src_game_engine_computeflops_test",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -55331,7 +55331,7 @@
     },
     {
       "source": "src_game_engine_computeflops_test",
-      "target": "src_game_layers_prestige_threshold",
+      "target": "src_game_layers_reboot_threshold",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -55451,7 +55451,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_buyautoprestige",
+      "target": "src_game_engine_buyautoreboot",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -55463,7 +55463,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_buyautoprestigeautobuyer",
+      "target": "src_game_engine_buyautorebootautobuyer",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -55547,7 +55547,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_buyprestigespeedbonus",
+      "target": "src_game_engine_buyrebootspeedbonus",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -56207,7 +56207,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_getautoprestigeattemptrate",
+      "target": "src_game_engine_getautorebootattemptrate",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -57083,7 +57083,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_getprestigedoubleppupgradecost",
+      "target": "src_game_engine_getrebootdoubleppupgradecost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -57095,7 +57095,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_getprestigepointsawarded",
+      "target": "src_game_engine_getrebootpointsawarded",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -57107,7 +57107,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_getprestigepowersperpp",
+      "target": "src_game_engine_getrebootpowersperpp",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -57119,7 +57119,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_getprestigeppperpower",
+      "target": "src_game_engine_getrebootppperpower",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -57131,7 +57131,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_getprestigeproductionmultiplier",
+      "target": "src_game_engine_getrebootproductionmultiplier",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -57143,7 +57143,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_getprestigeprogresspercent",
+      "target": "src_game_engine_getrebootprogresspercent",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -58067,7 +58067,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_isunboundedprestigeunlocked",
+      "target": "src_game_engine_isunboundedrebootunlocked",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -58259,7 +58259,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -58415,7 +58415,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_setautoprestigeautobuyerenabled",
+      "target": "src_game_engine_setautorebootautobuyerenabled",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -58427,7 +58427,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_setautoprestigeenabled",
+      "target": "src_game_engine_setautorebootenabled",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -58943,7 +58943,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_layers_auto_prestige_autobuyer_cost",
+      "target": "src_game_layers_auto_reboot_autobuyer_cost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -59555,7 +59555,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_layers_prestige_speed_bonus_unlock_cost",
+      "target": "src_game_layers_reboot_speed_bonus_unlock_cost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -59567,7 +59567,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_layers_prestige_threshold",
+      "target": "src_game_layers_reboot_threshold",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -59579,7 +59579,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_layers_prestige_unbounded_min_count",
+      "target": "src_game_layers_reboot_unbounded_min_count",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60143,7 +60143,7 @@
     },
     {
       "source": "src_game_layers_test",
-      "target": "src_game_layers_prestige_double_pp_upgrade_cost_base",
+      "target": "src_game_layers_reboot_double_pp_upgrade_cost_base",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60155,7 +60155,7 @@
     },
     {
       "source": "src_game_layers_test",
-      "target": "src_game_layers_prestige_point_speed_bonus",
+      "target": "src_game_layers_reboot_point_speed_bonus",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60167,7 +60167,7 @@
     },
     {
       "source": "src_game_layers_test",
-      "target": "src_game_layers_prestige_powers_per_pp_base",
+      "target": "src_game_layers_reboot_powers_per_pp_base",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60179,7 +60179,7 @@
     },
     {
       "source": "src_game_layers_test",
-      "target": "src_game_layers_prestige_speed_bonus_unlock_cost",
+      "target": "src_game_layers_reboot_speed_bonus_unlock_cost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60191,7 +60191,7 @@
     },
     {
       "source": "src_game_layers_test",
-      "target": "src_game_layers_prestige_threshold",
+      "target": "src_game_layers_reboot_threshold",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60203,7 +60203,7 @@
     },
     {
       "source": "src_game_layers_test",
-      "target": "src_game_layers_prestige_unbounded_min_count",
+      "target": "src_game_layers_reboot_unbounded_min_count",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60323,7 +60323,7 @@
     },
     {
       "source": "src_game_navattention",
-      "target": "src_game_layers_auto_prestige_autobuyer_cost",
+      "target": "src_game_layers_auto_reboot_autobuyer_cost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60395,7 +60395,7 @@
     },
     {
       "source": "src_game_navattention",
-      "target": "src_game_layers_prestige_speed_bonus_unlock_cost",
+      "target": "src_game_layers_reboot_speed_bonus_unlock_cost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60515,7 +60515,7 @@
     },
     {
       "source": "src_game_navattention",
-      "target": "src_game_engine_getprestigedoubleppupgradecost",
+      "target": "src_game_engine_getrebootdoubleppupgradecost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60779,7 +60779,7 @@
     },
     {
       "source": "src_game_navattention_test",
-      "target": "src_game_engine_getprestigedoubleppupgradecost",
+      "target": "src_game_engine_getrebootdoubleppupgradecost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60983,7 +60983,7 @@
     },
     {
       "source": "src_game_navattention_test",
-      "target": "src_game_layers_auto_prestige_autobuyer_cost",
+      "target": "src_game_layers_auto_reboot_autobuyer_cost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -61139,7 +61139,7 @@
     },
     {
       "source": "src_game_navattention_test",
-      "target": "src_game_layers_prestige_threshold",
+      "target": "src_game_layers_reboot_threshold",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -61259,7 +61259,7 @@
     },
     {
       "source": "src_game_storage",
-      "target": "src_game_layers_prestige_unbounded_min_count",
+      "target": "src_game_layers_reboot_unbounded_min_count",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -61391,7 +61391,7 @@
     },
     {
       "source": "src_game_storage_test",
-      "target": "src_game_layers_prestige_unbounded_min_count",
+      "target": "src_game_layers_reboot_unbounded_min_count",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -61847,7 +61847,7 @@
     },
     {
       "source": "src_game_useincrementalgame",
-      "target": "src_game_engine_buyautoprestige",
+      "target": "src_game_engine_buyautoreboot",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -61859,7 +61859,7 @@
     },
     {
       "source": "src_game_useincrementalgame",
-      "target": "src_game_engine_buyautoprestigeautobuyer",
+      "target": "src_game_engine_buyautorebootautobuyer",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -61931,7 +61931,7 @@
     },
     {
       "source": "src_game_useincrementalgame",
-      "target": "src_game_engine_buyprestigedoublepp",
+      "target": "src_game_engine_buyrebootdoublepp",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -61943,7 +61943,7 @@
     },
     {
       "source": "src_game_useincrementalgame",
-      "target": "src_game_engine_buyprestigespeedbonus",
+      "target": "src_game_engine_buyrebootspeedbonus",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -62423,7 +62423,7 @@
     },
     {
       "source": "src_game_useincrementalgame",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -62567,7 +62567,7 @@
     },
     {
       "source": "src_game_useincrementalgame",
-      "target": "src_game_engine_setautoprestigeautobuyerenabled",
+      "target": "src_game_engine_setautorebootautobuyerenabled",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -62579,7 +62579,7 @@
     },
     {
       "source": "src_game_useincrementalgame",
-      "target": "src_game_engine_setautoprestigeenabled",
+      "target": "src_game_engine_setautorebootenabled",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -64463,7 +64463,7 @@
     },
     {
       "source": "src_pages_devmodepage_index",
-      "target": "src_game_layers_prestige_threshold",
+      "target": "src_game_layers_reboot_threshold",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -64943,7 +64943,7 @@
     },
     {
       "source": "src_pages_infopage_index",
-      "target": "src_game_layers_prestige_unbounded_min_count",
+      "target": "src_game_layers_reboot_unbounded_min_count",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -65411,7 +65411,7 @@
     },
     {
       "source": "src_pages_mainpage_index",
-      "target": "src_game_engine_getprestigepointsawarded",
+      "target": "src_game_engine_getrebootpointsawarded",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -65423,7 +65423,7 @@
     },
     {
       "source": "src_pages_mainpage_index",
-      "target": "src_game_engine_getprestigeproductionmultiplier",
+      "target": "src_game_engine_getrebootproductionmultiplier",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -65435,7 +65435,7 @@
     },
     {
       "source": "src_pages_mainpage_index",
-      "target": "src_game_engine_getprestigeprogresspercent",
+      "target": "src_game_engine_getrebootprogresspercent",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -65663,7 +65663,7 @@
     },
     {
       "source": "src_pages_mainpage_index",
-      "target": "src_game_engine_isunboundedprestigeunlocked",
+      "target": "src_game_engine_isunboundedrebootunlocked",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -65747,7 +65747,7 @@
     },
     {
       "source": "src_pages_mainpage_index",
-      "target": "src_game_layers_prestige_speed_bonus_unlock_cost",
+      "target": "src_game_layers_reboot_speed_bonus_unlock_cost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -65759,7 +65759,7 @@
     },
     {
       "source": "src_pages_mainpage_index",
-      "target": "src_game_layers_prestige_threshold",
+      "target": "src_game_layers_reboot_threshold",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -65831,7 +65831,7 @@
     },
     {
       "source": "src_pages_milestonespage_index",
-      "target": "src_game_engine_isunboundedprestigeunlocked",
+      "target": "src_game_engine_isunboundedrebootunlocked",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -65927,7 +65927,7 @@
     },
     {
       "source": "src_pages_perkspage_index",
-      "target": "src_game_layers_auto_prestige_autobuyer_cost",
+      "target": "src_game_layers_auto_reboot_autobuyer_cost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -65987,7 +65987,7 @@
     },
     {
       "source": "src_pages_perkspage_index",
-      "target": "src_game_layers_prestige_speed_bonus_unlock_cost",
+      "target": "src_game_layers_reboot_speed_bonus_unlock_cost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -65999,7 +65999,7 @@
     },
     {
       "source": "src_pages_perkspage_index",
-      "target": "src_game_layers_prestige_unbounded_min_count",
+      "target": "src_game_layers_reboot_unbounded_min_count",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -66191,7 +66191,7 @@
     },
     {
       "source": "src_pages_perkspage_index",
-      "target": "src_game_engine_getprestigedoubleppupgradecost",
+      "target": "src_game_engine_getrebootdoubleppupgradecost",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -66203,7 +66203,7 @@
     },
     {
       "source": "src_pages_perkspage_index",
-      "target": "src_game_engine_getprestigepowersperpp",
+      "target": "src_game_engine_getrebootpowersperpp",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -66215,7 +66215,7 @@
     },
     {
       "source": "src_pages_perkspage_index",
-      "target": "src_game_engine_getprestigeppperpower",
+      "target": "src_game_engine_getrebootppperpower",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -66347,7 +66347,7 @@
     },
     {
       "source": "src_pages_perkspage_index",
-      "target": "src_game_engine_isunboundedprestigeunlocked",
+      "target": "src_game_engine_isunboundedrebootunlocked",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -66922,7 +66922,7 @@
       "weight": 1
     },
     {
-      "source": "e2e_prestige_e2e",
+      "source": "e2e_reboot_e2e",
       "target": "ref_playwright_test",
       "relation": "imports_from",
       "_origin": "ast",
@@ -71173,7 +71173,7 @@
     },
     {
       "source": "claude_economy_model",
-      "target": "claude_tiers_prestige_era_ascension",
+      "target": "claude_tiers_reboot_era_ascension",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -71668,7 +71668,7 @@
     },
     {
       "source": "claude_skills_simulate_run_times_run_simulation",
-      "target": "claude_skills_simulate_run_times_run_simulation_defaultcareerprestiges",
+      "target": "claude_skills_simulate_run_times_run_simulation_defaultcareerreboots",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -72449,7 +72449,7 @@
     },
     {
       "source": "docs_design_history_design_history_rationale",
-      "target": "docs_design_history_prestigegame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_prestige_626_2026_09_09",
+      "target": "docs_design_history_rebootgame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_reboot_626_2026_09_09",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -72713,7 +72713,7 @@
     },
     {
       "source": "docs_design_history_economy_model",
-      "target": "docs_design_history_the_byte_foundry_becomes_a_per_prestige_cycle_mechanic_not_a_one_time_gate",
+      "target": "docs_design_history_the_byte_foundry_becomes_a_per_reboot_cycle_mechanic_not_a_one_time_gate",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -72724,7 +72724,7 @@
     },
     {
       "source": "docs_design_history_economy_model",
-      "target": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_prestige",
+      "target": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_reboot",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -72735,7 +72735,7 @@
     },
     {
       "source": "docs_design_history_economy_model",
-      "target": "docs_design_history_why_the_prestige_threshold_became_googol_bits_per_byte_not_a_round_new_number",
+      "target": "docs_design_history_why_the_reboot_threshold_became_googol_bits_per_byte_not_a_round_new_number",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -72878,7 +72878,7 @@
     },
     {
       "source": "docs_design_history_economy_model",
-      "target": "docs_design_history_why_scaleupcount_now_resets_on_prestige_reversing_the_original_design",
+      "target": "docs_design_history_why_scaleupcount_now_resets_on_reboot_reversing_the_original_design",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -72900,7 +72900,7 @@
     },
     {
       "source": "docs_design_history_economy_model",
-      "target": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_prestige_count_milestone_unlocks",
+      "target": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_reboot_count_milestone_unlocks",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -72944,7 +72944,7 @@
     },
     {
       "source": "docs_design_history_economy_model",
-      "target": "docs_design_history_prestige_history_why_pp_replaced_direct_production_doubling",
+      "target": "docs_design_history_reboot_history_why_pp_replaced_direct_production_doubling",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -72955,7 +72955,7 @@
     },
     {
       "source": "docs_design_history_economy_model",
-      "target": "docs_design_history_why_prestige_pp_info_is_hidden_until_first_prestige",
+      "target": "docs_design_history_why_reboot_pp_info_is_hidden_until_first_reboot",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -73934,7 +73934,7 @@
     },
     {
       "source": "docs_design_history_testing",
-      "target": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_prestige_fixed_by_making_diskwritecache_diskreadcacheflush_prestige_permanent",
+      "target": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_reboot_fixed_by_making_diskwritecache_diskreadcacheflush_reboot_permanent",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -74484,7 +74484,7 @@
     },
     {
       "source": "docs_economy_reference_pool_local_reset_loop",
-      "target": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
+      "target": "docs_economy_reference_reboot_points_autobuyer_unlock_and_the_tickspeed_multiplier",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -74506,7 +74506,7 @@
     },
     {
       "source": "docs_economy_reference_pool_local_reset_loop",
-      "target": "docs_economy_reference_prestige_and_the_googol_freeze",
+      "target": "docs_economy_reference_reboot_and_the_googol_freeze",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -74539,7 +74539,7 @@
     },
     {
       "source": "docs_economy_reference_pool_local_reset_loop",
-      "target": "docs_economy_reference_prestige_info_is_hidden_until_first_prestige",
+      "target": "docs_economy_reference_reboot_info_is_hidden_until_first_reboot",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -82800,7 +82800,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_buyprestigedoublepp",
+      "target": "src_game_engine_buyrebootdoublepp",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -82921,7 +82921,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_getautoprestigeattemptrate",
+      "target": "src_game_engine_getautorebootattemptrate",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -82932,7 +82932,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_isunboundedprestigeunlocked",
+      "target": "src_game_engine_isunboundedrebootunlocked",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -82987,7 +82987,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_getprestigeprogresspercent",
+      "target": "src_game_engine_getrebootprogresspercent",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -83031,7 +83031,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_getprestigedoublepphalvinglevels",
+      "target": "src_game_engine_getrebootdoublepphalvinglevels",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -83042,7 +83042,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_getprestigepowersperpp",
+      "target": "src_game_engine_getrebootpowersperpp",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -83053,7 +83053,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_getprestigeppperpower",
+      "target": "src_game_engine_getrebootppperpower",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -83064,7 +83064,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_getprestigedoubleppupgradecost",
+      "target": "src_game_engine_getrebootdoubleppupgradecost",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -83075,7 +83075,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_getprestigepointsawarded",
+      "target": "src_game_engine_getrebootpointsawarded",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -83086,7 +83086,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_getprestigeppearnprogresspercent",
+      "target": "src_game_engine_getrebootppearnprogresspercent",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -86617,7 +86617,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_buyautoprestige",
+      "target": "src_game_engine_buyautoreboot",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -86628,7 +86628,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_setautoprestigeenabled",
+      "target": "src_game_engine_setautorebootenabled",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -86639,7 +86639,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_buyautoprestigeautobuyer",
+      "target": "src_game_engine_buyautorebootautobuyer",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -86650,7 +86650,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_setautoprestigeautobuyerenabled",
+      "target": "src_game_engine_setautorebootautobuyerenabled",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -86793,7 +86793,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -87233,7 +87233,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_getprestigeproductionmultiplier",
+      "target": "src_game_engine_getrebootproductionmultiplier",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -87244,7 +87244,7 @@
     },
     {
       "source": "src_game_engine",
-      "target": "src_game_engine_buyprestigespeedbonus",
+      "target": "src_game_engine_buyrebootspeedbonus",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -88036,7 +88036,7 @@
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_prestige_point_speed_bonus",
+      "target": "src_game_layers_reboot_point_speed_bonus",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -88047,7 +88047,7 @@
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_prestige_speed_bonus_unlock_cost",
+      "target": "src_game_layers_reboot_speed_bonus_unlock_cost",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -88289,7 +88289,7 @@
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_auto_prestige_autobuyer_cost",
+      "target": "src_game_layers_auto_reboot_autobuyer_cost",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -88531,7 +88531,7 @@
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_prestige_threshold",
+      "target": "src_game_layers_reboot_threshold",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -88542,7 +88542,7 @@
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_prestige_unbounded_min_count",
+      "target": "src_game_layers_reboot_unbounded_min_count",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -88553,7 +88553,7 @@
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_prestige_powers_per_pp_base",
+      "target": "src_game_layers_reboot_powers_per_pp_base",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -88564,7 +88564,7 @@
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_prestige_double_pp_upgrade_cost_base",
+      "target": "src_game_layers_reboot_double_pp_upgrade_cost_base",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -91193,7 +91193,7 @@
     },
     {
       "source": "src_pages_mainpage_index",
-      "target": "src_pages_mainpage_index_prestigeprogressbar",
+      "target": "src_pages_mainpage_index_rebootprogressbar",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -91204,7 +91204,7 @@
     },
     {
       "source": "src_pages_mainpage_index",
-      "target": "src_pages_mainpage_index_prestigeprogresstrack",
+      "target": "src_pages_mainpage_index_rebootprogresstrack",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -91215,7 +91215,7 @@
     },
     {
       "source": "src_pages_mainpage_index",
-      "target": "src_pages_mainpage_index_prestigeprogresslabel",
+      "target": "src_pages_mainpage_index_rebootprogresslabel",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -91336,7 +91336,7 @@
     },
     {
       "source": "src_pages_mainpage_index",
-      "target": "src_pages_mainpage_index_topprestigebar",
+      "target": "src_pages_mainpage_index_toprebootbar",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -91347,7 +91347,7 @@
     },
     {
       "source": "src_pages_mainpage_index",
-      "target": "src_pages_mainpage_index_topprestigebarspacer",
+      "target": "src_pages_mainpage_index_toprebootbarspacer",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -91358,7 +91358,7 @@
     },
     {
       "source": "src_pages_mainpage_index",
-      "target": "src_pages_mainpage_index_prestigemutedtext",
+      "target": "src_pages_mainpage_index_rebootmutedtext",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -93359,7 +93359,7 @@
     },
     {
       "source": "src_game_engine_test",
-      "target": "src_game_engine_buyprestigedoublepp",
+      "target": "src_game_engine_buyrebootdoublepp",
       "relation": "indirect_call",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -93479,7 +93479,7 @@
     },
     {
       "source": "src_game_useincrementalgame_useincrementalgame",
-      "target": "src_game_engine_buyautoprestige",
+      "target": "src_game_engine_buyautoreboot",
       "relation": "indirect_call",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -93491,7 +93491,7 @@
     },
     {
       "source": "src_game_useincrementalgame_useincrementalgame",
-      "target": "src_game_engine_buyautoprestigeautobuyer",
+      "target": "src_game_engine_buyautorebootautobuyer",
       "relation": "indirect_call",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -93515,7 +93515,7 @@
     },
     {
       "source": "src_game_useincrementalgame_useincrementalgame",
-      "target": "src_game_engine_buyprestigespeedbonus",
+      "target": "src_game_engine_buyrebootspeedbonus",
       "relation": "indirect_call",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -93527,7 +93527,7 @@
     },
     {
       "source": "src_game_useincrementalgame_useincrementalgame",
-      "target": "src_game_engine_buyprestigedoublepp",
+      "target": "src_game_engine_buyrebootdoublepp",
       "relation": "indirect_call",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -93563,7 +93563,7 @@
     },
     {
       "source": "src_game_useincrementalgame_useincrementalgame",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "indirect_call",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -96910,7 +96910,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_prestige_count_milestone_unlocks",
+      "source": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_reboot_count_milestone_unlocks",
       "target": "src_pages_mainpage_index_mainpage",
       "relation": "references",
       "_origin": "ast",
@@ -96934,7 +96934,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_why_prestige_pp_info_is_hidden_until_first_prestige",
+      "source": "docs_design_history_why_reboot_pp_info_is_hidden_until_first_reboot",
       "target": "src_pages_mainpage_index_mainpage",
       "relation": "references",
       "_origin": "ast",
@@ -97006,7 +97006,7 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
       "target": "src_pages_mainpage_index_mainpage",
       "relation": "references",
       "_origin": "ast",
@@ -97018,7 +97018,7 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_info_is_hidden_until_first_prestige",
+      "source": "docs_economy_reference_reboot_info_is_hidden_until_first_reboot",
       "target": "src_pages_mainpage_index_mainpage",
       "relation": "references",
       "_origin": "ast",
@@ -97738,7 +97738,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_prestige_count_milestone_unlocks",
+      "source": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_reboot_count_milestone_unlocks",
       "target": "src_game_engine_applyautobuyermilestones",
       "relation": "references",
       "_origin": "ast",
@@ -98074,7 +98074,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_prestige_fixed_by_making_diskwritecache_diskreadcacheflush_prestige_permanent",
+      "source": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_reboot_fixed_by_making_diskwritecache_diskreadcacheflush_reboot_permanent",
       "target": "src_game_engine_builderaintroreset",
       "relation": "references",
       "_origin": "ast",
@@ -98195,60 +98195,60 @@
     },
     {
       "source": "docs_economy_reference_era_ascension_and_eons_407",
-      "target": "src_game_engine_buyautoprestige",
+      "target": "src_game_engine_buyautoreboot",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "buyAutoPrestige",
+      "context": "buyAutoReboot",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1716",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_buyautoprestige",
+      "target": "src_game_engine_buyautoreboot",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "buyAutoPrestige",
+      "context": "buyAutoReboot",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2793",
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
-      "target": "src_game_engine_buyautoprestige",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
+      "target": "src_game_engine_buyautoreboot",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "buyAutoPrestige",
+      "context": "buyAutoReboot",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2047",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_constants_src_game_layers_js",
-      "target": "src_game_engine_buyautoprestigeautobuyer",
+      "target": "src_game_engine_buyautorebootautobuyer",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "buyAutoPrestigeAutobuyer",
+      "context": "buyAutoRebootAutobuyer",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L3021",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_buyautoprestigeautobuyer",
+      "target": "src_game_engine_buyautorebootautobuyer",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "buyAutoPrestigeAutobuyer",
+      "context": "buyAutoRebootAutobuyer",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2912",
       "weight": 1
@@ -98290,7 +98290,7 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
       "target": "src_game_engine_buyautobuyerbulkmode",
       "relation": "references",
       "_origin": "ast",
@@ -98578,7 +98578,7 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
       "target": "src_game_engine_buyglobaltickspeedmultiplier",
       "relation": "references",
       "_origin": "ast",
@@ -98614,7 +98614,7 @@
       "weight": 1
     },
     {
-      "source": "claude_tiers_prestige_era_ascension",
+      "source": "claude_tiers_reboot_era_ascension",
       "target": "src_game_engine_buyhyperscaler",
       "relation": "references",
       "_origin": "ast",
@@ -98663,7 +98663,7 @@
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_buyprestigedoublepp",
+      "target": "src_game_engine_buyrebootdoublepp",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -98674,8 +98674,8 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
-      "target": "src_game_engine_buyprestigedoublepp",
+      "source": "docs_economy_reference_reboot_points_autobuyer_unlock_and_the_tickspeed_multiplier",
+      "target": "src_game_engine_buyrebootdoublepp",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -98687,7 +98687,7 @@
     },
     {
       "source": "claude_skills_simulate_run_times_skill_what_it_does",
-      "target": "src_game_engine_buyprestigespeedbonus",
+      "target": "src_game_engine_buyrebootspeedbonus",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -98699,7 +98699,7 @@
     },
     {
       "source": "docs_economy_reference_constants_src_game_layers_js",
-      "target": "src_game_engine_buyprestigespeedbonus",
+      "target": "src_game_engine_buyrebootspeedbonus",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -98711,7 +98711,7 @@
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_buyprestigespeedbonus",
+      "target": "src_game_engine_buyrebootspeedbonus",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -98806,7 +98806,7 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
       "target": "src_game_engine_buytickspeedmultiplier",
       "relation": "references",
       "_origin": "ast",
@@ -98890,7 +98890,7 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
       "target": "src_game_engine_buytier",
       "relation": "references",
       "_origin": "ast",
@@ -98950,7 +98950,7 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
       "target": "src_game_engine_buytiermaxlevels",
       "relation": "references",
       "_origin": "ast",
@@ -99058,7 +99058,7 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
       "target": "src_game_engine_buytierquantity",
       "relation": "references",
       "_origin": "ast",
@@ -99958,7 +99958,7 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
       "target": "src_game_engine_consumexpforlasttiertickspeed",
       "relation": "references",
       "_origin": "ast",
@@ -100330,7 +100330,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_prestigegame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_prestige_626_2026_09_09",
+      "source": "docs_design_history_rebootgame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_reboot_626_2026_09_09",
       "target": "src_game_engine_createinitialgamestate",
       "relation": "references",
       "_origin": "ast",
@@ -100366,7 +100366,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_the_byte_foundry_becomes_a_per_prestige_cycle_mechanic_not_a_one_time_gate",
+      "source": "docs_design_history_the_byte_foundry_becomes_a_per_reboot_cycle_mechanic_not_a_one_time_gate",
       "target": "src_game_engine_createinitialgamestate",
       "relation": "references",
       "_origin": "ast",
@@ -100378,7 +100378,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_prestige",
+      "source": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_reboot",
       "target": "src_game_engine_createinitialgamestate",
       "relation": "references",
       "_origin": "ast",
@@ -100702,7 +100702,7 @@
       "weight": 1
     },
     {
-      "source": "claude_tiers_prestige_era_ascension",
+      "source": "claude_tiers_reboot_era_ascension",
       "target": "src_game_engine_eragame",
       "relation": "references",
       "_origin": "ast",
@@ -100738,7 +100738,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_prestigegame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_prestige_626_2026_09_09",
+      "source": "docs_design_history_rebootgame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_reboot_626_2026_09_09",
       "target": "src_game_engine_eragame",
       "relation": "references",
       "_origin": "ast",
@@ -101530,7 +101530,7 @@
       "weight": 1
     },
     {
-      "source": "claude_tiers_prestige_era_ascension",
+      "source": "claude_tiers_reboot_era_ascension",
       "target": "src_game_engine_formatcurrency",
       "relation": "references",
       "_origin": "ast",
@@ -102010,7 +102010,7 @@
       "weight": 1
     },
     {
-      "source": "claude_tiers_prestige_era_ascension",
+      "source": "claude_tiers_reboot_era_ascension",
       "target": "src_game_engine_formatmoneybalance",
       "relation": "references",
       "_origin": "ast",
@@ -102263,24 +102263,24 @@
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_getautoprestigeattemptrate",
+      "target": "src_game_engine_getautorebootattemptrate",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "getAutoPrestigeAttemptRate",
+      "context": "getAutoRebootAttemptRate",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2937",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_multiplier_outcomes_are_floored",
-      "target": "src_game_engine_getautoprestigeattemptrate",
+      "target": "src_game_engine_getautorebootattemptrate",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "getAutoPrestigeAttemptRate",
+      "context": "getAutoRebootAttemptRate",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1492",
       "weight": 1
@@ -102358,7 +102358,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_prestige_count_milestone_unlocks",
+      "source": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_reboot_count_milestone_unlocks",
       "target": "src_game_engine_getautobuyerunlockcost",
       "relation": "references",
       "_origin": "ast",
@@ -102418,7 +102418,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_prestige_count_milestone_unlocks",
+      "source": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_reboot_count_milestone_unlocks",
       "target": "src_game_engine_getautobuyerunlockmilestone",
       "relation": "references",
       "_origin": "ast",
@@ -105562,7 +105562,7 @@
       "weight": 1
     },
     {
-      "source": "claude_tiers_prestige_era_ascension",
+      "source": "claude_tiers_reboot_era_ascension",
       "target": "src_game_engine_gethyperscalerflopsboostrate",
       "relation": "references",
       "_origin": "ast",
@@ -106042,7 +106042,7 @@
       "weight": 1
     },
     {
-      "source": "claude_tiers_prestige_era_ascension",
+      "source": "claude_tiers_reboot_era_ascension",
       "target": "src_game_engine_getmoneyexponent",
       "relation": "references",
       "_origin": "ast",
@@ -106054,7 +106054,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_why_the_prestige_threshold_became_googol_bits_per_byte_not_a_round_new_number",
+      "source": "docs_design_history_why_the_reboot_threshold_became_googol_bits_per_byte_not_a_round_new_number",
       "target": "src_game_engine_getmoneyexponent",
       "relation": "references",
       "_origin": "ast",
@@ -106090,7 +106090,7 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
       "target": "src_game_engine_getmoneyexponent",
       "relation": "references",
       "_origin": "ast",
@@ -106991,7 +106991,7 @@
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_getprestigedoubleppupgradecost",
+      "target": "src_game_engine_getrebootdoubleppupgradecost",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -107003,7 +107003,7 @@
     },
     {
       "source": "claude_testing",
-      "target": "src_game_engine_getprestigepointsawarded",
+      "target": "src_game_engine_getrebootpointsawarded",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -107014,8 +107014,8 @@
       "weight": 1
     },
     {
-      "source": "claude_tiers_prestige_era_ascension",
-      "target": "src_game_engine_getprestigepointsawarded",
+      "source": "claude_tiers_reboot_era_ascension",
+      "target": "src_game_engine_getrebootpointsawarded",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -107026,8 +107026,8 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_why_the_prestige_threshold_became_googol_bits_per_byte_not_a_round_new_number",
-      "target": "src_game_engine_getprestigepointsawarded",
+      "source": "docs_design_history_why_the_reboot_threshold_became_googol_bits_per_byte_not_a_round_new_number",
+      "target": "src_game_engine_getrebootpointsawarded",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -107039,7 +107039,7 @@
     },
     {
       "source": "docs_economy_reference_constants_src_game_layers_js",
-      "target": "src_game_engine_getprestigepointsawarded",
+      "target": "src_game_engine_getrebootpointsawarded",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -107051,7 +107051,7 @@
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_getprestigepointsawarded",
+      "target": "src_game_engine_getrebootpointsawarded",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -107062,8 +107062,8 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
-      "target": "src_game_engine_getprestigepointsawarded",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
+      "target": "src_game_engine_getrebootpointsawarded",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -107075,7 +107075,7 @@
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_getprestigepowersperpp",
+      "target": "src_game_engine_getrebootpowersperpp",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -107087,7 +107087,7 @@
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_getprestigeppperpower",
+      "target": "src_game_engine_getrebootppperpower",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -107099,7 +107099,7 @@
     },
     {
       "source": "claude_skills_economy_change_review_skill_5_authorization_boundary",
-      "target": "src_game_engine_getprestigeproductionmultiplier",
+      "target": "src_game_engine_getrebootproductionmultiplier",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -107111,7 +107111,7 @@
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_getprestigeproductionmultiplier",
+      "target": "src_game_engine_getrebootproductionmultiplier",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -107123,7 +107123,7 @@
     },
     {
       "source": "docs_economy_reference_multiplier_outcomes_are_floored",
-      "target": "src_game_engine_getprestigeproductionmultiplier",
+      "target": "src_game_engine_getrebootproductionmultiplier",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
@@ -107134,73 +107134,73 @@
       "weight": 1
     },
     {
-      "source": "claude_tiers_prestige_era_ascension",
-      "target": "src_game_engine_getprestigeprogresspercent",
+      "source": "claude_tiers_reboot_era_ascension",
+      "target": "src_game_engine_getrebootprogresspercent",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "getPrestigeProgressPercent",
+      "context": "getRebootProgressPercent",
       "source_file": "CLAUDE.md",
       "source_location": "L736",
       "weight": 1
     },
     {
-      "source": "docs_design_history_why_the_prestige_threshold_became_googol_bits_per_byte_not_a_round_new_number",
-      "target": "src_game_engine_getprestigeprogresspercent",
+      "source": "docs_design_history_why_the_reboot_threshold_became_googol_bits_per_byte_not_a_round_new_number",
+      "target": "src_game_engine_getrebootprogresspercent",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "getPrestigeProgressPercent",
+      "context": "getRebootProgressPercent",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2175",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_constants_src_game_layers_js",
-      "target": "src_game_engine_getprestigeprogresspercent",
+      "target": "src_game_engine_getrebootprogresspercent",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "getPrestigeProgressPercent",
+      "context": "getRebootProgressPercent",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2985",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_getprestigeprogresspercent",
+      "target": "src_game_engine_getrebootprogresspercent",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "getPrestigeProgressPercent",
+      "context": "getRebootProgressPercent",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2959",
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
-      "target": "src_game_engine_getprestigeprogresspercent",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
+      "target": "src_game_engine_getrebootprogresspercent",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "getPrestigeProgressPercent",
+      "context": "getRebootProgressPercent",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2040",
       "weight": 1
     },
     {
       "source": "docs_mainpage_reference_mainpage_reference",
-      "target": "src_game_engine_getprestigeprogresspercent",
+      "target": "src_game_engine_getrebootprogresspercent",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "getPrestigeProgressPercent",
+      "context": "getRebootProgressPercent",
       "source_file": "docs/MAINPAGE_REFERENCE.md",
       "source_location": "L745",
       "weight": 1
@@ -109222,7 +109222,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_prestige_count_milestone_unlocks",
+      "source": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_reboot_count_milestone_unlocks",
       "target": "src_game_engine_gettiertickspeedautobuyermilestone",
       "relation": "references",
       "_origin": "ast",
@@ -111538,7 +111538,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_prestige_fixed_by_making_diskwritecache_diskreadcacheflush_prestige_permanent",
+      "source": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_reboot_fixed_by_making_diskwritecache_diskreadcacheflush_reboot_permanent",
       "target": "src_game_engine_isdiskstrandedbyadvancedtier",
       "relation": "references",
       "_origin": "ast",
@@ -111598,7 +111598,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_prestige_fixed_by_making_diskwritecache_diskreadcacheflush_prestige_permanent",
+      "source": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_reboot_fixed_by_making_diskwritecache_diskreadcacheflush_reboot_permanent",
       "target": "src_game_engine_isdiskwritecachecollectpaused",
       "relation": "references",
       "_origin": "ast",
@@ -112282,7 +112282,7 @@
       "weight": 1
     },
     {
-      "source": "claude_tiers_prestige_era_ascension",
+      "source": "claude_tiers_reboot_era_ascension",
       "target": "src_game_engine_isproductionfrozen",
       "relation": "references",
       "_origin": "ast",
@@ -112294,7 +112294,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_why_the_prestige_threshold_became_googol_bits_per_byte_not_a_round_new_number",
+      "source": "docs_design_history_why_the_reboot_threshold_became_googol_bits_per_byte_not_a_round_new_number",
       "target": "src_game_engine_isproductionfrozen",
       "relation": "references",
       "_origin": "ast",
@@ -112378,7 +112378,7 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
       "target": "src_game_engine_isproductionfrozen",
       "relation": "references",
       "_origin": "ast",
@@ -112390,7 +112390,7 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
+      "source": "docs_economy_reference_reboot_points_autobuyer_unlock_and_the_tickspeed_multiplier",
       "target": "src_game_engine_isproductionfrozen",
       "relation": "references",
       "_origin": "ast",
@@ -113075,36 +113075,36 @@
     },
     {
       "source": "docs_economy_reference_era_ascension_and_eons_407",
-      "target": "src_game_engine_isunboundedprestigeunlocked",
+      "target": "src_game_engine_isunboundedrebootunlocked",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "isUnboundedPrestigeUnlocked",
+      "context": "isUnboundedRebootUnlocked",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1752",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_isunboundedprestigeunlocked",
+      "target": "src_game_engine_isunboundedrebootunlocked",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "isUnboundedPrestigeUnlocked",
+      "context": "isUnboundedRebootUnlocked",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2792",
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
-      "target": "src_game_engine_isunboundedprestigeunlocked",
+      "source": "docs_economy_reference_reboot_points_autobuyer_unlock_and_the_tickspeed_multiplier",
+      "target": "src_game_engine_isunboundedrebootunlocked",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "isUnboundedPrestigeUnlocked",
+      "context": "isUnboundedRebootUnlocked",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1634",
       "weight": 1
@@ -114130,7 +114130,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_prestigegame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_prestige_626_2026_09_09",
+      "source": "docs_design_history_rebootgame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_reboot_626_2026_09_09",
       "target": "src_game_engine_overclockgame",
       "relation": "references",
       "_origin": "ast",
@@ -114166,7 +114166,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_the_byte_foundry_becomes_a_per_prestige_cycle_mechanic_not_a_one_time_gate",
+      "source": "docs_design_history_the_byte_foundry_becomes_a_per_reboot_cycle_mechanic_not_a_one_time_gate",
       "target": "src_game_engine_overclockgame",
       "relation": "references",
       "_origin": "ast",
@@ -114178,7 +114178,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_prestige",
+      "source": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_reboot",
       "target": "src_game_engine_overclockgame",
       "relation": "references",
       "_origin": "ast",
@@ -114383,432 +114383,432 @@
     },
     {
       "source": "changelog_fixed_424",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "CHANGELOG.md",
       "source_location": "L425",
       "weight": 1
     },
     {
       "source": "claude_agents_code_reviewer_2_load_the_repo_s_invariants",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": ".claude/agents/code-reviewer.md",
       "source_location": "L70",
       "weight": 1
     },
     {
       "source": "claude_skills_simulate_run_times_skill_what_it_does",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": ".claude/skills/simulate-run-times/SKILL.md",
       "source_location": "L28",
       "weight": 1
     },
     {
       "source": "docs_design_history_a_devin_review_finding_on_the_pr_above_the_target_stranded_gate_broke_cross_tier_boundary_write_cache_chains_removed_the_stranded_gate_from_write_cache_entirely",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L7338",
       "weight": 1
     },
     {
       "source": "docs_design_history_a_devin_review_pass_on_the_idle_disk_liquidation_removal_found_write_cache_still_consuming_stranded_disks",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L6984",
       "weight": 1
     },
     {
-      "source": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_prestige_fixed_by_making_diskwritecache_diskreadcacheflush_prestige_permanent",
-      "target": "src_game_engine_prestigegame",
+      "source": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_reboot_fixed_by_making_diskwritecache_diskreadcacheflush_reboot_permanent",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L7043",
       "weight": 1
     },
     {
       "source": "docs_design_history_byte_foundry_gate_made_permanent_one_time_ever_fill_multiplier_instant_loss_beyond_200_gauge_relocated_inside_the_tile_2026_09_02",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1257",
       "weight": 1
     },
     {
       "source": "docs_design_history_compute_cores_nodes_capping_the_storage_ladder_and_two_different_meanings_of_mb_in_the_same_feature",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L3215",
       "weight": 1
     },
     {
       "source": "docs_design_history_per_pool_memory_buffers_a_real_intermediary_reservoir_between_the_data_stream_and_storage_spending",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L4767",
       "weight": 1
     },
     {
-      "source": "docs_design_history_prestigegame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_prestige_626_2026_09_09",
-      "target": "src_game_engine_prestigegame",
+      "source": "docs_design_history_rebootgame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_reboot_626_2026_09_09",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L338",
       "weight": 1
     },
     {
       "source": "docs_design_history_provision_disk_gets_a_queue_next_build_toggle_closing_a_real_automation_gap_2026_09_03",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1244",
       "weight": 1
     },
     {
       "source": "docs_design_history_removing_claim_core_superseded_by_data_lake_boosters",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L4172",
       "weight": 1
     },
     {
       "source": "docs_design_history_scaleupgame_s_highestmilestone_passthrough_was_a_real_bug_not_a_harmless_asymmetry",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2790",
       "weight": 1
     },
     {
       "source": "docs_design_history_speed_up_renamed_to_scale_up_and_redesigned_from_a_last_tier_only_gate_to_a_per_tier_unlock_ladder_2026_09_09",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L400",
       "weight": 1
     },
     {
-      "source": "docs_design_history_the_byte_foundry_becomes_a_per_prestige_cycle_mechanic_not_a_one_time_gate",
-      "target": "src_game_engine_prestigegame",
+      "source": "docs_design_history_the_byte_foundry_becomes_a_per_reboot_cycle_mechanic_not_a_one_time_gate",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2104",
       "weight": 1
     },
     {
-      "source": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_prestige",
-      "target": "src_game_engine_prestigegame",
+      "source": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_reboot",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2134",
       "weight": 1
     },
     {
-      "source": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_prestige_count_milestone_unlocks",
-      "target": "src_game_engine_prestigegame",
+      "source": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_reboot_count_milestone_unlocks",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2596",
       "weight": 1
     },
     {
       "source": "docs_design_history_upgrade_data_stream_arms_below_a_full_buffer_outflow_pause_superseded",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L8846",
       "weight": 1
     },
     {
       "source": "docs_design_history_why_scale_up_exists_and_why_its_requirement_escalates",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2541",
       "weight": 1
     },
     {
-      "source": "docs_design_history_why_scaleupcount_now_resets_on_prestige_reversing_the_original_design",
-      "target": "src_game_engine_prestigegame",
+      "source": "docs_design_history_why_scaleupcount_now_resets_on_reboot_reversing_the_original_design",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2561",
       "weight": 1
     },
     {
-      "source": "docs_design_history_why_the_prestige_threshold_became_googol_bits_per_byte_not_a_round_new_number",
-      "target": "src_game_engine_prestigegame",
+      "source": "docs_design_history_why_the_reboot_threshold_became_googol_bits_per_byte_not_a_round_new_number",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2179",
       "weight": 1
     },
     {
       "source": "docs_design_history_xp_and_everything_it_funds_became_run_scoped_not_permanent",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L2749",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_byte_foundry",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L141",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_era_ascension_and_eons_407",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1651",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2792",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_overclock",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2179",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_pause_resume_for_per_tier_automations",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1849",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_pause_resume_for_the_global_automations",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1815",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_pp_compute_flops",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1599",
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
-      "target": "src_game_engine_prestigegame",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2045",
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
-      "target": "src_game_engine_prestigegame",
+      "source": "docs_economy_reference_reboot_points_autobuyer_unlock_and_the_tickspeed_multiplier",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1630",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_scale_up",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2103",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_the_global_tickspeed_multiplier",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1911",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_the_last_tier_s_xp_funded_tickspeed",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1943",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_tier_autobuyer_tier_tickspeed_autobuyer_milestones",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L1792",
       "weight": 1
     },
     {
       "source": "docs_mainpage_reference_mainpage_reference",
-      "target": "src_game_engine_prestigegame",
+      "target": "src_game_engine_rebootgame",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "prestigeGame",
+      "context": "rebootGame",
       "source_file": "docs/MAINPAGE_REFERENCE.md",
       "source_location": "L415",
       "weight": 1
@@ -116038,7 +116038,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_prestigegame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_prestige_626_2026_09_09",
+      "source": "docs_design_history_rebootgame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_reboot_626_2026_09_09",
       "target": "src_game_engine_scaleupgame",
       "relation": "references",
       "_origin": "ast",
@@ -116074,7 +116074,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_the_byte_foundry_becomes_a_per_prestige_cycle_mechanic_not_a_one_time_gate",
+      "source": "docs_design_history_the_byte_foundry_becomes_a_per_reboot_cycle_mechanic_not_a_one_time_gate",
       "target": "src_game_engine_scaleupgame",
       "relation": "references",
       "_origin": "ast",
@@ -116086,7 +116086,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_prestige",
+      "source": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_reboot",
       "target": "src_game_engine_scaleupgame",
       "relation": "references",
       "_origin": "ast",
@@ -116291,24 +116291,24 @@
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_setautoprestigeautobuyerenabled",
+      "target": "src_game_engine_setautorebootautobuyerenabled",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "setAutoPrestigeAutobuyerEnabled",
+      "context": "setAutoRebootAutobuyerEnabled",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2920",
       "weight": 1
     },
     {
       "source": "docs_economy_reference_key_engine_functions_src_game_engine_js",
-      "target": "src_game_engine_setautoprestigeenabled",
+      "target": "src_game_engine_setautorebootenabled",
       "relation": "references",
       "_origin": "ast",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
-      "context": "setAutoPrestigeEnabled",
+      "context": "setAutoRebootEnabled",
       "source_file": "docs/ECONOMY_REFERENCE.md",
       "source_location": "L2919",
       "weight": 1
@@ -117898,7 +117898,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_prestige_fixed_by_making_diskwritecache_diskreadcacheflush_prestige_permanent",
+      "source": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_reboot_fixed_by_making_diskwritecache_diskreadcacheflush_reboot_permanent",
       "target": "src_game_engine_tickdiskwritecache",
       "relation": "references",
       "_origin": "ast",
@@ -118642,7 +118642,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_prestige",
+      "source": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_reboot",
       "target": "src_game_engine_tickgame",
       "relation": "references",
       "_origin": "ast",
@@ -118822,7 +118822,7 @@
       "weight": 1
     },
     {
-      "source": "docs_economy_reference_prestige_and_the_googol_freeze",
+      "source": "docs_economy_reference_reboot_and_the_googol_freeze",
       "target": "src_game_engine_tickgame",
       "relation": "references",
       "_origin": "ast",
@@ -119326,7 +119326,7 @@
       "weight": 1
     },
     {
-      "source": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_prestige",
+      "source": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_reboot",
       "target": "src_game_engine_tickintroproduction",
       "relation": "references",
       "_origin": "ast",

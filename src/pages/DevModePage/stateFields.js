@@ -35,7 +35,7 @@ export const VARIABLE_AREAS = [
   { id: 'foundry', icon: '🔥', label: 'Foundry', match: key => /^intro$|^computeAutoBoost/.test(key) },
   { id: 'compute', icon: '🖥', label: 'Compute', match: key => /^computeFlops/.test(key) },
   { id: 'era', icon: '🌌', label: 'Era', match: key => /^(era|eons|eonsUpgrades|hyperscaler)/i.test(key) },
-  { id: 'reboot', icon: '🏆', label: 'Prestige', match: key => /^reboot|^autoReboot/.test(key) },
+  { id: 'reboot', icon: '🏆', label: 'Prestige', match: key => /^reboot|^autoReboot|^prestige/.test(key) },
   {
     id: 'perks',
     icon: '✨',

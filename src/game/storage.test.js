@@ -81,6 +81,29 @@ describe('saveGameState / loadGameState round-trip', () => {
     expect(loadGameState().purchased[tensTier.id]).toBe(12)
   })
 
+  it('carries pre-rename prestige/latency keys forward to their reboot/speedUp names', () => {
+    const { reboot: _r, autoReboot: _a, autoRebootEnabled: _e, autoRebootAttemptBudget: _b, ...base } = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify({
+      ...base,
+      prestige: { xp: 2, points: 9, count: 4, highestMilestone: 1 },
+      autoPrestige: 3,
+      autoPrestigeEnabled: false,
+      autoPrestigeAttemptBudget: 0.5,
+      automationIntervalLevels: { latency: 2, scaleUp: 1, overclock: 0, prestige: 5 },
+      automationAttemptBudgets: { latency: 0.25, scaleUp: 0, overclock: 0 },
+    }))
+    const loaded = loadGameState()
+    expect(loaded.reboot).toMatchObject({ points: 9, count: 4, xp: 2 })
+    expect(loaded.autoReboot).toBe(3)
+    expect(loaded.autoRebootEnabled).toBe(false)
+    expect(loaded.autoRebootAttemptBudget).toBe(0.5)
+    expect(loaded.automationIntervalLevels).toMatchObject({ speedUp: 2, scaleUp: 1, reboot: 5 })
+    expect(loaded.automationAttemptBudgets.speedUp).toBe(0.25)
+    expect(loaded).not.toHaveProperty('prestige')
+    expect(loaded).not.toHaveProperty('autoPrestige')
+    expect(loaded.automationIntervalLevels).not.toHaveProperty('latency')
+  })
+
   it('preserves prestige count, points, and XP', () => {
     const state = {
       ...createInitialGameState(),
@@ -387,15 +410,15 @@ describe('schema merge on load', () => {
     const legacy = {
       ...createInitialGameState(),
       autobuyerBulkLevels: { [tensTier.id]: 2 },
-      autoRebootAutobuyer: true,
-      autoRebootAutobuyerEnabled: false,
+      autoPrestigeAutobuyer: true,
+      autoPrestigeAutobuyerEnabled: false,
     }
     localStorage.setItem('tens_game_state', JSON.stringify(legacy))
     const loaded = loadGameState()
     expect(loaded).not.toBeNull()
     expect(loaded).not.toHaveProperty('autobuyerBulkLevels')
-    expect(loaded).not.toHaveProperty('autoRebootAutobuyer')
-    expect(loaded).not.toHaveProperty('autoRebootAutobuyerEnabled')
+    expect(loaded).not.toHaveProperty('autoPrestigeAutobuyer')
+    expect(loaded).not.toHaveProperty('autoPrestigeAutobuyerEnabled')
   })
 
   it('defaults everUnlockedTierIds to the fresh-state default (only the first tier true) on a save that predates it', () => {

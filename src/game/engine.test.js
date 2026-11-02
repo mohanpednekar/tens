@@ -10728,8 +10728,8 @@ describe('Data Lakes', () => {
       const latched = tickDataLakeAutoConvert(built())
       expect(latched.intro.dataLakes[1].boosterAuto).toBe(true)
       const withHighs = { ...latched, intro: { ...latched.intro, dataLakes: { ...latched.intro.dataLakes, 1: { ...latched.intro.dataLakes[1], capacityLevel: 2, purchased: 3 } } } }
-      const rebootd = rebootGame({ ...withHighs, resources: { ...withHighs.resources, [MONEY_ID]: REBOOT_THRESHOLD } })
-      expect(rebootd.intro.dataLakes[1].boosterAuto).toBe(true)
+      const rebooted = rebootGame({ ...withHighs, resources: { ...withHighs.resources, [MONEY_ID]: REBOOT_THRESHOLD } })
+      expect(rebooted.intro.dataLakes[1].boosterAuto).toBe(true)
       const merged = mergeFoundryUpgradeCaps(
         { lakes: { 1: { capacityLevel: 2, purchased: 1 } } },
         { lakes: { 1: { capacityLevel: 1, purchased: 4 } } },
@@ -11309,9 +11309,9 @@ describe('Data Lakes', () => {
       expect(tickPoolResetReprovision(filled).intro.disksBuiltTotal[kb1]).toBe(2)
       expect(getDataLakeOverflowRatePercent(reset, 1)).toBe(50)
 
-      const rebootd = rebootGame(withMoney(reset, REBOOT_THRESHOLD))
-      expect(rebootd.intro.poolResetRebuildingCount).toBe(1)
-      expect(tickPoolResetReprovision(rebootd).intro.disksBuiltTotal[kb1]).toBe(1)
+      const rebooted = rebootGame(withMoney(reset, REBOOT_THRESHOLD))
+      expect(rebooted.intro.poolResetRebuildingCount).toBe(1)
+      expect(tickPoolResetReprovision(rebooted).intro.disksBuiltTotal[kb1]).toBe(1)
     })
 
     it('auto-buys reachable Boosters only after rebuild and grants bandwidth from reset two onward', () => {

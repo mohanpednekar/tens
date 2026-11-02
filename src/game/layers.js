@@ -668,7 +668,7 @@ export const AUTOMATION_INTERVAL_CONFIG = {
 }
 // Per-tier tickspeed autobuyer: 2× the tier autobuyer chain's cost, 16 s base.
 export const TIER_TICKSPEED_INTERVAL_CONFIG = { baseCost: 2, baseSeconds: 16 }
-// How many times the player must have rebootd before a tier's unit-buying autobuyer unlocks
+// How many times the player must have rebooted before a tier's unit-buying autobuyer unlocks
 // automatically (see engine.js's getAutobuyerUnlockMilestone/applyAutobuyerMilestones) — replaces
 // the old PP-cost-funded unlock entirely: no purchase, no PP spent, just a milestone reached by
 // prestige count. tier01 unlocks after the very first prestige, tier02 after the second, … tier10

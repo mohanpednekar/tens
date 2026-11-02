@@ -161,7 +161,7 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: 0,
   }), {}),
-  // Permanent interval-upgrade levels for the global automations (latency/scaleUp/overclock/prestige —
+  // Permanent interval-upgrade levels for the global automations (speedUp/scaleUp/overclock/reboot —
   // see AUTOMATION_INTERVAL_CONFIG) and per-tier tickspeed autobuyers; never reset by prestige.
   automationIntervalLevels: { speedUp: 0, scaleUp: 0, overclock: 0, reboot: 0 },
   tierTickspeedIntervalLevels: TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: 0 }), {}),
@@ -336,7 +336,7 @@ export const createInitialGameState = () => ({
     // production speed (see getPrestigeProductionMultiplier), but only once
     // prestigeSpeedBonusUnlocked is true.
     points: 0,
-    // Number of times ever rebootd — drives only the first-run-vs-repeat UI presentation
+    // Number of times ever rebooted — drives only the first-run-vs-repeat UI presentation
     // (MainPage), not production or cost. Renamed from the old `level` field now that prestige
     // grants points instead of directly doubling production.
     count: 0,
@@ -1438,7 +1438,7 @@ export const getOverclockRequirement = state => {
 export const getOverclockMultiplier = overclockCount =>
   (1 + OVERCLOCK_MULTIPLIER_STEP) ** clampNonNegative(overclockCount)
 
-// One-time PP unlock cost of a global automation (latency / scaleUp / overclock / prestige) — the
+// One-time PP unlock cost of a global automation (speedUp / scaleUp / overclock / reboot) — the
 // same amount as its first interval-upgrade level (AUTOMATION_INTERVAL_CONFIG[key].baseCost).
 export const getAutomationUnlockCost = key => AUTOMATION_INTERVAL_CONFIG[key].baseCost
 
@@ -1771,7 +1771,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // even while otherwise frozen. Storage's own auto-fill/auto-pull still run through every
   // branch here — like tickDiskPull/convertIntroBitsToKilobytes, they pay from a separate currency
   // pool and deliberately bypass this freeze entirely, so a player who's crossed the Prestige
-  // threshold hasn't manually rebootd yet still gets disks pulled into fresh tier levels
+  // threshold hasn't manually rebooted yet still gets disks pulled into fresh tier levels
   // automatically.
   if (isProductionFrozen(stateAfterFlops)) {
     if (!autoRebootActive) return tickStorage(stateAfterFlops)
@@ -6635,7 +6635,7 @@ export const buyAutobuyerIntervalUpgrade = tierId => state => {
 const getIntervalMaxLevelForBase = baseSeconds =>
   Math.max(0, Math.ceil(Math.log(AUTOBUYER_MIN_INTERVAL_SECONDS / baseSeconds) / Math.log(AUTOBUYER_INTERVAL_MULTIPLIER)))
 
-// Global automation interval chains (latency / scaleUp / overclock / prestige): AUTOMATION_INTERVAL_CONFIG.
+// Global automation interval chains (speedUp / scaleUp / overclock / reboot): AUTOMATION_INTERVAL_CONFIG.
 export const getAutomationIntervalMaxLevel = key => getIntervalMaxLevelForBase(AUTOMATION_INTERVAL_CONFIG[key].baseSeconds)
 export const getAutomationIntervalSeconds = (state, key) =>
   Math.max(

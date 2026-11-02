@@ -1719,8 +1719,8 @@ milestones" below), spending no PP at all.
   `getAutobuyerIntervalMaxLevel(tierId)`, e.g. 44 for tier01, 66 for tier10). `tickGame` accrues attempt budget at
   `elapsedSeconds / getAutobuyerIntervalSeconds(state, tierId)`. Needs the autobuyer unlocked; kept
   through Prestige/Scale Up/Overclock/Era. UI: Perks → Upgrades → Autobuyer Speed.
-- **Active — Automation interval chains:** `AUTOMATION_INTERVAL_CONFIG` (`latency` 8 PP/1 s, `scaleUp`
-  16 PP/64 s, `overclock` 32 PP/256 s, `prestige` 64 PP/1024 s) and `TIER_TICKSPEED_INTERVAL_CONFIG`
+- **Active — Automation interval chains:** `AUTOMATION_INTERVAL_CONFIG` (`speedUp` 8 PP/1 s, `scaleUp`
+  16 PP/64 s, `overclock` 32 PP/256 s, `reboot` 64 PP/1024 s) and `TIER_TICKSPEED_INTERVAL_CONFIG`
   (2 PP/16 s per tier). Cost = baseCost × the tier-autobuyer ladder (`getAutobuyerIntervalUpgradeCost`);
   interval = baseSeconds × 0.9^level, floor 10 ms. `buyAutomationIntervalUpgrade(key)` /
   `buyTierTickspeedIntervalUpgrade(tierId)` (state: `automationIntervalLevels`,
@@ -1744,7 +1744,7 @@ milestones" below), spending no PP at all.
   interval chain's first level costs: Speed Up 8, Scale Up 16, Overclock 32, Auto-Reboot 64 PP. Anything
   unlocked by a milestone (tier autobuyers, tier tickspeed autobuyers) has no unlock cost at all — only
   upgrades (1 PP / 2 PP first levels). The old `AUTO_SCALE_UP_COST`, `TICKSPEED_AUTOBUYER_COST`,
-  `AUTO_REBOOT_COST`/`_MULTIPLIER` constants and `getAutoRebootCost` were removed.
+  `AUTO_PRESTIGE_COST`/`_MULTIPLIER` constants and `getAutoPrestigeCost` were removed.
 - **Active — Auto Scale Up:** `buyAutoScaleUp(state)` permanently spends the `scaleUp` unlock cost (16 PP)
   to set `autoScaleUp = true`. Once bought, `tickGame` calls `scaleUpGame` on its interval timer
   (see "Automation interval chains") whenever `autoScaleUpEnabled` is also true. Final-tier requirements
@@ -1753,11 +1753,11 @@ milestones" below), spending no PP at all.
 - **Active — Auto Overclock:** `buyAutoOverclock(state)` spends the `overclock` unlock cost (32 PP; needs
   Auto Scale Up) to set `autoOverclock = true`; `tickGame` then calls `overclockGame` on its timer
   (pausable via `autoOverclockEnabled`). Permanent.
-- **Active — Tickspeed Autobuyer (Speed Up):** `buyTickspeedAutobuyer(state)` spends the `latency` unlock
+- **Active — Tickspeed Autobuyer (Speed Up):** `buyTickspeedAutobuyer(state)` spends the `speedUp` unlock
   cost (8 PP) to set `autoGlobalTickspeed = true`; `tickGame` then calls `buyGlobalTickspeedMultiplier` on
   its interval timer (re-validating eligibility internally) whenever `autoGlobalTickspeedEnabled` is also
   true. Only automates the *clicking*. No-op if already bought, insufficient points, or frozen. Permanent.
-- **Active — Auto-Reboot:** `buyAutoReboot(state)` is activation-only (`null` → 1) for the `prestige`
+- **Active — Auto-Reboot:** `buyAutoReboot(state)` is activation-only (`null` → 1) for the `reboot`
   unlock cost (64 PP); cadence comes from the interval chain (base 1024 s). Once active and
   `autoRebootEnabled` is also true, `tickGame` accumulates a global `autoRebootAttemptBudget` every
   tick (frozen or not) by `getAutoRebootAttemptRate(state) * elapsedSeconds`
@@ -2001,7 +2001,7 @@ instant that budget crosses 1. Either way,
 all no-op while frozen for manual purchases; `rebootGame` is the only action able to change state.
 `MainPage` reads `isProductionFrozen` to disable every other control while frozen.
 
-How the Prestige control is presented depends on `reboot.count` (times ever rebootd), not
+How the Prestige control is presented depends on `reboot.count` (times ever rebooted), not
 `reboot.points`:
 
 - **First time ever** (`reboot.count === 0`): a mandatory `FullScreenOverlay`
@@ -2017,10 +2017,10 @@ How the Prestige control is presented depends on `reboot.count` (times ever rebo
   to a single-line default (60px, i.e. the old `3.75rem` constant) in environments without
   `ResizeObserver` (e.g. jsdom in tests).
 
-There used to also be a bottom `RebootCard` (Factory view) mirroring the analogous informational
+There used to also be a bottom `PrestigeCard` (Factory view) mirroring the analogous informational
 `ScaleUpCard` below — it carried no Prestige button of its own (the PP header display, `PpHeaderCard`,
 see "Balances (top HUD)" above, already doubles as the Prestige button once `canReboot`), so it was
-purely informational: prestige progress/award preview, rebootd count, unspent PP, and Auto-Reboot
+purely informational: prestige progress/award preview, rebooted count, unspent PP, and Auto-Reboot
 status. It has been removed entirely as redundant with the `TopRebootBar`/`FullScreenOverlay`/
 PP-header-as-button ways to trigger and observe Prestige — none of that information had anywhere else to
 go for it to lose. Auto-Reboot's status line (`"every {interval}"`) shows on its Perks → 🔓 Unlocks Global Automation row; its speed chain is on ⏫ Upgrades and its pause toggle on Perks → Toggles. Global automations are sequential (each needs the previous one, in the UI and the engine).
@@ -2432,7 +2432,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // see "Prestige Points, autobuyer unlock, and the
                                                           // tickspeed multiplier") — permanent, never reset by
                                                           // Scale Up, only added to by rebootGame;
-                                                          // count is the number of times ever rebootd (renamed
+                                                          // count is the number of times ever rebooted (renamed
                                                           // from the old `level` field), driving only the
                                                           // first-run-vs-repeat UI presentation; prestige itself
                                                           // is gated on Money ≥ REBOOT_THRESHOLD, not xp or points.
@@ -2857,7 +2857,7 @@ purchases were manual or automatic.
 | `getAutobuyerUnlockMilestone` | `tierId → number` | `AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP` (`1`, `1`) — the number of reboots required before a tier's unit-buying autobuyer unlocks automatically: 1 for the first tier, up through 10 for the 10th/last; an unrecognized tier id is treated as index 0 |
 | `getTierTickspeedAutobuyerMilestone` | `tierId → number` | `TIER_TICKSPEED_AUTOBUYER_MILESTONE_START + tierIndex * TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP` (`11`, `1`) — the number of reboots required before a tier's own tickspeed autobuyer unlocks automatically: 11 for the first tier, up through 20 for the 10th/last |
 | `getTickspeedProductionMultiplier` | `level → number` | `1.1 ** (level - 1)` (`TICKSPEED_PRODUCTION_STEP = 0.1`; `null`/never-unlocked and level ≤ 1 all treated as the baseline ×1, no bonus); despite the name, this factor is no longer multiplied into a production credit directly — `getEffectiveTierTickSpeedSeconds` divides it into the tier's base tickspeed instead, so it speeds up delivery frequency rather than delivery size |
-| `getAutomationUnlockCost` | `key → number` | `AUTOMATION_INTERVAL_CONFIG[key].baseCost` — one-time unlock cost of `latency`/`scaleUp`/`overclock`/`prestige`, equal to that chain's first upgrade level |
+| `getAutomationUnlockCost` | `key → number` | `AUTOMATION_INTERVAL_CONFIG[key].baseCost` — one-time unlock cost of `speedUp`/`scaleUp`/`overclock`/`reboot`, equal to that chain's first upgrade level |
 | `getAutoRebootAttemptRate` | `state → number` | `1 / getAutomationIntervalSeconds(state, 'reboot')` — attempts per second (base interval 1024 s, ×0.9 per speed level) |
 | `getGlobalTickspeedMultiplierCost` | `currentLevel → number` | `10 ** (currentLevel + 1)` — the Money cost to activate (level 0→1, costing 10 Money) or upgrade (level N→N+1) the global tickspeed multiplier; doubles the exponent each level (100, 1000, …) |
 | `getGlobalTickspeedProductionMultiplier` | `(level, overclockCount = 0) → number` | `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)) ** level`; every level uses the same step and milestones add no bonus |
@@ -2927,7 +2927,7 @@ purchases were manual or automatic.
 - `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS = 600` (10 minutes) — real elapsed time at or below this runs offline progress at 100% speed with no notice shown; only beyond it does `OFFLINE_PROGRESS_SPEED_MULTIPLIER` apply
 - `MAX_OFFLINE_SECONDS = 86400` (24 hours) — cap on real elapsed time counted toward offline progress
 - `PRESTIGE_POINT_SPEED_BONUS = 0.01` — +1% production speed per unspent Prestige Point, once unlocked (see next)
-- `PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000` — one-time PP cost to unlock the passive production speed bonus above (see `buyPrestigeSpeedBonus`) — inert until bought, regardless of PP balance. The priciest of the four global PP automation unlocks (see `AUTO_SCALE_UP_COST`/`TICKSPEED_AUTOBUYER_COST`/`AUTO_REBOOT_COST` below), since it's passive and always-on rather than a one-shot action
+- `PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000` — one-time PP cost to unlock the passive production speed bonus above (see `buyPrestigeSpeedBonus`) — inert until bought, regardless of PP balance. The priciest of the four global PP automation unlocks (see `AUTO_SCALE_UP_COST`/`TICKSPEED_AUTOBUYER_COST`/`AUTO_PRESTIGE_COST` below), since it's passive and always-on rather than a one-shot action
 - `TICKSPEED_MULTIPLIER_BASE_EXPONENT = 10` — exponent driving the (Money-funded) tickspeed multiplier's per-tier base cost (see `getTickspeedMultiplierBaseCost`): 10^10 for the first tier, down to 10^1 for the 10th/last tier
 - `TICKSPEED_PRODUCTION_STEP = 0.1` — each tickspeed multiplier level speeds up a tier's delivery frequency by another 10%, not the amount delivered (see `getTickspeedProductionMultiplier`/`getEffectiveTierTickSpeedSeconds`)
 - `AUTOBUYER_UNLOCK_BASE_COST = 1` — no longer an actual PP cost (see `getAutobuyerUnlockCost`'s doc above) — kept only as the price scale of PP purchases: 1 through 10 across the ten tiers

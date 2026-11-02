@@ -2075,7 +2075,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent(/2,?000 PP/)
 })
 
-test('no PP tabs or PP-based controls appear before the player has ever rebootd, even with an active autobuyer and unspent PP — Milestones stays via More', async () => {
+test('no PP tabs or PP-based controls appear before the player has ever rebooted, even with an active autobuyer and unspent PP — Milestones stays via More', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
@@ -5115,7 +5115,7 @@ test('a real Prestige from MainPage resets Data Stream balance but keeps Factory
 test('completing the Byte Foundry again after a Prestige navigates forward into MainPage with newly re-granted Kilobytes', () => {
   vi.useFakeTimers()
 
-  // Simulates "just rebootd, now replaying the intro" — reboot.count already at 1, resources/
+  // Simulates "just rebooted, now replaying the intro" — reboot.count already at 1, resources/
   // owned already at their fresh post-Prestige defaults, intro reset and one tick away from its
   // own auto-invest threshold again.
   seedIntroState(

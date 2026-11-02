@@ -725,7 +725,7 @@ Reset Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Reboo
 tickspeed track is **Speed Up** (formerly Latency). Code follows suit — `state.reboot`, `rebootGame`,
 `REBOOT_THRESHOLD`, `autoReboot`, automation keys `'speedUp'`/`'reboot'` — while Prestige-Point,
 Double PP, speed-bonus, `prestigeMuseum` and `metaPrestige` identifiers keep `prestige`. Pre-rename
-saves were not migrated (maintainer decision).
+save keys are renamed on load by `storage.js`'s `renamePreRebootKeys`.
 
 There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
 display names `Kilobytes` through `Quettabytes`. Every tier is bought directly with the base currency
@@ -962,7 +962,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (2183 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (2187 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

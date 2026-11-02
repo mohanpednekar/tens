@@ -490,7 +490,7 @@ const TierDetailsContent = styled.div`
 `
 
 // Mandatory full-screen takeover shown only the very first time Money reaches REBOOT_THRESHOLD (before the
-// player has ever rebootd) — covers the whole viewport so the frozen, disabled page underneath
+// player has ever rebooted) — covers the whole viewport so the frozen, disabled page underneath
 // is never visible/reachable; there's deliberately no close/dismiss control (see RebootButton
 // below, the only thing left clickable while frozen).
 const FullScreenOverlay = styled.div`
@@ -899,7 +899,7 @@ const MainPage = ({ game }) => {
 
   // All production and purchasing freezes the instant Money reaches REBOOT_THRESHOLD (see
   // isProductionFrozen in engine.js) — Prestige is the only remaining action. The first time
-  // this ever happens (before the player has rebootd even once) it's a mandatory full-screen
+  // this ever happens (before the player has rebooted even once) it's a mandatory full-screen
   // takeover; every time after that, it's a compact banner pinned to the top of the page instead,
   // since the player already knows what Prestige does.
   const isFrozen = isProductionFrozen(state)

@@ -519,9 +519,37 @@ const applyPendingComputeGrants = (intro, pendingComputeGrants) => {
   return next
 }
 
+// Pre-rename keys: the Factory reset was "prestige" and the global tickspeed automation "latency".
+// Renamed in place (new key wins if both exist) so older saves keep their progress.
+const RENAMED_TOP_LEVEL_KEYS = [
+  ['prestige', 'reboot'],
+  ['autoPrestige', 'autoReboot'],
+  ['autoPrestigeEnabled', 'autoRebootEnabled'],
+  ['autoPrestigeAttemptBudget', 'autoRebootAttemptBudget'],
+]
+const RENAMED_AUTOMATION_KEYS = [['latency', 'speedUp'], ['prestige', 'reboot']]
+const renameKeys = (obj, pairs) => {
+  if (!obj || typeof obj !== 'object') return obj
+  const next = { ...obj }
+  for (const [from, to] of pairs) {
+    if (from in next) {
+      if (!(to in next)) next[to] = next[from]
+      delete next[from]
+    }
+  }
+  return next
+}
+export const renamePreRebootKeys = saved => {
+  const next = renameKeys(saved, RENAMED_TOP_LEVEL_KEYS)
+  if (next.automationIntervalLevels) next.automationIntervalLevels = renameKeys(next.automationIntervalLevels, RENAMED_AUTOMATION_KEYS)
+  if (next.automationAttemptBudgets) next.automationAttemptBudgets = renameKeys(next.automationAttemptBudgets, RENAMED_AUTOMATION_KEYS)
+  return next
+}
+
 // Merge a saved state with fresh defaults so newly added fields are present on load.
 // Schema transforms run in save-migration/ on every load before this runs.
-const mergeState = saved => {
+const mergeState = rawSaved => {
+  const saved = renamePreRebootKeys(rawSaved)
   const fresh = createInitialGameState()
   // speedUpCount/autoSpeedUp/autoSpeedUpEnabled are the pre-rename names of
   // scaleUpCount/autoScaleUp/autoScaleUpEnabled (see engine.js) — stripped here (like
@@ -531,8 +559,8 @@ const mergeState = saved => {
     lastTierTickspeedXpUnlocked: _removed,
     // Removed mechanics (autobuyer bulk modes, Auto-Prestige Autobuyer) — stripped so legacy saves don't keep dead keys.
     autobuyerBulkLevels: _removedBulk,
-    autoRebootAutobuyer: _removedAutoPrestigeAutobuyer,
-    autoRebootAutobuyerEnabled: _removedAutoPrestigeAutobuyerEnabled,
+    autoPrestigeAutobuyer: _removedAutoPrestigeAutobuyer,
+    autoPrestigeAutobuyerEnabled: _removedAutoPrestigeAutobuyerEnabled,
     speedUpCount: legacySpeedUpCount,
     autoSpeedUp: legacyAutoSpeedUp,
     autoSpeedUpEnabled: legacyAutoSpeedUpEnabled,
