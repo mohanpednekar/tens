@@ -1933,7 +1933,9 @@ were removed outright rather than replaced. Overclock scales this one shared ste
 A **separate** upgrade from the last tier's own resource-funded tickspeed level (which stays buyable
 the whole time — see "Tickspeed multiplier" above). Once the **last tier**
 (`TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]`, read structurally) has been the target of a
-successful Scale Up this cycle (`isLastTierTickspeedXpUnlocked`), a **Restage** card appears on
+successful Scale Up this cycle (`isLastTierTickspeedXpUnlocked` — with 10 tiers, exactly the run's 10th
+Scale Up; maintainer-confirmed as "first Restage after 10 Scale Ups, then 10% additional XP each time"),
+a **Restage** card appears on
 MainPage directly below the Latency card. XP (`prestige.xp`) is otherwise absent from the UI — this is
 its one purpose.
 

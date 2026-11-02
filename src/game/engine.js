@@ -952,7 +952,9 @@ export const getGlobalTickspeedProductionMultiplier = (level, overclockCount = 0
 // Whether the separate Restage upgrade for the last tier (shown beside Latency — see
 // getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) is available — a live
 // check for the first Scale Up OF THE FINAL TIER (scaleUpTierCounts[last] >= 1). Simply revealing
-// the final tier is not enough. Deliberately live, not a permanent latch: Overclock/Prestige reset
+// the final tier is not enough. With TIER_DEFINITIONS.length tiers this is exactly the run's
+// TIER_DEFINITIONS.length-th (10th) Scale Up (scaleUpCount >= 10) — the intended "first Restage
+// after 10 Scale Ups" rule (maintainer-confirmed). Deliberately live, not a permanent latch: Overclock/Prestige reset
 // scaleUpTierCounts back to 0 (and also reset lastTierXpConsumed/prestige.xp to 0 — see
 // overclockGame/prestigeGame), hiding the upgrade again — re-Scaling-Up to the final tier re-engages it, from the fresh (0)
 // lastTierXpConsumed baseline a Prestige/Overclock left behind.
