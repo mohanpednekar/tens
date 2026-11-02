@@ -671,7 +671,7 @@ Strict three-layer separation:
    constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
    import) — the **only** in-app version surface. Reached via AppNav's Guide item.
 6. **`MilestonesPage/index.jsx`** — Chapters / Era ascension status screen (autobuyer unlock
-   milestones live once, on Perks → Unlocks — not repeated here). Chapters: the first KiloByte, Go Googol, Open
+   milestones live once, on Perks → Unlocks — not repeated here). Chapters: the first Kilobyte, Go Googol, Open
    Compute, DeGoogoled, Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always
    reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):

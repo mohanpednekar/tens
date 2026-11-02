@@ -112,14 +112,13 @@ const ComputeFlopsPage = ({ game }) => {
 
 
       <Hint>
-        Unlocks at {COMPUTE_FLOPS_REVEAL_PP} PP — you have {formatAmount(pp)} PP.
+        {!revealed && <>Unlocks at {COMPUTE_FLOPS_REVEAL_PP} PP — you have {formatAmount(pp)} PP. </>}
         {pp < COMPUTE_FLOPS_FIRST_TIER_COST_PP && (
-          <> First tier costs {formatAmount(COMPUTE_FLOPS_FIRST_TIER_COST_PP)} PP.</>
+          <>The first tier costs {formatAmount(COMPUTE_FLOPS_FIRST_TIER_COST_PP)} PP. </>
         )}
-        {' '}Each owned unit adds {(COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * 100).toFixed(2)}% per
-        second to the matching Factory tier (linear in owned count). Per-unit PP cost rises every
-        purchase on the same linear-increment power-of-ten curve as Factory tiers (not every 8 buys).
-        Boost resets each Prestige; owned units are permanent.
+        Each owned unit adds {(COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * 100).toFixed(2)}% per
+        second to the matching Factory tier’s boost. The PP price rises with every purchase (not
+        every 8, as on Factory tiers). Boosts reset each Prestige; owned units are permanent.
       </Hint>
 
       <TierList aria-label="compute flops tiers">

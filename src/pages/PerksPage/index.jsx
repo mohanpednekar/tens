@@ -474,7 +474,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               onClick={actions.buyAutoPrestige}
               points={points}
               progressLabel="Auto-Prestige Prestige Point progress"
-              title="Spend Prestige Points so Prestige happens automatically once Bits reaches 1 Googol Bytes"
+              title="Spend Prestige Points so Prestige happens automatically once your balance reaches 1 Googol Bytes"
             />
           )}
         </Row>
@@ -672,7 +672,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   onClick={() => actions.buyTierTickspeedIntervalUpgrade(tier.id)}
                   points={points}
                   progressLabel={`${tier.name} tickspeed autobuyer speed Prestige Point progress`}
-                  title="Spend Prestige Points to shorten this tier tickspeed autobuyer's interval by 10% (floor 10 ms); cost doubles each level"
+                  title="Spend Prestige Points to shorten this tier's tickspeed autobuyer interval by 10% (floor 10 ms); cost doubles each level"
                 />
               )}
             </Row>

@@ -5243,7 +5243,7 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry leaves Factor
 
 // --- Chapters (Milestones page) ---
 // Chapter rows read intro.mainGameUnlocked, prestige.count, computeFlops.pageUnlocked,
-// isUnboundedPrestigeUnlocked, and era.count — see CLAUDE.md / MAINPAGE_REFERENCE. "The first KiloByte"
+// isUnboundedPrestigeUnlocked, and era.count — see CLAUDE.md / MAINPAGE_REFERENCE. "The first Kilobyte"
 // is always ✅ once this view is reachable; Go Googol varies with prestige.count; separate tests cover
 // Open Compute / Go DeGoogol / Ascend an Era and the Compute autobuyer category.
 test.each([

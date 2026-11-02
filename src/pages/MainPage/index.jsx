@@ -1106,8 +1106,8 @@ const MainPage = ({ game }) => {
             <li>Resets your resources, owned tiers, and purchases</li>
             <li>
               Awards {formatAmount(prestigePointsPreview)} Prestige Point
-              {prestigePointsPreview === 1 ? '' : 's'} — each unspent point adds +1% production
-              speed, or spend them on the Perks page to unlock autobuyers
+              {prestigePointsPreview === 1 ? '' : 's'} — spend them on the Perks page for
+              automation and production bonuses
             </li>
             <li>Keeps your unlocked autobuyers and Prestige Points</li>
           </ul>
@@ -1295,7 +1295,7 @@ const MainPage = ({ game }) => {
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
             disabled={!canBuyGlobalTickspeed}
             onClick={actions.buyGlobalTickspeedMultiplier}
-            title="Spend Bytes to permanently speed up every tier's production ticks by another 1% at once (more frequent deliveries, not bigger ones) — each level costs another power of ten"
+            title="Spend Bytes to make every tier's production ticks faster (more frequent deliveries, not bigger ones) — each level costs the next power of ten"
             type="button"
             $progress={globalTickspeedProgressPercent}
             $progressColor="#3b82f6"
