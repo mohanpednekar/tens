@@ -607,6 +607,18 @@ security for these uploads to be accepted). Push/PR to `main` plus a weekly sche
 `CODE_SIGNING_ALLOWED=NO`. Default setup's Swift autobuild ran a bare `swift build` with no
 `node_modules` and failed once Capacitor plugins were synced in (#915).
 
+### Mutation testing (`mutation-testing.yml`, #592)
+
+Weekly (Sun 03:23 UTC) and `workflow_dispatch` job — **not** a PR check and never gates a merge. Runs
+Stryker (`stryker.config.json`, Vitest runner, `perTest` coverage) over `src/game/engine.js`: each
+mutant reruns only the tests covering it. The initial dry run takes ~1 min; a full engine run has
+thousands of mutants, so the job allows up to 330 min. `workflow_dispatch`'s `mutate` input takes a
+Stryker range override (e.g. `src/game/engine.js:100-400`) for a quick check. Read the output in the
+run's **job summary**: *Total score* = (killed+timeout) / (killed+timeout+survived+no-coverage);
+*Score on covered code* ignores no-coverage mutants. Survivors are tests that would miss a real bug —
+download the `mutation-report` artifact and open `index.html` to see them. Locally:
+`yarn stryker run --mutate src/game/engine.js:100-130` (reports in gitignored `reports/mutation/`).
+
 ### Release (`release.yml`)
 
 Deterministic (no agent) — the post-merge half of #52, complementing the pre-merge

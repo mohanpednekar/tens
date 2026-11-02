@@ -1,0 +1,76 @@
+name: Mutation testing
+
+# Periodic health signal (#592, part of #587): Stryker mutates src/game/engine.js and reruns the
+# Vitest suite per mutant. Far too slow to gate PRs, so this is scheduled/manual only and is NOT a
+# required check. The mutation score lands in the job summary; the full HTML report is an artifact.
+
+on:
+  schedule:
+    - cron: '23 3 * * 0' # weekly, Sunday 03:23 UTC
+  workflow_dispatch:
+    inputs:
+      mutate:
+        description: 'Optional Stryker --mutate glob/range override (e.g. src/game/engine.js:100-400)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-testing
+  cancel-in-progress: false
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-node-yarn
+
+      - name: Run Stryker
+        env:
+          MUTATE_OVERRIDE: ${{ github.event.inputs.mutate }}
+        run: |
+          if [ -n "$MUTATE_OVERRIDE" ]; then
+            yarn stryker run --mutate "$MUTATE_OVERRIDE"
+          else
+            yarn stryker run
+          fi
+
+      - name: Publish score to job summary
+        if: always()
+        run: |
+          if [ ! -f reports/mutation/mutation.json ]; then
+            echo "No mutation report was produced." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync("reports/mutation/mutation.json", "utf8"));
+            let c = {};
+            for (const f of Object.values(r.files)) for (const m of f.mutants) c[m.status] = (c[m.status] || 0) + 1;
+            const k = c.Killed || 0, t = c.Timeout || 0, s = c.Survived || 0, n = c.NoCoverage || 0;
+            const detected = k + t, valid = detected + s + n;
+            const pct = valid ? (100 * detected / valid).toFixed(2) : "n/a";
+            const covered = detected + s;
+            const cpct = covered ? (100 * detected / covered).toFixed(2) : "n/a";
+            console.log("## Mutation score (engine.js)\n");
+            console.log("| Metric | Value |\n|---|---|");
+            console.log("| Total score | **" + pct + "%** |");
+            console.log("| Score on covered code | " + cpct + "% |");
+            console.log("| Killed / Timeout | " + k + " / " + t + " |");
+            console.log("| Survived | " + s + " |");
+            console.log("| No coverage | " + n + " |");
+            console.log("\nDownload the `mutation-report` artifact and open `index.html` to inspect survivors.");
+          ' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutation-report
+          path: reports/mutation/
+          if-no-files-found: ignore
+          retention-days: 30
