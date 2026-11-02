@@ -59,7 +59,7 @@ yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump p
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png + favicon.ico from scripts/generate-pwa-icons.mjs
 ```
 
-Single test file or name: `yarn test src/game/engine.js.test.js` (vitest run <path>); `yarn test -t "buyTier"`.
+Single test file or name: `yarn test src/game/engine.test.js` (vitest run <path>); `yarn test -t "buyTier"`.
 
 ## Interactive session startup
 
