@@ -1182,7 +1182,7 @@ test('the scale up and overclock panels render below the tier list, not above it
   expect(regions.indexOf('overclock panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('once the last tier has been a Scale Up target, a separate XP Tickspeed panel appears beside Latency while the row keeps its own tickspeed button', () => {
+test('once the last tier has been a Scale Up target, a separate Restage panel appears beside Latency while the row keeps its own tickspeed button', () => {
   seedMainGameState({
     resources: { base: 12345, tier10: 25 },
     owned: { tier09: 10, tier10: 25 },
@@ -1193,7 +1193,7 @@ test('once the last tier has been a Scale Up target, a separate XP Tickspeed pan
   })
   render(<App />)
 
-  const xpPanel = screen.getByLabelText(/^xp tickspeed panel$/i)
+  const xpPanel = screen.getByLabelText(/^restage panel$/i)
   const xpButton = within(xpPanel).getByRole('button', { name: /consume 37 xp for .* quettabytes tickspeed/i })
   expect(xpButton).toHaveTextContent('🧬')
   expect(xpButton).toBeEnabled()
@@ -1203,17 +1203,17 @@ test('once the last tier has been a Scale Up target, a separate XP Tickspeed pan
   expect(within(quettabytesLayer).getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 1 QB/i })).toBeEnabled()
 })
 
-test('the XP Tickspeed panel is hidden before the last tier has been a Scale Up target', () => {
+test('the Restage panel is hidden before the last tier has been a Scale Up target', () => {
   seedMainGameState({
     resources: { base: 12345 },
     owned: { tier09: 10, tier10: 25 },
     prestige: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
   })
   render(<App />)
-  expect(screen.queryByLabelText(/^xp tickspeed panel$/i)).toBeNull()
+  expect(screen.queryByLabelText(/^restage panel$/i)).toBeNull()
 })
 
-test('the XP Tickspeed button disables once the last tier\'s own owned count is 0', () => {
+test('the Restage button disables once the last tier\'s own owned count is 0', () => {
   seedMainGameState({
     resources: { base: 12345 },
     owned: { tier09: 10, tier10: 0 },
@@ -1223,7 +1223,7 @@ test('the XP Tickspeed button disables once the last tier\'s own owned count is 
   })
   render(<App />)
 
-  const xpPanel = screen.getByLabelText(/^xp tickspeed panel$/i)
+  const xpPanel = screen.getByLabelText(/^restage panel$/i)
   expect(within(xpPanel).getByRole('button', { name: /consume 37 xp for .* quettabytes tickspeed/i })).toBeDisabled()
 })
 
@@ -1520,7 +1520,7 @@ test('an Enable Auto Scale Up button appears on the PP Upgrades page after the f
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('an Enable XP Tickspeed Autobuyer button on Perks → Unlocks spends 8 PP to enable it', async () => {
+test('an Enable Auto Restage button on Perks → Unlocks spends 8 PP to enable it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1531,11 +1531,11 @@ test('an Enable XP Tickspeed Autobuyer button on Perks → Unlocks spends 8 PP t
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  const button = screen.getByRole('button', { name: /enable xp tickspeed autobuyer for 8 prestige points/i })
+  const button = screen.getByRole('button', { name: /enable auto restage for 8 prestige points/i })
   expect(button).toBeEnabled()
   await user.click(button)
 
-  expect(screen.getByLabelText('XP Tickspeed Autobuyer unlocked')).toBeInTheDocument()
+  expect(screen.getByLabelText('Auto Restage unlocked')).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -1809,9 +1809,9 @@ test.each([
     buttonName: /enable auto scale up for 16 prestige points/i,
   },
   {
-    name: 'Enable XP Tickspeed Autobuyer',
+    name: 'Enable Auto Restage',
     seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 7, count: 1, highestMilestone: 1 } },
-    buttonName: /enable xp tickspeed autobuyer for 8 prestige points/i,
+    buttonName: /enable auto restage for 8 prestige points/i,
   },
   {
     name: 'Auto-Prestige',
@@ -1853,10 +1853,10 @@ test.each([
     resumeName: /^Auto Scale Up automation$/i,
   },
   {
-    name: 'XP Tickspeed Autobuyer',
+    name: 'Auto Restage',
     seed: { owned: { tier09: 10 }, autoXpTickspeed: true },
-    pauseName: /^XP Tickspeed Autobuyer automation$/i,
-    resumeName: /^XP Tickspeed Autobuyer automation$/i,
+    pauseName: /^Auto Restage automation$/i,
+    resumeName: /^Auto Restage automation$/i,
   },
   {
     name: 'Auto-Prestige',

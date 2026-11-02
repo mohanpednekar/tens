@@ -1047,7 +1047,7 @@ const MainPage = ({ game }) => {
   const lastTierXpConsumeBonusLabel = formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpBalance))
   const handleConsumeLastTierXp = () => {
     if (!canConsumeLastTierXp) return
-    if (window.confirm(`Consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} faster ${lastTier.name} ticks? This resets every other tier's owned quantity (not their level) and your Bits balance back to 0.`)) {
+    if (window.confirm(`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} faster ${lastTier.name} ticks? This resets every other tier's owned quantity (not their level) and your Bits balance back to 0.`)) {
       actions.consumeXpForLastTierTickspeed(lastTierXpBalance)
     }
   }
@@ -1335,16 +1335,16 @@ const MainPage = ({ game }) => {
       )}
 
       {isLastTierXpUnlocked && (
-        <GlobalTickspeedCard aria-label="xp tickspeed panel">
+        <GlobalTickspeedCard aria-label="restage panel">
           <Disclosure>
-            <summary><h2>XP Tickspeed</h2></summary>
+            <summary><h2>Restage</h2></summary>
             <MutedText>
               {formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpConsumed), { precise: true })} faster {lastTier.name} ticks
               {' '}from {formatAmount(lastTierXpConsumed)} XP consumed. Next consumption needs at least {formatAmount(lastTierXpMinConsumption)} XP.
             </MutedText>
           </Disclosure>
           <Button
-            aria-label={`Consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`}
+            aria-label={`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`}
             variant="smart"
             disabled={!canConsumeLastTierXp}
             onClick={handleConsumeLastTierXp}
@@ -1356,10 +1356,10 @@ const MainPage = ({ game }) => {
             $pulse={canConsumeLastTierXp}
           >
             <ButtonIcon>🧬 </ButtonIcon>
-            <ButtonLabel>Consume {formatAmount(lastTierXpBalance)} XP</ButtonLabel>
+            <ButtonLabel>Restage ({formatAmount(lastTierXpBalance)} XP)</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
-              aria-label={`${lastTier.name} XP tickspeed progress`}
+              aria-label={`${lastTier.name} Restage progress`}
               aria-valuenow={lastTierXpProgressPercent}
               aria-valuemin={0}
               aria-valuemax={100}

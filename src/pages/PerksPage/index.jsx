@@ -458,13 +458,13 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             />
           )}
         </Row>
-        <Row aria-label="xp tickspeed autobuyer upgrade">
-          <RowLabel>🧬 XP Tickspeed Autobuyer</RowLabel>
+        <Row aria-label="auto restage upgrade">
+          <RowLabel>🧬 Auto Restage</RowLabel>
           {isXpTickspeedAutobuyerActive ? (
-            <UnlockedBadge icon="🧬" name="XP Tickspeed Autobuyer" />
+            <UnlockedBadge icon="🧬" name="Auto Restage" />
           ) : (
             <PpPurchaseButton
-              ariaLabel={`Enable XP Tickspeed Autobuyer for ${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} Prestige Points`}
+              ariaLabel={`Enable Auto Restage for ${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} Prestige Points`}
               color="#38bdf8"
               cost={XP_TICKSPEED_AUTOBUYER_UNLOCK_COST}
               disabled={!canBuyXpTickspeedAutobuyer}
@@ -472,8 +472,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} PP`}
               onClick={actions.buyXpTickspeedAutobuyer}
               points={points}
-              progressLabel="XP Tickspeed Autobuyer Prestige Point progress"
-              title="Spend Prestige Points so XP is automatically consumed for XP Tickspeed whenever possible (each consumption resets every other tier's owned quantity and Bits)"
+              progressLabel="Auto Restage Prestige Point progress"
+              title="Spend Prestige Points so XP is automatically consumed for Restage whenever possible (each consumption resets every other tier's owned quantity and Bits)"
             />
           )}
         </Row>
@@ -802,14 +802,14 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </Row>
       ),
       isXpTickspeedAutobuyerActive && (
-        <Row key="xp-tickspeed" aria-label="xp tickspeed autobuyer toggle">
-          <RowLabel>🧬 XP Tickspeed Autobuyer</RowLabel>
+        <Row key="auto-restage" aria-label="auto restage toggle">
+          <RowLabel>🧬 Auto Restage</RowLabel>
           <AutomationToggle
             enabled={xpTickspeedAutobuyerEnabled}
             icon="🧬"
-            name="XP Tickspeed Autobuyer"
+            name="Auto Restage"
             onToggle={() => actions.setAutoXpTickspeedEnabled(!xpTickspeedAutobuyerEnabled)}
-            toggleLabel="XP Tickspeed Autobuyer automation"
+            toggleLabel="Auto Restage automation"
           />
         </Row>
       ),

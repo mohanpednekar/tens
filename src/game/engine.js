@@ -287,7 +287,7 @@ export const createInitialGameState = () => ({
   // final tier. Its 3/6/9 cadence leaves Overclock reachable at level 5. Never reset by prestige or by Scale Up itself, like
   // autoPrestige/prestigeSpeedBonusUnlocked above.
   autoScaleUp: false,
-  // Permanent GLOBAL flag, false = not yet bought: whether the XP Tickspeed autobuyer
+  // Permanent GLOBAL flag, false = not yet bought: whether the Auto Restage
   // (XP_TICKSPEED_AUTOBUYER_UNLOCK_COST PP — see buyXpTickspeedAutobuyer/tickGame) is owned.
   // Never reset by Prestige, Scale Up, Overclock or Era ascension, like autoScaleUp.
   autoXpTickspeed: false,
@@ -949,7 +949,7 @@ export const getGlobalTickspeedProductionMultiplier = (level, overclockCount = 0
   return (1 + step) ** lvl
 }
 
-// Whether the separate XP Tickspeed upgrade for the last tier (shown beside Latency — see
+// Whether the separate Restage upgrade for the last tier (shown beside Latency — see
 // getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) is available — a live
 // check for the first Scale Up OF THE FINAL TIER (scaleUpTierCounts[last] >= 1). Simply revealing
 // the final tier is not enough. Deliberately live, not a permanent latch: Overclock/Prestige reset
@@ -1979,7 +1979,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     ? runGlobalIntervalAutomation(stateAfterAutoScaleUp, elapsedSeconds, 'overclock', overclockGame)
     : stateAfterAutoScaleUp
 
-  // XP Tickspeed autobuyer (PP unlock): spends the whole XP balance on the last tier's XP tickspeed
+  // Auto Restage (PP unlock): spends the whole XP balance on the last tier's XP tickspeed
   // whenever consumeXpForLastTierTickspeed allows (unlocked, last tier owned > 0, XP >= minimum,
   // not frozen) — edge-triggered; that function re-validates and no-ops otherwise.
   const stateAfterAutoXp = stateAfterScaleUp.autoXpTickspeed && (stateAfterScaleUp.autoXpTickspeedEnabled ?? true)
@@ -7547,7 +7547,7 @@ export const buyComputeAutoBoost = state => {
   }
 }
 
-// One-time XP_TICKSPEED_AUTOBUYER_UNLOCK_COST (8) PP purchase of the XP Tickspeed autobuyer (see
+// One-time XP_TICKSPEED_AUTOBUYER_UNLOCK_COST (8) PP purchase of the Auto Restage (see
 // autoXpTickspeed/tickGame). No prerequisite. A no-op if already bought, if there aren't enough
 // unspent points, or while production is frozen — same convention as buyAutoScaleUp.
 export const buyXpTickspeedAutobuyer = state => {
@@ -7563,7 +7563,7 @@ export const buyXpTickspeedAutobuyer = state => {
   }
 }
 
-// Toggles whether the XP Tickspeed autobuyer currently acts. A no-op until it's bought.
+// Toggles whether the Auto Restage currently acts. A no-op until it's bought.
 export const setAutoXpTickspeedEnabled = enabled => state => {
   if (!state.autoXpTickspeed) return state
   return { ...state, autoXpTickspeedEnabled: !!enabled }

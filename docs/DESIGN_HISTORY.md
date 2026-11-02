@@ -9084,3 +9084,6 @@ longer tied to the tier tickspeed autobuyer, and each consumption wipes every ot
 so it stays a deliberate, confirmed manual action — unless the player buys the separate 8 PP XP
 Tickspeed Autobuyer (`autoXpTickspeed`, added at the maintainer's request in the same PR), an explicit
 opt-in with its own pause toggle.
+The player-facing name became **Restage** (autobuyer: **Auto Restage**) at the maintainer's request —
+"Sacrifice" was considered and rejected. Engine identifiers (`consumeXpForLastTierTickspeed`,
+`autoXpTickspeed`, …) keep their descriptive names.

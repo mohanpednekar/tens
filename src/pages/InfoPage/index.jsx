@@ -486,9 +486,9 @@ const InfoPage = () => {
             it (the 2nd upgrade needs 100, spends 10).
           </li>
           <li>
-            After your first {lastTierName} Scale Up, an XP Tickspeed upgrade appears below Latency:
+            After your first {lastTierName} Scale Up, the Restage upgrade appears below Latency:
             spend XP for +1% faster {lastTierName} ticks per XP (compounding). It resets every other
-            tier’s owned quantity and your Bits. An 8 PP XP Tickspeed Autobuyer (Perks → Unlocks)
+            tier’s owned quantity and your Bits. An 8 PP Auto Restage (Perks → Unlocks)
             spends it for you.
           </li>
         </ul>
