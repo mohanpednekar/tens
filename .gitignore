@@ -115,3 +115,4 @@ graphify-out/.graphify_uncached.txt
 android/keystore.properties
 *.p12
 *.mobileprovision
+graphify-out/.graphify_build_state.json

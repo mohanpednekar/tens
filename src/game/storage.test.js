@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState, eraGame, getUnlockedStoragePoolCount } from './engine'
 import { BYTES_ID, ERA_ELIGIBILITY_PP, INTRO_CAPACITY_CAP_BITS, MONEY_ID, MONEY_STARTING_AMOUNT, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
-import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, getActiveSlotId, isDevModeActive, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, setDevModeActive, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
+import { adaptSaveForLoad, applyDevGameStateJson, importSaveJson, serializeSaveForExport, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, getActiveSlotId, isDevModeActive, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, setDevModeActive, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 
@@ -1181,5 +1181,45 @@ describe('cloud save export / import', () => {
     expect(importSaveJson('not json')).toEqual({ ok: false, reason: 'invalid_json' })
     expect(importSaveJson('[1,2]')).toEqual({ ok: false, reason: 'invalid_json' })
     expect(loadGameState()).toBeNull()
+  })
+
+  it('accepts partial hand-built saves (only the fields a test cares about)', () => {
+    expect(importSaveJson('{"intro":{"mainGameUnlocked":true}}').ok).toBe(true)
+    expect(importSaveJson('{"prestige":{"points":5},"era":{"count":1}}').ok).toBe(true)
+  })
+})
+
+describe('importSaveJson (production shape check)', () => {
+  beforeEach(() => localStorage.clear())
+  it('refuses JSON that is not a save instead of overwriting the slot', () => {
+    for (const text of ['{}', '{"foo":1}', '{"toString":1}', '{"saveSchemaVersion":2,"resources":{"base":"abc"}}', '{"saveSchemaVersion":2,"resources":"x"}']) {
+      expect(importSaveJson(text)).toEqual({ ok: false, reason: 'invalid_state' })
+    }
+    expect(loadGameState()).toBeNull()
+  })
+})
+
+describe('adaptSaveForLoad (dev build: no backward compatibility)', () => {
+  it('accepts any plain-object save as-is, dropping only the schema envelope', () => {
+    expect(adaptSaveForLoad({ saveSchemaVersion: 0, legacy: true, x: 1 }, true)).toEqual({ ok: true, payload: { legacy: true, x: 1 } })
+  })
+
+  it('still rejects non-objects in the dev build', () => {
+    expect(adaptSaveForLoad(null, true).ok).toBe(false)
+    expect(adaptSaveForLoad([1], true).ok).toBe(false)
+  })
+
+  it('is also lenient whenever Dev Mode is active, in any build', () => {
+    const legacy = { resources: { Ones: 5 } }
+    expect(adaptSaveForLoad(legacy).ok).toBe(false)
+    setDevModeActive(true)
+    expect(adaptSaveForLoad(legacy).ok).toBe(true)
+    setDevModeActive(false)
+  })
+
+  it('production path still delegates to save-migration (rejects an unmigratable legacy payload)', () => {
+    const legacy = { resources: { Ones: 5 } }
+    expect(adaptSaveForLoad(legacy, false).ok).toBe(false)
+    expect(adaptSaveForLoad(legacy, true).ok).toBe(true)
   })
 })

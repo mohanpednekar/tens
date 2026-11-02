@@ -3487,28 +3487,23 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   })
 
-  test('Provision Disk stays clickable below its cost, starting at 1 KB — clicking queues the build instead of doing nothing', () => {
-    // in the forced priority order (see "Byte Foundry" in CLAUDE.md) and would disable/queue Provision
-    // for a different reason than the one this test is isolating.
-    seedIntroState({ bits: currentBankCost - 1, capacity: currentBankCost, byteCreated: true })
+  test('Provision Disk is startable with an empty pool buffer — clicking arms a buffer-funded build that spends nothing yet', () => {
+    seedIntroState({ bits: 0, capacity: currentBankCost, byteCreated: true })
     render(<App />)
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
     expect(buildButton).toHaveTextContent('1 KB')
-    // The first pass isn't affordable yet, but the button is no longer disabled — clicking it
-    // queues the build (diskBuildQueued) so it fires itself the moment the buffer covers a pass,
-    // the same automatic continuation every LATER pass already gets once one is collected.
     expect(buildButton).not.toBeDisabled()
-    expect(buildButton).toHaveTextContent(/1 KB · tap to queue/)
-    expect(buildButton).toHaveAttribute('aria-description', expect.stringMatching(/pool buffer too low/))
-    expect(buildButton).not.toHaveTextContent(/Ready|Queued|Provisioning/)
+    expect(buildButton).toHaveTextContent(/Ready · /)
+    expect(buildButton).not.toHaveTextContent(/Queued|Provisioning/)
     expect(buildButton).toHaveTextContent('Provision 1 KB Disk')
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(savedState.intro.diskBuildQueued).toBe(true)
-    expect(buildButton).toHaveTextContent(/⏳.*1 KB Disk….*Queued/)
-    expect(buildButton).not.toHaveTextContent(/tap to queue/)
-    expect(savedState.intro.diskProvisionPasses ?? {}).toEqual({})
+    expect(buildButton).toHaveTextContent(/⏳.*1 KB Disk…/)
+    expect(buildButton).not.toHaveTextContent(/Ready/)
+    expect(savedState.intro.disksBuiltTotal?.[currentBankSize] ?? 0).toBe(0) // the build progresses on later ticks
+    expect(savedState.intro.poolBuffers?.[1] ?? 0).toBe(0)
   })
 
   test('a queued Provision Disk reads the speed/time tile with its banked passes, unlike the idle "Provision …" label', () => {
@@ -3710,6 +3705,31 @@ describe('Byte Foundry Storage', () => {
     expect(button.querySelector('[title^="Projected speed"]')).not.toBeNull()
   })
 
+  test('the disk being provisioned is drawn as a radial progressbar; a rebuild is labelled distinctly', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: 4 }, disks: { [currentBankSize]: 2 },
+      diskBuildQueued: true, diskProvisionPasses: { [currentBankSize]: 2.4 },
+    })
+    const { unmount } = render(<App />)
+    const active = screen.getByRole('progressbar', { name: /provisioning 1 kb disk/i })
+    expect(active).toHaveAttribute('aria-valuenow', '48') // 2.4 of 5 passes
+    expect(active.getAttribute('style')).toMatch(/conic-gradient/)
+    unmount()
+  })
+
+  test('the disk being rebuilt after a Foundry reset is labelled and shows its progress', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 2,
+      disksBuiltTotal: { [currentBankSize]: 3 }, disks: { [currentBankSize]: 3 },
+      lowerRebuild: { size: currentBankSize, progress: 0.5 },
+    })
+    render(<App />)
+    const active = screen.getByRole('progressbar', { name: /rebuilding 1 kb disk/i })
+    expect(active).toHaveAttribute('aria-valuenow', '50')
+  })
+
   test('a multi-size rebuild names the size being rebuilt and the largest size it will reach', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
@@ -3782,17 +3802,8 @@ describe('Byte Foundry Storage', () => {
     expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.diskBuildQueued).toBe(true)
   })
 
-  test('Provision Disk fires its first pass on click once affordable — the consolidated Upgrade Data Stream is now the LOWER-priority action that waits on it', () => {
-    // Provision Disk's pass is paid from the pool's own buffer, so that's what gets seeded —
-    // exactly one pass's worth (currentBankSize), so the click collects the first pass and
-    // auto-arms the queue for the rest rather than finishing the whole disk at once.
-    // capacity: currentBankCost keeps pool 1 unlocked and the buffer's ceiling well above it.
-    seedIntroState({
-      bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true,
-      // Pool 1's own read cache already full — otherwise getPoolCacheReservationBits would reserve
-      // this exact size out of the buffer this test seeds.
-      diskCache: { [currentBankSize]: currentBankSize },
-    })
+  test('Provision Disk arms its buffer-funded build on click — the consolidated Upgrade Data Stream is the LOWER-priority action', () => {
+    seedIntroState({ bits: 0, capacity: currentBankCost, byteCreated: true })
     render(<App />)
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
@@ -3801,10 +3812,7 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('region', { name: 'Provision Disk' })).toContainElement(buildButton)
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
-    // The first disk needs exactly one pass, which the seeded buffer funds outright — it lands
-    // completed (diskProvisionPasses cleared), with the queue disarmed for the next disk.
-    expect(savedState.intro.disksBuiltTotal[currentBankSize]).toBe(1)
-    expect(savedState.intro.diskProvisionPasses?.[currentBankSize] ?? 0).toBe(0)
+    expect(savedState.intro.diskBuildQueued).toBe(true)
     // The Data Stream upgrade didn't fire — its Buffer isn't full (it could only be armed).
     expect(savedState.intro.capacity).toBe(currentBankCost)
   })
@@ -3938,44 +3946,21 @@ describe('Byte Foundry Storage', () => {
     })
   })
 
-  test('starting a build spends the cost from its own pool buffer and constructs an EMPTY disk, both in the same click', () => {
-    // Raw Data Stream capacity must derive (via the decade-power pool Capacity ladder) at least
-    // currentBankCost — 2**14 doublings is the smallest step whose derived pool 1 Capacity (80,000
-    // bits) exactly covers it; seeding `capacity: currentBankCost` directly would derive a pool
-    // Capacity one decade LOWER (8,000 bits, see docs/DESIGN_HISTORY.md), which the normalization
-    // pass would then clamp the seeded poolBuffers value down to.
-    // This is the array's very first disk (fresh state, nothing built yet), so its own real cost is
-    // just 1 pass — currentBankSize itself, not currentBankCost (the flat DISK_BUILD_COST_MULTIPLIER-
-    // times figure only its LAST disk still costs) — see getDiskProvisionPassesRequired.
+  test('starting a build only arms it: nothing is drawn from the pool buffer or built until the next ticks', () => {
     seedIntroState({
       poolBuffers: { 1: currentBankSize },
       capacity: BITS_PER_BYTE * (2 ** 14),
       byteCreated: true,
-      // Pool 1's own read cache already full — otherwise getPoolCacheReservationBits would reserve
-      // this exact size out of the buffer this test seeds, since currentBankSize is also pool 1's
-      // own cache-eligible size.
       diskCache: { [currentBankSize]: currentBankSize },
     })
     const { unmount } = render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: /provision disk/i }))
 
-    // The cost is spent, and the disk itself constructed, immediately — funding the passes already
-    // took as long as the build itself once did, so there is no further separate timed wait once the
-    // final pass lands (see docs/DESIGN_HISTORY.md's "Provision Disk's post-funding build timer
-    // duplicated the wait already spent funding it" entry).
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.poolBuffers['1']).toBe(0)
-    expect(saved.intro.diskBuild).toBeNull()
-    expect(saved.intro.disksBuiltTotal[currentBankSize]).toBe(1)
-    // The disk exists (built) but starts empty — no full disk yet.
-    expect(saved.intro.disks?.[currentBankSize] ?? 0).toBe(0)
-
-    // The detail (empty/full squares, pull status) lives on StoragePage.
-    openStorage()
-    expect(screen.queryByLabelText(/pulling into/i)).not.toBeInTheDocument()
-    expect(screen.getByLabelText(/empty 1 kb disk/i)).toBeInTheDocument()
-
+    expect(saved.intro.diskBuildQueued).toBe(true)
+    expect(saved.intro.poolBuffers['1']).toBe(currentBankSize) // the click itself draws nothing
+    expect(saved.intro.disksBuiltTotal?.[currentBankSize] ?? 0).toBe(0)
     unmount()
   })
 

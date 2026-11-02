@@ -218,7 +218,7 @@ export const hasFoundryAttention = state =>
   isCombineAvailable(state) ||
   (isMemoryCapacityUpgradeAvailable(state) && !state.intro?.capacityUpgradeQueued && !state.intro?.speedUpgradeQueued) ||
   (isSpeedUpgradeArmable(state) && (state.intro?.bits ?? 0) >= getSpeedUpgradeCostBits(state.intro)) ||
-  isProvisionDiskTurnAvailable(state) ||
+  (isProvisionDiskTurnAvailable(state) && !state.intro?.diskBuildQueued) || // startable and not already armed
   isDiskSizeUnlockAvailable(state) ||
   isTransferBlockAffordable(state)
 

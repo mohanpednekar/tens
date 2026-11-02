@@ -19,6 +19,20 @@ const safeJsonParse = jsonString =>
     return value
   })
 
+// Dev Mode (the toggle's isolated 'dev' slot, in any build) and the dev build (`yarn build:dev`):
+// saves are edited live and never need backward compatibility, so any plain-object payload is accepted as-is (mergeState fills in whatever is missing) instead of going
+// through save-migration, and an unreadable one is dropped silently — no IncompatibleSaveNotice.
+export const IS_DEV_BUILD = import.meta.env.VITE_TENS_DEV_BUILD === '1'
+
+export const isBackwardCompatExempt = () => IS_DEV_BUILD || isDevModeActive()
+
+export const adaptSaveForLoad = (raw, devBuild = isBackwardCompatExempt()) => {
+  if (!devBuild) return adaptSaveForCurrentSchema(raw)
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, reason: 'invalid_payload' }
+  const { saveSchemaVersion: _version, ...payload } = raw
+  return { ok: true, payload }
+}
+
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
 // ever wrote a single save keep working without a forced rewrite of every consumer.
 const STORAGE_KEY = 'tens_game_state'
@@ -403,10 +417,10 @@ export const discardIncompatibleActiveSaveIfNeeded = () => {
   const slotId = getActiveSlotId()
   const parsed = readActiveSavePayload()
   if (!parsed) return null
-  const result = adaptSaveForCurrentSchema(parsed)
+  const result = adaptSaveForLoad(parsed)
   if (result.ok) return null
   removeSlotStorage(slotId)
-  return result.reason
+  return isBackwardCompatExempt() ? null : result.reason
 }
 
 const mergeTierMap = (freshMap, savedMap) => ({ ...freshMap, ...(savedMap ?? {}) })
@@ -631,7 +645,7 @@ export const loadGameState = storage => {
   try {
     const parsed = readActiveSavePayload(storage)
     if (!parsed) return null
-    const result = adaptSaveForCurrentSchema(parsed)
+    const result = adaptSaveForLoad(parsed)
     if (!result.ok) return null
     return mergeState(result.payload)
   } catch {
@@ -757,9 +771,19 @@ export const serializeSaveForExport = state => JSON.stringify({ saveSchemaVersio
 
 /**
  * Replaces the active slot's save with an exported payload (a cloud-save download). The payload goes
- * through the same adaptSaveForCurrentSchema + mergeState pipeline as an ordinary load, so an older
- * or partial save is upgraded or refused exactly like one read from localStorage.
+ * through the same adaptSaveForLoad (save-migration, unless Dev Mode / the dev build) + mergeState
+ * pipeline as an ordinary load, so an older or partial save is upgraded or refused exactly like one
+ * read from localStorage. Outside the exempt modes it must also look like a save at all (see looksLikeSave), so pasting the wrong JSON is refused instead of silently overwriting the slot.
  */
+// Partial saves are fine (mergeState fills the rest), but the payload must share at least one
+// top-level field with a real game state, and `resources`/`resources.base` must be well-formed.
+const looksLikeSave = payload => {
+  if (!Object.keys(payload).some(key => Object.hasOwn(createInitialGameState(), key))) return false
+  if (payload.resources !== undefined && !isPlainObject(payload.resources)) return false
+  const base = payload.resources?.base
+  return base === undefined || Number.isFinite(base)
+}
+
 export const importSaveJson = jsonText => {
   let parsed
   try {
@@ -768,8 +792,9 @@ export const importSaveJson = jsonText => {
     return { ok: false, reason: 'invalid_json' }
   }
   if (!isPlainObject(parsed)) return { ok: false, reason: 'invalid_json' }
-  const adapted = adaptSaveForCurrentSchema(parsed)
+  const adapted = adaptSaveForLoad(parsed)
   if (!adapted.ok) return { ok: false, reason: 'incompatible_save' }
+  if (!isBackwardCompatExempt() && !looksLikeSave(adapted.payload)) return { ok: false, reason: 'invalid_state' }
   const state = mergeState(adapted.payload)
   saveGameState(state)
   return { ok: true, state }
