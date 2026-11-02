@@ -64,3 +64,7 @@ icon, standalone display with no browser chrome, offline-capable after a first v
   worker as part of the normal production build — no separate PWA-specific CI step exists or is needed;
   `ci.yml` itself is one of the protected workflow files `autonomous-maintenance.yml` can't edit anyway
   (see `docs/AUTOMATION.md`).
+
+## Dev build exclusion
+
+The production `VitePWA` `workbox.navigateFallbackDenylist` includes `DEV_BUILD_PATH_PATTERN` (`viteConfigFactory.js`), so the production worker never answers navigations under `/tens/dev` (with or without the slash). The dev build (`yarn build:dev`) ships no service worker.

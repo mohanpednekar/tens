@@ -8,6 +8,18 @@ its entry point (`AppMenu`'s "Dev Mode" button) and page route both render only 
 grepping `dist/assets/*.js` for page-specific strings — see this feature's own PR). `yarn dev`/`yarn
 test` (Vitest defaults `import.meta.env.DEV` to true) both expose it.
 
+**Dev build.** `yarn build:dev` (`TENS_DEV_BUILD=1`, `viteConfigFactory.js`'s `devBuild`) is a minified
+production bundle with `import.meta.env.DEV` forced true, base `/tens/dev/`, and no service worker, so
+Dev Mode works on a phone. `deploy.yml` builds prod into `dist/` then dev into `dist/dev/`, so Pages
+serves prod at `/tens/` and dev at `/tens/dev/`. Both share one origin, so the dev build wraps
+`localStorage` (`game/storagePrefix.js`, `VITE_TENS_STORAGE_PREFIX=dev:`) and every key it touches is
+`dev:<key>` — its saves, slots, meta and preferences never appear in the main game and vice versa. Dev Mode (any build) and the dev build
+(`VITE_TENS_DEV_BUILD=1`) have no backward-compat obligation (`isBackwardCompatExempt`): `storage.js`'s
+`adaptSaveForLoad` accepts any plain-object save (missing fields filled by `mergeState`, no
+save-migration, no `IncompatibleSaveNotice`; an unreadable save is silently dropped). Production keeps
+the full migration path.
+The prod SW denylists `/tens/dev/`.
+
 Dev Mode edits never touch real player progress. Toggling it (`game.toggleDevMode()`) first saves the
 currently loaded state to whichever slot is active, exactly as `switchSaveSlot` does, so enabling it
 writes the real slot one last time before switching away. After that, `game/storage.js`

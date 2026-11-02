@@ -175,111 +175,20 @@ Below Build, every size from `getDiskSizesToShow(state)` renders a full interact
 not behind a Storage tab. Each disk strip always shows all `DISK_ARRAY_LADDER_CAP` (9) slots in one unbroken row.
 
 Provisioning a disk's cost is no longer paid in one lump sum —
-`provisionDisk` (`actions.provisionDisk`) collects the cost in `getDiskProvisionPassesRequired(state,
-size)` separate PASSES of exactly the disk's own face-value size each (`intro.diskProvisionPasses[size]`,
-`getDiskProvisionPassesCollected`), so the pool buffer only ever needs to hold one pass at a time —
-a click collects as many WHOLE passes as the buffer currently affords (every required pass in one
-click if the buffer already holds the full cost, fewer otherwise, banking the remainder). A click
-that doesn't finish the build in one call also auto-arms `intro.diskBuildQueued` (see below) so
-every remaining pass fires itself as the buffer refills, with no further clicks needed — only
-starting a NEW disk's build still needs one click. Once the final required pass lands, the disk
-completes IMMEDIATELY — `disksBuiltTotal[size]` increments in that same call — with no further,
-separate timed wait: gathering the passes at the pool's own production rate already takes the
-intended build time, so an additional post-funding countdown would only duplicate it (see
-`docs/DESIGN_HISTORY.md`'s "Provision Disk's post-funding build timer duplicated the wait already
-spent funding it" entry). An earlier version DID impose a real timed countdown here
-(`intro.diskBuild = { size, remainingSeconds, totalSeconds }`, ticked down every tick by
-`tickProvisionDisk`, wired into `tickGame`) even after passes started taking real time to fund —
-`intro.diskBuild`/`tickProvisionDisk` and the "mid-build" behavioral state described below remain
-solely to finish out a countdown a save from before that change may still be carrying; a build
-`provisionDisk` starts today never creates one. While a legacy countdown IS in flight, every IO
-operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
-disallowed, "the array provisioning." When Storage is revealed and the funding pool has a delivered fill rate, a queued build (and a Foundry-reset auto-rebuild of smaller sizes) uses the running-upgrade tile (`RunningUpgradeContent`, equal columns so the percent is centred): `{size} Disk…` plus `Queued` or `{collected}/{required}` (rebuild: `Rebuilding` / `{autoSize} → {largest rebuilt size}` (or `{autoSize} disks` when it is the last)), progress %, ⚡ live delivered pool fill speed, and ⏳ remaining-cost time along the fill-multiplier curve (`secondsToBankPoolBits` / `getFillCurveSeconds`, same closed form as pool tiles), ⏳ hidden while the build waits behind Disk Fill (rebuild: current auto-size only — cache refill + `getDiskReadCacheFlushSeconds` per remaining disk; write-cache sizes use remaining bits at the pool's current delivered speed). Idle, unaffordable, ladder-complete, and legacy `intro.diskBuild` countdown keep the original two-line `diskBuildStatus` layout — `Ready · 🏷️ {cost}`; `🏷️ {cost} · tap to queue` (the `title` / `aria-description` still name which blocker); `{n}s left` (legacy countdown). A queued build still uses the purple `smart` variant and `$pulse` (honors reduced motion); idle states keep the imperative `🏦 Provision {size} Disk`. Ladder exhausted shows only `✅ All Pools Complete ({size})`, no status line. A
-` · {collected}/{required}` segment appears whenever
-`diskPassesRequired > 1` or any pass is banked (`diskPassesCollected`, clamped at
-`diskPassesRequired` for display — see `docs/DESIGN_HISTORY.md`), so a single-pass disk never shows a
-redundant "0/1". The status line is also the button's `aria-description`. Overall
-the button renders three distinct BEHAVIORAL states (idle/mid-build/ladder-complete, each covering
-its own label variants above) off
-`diskBuildInProgress = intro.diskBuild` and `diskLadderExhausted =
-isDiskLadderExhaustedForActivePools(state)` — **mid-build only ever occurs for a save carrying an
-already-in-flight legacy countdown from before the timed-build removal above; a fresh build started
-today goes straight from idle to the disk existing, in the same click, with no mid-build state ever
-rendered**: **idle** (covers both the not-yet-started and
-funding-in-progress label variants above) — `aria-label="provision disk"`,
-`disabled={!canProvisionDisk}` where `canProvisionDisk = isProvisionDiskTurnAvailable(state)` (below
-a single pass's cost against the pool's SPENDABLE buffer (its own read cache's reservation,
-`getPoolCacheReservationBits`, excluded — mirrors `isProvisionDiskAvailable`'s own engine-side
-check, so the UI's affordability reading never credits bits the cache itself has first claim on), no
-build already in progress, the ladder not yet exhausted for every currently-active
-pool, OR while a redeemable Disk Fill — the only higher-priority action, see
-"Forced priority order" in docs/ECONOMY_REFERENCE.md; Upgrade Data Stream itself sits outside the
-order and never blocks Provision Disk — is currently available),
-`variant={canStartDiskBuild ? 'info' : 'neutral'}`,
-`title` either naming which higher-priority action to take first (`"Redeem a full Disk first"`, when
-`diskBuildBlockedByPriority`) or — depending on whether this size's own fixed
-corresponding tier is currently at its required level (`diskRedeemTierName`, from
-`getDiskRedeemTierName(state, diskSize)`) — `"Costs
-{cost}, paid in {passesRequired} pass(es) of {size} each ({passesCollected}/
-{passesRequired} collected) — creates an empty {size} container; its cache auto-fills it,
-redeemable right away for a free {tierName} once full"` or the same sentence ending `"…but it won't
-be redeemable until its own fixed corresponding tier reaches its matching level"`; **mid-build** — `aria-label="disk array
-rebuilding"`, always `disabled`, visible text `"🏦 Provisioning {size} Disk — {ceil(remainingSeconds)}s"`,
-`title="Provisioning {size} — {ceil(remainingSeconds)}s (array offline)"`; and **ladder complete**
-(`diskLadderExhausted`, checked before `diskBuildInProgress`'s idle-state alternatives) —
-`aria-label="disk ladder complete"`, always `disabled`, visible text `"🏦 All Pools Complete
-({size})"`, `title="All storage pools are complete through {size}"` only at pool 10's terminal size;
-completing all three arrays in an earlier pool unlocks the next pool (see
-`isDiskLadderExhaustedForActivePools`/`getMaxActiveDiskLadderStep` in engine.js). `$progress` and the
-hidden `role="progressbar"` (`aria-label="byte foundry disk build progress"`,
-`aria-valuenow={round(diskDisplayedProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`) share
-`diskDisplayedProgress`. While smaller sizes rebuild that is `rebuildProgress` (percent of those
-disks already built, from `disksBuiltTotal`, so a merge/Factory pull cannot walk the bar backwards).
-Otherwise it is `diskBuildProgress`: mid-provision, `100 - (remainingSeconds / totalSeconds) * 100`
-(a genuine "% built" fill, using `totalSeconds` as the fixed denominator so the fill only ever
-climbs toward 100 as `remainingSeconds` counts down); pool complete, a fixed `100`; idle, `0` until
-`diskBuildEngaged` (`diskPassesCollected > 0 || intro.diskBuildQueued` — i.e. the player has actually
-clicked at least once), THEN
-`((passesCollected * diskSize + min(diskPoolSpendableBufferBits, diskSize)) / diskCost) * 100`
-(`diskPoolSpendableBufferBits = diskPoolBufferBits - getPoolCacheReservationBits`, the SAME
-spendable amount `isProvisionDiskAvailable`/`provisionDisk` themselves check/spend against — the raw
-buffer alone would let the bar advance on bits the very next cache-fill tick is about to consume
-instead, making displayed progress regress or promise a pass that never actually lands; see
-`docs/DESIGN_HISTORY.md`) — already-
-collected passes count as permanent progress, plus however much of the CURRENT spendable buffer
-counts toward the next pass, so the bar climbs smoothly between clicks rather than jumping only once
-a whole pass fires — the button's own existence already signals eligibility, so it deliberately does NOT preview
-a fill from whatever the pool buffer happens to be holding for unrelated reasons (e.g. read-cache
-fill) before the player has ever engaged this specific build; see `docs/DESIGN_HISTORY.md`.
-Both the
-label and `title` render the disk's size AND its cost via `formatDiskSize` (see "Numbers are
-formatted" below) — the cost is a Disk-denominated amount (`getDiskCost` = `getDiskProvisionPassesRequired`
-× the array's own SI face value), so it renders on the same SI scale as the disk's own size right
-next to it, not Memory's binary Sacrifice-ladder scale. Building only ever constructs an EMPTY
-container — Memory / read cache / write cache fill it afterward (see DiskArrayRow continuous
-sections above). There is no separate StorageSummary chip row and no Foundry Memory vs Storage tab
-split — every shown size's full interactive DiskArrayRow already lives on this page.
+`provisionDisk` (`actions.provisionDisk`) ARMS the build; its cost is `getDiskProvisionPassesRequired(state, size)` PASSES of the
+disk's own face-value size (`intro.diskProvisionPasses[size]`, fractional), drawn each tick from the pool buffer at the pool's
+fixed base Bandwidth (`tickQueuedDiskBuild`) — an empty buffer pauses it, progress is never lost. When the final pass is
+drawn the disk completes (empty container) and the queue disarms, so only starting a NEW disk's build needs a click.
 
 The pin-icon `QueueToggleButton` that used to sit beside the Provision Disk button
 (`ProvisionDiskRow` wrapping the pair) has been removed from the page — `provisionDiskButton` now
-renders the plain `Button` directly, with no wrapper. `provisionDisk` itself auto-arms
-`intro.diskBuildQueued` whenever a manual click leaves a build mid-funded (see above), so a build
-already begun always finishes itself pass by pass with no further clicks. The button's own click
-handler (`handleProvisionDiskClick`) now covers the one remaining case that mechanic didn't —
-STARTING a build whose first pass isn't affordable yet, or that's currently outranked by a
-higher-priority action: `canStartDiskBuild` (turn-available right now) fires `actions.provisionDisk()`
-directly, exactly as before; otherwise it calls `actions.queueDiskBuild()`, so
-`tickQueuedDiskBuild` fires the very first pass itself the instant it can, the same "click once,
-then it just happens" treatment every later pass already had. `disabled` dropped its own
-affordability/priority checks — the button refuses input only while a build's own timed countdown
-is running or the ladder is exhausted for active pools, since a click in every other state now does
-something useful. Variant/icon reflect the live state: `'smart'`/⏳ whenever queued (checked first),
-else `'info'`/🏦 while turn-available (fires now), else `'neutral'`/🏦 (clickable to arm); `aria-label` stays anchored on "provision disk" in every one of them
+renders the plain `Button` directly, with no wrapper. Its click handler (`handleProvisionDiskClick`) only ARMS the build: `actions.provisionDisk()` when it can start now, else `actions.queueDiskBuild()`. An armed build then draws bits from the pool buffer every tick at the pool's fixed base Bandwidth (`tickQueuedDiskBuild`), with no further clicks. `disabled` drops affordability/priority checks — the button refuses input only while a legacy `intro.diskBuild` is in flight, the ladder is exhausted for active pools, or a lower-size rebuild is pending; clicking while already armed is an idempotent no-op. Variant/icon reflect the live state: `'smart'`/⏳ whenever queued (checked first),
+else `'info'`/🏦 while turn-available (a click arms it), else `'neutral'`/🏦 (clickable to arm); `aria-label` stays anchored on "provision disk" in every one of them
 so the control's identity never changes out from under assistive tech or a `getByRole` query.
 `actions.clearDiskBuildQueue` remains implemented/tested with no UI control of its own — the same
 posture Capacity's own `queueIntroCapacityUpgrade` still has. See docs/ECONOMY_REFERENCE.md's
 "Disks" section for the full queue mechanic, and docs/DESIGN_HISTORY.md for why the first pass
-needed this and later passes didn't.
+replaced per-pass firing with the fixed-speed draw.
 
 Below its own disk-array rows, each pool card renders `components/DataLakePanel` with both `bare`
 and `tierIndex={poolIndex}` set (`<DataLakePanel actions={actions} state={state} bare
