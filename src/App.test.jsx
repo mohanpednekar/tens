@@ -5504,6 +5504,7 @@ describe('Dev Mode', { timeout: 20000 }, () => {
     // Not a hardcoded field list — expand the auto-generated "resources" group (one leaf per
     // resource id in play, straight off createInitialGameState()'s own resources shape) to reach
     // the input.
+    await user.click(screen.getByRole('tab', { name: /show factory variables/i }))
     await user.click(screen.getByText(/^resources \(\d+\)$/))
     const bitsInput = screen.getByLabelText('resources.base')
     await user.clear(bitsInput)
@@ -5545,10 +5546,58 @@ describe('Dev Mode', { timeout: 20000 }, () => {
 
     await user.click(screen.getByText(/^intro \(\d+\)$/))
     const toggle = screen.getByRole('button', { name: /^intro\.mainGameUnlocked$/ })
-    expect(toggle).toHaveTextContent('false')
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
     await user.click(toggle)
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
 
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).intro.mainGameUnlocked).toBe(true)
+  })
+
+  it('number fields accept scientific / grouped input, step by powers of ten, and reject non-numbers', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
+
+    // Search reaches any leaf across every area by its path or tier display name.
+    await user.type(screen.getByRole('searchbox', { name: /search variables/i }), 'prestige.points')
+    const input = screen.getByLabelText('prestige.points')
+    await user.clear(input)
+    await user.type(input, '1,000{Enter}')
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(1000)
+
+    await user.click(screen.getByRole('button', { name: 'prestige.points ×10' }))
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(10000)
+    await user.click(screen.getByRole('button', { name: 'prestige.points +1' }))
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(10001)
+
+    await user.clear(input)
+    await user.type(input, 'abc')
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('button', { name: /^set prestige\.points$/ })).toBeDisabled()
+    await user.type(input, '{Escape}')
+    expect(input).toHaveValue('10001')
+  })
+
+  it('variable search matches tier display names', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
+    await user.type(screen.getByRole('searchbox', { name: /search variables/i }), 'owned › kilobytes')
+    expect(screen.getByLabelText('owned.tier01')).toBeInTheDocument()
+  })
+
+  it('the raw JSON editor blocks Apply on invalid JSON', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
+    fireEvent.change(screen.getByLabelText(/dev save state json/i), { target: { value: '{ nope' } })
+    expect(screen.getByRole('button', { name: /^apply json to dev save$/i })).toBeDisabled()
   })
 
   it('quick-seed presets and the raw JSON editor both stay scoped to the dev save', async () => {
@@ -5583,6 +5632,7 @@ describe('Dev Mode', { timeout: 20000 }, () => {
       expect(state.computeFlops.pageUnlocked).toBe(true)
     }],
     [/^🔧 Unlock Boosters \(Core\)$/, state => expect(state.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)],
+    [/^🏆 \+1 Prestige count$/, state => expect(state.prestige.count).toBe(1)],
   ])('quick-seed preset %s applies its documented effect to the dev save', async (buttonName, assertState) => {
     const user = userEvent.setup()
     seedMainGameState()

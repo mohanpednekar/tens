@@ -1,4 +1,15 @@
-import { isEditableScalar, prettifySegment, setValueAtPath } from './stateFields'
+import { createInitialGameState } from 'game/engine'
+import {
+  VARIABLE_AREAS,
+  collectLeaves,
+  describePath,
+  getVariableAreaId,
+  isEditableScalar,
+  leafMatchesQuery,
+  parseNumberDraft,
+  prettifySegment,
+  setValueAtPath,
+} from './stateFields'
 
 describe('prettifySegment', () => {
   it('maps ladder and Flops tier ids to their display names', () => {
@@ -82,5 +93,70 @@ describe('setValueAtPath', () => {
     const next = setValueAtPath(Foo, ['prototype', 'polluted'], true)
     expect(next).toEqual(Foo)
     expect(Foo.prototype.polluted).toBeUndefined()
+  })
+})
+
+describe('parseNumberDraft', () => {
+  it.each([
+    ['777', 777],
+    ['1e100', 1e100],
+    ['8E6', 8e6],
+    ['1,000', 1000],
+    ['1_000_000', 1e6],
+    [' 2.5 ', 2.5],
+    ['10^6', 1e6],
+    ['-3', -3],
+  ])('parses %j → %d', (draft, expected) => {
+    expect(parseNumberDraft(draft)).toBe(expected)
+  })
+
+  it.each(['', '   ', 'abc', '1e999', 'NaN', '1.2.3', undefined])('rejects %j', draft => {
+    expect(parseNumberDraft(draft)).toBeNull()
+  })
+})
+
+describe('getVariableAreaId', () => {
+  it.each([
+    ['intro', 'foundry'],
+    ['computeAutoBoostUnlocked', 'foundry'],
+    ['computeFlops', 'compute'],
+    ['computeFlopsAutobuyers', 'compute'],
+    ['era', 'era'],
+    ['eonsUpgrades', 'era'],
+    ['hyperscalerCount', 'era'],
+    ['prestige', 'prestige'],
+    ['autoPrestige', 'prestige'],
+    ['autobuyers', 'perks'],
+    ['autoOverclock', 'perks'],
+    ['tierTickspeedIntervalLevels', 'perks'],
+    ['resources', 'factory'],
+    ['owned', 'factory'],
+    ['someBrandNewField', 'factory'],
+  ])('%s → %s', (key, area) => {
+    expect(getVariableAreaId(key)).toBe(area)
+  })
+
+  it('places every top-level key of a fresh state in exactly one known area', () => {
+    const ids = new Set(VARIABLE_AREAS.map(area => area.id))
+    Object.keys(createInitialGameState()).forEach(key => expect(ids.has(getVariableAreaId(key))).toBe(true))
+  })
+})
+
+describe('collectLeaves / leafMatchesQuery', () => {
+  it('flattens nested objects, keeping null and array leaves', () => {
+    expect(collectLeaves({ a: 1, b: { c: true, d: null, e: [1] } })).toEqual([
+      { path: ['a'], value: 1 },
+      { path: ['b', 'c'], value: true },
+      { path: ['b', 'd'], value: null },
+      { path: ['b', 'e'], value: [1] },
+    ])
+  })
+
+  it('matches raw dotted paths and prettified tier names, case-insensitively', () => {
+    expect(leafMatchesQuery(['owned', 'tier01'], 'owned.tier01')).toBe(true)
+    expect(leafMatchesQuery(['owned', 'tier01'], 'KILOBYTES')).toBe(true)
+    expect(leafMatchesQuery(['owned', 'tier01'], 'megabytes')).toBe(false)
+    expect(leafMatchesQuery(['owned', 'tier01'], '  ')).toBe(true)
+    expect(describePath(['owned', 'tier01'])).toBe('owned › Kilobytes')
   })
 })

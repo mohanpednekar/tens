@@ -32,31 +32,39 @@ toggling on for the first time starts from a fresh `createInitialGameState()`.
 `isDevModeActive`/`setDevModeActive` persist the flag itself (`tens_dev_mode_active`) separately from
 `tens_saves_meta`, so flipping it never touches player slot bookkeeping.
 
-`DevModePage` offers three ways to seed/experiment, all going through `useIncrementalGame`'s
-`setDevState`/`applyDevStateJson` (both no-op outside Dev Mode as a defense-in-depth guard, though the UI
-only renders them while active):
-- **Quick seed** — one-click presets (`PRESETS` in `DevModePage`) applying a small delta onto the live
-  state via `game.setDevState(updater)`, e.g. unlocking the Byte Factory gate or setting Bits to the
-  Prestige threshold. They reference the same `layers.js` constants
-  (`PRESTIGE_THRESHOLD`/`ERA_ELIGIBILITY_PP`/etc.) the real game gates on, so they can't drift.
-- **Variables** — not a hand-maintained field list: `DevModePage`'s `FieldNode` recursively walks
-  `game.state` and renders one row per scalar leaf (number/string get a text input + Set; booleans
-  toggle on click), nested under a collapsible `<details>` per object ancestor (so
-  `intro.dataLakes.1.purchased` renders under `intro` → `dataLakes` → `1`, mirroring the state shape).
-  `stateFields.js`'s `prettifySegment` relabels a key that is a known tier id (e.g. `owned.tier01`)
-  with that tier's display name via a `TIER_DEFINITIONS`/`COMPUTE_FLOPS_TIER_DEFINITIONS` lookup — the
-  only place this page references tier data, purely cosmetic. A new state key shows up automatically
-  with zero changes here — the "always in sync with the game code" property this section exists for.
-  `null`/`undefined` leaves (structural "not yet built" sentinels, e.g. `intro.diskBuild`) and arrays
-  (e.g. `prestigeMuseum.history`) are skipped; only the raw JSON editor can touch them.
-  `setValueAtPath` sets one leaf immutably by its full path array, at any depth, without disturbing
-  siblings. `setDevState` then runs the result through `normalizePoolMemoryCapacity` (the same clamp a
-  real load applies), so bounded fields don't keep out-of-range edits: e.g. a Data Lake's
-  `capacityLevel` is clamped to `[0, DATA_LAKE_CAPACITY_MAX_LEVEL]` and truncated to a whole level,
-  `intro.capacity` is floored at 0, and an armed Upgrade Data Stream that can't fire is cleared. A
-  value that "doesn't stick" was normalized, not ignored.
-- **Raw state JSON** — a textarea pre-filled with `JSON.stringify(game.state, null, 2)`; Apply calls
-  `game.applyDevStateJson(text)` → `storage.js`'s `applyDevGameStateJson(jsonText, currentState)`.
+`DevModePage` mirrors the real game's UI: a header card with a Perks-style `Switch` (`aria-label="dev
+mode"`) and HUD-style readouts (Bits, PP, Prestiges, Era · Eons, Capacity), then three ways to
+seed/experiment, all going through `useIncrementalGame`'s `setDevState`/`applyDevStateJson` (both
+no-op outside Dev Mode as a defense-in-depth guard, though the UI only renders them while active):
+- **Quick seed** — one-click presets (`PRESET_GROUPS` in `DevModePage`, grouped Foundry / Factory /
+  Prestige / Era) applying a small delta onto the live state via `game.setDevState(updater)`, e.g.
+  unlocking the Byte Factory gate, Bits to the Prestige threshold, +1 Prestige count. They reference
+  the same `layers.js` constants (`PRESTIGE_THRESHOLD`/`ERA_ELIGIBILITY_PP`/etc.) the real game gates
+  on, so they can't drift.
+- **Variables** — not a hand-maintained field list: `FieldNode` recursively walks `game.state`, one
+  row per leaf, nested under a collapsible `<details>` per object ancestor. Top-level keys are split
+  into AppNav-style icon tabs (Foundry / Compute / Factory / Perks / Prestige / Era) by
+  `stateFields.js`'s rule-based `VARIABLE_AREAS`/`getVariableAreaId` (key-pattern match, unmatched
+  keys fall through to Factory — never dropped). A `type="search"` box (`collectLeaves` +
+  `leafMatchesQuery`) filters every leaf across all tabs by dotted path or prettified label
+  (`describePath`, e.g. "owned › Kilobytes"), capped at 60 rows. Input per type: booleans are a
+  `Switch` (applies instantly); numbers are a `inputMode="decimal"` text input that shows the live
+  value, commits on Enter or ✓ (`set <path>`), reverts on Escape, parses `1e100` / `1,000` / `10^6`
+  via `parseNumberDraft` (anything else is flagged `aria-invalid` and ✓ disabled — never coerced to 0),
+  echoes large values through `formatAmount`, and offers ÷10 / ×10 steppers (plus −1 / +1 for whole
+  numbers, floored at 0); strings are a plain text input with the same Enter/✓ commit. `null` and
+  array leaves render read-only ("not set" / "[n items]") — only the raw JSON editor can touch them.
+  `prettifySegment` relabels tier ids with display names (cosmetic only). `setValueAtPath` sets one
+  leaf immutably by its full path array. `setDevState` then runs the result through
+  `normalizePoolMemoryCapacity` (the same clamp a real load applies), so bounded fields don't keep
+  out-of-range edits: e.g. a Data Lake's `capacityLevel` is clamped to
+  `[0, DATA_LAKE_CAPACITY_MAX_LEVEL]` and truncated to a whole level, `intro.capacity` is floored at 0,
+  and an armed Upgrade Data Stream that can't fire is cleared. A value that "doesn't stick" was
+  normalized, not ignored.
+- **Raw state JSON** — collapsed under "Advanced"; a textarea pre-filled with
+  `JSON.stringify(game.state, null, 2)` (reloaded whenever Dev Mode toggles), with live parse
+  validation (Apply disabled on invalid JSON or a non-object), ↻ Load live state, and ⧉ Copy. Apply
+  calls `game.applyDevStateJson(text)` → `storage.js`'s `applyDevGameStateJson(jsonText, currentState)`.
   A caller only specifies the fields they're changing (e.g. `{ "resources": { "base": 1e50 } }`) —
   `mergeStateForDevWrite` recursively merges the parsed object onto `currentState` at every depth
   before writing, so untouched top-level fields and untouched siblings inside any edited object (e.g.
