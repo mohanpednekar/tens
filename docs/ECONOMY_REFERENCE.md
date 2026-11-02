@@ -1847,7 +1847,8 @@ attempt budget (`autobuyerAttemptBudgets[tier.id]`) stops accumulating too, exac
 automations' own paused behavior; manual Buy is unaffected. The tier tickspeed self-upgrade loop is
 gated the same way on `tierTickspeedAutobuyerEnabled[tier.id] ?? true`, alongside its existing
 `tierTickspeedAutobuyer[tier.id]` check; manual `buyTickspeedMultiplier` is unaffected. (The last
-tier's XP-funded upgrade is manual-only — never automated.)
+tier's XP-funded Restage is not driven by this per-tier loop; it has its own global automation, Auto
+Restage — `autoXpTickspeed`/`autoXpTickspeedEnabled` — see "The last tier's XP-funded tickspeed".)
 `prestigeGame`/`scaleUpGame` carry both fields through unchanged, same permanence as
 `autobuyers`/`tierTickspeedAutobuyer` themselves. 
 `autobuyersEnabled`/`tierTickspeedAutobuyerEnabled` keys from fresh defaults (`true` for every tier)
