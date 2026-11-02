@@ -6,6 +6,7 @@ import { MUSEUM_PIN_CAP } from 'game/layers'
 import { FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE as UNLOCK_CODE, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage } from 'game/storage'
 import styled from 'styled-components'
 import CloudSaveSection from './CloudSaveSection'
+import ManualSaveSection from './ManualSaveSection'
 import LegalSection from './LegalSection'
 import StoreSection from './StoreSection'
 import { CodeForm, CodeInput, Row, Section, StatusText } from './styles'
@@ -256,6 +257,8 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
       </Section>
 
       <CloudSaveSection game={game} />
+
+      <ManualSaveSection game={game} />
 
       <StoreSection />
 

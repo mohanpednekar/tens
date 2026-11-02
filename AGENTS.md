@@ -13,8 +13,8 @@ is under Foundry as continuous **Data Stream + Disk** sections on the same scree
 item, and no second-level Memory | Storage tabs). **Perks** (after the first Prestige) has icon tabs 🔓 Unlocks / ⏫ Upgrades / 🎛 Toggles (one-time PP
 unlocks + autobuyer milestones / leveled PP upgrades / Buy max + automation pause toggles). Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
-dev build (`import.meta.env.DEV`) — a local sandbox for seeding/experimenting with an isolated save,
-never a player-facing feature; see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
+dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
+production bundle; `yarn build:dev` builds a Dev-Mode-enabled variant published at `/tens/dev/` (own `dev:`-prefixed saves, no backward-compat); see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
 Reset Byte Foundry live under Settings → Danger zone (see CLAUDE.md's SettingsPage entry for what
 each wipes/keeps). No backend — state lives in React and persists to `localStorage`.
 
@@ -24,7 +24,7 @@ each wipes/keeps). No backend — state lives in React and persists to `localSto
 |------|---------|-------|
 | React | 19 | JSX transform enabled |
 | Vite | 8 | OXC-based; JSX files **must** use the `.jsx` extension |
-| Vitest | 4 | Runs via `yarn test` |
+| Vitest | 5 | Runs via `yarn test` |
 | Playwright | 1 | Real-browser e2e suite, `yarn test:e2e`, chromium only |
 | styled-components | 6 | All component styling |
 | Yarn | 1 (Classic) | `yarn@1.22.22` via Corepack; lockfile is v1 format |
