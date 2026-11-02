@@ -478,8 +478,8 @@ const InfoPage = () => {
           <li>Each level costs the next power of ten (10 B, 100 B, 1,000 B, …).</li>
           <li>Unlocks once {firstTierName} complete their first level.</li>
           <li>
-            Each tier row also has its own tickspeed upgrade, paid for with the resource that tier
-            produces.
+            Each tier row also has its own tickspeed upgrade, paid for with units of that tier
+            itself — buying one lowers that tier’s owned count.
           </li>
         </ul>
       </Section>
