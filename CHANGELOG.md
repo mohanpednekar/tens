@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **XP Tickspeed Autobuyer (8 PP, Perks → Unlocks).** Once bought, XP is spent on XP Tickspeed automatically whenever possible (each spend still resets every other tier's owned quantity and Bits). Pause it on Perks → Toggles.
 - **Dev build published beside production**: `yarn build:dev` produces a build with Dev Mode enabled (presets, Variables tree, state-JSON editor), and the Pages deploy now serves it at `/tens/dev/` while production stays at `/tens/`. The dev build keeps its own separate saves (every storage key is `dev:`-prefixed), invisible to the main game, and, like Dev Mode itself, carries no backward-compatibility burden (any save loads; missing fields are filled in, no "incompatible save" notice).
 - Settings → Import / export save: copy, download, paste or choose a save file to replace the active slot — hand-built test saves can now be loaded directly on a phone/PWA, no second computer or dev build needed.
 
@@ -20,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - **Quettabytes keeps its own tickspeed upgrade at 10% of the price.** Its tickspeed button no longer turns into the XP button after the first Quettabytes Scale Up; each level still needs the usual amount owned (10, 100, …) but only spends a tenth of it (1, 10, …).
-- **XP Tickspeed is now its own upgrade, shown below Latency.** Its bonus stacks on top of Quettabytes' own tickspeed level, and it is no longer spent automatically by the Quettabytes tickspeed autobuyer — consuming XP is always a manual, confirmed action.
+- **XP Tickspeed is now its own upgrade, shown below Latency.** Its bonus stacks on top of Quettabytes' own tickspeed level, and the Quettabytes tickspeed autobuyer no longer spends XP — XP is spent manually, or by the new XP Tickspeed Autobuyer (below).
 
 - **Dev Mode revamped for ease of use** (dev build only): an on/off switch with game-style readouts; quick-seed presets grouped by area, plus a new +1 Prestige count preset that unlocks count-gated autobuyers; Variables split into Foundry / Compute / Factory / Perks / Prestige / Era tabs with search across all fields; switches for on/off fields; number fields that accept `1e100` / `1,000` / `10^6`, set on Enter, revert on Escape, step by ÷10 / ×10 / ±1 and flag invalid input instead of writing 0; and the raw JSON editor folded under Advanced with live validation and Copy.
 - **Provision Disk runs at a fixed speed and the disk being built or rebuilt is shown distinctly.** Provisioning is still funded from the pool buffer, but it draws bits at the pool's base Bandwidth instead of waiting on the fill-multiplied buffer pace (an empty buffer still stalls it; a Speed/Capacity upgrade mid-build speeds it up at once; progress is never lost). The post-Foundry-reset rebuild runs at the same fixed speed. The disk under construction fills radially with a glow — violet while provisioning, amber while rebuilding. The tile's ⚡ is that fixed speed. Provision Disk now blocks Compute Boost / Auto-Boost only while a build is armed (not merely startable), and the Foundry nav dot lights only while a disk can be started and none is armed.

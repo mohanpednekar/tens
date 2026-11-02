@@ -741,7 +741,9 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
     milestone progressbar). Rows never disappear, so reached milestones stay visible as unlock history.
   - *Global Automation* — a strict sequence, every row always listed, each purchasable only once the previous is
     owned (engine-enforced): Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Prestige. PP button (disabled until the previous step is bought), or an `UnlockedBadge`
-    (`"<name> unlocked"`) once bought; never a pause control here.
+    (`"<name> unlocked"`) once bought; never a pause control here. Outside that sequence, the 🧬 **XP Tickspeed
+    Autobuyer** row (`XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` = 8 PP, no prerequisite, `buyXpTickspeedAutobuyer`)
+    sits between Auto Overclock and Auto-Prestige.
   - *Compute Automation* (Auto-Boost, once Foundry Compute unlocks), *Production Bonuses* (until bought), *Compute Autobuyers* (Era-milestone badges, once the Flops page
     is unlocked), and *Prestige* (DeGoogol: locked until Auto-Prestige's interval ≤ `UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS`).
   Each milestone appears only here — `MilestonesPage` no longer repeats them.
@@ -752,7 +754,7 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
 - 🎛 **Toggles** (`open toggles`, `aria-label="automation toggles page"`) — *Purchasing* (the Buy max
   button, `components/BuyMaxToggle`, removed from MainPage/ComputeFlopsPage), *Tier Autobuyers* (each
   reachable tier's ⚙/🤖 `AutomationToggle`, kept even for fully-automated tiers), *Global Automation*
-  (Tickspeed Autobuyer, Auto Scale Up, Auto-Prestige), *Compute Autobuyers*
+  (Tickspeed Autobuyer, Auto Scale Up, XP Tickspeed Autobuyer, Auto Overclock, Auto-Prestige), *Compute Autobuyers*
   (each Era-unlocked Flops autobuyer, `setComputeFlopsAutobuyerEnabled`). Each toggle is a status
   badge (`"<name> active|paused"`) + `components/Switch` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up
   automation"`, `"<tier>'s autobuyer"`). A `no toggles notice` empty state covers the (practically

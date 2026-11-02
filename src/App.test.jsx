@@ -1520,6 +1520,25 @@ test('an Enable Auto Scale Up button appears on the PP Upgrades page after the f
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
+test('an Enable XP Tickspeed Autobuyer button on Perks → Unlocks spends 8 PP to enable it', async () => {
+  const user = userEvent.setup()
+
+  seedMainGameState({
+    resources: { base: 10 },
+    owned: { tier09: 10 },
+    prestige: { xp: 0, points: 8, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+  await openPerksTab(user, /open unlocks/i)
+
+  const button = screen.getByRole('button', { name: /enable xp tickspeed autobuyer for 8 prestige points/i })
+  expect(button).toBeEnabled()
+  await user.click(button)
+
+  expect(screen.getByLabelText('XP Tickspeed Autobuyer unlocked')).toBeInTheDocument()
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
+})
+
 test('Auto-Boost is unlocked from Perks → Unlocks (30 PP), not on Boosters, which then shows its preset preference', async () => {
   const user = userEvent.setup()
 
@@ -1790,6 +1809,11 @@ test.each([
     buttonName: /enable auto scale up for 16 prestige points/i,
   },
   {
+    name: 'Enable XP Tickspeed Autobuyer',
+    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 7, count: 1, highestMilestone: 1 } },
+    buttonName: /enable xp tickspeed autobuyer for 8 prestige points/i,
+  },
+  {
     name: 'Auto-Prestige',
     seed: { ...allTiersSmartSeed(), prestige: { xp: 0, points: 63, count: 1, highestMilestone: 1 } },
     buttonName: /enable auto-prestige for 64 prestige points/i,
@@ -1827,6 +1851,12 @@ test.each([
     seed: { owned: { tier09: 10 }, autoScaleUp: true },
     pauseName: /^Auto Scale Up automation$/i,
     resumeName: /^Auto Scale Up automation$/i,
+  },
+  {
+    name: 'XP Tickspeed Autobuyer',
+    seed: { owned: { tier09: 10 }, autoXpTickspeed: true },
+    pauseName: /^XP Tickspeed Autobuyer automation$/i,
+    resumeName: /^XP Tickspeed Autobuyer automation$/i,
   },
   {
     name: 'Auto-Prestige',

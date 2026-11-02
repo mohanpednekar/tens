@@ -728,6 +728,9 @@ export const LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1
 // of) its own resource-funded tickspeed level. "Last tier" (not a hardcoded tier id) so this stays
 // correct if TIER_DEFINITIONS ever grows a new final entry.
 export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
+// One-time PP cost (Perks → Unlocks) for the XP Tickspeed autobuyer — once bought, tickGame spends the
+// whole XP balance on the last tier's XP-funded tickspeed whenever consumeXpForLastTierTickspeed allows.
+export const XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = 8
 // Each single XP-consumption action must be at least this fraction of the cumulative XP already
 // consumed this way (see engine.js's getLastTierXpTickspeedMinConsumption) — so repeat
 // consumptions can't trickle in one XP at a time forever; the required minimum grows alongside

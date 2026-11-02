@@ -36,6 +36,7 @@ import {
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
+  XP_TICKSPEED_AUTOBUYER_UNLOCK_COST,
 } from 'game/layers'
 import { hasAffordablePpLevelUpgrade, hasAffordablePpUnlock } from 'game/navAttention'
 import { useEffect, useState } from 'react'
@@ -324,6 +325,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const canBuyAutoOverclock = !isFrozen && isAutoScaleUpActive && !isAutoOverclockActive && !isFirstRun && points >= overclockUnlockCost
   const canBuyAutoScaleUp = !isFrozen && state.autoGlobalTickspeed && !isAutoScaleUpActive && !isFirstRun && points >= scaleUpUnlockCost
   const autoScaleUpEnabled = state.autoScaleUpEnabled ?? true
+  const isXpTickspeedAutobuyerActive = state.autoXpTickspeed ?? false
+  const canBuyXpTickspeedAutobuyer = !isFrozen && !isXpTickspeedAutobuyerActive && !isFirstRun && points >= XP_TICKSPEED_AUTOBUYER_UNLOCK_COST
+  const xpTickspeedAutobuyerEnabled = state.autoXpTickspeedEnabled ?? true
 
   const isTickspeedAutobuyerActive = state.autoGlobalTickspeed ?? false
   const canBuyTickspeedAutobuyer = !isFrozen && !isTickspeedAutobuyerActive && !isFirstRun && points >= latencyUnlockCost
@@ -451,6 +455,25 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               points={points}
               progressLabel="Auto Overclock Prestige Point progress"
               title="Spend Prestige Points so Overclock is claimed automatically whenever it is eligible"
+            />
+          )}
+        </Row>
+        <Row aria-label="xp tickspeed autobuyer upgrade">
+          <RowLabel>🧬 XP Tickspeed Autobuyer</RowLabel>
+          {isXpTickspeedAutobuyerActive ? (
+            <UnlockedBadge icon="🧬" name="XP Tickspeed Autobuyer" />
+          ) : (
+            <PpPurchaseButton
+              ariaLabel={`Enable XP Tickspeed Autobuyer for ${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} Prestige Points`}
+              color="#38bdf8"
+              cost={XP_TICKSPEED_AUTOBUYER_UNLOCK_COST}
+              disabled={!canBuyXpTickspeedAutobuyer}
+              icon="🔓"
+              label={`${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} PP`}
+              onClick={actions.buyXpTickspeedAutobuyer}
+              points={points}
+              progressLabel="XP Tickspeed Autobuyer Prestige Point progress"
+              title="Spend Prestige Points so XP is automatically consumed for XP Tickspeed whenever possible (each consumption resets every other tier's owned quantity and Bits)"
             />
           )}
         </Row>
@@ -775,6 +798,18 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               ? "Scale Up triggers automatically the instant it's eligible"
               : 'Auto Scale Up is paused — it will not trigger until resumed'}
             toggleLabel="Auto Scale Up automation"
+          />
+        </Row>
+      ),
+      isXpTickspeedAutobuyerActive && (
+        <Row key="xp-tickspeed" aria-label="xp tickspeed autobuyer toggle">
+          <RowLabel>🧬 XP Tickspeed Autobuyer</RowLabel>
+          <AutomationToggle
+            enabled={xpTickspeedAutobuyerEnabled}
+            icon="🧬"
+            name="XP Tickspeed Autobuyer"
+            onToggle={() => actions.setAutoXpTickspeedEnabled(!xpTickspeedAutobuyerEnabled)}
+            toggleLabel="XP Tickspeed Autobuyer automation"
           />
         </Row>
       ),

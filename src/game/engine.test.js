@@ -98,6 +98,8 @@ import {
   setAutoGlobalTickspeedEnabled,
   setAutoPrestigeEnabled,
   setAutoScaleUpEnabled,
+  buyXpTickspeedAutobuyer,
+  setAutoXpTickspeedEnabled,
   setComputeFlopsAutobuyerEnabled,
   setTierTickspeedAutobuyerEnabled,
   formatAmount,
@@ -9564,6 +9566,58 @@ describe('buyTickspeedAutobuyer', () => {
 })
 
 // ─── setAutoScaleUpEnabled / setAutoGlobalTickspeedEnabled / setAutoPrestigeEnabled ─────────────
+
+describe('buyXpTickspeedAutobuyer / setAutoXpTickspeedEnabled', () => {
+  it('spends 8 PP to unlock, with no prerequisite', () => {
+    const after = buyXpTickspeedAutobuyer(withPrestigePoints(createInitialGameState(), 10))
+    expect(after.autoXpTickspeed).toBe(true)
+    expect(after.prestige.points).toBe(2)
+  })
+
+  it('is a no-op below 8 PP, when already bought, or while frozen', () => {
+    const poor = withPrestigePoints(createInitialGameState(), 7)
+    expect(buyXpTickspeedAutobuyer(poor)).toBe(poor)
+    const owned = { ...withPrestigePoints(createInitialGameState(), 100), autoXpTickspeed: true }
+    expect(buyXpTickspeedAutobuyer(owned)).toBe(owned)
+    const frozen = withMoney(withPrestigePoints(createInitialGameState(), 100), PRESTIGE_THRESHOLD)
+    expect(buyXpTickspeedAutobuyer(frozen)).toBe(frozen)
+  })
+
+  it('toggle is a no-op until bought, then flips the preference', () => {
+    const state = createInitialGameState()
+    expect(setAutoXpTickspeedEnabled(false)(state)).toBe(state)
+    expect(setAutoXpTickspeedEnabled(false)({ ...state, autoXpTickspeed: true }).autoXpTickspeedEnabled).toBe(false)
+  })
+
+  it('tickGame auto-consumes the whole XP balance once bought and enabled', () => {
+    let state = withLastTierTickspeedXpUnlocked(createInitialGameState())
+    state = { ...state, autoXpTickspeed: true }
+    state = withResource(withOwned(state, thousandsTier.id, 30), thousandsTier.id, 30)
+    state = withMoney(state, 5)
+    state = withXP(state, 50)
+    const after = tickGame(1)(state)
+    expect(after.lastTierXpConsumed).toBe(50)
+    expect(after.prestige.xp).toBe(0)
+    expect(after.owned[thousandsTier.id]).toBe(0)
+  })
+
+  it('tickGame does not auto-consume XP while paused, when not bought, or below the minimum', () => {
+    let base = withLastTierTickspeedXpUnlocked(createInitialGameState())
+    base = withMoney(withXP(base, 50), 5)
+    expect(tickGame(1)({ ...base, autoXpTickspeed: true, autoXpTickspeedEnabled: false }).lastTierXpConsumed).toBe(0)
+    expect(tickGame(1)(base).lastTierXpConsumed).toBe(0)
+    const belowMin = withXP({ ...withLastTierXpConsumed(base, 100), autoXpTickspeed: true }, 5)
+    expect(tickGame(1)(belowMin).lastTierXpConsumed).toBe(100)
+  })
+
+  it('survives a real Prestige (permanent unlock and preference)', () => {
+    const state = withMoney({ ...createInitialGameState(), autoXpTickspeed: true, autoXpTickspeedEnabled: false }, PRESTIGE_THRESHOLD)
+    const after = prestigeGame(state)
+    expect(after).not.toBe(state)
+    expect(after.autoXpTickspeed).toBe(true)
+    expect(after.autoXpTickspeedEnabled).toBe(false)
+  })
+})
 
 describe('setAutoScaleUpEnabled', () => {
   it('toggles autoScaleUpEnabled once Auto Scale Up is bought', () => {
