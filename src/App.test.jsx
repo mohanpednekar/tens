@@ -349,7 +349,7 @@ test('the Guide nav item opens the Info page and Factory returns, preserving gam
   expect(screen.getByRole('heading', { level: 2, name: /^storage$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^boosters$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^compute$/i })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 2, name: /^prestige$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 2, name: /^reboot$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/byte foundry section/i)).toHaveTextContent(/forced priority/i)
   expect(screen.getByLabelText(/storage section/i)).toHaveTextContent(/clean-slate disk/i)
   expect(screen.getByLabelText(/boosters section/i)).toHaveTextContent(/stack/i)
@@ -848,7 +848,7 @@ test('applies offline progress at 100% speed and shows no notice for an absence 
 
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /enable latency for 10 b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /enable speed up for 10 b/i })).toBeEnabled()
   expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
 })
 
@@ -864,7 +864,7 @@ test('applies offline progress at 50% speed and shows a notice for an absence pa
 
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /enable latency for 10 b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /enable speed up for 10 b/i })).toBeEnabled()
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 })
 
@@ -974,7 +974,7 @@ test('catches up a real-world gap detected mid-session by the live tick loop, wi
 
   // 1000s real -> 500s simulated at 50% speed; Kilobytes' 1s tickspeed fits 500 deliveries into
   // that window -> 5 generators x 500 deliveries = 2,500 Bytes.
-  expect(screen.getByRole('button', { name: /enable latency for 10 b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /enable speed up for 10 b/i })).toBeEnabled()
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 
   unmount()
@@ -997,7 +997,7 @@ test('catches up a real-world gap as soon as the page becomes visible again, eve
   Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
   act(() => { document.dispatchEvent(new Event('visibilitychange')) })
 
-  expect(screen.getByRole('button', { name: /enable latency for 10 b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /enable speed up for 10 b/i })).toBeEnabled()
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 
   unmount()
@@ -1012,13 +1012,13 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
   })
   render(<App />)
 
-  expect(screen.getByRole('dialog', { name: /prestige required/i })).toBeInTheDocument()
-  const prestigeButton = screen.getByRole('button', { name: /prestige now/i })
+  expect(screen.getByRole('dialog', { name: /reboot required/i })).toBeInTheDocument()
+  const prestigeButton = screen.getByRole('button', { name: /reboot now/i })
   expect(prestigeButton).toBeEnabled()
 
   await user.click(prestigeButton)
 
-  expect(screen.queryByRole('dialog', { name: /prestige required/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: /reboot required/i })).not.toBeInTheDocument()
   // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked in engine.js) — a real Prestige
   // resets the Byte Foundry's Data Stream balance but never re-gates it, so the app stays on
   // Factory rather than navigating back to the Byte Foundry — see the dedicated Byte-Foundry/
@@ -1033,9 +1033,9 @@ test('from the 2nd prestige onward, reaching a googol shows a top banner instead
   })
   render(<App />)
 
-  expect(screen.queryByRole('dialog', { name: /prestige required/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^prestige available banner$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /prestige \(requires/i })).toBeEnabled()
+  expect(screen.queryByRole('dialog', { name: /reboot required/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^reboot available banner$/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /reboot \(requires/i })).toBeEnabled()
 })
 
 test('the sticky PP display doubles as a Prestige button once Prestige is available', async () => {
@@ -1049,7 +1049,7 @@ test('the sticky PP display doubles as a Prestige button once Prestige is availa
 
   await user.click(screen.getByRole('button', { name: /^prestige points display$/i }))
 
-  expect(screen.queryByLabelText(/^prestige available banner$/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^reboot available banner$/i)).not.toBeInTheDocument()
 })
 
 test('the sticky PP display is not a clickable button before Prestige is available', () => {
@@ -1263,7 +1263,7 @@ test('Scale Up resets the global tickspeed multiplier level back to not-yet-boug
 
   // The cumulative level/bonus only shows in the expanded description, not the button itself —
   // the description stays in the DOM (and toHaveTextContent-visible) even while collapsed.
-  expect(screen.getByLabelText(/^global latency panel$/i)).toHaveTextContent(/lv\.2/i)
+  expect(screen.getByLabelText(/^global speed up panel$/i)).toHaveTextContent(/lv\.2/i)
 
   await user.click(screen.getByRole('button', { name: /scale up \(requires 3 completed kilobytes levels/i }))
 
@@ -1271,8 +1271,8 @@ test('Scale Up resets the global tickspeed multiplier level back to not-yet-boug
   // itself stays on screen (progressive-disclosure latch: once revealed it never disappears
   // again) but drops back to its not-yet-active "Enable" state, same as a save that never
   // bought it.
-  expect(screen.getByLabelText(/^global latency panel$/i)).not.toHaveTextContent(/lv\.2/i)
-  expect(screen.getByRole('button', { name: /enable latency for 10 b/i })).toBeDisabled()
+  expect(screen.getByLabelText(/^global speed up panel$/i)).not.toHaveTextContent(/lv\.2/i)
+  expect(screen.getByRole('button', { name: /enable speed up for 10 b/i })).toBeDisabled()
 })
 
 test('the Scale Up button is disabled once production freezes at a googol', () => {
@@ -1384,7 +1384,7 @@ test('the Overclock button shows the next per-level Latency rate and completed-l
   // Latency's per-level rate to 2.14% (1% × 1.1^8) — both shown on the button itself, no
   // separate status text line.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus and raises latency's per-level rate to 2\.14%/i,
+    name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus and raises speed up's per-level rate to 2\.14%/i,
   })).toBeInTheDocument()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 2.14%/lvl · QB 7/7')
 })
@@ -1404,7 +1404,7 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
   render(<App />)
 
   const panel = screen.getByLabelText(/^overclock panel$/i)
-  expect(panel).toHaveTextContent(/latency's per-level rate is now 2\.59% \(was 1%\) from 10 banked completed levels\./i)
+  expect(panel).toHaveTextContent(/speed up's per-level rate is now 2\.59% \(was 1%\) from 10 banked completed levels\./i)
 })
 
 test('the Overclock card\'s disclosure shows no per-level rate line before the first claim', () => {
@@ -1570,7 +1570,7 @@ test('the global latency panel renders above the tier list, not below it', () =>
   render(<App />)
 
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
-  expect(regions.indexOf('global latency panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('global speed up panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
 })
 
 test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after the first prestige, and spends 8 PP to enable it', async () => {
@@ -1670,7 +1670,7 @@ test('no Global Latency panel appears before the second tier has ever been owned
   })
   render(<App />)
 
-  expect(screen.queryByLabelText(/^global latency panel$/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^global speed up panel$/i)).not.toBeInTheDocument()
 })
 
 test('an Enable Latency button appears once level 1 of the first tier completes (even during the first run), and spends 10 Bytes to activate level 1', async () => {
@@ -1682,18 +1682,18 @@ test('an Enable Latency button appears once level 1 of the first tier completes 
   })
   render(<App />)
 
-  const globalTickspeedButton = screen.getByRole('button', { name: /enable latency for 10 b/i })
+  const globalTickspeedButton = screen.getByRole('button', { name: /enable speed up for 10 b/i })
   expect(globalTickspeedButton).toBeEnabled()
 
   await user.click(globalTickspeedButton)
 
-  const upgradeButton = screen.getByRole('button', { name: /upgrade latency for 100 b/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade speed up for 100 b/i })
   expect(upgradeButton).toBeInTheDocument()
   // The cumulative level/bonus shows only in the expanded description, never on the button
   // itself or the heading — both stay compact regardless of level.
   expect(upgradeButton).not.toHaveTextContent(/lv\.1/i)
-  expect(screen.getByRole('heading', { level: 2, name: 'Latency' })).not.toHaveTextContent(/lv\.1|\+1%/i)
-  const panel = screen.getByLabelText(/^global latency panel$/i)
+  expect(screen.getByRole('heading', { level: 2, name: 'Speed Up' })).not.toHaveTextContent(/lv\.1|\+1%/i)
+  const panel = screen.getByLabelText(/^global speed up panel$/i)
   expect(panel).toHaveTextContent(/lv\.1/i)
   // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
   expect(panel).toHaveTextContent(/\+1%/i)
@@ -1710,7 +1710,7 @@ test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clic
   })
   render(<App />)
 
-  const heading = screen.getByRole('heading', { level: 2, name: 'Latency' })
+  const heading = screen.getByRole('heading', { level: 2, name: 'Speed Up' })
   const statusLine = screen.getByText(/lv\.1 —/i)
   expect(statusLine).not.toBeVisible()
 
@@ -1732,7 +1732,7 @@ test('the Enable Latency button stays disabled without enough Bits', () => {
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /enable latency for 10 b/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /enable speed up for 10 b/i })).toBeDisabled()
 })
 
 test('the Latency Upgrade button costs another power of ten each level, and shows the compounding bonus with decimal precision below 100%', () => {
@@ -1742,11 +1742,11 @@ test('the Latency Upgrade button costs another power of ten each level, and show
   })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /upgrade latency for 1,000 b/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade speed up for 1,000 b/i })
   expect(upgradeButton).toBeDisabled()
   // The cumulative level/bonus shows only in the expanded description, not on the button itself.
   expect(upgradeButton).not.toHaveTextContent(/lv\.2/i)
-  const panel = screen.getByLabelText(/^global latency panel$/i)
+  const panel = screen.getByLabelText(/^global speed up panel$/i)
   expect(panel).toHaveTextContent(/lv\.2/i)
   // Level 2 is still below the first 10-level milestone — two regular 1% levels compounded
   // (1.01^2 ≈ ×1.0201) land on a fractional percentage, shown to 2 decimal places.
@@ -1760,7 +1760,7 @@ test('Latency level 10 stays on the same uniform compounded step as every other 
   })
   render(<App />)
 
-  expect(screen.getByLabelText(/^global latency panel$/i)).toHaveTextContent(/\+10\.46%/i)
+  expect(screen.getByLabelText(/^global speed up panel$/i)).toHaveTextContent(/\+10\.46%/i)
 })
 
 test('the global tickspeed bonus keeps fractional percent precision between milestones', () => {
@@ -1770,7 +1770,7 @@ test('the global tickspeed bonus keeps fractional percent precision between mile
   })
   render(<App />)
 
-  expect(screen.getByLabelText(/^global latency panel$/i)).toHaveTextContent(/\+47\.41%/i)
+  expect(screen.getByLabelText(/^global speed up panel$/i)).toHaveTextContent(/\+47\.41%/i)
 })
 
 test('the global tickspeed bonus switches to an "Nx" multiplier once uniform compounding crosses +100%', () => {
@@ -1780,7 +1780,7 @@ test('the global tickspeed bonus switches to an "Nx" multiplier once uniform com
   })
   render(<App />)
 
-  const panel = screen.getByLabelText(/^global latency panel$/i)
+  const panel = screen.getByLabelText(/^global speed up panel$/i)
   expect(panel).toHaveTextContent(/2\.01x/i)
 })
 
@@ -1814,9 +1814,9 @@ test.each([
     buttonName: /enable auto restage for 16 prestige points/i,
   },
   {
-    name: 'Auto-Prestige',
+    name: 'Auto-Reboot',
     seed: { ...allTiersSmartSeed(), prestige: { xp: 0, points: 63, count: 1, highestMilestone: 1 } },
-    buttonName: /enable auto-prestige for 64 prestige points/i,
+    buttonName: /enable auto-reboot for 64 prestige points/i,
   },
   {
     name: 'Unlock Speed Bonus',
@@ -1859,10 +1859,10 @@ test.each([
     resumeName: /^Auto Restage automation$/i,
   },
   {
-    name: 'Auto-Prestige',
+    name: 'Auto-Reboot',
     seed: { ...allTiersSmartSeed(), autoPrestige: 1 },
-    pauseName: /^Auto-Prestige automation$/i,
-    resumeName: /^Auto-Prestige automation$/i,
+    pauseName: /^Auto-Reboot automation$/i,
+    resumeName: /^Auto-Reboot automation$/i,
   },
   {
     name: "Kilobytes's tickspeed autobuyer",
@@ -1912,7 +1912,7 @@ test('Global Automation lists every step (Tickspeed → Auto Scale Up → Auto O
   expect(screen.getByRole('button', { name: /enable tickspeed autobuyer for 8 prestige points/i })).toBeEnabled()
   expect(screen.getByRole('button', { name: /enable auto scale up for 16 prestige points/i })).toBeDisabled()
   expect(screen.getByRole('button', { name: /enable auto overclock for 32 prestige points/i })).toBeDisabled()
-  expect(screen.getByRole('button', { name: /enable auto-prestige for 64 prestige points/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /enable auto-reboot for 64 prestige points/i })).toBeDisabled()
 })
 
 test('the Auto-Prestige option stays out of Upgrades until Auto-Prestige is bought', async () => {
@@ -1925,8 +1925,8 @@ test('the Auto-Prestige option stays out of Upgrades until Auto-Prestige is boug
   render(<App />)
   await openPerksTab(user, /open upgrades/i)
 
-  expect(screen.queryByRole('button', { name: /auto-prestige/i })).not.toBeInTheDocument()
-  expect(screen.queryByText(/auto-prestige/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /auto-reboot/i })).not.toBeInTheDocument()
+  expect(screen.queryByText(/auto-reboot/i)).not.toBeInTheDocument()
 })
 
 test('an Auto-Prestige button appears in Perks → Unlocks (Global Automation) once every tier is Smart, and spends 64 PP to activate it', async () => {
@@ -1941,14 +1941,14 @@ test('an Auto-Prestige button appears in Perks → Unlocks (Global Automation) o
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  const autoPrestigeButton = screen.getByRole('button', { name: /enable auto-prestige for 64 prestige points/i })
+  const autoPrestigeButton = screen.getByRole('button', { name: /enable auto-reboot for 64 prestige points/i })
   expect(autoPrestigeButton).toBeEnabled()
 
   await user.click(autoPrestigeButton)
 
-  expect(screen.getByLabelText(/^auto-prestige upgrade$/i)).toHaveTextContent(/every 1024 s/i)
+  expect(screen.getByLabelText(/^auto-reboot upgrade$/i)).toHaveTextContent(/every 1024 s/i)
   await openPerksTab(user, /open upgrades/i)
-  expect(screen.getByRole('button', { name: /upgrade prestige automation speed to level 1 for 64 prestige points/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /upgrade reboot automation speed to level 1 for 64 prestige points/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -1963,7 +1963,7 @@ test('no pause toggle appears for Auto-Prestige before it has ever been activate
   render(<App />)
   await openPerksTab(user, /open toggles/i)
 
-  expect(screen.queryByRole('button', { name: /^auto-prestige automation$/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^auto-reboot automation$/i })).not.toBeInTheDocument()
 })
 
 test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled without enough points', async () => {
@@ -1978,8 +1978,8 @@ test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled withou
   render(<App />)
   await openPerksTab(user, /open upgrades/i)
 
-  expect(screen.getByLabelText(/^prestige automation speed upgrade$/i)).toHaveTextContent(/every 1024 s/i)
-  expect(screen.getByRole('button', { name: /upgrade prestige automation speed to level 1 for 64 prestige points/i })).toBeDisabled()
+  expect(screen.getByLabelText(/^reboot automation speed upgrade$/i)).toHaveTextContent(/every 1024 s/i)
+  expect(screen.getByRole('button', { name: /upgrade reboot automation speed to level 1 for 64 prestige points/i })).toBeDisabled()
 })
 
 test('prestige points and the production speed bonus are shown once the bonus is unlocked', () => {
@@ -2054,7 +2054,7 @@ test('a locked badge appears on the PP Unlocks page for a tier whose autobuyer m
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  expect(screen.getByLabelText(/^megabytes's autobuyer unlocks at prestige 2$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^megabytes's autobuyer unlocks at reboot 2$/i)).toBeInTheDocument()
 })
 
 test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone is reached', async () => {
@@ -2069,8 +2069,8 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  expect(screen.queryByLabelText(/^megabytes's autobuyer unlocks at prestige/i)).not.toBeInTheDocument()
-  expect(screen.getByLabelText("Megabytes's autobuyer unlocked at Prestige 2")).toBeInTheDocument()
+  expect(screen.queryByLabelText(/^megabytes's autobuyer unlocks at reboot/i)).not.toBeInTheDocument()
+  expect(screen.getByLabelText("Megabytes's autobuyer unlocked at Reboot 2")).toBeInTheDocument()
   // Confirms no PP was spent to reach this state — the milestone unlock is free.
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent(/2,?000 PP/)
 })
@@ -2103,7 +2103,7 @@ test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) p
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 11$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at reboot 11$/i)).toBeInTheDocument()
 })
 
 test('a tier\'s tickspeed autobuyer auto-unlocks (no PP spent) once its own prestige milestone is reached', async () => {
@@ -2115,8 +2115,8 @@ test('a tier\'s tickspeed autobuyer auto-unlocks (no PP spent) once its own pres
   render(<App />)
   await openPerksTab(userEvent.setup(), /open unlocks/i)
 
-  expect(screen.queryByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige/i)).not.toBeInTheDocument()
-  expect(screen.getByLabelText("Kilobytes's tickspeed autobuyer unlocked at Prestige 11")).toBeInTheDocument()
+  expect(screen.queryByLabelText(/^kilobytes's tickspeed autobuyer unlocks at reboot/i)).not.toBeInTheDocument()
+  expect(screen.getByLabelText("Kilobytes's tickspeed autobuyer unlocked at Reboot 11")).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('10 PP')
 })
 
@@ -2131,8 +2131,8 @@ test('a tier\'s Unlocks row stays listed (as unlock history)', async () => {
   await openPerksTab(userEvent.setup(), /open unlocks/i)
 
   const row = screen.getByLabelText(/^kilobytes pp unlocks$/i)
-  expect(within(row).getByLabelText("Kilobytes's autobuyer unlocked at Prestige 1")).toBeInTheDocument()
-  expect(within(row).getByLabelText("Kilobytes's tickspeed autobuyer unlocked at Prestige 11")).toBeInTheDocument()
+  expect(within(row).getByLabelText("Kilobytes's autobuyer unlocked at Reboot 1")).toBeInTheDocument()
+  expect(within(row).getByLabelText("Kilobytes's tickspeed autobuyer unlocked at Reboot 11")).toBeInTheDocument()
 })
 test('a tier\'s Unlocks row shows only its milestones (no Smart) before that tier itself is reachable', async () => {
   seedMainGameState({
@@ -2147,7 +2147,7 @@ test('a tier\'s Unlocks row shows only its milestones (no Smart) before that tie
   await openPerksTab(userEvent.setup(), /open unlocks/i)
 
   const row = screen.getByLabelText(/^megabytes pp unlocks$/i)
-  expect(within(row).getByLabelText("Megabytes's autobuyer unlocked at Prestige 2")).toBeInTheDocument()
+  expect(within(row).getByLabelText("Megabytes's autobuyer unlocked at Reboot 2")).toBeInTheDocument()
   expect(within(row).queryByRole('button', { name: /make megabytes's autobuyer smart/i })).not.toBeInTheDocument()
 })
 
@@ -2245,13 +2245,13 @@ test('Perks → Unlocks lists every tier\'s autobuyer/tier-tickspeed-autobuyer u
 
   // Prestige count 3 meets Kilobytes/Megabytes/Gigabytes' autobuyer-unlock milestones (1/2/3) but not
   // Terabytes' (4) — each already-met tier shows as unlocked, the next one as still locked.
-  expect(screen.getByLabelText(/^kilobytes's autobuyer unlocked at prestige 1$/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^megabytes's autobuyer unlocked at prestige 2$/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^gigabytes's autobuyer unlocked at prestige 3$/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^terabytes's autobuyer unlocks at prestige 4$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's autobuyer unlocked at reboot 1$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^megabytes's autobuyer unlocked at reboot 2$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^gigabytes's autobuyer unlocked at reboot 3$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^terabytes's autobuyer unlocks at reboot 4$/i)).toBeInTheDocument()
 
   // None of the tier tickspeed autobuyer milestones (11+) are anywhere close yet.
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 11$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at reboot 11$/i)).toBeInTheDocument()
   const tickspeedProgress = screen.getByRole('progressbar', { name: /^kilobytes tickspeed autobuyer milestone progress$/i })
   expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '3')
   expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '11')
@@ -2301,7 +2301,7 @@ test('no autobuyer pause button appears on the Toggles tab before its autobuyer 
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  expect(screen.getByLabelText("Megabytes's autobuyer unlocks at Prestige 2")).toBeInTheDocument()
+  expect(screen.getByLabelText("Megabytes's autobuyer unlocks at Reboot 2")).toBeInTheDocument()
   await user.click(screen.getByRole('tab', { name: /open toggles/i }))
   expect(screen.queryByRole('button', { name: /^Megabytes's autobuyer$/i })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^Kilobytes's autobuyer$/i })).toBeInTheDocument()
@@ -2395,7 +2395,7 @@ test('a tier whose autobuyer is unlocked but not yet tickspeed-automated still o
   render(<App />)
   await openPerksTab(userEvent.setup(), /open unlocks/i)
 
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at prestige 11$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at reboot 11$/i)).toBeInTheDocument()
 })
 
 test('clicking the money balance expands a breakdown of every global production multiplier currently in effect, and collapses again on a second click', async () => {
@@ -2421,7 +2421,7 @@ test('clicking the money balance expands a breakdown of every global production 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: \+50% production speed from 50 unspent pp/i)
   expect(breakdown).toHaveTextContent(/scale up: 2 activations; multiplier varies by tier/i)
-  expect(breakdown).toHaveTextContent(/latency: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
+  expect(breakdown).toHaveTextContent(/speed up: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
 
   await user.click(moneyDisplay)
 
@@ -2444,7 +2444,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on perks → unlocks\)/i)
   expect(breakdown).toHaveTextContent(/scale up: not yet activated \(reach 3 completed levels on kilobytes\)/i)
-  expect(breakdown).toHaveTextContent(/latency: not yet active/i)
+  expect(breakdown).toHaveTextContent(/speed up: not yet active/i)
 })
 
 test('the money balance breakdown omits the Prestige speed bonus line before the first prestige, but still shows Scale Up/Global Tickspeed status once those are revealed', async () => {
@@ -2461,7 +2461,7 @@ test('the money balance breakdown omits the Prestige speed bonus line before the
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).not.toHaveTextContent(/prestige speed bonus/i)
   expect(breakdown).toHaveTextContent(/scale up: not yet activated/i)
-  expect(breakdown).toHaveTextContent(/latency: not yet active/i)
+  expect(breakdown).toHaveTextContent(/speed up: not yet active/i)
 })
 
 test('the money balance breakdown\'s Overclock line reports the boosted per-level Latency rate once active, not a standalone bonus percentage', async () => {
@@ -2478,7 +2478,7 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(
-    /overclock: latency's per-level rate is now 1\.21% \(was 1%\) from 2 banked completed levels/i
+    /overclock: speed up's per-level rate is now 1\.21% \(was 1%\) from 2 banked completed levels/i
   )
 })
 
@@ -5096,7 +5096,7 @@ test('a real Prestige from MainPage resets Data Stream balance but keeps Factory
   // A synchronous click, then an immediate read: a real timer tick can't fire in between. (An
   // awaited userEvent click yields to the event loop, and under CPU load a live tick credits the
   // Data Stream bits before the `bits === 0` assertion below — the old, intermittent failure.)
-  fireEvent.click(screen.getByRole('button', { name: /prestige \(requires/i }))
+  fireEvent.click(screen.getByRole('button', { name: /reboot \(requires/i }))
 
   // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked in engine.js) — a real Prestige
   // never re-gates it, so Factory stays on screen with no navigation to the Byte Foundry.
@@ -5277,7 +5277,7 @@ test.each([
   { prestigeCount: 0, reached: false },
   { prestigeCount: 1, reached: true },
   { prestigeCount: 5, reached: true },
-])('the "Go Googol" chapter reads $reached when prestige.count is $prestigeCount', async ({ prestigeCount, reached }) => {
+])('the "Go Googol" chapter reads $reached when reboot.count is $prestigeCount', async ({ prestigeCount, reached }) => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -5675,8 +5675,8 @@ describe('Dev Mode', { timeout: 20000 }, () => {
   // each asserting the exact state change its own label promises, per CLAUDE.md's test.each
   // convention for near-identical cases.
   it.each([
-    [/^💰 Bits → 99% to Prestige$/, state => expect(state.resources.base).toBe(PRESTIGE_THRESHOLD * 0.99)],
-    [/^💰 Bits → Prestige threshold$/, state => expect(state.resources.base).toBe(PRESTIGE_THRESHOLD)],
+    [/^💰 Bits → 99% to Reboot$/, state => expect(state.resources.base).toBe(PRESTIGE_THRESHOLD * 0.99)],
+    [/^💰 Bits → Reboot threshold$/, state => expect(state.resources.base).toBe(PRESTIGE_THRESHOLD)],
     [/^🏆 \+1,000 PP$/, state => expect(state.prestige.points).toBe(1000)],
     [/^🏆 PP → Era-ready \(1 Googol\)$/, state => expect(state.prestige.points).toBe(ERA_ELIGIBILITY_PP)],
     [/^🖥️ Unlock Compute \(Flops\)$/, state => {
@@ -5684,7 +5684,7 @@ describe('Dev Mode', { timeout: 20000 }, () => {
       expect(state.computeFlops.pageUnlocked).toBe(true)
     }],
     [/^🔧 Unlock Boosters \(Core\)$/, state => expect(state.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)],
-    [/^🏆 \+1 Prestige count$/, state => {
+    [/^🏆 \+1 Reboot count$/, state => {
       expect(state.prestige.count).toBe(1)
       expect(state.autobuyers.tier01).not.toBeNull()
     }],

@@ -381,7 +381,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 progressLabel={`${tier.name} tickspeed autobuyer milestone progress`}
                 reached={isTierTickspeedAutobuyerActive}
                 subject={`${tier.name}'s tickspeed autobuyer`}
-                unit="Prestige"
+                unit="Reboot"
               />
               <span>
                 <MilestoneBadge
@@ -391,7 +391,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   progressLabel={`${tier.name} autobuyer unlock milestone progress`}
                   reached={!isAutobuyerLocked}
                   subject={`${tier.name}'s autobuyer`}
-                  unit="Prestige"
+                  unit="Reboot"
                 />
               </span>
             </Row>
@@ -477,18 +477,18 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             />
           )}
         </Row>
-        <Row aria-label="auto-prestige upgrade">
+        <Row aria-label="auto-reboot upgrade">
           <RowLabelStack>
-            <RowLabel>✦ Auto-Prestige</RowLabel>
+            <RowLabel>✦ Auto-Reboot</RowLabel>
             {isAutoPrestigeActive && (
               <SubText>every {formatInterval(getAutomationIntervalSeconds(state, 'prestige') * 1000)}</SubText>
             )}
           </RowLabelStack>
           {isAutoPrestigeActive ? (
-            <UnlockedBadge icon="✦" name="Auto-Prestige" />
+            <UnlockedBadge icon="✦" name="Auto-Reboot" />
           ) : (
             <PpPurchaseButton
-              ariaLabel={`Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`}
+              ariaLabel={`Enable Auto-Reboot for ${autoPrestigeCost} Prestige Points`}
               color="#38bdf8"
               cost={autoPrestigeCost}
               disabled={!canBuyAutoPrestige}
@@ -496,8 +496,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${autoPrestigeCost} PP`}
               onClick={actions.buyAutoPrestige}
               points={points}
-              progressLabel="Auto-Prestige Prestige Point progress"
-              title="Spend Prestige Points so Prestige happens automatically once your balance reaches 1 Googol Bytes"
+              progressLabel="Auto-Reboot Prestige Point progress"
+              title="Spend Prestige Points so Reboot happens automatically once your balance reaches 1 Googol Bytes"
             />
           )}
         </Row>
@@ -578,17 +578,17 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <CategoryHeading>Prestige</CategoryHeading>
         <Row aria-label="degoogol unlock">
           <RowLabelStack>
-            <RowLabel title="Earn past 1 Googol Bytes without freezing; Prestige voluntarily to claim PP">♾ DeGoogol</RowLabel>
+            <RowLabel title="Earn past 1 Googol Bytes without freezing; Reboot voluntarily to claim PP">♾ DeGoogol</RowLabel>
             {!isUnboundedPrestigeUnlocked(state) && (
               <SubText>
-                Auto-Prestige ≤ {UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s
+                Auto-Reboot ≤ {UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s
               </SubText>
             )}
           </RowLabelStack>
           {isUnboundedPrestigeUnlocked(state) ? (
             <UnlockedBadge icon="♾" name="DeGoogol" />
           ) : (
-            <Badge $color={theme.color.disabled} $dimmed aria-label="DeGoogol locked" title="Unlocks when Auto-Prestige's interval reaches 1 s or less">
+            <Badge $color={theme.color.disabled} $dimmed aria-label="DeGoogol locked" title="Unlocks when Auto-Reboot's interval reaches 1 s or less">
               ♾ 🔒
             </Badge>
           )}
@@ -702,10 +702,10 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           )
         })}
         {[
-          ['latency', 'Latency', '🌐'],
+          ['latency', 'Speed Up', '🌐'],
           ['scaleUp', 'Scale Up', '⏩'],
           ['overclock', 'Overclock', '🚀'],
-          ['prestige', 'Prestige', '✦'],
+          ['prestige', 'Reboot', '✦'],
         ].map(([key, name, icon]) => {
           if (!isAutomationIntervalChainUnlocked(state, key)) return null
           const level = state.automationIntervalLevels?.[key] ?? 0
@@ -826,14 +826,14 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </Row>
       ),
       isAutoPrestigeActive && (
-        <Row key="auto-prestige" aria-label="auto-prestige toggle">
-          <RowLabel>✦ Auto-Prestige</RowLabel>
+        <Row key="auto-reboot" aria-label="auto-reboot toggle">
+          <RowLabel>✦ Auto-Reboot</RowLabel>
           <AutomationToggle
             enabled={autoPrestigeEnabled}
             icon="✦"
-            name="Auto-Prestige"
+            name="Auto-Reboot"
             onToggle={() => actions.setAutoPrestigeEnabled(!autoPrestigeEnabled)}
-            toggleLabel="Auto-Prestige automation"
+            toggleLabel="Auto-Reboot automation"
           />
         </Row>
       ),

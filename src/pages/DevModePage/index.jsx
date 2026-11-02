@@ -427,19 +427,19 @@ const PRESET_GROUPS = [
     presets: [
       {
         id: 'near-prestige',
-        label: '💰 Bits → 99% to Prestige',
+        label: '💰 Bits → 99% to Reboot',
         apply: state => ({ ...state, resources: { ...state.resources, base: PRESTIGE_THRESHOLD * 0.99 } }),
       },
       {
         id: 'prestige-ready',
-        label: '💰 Bits → Prestige threshold',
+        label: '💰 Bits → Reboot threshold',
         apply: state => ({ ...state, resources: { ...state.resources, base: PRESTIGE_THRESHOLD } }),
       },
     ],
   },
   {
     id: 'prestige',
-    label: '🏆 Prestige',
+    label: '🏆 Reboot',
     presets: [
       {
         id: 'grant-1000-pp',
@@ -451,7 +451,7 @@ const PRESET_GROUPS = [
       },
       {
         id: 'add-prestige',
-        label: '🏆 +1 Prestige count',
+        label: '🏆 +1 Reboot count',
         // Same milestone unlocks a real Prestige applies (prestigeGame), so the count-gated
         // autobuyers this preset exists to test actually unlock.
         apply: state => applyAutobuyerMilestones({
@@ -562,7 +562,7 @@ const DevModePage = ({ game }) => {
   const readouts = [
     ['Bits', formatCurrency(state.resources?.base ?? 0)],
     ['Prestige Points', `✦ ${formatAmount(state.prestige?.points ?? 0)}`],
-    ['Prestiges', formatAmount(state.prestige?.count ?? 0)],
+    ['Reboots', formatAmount(state.prestige?.count ?? 0)],
     ['Era · Eons', `${formatAmount(state.era?.count ?? 0)} · ${formatAmount(state.eons?.balance ?? 0)}`],
     ['Capacity', formatBitsInNearestUnit(state.intro?.capacity ?? 0)],
   ]

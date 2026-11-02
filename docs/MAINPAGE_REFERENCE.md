@@ -703,14 +703,14 @@ live inside the selected tier):
   (`components/BuyMaxToggle`, rendered only on Perks → 🎛 Toggles once `isBuyMaxUnlocked`): while on, a click that can afford at least one FULL level
   from zero progress buys every such level (`buyTierMaxLevels`) and the button previews it as
   `+N Lv` with the summed cost (`getTierMaxLevelsPreview`; aria-label `Buy N full level(s) for …`);
-  otherwise the button keeps the normal single-level text and behavior below. Latency, tier tickspeed,
-  Double PP, Auto-Prestige and Flops buttons keep their single-level cost text but buy every
+  otherwise the button keeps the normal single-level text and behavior below. Speed Up, tier tickspeed,
+  Double PP, Auto-Reboot and Flops buttons keep their single-level cost text but buy every
   affordable level per click in that mode (`repeatPurchaseMax`). Renders its cost-block progress as an
   on-button gradient fill via `Button`'s `$progress`/`$secondaryProgress` props (green = units already
   bought this level, amber = units affordable now but not yet bought). Prestige gets the same single-tone fill
   treatment (spendable ÷ cost, or `prestigeProgressPercent`), and both pulse (`$pulse`) when
   actionable. Every PP-spending button (per-tier speed upgrades, Auto Scale Up, Unlock Speed Bonus,
-  Auto-Prestige — all on the Perks page) carries the same single-tone fill (unspent PP ÷ that
+  Auto-Reboot — all on the Perks page) carries the same single-tone fill (unspent PP ÷ that
   button's cost, `ppProgressPercent`), each nesting a `VisuallyHidden` `role="progressbar"`
   (`aria-valuenow` = PP balance capped at cost, `aria-valuemax` = cost).
 - **Compact labels.** Buy/Prestige/Reset render compact visible text — an icon in place of the action
@@ -740,12 +740,12 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
     (`"<tier>'s … unlocked at Prestige N"` once reached, else `"… unlocks at Prestige N"` + hidden
     milestone progressbar). Rows never disappear, so reached milestones stay visible as unlock history.
   - *Global Automation* — a strict sequence, every row always listed, each purchasable only once the previous is
-    owned (engine-enforced): Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Prestige. PP button (disabled until the previous step is bought), or an `UnlockedBadge`
+    owned (engine-enforced): Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Reboot. PP button (disabled until the previous step is bought), or an `UnlockedBadge`
     (`"<name> unlocked"`) once bought; never a pause control here. Outside that sequence, the 🧬 **Restage
     Autobuyer** row (`XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` = 16 PP, no prerequisite, `buyXpTickspeedAutobuyer`)
-    sits between Auto Overclock and Auto-Prestige.
+    sits between Auto Overclock and Auto-Reboot.
   - *Compute Automation* (Auto-Boost, once Foundry Compute unlocks), *Production Bonuses* (until bought), *Compute Autobuyers* (Era-milestone badges, once the Flops page
-    is unlocked), and *Prestige* (DeGoogol: locked until Auto-Prestige's interval ≤ `UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS`).
+    is unlocked), and *Prestige* (DeGoogol: locked until Auto-Reboot's interval ≤ `UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS`).
   Each milestone appears only here — `MilestonesPage` no longer repeats them.
 - ⏫ **Upgrades** (`open upgrades`, `aria-label="PP upgrades page"`) — repeatable leveled purchases:
   Double PP, and the speed chains. A tier autobuyer's *Autobuyer Speed* row shows `every <interval>`, and once
@@ -754,13 +754,13 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
 - 🎛 **Toggles** (`open toggles`, `aria-label="automation toggles page"`) — *Purchasing* (the Buy max
   button, `components/BuyMaxToggle`, removed from MainPage/ComputeFlopsPage), *Tier Autobuyers* (each
   reachable tier's ⚙/🤖 `AutomationToggle`, kept even for fully-automated tiers), *Global Automation*
-  (Tickspeed Autobuyer, Auto Scale Up, Auto Restage, Auto Overclock, Auto-Prestige), *Compute Autobuyers*
+  (Tickspeed Autobuyer, Auto Scale Up, Auto Restage, Auto Overclock, Auto-Reboot), *Compute Autobuyers*
   (each Era-unlocked Flops autobuyer, `setComputeFlopsAutobuyerEnabled`). Each toggle is a status
   badge (`"<name> active|paused"`) + `components/Switch` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up
   automation"`, `"<tier>'s autobuyer"`). A `no toggles notice` empty state covers the (practically
   unreachable) nothing-owned case.
 Layout: every Perks row is a CSS grid (default `label | control`; tier rows `$tier="unlocks"` = symbol | ⚙ |
-🤖 | `$tier="toggles"`/`"unlocks"` = symbol | ⚙ | 🤖; no content-sized tracks, fits 320px) so columns align row-to-row on both Unlocks and Toggles. Factory's Latency /
+🤖 | `$tier="toggles"`/`"unlocks"` = symbol | ⚙ | 🤖; no content-sized tracks, fits 320px) so columns align row-to-row on both Unlocks and Toggles. Factory's Speed Up /
 Scale Up / Overclock cards share `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem
 heading); Auto Scale Up's status is an `AutoChip` in the Scale Up card header.
 Tab dots: Unlocks `PP unlock available` (`hasAffordablePpUnlock`),
@@ -838,7 +838,7 @@ The **last tier's** button stays the ordinary resource-funded tickspeed button f
 but its requirement and spend differ: it needs `getTickspeedMultiplierRequirement` owned (e.g. 100 for
 the 2nd upgrade) and spends only `getTickspeedMultiplierSpend` (10% — e.g. 10); the visible label shows
 the spend, the aria-label/progress bar the requirement. Its XP-funded tickspeed is a **separate**
-**Restage** card beside the Latency card (same `SpeedCardsRow`) (`aria-label="restage panel"`, shown once
+**Restage** card beside the Speed Up card (same `SpeedCardsRow`) (`aria-label="restage panel"`, shown once
 `isLastTierTickspeedXpUnlocked`) with a `🧬 {XP} XP` button — see docs/ECONOMY_REFERENCE.md's
 "The last tier's XP-funded tickspeed". The row's Details "tier ×N" multiplier includes the XP bonus.
 
@@ -849,7 +849,7 @@ above) and no autobuyer status icon. An earlier version showed an always-visible
 `PpUpgradeBadge` here (a single 🤖 glyph, full opacity while active / dimmed `$dimmed` while paused,
 via the same icon-instead-of-text convention every other automation status badge in the app still
 uses — the tier tickspeed/global tickspeed/Auto Scale Up badges on Perks →
-Toggles, and the Auto-Prestige/Auto Scale Up status lines — see their own sections below) once
+Toggles, and the Auto-Reboot/Auto Scale Up status lines — see their own sections below) once
 a tier's unit-buying autobuyer was unlocked (`autobuyers`/`applyAutobuyerMilestones` — a free,
 prestige-count-milestone-triggered unlock, not a PP purchase). Both removed to keep the Factory view
 row down to just the tier name plus live production/owned figures and the two action buttons —
@@ -857,18 +857,18 @@ autobuyer active/paused status is still visible (and, unlike the old read-only G
 directly toggleable) on Perks → 🎛 Toggles' Tier Autobuyers category, via the same
 `autobuyersEnabled`/`setAutobuyerEnabled` state (see "Perks page" above).
 
-**PP purchase rationale.** The global automations, Auto-Prestige and Double PP mechanics are
+**PP purchase rationale.** The global automations, Auto-Reboot and Double PP mechanics are
 unchanged by the move to Perks — see `docs/ECONOMY_REFERENCE.md` for costs/effects and
 `docs/DESIGN_HISTORY.md` ("PP Upgrades tab split…") for why the page is split three ways.
 
 **Scale Up and Overclock cards, below the tier list.** `ScaleUpCard` and `OverclockCard` render
 together, in that order, inside a shared `SpeedCardsRow` flex row placed directly below `TierList` —
-not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why Latency
+not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why Speed Up
 (paired with Restage) stays on top while this pair sits below the tier list). `SpeedCardsRow` keeps the pair side by side at every width, phone included (`flex: 1 1 0`,
-`min-width: 0`, no wrap) — the same row also holds Latency + Restage above the tier list. The earlier
+`min-width: 0`, no wrap) — the same row also holds Speed Up + Restage above the tier list. The earlier
 below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below),
 so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
-alongside it. Both soft-reset cards (and Latency) share `featureCard(accent)`: compact `0.6rem 0.75rem`
+alongside it. Both soft-reset cards (and Speed Up) share `featureCard(accent)`: compact `0.6rem 0.75rem`
 padding, a `0.4rem` internal gap and a 3px left accent stripe; their headings have no default margin, their
 buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`.
 

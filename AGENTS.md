@@ -5,6 +5,8 @@ of truth — `CLAUDE.md` (plus its `docs/*.md` references) is authoritative for 
 anything below ever conflicts with `CLAUDE.md`, `CLAUDE.md` wins; fix this file to match in the same
 change rather than letting the two drift (a stale mirror here is worse than no mirror at all).
 
+Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Reboot**, the global tickspeed track is **Speed Up** (formerly Latency). Code/state keep `prestige`/`latency` names.
+
 ## Project
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via

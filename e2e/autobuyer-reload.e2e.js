@@ -32,6 +32,6 @@ test('an already-unlocked tier autobuyer stays unlocked after a reload', async (
 
   // The autobuyer was already unlocked in the seeded save — it must read as unlocked, not locked
   // (a locked badge would mean the reload silently relocked it).
-  await expect(unlockRow.getByLabel(/^kilobytes's autobuyer unlocked at prestige 1$/i)).toBeVisible()
-  await expect(unlockRow.getByLabel(/^kilobytes's autobuyer unlocks at prestige/i)).toHaveCount(0)
+  await expect(unlockRow.getByLabel(/^kilobytes's autobuyer unlocked at reboot 1$/i)).toBeVisible()
+  await expect(unlockRow.getByLabel(/^kilobytes's autobuyer unlocks at reboot/i)).toHaveCount(0)
 })

@@ -665,7 +665,7 @@ Strict three-layer separation:
    Prestige. Pure renderer — full spec: `docs/ECONOMY_REFERENCE.md`'s "PP Compute (Flops)" section.
 5. **`InfoPage/index.jsx`** — a static Guide page holding every mechanic's evergreen explanation in
    short bullets/sub-headings (what used to be MainPage's click-to-expand `InfoDetails` disclosures —
-   Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Latency, Scale Up, Overclock, Tier
+   Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Speed Up, Scale Up, Overclock, Tier
    Autobuyers, Milestones, Prestige, Offline progress, Era ascension). Numbers come from the same `engine.js`/`layers.js`
    constants the game uses, so they can't drift. Reads no `useIncrementalGame` state — only pure
    constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
@@ -720,14 +720,19 @@ this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop".
 
 ### Tiers, Prestige, Era ascension
 
+**Terminology (player-facing):** "Prestige" is the umbrella term for every reset-for-rewards (Reboot, Era
+ascension, Reset Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is called **Reboot**
+(Auto-Reboot, Reboot museum entries). Code identifiers, state keys and "Prestige Points (PP)" keep
+`prestige` naming — this rename is UI text only, so saves are unaffected.
+
 There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
 display names `Kilobytes` through `Quettabytes`. Every tier is bought directly with the base currency
 (`MONEY_ID = 'base'`, display name "Bits") and, once owned, produces the tier immediately below it,
 cascading down the ladder; `tier01` (Kilobytes) is the special case where cost is still Bits but
 production is a whole-Byte amount (`BYTES_ID = 'bytes'`, displayed as `B`) credited to Bits at
 `BITS_PER_BYTE` (8) per Byte. **Bytes and Bits are ONE pool** (`resources.base`) — there is no separate
-Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Latency** (the global
-tickspeed multiplier on MainPage, formerly "Tickspeed"/"Clock Speed") is paid from that Bits balance —
+Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Speed Up** (the global
+tickspeed multiplier on MainPage, formerly "Latency"/"Tickspeed"/"Clock Speed"; code keys stay `latency`/`globalTickspeed`) is paid from that Bits balance —
 initial activation costs **10 Bytes (80 Bits)**. It unlocks once level 1 of tier01 is purchased; there
 are no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
 Reaching Money ≥ `PRESTIGE_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
@@ -820,7 +825,7 @@ from the re-reveal mechanic: after a reset, a tier already unlocked by a previou
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
 Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
 completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`,
-not a fixed 5/8/11/14 ladder (Latency's Overclock-scaled 1% step is under "Tiers, Prestige, Era
+not a fixed 5/8/11/14 ladder (Speed Up's Overclock-scaled 1% step is under "Tiers, Prestige, Era
 ascension" above).
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
@@ -834,7 +839,7 @@ new file per run** onto the stable orphan branch `ideal-run-strategy` via
 `publish-strategy.sh` (`runs/<UTC-stamp>-<sha>.md` + `README.md` index) — never merge that branch
 into `main`, and do not rename it with an agent/session suffix.
 
-**Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Latency/Overclock
+**Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Speed Up/Overclock
 heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
 **No link styling:** it's a game — never underline (solid, dotted or on hover) just because something is
 clickable; use `cursor: pointer` and a `:focus-visible` outline instead.

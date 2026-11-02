@@ -316,7 +316,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                     devModeActive
                       ? 'Disable Dev Mode first'
                       : frozen && slot.isActive
-                        ? 'Prestige first — production is frozen at 1 Googol Bytes'
+                        ? 'Reboot first — production is frozen at 1 Googol Bytes'
                         : 'Erase this slot only (asks for confirmation)'
                   }
                   type="button"
@@ -334,8 +334,8 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         <h2>Prestige museum</h2>
         {!supporter ? (
           <LockedNote>
-            History still records in the background. Unlock Supporter to browse past prestiges and pin up to {MUSEUM_PIN_CAP}.
-            {history.length > 0 && ` Latest: Prestige #${history[0].prestigeNumber} (+${history[0].pointsAwarded} PP).`}
+            History still records in the background. Unlock Supporter to browse past reboots and pin up to {MUSEUM_PIN_CAP}.
+            {history.length > 0 && ` Latest: Reboot #${history[0].prestigeNumber} (+${history[0].pointsAwarded} PP).`}
           </LockedNote>
         ) : (
           <>
@@ -347,7 +347,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                   {pinnedEntries.map(entry => (
                     <MuseumItem key={`pin-${entry.id}`}>
                       <div>
-                        <strong>Prestige #{entry.prestigeNumber}</strong>
+                        <strong>Reboot #{entry.prestigeNumber}</strong>
                         <div>
                           <span>+{entry.pointsAwarded} PP · {formatMoneyBalance(entry.moneyBits)}</span>
                         </div>
@@ -367,13 +367,13 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
             )}
             <LockedNote>Recent history</LockedNote>
             {visibleHistory.length === 0 ? (
-              <LockedNote>No prestiges recorded yet.</LockedNote>
+              <LockedNote>No reboots recorded yet.</LockedNote>
             ) : (
               <MuseumList aria-label="prestige museum history">
                 {visibleHistory.map(entry => (
                   <MuseumItem key={entry.id}>
                     <div>
-                      <strong>Prestige #{entry.prestigeNumber}</strong>
+                      <strong>Reboot #{entry.prestigeNumber}</strong>
                       <div>
                         <span>+{entry.pointsAwarded} PP · {formatCurrency(entry.moneyBits)}</span>
                       </div>
@@ -497,7 +497,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           onClick={onReset}
           title={
             frozen
-              ? 'Prestige first — production is frozen at 1 Googol Bytes'
+              ? 'Reboot first — production is frozen at 1 Googol Bytes'
               : 'Erases the active save slot and starts over (asks for confirmation)'
           }
           type="button"
@@ -512,7 +512,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           Restart the Byte Foundry on the active save — Capacity, Memory, Disks, Data Lakes and
           Compute entities. Combine, Upgrade Capacity, Upgrade Speed, Provision Disk and Data Lake
           upgrades/Boosters then replay automatically up to your pre-reset highs.
-          Byte Factory progress and Prestige stay.
+          Byte Factory and Reboot progress stay.
         </p>
         <Button
           aria-describedby="settings-reset-foundry-description"
@@ -521,7 +521,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           onClick={onResetByteFoundry}
           title={
             frozen
-              ? 'Prestige first — production is frozen at 1 Googol Bytes'
+              ? 'Reboot first — production is frozen at 1 Googol Bytes'
               : 'Restarts the Foundry; Combine, Data Stream upgrades, Disks and Data Lakes replay automatically up to prior highs'
           }
           type="button"
@@ -530,7 +530,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           <ButtonContent>↺ Reset Byte Foundry…</ButtonContent>
           <VisuallyHidden id="settings-reset-foundry-description">
             Restarts Capacity, Storage, Data Lakes and Compute from scratch, then replays upgrades,
-            Disks and Data Lakes automatically up to pre-reset highs; Byte Factory and Prestige stay
+            Disks and Data Lakes automatically up to pre-reset highs; Byte Factory and Reboot progress stay
           </VisuallyHidden>
         </Button>
         <p>Wipe every slot’s progress on this device. Does not remove the Supporter unlock.</p>
@@ -542,7 +542,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
             devModeActive
               ? 'Disable Dev Mode first'
               : frozen
-                ? 'Prestige first — production is frozen at 1 Googol Bytes'
+                ? 'Reboot first — production is frozen at 1 Googol Bytes'
                 : 'Erases all slots but keeps Supporter unlock (asks for confirmation)'
           }
           type="button"
@@ -567,7 +567,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         </p>
         <p>
           <strong>Resets:</strong> Foundry generator upgrades, Memory, Disks, Compute entities,
-          Byte Factory tiers and resources, unspent PP and prestige count, Double PP level, and Compute
+          Byte Factory tiers and resources, unspent PP and Reboot count, Double PP level, and Compute
           owned units.
         </p>
         <p>

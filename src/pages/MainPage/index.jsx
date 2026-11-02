@@ -818,8 +818,8 @@ const MainPage = ({ game }) => {
   // but the award on reaching it is always at least 1, so that's the effect worth advertising.
   const prestigeAwardPreview = Math.max(1, prestigePointsPreview)
   const prestigeLabel = isUnbounded && canPrestige
-    ? 'Prestige (optional — claim accumulated PP)'
-    : 'Prestige (requires 1 Googol Bytes)'
+    ? 'Reboot (optional — claim accumulated PP)'
+    : 'Reboot (requires 1 Googol Bytes)'
   const prestigeAriaLabel = `${prestigeLabel} — awards +${formatAmount(prestigeAwardPreview)} Prestige Point${prestigeAwardPreview === 1 ? '' : 's'}`
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
   // lazy initializer, from whatever loadGameState() returned) — a tier unlocked before this
@@ -1092,9 +1092,9 @@ const MainPage = ({ game }) => {
 
   if (showFullScreenPrompt) {
     return (
-      <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Prestige required">
+      <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Reboot required">
         <FullScreenCard>
-          <h2>✦ Prestige Available!</h2>
+          <h2>✦ Reboot Available!</h2>
           <PrestigeMutedText>
             You've reached {formatCurrency(state.resources[MONEY_ID])} — 1 Googol Bytes. All
             production has stopped.
@@ -1110,14 +1110,14 @@ const MainPage = ({ game }) => {
           </ul>
           <Button
             ref={fullScreenPrestigeButtonRef}
-            aria-label="Prestige now"
+            aria-label="Reboot now"
             variant="prestige"
             onClick={actions.prestige}
             title="Awards Prestige Points and resets your resources"
             type="button"
             $pulse
           >
-            <ButtonContent>✦ Prestige Now</ButtonContent>
+            <ButtonContent>✦ Reboot Now</ButtonContent>
           </Button>
         </FullScreenCard>
       </FullScreenOverlay>
@@ -1128,7 +1128,7 @@ const MainPage = ({ game }) => {
     <RootDiv>
       {showTopPrestigeBar && (
         <>
-          <TopPrestigeBar ref={topPrestigeBarRef} aria-label="prestige available banner">
+          <TopPrestigeBar ref={topPrestigeBarRef} aria-label="reboot available banner">
             <PrestigeMutedText>1 Googol Bytes reached — production has stopped.</PrestigeMutedText>
             <Button
               aria-label={prestigeAriaLabel}
@@ -1139,24 +1139,24 @@ const MainPage = ({ game }) => {
               $pulse
             >
               <ButtonIcon>✦ </ButtonIcon>
-              <ButtonLabel>Prestige +{formatAmount(prestigeAwardPreview)} PP</ButtonLabel>
+              <ButtonLabel>Reboot +{formatAmount(prestigeAwardPreview)} PP</ButtonLabel>
             </Button>
           </TopPrestigeBar>
           <TopPrestigeBarSpacer $height={topPrestigeBarHeight} />
         </>
       )}
 
-      <PrestigeProgressBar aria-label="prestige progress">
+      <PrestigeProgressBar aria-label="reboot progress">
         <PrestigeProgressTrack $percent={prestigeProgressPercent}>
           <VisuallyHidden
             role="progressbar"
-            aria-label="progress toward 1 Googol Bytes, when Prestige becomes available"
+            aria-label="progress toward 1 Googol Bytes, when Reboot becomes available"
             aria-valuenow={prestigeProgressPercent}
             aria-valuemin={0}
             aria-valuemax={100}
           />
           <PrestigeProgressLabel>
-            {`${prestigeProgressPercent}% to Prestige`}
+            {`${prestigeProgressPercent}% to Reboot`}
           </PrestigeProgressLabel>
         </PrestigeProgressTrack>
       </PrestigeProgressBar>
@@ -1234,7 +1234,7 @@ const MainPage = ({ game }) => {
               </li>
               {globalTickspeedCardEverRevealed && (
                 <li>
-                  Latency: {isGlobalTickspeedActive
+                  Speed Up: {isGlobalTickspeedActive
                     ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier (Lv.${globalTickspeedLevel})`
                     : 'not yet active'}
                 </li>
@@ -1242,7 +1242,7 @@ const MainPage = ({ game }) => {
               {overclockEverRevealed && (
                 <li>
                   Overclock: {overclockCount > 0
-                    ? `Latency's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from ${formatAmount(overclockCount)} banked completed levels`
+                    ? `Speed Up's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from ${formatAmount(overclockCount)} banked completed levels`
                     : `not yet claimed (reach ${formatAmount(overclockRequirementDisplay)} completed levels on ${lastTier.name})`}
                 </li>
               )}
@@ -1276,9 +1276,9 @@ const MainPage = ({ game }) => {
       {(globalTickspeedCardEverRevealed || isLastTierXpUnlocked) && (
       <SpeedCardsRow>
       {globalTickspeedCardEverRevealed && (
-        <GlobalTickspeedCard aria-label="global latency panel">
+        <GlobalTickspeedCard aria-label="global speed up panel">
           <Disclosure>
-            <summary><h2>Latency</h2></summary>
+            <summary><h2>Speed Up</h2></summary>
             {isGlobalTickspeedActive && (
               <MutedText>
                 Lv.{globalTickspeedLevel} — {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
@@ -1288,8 +1288,8 @@ const MainPage = ({ game }) => {
           <Button
             aria-label={
               isGlobalTickspeedActive
-                ? `Upgrade Latency for ${formatBytes(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
-                : `Enable Latency for ${formatBytes(globalTickspeedCost)}`
+                ? `Upgrade Speed Up for ${formatBytes(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
+                : `Enable Speed Up for ${formatBytes(globalTickspeedCost)}`
             }
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
             disabled={!canBuyGlobalTickspeed}
@@ -1304,7 +1304,7 @@ const MainPage = ({ game }) => {
             <ButtonLabel>{formatBytes(globalTickspeedCost)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
-              aria-label="Latency progress"
+              aria-label="Speed Up progress"
               aria-valuenow={globalTickspeedProgressPercent}
               aria-valuemin={0}
               aria-valuemax={100}
@@ -1592,16 +1592,16 @@ const MainPage = ({ game }) => {
             <summary><h2>Overclock</h2></summary>
             {overclockCount > 0 && (
               <MutedText>
-                Latency's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from {formatAmount(overclockCount)} banked completed levels.
+                Speed Up's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from {formatAmount(overclockCount)} banked completed levels.
               </MutedText>
             )}
           </Disclosure>
           <OverclockButton
-            aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus and raises Latency's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
+            aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus and raises Speed Up's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
             onClick={actions.overclock}
-            title={`Resets tiers (and Scale Up's bonus) and raises Latency's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}% — requires ${overclockRequirementDisplay} completed ${lastTier.name} levels`}
+            title={`Resets tiers (and Scale Up's bonus) and raises Speed Up's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}% — requires ${overclockRequirementDisplay} completed ${lastTier.name} levels`}
             type="button"
             $progress={overclockProgressPercent}
             $progressColor="#fb923c"
