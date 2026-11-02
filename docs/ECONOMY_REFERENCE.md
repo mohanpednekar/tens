@@ -1937,7 +1937,7 @@ the whole time — see "Tickspeed multiplier" above). Once the **last tier**
 successful Scale Up this cycle (`isLastTierTickspeedXpUnlocked` — with 10 tiers, exactly the run's 10th
 Scale Up; maintainer-confirmed as "first Restage after 10 Scale Ups, then 10% additional XP each time"),
 a **Restage** card appears on
-MainPage directly below the Latency card. XP (`prestige.xp`) is otherwise absent from the UI — this is
+MainPage beside the Latency card (sharing its `SpeedCardsRow`). XP (`prestige.xp`) is otherwise absent from the UI — this is
 its one purpose.
 
 - `isLastTierTickspeedXpUnlocked(state) = (state.scaleUpTierCounts?.[lastTier.id] ?? 0) >= 1` — revealing
@@ -2087,8 +2087,8 @@ after a Prestige — it just starts re-accumulating `scaleUpCount`/`scaleUpTarge
 the next cycle. Can fire without a manual click once Auto Scale Up is bought.
 
 `MainPage` surfaces this as a `ScaleUpCard` (cyan accent; Factory view only), rendered directly below
-`TierList`, side by side with `OverclockCard` (inside a shared `SpeedCardsRow` flex row, side by side at every width) — `GlobalTickspeedCard` renders separately, alone at the top of the Game
-view, since it's the one control relevant before the last tier is even reachable (see "Global Tickspeed
+`TierList`, side by side with `OverclockCard` (inside a shared `SpeedCardsRow` flex row, side by side at every width) — `GlobalTickspeedCard` renders separately at the top of the Game
+view (paired only with the Restage card), since it's the one control relevant before the last tier is even reachable (see "Global Tickspeed
 card" in docs/MAINPAGE_REFERENCE.md). Unlike `OverclockCard` (still gated on `overclockEverRevealed`,
 the last tier having ever been unlocked — see docs/MAINPAGE_REFERENCE.md), `ScaleUpCard` is always
 shown — relevant from the very first cycle, well before the last tier even exists. The button

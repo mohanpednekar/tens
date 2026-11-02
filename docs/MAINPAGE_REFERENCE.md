@@ -838,7 +838,7 @@ The **last tier's** button stays the ordinary resource-funded tickspeed button f
 but its requirement and spend differ: it needs `getTickspeedMultiplierRequirement` owned (e.g. 100 for
 the 2nd upgrade) and spends only `getTickspeedMultiplierSpend` (10% — e.g. 10); the visible label shows
 the spend, the aria-label/progress bar the requirement. Its XP-funded tickspeed is a **separate**
-**Restage** card directly below the Latency card (`aria-label="restage panel"`, shown once
+**Restage** card beside the Latency card (same `SpeedCardsRow`) (`aria-label="restage panel"`, shown once
 `isLastTierTickspeedXpUnlocked`) with a `🧬 {XP} XP` button — see docs/ECONOMY_REFERENCE.md's
 "The last tier's XP-funded tickspeed". The row's Details "tier ×N" multiplier includes the XP bonus.
 
@@ -863,9 +863,8 @@ unchanged by the move to Perks — see `docs/ECONOMY_REFERENCE.md` for costs/eff
 
 **Scale Up and Overclock cards, below the tier list.** `ScaleUpCard` and `OverclockCard` render
 together, in that order, inside a shared `SpeedCardsRow` flex row placed directly below `TierList` —
-not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why the three
-speed-related cards are split into a top card plus this separate bottom pair rather than one shared
-row). `SpeedCardsRow` keeps the pair side by side at every width, phone included (`flex: 1 1 0`,
+not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why Latency
+(paired with Restage) stays on top while this pair sits below the tier list). `SpeedCardsRow` keeps the pair side by side at every width, phone included (`flex: 1 1 0`,
 `min-width: 0`, no wrap) — the same row also holds Latency + Restage above the tier list. The earlier
 below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below),
 so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
