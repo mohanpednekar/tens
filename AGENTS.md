@@ -207,8 +207,8 @@ resolve to that dir's `index.jsx`/`index.js`.
 
 - Test files live next to source: `engine.test.js`, `layers.test.js`, `storage.test.js`,
   `App.test.jsx`. Environment: jsdom, globals enabled. Setup file: `src/setupTests.js`.
-- `yarn test` is green — see `CLAUDE.md`'s Testing section for the current test count (the
-  authoritative number; don't restate it here, to avoid the two drifting apart).
+- `yarn test` is green — run it for the current test count (counts are intentionally not recorded in
+  docs: they went stale and made the docs a merge-conflict hot-spot).
 
 ## Changelog convention
 
