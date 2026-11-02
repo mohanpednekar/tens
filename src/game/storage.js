@@ -543,6 +543,12 @@ export const renamePreRebootKeys = saved => {
   const next = renameKeys(saved, RENAMED_TOP_LEVEL_KEYS)
   if (next.automationIntervalLevels) next.automationIntervalLevels = renameKeys(next.automationIntervalLevels, RENAMED_AUTOMATION_KEYS)
   if (next.automationAttemptBudgets) next.automationAttemptBudgets = renameKeys(next.automationAttemptBudgets, RENAMED_AUTOMATION_KEYS)
+  if (Array.isArray(next.prestigeMuseum?.history)) {
+    next.prestigeMuseum = {
+      ...next.prestigeMuseum,
+      history: next.prestigeMuseum.history.map(entry => renameKeys(entry, [['prestigeNumber', 'rebootNumber']])),
+    }
+  }
   return next
 }
 

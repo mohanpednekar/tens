@@ -91,6 +91,7 @@ describe('saveGameState / loadGameState round-trip', () => {
       autoPrestigeAttemptBudget: 0.5,
       automationIntervalLevels: { latency: 2, scaleUp: 1, overclock: 0, prestige: 5 },
       automationAttemptBudgets: { latency: 0.25, scaleUp: 0, overclock: 0 },
+      prestigeMuseum: { history: [{ id: 'p3-1', prestigeNumber: 3, pointsAwarded: 1 }], pinnedIds: [] },
     }))
     const loaded = loadGameState()
     expect(loaded.reboot).toMatchObject({ points: 9, count: 4, xp: 2 })
@@ -102,6 +103,8 @@ describe('saveGameState / loadGameState round-trip', () => {
     expect(loaded).not.toHaveProperty('prestige')
     expect(loaded).not.toHaveProperty('autoPrestige')
     expect(loaded.automationIntervalLevels).not.toHaveProperty('latency')
+    expect(loaded.prestigeMuseum.history[0]).toMatchObject({ rebootNumber: 3 })
+    expect(loaded.prestigeMuseum.history[0]).not.toHaveProperty('prestigeNumber')
   })
 
   it('preserves prestige count, points, and XP', () => {

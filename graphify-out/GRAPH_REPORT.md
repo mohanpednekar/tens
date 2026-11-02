@@ -203,7 +203,7 @@ Nodes (48): types, concurrency, cancel-in-progress, group, CHECK_SUITE_BRANCH, C
 
 ### Community 12 - "run-simulation.mjs"
 Cohesion: 0.15
-Nodes (22): actMainBuys(), actPlayer(), actSpeedBonus(), actTickspeed(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerReboots, defaultPPValues (+14 more)
+Nodes (22): actMainBuys(), actPlayer(), actSpeedBonus(), actTickspeed(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerPrestiges, defaultPPValues (+14 more)
 
 ### Community 13 - "ComputePage"
 Cohesion: 0.20
@@ -223,7 +223,7 @@ Nodes (39): concurrency, cancel-in-progress, group, GH_TOKEN, RUN_CONCLUSION, RU
 
 ### Community 17 - "App.test.jsx"
 Cohesion: 0.06
-Nodes (34): vitest@^5.0.4, vitest, ALL_TIER_IDS, allTiersSmartSeed(), derivePurchaseFieldsFromCounts(), seedMainGameState(), AUTO_REBOOT_AUTOBUYER_COST, BITS_PER_BYTE (+26 more)
+Nodes (34): vitest@^5.0.4, vitest, ALL_TIER_IDS, allTiersSmartSeed(), derivePurchaseFieldsFromCounts(), seedMainGameState(), AUTO_PRESTIGE_AUTOBUYER_COST, BITS_PER_BYTE (+26 more)
 
 ### Community 18 - "InfoPage/index.jsx"
 Cohesion: 0.10
