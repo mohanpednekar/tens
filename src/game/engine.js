@@ -415,8 +415,8 @@ export const createInitialGameState = () => ({
     // permanent intro fields; cleared only by a full save Reset.
     foundryResetCaps: null,
     // Progress (0..1) of the one lower-size disk currently being rebuilt for free after a Foundry reset
-    // (tickAutoProvisionLowerDiskSizes): { size, progress } or null. Advances at the pool's BASE
-    // Bandwidth, never the fill multiplier. Wiped with the rest of the Foundry.
+    // (tickAutoProvisionLowerDiskSizes): { size, progress } or null. Draws one disk's worth from the
+    // pool buffer at the pool's BASE Bandwidth × tap bonus, never the fill multiplier. Wiped with the rest of the Foundry.
     lowerRebuild: null,
     // PERMANENT — a one-time-ever latch, never reset by a real Prestige or an Era ascension (see
     // rebootGame/buildEraIntroReset). True the instant Storage's own capacity threshold is
@@ -4162,11 +4162,13 @@ export const tickQueuedDiskBuild = (elapsedSeconds = 0) => state => {
   }
 }
 
-// Sizes below the newest unlocked one (rebuilt after a Foundry reset) provision themselves FOR FREE, one
-// disk at a time, smallest size first. Each disk takes exactly size / (the pool's BASE Bandwidth ×
-// its tap bonus) (getStoragePoolBandwidth × getPoolTapMultiplier) — independent of the fill multiplier, the pool buffer and the caches — so the
-// total time is predictable (getLowerRebuildSummary). Progress lives in intro.lowerRebuild ({ size,
-// progress 0..1 }); a finished disk lands full (a drained built disk is refilled before a new one is built).
+// Sizes below the newest unlocked one (rebuilt after a Foundry reset) provision themselves automatically,
+// one disk at a time, smallest size first. "Free" means no provisioning cost: each disk costs exactly ONE
+// fill — `size` bits drawn from its pool's buffer (minus the read cache's claim, getPoolCacheReservationBits)
+// at the pool's BASE Bandwidth × its tap bonus (getStoragePoolBandwidth × getPoolTapMultiplier, never the
+// fill multiplier) — and lands full. An empty buffer stalls it (progress is kept). getLowerRebuildSummary's
+// time ignores buffer stalls. Progress lives in intro.lowerRebuild ({ size, progress 0..1 }); a drained
+// built disk is refilled before a new one is built.
 // A size counts as done once DISK_ARRAY_LADDER_CAP disks are built (getDiskSize advances). `elapsedSeconds`
 // may span many disks (offline gaps). Same-reference no-op when nothing changed.
 const LOWER_REBUILD_MAX_STEPS = 200
@@ -4174,8 +4176,10 @@ export const getLowerRebuildDiskSeconds = (state, size) => {
   const poolIndex = getPoolIndexForDiskSize(size)
   return size / Math.max(getStoragePoolBandwidth(state, poolIndex) * getPoolTapMultiplier(state, poolIndex), Number.MIN_VALUE)
 }
-const getLowerRebuildProjectedDiskSeconds = (state, size) =>
-  size / Math.max(getProjectedPoolBandwidth(state, getPoolIndexForDiskSize(size)), Number.MIN_VALUE)
+const getLowerRebuildProjectedDiskSeconds = (state, size) => {
+  const poolIndex = getPoolIndexForDiskSize(size)
+  return size / Math.max(getProjectedPoolBandwidth(state, poolIndex) * getPoolTapMultiplier(state, poolIndex), Number.MIN_VALUE)
+}
 
 export const tickAutoProvisionLowerDiskSizes = (elapsedSeconds = 0) => state => {
   if (!state.intro?.byteCreated) return state
@@ -4195,21 +4199,24 @@ export const tickAutoProvisionLowerDiskSizes = (elapsedSeconds = 0) => state => 
     const built = intro.disksBuiltTotal?.[size] ?? 0
     const full = intro.disks?.[size] ?? 0
     if (built >= DISK_ARRAY_LADDER_CAP && full >= built) break
-    const diskSeconds = getLowerRebuildDiskSeconds(current, size)
-    if (!Number.isFinite(diskSeconds) || getStoragePoolBandwidth(current, poolIndex) <= 0) break
+    const rate = getStoragePoolBandwidth(current, poolIndex) * getPoolTapMultiplier(current, poolIndex)
+    if (!(rate > 0) || !Number.isFinite(rate)) break
     const progress = intro.lowerRebuild?.size === size ? intro.lowerRebuild.progress : 0
-    const gained = left / diskSeconds
-    if (progress + gained < 1 - TICK_ACCUMULATION_EPSILON) {
-      if (gained > 0) {
-        intro = { ...intro, lowerRebuild: { size, progress: progress + gained } }
-        changed = true
-      }
-      left = 0
+    const buffer = intro.poolBuffers?.[poolIndex] ?? 0
+    const spendable = Math.max(0, buffer - getPoolCacheReservationBits(current, poolIndex))
+    const drawBits = Math.min(left * rate, spendable, Math.max(0, 1 - progress) * size)
+    if (!(drawBits > 0)) break
+    const nextProgress = progress + drawBits / size
+    const poolBuffers = { ...intro.poolBuffers, [poolIndex]: buffer - drawBits }
+    left = Math.max(0, left - drawBits / rate)
+    if (nextProgress < 1 - TICK_ACCUMULATION_EPSILON) {
+      intro = { ...intro, poolBuffers, lowerRebuild: { size, progress: nextProgress } }
+      changed = true
       break
     }
-    left = Math.max(0, left - (1 - progress) * diskSeconds)
     intro = {
       ...intro,
+      poolBuffers,
       disks: { ...intro.disks, [size]: full + 1 },
       disksBuiltTotal: { ...intro.disksBuiltTotal, [size]: Math.max(built, full + 1) },
       lowerRebuild: null,
@@ -4220,7 +4227,8 @@ export const tickAutoProvisionLowerDiskSizes = (elapsedSeconds = 0) => state => 
 }
 
 // Time and progress of the whole post-Foundry-reset rebuild: every size below the presented one still short
-// of a full array, each remaining disk at size / its pool's base Bandwidth (the in-flight disk's progress
+// of a full array, each remaining disk at size / (its pool's base Bandwidth × tap bonus), assuming the
+// buffer keeps up (the in-flight disk's progress
 // already deducted). For a pool not live yet the Bandwidth is projected (getProjectedPoolBandwidth), so `seconds` is only Infinity if the Data Stream Speed is 0. `disksDone`/`disksTotal` count disks
 // (the in-flight one fractionally); `projected` is true when any remaining size's pool is not live yet (its part of `seconds` is an estimate). Zeros when nothing is pending.
 export const getLowerRebuildSummary = state => {
@@ -6968,7 +6976,7 @@ export const tickFoundryResetConvenience = state => {
     }
   }
 
-  // Sizes below the newest unlocked one are re-provisioned for free by tickAutoProvisionLowerDiskSizes —
+  // Sizes below the newest unlocked one are re-provisioned (one buffer fill per disk, no provisioning cost) by tickAutoProvisionLowerDiskSizes —
   // the paid replay must not also fund them (it would bank passes the free loop then ignores).
   if (!isLowerDiskSizePending(next) && isDiskBuildBelowCap(next, caps)) {
     // The replay just arms the ordinary timed build, marked replay-owned so tickQueuedDiskBuild stops at the

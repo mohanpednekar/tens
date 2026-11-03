@@ -186,7 +186,7 @@ const InfoPage = () => {
           <li>
             <strong>Tap</strong> the Data Stream to add one second of its production. Once Storage
             appears (at {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)} Capacity), a tap
-            instead adds a temporary tap bonus to its speed (below).
+            instead adds a temporary tap bonus to what it feeds (below).
           </li>
           <li>
             <strong>Combine</strong> the first {INTRO_BYTE_COMBINE_COST} bits into a permanent Byte

@@ -11731,35 +11731,56 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
     expect(tickAutoProvisionLowerDiskSizes(1)(state)).toBe(state)
   })
 
-  it('the pool tap bonus speeds the rebuild ×(1 + bonus%)', () => {
-    const base = afterReset()
-    const tapped = withIntro(base, { poolTapBonusPercents: { 1: 100 } })
-    expect(getLowerRebuildDiskSeconds(tapped, FIRST_DISK_SIZE)).toBeCloseTo(getLowerRebuildDiskSeconds(base, FIRST_DISK_SIZE) / 2)
+  // A funded pool buffer: the cache reservation plus `disks` disks' worth of spendable bits.
+  const funded = (state, disks) => withIntro(state, {
+    poolBuffers: { 1: getPoolCacheReservationBits(state, 1) + disks * FIRST_DISK_SIZE },
   })
 
-  it('rebuilds each smaller-size disk for free at the pool\'s BASE Bandwidth, one at a time, ignoring the fill multiplier', () => {
-    const base = afterReset()
+  it('the pool tap bonus speeds the rebuild ×(1 + bonus%)', () => {
+    const base = funded(afterReset(), 2)
+    const tapped = withIntro(base, { poolTapBonusPercents: { 1: 100 } })
+    const diskSeconds = getLowerRebuildDiskSeconds(base, FIRST_DISK_SIZE)
+    expect(getLowerRebuildDiskSeconds(tapped, FIRST_DISK_SIZE)).toBeCloseTo(diskSeconds / 2)
+    expect(tickAutoProvisionLowerDiskSizes(diskSeconds / 4)(tapped).intro.lowerRebuild.progress).toBeCloseTo(0.5, 9)
+    expect(getLowerRebuildSummary(tapped).seconds).toBeCloseTo(getLowerRebuildSummary(base).seconds / 2, 6)
+  })
+
+  it('rebuilds each smaller-size disk for one fill from the pool buffer at BASE Bandwidth, one at a time, ignoring the fill multiplier', () => {
+    const base = funded(afterReset(), 3)
+    const startBuffer = base.intro.poolBuffers[1]
     const diskSeconds = getLowerRebuildDiskSeconds(base, FIRST_DISK_SIZE)
     expect(diskSeconds).toBe(FIRST_DISK_SIZE / getStoragePoolBandwidth(base, 1))
-    expect(base.intro.poolBuffers?.[1] ?? 0).toBe(0) // nothing to pay with
     const half = tickAutoProvisionLowerDiskSizes(diskSeconds / 2)(base)
     expect(half.intro.lowerRebuild).toEqual({ size: FIRST_DISK_SIZE, progress: 0.5 })
     expect(half.intro.disksBuiltTotal[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(half.intro.poolBuffers[1]).toBeCloseTo(startBuffer - FIRST_DISK_SIZE / 2, 6)
     const one = tickAutoProvisionLowerDiskSizes(diskSeconds / 2)(half)
     expect(one.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(1)
     expect(one.intro.disks[FIRST_DISK_SIZE]).toBe(1) // lands full
     expect(one.intro.lowerRebuild).toBeNull()
-    expect(one.intro.poolBuffers?.[1] ?? 0).toBe(0) // free
+    // exactly one fill per disk — no extra provisioning cost
+    expect(one.intro.poolBuffers[1]).toBeCloseTo(startBuffer - FIRST_DISK_SIZE, 6)
     // an offline-sized gap rebuilds several disks in one call
     const three = tickAutoProvisionLowerDiskSizes(diskSeconds * 3)(base)
     expect(three.intro.disks[FIRST_DISK_SIZE]).toBe(3)
-    // the fill multiplier (a full vs empty tap bonus) never changes the pace
-    const boosted = withIntro(base, { dataStreamTapBonusPercent: 500 })
+    // the Data Stream's tap bonus never changes the pace
+    const boosted = withIntro(base, { dataStreamTapBonusPercent: 100 })
     expect(tickAutoProvisionLowerDiskSizes(diskSeconds)(boosted).intro.disks[FIRST_DISK_SIZE]).toBe(1)
   })
 
+  it('stalls on an empty buffer (same reference), never dips into the read cache\'s claim, and is limited by what the buffer holds', () => {
+    const empty = afterReset()
+    expect(tickAutoProvisionLowerDiskSizes(100)(empty)).toBe(empty)
+    const reserveOnly = funded(afterReset(), 0)
+    expect(tickAutoProvisionLowerDiskSizes(100)(reserveOnly)).toBe(reserveOnly)
+    const scarce = withIntro(afterReset(), { poolBuffers: { 1: getPoolCacheReservationBits(afterReset(), 1) + FIRST_DISK_SIZE / 10 } })
+    const after = tickAutoProvisionLowerDiskSizes(1e6)(scarce)
+    expect(after.intro.lowerRebuild.progress).toBeCloseTo(0.1, 9)
+    expect(after.intro.poolBuffers[1]).toBeCloseTo(getPoolCacheReservationBits(afterReset(), 1), 6)
+  })
+
   it('getLowerRebuildSummary totals the exact remaining time and counts in-flight progress', () => {
-    const base = afterReset()
+    const base = funded(afterReset(), 3)
     const diskSeconds = getLowerRebuildDiskSeconds(base, FIRST_DISK_SIZE)
     expect(getLowerRebuildSummary(base)).toEqual({ seconds: DISK_ARRAY_LADDER_CAP * diskSeconds, disksDone: 0, disksTotal: DISK_ARRAY_LADDER_CAP, projected: false })
     const part = tickAutoProvisionLowerDiskSizes(diskSeconds * 2.5)(base)

@@ -686,7 +686,7 @@ Strict three-layer separation:
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
     dashboard, Legal (`LegalSection.jsx`: Privacy Policy / Terms links), and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
     Storage / Compute + upgrades wipe to scratch; Combine / Upgrade Capacity / Upgrade Speed
-    convenience-auto up to prior highs; smaller Disk sizes re-provision for free; Factory + Prestige kept). Takes `{ game, onReset,
+    convenience-auto up to prior highs; smaller Disk sizes re-provision with no provisioning cost (one buffer fill per disk); Factory + Prestige kept). Takes `{ game, onReset,
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
     aside from local form state.

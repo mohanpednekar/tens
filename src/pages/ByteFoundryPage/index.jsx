@@ -891,7 +891,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               status: `${COST_ICON} ${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
               reason: diskBuildBlockedByPriority ? 'disk fill comes first' : 'pool not ready (offline, rebuilding or too small)',
             }
-  // Same stat layout as the running-upgrade tile. Provisioning (buffer-funded) and the post-Foundry-reset rebuild (free) both run at
+  // Same stat layout as the running-upgrade tile. Provisioning (buffer-funded) and the post-Foundry-reset rebuild (one buffer fill per disk, no provisioning cost) both run at
   // the pool's BASE Bandwidth × its tap bonus (getPoolTapMultiplier; no fill multiplier), so ⚡ is that speed; ⏳ is the time left
   // (provisioning also waits on the buffer; rebuild: getLowerRebuildSummary; hidden for a build waiting behind Disk Fill) — a projection from the Bandwidth the pool will have once live while the size's pool isn't live yet.
   const rebuildPoolIndex = getPoolIndexForDiskSize(autoDiskSize)
@@ -945,7 +945,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           : diskLadderExhausted
             ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
             : lowerDiskSizePending
-              ? `Smaller sizes are re-provisioned for free first (${formatDiskSize(autoDiskSize)} now); ${formatDiskSize(diskSize)} unlocks for provisioning once they are done`
+              ? `Smaller sizes are rebuilt first (one buffer fill per disk, no provisioning cost) (${formatDiskSize(autoDiskSize)} now); ${formatDiskSize(diskSize)} unlocks for provisioning once they are done`
             : diskBuildQueued
               ? `Armed — draws from the pool buffer at the pool's fixed speed${diskBuildBlockedByPriority ? ' once Disk Fill is done' : ''} (${diskPassesCollected}/${diskPassesRequired} passes so far)`
               : canStartDiskBuild
