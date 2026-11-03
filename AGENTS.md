@@ -12,8 +12,8 @@ Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rew
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
 shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute → Factory → Perks → Guide → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
-item, and no second-level Memory | Storage tabs). **Perks** (after the first Prestige) has icon tabs 🔓 Unlocks / ⏫ Upgrades / 🎛 Toggles (one-time PP
-unlocks + autobuyer milestones / leveled PP upgrades / Buy max + automation pause toggles). Guide and More (Milestones, Settings) are always available — even
+item, and no second-level Memory | Storage tabs). **Perks** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
+unlock/milestone → pause Switch → speed upgrade / Double PP, speed bonus, DeGoogol, Buy max). Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
 production bundle; `yarn build:dev` builds a Dev-Mode-enabled variant published at `/tens/dev/` (own `dev:`-prefixed saves, no backward-compat); see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
@@ -185,7 +185,7 @@ already have tried and rejected.
 
 After **100 lifetime reboots**, production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Double PP
-upgrades on Perks → Upgrades.
+upgrades on Perks → Prestige.
 
 For run times / pacing questions — and after any change that can significantly affect ideal Foundry
 or prestige timings — use the `simulate-run-times` skill and publish via `publish-strategy.sh`.

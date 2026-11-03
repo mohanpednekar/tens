@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createInitialGameState,
+  getAutomationIntervalUpgradeCost,
   getAutomationUnlockCost,
   getIntroKilobyteConversionCost,
   getPrestigeDoublePpUpgradeCost,
@@ -18,6 +19,7 @@ import {
   INTRO_STARTING_CAPACITY,
   BITS_PER_BYTE,
   MONEY_ID,
+  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   REBOOT_THRESHOLD,
   TIER_DEFINITIONS,
 } from 'game/layers'
@@ -28,8 +30,8 @@ import {
   hasAffordableComputeFlopsTier,
   hasAffordableFullLevel,
   hasAffordableGlobalTickspeed,
-  hasAffordablePpLevelUpgrade,
-  hasAffordablePpUnlock,
+  hasAffordableAutomationPerk,
+  hasAffordablePrestigePerk,
   hasAffordablePpUpgrade,
   hasComputeAttention,
   hasFoundryAttention,
@@ -348,22 +350,22 @@ describe('navAttention', () => {
     expect(getNavAttention(state).perks).toBe(ATTENTION_NORMAL)
   })
 
-  it('splits PP affordability between one-time unlocks and leveled upgrades', () => {
+  it('splits PP affordability between automation perks and prestige perks', () => {
     const base = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
+      prestigeSpeedBonusUnlocked: true,
     }
-    const unlockOnly = { ...base, reboot: { count: 1, points: getAutomationUnlockCost('speedUp') }, autoGlobalTickspeed: false }
-    expect(hasAffordablePpUnlock(unlockOnly)).toBe(true)
-    expect(hasAffordablePpLevelUpgrade(unlockOnly)).toBe(false)
+    const automationOnly = { ...base, reboot: { count: 1, points: getAutomationUnlockCost('speedUp') }, autoGlobalTickspeed: false }
+    expect(hasAffordableAutomationPerk(automationOnly)).toBe(true)
+    expect(hasAffordablePrestigePerk(automationOnly)).toBe(false)
 
     const doublePpCost = getPrestigeDoublePpUpgradeCost(0)
-    const levelOnly = {
+    const prestigeOnly = {
       ...base,
       reboot: { count: 1, points: doublePpCost },
-      // Every one-time unlock already owned, so only the leveled Double PP is affordable.
-      prestigeSpeedBonusUnlocked: true,
+      // Every automation already owned and maxed, so only the leveled Double PP is affordable.
       autoScaleUp: true,
       autoOverclock: true,
       autoGlobalTickspeed: true,
@@ -371,22 +373,36 @@ describe('navAttention', () => {
       autoReboot: 1,
       automationIntervalLevels: { reboot: 1e9 },
     }
-    expect(hasAffordablePpUnlock(levelOnly)).toBe(false)
-    expect(hasAffordablePpLevelUpgrade(levelOnly)).toBe(true)
-    expect(hasAffordablePpUpgrade(levelOnly)).toBe(true)
+    expect(hasAffordableAutomationPerk(prestigeOnly)).toBe(false)
+    expect(hasAffordablePrestigePerk(prestigeOnly)).toBe(true)
+    expect(hasAffordablePpUpgrade(prestigeOnly)).toBe(true)
+
+    // The production speed bonus is a prestige perk, not an automation one.
+    const speedBonusOnly = { ...prestigeOnly, prestigeSpeedBonusUnlocked: false, prestigeDoublePpLevel: 5, reboot: { count: 1, points: PRESTIGE_SPEED_BONUS_UNLOCK_COST } }
+    expect(hasAffordablePrestigePerk(speedBonusOnly)).toBe(true)
+    expect(hasAffordableAutomationPerk(speedBonusOnly)).toBe(false)
+
+    // An affordable Auto Purge speed level lights the Automation tab (its whole lifecycle lives there).
+    const purgeSpeedOnly = {
+      ...prestigeOnly,
+      prestigeDoublePpLevel: 5,
+      automationIntervalLevels: { reboot: 0 },
+      reboot: { count: 1, points: getAutomationIntervalUpgradeCost('reboot', 0) },
+    }
+    expect(hasAffordableAutomationPerk(purgeSpeedOnly)).toBe(true)
 
     // Global automations are sequential: each counts only once the previous one is owned.
     const autoRebootUnlockOnly = {
-      ...levelOnly,
+      ...prestigeOnly,
       reboot: { count: 1, points: getAutomationUnlockCost('reboot') },
       prestigeDoublePpLevel: 5,
       autoReboot: null,
     }
-    expect(hasAffordablePpUnlock(autoRebootUnlockOnly)).toBe(true)
-    expect(hasAffordablePpUnlock({ ...autoRebootUnlockOnly, reboot: { count: 1, points: getAutomationUnlockCost('reboot') - 1 } })).toBe(false)
+    expect(hasAffordableAutomationPerk(autoRebootUnlockOnly)).toBe(true)
+    expect(hasAffordableAutomationPerk({ ...autoRebootUnlockOnly, reboot: { count: 1, points: getAutomationUnlockCost('reboot') - 1 } })).toBe(false)
   })
 
-  it('lights the Perks unlocks dot for an affordable Auto Boost only once Boosters is available and it is not owned', () => {
+  it('lights the Perks automation dot for an affordable Auto Boost only once Boosters is available and it is not owned', () => {
     const init = createInitialGameState()
     const ownedEverythingElse = {
       ...init,
@@ -402,10 +418,10 @@ describe('navAttention', () => {
       intro: { ...init.intro, mainGameUnlocked: true, byteCreated: true, capacity },
     })
 
-    expect(hasAffordablePpUnlock(withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY))).toBe(true)
-    expect(hasAffordablePpUnlock(withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY / 2))).toBe(false)
-    expect(hasAffordablePpUnlock({ ...withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY), computeAutoBoostUnlocked: true })).toBe(false)
-    expect(hasAffordablePpUnlock({
+    expect(hasAffordableAutomationPerk(withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY))).toBe(true)
+    expect(hasAffordableAutomationPerk(withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY / 2))).toBe(false)
+    expect(hasAffordableAutomationPerk({ ...withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY), computeAutoBoostUnlocked: true })).toBe(false)
+    expect(hasAffordableAutomationPerk({
       ...withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY),
       reboot: { count: 1, points: COMPUTE_AUTO_BOOST_UNLOCK_COST - 1 },
     })).toBe(false)

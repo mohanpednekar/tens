@@ -209,7 +209,7 @@ Toggles automation row.
 `{ game }` — the Buy max mode toggle. Renders nothing until `isBuyMaxUnlocked(game.state)` (first
 Prestige or any Era ascension); then a `components/Switch` (`aria-label="Toggle buy max mode"`,
 `aria-pressed`, `$on`) that calls
-`game.setBuyMaxMode(!game.buyMaxMode)`. Used only on Perks → 🎛 Toggles (`pages/PerksPage`'s Purchasing row); mechanic in
+`game.setBuyMaxMode(!game.buyMaxMode)`. Used only on Perks → ✦ Prestige (`pages/PerksPage`'s Purchasing row); mechanic in
 `docs/ECONOMY_REFERENCE.md`'s "Buy max mode".
 
 ## `ConfirmDialog/index.jsx`

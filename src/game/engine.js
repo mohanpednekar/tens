@@ -2180,7 +2180,7 @@ export const buyTierQuantity = (tierId, quantity) => state => {
 export const isBuyMaxUnlocked = state =>
   clampNonNegative(state.reboot?.count ?? 0) >= 1 || clampNonNegative(state.era?.count ?? 0) >= 1
 
-// The Perks page (Unlocks / Upgrades / Toggles) appears on the same first-Prestige-ever condition.
+// The Perks page (Automation / Prestige) appears on the same first-Prestige-ever condition.
 export const isPerksPageRevealed = isBuyMaxUnlocked
 
 // Chains a single-level purchase action (state => state, same-reference no-op when it can't buy)

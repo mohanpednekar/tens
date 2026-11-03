@@ -975,7 +975,7 @@ const MainPage = ({ game }) => {
   const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)
   const canOverclock = !isFrozen && lastTierLevelDisplay >= overclockRequirement
 
-  // Auto Scale Up (bought on Perks → Unlocks; see buyAutoScaleUp in engine.js) — Factory only shows
+  // Auto Scale Up (bought on Perks → Automation; see buyAutoScaleUp in engine.js) — Factory only shows
   // its status note.
   const isAutoScaleUpActive = state.autoScaleUp ?? false
   // Whether Auto Scale Up currently acts, independent of whether it's been bought (see
@@ -1224,7 +1224,7 @@ const MainPage = ({ game }) => {
                 <li>
                   Prestige speed bonus: {state.prestigeSpeedBonusUnlocked
                     ? `${formatBonusOrMultiplier(prestigeBonus)} production speed from ${formatAmount(reboot.points)} unspent PP`
-                    : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on Perks → Unlocks)`}
+                    : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on Perks → Prestige)`}
                 </li>
               )}
               <li>

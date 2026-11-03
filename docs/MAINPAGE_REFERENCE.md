@@ -436,7 +436,7 @@ live inside the selected tier):
    a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cores:
-   The timer bar / idle status line and (once unlocked) the Auto Boost preference picker all live in one `BoostCard`. The Auto Boost UNLOCK itself is a Perks → Unlocks → Booster Automation row (`aria-label="auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
+   The timer bar / idle status line and (once unlocked) the Auto Boost preference picker all live in one `BoostCard`. The Auto Boost UNLOCK itself is a Perks → Automation → Booster Automation row (`aria-label="auto boost row"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordableAutomationPerk`); Boosters shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
    a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
@@ -680,7 +680,7 @@ live inside the selected tier):
 - **No description prose on this page.** Every mechanic's evergreen explanation (what used to live
   inline as `InfoDetails` disclosure bodies) moved to `InfoPage` (see the file header note above).
   Headings with nothing left to show (`ScaleUpCard`'s `<h2>`, the page `Header`'s `<h1>`, the Tier
-  Autobuyers category's old shared "How these controls work" panel, Perks → Unlocks' Tier
+  Autobuyers category's old shared "How these controls work" panel, Perks → Automation's Tier
   Autobuyer Unlocks category) are now plain, non-interactive text — there's no click target because
   there's nothing to reveal. `GlobalTickspeedCard`/`OverclockCard`'s own `<h2>` and the Milestones
   view's Tier Tickspeed Autobuyers `CategoryHeading` still wrap a `Disclosure`
@@ -688,7 +688,7 @@ live inside the selected tier):
   it — no separate visible "expand" affordance) — but only when there's a genuinely *live game
   status* number to reveal (not a description of how the mechanic works): `GlobalTickspeedCard`'s
   `Lv.N — +N% faster ticks on every tier.`, `OverclockCard`'s current per-level rate, and the
-  Perks → Unlocks' Tier Tickspeed Autobuyers start-Prestige/step pattern (see "Scale Up and
+  Perks → Automation's Tier Tickspeed Autobuyers start-Prestige/step pattern (see "Scale Up and
   Overclock cards"/"Perks page" above) — each collapsed until the player clicks that heading.
   Only the heading (native `<summary>` toggle) opens or closes it — clicking the revealed status line does nothing. Each card's own
   action button sits *outside* its `Disclosure` as a sibling, so clicking Buy/Upgrade/Overclock
@@ -700,7 +700,7 @@ live inside the selected tier):
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against
   `getPurchaseBlockSize(state)`). The one player-facing control over this is **Buy max mode**
-  (`components/BuyMaxToggle`, rendered only on Perks → 🎛 Toggles once `isBuyMaxUnlocked`): while on, a click that can afford at least one FULL level
+  (`components/BuyMaxToggle`, rendered only on Perks → ✦ Prestige once `isBuyMaxUnlocked`): while on, a click that can afford at least one FULL level
   from zero progress buys every such level (`buyTierMaxLevels`) and the button previews it as
   `+N Lv` with the summed cost (`getTierMaxLevelsPreview`; aria-label `Buy N full level(s) for …`);
   otherwise the button keeps the normal single-level text and behavior below. Speed Up, tier tickspeed,
@@ -724,48 +724,45 @@ live inside the selected tier):
 **Factory view (no second-level tabs).** `MainPage` renders only the tier ladder and its cards
 (`GlobalTickspeedCard`, `TierList`, `ScaleUpCard`, `OverclockCard`) — it no longer has a tab bar or any
 PP-spending control. Its sticky Money/PP balances stay; the speed-bonus breakdown points at "Perks →
-Unlocks" while the bonus is locked. Every PP purchase, every free autobuyer milestone, Buy max, and every
+Prestige" while the bonus is locked. Every PP purchase, every free autobuyer milestone, Buy max, and every
 automation pause toggle live on the separate **Perks** page (below). Chapters / Era status live on
 `MilestonesPage` (AppNav → More). Full-save Reset lives only under More → Settings → Danger zone.
 
 **Perks page (`pages/PerksPage`).** Its own AppNav destination (page id `'perks'`, item `open perks`, ✨,
 between Factory and Guide), shown once `isPerksPageRevealed` (= `isBuyMaxUnlocked`: first Prestige or
 Era) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
-attention). Header shows the spendable PP (`aria-label="prestige points display"`). Three **icon-only**
+attention). Header shows the spendable PP (`aria-label="purge points display"`). Two **icon-only**
 tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyph, the full name is in
-`aria-label`/`title`), defaulting to Unlocks and reset to it by `focusNonce` on each AppNav visit:
-- 🔓 **Unlocks** (`open unlocks`, `aria-label="PP unlocks page"`) — everything bought or earned once:
-  - *Tier Autobuyers*: one row per tier (`"<tier> PP unlocks"`, all ten, even before the tier is
-    reachable this run) with a `MilestoneBadge` for its ⚙ tickspeed autobuyer and 🤖 autobuyer
-    (`"<tier>'s … unlocked at Reboot N"` once reached, else `"… unlocks at Reboot N"` + hidden
-    milestone progressbar). Rows never disappear, so reached milestones stay visible as unlock history.
-  - *Global Automation* — every row always listed, rendered Auto Speed Up → Auto Restage → Auto Scale Up →
-    Auto Overclock → Auto Purge. Gating (engine-enforced): Restage and Scale Up both open once Speed Up is
-    owned (either order); Overclock needs both; Purge needs Overclock. PP button (disabled until its
-    prerequisites are bought), or an `UnlockedBadge` (`"<name> unlocked"`) once bought; never a pause
-    control here. Every Perks row label is `<RowIcon>` (fixed-width icon cell) + name, and every
-    automation is named `Auto <feature>` (no hyphen).
-  - *Booster Automation* (Auto Boost, once Foundry Compute unlocks), *Production Bonuses* (until bought), *Compute Autobuyers* (Era-milestone badges, once the Flops page
-    is unlocked), and *Prestige* (DeGoogol: locked until Auto Reboot's interval ≤ `UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS`).
-  Each milestone appears only here — `MilestonesPage` no longer repeats them.
-- ⏫ **Upgrades** (`open upgrades`, `aria-label="PP upgrades page"`) — repeatable leveled purchases:
-  Double PP, and the speed chains. A tier autobuyer's *Autobuyer Speed* row shows `every <interval>`, and once
-  past the 10 ms floor `· N/buy` (each further level doubles the levels one attempt may buy; button label
-  `M/buy · <cost> PP`).
-- 🎛 **Toggles** (`open toggles`, `aria-label="automation toggles page"`) — *Purchasing* (the Buy max
-  button, `components/BuyMaxToggle`, removed from MainPage/ComputeFlopsPage), *Tier Autobuyers* (each
-  reachable tier's ⚙/🤖 `AutomationToggle`, kept even for fully-automated tiers), *Global Automation*
-  (same order as Unlocks), *Compute Autobuyers*
-  (each Era-unlocked Flops autobuyer, `setComputeFlopsAutobuyerEnabled`). Each toggle is a status
-  badge (`"<name> active|paused"`) + `components/Switch` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up
-  automation"`, `"<tier>'s autobuyer"`). A `no toggles notice` empty state covers the (practically
-  unreachable) nothing-owned case.
-Layout: every Perks row is a CSS grid (default `label | control`; tier rows `$tier="unlocks"` = symbol | ⚙ |
-🤖 | `$tier="toggles"`/`"unlocks"` = symbol | ⚙ | 🤖; no content-sized tracks, fits 320px) so columns align row-to-row on both Unlocks and Toggles. Factory's Speed Up /
-Scale Up / Overclock cards share `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem
-heading); Auto Scale Up's status is an `AutoChip` in the Scale Up card header.
-Tab dots: Unlocks `PP unlock available` (`hasAffordablePpUnlock`),
-Upgrades `PP upgrade available` (`hasAffordablePpLevelUpgrade`). Every PP button keeps the shared live
+`aria-label`/`title`), defaulting to Automation and reset to it by `focusNonce` on each AppNav visit.
+Rows are grouped **by feature, not by purchase kind** — an automation's unlock, pause toggle and speed
+chain are one row (they used to be split across Unlocks / Upgrades / Toggles tabs; see
+`docs/DESIGN_HISTORY.md`):
+- 🤖 **Automation** (`open automation`, `aria-label="automation perks page"`) — every automation as one
+  `AutomationRow` (grid `2.75rem | 1fr | auto` = lead Switch cell | label | action). Locked: empty lead
+  cell, action = 🔒 `MilestoneBadge` (free Purge/Era milestone, `"<subject> unlocks at <unit> N"` +
+  hidden progressbar) or 🔓 PP unlock button (`"Enable <name> for N Purge Points"`). Owned: lead cell =
+  `components/Switch` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up automation"`,
+  `"<tier>'s autobuyer"`), the label icon becomes the `"<name> active|paused"` status, subtext
+  `every <interval>` (tier autobuyers past the 10 ms floor add `· N/buy`; `(max)` once maxed), action
+  = ⏫ speed upgrade (`M/buy · <cost> PP` past the floor) or nothing once maxed. Categories:
+  *Global Automation* (rows `"<name> row"`, Auto Speed Up → Auto Restage → Auto Scale Up → Auto
+  Overclock → Auto Purge; Restage and Scale Up both need Speed Up, Overclock needs both, Purge needs
+  Overclock — engine-enforced), *Tier Autobuyers* / *Tier Tickspeed Autobuyers* (all ten tiers always
+  listed, rows `"<tier> autobuyer"` / `"<tier> tickspeed autobuyer"`), *Booster Automation* (Auto
+  Boost once Foundry Compute unlocks; no Switch — its preset picker on Boosters is the control, owned
+  shows `"Auto Boost unlocked"`), *Compute Autobuyers* (Era milestones, once the Flops page is
+  unlocked; no speed chain). Each milestone appears only here — `MilestonesPage` doesn't repeat them.
+- ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
+  *Purge Points* (Double PP leveled upgrade; Production speed bonus one-time unlock, `"Production
+  speed bonus unlocked"` once bought; DeGoogol, locked until Auto Purge's interval ≤
+  `UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS`) and *Purchasing* (Buy max, `components/BuyMaxToggle`).
+Every Perks row label is `<RowIcon>` (fixed-width icon cell) + name; every automation is named
+`Auto <feature>` (no hyphen). Factory's Speed Up / Scale Up / Overclock cards share
+`featureCard(accent)` (neutral border + 3px left accent stripe, 1rem heading); Auto Scale Up's status
+is an `AutoChip` in the Scale Up card header.
+Tab dots: Automation `automation perk available` (`hasAffordableAutomationPerk`: an automation unlock
+or Auto Purge speed level), Prestige `prestige perk available` (`hasAffordablePrestigePerk`: Double PP
+or the speed bonus). Every PP button keeps the shared live
 progress fill + hidden `role="progressbar"` (`PpPurchaseButton`); see "Accessibility" below.
 
 **Global Tickspeed card (Factory view).** Unlike every other automation upgrade, this one is
@@ -824,7 +821,7 @@ tier's own delivery frequency by another 10% (`getTickspeedProductionMultiplier`
 tier's effective period rather than multiplied into its production credit — see "Tier production
 tickspeed" below); it changes **neither** the amount delivered per batch **nor** autobuyer
 purchase-attempt frequency (that rate is flat). Visible text is `⚙ {cost} {symbol}` — a single ⚙
-icon (matching the tier tickspeed autobuyer's own icon-only status badge on Perks → Toggles)
+icon (matching the tier tickspeed autobuyer's own icon-only status icon on Perks → Automation)
 identifies the button as the tickspeed control; no separate icon marks the marginal effect, since
 it's always exactly `TICKSPEED_PRODUCTION_STEP` (every level adds the same fixed 10% step) and
 implied by the button itself — `aria-label`/`title` still spell out the full "+10% faster ticks"
@@ -855,7 +852,7 @@ a tier's unit-buying autobuyer was unlocked (`autobuyers`/`applyAutobuyerMilesto
 prestige-count-milestone-triggered unlock, not a PP purchase). Both removed to keep the Factory view
 row down to just the tier name plus live production/owned figures and the two action buttons —
 autobuyer active/paused status is still visible (and, unlike the old read-only Game-view badge,
-directly toggleable) on Perks → 🎛 Toggles' Tier Autobuyers category, via the same
+directly toggleable) on Perks → 🤖 Automation's Tier Autobuyers category, via the same
 `autobuyersEnabled`/`setAutobuyerEnabled` state (see "Perks page" above).
 
 **PP purchase rationale.** The global automations, Auto Reboot and Double PP mechanics are
@@ -1054,7 +1051,7 @@ Uses the default `IntersectionObserver` threshold (`0`), so a row only collapses
 overlap with the viewport — "scrolled beyond screen," not merely partially cut off — and is guarded
 for environments without `IntersectionObserver` (e.g. jsdom in tests), where a disclosure simply
 stays open once expanded. The native `<details>`-based `Disclosure` instances elsewhere on this page
-(`GlobalTickspeedCard`/`OverclockCard`/Perks → Unlocks' tier milestone badges — see
+(`GlobalTickspeedCard`/`OverclockCard`/Perks → Automation's tier milestone badges — see
 "No description prose on this page" above) do **not** auto-collapse on scroll — there's no
 `useAutoCollapseDetails()`-style hook wired to them; each stays open until the player clicks its
 heading again, which is enough for a short one-line body that isn't competing with the rest of the

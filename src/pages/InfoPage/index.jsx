@@ -164,7 +164,7 @@ const InfoPage = () => {
             Purge — unless you have unlocked DeGoogol (see Purge).
           </li>
           <li>
-            After your first Purge, the <strong>Buy max</strong> toggle (Perks → 🎛 Toggles) makes
+            After your first Purge, the <strong>Buy max</strong> toggle (Perks → ✦ Prestige) makes
             each purchase buy as many levels as you can afford. Tiers buy full levels only — a
             partly bought level takes its own click.
           </li>
@@ -433,8 +433,8 @@ const InfoPage = () => {
             after a confirmation.
           </li>
           <li>
-            <strong>Auto Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time, on Perks → 🔓
-            Unlocks): when a tier is full and waiting on its own automatic merge, activates (or
+            <strong>Auto Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time, on Perks → 🤖
+            Automation): when a tier is full and waiting on its own automatic merge, activates (or
             stacks) your preferred preset from the <strong>biggest</strong> such tier. Choose the
             preset on Boosters (default Standard). It never forfeits a running boost.
           </li>
@@ -492,7 +492,7 @@ const InfoPage = () => {
             Restage upgrade appears beside Speed Up: spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
             It resets every other tier’s owned quantity and your Bits. A 16 PP Auto Restage
-            (Perks → Unlocks, after Auto Speed Up) spends it for you, every 64 s at first —
+            (Perks → Automation, after Auto Speed Up) spends it for you, every 64 s at first —
             faster with its speed upgrades.
           </li>
         </ul>
@@ -553,15 +553,15 @@ const InfoPage = () => {
         <ul>
           <li>
             Each tier’s autobuyer and its tickspeed autobuyer unlock automatically as your Purge
-            count grows — see Perks → 🔓 Unlocks for the exact thresholds.
+            count grows — see Perks → 🤖 Automation for the exact thresholds.
           </li>
           <li>
-            Once unlocked, pause or resume each one on Perks → 🎛 Toggles without losing it.
+            Once unlocked, the same row pauses or resumes it without losing it.
           </li>
           <li>
             An autobuyer buys <strong>one full level per attempt</strong>, only when that whole level
             (or the rest of a partly bought one) is affordable; Buy max never applies to it. Speed
-            upgrades on Perks → ⏫ Upgrades shorten its interval down to 10 ms; each level after that
+            upgrades on that same row shorten its interval down to 10 ms; each level after that
             doubles how many levels one attempt can buy, up to 512.
           </li>
         </ul>
@@ -603,7 +603,7 @@ const InfoPage = () => {
             upgrade halves the powers needed per PP, and once that reaches 1, doubles the PP per power.
           </li>
           <li>
-            Double PP costs 100^(level+1) PP (100, 10,000, 1,000,000, …) on Perks → ⏫ Upgrades and
+            Double PP costs 100^(level+1) PP (100, 10,000, 1,000,000, …) on Perks → ✦ Prestige and
             is permanent across Purges.
           </li>
           <li>

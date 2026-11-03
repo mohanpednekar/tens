@@ -726,7 +726,7 @@ export const LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1
 // of) its own resource-funded tickspeed level. "Last tier" (not a hardcoded tier id) so this stays
 // correct if TIER_DEFINITIONS ever grows a new final entry.
 export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
-// One-time PP cost (Perks → Unlocks) for Auto Restage (= its interval chain's baseCost) — once bought,
+// One-time PP cost (Perks → Automation) for Auto Restage (= its interval chain's baseCost) — once bought,
 // tickGame spends the whole XP balance on the last tier's XP-funded tickspeed whenever
 // consumeXpForLastTierTickspeed allows, at most once per AUTOMATION_INTERVAL_CONFIG.restage interval.
 export const XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = AUTOMATION_INTERVAL_CONFIG.restage.baseCost

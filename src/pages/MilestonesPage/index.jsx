@@ -7,7 +7,7 @@ import { ERA_ELIGIBILITY_PP } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
 
 // Standalone Milestones screen — Chapters and Era ascension status (autobuyer unlock milestones live
-// once, on Perks → Unlocks); reachable from every screen via AppNav → More without requiring the main game to be unlocked
+// once, on Perks → Automation); reachable from every screen via AppNav → More without requiring the main game to be unlocked
 // first (Chapters in particular is useful during the Foundry gate).
 
 const RootDiv = styled.main`

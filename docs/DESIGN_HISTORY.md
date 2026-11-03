@@ -1,5 +1,22 @@
 # Design history & rationale
 
+### Perks regrouped by feature: Unlocks / Upgrades / Toggles → Automation / Prestige — 2026-11-03
+
+Perks used three tabs split by *purchase kind* (🔓 one-time unlocks, ⏫ leveled upgrades, 🎛 pause
+toggles). Every automation therefore appeared up to three times — e.g. Auto Purge's unlock on
+Unlocks, its speed chain on Upgrades, its pause on Toggles — and a player had to visit three tabs to
+manage one feature. Regrouped by *feature*: one `AutomationRow` per automation carries its whole
+lifecycle (🔒 milestone / 🔓 unlock → Switch + `every <interval>` + ⏫ speed). Kept separate because
+they aren't automations and have no unlock/toggle/speed triad: Double PP (pure leveled upgrade),
+Production speed bonus (one-time), DeGoogol (milestone), Buy max (per-device purchasing preference) —
+these form the ✦ Prestige tab. Tier autobuyers and tier tickspeed autobuyers became two categories
+(one row each per tier) instead of one two-cell tier row, since an owned cell now needs a Switch *and*
+a speed button, which two side-by-side cells can't fit at 320px. Trade-off: an owned milestone row
+shows its Switch rather than the old "✓ unlocked at Purge N" history badge (the threshold is still in
+nearby rows' locked badges and the Guide). Tab dots follow the regrouping (`hasAffordablePpUnlock`/
+`hasAffordablePpLevelUpgrade` → `hasAffordableAutomationPerk`/`hasAffordablePrestigePerk`; the Auto
+Purge speed level moved to the Automation dot, the speed bonus to the Prestige dot).
+
 ### Fill multiplier 10× → 0.1× (log-linear) and a multiplicative tap bonus — 2026-10-30
 
 The original fill-based Speed/Bandwidth multiplier was linear in fill fraction: 150% empty, 100% at

@@ -22,12 +22,10 @@ import {
   getPrestigeDoublePpUpgradeCost,
   getPrestigePowersPerPp,
   getPrestigePpPerPower,
-  getPurchaseBlockSize,
   getTierTickspeedAutobuyerMilestone,
   isBuyMaxUnlocked,
   isComputeCoreConversionUnlocked,
   isProductionFrozen,
-  isTierUnlocked,
   isUnboundedRebootUnlocked,
 } from 'game/engine'
 import {
@@ -38,18 +36,18 @@ import {
   TIER_DEFINITIONS,
   XP_TICKSPEED_AUTOBUYER_UNLOCK_COST,
 } from 'game/layers'
-import { hasAffordablePpLevelUpgrade, hasAffordablePpUnlock } from 'game/navAttention'
+import { hasAffordableAutomationPerk, hasAffordablePrestigePerk } from 'game/navAttention'
 import { useEffect, useState } from 'react'
 import styled, { useTheme } from 'styled-components'
 
-// Perks — its own AppNav destination (page id 'perks', revealed by isPerksPageRevealed) holding every
-// permanent progression feature in three icon tabs:
-// - 🔓 Unlocks: one-time permanent PP purchases AND free milestone unlocks (tier autobuyers, tier
-//   tickspeed autobuyers, Compute autobuyers, DeGoogol) — each milestone shown exactly once
-//   here, not also on MilestonesPage (which keeps only Chapters / Era ascension).
-// - ⏫ Upgrades: repeatable leveled PP purchases (Double PP, autobuyer/automation speed).
-// - 🎛 Toggles: Buy max mode plus every owned automation's pause/resume (Factory tiers, global
-//   automations, and Era-unlocked Compute autobuyers).
+// Perks — its own AppNav destination (page id 'perks', revealed by isPerksPageRevealed), grouped by
+// feature rather than by purchase kind, in two icon tabs:
+// - 🤖 Automation: ONE row per automation covering its whole lifecycle — locked (🔒 milestone badge
+//   or 🔓 PP unlock button) → owned (pause/resume Switch in the lead cell, `every <interval>` subtext,
+//   ⏫ speed upgrade button). Global automations, tier autobuyers, tier tickspeed autobuyers, Auto
+//   Boost, and Era-unlocked Compute autobuyers. Each milestone is shown exactly once, here.
+// - ✦ Prestige: non-automation perks that stand on their own — Double PP (leveled), Production
+//   speed bonus (one-time), DeGoogol (milestone), and the Buy max purchasing toggle.
 
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));
@@ -121,19 +119,14 @@ const CategoryHeading = styled.h2`
   text-transform: uppercase;
 `
 
-// Every row is a CSS grid so columns line up row-to-row regardless of content width (a flex
-// `space-between` row let each badge drift with its siblings' widths). Default: label | control.
-// `$tier`: symbol | ⚙ cell | 🤖 cell — shared by the Unlocks and Toggles
-// tier lists so both tabs read as the same table.
+// Every row is a CSS grid so columns line up row-to-row regardless of content width. Default:
+// label | action. `$lead` (automation rows): fixed Switch cell | label | action, so every switch and
+// every name start at the same x whether or not the automation is owned yet. Fits a 320px phone.
 const Row = styled.div`
   align-items: center;
   column-gap: 0.6rem;
   display: grid;
-  /* Every track is fixed or fr-based (never content-sized) so separate rows' columns line up, and
-     the whole row still fits a 320px-wide phone. */
-  grid-template-columns: ${props => (props.$tier === 'unlocks' || props.$tier === 'toggles'
-    ? '2.25rem minmax(0, 1fr) minmax(0, 1fr)'
-    : 'minmax(0, 1fr) auto')};
+  grid-template-columns: ${props => (props.$lead ? '2.75rem minmax(0, 1fr) auto' : 'minmax(0, 1fr) auto')};
   min-height: 2.75rem;
   padding: 0.35rem 0;
 
@@ -142,8 +135,14 @@ const Row = styled.div`
   }
 
   & > :last-child {
-    justify-self: ${props => (props.$tier === 'toggles' || props.$tier === 'unlocks' ? 'start' : 'end')};
+    justify-self: end;
   }
+`
+
+// Lead cell of an automation row — holds the Switch once owned, empty while locked.
+const LeadCell = styled.span`
+  display: flex;
+  justify-content: center;
 `
 
 const RowLabel = styled.span`
@@ -156,6 +155,15 @@ const RowLabel = styled.span`
 const RowIcon = styled.span.attrs({ 'aria-hidden': true })`
   display: inline-block;
   margin-right: 0.45rem;
+  text-align: center;
+  width: 1.5em;
+`
+
+// The automation's icon doubling as its live status ("<name> active|paused"), dimmed while paused.
+const StatusIcon = styled.span`
+  display: inline-block;
+  margin-right: 0.45rem;
+  opacity: ${props => (props.$dimmed ? 0.55 : 1)};
   text-align: center;
   width: 1.5em;
 `
@@ -173,18 +181,13 @@ const RowControls = styled.div`
   gap: 0.5rem;
 `
 
-const MutedText = styled.p`
-  color: ${props => props.theme.color.textMuted};
-  margin: 0;
-`
-
 // Indented past the label's RowIcon cell (1.5em of the label's font + its margin) so it lines up
 // with the name above it.
 const SubText = styled.span`
   color: ${props => props.theme.color.textMuted};
   font-size: 0.82em;
   font-weight: 400;
-  padding-left: calc(1.5em / 0.82 + 0.45rem);
+  padding-left: ${props => (props.$flush ? '0' : 'calc(1.5em / 0.82 + 0.45rem)')};
 `
 
 const PpButton = styled(Button)`
@@ -209,25 +212,10 @@ const Badge = styled.span`
 
 const progressPercent = (numerator, denominator) => Math.min(100, Math.round((numerator / denominator) * 100))
 
-const TierSymbol = ({ tier }) => (
-  <RowLabel title={tier.name}>
-    <VisuallyHidden>{tier.name}</VisuallyHidden>
-    <span aria-hidden="true">{tier.symbol}</span>
-  </RowLabel>
-)
-
-// A free milestone unlock (prestige- or era-count based): ✓ once reached, else 🔒 + target with a
-// hidden progressbar. `subject` drives the aria-labels ("<subject> unlocked at <unit> N" /
-// "<subject> unlocks at <unit> N").
-const MilestoneBadge = ({ icon, subject, unit, milestone, current, progressLabel, reached }) => {
+// A free milestone unlock (prestige- or era-count based) not reached yet: 🔒 + target with a hidden
+// progressbar (aria-label "<subject> unlocks at <unit> N"). Once reached, the row shows its Switch.
+const MilestoneBadge = ({ icon, subject, unit, milestone, current, progressLabel }) => {
   const theme = useTheme()
-  if (reached) {
-    return (
-      <Badge $color={theme.color.good} aria-label={`${subject} unlocked at ${unit} ${milestone}`} title={`${subject} — unlocked at ${unit} ${milestone}`}>
-        {icon} ✓
-      </Badge>
-    )
-  }
   return (
     <RowControls>
       <Badge
@@ -236,7 +224,7 @@ const MilestoneBadge = ({ icon, subject, unit, milestone, current, progressLabel
         aria-label={`${subject} unlocks at ${unit} ${milestone}`}
         title={`${subject} — unlocks at ${unit} ${milestone} (you're at ${unit} ${current})`}
       >
-        {icon} 🔒 {milestone}
+        {icon && `${icon} `}🔒 {milestone}
       </Badge>
       <VisuallyHidden
         role="progressbar"
@@ -249,11 +237,11 @@ const MilestoneBadge = ({ icon, subject, unit, milestone, current, progressLabel
   )
 }
 
-// Static "already bought" marker for a one-time PP unlock — pause/resume lives on Toggles.
-const UnlockedBadge = ({ name, icon }) => {
+// Static "already owned" marker for a one-time unlock with nothing further to control here.
+const UnlockedBadge = ({ name, icon, title }) => {
   const theme = useTheme()
   return (
-    <Badge $color={theme.color.good} aria-label={`${name} unlocked`} title={`${name} unlocked — pause/resume it on the Toggles tab`}>
+    <Badge $color={theme.color.good} aria-label={`${name} unlocked`} title={title ?? `${name} unlocked`}>
       {icon} ✓
     </Badge>
   )
@@ -283,34 +271,57 @@ const PpPurchaseButton = ({ ariaLabel, color, cost, points, disabled, onClick, t
   </PpButton>
 )
 
-// One pause/resume control: the automation's icon (dimmed while paused, carrying the
-// "<name> active|paused" status label) beside an on/off Switch named `toggleLabel`.
-const AutomationToggle = ({ name, icon, enabled, onToggle, toggleLabel, statusLabel, statusTitle }) => (
-  <RowControls>
-    <Badge
-      $dimmed={!enabled}
-      aria-label={statusLabel ?? `${name} ${enabled ? 'active' : 'paused'}`}
-      title={statusTitle}
-    >
-      {icon}
-    </Badge>
-    <Switch
-      $on={enabled}
-      aria-label={toggleLabel}
-      aria-pressed={enabled}
-      onClick={onToggle}
-      title={`${enabled ? 'Pause' : 'Resume'} ${toggleLabel}`}
-    />
-  </RowControls>
+// One automation's whole lifecycle in a single row. Locked: empty lead cell + `lockedAction` (a
+// 🔒 milestone badge or a 🔓 PP unlock button). Owned: pause/resume Switch in the lead cell (when
+// `onToggle` is given), the icon becomes the "<name> active|paused" status, `subText` shows its
+// current interval, and `ownedAction` holds its ⏫ speed upgrade (or nothing once maxed).
+const AutomationRow = ({ ariaLabel, icon, name, label = name, owned, enabled = true, onToggle, toggleLabel, statusTitle, subText, lockedAction, ownedAction }) => (
+  <Row $lead aria-label={ariaLabel}>
+    <LeadCell>
+      {owned && onToggle && (
+        <Switch
+          $on={enabled}
+          aria-label={toggleLabel}
+          aria-pressed={enabled}
+          onClick={onToggle}
+          title={`${enabled ? 'Pause' : 'Resume'} ${toggleLabel}`}
+        />
+      )}
+    </LeadCell>
+    <RowLabelStack>
+      <RowLabel>
+        {/* Icon-less rows (tier/Flops lists, whose category heading names the kind) keep the
+            status for assistive tech only — the Switch already shows it visually. */}
+        {owned && onToggle && !icon && (
+          <VisuallyHidden aria-label={`${name} ${enabled ? 'active' : 'paused'}`}>{enabled ? 'active' : 'paused'}</VisuallyHidden>
+        )}
+        {icon && (owned && onToggle ? (
+          <StatusIcon $dimmed={!enabled} aria-label={`${name} ${enabled ? 'active' : 'paused'}`} title={statusTitle}>{icon}</StatusIcon>
+        ) : (
+          <RowIcon>{icon}</RowIcon>
+        ))}
+        {label}
+      </RowLabel>
+      {owned && subText && <SubText $flush={!icon}>{subText}</SubText>}
+    </RowLabelStack>
+    {owned ? (ownedAction ?? <span />) : lockedAction}
+  </Row>
 )
 
 export const PERKS_TABS = [
-  { id: 'unlocks', icon: '🔓', ariaLabel: 'open unlocks', title: 'Unlocks — one-time permanent unlocks and milestones' },
-  { id: 'upgrades', icon: '⏫', ariaLabel: 'open upgrades', title: 'Upgrades — repeatable leveled upgrades' },
-  { id: 'toggles', icon: '🎛', ariaLabel: 'open toggles', title: 'Toggles — Buy max and automation pause/resume' },
+  { id: 'automation', icon: '🤖', ariaLabel: 'open automation', title: 'Automation — unlock, pause/resume and speed up every automation' },
+  { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Double PP, production speed bonus, DeGoogol and Buy max' },
 ]
 
 const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Math.round(ms * 10) / 10} ms`)
+
+const GLOBAL_AUTOMATIONS = [
+  { key: 'speedUp', name: 'Auto Speed Up', icon: '🌐', owned: s => s.autoGlobalTickspeed ?? false, enabled: s => s.autoGlobalTickspeedEnabled ?? true, setEnabled: 'setAutoGlobalTickspeedEnabled', buy: 'buyTickspeedAutobuyer', canBuy: () => true, unlockTitle: 'Spend Purge Points so the global tickspeed multiplier upgrades itself automatically, forever, whenever affordable' },
+  { key: 'restage', name: 'Auto Restage', icon: '🧬', owned: s => s.autoXpTickspeed ?? false, enabled: s => s.autoXpTickspeedEnabled ?? true, setEnabled: 'setAutoXpTickspeedEnabled', buy: 'buyXpTickspeedAutobuyer', canBuy: s => Boolean(s.autoGlobalTickspeed), cost: XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, unlockTitle: 'Spend Purge Points so XP is automatically consumed for Restage whenever possible (each consumption resets every other tier\'s owned quantity and Bits)' },
+  { key: 'scaleUp', name: 'Auto Scale Up', icon: '⏩', owned: s => s.autoScaleUp ?? false, enabled: s => s.autoScaleUpEnabled ?? true, setEnabled: 'setAutoScaleUpEnabled', buy: 'buyAutoScaleUp', canBuy: s => Boolean(s.autoGlobalTickspeed), unlockTitle: 'Spend Purge Points so eligible Scale Ups happen automatically until the final tier, where they stay manual for Overclock', statusTitle: enabled => (enabled ? "Scale Up triggers automatically the instant it's eligible" : 'Auto Scale Up is paused — it will not trigger until resumed') },
+  { key: 'overclock', name: 'Auto Overclock', icon: '🚀', owned: s => s.autoOverclock ?? false, enabled: s => s.autoOverclockEnabled ?? true, setEnabled: 'setAutoOverclockEnabled', buy: 'buyAutoOverclock', canBuy: s => Boolean(s.autoScaleUp) && Boolean(s.autoXpTickspeed), unlockTitle: 'Spend Purge Points so Overclock is claimed automatically whenever it is eligible' },
+  { key: 'reboot', name: 'Auto Purge', icon: '✦', owned: s => (s.autoReboot ?? null) !== null, enabled: s => s.autoRebootEnabled ?? true, setEnabled: 'setAutoRebootEnabled', buy: 'buyAutoReboot', canBuy: s => Boolean(s.autoOverclock), allowFirstRun: true, unlockTitle: 'Spend Purge Points so Purge happens automatically once your balance reaches 1 Googol Bytes' },
+]
 
 const PerksPage = ({ game, focusNonce = 0 }) => {
   const { state, actions } = game
@@ -322,28 +333,10 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const isFirstRun = rebootCount === 0
   const isFrozen = isProductionFrozen(state)
 
-  const [tab, setTab] = useState('unlocks')
+  const [tab, setTab] = useState('automation')
   useEffect(() => {
-    setTab('unlocks')
+    setTab('automation')
   }, [focusNonce])
-
-  const purchaseBlockSize = getPurchaseBlockSize(state)
-
-  const speedUpUnlockCost = getAutomationUnlockCost('speedUp')
-  const scaleUpUnlockCost = getAutomationUnlockCost('scaleUp')
-  const overclockUnlockCost = getAutomationUnlockCost('overclock')
-  const isAutoScaleUpActive = state.autoScaleUp ?? false
-  const isAutoOverclockActive = state.autoOverclock ?? false
-  const isXpTickspeedAutobuyerActive = state.autoXpTickspeed ?? false
-  const canBuyAutoOverclock = !isFrozen && isAutoScaleUpActive && isXpTickspeedAutobuyerActive && !isAutoOverclockActive && !isFirstRun && points >= overclockUnlockCost
-  const canBuyAutoScaleUp = !isFrozen && state.autoGlobalTickspeed && !isAutoScaleUpActive && !isFirstRun && points >= scaleUpUnlockCost
-  const autoScaleUpEnabled = state.autoScaleUpEnabled ?? true
-  const canBuyXpTickspeedAutobuyer = !isFrozen && state.autoGlobalTickspeed && !isXpTickspeedAutobuyerActive && !isFirstRun && points >= XP_TICKSPEED_AUTOBUYER_UNLOCK_COST
-  const xpTickspeedAutobuyerEnabled = state.autoXpTickspeedEnabled ?? true
-
-  const isTickspeedAutobuyerActive = state.autoGlobalTickspeed ?? false
-  const canBuyTickspeedAutobuyer = !isFrozen && !isTickspeedAutobuyerActive && !isFirstRun && points >= speedUpUnlockCost
-  const tickspeedAutobuyerEnabled = state.autoGlobalTickspeedEnabled ?? true
 
   const doublePpLevel = state.prestigeDoublePpLevel ?? 0
   const doublePpCost = getPrestigeDoublePpUpgradeCost(doublePpLevel)
@@ -355,262 +348,241 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     : `1 PP per ${formatAmount(powersPerPp)} power${powersPerPp === 1 ? '' : 's'}`
   const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
 
-  // Auto Purge: one-time activation, then the interval chain (see AUTOMATION_INTERVAL_CONFIG.reboot).
-  const autoRebootLevel = state.autoReboot ?? null
-  const isAutoRebootActive = autoRebootLevel !== null
-  const autoRebootCost = getAutomationUnlockCost('reboot')
-  const canBuyAutoReboot = !isFrozen && isAutoOverclockActive && !isAutoRebootActive && points >= autoRebootCost
-  const autoRebootEnabled = state.autoRebootEnabled ?? true
-
-
   const isComputeAutoBoostActive = state.computeAutoBoostUnlocked ?? false
   // Stays listed once bought, even after Era ascension / Reset Byte Foundry drops Capacity back below the Boosters threshold.
   const showComputeAutoBoost = isComputeAutoBoostActive || isComputeCoreConversionUnlocked(state)
   const canBuyComputeAutoBoost = !isFrozen && !isComputeAutoBoostActive && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST
 
   const tabDots = {
-    unlocks: hasAffordablePpUnlock(state) && 'PP unlock available',
-    upgrades: hasAffordablePpLevelUpgrade(state) && 'PP upgrade available',
+    automation: hasAffordableAutomationPerk(state) && 'automation perk available',
+    prestige: hasAffordablePrestigePerk(state) && 'prestige perk available',
   }
 
-  const renderUnlocks = () => (
-    <List aria-label="PP unlocks page">
-      <Category aria-label="tier autobuyers category">
-        <CategoryHeading>Tier Autobuyers</CategoryHeading>
-        {/* Every tier's row stays listed (reached milestones included) so unlock history is never lost. */}
-        {TIER_DEFINITIONS.map(tier => {
-          const isTierTickspeedAutobuyerActive = state.tierTickspeedAutobuyer?.[tier.id] ?? false
-          const isAutobuyerLocked = (state.autobuyers[tier.id] ?? null) === null
-          const autobuyerMilestone = getAutobuyerUnlockMilestone(tier.id)
-          const tickspeedMilestone = getTierTickspeedAutobuyerMilestone(tier.id)
+  // ⏫ speed-upgrade button shared by every owned automation's row (hidden once maxed).
+  const speedUpgradeButton = ({ maxed, cost, ariaLabel, label, onClick, progressLabel, title }) => (maxed ? null : (
+    <PpPurchaseButton
+      ariaLabel={ariaLabel}
+      color="#34d399"
+      cost={cost}
+      disabled={isFrozen || points < cost}
+      icon="⏫"
+      label={label ?? `${formatAmount(cost)} PP`}
+      onClick={onClick}
+      points={points}
+      progressLabel={progressLabel}
+      title={title}
+    />
+  ))
+
+  const unlockButton = ({ name, cost, canBuy, onClick, title }) => (
+    <PpPurchaseButton
+      ariaLabel={`Enable ${name} for ${cost} Purge Points`}
+      color="#38bdf8"
+      cost={cost}
+      disabled={!canBuy}
+      icon="🔓"
+      label={`${formatAmount(cost)} PP`}
+      onClick={onClick}
+      points={points}
+      progressLabel={`${name} PP progress`}
+      title={title}
+    />
+  )
+
+  const renderAutomation = () => (
+    <List aria-label="automation perks page">
+      <Category aria-label="global automation category">
+        <CategoryHeading>Global Automation</CategoryHeading>
+        {/* Every row always listed, in prerequisite order; the engine re-checks every gate. */}
+        {GLOBAL_AUTOMATIONS.map(auto => {
+          const owned = auto.owned(state)
+          const enabled = auto.enabled(state)
+          const unlockCost = auto.cost ?? getAutomationUnlockCost(auto.key)
+          const chainUnlocked = isAutomationIntervalChainUnlocked(state, auto.key)
+          const level = state.automationIntervalLevels?.[auto.key] ?? 0
+          const maxed = level >= getAutomationIntervalMaxLevel(auto.key)
+          const cost = getAutomationIntervalUpgradeCost(auto.key, level)
           return (
-            <Row key={tier.id} $tier="unlocks" aria-label={`${tier.name} PP unlocks`}>
-              <TierSymbol tier={tier} />
-              <MilestoneBadge
-                current={rebootCount}
-                icon="⚙"
-                milestone={tickspeedMilestone}
-                progressLabel={`${tier.name} tickspeed autobuyer milestone progress`}
-                reached={isTierTickspeedAutobuyerActive}
-                subject={`${tier.name}'s tickspeed autobuyer`}
-                unit="Purge"
-              />
-              <span>
-                <MilestoneBadge
-                  current={rebootCount}
-                  icon="🤖"
-                  milestone={autobuyerMilestone}
-                  progressLabel={`${tier.name} autobuyer unlock milestone progress`}
-                  reached={!isAutobuyerLocked}
-                  subject={`${tier.name}'s autobuyer`}
-                  unit="Purge"
-                />
-              </span>
-            </Row>
+            <AutomationRow
+              key={auto.key}
+              ariaLabel={`${auto.name.toLowerCase()} row`}
+              enabled={enabled}
+              icon={auto.icon}
+                            lockedAction={unlockButton({
+                name: auto.name,
+                cost: unlockCost,
+                canBuy: !isFrozen && (auto.allowFirstRun || !isFirstRun) && auto.canBuy(state) && points >= unlockCost,
+                onClick: actions[auto.buy],
+                title: auto.unlockTitle,
+              })}
+              name={auto.name}
+              onToggle={() => actions[auto.setEnabled](!enabled)}
+              owned={owned}
+              ownedAction={chainUnlocked ? speedUpgradeButton({
+                maxed,
+                cost,
+                ariaLabel: `Upgrade ${auto.name} speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`,
+                onClick: () => actions.buyAutomationIntervalUpgrade(auto.key),
+                progressLabel: `${auto.name} speed PP progress`,
+                title: "Spend Purge Points to shorten this automation's interval by 10% (floor 10 ms); cost doubles each level",
+              }) : null}
+              statusTitle={auto.statusTitle?.(enabled)}
+              subText={chainUnlocked ? `${level > 0 ? `Lv.${level} · ` : ''}every ${formatInterval(getAutomationIntervalSeconds(state, auto.key) * 1000)}${maxed ? ' (max)' : ''}` : null}
+              toggleLabel={`${auto.name} automation`}
+            />
           )
         })}
       </Category>
 
-      <Category aria-label="global automation category">
-        <CategoryHeading>Global Automation</CategoryHeading>
-        <Row aria-label="auto speed up upgrade">
-          <RowLabel><RowIcon>🌐</RowIcon>Auto Speed Up</RowLabel>
-          {isTickspeedAutobuyerActive ? (
-            <UnlockedBadge icon="🌐" name="Auto Speed Up" />
-          ) : (
-            <PpPurchaseButton
-              ariaLabel={`Enable Auto Speed Up for ${speedUpUnlockCost} Purge Points`}
-              color="#38bdf8"
-              cost={speedUpUnlockCost}
-              disabled={!canBuyTickspeedAutobuyer}
-              icon="🔓"
-              label={`${speedUpUnlockCost} PP`}
-              onClick={actions.buyTickspeedAutobuyer}
-              points={points}
-              progressLabel="Auto Speed Up PP progress"
-              title="Spend Purge Points so the global tickspeed multiplier upgrades itself automatically, forever, whenever affordable"
+      <Category aria-label="tier autobuyers category">
+        <CategoryHeading>Tier Autobuyers</CategoryHeading>
+        {/* All ten tiers stay listed (owned ones included) so unlock history is never lost. */}
+        {TIER_DEFINITIONS.map(tier => {
+          const owned = (state.autobuyers[tier.id] ?? null) !== null
+          const enabled = state.autobuyersEnabled?.[tier.id] ?? true
+          const milestone = getAutobuyerUnlockMilestone(tier.id)
+          const level = state.autobuyerIntervalLevels?.[tier.id] ?? 0
+          const maxed = level >= getAutobuyerSpeedUpgradeMaxLevel(tier.id)
+          const atFloor = level >= getAutobuyerIntervalMaxLevel(tier.id)
+          const bulkLevels = owned ? getAutobuyerBulkLevels(state, tier.id) : 1
+          const cost = getAutobuyerIntervalUpgradeCost(level)
+          return (
+            <AutomationRow
+              key={tier.id}
+              ariaLabel={`${tier.name} autobuyer`}
+              enabled={enabled}
+              label={tier.name}
+              lockedAction={(
+                <MilestoneBadge
+                  current={rebootCount}
+                  milestone={milestone}
+                  progressLabel={`${tier.name} autobuyer unlock milestone progress`}
+                  subject={`${tier.name}'s autobuyer`}
+                  unit="Purge"
+                />
+              )}
+              name={`${tier.name}'s autobuyer`}
+              onToggle={() => actions.setAutobuyerEnabled(tier.id, !enabled)}
+              owned={owned}
+              ownedAction={speedUpgradeButton({
+                maxed,
+                cost,
+                ariaLabel: atFloor
+                  ? `Upgrade ${tier.name}'s autobuyer to level ${level + 1} for ${formatAmount(cost)} Purge Points — doubles levels bought per attempt to up to ${bulkLevels * 2}`
+                  : `Upgrade ${tier.name}'s autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`,
+                label: atFloor ? `${bulkLevels * 2}/buy · ${formatAmount(cost)} PP` : undefined,
+                onClick: () => actions.buyAutobuyerIntervalUpgrade(tier.id),
+                progressLabel: `${tier.name} autobuyer speed PP progress`,
+                title: atFloor
+                  ? 'At the 10 ms floor, each further level doubles how many full levels one autobuyer attempt can buy (as many as are affordable, at least one); cost keeps rising'
+                  : "Spend Purge Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); past the floor, levels double how many levels it buys per attempt",
+              })}
+              subText={owned ? `${level > 0 ? `Lv.${level} · ` : ''}every ${formatInterval(getAutobuyerIntervalSeconds(state, tier.id) * 1000)}${bulkLevels > 1 ? ` · ${bulkLevels}/buy` : ''}${maxed ? ' (max)' : ''}` : null}
+              toggleLabel={`${tier.name}'s autobuyer`}
             />
-          )}
-        </Row>
-        <Row aria-label="auto restage upgrade">
-          <RowLabel><RowIcon>🧬</RowIcon>Auto Restage</RowLabel>
-          {isXpTickspeedAutobuyerActive ? (
-            <UnlockedBadge icon="🧬" name="Auto Restage" />
-          ) : (
-            <PpPurchaseButton
-              ariaLabel={`Enable Auto Restage for ${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} Purge Points`}
-              color="#38bdf8"
-              cost={XP_TICKSPEED_AUTOBUYER_UNLOCK_COST}
-              disabled={!canBuyXpTickspeedAutobuyer}
-              icon="🔓"
-              label={`${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} PP`}
-              onClick={actions.buyXpTickspeedAutobuyer}
-              points={points}
-              progressLabel="Auto Restage PP progress"
-              title="Spend Purge Points so XP is automatically consumed for Restage whenever possible (each consumption resets every other tier's owned quantity and Bits)"
+          )
+        })}
+      </Category>
+
+      <Category aria-label="tier tickspeed autobuyers category">
+        <CategoryHeading>Tier Tickspeed Autobuyers</CategoryHeading>
+        {TIER_DEFINITIONS.map(tier => {
+          const owned = state.tierTickspeedAutobuyer?.[tier.id] ?? false
+          const enabled = state.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true
+          const level = state.tierTickspeedIntervalLevels?.[tier.id] ?? 0
+          const maxed = level >= getTierTickspeedIntervalMaxLevel()
+          const cost = getTierTickspeedIntervalUpgradeCost(level)
+          return (
+            <AutomationRow
+              key={tier.id}
+              ariaLabel={`${tier.name} tickspeed autobuyer`}
+              enabled={enabled}
+              label={tier.name}
+              lockedAction={(
+                <MilestoneBadge
+                  current={rebootCount}
+                  milestone={getTierTickspeedAutobuyerMilestone(tier.id)}
+                  progressLabel={`${tier.name} tickspeed autobuyer milestone progress`}
+                  subject={`${tier.name}'s tickspeed autobuyer`}
+                  unit="Purge"
+                />
+              )}
+              name={`${tier.name}'s tickspeed autobuyer`}
+              onToggle={() => actions.setTierTickspeedAutobuyerEnabled(tier.id, !enabled)}
+              owned={owned}
+              ownedAction={speedUpgradeButton({
+                maxed,
+                cost,
+                ariaLabel: `Upgrade ${tier.name}'s tickspeed autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`,
+                onClick: () => actions.buyTierTickspeedIntervalUpgrade(tier.id),
+                progressLabel: `${tier.name} tickspeed autobuyer speed PP progress`,
+                title: "Spend Purge Points to shorten this tier's tickspeed autobuyer interval by 10% (floor 10 ms); cost doubles each level",
+              })}
+              subText={owned ? `${level > 0 ? `Lv.${level} · ` : ''}every ${formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)}${maxed ? ' (max)' : ''}` : null}
+              toggleLabel={`${tier.name}'s tickspeed autobuyer`}
             />
-          )}
-        </Row>
-        <Row aria-label="auto scale up upgrade">
-          <RowLabel><RowIcon>⏩</RowIcon>Auto Scale Up</RowLabel>
-          {isAutoScaleUpActive ? (
-            <UnlockedBadge icon="⏩" name="Auto Scale Up" />
-          ) : (
-            <PpPurchaseButton
-              ariaLabel={`Enable Auto Scale Up for ${scaleUpUnlockCost} Purge Points`}
-              color="#38bdf8"
-              cost={scaleUpUnlockCost}
-              disabled={!canBuyAutoScaleUp}
-              icon="🔓"
-              label={`${scaleUpUnlockCost} PP`}
-              onClick={actions.buyAutoScaleUp}
-              points={points}
-              progressLabel="Auto Scale Up PP progress"
-              title="Spend Purge Points so eligible Scale Ups happen automatically until the final tier, where they stay manual for Overclock"
-            />
-          )}
-        </Row>
-        <Row aria-label="auto overclock upgrade">
-          <RowLabel><RowIcon>🚀</RowIcon>Auto Overclock</RowLabel>
-          {isAutoOverclockActive ? (
-            <UnlockedBadge icon="🚀" name="Auto Overclock" />
-          ) : (
-            <PpPurchaseButton
-              ariaLabel={`Enable Auto Overclock for ${overclockUnlockCost} Purge Points`}
-              color="#38bdf8"
-              cost={overclockUnlockCost}
-              disabled={!canBuyAutoOverclock}
-              icon="🔓"
-              label={`${overclockUnlockCost} PP`}
-              onClick={actions.buyAutoOverclock}
-              points={points}
-              progressLabel="Auto Overclock PP progress"
-              title="Spend Purge Points so Overclock is claimed automatically whenever it is eligible"
-            />
-          )}
-        </Row>
-        <Row aria-label="auto purge upgrade">
-          <RowLabelStack>
-            <RowLabel><RowIcon>✦</RowIcon>Auto Purge</RowLabel>
-            {isAutoRebootActive && (
-              <SubText>every {formatInterval(getAutomationIntervalSeconds(state, 'reboot') * 1000)}</SubText>
-            )}
-          </RowLabelStack>
-          {isAutoRebootActive ? (
-            <UnlockedBadge icon="✦" name="Auto Purge" />
-          ) : (
-            <PpPurchaseButton
-              ariaLabel={`Enable Auto Purge for ${autoRebootCost} Purge Points`}
-              color="#38bdf8"
-              cost={autoRebootCost}
-              disabled={!canBuyAutoReboot}
-              icon="🔓"
-              label={`${autoRebootCost} PP`}
-              onClick={actions.buyAutoReboot}
-              points={points}
-              progressLabel="Auto Purge PP progress"
-              title="Spend Purge Points so Purge happens automatically once your balance reaches 1 Googol Bytes"
-            />
-          )}
-        </Row>
+          )
+        })}
       </Category>
 
       {showComputeAutoBoost && (
         <Category aria-label="booster automation category">
           <CategoryHeading>Booster Automation</CategoryHeading>
-          <Row aria-label="auto boost upgrade">
-            <RowLabel><RowIcon>🤖</RowIcon>Auto Boost</RowLabel>
-            {isComputeAutoBoostActive ? (
-              <UnlockedBadge icon="🤖" name="Auto Boost" />
-            ) : (
-              <PpPurchaseButton
-                ariaLabel={`Enable Auto Boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} Purge Points`}
-                color="#38bdf8"
-                cost={COMPUTE_AUTO_BOOST_UNLOCK_COST}
-                disabled={!canBuyComputeAutoBoost}
-                icon="🔓"
-                label={`${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP`}
-                onClick={actions.buyComputeAutoBoost}
-                points={points}
-                progressLabel="Auto Boost PP progress"
-                title="Spend Purge Points so a full tier waiting on its own in-flight merge automatically activates your preferred Boost preset (choose it on Boosters)"
-              />
-            )}
-          </Row>
-        </Category>
-      )}
-
-      {!state.prestigeSpeedBonusUnlocked && (
-        <Category aria-label="production bonuses category">
-          <CategoryHeading>Production Bonuses</CategoryHeading>
-          <Row aria-label="production speed bonus upgrade">
-            <RowLabel><RowIcon>📈</RowIcon>Production speed bonus</RowLabel>
-            <PpPurchaseButton
-              ariaLabel={`Unlock Purge Point production speed bonus for ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} Purge Points`}
-              color="#38bdf8"
-              cost={PRESTIGE_SPEED_BONUS_UNLOCK_COST}
-              disabled={!canBuySpeedBonus}
-              icon="🔓"
-              label={`${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP`}
-              onClick={actions.buyPrestigeSpeedBonus}
-              points={points}
-              progressLabel="Speed bonus unlock PP progress"
-              title="Spend Purge Points once to enable +1% production speed per unspent Purge Point"
-            />
-          </Row>
+          {/* No pause Switch: the Auto Boost preset picker on Boosters (incl. its off choice) is its control. */}
+          <AutomationRow
+            ariaLabel="auto boost row"
+            icon="🤖"
+            lockedAction={unlockButton({
+              name: 'Auto Boost',
+              cost: COMPUTE_AUTO_BOOST_UNLOCK_COST,
+              canBuy: canBuyComputeAutoBoost,
+              onClick: actions.buyComputeAutoBoost,
+              title: 'Spend Purge Points so a full tier waiting on its own in-flight merge automatically activates your preferred Boost preset (choose it on Boosters)',
+            })}
+            name="Auto Boost"
+            owned={isComputeAutoBoostActive}
+            ownedAction={<UnlockedBadge icon="🤖" name="Auto Boost" title="Auto Boost unlocked — choose its preset on Boosters" />}
+          />
         </Category>
       )}
 
       {state.computeFlops?.pageUnlocked && (
-        <Category aria-label="compute autobuyer unlock milestones category">
+        <Category aria-label="compute autobuyers category">
           <CategoryHeading>Compute Autobuyers</CategoryHeading>
           {COMPUTE_FLOPS_TIER_DEFINITIONS.map(flopTier => {
-            const milestone = getFlopsAutobuyerUnlockEra(flopTier.id)
+            const owned = (state.computeFlopsAutobuyers?.[flopTier.id] ?? null) !== null
+            const enabled = state.computeFlopsAutobuyersEnabled?.[flopTier.id] ?? true
             return (
-              <Row key={flopTier.id} aria-label={`${flopTier.name} autobuyer unlock milestone`}>
-                <TierSymbol tier={flopTier} />
-                <MilestoneBadge
-                  current={eraCount}
-                  icon="🤖"
-                  milestone={milestone}
-                  progressLabel={`${flopTier.name} autobuyer unlock milestone progress`}
-                  reached={(state.computeFlopsAutobuyers?.[flopTier.id] ?? null) !== null}
-                  subject={`${flopTier.name}'s autobuyer`}
-                  unit="Era"
-                />
-              </Row>
+              <AutomationRow
+                key={flopTier.id}
+                ariaLabel={`${flopTier.name} autobuyer`}
+                enabled={enabled}
+                label={flopTier.name}
+                lockedAction={(
+                  <MilestoneBadge
+                    current={eraCount}
+                    milestone={getFlopsAutobuyerUnlockEra(flopTier.id)}
+                    progressLabel={`${flopTier.name} autobuyer unlock milestone progress`}
+                      subject={`${flopTier.name}'s autobuyer`}
+                    unit="Era"
+                  />
+                )}
+                name={`${flopTier.name}'s autobuyer`}
+                onToggle={() => actions.setComputeFlopsAutobuyerEnabled(flopTier.id, !enabled)}
+                owned={owned}
+                toggleLabel={`${flopTier.name}'s autobuyer`}
+              />
             )
           })}
         </Category>
       )}
-
-      <Category aria-label="prestige unlocks category">
-        <CategoryHeading>Prestige</CategoryHeading>
-        <Row aria-label="degoogol unlock">
-          <RowLabelStack>
-            <RowLabel title="Earn past 1 Googol Bytes without freezing; Purge voluntarily to claim PP"><RowIcon>♾</RowIcon>DeGoogol</RowLabel>
-            {!isUnboundedRebootUnlocked(state) && (
-              <SubText>
-                Auto Purge ≤ {UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS} s
-              </SubText>
-            )}
-          </RowLabelStack>
-          {isUnboundedRebootUnlocked(state) ? (
-            <UnlockedBadge icon="♾" name="DeGoogol" />
-          ) : (
-            <Badge $color={theme.color.disabled} $dimmed aria-label="DeGoogol locked" title="Unlocks when Auto Purge's interval reaches 1 s or less">
-              ♾ 🔒
-            </Badge>
-          )}
-        </Row>
-      </Category>
     </List>
   )
 
-  const renderUpgrades = () => (
-    <List aria-label="PP upgrades page">
-      <Category aria-label="prestige upgrades category">
-        <CategoryHeading>Prestige</CategoryHeading>
+  const renderPrestige = () => (
+    <List aria-label="prestige perks page">
+      <Category aria-label="purge points category">
+        <CategoryHeading>Purge Points</CategoryHeading>
         <Row aria-label="double PP upgrade">
           <RowLabelStack>
             <RowLabel>
@@ -634,276 +606,54 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               : 'Doubles how many Purge Points each power earns (claimable once you reach 1 Googol Bytes)'}
           />
         </Row>
+        <Row aria-label="production speed bonus upgrade">
+          <RowLabel title="+1% production speed per unspent Purge Point"><RowIcon>📈</RowIcon>Production speed bonus</RowLabel>
+          {state.prestigeSpeedBonusUnlocked ? (
+            <UnlockedBadge icon="📈" name="Production speed bonus" />
+          ) : (
+            <PpPurchaseButton
+              ariaLabel={`Unlock Purge Point production speed bonus for ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} Purge Points`}
+              color="#38bdf8"
+              cost={PRESTIGE_SPEED_BONUS_UNLOCK_COST}
+              disabled={!canBuySpeedBonus}
+              icon="🔓"
+              label={`${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP`}
+              onClick={actions.buyPrestigeSpeedBonus}
+              points={points}
+              progressLabel="Speed bonus unlock PP progress"
+              title="Spend Purge Points once to enable +1% production speed per unspent Purge Point"
+            />
+          )}
+        </Row>
+        <Row aria-label="degoogol unlock">
+          <RowLabelStack>
+            <RowLabel title="Earn past 1 Googol Bytes without freezing; Purge voluntarily to claim PP"><RowIcon>♾</RowIcon>DeGoogol</RowLabel>
+            {!isUnboundedRebootUnlocked(state) && (
+              <SubText>
+                Auto Purge ≤ {UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS} s
+              </SubText>
+            )}
+          </RowLabelStack>
+          {isUnboundedRebootUnlocked(state) ? (
+            <UnlockedBadge icon="♾" name="DeGoogol" />
+          ) : (
+            <Badge $color={theme.color.disabled} $dimmed aria-label="DeGoogol locked" title="Unlocks when Auto Purge's interval reaches 1 s or less">
+              ♾ 🔒
+            </Badge>
+          )}
+        </Row>
       </Category>
-
-      <Category aria-label="autobuyer speed category">
-        <CategoryHeading>Autobuyer Speed</CategoryHeading>
-        {TIER_DEFINITIONS.map(tier => {
-          if ((state.autobuyers[tier.id] ?? null) === null) return null
-          const level = state.autobuyerIntervalLevels?.[tier.id] ?? 0
-          const maxed = level >= getAutobuyerSpeedUpgradeMaxLevel(tier.id)
-          const atFloor = level >= getAutobuyerIntervalMaxLevel(tier.id)
-          const bulkLevels = getAutobuyerBulkLevels(state, tier.id)
-          const cost = getAutobuyerIntervalUpgradeCost(level)
-          const intervalMs = getAutobuyerIntervalSeconds(state, tier.id) * 1000
-          return (
-            <Row key={tier.id} aria-label={`${tier.name} autobuyer speed upgrade`}>
-              <RowLabelStack>
-                <RowLabel>
-                  <RowIcon>⏱</RowIcon>{tier.name}
-                  {level > 0 && ` (Lv.${level})`}
-                </RowLabel>
-                <SubText>
-                  every {formatInterval(intervalMs)}
-                  {bulkLevels > 1 && ` · ${bulkLevels}/buy`}
-                  {maxed ? ' (max)' : ''}
-                </SubText>
-              </RowLabelStack>
-              {!maxed && (
-                <PpPurchaseButton
-                  ariaLabel={atFloor
-                    ? `Upgrade ${tier.name}'s autobuyer to level ${level + 1} for ${formatAmount(cost)} Purge Points — doubles levels bought per attempt to up to ${bulkLevels * 2}`
-                    : `Upgrade ${tier.name}'s autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`}
-                  color="#34d399"
-                  cost={cost}
-                  disabled={isFrozen || points < cost}
-                  icon="⏫"
-                  label={atFloor ? `${bulkLevels * 2}/buy · ${formatAmount(cost)} PP` : `${formatAmount(cost)} PP`}
-                  onClick={() => actions.buyAutobuyerIntervalUpgrade(tier.id)}
-                  points={points}
-                  progressLabel={`${tier.name} autobuyer speed PP progress`}
-                  title={atFloor
-                    ? 'At the 10 ms floor, each further level doubles how many full levels one autobuyer attempt can buy (as many as are affordable, at least one); cost keeps rising'
-                    : "Spend Purge Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); past the floor, levels double how many levels it buys per attempt"}
-                />
-              )}
-            </Row>
-          )
-        })}
-        {TIER_DEFINITIONS.map(tier => {
-          if (!state.tierTickspeedAutobuyer?.[tier.id]) return null
-          const level = state.tierTickspeedIntervalLevels?.[tier.id] ?? 0
-          const maxed = level >= getTierTickspeedIntervalMaxLevel()
-          const cost = getTierTickspeedIntervalUpgradeCost(level)
-          return (
-            <Row key={`ts-${tier.id}`} aria-label={`${tier.name} tickspeed autobuyer speed upgrade`}>
-              <RowLabelStack>
-                <RowLabel>
-                  <RowIcon>⚙</RowIcon>{tier.name} tickspeed
-                  {level > 0 && ` (Lv.${level})`}
-                </RowLabel>
-                <SubText>every {formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)}{maxed ? ' (max)' : ''}</SubText>
-              </RowLabelStack>
-              {!maxed && (
-                <PpPurchaseButton
-                  ariaLabel={`Upgrade ${tier.name}'s tickspeed autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`}
-                  color="#34d399"
-                  cost={cost}
-                  disabled={isFrozen || points < cost}
-                  icon="⏫"
-                  label={`${formatAmount(cost)} PP`}
-                  onClick={() => actions.buyTierTickspeedIntervalUpgrade(tier.id)}
-                  points={points}
-                  progressLabel={`${tier.name} tickspeed autobuyer speed PP progress`}
-                  title="Spend Purge Points to shorten this tier's tickspeed autobuyer interval by 10% (floor 10 ms); cost doubles each level"
-                />
-              )}
-            </Row>
-          )
-        })}
-        {[
-          ['speedUp', 'Auto Speed Up', '🌐'],
-          ['restage', 'Auto Restage', '🧬'],
-          ['scaleUp', 'Auto Scale Up', '⏩'],
-          ['overclock', 'Auto Overclock', '🚀'],
-          ['reboot', 'Auto Purge', '✦'],
-        ].map(([key, name, icon]) => {
-          if (!isAutomationIntervalChainUnlocked(state, key)) return null
-          const level = state.automationIntervalLevels?.[key] ?? 0
-          const maxed = level >= getAutomationIntervalMaxLevel(key)
-          const cost = getAutomationIntervalUpgradeCost(key, level)
-          return (
-            <Row key={`auto-${key}`} aria-label={`${name} speed upgrade`}>
-              <RowLabelStack>
-                <RowLabel>
-                  <RowIcon>{icon}</RowIcon>{name}
-                  {level > 0 && ` (Lv.${level})`}
-                </RowLabel>
-                <SubText>every {formatInterval(getAutomationIntervalSeconds(state, key) * 1000)}{maxed ? ' (max)' : ''}</SubText>
-              </RowLabelStack>
-              {!maxed && (
-                <PpPurchaseButton
-                  ariaLabel={`Upgrade ${name} speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`}
-                  color="#34d399"
-                  cost={cost}
-                  disabled={isFrozen || points < cost}
-                  icon="⏫"
-                  label={`${formatAmount(cost)} PP`}
-                  onClick={() => actions.buyAutomationIntervalUpgrade(key)}
-                  points={points}
-                  progressLabel={`${name} speed PP progress`}
-                  title="Spend Purge Points to shorten this automation's interval by 10% (floor 10 ms); cost doubles each level"
-                />
-              )}
-            </Row>
-          )
-        })}
-      </Category>
+      {isBuyMaxUnlocked(state) && (
+        <Category aria-label="purchasing category">
+          <CategoryHeading>Purchasing</CategoryHeading>
+          <Row aria-label="buy max toggle">
+            <RowLabel title="Each purchase buys as many levels as you can afford (Factory tiers buy full levels only)"><RowIcon>⏭</RowIcon>Buy max</RowLabel>
+            <BuyMaxToggle game={game} />
+          </Row>
+        </Category>
+      )}
     </List>
   )
-
-  const renderToggles = () => {
-    const tierRows = TIER_DEFINITIONS.map(tier => {
-      if (!isTierUnlocked(state)(tier)) return null
-      const isAutobuyerLocked = (state.autobuyers[tier.id] ?? null) === null
-      const isTierTickspeedAutobuyerActive = state.tierTickspeedAutobuyer?.[tier.id] ?? false
-      if (isAutobuyerLocked && !isTierTickspeedAutobuyerActive) return null
-      const autobuyerEnabled = state.autobuyersEnabled?.[tier.id] ?? true
-      const tierTickspeedAutobuyerEnabled = state.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true
-      return (
-        <Row key={tier.id} $tier="toggles" aria-label={`${tier.name} automation toggles`}>
-          <TierSymbol tier={tier} />
-          {!isTierTickspeedAutobuyerActive ? <span /> : (
-            <AutomationToggle
-              enabled={tierTickspeedAutobuyerEnabled}
-              icon="⚙"
-              name={`${tier.name}'s tickspeed autobuyer`}
-              onToggle={() => actions.setTierTickspeedAutobuyerEnabled(tier.id, !tierTickspeedAutobuyerEnabled)}
-              toggleLabel={`${tier.name}'s tickspeed autobuyer`}
-            />
-          )}
-          {isAutobuyerLocked ? <span /> : (
-            <AutomationToggle
-              enabled={autobuyerEnabled}
-              icon="🤖"
-              name={`${tier.name}'s autobuyer`}
-              onToggle={() => actions.setAutobuyerEnabled(tier.id, !autobuyerEnabled)}
-              toggleLabel={`${tier.name}'s autobuyer`}
-            />
-          )}
-        </Row>
-      )
-    }).filter(Boolean)
-    const globalRows = [
-      isTickspeedAutobuyerActive && (
-        <Row key="tickspeed" aria-label="auto speed up toggle">
-          <RowLabel><RowIcon>🌐</RowIcon>Auto Speed Up</RowLabel>
-          <AutomationToggle
-            enabled={tickspeedAutobuyerEnabled}
-            icon="🌐"
-            name="Auto Speed Up"
-            onToggle={() => actions.setAutoGlobalTickspeedEnabled(!tickspeedAutobuyerEnabled)}
-            toggleLabel="Auto Speed Up automation"
-          />
-        </Row>
-      ),
-      isXpTickspeedAutobuyerActive && (
-        <Row key="auto-restage" aria-label="auto restage toggle">
-          <RowLabel><RowIcon>🧬</RowIcon>Auto Restage</RowLabel>
-          <AutomationToggle
-            enabled={xpTickspeedAutobuyerEnabled}
-            icon="🧬"
-            name="Auto Restage"
-            onToggle={() => actions.setAutoXpTickspeedEnabled(!xpTickspeedAutobuyerEnabled)}
-            toggleLabel="Auto Restage automation"
-          />
-        </Row>
-      ),
-      isAutoScaleUpActive && (
-        <Row key="scale-up" aria-label="auto scale up toggle">
-          <RowLabel><RowIcon>⏩</RowIcon>Auto Scale Up</RowLabel>
-          <AutomationToggle
-            enabled={autoScaleUpEnabled}
-            icon="⏩"
-            name="Auto Scale Up"
-            onToggle={() => actions.setAutoScaleUpEnabled(!autoScaleUpEnabled)}
-            statusTitle={autoScaleUpEnabled
-              ? "Scale Up triggers automatically the instant it's eligible"
-              : 'Auto Scale Up is paused — it will not trigger until resumed'}
-            toggleLabel="Auto Scale Up automation"
-          />
-        </Row>
-      ),
-      isAutoOverclockActive && (
-        <Row key="auto-overclock" aria-label="auto overclock toggle">
-          <RowLabel><RowIcon>🚀</RowIcon>Auto Overclock</RowLabel>
-          <AutomationToggle
-            enabled={state.autoOverclockEnabled ?? true}
-            icon="🚀"
-            name="Auto Overclock"
-            onToggle={() => actions.setAutoOverclockEnabled(!(state.autoOverclockEnabled ?? true))}
-            toggleLabel="Auto Overclock automation"
-          />
-        </Row>
-      ),
-      isAutoRebootActive && (
-        <Row key="auto-reboot" aria-label="auto purge toggle">
-          <RowLabel><RowIcon>✦</RowIcon>Auto Purge</RowLabel>
-          <AutomationToggle
-            enabled={autoRebootEnabled}
-            icon="✦"
-            name="Auto Purge"
-            onToggle={() => actions.setAutoRebootEnabled(!autoRebootEnabled)}
-            toggleLabel="Auto Purge automation"
-          />
-        </Row>
-      ),
-    ].filter(Boolean)
-    // Era-unlocked Compute (Flops) autobuyers — see setComputeFlopsAutobuyerEnabled in engine.js.
-    const flopsRows = COMPUTE_FLOPS_TIER_DEFINITIONS.map(flopTier => {
-      if ((state.computeFlopsAutobuyers?.[flopTier.id] ?? null) === null) return null
-      const enabled = state.computeFlopsAutobuyersEnabled?.[flopTier.id] ?? true
-      return (
-        <Row key={flopTier.id} aria-label={`${flopTier.name} automation toggles`}>
-          <TierSymbol tier={flopTier} />
-          <AutomationToggle
-            enabled={enabled}
-            icon="🤖"
-            name={`${flopTier.name}'s autobuyer`}
-            onToggle={() => actions.setComputeFlopsAutobuyerEnabled(flopTier.id, !enabled)}
-            toggleLabel={`${flopTier.name}'s autobuyer`}
-          />
-        </Row>
-      )
-    }).filter(Boolean)
-    const showBuyMax = isBuyMaxUnlocked(state)
-    return (
-      <List aria-label="automation toggles page">
-        {showBuyMax && (
-          <Category aria-label="purchase mode toggles category">
-            <CategoryHeading>Purchasing</CategoryHeading>
-            <Row aria-label="buy max toggle">
-              <RowLabel title="Each purchase buys as many levels as you can afford (Factory tiers buy full levels only)"><RowIcon>⏭</RowIcon>Buy max</RowLabel>
-              <BuyMaxToggle game={game} />
-            </Row>
-          </Category>
-        )}
-        {tierRows.length > 0 && (
-          <Category aria-label="tier automation toggles category">
-            <CategoryHeading>Tier Autobuyers</CategoryHeading>
-            {tierRows}
-          </Category>
-        )}
-        {globalRows.length > 0 && (
-          <Category aria-label="global automation toggles category">
-            <CategoryHeading>Global Automation</CategoryHeading>
-            {globalRows}
-          </Category>
-        )}
-        {flopsRows.length > 0 && (
-          <Category aria-label="compute automation toggles category">
-            <CategoryHeading>Compute Autobuyers</CategoryHeading>
-            {flopsRows}
-          </Category>
-        )}
-        {!showBuyMax && tierRows.length === 0 && globalRows.length === 0 && flopsRows.length === 0 && (
-          <StatCard aria-label="no toggles notice">
-            <MutedText>Nothing to toggle yet — automations appear here once unlocked.</MutedText>
-          </StatCard>
-        )}
-      </List>
-    )
-  }
 
   return (
     <RootDiv>
@@ -928,9 +678,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           </TabButton>
         ))}
       </TabBar>
-      {tab === 'unlocks' && renderUnlocks()}
-      {tab === 'upgrades' && renderUpgrades()}
-      {tab === 'toggles' && renderToggles()}
+      {tab === 'automation' && renderAutomation()}
+      {tab === 'prestige' && renderPrestige()}
     </RootDiv>
   )
 }
