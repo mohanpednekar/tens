@@ -562,7 +562,8 @@ const InfoPage = () => {
             An autobuyer buys <strong>one full level per attempt</strong>, only when that whole level
             (or the rest of a partly bought one) is affordable; Buy max never applies to it. Speed
             upgrades on that same row shorten its interval down to 10 ms; each level after that
-            doubles how many levels one attempt can buy, up to 512.
+            doubles how many levels one attempt can buy, up to 1024. Every autobuyer’s speed
+            upgrades start at 100 PP.
           </li>
         </ul>
       </Section>

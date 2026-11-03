@@ -593,7 +593,8 @@ export const PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1
 // Buy max mode (see isBuyMaxUnlocked/buyTierMaxLevels/repeatPurchaseMax in engine.js): a safety cap
 // on how many purchases one Buy-max click can chain. Every ladder it repeats has exponentially
 // rising costs, so a real click stops long before this — it only guards against an Infinity balance.
-export const BUY_MAX_ITERATION_CAP = 1000
+// A power of two so the autobuyer bulk doubling (below) lands exactly on it.
+export const BUY_MAX_ITERATION_CAP = 1024
 
 // A tier's production is multiplied by 1.25 at every completed level (see engine.js's
 // getPurchaseMilestoneMultiplier), compounding per completed level — the per-level multiplier
@@ -640,14 +641,16 @@ export const AUTOBUYER_UNLOCK_BASE_COST = 1
 // Autobuyer bulk: a tier autobuyer's speed upgrades continue past the interval floor
 // (AUTOBUYER_MIN_INTERVAL_SECONDS); each such extra level doubles how many whole levels one attempt may buy
 // (2, 4, 8, … — an upper limit, fewer when fewer are affordable; see engine.js's getAutobuyerBulkLevels).
-// Capped so the doubling never exceeds BUY_MAX_ITERATION_CAP (1000), the most levels one attempt can buy: 2^9 = 512.
+// Capped at BUY_MAX_ITERATION_CAP, the most levels one attempt can buy: 2^10 = 1024.
 export const AUTOBUYER_BULK_MAX_EXTRA_LEVELS = Math.floor(Math.log2(BUY_MAX_ITERATION_CAP))
 // Tier autobuyer interval upgrade (PP-funded, per tier, permanent): each level multiplies the
 // autobuyer's purchase-attempt interval by AUTOBUYER_INTERVAL_MULTIPLIER, from the tier's base (tier N =
 // N × AUTOBUYER_BASE_INTERVAL_SECONDS, i.e. 1 s … 10 s) down to
 // the AUTOBUYER_MIN_INTERVAL_SECONDS floor (see engine.js's getAutobuyerIntervalSeconds /
-// getAutobuyerIntervalMaxLevel). Cost: 1 PP, doubling per level on the SI-clean 1,2,4,…,64,125,250,500
-// ladder (×1000 every ten levels) — see engine.js's getAutobuyerIntervalUpgradeCost.
+// getAutobuyerIntervalMaxLevel). Cost: AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (100 PP, same for every
+// tier), doubling per level on the SI-clean 1,2,4,…,64,125,250,500 ladder (×1000 every ten levels) —
+// see engine.js's getAutobuyerIntervalUpgradeCost.
+export const AUTOBUYER_INTERVAL_UPGRADE_BASE_COST = 100
 export const AUTOBUYER_BASE_INTERVAL_SECONDS = 1
 export const AUTOBUYER_INTERVAL_MULTIPLIER = 0.9
 export const AUTOBUYER_MIN_INTERVAL_SECONDS = 0.01
@@ -664,8 +667,8 @@ export const AUTOMATION_INTERVAL_CONFIG = {
   overclock: { baseCost: 32, baseSeconds: 256 },
   reboot: { baseCost: 64, baseSeconds: 1024 },
 }
-// Per-tier tickspeed autobuyer: 2× the tier autobuyer chain's cost, 16 s base.
-export const TIER_TICKSPEED_INTERVAL_CONFIG = { baseCost: 2, baseSeconds: 16 }
+// Per-tier tickspeed autobuyer: same 100 PP start as the tier autobuyer chain, 16 s base.
+export const TIER_TICKSPEED_INTERVAL_CONFIG = { baseCost: 100, baseSeconds: 16 }
 // How many times the player must have rebooted before a tier's unit-buying autobuyer unlocks
 // automatically (see engine.js's getAutobuyerUnlockMilestone/applyAutobuyerMilestones) — replaces
 // the old PP-cost-funded unlock entirely: no purchase, no PP spent, just a milestone reached by

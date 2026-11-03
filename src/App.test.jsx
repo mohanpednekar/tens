@@ -118,7 +118,7 @@ const openSettings = async user => {
 }
 
 
-// PP unlocks/upgrades/toggles live on the Perks page (AppNav → Perks), as three icon tabs.
+// Perks (AppNav → Perks) has two icon tabs: Automation and Prestige.
 const openPerksTab = async (user, tab) => {
   await user.click(screen.getByRole('button', { name: /^open perks$/i }))
   await user.click(screen.getByRole('tab', { name: tab }))
@@ -146,7 +146,8 @@ test('shows the app version only on the Guide page', async () => {
 
   expect(screen.queryByText(`v${version}`)).not.toBeInTheDocument()
 
-  await user.click(screen.getByRole('button', { name: /guide/i }))
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  await user.click(screen.getByRole('button', { name: /open guide/i }))
   expect(screen.getByText(`v${version}`)).toBeInTheDocument()
 
   await openSettings(user)
@@ -198,9 +199,11 @@ test('AppNav exposes accessibly-labeled Foundry, Guide, and More once unlocked',
   // Storage is folded into Foundry → Disks — not a top-level AppNav item.
   expect(screen.queryByRole('button', { name: /open storage/i })).not.toBeInTheDocument()
 
-  const guideButton = screen.getByRole('button', { name: /open guide/i })
-  expect(guideButton).toHaveTextContent(/guide/i)
-  expect(guideButton).toHaveAttribute('title', 'How this game works')
+  // Guide lives in the More sheet, not on the bottom bar.
+  expect(within(screen.getByRole('navigation', { name: /main navigation/i })).queryByRole('button', { name: /open guide/i })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /open more menu/i }))
+  expect(screen.getByRole('button', { name: /open guide/i })).toHaveTextContent(/guide/i)
+  fireEvent.click(screen.getByRole('button', { name: /open more menu/i }))
 
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
 })
@@ -232,6 +235,7 @@ test('More menu reaches Milestones and Settings from any screen without progress
   expect(screen.getByLabelText(/ops dashboard section/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /dummy supporter checkout/i })).toBeInTheDocument()
 
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open guide/i }))
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
 })
@@ -261,11 +265,11 @@ test('AppNav Factory attention dot lights when a full purchase level is affordab
 
   const tiersButton = screen.getByRole('button', { name: /open byte factory/i })
   expect(within(tiersButton).getByLabelText(/important action available/i)).toBeInTheDocument()
-  // Perks (PP unlocks/upgrades/toggles) only appears after prestige.
+  // Perks (Automation / Prestige) only appears after prestige.
   expect(screen.queryByRole('button', { name: /^open perks$/i })).not.toBeInTheDocument()
 })
 
-test('the Byte Factory screen has no second-level tabs; Perks is its own AppNav page with three icon tabs', async () => {
+test('the Byte Factory screen has no second-level tabs; Perks is its own AppNav page with two icon tabs', async () => {
   seedMainGameState({ reboot: { xp: 0, points: 10, count: 1, highestMilestone: 1 } })
   render(<App />)
 
@@ -273,7 +277,7 @@ test('the Byte Factory screen has no second-level tabs; Perks is its own AppNav 
   await userEvent.setup().click(screen.getByRole('button', { name: /^open perks$/i }))
   expect(screen.getByRole('heading', { level: 1, name: /perks/i })).toBeInTheDocument()
   const tablist = screen.getByRole('tablist', { name: /perks view/i })
-  for (const name of [/open automation/i, /open automation/i, /open automation/i]) {
+  for (const name of [/open automation/i, /open prestige/i]) {
     const tab = within(tablist).getByRole('tab', { name })
     // Icon-only: visible text carries no words.
     expect(tab.textContent).not.toMatch(/[a-z]/i)
@@ -326,7 +330,6 @@ test('a fully-automated tier keeps its pause toggles on Perks → Automation', a
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  await user.click(screen.getByRole('tab', { name: /open automation/i }))
   expect(screen.getByRole('button', { name: /^Kilobytes's autobuyer$/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^Kilobytes's tickspeed autobuyer$/i })).toBeInTheDocument()
 })
@@ -341,6 +344,7 @@ test('the Guide nav item opens the Info page and Factory returns, preserving gam
   await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open guide/i }))
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
   // Guide sections covering the Byte Foundry pre-game (Data Stream/tapping/Speed, Storage,
@@ -1262,9 +1266,9 @@ test('Scale Up resets the global tickspeed multiplier level back to not-yet-boug
   })
   render(<App />)
 
-  // The cumulative level/bonus only shows in the expanded description, not the button itself —
-  // the description stays in the DOM (and toHaveTextContent-visible) even while collapsed.
-  expect(screen.getByLabelText(/^global speed up panel$/i)).toHaveTextContent(/lv\.2/i)
+  // The cumulative bonus only shows in the expanded description, not the button itself — the
+  // description stays in the DOM (and toHaveTextContent-visible) even while collapsed.
+  expect(screen.getByLabelText(/^global speed up panel$/i)).toHaveTextContent(/faster ticks on every tier/i)
 
   await user.click(screen.getByRole('button', { name: /scale up \(requires 3 completed kilobytes levels/i }))
 
@@ -1272,7 +1276,7 @@ test('Scale Up resets the global tickspeed multiplier level back to not-yet-boug
   // itself stays on screen (progressive-disclosure latch: once revealed it never disappears
   // again) but drops back to its not-yet-active "Enable" state, same as a save that never
   // bought it.
-  expect(screen.getByLabelText(/^global speed up panel$/i)).not.toHaveTextContent(/lv\.2/i)
+  expect(screen.getByLabelText(/^global speed up panel$/i)).not.toHaveTextContent(/faster ticks on every tier/i)
   expect(screen.getByRole('button', { name: /enable speed up for 10 b/i })).toBeDisabled()
 })
 
@@ -1699,17 +1703,18 @@ test('an Enable Speed Up button appears once level 1 of the first tier completes
   expect(upgradeButton).toBeInTheDocument()
   // The cumulative level/bonus shows only in the expanded description, never on the button
   // itself or the heading — both stay compact regardless of level.
-  expect(upgradeButton).not.toHaveTextContent(/lv\.1/i)
-  expect(screen.getByRole('heading', { level: 2, name: 'Speed Up' })).not.toHaveTextContent(/lv\.1|\+1%/i)
+  expect(upgradeButton).not.toHaveTextContent(/\+1%/i)
+  expect(screen.getByRole('heading', { level: 2, name: 'Speed Up' })).not.toHaveTextContent(/\+1%/i)
   const panel = screen.getByLabelText(/^global speed up panel$/i)
-  expect(panel).toHaveTextContent(/lv\.1/i)
+  // No level numbers anywhere — only the effect.
+  expect(panel).not.toHaveTextContent(/lv\./i)
   // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
   expect(panel).toHaveTextContent(/\+1%/i)
   // Speed Up spends Bits (10 B = 80 b) from the one shared balance.
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
 })
 
-test('the Speed Up panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line does not collapse it', async () => {
+test('the Speed Up panel\'s bonus line is collapsed until the heading is clicked, and clicking the revealed line does not collapse it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1719,7 +1724,7 @@ test('the Speed Up panel\'s Lv./bonus line is collapsed until the heading is cli
   render(<App />)
 
   const heading = screen.getByRole('heading', { level: 2, name: 'Speed Up' })
-  const statusLine = screen.getByText(/lv\.1 —/i)
+  const statusLine = screen.getByText(/faster ticks on every tier\./i)
   expect(statusLine).not.toBeVisible()
 
   await user.click(heading)
@@ -1753,9 +1758,8 @@ test('the Speed Up Upgrade button costs another power of ten each level, and sho
   const upgradeButton = screen.getByRole('button', { name: /upgrade speed up for 1,000 b/i })
   expect(upgradeButton).toBeDisabled()
   // The cumulative level/bonus shows only in the expanded description, not on the button itself.
-  expect(upgradeButton).not.toHaveTextContent(/lv\.2/i)
+  expect(upgradeButton).not.toHaveTextContent(/2\.01%/i)
   const panel = screen.getByLabelText(/^global speed up panel$/i)
-  expect(panel).toHaveTextContent(/lv\.2/i)
   // Level 2 is still below the first 10-level milestone — two regular 1% levels compounded
   // (1.01^2 ≈ ×1.0201) land on a fractional percentage, shown to 2 decimal places.
   expect(panel).toHaveTextContent(/\+2\.01%/i)
@@ -2038,7 +2042,7 @@ test('purge points and the production speed bonus are shown once the bonus is un
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('+50% production speed')
 })
 
-test('the production speed bonus reads as locked, and an unlock button is offered on Perks → Automation, before it has been bought', async () => {
+test('the production speed bonus reads as locked, and an unlock button is offered on Perks → Prestige, before it has been bought', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2075,7 +2079,6 @@ test('PP-spending buttons report how much of their cost the current balance cove
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  await user.click(screen.getByRole('tab', { name: /open automation/i }))
   // Auto Scale Up costs 16 PP — 10 PP covers most of it.
   const autoScaleUpProgress = screen.getByRole('progressbar', { name: /auto scale up pp progress/i })
   expect(autoScaleUpProgress).toHaveAttribute('aria-valuenow', '10')
@@ -2345,7 +2348,6 @@ test('no autobuyer pause button appears on Perks → Automation before its autob
   await openPerksTab(user, /open automation/i)
 
   expect(screen.getByLabelText("Megabytes's autobuyer unlocks at Purge 2")).toBeInTheDocument()
-  await user.click(screen.getByRole('tab', { name: /open automation/i }))
   expect(screen.queryByRole('button', { name: /^Megabytes's autobuyer$/i })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^Kilobytes's autobuyer$/i })).toBeInTheDocument()
 })
@@ -2465,7 +2467,7 @@ test('clicking the money balance expands a breakdown of every global production 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: \+50% production speed from 50 unspent pp/i)
   expect(breakdown).toHaveTextContent(/scale up: 2 activations; multiplier varies by tier/i)
-  expect(breakdown).toHaveTextContent(/speed up: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
+  expect(breakdown).toHaveTextContent(/speed up: \+[\d.]+% faster ticks on every tier(?! \(lv)/i)
 
   await user.click(moneyDisplay)
 
@@ -5242,6 +5244,7 @@ test('a Prestige firing while on the Guide page does not disrupt the page — ma
   })
   const { unmount } = render(<App />)
 
+  fireEvent.click(screen.getByRole('button', { name: /open more menu/i }))
   fireEvent.click(screen.getByRole('button', { name: /open guide/i }))
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
 
@@ -5310,8 +5313,7 @@ test('the mandatory Byte Foundry gate (before mainGameUnlocked) blocks Factory b
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /open byte factory/i })).not.toBeInTheDocument()
-  // Utilities must not require progress — Guide + More (Milestones / Settings) stay available.
-  expect(screen.getByRole('button', { name: /open guide/i })).toBeInTheDocument()
+  // Utilities must not require progress — More (Guide / Milestones / Settings) stays available.
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
 })
@@ -5343,7 +5345,6 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry leaves Factor
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /open byte factory/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /open guide/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
   expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
 
@@ -5838,7 +5839,7 @@ describe('Buy max mode', () => {
     })
     render(<App />)
 
-    // The toggle lives only on Perks → Automation, not on the Factory screen.
+    // The toggle lives only on Perks → Prestige, not on the Factory screen.
     expect(screen.queryByRole('button', { name: /buy max mode/i })).not.toBeInTheDocument()
     await openPerksTab(user, /open prestige/i)
     const toggle = screen.getByRole('button', { name: /buy max mode/i })

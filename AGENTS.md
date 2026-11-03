@@ -10,10 +10,10 @@ Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rew
 ## Project
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
-shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute → Factory → Perks → Guide → More**. Storage
+shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute → Factory → Perks → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
 item, and no second-level Memory | Storage tabs). **Perks** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
-unlock/milestone → pause Switch → speed upgrade / Double PP, speed bonus, DeGoogol, Buy max). Guide and More (Milestones, Settings) are always available — even
+unlock/milestone → pause Switch → speed upgrade / Double PP, speed bonus, DeGoogol, Buy max). More (Guide, Milestones, Settings) is always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
 production bundle; `yarn build:dev` builds a Dev-Mode-enabled variant published at `/tens/dev/` (own `dev:`-prefixed saves, no backward-compat); see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
@@ -77,7 +77,7 @@ src/
     storage.js             ← localStorage persistence; calls save-migration on every load, then mergeState.
                               Also Dev Mode's own isolated `'dev'` slot (separate from numbered player slots)
   components/
-    AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Compute → Factory → Perks → Guide → More) + More sheet
+    AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Compute → Factory → Perks → More) + More sheet (Guide / Milestones / Settings)
     Button/, BuyMaxToggle/, Switch/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/, BoostBadge/, SpeedDetailsPopover/, LeadIcon/
                             ← shared styled components; see docs/COMPONENTS_REFERENCE.md
     DataLakePanel/          ← one Data Lake's own self-contained block (title + disk-square rows
@@ -92,7 +92,7 @@ src/
     ComputeFlopsPage/index.jsx ← PP Compute (Flops); nav Compute, page id `'compute'`; reveals at 100 PP
     MainPage/index.jsx     ← the game (Byte Factory); data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← Guide; static mechanic explanations; reads no game state
-    PerksPage/index.jsx    ← Unlocks / Upgrades / Toggles icon tabs; AppNav after first Prestige
+    PerksPage/index.jsx    ← Automation / Prestige icon tabs (feature-grouped); AppNav after first Prestige
     MilestonesPage/index.jsx ← Chapters / Era status; via AppNav → More
     SettingsPage/index.jsx ← Supporter / Cloud save / Store / saves / museum / Era ascension / Ops /
                               Legal / Reset; via AppNav → More
@@ -124,12 +124,12 @@ persistence), called once in `App.jsx` and shared by every page via a `game` pro
 `InfoPage/index.jsx` is a static page (evergreen mechanic explanations only, reads no game state);
 `StoragePage`/`ComputePage`/`ComputeFlopsPage`/`MilestonesPage`/`SettingsPage`/`DevModePage` are pure
 renderers. `App.jsx` switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry →
-Boosters → Compute → Factory → Guide → More), with `ByteFoundryPage` additionally forced onto screen —
+Boosters → Compute → Factory → Perks → More), with `ByteFoundryPage` additionally forced onto screen —
 overriding whatever `page` says, except on gate-exempt utility pages
 (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`) — whenever
 `intro.mainGameUnlocked` is still false (see "Byte Foundry"). Storage is continuous Foundry sections
-(Data Stream + Disks), not gate-exempt on its own. Factory stays hidden during the gate; Guide and More
-stay reachable so utilities never require unlocking the main game. Once unlocked, Foundry is just
+(Data Stream + Disks), not gate-exempt on its own. Factory stays hidden during the gate; More (Guide /
+Milestones / Settings) stays reachable so utilities never require unlocking the main game. Once unlocked, Foundry is just
 another AppNav destination. `intro.mainGameUnlocked` is PERMANENT (`latchMainGameUnlocked` in
 `engine.js`) — never reset by a real Prestige or Era ascension — so the gate is effectively
 one-time-ever, on a save's very first cycle only.

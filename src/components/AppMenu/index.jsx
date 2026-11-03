@@ -1,8 +1,8 @@
 import styled from 'styled-components'
 
-// Overflow sheet for always-available utilities (Milestones, Settings) — reachable from every
-// screen, including the mandatory Byte Foundry gate, without requiring any progress. Guide stays
-// on AppNav itself; this sheet holds everything else that shouldn't consume a nav slot. Reset
+// Overflow sheet for always-available utilities (Guide, Milestones, Settings) — reachable from every
+// screen, including the mandatory Byte Foundry gate, without requiring any progress; none of them
+// earns a bottom-bar slot. Reset
 // lives only under Settings → Danger zone (not duplicated here). Opened from AppNav's More item;
 // closes on backdrop click, Escape, or any action. A third Dev Mode entry (pages/DevModePage)
 // renders only when `import.meta.env.DEV` is true — absent from a production build.
@@ -98,6 +98,10 @@ const AppMenu = ({ open, onClose, onNavigate }) => {
         role="dialog"
       >
         <SheetTitle>More</SheetTitle>
+        <MenuButton aria-label="open guide" onClick={() => go('info')} type="button">
+          <Icon aria-hidden="true">ℹ️</Icon>
+          Guide
+        </MenuButton>
         <MenuButton aria-label="open milestones" onClick={() => go('milestones')} type="button">
           <Icon aria-hidden="true">🏁</Icon>
           Milestones

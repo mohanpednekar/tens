@@ -201,8 +201,8 @@ Used on ByteFoundryPage's `DataStreamCard` (glow + badge after the Speed figure,
 
 Styled `<button type="button">` on/off switch (pill track + sliding knob; `$on` drives the visual,
 `theme.color.good` when on / `textMuted` when off; reduced-motion aware). Callers pass
-`aria-pressed` and an `aria-label` for the accessible name. Used by `BuyMaxToggle` and every Perks →
-Toggles automation row.
+`aria-pressed` and an `aria-label` for the accessible name. Used by `BuyMaxToggle` and every owned Perks →
+Automation row.
 
 ## `BuyMaxToggle/index.jsx`
 

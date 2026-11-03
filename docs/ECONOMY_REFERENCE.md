@@ -1719,7 +1719,7 @@ milestones" below), spending no PP at all.
   through Prestige/Scale Up/Overclock/Era. UI: the tier's row on Perks → Automation → Tier Autobuyers.
 - **Active — Automation interval chains:** `AUTOMATION_INTERVAL_CONFIG` (`speedUp` 8 PP/1 s, `scaleUp`
   16 PP/64 s, `restage` 16 PP/64 s, `overclock` 32 PP/256 s, `reboot` 64 PP/1024 s) and `TIER_TICKSPEED_INTERVAL_CONFIG`
-  (2 PP/16 s per tier). Cost = baseCost × the tier-autobuyer ladder (`getAutobuyerIntervalUpgradeCost`);
+  (100 PP/16 s per tier). Cost = baseCost × the shared doubling ladder (`getSiCleanDoublingFactor`: 1, 2, 4, …, 64, 125, …);
   interval = baseSeconds × 0.9^level, floor 10 ms. `buyAutomationIntervalUpgrade(key)` /
   `buyTierTickspeedIntervalUpgrade(tierId)` (state: `automationIntervalLevels`,
   `tierTickspeedIntervalLevels`, permanent). Each automation accrues a run-scoped budget
@@ -1733,15 +1733,16 @@ milestones" below), spending no PP at all.
   a partial purchase (the `autobuyerBatchSize` argument and Buy max mode are ignored by autobuyers).
   The tier's PP **speed upgrades** (`buyAutobuyerIntervalUpgrade`, ×0.9 interval per level) continue past the
   10 ms floor (`getAutobuyerIntervalMaxLevel`): each extra level doubles how many FULL levels one attempt may buy
-  (`getAutobuyerBulkLevels` = 2^extra: 1, 2, 4, … up to `2^AUTOBUYER_BULK_MAX_EXTRA_LEVELS` = 512, kept
-  below `BUY_MAX_ITERATION_CAP`; `getAutobuyerSpeedUpgradeMaxLevel` = floor level + 9). It is only an
+  (`getAutobuyerBulkLevels` = 2^extra: 1, 2, 4, … up to `2^AUTOBUYER_BULK_MAX_EXTRA_LEVELS` = 1024 =
+  `BUY_MAX_ITERATION_CAP`; `getAutobuyerSpeedUpgradeMaxLevel` = floor level + 10). It is only an
   upper limit: `buyTierUpToLevels` buys as many whole clean levels as are affordable up to it (zero level
   progress required), otherwise falls back to a single level. Permanent across Prestige/Scale Up/Overclock/Era.
 - **Unlock costs = first upgrade cost.** Each global automation's one-time unlock costs
   `getAutomationUnlockCost(key)` = `AUTOMATION_INTERVAL_CONFIG[key].baseCost` — the same amount its
   interval chain's first level costs: Speed Up 8, Scale Up 16, Overclock 32, Auto Reboot 64 PP. Anything
   unlocked by a milestone (tier autobuyers, tier tickspeed autobuyers) has no unlock cost at all — only
-  upgrades (1 PP / 2 PP first levels). The old `AUTO_SCALE_UP_COST`, `TICKSPEED_AUTOBUYER_COST`,
+  upgrades, every chain starting at 100 PP (`AUTOBUYER_INTERVAL_UPGRADE_BASE_COST` for tier autobuyers,
+  `TIER_TICKSPEED_INTERVAL_CONFIG.baseCost` for tier tickspeed autobuyers — same for every tier). The old `AUTO_SCALE_UP_COST`, `TICKSPEED_AUTOBUYER_COST`,
   `AUTO_PRESTIGE_COST`/`_MULTIPLIER` constants and `getAutoPrestigeCost` were removed.
 - **Active — Auto Scale Up:** `buyAutoScaleUp(state)` permanently spends the `scaleUp` unlock cost (16 PP)
   to set `autoScaleUp = true`. Once bought, `tickGame` calls `scaleUpGame` on its interval timer
@@ -1800,8 +1801,8 @@ per-tier milestone, no PP spent, no button to click:
   removed entirely — nothing else needed that formula once the tier tickspeed autobuyer itself
   stopped costing PP.
 - Surfaced once, on Perks → 🤖 Automation's "Tier Autobuyers"/"Tier Tickspeed Autobuyers" categories (`pages/PerksPage`): each tier's
-  row shows a `MilestoneBadge` per track — `✓` once reached, or a dimmed `🔒 {milestone}` badge plus a
-  `role="progressbar"` (`aria-valuenow = min(reboot.count, milestone)`) while pending. `MilestonesPage` no longer repeats this.
+  each track is its own row: a dimmed `🔒 {milestone}` `MilestoneBadge` plus a
+  `role="progressbar"` (`aria-valuenow = min(reboot.count, milestone)`) while pending, then the pause Switch + speed upgrade once reached. `MilestonesPage` no longer repeats this.
 
 #### Pause/resume for the global automations
 
@@ -1826,7 +1827,7 @@ never been bought, for automation purposes only — the level/PP already spent a
 Auto Reboot) the manual Prestige button keeps working regardless. Pausing Auto Reboot stops both its
 per-tick `autoRebootAttemptBudget` accumulation and its automatic `rebootGame` firing, not just the
 firing. Each owned row on Perks → 🤖 Automation renders a pause/resume `components/Switch` (`aria-pressed`)
-beside an icon-only status badge for each of the four global automations once bought.
+beside an icon status (`"<name> active|paused"`) for each of the five global automations once bought.
 
 #### Pause/resume for per-tier automations
 

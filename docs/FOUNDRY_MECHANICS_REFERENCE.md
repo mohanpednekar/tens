@@ -13,7 +13,7 @@ commit as any change to the mechanics it describes.
    `{ game, focusNonce }`; how a save's first Prestige cycle earns its first Kilobytes (rationale:
    `docs/DESIGN_HISTORY.md`'s "Why Bytes was pulled out of the tier ladder in favor of the Byte Foundry
    intro"). A mandatory gate whenever `intro.mainGameUnlocked` is false (AppNav omits Factory during it;
-   Guide and More stay), permanently latched true the instant Storage's capacity threshold is crossed
+   More stays), permanently latched true the instant Storage's capacity threshold is crossed
    (`latchMainGameUnlocked`/`isStorageUnlocked` in `engine.js`) — the SAME "1 KiB" threshold that
    reveals pool 1's card and switches the tap into consumer-bonus mode. One-time-ever; never
    resets (see `App.jsx`'s repo-layout entry). Once latched, the standalone Tap button is gone and the

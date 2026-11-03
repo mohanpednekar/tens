@@ -11,7 +11,7 @@ deliberately purely game — live controls, numbers, and status text only. Every
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via AppNav's Guide
 item; see CLAUDE.md's Architecture section for the split. Top-level page switching lives in
-`App.jsx`'s shared `components/AppNav` (Foundry → Boosters → Compute → Factory → Guide → More) — pages
+`App.jsx`'s shared `components/AppNav` (Foundry → Boosters → Compute → Factory → Perks → More; Guide / Milestones / Settings in More) — pages
 themselves take `{ game }` only and carry no Back / open-* navigation props. Storage is not a
 top-level AppNav item (continuous Foundry sections). `MainPage` is only
 ever rendered while the Byte Foundry gate isn't active — i.e. `state.intro.mainGameUnlocked` is
@@ -24,7 +24,7 @@ simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, acti
 view-tab system of its own. Unlike the old design, nothing here ever goes read-only — the page
 renders identically whether reached as the mandatory gate or voluntarily; AppNav
 omits Factory during the gate so there is still no escape hatch via the production screen
-(Guide and More stay reachable).
+(More — Guide / Milestones / Settings — stays reachable).
 
 Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
 `docs/COMPONENTS_REFERENCE.md`), rendered right after the page title whenever the hook reports a
@@ -687,7 +687,7 @@ live inside the selected tier):
   (`styled.details`/`<summary>`, collapsed by default, the heading itself the only way to *open*
   it — no separate visible "expand" affordance) — but only when there's a genuinely *live game
   status* number to reveal (not a description of how the mechanic works): `GlobalTickspeedCard`'s
-  `Lv.N — +N% faster ticks on every tier.`, `OverclockCard`'s current per-level rate, and the
+  `+N% faster ticks on every tier.`, `OverclockCard`'s current per-level rate, and the
   Perks → Automation's Tier Tickspeed Autobuyers start-Prestige/step pattern (see "Scale Up and
   Overclock cards"/"Perks page" above) — each collapsed until the player clicks that heading.
   Only the heading (native `<summary>` toggle) opens or closes it — clicking the revealed status line does nothing. Each card's own
@@ -695,7 +695,7 @@ live inside the selected tier):
   never touches the disclosure. None of these is prose about *how* the mechanic works, only
   *what its current numbers are*.
 - **Page title.** The MainPage header is `<h1>Byte Factory</h1>` (screen name; AppNav short label **Factory** — not the game name
-  “Tens”). Top-level destinations (Foundry → Boosters → Compute → Factory → Guide → More) live in
+  “Tens”). Top-level destinations (Foundry → Boosters → Compute → Factory → Perks → More) live in
   `App.jsx`'s shared `AppNav`, not as header buttons here.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against
@@ -743,7 +743,8 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   hidden progressbar) or 🔓 PP unlock button (`"Enable <name> for N Purge Points"`). Owned: lead cell =
   `components/Switch` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up automation"`,
   `"<tier>'s autobuyer"`), the label icon becomes the `"<name> active|paused"` status, subtext
-  `every <interval>` (tier autobuyers past the 10 ms floor add `· N/buy`; `(max)` once maxed), action
+  `every <interval>` (tier autobuyers past the 10 ms floor add `· N/buy`, up to 1024; `(max)` once maxed;
+  every tier autobuyer / tier tickspeed autobuyer speed chain starts at 100 PP), action
   = ⏫ speed upgrade (`M/buy · <cost> PP` past the floor) or nothing once maxed. Categories:
   *Global Automation* (rows `"<name> row"`, Auto Speed Up → Auto Restage → Auto Scale Up → Auto
   Overclock → Auto Purge; Restage and Scale Up both need Speed Up, Overclock needs both, Purge needs
@@ -756,7 +757,9 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   *Purge Points* (Double PP leveled upgrade; Production speed bonus one-time unlock, `"Production
   speed bonus unlocked"` once bought; DeGoogol, locked until Auto Purge's interval ≤
   `UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS`) and *Purchasing* (Buy max, `components/BuyMaxToggle`).
-Every Perks row label is `<RowIcon>` (fixed-width icon cell) + name; every automation is named
+Perks never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
+row labels are `<RowIcon>` (fixed-width icon cell) + name; tier / tier-tickspeed / Flops rows are the bare
+tier name (their category heading names the kind) with a hidden `role="img"` status. Every automation is named
 `Auto <feature>` (no hyphen). Factory's Speed Up / Scale Up / Overclock cards share
 `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem heading); Auto Scale Up's status
 is an `AutoChip` in the Scale Up card header.
@@ -786,7 +789,7 @@ own two-word heading; no behavior change, and the shortened heading stuck even a
 split back apart — the `GlobalTickspeedCard` component/prop names are unaffected either way, this is
 purely the rendered heading text), but it lives inside a `Disclosure`'s `<summary>` (see "No
 description prose on this page" above) — collapsed by default, clicking it is the only way to reveal
-the current level and cumulative speed bonus line (`Lv.N — +N% faster ticks on every tier.`), which
+the cumulative speed bonus line (`+N% faster ticks on every tier.` — no level number), which
 renders **only** once `isGlobalTickspeedActive` in the first place — so the card's shape stays the
 same both before the multiplier is ever bought (the line doesn't exist at all) and after (the line
 exists but starts collapsed). The `+N%` figure is rendered via `formatGlobalTickspeedBonusPercent` (`MainPage/index.jsx`),
@@ -846,8 +849,8 @@ same first line, right-aligned to the row center — no tickspeed-bonus badge (s
 above) and no autobuyer status icon. An earlier version showed an always-visible, read-only
 `PpUpgradeBadge` here (a single 🤖 glyph, full opacity while active / dimmed `$dimmed` while paused,
 via the same icon-instead-of-text convention every other automation status badge in the app still
-uses — the tier tickspeed/global tickspeed/Auto Scale Up badges on Perks →
-Toggles, and the Auto Reboot/Auto Scale Up status lines — see their own sections below) once
+uses — the tier tickspeed/global tickspeed/Auto Scale Up statuses on Perks →
+Automation, and the Auto Reboot/Auto Scale Up status lines — see their own sections below) once
 a tier's unit-buying autobuyer was unlocked (`autobuyers`/`applyAutobuyerMilestones` — a free,
 prestige-count-milestone-triggered unlock, not a PP purchase). Both removed to keep the Factory view
 row down to just the tier name plus live production/owned figures and the two action buttons —
@@ -922,7 +925,7 @@ the *next* rate — see above); this is the one Overclock-specific number not ot
 anywhere on the Factory view. Beyond that one figure, Overclock has no visible effect of its own to
 display separately from the Tickspeed card above it — raising the global tickspeed multiplier's own
 per-level step, rather than stacking a second multiplier alongside it, means the Tickspeed card's own
-`Lv.N — +N% faster ticks on every tier.` status line (see "Global Tickspeed card" above) already
+`+N% faster ticks on every tier.` status line (see "Global Tickspeed card" above) already
 reflects Overclock's cumulative contribution once any levels are bought, with no separate "Overclock
 bonus" figure needed anywhere else in the UI besides the money-balance breakdown's own summary line
 (see `GlobalMultipliersList` above).
@@ -1105,7 +1108,7 @@ the Googol freeze" below.
 
 `App.jsx` switches screens via a local `page` `useState` (`'game'`/`'info'`/`'foundry'`/`'boosters'`/
 `'compute'`/`'perks'`/`'milestones'`/`'settings'`/`'dev'`, default `'game'`) — not a routing library —
-plus a shared fixed bottom `AppNav` (Foundry → Boosters → Compute → Factory → Perks → Guide → More) and
+plus a shared fixed bottom `AppNav` (Foundry → Boosters → Compute → Factory → Perks → More; Guide is in More) and
 `AppMenu` (More sheet → Milestones / Settings / Dev Mode in dev builds). Legacy `page === 'storage'`
 rewrites to `'foundry'`. Which screen renders is derived, not `page` directly:
 `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked || page === 'foundry')`.

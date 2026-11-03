@@ -88,7 +88,7 @@ const TabButton = styled(Button)`
   position: relative;
 `
 
-// Affordability cue on the Unlocks/Upgrades tabs — same green as AppNav attention dots.
+// Affordability cue on the Automation/Prestige tabs — same green as AppNav attention dots.
 const NavDot = styled.span`
   background: ${props => props.theme.color.good};
   border-radius: 50%;
@@ -293,10 +293,10 @@ const AutomationRow = ({ ariaLabel, icon, name, label = name, owned, enabled = t
         {/* Icon-less rows (tier/Flops lists, whose category heading names the kind) keep the
             status for assistive tech only — the Switch already shows it visually. */}
         {owned && onToggle && !icon && (
-          <VisuallyHidden aria-label={`${name} ${enabled ? 'active' : 'paused'}`}>{enabled ? 'active' : 'paused'}</VisuallyHidden>
+          <VisuallyHidden role="img" aria-label={`${name} ${enabled ? 'active' : 'paused'}`}>{enabled ? 'active ' : 'paused '}</VisuallyHidden>
         )}
         {icon && (owned && onToggle ? (
-          <StatusIcon $dimmed={!enabled} aria-label={`${name} ${enabled ? 'active' : 'paused'}`} title={statusTitle}>{icon}</StatusIcon>
+          <StatusIcon $dimmed={!enabled} role="img" aria-label={`${name} ${enabled ? 'active' : 'paused'}`} title={statusTitle}>{icon}</StatusIcon>
         ) : (
           <RowIcon>{icon}</RowIcon>
         ))}
@@ -408,7 +408,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               ariaLabel={`${auto.name.toLowerCase()} row`}
               enabled={enabled}
               icon={auto.icon}
-                            lockedAction={unlockButton({
+              lockedAction={unlockButton({
                 name: auto.name,
                 cost: unlockCost,
                 canBuy: !isFrozen && (auto.allowFirstRun || !isFirstRun) && auto.canBuy(state) && points >= unlockCost,
@@ -427,7 +427,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 title: "Spend Purge Points to shorten this automation's interval by 10% (floor 10 ms); cost doubles each level",
               }) : null}
               statusTitle={auto.statusTitle?.(enabled)}
-              subText={chainUnlocked ? `${level > 0 ? `Lv.${level} · ` : ''}every ${formatInterval(getAutomationIntervalSeconds(state, auto.key) * 1000)}${maxed ? ' (max)' : ''}` : null}
+              subText={chainUnlocked ? `every ${formatInterval(getAutomationIntervalSeconds(state, auto.key) * 1000)}${maxed ? ' (max)' : ''}` : null}
               toggleLabel={`${auto.name} automation`}
             />
           )
@@ -477,7 +477,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   ? 'At the 10 ms floor, each further level doubles how many full levels one autobuyer attempt can buy (as many as are affordable, at least one); cost keeps rising'
                   : "Spend Purge Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); past the floor, levels double how many levels it buys per attempt",
               })}
-              subText={owned ? `${level > 0 ? `Lv.${level} · ` : ''}every ${formatInterval(getAutobuyerIntervalSeconds(state, tier.id) * 1000)}${bulkLevels > 1 ? ` · ${bulkLevels}/buy` : ''}${maxed ? ' (max)' : ''}` : null}
+              subText={owned ? `every ${formatInterval(getAutobuyerIntervalSeconds(state, tier.id) * 1000)}${bulkLevels > 1 ? ` · ${bulkLevels}/buy` : ''}${maxed ? ' (max)' : ''}` : null}
               toggleLabel={`${tier.name}'s autobuyer`}
             />
           )
@@ -518,7 +518,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 progressLabel: `${tier.name} tickspeed autobuyer speed PP progress`,
                 title: "Spend Purge Points to shorten this tier's tickspeed autobuyer interval by 10% (floor 10 ms); cost doubles each level",
               })}
-              subText={owned ? `${level > 0 ? `Lv.${level} · ` : ''}every ${formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)}${maxed ? ' (max)' : ''}` : null}
+              subText={owned ? `every ${formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)}${maxed ? ' (max)' : ''}` : null}
               toggleLabel={`${tier.name}'s tickspeed autobuyer`}
             />
           )
@@ -563,7 +563,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                     current={eraCount}
                     milestone={getFlopsAutobuyerUnlockEra(flopTier.id)}
                     progressLabel={`${flopTier.name} autobuyer unlock milestone progress`}
-                      subject={`${flopTier.name}'s autobuyer`}
+                    subject={`${flopTier.name}'s autobuyer`}
                     unit="Era"
                   />
                 )}
@@ -587,7 +587,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           <RowLabelStack>
             <RowLabel>
               <RowIcon>✦</RowIcon>Double PP
-              {doublePpLevel > 0 && ` (Lv.${doublePpLevel})`}
             </RowLabel>
             <SubText>{doublePpUpgradeSummary}</SubText>
           </RowLabelStack>

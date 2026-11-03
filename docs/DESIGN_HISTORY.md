@@ -17,6 +17,16 @@ nearby rows' locked badges and the Guide). Tab dots follow the regrouping (`hasA
 `hasAffordablePpLevelUpgrade` → `hasAffordableAutomationPerk`/`hasAffordablePrestigePerk`; the Auto
 Purge speed level moved to the Automation dot, the speed bonus to the Prestige dot).
 
+Same PR, follow-up maintainer direction: level numbers were dropped everywhere they were shown ("useless" —
+the interval, `N/buy`, bonus % and cost already say what a level does); Guide moved from the bottom bar into
+More (Milestones stayed there — it's a rarely-visited status screen, and seven bar items were tight at
+320px); the tier autobuyer and tier tickspeed autobuyer speed chains both start at a flat 100 PP for every
+tier (a per-tier 100/200/300… start was considered and dropped in favour of one flat start) — previously 1 PP
+and 2 PP, which made the first levels trivially cheap. The bulk cap became exactly 1024 (`BUY_MAX_ITERATION_CAP`
+1000 → 1024, so `AUTOBUYER_BULK_MAX_EXTRA_LEVELS` = 10). The global-automation chains keep their own
+8/16/32/64 PP bases (`getSiCleanDoublingFactor` is now the shared ladder; `getAutobuyerIntervalUpgradeCost`
+applies the 100 PP base on top).
+
 ### Fill multiplier 10× → 0.1× (log-linear) and a multiplicative tap bonus — 2026-10-30
 
 The original fill-based Speed/Bandwidth multiplier was linear in fill fraction: 150% empty, 100% at

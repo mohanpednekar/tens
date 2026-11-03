@@ -11955,7 +11955,7 @@ const withPpForInterval = (points, autobuyer = 1) => {
 
 describe('autobuyer interval upgrade', () => {
   it('costs 1 PP doubling on the 125-based ladder', () => {
-    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(getAutobuyerIntervalUpgradeCost)).toEqual([1, 2, 4, 64, 125, 250, 500, 1000, 2000])
+    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(getAutobuyerIntervalUpgradeCost)).toEqual([100, 200, 400, 6400, 12500, 25000, 50000, 100000, 200000])
   })
 
   it('multiplies the interval by 0.9 per level and caps at 10ms', () => {
@@ -11980,7 +11980,7 @@ describe('autobuyer interval upgrade', () => {
   })
 
   it('getAutobuyerBulkLevels is 1 at/below the floor, then doubles per level up to 2**AUTOBUYER_BULK_MAX_EXTRA_LEVELS', () => {
-    expect(AUTOBUYER_BULK_MAX_EXTRA_LEVELS).toBe(9)
+    expect(AUTOBUYER_BULK_MAX_EXTRA_LEVELS).toBe(10)
     const base = createInitialGameState()
     const maxLevel = getAutobuyerIntervalMaxLevel('tier01')
     const at = level => ({ ...base, autobuyerIntervalLevels: { ...base.autobuyerIntervalLevels, tier01: level } })
@@ -11990,6 +11990,7 @@ describe('autobuyer interval upgrade', () => {
     expect([1, 2, 3, 4].map(n => getAutobuyerBulkLevels(at(maxLevel + n), 'tier01'))).toEqual([2, 4, 8, 16])
     expect(getAutobuyerBulkExtraLevels(at(maxLevel + 3), 'tier01')).toBe(3)
     expect(getAutobuyerBulkLevels(at(getAutobuyerSpeedUpgradeMaxLevel('tier01') + 5), 'tier01')).toBe(2 ** AUTOBUYER_BULK_MAX_EXTRA_LEVELS)
+    expect(2 ** AUTOBUYER_BULK_MAX_EXTRA_LEVELS).toBe(1024)
   })
 
   it('base interval is N seconds for tier N and caps at 10ms', () => {
@@ -12024,7 +12025,7 @@ describe('automation interval chains', () => {
     const s = base()
     expect(['speedUp', 'scaleUp', 'overclock', 'reboot'].map(k => getAutomationIntervalUpgradeCost(k, 0))).toEqual([8, 16, 32, 64])
     expect(['speedUp', 'scaleUp', 'overclock', 'reboot'].map(k => getAutomationIntervalSeconds(s, k))).toEqual([1, 64, 256, 1024])
-    expect(getTierTickspeedIntervalUpgradeCost(0)).toBe(2)
+    expect(getTierTickspeedIntervalUpgradeCost(0)).toBe(100)
     expect(getTierTickspeedIntervalSeconds(s, 'tier01')).toBe(16)
   })
 
@@ -12048,12 +12049,13 @@ describe('automation interval chains', () => {
     expect(buyAutomationIntervalUpgrade('speedUp')(poor)).toBe(poor)
   })
 
-  it('tier tickspeed chain needs the tier tickspeed autobuyer and costs 2 PP first', () => {
-    const noAuto = withPoints(base(), 10)
+  it('tier tickspeed chain needs the tier tickspeed autobuyer and costs 100 PP first', () => {
+    const noAuto = withPoints(base(), 150)
     expect(buyTierTickspeedIntervalUpgrade('tier01')(noAuto)).toBe(noAuto)
-    const s = withPoints({ ...base(), tierTickspeedAutobuyer: { ...base().tierTickspeedAutobuyer, tier01: true } }, 10)
+    const s = withPoints({ ...base(), tierTickspeedAutobuyer: { ...base().tierTickspeedAutobuyer, tier01: true } }, 150)
+    expect(buyTierTickspeedIntervalUpgrade('tier01')(withPoints(s, 99))).toEqual(withPoints(s, 99))
     const after = buyTierTickspeedIntervalUpgrade('tier01')(s)
-    expect(after.reboot.points).toBe(8)
+    expect(after.reboot.points).toBe(50)
     expect(after.tierTickspeedIntervalLevels.tier01).toBe(1)
   })
 

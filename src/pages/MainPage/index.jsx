@@ -1235,7 +1235,7 @@ const MainPage = ({ game }) => {
               {globalTickspeedCardEverRevealed && (
                 <li>
                   Speed Up: {isGlobalTickspeedActive
-                    ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier (Lv.${globalTickspeedLevel})`
+                    ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier`
                     : 'not yet active'}
                 </li>
               )}
@@ -1281,7 +1281,7 @@ const MainPage = ({ game }) => {
             <summary><h2>Speed Up</h2></summary>
             {isGlobalTickspeedActive && (
               <MutedText>
-                Lv.{globalTickspeedLevel} — {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
+                {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
               </MutedText>
             )}
           </Disclosure>
