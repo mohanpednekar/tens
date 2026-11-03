@@ -3,7 +3,7 @@
 // `id` is a naming-agnostic key (tier01…tier10), decoupled from `name`/`symbol`
 // so a future re-theme never has to touch state keys, tests, or save data.
 // 'tier01' is bought with Bits but produces Bytes (see BYTES_ID below) — the Factory's
-// byte-scale output currency for Latency. `tickGame` also mirrors each Byte into Bits at
+// byte-scale output currency for Speed Up. `tickGame` also mirrors each Byte into Bits at
 // `BITS_PER_BYTE` so MoneyHero / Prestige / Buys (still Bits-denominated) keep moving. Bytes
 // themselves are still not a purchasable tier here; the Byte Foundry pre-game screen (see the
 // "Byte Foundry" constants section and `intro` state below) hands the player their first
@@ -81,19 +81,19 @@ export const GOOGOL = 1e100
 export const BITS_PER_BYTE = 8
 // Money (Bits) balance required to Prestige — "1 Googol Bytes," expressed in Bits since
 // resources[MONEY_ID] is Bits-denominated, not Bytes (Bytes aren't even a purchasable tier any
-// more — see TIER_DEFINITIONS above). This is the threshold isProductionFrozen/prestigeGame
+// more — see TIER_DEFINITIONS above). This is the threshold isProductionFrozen/rebootGame
 // actually gate on. GOOGOL itself stays unchanged/exported — the exponent-based formulas
-// (getPrestigePointsAwarded/getMoneyExponent/getPrestigeProgressPercent in engine.js) deliberately
+// (getPrestigePointsAwarded/getMoneyExponent/getRebootProgressPercent in engine.js) deliberately
 // keep keying off GOOGOL's own clean 10^100 rather than this messier ~10^100.9 value, since an 8x
 // constant factor is negligible at that scale — see docs/DESIGN_HISTORY.md.
-export const PRESTIGE_THRESHOLD = GOOGOL * BITS_PER_BYTE
+export const REBOOT_THRESHOLD = GOOGOL * BITS_PER_BYTE
 // DeGoogol: once Auto-Prestige's interval is upgraded to this many seconds or less, Money may
-// exceed PRESTIGE_THRESHOLD without freezing production — the player keeps earning and may Prestige
-// voluntarily to claim accumulated PP. Permanent once reached (prestige.unboundedUnlocked latch).
-export const UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS = 1
+// exceed REBOOT_THRESHOLD without freezing production — the player keeps earning and may Prestige
+// voluntarily to claim accumulated PP. Permanent once reached (reboot.unboundedUnlocked latch).
+export const UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS = 1
 // Legacy rule (lifetime prestige count), kept only so storage.js can grandfather saves that reached
 // it before DeGoogol moved to the Auto-Prestige interval above.
-export const PRESTIGE_UNBOUNDED_MIN_COUNT = 100
+export const REBOOT_UNBOUNDED_MIN_COUNT = 100
 // Base PP earning rate beyond Googol: 1 PP per this many additional money-exponent "powers"
 // (orders of magnitude above GOOGOL's own 10^100 exponent). Each Double PP upgrade halves this
 // until 1 power per PP, then doubles PP per power instead (see getPrestigePowersPerPp/
@@ -251,7 +251,7 @@ export const FILL_MULTIPLIER_TAP_CAP_PERCENT = 2000
 // convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a disk's contents came from Data
 // Stream via the read-cache flush, not a further transfer out of it at pull time.
 // Disks (and their arrays' cache) are themselves PERMANENT, like the Byte generator itself (see
-// prestigeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
+// rebootGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
 // even though Data Stream itself resets, letting banked-up Storage give a fresh cycle a head start.
 // The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
 // until Buffer / pool Memory Capacity reaches this many bits — deliberately set to EQUAL pool 1's
@@ -360,7 +360,7 @@ export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTR
 // engine.js) uses as its own threshold — NOT the Core -> Node merge boundary itself, which reuses
 // the same ratio via COMPUTE_MERGE_RATIO below instead (see issue #321). Both intro.computeCores
 // and intro.computeNodes are permanent counters, carried over every real
-// Prestige exactly like the Byte generator/Disks themselves — see prestigeGame.
+// Prestige exactly like the Byte generator/Disks themselves — see rebootGame.
 export const COMPUTE_CORES_PER_NODE = 8
 // Maximum permanent balance of ANY compute-ladder entity a player can hold at once — Core, Node,
 // Cluster, Network, Grid, Fabric, Cloud, Datacenter, Supercomputer, Megacomputer alike. Once an
@@ -588,7 +588,7 @@ export const DEFAULT_PURCHASE_BLOCK_SIZE = 8
 // Every this many levels the LAST tier completes, the (global, shared-by-every-tier) purchase
 // block size grows by PURCHASE_BLOCK_SIZE_GROWTH_STEP (see engine.js's getPurchaseBlockSize) — ties
 // growth to the same "flagship" progress marker getScaleUpRequirement/isLastTierTickspeedXpUnlocked/
-// prestigeCardEverRevealed already key off, rather than any other tier or a global total.
+// rebootCardEverRevealed already key off, rather than any other tier or a global total.
 export const PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100
 // The amount the block size grows by every PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS.
 export const PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1
@@ -657,18 +657,18 @@ export const AUTOBUYER_MIN_INTERVAL_SECONDS = 0.01
 // Interval upgrade chains for the global/per-tier automations (engine.js's
 // buyAutomationIntervalUpgrade / buyTierTickspeedIntervalUpgrade): cost = baseCost × the same
 // 1,2,4,…,64,125,… ladder as the tier autobuyer chain; interval = baseSeconds × 0.9^level, 10 ms floor.
-// baseCost is BOTH the one-time unlock cost of the automation (Latency / Scale Up / Overclock /
+// baseCost is BOTH the one-time unlock cost of the automation (Speed Up / Scale Up / Overclock /
 // Auto-Prestige autobuyers) AND the first interval-upgrade level's cost. Automations unlocked by a
 // milestone (tier autobuyers, tier tickspeed autobuyers) have no unlock cost — only the upgrades.
 export const AUTOMATION_INTERVAL_CONFIG = {
-  latency: { baseCost: 8, baseSeconds: 1 },
+  speedUp: { baseCost: 8, baseSeconds: 1 },
   scaleUp: { baseCost: 16, baseSeconds: 64 },
   overclock: { baseCost: 32, baseSeconds: 256 },
-  prestige: { baseCost: 64, baseSeconds: 1024 },
+  reboot: { baseCost: 64, baseSeconds: 1024 },
 }
 // Per-tier tickspeed autobuyer: 2× the tier autobuyer chain's cost, 16 s base.
 export const TIER_TICKSPEED_INTERVAL_CONFIG = { baseCost: 2, baseSeconds: 16 }
-// How many times the player must have prestiged before a tier's unit-buying autobuyer unlocks
+// How many times the player must have rebooted before a tier's unit-buying autobuyer unlocks
 // automatically (see engine.js's getAutobuyerUnlockMilestone/applyAutobuyerMilestones) — replaces
 // the old PP-cost-funded unlock entirely: no purchase, no PP spent, just a milestone reached by
 // prestige count. tier01 unlocks after the very first prestige, tier02 after the second, … tier10
@@ -682,7 +682,7 @@ export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 1
 // unit-buying autobuyer above. Also no longer PP-funded.
 export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 11
 export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 1
-// Latency (the global tickspeed multiplier — see engine.js's
+// Speed Up (the global tickspeed multiplier — see engine.js's
 // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) speeds up *every* tier's
 // production at once. Every level compounds by the same rate.
 export const GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01
@@ -722,7 +722,7 @@ export const COMPUTE_AUTO_BOOST_UNLOCK_COST = 30
 export const LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1
 // Once the last tier has ever been the target of a successful Scale Up this cycle (see engine.js's
 // isLastTierTickspeedXpUnlocked — a scaleUpTierCounts-based latch, NOT a live owned check), a
-// separate XP-funded upgrade (shown beside Latency) becomes available — see engine.js's
+// separate XP-funded upgrade (shown beside Speed Up) becomes available — see engine.js's
 // getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed. Each XP consumed compounds another
 // LAST_TIER_XP_TICKSPEED_STEP (1%) into the last tier's delivery frequency, on top of (not instead
 // of) its own resource-funded tickspeed level. "Last tier" (not a hardcoded tier id) so this stays

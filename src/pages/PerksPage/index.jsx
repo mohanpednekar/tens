@@ -28,13 +28,13 @@ import {
   isComputeCoreConversionUnlocked,
   isProductionFrozen,
   isTierUnlocked,
-  isUnboundedPrestigeUnlocked,
+  isUnboundedRebootUnlocked,
 } from 'game/engine'
 import {
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
-  UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS,
+  UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   XP_TICKSPEED_AUTOBUYER_UNLOCK_COST,
 } from 'game/layers'
@@ -303,11 +303,11 @@ const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Mat
 const PerksPage = ({ game, focusNonce = 0 }) => {
   const { state, actions } = game
   const theme = useTheme()
-  const { prestige } = state
-  const points = prestige.points ?? 0
-  const prestigeCount = prestige.count ?? 0
+  const { reboot } = state
+  const points = reboot.points ?? 0
+  const rebootCount = reboot.count ?? 0
   const eraCount = state.era?.count ?? 0
-  const isFirstRun = prestigeCount === 0
+  const isFirstRun = rebootCount === 0
   const isFrozen = isProductionFrozen(state)
 
   const [tab, setTab] = useState('unlocks')
@@ -317,7 +317,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
 
   const purchaseBlockSize = getPurchaseBlockSize(state)
 
-  const latencyUnlockCost = getAutomationUnlockCost('latency')
+  const speedUpUnlockCost = getAutomationUnlockCost('speedUp')
   const scaleUpUnlockCost = getAutomationUnlockCost('scaleUp')
   const overclockUnlockCost = getAutomationUnlockCost('overclock')
   const isAutoScaleUpActive = state.autoScaleUp ?? false
@@ -330,7 +330,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const xpTickspeedAutobuyerEnabled = state.autoXpTickspeedEnabled ?? true
 
   const isTickspeedAutobuyerActive = state.autoGlobalTickspeed ?? false
-  const canBuyTickspeedAutobuyer = !isFrozen && !isTickspeedAutobuyerActive && !isFirstRun && points >= latencyUnlockCost
+  const canBuyTickspeedAutobuyer = !isFrozen && !isTickspeedAutobuyerActive && !isFirstRun && points >= speedUpUnlockCost
   const tickspeedAutobuyerEnabled = state.autoGlobalTickspeedEnabled ?? true
 
   const doublePpLevel = state.prestigeDoublePpLevel ?? 0
@@ -343,12 +343,12 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     : `1 PP per ${formatAmount(powersPerPp)} power${powersPerPp === 1 ? '' : 's'}`
   const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
 
-  // Auto-Prestige: one-time activation, then the interval chain (see AUTOMATION_INTERVAL_CONFIG.prestige).
-  const autoPrestigeLevel = state.autoPrestige ?? null
-  const isAutoPrestigeActive = autoPrestigeLevel !== null
-  const autoPrestigeCost = getAutomationUnlockCost('prestige')
-  const canBuyAutoPrestige = !isFrozen && isAutoOverclockActive && !isAutoPrestigeActive && points >= autoPrestigeCost
-  const autoPrestigeEnabled = state.autoPrestigeEnabled ?? true
+  // Auto-Prestige: one-time activation, then the interval chain (see AUTOMATION_INTERVAL_CONFIG.reboot).
+  const autoRebootLevel = state.autoReboot ?? null
+  const isAutoRebootActive = autoRebootLevel !== null
+  const autoRebootCost = getAutomationUnlockCost('reboot')
+  const canBuyAutoReboot = !isFrozen && isAutoOverclockActive && !isAutoRebootActive && points >= autoRebootCost
+  const autoRebootEnabled = state.autoRebootEnabled ?? true
 
 
   const isComputeAutoBoostActive = state.computeAutoBoostUnlocked ?? false
@@ -375,23 +375,23 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             <Row key={tier.id} $tier="unlocks" aria-label={`${tier.name} PP unlocks`}>
               <TierSymbol tier={tier} />
               <MilestoneBadge
-                current={prestigeCount}
+                current={rebootCount}
                 icon="⚙"
                 milestone={tickspeedMilestone}
                 progressLabel={`${tier.name} tickspeed autobuyer milestone progress`}
                 reached={isTierTickspeedAutobuyerActive}
                 subject={`${tier.name}'s tickspeed autobuyer`}
-                unit="Prestige"
+                unit="Reboot"
               />
               <span>
                 <MilestoneBadge
-                  current={prestigeCount}
+                  current={rebootCount}
                   icon="🤖"
                   milestone={autobuyerMilestone}
                   progressLabel={`${tier.name} autobuyer unlock milestone progress`}
                   reached={!isAutobuyerLocked}
                   subject={`${tier.name}'s autobuyer`}
-                  unit="Prestige"
+                  unit="Reboot"
                 />
               </span>
             </Row>
@@ -407,12 +407,12 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             <UnlockedBadge icon="🌐" name="Tickspeed Autobuyer" />
           ) : (
             <PpPurchaseButton
-              ariaLabel={`Enable Tickspeed Autobuyer for ${latencyUnlockCost} Prestige Points`}
+              ariaLabel={`Enable Tickspeed Autobuyer for ${speedUpUnlockCost} Prestige Points`}
               color="#38bdf8"
-              cost={latencyUnlockCost}
+              cost={speedUpUnlockCost}
               disabled={!canBuyTickspeedAutobuyer}
               icon="🔓"
-              label={`${latencyUnlockCost} PP`}
+              label={`${speedUpUnlockCost} PP`}
               onClick={actions.buyTickspeedAutobuyer}
               points={points}
               progressLabel="Tickspeed Autobuyer Prestige Point progress"
@@ -477,27 +477,27 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             />
           )}
         </Row>
-        <Row aria-label="auto-prestige upgrade">
+        <Row aria-label="auto-reboot upgrade">
           <RowLabelStack>
-            <RowLabel>✦ Auto-Prestige</RowLabel>
-            {isAutoPrestigeActive && (
-              <SubText>every {formatInterval(getAutomationIntervalSeconds(state, 'prestige') * 1000)}</SubText>
+            <RowLabel>✦ Auto-Reboot</RowLabel>
+            {isAutoRebootActive && (
+              <SubText>every {formatInterval(getAutomationIntervalSeconds(state, 'reboot') * 1000)}</SubText>
             )}
           </RowLabelStack>
-          {isAutoPrestigeActive ? (
-            <UnlockedBadge icon="✦" name="Auto-Prestige" />
+          {isAutoRebootActive ? (
+            <UnlockedBadge icon="✦" name="Auto-Reboot" />
           ) : (
             <PpPurchaseButton
-              ariaLabel={`Enable Auto-Prestige for ${autoPrestigeCost} Prestige Points`}
+              ariaLabel={`Enable Auto-Reboot for ${autoRebootCost} Prestige Points`}
               color="#38bdf8"
-              cost={autoPrestigeCost}
-              disabled={!canBuyAutoPrestige}
+              cost={autoRebootCost}
+              disabled={!canBuyAutoReboot}
               icon="🔓"
-              label={`${autoPrestigeCost} PP`}
-              onClick={actions.buyAutoPrestige}
+              label={`${autoRebootCost} PP`}
+              onClick={actions.buyAutoReboot}
               points={points}
-              progressLabel="Auto-Prestige Prestige Point progress"
-              title="Spend Prestige Points so Prestige happens automatically once your balance reaches 1 Googol Bytes"
+              progressLabel="Auto-Reboot Prestige Point progress"
+              title="Spend Prestige Points so Reboot happens automatically once your balance reaches 1 Googol Bytes"
             />
           )}
         </Row>
@@ -578,17 +578,17 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <CategoryHeading>Prestige</CategoryHeading>
         <Row aria-label="degoogol unlock">
           <RowLabelStack>
-            <RowLabel title="Earn past 1 Googol Bytes without freezing; Prestige voluntarily to claim PP">♾ DeGoogol</RowLabel>
-            {!isUnboundedPrestigeUnlocked(state) && (
+            <RowLabel title="Earn past 1 Googol Bytes without freezing; Reboot voluntarily to claim PP">♾ DeGoogol</RowLabel>
+            {!isUnboundedRebootUnlocked(state) && (
               <SubText>
-                Auto-Prestige ≤ {UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s
+                Auto-Reboot ≤ {UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS} s
               </SubText>
             )}
           </RowLabelStack>
-          {isUnboundedPrestigeUnlocked(state) ? (
+          {isUnboundedRebootUnlocked(state) ? (
             <UnlockedBadge icon="♾" name="DeGoogol" />
           ) : (
-            <Badge $color={theme.color.disabled} $dimmed aria-label="DeGoogol locked" title="Unlocks when Auto-Prestige's interval reaches 1 s or less">
+            <Badge $color={theme.color.disabled} $dimmed aria-label="DeGoogol locked" title="Unlocks when Auto-Reboot's interval reaches 1 s or less">
               ♾ 🔒
             </Badge>
           )}
@@ -702,10 +702,10 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           )
         })}
         {[
-          ['latency', 'Latency', '🌐'],
+          ['speedUp', 'Speed Up', '🌐'],
           ['scaleUp', 'Scale Up', '⏩'],
           ['overclock', 'Overclock', '🚀'],
-          ['prestige', 'Prestige', '✦'],
+          ['reboot', 'Reboot', '✦'],
         ].map(([key, name, icon]) => {
           if (!isAutomationIntervalChainUnlocked(state, key)) return null
           const level = state.automationIntervalLevels?.[key] ?? 0
@@ -825,15 +825,15 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           />
         </Row>
       ),
-      isAutoPrestigeActive && (
-        <Row key="auto-prestige" aria-label="auto-prestige toggle">
-          <RowLabel>✦ Auto-Prestige</RowLabel>
+      isAutoRebootActive && (
+        <Row key="auto-reboot" aria-label="auto-reboot toggle">
+          <RowLabel>✦ Auto-Reboot</RowLabel>
           <AutomationToggle
-            enabled={autoPrestigeEnabled}
+            enabled={autoRebootEnabled}
             icon="✦"
-            name="Auto-Prestige"
-            onToggle={() => actions.setAutoPrestigeEnabled(!autoPrestigeEnabled)}
-            toggleLabel="Auto-Prestige automation"
+            name="Auto-Reboot"
+            onToggle={() => actions.setAutoRebootEnabled(!autoRebootEnabled)}
+            toggleLabel="Auto-Reboot automation"
           />
         </Row>
       ),

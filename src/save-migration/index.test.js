@@ -44,7 +44,7 @@ describe('adaptSaveForCurrentSchema', () => {
   })
 
   it('passes through saveSchemaVersion 1 for mergeState forward-fill', () => {
-    const payload = { intro: { mainGameUnlocked: true }, prestige: { count: 5, points: 0 } }
+    const payload = { intro: { mainGameUnlocked: true }, reboot: { count: 5, points: 0 } }
     expect(adaptSaveForCurrentSchema({ saveSchemaVersion: 1, ...payload })).toEqual({
       ok: true,
       payload,

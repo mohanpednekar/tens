@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
     window.localStorage.clear()
     window.localStorage.setItem('tens_game_state', JSON.stringify({
       intro: { mainGameUnlocked: true, byteCreated: true },
-      prestige: { xp: 0, points: 1e100, count: 5, highestMilestone: 1 },
+      reboot: { xp: 0, points: 1e100, count: 5, highestMilestone: 1 },
       era: { count: 0 },
       eons: { balance: 0 },
     }))

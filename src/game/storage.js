@@ -1,5 +1,5 @@
 import { applyFlopsAutobuyerMilestones, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
-import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
+import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES, REBOOT_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 
@@ -330,7 +330,7 @@ export const buildResetByteFoundryConfirmMessage = () => {
     `Use this if Capacity (or Storage / Compute) went too far.\n\n` +
     `Erased: Data Stream Buffer, pool Memory Capacity, Data Stream upgrade progress, all Disks/Storage, and all Compute. Multipliers restart from scratch.\n\n` +
     `Convenience: Combine, Upgrade Data Stream, and Provision Disk all auto-press again up to your pre-reset highs as soon as each is affordable — you do not need to click them. Capacity remains on its doubling ladder up to the active pool ceiling.\n\n` +
-    `Also kept: Byte Factory, Prestige Points / count / upgrades, and (if already unlocked) access to the main game this cycle.\n\n` +
+    `Also kept: Byte Factory, Prestige Points, Reboot count and upgrades, and (if already unlocked) access to the main game this cycle.\n\n` +
     `Other save slots and your Supporter unlock (if any) stay.\n\n` +
     `This cannot be undone.`
   )
@@ -519,9 +519,43 @@ const applyPendingComputeGrants = (intro, pendingComputeGrants) => {
   return next
 }
 
+// Pre-rename keys: the Factory reset was "prestige" and the global tickspeed automation "latency".
+// Renamed in place (new key wins if both exist) so older saves keep their progress.
+const RENAMED_TOP_LEVEL_KEYS = [
+  ['prestige', 'reboot'],
+  ['autoPrestige', 'autoReboot'],
+  ['autoPrestigeEnabled', 'autoRebootEnabled'],
+  ['autoPrestigeAttemptBudget', 'autoRebootAttemptBudget'],
+]
+const RENAMED_AUTOMATION_KEYS = [['latency', 'speedUp'], ['prestige', 'reboot']]
+const renameKeys = (obj, pairs) => {
+  if (!obj || typeof obj !== 'object') return obj
+  const next = { ...obj }
+  for (const [from, to] of pairs) {
+    if (from in next) {
+      if (!(to in next)) next[to] = next[from]
+      delete next[from]
+    }
+  }
+  return next
+}
+export const renamePreRebootKeys = saved => {
+  const next = renameKeys(saved, RENAMED_TOP_LEVEL_KEYS)
+  if (next.automationIntervalLevels) next.automationIntervalLevels = renameKeys(next.automationIntervalLevels, RENAMED_AUTOMATION_KEYS)
+  if (next.automationAttemptBudgets) next.automationAttemptBudgets = renameKeys(next.automationAttemptBudgets, RENAMED_AUTOMATION_KEYS)
+  if (Array.isArray(next.prestigeMuseum?.history)) {
+    next.prestigeMuseum = {
+      ...next.prestigeMuseum,
+      history: next.prestigeMuseum.history.map(entry => renameKeys(entry, [['prestigeNumber', 'rebootNumber']])),
+    }
+  }
+  return next
+}
+
 // Merge a saved state with fresh defaults so newly added fields are present on load.
 // Schema transforms run in save-migration/ on every load before this runs.
-const mergeState = saved => {
+const mergeState = rawSaved => {
+  const saved = renamePreRebootKeys(rawSaved)
   const fresh = createInitialGameState()
   // speedUpCount/autoSpeedUp/autoSpeedUpEnabled are the pre-rename names of
   // scaleUpCount/autoScaleUp/autoScaleUpEnabled (see engine.js) — stripped here (like
@@ -590,11 +624,11 @@ const mergeState = saved => {
     tierTickspeedAutobuyer: mergeTierMap(fresh.tierTickspeedAutobuyer, saved.tierTickspeedAutobuyer),
     tierTickspeedAutobuyerEnabled: mergeTierMap(fresh.tierTickspeedAutobuyerEnabled, saved.tierTickspeedAutobuyerEnabled),
     everUnlockedTierIds: mergeTierMap(fresh.everUnlockedTierIds, saved.everUnlockedTierIds),
-    prestige: {
-      ...fresh.prestige,
-      ...(saved.prestige ?? {}),
-      unboundedUnlocked: Boolean(saved.prestige?.unboundedUnlocked)
-        || Math.max(0, Number(saved.prestige?.count) || 0) >= PRESTIGE_UNBOUNDED_MIN_COUNT,
+    reboot: {
+      ...fresh.reboot,
+      ...(saved.reboot ?? {}),
+      unboundedUnlocked: Boolean(saved.reboot?.unboundedUnlocked)
+        || Math.max(0, Number(saved.reboot?.count) || 0) >= REBOOT_UNBOUNDED_MIN_COUNT,
     },
     era: { ...fresh.era, ...(saved.era ?? {}) },
     eons: { ...fresh.eons, ...(saved.eons ?? {}) },
@@ -617,7 +651,7 @@ const mergeState = saved => {
     }, pendingComputeGrants),
     computeFlops: {
       pageUnlocked: Boolean(saved.computeFlops?.pageUnlocked)
-        || Math.max(0, Number(saved.prestige?.points) || 0) >= COMPUTE_FLOPS_REVEAL_PP,
+        || Math.max(0, Number(saved.reboot?.points) || 0) >= COMPUTE_FLOPS_REVEAL_PP,
       owned: { ...fresh.computeFlops.owned, ...(saved.computeFlops?.owned ?? {}) },
       cumulativeBoost: { ...fresh.computeFlops.cumulativeBoost, ...(saved.computeFlops?.cumulativeBoost ?? {}) },
     },

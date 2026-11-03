@@ -42,7 +42,7 @@ import {
   PRESTIGE_POINT_SPEED_BONUS,
   PRESTIGE_POWERS_PER_PP_BASE,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
-  UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS,
+  UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
   getStoragePoolMemoryBounds,
@@ -162,10 +162,10 @@ const InfoPage = () => {
           </li>
           <li>
             Reaching <strong>1 Googol Bytes</strong> (8×10^100 Bits) freezes production until you
-            Prestige — unless you have unlocked DeGoogol (see Prestige).
+            Reboot — unless you have unlocked DeGoogol (see Reboot).
           </li>
           <li>
-            After your first Prestige, the <strong>Buy max</strong> toggle (Perks → 🎛 Toggles) makes
+            After your first Reboot, the <strong>Buy max</strong> toggle (Perks → 🎛 Toggles) makes
             each purchase buy as many levels as you can afford. Tiers buy full levels only — a
             partly bought level takes its own click.
           </li>
@@ -176,7 +176,7 @@ const InfoPage = () => {
         <h2>Byte Foundry</h2>
         <p>
           Every new save starts here, before any {firstTierName} exist. Unlocking the main game is
-          permanent — no Prestige or Era ascension sends you back through this gate. Reopen the
+          permanent — no Reboot or Era ascension sends you back through this gate. Reopen the
           Foundry any time from the bottom nav. The Data Stream’s Capacity uses binary units (KiB,
           MiB, …; 1 KiB = 1,024 Bytes); Storage pools, Disks and Data Lakes use decimal units (KB,
           MB, …; 1 KB = 1,000 Bytes).
@@ -232,11 +232,11 @@ const InfoPage = () => {
         <h3>What resets vs. what stays</h3>
         <ul>
           <li>
-            <strong>Resets each Prestige:</strong> the Data Stream balance and any partly bought{' '}
+            <strong>Resets each Reboot:</strong> the Data Stream balance and any partly bought{' '}
             {firstTierName} level.
           </li>
           <li>
-            <strong>Kept through Prestige:</strong> the Byte generator, Capacity/Speed upgrades,
+            <strong>Kept through Reboot:</strong> the Byte generator, Capacity/Speed upgrades,
             Disks, Data Lakes, every Compute entity, and the main-game unlock. Era ascension resets
             most of this (see Era ascension).
           </li>
@@ -306,7 +306,7 @@ const InfoPage = () => {
             A tier still on its level 1 with no disk to pull draws from its pool’s Cache directly
             instead. Later levels only ever come from whole disks.
           </li>
-          <li>Disks are permanent across Prestige; a full disk stays full.</li>
+          <li>Disks are permanent across Reboots; a full disk stays full.</li>
         </ul>
       </Section>
 
@@ -345,7 +345,7 @@ const InfoPage = () => {
             The nth Booster bought from a lake costs n units and instantly grants 1 compute entity of
             that lake’s tier (KB → Core, MB → Node, …). Once a pool has all of its disks built, its
             lake buys every affordable Booster automatically for the rest of the Era — through pool
-            resets, Foundry resets and Prestige.
+            resets, Foundry resets and Reboots.
           </li>
         </ul>
 
@@ -463,13 +463,13 @@ const InfoPage = () => {
           <li>
             The header’s <strong>Flops</strong> total weights each tier’s boost by 10<sup>n</sup>{' '}
             (<strong>K + 10·M + 100·G + … + 10⁹·Q</strong>); production uses each tier’s own boost.
-            Boosts reset each Prestige; owned units are kept.
+            Boosts reset each Reboot; owned units are kept.
           </li>
         </ul>
       </Section>
 
-      <Section aria-label="latency section">
-        <h2>Latency</h2>
+      <Section aria-label="speed up section">
+        <h2>Speed Up</h2>
         <ul>
           <li>
             Spend Bytes to make every tier’s production ticks 1% faster per level, compounding — more
@@ -487,7 +487,7 @@ const InfoPage = () => {
           </li>
           <li>
             After {TIER_DEFINITIONS.length} Scale Ups in a run (the first onto {lastTierName}), the
-            Restage upgrade appears beside Latency: spend XP for +1% faster {lastTierName} ticks per XP
+            Restage upgrade appears beside Speed Up: spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
             It resets every other tier’s owned quantity and your Bits. A 16 PP Auto Restage
             (Perks → Unlocks) spends it for you.
@@ -509,7 +509,7 @@ const InfoPage = () => {
           </li>
           <li>
             Doubles production for every tier unlocked so far; the bonuses stack (×2, ×4, ×8, …) and
-            a newly unlocked tier starts at ×1. They last until the next Overclock or Prestige.
+            a newly unlocked tier starts at ×1. They last until the next Overclock or Reboot.
           </li>
           <li>
             Each of the first ten claims needs 3 completed levels on the last unlocked tier. After
@@ -530,7 +530,7 @@ const InfoPage = () => {
             and Prestige Points are kept.
           </li>
           <li>
-            In exchange, permanently multiplies Latency’s per-level rate by ×1.1 for each completed
+            In exchange, permanently multiplies Speed Up’s per-level rate by ×1.1 for each completed
             level banked (1% → 1.1% → 1.21% → …).
           </li>
           <li>
@@ -549,7 +549,7 @@ const InfoPage = () => {
         <h2>Tier Autobuyers</h2>
         <ul>
           <li>
-            Each tier’s autobuyer and its tickspeed autobuyer unlock automatically as your Prestige
+            Each tier’s autobuyer and its tickspeed autobuyer unlock automatically as your Reboot
             count grows — see Perks → 🔓 Unlocks for the exact thresholds.
           </li>
           <li>
@@ -568,27 +568,31 @@ const InfoPage = () => {
         <h2>Milestones</h2>
         <ul>
           <li>
-            <strong>Tier autobuyers:</strong> one tier per Prestige, from Prestige{' '}
-            {firstTierAutobuyerMilestone} ({firstTierName}) through Prestige{' '}
+            <strong>Tier autobuyers:</strong> one tier per Reboot, from Reboot{' '}
+            {firstTierAutobuyerMilestone} ({firstTierName}) through Reboot{' '}
             {lastTierAutobuyerMilestone} ({lastTierName}).
           </li>
           <li>
-            <strong>Tier tickspeed autobuyers:</strong> start at Prestige{' '}
+            <strong>Tier tickspeed autobuyers:</strong> start at Reboot{' '}
             {firstTierTickspeedAutobuyerMilestone}, then every{' '}
-            {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP === 1 ? 'Prestige' : `${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Prestiges`} after that.
+            {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP === 1 ? 'Reboot' : `${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Reboots`} after that.
           </li>
           <li>More → Milestones tracks your story chapters and Era progress.</li>
         </ul>
       </Section>
 
       <Section aria-label="prestige section">
-        <h2>Prestige</h2>
+        <h2>Reboot</h2>
         <ul>
           <li>
+            <strong>Prestige</strong> is the umbrella term for every reset-for-rewards: Reboot, Era
+            ascension, Reset Byte Foundry and a pool’s Data Lake reset. Reboot is the Factory one.
+          </li>
+          <li>
             Available at 1 Googol Bytes (8×10^100 Bits), where production freezes until you
-            Prestige. Getting Auto-Prestige’s interval down to {UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS} s
+            Reboot. Getting Auto-Reboot’s interval down to {UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS} s
             or less unlocks <strong>DeGoogol</strong>: production keeps running past 1 Googol Bytes
-            and Prestige becomes optional.
+            and Reboot becomes optional.
           </li>
           <li>
             Awards 1 Prestige Point (PP) at 1 Googol Bytes, plus 1 PP for every{' '}
@@ -597,7 +601,7 @@ const InfoPage = () => {
           </li>
           <li>
             Double PP costs 100^(level+1) PP (100, 10,000, 1,000,000, …) on Perks → ⏫ Upgrades and
-            is permanent across Prestige.
+            is permanent across Reboots.
           </li>
           <li>
             Spend PP on Perks for automation and bonuses — e.g. the one-time Production speed bonus
@@ -609,7 +613,7 @@ const InfoPage = () => {
             Foundry, Storage and Boosters progress carries over.
           </li>
           <li>
-            Your first Prestige uses a full-screen prompt; after that, use the Prestige bar at the top
+            Your first Reboot uses a full-screen prompt; after that, use the Reboot bar at the top
             of the Factory or tap the PP display.
           </li>
         </ul>
@@ -645,7 +649,7 @@ const InfoPage = () => {
           </li>
           <li>
             <strong>Resets:</strong> Foundry upgrades and Capacity, Disks, Data Lakes, Compute
-            entities, the Factory (resources, owned tiers, Double PP level), unspent PP, Prestige
+            entities, the Factory (resources, owned tiers, Double PP level), unspent PP, Reboot
             count, and owned Compute (Flops) units.
           </li>
           <li>

@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Renamed: Latency → Speed Up, Prestige → Reboot.** The Factory reset at 1 Googol Bytes is now called Reboot (Auto-Reboot, "Reboot Now", Reboot museum entries, autobuyer milestones "at Reboot N"). "Prestige" is now the umbrella term for every reset-for-rewards — Reboot, Era ascension, Reset Byte Foundry and pool resets — and Prestige Points keep their name. Earlier entries below use the old names. Existing saves carry over: the renamed save fields are converted on load.
 - **Latency and Restage sit side by side, as do Scale Up and Overclock** — on every screen size, including phones (Scale Up / Overclock used to stack on narrow screens).
 - **Quettabytes keeps its own tickspeed upgrade at 10% of the price.** Its tickspeed button no longer turns into the XP button after the first Quettabytes Scale Up; each level still needs the usual amount owned (10, 100, …) but only spends a tenth of it (1, 10, …).
 - **The XP-funded tickspeed is now a separate upgrade, Restage, shown beside Latency.** Its bonus stacks on top of Quettabytes' own tickspeed level, and the Quettabytes tickspeed autobuyer no longer spends XP — XP is spent manually, or by the new Auto Restage (below).

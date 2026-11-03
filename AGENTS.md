@@ -5,6 +5,8 @@ of truth — `CLAUDE.md` (plus its `docs/*.md` references) is authoritative for 
 anything below ever conflicts with `CLAUDE.md`, `CLAUDE.md` wins; fix this file to match in the same
 change rather than letting the two drift (a stale mirror here is worse than no mirror at all).
 
+Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Reboot**, the global tickspeed track is **Speed Up** (formerly Latency). Code and state use the same names (`reboot`, `rebootGame`, `REBOOT_THRESHOLD`, automation key `speedUp`); only Prestige-Point/museum identifiers keep `prestige`.
+
 ## Project
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
@@ -137,7 +139,7 @@ produces the tier below it; `tier01` costs Bits but produces whole Bytes (`BYTES
 credited as `BITS_PER_BYTE` Bits each — Bytes and Bits are one pool (`resources.base`). Bytes are still
 not a purchasable tier — the ladder starts at Kilobytes; a fresh
 save earns its first Kilobytes via the Byte Foundry below, not by buying a `tier00`/Bytes entry.
-**Do not guess at cost/production formulas, the purchase-level system, prestige, Era ascension,
+**Do not guess at cost/production formulas, the purchase-level system, reboot, Era ascension,
 or tickspeed mechanics here** — they're intricate and have changed shape multiple times (see
 `docs/DESIGN_HISTORY.md`). Read `docs/ECONOMY_REFERENCE.md` (or the matching section of `CLAUDE.md`)
 before touching `src/game/engine.js`, `src/game/layers.js`, or any economy constant.
@@ -180,7 +182,7 @@ omitted; do not guess at any of it.** See `CLAUDE.md`'s "Economy model"/"Archite
 `ComputePage`, and check `docs/DESIGN_HISTORY.md` first if changing a formula/gate a past iteration may
 already have tried and rejected.
 
-After **100 lifetime prestiges**, production no longer freezes at 1 Googol Bytes (optional Prestige
+After **100 lifetime reboots**, production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Double PP
 upgrades on Perks → Upgrades.
 
