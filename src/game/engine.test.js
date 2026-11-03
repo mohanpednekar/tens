@@ -11769,9 +11769,20 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
   })
 
   it('holds the Data Lake drain off its pool while the rebuild is pending, so the lake cannot take its funding', () => {
-    const state = funded(afterReset(), 2)
+    // One smallest disk built and full, so the lake is ready and every other drain condition holds.
+    const oneDisk = { disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 }, disks: { [FIRST_DISK_SIZE]: 1 } }
+    const state = funded(withIntro(afterReset(), oneDisk), 2)
+    expect(isLowerDiskSizePending(state)).toBe(true)
     expect(isStoragePoolProvisioningInProgress(state, 1)).toBe(true)
     expect(isDataLakePoolDrainAvailable(state, 1)).toBe(false)
+    expect(tickDataLakePoolDrain(1)(state)).toBe(state)
+    // The same pool with no rebuild pending (only one size unlocked) does drain — the rebuild alone blocks it.
+    const notPending = withIntro(state, { unlockedDiskSteps: 1 })
+    expect(isLowerDiskSizePending(notPending)).toBe(false)
+    expect(isDataLakePoolDrainAvailable(notPending, 1)).toBe(true)
+    // The rebuild gets the whole tick's draw.
+    const ticked = tickAutoProvisionLowerDiskSizes(1)(tickDataLakePoolDrain(1)(state))
+    expect(ticked.intro.poolBuffers[1]).toBeCloseTo(state.intro.poolBuffers[1] - getStoragePoolBandwidth(state, 1), 6)
     const done = withIntro(state, { disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP }, disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP } })
     expect(isStoragePoolProvisioningInProgress(done, 1)).toBe(false)
   })

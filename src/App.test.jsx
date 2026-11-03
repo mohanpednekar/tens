@@ -3698,6 +3698,32 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('progressbar', { name: /disk build progress/i })).toHaveAttribute('aria-valuenow', '33')
   })
 
+  test('the rebuild status says it is waiting for buffer while the pool buffer cannot fund it, automatic once it can', () => {
+    const seed = poolBuffers => seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 2,
+      disks: { [currentBankSize]: 3 },
+      disksBuiltTotal: { [currentBankSize]: 3 },
+      poolBuffers,
+    })
+    seed({})
+    const { unmount } = render(<App />)
+    expect(screen.getByRole('button', { name: /provision disk/i })).toHaveAttribute('aria-description', expect.stringMatching(/Rebuilding .* first · waiting for buffer/))
+    unmount()
+    localStorage.clear()
+    // Once the read cache is full its claim is 0, so the buffer funds the rebuild.
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 2,
+      disks: { [currentBankSize]: 3 },
+      disksBuiltTotal: { [currentBankSize]: 3 },
+      diskCache: { [currentBankSize]: currentBankSize },
+      poolBuffers: { 1: currentBankSize / 2 },
+    })
+    render(<App />)
+    expect(screen.getByRole('button', { name: /provision disk/i })).toHaveAttribute('aria-description', expect.stringMatching(/Rebuilding .* first · automatic/))
+  })
+
   test('a queued Provision Disk waiting behind Disk Fill never claims "now" for its time', () => {
     seedIntroState({
       bits: 0, capacity: currentBankCost * 1024, byteCreated: true,

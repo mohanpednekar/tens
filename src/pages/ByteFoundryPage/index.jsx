@@ -871,12 +871,19 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // the buffer allows), so it alone gets the progressive title, the pulse and the hourglass — idle
   // states keep the imperative "Provision …" so the two never read alike.
   const diskProvisioningActive = Boolean(diskBuildQueued) && !diskBuildInProgress && !diskLadderExhausted && !lowerDiskSizePending
+  // Mirrors tickAutoProvisionLowerDiskSizes' stall conditions so a paused rebuild says why.
+  const rebuildPoolIndex = getPoolIndexForDiskSize(autoDiskSize)
+  const lowerRebuildWaitReason = !lowerDiskSizePending ? null
+    : intro.diskBuild ? 'waiting for build'
+      : getStoragePoolBandwidth(state, rebuildPoolIndex) <= 0 ? 'waiting for pool'
+        : getPoolBufferBits(state, rebuildPoolIndex) <= getPoolCacheReservationBits(state, rebuildPoolIndex) ? 'waiting for buffer'
+          : null
   const diskBuildStatus = diskBuildInProgress
     ? { icon: '🏗', label: `Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk`, status: `${Math.ceil(diskBuildInProgress.remainingSeconds)}s left` }
     : diskLadderExhausted
       ? { icon: '✅', label: `All Pools Complete (${formatDiskSize(diskSize)})`, status: null }
       : lowerDiskSizePending
-        ? { icon: '🔁', label: diskOfferLabel, status: `Rebuilding ${formatDiskSize(autoDiskSize)} first · ${getPoolBufferBits(state, getPoolIndexForDiskSize(autoDiskSize)) > getPoolCacheReservationBits(state, getPoolIndexForDiskSize(autoDiskSize)) ? 'automatic' : 'waiting for buffer'}` }
+        ? { icon: '🔁', label: diskOfferLabel, status: `Rebuilding ${formatDiskSize(autoDiskSize)} first · ${lowerRebuildWaitReason ?? 'automatic'}` }
       : diskBuildQueued
         ? {
             icon: '⏳',
@@ -894,7 +901,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // Same stat layout as the running-upgrade tile. Provisioning (buffer-funded) and the post-Foundry-reset rebuild (one buffer fill per disk, no provisioning cost) both run at
   // the pool's BASE Bandwidth × its tap bonus (getPoolTapMultiplier; no fill multiplier), so ⚡ is that speed; ⏳ is the time left
   // (provisioning also waits on the buffer; rebuild: getLowerRebuildSummary; hidden for a build waiting behind Disk Fill) — a projection from the Bandwidth the pool will have once live while the size's pool isn't live yet.
-  const rebuildPoolIndex = getPoolIndexForDiskSize(autoDiskSize)
   // Rebuild and provisioning are pool consumers, so the pool's tap bonus speeds both (getPoolTapMultiplier).
   const diskFundingTapMultiplier = getPoolTapMultiplier(state, lowerDiskSizePending ? rebuildPoolIndex : diskPoolIndex)
   const diskFundingMultiplierPercent = 100 * diskFundingTapMultiplier

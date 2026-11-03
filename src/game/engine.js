@@ -414,7 +414,7 @@ export const createInitialGameState = () => ({
     // Disk, Capacity) after a Foundry wipe. null when inactive. Survives Prestige like other
     // permanent intro fields; cleared only by a full save Reset.
     foundryResetCaps: null,
-    // Progress (0..1) of the one lower-size disk currently being rebuilt for free after a Foundry reset
+    // Progress (0..1) of the one lower-size disk currently being rebuilt after a Foundry reset (one buffer fill, no provisioning cost)
     // (tickAutoProvisionLowerDiskSizes): { size, progress } or null. Draws one disk's worth from the
     // pool buffer at the pool's BASE Bandwidth × tap bonus, never the fill multiplier. Wiped with the rest of the Foundry.
     lowerRebuild: null,
@@ -3273,7 +3273,7 @@ export const isDiskFillAvailable = state =>
     .some(size => isDiskPullEligible(state, size))
 
 // "Provision Disk" — true whenever no array is already mid-build (intro.diskBuild — only one build slot exists at a
-// time), no smaller size is still being rebuilt for free, the disk ladder isn't exhausted for the active pools, that
+// time), no smaller size is still being rebuilt (tickAutoProvisionLowerDiskSizes), the disk ladder isn't exhausted for the active pools, that
 // size's pool isn't rebuilding, and the pool is LIVE (getStoragePoolBandwidth > 0) with a buffer whose CAPACITY can hold
 // one pass of this size (getPoolBufferCapacity >= size — the old implicit unlock, so the early game before Storage is
 // unchanged). It does NOT require bits in hand: provisioning is buffer-funded at a fixed speed (see
@@ -3299,7 +3299,7 @@ export const isProvisionDiskInProgress = state =>
 
 export const isProvisionDiskAvailable = state => {
   if (state.intro.diskBuild) return false
-  // Smaller sizes below the newest unlocked one are provisioned automatically and for free instead.
+  // Smaller sizes below the newest unlocked one are rebuilt automatically instead (one buffer fill per disk, no provisioning cost).
   if (isLowerDiskSizePending(state)) return false
   if (isDiskLadderExhaustedForActivePools(state)) return false
   const size = getDiskSize(state)
@@ -3909,7 +3909,7 @@ export const isDiskSizeUnlockAvailable = state => {
 
 // The Foundry reset that unlocks the next disk size: a Reset Byte Foundry (Capacity, Disks, Lakes, Compute
 // wipe; Combine / Upgrade Capacity / Upgrade Speed convenience-replay up to prior highs; every smaller Disk size
-// re-provisions itself for free via tickAutoProvisionLowerDiskSizes)
+// re-provisions itself via tickAutoProvisionLowerDiskSizes — one buffer fill per disk, no provisioning cost)
 // plus one more unlocked disk step, which raises the speed exponent by DATA_STREAM_SPEED_EXPONENT_STEP.
 export const unlockNextDiskSizeByFoundryReset = state => {
   if (!isDiskSizeUnlockAvailable(state)) return state
