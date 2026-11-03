@@ -70,7 +70,7 @@ implicit in the Data Stream balance itself — there's no separate manual transf
 below). Before `intro.mainGameUnlocked` the tile is a plain, non-interactive `<section>`,
 `aria-label="data stream balance"`; once unlocked it becomes the tap target itself, built like a pool
 tile: a `DataStreamTile` div with a stretched `PoolTapButton` behind its readouts
-(`onClick={actions.tapIntroBit}`, `disabled={isFull || dataStreamMultiplierCapped}`,
+(`onClick={actions.tapIntroBit}`, `disabled={dataStreamMultiplierCapped}` — a full Buffer stays tappable, the bonus speeds consumers,
 `aria-label="tap to generate a bit"`), so the ⚡ speed can be its own button opening
 `SpeedDetailsPopover` without nesting interactive elements.
 
@@ -177,12 +177,12 @@ not behind a Storage tab. Each disk strip always shows all `DISK_ARRAY_LADDER_CA
 Provisioning a disk's cost is no longer paid in one lump sum —
 `provisionDisk` (`actions.provisionDisk`) ARMS the build; its cost is `getDiskProvisionPassesRequired(state, size)` PASSES of the
 disk's own face-value size (`intro.diskProvisionPasses[size]`, fractional), drawn each tick from the pool buffer at the pool's
-fixed base Bandwidth (`tickQueuedDiskBuild`) — an empty buffer pauses it, progress is never lost. When the final pass is
+base Bandwidth × pool tap bonus (`tickQueuedDiskBuild`) — an empty buffer pauses it, progress is never lost. When the final pass is
 drawn the disk completes (empty container) and the queue disarms, so only starting a NEW disk's build needs a click.
 
 The pin-icon `QueueToggleButton` that used to sit beside the Provision Disk button
 (`ProvisionDiskRow` wrapping the pair) has been removed from the page — `provisionDiskButton` now
-renders the plain `Button` directly, with no wrapper. Its click handler (`handleProvisionDiskClick`) only ARMS the build: `actions.provisionDisk()` when it can start now, else `actions.queueDiskBuild()`. An armed build then draws bits from the pool buffer every tick at the pool's fixed base Bandwidth (`tickQueuedDiskBuild`), with no further clicks. `disabled` drops affordability/priority checks — the button refuses input only while a legacy `intro.diskBuild` is in flight, the ladder is exhausted for active pools, or a lower-size rebuild is pending; clicking while already armed is an idempotent no-op. Variant/icon reflect the live state: `'smart'`/⏳ whenever queued (checked first),
+renders the plain `Button` directly, with no wrapper. Its click handler (`handleProvisionDiskClick`) only ARMS the build: `actions.provisionDisk()` when it can start now, else `actions.queueDiskBuild()`. An armed build then draws bits from the pool buffer every tick at the pool's base Bandwidth × pool tap bonus (`tickQueuedDiskBuild`), with no further clicks. `disabled` drops affordability/priority checks — the button refuses input only while a legacy `intro.diskBuild` is in flight, the ladder is exhausted for active pools, or a lower-size rebuild is pending; clicking while already armed is an idempotent no-op. Variant/icon reflect the live state: `'smart'`/⏳ whenever queued (checked first),
 else `'info'`/🏦 while turn-available (a click arms it), else `'neutral'`/🏦 (clickable to arm); `aria-label` stays anchored on "provision disk" in every one of them
 so the control's identity never changes out from under assistive tech or a `getByRole` query.
 `actions.clearDiskBuildQueue` remains implemented/tested with no UI control of its own — the same

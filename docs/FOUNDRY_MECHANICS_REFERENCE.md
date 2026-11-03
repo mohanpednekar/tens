@@ -91,8 +91,8 @@ generator. Combine creates the generator without snapping Capacity; save load vi
 keeps the generator (`byteCreated`) and the `mainGameUnlocked` latch but resets Capacity to
 `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`) — Capacity is rebuilt each
 Era, Factory access never goes away again once earned. Production and storage grow via two **Upgrade Capacity** / **Upgrade Speed** actions, one at a time (`queueIntroSpeedUpgrade`; detail: `docs/ECONOMY_REFERENCE.md`'s "Upgrade Speed"): a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
-and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at the base Speed
-(like a pool pulling at its Bandwidth, at a constant 1× Speed — no fill multiplier) into `intro.capacityUpgradeProgress`, ahead of
+and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at base Speed × the
+Data Stream tap bonus (`getDataStreamTapMultiplier` — no fill multiplier) into `intro.capacityUpgradeProgress`, ahead of
 every other consumer — nothing is paused or raced; when the bar
 reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
 running, the same button becomes an inert progress bar (no cancel; the tile is unchanged). Displayed Speed is *derived* from the Speed basis
@@ -163,7 +163,7 @@ Provision Disk is **buffer-funded at a fixed speed**: its cost is `getDiskProvis
 own face-value size (N for the array's Nth disk, 1…9), banked as fractional passes in
 `diskProvisionPasses[size]`. `provisionDisk` only ARMS the build (`diskBuildQueued`; `queueDiskBuild` arms it directly
 even when it can't start yet); each tick `tickQueuedDiskBuild(elapsedSeconds)` (wired into `tickGame`) draws up to
-`elapsed × getStoragePoolBandwidth` bits from the pool buffer — the pool's BASE Bandwidth, never the fill multiplier,
+`elapsed × getStoragePoolBandwidth × getPoolTapMultiplier` bits from the pool buffer — the pool's BASE Bandwidth × its tap bonus, never the fill multiplier,
 re-read every tick so a Speed/Capacity upgrade applies at once. An empty buffer pauses it (nothing lost); a full one
 never makes it faster. The disk completes (empty container) when the passes reach the requirement, with no separate
 build-time delay, and disarms the queue — only starting a NEW disk's build needs a click. Provision Disk is offered once
@@ -191,7 +191,7 @@ tile reads a static "Locked"). Its **Booster-conversion control fills MANUALLY, 
 its next Booster, until its matching pool is entirely COMPLETE (`isStoragePoolFullyBuilt` — all three
 ladder sizes fully built); only then does full-buffer OVERFLOW also fill it AUTOMATICALLY** from that
 pool's buffer (`tickPoolBufferFill`'s overflow branch, same gate). Separately, the lake draws directly
-from its pool's buffer at the pool's Bandwidth (`tickDataLakePoolDrain`, right after
+from its pool's buffer at the pool's Bandwidth × its tap bonus (`tickDataLakePoolDrain`, right after
 `tickPoolBufferFill`) under a fixed pool-buffer priority: disk filling > provisioning in progress > lake
 filling — only while every BUILT disk is full and no build is in progress in that pool, the lake has
 room, and the buffer holds more than the read cache's reservation (`isDataLakePoolDrainAvailable`; while

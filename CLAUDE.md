@@ -785,10 +785,11 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
 
 **Hard rules (full text and the rest of the Foundry mechanics: `docs/FOUNDRY_MECHANICS_REFERENCE.md`):**
 - **Fill multiplier** (`FILL_MULTIPLIER_*`, `getFillMultiplierPercent`): displayed Speed/Bandwidth never
-  change; a fill-dependent multiplier (1000% empty → 100% at 50% → 10% full (log-linear), ×(1 + Data Stream tap bonus%) decaying
-  1%/s, capped 2000%) scales only the real per-tick amount delivered (`getFillCurveDelta` integrates the curve so a 1s offline tick matches live 0.1s ticks).
-  A **pool** tap bonus never scales its buffer fill — it speeds that pool's consumers (`getPoolTapMultiplier`:
-  Provision Disk draw, read-cache flush, Data Lake drain).
+  change; a fill-dependent multiplier (1000% empty → 100% at 50% → 10% full (log-linear)) scales only the
+  real per-tick amount delivered (`getFillCurveDelta` integrates the curve so a 1s offline tick matches live 0.1s ticks).
+  **Tap bonuses never scale a fill** (the curve already reaches 10×); they speed CONSUMERS ×(1 + bonus%),
+  decaying 1%/s: Data Stream tap → Upgrade Capacity/Speed drains (`getDataStreamTapMultiplier`); pool tap →
+  Provision Disk draw, read-cache flush, write-cache merges, lower-size rebuild, Data Lake drain (`getPoolTapMultiplier`).
 - **Standing rule — `intro.capacity` keeps doubling plainly in binary** (IEC `KiB`/`MiB`, step 1024);
   non-binary (SI-clean/decade-power) transforms are for storage-pool-scoped values only
   (`getStoragePoolCapacity`, `getDecadePowerEquivalentBits`, `getSiCleanEquivalentBits`) — two earlier

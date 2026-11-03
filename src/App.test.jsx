@@ -2561,7 +2561,7 @@ test('once mainGameUnlocked, the standalone Tap button is gone and Data Stream i
   expect(Number(balanceBar.getAttribute('aria-valuenow'))).toBeGreaterThanOrEqual(89)
 })
 
-test('the Data Stream tile stops accepting taps once Buffer is full, same as the old standalone button', () => {
+test('the Data Stream tile stays tappable on a full Buffer (the bonus speeds consumers) without crediting bits', () => {
   // Fake timers so auto-convert can't drain a full Buffer between mount and the assertion.
   vi.useFakeTimers()
 
@@ -2570,7 +2570,7 @@ test('the Data Stream tile stops accepting taps once Buffer is full, same as the
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   const tapTarget = screen.getByRole('button', { name: /tap to generate a bit/i })
-  expect(tapTarget).toBeDisabled()
+  expect(tapTarget).not.toBeDisabled()
 
   fireEvent.click(tapTarget)
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })

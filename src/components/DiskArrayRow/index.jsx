@@ -15,6 +15,7 @@ import {
   getPoolBufferBits,
   getPoolCacheReservationBits,
   getPoolIndexForDiskSize,
+  getPoolTapMultiplier,
   isDiskPullEligible,
   isDiskReadCacheEligible,
   isDiskReadCacheFlushPaused,
@@ -351,7 +352,7 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
                   readFlushing
                     ? (readFlushPaused
                       ? 'Flush paused — matching tier claims this size first'
-                      : `Flushing read cache to disk (${Math.ceil(readFlush.remainingSeconds)}s)`)
+                      : `Flushing read cache to disk (${Math.ceil(readFlush.remainingSeconds / getPoolTapMultiplier(state, getPoolIndexForDiskSize(size)))}s)`)
                     : isFull
                       ? `${blockLabel} banked toward ${redeemTierName ?? 'the matching tier'}`
                       : partialFill > 0

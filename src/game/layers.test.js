@@ -26,7 +26,6 @@ import {
   FILL_MULTIPLIER_MAX_PERCENT,
   FILL_MULTIPLIER_MIN_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
-  FILL_MULTIPLIER_TAP_CAP_PERCENT,
   FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND,
   
   INTRO_CAPACITY_CAP_BITS,
@@ -299,10 +298,6 @@ describe('constants', () => {
   it('FILL_MULTIPLIER_TAP_BONUS_PERCENT is 5 and FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND is 1', () => {
     expect(FILL_MULTIPLIER_TAP_BONUS_PERCENT).toBe(5)
     expect(FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND).toBe(1)
-  })
-
-  it('FILL_MULTIPLIER_TAP_CAP_PERCENT is 2000 (the cumulative fill + tap-bonus ceiling)', () => {
-    expect(FILL_MULTIPLIER_TAP_CAP_PERCENT).toBe(2000)
   })
 
   it('getStoragePoolMemoryBounds delimits pool Memory Capacity start/end on the shared SI-aligned ladder', () => {

@@ -9094,14 +9094,16 @@ At the maintainer's request, Latency + Restage (above the tier list) and Scale U
 it) each share one `SpeedCardsRow` that stays side by side at every width (`flex: 1 1 0`, no wrap),
 superseding the earlier below-40rem single-column stack of Scale Up / Overclock.
 
-## Pool tap bonus moved from buffer fill to the pool's consumers (2026-11)
+## Tap bonuses moved from buffer fills to their consumers (2026-11)
 
-A pool tap used to multiply the pool buffer's own fill (×(1 + bonus%) inside `tickPoolBufferFill`),
-and `tickFillMultiplierDecay` zeroed the bonus once the buffer was full so it couldn't ride on the
-retired full-buffer reading. Maintainer direction: the buffer's source is already scaled to Speed/
-Bandwidth and keeps up on its own, so the tap belongs on what drains the pool. `getPoolTapMultiplier`
-now scales the Provision Disk draw, the read-cache → disk flush countdown and the Data Lake drain;
-`getPoolMultiplierPercent` is the fill-based value only, and the full-buffer reset was dropped (a full
-buffer is exactly when faster consumers help). The Data Stream's own tap bonus is unchanged. Not
-applied to the lower-disk rebuild (doesn't draw the buffer), write-cache merges (disk → disk) or
-`getComputeMergeDurationSeconds` (reads the static flush duration).
+Taps used to multiply the Data Stream's and each pool's own fill (×(1 + bonus%) inside
+`tickIntroProduction`/`tickPoolBufferFill`, combined reading capped at the since-removed
+`FILL_MULTIPLIER_TAP_CAP_PERCENT` = 2000), and `tickFillMultiplierDecay` zeroed a pool's bonus once its
+buffer was full. Maintainer direction: the stream and pools already reach 10× on their own fill curve
+and their sources keep up, so a tap belongs on what DRAINS the buffer. `getDataStreamTapMultiplier`
+now scales the Upgrade Capacity / Speed drains; `getPoolTapMultiplier` scales the Provision Disk draw,
+the read-cache → disk flush countdown, write-cache merge countdowns, the lower-size rebuild and the
+Data Lake drain. `get*MultiplierPercent` are fill-only; the full-buffer reset and the post-reveal
+full-Buffer tap no-op were dropped (a full buffer is exactly when faster consumers help). Not applied:
+pool buffer fills (they are fill curves, not stream consumers needing help), full-buffer lake overflow
+(Data Stream sourced) and `getComputeMergeDurationSeconds` (reads the static flush duration).
