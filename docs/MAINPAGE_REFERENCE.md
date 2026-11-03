@@ -737,8 +737,9 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
 - 🤖 **Automation** (`open automation`, `aria-label="automation perks page"`) — every automation as one
   compact `AutomationRow` **cell** in a `CellGrid`, laid out for the capped end state: a maxed
   automation is a single line, label + Switch, nothing else (its interval moves to the cell's `title`).
-  Before the cap the cell grows downward — `every <interval>` subtext (tier autobuyers past the 10 ms
-  floor add `· N/buy`, up to 1024) and a full-width ⏫ speed upgrade (visible text is the cost only — the
+  Before the cap the head also carries a terse inline interval (`InlineMeta`, `formatIntervalShort`:
+  `64s`, `2.9s`, `212ms`; a tier autobuyer at the 10 ms floor shows only its bulk `×N`, up to 1024) —
+  never its own line — and the cell grows one line downward for a full-width ⏫ speed upgrade (visible text is the cost only — the
   doubling to `M/buy` is in its `aria-label`/`title`; every tier autobuyer / tier tickspeed autobuyer
   chain starts at 100 PP). Locked: a 🔒
   `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) or a full-width

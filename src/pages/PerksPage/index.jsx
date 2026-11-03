@@ -140,8 +140,8 @@ const Row = styled.div`
 
 // Automation categories lay their entries out as a grid of compact cells, optimised for the end
 // state: a capped (maxed) automation is just "label + Switch" on one line — Flops cells go
-// three-up on a phone, global cells one per row (tiers use TierPair below). Before the cap a cell grows downward (interval line
-// + full-width upgrade/unlock button) — taller, an accepted trade-off.
+// three-up on a phone, global cells one per row (tiers use TierPair below). Before the cap a terse interval sits inline in
+// the head and the cell grows one line for its full-width upgrade/unlock button — an accepted trade-off.
 const CellGrid = styled.div`
   align-items: start;
   display: grid;
@@ -224,6 +224,16 @@ const CellHead = styled.div`
   }
 `
 
+// Current interval (or bulk) inline in a cell's head, between label and Switch — never its own line.
+const InlineMeta = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  flex-shrink: 0;
+  font-size: 0.8em;
+  font-weight: 400;
+  margin-left: auto;
+  white-space: nowrap;
+`
+
 // Full-width action under a cell's head (upgrade or unlock button). Narrow cells drop the button's
 // leading glyph (its colour already says upgrade vs unlock) so the PP cost keeps the whole width.
 const CellAction = styled.div`
@@ -290,7 +300,7 @@ const SubText = styled.span`
   color: ${props => props.theme.color.textMuted};
   font-size: 0.82em;
   font-weight: 400;
-  padding-left: ${props => (props.$flush ? '0' : 'calc(1.5em / 0.82 + 0.45rem)')};
+  padding-left: calc(1.5em / 0.82 + 0.45rem);
 `
 
 const PpButton = styled(Button)`
@@ -376,7 +386,8 @@ const PpPurchaseButton = ({ ariaLabel, color, cost, points, disabled, onClick, t
 
 // One automation's whole lifecycle in a single compact cell (see CellGrid).
 // Head: label + (Switch once owned and pausable | `ownedBadge` | 🔒 `lockedBadge` milestone).
-// Below the head, only while there's something left to buy: `subText` (current interval) and the
+// `subText` (compact interval, e.g. `2.9s` / `×8`) sits inline in the head. Below the head, only while
+// there's something left to buy: the
 // full-width `ownedAction` (⏫ speed upgrade) or `lockedAction` (🔓 PP unlock). Capped → head only.
 const AutomationRow = ({ ariaLabel, narrow = false, bare = false, icon, name, label = name, owned, enabled = true, onToggle, toggleLabel, statusTitle, title, subText, lockedBadge, lockedAction, ownedBadge, ownedAction }) => {
   const status = `${name} ${enabled ? 'active' : 'paused'}`
@@ -397,6 +408,7 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, icon, name, la
           ))}
           {label}
         </RowLabel>
+        {owned && subText && <InlineMeta>{subText}</InlineMeta>}
         {owned && onToggle && (
           <Switch
             $on={enabled}
@@ -409,7 +421,6 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, icon, name, la
         {owned && !onToggle && ownedBadge}
         {!owned && lockedBadge}
       </CellHead>
-      {owned && subText && <SubText $flush>{subText}</SubText>}
       {action && <CellAction $narrow={narrow}>{action}</CellAction>}
     </Cell>
   )
@@ -421,6 +432,8 @@ export const PERKS_TABS = [
 ]
 
 const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Math.round(ms * 10) / 10} ms`)
+// Terse inline form for cell heads: `64s`, `2.9s`, `212ms`.
+const formatIntervalShort = ms => (ms >= 1000 ? `${Number((ms / 1000).toFixed(ms >= 10000 ? 0 : 1))}s` : `${Math.round(ms)}ms`)
 
 const GLOBAL_AUTOMATIONS = [
   { key: 'speedUp', name: 'Auto Speed Up', icon: '🌐', owned: s => s.autoGlobalTickspeed ?? false, enabled: s => s.autoGlobalTickspeedEnabled ?? true, setEnabled: 'setAutoGlobalTickspeedEnabled', buy: 'buyTickspeedAutobuyer', canBuy: () => true, unlockTitle: 'Spend Purge Points so the global tickspeed multiplier upgrades itself automatically, forever, whenever affordable' },
@@ -535,7 +548,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 title: "Spend Purge Points to shorten this automation's interval by 10% (floor 10 ms); cost doubles each level",
               }) : null}
               statusTitle={auto.statusTitle?.(enabled)}
-              subText={chainUnlocked && !maxed ? `every ${formatInterval(getAutomationIntervalSeconds(state, auto.key) * 1000)}` : null}
+              subText={chainUnlocked && !maxed ? formatIntervalShort(getAutomationIntervalSeconds(state, auto.key) * 1000) : null}
               title={chainUnlocked && maxed ? `${auto.name}: every ${formatInterval(getAutomationIntervalSeconds(state, auto.key) * 1000)} (max)` : undefined}
               toggleLabel={`${auto.name} automation`}
             />
@@ -593,7 +606,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                     progressLabel: `${tier.name} tickspeed autobuyer speed PP progress`,
                     title: "Spend Purge Points to shorten this tier's tickspeed autobuyer interval by 10% (floor 10 ms); cost doubles each level",
                   })}
-                  subText={tickOwned && !tickMaxed ? `every ${formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)}` : null}
+                  subText={tickOwned && !tickMaxed ? formatIntervalShort(getTierTickspeedIntervalSeconds(state, tier.id) * 1000) : null}
                   title={tickOwned && tickMaxed ? `${tier.name} tickspeed autobuyer: every ${formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)} (max)` : undefined}
                   toggleLabel={`${tier.name}'s tickspeed autobuyer`}
                 />
@@ -631,7 +644,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                       ? 'At the 10 ms floor, each further level doubles how many full levels one autobuyer attempt can buy (as many as are affordable, at least one); cost keeps rising'
                       : "Spend Purge Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); past the floor, levels double how many levels it buys per attempt",
                   })}
-                  subText={owned && !maxed ? `every ${formatInterval(getAutobuyerIntervalSeconds(state, tier.id) * 1000)}${bulkLevels > 1 ? ` · ${bulkLevels}/buy` : ''}` : null}
+                  // At the 10 ms floor the interval never changes, so only the bulk (×N) is worth the space.
+                  subText={owned && !maxed ? (bulkLevels > 1 ? `×${bulkLevels}` : formatIntervalShort(getAutobuyerIntervalSeconds(state, tier.id) * 1000)) : null}
                   title={owned && maxed ? `${tier.name} autobuyer: every ${formatInterval(getAutobuyerIntervalSeconds(state, tier.id) * 1000)} · ${bulkLevels}/buy (max)` : undefined}
                   toggleLabel={`${tier.name}'s autobuyer`}
                 />

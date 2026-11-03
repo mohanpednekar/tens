@@ -1978,7 +1978,7 @@ test('Auto Purge offers no speed upgrade or interval until it is bought', async 
   await openPerksTab(user, /open automation/i)
 
   expect(screen.queryByRole('button', { name: /upgrade auto purge speed/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^auto purge row$/i)).not.toHaveTextContent(/every/i)
+  expect(screen.getByLabelText(/^auto purge row$/i)).not.toHaveTextContent(/1024s/)
 })
 
 test('an Auto-Prestige button appears in Perks → Automation (Global Automation) once every tier is Smart, and spends 64 PP to activate it', async () => {
@@ -1999,7 +1999,7 @@ test('an Auto-Prestige button appears in Perks → Automation (Global Automation
   await user.click(autoRebootButton)
 
   // Same row now carries the interval and the speed upgrade.
-  expect(screen.getByLabelText(/^auto purge row$/i)).toHaveTextContent(/every 1024 s/i)
+  expect(screen.getByLabelText(/^auto purge row$/i)).toHaveTextContent('1024s')
   expect(screen.getByRole('button', { name: /upgrade auto purge speed to level 1 for 64 purge points/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
 })
@@ -2030,7 +2030,7 @@ test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled withou
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  expect(screen.getByLabelText(/^auto purge row$/i)).toHaveTextContent(/every 1024 s/i)
+  expect(screen.getByLabelText(/^auto purge row$/i)).toHaveTextContent('1024s')
   expect(screen.getByRole('button', { name: /upgrade auto purge speed to level 1 for 64 purge points/i })).toBeDisabled()
 })
 
@@ -2214,7 +2214,7 @@ test('a tier autobuyer\'s speed upgrade continues past the 10 ms floor, showing 
   await openPerksTab(user, /open automation/i)
 
   const row = screen.getByLabelText(/^kilobytes autobuyer$/i)
-  expect(row).toHaveTextContent(/every 10 ms/i)
+  expect(row).toHaveTextContent('10ms')
   const button = within(row).getByRole('button', { name: new RegExp(`upgrade kilobytes's autobuyer to level ${maxLevel + 1} for .* purge points — doubles levels bought per attempt to up to 2`, 'i') })
   // Narrow cell: the button shows only the cost; the doubling lives in its accessible name.
   expect(button).toHaveTextContent(/ PP$/)
@@ -2222,7 +2222,9 @@ test('a tier autobuyer\'s speed upgrade continues past the 10 ms floor, showing 
   await user.click(button)
 
   const after = screen.getByLabelText(/^kilobytes autobuyer$/i)
-  expect(after).toHaveTextContent(/every 10 ms · 2\/buy/i)
+  // At the floor only the bulk is shown, inline: ×2.
+  expect(after).toHaveTextContent('×2')
+  expect(after).not.toHaveTextContent('10ms')
   expect(within(after).getByRole('button', { name: new RegExp(`upgrade kilobytes's autobuyer to level ${maxLevel + 2} for .* up to 4`, 'i') })).toHaveTextContent(/ PP$/)
 })
 
@@ -2259,7 +2261,7 @@ test.each([
   const capped = screen.getByLabelText(cell)
   expect(within(capped).getByRole('button', { name: toggle })).toBeInTheDocument()
   expect(within(capped).getAllByRole('button')).toHaveLength(1)
-  expect(capped).not.toHaveTextContent(/every/i)
+  expect(capped).not.toHaveTextContent(/\d+m?s\b|×\d/)
   expect(capped).toHaveAttribute('title', expect.stringMatching(/every .* \(max\)$/))
 })
 
