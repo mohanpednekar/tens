@@ -2072,7 +2072,7 @@ test('PP-spending buttons report how much of their cost the current balance cove
 
   await user.click(screen.getByRole('tab', { name: /open unlocks/i }))
   // Auto Scale Up costs 16 PP — 10 PP covers most of it.
-  const autoScaleUpProgress = screen.getByRole('progressbar', { name: /auto scale up purge point progress/i })
+  const autoScaleUpProgress = screen.getByRole('progressbar', { name: /auto scale up pp progress/i })
   expect(autoScaleUpProgress).toHaveAttribute('aria-valuenow', '10')
   expect(autoScaleUpProgress).toHaveAttribute('aria-valuemax', '16')
 })

@@ -490,7 +490,8 @@ const InfoPage = () => {
             Restage upgrade appears beside Speed Up: spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
             It resets every other tier’s owned quantity and your Bits. A 16 PP Auto Restage
-            (Perks → Unlocks) spends it for you.
+            (Perks → Unlocks, after Auto Speed Up) spends it for you, every 64 s at first —
+            faster with its speed upgrades.
           </li>
         </ul>
       </Section>

@@ -427,7 +427,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${speedUpUnlockCost} PP`}
               onClick={actions.buyTickspeedAutobuyer}
               points={points}
-              progressLabel="Auto Speed Up Purge Point progress"
+              progressLabel="Auto Speed Up PP progress"
               title="Spend Purge Points so the global tickspeed multiplier upgrades itself automatically, forever, whenever affordable"
             />
           )}
@@ -446,7 +446,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} PP`}
               onClick={actions.buyXpTickspeedAutobuyer}
               points={points}
-              progressLabel="Auto Restage Purge Point progress"
+              progressLabel="Auto Restage PP progress"
               title="Spend Purge Points so XP is automatically consumed for Restage whenever possible (each consumption resets every other tier's owned quantity and Bits)"
             />
           )}
@@ -465,7 +465,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${scaleUpUnlockCost} PP`}
               onClick={actions.buyAutoScaleUp}
               points={points}
-              progressLabel="Auto Scale Up Purge Point progress"
+              progressLabel="Auto Scale Up PP progress"
               title="Spend Purge Points so eligible Scale Ups happen automatically until the final tier, where they stay manual for Overclock"
             />
           )}
@@ -484,7 +484,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${overclockUnlockCost} PP`}
               onClick={actions.buyAutoOverclock}
               points={points}
-              progressLabel="Auto Overclock Purge Point progress"
+              progressLabel="Auto Overclock PP progress"
               title="Spend Purge Points so Overclock is claimed automatically whenever it is eligible"
             />
           )}
@@ -508,7 +508,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${autoRebootCost} PP`}
               onClick={actions.buyAutoReboot}
               points={points}
-              progressLabel="Auto Purge Purge Point progress"
+              progressLabel="Auto Purge PP progress"
               title="Spend Purge Points so Purge happens automatically once your balance reaches 1 Googol Bytes"
             />
           )}
@@ -532,7 +532,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 label={`${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP`}
                 onClick={actions.buyComputeAutoBoost}
                 points={points}
-                progressLabel="Auto Boost Purge Point progress"
+                progressLabel="Auto Boost PP progress"
                 title="Spend Purge Points so a full tier waiting on its own in-flight merge automatically activates your preferred Boost preset (choose it on Boosters)"
               />
             )}
@@ -554,7 +554,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP`}
               onClick={actions.buyPrestigeSpeedBonus}
               points={points}
-              progressLabel="Speed bonus unlock Purge Point progress"
+              progressLabel="Speed bonus unlock PP progress"
               title="Spend Purge Points once to enable +1% production speed per unspent Purge Point"
             />
           </Row>
@@ -628,7 +628,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             label={`${formatAmount(doublePpCost)} PP`}
             onClick={actions.buyPrestigeDoublePp}
             points={points}
-            progressLabel="Double PP upgrade Purge Point progress"
+            progressLabel="Double PP upgrade PP progress"
             title={doublePpLevel < 6
               ? 'Halves how many money-exponent powers are needed per Purge Point (claimable once you reach 1 Googol Bytes)'
               : 'Doubles how many Purge Points each power earns (claimable once you reach 1 Googol Bytes)'}
@@ -671,7 +671,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   label={atFloor ? `${bulkLevels * 2}/buy · ${formatAmount(cost)} PP` : `${formatAmount(cost)} PP`}
                   onClick={() => actions.buyAutobuyerIntervalUpgrade(tier.id)}
                   points={points}
-                  progressLabel={`${tier.name} autobuyer speed Purge Point progress`}
+                  progressLabel={`${tier.name} autobuyer speed PP progress`}
                   title={atFloor
                     ? 'At the 10 ms floor, each further level doubles how many full levels one autobuyer attempt can buy (as many as are affordable, at least one); cost keeps rising'
                     : "Spend Purge Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); past the floor, levels double how many levels it buys per attempt"}
@@ -704,7 +704,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   label={`${formatAmount(cost)} PP`}
                   onClick={() => actions.buyTierTickspeedIntervalUpgrade(tier.id)}
                   points={points}
-                  progressLabel={`${tier.name} tickspeed autobuyer speed Purge Point progress`}
+                  progressLabel={`${tier.name} tickspeed autobuyer speed PP progress`}
                   title="Spend Purge Points to shorten this tier's tickspeed autobuyer interval by 10% (floor 10 ms); cost doubles each level"
                 />
               )}
@@ -741,7 +741,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   label={`${formatAmount(cost)} PP`}
                   onClick={() => actions.buyAutomationIntervalUpgrade(key)}
                   points={points}
-                  progressLabel={`${name} speed Purge Point progress`}
+                  progressLabel={`${name} speed PP progress`}
                   title="Spend Purge Points to shorten this automation's interval by 10% (floor 10 ms); cost doubles each level"
                 />
               )}

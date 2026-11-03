@@ -1963,14 +1963,6 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     ? runGlobalIntervalAutomation(stateAfterAutomation, elapsedSeconds, 'speedUp', buyGlobalTickspeedMultiplier)
     : stateAfterAutomation
 
-  // If Auto Scale Up is bought (see buyAutoScaleUp), trigger a Scale Up automatically the instant
-  // it's eligible — no manual click needed. scaleUpGame re-validates the current target's
-  // completed-level requirement (a multiple of 3 — see getScaleUpRequirement) and the production
-  // freeze, so this is a
-  // plain edge-triggered call, same convention as the autobuyer-automation loop above, not a
-  // rate-accumulating budget — Scale Up has no cadence to throttle, unlike Auto-Prestige. Gated on
-  // autoScaleUpEnabled (see setAutoScaleUpEnabled) — paused behaves exactly as if autoScaleUp were
-  // still false, for automation purposes only; the manual Scale Up button is unaffected.
   // Auto Restage (PP unlock, needs Auto Speed Up; parallel to Auto Scale Up): spends the whole XP
   // balance on the last tier's XP tickspeed whenever consumeXpForLastTierTickspeed allows (unlocked,
   // last tier owned > 0, XP >= minimum, not frozen), at most once per 'restage' interval — that
@@ -1980,6 +1972,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     ? runGlobalIntervalAutomation(stateAfterGlobalTickspeedAutobuyer, elapsedSeconds, 'restage', s => consumeXpForLastTierTickspeed(s.reboot.xp)(s))
     : stateAfterGlobalTickspeedAutobuyer
 
+  // If Auto Scale Up is bought (see buyAutoScaleUp), trigger a Scale Up whenever eligible, at most
+  // once per 'scaleUp' interval. scaleUpGame re-validates the current target's completed-level
+  // requirement (see getScaleUpRequirement) and the production freeze. Gated on autoScaleUpEnabled
+  // (see setAutoScaleUpEnabled); the manual Scale Up button is unaffected.
   const stateAfterAutoScaleUp = stateAfterAutoXp.autoScaleUp
     && (stateAfterAutoXp.autoScaleUpEnabled ?? true)
     ? runGlobalIntervalAutomation(stateAfterAutoXp, elapsedSeconds, 'scaleUp', scaleUpGame)
