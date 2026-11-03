@@ -318,7 +318,7 @@ touching any `.github/workflows/*.yml` file or reasoning in detail about the una
 
 Always update this file (`CLAUDE.md`) in the same change/commit as any code change it describes —
 don't leave it as a follow-up. If a change touches function signatures, constants, state shape,
-economy/game-rule behavior, file layout, or test counts documented below, update the corresponding
+economy/game-rule behavior, or file layout documented below, update the corresponding
 section here before considering the change done. A code change and a stale doc describing the old
 behavior should never ship together. If a change needs a rationale trail (a superseded formula, a
 rejected alternative, an incident write-up), add it to `docs/DESIGN_HISTORY.md` in the same commit
@@ -966,7 +966,11 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
+<<<<<<< HEAD
+- `yarn test` is green (run it for the current count — counts are deliberately not recorded here: every PR bumped them, so they went stale and made CLAUDE.md the top merge-conflict hot-spot). The four core test files (`engine.test.js`, `layers.test.js`,
+=======
 - `yarn test` is green (2187 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+>>>>>>> origin/main
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -982,7 +986,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   both themes, see `docs/THEMING_REFERENCE.md`. `engine.computeFlops.test.js` covers the PP Compute
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
-  (`prettifySegment`/`isEditableScalar`/`setValueAtPath`/`parseNumberDraft`/`getVariableAreaId`/search helpers). The rest of the 31 test files (`yarn test` total) sit beside their source — `save-migration/`, `navAttention`,
+  (`prettifySegment`/`isEditableScalar`/`setValueAtPath`/`parseNumberDraft`/`getVariableAreaId`/search helpers). The rest of the test files sit beside their source — `save-migration/`, `navAttention`,
   `components/*` (Button, BoostBadge, OfflineProgressNotice), `services/*` (config, monetization, rewardedAdCache,
   cloudSave/deleteAccount), `game/useIncrementalGame.offlineReward.test.jsx`, `game/storagePrefix.test.js`, `pages/SettingsPage/sections.test.jsx`,
   and `scripts/*.test.js` (maintainer checklist, iOS plist, adversarial marker, low-risk bar, bump-version,

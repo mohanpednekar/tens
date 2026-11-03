@@ -115,7 +115,7 @@ Run each of these explicitly and record a per-check result — silence is not a 
   findings. If the diff claims a bug fix, look for the regression test.
 - **Docs sync**: CLAUDE.md (and the `docs/*.md` reference file covering the touched area, and
   AGENTS.md where it overlaps) must be updated in the *same* diff as any change to function
-  signatures, constants, state shape, behavior, file layout, or test counts it documents. Grep
+  signatures, constants, state shape, behavior, or file layout it documents. Grep
   CLAUDE.md and the relevant `docs/*.md` for each renamed symbol and changed constant value; a
   stale doc shipping alongside the code change is a finding, per CLAUDE.md's own Documentation
   section.
