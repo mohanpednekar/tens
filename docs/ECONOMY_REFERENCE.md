@@ -117,7 +117,7 @@ updated. Autobuyers and offline progress are unaffected.
   `{ levels, cost }` for the Buy button (`levels: 0` → show the normal single-level preview).
 - **Single-level ladders** — `repeatPurchaseMax(action)` chains a one-level purchase action until it
   returns the same reference: per-tier tickspeed, Speed Up, Double PP, Auto Reboot level, Flops tiers.
-- `BUY_MAX_ITERATION_CAP` (1000, `layers.js`) bounds both loops (only reachable with an Infinity
+- `BUY_MAX_ITERATION_CAP` (1024, `layers.js`) bounds both loops (only reachable with an Infinity
   balance — every ladder's costs rise exponentially).
 
 ### Adding a new tier
@@ -1711,7 +1711,7 @@ milestones" below), spending no PP at all.
   unlocks, since it's passive/always-on) to set `prestigeSpeedBonusUnlocked = true`. No-op if already
   unlocked, insufficient points, or frozen.
 - **Active — Autobuyer interval:** `buyAutobuyerIntervalUpgrade(tierId)` permanently spends PP
-  (`getAutobuyerIntervalUpgradeCost(level)` = SI-clean ladder 1,2,4,…,64,125,250,500 × 1000^floor(level/10))
+  (`getAutobuyerIntervalUpgradeCost(level)` = `AUTOBUYER_INTERVAL_UPGRADE_BASE_COST` (100) × `getSiCleanDoublingFactor(level)`, the SI-clean ladder 1,2,4,…,64,125,250,500 × 1000^floor(level/10) — 100 PP first level, every tier)
   to multiply that tier's autobuyer interval (base `getAutobuyerBaseIntervalSeconds` = tier N → N s, autobuyer only, independent of tickspeed/manual buys) by `AUTOBUYER_INTERVAL_MULTIPLIER` (0.9) per level in
   `autobuyerIntervalLevels[tierId]`, floored at `AUTOBUYER_MIN_INTERVAL_SECONDS` (10 ms; max level
   `getAutobuyerIntervalMaxLevel(tierId)`, e.g. 44 for tier01, 66 for tier10). `tickGame` accrues attempt budget at
@@ -2935,13 +2935,14 @@ purchases were manual or automatic.
 - `TICKSPEED_MULTIPLIER_BASE_EXPONENT = 10` — exponent driving the (Money-funded) tickspeed multiplier's per-tier base cost (see `getTickspeedMultiplierBaseCost`): 10^10 for the first tier, down to 10^1 for the 10th/last tier
 - `TICKSPEED_PRODUCTION_STEP = 0.1` — each tickspeed multiplier level speeds up a tier's delivery frequency by another 10%, not the amount delivered (see `getTickspeedProductionMultiplier`/`getEffectiveTierTickSpeedSeconds`)
 - `AUTOBUYER_UNLOCK_BASE_COST = 1` — no longer an actual PP cost (see `getAutobuyerUnlockCost`'s doc above) — kept only as the price scale of PP purchases: 1 through 10 across the ten tiers
-- `AUTOBUYER_BULK_MAX_EXTRA_LEVELS = 9` (`floor(log2(BUY_MAX_ITERATION_CAP))`) — how many speed-upgrade levels past the 10 ms interval floor each double an autobuyer attempt's bulk limit (see `getAutobuyerBulkLevels`).
+- `AUTOBUYER_BULK_MAX_EXTRA_LEVELS = 10` (`floor(log2(BUY_MAX_ITERATION_CAP))`, so bulk tops out at exactly 1024) — how many speed-upgrade levels past the 10 ms interval floor each double an autobuyer attempt's bulk limit (see `getAutobuyerBulkLevels`).
 - `AUTOBUYER_UNLOCK_MILESTONE_START = 1` / `AUTOBUYER_UNLOCK_MILESTONE_STEP = 1` — how many reboots a tier's unit-buying autobuyer requires before it unlocks automatically (see `getAutobuyerUnlockMilestone`): 1 for the first tier, up through 10 for the 10th/last, one tier per prestige across the first 10
 - `TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 11` / `TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 1` — how many reboots a tier's own tickspeed autobuyer requires before it unlocks automatically (see `getTierTickspeedAutobuyerMilestone`): 11 for the first tier, spacing out by 1 more per tier after that, up through 20 for the 10th/last — later than the unit-buying autobuyer above, since it's a further-out convenience
 - `GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01` — the uniform per-level compounding rate for the global tickspeed multiplier; milestone levels use the same rate. The global tickspeed multiplier's *cost* (`getGlobalTickspeedMultiplierCost`, see the engine functions table above) is Money-funded, not PP-funded — it has no dedicated cost constant here, using an inline `10 ** (level + 1)` formula against `resources[MONEY_ID]` instead
 - `DEFAULT_PURCHASE_BLOCK_SIZE = 8` — the purchase block size a tier's level 1 (the very start of a run) requires to complete — only the *default/starting* value, not a fixed constant used throughout the game; the effective, current block size is computed at runtime by `getPurchaseBlockSize(state)` and can grow over a run (see the two constants below). Supersedes an old fixed `PURCHASE_BLOCK_SIZE = 8` constant that every level-dependent formula used directly — see `docs/DESIGN_HISTORY.md`
 - `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100` — every this many levels the LAST tier completes, the (global, shared-by-every-tier) purchase block size grows by `PURCHASE_BLOCK_SIZE_GROWTH_STEP` (see `getPurchaseBlockSize`)
-- `BUY_MAX_ITERATION_CAP = 1000` — safety cap on purchases one Buy-max click can chain (see "Buy max mode")
+- `AUTOBUYER_INTERVAL_UPGRADE_BASE_COST = 100` — first-level PP cost of every tier autobuyer speed chain (doubling ladder on top)
+- `BUY_MAX_ITERATION_CAP = 1024` — safety cap on purchases one Buy-max click can chain (see "Buy max mode")
 - `PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1` — the amount the block size grows by every `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS`
 - `PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.25` — the regular per-completed-level production multiplier, compounding (see `getPurchaseMilestoneMultiplier`); raised from an earlier `1.1` to shorten a fresh run's time to first Prestige
 - `PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10` — every 10th level uses this larger factor instead of `PURCHASE_MILESTONE_MULTIPLIER_BASE` for that one level, compounding into the rest (see `getPurchaseMilestoneMultiplier`) — this "every 10th level" cadence is independent of the (now variable) purchase block size and stays fixed at 10

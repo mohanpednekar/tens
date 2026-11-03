@@ -119,14 +119,13 @@ const CategoryHeading = styled.h2`
   text-transform: uppercase;
 `
 
-// Every row is a CSS grid so columns line up row-to-row regardless of content width. Default:
-// label | action. `$lead` (automation rows): fixed Switch cell | label | action, so every switch and
-// every name start at the same x whether or not the automation is owned yet. Fits a 320px phone.
+// Every Prestige row is a CSS grid (label | action) so columns line up row-to-row regardless of
+// content width. Fits a 320px phone.
 const Row = styled.div`
   align-items: center;
   column-gap: 0.6rem;
   display: grid;
-  grid-template-columns: ${props => (props.$lead ? '2.75rem minmax(0, 1fr) auto' : 'minmax(0, 1fr) auto')};
+  grid-template-columns: minmax(0, 1fr) auto;
   min-height: 2.75rem;
   padding: 0.35rem 0;
 
@@ -139,10 +138,77 @@ const Row = styled.div`
   }
 `
 
-// Lead cell of an automation row — holds the Switch once owned, empty while locked.
-const LeadCell = styled.span`
+// Automation categories lay their entries out as a two-column grid of compact cells, optimised for
+// the end state: a capped (maxed) automation is just "name + Switch" on one line, so a fully
+// upgraded category packs two per row. Before the cap a cell grows downward (interval line +
+// full-width upgrade/unlock button) — taller, an accepted trade-off.
+const CellGrid = styled.div`
+  align-items: start;
+  display: grid;
+  gap: 0.4rem;
+  /* $narrow: tier/Flops cells show only the symbol (KB, MF…), so three fit a 320px phone; named
+     (global) cells need a full row on a phone and go two-up on wider screens. */
+  grid-template-columns: repeat(auto-fill, minmax(${props => (props.$narrow ? '4.75rem' : '15rem')}, 1fr));
+`
+
+// A tier's compact label: visible symbol, full name for assistive tech and the tooltip.
+const TierSymbol = ({ tier }) => (
+  <span title={tier.name} style={{ flexShrink: 0 }}>
+    <VisuallyHidden>{tier.name}</VisuallyHidden>
+    <span aria-hidden="true">{tier.symbol}</span>
+  </span>
+)
+
+const Cell = styled.div`
+  background: ${props => props.theme.color.surfaceSunken};
+  border: 1px solid ${props => props.theme.color.border};
+  border-radius: ${props => props.theme.radius.sm};
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  font-size: ${props => (props.$narrow ? '0.88em' : '1em')};
+
+  /* Narrow (symbol-only) cells: a slightly smaller Switch so even "MB" + Switch fit three-up at 320px. */
+  ${props => props.$narrow && `
+    & button[aria-pressed] {
+      flex-shrink: 0;
+      zoom: 0.85;
+    }
+  `}
+  padding: 0.35rem 0.3rem 0.35rem 0.4rem;
+`
+
+const CellHead = styled.div`
+  align-items: center;
+  display: flex;
+  gap: 0.25rem;
+  justify-content: space-between;
+  min-height: 1.9rem;
+
+  & > span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+`
+
+// Full-width action under a cell's head (upgrade or unlock button). Narrow cells drop the button's
+// leading glyph (its colour already says upgrade vs unlock) so the PP cost keeps the whole width.
+const CellAction = styled.div`
+  & > button {
+    min-width: 0;
+    padding-left: 0.4em;
+    padding-right: 0.4em;
+    width: 100%;
+  }
+
+  ${props => props.$narrow && `
+    & > button > :first-child {
+      display: none;
+    }
+  `}
 `
 
 const RowLabel = styled.span`
@@ -271,42 +337,46 @@ const PpPurchaseButton = ({ ariaLabel, color, cost, points, disabled, onClick, t
   </PpButton>
 )
 
-// One automation's whole lifecycle in a single row. Locked: empty lead cell + `lockedAction` (a
-// 🔒 milestone badge or a 🔓 PP unlock button). Owned: pause/resume Switch in the lead cell (when
-// `onToggle` is given), the icon becomes the "<name> active|paused" status, `subText` shows its
-// current interval, and `ownedAction` holds its ⏫ speed upgrade (or nothing once maxed).
-const AutomationRow = ({ ariaLabel, icon, name, label = name, owned, enabled = true, onToggle, toggleLabel, statusTitle, subText, lockedAction, ownedAction }) => (
-  <Row $lead aria-label={ariaLabel}>
-    <LeadCell>
-      {owned && onToggle && (
-        <Switch
-          $on={enabled}
-          aria-label={toggleLabel}
-          aria-pressed={enabled}
-          onClick={onToggle}
-          title={`${enabled ? 'Pause' : 'Resume'} ${toggleLabel}`}
-        />
-      )}
-    </LeadCell>
-    <RowLabelStack>
-      <RowLabel>
-        {/* Icon-less rows (tier/Flops lists, whose category heading names the kind) keep the
-            status for assistive tech only — the Switch already shows it visually. */}
-        {owned && onToggle && !icon && (
-          <VisuallyHidden role="img" aria-label={`${name} ${enabled ? 'active' : 'paused'}`}>{enabled ? 'active ' : 'paused '}</VisuallyHidden>
+// One automation's whole lifecycle in a single compact cell (see CellGrid).
+// Head: label + (Switch once owned and pausable | `ownedBadge` | 🔒 `lockedBadge` milestone).
+// Below the head, only while there's something left to buy: `subText` (current interval) and the
+// full-width `ownedAction` (⏫ speed upgrade) or `lockedAction` (🔓 PP unlock). Capped → head only.
+const AutomationRow = ({ ariaLabel, narrow = false, icon, name, label = name, owned, enabled = true, onToggle, toggleLabel, statusTitle, title, subText, lockedBadge, lockedAction, ownedBadge, ownedAction }) => {
+  const status = `${name} ${enabled ? 'active' : 'paused'}`
+  const action = owned ? ownedAction : lockedAction
+  return (
+    <Cell $narrow={narrow} aria-label={ariaLabel} title={title}>
+      <CellHead>
+        <RowLabel>
+          {/* Icon-less cells (tier/Flops lists, whose category heading names the kind) keep the
+              status for assistive tech only — the Switch already shows it visually. */}
+          {owned && onToggle && !icon && (
+            <VisuallyHidden role="img" aria-label={status}>{enabled ? 'active ' : 'paused '}</VisuallyHidden>
+          )}
+          {icon && (owned && onToggle ? (
+            <StatusIcon $dimmed={!enabled} role="img" aria-label={status} title={statusTitle}>{icon}</StatusIcon>
+          ) : (
+            <RowIcon>{icon}</RowIcon>
+          ))}
+          {label}
+        </RowLabel>
+        {owned && onToggle && (
+          <Switch
+            $on={enabled}
+            aria-label={toggleLabel}
+            aria-pressed={enabled}
+            onClick={onToggle}
+            title={`${enabled ? 'Pause' : 'Resume'} ${toggleLabel}`}
+          />
         )}
-        {icon && (owned && onToggle ? (
-          <StatusIcon $dimmed={!enabled} role="img" aria-label={`${name} ${enabled ? 'active' : 'paused'}`} title={statusTitle}>{icon}</StatusIcon>
-        ) : (
-          <RowIcon>{icon}</RowIcon>
-        ))}
-        {label}
-      </RowLabel>
-      {owned && subText && <SubText $flush={!icon}>{subText}</SubText>}
-    </RowLabelStack>
-    {owned ? (ownedAction ?? <span />) : lockedAction}
-  </Row>
-)
+        {owned && !onToggle && ownedBadge}
+        {!owned && lockedBadge}
+      </CellHead>
+      {owned && subText && <SubText $flush>{subText}</SubText>}
+      {action && <CellAction $narrow={narrow}>{action}</CellAction>}
+    </Cell>
+  )
+}
 
 export const PERKS_TABS = [
   { id: 'automation', icon: '🤖', ariaLabel: 'open automation', title: 'Automation — unlock, pause/resume and speed up every automation' },
@@ -393,6 +463,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     <List aria-label="automation perks page">
       <Category aria-label="global automation category">
         <CategoryHeading>Global Automation</CategoryHeading>
+        <CellGrid>
         {/* Every row always listed, in prerequisite order; the engine re-checks every gate. */}
         {GLOBAL_AUTOMATIONS.map(auto => {
           const owned = auto.owned(state)
@@ -427,15 +498,18 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 title: "Spend Purge Points to shorten this automation's interval by 10% (floor 10 ms); cost doubles each level",
               }) : null}
               statusTitle={auto.statusTitle?.(enabled)}
-              subText={chainUnlocked ? `every ${formatInterval(getAutomationIntervalSeconds(state, auto.key) * 1000)}${maxed ? ' (max)' : ''}` : null}
+              subText={chainUnlocked && !maxed ? `every ${formatInterval(getAutomationIntervalSeconds(state, auto.key) * 1000)}` : null}
+              title={chainUnlocked && maxed ? `${auto.name}: every ${formatInterval(getAutomationIntervalSeconds(state, auto.key) * 1000)} (max)` : undefined}
               toggleLabel={`${auto.name} automation`}
             />
           )
         })}
+        </CellGrid>
       </Category>
 
       <Category aria-label="tier autobuyers category">
         <CategoryHeading>Tier Autobuyers</CategoryHeading>
+        <CellGrid $narrow>
         {/* All ten tiers stay listed (owned ones included) so unlock history is never lost. */}
         {TIER_DEFINITIONS.map(tier => {
           const owned = (state.autobuyers[tier.id] ?? null) !== null
@@ -451,8 +525,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               key={tier.id}
               ariaLabel={`${tier.name} autobuyer`}
               enabled={enabled}
-              label={tier.name}
-              lockedAction={(
+              label={<TierSymbol tier={tier} />}
+              narrow
+              lockedBadge={(
                 <MilestoneBadge
                   current={rebootCount}
                   milestone={milestone}
@@ -477,15 +552,18 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   ? 'At the 10 ms floor, each further level doubles how many full levels one autobuyer attempt can buy (as many as are affordable, at least one); cost keeps rising'
                   : "Spend Purge Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); past the floor, levels double how many levels it buys per attempt",
               })}
-              subText={owned ? `every ${formatInterval(getAutobuyerIntervalSeconds(state, tier.id) * 1000)}${bulkLevels > 1 ? ` · ${bulkLevels}/buy` : ''}${maxed ? ' (max)' : ''}` : null}
+              subText={owned && !maxed ? `every ${formatInterval(getAutobuyerIntervalSeconds(state, tier.id) * 1000)}${bulkLevels > 1 ? ` · ${bulkLevels}/buy` : ''}` : null}
+              title={owned && maxed ? `${tier.name} autobuyer: every ${formatInterval(getAutobuyerIntervalSeconds(state, tier.id) * 1000)} · ${bulkLevels}/buy (max)` : undefined}
               toggleLabel={`${tier.name}'s autobuyer`}
             />
           )
         })}
+        </CellGrid>
       </Category>
 
       <Category aria-label="tier tickspeed autobuyers category">
         <CategoryHeading>Tier Tickspeed Autobuyers</CategoryHeading>
+        <CellGrid $narrow>
         {TIER_DEFINITIONS.map(tier => {
           const owned = state.tierTickspeedAutobuyer?.[tier.id] ?? false
           const enabled = state.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true
@@ -497,8 +575,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               key={tier.id}
               ariaLabel={`${tier.name} tickspeed autobuyer`}
               enabled={enabled}
-              label={tier.name}
-              lockedAction={(
+              label={<TierSymbol tier={tier} />}
+              narrow
+              lockedBadge={(
                 <MilestoneBadge
                   current={rebootCount}
                   milestone={getTierTickspeedAutobuyerMilestone(tier.id)}
@@ -518,16 +597,19 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 progressLabel: `${tier.name} tickspeed autobuyer speed PP progress`,
                 title: "Spend Purge Points to shorten this tier's tickspeed autobuyer interval by 10% (floor 10 ms); cost doubles each level",
               })}
-              subText={owned ? `every ${formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)}${maxed ? ' (max)' : ''}` : null}
+              subText={owned && !maxed ? `every ${formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)}` : null}
+              title={owned && maxed ? `${tier.name} tickspeed autobuyer: every ${formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)} (max)` : undefined}
               toggleLabel={`${tier.name}'s tickspeed autobuyer`}
             />
           )
         })}
+        </CellGrid>
       </Category>
 
       {showComputeAutoBoost && (
         <Category aria-label="booster automation category">
           <CategoryHeading>Booster Automation</CategoryHeading>
+          <CellGrid>
           {/* No pause Switch: the Auto Boost preset picker on Boosters (incl. its off choice) is its control. */}
           <AutomationRow
             ariaLabel="auto boost row"
@@ -541,14 +623,16 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             })}
             name="Auto Boost"
             owned={isComputeAutoBoostActive}
-            ownedAction={<UnlockedBadge icon="🤖" name="Auto Boost" title="Auto Boost unlocked — choose its preset on Boosters" />}
+            ownedBadge={<UnlockedBadge icon="🤖" name="Auto Boost" title="Auto Boost unlocked — choose its preset on Boosters" />}
           />
+          </CellGrid>
         </Category>
       )}
 
       {state.computeFlops?.pageUnlocked && (
         <Category aria-label="compute autobuyers category">
           <CategoryHeading>Compute Autobuyers</CategoryHeading>
+          <CellGrid $narrow>
           {COMPUTE_FLOPS_TIER_DEFINITIONS.map(flopTier => {
             const owned = (state.computeFlopsAutobuyers?.[flopTier.id] ?? null) !== null
             const enabled = state.computeFlopsAutobuyersEnabled?.[flopTier.id] ?? true
@@ -557,8 +641,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 key={flopTier.id}
                 ariaLabel={`${flopTier.name} autobuyer`}
                 enabled={enabled}
-                label={flopTier.name}
-                lockedAction={(
+                label={<TierSymbol tier={flopTier} />}
+                narrow
+                lockedBadge={(
                   <MilestoneBadge
                     current={eraCount}
                     milestone={getFlopsAutobuyerUnlockEra(flopTier.id)}
@@ -574,6 +659,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               />
             )
           })}
+          </CellGrid>
         </Category>
       )}
     </List>

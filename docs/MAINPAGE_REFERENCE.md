@@ -668,8 +668,7 @@ live inside the selected tier):
   `!isFirstRun`), Scale Up, Tickspeed, and Overclock — each gated on the same
   reveal/`everRevealed` flag its own card already uses (so a not-yet-relevant multiplier doesn't appear
   here before its own card would show it either), reading either its live effect (e.g. "+50% production
-  speed from 50 unspent PP", "×4 production speed from 2 activations", "+1% faster ticks on every tier
-  (Lv.1)", "Tickspeed upgrade's per-level rate is now 1.21% (was 1%) from level 2") or a "not yet
+  speed from 50 unspent PP", "×4 production speed from 2 activations", "+1% faster ticks on every tier", "Tickspeed upgrade's per-level rate is now 1.21% (was 1%) from level 2") or a "not yet
   unlocked/activated/active" status line when revealed but not yet bought. The
   per-tier purchase milestone multiplier (`getPurchaseMilestoneMultiplier`) is deliberately not listed
   here — it's per-tier, not global, and already shown in each tier row's own Details disclosure. The
@@ -738,28 +737,32 @@ Rows are grouped **by feature, not by purchase kind** — an automation's unlock
 chain are one row (they used to be split across Unlocks / Upgrades / Toggles tabs; see
 `docs/DESIGN_HISTORY.md`):
 - 🤖 **Automation** (`open automation`, `aria-label="automation perks page"`) — every automation as one
-  `AutomationRow` (grid `2.75rem | 1fr | auto` = lead Switch cell | label | action). Locked: empty lead
-  cell, action = 🔒 `MilestoneBadge` (free Purge/Era milestone, `"<subject> unlocks at <unit> N"` +
-  hidden progressbar) or 🔓 PP unlock button (`"Enable <name> for N Purge Points"`). Owned: lead cell =
-  `components/Switch` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up automation"`,
-  `"<tier>'s autobuyer"`), the label icon becomes the `"<name> active|paused"` status, subtext
-  `every <interval>` (tier autobuyers past the 10 ms floor add `· N/buy`, up to 1024; `(max)` once maxed;
-  every tier autobuyer / tier tickspeed autobuyer speed chain starts at 100 PP), action
-  = ⏫ speed upgrade (`M/buy · <cost> PP` past the floor) or nothing once maxed. Categories:
-  *Global Automation* (rows `"<name> row"`, Auto Speed Up → Auto Restage → Auto Scale Up → Auto
-  Overclock → Auto Purge; Restage and Scale Up both need Speed Up, Overclock needs both, Purge needs
-  Overclock — engine-enforced), *Tier Autobuyers* / *Tier Tickspeed Autobuyers* (all ten tiers always
-  listed, rows `"<tier> autobuyer"` / `"<tier> tickspeed autobuyer"`), *Booster Automation* (Auto
-  Boost once Foundry Compute unlocks; no Switch — its preset picker on Boosters is the control, owned
-  shows `"Auto Boost unlocked"`), *Compute Autobuyers* (Era milestones, once the Flops page is
-  unlocked; no speed chain). Each milestone appears only here — `MilestonesPage` doesn't repeat them.
+  compact `AutomationRow` **cell** in a `CellGrid`, laid out for the capped end state: a maxed
+  automation is a single line, label + Switch, nothing else (its interval moves to the cell's `title`).
+  Before the cap the cell grows downward — `every <interval>` subtext (tier autobuyers past the 10 ms
+  floor add `· N/buy`, up to 1024) and a full-width ⏫ speed upgrade (`M/buy · <cost> PP` past the
+  floor; every tier autobuyer / tier tickspeed autobuyer chain starts at 100 PP). Locked: a 🔒
+  `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) or a full-width
+  🔓 PP unlock button (`"Enable <name> for N Purge Points"`). The Switch (`aria-pressed`, `aria-label`
+  e.g. `"Auto Scale Up automation"`, `"<tier>'s autobuyer"`) sits at the head's right; the status is
+  `"<name> active|paused"` (`role="img"`). Grids: tier / tier-tickspeed / Flops cells are `$narrow`
+  (`minmax(4.75rem, 1fr)` → three-up at 320px; label = tier **symbol** `KB`/`MF`, full name hidden +
+  `title`; 0.88em font, Switch `zoom: 0.85`, button glyph hidden so the cost fits); global cells are
+  `minmax(15rem, 1fr)` (one per row on a phone, two-up wider). Categories: *Global Automation* (cells
+  `"<name> row"`, Auto Speed Up → Auto Restage → Auto Scale Up → Auto Overclock → Auto Purge; Restage
+  and Scale Up both need Speed Up, Overclock needs both, Purge needs Overclock — engine-enforced),
+  *Tier Autobuyers* / *Tier Tickspeed Autobuyers* (all ten tiers always listed, cells
+  `"<tier> autobuyer"` / `"<tier> tickspeed autobuyer"`), *Booster Automation* (Auto Boost once Foundry
+  Compute unlocks; no Switch — its preset picker on Boosters is the control, owned shows `"Auto Boost
+  unlocked"`), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
+  Each milestone appears only here — `MilestonesPage` doesn't repeat them.
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
   *Purge Points* (Double PP leveled upgrade; Production speed bonus one-time unlock, `"Production
   speed bonus unlocked"` once bought; DeGoogol, locked until Auto Purge's interval ≤
   `UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS`) and *Purchasing* (Buy max, `components/BuyMaxToggle`).
 Perks never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
-row labels are `<RowIcon>` (fixed-width icon cell) + name; tier / tier-tickspeed / Flops rows are the bare
-tier name (their category heading names the kind) with a hidden `role="img"` status. Every automation is named
+labels are `<RowIcon>` (fixed-width icon cell) + name; tier / tier-tickspeed / Flops cells show the
+tier symbol (their category heading names the kind). Every automation is named
 `Auto <feature>` (no hyphen). Factory's Speed Up / Scale Up / Overclock cards share
 `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem heading); Auto Scale Up's status
 is an `AutoChip` in the Scale Up card header.
