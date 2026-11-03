@@ -1,5 +1,36 @@
 # Design history & rationale
 
+### Perks regrouped by feature: Unlocks / Upgrades / Toggles → Automation / Prestige — 2026-11-03
+
+Perks used three tabs split by *purchase kind* (🔓 one-time unlocks, ⏫ leveled upgrades, 🎛 pause
+toggles). Every automation therefore appeared up to three times — e.g. Auto Purge's unlock on
+Unlocks, its speed chain on Upgrades, its pause on Toggles — and a player had to visit three tabs to
+manage one feature. Regrouped by *feature*: one `AutomationRow` per automation carries its whole
+lifecycle (🔒 milestone / 🔓 unlock → Switch + `every <interval>` + ⏫ speed). Kept separate because
+they aren't automations and have no unlock/toggle/speed triad: Double PP (pure leveled upgrade),
+Production speed bonus (one-time), DeGoogol (milestone), Buy max (per-device purchasing preference) —
+these form the ✦ Prestige tab. Tier autobuyers and tier tickspeed autobuyers became two categories
+(one row each per tier) instead of one two-cell tier row, since an owned cell now needs a Switch *and*
+a speed button, which two side-by-side cells can't fit at 320px. Trade-off: an owned milestone row
+shows its Switch rather than the old "✓ unlocked at Purge N" history badge (the threshold is still in
+nearby rows' locked badges and the Guide). Tab dots follow the regrouping (`hasAffordablePpUnlock`/
+`hasAffordablePpLevelUpgrade` → `hasAffordableAutomationPerk`/`hasAffordablePrestigePerk`; the Auto
+Purge speed level moved to the Automation dot, the speed bonus to the Prestige dot).
+
+Same PR, follow-up maintainer direction: level numbers were dropped everywhere they were shown ("useless" —
+the interval, `N/buy`, bonus % and cost already say what a level does); Guide moved from the bottom bar into
+More (Milestones stayed there — it's a rarely-visited status screen, and seven bar items were tight at
+320px); the tier autobuyer and tier tickspeed autobuyer speed chains both start at a flat 100 PP for every
+tier (a per-tier 100/200/300… start was considered and dropped in favour of one flat start) — previously 1 PP
+and 2 PP, which made the first levels trivially cheap. The bulk cap became exactly 1024 (`BUY_MAX_ITERATION_CAP`
+1000 → 1024, so `AUTOBUYER_BULK_MAX_EXTRA_LEVELS` = 10). The global-automation chains keep their own
+8/16/32/64 PP bases (`getSiCleanDoublingFactor` is now the shared ladder; `getAutobuyerIntervalUpgradeCost`
+applies the 100 PP base on top).
+
+Later in the same PR the two tier lists (autobuyers, tickspeed autobuyers) merged back into one card per
+tier, mirroring the Factory row's own positions — ⚙ tickspeed on the left, 🤖 buy on the right — so the
+same tier's automations sit where the player already looks for them; capped, a tier is one line.
+
 ### Fill multiplier 10× → 0.1× (log-linear) and a multiplicative tap bonus — 2026-10-30
 
 The original fill-based Speed/Bandwidth multiplier was linear in fill fraction: 150% empty, 100% at

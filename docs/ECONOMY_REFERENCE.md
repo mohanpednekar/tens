@@ -117,7 +117,7 @@ updated. Autobuyers and offline progress are unaffected.
   `{ levels, cost }` for the Buy button (`levels: 0` → show the normal single-level preview).
 - **Single-level ladders** — `repeatPurchaseMax(action)` chains a one-level purchase action until it
   returns the same reference: per-tier tickspeed, Speed Up, Double PP, Auto Reboot level, Flops tiers.
-- `BUY_MAX_ITERATION_CAP` (1000, `layers.js`) bounds both loops (only reachable with an Infinity
+- `BUY_MAX_ITERATION_CAP` (1024, `layers.js`) bounds both loops (only reachable with an Infinity
   balance — every ladder's costs rise exponentially).
 
 ### Adding a new tier
@@ -1711,21 +1711,21 @@ milestones" below), spending no PP at all.
   unlocks, since it's passive/always-on) to set `prestigeSpeedBonusUnlocked = true`. No-op if already
   unlocked, insufficient points, or frozen.
 - **Active — Autobuyer interval:** `buyAutobuyerIntervalUpgrade(tierId)` permanently spends PP
-  (`getAutobuyerIntervalUpgradeCost(level)` = SI-clean ladder 1,2,4,…,64,125,250,500 × 1000^floor(level/10))
+  (`getAutobuyerIntervalUpgradeCost(level)` = `AUTOBUYER_INTERVAL_UPGRADE_BASE_COST` (100) × `getSiCleanDoublingFactor(level)`, the SI-clean ladder 1,2,4,…,64,125,250,500 × 1000^floor(level/10) — 100 PP first level, every tier)
   to multiply that tier's autobuyer interval (base `getAutobuyerBaseIntervalSeconds` = tier N → N s, autobuyer only, independent of tickspeed/manual buys) by `AUTOBUYER_INTERVAL_MULTIPLIER` (0.9) per level in
   `autobuyerIntervalLevels[tierId]`, floored at `AUTOBUYER_MIN_INTERVAL_SECONDS` (10 ms; max level
   `getAutobuyerIntervalMaxLevel(tierId)`, e.g. 44 for tier01, 66 for tier10). `tickGame` accrues attempt budget at
   `elapsedSeconds / getAutobuyerIntervalSeconds(state, tierId)`. Needs the autobuyer unlocked; kept
-  through Prestige/Scale Up/Overclock/Era. UI: Perks → Upgrades → Autobuyer Speed.
+  through Prestige/Scale Up/Overclock/Era. UI: the tier's row on Perks → Automation → Tier Autobuyers.
 - **Active — Automation interval chains:** `AUTOMATION_INTERVAL_CONFIG` (`speedUp` 8 PP/1 s, `scaleUp`
   16 PP/64 s, `restage` 16 PP/64 s, `overclock` 32 PP/256 s, `reboot` 64 PP/1024 s) and `TIER_TICKSPEED_INTERVAL_CONFIG`
-  (2 PP/16 s per tier). Cost = baseCost × the tier-autobuyer ladder (`getAutobuyerIntervalUpgradeCost`);
+  (100 PP/16 s per tier). Cost = baseCost × the shared doubling ladder (`getSiCleanDoublingFactor`: 1, 2, 4, …, 64, 125, …);
   interval = baseSeconds × 0.9^level, floor 10 ms. `buyAutomationIntervalUpgrade(key)` /
   `buyTierTickspeedIntervalUpgrade(tierId)` (state: `automationIntervalLevels`,
   `tierTickspeedIntervalLevels`, permanent). Each automation accrues a run-scoped budget
   (`automationAttemptBudgets`, `tierTickspeedAttemptBudgets`, `autoRebootAttemptBudget`) at
   elapsed ÷ interval via `runIntervalAutomation`; a no-op attempt clamps the bank to 1. Auto Reboot
-  is activation-only (`buyAutoReboot`); its speed chain is bought separately on Perks → Upgrades. **Auto Overclock**
+  is activation-only (`buyAutoReboot`); its speed chain is bought separately (same Perks → Automation row, once active). **Auto Overclock**
   is a separate 32 PP unlock (needs Auto Scale Up), pausable via `autoOverclockEnabled`.
 - **Active — Autobuyer bulk (past the speed floor):** a tier's autobuyer buys ONE whole level (all 8
   blocks) per attempt, only when fully affordable; with partial level progress it completes the rest
@@ -1733,15 +1733,16 @@ milestones" below), spending no PP at all.
   a partial purchase (the `autobuyerBatchSize` argument and Buy max mode are ignored by autobuyers).
   The tier's PP **speed upgrades** (`buyAutobuyerIntervalUpgrade`, ×0.9 interval per level) continue past the
   10 ms floor (`getAutobuyerIntervalMaxLevel`): each extra level doubles how many FULL levels one attempt may buy
-  (`getAutobuyerBulkLevels` = 2^extra: 1, 2, 4, … up to `2^AUTOBUYER_BULK_MAX_EXTRA_LEVELS` = 512, kept
-  below `BUY_MAX_ITERATION_CAP`; `getAutobuyerSpeedUpgradeMaxLevel` = floor level + 9). It is only an
+  (`getAutobuyerBulkLevels` = 2^extra: 1, 2, 4, … up to `2^AUTOBUYER_BULK_MAX_EXTRA_LEVELS` = 1024 =
+  `BUY_MAX_ITERATION_CAP`; `getAutobuyerSpeedUpgradeMaxLevel` = floor level + 10). It is only an
   upper limit: `buyTierUpToLevels` buys as many whole clean levels as are affordable up to it (zero level
   progress required), otherwise falls back to a single level. Permanent across Prestige/Scale Up/Overclock/Era.
 - **Unlock costs = first upgrade cost.** Each global automation's one-time unlock costs
   `getAutomationUnlockCost(key)` = `AUTOMATION_INTERVAL_CONFIG[key].baseCost` — the same amount its
   interval chain's first level costs: Speed Up 8, Scale Up 16, Overclock 32, Auto Reboot 64 PP. Anything
   unlocked by a milestone (tier autobuyers, tier tickspeed autobuyers) has no unlock cost at all — only
-  upgrades (1 PP / 2 PP first levels). The old `AUTO_SCALE_UP_COST`, `TICKSPEED_AUTOBUYER_COST`,
+  upgrades, every chain starting at 100 PP (`AUTOBUYER_INTERVAL_UPGRADE_BASE_COST` for tier autobuyers,
+  `TIER_TICKSPEED_INTERVAL_CONFIG.baseCost` for tier tickspeed autobuyers — same for every tier). The old `AUTO_SCALE_UP_COST`, `TICKSPEED_AUTOBUYER_COST`,
   `AUTO_PRESTIGE_COST`/`_MULTIPLIER` constants and `getAutoPrestigeCost` were removed.
 - **Active — Auto Scale Up:** `buyAutoScaleUp(state)` permanently spends the `scaleUp` unlock cost (16 PP)
   to set `autoScaleUp = true`. Once bought, `tickGame` calls `scaleUpGame` on its interval timer
@@ -1799,9 +1800,10 @@ per-tier milestone, no PP spent, no button to click:
   the PP-purchase price scale. `getTierTickspeedAutobuyerCost` and `TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER` were
   removed entirely — nothing else needed that formula once the tier tickspeed autobuyer itself
   stopped costing PP.
-- Surfaced once, on Perks → 🔓 Unlocks' "Tier Autobuyers" category (`pages/PerksPage`): each tier's
-  row shows a `MilestoneBadge` per track — `✓` once reached, or a dimmed `🔒 {milestone}` badge plus a
-  `role="progressbar"` (`aria-valuenow = min(reboot.count, milestone)`) while pending. `MilestonesPage` no longer repeats this.
+- Surfaced once, on Perks → 🤖 Automation's "Tier Autobuyers" category (`pages/PerksPage`): one `TierPair`
+  card per tier, ⚙ tickspeed half left / 🤖 autobuyer half right (the Factory row's own positions); each half
+  shows a dimmed `🔒 {milestone}` `MilestoneBadge` plus a
+  `role="progressbar"` (`aria-valuenow = min(reboot.count, milestone)`) while pending, then the pause Switch + speed upgrade once reached. `MilestonesPage` no longer repeats this.
 
 #### Pause/resume for the global automations
 
@@ -1825,8 +1827,8 @@ predating this feature — see `storage.js` below): a paused automation behaves 
 never been bought, for automation purposes only — the level/PP already spent are untouched, and (for
 Auto Reboot) the manual Prestige button keeps working regardless. Pausing Auto Reboot stops both its
 per-tick `autoRebootAttemptBudget` accumulation and its automatic `rebootGame` firing, not just the
-firing. Perks → 🎛 Toggles renders a pause/resume `components/Switch` (`aria-pressed`)
-beside an icon-only status badge for each of the four global automations once bought.
+firing. Each owned row on Perks → 🤖 Automation renders a pause/resume `components/Switch` (`aria-pressed`)
+beside an icon status (`"<name> active|paused"`) for each of the five global automations once bought.
 
 #### Pause/resume for per-tier automations
 
@@ -1850,7 +1852,7 @@ Restage — `autoXpTickspeed`/`autoXpTickspeedEnabled` — see "The last tier's 
 `rebootGame`/`scaleUpGame` carry both fields through unchanged, same permanence as
 `autobuyers`/`tierTickspeedAutobuyer` themselves. 
 `autobuyersEnabled`/`tierTickspeedAutobuyerEnabled` keys from fresh defaults (`true` for every tier)
-but does not transform legacy save formats. See "Unit autobuyer status (Factory view, per tier)" above and `docs/MAINPAGE_REFERENCE.md`'s "Perks page" — every toggle renders on Perks → 🎛 Toggles.
+but does not transform legacy save formats. See "Unit autobuyer status (Factory view, per tier)" above and `docs/MAINPAGE_REFERENCE.md`'s "Perks page" — every toggle renders in its automation's row on Perks → 🤖 Automation.
 
 XP (`reboot.xp`) has otherwise been removed from the UI — see `docs/DESIGN_HISTORY.md`; the
 underlying earning mechanic (`checkMilestones`) is untouched in `engine.js`. Its one exception is
@@ -1954,11 +1956,11 @@ its one purpose.
   (`purchased`/levels untouched; the last tier's own counts untouched). No-op if not unlocked, if the
   last tier's own `owned` is 0 (nothing to speed up — see `docs/DESIGN_HISTORY.md`), if `amount` isn't a
   positive integer, is below the minimum, exceeds unspent XP, or production is frozen.
-- **Automation: the Auto Restage** (`autoXpTickspeed`, bought once on Perks → Unlocks for
+- **Automation: the Auto Restage** (`autoXpTickspeed`, bought once on Perks → Automation for
   `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` = 16 PP = `AUTOMATION_INTERVAL_CONFIG.restage.baseCost` via
   `buyXpTickspeedAutobuyer`; needs Auto Speed Up, parallel to Auto Scale Up; permanent across
   Prestige/Scale Up/Overclock/Era like the other global automations). While bought and
-  `autoXpTickspeedEnabled` (pause via `setAutoXpTickspeedEnabled`, Perks → Toggles), `tickGame` calls
+  `autoXpTickspeedEnabled` (pause via `setAutoXpTickspeedEnabled`, same Perks row), `tickGame` calls
   `consumeXpForLastTierTickspeed(reboot.xp)` through `runGlobalIntervalAutomation(…, 'restage', …)` —
   at most once per `getAutomationIntervalSeconds(state, 'restage')` (64 s × 0.9^level, upgraded via
   `buyAutomationIntervalUpgrade('restage')`), after Auto Speed Up and before Auto Scale Up — and
@@ -2024,7 +2026,7 @@ see "Balances (top HUD)" above, already doubles as the Prestige button once `can
 purely informational: prestige progress/award preview, rebooted count, unspent PP, and Auto Reboot
 status. It has been removed entirely as redundant with the `TopRebootBar`/`FullScreenOverlay`/
 PP-header-as-button ways to trigger and observe Prestige — none of that information had anywhere else to
-go for it to lose. Auto Reboot's status line (`"every {interval}"`) shows on its Perks → 🔓 Unlocks Global Automation row; its speed chain is on ⏫ Upgrades and its pause toggle on Perks → Toggles. Global automations are sequential (each needs the previous one, in the UI and the engine).
+go for it to lose. Auto Reboot's current interval (terse inline `formatIntervalShort`, e.g. `1024s`) shows on its Perks → 🤖 Automation Global Automation row, which also carries its speed upgrade and pause Switch. Global automations are sequential (each needs the previous one, in the UI and the engine).
 
 ### Scale Up
 
@@ -2102,7 +2104,7 @@ requirement is already in completed levels; the displayed current count is
 `state.purchaseLevels[targetTier.id] − 1`. Enabled once the raw engine requirement is met and disabled
 while frozen — no `window.confirm` guard, since this is beneficial not destructive. Once `!isFirstRun`
 and `autoScaleUp` bought, an `AutoChip` in the Scale Up card header reads "⏩ Auto" (or "⏩ Paused";
-`aria-label` "Auto Scale Up active|paused"; the purchase button itself lives on Perks → Unlocks).
+`aria-label` "Auto Scale Up active|paused"; the purchase button itself lives on Perks → Automation).
 
 ### Overclock
 
@@ -2197,7 +2199,7 @@ false, so `MainPage` keeps every PP-related display/control out of the page duri
 - Once that page is reachable, every purchase on it shows immediately — no separate "reveal one by
   one" teaser gate. The only exceptions are real prerequisites: Global Automation is a
   chain: Auto Speed Up → {Auto Restage, Auto Scale Up} (both open once Speed Up is owned, either order)
-  → Auto Overclock (needs both) → Auto Purge (`autoReboot`) — engine-enforced. Every tier's Unlocks row (its milestone badges) is always listed.
+  → Auto Overclock (needs both) → Auto Purge (`autoReboot`) — engine-enforced. Every tier's Perks → Automation rows (milestone badge until owned) are always listed.
 - The sticky PP header display (`PpHeaderCard`, unspent PP + production-speed suffix once
   `state.prestigeSpeedBonusUnlocked`) only renders once `!isFirstRun`.
 
@@ -2934,13 +2936,14 @@ purchases were manual or automatic.
 - `TICKSPEED_MULTIPLIER_BASE_EXPONENT = 10` — exponent driving the (Money-funded) tickspeed multiplier's per-tier base cost (see `getTickspeedMultiplierBaseCost`): 10^10 for the first tier, down to 10^1 for the 10th/last tier
 - `TICKSPEED_PRODUCTION_STEP = 0.1` — each tickspeed multiplier level speeds up a tier's delivery frequency by another 10%, not the amount delivered (see `getTickspeedProductionMultiplier`/`getEffectiveTierTickSpeedSeconds`)
 - `AUTOBUYER_UNLOCK_BASE_COST = 1` — no longer an actual PP cost (see `getAutobuyerUnlockCost`'s doc above) — kept only as the price scale of PP purchases: 1 through 10 across the ten tiers
-- `AUTOBUYER_BULK_MAX_EXTRA_LEVELS = 9` (`floor(log2(BUY_MAX_ITERATION_CAP))`) — how many speed-upgrade levels past the 10 ms interval floor each double an autobuyer attempt's bulk limit (see `getAutobuyerBulkLevels`).
+- `AUTOBUYER_BULK_MAX_EXTRA_LEVELS = 10` (`floor(log2(BUY_MAX_ITERATION_CAP))`, so bulk tops out at exactly 1024) — how many speed-upgrade levels past the 10 ms interval floor each double an autobuyer attempt's bulk limit (see `getAutobuyerBulkLevels`).
 - `AUTOBUYER_UNLOCK_MILESTONE_START = 1` / `AUTOBUYER_UNLOCK_MILESTONE_STEP = 1` — how many reboots a tier's unit-buying autobuyer requires before it unlocks automatically (see `getAutobuyerUnlockMilestone`): 1 for the first tier, up through 10 for the 10th/last, one tier per prestige across the first 10
 - `TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 11` / `TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 1` — how many reboots a tier's own tickspeed autobuyer requires before it unlocks automatically (see `getTierTickspeedAutobuyerMilestone`): 11 for the first tier, spacing out by 1 more per tier after that, up through 20 for the 10th/last — later than the unit-buying autobuyer above, since it's a further-out convenience
 - `GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01` — the uniform per-level compounding rate for the global tickspeed multiplier; milestone levels use the same rate. The global tickspeed multiplier's *cost* (`getGlobalTickspeedMultiplierCost`, see the engine functions table above) is Money-funded, not PP-funded — it has no dedicated cost constant here, using an inline `10 ** (level + 1)` formula against `resources[MONEY_ID]` instead
 - `DEFAULT_PURCHASE_BLOCK_SIZE = 8` — the purchase block size a tier's level 1 (the very start of a run) requires to complete — only the *default/starting* value, not a fixed constant used throughout the game; the effective, current block size is computed at runtime by `getPurchaseBlockSize(state)` and can grow over a run (see the two constants below). Supersedes an old fixed `PURCHASE_BLOCK_SIZE = 8` constant that every level-dependent formula used directly — see `docs/DESIGN_HISTORY.md`
 - `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100` — every this many levels the LAST tier completes, the (global, shared-by-every-tier) purchase block size grows by `PURCHASE_BLOCK_SIZE_GROWTH_STEP` (see `getPurchaseBlockSize`)
-- `BUY_MAX_ITERATION_CAP = 1000` — safety cap on purchases one Buy-max click can chain (see "Buy max mode")
+- `AUTOBUYER_INTERVAL_UPGRADE_BASE_COST = 100` — first-level PP cost of every tier autobuyer speed chain (doubling ladder on top)
+- `BUY_MAX_ITERATION_CAP = 1024` — safety cap on purchases one Buy-max click can chain (see "Buy max mode")
 - `PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1` — the amount the block size grows by every `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS`
 - `PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.25` — the regular per-completed-level production multiplier, compounding (see `getPurchaseMilestoneMultiplier`); raised from an earlier `1.1` to shorten a fresh run's time to first Prestige
 - `PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10` — every 10th level uses this larger factor instead of `PURCHASE_MILESTONE_MULTIPLIER_BASE` for that one level, compounding into the rest (see `getPurchaseMilestoneMultiplier`) — this "every 10th level" cadence is independent of the (now variable) purchase block size and stays fixed at 10

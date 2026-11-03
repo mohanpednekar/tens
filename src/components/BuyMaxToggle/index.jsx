@@ -3,7 +3,7 @@ import { isBuyMaxUnlocked } from 'game/engine'
 
 // Buy max mode toggle (see isBuyMaxUnlocked/buyTierMaxLevels in engine.js and useIncrementalGame's
 // buyMaxMode). Renders nothing until the save has completed its first Prestige. Lives on Perks →
-// Toggles; one per-device preference covering every page with leveled purchases.
+// Prestige; one per-device preference covering every page with leveled purchases.
 const BuyMaxToggle = ({ game }) => {
   if (!isBuyMaxUnlocked(game.state)) return null
   const enabled = Boolean(game.buyMaxMode)

@@ -975,7 +975,7 @@ const MainPage = ({ game }) => {
   const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)
   const canOverclock = !isFrozen && lastTierLevelDisplay >= overclockRequirement
 
-  // Auto Scale Up (bought on Perks → Unlocks; see buyAutoScaleUp in engine.js) — Factory only shows
+  // Auto Scale Up (bought on Perks → Automation; see buyAutoScaleUp in engine.js) — Factory only shows
   // its status note.
   const isAutoScaleUpActive = state.autoScaleUp ?? false
   // Whether Auto Scale Up currently acts, independent of whether it's been bought (see
@@ -1224,7 +1224,7 @@ const MainPage = ({ game }) => {
                 <li>
                   Prestige speed bonus: {state.prestigeSpeedBonusUnlocked
                     ? `${formatBonusOrMultiplier(prestigeBonus)} production speed from ${formatAmount(reboot.points)} unspent PP`
-                    : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on Perks → Unlocks)`}
+                    : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on Perks → Prestige)`}
                 </li>
               )}
               <li>
@@ -1235,7 +1235,7 @@ const MainPage = ({ game }) => {
               {globalTickspeedCardEverRevealed && (
                 <li>
                   Speed Up: {isGlobalTickspeedActive
-                    ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier (Lv.${globalTickspeedLevel})`
+                    ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier`
                     : 'not yet active'}
                 </li>
               )}
@@ -1281,7 +1281,7 @@ const MainPage = ({ game }) => {
             <summary><h2>Speed Up</h2></summary>
             {isGlobalTickspeedActive && (
               <MutedText>
-                Lv.{globalTickspeedLevel} — {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
+                {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
               </MutedText>
             )}
           </Disclosure>

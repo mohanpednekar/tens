@@ -44,7 +44,7 @@ function App() {
   // cycle goes straight to Factory with no replay of the gate.
   const [page, setPage] = useState('game')
   const [menuOpen, setMenuOpen] = useState(false)
-  // Bumped when AppNav selects Perks so it resets to its Unlocks tab.
+  // Bumped when AppNav selects Perks so it resets to its Automation tab.
   const [perksFocusNonce, setPerksFocusNonce] = useState(0)
   // Bumped on legacy `storage` navigations (and available for future Foundry focus resets).
   // ByteFoundryPage no longer has Memory | Storage tabs; focusNonce is accepted for API parity.
