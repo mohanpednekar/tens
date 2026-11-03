@@ -631,17 +631,17 @@ test('a tickspeed multiplier level speeds up delivery frequency, not the amount 
 test('the tier tickspeed multiplier button is buyable even when that tier\'s autobuyer has never been unlocked', async () => {
   const user = userEvent.setup()
 
-  // The last tier (Quettabytes) has the cheapest tickspeed base cost (10^1), so level 1 → 2 costs
-  // a testable 10 of its own resource — matching engine.test.js's convention for this ladder.
+  // The last tier (Quettabytes) has the cheapest tickspeed base cost (10^1), so level 1 → 2
+  // requires 10 of its own resource and spends only 1 (10%).
   seedMainGameState({
-    resources: { base: 10, tier10: 11 },
-    owned: { tier09: 10, tier10: 1 },
+    resources: { base: 10, tier10: 10 },
+    owned: { tier09: 10, tier10: 10 },
     // autobuyers.tier10 is left at its default (null, locked) — the tickspeed multiplier is
     // enabled by default regardless.
   })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 10 QB/i })
+  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 1 QB \(requires 10 QB owned\)/i })
   expect(upgradeButton).toBeEnabled()
 
   await user.click(upgradeButton)
@@ -1182,52 +1182,49 @@ test('the scale up and overclock panels render below the tier list, not above it
   expect(regions.indexOf('overclock panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('once the last tier is full, its row shows the XP-consume tickspeed button, distinct from the top Scale Up panel button', () => {
+test('once the last tier has been a Scale Up target, a separate Restage panel appears beside Latency while the row keeps its own tickspeed button', () => {
   seedMainGameState({
-    resources: { base: 12345 },
+    resources: { base: 12345, tier10: 25 },
     owned: { tier09: 10, tier10: 25 },
     purchaseLevels: { tier09: 3, tier10: 2 },
-    // The XP-consume row button replaces the Money-funded tickspeed button only once the first
-    // Scale Up OF THE FINAL TIER has landed (scaleUpTierCounts[tier10] >= 1).
     scaleUpTierCounts: { tier10: 1 },
-    scaleUpTargetTierIndex: 9, // targets Quettabytes, so the panel button's own label is comparable below
+    scaleUpTargetTierIndex: 9,
     prestige: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
   })
   render(<App />)
 
-  const quettabytesLayer = screen.getByLabelText(/^quettabytes layer$/i)
-  const rowXpButton = within(quettabytesLayer).getByRole('button', {
-    name: /consume 37 xp for .* quettabytes tickspeed/i,
-  })
-  expect(rowXpButton).toHaveTextContent('🧬')
+  const xpPanel = screen.getByLabelText(/^restage panel$/i)
+  const xpButton = within(xpPanel).getByRole('button', { name: /consume 37 xp for .* quettabytes tickspeed/i })
+  expect(xpButton).toHaveTextContent('🧬')
+  expect(xpButton).toBeEnabled()
 
-  // The top panel's own Scale Up button is a separate element doing something else entirely
-  // (resets the run) from the row's XP-consume button (boosts this tier's own tickspeed).
-  const panelScaleUpButton = screen.getByRole('button', { name: /^scale up \(requires 3 completed quettabytes levels/i })
-  expect(panelScaleUpButton).not.toBe(rowXpButton)
+  const quettabytesLayer = screen.getByLabelText(/^quettabytes layer$/i)
+  expect(within(quettabytesLayer).queryByRole('button', { name: /consume .* xp/i })).toBeNull()
+  expect(within(quettabytesLayer).getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 1 QB/i })).toBeEnabled()
 })
 
-test('the last tier row keeps showing the XP-consume button but disables it once that tier\'s own owned count is 0', () => {
+test('the Restage panel is hidden before the last tier has been a Scale Up target', () => {
+  seedMainGameState({
+    resources: { base: 12345 },
+    owned: { tier09: 10, tier10: 25 },
+    prestige: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
+  })
+  render(<App />)
+  expect(screen.queryByLabelText(/^restage panel$/i)).toBeNull()
+})
+
+test('the Restage button disables once the last tier\'s own owned count is 0', () => {
   seedMainGameState({
     resources: { base: 12345 },
     owned: { tier09: 10, tier10: 0 },
     purchaseLevels: { tier09: 3, tier10: 2 },
-    // Still XP-unlocked (a successful Scale Up onto Quettabytes already landed this cycle) even
-    // though its own owned count has since dropped to 0 — the row must keep showing the
-    // XP-consume control rather than falling back to the Money-funded one, but the button itself
-    // has nothing left to speed up and must disable (see consumeXpForLastTierTickspeed's matching
-    // engine-level guard).
     scaleUpTierCounts: { tier10: 1 },
     prestige: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
   })
   render(<App />)
 
-  const quettabytesLayer = screen.getByLabelText(/^quettabytes layer$/i)
-  const rowXpButton = within(quettabytesLayer).getByRole('button', {
-    name: /consume 37 xp for .* quettabytes tickspeed/i,
-  })
-  expect(rowXpButton).toHaveTextContent('🧬')
-  expect(rowXpButton).toBeDisabled()
+  const xpPanel = screen.getByLabelText(/^restage panel$/i)
+  expect(within(xpPanel).getByRole('button', { name: /consume 37 xp for .* quettabytes tickspeed/i })).toBeDisabled()
 })
 
 test('clicking Scale Up once eligible resets resources but advances the target to the next tier', async () => {
@@ -1523,6 +1520,25 @@ test('an Enable Auto Scale Up button appears on the PP Upgrades page after the f
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
+test('an Enable Auto Restage button on Perks → Unlocks spends 16 PP to enable it', async () => {
+  const user = userEvent.setup()
+
+  seedMainGameState({
+    resources: { base: 10 },
+    owned: { tier09: 10 },
+    prestige: { xp: 0, points: 16, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+  await openPerksTab(user, /open unlocks/i)
+
+  const button = screen.getByRole('button', { name: /enable auto restage for 16 prestige points/i })
+  expect(button).toBeEnabled()
+  await user.click(button)
+
+  expect(screen.getByLabelText('Auto Restage unlocked')).toBeInTheDocument()
+  expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
+})
+
 test('Auto-Boost is unlocked from Perks → Unlocks (30 PP), not on Boosters, which then shows its preset preference', async () => {
   const user = userEvent.setup()
 
@@ -1793,6 +1809,11 @@ test.each([
     buttonName: /enable auto scale up for 16 prestige points/i,
   },
   {
+    name: 'Enable Auto Restage',
+    seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 15, count: 1, highestMilestone: 1 } },
+    buttonName: /enable auto restage for 16 prestige points/i,
+  },
+  {
     name: 'Auto-Prestige',
     seed: { ...allTiersSmartSeed(), prestige: { xp: 0, points: 63, count: 1, highestMilestone: 1 } },
     buttonName: /enable auto-prestige for 64 prestige points/i,
@@ -1830,6 +1851,12 @@ test.each([
     seed: { owned: { tier09: 10 }, autoScaleUp: true },
     pauseName: /^Auto Scale Up automation$/i,
     resumeName: /^Auto Scale Up automation$/i,
+  },
+  {
+    name: 'Auto Restage',
+    seed: { owned: { tier09: 10 }, autoXpTickspeed: true },
+    pauseName: /^Auto Restage automation$/i,
+    resumeName: /^Auto Restage automation$/i,
   },
   {
     name: 'Auto-Prestige',
@@ -5243,7 +5270,7 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry leaves Factor
 
 // --- Chapters (Milestones page) ---
 // Chapter rows read intro.mainGameUnlocked, prestige.count, computeFlops.pageUnlocked,
-// isUnboundedPrestigeUnlocked, and era.count — see CLAUDE.md / MAINPAGE_REFERENCE. "The first KiloByte"
+// isUnboundedPrestigeUnlocked, and era.count — see CLAUDE.md / MAINPAGE_REFERENCE. "The first Kilobyte"
 // is always ✅ once this view is reachable; Go Googol varies with prestige.count; separate tests cover
 // Open Compute / Go DeGoogol / Ascend an Era and the Compute autobuyer category.
 test.each([
@@ -5504,6 +5531,7 @@ describe('Dev Mode', { timeout: 20000 }, () => {
     // Not a hardcoded field list — expand the auto-generated "resources" group (one leaf per
     // resource id in play, straight off createInitialGameState()'s own resources shape) to reach
     // the input.
+    await user.click(screen.getByRole('tab', { name: /show factory variables/i }))
     await user.click(screen.getByText(/^resources \(\d+\)$/))
     const bitsInput = screen.getByLabelText('resources.base')
     await user.clear(bitsInput)
@@ -5545,10 +5573,83 @@ describe('Dev Mode', { timeout: 20000 }, () => {
 
     await user.click(screen.getByText(/^intro \(\d+\)$/))
     const toggle = screen.getByRole('button', { name: /^intro\.mainGameUnlocked$/ })
-    expect(toggle).toHaveTextContent('false')
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
     await user.click(toggle)
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
 
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).intro.mainGameUnlocked).toBe(true)
+  })
+
+  it('number fields accept scientific / grouped input, step by powers of ten, and reject non-numbers', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
+
+    // Search reaches any leaf across every area by its path or tier display name.
+    await user.type(screen.getByRole('searchbox', { name: /search variables/i }), 'prestige.points')
+    const input = screen.getByLabelText('prestige.points')
+    await user.clear(input)
+    await user.type(input, '1,000{Enter}')
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(1000)
+
+    await user.click(screen.getByRole('button', { name: 'prestige.points ×10' }))
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(10000)
+    await user.click(screen.getByRole('button', { name: 'prestige.points +1' }))
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(10001)
+
+    // A stepper drops any uncommitted draft so a later Enter can't undo the step.
+    await user.clear(input)
+    await user.type(input, '5')
+    await user.click(screen.getByRole('button', { name: 'prestige.points −1' }))
+    expect(input).toHaveValue('10000')
+    await user.click(screen.getByRole('button', { name: 'prestige.points +1' }))
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(10001)
+
+    await user.clear(input)
+    await user.type(input, 'abc')
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('button', { name: /^set prestige\.points$/ })).toBeDisabled()
+    await user.type(input, '{Escape}')
+    expect(input).toHaveValue('10001')
+  })
+
+  it('variable search matches tier display names', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
+    await user.type(screen.getByRole('searchbox', { name: /search variables/i }), 'owned › kilobytes')
+    expect(screen.getByLabelText('owned.tier01')).toBeInTheDocument()
+  })
+
+  it('applying JSON drops uncommitted Variables drafts so Enter cannot undo the apply', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
+    await user.type(screen.getByRole('searchbox', { name: /search variables/i }), 'prestige.points')
+    await user.clear(screen.getByLabelText('prestige.points'))
+    await user.type(screen.getByLabelText('prestige.points'), '5')
+
+    fireEvent.change(screen.getByLabelText(/dev save state json/i), { target: { value: JSON.stringify({ prestige: { points: 123 } }) } })
+    await user.click(screen.getByRole('button', { name: /^apply json to dev save$/i }))
+
+    expect(screen.getByLabelText('prestige.points')).toHaveValue('123')
+    expect(screen.getByRole('button', { name: /^set prestige\.points$/ })).toBeDisabled()
+  })
+
+  it('the raw JSON editor blocks Apply on invalid JSON', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
+    fireEvent.change(screen.getByLabelText(/dev save state json/i), { target: { value: '{ nope' } })
+    expect(screen.getByRole('button', { name: /^apply json to dev save$/i })).toBeDisabled()
   })
 
   it('quick-seed presets and the raw JSON editor both stay scoped to the dev save', async () => {
@@ -5583,6 +5684,10 @@ describe('Dev Mode', { timeout: 20000 }, () => {
       expect(state.computeFlops.pageUnlocked).toBe(true)
     }],
     [/^🔧 Unlock Boosters \(Core\)$/, state => expect(state.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)],
+    [/^🏆 \+1 Prestige count$/, state => {
+      expect(state.prestige.count).toBe(1)
+      expect(state.autobuyers.tier01).not.toBeNull()
+    }],
   ])('quick-seed preset %s applies its documented effect to the dev save', async (buttonName, assertState) => {
     const user = userEvent.setup()
     seedMainGameState()

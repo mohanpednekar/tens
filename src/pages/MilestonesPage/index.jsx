@@ -77,7 +77,7 @@ const MilestonesPage = ({ game }) => {
   const eonsBalance = state.eons?.balance ?? 0
   const eraEligible = isEraEligible(state)
   const chapters = [
-    { label: 'The first KiloByte', reached: !!state.intro?.mainGameUnlocked },
+    { label: 'The first Kilobyte', reached: !!state.intro?.mainGameUnlocked },
     { label: 'Go Googol', reached: (prestige.count ?? 0) > 0 },
     { label: 'Open Compute', reached: !!state.computeFlops?.pageUnlocked },
     { label: 'DeGoogoled', reached: isUnboundedPrestigeUnlocked(state) },

@@ -442,7 +442,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                   <ActionButton
                     aria-label={`start converting toward 1 ${boosterLabel} from the ${label} Data Lake`}
                     onClick={() => actions.startDataLakeAutoConvert(tierIndex)}
-                    title={`Draws from this pool's own buffer automatically until ${nextCostSize} is banked, then buys 1 ${boosterLabel} and stops — automatic overflow fill takes over once this ENTIRE pool is built`}
+                    title={`Draws from this pool's own buffer automatically until ${nextCostSize} is banked, then buys 1 ${boosterLabel} and stops — automatic overflow fill takes over once this entire pool is built`}
                     type="button"
                     variant="success"
                   >
