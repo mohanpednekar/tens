@@ -1527,6 +1527,7 @@ test('an Enable Auto Restage button on Perks → Unlocks spends 16 PP to enable 
     resources: { base: 10 },
     owned: { tier09: 10 },
     reboot: { xp: 0, points: 16, count: 1, highestMilestone: 1 },
+    autoGlobalTickspeed: true, // Auto Restage needs Auto Speed Up first (parallel to Auto Scale Up)
   })
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
@@ -1915,7 +1916,24 @@ test('Global Automation lists every step (Auto Speed Up → Auto Scale Up → Au
   expect(screen.getByRole('button', { name: /enable auto reboot for 64 prestige points/i })).toBeDisabled()
 })
 
-test('Perks lists global automations in one order on both Unlocks and Toggles: Auto Speed Up → Scale Up → Overclock → Reboot → Restage', async () => {
+test('after Auto Speed Up, Auto Restage and Auto Scale Up are both buyable (either order); Auto Overclock needs both', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    resources: { base: 10 },
+    reboot: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
+    autoGlobalTickspeed: true,
+    autoScaleUp: true,
+  })
+  render(<App />)
+  await openPerksTab(user, /open unlocks/i)
+  expect(screen.getByRole('button', { name: /enable auto restage for 16 prestige points/i })).toBeEnabled()
+  // Scale Up alone isn't enough for Overclock.
+  expect(screen.getByRole('button', { name: /enable auto overclock for 32 prestige points/i })).toBeDisabled()
+  await user.click(screen.getByRole('button', { name: /enable auto restage for 16 prestige points/i }))
+  expect(screen.getByRole('button', { name: /enable auto overclock for 32 prestige points/i })).toBeEnabled()
+})
+
+test('Perks lists global automations in one order on both Unlocks and Toggles: Auto Speed Up → Restage → Scale Up → Overclock → Reboot', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
@@ -1927,7 +1945,7 @@ test('Perks lists global automations in one order on both Unlocks and Toggles: A
     autoXpTickspeed: true,
   })
   render(<App />)
-  const order = ['auto speed up', 'auto scale up', 'auto overclock', 'auto reboot', 'auto restage']
+  const order = ['auto speed up', 'auto restage', 'auto scale up', 'auto overclock', 'auto reboot']
   await openPerksTab(user, /open unlocks/i)
   const unlockRows = within(screen.getByLabelText('global automation category')).getAllByLabelText(/ upgrade$/)
   expect(unlockRows.map(row => row.getAttribute('aria-label'))).toEqual(order.map(name => `${name} upgrade`))

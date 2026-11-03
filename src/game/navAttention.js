@@ -180,9 +180,9 @@ export const hasAffordablePpUnlock = state => {
     (!state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) ||
     (Boolean(state.autoGlobalTickspeed) && !(state.autoScaleUp ?? false) && points >= getAutomationUnlockCost('scaleUp')) ||
     (isComputeCoreConversionUnlocked(state) && !(state.computeAutoBoostUnlocked ?? false) && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST) ||
-    (Boolean(state.autoScaleUp) && !(state.autoOverclock ?? false) && points >= getAutomationUnlockCost('overclock')) ||
+    (Boolean(state.autoScaleUp) && Boolean(state.autoXpTickspeed) && !(state.autoOverclock ?? false) && points >= getAutomationUnlockCost('overclock')) ||
     (!(state.autoGlobalTickspeed ?? false) && points >= getAutomationUnlockCost('speedUp')) ||
-    (!(state.autoXpTickspeed ?? false) && points >= XP_TICKSPEED_AUTOBUYER_UNLOCK_COST) ||
+    (Boolean(state.autoGlobalTickspeed) && !(state.autoXpTickspeed ?? false) && points >= XP_TICKSPEED_AUTOBUYER_UNLOCK_COST) ||
     (Boolean(state.autoOverclock) && state.autoReboot == null && points >= getAutomationUnlockCost('reboot'))
   )
 }

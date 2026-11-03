@@ -9568,18 +9568,21 @@ describe('buyTickspeedAutobuyer', () => {
 // ─── setAutoScaleUpEnabled / setAutoGlobalTickspeedEnabled / setAutoRebootEnabled ─────────────
 
 describe('buyXpTickspeedAutobuyer / setAutoXpTickspeedEnabled', () => {
-  it('spends 16 PP to unlock, with no prerequisite', () => {
-    const after = buyXpTickspeedAutobuyer(withPrestigePoints(createInitialGameState(), 20))
+  it('spends 16 PP to unlock, needing only Auto Speed Up (not Auto Scale Up)', () => {
+    const noSpeedUp = withPrestigePoints(createInitialGameState(), 20)
+    expect(buyXpTickspeedAutobuyer(noSpeedUp)).toBe(noSpeedUp)
+    const after = buyXpTickspeedAutobuyer({ ...noSpeedUp, autoGlobalTickspeed: true })
     expect(after.autoXpTickspeed).toBe(true)
+    expect(after.autoScaleUp).toBe(false)
     expect(after.reboot.points).toBe(4)
   })
 
   it('is a no-op below 16 PP, when already bought, or while frozen', () => {
     const poor = withPrestigePoints(createInitialGameState(), 15)
     expect(buyXpTickspeedAutobuyer(poor)).toBe(poor)
-    const owned = { ...withPrestigePoints(createInitialGameState(), 100), autoXpTickspeed: true }
+    const owned = { ...withPrestigePoints(createInitialGameState(), 100), autoXpTickspeed: true, autoGlobalTickspeed: true }
     expect(buyXpTickspeedAutobuyer(owned)).toBe(owned)
-    const frozen = withMoney(withPrestigePoints(createInitialGameState(), 100), REBOOT_THRESHOLD)
+    const frozen = withMoney({ ...withPrestigePoints(createInitialGameState(), 100), autoGlobalTickspeed: true }, REBOOT_THRESHOLD)
     expect(buyXpTickspeedAutobuyer(frozen)).toBe(frozen)
   })
 
@@ -9589,9 +9592,17 @@ describe('buyXpTickspeedAutobuyer / setAutoXpTickspeedEnabled', () => {
     expect(setAutoXpTickspeedEnabled(false)({ ...state, autoXpTickspeed: true }).autoXpTickspeedEnabled).toBe(false)
   })
 
-  it('tickGame auto-consumes the whole XP balance once bought and enabled', () => {
+  it('tickGame auto-consumes the whole XP balance once bought, enabled and its interval has elapsed', () => {
     let state = withLastTierTickspeedXpUnlocked(createInitialGameState())
     state = { ...state, autoXpTickspeed: true }
+    state = withResource(withOwned(state, thousandsTier.id, 30), thousandsTier.id, 30)
+    state = withMoney(state, 5)
+    state = withXP(state, 50)
+    // Interval-driven like the other global automations: 1 s of a 64 s interval doesn't fire yet.
+    const early = tickGame(1)(state)
+    expect(early.lastTierXpConsumed).toBe(0)
+    expect(early.automationAttemptBudgets.restage).toBeCloseTo(1 / 64)
+    state = { ...state, automationAttemptBudgets: { ...state.automationAttemptBudgets, restage: 1 } }
     state = withResource(withOwned(state, thousandsTier.id, 30), thousandsTier.id, 30)
     state = withMoney(state, 5)
     state = withXP(state, 50)
@@ -11958,19 +11969,32 @@ describe('automation interval chains', () => {
     expect(after.tierTickspeedIntervalLevels.tier01).toBe(1)
   })
 
-  it('Auto Overclock costs 32 PP to unlock (needs Auto Scale Up), then its speed chain also starts at 32 PP', () => {
+  it('Auto Overclock costs 32 PP to unlock (needs Auto Scale Up AND Auto Restage), then its speed chain also starts at 32 PP', () => {
     const s = base()
     expect(setAutoOverclockEnabled(false)(s)).toBe(s)
-    const noScaleUp = withPoints(base(), 100)
+    const noScaleUp = withPoints({ ...base(), autoXpTickspeed: true }, 100)
     expect(buyAutoOverclock(noScaleUp)).toBe(noScaleUp)
-    expect(buyAutomationIntervalUpgrade('overclock')(withPoints({ ...base(), autoScaleUp: true }, 100)).automationIntervalLevels.overclock).toBe(0)
-    const unlocked = buyAutoOverclock(withPoints({ ...base(), autoScaleUp: true }, 64))
+    const noRestage = withPoints({ ...base(), autoScaleUp: true }, 100)
+    expect(buyAutoOverclock(noRestage)).toBe(noRestage)
+    expect(buyAutomationIntervalUpgrade('overclock')(withPoints({ ...base(), autoScaleUp: true, autoXpTickspeed: true }, 100)).automationIntervalLevels.overclock).toBe(0)
+    const unlocked = buyAutoOverclock(withPoints({ ...base(), autoScaleUp: true, autoXpTickspeed: true }, 64))
     expect(unlocked.autoOverclock).toBe(true)
     expect(unlocked.reboot.points).toBe(32)
     const upgraded = buyAutomationIntervalUpgrade('overclock')(unlocked)
     expect(upgraded.automationIntervalLevels.overclock).toBe(1)
     expect(upgraded.reboot.points).toBe(0)
     expect(setAutoOverclockEnabled(false)(upgraded).autoOverclockEnabled).toBe(false)
+  })
+
+  it('Auto Restage has its own speed chain (16 PP first level, 64 s base), available once Restage is bought', () => {
+    const locked = withPoints(base(), 100)
+    expect(buyAutomationIntervalUpgrade('restage')(locked)).toBe(locked)
+    const s = withPoints({ ...base(), autoXpTickspeed: true }, 20)
+    expect(getAutomationIntervalSeconds(s, 'restage')).toBe(64)
+    const upgraded = buyAutomationIntervalUpgrade('restage')(s)
+    expect(upgraded.automationIntervalLevels.restage).toBe(1)
+    expect(upgraded.reboot.points).toBe(4)
+    expect(getAutomationIntervalSeconds(upgraded, 'restage')).toBeCloseTo(57.6)
   })
 
   it('Speed Up autobuyer waits for its interval timer', () => {

@@ -334,11 +334,11 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const overclockUnlockCost = getAutomationUnlockCost('overclock')
   const isAutoScaleUpActive = state.autoScaleUp ?? false
   const isAutoOverclockActive = state.autoOverclock ?? false
-  const canBuyAutoOverclock = !isFrozen && isAutoScaleUpActive && !isAutoOverclockActive && !isFirstRun && points >= overclockUnlockCost
+  const isXpTickspeedAutobuyerActive = state.autoXpTickspeed ?? false
+  const canBuyAutoOverclock = !isFrozen && isAutoScaleUpActive && isXpTickspeedAutobuyerActive && !isAutoOverclockActive && !isFirstRun && points >= overclockUnlockCost
   const canBuyAutoScaleUp = !isFrozen && state.autoGlobalTickspeed && !isAutoScaleUpActive && !isFirstRun && points >= scaleUpUnlockCost
   const autoScaleUpEnabled = state.autoScaleUpEnabled ?? true
-  const isXpTickspeedAutobuyerActive = state.autoXpTickspeed ?? false
-  const canBuyXpTickspeedAutobuyer = !isFrozen && !isXpTickspeedAutobuyerActive && !isFirstRun && points >= XP_TICKSPEED_AUTOBUYER_UNLOCK_COST
+  const canBuyXpTickspeedAutobuyer = !isFrozen && state.autoGlobalTickspeed && !isXpTickspeedAutobuyerActive && !isFirstRun && points >= XP_TICKSPEED_AUTOBUYER_UNLOCK_COST
   const xpTickspeedAutobuyerEnabled = state.autoXpTickspeedEnabled ?? true
 
   const isTickspeedAutobuyerActive = state.autoGlobalTickspeed ?? false
@@ -432,6 +432,25 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             />
           )}
         </Row>
+        <Row aria-label="auto restage upgrade">
+          <RowLabel><RowIcon>🧬</RowIcon>Auto Restage</RowLabel>
+          {isXpTickspeedAutobuyerActive ? (
+            <UnlockedBadge icon="🧬" name="Auto Restage" />
+          ) : (
+            <PpPurchaseButton
+              ariaLabel={`Enable Auto Restage for ${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} Prestige Points`}
+              color="#38bdf8"
+              cost={XP_TICKSPEED_AUTOBUYER_UNLOCK_COST}
+              disabled={!canBuyXpTickspeedAutobuyer}
+              icon="🔓"
+              label={`${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} PP`}
+              onClick={actions.buyXpTickspeedAutobuyer}
+              points={points}
+              progressLabel="Auto Restage Prestige Point progress"
+              title="Spend Prestige Points so XP is automatically consumed for Restage whenever possible (each consumption resets every other tier's owned quantity and Bits)"
+            />
+          )}
+        </Row>
         <Row aria-label="auto scale up upgrade">
           <RowLabel><RowIcon>⏩</RowIcon>Auto Scale Up</RowLabel>
           {isAutoScaleUpActive ? (
@@ -491,25 +510,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               points={points}
               progressLabel="Auto Reboot Prestige Point progress"
               title="Spend Prestige Points so Reboot happens automatically once your balance reaches 1 Googol Bytes"
-            />
-          )}
-        </Row>
-        <Row aria-label="auto restage upgrade">
-          <RowLabel><RowIcon>🧬</RowIcon>Auto Restage</RowLabel>
-          {isXpTickspeedAutobuyerActive ? (
-            <UnlockedBadge icon="🧬" name="Auto Restage" />
-          ) : (
-            <PpPurchaseButton
-              ariaLabel={`Enable Auto Restage for ${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} Prestige Points`}
-              color="#38bdf8"
-              cost={XP_TICKSPEED_AUTOBUYER_UNLOCK_COST}
-              disabled={!canBuyXpTickspeedAutobuyer}
-              icon="🔓"
-              label={`${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} PP`}
-              onClick={actions.buyXpTickspeedAutobuyer}
-              points={points}
-              progressLabel="Auto Restage Prestige Point progress"
-              title="Spend Prestige Points so XP is automatically consumed for Restage whenever possible (each consumption resets every other tier's owned quantity and Bits)"
             />
           )}
         </Row>
@@ -713,6 +713,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         })}
         {[
           ['speedUp', 'Auto Speed Up', '🌐'],
+          ['restage', 'Auto Restage', '🧬'],
           ['scaleUp', 'Auto Scale Up', '⏩'],
           ['overclock', 'Auto Overclock', '🚀'],
           ['reboot', 'Auto Reboot', '✦'],
@@ -796,6 +797,18 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           />
         </Row>
       ),
+      isXpTickspeedAutobuyerActive && (
+        <Row key="auto-restage" aria-label="auto restage toggle">
+          <RowLabel><RowIcon>🧬</RowIcon>Auto Restage</RowLabel>
+          <AutomationToggle
+            enabled={xpTickspeedAutobuyerEnabled}
+            icon="🧬"
+            name="Auto Restage"
+            onToggle={() => actions.setAutoXpTickspeedEnabled(!xpTickspeedAutobuyerEnabled)}
+            toggleLabel="Auto Restage automation"
+          />
+        </Row>
+      ),
       isAutoScaleUpActive && (
         <Row key="scale-up" aria-label="auto scale up toggle">
           <RowLabel><RowIcon>⏩</RowIcon>Auto Scale Up</RowLabel>
@@ -832,18 +845,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             name="Auto Reboot"
             onToggle={() => actions.setAutoRebootEnabled(!autoRebootEnabled)}
             toggleLabel="Auto Reboot automation"
-          />
-        </Row>
-      ),
-      isXpTickspeedAutobuyerActive && (
-        <Row key="auto-restage" aria-label="auto restage toggle">
-          <RowLabel><RowIcon>🧬</RowIcon>Auto Restage</RowLabel>
-          <AutomationToggle
-            enabled={xpTickspeedAutobuyerEnabled}
-            icon="🧬"
-            name="Auto Restage"
-            onToggle={() => actions.setAutoXpTickspeedEnabled(!xpTickspeedAutobuyerEnabled)}
-            toggleLabel="Auto Restage automation"
           />
         </Row>
       ),
