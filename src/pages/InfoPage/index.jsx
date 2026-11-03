@@ -41,7 +41,7 @@ import {
   PRESTIGE_POINT_SPEED_BONUS,
   PRESTIGE_POWERS_PER_PP_BASE,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
-  UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS,
+  OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
   getStoragePoolMemoryBounds,
@@ -593,7 +593,7 @@ const InfoPage = () => {
           </li>
           <li>
             Available at 1 Googol Bytes (8×10^100 Bits), where production freezes until you
-            Purge. Getting Auto Purge’s interval down to {UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS} s
+            Purge. Getting Auto Purge’s interval down to {OVERFLOW_MODE_MAX_INTERVAL_SECONDS} s
             or less unlocks <strong>DeGoogol</strong>: production keeps running past 1 Googol Bytes
             and Purge becomes optional.
           </li>

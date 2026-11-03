@@ -97,7 +97,7 @@ const tierNameById = Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, t.name]
 
 const ComputeFlopsPage = ({ game }) => {
   const { actions, state } = game
-  const pp = state.reboot?.points ?? 0
+  const pp = state.purge?.points ?? 0
   const totalFlops = getComputeFlopsTotal(state)
   const revealed = isComputeFlopsPageRevealed(state)
 

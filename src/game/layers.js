@@ -81,19 +81,19 @@ export const GOOGOL = 1e100
 export const BITS_PER_BYTE = 8
 // Money (Bits) balance required to Prestige — "1 Googol Bytes," expressed in Bits since
 // resources[MONEY_ID] is Bits-denominated, not Bytes (Bytes aren't even a purchasable tier any
-// more — see TIER_DEFINITIONS above). This is the threshold isProductionFrozen/rebootGame
+// more — see TIER_DEFINITIONS above). This is the threshold isProductionFrozen/purgeGame
 // actually gate on. GOOGOL itself stays unchanged/exported — the exponent-based formulas
-// (getPrestigePointsAwarded/getMoneyExponent/getRebootProgressPercent in engine.js) deliberately
+// (getPrestigePointsAwarded/getMoneyExponent/getPurgePercent in engine.js) deliberately
 // keep keying off GOOGOL's own clean 10^100 rather than this messier ~10^100.9 value, since an 8x
 // constant factor is negligible at that scale — see docs/DESIGN_HISTORY.md.
-export const REBOOT_THRESHOLD = GOOGOL * BITS_PER_BYTE
+export const PURGE_THRESHOLD = GOOGOL * BITS_PER_BYTE
 // DeGoogol: once Auto-Prestige's interval is upgraded to this many seconds or less, Money may
-// exceed REBOOT_THRESHOLD without freezing production — the player keeps earning and may Prestige
-// voluntarily to claim accumulated PP. Permanent once reached (reboot.unboundedUnlocked latch).
-export const UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS = 1
+// exceed PURGE_THRESHOLD without freezing production — the player keeps earning and may Prestige
+// voluntarily to claim accumulated PP. Permanent once reached (purge.unboundedUnlocked latch).
+export const OVERFLOW_MODE_MAX_INTERVAL_SECONDS = 1
 // Legacy rule (lifetime prestige count), kept only so storage.js can grandfather saves that reached
 // it before DeGoogol moved to the Auto-Prestige interval above.
-export const REBOOT_UNBOUNDED_MIN_COUNT = 100
+export const PURGE_UNBOUNDED_MIN_COUNT = 100
 // Base PP earning rate beyond Googol: 1 PP per this many additional money-exponent "powers"
 // (orders of magnitude above GOOGOL's own 10^100 exponent). Each Double PP upgrade halves this
 // until 1 power per PP, then doubles PP per power instead (see getPrestigePowersPerPp/
@@ -248,7 +248,7 @@ export const FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT = 100
 // convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a disk's contents came from Data
 // Stream via the read-cache flush, not a further transfer out of it at pull time.
 // Disks (and their arrays' cache) are themselves PERMANENT, like the Byte generator itself (see
-// rebootGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
+// purgeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
 // even though Data Stream itself resets, letting banked-up Storage give a fresh cycle a head start.
 // The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
 // until Buffer / pool Memory Capacity reaches this many bits — deliberately set to EQUAL pool 1's
@@ -357,7 +357,7 @@ export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTR
 // engine.js) uses as its own threshold — NOT the Core -> Node merge boundary itself, which reuses
 // the same ratio via COMPUTE_MERGE_RATIO below instead (see issue #321). Both intro.computeCores
 // and intro.computeNodes are permanent counters, carried over every real
-// Prestige exactly like the Byte generator/Disks themselves — see rebootGame.
+// Prestige exactly like the Byte generator/Disks themselves — see purgeGame.
 export const COMPUTE_CORES_PER_NODE = 8
 // Maximum permanent balance of ANY compute-ladder entity a player can hold at once — Core, Node,
 // Cluster, Network, Grid, Fabric, Cloud, Datacenter, Supercomputer, Megacomputer alike. Once an
@@ -585,7 +585,7 @@ export const DEFAULT_PURCHASE_BLOCK_SIZE = 8
 // Every this many levels the LAST tier completes, the (global, shared-by-every-tier) purchase
 // block size grows by PURCHASE_BLOCK_SIZE_GROWTH_STEP (see engine.js's getPurchaseBlockSize) — ties
 // growth to the same "flagship" progress marker getScaleUpRequirement/isLastTierTickspeedXpUnlocked/
-// rebootCardEverRevealed already key off, rather than any other tier or a global total.
+// purgeCardEverRevealed already key off, rather than any other tier or a global total.
 export const PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100
 // The amount the block size grows by every PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS.
 export const PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1
@@ -662,11 +662,11 @@ export const AUTOMATION_INTERVAL_CONFIG = {
   scaleUp: { baseCost: 16, baseSeconds: 64 },
   restage: { baseCost: 16, baseSeconds: 64 },
   overclock: { baseCost: 32, baseSeconds: 256 },
-  reboot: { baseCost: 64, baseSeconds: 1024 },
+  purge: { baseCost: 64, baseSeconds: 1024 },
 }
 // Per-tier tickspeed autobuyer: 2× the tier autobuyer chain's cost, 16 s base.
 export const TIER_TICKSPEED_INTERVAL_CONFIG = { baseCost: 2, baseSeconds: 16 }
-// How many times the player must have rebooted before a tier's unit-buying autobuyer unlocks
+// How many times the player must have purged before a tier's unit-buying autobuyer unlocks
 // automatically (see engine.js's getAutobuyerUnlockMilestone/applyAutobuyerMilestones) — replaces
 // the old PP-cost-funded unlock entirely: no purchase, no PP spent, just a milestone reached by
 // prestige count. tier01 unlocks after the very first prestige, tier02 after the second, … tier10

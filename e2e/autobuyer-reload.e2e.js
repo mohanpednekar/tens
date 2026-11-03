@@ -7,7 +7,7 @@ const seededState = {
   owned: { tier01: 50 },
   purchased: { tier01: 50 },
   autobuyers: { tier01: 1 },
-  reboot: { points: 50, count: 1, xp: 0, highestMilestone: 1 },
+  purge: { points: 50, count: 1, xp: 0, highestMilestone: 1 },
 }
 
 test.beforeEach(async ({ page }) => {

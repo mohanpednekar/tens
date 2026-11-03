@@ -5,7 +5,7 @@ import { INTRO_COMPUTE_CORE_UNLOCK_CAPACITY } from '../src/game/layers.js'
 const seedDataLakeSave = () => {
   const state = createInitialGameState()
   return {
-    saveSchemaVersion: 2,
+    saveSchemaVersion: 3,
     ...state,
     intro: {
       ...state.intro,

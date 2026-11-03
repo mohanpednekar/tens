@@ -23347,13 +23347,13 @@
     },
     {
       "id": "e2e_prestige_e2e",
-      "label": "reboot.e2e.js",
+      "label": "purge.e2e.js",
       "_origin": "ast",
       "community": 62,
       "community_name": "@playwright/test",
       "file_type": "code",
-      "norm_label": "reboot.e2e.js",
-      "source_file": "e2e/reboot.e2e.js",
+      "norm_label": "purge.e2e.js",
+      "source_file": "e2e/purge.e2e.js",
       "source_location": "L1"
     },
     {
@@ -66948,7 +66948,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1,
       "context": "import",
-      "source_file": "e2e/reboot.e2e.js",
+      "source_file": "e2e/purge.e2e.js",
       "source_location": "L1",
       "weight": 1
     },

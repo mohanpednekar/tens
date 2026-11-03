@@ -1,7 +1,7 @@
 import StatCard from 'components/StatCard'
 import {
   isEraEligible,
-  isUnboundedRebootUnlocked,
+  isOverflowModeUnlocked,
 } from 'game/engine'
 import { ERA_ELIGIBILITY_PP } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
@@ -72,15 +72,15 @@ const Badge = styled.span`
 const MilestonesPage = ({ game }) => {
   const { state } = game
   const theme = useTheme()
-  const { reboot } = state
+  const { purge } = state
   const eraCount = state.era?.count ?? 0
   const eonsBalance = state.eons?.balance ?? 0
   const eraEligible = isEraEligible(state)
   const chapters = [
     { label: 'The first Kilobyte', reached: !!state.intro?.mainGameUnlocked },
-    { label: 'Go Googol', reached: (reboot.count ?? 0) > 0 },
+    { label: 'Go Googol', reached: (purge.count ?? 0) > 0 },
     { label: 'Open Compute', reached: !!state.computeFlops?.pageUnlocked },
-    { label: 'DeGoogoled', reached: isUnboundedRebootUnlocked(state) },
+    { label: 'DeGoogoled', reached: isOverflowModeUnlocked(state) },
     { label: 'Ascend an Era', reached: eraCount > 0 },
   ]
 

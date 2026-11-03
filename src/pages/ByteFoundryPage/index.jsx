@@ -1208,7 +1208,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                       : 'Capacity is already at its maximum'}
                     aria-description={capacityUpgradeArmable ? `Costs ${formatBitsInNearestUnit(capacityUpgradeCost)}; capacity ${nextCapacityText} after upgrading` : undefined}
                     type="button"
-                    variant={capacityUpgradeArmable ? 'reboot' : 'neutral'}
+                    variant={capacityUpgradeArmable ? 'purge' : 'neutral'}
                   >
                     <MilestoneButtonContent>
                       <span>Upgrade Capacity</span>
@@ -1228,7 +1228,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                       : `Base Speed cannot exceed Capacity^${speedExponentText} — upgrade Capacity first`}
                     aria-description={speedUpgradeArmable ? `Costs ${formatBitsInNearestUnit(speedUpgradeCost)}; speed ${nextRateText} after upgrading` : undefined}
                     type="button"
-                    variant={speedUpgradeArmable ? 'reboot' : 'neutral'}
+                    variant={speedUpgradeArmable ? 'purge' : 'neutral'}
                   >
                     <MilestoneButtonContent>
                       <span>Upgrade Speed</span>

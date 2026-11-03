@@ -631,7 +631,7 @@ const ComputePage = ({ game }) => {
                 onClick={() => actions.setComputeAutoBoostType(boostType)}
                 title={`Auto Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
                 type="button"
-                variant={selected ? 'reboot' : 'neutral'}
+                variant={selected ? 'purge' : 'neutral'}
               >
                 <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon}${selected ? ' ✓' : ''}`}</ButtonContent>
               </CompactButton>

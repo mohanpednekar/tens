@@ -28,13 +28,13 @@ import {
   isComputeCoreConversionUnlocked,
   isProductionFrozen,
   isTierUnlocked,
-  isUnboundedRebootUnlocked,
+  isOverflowModeUnlocked,
 } from 'game/engine'
 import {
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
-  UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS,
+  OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   XP_TICKSPEED_AUTOBUYER_UNLOCK_COST,
 } from 'game/layers'
@@ -315,11 +315,11 @@ const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Mat
 const PerksPage = ({ game, focusNonce = 0 }) => {
   const { state, actions } = game
   const theme = useTheme()
-  const { reboot } = state
-  const points = reboot.points ?? 0
-  const rebootCount = reboot.count ?? 0
+  const { purge } = state
+  const points = purge.points ?? 0
+  const purgeCount = purge.count ?? 0
   const eraCount = state.era?.count ?? 0
-  const isFirstRun = rebootCount === 0
+  const isFirstRun = purgeCount === 0
   const isFrozen = isProductionFrozen(state)
 
   const [tab, setTab] = useState('unlocks')
@@ -355,12 +355,12 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     : `1 PP per ${formatAmount(powersPerPp)} power${powersPerPp === 1 ? '' : 's'}`
   const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
 
-  // Auto Purge: one-time activation, then the interval chain (see AUTOMATION_INTERVAL_CONFIG.reboot).
-  const autoRebootLevel = state.autoReboot ?? null
-  const isAutoRebootActive = autoRebootLevel !== null
-  const autoRebootCost = getAutomationUnlockCost('reboot')
-  const canBuyAutoReboot = !isFrozen && isAutoOverclockActive && !isAutoRebootActive && points >= autoRebootCost
-  const autoRebootEnabled = state.autoRebootEnabled ?? true
+  // Auto Purge: one-time activation, then the interval chain (see AUTOMATION_INTERVAL_CONFIG.purge).
+  const autoPurgeLevel = state.autoPurge ?? null
+  const isAutoPurgeActive = autoPurgeLevel !== null
+  const autoPurgeCost = getAutomationUnlockCost('purge')
+  const canBuyAutoPurge = !isFrozen && isAutoOverclockActive && !isAutoPurgeActive && points >= autoPurgeCost
+  const autoPurgeEnabled = state.autoPurgeEnabled ?? true
 
 
   const isComputeAutoBoostActive = state.computeAutoBoostUnlocked ?? false
@@ -387,7 +387,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             <Row key={tier.id} $tier="unlocks" aria-label={`${tier.name} PP unlocks`}>
               <TierSymbol tier={tier} />
               <MilestoneBadge
-                current={rebootCount}
+                current={purgeCount}
                 icon="⚙"
                 milestone={tickspeedMilestone}
                 progressLabel={`${tier.name} tickspeed autobuyer milestone progress`}
@@ -397,7 +397,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               />
               <span>
                 <MilestoneBadge
-                  current={rebootCount}
+                  current={purgeCount}
                   icon="🤖"
                   milestone={autobuyerMilestone}
                   progressLabel={`${tier.name} autobuyer unlock milestone progress`}
@@ -492,21 +492,21 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <Row aria-label="auto purge upgrade">
           <RowLabelStack>
             <RowLabel><RowIcon>✦</RowIcon>Auto Purge</RowLabel>
-            {isAutoRebootActive && (
-              <SubText>every {formatInterval(getAutomationIntervalSeconds(state, 'reboot') * 1000)}</SubText>
+            {isAutoPurgeActive && (
+              <SubText>every {formatInterval(getAutomationIntervalSeconds(state, 'purge') * 1000)}</SubText>
             )}
           </RowLabelStack>
-          {isAutoRebootActive ? (
+          {isAutoPurgeActive ? (
             <UnlockedBadge icon="✦" name="Auto Purge" />
           ) : (
             <PpPurchaseButton
-              ariaLabel={`Enable Auto Purge for ${autoRebootCost} Purge Points`}
+              ariaLabel={`Enable Auto Purge for ${autoPurgeCost} Purge Points`}
               color="#38bdf8"
-              cost={autoRebootCost}
-              disabled={!canBuyAutoReboot}
+              cost={autoPurgeCost}
+              disabled={!canBuyAutoPurge}
               icon="🔓"
-              label={`${autoRebootCost} PP`}
-              onClick={actions.buyAutoReboot}
+              label={`${autoPurgeCost} PP`}
+              onClick={actions.buyAutoPurge}
               points={points}
               progressLabel="Auto Purge PP progress"
               title="Spend Purge Points so Purge happens automatically once your balance reaches 1 Googol Bytes"
@@ -589,13 +589,13 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <Row aria-label="degoogol unlock">
           <RowLabelStack>
             <RowLabel title="Earn past 1 Googol Bytes without freezing; Purge voluntarily to claim PP"><RowIcon>♾</RowIcon>DeGoogol</RowLabel>
-            {!isUnboundedRebootUnlocked(state) && (
+            {!isOverflowModeUnlocked(state) && (
               <SubText>
-                Auto Purge ≤ {UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS} s
+                Auto Purge ≤ {OVERFLOW_MODE_MAX_INTERVAL_SECONDS} s
               </SubText>
             )}
           </RowLabelStack>
-          {isUnboundedRebootUnlocked(state) ? (
+          {isOverflowModeUnlocked(state) ? (
             <UnlockedBadge icon="♾" name="DeGoogol" />
           ) : (
             <Badge $color={theme.color.disabled} $dimmed aria-label="DeGoogol locked" title="Unlocks when Auto Purge's interval reaches 1 s or less">
@@ -716,7 +716,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           ['restage', 'Auto Restage', '🧬'],
           ['scaleUp', 'Auto Scale Up', '⏩'],
           ['overclock', 'Auto Overclock', '🚀'],
-          ['reboot', 'Auto Purge', '✦'],
+          ['purge', 'Auto Purge', '✦'],
         ].map(([key, name, icon]) => {
           if (!isAutomationIntervalChainUnlocked(state, key)) return null
           const level = state.automationIntervalLevels?.[key] ?? 0
@@ -836,14 +836,14 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           />
         </Row>
       ),
-      isAutoRebootActive && (
-        <Row key="auto-reboot" aria-label="auto purge toggle">
+      isAutoPurgeActive && (
+        <Row key="auto-purge" aria-label="auto purge toggle">
           <RowLabel><RowIcon>✦</RowIcon>Auto Purge</RowLabel>
           <AutomationToggle
-            enabled={autoRebootEnabled}
+            enabled={autoPurgeEnabled}
             icon="✦"
             name="Auto Purge"
-            onToggle={() => actions.setAutoRebootEnabled(!autoRebootEnabled)}
+            onToggle={() => actions.setAutoPurgeEnabled(!autoPurgeEnabled)}
             toggleLabel="Auto Purge automation"
           />
         </Row>

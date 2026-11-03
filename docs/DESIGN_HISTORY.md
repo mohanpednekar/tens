@@ -9129,3 +9129,19 @@ pool buffer (minus the read cache's claim) at base Bandwidth × pool tap bonus a
 kept) on an empty buffer. Because it now competes for the buffer, a pending rebuild counts as
 provisioning-in-progress (`isStoragePoolProvisioningInProgress`) so the lower-priority Data Lake drain,
 which runs earlier in `tickGame`, cannot starve it.
+
+## Purge code rename: reboot → purge (2026-11, #987)
+
+Follow-up to the player-facing Reboot → Purge rename above, part of epic #986. Code identifiers now
+match the UI: `state.reboot` → `state.purge`, `rebootGame` → `purgeGame`, `REBOOT_*` → `PURGE_*`,
+`autoReboot*` → `autoPurge*`, automation key `'reboot'` → `'purge'`, museum entry `rebootNumber` →
+`purgeNumber`, `isUnboundedRebootUnlocked` → `isOverflowModeUnlocked`,
+`UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS` → `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`,
+`getRebootProgressPercent` → `getPurgePercent`, `e2e/reboot.e2e.js` → `e2e/purge.e2e.js`. This frees
+"Reboot" to become the player-facing name for Era ascension (#986) without colliding with a legacy
+code meaning. The save schema moved to v3: `save-migration/migrateToV3.js` maps every legacy spelling
+(`prestige` and `reboot` keys, their `auto*` flags, automation-map keys, `latency` → `speedUp`, museum
+`prestigeNumber`/`rebootNumber`) straight to the purge names, absorbing the old `storage.js`
+`renamePreRebootKeys` (removed). `adaptSaveForLoad`'s dev/Dev Mode bypass also runs `migrateToV3`,
+since it skips `adaptSaveForCurrentSchema`. The internal `unboundedUnlocked` field name under `purge`
+is unchanged.

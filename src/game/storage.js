@@ -1,6 +1,6 @@
 import { applyFlopsAutobuyerMilestones, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
-import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES, REBOOT_UNBOUNDED_MIN_COUNT } from './layers'
-import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
+import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES, PURGE_UNBOUNDED_MIN_COUNT } from './layers'
+import { adaptSaveForCurrentSchema, migrateToV3, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 
 
@@ -30,7 +30,7 @@ export const adaptSaveForLoad = (raw, devBuild = isBackwardCompatExempt()) => {
   if (!devBuild) return adaptSaveForCurrentSchema(raw)
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, reason: 'invalid_payload' }
   const { saveSchemaVersion: _version, ...payload } = raw
-  return { ok: true, payload }
+  return { ok: true, payload: migrateToV3(payload) }
 }
 
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
@@ -519,43 +519,10 @@ const applyPendingComputeGrants = (intro, pendingComputeGrants) => {
   return next
 }
 
-// Pre-rename keys: the Factory reset was "prestige" and the global tickspeed automation "latency".
-// Renamed in place (new key wins if both exist) so older saves keep their progress.
-const RENAMED_TOP_LEVEL_KEYS = [
-  ['prestige', 'reboot'],
-  ['autoPrestige', 'autoReboot'],
-  ['autoPrestigeEnabled', 'autoRebootEnabled'],
-  ['autoPrestigeAttemptBudget', 'autoRebootAttemptBudget'],
-]
-const RENAMED_AUTOMATION_KEYS = [['latency', 'speedUp'], ['prestige', 'reboot']]
-const renameKeys = (obj, pairs) => {
-  if (!obj || typeof obj !== 'object') return obj
-  const next = { ...obj }
-  for (const [from, to] of pairs) {
-    if (from in next) {
-      if (!(to in next)) next[to] = next[from]
-      delete next[from]
-    }
-  }
-  return next
-}
-export const renamePreRebootKeys = saved => {
-  const next = renameKeys(saved, RENAMED_TOP_LEVEL_KEYS)
-  if (next.automationIntervalLevels) next.automationIntervalLevels = renameKeys(next.automationIntervalLevels, RENAMED_AUTOMATION_KEYS)
-  if (next.automationAttemptBudgets) next.automationAttemptBudgets = renameKeys(next.automationAttemptBudgets, RENAMED_AUTOMATION_KEYS)
-  if (Array.isArray(next.prestigeMuseum?.history)) {
-    next.prestigeMuseum = {
-      ...next.prestigeMuseum,
-      history: next.prestigeMuseum.history.map(entry => renameKeys(entry, [['prestigeNumber', 'rebootNumber']])),
-    }
-  }
-  return next
-}
-
 // Merge a saved state with fresh defaults so newly added fields are present on load.
 // Schema transforms run in save-migration/ on every load before this runs.
 const mergeState = rawSaved => {
-  const saved = renamePreRebootKeys(rawSaved)
+  const saved = rawSaved
   const fresh = createInitialGameState()
   // speedUpCount/autoSpeedUp/autoSpeedUpEnabled are the pre-rename names of
   // scaleUpCount/autoScaleUp/autoScaleUpEnabled (see engine.js) — stripped here (like
@@ -624,11 +591,11 @@ const mergeState = rawSaved => {
     tierTickspeedAutobuyer: mergeTierMap(fresh.tierTickspeedAutobuyer, saved.tierTickspeedAutobuyer),
     tierTickspeedAutobuyerEnabled: mergeTierMap(fresh.tierTickspeedAutobuyerEnabled, saved.tierTickspeedAutobuyerEnabled),
     everUnlockedTierIds: mergeTierMap(fresh.everUnlockedTierIds, saved.everUnlockedTierIds),
-    reboot: {
-      ...fresh.reboot,
-      ...(saved.reboot ?? {}),
-      unboundedUnlocked: Boolean(saved.reboot?.unboundedUnlocked)
-        || Math.max(0, Number(saved.reboot?.count) || 0) >= REBOOT_UNBOUNDED_MIN_COUNT,
+    purge: {
+      ...fresh.purge,
+      ...(saved.purge ?? {}),
+      unboundedUnlocked: Boolean(saved.purge?.unboundedUnlocked)
+        || Math.max(0, Number(saved.purge?.count) || 0) >= PURGE_UNBOUNDED_MIN_COUNT,
     },
     era: { ...fresh.era, ...(saved.era ?? {}) },
     eons: { ...fresh.eons, ...(saved.eons ?? {}) },
@@ -651,7 +618,7 @@ const mergeState = rawSaved => {
     }, pendingComputeGrants),
     computeFlops: {
       pageUnlocked: Boolean(saved.computeFlops?.pageUnlocked)
-        || Math.max(0, Number(saved.reboot?.points) || 0) >= COMPUTE_FLOPS_REVEAL_PP,
+        || Math.max(0, Number(saved.purge?.points) || 0) >= COMPUTE_FLOPS_REVEAL_PP,
       owned: { ...fresh.computeFlops.owned, ...(saved.computeFlops?.owned ?? {}) },
       cumulativeBoost: { ...fresh.computeFlops.cumulativeBoost, ...(saved.computeFlops?.cumulativeBoost ?? {}) },
     },
