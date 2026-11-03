@@ -155,7 +155,7 @@ Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator 
 *derived* from the Speed basis as `basis^e` via `getDataStreamSpeedBytesPerSecond`, capped at `Capacity^e`, where `e` = 0.5 + 0.01 per Disk size unlocked beyond the first via Foundry reset (`getDataStreamSpeedExponent`), not purchased) — entirely OUTSIDE the
 forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a separate fill-based
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer
-fullness and recent taps. Disks (`StoragePage`) fill and pull into Factory automatically, with no manual
+fullness and recent Data Stream taps (a pool tap instead speeds that pool's consumers). Disks (`StoragePage`) fill and pull into Factory automatically, with no manual
 redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too — but Boosters,
 which spend banked Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**), only
 buy via a single per-lake "🏷️ `<cost>`" control: it buys immediately if affordable, or arms a one-shot

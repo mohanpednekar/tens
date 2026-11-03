@@ -2819,14 +2819,19 @@ export const getPoolBaseMultiplierPercent = (state, poolIndex) =>
 export const getPoolTapBonusPercent = (state, poolIndex) =>
   state.intro?.poolTapBonusPercents?.[poolIndex] ?? 0
 
-// The pool's currently active multiplier percent — fill-based value times (1 + live decaying tap
-// bonus %) (see tapPoolBuffer/tickFillMultiplierDecay below). What ByteFoundryPage displays alongside
-// that pool's Bandwidth figure. getPoolEffectMultiplier is the instantaneous scale;
-// tickPoolBufferFill integrates the curve via getFillCurveDelta.
-// Fill-based value × (1 + live tap bonus %), hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000) — same
-// "cumulative total, not the bonus alone" cap the Data Stream's own getDataStreamMultiplierPercent uses.
+// The pool's buffer-FILL multiplier percent — the fill-based value only. Unlike the Data Stream, a
+// pool's tap bonus does NOT scale its buffer's fill (the source is already paced by Speed/Bandwidth
+// and keeps up on its own); it scales the pool's CONSUMERS instead — see getPoolTapMultiplier.
+// getPoolEffectMultiplier is the instantaneous scale; tickPoolBufferFill integrates the curve via
+// getFillCurveDelta.
 export const getPoolMultiplierPercent = (state, poolIndex) =>
-  Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getPoolBaseMultiplierPercent(state, poolIndex) * (1 + getPoolTapBonusPercent(state, poolIndex) / 100))
+  getPoolBaseMultiplierPercent(state, poolIndex)
+
+// ×(1 + live decaying tap bonus %) on everything that DRAINS one pool (tapPoolBuffer/
+// tickFillMultiplierDecay): the Provision Disk draw (tickQueuedDiskBuild), the read-cache → disk
+// flush (tickDiskAutoFill) and the Data Lake drain (tickDataLakePoolDrain).
+export const getPoolTapMultiplier = (state, poolIndex) =>
+  1 + getPoolTapBonusPercent(state, poolIndex) / 100
 
 // The boost's pool bonus (getComputeBoostPoolMultiplier) scales the real buffer fill on top of the
 // capped fill-based percent; the displayed percent/Bandwidth stay unboosted.
@@ -2846,11 +2851,10 @@ export const getPoolAvailableFillRate = (state, poolIndex) => {
 }
 
 // Manual tap on one pool's own local Memory buffer — adds FILL_MULTIPLIER_TAP_BONUS_PERCENT to
-// that pool's own decaying multiplier bonus (poolTapBonusPercents[poolIndex]), scoped to this one
-// pool only — never touches the Data Stream's own bonus or any other pool's (see FILL_MULTIPLIER_*
-// in layers.js). No-op only for a locked/invalid pool or one whose stored tap bonus is already at
-// FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT (100) — deliberately NOT for a full or lake-draining buffer:
-// a pool tap always grants its bonus, whether or not the faster fill can currently help.
+// that pool's own decaying consumer bonus (poolTapBonusPercents[poolIndex], see getPoolTapMultiplier),
+// scoped to this one pool only — never touches the Data Stream's own bonus or any other pool's. No-op
+// only for a locked/invalid pool or one whose stored tap bonus is already at
+// FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT (100) — a pool tap always grants its bonus, full buffer or not.
 export const tapPoolBuffer = poolIndex => state => {
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getVisibleStoragePoolCount(state)) return state
   // Same independent 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT clamp as tapIntroBit above.
@@ -2892,16 +2896,12 @@ export const tickFillMultiplierDecay = elapsedSeconds => state => {
   let poolsChanged = false
   const poolTapBonusPercents = {}
   Object.keys(priorPoolBonuses).forEach(poolIndexKey => {
-    const poolIndex = Number(poolIndexKey)
     const priorBonus = priorPoolBonuses[poolIndexKey]
-    // Once a pool's own buffer is completely full, its fill-based multiplier reading is retired.
-    // Force the tap bonus to 0 immediately rather than letting it decay at 1%/sec — a leftover
-    // bonus would keep the derived multiplier above FILL_MULTIPLIER_MIN_PERCENT after the buffer
-    // is already full. (The old 50% seam with DATA_LAKE_OVERFLOW_MAX_PERCENT applied to a
-    // since-removed lake-rate bar; see docs/DESIGN_HISTORY.md.)
-    const isBufferFull = getPoolBufferFillFraction(state, poolIndex) >= 1
-    const decayedBonus = !isBufferFull && decay > 0 ? Math.max(0, priorBonus - decay) : priorBonus
-    const finalBonus = isBufferFull ? 0 : Math.min(decayedBonus, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT)
+    // A pool's bonus speeds its consumers (getPoolTapMultiplier), which matter most on a full
+    // buffer, so it just decays — no full-buffer reset (that rule belonged to the retired
+    // fill-side pool bonus; see docs/DESIGN_HISTORY.md).
+    const decayedBonus = decay > 0 ? Math.max(0, priorBonus - decay) : priorBonus
+    const finalBonus = Math.min(decayedBonus, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT)
     if (finalBonus !== priorBonus) poolsChanged = true
     poolTapBonusPercents[poolIndexKey] = finalBonus
   })
@@ -2932,7 +2932,8 @@ export const tickFillMultiplierDecay = elapsedSeconds => state => {
 // runs earlier in the pipeline) until the next tick — imperceptible at TICK_RATE_MS. The
 // reservation bookkeeping above (poolRate/fillRate/remainingRate) stays on each pool's RAW
 // Bandwidth throughout — the actual bits transferred into a pool's buffer at the end of its own
-// iteration integrate that reserved rate × tap-bonus × pool Compute Boost via getFillCurveDelta
+// iteration integrate that reserved rate × pool Compute Boost via getFillCurveDelta (the pool tap
+// bonus speeds consumers, not this fill — getPoolTapMultiplier)
 // ("primary fill only" per FILL_MULTIPLIER_* in layers.js). getPoolEffectMultiplier remains the
 // instantaneous UI reading. Once a pool's own buffer is completely
 // full, its reserved share feeds that pool's own matching Data Lake instead, at a fill-based rate
@@ -2962,8 +2963,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     const current = poolBuffers[poolIndex] ?? 0
     const bufferCap = getPoolBufferCapacity(state, poolIndex)
     const room = Math.max(0, bufferCap - current)
-    const tapK = 1 + getPoolTapBonusPercent(state, poolIndex) / 100
-    const unmultipliedRate = fillRate * tapK * getComputeBoostPoolMultiplier(state.intro, poolIndex)
+    const unmultipliedRate = fillRate * getComputeBoostPoolMultiplier(state.intro, poolIndex)
 
     // How much of this tick's own elapsedSeconds interval is left over for lake overflow, once
     // the buffer-fill above has taken whatever it needed — 0 unless the buffer is (or just
@@ -4109,8 +4109,8 @@ export const clearDiskBuildQueue = state => {
 }
 
 // Advances an armed Provision Disk build. It is BUFFER-FUNDED at a FIXED speed: each tick it draws up to
-// elapsed × the pool's BASE Bandwidth (getStoragePoolBandwidth — re-read every tick, so a mid-build Speed/Capacity
-// upgrade raises the pace immediately; never the fill multiplier) out of the pool buffer (minus the read cache's
+// elapsed × the pool's BASE Bandwidth × its tap bonus (getStoragePoolBandwidth × getPoolTapMultiplier — re-read
+// every tick, so a mid-build Speed/Capacity upgrade raises the pace immediately; never the fill multiplier) out of the pool buffer (minus the read cache's
 // own claim, getPoolCacheReservationBits) and banks those bits as fractional passes in diskProvisionPasses[size].
 // The buffer itself still refills at the fill-multiplier pace, so an empty buffer stalls the build (nothing is
 // lost — progress is stored in bits) while a full one never makes it faster than the fixed speed. It only runs on
@@ -4132,7 +4132,7 @@ export const tickQueuedDiskBuild = (elapsedSeconds = 0) => state => {
   const stale = collected >= required
   const bufferBits = getPoolBufferBits(state, poolIndex)
   const spendable = Math.max(0, bufferBits - getPoolCacheReservationBits(state, poolIndex))
-  const bandwidth = getStoragePoolBandwidth(state, poolIndex)
+  const bandwidth = getStoragePoolBandwidth(state, poolIndex) * getPoolTapMultiplier(state, poolIndex)
   const headroomPasses = Math.max(0, Math.min(required - collected, allowance))
   const drawBits = stale ? 0 : Math.min(Math.max(0, elapsedSeconds) * bandwidth, spendable, headroomPasses * size)
   if (!stale && !(drawBits > 0)) return state
@@ -4717,7 +4717,8 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
       continue
     }
 
-    let remainingSeconds = flush.remainingSeconds - elapsedSeconds
+    // The pool's tap bonus speeds this consumer: the countdown advances ×getPoolTapMultiplier.
+    let remainingSeconds = flush.remainingSeconds - elapsedSeconds * getPoolTapMultiplier(state, getPoolIndexForDiskSize(size))
     if (remainingSeconds > TICK_ACCUMULATION_EPSILON) {
       if (remainingSeconds !== flush.remainingSeconds) {
         diskReadCacheFlush[size] = { ...flush, remainingSeconds }
@@ -5761,7 +5762,7 @@ export const isDataLakePoolDrainAvailable = (state, poolIndex) =>
   getPoolBufferBits(state, poolIndex) > getPoolCacheReservationBits(state, poolIndex)
 
 // A Data Lake draws directly from its pool's OWN buffer (isDataLakePoolDrainAvailable), at the pool's raw
-// Bandwidth, every tick — independent of the Data Stream. This keeps lakes filling while a running
+// Bandwidth × its tap bonus (getPoolTapMultiplier), every tick — independent of the Data Stream. This keeps lakes filling while a running
 // Upgrade Data Stream diverts the Data Stream's output, and generally lets a finished pool keep converting its
 // throughput into lake units rather than only via tickPoolBufferFill's full-buffer overflow. The
 // read cache's own refill claim (getPoolCacheReservationBits) is left untouched, and the whole pass
@@ -5776,7 +5777,7 @@ export const tickDataLakePoolDrain = elapsedSeconds => state => {
     const buffer = getPoolBufferBits(state, poolIndex)
     const spendable = Math.max(0, buffer - getPoolCacheReservationBits(state, poolIndex))
     if (spendable <= 0) continue
-    const rate = getStoragePoolBandwidth(state, poolIndex)
+    const rate = getStoragePoolBandwidth(state, poolIndex) * getPoolTapMultiplier(state, poolIndex)
     const { lake, remainingBits, changed } = applyDataLakeOverflow(state, poolIndex, rate, elapsedSeconds, spendable)
     if (!changed) continue
     poolBuffers = poolBuffers ?? { ...(state.intro.poolBuffers ?? {}) }

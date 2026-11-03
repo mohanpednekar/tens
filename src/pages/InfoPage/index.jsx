@@ -203,7 +203,9 @@ const InfoPage = () => {
             (fast). Tapping the Data Stream (once Storage appears) or a pool’s Memory tile adds a +
             {FILL_MULTIPLIER_TAP_BONUS_PERCENT}% tap bonus (up to {FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}%),
             which fades by {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}% per second and shows as a
-            thin bar and “+x% 👆”. The combined multiplier is capped at {FILL_MULTIPLIER_TAP_CAP_PERCENT}%.
+            thin bar and “+x% 👆”. On the Data Stream it speeds the fill (combined multiplier capped at{' '}
+            {FILL_MULTIPLIER_TAP_CAP_PERCENT}%); on a pool it speeds what the pool feeds — disk
+            provisioning, disk fills and the Data Lake.
           </li>
           <li>
             <strong>Upgrade Capacity</strong> costs your current Capacity and doubles it.{' '}

@@ -215,9 +215,10 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // geometrically (10x -> 1x over the first half, 1x -> 0.1x over the second), reaching exactly 100%
 // at 50% full and FILL_MULTIPLIER_MIN_PERCENT once completely full (getFillMultiplierPercent). A manual tap on the
 // Data Stream (once Storage pools are revealed at 1 KiB — see getVisibleStoragePoolCount/
-// tapIntroBit) or on a specific pool's own Memory tile (tapPoolBuffer) adds
-// FILL_MULTIPLIER_TAP_BONUS_PERCENT as a multiplier (×(1 + bonus%)) on that fill-based value for that one Data Stream/pool
-// only, decaying back down at FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND per second
+// tapIntroBit) adds FILL_MULTIPLIER_TAP_BONUS_PERCENT as a multiplier (×(1 + bonus%)) on that fill-based
+// value; a tap on a specific pool's own Memory tile (tapPoolBuffer) instead speeds that one pool's
+// CONSUMERS ×(1 + bonus%) (getPoolTapMultiplier — disk provisioning, read-cache flush, lake drain),
+// leaving its buffer fill alone. Either bonus is decaying back down at FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND per second
 // (tickFillMultiplierDecay) until only the fill-based value remains — never below it. Before
 // Storage pools are revealed, tapping the Data Stream keeps its original flat "one second's worth
 // of bits" effect instead (tapIntroBit) — this multiplier has no bearing pre-reveal.

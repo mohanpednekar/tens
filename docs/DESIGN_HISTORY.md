@@ -9093,3 +9093,15 @@ The player-facing name became **Restage** (autobuyer: **Auto Restage**) at the m
 At the maintainer's request, Latency + Restage (above the tier list) and Scale Up + Overclock (below
 it) each share one `SpeedCardsRow` that stays side by side at every width (`flex: 1 1 0`, no wrap),
 superseding the earlier below-40rem single-column stack of Scale Up / Overclock.
+
+## Pool tap bonus moved from buffer fill to the pool's consumers (2026-11)
+
+A pool tap used to multiply the pool buffer's own fill (×(1 + bonus%) inside `tickPoolBufferFill`),
+and `tickFillMultiplierDecay` zeroed the bonus once the buffer was full so it couldn't ride on the
+retired full-buffer reading. Maintainer direction: the buffer's source is already scaled to Speed/
+Bandwidth and keeps up on its own, so the tap belongs on what drains the pool. `getPoolTapMultiplier`
+now scales the Provision Disk draw, the read-cache → disk flush countdown and the Data Lake drain;
+`getPoolMultiplierPercent` is the fill-based value only, and the full-buffer reset was dropped (a full
+buffer is exactly when faster consumers help). The Data Stream's own tap bonus is unchanged. Not
+applied to the lower-disk rebuild (doesn't draw the buffer), write-cache merges (disk → disk) or
+`getComputeMergeDurationSeconds` (reads the static flush duration).
