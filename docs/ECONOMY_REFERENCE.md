@@ -1807,7 +1807,7 @@ per-tier milestone, no PP spent, no button to click:
 
 #### Pause/resume for the global automations
 
-Each of the automations above (Auto Scale Up, the Auto Speed Up, Auto Overclock,
+Each of the automations above (Auto Scale Up, Auto Speed Up, Auto Overclock,
 Auto Reboot — and Auto Restage, via `autoXpTickspeed`/`autoXpTickspeedEnabled`/
 `setAutoXpTickspeedEnabled`, same convention) splits "has this ever been bought" (the permanent fields documented above —
 `autoScaleUp`/`autoGlobalTickspeed`/`autoReboot`, all unaffected by this

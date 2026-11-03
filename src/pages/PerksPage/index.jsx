@@ -824,7 +824,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </Row>
       ),
       isAutoRebootActive && (
-        <Row key="auto reboot" aria-label="auto reboot toggle">
+        <Row key="auto-reboot" aria-label="auto reboot toggle">
           <RowLabel><RowIcon>✦</RowIcon>Auto Reboot</RowLabel>
           <AutomationToggle
             enabled={autoRebootEnabled}

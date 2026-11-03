@@ -386,7 +386,7 @@ describe('navAttention', () => {
     expect(hasAffordablePpUnlock({ ...autoRebootUnlockOnly, reboot: { count: 1, points: getAutomationUnlockCost('reboot') - 1 } })).toBe(false)
   })
 
-  it('lights the Perks unlocks dot for an affordable Auto-Boost only once Boosters is available and it is not owned', () => {
+  it('lights the Perks unlocks dot for an affordable Auto Boost only once Boosters is available and it is not owned', () => {
     const init = createInitialGameState()
     const ownedEverythingElse = {
       ...init,

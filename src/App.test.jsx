@@ -1915,6 +1915,27 @@ test('Global Automation lists every step (Auto Speed Up → Auto Scale Up → Au
   expect(screen.getByRole('button', { name: /enable auto reboot for 64 prestige points/i })).toBeDisabled()
 })
 
+test('Perks lists global automations in one order on both Unlocks and Toggles: Auto Speed Up → Scale Up → Overclock → Reboot → Restage', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    resources: { base: 10 },
+    reboot: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
+    autoGlobalTickspeed: true,
+    autoScaleUp: true,
+    autoOverclock: true,
+    autoReboot: 1,
+    autoXpTickspeed: true,
+  })
+  render(<App />)
+  const order = ['auto speed up', 'auto scale up', 'auto overclock', 'auto reboot', 'auto restage']
+  await openPerksTab(user, /open unlocks/i)
+  const unlockRows = within(screen.getByLabelText('global automation category')).getAllByLabelText(/ upgrade$/)
+  expect(unlockRows.map(row => row.getAttribute('aria-label'))).toEqual(order.map(name => `${name} upgrade`))
+  await user.click(screen.getByRole('tab', { name: /open toggles/i }))
+  const toggleRows = within(screen.getByLabelText('global automation toggles category')).getAllByLabelText(/ toggle$/)
+  expect(toggleRows.map(row => row.getAttribute('aria-label'))).toEqual(order.map(name => `${name} toggle`))
+})
+
 test('the Auto-Prestige option stays out of Upgrades until Auto-Prestige is bought', async () => {
   const user = userEvent.setup()
 

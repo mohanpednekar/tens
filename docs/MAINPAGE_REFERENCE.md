@@ -436,7 +436,7 @@ live inside the selected tier):
    a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cores:
-   The timer bar / idle status line and (once unlocked) the Auto Boost preference picker all live in one `BoostCard`. The Auto Boost UNLOCK itself is a Perks → Unlocks → Booster Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
+   The timer bar / idle status line and (once unlocked) the Auto Boost preference picker all live in one `BoostCard`. The Auto Boost UNLOCK itself is a Perks → Unlocks → Booster Automation row (`aria-label="auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
    a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
