@@ -778,7 +778,7 @@ than joining this card, since its own target walks through the tier ladder one t
 "Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
 through. `ScaleUpCard` and `OverclockCard` (see below) render together in that shared row instead.
 (Earlier iterations tried grouping all three speed-related cards together at the top; this
-was reverted to the current split — Tickspeed alone at top, Scale Up/Overclock below the tier list —
+was reverted to the current split — Tickspeed (Latency, with Restage beside it) at top, Scale Up/Overclock below the tier list —
 per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying
 `engine.js` mechanics. The heading text itself never changes
 (`Tickspeed`, no level/percent readout — shortened first from `Global Tickspeed Multiplier` to
