@@ -1,0 +1,87 @@
+name: Revert deploy
+
+# Manual safety net (#594, part of #587): open a PR that restores main's tree to a
+# prior known-good commit. Merging that PR lands a normal commit on main, so
+# deploy.yml redeploys GitHub Pages as usual — no change needed there.
+#
+# Option (a) from the spec: a revert PR for a human to merge, never a direct push
+# to main. Triggered ONLY by a deliberate workflow_dispatch — no other event.
+#
+# The revert replaces the whole working tree with the target commit's tree rather
+# than using `git revert`, which breaks on merge commits (main is full of them).
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: "Known-good commit SHA on main to restore the tree to"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: revert-deploy
+  cancel-in-progress: false
+
+jobs:
+  open-revert-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout main (automation PAT so the branch push and PR can be created)
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Create revert branch and PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+          TARGET_INPUT: ${{ inputs.target_sha }}
+        run: |
+          set -euo pipefail
+
+          # Input is passed via env (never interpolated into the script) and
+          # validated as a hex SHA before use.
+          if ! printf '%s' "$TARGET_INPUT" | grep -Eq '^[0-9a-fA-F]{7,40}$'; then
+            echo "ERROR: target_sha must be a 7-40 character hex commit SHA."
+            exit 1
+          fi
+          target=$(git rev-parse --verify "${TARGET_INPUT}^{commit}")
+          head_sha=$(git rev-parse HEAD)
+          short=$(git rev-parse --short=8 "$target")
+
+          if [ "$target" = "$head_sha" ]; then
+            echo "ERROR: target ${short} is already main's HEAD — nothing to revert."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$target" "$head_sha"; then
+            echo "ERROR: ${short} is not an ancestor of main — refusing."
+            exit 1
+          fi
+
+          branch="revert-deploy/to-${short}-$(date -u +%Y%m%d%H%M%S)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+
+          # Replace the full tree (including deletions) with the target's.
+          git rm -r -q --ignore-unmatch . >/dev/null
+          git checkout "$target" -- .
+          if git diff --cached --quiet; then
+            echo "ERROR: tree at ${short} is identical to main's HEAD — nothing to revert."
+            exit 1
+          fi
+          git commit -q -m "Revert main to ${short}" \
+            -m "Restores the working tree to commit ${target} via the manual revert-deploy workflow (#594)."
+          git push origin "$branch"
+
+          body="Restores \`main\`'s tree to \`${target}\` (manual \`revert-deploy\` dispatch, #594).
+
+          Review the diff, then merge: \`deploy.yml\` redeploys GitHub Pages from \`main\` as usual.
+          This PR was opened by a deliberate \`workflow_dispatch\`; nothing was pushed to \`main\`."
+          gh pr create --base main --head "$branch" \
+            --title "Revert main to ${short}" --body "$body"

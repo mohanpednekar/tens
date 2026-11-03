@@ -211,7 +211,7 @@ Nodes (19): Compute Boost: Reclaim and Forfeit made mutually exclusive — 2026-
 
 ### Community 14 - "DevModePage/index.jsx"
 Cohesion: 0.14
-Nodes (22): COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_THRESHOLD, ButtonGrid, coerceDraft(), Details, DevModePage(), FieldLabel, FieldNode() (+14 more)
+Nodes (22): COMPUTE_FLOPS_REVEAL_PP, REBOOT_THRESHOLD, ButtonGrid, coerceDraft(), Details, DevModePage(), FieldLabel, FieldNode() (+14 more)
 
 ### Community 15 - "engine.js"
 Cohesion: 0.06
@@ -439,7 +439,7 @@ Nodes (3): End-to-end specs (Playwright), Updating baselines when a PR intention
 
 ### Community 84 - "createInitialGameState"
 Cohesion: 0.14
-Nodes (36): 2. Load the repo's invariants, End-to-end testing, actSoftResets(), Testing, Byte Foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile — 2026-09-02, Era ascension and Eons — meta-prestige above Unbounded (#407 / #405), Migration in `src/save-migration/`, runs on every load — 2026-08-22, `prestigeGame` wiped era/eons/hyperscalerCount/eonsUpgrades/Flops-autobuyer state on every ordinary Prestige (#626) — 2026-09-09 (+28 more)
+Nodes (36): 2. Load the repo's invariants, End-to-end testing, actSoftResets(), Testing, Byte Foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile — 2026-09-02, Era ascension and Eons — meta-prestige above Unbounded (#407 / #405), Migration in `src/save-migration/`, runs on every load — 2026-08-22, `rebootGame` wiped era/eons/hyperscalerCount/eonsUpgrades/Flops-autobuyer state on every ordinary Prestige (#626) — 2026-09-09 (+28 more)
 
 ### Community 85 - "getPoolBufferBits"
 Cohesion: 0.12

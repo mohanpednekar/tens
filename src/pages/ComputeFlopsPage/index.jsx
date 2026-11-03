@@ -97,7 +97,7 @@ const tierNameById = Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, t.name]
 
 const ComputeFlopsPage = ({ game }) => {
   const { actions, state } = game
-  const pp = state.prestige?.points ?? 0
+  const pp = state.reboot?.points ?? 0
   const totalFlops = getComputeFlopsTotal(state)
   const revealed = isComputeFlopsPageRevealed(state)
 
@@ -118,7 +118,7 @@ const ComputeFlopsPage = ({ game }) => {
         )}
         Each owned unit adds {(COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * 100).toFixed(2)}% per
         second to the matching Factory tier’s boost. The PP price rises with every purchase (not
-        every 8, as on Factory tiers). Boosts reset each Prestige; owned units are permanent.
+        every 8, as on Factory tiers). Boosts reset each Reboot; owned units are permanent.
       </Hint>
 
       <TierList aria-label="compute flops tiers">

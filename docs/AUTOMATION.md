@@ -114,7 +114,8 @@ which silently failed every scheduled run for two days (#738) — is closed by a
 `scripts/lint-workflow-shell.mjs` (`yarn lint:workflows`) extracts every `run:` block in
 `.github/workflows/*.yml` and `.github/actions/**` (composite actions included — a broken one takes
 every workflow down identically) and runs `bash -n` on each, wired as a step in `ci.yml`'s required
-`test` job. It lives inside that job (not as its own job) so the check is merge-blocking under the
+`test` job. The same script chains `scripts/lint-conflict-markers.mjs` (#945), which fails on committed
+git conflict markers. It lives inside that job (not as its own job) so the check is merge-blocking under the
 existing branch-protection requirement without a settings change. Extraction uses the `yaml`
 package's parser (an earlier hand-written indentation scanner kept missing YAML edge cases — ~48
 review findings on #739), linting only the scalar `run` value of steps on paths Actions executes (`jobs.<id>.steps`, composite `runs.steps`, nested `parallel:` groups), aliases resolved, so `with.run`,
@@ -607,6 +608,18 @@ security for these uploads to be accepted). Push/PR to `main` plus a weekly sche
 `CODE_SIGNING_ALLOWED=NO`. Default setup's Swift autobuild ran a bare `swift build` with no
 `node_modules` and failed once Capacitor plugins were synced in (#915).
 
+### Mutation testing (`mutation-testing.yml`, #592)
+
+Weekly (Sun 03:23 UTC) and `workflow_dispatch` job — **not** a PR check and never gates a merge. Runs
+Stryker (`stryker.config.json`, Vitest runner, `perTest` coverage) over `src/game/engine.js`: each
+mutant reruns only the tests covering it. The initial dry run takes ~1 min; a full engine run has
+thousands of mutants, so the job allows up to 330 min. `workflow_dispatch`'s `mutate` input takes a
+Stryker range override (e.g. `src/game/engine.js:100-400`) for a quick check. Read the output in the
+run's **job summary**: *Total score* = (killed+timeout) / (killed+timeout+survived+no-coverage);
+*Score on covered code* ignores no-coverage mutants. Survivors are tests that would miss a real bug —
+download the `mutation-report` artifact and open `index.html` to see them. Locally:
+`yarn stryker run --mutate src/game/engine.js:100-130` (reports in gitignored `reports/mutation/`).
+
 ### Release (`release.yml`)
 
 Deterministic (no agent) — the post-merge half of #52, complementing the pre-merge
@@ -637,6 +650,18 @@ the shared deny-list's protected base (`scripts/claude-deny-settings.sh`), so no
 always-open-a-PR + CODEOWNERS human-review gate instead. Failures are not watched by
 `automation-self-heal.yml` (a red run is visible on the Actions tab / commit status like any
 other main-branch workflow).
+
+### Revert deploy (`revert-deploy.yml`, #594)
+
+A manual safety net for a bad change that reached `main` (and therefore GitHub Pages). Run it from
+the Actions tab via **Run workflow**, passing `target_sha` — the last known-good commit on `main`.
+It is `workflow_dispatch`-only (never auto-triggered) and **never pushes to `main`**: it validates
+the SHA is a real ancestor of `main`'s HEAD, creates a `revert-deploy/to-<sha>-<timestamp>` branch
+whose single commit replaces the whole tree with the target's (deletions included — plain
+`git revert` breaks on merge commits), and opens a PR. A human reviews and merges it; as a normal
+commit on `main`, it makes `deploy.yml` redeploy with no changes there. Use it when a forward fix
+would be slower than restoring the previous state; the PR still waits for the usual required
+checks. Writes use `GH_AUTOMATION_PAT`. Automatic rollback detection is out of scope.
 
 ### PR review & testing cadence
 

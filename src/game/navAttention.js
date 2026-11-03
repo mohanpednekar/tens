@@ -162,7 +162,7 @@ export const hasOverclockAvailable = state => {
   return completedLevels >= getOverclockRequirement(state)
 }
 
-/** Byte Factory-view cues (buys, prestige, Scale Up / Overclock, Money tickspeed). */
+/** Byte Factory-view cues (buys, reboot, Scale Up / Overclock, Money tickspeed). */
 export const hasTiersGameAttention = state =>
   isProductionFrozen(state) ||
   hasAffordableFullLevel(state) ||
@@ -173,28 +173,28 @@ export const hasTiersGameAttention = state =>
 // The Perks page's PP tabs (see pages/PerksPage): Unlocks = one-time
 // permanent unlocks, repeatable leveled upgrades, and pause/resume toggles (never "affordable").
 export const hasAffordablePpUnlock = state => {
-  if ((state.prestige?.count ?? 0) < 1) return false
+  if ((state.reboot?.count ?? 0) < 1) return false
   if (isProductionFrozen(state)) return false
-  const points = state.prestige?.points ?? 0
+  const points = state.reboot?.points ?? 0
   return (
     (!state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) ||
     (Boolean(state.autoGlobalTickspeed) && !(state.autoScaleUp ?? false) && points >= getAutomationUnlockCost('scaleUp')) ||
     (isComputeCoreConversionUnlocked(state) && !(state.computeAutoBoostUnlocked ?? false) && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST) ||
     (Boolean(state.autoScaleUp) && !(state.autoOverclock ?? false) && points >= getAutomationUnlockCost('overclock')) ||
-    (!(state.autoGlobalTickspeed ?? false) && points >= getAutomationUnlockCost('latency')) ||
+    (!(state.autoGlobalTickspeed ?? false) && points >= getAutomationUnlockCost('speedUp')) ||
     (!(state.autoXpTickspeed ?? false) && points >= XP_TICKSPEED_AUTOBUYER_UNLOCK_COST) ||
-    (Boolean(state.autoOverclock) && state.autoPrestige == null && points >= getAutomationUnlockCost('prestige'))
+    (Boolean(state.autoOverclock) && state.autoReboot == null && points >= getAutomationUnlockCost('reboot'))
   )
 }
 
 export const hasAffordablePpLevelUpgrade = state => {
-  if ((state.prestige?.count ?? 0) < 1) return false
-  const points = state.prestige?.points ?? 0
+  if ((state.reboot?.count ?? 0) < 1) return false
+  const points = state.reboot?.points ?? 0
   if (points >= getPrestigeDoublePpUpgradeCost(state.prestigeDoublePpLevel ?? 0)) return true
   if (isProductionFrozen(state)) return false
-  if (state.autoPrestige == null) return false
-  const level = state.automationIntervalLevels?.prestige ?? 0
-  return level < getAutomationIntervalMaxLevel('prestige') && points >= getAutomationIntervalUpgradeCost('prestige', level)
+  if (state.autoReboot == null) return false
+  const level = state.automationIntervalLevels?.reboot ?? 0
+  return level < getAutomationIntervalMaxLevel('reboot') && points >= getAutomationIntervalUpgradeCost('reboot', level)
 }
 
 export const hasAffordablePpUpgrade = state =>

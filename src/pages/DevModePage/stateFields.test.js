@@ -58,13 +58,13 @@ describe('setValueAtPath', () => {
         mainGameUnlocked: false,
         dataLakes: { 1: { purchased: 0, deposited: 2 }, 2: { purchased: 1 } },
       },
-      prestige: { points: 5 },
+      reboot: { points: 5 },
     }
     const next = setValueAtPath(original, ['intro', 'dataLakes', '1', 'purchased'], 3)
     expect(next.intro.dataLakes['1']).toEqual({ purchased: 3, deposited: 2 })
     expect(next.intro.dataLakes['2']).toEqual({ purchased: 1 })
     expect(next.intro.mainGameUnlocked).toBe(false)
-    expect(next.prestige).toEqual({ points: 5 })
+    expect(next.reboot).toEqual({ points: 5 })
     expect(original.intro.dataLakes['1'].purchased).toBe(0)
   })
 
@@ -124,8 +124,11 @@ describe('getVariableAreaId', () => {
     ['era', 'era'],
     ['eonsUpgrades', 'era'],
     ['hyperscalerCount', 'era'],
-    ['prestige', 'prestige'],
-    ['autoPrestige', 'prestige'],
+    ['reboot', 'reboot'],
+    ['autoReboot', 'reboot'],
+    ['prestigeDoublePpLevel', 'reboot'],
+    ['prestigeMuseum', 'reboot'],
+    ['prestigeSpeedBonusUnlocked', 'reboot'],
     ['autobuyers', 'perks'],
     ['autoOverclock', 'perks'],
     ['tierTickspeedIntervalLevels', 'perks'],

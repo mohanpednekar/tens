@@ -9,12 +9,12 @@ import {
   getComputeFlopsTierProductionMultiplier,
   isComputeFlopsPageRevealed,
   latchComputeFlopsPageUnlocked,
-  prestigeGame,
+  rebootGame,
   scaleUpGame,
   tickComputeFlops,
   tickGame,
 } from './engine'
-import { BITS_PER_BYTE, MONEY_ID, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_FIRST_TIER_COST_PP, COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_THRESHOLD, TICK_RATE_MS } from './layers'
+import { BITS_PER_BYTE, MONEY_ID, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_FIRST_TIER_COST_PP, COMPUTE_FLOPS_REVEAL_PP, REBOOT_THRESHOLD, TICK_RATE_MS } from './layers'
 
 // Bytes and Bits are one pool (MONEY_ID) — 8 Bits per Byte.
 const bytesOf = state => (state.resources[MONEY_ID] ?? 0) / BITS_PER_BYTE
@@ -24,9 +24,9 @@ const elapsed = TICK_RATE_MS / 1000
 describe('Compute Flops screen', () => {
   it('is hidden below COMPUTE_FLOPS_REVEAL_PP and latches once revealed', () => {
     let state = createInitialGameState()
-    state = { ...state, prestige: { ...state.prestige, points: COMPUTE_FLOPS_REVEAL_PP - 1 } }
+    state = { ...state, reboot: { ...state.reboot, points: COMPUTE_FLOPS_REVEAL_PP - 1 } }
     expect(isComputeFlopsPageRevealed(state)).toBe(false)
-    state = { ...state, prestige: { ...state.prestige, points: COMPUTE_FLOPS_REVEAL_PP } }
+    state = { ...state, reboot: { ...state.reboot, points: COMPUTE_FLOPS_REVEAL_PP } }
     expect(isComputeFlopsPageRevealed(state)).toBe(true)
     const latched = latchComputeFlopsPageUnlocked(state)
     expect(latched.computeFlops.pageUnlocked).toBe(true)
@@ -36,17 +36,17 @@ describe('Compute Flops screen', () => {
     let state = createInitialGameState()
     state = latchComputeFlopsPageUnlocked({
       ...state,
-      prestige: { ...state.prestige, points: COMPUTE_FLOPS_REVEAL_PP },
+      reboot: { ...state.reboot, points: COMPUTE_FLOPS_REVEAL_PP },
     })
     expect(buyComputeFlopsTier('flop01')(state)).toBe(state)
     state = {
       ...state,
-      prestige: { ...state.prestige, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP },
+      reboot: { ...state.reboot, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP },
     }
     const after = buyComputeFlopsTier('flop01')(state)
     expect(after).not.toBe(state)
     expect(after.computeFlops.owned.flop01).toBe(1)
-    expect(after.prestige.points).toBe(0)
+    expect(after.reboot.points).toBe(0)
   })
 
   it('raises KFlops cost after every purchase on the linear-increment power-of-ten curve', () => {
@@ -57,15 +57,15 @@ describe('Compute Flops screen', () => {
 
     let state = buyComputeFlopsTier('flop01')({
       ...createInitialGameState(),
-      prestige: { xp: 0, points: 1_000, count: 1, highestMilestone: 1 },
+      reboot: { xp: 0, points: 1_000, count: 1, highestMilestone: 1 },
     })
     state = {
       ...state,
-      prestige: { ...state.prestige, points: 10_000 },
+      reboot: { ...state.reboot, points: 10_000 },
     }
     const after = buyComputeFlopsTier('flop01')(state)
     expect(after.computeFlops.owned.flop01).toBe(2)
-    expect(after.prestige.points).toBe(0)
+    expect(after.reboot.points).toBe(0)
   })
 
   it('weights cumulative Flops total as k + 10M + 100G + … + 10^9 Q', () => {
@@ -90,7 +90,7 @@ describe('Compute Flops screen', () => {
     let state = createInitialGameState()
     state = buyComputeFlopsTier('flop01')({
       ...state,
-      prestige: { ...state.prestige, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP },
+      reboot: { ...state.reboot, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP },
     })
     state = tickComputeFlops(10)(state)
     const expected = COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * 10
@@ -107,7 +107,7 @@ describe('Compute Flops screen', () => {
     }
     const bought = buyComputeFlopsTier('flop01')({
       ...base,
-      prestige: { ...base.prestige, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP },
+      reboot: { ...base.reboot, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP },
     })
     const withFlop = {
       ...bought,
@@ -116,7 +116,7 @@ describe('Compute Flops screen', () => {
         cumulativeBoost: { ...bought.computeFlops.cumulativeBoost, tier01: 1 },
       },
     }
-    const withoutFlop = { ...base, prestige: { ...base.prestige, points: 0 } }
+    const withoutFlop = { ...base, reboot: { ...base.reboot, points: 0 } }
     const afterWith = tickGame(1)(withFlop)
     const afterWithout = tickGame(1)(withoutFlop)
     expect(bytesOf(afterWith)).toBeGreaterThan(bytesOf(afterWithout))
@@ -126,14 +126,14 @@ describe('Compute Flops screen', () => {
     let state = createInitialGameState()
     state = buyComputeFlopsTier('flop01')({
       ...state,
-      prestige: { ...state.prestige, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP },
+      reboot: { ...state.reboot, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP },
     })
     state = tickComputeFlops(5)(state)
     state = {
       ...state,
-      resources: { ...state.resources, base: PRESTIGE_THRESHOLD },
+      resources: { ...state.resources, base: REBOOT_THRESHOLD },
     }
-    const after = prestigeGame(state)
+    const after = rebootGame(state)
     expect(after.computeFlops.owned.flop01).toBe(1)
     expect(after.computeFlops.cumulativeBoost.tier01).toBe(0)
     expect(getComputeFlopsTotal(after)).toBe(0)
@@ -142,7 +142,7 @@ describe('Compute Flops screen', () => {
   it('scaleUpGame preserves owned Flops units and resets cumulativeBoost', () => {
     let state = buyComputeFlopsTier('flop01')({
       ...createInitialGameState(),
-      prestige: { xp: 0, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP, count: 1, highestMilestone: 1 },
+      reboot: { xp: 0, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP, count: 1, highestMilestone: 1 },
     })
     state = tickComputeFlops(5)(state)
     state = {
@@ -163,14 +163,14 @@ describe('Compute Flops screen', () => {
     let state = {
       ...createInitialGameState(),
       autoGlobalTickspeed: true, // Auto Scale Up needs the Tickspeed Autobuyer first
-      prestige: { xp: 0, points: COMPUTE_FLOPS_REVEAL_PP, count: 1, highestMilestone: 1 },
+      reboot: { xp: 0, points: COMPUTE_FLOPS_REVEAL_PP, count: 1, highestMilestone: 1 },
     }
     expect(isComputeFlopsPageRevealed(state)).toBe(true)
     expect(state.computeFlops.pageUnlocked).toBe(false)
     state = buyAutoScaleUp(state)
     expect(state.computeFlops.pageUnlocked).toBe(true)
     expect(isComputeFlopsPageRevealed(state)).toBe(true)
-    expect(state.prestige.points).toBe(COMPUTE_FLOPS_REVEAL_PP - getAutomationUnlockCost('scaleUp'))
+    expect(state.reboot.points).toBe(COMPUTE_FLOPS_REVEAL_PP - getAutomationUnlockCost('scaleUp'))
   })
 
   describe('getComputeFlopsAffordableQuantity', () => {
@@ -207,27 +207,27 @@ describe('Compute Flops screen', () => {
     it('buys multiple units in one call, spending the sum of each unit\'s own escalating price', () => {
       const state = {
         ...createInitialGameState(),
-        prestige: { xp: 0, points: 1_000 + 10_000, count: 1, highestMilestone: 1 },
+        reboot: { xp: 0, points: 1_000 + 10_000, count: 1, highestMilestone: 1 },
       }
       const after = buyComputeFlopsTier('flop01', 2)(state)
       expect(after.computeFlops.owned.flop01).toBe(2)
-      expect(after.prestige.points).toBe(0)
+      expect(after.reboot.points).toBe(0)
     })
 
     it('partially fills a batch purchase when spendable affords fewer units than requested, spending only for the affordable units', () => {
       const state = {
         ...createInitialGameState(),
-        prestige: { xp: 0, points: 15_000, count: 1, highestMilestone: 1 },
+        reboot: { xp: 0, points: 15_000, count: 1, highestMilestone: 1 },
       }
       const after = buyComputeFlopsTier('flop01', 5)(state)
       expect(after.computeFlops.owned.flop01).toBe(2)
-      expect(after.prestige.points).toBe(15_000 - (1_000 + 10_000))
+      expect(after.reboot.points).toBe(15_000 - (1_000 + 10_000))
     })
 
     it('no-ops (same state reference) when not even a single unit is affordable', () => {
       const state = {
         ...createInitialGameState(),
-        prestige: { xp: 0, points: 999, count: 1, highestMilestone: 1 },
+        reboot: { xp: 0, points: 999, count: 1, highestMilestone: 1 },
       }
       expect(buyComputeFlopsTier('flop01', 3)(state)).toBe(state)
     })
@@ -235,11 +235,11 @@ describe('Compute Flops screen', () => {
     it('defaults quantity to 1 when omitted', () => {
       const state = {
         ...createInitialGameState(),
-        prestige: { xp: 0, points: 1_000, count: 1, highestMilestone: 1 },
+        reboot: { xp: 0, points: 1_000, count: 1, highestMilestone: 1 },
       }
       const after = buyComputeFlopsTier('flop01')(state)
       expect(after.computeFlops.owned.flop01).toBe(1)
-      expect(after.prestige.points).toBe(0)
+      expect(after.reboot.points).toBe(0)
     })
   })
 })
