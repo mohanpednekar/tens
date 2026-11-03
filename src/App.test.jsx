@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
 import { ThemeProvider } from 'theme'
-import { applyAutobuyerMilestones, createInitialGameState, getAutobuyerIntervalMaxLevel, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, formatOfflineDuration, getIntroProductionRate, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
+import { applyAutobuyerMilestones, createInitialGameState, getAutobuyerIntervalMaxLevel, getAutobuyerSpeedUpgradeMaxLevel, getAutomationIntervalMaxLevel, getTierTickspeedIntervalMaxLevel, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, formatOfflineDuration, getIntroProductionRate, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   BITS_PER_BYTE,
   COMPUTE_BOOST_MAX_STACKS,
@@ -2212,12 +2212,51 @@ test('a tier autobuyer\'s speed upgrade continues past the 10 ms floor, showing 
   const row = screen.getByLabelText(/^kilobytes autobuyer$/i)
   expect(row).toHaveTextContent(/every 10 ms/i)
   const button = within(row).getByRole('button', { name: new RegExp(`upgrade kilobytes's autobuyer to level ${maxLevel + 1} for .* purge points — doubles levels bought per attempt to up to 2`, 'i') })
-  expect(button).toHaveTextContent(/2\/buy · /)
+  // Narrow cell: the button shows only the cost; the doubling lives in its accessible name.
+  expect(button).toHaveTextContent(/ PP$/)
+  expect(button).not.toHaveTextContent(/\/buy/)
   await user.click(button)
 
   const after = screen.getByLabelText(/^kilobytes autobuyer$/i)
   expect(after).toHaveTextContent(/every 10 ms · 2\/buy/i)
-  expect(within(after).getByRole('button', { name: new RegExp(`upgrade kilobytes's autobuyer to level ${maxLevel + 2} for .* up to 4`, 'i') })).toHaveTextContent(/4\/buy · /)
+  expect(within(after).getByRole('button', { name: new RegExp(`upgrade kilobytes's autobuyer to level ${maxLevel + 2} for .* up to 4`, 'i') })).toHaveTextContent(/ PP$/)
+})
+
+// Capped (maxed) automations collapse to label + Switch — no interval line, no upgrade button;
+// the interval moves to the cell's title.
+test.each([
+  {
+    name: 'a global automation (Auto Speed Up)',
+    seed: () => ({ autoGlobalTickspeed: true, automationIntervalLevels: { speedUp: getAutomationIntervalMaxLevel('speedUp') } }),
+    cell: /^auto speed up row$/i,
+    toggle: /^Auto Speed Up automation$/i,
+  },
+  {
+    name: 'a tier autobuyer',
+    seed: () => ({ autobuyers: { tier01: 1 }, autobuyerIntervalLevels: { tier01: getAutobuyerSpeedUpgradeMaxLevel('tier01') } }),
+    cell: /^kilobytes autobuyer$/i,
+    toggle: /^Kilobytes's autobuyer$/i,
+  },
+  {
+    name: 'a tier tickspeed autobuyer',
+    seed: () => ({ tierTickspeedAutobuyer: { tier01: true }, tierTickspeedIntervalLevels: { tier01: getTierTickspeedIntervalMaxLevel() } }),
+    cell: /^kilobytes tickspeed autobuyer$/i,
+    toggle: /^Kilobytes's tickspeed autobuyer$/i,
+  },
+])('$name at its cap shows only its label and Switch', async ({ seed, cell, toggle }) => {
+  seedMainGameState({
+    resources: { base: 10 },
+    reboot: { xp: 0, points: 1e30, count: 1, highestMilestone: 1 },
+    ...seed(),
+  })
+  render(<App />)
+  await openPerksTab(userEvent.setup(), /open automation/i)
+
+  const capped = screen.getByLabelText(cell)
+  expect(within(capped).getByRole('button', { name: toggle })).toBeInTheDocument()
+  expect(within(capped).getAllByRole('button')).toHaveLength(1)
+  expect(capped).not.toHaveTextContent(/every/i)
+  expect(capped).toHaveAttribute('title', expect.stringMatching(/every .* \(max\)$/))
 })
 
 test('the Perks Prestige tab NavDot lights up when a leveled Double PP purchase is affordable', async () => {

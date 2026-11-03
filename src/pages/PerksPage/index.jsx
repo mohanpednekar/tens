@@ -138,10 +138,10 @@ const Row = styled.div`
   }
 `
 
-// Automation categories lay their entries out as a two-column grid of compact cells, optimised for
-// the end state: a capped (maxed) automation is just "name + Switch" on one line, so a fully
-// upgraded category packs two per row. Before the cap a cell grows downward (interval line +
-// full-width upgrade/unlock button) — taller, an accepted trade-off.
+// Automation categories lay their entries out as a grid of compact cells, optimised for the end
+// state: a capped (maxed) automation is just "label + Switch" on one line — tier/Flops cells go
+// three-up on a phone, global cells one per row. Before the cap a cell grows downward (interval line
+// + full-width upgrade/unlock button) — taller, an accepted trade-off.
 const CellGrid = styled.div`
   align-items: start;
   display: grid;
@@ -207,6 +207,13 @@ const CellAction = styled.div`
   ${props => props.$narrow && `
     & > button > :first-child {
       display: none;
+    }
+
+    /* Long costs (1.6e15 PP) wrap rather than ellipsize, so the price is never hidden. */
+    & > button > span {
+      overflow: visible;
+      overflow-wrap: anywhere;
+      white-space: normal;
     }
   `}
 `
@@ -545,7 +552,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 ariaLabel: atFloor
                   ? `Upgrade ${tier.name}'s autobuyer to level ${level + 1} for ${formatAmount(cost)} Purge Points — doubles levels bought per attempt to up to ${bulkLevels * 2}`
                   : `Upgrade ${tier.name}'s autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`,
-                label: atFloor ? `${bulkLevels * 2}/buy · ${formatAmount(cost)} PP` : undefined,
+                // Narrow cell: cost only — the subtext already shows the current N/buy, and the
+                // aria-label/title spell out the doubling.
+                label: undefined,
                 onClick: () => actions.buyAutobuyerIntervalUpgrade(tier.id),
                 progressLabel: `${tier.name} autobuyer speed PP progress`,
                 title: atFloor

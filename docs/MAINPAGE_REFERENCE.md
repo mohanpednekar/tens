@@ -740,14 +740,15 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   compact `AutomationRow` **cell** in a `CellGrid`, laid out for the capped end state: a maxed
   automation is a single line, label + Switch, nothing else (its interval moves to the cell's `title`).
   Before the cap the cell grows downward — `every <interval>` subtext (tier autobuyers past the 10 ms
-  floor add `· N/buy`, up to 1024) and a full-width ⏫ speed upgrade (`M/buy · <cost> PP` past the
-  floor; every tier autobuyer / tier tickspeed autobuyer chain starts at 100 PP). Locked: a 🔒
+  floor add `· N/buy`, up to 1024) and a full-width ⏫ speed upgrade (visible text is the cost only — the
+  doubling to `M/buy` is in its `aria-label`/`title`; every tier autobuyer / tier tickspeed autobuyer
+  chain starts at 100 PP). Locked: a 🔒
   `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) or a full-width
   🔓 PP unlock button (`"Enable <name> for N Purge Points"`). The Switch (`aria-pressed`, `aria-label`
   e.g. `"Auto Scale Up automation"`, `"<tier>'s autobuyer"`) sits at the head's right; the status is
   `"<name> active|paused"` (`role="img"`). Grids: tier / tier-tickspeed / Flops cells are `$narrow`
   (`minmax(4.75rem, 1fr)` → three-up at 320px; label = tier **symbol** `KB`/`MF`, full name hidden +
-  `title`; 0.88em font, Switch `zoom: 0.85`, button glyph hidden so the cost fits); global cells are
+  `title`; 0.88em font, Switch `zoom: 0.85`, button glyph hidden and the cost wraps instead of ellipsizing); global cells are
   `minmax(15rem, 1fr)` (one per row on a phone, two-up wider). Categories: *Global Automation* (cells
   `"<name> row"`, Auto Speed Up → Auto Restage → Auto Scale Up → Auto Overclock → Auto Purge; Restage
   and Scale Up both need Speed Up, Overclock needs both, Purge needs Overclock — engine-enforced),
