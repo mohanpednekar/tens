@@ -3698,6 +3698,22 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('progressbar', { name: /disk build progress/i })).toHaveAttribute('aria-valuenow', '33')
   })
 
+  test('the rebuild status says it is waiting for an earlier pool while that pool\'s reset rebuild still holds the lock', () => {
+    // Pool 1 (ladder steps 1-3) fully built but its lake still flagged rebuilding; pool 2's first size
+    // (step 4) is the pending lower-size rebuild below the presented step 5.
+    const pool1Sizes = [currentBankSize, currentBankSize * 10, currentBankSize * 100]
+    const full = Object.fromEntries(pool1Sizes.map(size => [size, 9]))
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 5,
+      disks: full,
+      disksBuiltTotal: full,
+      dataLakes: { 1: { rebuilding: true } },
+    })
+    render(<App />)
+    expect(screen.getByRole('button', { name: /provision disk/i })).toHaveAttribute('aria-description', expect.stringMatching(/Rebuilding .* first · waiting for earlier pool/))
+  })
+
   test('the rebuild status says it is waiting for buffer while the pool buffer cannot fund it, automatic once it can', () => {
     const seed = poolBuffers => seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
