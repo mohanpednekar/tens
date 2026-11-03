@@ -1957,10 +1957,13 @@ its one purpose.
   last tier's own `owned` is 0 (nothing to speed up — see `docs/DESIGN_HISTORY.md`), if `amount` isn't a
   positive integer, is below the minimum, exceeds unspent XP, or production is frozen.
 - **Automation: the Auto Restage** (`autoXpTickspeed`, bought once on Perks → Unlocks for
-  `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` = 16 PP via `buyXpTickspeedAutobuyer`; no prerequisite; permanent
-  across Prestige/Scale Up/Overclock/Era like the other global automations). While bought and
+  `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` = 16 PP = `AUTOMATION_INTERVAL_CONFIG.restage.baseCost` via
+  `buyXpTickspeedAutobuyer`; needs Auto Speed Up, parallel to Auto Scale Up; permanent across
+  Prestige/Scale Up/Overclock/Era like the other global automations). While bought and
   `autoXpTickspeedEnabled` (pause via `setAutoXpTickspeedEnabled`, Perks → Toggles), `tickGame` calls
-  `consumeXpForLastTierTickspeed(reboot.xp)` every tick (edge-triggered, after Auto Overclock) — it
+  `consumeXpForLastTierTickspeed(reboot.xp)` through `runGlobalIntervalAutomation(…, 'restage', …)` —
+  at most once per `getAutomationIntervalSeconds(state, 'restage')` (64 s × 0.9^level, upgraded via
+  `buyAutomationIntervalUpgrade('restage')`), after Auto Speed Up and before Auto Scale Up — and
   no-ops until all of that function's guards pass. The last tier's tier tickspeed autobuyer is separate
   and always drives the ordinary `buyTickspeedMultiplier`.
 - **MainPage**: the Restage card (`aria-label="restage panel"`) shows the current XP multiplier,
@@ -2195,8 +2198,8 @@ false, so `MainPage` keeps every PP-related display/control out of the page duri
   stays reachable after an Era resets the Prestige count to 0).
 - Once that page is reachable, every purchase on it shows immediately — no separate "reveal one by
   one" teaser gate. The only exceptions are real prerequisites: Global Automation is a
-  strict sequence (Auto Speed Up → Auto Scale Up → Auto Overclock → Auto Reboot, each needing the
-  previous — engine-enforced). Every tier's Unlocks row (its milestone badges) is always listed.
+  chain: Auto Speed Up → {Auto Restage, Auto Scale Up} (both open once Speed Up is owned, either order)
+  → Auto Overclock (needs both) → Auto Purge (`autoReboot`) — engine-enforced. Every tier's Unlocks row (its milestone badges) is always listed.
 - The sticky PP header display (`PpHeaderCard`, unspent PP + production-speed suffix once
   `state.prestigeSpeedBonusUnlocked`) only renders once `!isFirstRun`.
 
@@ -2945,7 +2948,7 @@ purchases were manual or automatic.
 - `OVERCLOCK_MULTIPLIER_STEP = 0.1` — per-level growth factor for Overclock's own reward (see `getOverclockMultiplier`/`getGlobalTickspeedProductionMultiplier`/`overclockGame`, "Overclock" above) — each claimed level multiplies the global tickspeed multiplier's single per-level step by a further ×1.1, folded directly into that existing track's own step rather than a separate multiplier stacked alongside it; unconditional, no PP unlock needed
 - `OVERCLOCK_REQUIREMENT_STEP = 3` — completed-level growth required between Overclock uses; the first use has a fixed 5-completed-level floor (`getOverclockRequirement` reads `overclockLastClaimCompletedLevels`, falling back to `overclockCount` for older saves)
 - `LAST_TIER_XP_TICKSPEED_STEP = 0.01` — each XP consumed via `consumeXpForLastTierTickspeed` within the current run compounds another 1% into the last tier's own delivery frequency (see `getLastTierXpTickspeedMultiplier`) — the separate Restage upgrade (beside Speed Up, available once `isLastTierTickspeedXpUnlocked`), which stacks with that tier's own tickspeed level
-- `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = 16` — one-time PP cost of the Auto Restage (`buyXpTickspeedAutobuyer`)
+- `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = 16` (= `AUTOMATION_INTERVAL_CONFIG.restage.baseCost`; chain base 64 s) — one-time PP cost of Auto Restage (`buyXpTickspeedAutobuyer`)
 - `LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1` — the last tier's resource-funded tickspeed upgrade spends only this fraction of its requirement (see `getTickspeedMultiplierSpend`)
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1` — a single `consumeXpForLastTierTickspeed` call must spend at least this fraction of the XP already consumed this way (see `getLastTierXpTickspeedMinConsumption`), so repeat consumptions can't trickle in one XP at a time forever
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR = 1` — the practical minimum consumption before any XP has been consumed this way, since `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT` alone computes 0 at that point

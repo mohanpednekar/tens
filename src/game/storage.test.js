@@ -913,7 +913,7 @@ describe('supporter unlock + save slots', () => {
     expect(message).toMatch(/disks\/storage/i)
     expect(message).toMatch(/compute/i)
     expect(message).toMatch(/also kept:\s*byte factory\b/i)
-    expect(message).toMatch(/prestige points/i)
+    expect(message).toMatch(/purge points/i)
   })
 
   it('clear-slot confirm names the slot and notes when it is active', () => {

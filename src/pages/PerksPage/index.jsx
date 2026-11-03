@@ -355,7 +355,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     : `1 PP per ${formatAmount(powersPerPp)} power${powersPerPp === 1 ? '' : 's'}`
   const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
 
-  // Auto Reboot: one-time activation, then the interval chain (see AUTOMATION_INTERVAL_CONFIG.reboot).
+  // Auto Purge: one-time activation, then the interval chain (see AUTOMATION_INTERVAL_CONFIG.reboot).
   const autoRebootLevel = state.autoReboot ?? null
   const isAutoRebootActive = autoRebootLevel !== null
   const autoRebootCost = getAutomationUnlockCost('reboot')
@@ -393,7 +393,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 progressLabel={`${tier.name} tickspeed autobuyer milestone progress`}
                 reached={isTierTickspeedAutobuyerActive}
                 subject={`${tier.name}'s tickspeed autobuyer`}
-                unit="Reboot"
+                unit="Purge"
               />
               <span>
                 <MilestoneBadge
@@ -403,7 +403,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   progressLabel={`${tier.name} autobuyer unlock milestone progress`}
                   reached={!isAutobuyerLocked}
                   subject={`${tier.name}'s autobuyer`}
-                  unit="Reboot"
+                  unit="Purge"
                 />
               </span>
             </Row>
@@ -419,7 +419,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             <UnlockedBadge icon="🌐" name="Auto Speed Up" />
           ) : (
             <PpPurchaseButton
-              ariaLabel={`Enable Auto Speed Up for ${speedUpUnlockCost} Prestige Points`}
+              ariaLabel={`Enable Auto Speed Up for ${speedUpUnlockCost} Purge Points`}
               color="#38bdf8"
               cost={speedUpUnlockCost}
               disabled={!canBuyTickspeedAutobuyer}
@@ -427,8 +427,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${speedUpUnlockCost} PP`}
               onClick={actions.buyTickspeedAutobuyer}
               points={points}
-              progressLabel="Auto Speed Up Prestige Point progress"
-              title="Spend Prestige Points so the global tickspeed multiplier upgrades itself automatically, forever, whenever affordable"
+              progressLabel="Auto Speed Up Purge Point progress"
+              title="Spend Purge Points so the global tickspeed multiplier upgrades itself automatically, forever, whenever affordable"
             />
           )}
         </Row>
@@ -438,7 +438,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             <UnlockedBadge icon="🧬" name="Auto Restage" />
           ) : (
             <PpPurchaseButton
-              ariaLabel={`Enable Auto Restage for ${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} Prestige Points`}
+              ariaLabel={`Enable Auto Restage for ${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} Purge Points`}
               color="#38bdf8"
               cost={XP_TICKSPEED_AUTOBUYER_UNLOCK_COST}
               disabled={!canBuyXpTickspeedAutobuyer}
@@ -446,8 +446,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${XP_TICKSPEED_AUTOBUYER_UNLOCK_COST} PP`}
               onClick={actions.buyXpTickspeedAutobuyer}
               points={points}
-              progressLabel="Auto Restage Prestige Point progress"
-              title="Spend Prestige Points so XP is automatically consumed for Restage whenever possible (each consumption resets every other tier's owned quantity and Bits)"
+              progressLabel="Auto Restage Purge Point progress"
+              title="Spend Purge Points so XP is automatically consumed for Restage whenever possible (each consumption resets every other tier's owned quantity and Bits)"
             />
           )}
         </Row>
@@ -457,7 +457,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             <UnlockedBadge icon="⏩" name="Auto Scale Up" />
           ) : (
             <PpPurchaseButton
-              ariaLabel={`Enable Auto Scale Up for ${scaleUpUnlockCost} Prestige Points`}
+              ariaLabel={`Enable Auto Scale Up for ${scaleUpUnlockCost} Purge Points`}
               color="#38bdf8"
               cost={scaleUpUnlockCost}
               disabled={!canBuyAutoScaleUp}
@@ -465,8 +465,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${scaleUpUnlockCost} PP`}
               onClick={actions.buyAutoScaleUp}
               points={points}
-              progressLabel="Auto Scale Up Prestige Point progress"
-              title="Spend Prestige Points so eligible Scale Ups happen automatically until the final tier, where they stay manual for Overclock"
+              progressLabel="Auto Scale Up Purge Point progress"
+              title="Spend Purge Points so eligible Scale Ups happen automatically until the final tier, where they stay manual for Overclock"
             />
           )}
         </Row>
@@ -476,7 +476,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             <UnlockedBadge icon="🚀" name="Auto Overclock" />
           ) : (
             <PpPurchaseButton
-              ariaLabel={`Enable Auto Overclock for ${overclockUnlockCost} Prestige Points`}
+              ariaLabel={`Enable Auto Overclock for ${overclockUnlockCost} Purge Points`}
               color="#38bdf8"
               cost={overclockUnlockCost}
               disabled={!canBuyAutoOverclock}
@@ -484,23 +484,23 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${overclockUnlockCost} PP`}
               onClick={actions.buyAutoOverclock}
               points={points}
-              progressLabel="Auto Overclock Prestige Point progress"
-              title="Spend Prestige Points so Overclock is claimed automatically whenever it is eligible"
+              progressLabel="Auto Overclock Purge Point progress"
+              title="Spend Purge Points so Overclock is claimed automatically whenever it is eligible"
             />
           )}
         </Row>
-        <Row aria-label="auto reboot upgrade">
+        <Row aria-label="auto purge upgrade">
           <RowLabelStack>
-            <RowLabel><RowIcon>✦</RowIcon>Auto Reboot</RowLabel>
+            <RowLabel><RowIcon>✦</RowIcon>Auto Purge</RowLabel>
             {isAutoRebootActive && (
               <SubText>every {formatInterval(getAutomationIntervalSeconds(state, 'reboot') * 1000)}</SubText>
             )}
           </RowLabelStack>
           {isAutoRebootActive ? (
-            <UnlockedBadge icon="✦" name="Auto Reboot" />
+            <UnlockedBadge icon="✦" name="Auto Purge" />
           ) : (
             <PpPurchaseButton
-              ariaLabel={`Enable Auto Reboot for ${autoRebootCost} Prestige Points`}
+              ariaLabel={`Enable Auto Purge for ${autoRebootCost} Purge Points`}
               color="#38bdf8"
               cost={autoRebootCost}
               disabled={!canBuyAutoReboot}
@@ -508,8 +508,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${autoRebootCost} PP`}
               onClick={actions.buyAutoReboot}
               points={points}
-              progressLabel="Auto Reboot Prestige Point progress"
-              title="Spend Prestige Points so Reboot happens automatically once your balance reaches 1 Googol Bytes"
+              progressLabel="Auto Purge Purge Point progress"
+              title="Spend Purge Points so Purge happens automatically once your balance reaches 1 Googol Bytes"
             />
           )}
         </Row>
@@ -524,7 +524,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               <UnlockedBadge icon="🤖" name="Auto Boost" />
             ) : (
               <PpPurchaseButton
-                ariaLabel={`Enable Auto Boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} Prestige Points`}
+                ariaLabel={`Enable Auto Boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} Purge Points`}
                 color="#38bdf8"
                 cost={COMPUTE_AUTO_BOOST_UNLOCK_COST}
                 disabled={!canBuyComputeAutoBoost}
@@ -532,8 +532,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 label={`${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP`}
                 onClick={actions.buyComputeAutoBoost}
                 points={points}
-                progressLabel="Auto Boost Prestige Point progress"
-                title="Spend Prestige Points so a full tier waiting on its own in-flight merge automatically activates your preferred Boost preset (choose it on Boosters)"
+                progressLabel="Auto Boost Purge Point progress"
+                title="Spend Purge Points so a full tier waiting on its own in-flight merge automatically activates your preferred Boost preset (choose it on Boosters)"
               />
             )}
           </Row>
@@ -546,7 +546,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           <Row aria-label="production speed bonus upgrade">
             <RowLabel><RowIcon>📈</RowIcon>Production speed bonus</RowLabel>
             <PpPurchaseButton
-              ariaLabel={`Unlock Prestige Point production speed bonus for ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} Prestige Points`}
+              ariaLabel={`Unlock Purge Point production speed bonus for ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} Purge Points`}
               color="#38bdf8"
               cost={PRESTIGE_SPEED_BONUS_UNLOCK_COST}
               disabled={!canBuySpeedBonus}
@@ -554,8 +554,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               label={`${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP`}
               onClick={actions.buyPrestigeSpeedBonus}
               points={points}
-              progressLabel="Speed bonus unlock Prestige Point progress"
-              title="Spend Prestige Points once to enable +1% production speed per unspent Prestige Point"
+              progressLabel="Speed bonus unlock Purge Point progress"
+              title="Spend Purge Points once to enable +1% production speed per unspent Purge Point"
             />
           </Row>
         </Category>
@@ -588,17 +588,17 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <CategoryHeading>Prestige</CategoryHeading>
         <Row aria-label="degoogol unlock">
           <RowLabelStack>
-            <RowLabel title="Earn past 1 Googol Bytes without freezing; Reboot voluntarily to claim PP"><RowIcon>♾</RowIcon>DeGoogol</RowLabel>
+            <RowLabel title="Earn past 1 Googol Bytes without freezing; Purge voluntarily to claim PP"><RowIcon>♾</RowIcon>DeGoogol</RowLabel>
             {!isUnboundedRebootUnlocked(state) && (
               <SubText>
-                Auto Reboot ≤ {UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS} s
+                Auto Purge ≤ {UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS} s
               </SubText>
             )}
           </RowLabelStack>
           {isUnboundedRebootUnlocked(state) ? (
             <UnlockedBadge icon="♾" name="DeGoogol" />
           ) : (
-            <Badge $color={theme.color.disabled} $dimmed aria-label="DeGoogol locked" title="Unlocks when Auto Reboot's interval reaches 1 s or less">
+            <Badge $color={theme.color.disabled} $dimmed aria-label="DeGoogol locked" title="Unlocks when Auto Purge's interval reaches 1 s or less">
               ♾ 🔒
             </Badge>
           )}
@@ -620,7 +620,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             <SubText>{doublePpUpgradeSummary}</SubText>
           </RowLabelStack>
           <PpPurchaseButton
-            ariaLabel={`Buy Double PP level ${doublePpLevel + 1} for ${formatAmount(doublePpCost)} Prestige Points — ${doublePpLevel < 6 ? 'halves powers needed per PP' : 'doubles PP per power'}`}
+            ariaLabel={`Buy Double PP level ${doublePpLevel + 1} for ${formatAmount(doublePpCost)} Purge Points — ${doublePpLevel < 6 ? 'halves powers needed per PP' : 'doubles PP per power'}`}
             color="#fbbf24"
             cost={doublePpCost}
             disabled={!canBuyDoublePp}
@@ -628,10 +628,10 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             label={`${formatAmount(doublePpCost)} PP`}
             onClick={actions.buyPrestigeDoublePp}
             points={points}
-            progressLabel="Double PP upgrade Prestige Point progress"
+            progressLabel="Double PP upgrade Purge Point progress"
             title={doublePpLevel < 6
-              ? 'Halves how many money-exponent powers are needed per Prestige Point (claimable once you reach 1 Googol Bytes)'
-              : 'Doubles how many Prestige Points each power earns (claimable once you reach 1 Googol Bytes)'}
+              ? 'Halves how many money-exponent powers are needed per Purge Point (claimable once you reach 1 Googol Bytes)'
+              : 'Doubles how many Purge Points each power earns (claimable once you reach 1 Googol Bytes)'}
           />
         </Row>
       </Category>
@@ -662,8 +662,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               {!maxed && (
                 <PpPurchaseButton
                   ariaLabel={atFloor
-                    ? `Upgrade ${tier.name}'s autobuyer to level ${level + 1} for ${formatAmount(cost)} Prestige Points — doubles levels bought per attempt to up to ${bulkLevels * 2}`
-                    : `Upgrade ${tier.name}'s autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Prestige Points — interval ×0.9`}
+                    ? `Upgrade ${tier.name}'s autobuyer to level ${level + 1} for ${formatAmount(cost)} Purge Points — doubles levels bought per attempt to up to ${bulkLevels * 2}`
+                    : `Upgrade ${tier.name}'s autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`}
                   color="#34d399"
                   cost={cost}
                   disabled={isFrozen || points < cost}
@@ -671,10 +671,10 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   label={atFloor ? `${bulkLevels * 2}/buy · ${formatAmount(cost)} PP` : `${formatAmount(cost)} PP`}
                   onClick={() => actions.buyAutobuyerIntervalUpgrade(tier.id)}
                   points={points}
-                  progressLabel={`${tier.name} autobuyer speed Prestige Point progress`}
+                  progressLabel={`${tier.name} autobuyer speed Purge Point progress`}
                   title={atFloor
                     ? 'At the 10 ms floor, each further level doubles how many full levels one autobuyer attempt can buy (as many as are affordable, at least one); cost keeps rising'
-                    : "Spend Prestige Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); past the floor, levels double how many levels it buys per attempt"}
+                    : "Spend Purge Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); past the floor, levels double how many levels it buys per attempt"}
                 />
               )}
             </Row>
@@ -696,7 +696,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               </RowLabelStack>
               {!maxed && (
                 <PpPurchaseButton
-                  ariaLabel={`Upgrade ${tier.name}'s tickspeed autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Prestige Points — interval ×0.9`}
+                  ariaLabel={`Upgrade ${tier.name}'s tickspeed autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`}
                   color="#34d399"
                   cost={cost}
                   disabled={isFrozen || points < cost}
@@ -704,8 +704,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   label={`${formatAmount(cost)} PP`}
                   onClick={() => actions.buyTierTickspeedIntervalUpgrade(tier.id)}
                   points={points}
-                  progressLabel={`${tier.name} tickspeed autobuyer speed Prestige Point progress`}
-                  title="Spend Prestige Points to shorten this tier's tickspeed autobuyer interval by 10% (floor 10 ms); cost doubles each level"
+                  progressLabel={`${tier.name} tickspeed autobuyer speed Purge Point progress`}
+                  title="Spend Purge Points to shorten this tier's tickspeed autobuyer interval by 10% (floor 10 ms); cost doubles each level"
                 />
               )}
             </Row>
@@ -716,7 +716,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           ['restage', 'Auto Restage', '🧬'],
           ['scaleUp', 'Auto Scale Up', '⏩'],
           ['overclock', 'Auto Overclock', '🚀'],
-          ['reboot', 'Auto Reboot', '✦'],
+          ['reboot', 'Auto Purge', '✦'],
         ].map(([key, name, icon]) => {
           if (!isAutomationIntervalChainUnlocked(state, key)) return null
           const level = state.automationIntervalLevels?.[key] ?? 0
@@ -733,7 +733,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               </RowLabelStack>
               {!maxed && (
                 <PpPurchaseButton
-                  ariaLabel={`Upgrade ${name} speed to level ${level + 1} for ${formatAmount(cost)} Prestige Points — interval ×0.9`}
+                  ariaLabel={`Upgrade ${name} speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`}
                   color="#34d399"
                   cost={cost}
                   disabled={isFrozen || points < cost}
@@ -741,8 +741,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   label={`${formatAmount(cost)} PP`}
                   onClick={() => actions.buyAutomationIntervalUpgrade(key)}
                   points={points}
-                  progressLabel={`${name} speed Prestige Point progress`}
-                  title="Spend Prestige Points to shorten this automation's interval by 10% (floor 10 ms); cost doubles each level"
+                  progressLabel={`${name} speed Purge Point progress`}
+                  title="Spend Purge Points to shorten this automation's interval by 10% (floor 10 ms); cost doubles each level"
                 />
               )}
             </Row>
@@ -837,14 +837,14 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </Row>
       ),
       isAutoRebootActive && (
-        <Row key="auto-reboot" aria-label="auto reboot toggle">
-          <RowLabel><RowIcon>✦</RowIcon>Auto Reboot</RowLabel>
+        <Row key="auto-reboot" aria-label="auto purge toggle">
+          <RowLabel><RowIcon>✦</RowIcon>Auto Purge</RowLabel>
           <AutomationToggle
             enabled={autoRebootEnabled}
             icon="✦"
-            name="Auto Reboot"
+            name="Auto Purge"
             onToggle={() => actions.setAutoRebootEnabled(!autoRebootEnabled)}
-            toggleLabel="Auto Reboot automation"
+            toggleLabel="Auto Purge automation"
           />
         </Row>
       ),
@@ -909,7 +909,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     <RootDiv>
       <Header>
         <h1>Perks</h1>
-        <PpBalance aria-label="prestige points display">✦ {formatAmount(points)} PP</PpBalance>
+        <PpBalance aria-label="purge points display">✦ {formatAmount(points)} PP</PpBalance>
       </Header>
       <TabBar role="tablist" aria-label="perks view">
         {PERKS_TABS.map(item => (

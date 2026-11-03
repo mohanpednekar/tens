@@ -5,7 +5,7 @@ of truth — `CLAUDE.md` (plus its `docs/*.md` references) is authoritative for 
 anything below ever conflicts with `CLAUDE.md`, `CLAUDE.md` wins; fix this file to match in the same
 change rather than letting the two drift (a stale mirror here is worse than no mirror at all).
 
-Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Reboot**, the global tickspeed track is **Speed Up** (formerly Latency). Code and state use the same names (`reboot`, `rebootGame`, `REBOOT_THRESHOLD`, automation key `speedUp`); only Prestige-Point/museum identifiers keep `prestige`.
+Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Purge** (formerly Reboot; PP = Purge Points), the global tickspeed track is **Speed Up** (formerly Latency). Code and state keep the Reboot-era names (`reboot`, `rebootGame`, `REBOOT_THRESHOLD`, automation key `speedUp`); only Prestige-Point/museum identifiers keep `prestige`.
 
 ## Project
 

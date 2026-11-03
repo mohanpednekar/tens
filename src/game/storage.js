@@ -330,7 +330,7 @@ export const buildResetByteFoundryConfirmMessage = () => {
     `Use this if Capacity (or Storage / Compute) went too far.\n\n` +
     `Erased: Data Stream Buffer, pool Memory Capacity, Data Stream upgrade progress, all Disks/Storage, and all Compute. Multipliers restart from scratch.\n\n` +
     `Convenience: Combine, Upgrade Data Stream, and Provision Disk all auto-press again up to your pre-reset highs as soon as each is affordable — you do not need to click them. Capacity remains on its doubling ladder up to the active pool ceiling.\n\n` +
-    `Also kept: Byte Factory, Prestige Points, Reboot count and upgrades, and (if already unlocked) access to the main game this cycle.\n\n` +
+    `Also kept: Byte Factory, Purge Points, Purge count and upgrades, and (if already unlocked) access to the main game this cycle.\n\n` +
     `Other save slots and your Supporter unlock (if any) stay.\n\n` +
     `This cannot be undone.`
   )

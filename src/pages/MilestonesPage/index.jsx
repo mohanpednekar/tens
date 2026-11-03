@@ -131,7 +131,7 @@ const MilestonesPage = ({ game }) => {
               <Badge
                 $color={theme.color.disabled}
                 $dimmed
-                aria-label={`era ascension locked — requires ${ERA_ELIGIBILITY_PP.toExponential(0).replace('+', '')} unspent Prestige Points`}
+                aria-label={`era ascension locked — requires ${ERA_ELIGIBILITY_PP.toExponential(0).replace('+', '')} unspent Purge Points`}
               >
                 🔒 1 Googol PP
               </Badge>

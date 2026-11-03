@@ -20,7 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- **Perks automation names and layout made consistent.** Every automation is now named `Auto <feature>` (Tickspeed Autobuyer → Auto Speed Up; Auto-Reboot → Auto Reboot; Auto-Boost → Auto Boost), Compute Automation is now Booster Automation, Auto Restage moved after the Auto Speed Up → Auto Reboot chain on both Unlocks and Toggles, every row's icon sits in a fixed-width cell so names line up, and Production speed bonus now uses 📈 instead of sharing Overclock's 🚀.
+- **Reboot is now called Purge, and PP are Purge Points.** Same reset, same rewards; existing saves are unaffected.
+- **Auto Restage now unlocks after Auto Speed Up, alongside Auto Scale Up** — buy either first; Auto Overclock now needs both. Auto Restage also fires on its own interval (64 s to start) with a speed upgrade chain on Perks → Upgrades, like the other automations. Saves that already own it keep it.
+- **Perks automation names and layout made consistent.** Every automation is now named `Auto <feature>` (Tickspeed Autobuyer → Auto Speed Up; Auto-Reboot → Auto Purge; Auto-Boost → Auto Boost), Compute Automation is now Booster Automation, Unlocks and Toggles list automations in the same order, every row's icon sits in a fixed-width cell so names line up, and Production speed bonus now uses 📈 instead of sharing Overclock's 🚀.
 
 - **Renamed: Latency → Speed Up, Prestige → Reboot.** The Factory reset at 1 Googol Bytes is now called Reboot (Auto-Reboot, "Reboot Now", Reboot museum entries, autobuyer milestones "at Reboot N"). "Prestige" is now the umbrella term for every reset-for-rewards — Reboot, Era ascension, Reset Byte Foundry and pool resets — and Prestige Points keep their name. Earlier entries below use the old names. Existing saves carry over: the renamed save fields are converted on load.
 - **Latency and Restage sit side by side, as do Scale Up and Overclock** — on every screen size, including phones (Scale Up / Overclock used to stack on narrow screens).

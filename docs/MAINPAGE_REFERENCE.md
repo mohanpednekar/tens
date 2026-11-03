@@ -739,11 +739,11 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
     reachable this run) with a `MilestoneBadge` for its ⚙ tickspeed autobuyer and 🤖 autobuyer
     (`"<tier>'s … unlocked at Reboot N"` once reached, else `"… unlocks at Reboot N"` + hidden
     milestone progressbar). Rows never disappear, so reached milestones stay visible as unlock history.
-  - *Global Automation* — a strict sequence, every row always listed, each purchasable only once the previous is
-    owned (engine-enforced): Auto Speed Up → Auto Scale Up → Auto Overclock → Auto Reboot. PP button (disabled until the previous step is bought), or an `UnlockedBadge`
-    (`"<name> unlocked"`) once bought; never a pause control here. Outside that sequence, the 🧬 **Auto
-    Restage** row (`XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` = 16 PP, no prerequisite, `buyXpTickspeedAutobuyer`)
-    follows Auto Reboot. Every Perks row label is `<RowIcon>` (fixed-width icon cell) + name, and every
+  - *Global Automation* — every row always listed, rendered Auto Speed Up → Auto Restage → Auto Scale Up →
+    Auto Overclock → Auto Purge. Gating (engine-enforced): Restage and Scale Up both open once Speed Up is
+    owned (either order); Overclock needs both; Purge needs Overclock. PP button (disabled until its
+    prerequisites are bought), or an `UnlockedBadge` (`"<name> unlocked"`) once bought; never a pause
+    control here. Every Perks row label is `<RowIcon>` (fixed-width icon cell) + name, and every
     automation is named `Auto <feature>` (no hyphen).
   - *Booster Automation* (Auto Boost, once Foundry Compute unlocks), *Production Bonuses* (until bought), *Compute Autobuyers* (Era-milestone badges, once the Flops page
     is unlocked), and *Prestige* (DeGoogol: locked until Auto Reboot's interval ≤ `UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS`).
@@ -755,7 +755,7 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
 - 🎛 **Toggles** (`open toggles`, `aria-label="automation toggles page"`) — *Purchasing* (the Buy max
   button, `components/BuyMaxToggle`, removed from MainPage/ComputeFlopsPage), *Tier Autobuyers* (each
   reachable tier's ⚙/🤖 `AutomationToggle`, kept even for fully-automated tiers), *Global Automation*
-  (Auto Speed Up, Auto Scale Up, Auto Overclock, Auto Reboot, Auto Restage — same order as Unlocks), *Compute Autobuyers*
+  (same order as Unlocks), *Compute Autobuyers*
   (each Era-unlocked Flops autobuyer, `setComputeFlopsAutobuyerEnabled`). Each toggle is a status
   badge (`"<name> active|paused"`) + `components/Switch` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up
   automation"`, `"<tier>'s autobuyer"`). A `no toggles notice` empty state covers the (practically
