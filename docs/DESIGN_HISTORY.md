@@ -9094,7 +9094,6 @@ At the maintainer's request, Latency + Restage (above the tier list) and Scale U
 it) each share one `SpeedCardsRow` that stays side by side at every width (`flex: 1 1 0`, no wrap),
 superseding the earlier below-40rem single-column stack of Scale Up / Overclock.
 
-<<<<<<< HEAD
 ## Reboot → Purge (player-facing only); Auto Restage joins the automation chain (2026-11)
 
 The Factory reset was renamed **Purge** in the UI (PP now reads **Purge Points**). Unlike the earlier
@@ -9105,7 +9104,7 @@ separately if ever wanted. Auto Restage previously had no prerequisite and fired
 needs Auto Speed Up, unlocks in parallel with Auto Scale Up (player picks the order), gates Auto
 Overclock alongside Scale Up, and runs on its own `AUTOMATION_INTERVAL_CONFIG.restage` interval chain
 (16 PP / 64 s, same as Scale Up). Saves that already own Restage or Overclock keep them.
-=======
+
 ## Tap bonuses moved from buffer fills to their consumers (2026-11)
 
 Taps used to multiply the Data Stream's and each pool's own fill (×(1 + bonus%) inside
@@ -9130,4 +9129,3 @@ pool buffer (minus the read cache's claim) at base Bandwidth × pool tap bonus a
 kept) on an empty buffer. Because it now competes for the buffer, a pending rebuild counts as
 provisioning-in-progress (`isStoragePoolProvisioningInProgress`) so the lower-priority Data Lake drain,
 which runs earlier in `tickGame`, cannot starve it.
->>>>>>> origin/main
