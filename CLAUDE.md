@@ -454,6 +454,7 @@ src/
                                Provision Disk status line)
     BoostBadge/index.jsx    ← Compute-Boosted glow helpers: `boostGlow` card css + `isDataStreamBoosted`/
                                `isFactoryTierBoosted` (ByteFoundryPage Data Stream, MainPage tier rows)
+    BoostTimerBar/index.jsx ← active Compute Boost timer bar (Pop/Forfeit · bar · Stack), shared by ComputePage and MainPage's header
     SpeedDetailsPopover/index.jsx ← non-modal portal panel behind every Foundry ⚡ speed (Data Stream, running upgrade, each pool)
     LeadIcon/index.js       ← a line's leading emoji in a fixed-size, aria-hidden box (Foundry tile rows)
     Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`): Perks → Toggles, Buy max
