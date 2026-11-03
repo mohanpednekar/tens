@@ -790,7 +790,7 @@ export const getPurchaseBlockSize = state => {
 // hasn't changed. No division is involved anywhere in this, so the result is always an exact
 // integer — no rounding needed.
 export const getTierCost = (tier, level) => {
-  const epoch = Math.max(0, clampNonNegative(level) - 1)
+  const epoch = Math.max(0, level - 1)
   return tier.baseCost * (10 ** (getCostEpochExponent(epoch) - 1))
 }
 
@@ -1032,13 +1032,15 @@ export const getComputeFlopsAffordableAndCost = (state, flopId, maxQuantity) => 
 
   let quantity = 0
   let totalCost = 0
+  let currentOwned = owned
 
   while (quantity < maxQuantity) {
-    const cost = getComputeFlopsTierCost(flopTier, owned + quantity)
+    const cost = getComputeFlopsTierCost(flopTier, currentOwned)
     if (spendable < cost) break
     spendable -= cost
     totalCost += cost
     quantity++
+    currentOwned++
   }
 
 
@@ -1062,7 +1064,7 @@ export const buyComputeFlopsTierQuantity = (flopId, quantity, totalCost) => stat
   }
 }
 export const getComputeFlopsTierCost = (flopTier, ownedCount = 0) => {
-  const level = clampNonNegative(ownedCount) + 1
+  const level = ownedCount + 1
   return getTierCost({ baseCost: flopTier.baseCostPP }, level)
 }
 
