@@ -98,6 +98,8 @@ import {
   setAutoGlobalTickspeedEnabled,
   setAutoPrestigeEnabled,
   setAutoScaleUpEnabled,
+  buyXpTickspeedAutobuyer,
+  setAutoXpTickspeedEnabled,
   setComputeFlopsAutobuyerEnabled,
   setTierTickspeedAutobuyerEnabled,
   formatAmount,
@@ -195,6 +197,8 @@ import {
   getTierScaleUpMultiplier,
   getTickspeedMultiplierBaseCost,
   getTickspeedMultiplierCost,
+  getTickspeedMultiplierRequirement,
+  getTickspeedMultiplierSpend,
   getTickspeedProductionMultiplier,
   getTierAffordableQuantity,
   getTierBulkQuantity,
@@ -6629,18 +6633,18 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.1 * globalMultiplier))
   })
 
-  it('uses the XP-funded multiplier for the last tier once unlocked, ignoring its (stale) tickspeedLevels entry', () => {
+  it('composes the last tier\'s XP-funded multiplier with its own tickspeed level once unlocked', () => {
     const lastTierId = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
     const baseTickSpeed = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].baseTickSpeedSeconds
     const state = withLastTierXpConsumed(
       withTickspeedLevel(
         withLastTierTickspeedXpUnlocked(createInitialGameState()),
         lastTierId,
-        5 // would normally shrink the period a lot — must be ignored once XP-unlocked
+        5
       ),
       37
     )
-    expect(getEffectiveTierTickSpeedSeconds(state, lastTierId)).toBeCloseTo(baseTickSpeed / (1.01 ** 37))
+    expect(getEffectiveTierTickSpeedSeconds(state, lastTierId)).toBeCloseTo(baseTickSpeed / ((1.1 ** 4) * (1.01 ** 37)))
   })
 
   it('never returns a non-finite or zero period even once the last tier\'s XP multiplier overflows to Infinity', () => {
@@ -7589,7 +7593,8 @@ describe('tickGame', () => {
     expect(state.autobuyers[lastTier.id]).toBeNull()
     const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
-    expect(after.resources[lastTier.id]).toBe(1)
+    // The last tier spends only 10% of its requirement (10 → 1).
+    expect(after.resources[lastTier.id]).toBe(10)
   })
 
   it('does not auto-upgrade a tier\'s tickspeed multiplier without its tier tickspeed autobuyer bought, even though the autobuyer itself is unlocked', () => {
@@ -7627,57 +7632,23 @@ describe('tickGame', () => {
     expect(after.tickspeedLevels[lastTier.id]).toBe(1)
   })
 
-  it('automatically consumes XP for the last tier once it is XP-unlocked and its tier tickspeed autobuyer is bought, resetting every other tier and Money the same way a manual consumption does', () => {
+  it('never auto-consumes XP for the last tier — once XP-unlocked its tier tickspeed autobuyer keeps driving the ordinary resource-funded upgrade', () => {
     const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
     let state = createInitialGameState()
     state = withLastTierTickspeedXpUnlocked(state)
     state = withTierTickspeedAutobuyer(state, lastTier.id)
-    state = withOwned(state, thousandsTier.id, 30)
-    state = withResource(state, thousandsTier.id, 30)
-    state = withMoney(state, 5) // stays within the same milestone exponent as the default watermark, so checkMilestones doesn't grant incidental XP
-    state = withXP(state, 50)
-
-    const after = tickGame(1)(withReadyIntervalBudgets(state))
-    expect(after.lastTierXpConsumed).toBe(50)
-    expect(after.prestige.xp).toBe(0)
-    expect(after.owned[thousandsTier.id]).toBe(0)
-    expect(after.resources[thousandsTier.id]).toBe(0)
-    expect(after.resources[MONEY_ID]).toBe(0)
-  })
-
-  it('does not auto-consume XP for the last tier when unspent XP is below the minimum required consumption', () => {
-    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
-    let state = createInitialGameState()
-    state = withLastTierTickspeedXpUnlocked(state)
-    state = withTierTickspeedAutobuyer(state, lastTier.id)
-    state = withLastTierXpConsumed(state, 100) // min consumption is ceil(0.1 * 100) = 10
-    state = withOwned(state, thousandsTier.id, 30)
-    state = withResource(state, thousandsTier.id, 30)
-    state = withXP(state, 5) // below the 10 XP minimum
-
-    const after = tickGame(1)(state)
-    expect(after.lastTierXpConsumed).toBe(100)
-    expect(after.prestige.xp).toBe(5)
-    expect(after.owned[thousandsTier.id]).toBe(30)
-    expect(after.resources[thousandsTier.id]).toBe(30)
-  })
-
-  it('does not auto-consume XP for the last tier while its tier tickspeed autobuyer is paused (tierTickspeedAutobuyerEnabled false), even once XP-unlocked', () => {
-    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
-    let state = createInitialGameState()
-    state = withLastTierTickspeedXpUnlocked(state)
-    state = withTierTickspeedAutobuyer(state, lastTier.id)
-    state = withTierTickspeedAutobuyerEnabled(state, lastTier.id, false)
+    state = withResource(withOwned(state, lastTier.id, 10), lastTier.id, 10)
     state = withOwned(state, thousandsTier.id, 30)
     state = withResource(state, thousandsTier.id, 30)
     state = withMoney(state, 5)
     state = withXP(state, 50)
 
-    const after = tickGame(1)(state)
+    const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.lastTierXpConsumed).toBe(0)
     expect(after.prestige.xp).toBe(50)
     expect(after.owned[thousandsTier.id]).toBe(30)
-    expect(after.resources[thousandsTier.id]).toBe(30)
+    expect(after.tickspeedLevels[lastTier.id]).toBe(2)
+    expect(after.resources[lastTier.id]).toBe(9)
   })
 
   it('regression: before the last tier is XP-unlocked, its tier tickspeed autobuyer still drives the ordinary buyTickspeedMultiplier auto-upgrade, untouched by the XP-consumption branch', () => {
@@ -8101,12 +8072,28 @@ const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
 const unlockedLastTierState = () => withOwned(createInitialGameState(), lastTier.id, 1)
 
 describe('buyTickspeedMultiplier', () => {
-  it('upgrades from level 1 to 2 with no autobuyer unlock at all, deducting exactly the tier\'s base cost (10), keeping 1 generator', () => {
-    const state = withResource(unlockedLastTierState(), lastTier.id, 11)
+  const ninthTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 2]
+  const unlockedNinthTierState = () => withOwned(createInitialGameState(), ninthTier.id, 1)
+
+  it('last tier: level 1 → 2 requires 10 owned but spends only 1 (10%), with no autobuyer unlock', () => {
+    const state = withResource(unlockedLastTierState(), lastTier.id, 10)
     expect(state.autobuyers[lastTier.id]).toBeNull()
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
-    expect(after.resources[lastTier.id]).toBe(1)
+    expect(after.resources[lastTier.id]).toBe(9)
+    expect(after.owned[lastTier.id]).toBe(9)
+  })
+
+  it('last tier: level 2 → 3 requires 100 owned but spends only 10', () => {
+    const state = withResource(withTickspeedLevel(unlockedLastTierState(), lastTier.id, 2), lastTier.id, 100)
+    const after = buyTickspeedMultiplier(lastTier.id)(state)
+    expect(after.tickspeedLevels[lastTier.id]).toBe(3)
+    expect(after.resources[lastTier.id]).toBe(90)
+  })
+
+  it('last tier: refuses below the full requirement even though the 10% spend is affordable', () => {
+    const state = withResource(withTickspeedLevel(unlockedLastTierState(), lastTier.id, 2), lastTier.id, 99)
+    expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
   })
 
   it('returns the same state for a tier that is not itself unlocked yet', () => {
@@ -8114,15 +8101,17 @@ describe('buyTickspeedMultiplier', () => {
     expect(buyTickspeedMultiplier(thousandsTier.id)(state)).toBe(state)
   })
 
-  it('upgrades from level 2 to 3, deducting the base cost squared (100), keeping 1 generator', () => {
-    const state = withResource(
-      withTickspeedLevel(unlockedLastTierState(), lastTier.id, 2),
-      lastTier.id,
-      101
-    )
-    const after = buyTickspeedMultiplier(lastTier.id)(state)
-    expect(after.tickspeedLevels[lastTier.id]).toBe(3)
-    expect(after.resources[lastTier.id]).toBe(1)
+  it('other tiers: deducts the full cost (base 100 for the 9th tier), keeping 1 generator', () => {
+    const state = withResource(unlockedNinthTierState(), ninthTier.id, 101)
+    const after = buyTickspeedMultiplier(ninthTier.id)(state)
+    expect(after.tickspeedLevels[ninthTier.id]).toBe(2)
+    expect(after.resources[ninthTier.id]).toBe(1)
+    expect(after.owned[ninthTier.id]).toBe(1)
+  })
+
+  it('other tiers: refuses when paying the cost would leave zero generators', () => {
+    const state = withResource(unlockedNinthTierState(), ninthTier.id, 100)
+    expect(buyTickspeedMultiplier(ninthTier.id)(state)).toBe(state)
   })
 
   it('returns the same state when the tier\'s own resource is insufficient', () => {
@@ -8138,53 +8127,40 @@ describe('buyTickspeedMultiplier', () => {
     expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
   })
 
-  it('refuses to level up when paying the cost would leave zero generators', () => {
-    // Exactly enough to cover the cost, but that would drain resources/owned to 0 — since those
-    // two move together, the tier would be left with no generators at all.
-    const state = withResource(unlockedLastTierState(), lastTier.id, 10)
-    expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
-  })
-
-  it('leaves owned in sync with resources after leveling up (keeps 1 generator)', () => {
-    // owned is deliberately kept below 10 here (unlockedLastTierState's default of 1) so the last
-    // tier's live XP tickspeed check (see isLastTierTickspeedXpUnlocked) doesn't engage and disable
-    // this (Money-funded) tickspeed button — this test is about the owned/resources sync behavior
-    // buyTickspeedMultiplier itself has, not the last-tier XP mechanic.
-    const state = withResource(unlockedLastTierState(), lastTier.id, 11)
-    const after = buyTickspeedMultiplier(lastTier.id)(state)
-    expect(after.owned[lastTier.id]).toBe(1)
-    expect(after.resources[lastTier.id]).toBe(1)
-  })
-
   it('returns the same state for an unknown tier ID', () => {
     const state = withMoney(createInitialGameState(), 100)
     expect(buyTickspeedMultiplier('does_not_exist')(state)).toBe(state)
   })
 
-  it('is a no-op for the last tier while its tickspeed is XP-unlocked (a successful Scale Up onto it this cycle, not an owned threshold), even with plenty of the tier\'s own resource', () => {
+  it('still works for the last tier while its XP tickspeed is unlocked (the XP upgrade is separate)', () => {
     const state = withResource(
       withLastTierTickspeedXpUnlocked(unlockedLastTierState()),
       lastTier.id,
-      1_000_000
+      1_000
     )
-    expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
-  })
-
-  it('works normally for the last tier when it was never XP-unlocked this cycle (no Scale Up onto it yet), regardless of its owned count', () => {
-    const state = withResource(
-      withOwned(unlockedLastTierState(), lastTier.id, 1),
-      lastTier.id,
-      11
-    )
-    expect(isLastTierTickspeedXpUnlocked(state)).toBe(false)
+    expect(isLastTierTickspeedXpUnlocked(state)).toBe(true)
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
+    expect(after.resources[lastTier.id]).toBe(999)
   })
 
   it('falls back to level 1 (baseline) when tickspeedLevels is missing from state entirely, upgrading to level 2', () => {
     const state = omit(withResource(unlockedLastTierState(), lastTier.id, 11), 'tickspeedLevels')
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
+  })
+})
+
+describe('getTickspeedMultiplierSpend / getTickspeedMultiplierRequirement', () => {
+  it('last tier spends 10% of its requirement', () => {
+    expect(getTickspeedMultiplierRequirement(lastTier.id, 3)).toBe(100)
+    expect(getTickspeedMultiplierSpend(lastTier.id, 3)).toBe(10)
+  })
+
+  it('other tiers spend the full cost and require cost + 1', () => {
+    const ninth = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 2]
+    expect(getTickspeedMultiplierSpend(ninth.id, 2)).toBe(100)
+    expect(getTickspeedMultiplierRequirement(ninth.id, 2)).toBe(101)
   })
 })
 
@@ -9590,6 +9566,58 @@ describe('buyTickspeedAutobuyer', () => {
 })
 
 // ─── setAutoScaleUpEnabled / setAutoGlobalTickspeedEnabled / setAutoPrestigeEnabled ─────────────
+
+describe('buyXpTickspeedAutobuyer / setAutoXpTickspeedEnabled', () => {
+  it('spends 16 PP to unlock, with no prerequisite', () => {
+    const after = buyXpTickspeedAutobuyer(withPrestigePoints(createInitialGameState(), 20))
+    expect(after.autoXpTickspeed).toBe(true)
+    expect(after.prestige.points).toBe(4)
+  })
+
+  it('is a no-op below 16 PP, when already bought, or while frozen', () => {
+    const poor = withPrestigePoints(createInitialGameState(), 15)
+    expect(buyXpTickspeedAutobuyer(poor)).toBe(poor)
+    const owned = { ...withPrestigePoints(createInitialGameState(), 100), autoXpTickspeed: true }
+    expect(buyXpTickspeedAutobuyer(owned)).toBe(owned)
+    const frozen = withMoney(withPrestigePoints(createInitialGameState(), 100), PRESTIGE_THRESHOLD)
+    expect(buyXpTickspeedAutobuyer(frozen)).toBe(frozen)
+  })
+
+  it('toggle is a no-op until bought, then flips the preference', () => {
+    const state = createInitialGameState()
+    expect(setAutoXpTickspeedEnabled(false)(state)).toBe(state)
+    expect(setAutoXpTickspeedEnabled(false)({ ...state, autoXpTickspeed: true }).autoXpTickspeedEnabled).toBe(false)
+  })
+
+  it('tickGame auto-consumes the whole XP balance once bought and enabled', () => {
+    let state = withLastTierTickspeedXpUnlocked(createInitialGameState())
+    state = { ...state, autoXpTickspeed: true }
+    state = withResource(withOwned(state, thousandsTier.id, 30), thousandsTier.id, 30)
+    state = withMoney(state, 5)
+    state = withXP(state, 50)
+    const after = tickGame(1)(state)
+    expect(after.lastTierXpConsumed).toBe(50)
+    expect(after.prestige.xp).toBe(0)
+    expect(after.owned[thousandsTier.id]).toBe(0)
+  })
+
+  it('tickGame does not auto-consume XP while paused, when not bought, or below the minimum', () => {
+    let base = withLastTierTickspeedXpUnlocked(createInitialGameState())
+    base = withMoney(withXP(base, 50), 5)
+    expect(tickGame(1)({ ...base, autoXpTickspeed: true, autoXpTickspeedEnabled: false }).lastTierXpConsumed).toBe(0)
+    expect(tickGame(1)(base).lastTierXpConsumed).toBe(0)
+    const belowMin = withXP({ ...withLastTierXpConsumed(base, 100), autoXpTickspeed: true }, 5)
+    expect(tickGame(1)(belowMin).lastTierXpConsumed).toBe(100)
+  })
+
+  it('survives a real Prestige (permanent unlock and preference)', () => {
+    const state = withMoney({ ...createInitialGameState(), autoXpTickspeed: true, autoXpTickspeedEnabled: false }, PRESTIGE_THRESHOLD)
+    const after = prestigeGame(state)
+    expect(after).not.toBe(state)
+    expect(after.autoXpTickspeed).toBe(true)
+    expect(after.autoXpTickspeedEnabled).toBe(false)
+  })
+})
 
 describe('setAutoScaleUpEnabled', () => {
   it('toggles autoScaleUpEnabled once Auto Scale Up is bought', () => {

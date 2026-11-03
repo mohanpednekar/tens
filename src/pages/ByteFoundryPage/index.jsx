@@ -794,7 +794,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const nextUnlockDiskSizeText = formatDiskSize(getDiskLadderSizeBits(getUnlockedDiskSteps(intro) + 1))
   const handleUnlockDiskSizeClick = () => {
     const confirmed = typeof window === 'undefined' || typeof window.confirm !== 'function' || window.confirm(
-      `Foundry reset to unlock ${nextUnlockDiskSizeText} disks? Capacity, Disks, Data Lakes (Boosters, lake upgrades, pool resets) and Compute entities are wiped; only Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs; speed exponent ${speedExponentText} → ${nextSpeedExponentText}.`
+      `Foundry reset to unlock ${nextUnlockDiskSizeText} disks? The Foundry restarts from scratch (Capacity, Disks, Data Lakes, pool resets and Compute entities); Combine, Capacity, Speed, Disks and Data Lake upgrades/Boosters are then auto-rebuilt up to your prior highs. Speed exponent ${speedExponentText} → ${nextSpeedExponentText}.`
     )
     if (confirmed) actions.unlockNextDiskSize()
   }
@@ -920,7 +920,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     <Button
       aria-label="foundry reset to unlock disk size"
       onClick={handleUnlockDiskSizeClick}
-      title={`Reset the Byte Foundry to unlock ${nextUnlockDiskSizeText} disks. Combine, Capacity, Speed and Disks are auto-rebuilt up to your prior highs; Data Lakes and Compute entities are wiped; the speed exponent rises ${speedExponentText} → ${nextSpeedExponentText}.`}
+      title={`Reset the Byte Foundry to unlock ${nextUnlockDiskSizeText} disks. The Foundry restarts from scratch, then Combine, Capacity, Speed, Disks and Data Lake upgrades/Boosters are auto-rebuilt up to your prior highs; Compute entities and pool resets are not. The speed exponent rises ${speedExponentText} → ${nextSpeedExponentText}.`}
       type="button"
       variant="prestige"
     >
@@ -947,8 +947,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               ? `Armed — draws from the pool buffer at the pool's fixed speed${diskBuildBlockedByPriority ? ' once Disk Fill is done' : ''} (${diskPassesCollected}/${diskPassesRequired} passes so far)`
               : canStartDiskBuild
                 ? (diskRedeemTierName
-                  ? `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                  : `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`)
+                  ? `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache fills it automatically, and once full it is pulled right away to complete a ${diskRedeemTierName} level`
+                  : `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache fills it automatically; it is pulled once its matching tier reaches the matching level`)
                 : diskBuildBlockedByPriority
                   ? 'Disk Fill comes first — click to arm this build so it starts the instant it is your turn'
                   : `The pool isn't ready yet (offline, rebuilding or too small) — click to arm this build so it starts as soon as it is (${diskPassesCollected}/${diskPassesRequired} passes so far)`

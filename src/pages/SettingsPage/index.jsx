@@ -509,9 +509,9 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           </VisuallyHidden>
         </Button>
         <p>
-          Wipe Capacity, Memory, Disks / Storage, and Compute on the active save — useful if
-          Capacity was pushed too far. Combine, Upgrade Capacity, Upgrade Speed, and Provision Disk
-          restart from scratch, then auto-press again up to your pre-reset highs.
+          Restart the Byte Foundry on the active save — Capacity, Memory, Disks, Data Lakes and
+          Compute entities. Combine, Upgrade Capacity, Upgrade Speed, Provision Disk and Data Lake
+          upgrades/Boosters then replay automatically up to your pre-reset highs.
           Byte Factory progress and Prestige stay.
         </p>
         <Button
@@ -522,15 +522,15 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           title={
             frozen
               ? 'Prestige first — production is frozen at 1 Googol Bytes'
-              : 'Resets Foundry to scratch; auto-replays Combine / Data Stream / Provision Disk up to prior highs'
+              : 'Restarts the Foundry; Combine, Data Stream upgrades, Disks and Data Lakes replay automatically up to prior highs'
           }
           type="button"
           variant="danger"
         >
           <ButtonContent>↺ Reset Byte Foundry…</ButtonContent>
           <VisuallyHidden id="settings-reset-foundry-description">
-            Erases Capacity, Storage, and Compute; restarts upgrades from scratch with convenience
-            auto-clicks up to pre-reset highs; Byte Factory and Prestige stay
+            Restarts Capacity, Storage, Data Lakes and Compute from scratch, then replays upgrades,
+            Disks and Data Lakes automatically up to pre-reset highs; Byte Factory and Prestige stay
           </VisuallyHidden>
         </Button>
         <p>Wipe every slot’s progress on this device. Does not remove the Supporter unlock.</p>
