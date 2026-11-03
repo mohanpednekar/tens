@@ -15,7 +15,7 @@ commit as any change to the mechanics it describes.
    intro"). A mandatory gate whenever `intro.mainGameUnlocked` is false (AppNav omits Factory during it;
    Guide and More stay), permanently latched true the instant Storage's capacity threshold is crossed
    (`latchMainGameUnlocked`/`isStorageUnlocked` in `engine.js`) — the SAME "1 KiB" threshold that
-   reveals pool 1's card and switches the tap into fill-multiplier-bonus mode. One-time-ever; never
+   reveals pool 1's card and switches the tap into consumer-bonus mode. One-time-ever; never
    resets (see `App.jsx`'s repo-layout entry). Once latched, the standalone Tap button is gone and the
    Data Stream tile itself is the tap target (a stretched `PoolTapButton` inside `DataStreamTile`, calling
    `actions.tapIntroBit`; see "Fill-based Speed/Bandwidth multiplier"). Compute lives on its own screen
@@ -91,8 +91,8 @@ generator. Combine creates the generator without snapping Capacity; save load vi
 keeps the generator (`byteCreated`) and the `mainGameUnlocked` latch but resets Capacity to
 `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`) — Capacity is rebuilt each
 Era, Factory access never goes away again once earned. Production and storage grow via two **Upgrade Capacity** / **Upgrade Speed** actions, one at a time (`queueIntroSpeedUpgrade`; detail: `docs/ECONOMY_REFERENCE.md`'s "Upgrade Speed"): a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
-and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at the base Speed
-(like a pool pulling at its Bandwidth, at a constant 1× Speed — no fill multiplier) into `intro.capacityUpgradeProgress`, ahead of
+and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at base Speed × the
+Data Stream tap bonus (`getDataStreamTapMultiplier` — no fill multiplier) into `intro.capacityUpgradeProgress`, ahead of
 every other consumer — nothing is paused or raced; when the bar
 reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
 running, the same button becomes an inert progress bar (no cancel; the tile is unchanged). Displayed Speed is *derived* from the Speed basis
@@ -121,7 +121,7 @@ each cycle. Nothing here ever fully freezes — every action stays live indefini
 `getDataStreamEffectMultiplier`/`getPoolEffectMultiplier`/`tickFillMultiplierDecay`/`tapPoolBuffer` in
 `engine.js`) — the displayed Speed/Bandwidth never change; a separate fill-dependent multiplier (1000%
 empty → 100% at 50% full → 10% at full buffer, log-linear) scales only the real per-tick amount delivered into the
-buffer, boosted temporarily by tapping (+5%, decaying 1%/sec, multiplicative, ×(1 + bonus%), hard-capped at 2000% total).
+buffer. Tapping never boosts the fill: it adds a +5% bonus (decaying 1%/sec, capped at +100%) that speeds that buffer's consumers ×(1 + bonus%) — see `getDataStreamTapMultiplier`/`getPoolTapMultiplier`.
 `ByteFoundryPage` no longer draws a multiplier bar: the Data Stream's Speed and each pool's Bandwidth
 show the EFFECTIVE value (base × multiplier, 3 significant digits, `formatSpeedText`), tinted
 red (10%) → blue (100%) → green (1000%) by `getSpeedColor`; each tile also gets a `CapacityBonusRow` (📦 Capacity under the name, a narrow tap-bonus bar, and "+x% 👆" under the speed — or, while no bonus is active, "⏳ time to full" (`getBufferSecondsToFull`: (capacity/rate)·e^(−a)·(e^b − e^(b·fill))/b with a = ln(MAX/100), b = ln(MAX/MIN), the integral of the log-linear fill-multiplier curve, assuming nothing else draws from the buffer); bar and bonus text auto-hide at 0).
@@ -163,7 +163,7 @@ Provision Disk is **buffer-funded at a fixed speed**: its cost is `getDiskProvis
 own face-value size (N for the array's Nth disk, 1…9), banked as fractional passes in
 `diskProvisionPasses[size]`. `provisionDisk` only ARMS the build (`diskBuildQueued`; `queueDiskBuild` arms it directly
 even when it can't start yet); each tick `tickQueuedDiskBuild(elapsedSeconds)` (wired into `tickGame`) draws up to
-`elapsed × getStoragePoolBandwidth` bits from the pool buffer — the pool's BASE Bandwidth, never the fill multiplier,
+`elapsed × getStoragePoolBandwidth × getPoolTapMultiplier` bits from the pool buffer — the pool's BASE Bandwidth × its tap bonus, never the fill multiplier,
 re-read every tick so a Speed/Capacity upgrade applies at once. An empty buffer pauses it (nothing lost); a full one
 never makes it faster. The disk completes (empty container) when the passes reach the requirement, with no separate
 build-time delay, and disarms the queue — only starting a NEW disk's build needs a click. Provision Disk is offered once
@@ -191,7 +191,7 @@ tile reads a static "Locked"). Its **Booster-conversion control fills MANUALLY, 
 its next Booster, until its matching pool is entirely COMPLETE (`isStoragePoolFullyBuilt` — all three
 ladder sizes fully built); only then does full-buffer OVERFLOW also fill it AUTOMATICALLY** from that
 pool's buffer (`tickPoolBufferFill`'s overflow branch, same gate). Separately, the lake draws directly
-from its pool's buffer at the pool's Bandwidth (`tickDataLakePoolDrain`, right after
+from its pool's buffer at the pool's Bandwidth × its tap bonus (`tickDataLakePoolDrain`, right after
 `tickPoolBufferFill`) under a fixed pool-buffer priority: disk filling > provisioning in progress > lake
 filling — only while every BUILT disk is full and no build is in progress in that pool, the lake has
 room, and the buffer holds more than the read cache's reservation (`isDataLakePoolDrainAvailable`; while
@@ -246,6 +246,6 @@ balance) always renders in its own fixed unit (`formatDiskSizeInPoolUnit`) — a
 (`formatPoolBalance`/`formatPoolBalanceStable`, e.g. "398.3 KB / 1 MB"). Details:
 `docs/ECONOMY_REFERENCE.md`.
 
-**Smaller sizes after a Foundry reset (free auto-provisioning).** `getPresentedDiskSize` is the newest unlocked size (`getDiskLadderSizeBits(intro.unlockedDiskSteps)`, shown immediately even before its pool is reachable); `isLowerDiskSizePending` is true while `getDiskSize` (the smallest incomplete array) is smaller than it. In that state `tickAutoProvisionLowerDiskSizes` (in `tickStorage`, before `tickQueuedDiskBuild`) rebuilds the smallest incomplete array for free, one disk at a time, each taking exactly `size / getStoragePoolBandwidth` (the pool's BASE Bandwidth — independent of the fill multiplier, buffer and caches; progress in `intro.lowerRebuild = { size, progress }`) and landing FULL (a drained built disk is refilled before a new one is built; a long/offline `elapsedSeconds` completes several disks in one call). `getLowerRebuildSummary` returns the remaining `seconds` (exact for live pools; a pool not live yet uses `getProjectedPoolBandwidth` — the Bandwidth that pool will have once live (Capacity at its unlock threshold) — as a stand-in, so that part is an estimate and does not count down until the pool goes live; the summary's `projected` flag is true when any remaining size's pool is not live) and disks done/total for the UI. It skips while that pool (or an earlier one) is rebuilding, during a legacy `diskBuild`, or before the Byte exists. While pending, `isProvisionDiskAvailable`/`queueDiskBuild` (hence `provisionDisk`, `tickQueuedDiskBuild`) are no-ops and `tickFoundryResetConvenience` skips its paid Provision Disk branch, so nothing is ever paid twice. `ByteFoundryPage` presents only the newest size, disabled with a "Rebuilding <size> first" note.
+**Smaller sizes after a Foundry reset (auto-provisioning, one fill per disk).** `getPresentedDiskSize` is the newest unlocked size (`getDiskLadderSizeBits(intro.unlockedDiskSteps)`, shown immediately even before its pool is reachable); `isLowerDiskSizePending` is true while `getDiskSize` (the smallest incomplete array) is smaller than it. In that state `tickAutoProvisionLowerDiskSizes` (in `tickStorage`, before `tickQueuedDiskBuild`) rebuilds the smallest incomplete array with no provisioning cost, one disk at a time: each disk costs exactly ONE fill — `size` bits drawn from the pool buffer (minus `getPoolCacheReservationBits`) at `getStoragePoolBandwidth × getPoolTapMultiplier` (BASE Bandwidth × pool tap bonus, never the fill multiplier), so it takes `size / (Bandwidth × tap)` while the buffer keeps up and stalls (progress kept) when it is empty; progress in `intro.lowerRebuild = { size, progress }` and landing FULL (a drained built disk is refilled before a new one is built; a long/offline `elapsedSeconds` completes several disks in one call). `getLowerRebuildSummary` returns the remaining `seconds` (exact for live pools; a pool not live yet uses `getProjectedPoolBandwidth` — the Bandwidth that pool will have once live (Capacity at its unlock threshold) — as a stand-in, so that part is an estimate and does not count down until the pool goes live; the summary's `projected` flag is true when any remaining size's pool is not live) and disks done/total for the UI. It skips while that pool (or an earlier one) is rebuilding, during a legacy `diskBuild`, or before the Byte exists. While pending, `isProvisionDiskAvailable`/`queueDiskBuild` (hence `provisionDisk`, `tickQueuedDiskBuild`) are no-ops and `tickFoundryResetConvenience` skips its paid Provision Disk branch, so nothing is ever paid twice. `ByteFoundryPage` presents only the newest size, disabled with a "Rebuilding <size> first" note.
 
 **Replay order.** After a Foundry reset `tickFoundryResetConvenience` replays Capacity and Speed upgrades up to their prior highs in order of increasing cost (Capacity costs the current Capacity, Speed its current basis; Speed is prioritised while armable, so it reaches the "needs Capacity" state before a Capacity upgrade is chosen): when no upgrade is running, the next pending, armable one is started through the ordinary progress-bar queue (`queueIntroCapacityUpgrade`/`queueIntroSpeedUpgrade`), so it is paid from the Data Stream by the usual drain; one at a time.

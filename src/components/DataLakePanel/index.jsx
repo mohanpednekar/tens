@@ -24,6 +24,7 @@ import {
   getPoolBufferBits,
   getPoolBufferCapacity,
   getStoragePoolBandwidth,
+  getPoolTapMultiplier,
   isBoosterEntityAtCap,
   isBoosterPurchaseAvailable,
   isDataLakeAutoConvertActive,
@@ -384,11 +385,13 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
         // The lake fills from its pool at the pool's Bandwidth, by draining the buffer directly or by
         // full-buffer overflow once the pool is entirely built (see tickDataLakePoolDrain /
         // tickPoolBufferFill); otherwise it is idle (or only filling via a manual conversion).
-        const fillingAutomatically = currentFillSubSize !== null && (
-          isDataLakePoolDrainAvailable(state, tierIndex) ||
-          (poolComplete && getPoolBufferBits(state, tierIndex) >= getPoolBufferCapacity(state, tierIndex))
-        )
-        const fillSpeed = fillingAutomatically ? getStoragePoolBandwidth(state, tierIndex) : 0
+        // The direct drain is a pool consumer, so the pool tap bonus speeds it (getPoolTapMultiplier);
+        // full-buffer overflow comes from the Data Stream and stays at base Bandwidth.
+        const draining = currentFillSubSize !== null && isDataLakePoolDrainAvailable(state, tierIndex)
+        const fillingAutomatically = draining || (currentFillSubSize !== null &&
+          poolComplete && getPoolBufferBits(state, tierIndex) >= getPoolBufferCapacity(state, tierIndex))
+        const fillSpeed = !fillingAutomatically ? 0
+          : getStoragePoolBandwidth(state, tierIndex) * (draining ? getPoolTapMultiplier(state, tierIndex) : 1)
         const scaleOutShown = upgradeAvailable && !converting && !entityAtCap && !canBuy
         const rightSlotButton = resetAvailable || scaleOutShown
         // Time until the next Booster's cost is banked at the current fill speed — only while it is still

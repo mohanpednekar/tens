@@ -151,11 +151,11 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 one-time-ever gate (`latchMainGameUnlocked` — see above) before `MainPage` (`tier01`/Kilobytes onward)
 is reachable. Tapping accumulates bits into the **Data Stream** (Buffer-capped, binary units —
 Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator grown via a single
-**Upgrade Capacity** / **Upgrade Speed** actions (one at a time; cost = current capacity / current Speed basis, a click starts a progress bar fed from the Buffer at a constant 1× Speed; displayed Speed is
+**Upgrade Capacity** / **Upgrade Speed** actions (one at a time; cost = current capacity / current Speed basis, a click starts a progress bar fed from the Buffer at base Speed × the Data Stream tap bonus; displayed Speed is
 *derived* from the Speed basis as `basis^e` via `getDataStreamSpeedBytesPerSecond`, capped at `Capacity^e`, where `e` = 0.5 + 0.01 per Disk size unlocked beyond the first via Foundry reset (`getDataStreamSpeedExponent`), not purchased) — entirely OUTSIDE the
 forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a separate fill-based
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer
-fullness and recent taps. Disks (`StoragePage`) fill and pull into Factory automatically, with no manual
+fullness; taps never speed a fill — a Data Stream tap speeds Upgrade Capacity/Speed, a pool tap speeds that pool's consumers (disks, merges, provisioning, lake). Disks (`StoragePage`) fill and pull into Factory automatically, with no manual
 redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too — but Boosters,
 which spend banked Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**), only
 buy via a single per-lake "🏷️ `<cost>`" control: it buys immediately if affordable, or arms a one-shot
