@@ -2026,7 +2026,7 @@ see "Balances (top HUD)" above, already doubles as the Prestige button once `can
 purely informational: prestige progress/award preview, rebooted count, unspent PP, and Auto Reboot
 status. It has been removed entirely as redundant with the `TopRebootBar`/`FullScreenOverlay`/
 PP-header-as-button ways to trigger and observe Prestige — none of that information had anywhere else to
-go for it to lose. Auto Reboot's status line (`"every {interval}"`) shows on its Perks → 🤖 Automation Global Automation row, which also carries its speed upgrade and pause Switch. Global automations are sequential (each needs the previous one, in the UI and the engine).
+go for it to lose. Auto Reboot's current interval (terse inline `formatIntervalShort`, e.g. `1024s`) shows on its Perks → 🤖 Automation Global Automation row, which also carries its speed upgrade and pause Switch. Global automations are sequential (each needs the previous one, in the UI and the engine).
 
 ### Scale Up
 
