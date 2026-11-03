@@ -15,7 +15,7 @@ commit as any change to the mechanics it describes.
    intro"). A mandatory gate whenever `intro.mainGameUnlocked` is false (AppNav omits Factory during it;
    Guide and More stay), permanently latched true the instant Storage's capacity threshold is crossed
    (`latchMainGameUnlocked`/`isStorageUnlocked` in `engine.js`) — the SAME "1 KiB" threshold that
-   reveals pool 1's card and switches the tap into fill-multiplier-bonus mode. One-time-ever; never
+   reveals pool 1's card and switches the tap into consumer-bonus mode. One-time-ever; never
    resets (see `App.jsx`'s repo-layout entry). Once latched, the standalone Tap button is gone and the
    Data Stream tile itself is the tap target (a stretched `PoolTapButton` inside `DataStreamTile`, calling
    `actions.tapIntroBit`; see "Fill-based Speed/Bandwidth multiplier"). Compute lives on its own screen

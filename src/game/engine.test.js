@@ -11768,6 +11768,14 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
     expect(tickAutoProvisionLowerDiskSizes(diskSeconds)(boosted).intro.disks[FIRST_DISK_SIZE]).toBe(1)
   })
 
+  it('holds the Data Lake drain off its pool while the rebuild is pending, so the lake cannot take its funding', () => {
+    const state = funded(afterReset(), 2)
+    expect(isStoragePoolProvisioningInProgress(state, 1)).toBe(true)
+    expect(isDataLakePoolDrainAvailable(state, 1)).toBe(false)
+    const done = withIntro(state, { disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP }, disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP } })
+    expect(isStoragePoolProvisioningInProgress(done, 1)).toBe(false)
+  })
+
   it('stalls on an empty buffer (same reference), never dips into the read cache\'s claim, and is limited by what the buffer holds', () => {
     const empty = afterReset()
     expect(tickAutoProvisionLowerDiskSizes(100)(empty)).toBe(empty)

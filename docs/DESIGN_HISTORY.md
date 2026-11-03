@@ -9107,3 +9107,14 @@ Data Lake drain. `get*MultiplierPercent` are fill-only; the full-buffer reset an
 full-Buffer tap no-op were dropped (a full buffer is exactly when faster consumers help). Not applied:
 pool buffer fills (they are fill curves, not stream consumers needing help), full-buffer lake overflow
 (Data Stream sourced) and `getComputeMergeDurationSeconds` (reads the static flush duration).
+
+## "Free" Foundry-reset rebuild means one fill per disk, not zero bits (2026-11)
+
+The lower-size rebuild (`tickAutoProvisionLowerDiskSizes`) was implemented as a pure timer at base
+Bandwidth that spent nothing, reading "free" literally. Maintainer clarification: "free" meant only
+that the extra initial provisioning cost (the multi-pass `getDiskProvisionPassesRequired` draw) does
+not apply — filling the disk once is enough. Each rebuilt disk now draws exactly `size` bits from its
+pool buffer (minus the read cache's claim) at base Bandwidth × pool tap bonus and stalls (progress
+kept) on an empty buffer. Because it now competes for the buffer, a pending rebuild counts as
+provisioning-in-progress (`isStoragePoolProvisioningInProgress`) so the lower-priority Data Lake drain,
+which runs earlier in `tickGame`, cannot starve it.

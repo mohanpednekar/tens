@@ -876,7 +876,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     : diskLadderExhausted
       ? { icon: '✅', label: `All Pools Complete (${formatDiskSize(diskSize)})`, status: null }
       : lowerDiskSizePending
-        ? { icon: '🔁', label: diskOfferLabel, status: `Rebuilding ${formatDiskSize(autoDiskSize)} first · automatic` }
+        ? { icon: '🔁', label: diskOfferLabel, status: `Rebuilding ${formatDiskSize(autoDiskSize)} first · ${getPoolBufferBits(state, getPoolIndexForDiskSize(autoDiskSize)) > getPoolCacheReservationBits(state, getPoolIndexForDiskSize(autoDiskSize)) ? 'automatic' : 'waiting for buffer'}` }
       : diskBuildQueued
         ? {
             icon: '⏳',

@@ -5748,11 +5748,13 @@ export const areStoragePoolDisksFull = (state, poolIndex) =>
     (state.intro?.disks?.[size] ?? 0) >= (state.intro?.disksBuiltTotal?.[size] ?? 0))
 
 // Whether a disk build in pool `poolIndex` has been STARTED and not finished: a queued/partially
-// funded Provision Disk on one of its sizes, a legacy timed build, or a pool-local reset rebuild.
+// funded Provision Disk on one of its sizes, a legacy timed build, a pool-local reset rebuild, or the
+// automatic post-Foundry-reset lower-size rebuild (buffer-funded — the lake drain must not starve it).
 // Merely being able to provision another disk doesn't count.
 export const isStoragePoolProvisioningInProgress = (state, poolIndex) => {
   const intro = state.intro ?? {}
   if (isStoragePoolRebuilding(state, poolIndex)) return true
+  if (isLowerDiskSizePending(state) && getPoolIndexForDiskSize(getDiskSize(state)) === poolIndex) return true
   if (intro.diskBuild && getPoolIndexForDiskSize(intro.diskBuild.size) === poolIndex) return true
   const sizes = getStoragePoolSizes(poolIndex)
   if (sizes.some(size => getDiskProvisionPassesCollected(state, size) > 0)) return true
