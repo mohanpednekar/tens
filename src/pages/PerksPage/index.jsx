@@ -139,8 +139,8 @@ const Row = styled.div`
 `
 
 // Automation categories lay their entries out as a grid of compact cells, optimised for the end
-// state: a capped (maxed) automation is just "label + Switch" on one line — tier/Flops cells go
-// three-up on a phone, global cells one per row. Before the cap a cell grows downward (interval line
+// state: a capped (maxed) automation is just "label + Switch" on one line — Flops cells go
+// three-up on a phone, global cells one per row (tiers use TierPair below). Before the cap a cell grows downward (interval line
 // + full-width upgrade/unlock button) — taller, an accepted trade-off.
 const CellGrid = styled.div`
   align-items: start;
@@ -160,8 +160,8 @@ const TierSymbol = ({ tier }) => (
 )
 
 const Cell = styled.div`
-  background: ${props => props.theme.color.surfaceSunken};
-  border: 1px solid ${props => props.theme.color.border};
+  background: ${props => (props.$bare ? 'transparent' : props.theme.color.surfaceSunken)};
+  border: ${props => (props.$bare ? 'none' : `1px solid ${props.theme.color.border}`)};
   border-radius: ${props => props.theme.radius.sm};
   display: flex;
   flex-direction: column;
@@ -176,7 +176,37 @@ const Cell = styled.div`
       zoom: 0.85;
     }
   `}
-  padding: 0.35rem 0.3rem 0.35rem 0.4rem;
+  padding: ${props => (props.$bare ? '0' : '0.35rem 0.3rem 0.35rem 0.4rem')};
+`
+
+// One tier's two autobuyers, laid out like that tier's Factory row: symbol, then the ⚙ tickspeed
+// autobuyer on the left half (the row's tickspeed button sits bottom-left) and the 🤖 autobuyer on the
+// right half (the Buy button sits bottom-right). Same accent stripe as the Factory row. With both
+// capped a tier is one line.
+const TierPair = styled.div`
+  align-items: start;
+  background: ${props => props.theme.color.surfaceSunken};
+  border: 1px solid ${props => props.theme.color.border};
+  border-left: 3px solid ${props => props.$accent};
+  border-radius: ${props => props.theme.radius.sm};
+  column-gap: 0.45rem;
+  display: grid;
+  grid-template-columns: 1.9rem minmax(0, 1fr) minmax(0, 1fr);
+  padding: 0.35rem 0.35rem 0.35rem 0.45rem;
+
+  & > :first-child {
+    align-items: center;
+    display: flex;
+    font-size: 0.88em;
+    font-weight: 600;
+    min-height: 1.9rem;
+  }
+`
+
+const TierPairList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 `
 
 const CellHead = styled.div`
@@ -348,11 +378,11 @@ const PpPurchaseButton = ({ ariaLabel, color, cost, points, disabled, onClick, t
 // Head: label + (Switch once owned and pausable | `ownedBadge` | 🔒 `lockedBadge` milestone).
 // Below the head, only while there's something left to buy: `subText` (current interval) and the
 // full-width `ownedAction` (⏫ speed upgrade) or `lockedAction` (🔓 PP unlock). Capped → head only.
-const AutomationRow = ({ ariaLabel, narrow = false, icon, name, label = name, owned, enabled = true, onToggle, toggleLabel, statusTitle, title, subText, lockedBadge, lockedAction, ownedBadge, ownedAction }) => {
+const AutomationRow = ({ ariaLabel, narrow = false, bare = false, icon, name, label = name, owned, enabled = true, onToggle, toggleLabel, statusTitle, title, subText, lockedBadge, lockedAction, ownedBadge, ownedAction }) => {
   const status = `${name} ${enabled ? 'active' : 'paused'}`
   const action = owned ? ownedAction : lockedAction
   return (
-    <Cell $narrow={narrow} aria-label={ariaLabel} title={title}>
+    <Cell $bare={bare} $narrow={narrow} aria-label={ariaLabel} title={title}>
       <CellHead>
         <RowLabel>
           {/* Icon-less cells (tier/Flops lists, whose category heading names the kind) keep the
@@ -516,9 +546,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
 
       <Category aria-label="tier autobuyers category">
         <CategoryHeading>Tier Autobuyers</CategoryHeading>
-        <CellGrid $narrow>
+        <TierPairList>
         {/* All ten tiers stay listed (owned ones included) so unlock history is never lost. */}
-        {TIER_DEFINITIONS.map(tier => {
+        {TIER_DEFINITIONS.map((tier, tierIndex) => {
           const owned = (state.autobuyers[tier.id] ?? null) !== null
           const enabled = state.autobuyersEnabled?.[tier.id] ?? true
           const milestone = getAutobuyerUnlockMilestone(tier.id)
@@ -527,92 +557,88 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           const atFloor = level >= getAutobuyerIntervalMaxLevel(tier.id)
           const bulkLevels = owned ? getAutobuyerBulkLevels(state, tier.id) : 1
           const cost = getAutobuyerIntervalUpgradeCost(level)
-          return (
-            <AutomationRow
-              key={tier.id}
-              ariaLabel={`${tier.name} autobuyer`}
-              enabled={enabled}
-              label={<TierSymbol tier={tier} />}
-              narrow
-              lockedBadge={(
-                <MilestoneBadge
-                  current={rebootCount}
-                  milestone={milestone}
-                  progressLabel={`${tier.name} autobuyer unlock milestone progress`}
-                  subject={`${tier.name}'s autobuyer`}
-                  unit="Purge"
-                />
-              )}
-              name={`${tier.name}'s autobuyer`}
-              onToggle={() => actions.setAutobuyerEnabled(tier.id, !enabled)}
-              owned={owned}
-              ownedAction={speedUpgradeButton({
-                maxed,
-                cost,
-                ariaLabel: atFloor
-                  ? `Upgrade ${tier.name}'s autobuyer to level ${level + 1} for ${formatAmount(cost)} Purge Points — doubles levels bought per attempt to up to ${bulkLevels * 2}`
-                  : `Upgrade ${tier.name}'s autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`,
-                // Narrow cell: cost only — the subtext already shows the current N/buy, and the
-                // aria-label/title spell out the doubling.
-                label: undefined,
-                onClick: () => actions.buyAutobuyerIntervalUpgrade(tier.id),
-                progressLabel: `${tier.name} autobuyer speed PP progress`,
-                title: atFloor
-                  ? 'At the 10 ms floor, each further level doubles how many full levels one autobuyer attempt can buy (as many as are affordable, at least one); cost keeps rising'
-                  : "Spend Purge Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); past the floor, levels double how many levels it buys per attempt",
-              })}
-              subText={owned && !maxed ? `every ${formatInterval(getAutobuyerIntervalSeconds(state, tier.id) * 1000)}${bulkLevels > 1 ? ` · ${bulkLevels}/buy` : ''}` : null}
-              title={owned && maxed ? `${tier.name} autobuyer: every ${formatInterval(getAutobuyerIntervalSeconds(state, tier.id) * 1000)} · ${bulkLevels}/buy (max)` : undefined}
-              toggleLabel={`${tier.name}'s autobuyer`}
-            />
-          )
-        })}
-        </CellGrid>
-      </Category>
 
-      <Category aria-label="tier tickspeed autobuyers category">
-        <CategoryHeading>Tier Tickspeed Autobuyers</CategoryHeading>
-        <CellGrid $narrow>
-        {TIER_DEFINITIONS.map(tier => {
-          const owned = state.tierTickspeedAutobuyer?.[tier.id] ?? false
-          const enabled = state.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true
-          const level = state.tierTickspeedIntervalLevels?.[tier.id] ?? 0
-          const maxed = level >= getTierTickspeedIntervalMaxLevel()
-          const cost = getTierTickspeedIntervalUpgradeCost(level)
+          const tickOwned = state.tierTickspeedAutobuyer?.[tier.id] ?? false
+          const tickEnabled = state.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true
+          const tickLevel = state.tierTickspeedIntervalLevels?.[tier.id] ?? 0
+          const tickMaxed = tickLevel >= getTierTickspeedIntervalMaxLevel()
+          const tickCost = getTierTickspeedIntervalUpgradeCost(tickLevel)
           return (
-            <AutomationRow
-              key={tier.id}
-              ariaLabel={`${tier.name} tickspeed autobuyer`}
-              enabled={enabled}
-              label={<TierSymbol tier={tier} />}
-              narrow
-              lockedBadge={(
-                <MilestoneBadge
-                  current={rebootCount}
-                  milestone={getTierTickspeedAutobuyerMilestone(tier.id)}
-                  progressLabel={`${tier.name} tickspeed autobuyer milestone progress`}
-                  subject={`${tier.name}'s tickspeed autobuyer`}
-                  unit="Purge"
+            <TierPair key={tier.id} $accent={theme.tierAccents[tierIndex % theme.tierAccents.length]} aria-label={`${tier.name} automation`}>
+              <TierSymbol tier={tier} />
+    <AutomationRow
+                  ariaLabel={`${tier.name} tickspeed autobuyer`}
+                  enabled={tickEnabled}
+                  bare
+                  icon="⚙"
+                  label=""
+                  narrow
+                  lockedBadge={(
+                    <MilestoneBadge
+                      current={rebootCount}
+                      milestone={getTierTickspeedAutobuyerMilestone(tier.id)}
+                      progressLabel={`${tier.name} tickspeed autobuyer milestone progress`}
+                      subject={`${tier.name}'s tickspeed autobuyer`}
+                      unit="Purge"
+                    />
+                  )}
+                  name={`${tier.name}'s tickspeed autobuyer`}
+                  onToggle={() => actions.setTierTickspeedAutobuyerEnabled(tier.id, !tickEnabled)}
+                  owned={tickOwned}
+                  ownedAction={speedUpgradeButton({
+                    maxed: tickMaxed,
+                    cost: tickCost,
+                    ariaLabel: `Upgrade ${tier.name}'s tickspeed autobuyer speed to level ${tickLevel + 1} for ${formatAmount(tickCost)} Purge Points — interval ×0.9`,
+                    onClick: () => actions.buyTierTickspeedIntervalUpgrade(tier.id),
+                    progressLabel: `${tier.name} tickspeed autobuyer speed PP progress`,
+                    title: "Spend Purge Points to shorten this tier's tickspeed autobuyer interval by 10% (floor 10 ms); cost doubles each level",
+                  })}
+                  subText={tickOwned && !tickMaxed ? `every ${formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)}` : null}
+                  title={tickOwned && tickMaxed ? `${tier.name} tickspeed autobuyer: every ${formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)} (max)` : undefined}
+                  toggleLabel={`${tier.name}'s tickspeed autobuyer`}
                 />
-              )}
-              name={`${tier.name}'s tickspeed autobuyer`}
-              onToggle={() => actions.setTierTickspeedAutobuyerEnabled(tier.id, !enabled)}
-              owned={owned}
-              ownedAction={speedUpgradeButton({
-                maxed,
-                cost,
-                ariaLabel: `Upgrade ${tier.name}'s tickspeed autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`,
-                onClick: () => actions.buyTierTickspeedIntervalUpgrade(tier.id),
-                progressLabel: `${tier.name} tickspeed autobuyer speed PP progress`,
-                title: "Spend Purge Points to shorten this tier's tickspeed autobuyer interval by 10% (floor 10 ms); cost doubles each level",
-              })}
-              subText={owned && !maxed ? `every ${formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)}` : null}
-              title={owned && maxed ? `${tier.name} tickspeed autobuyer: every ${formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)} (max)` : undefined}
-              toggleLabel={`${tier.name}'s tickspeed autobuyer`}
-            />
+    <AutomationRow
+                  ariaLabel={`${tier.name} autobuyer`}
+                  enabled={enabled}
+                  bare
+                  icon="🤖"
+                  label=""
+                  narrow
+                  lockedBadge={(
+                    <MilestoneBadge
+                      current={rebootCount}
+                      milestone={milestone}
+                      progressLabel={`${tier.name} autobuyer unlock milestone progress`}
+                      subject={`${tier.name}'s autobuyer`}
+                      unit="Purge"
+                    />
+                  )}
+                  name={`${tier.name}'s autobuyer`}
+                  onToggle={() => actions.setAutobuyerEnabled(tier.id, !enabled)}
+                  owned={owned}
+                  ownedAction={speedUpgradeButton({
+                    maxed,
+                    cost,
+                    ariaLabel: atFloor
+                      ? `Upgrade ${tier.name}'s autobuyer to level ${level + 1} for ${formatAmount(cost)} Purge Points — doubles levels bought per attempt to up to ${bulkLevels * 2}`
+                      : `Upgrade ${tier.name}'s autobuyer speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`,
+                    // Narrow cell: cost only — the subtext already shows the current N/buy, and the
+                    // aria-label/title spell out the doubling.
+                    label: undefined,
+                    onClick: () => actions.buyAutobuyerIntervalUpgrade(tier.id),
+                    progressLabel: `${tier.name} autobuyer speed PP progress`,
+                    title: atFloor
+                      ? 'At the 10 ms floor, each further level doubles how many full levels one autobuyer attempt can buy (as many as are affordable, at least one); cost keeps rising'
+                      : "Spend Purge Points to shorten this autobuyer's purchase interval by 10% (floor 10 ms); past the floor, levels double how many levels it buys per attempt",
+                  })}
+                  subText={owned && !maxed ? `every ${formatInterval(getAutobuyerIntervalSeconds(state, tier.id) * 1000)}${bulkLevels > 1 ? ` · ${bulkLevels}/buy` : ''}` : null}
+                  title={owned && maxed ? `${tier.name} autobuyer: every ${formatInterval(getAutobuyerIntervalSeconds(state, tier.id) * 1000)} · ${bulkLevels}/buy (max)` : undefined}
+                  toggleLabel={`${tier.name}'s autobuyer`}
+                />
+            </TierPair>
           )
         })}
-        </CellGrid>
+        </TierPairList>
       </Category>
 
       {showComputeAutoBoost && (

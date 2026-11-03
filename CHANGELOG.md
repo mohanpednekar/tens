@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - **Perks regrouped by feature.** The 🔓 Unlocks / ⏫ Upgrades / 🎛 Toggles tabs are now 🤖 Automation and ✦ Prestige. Each automation is a single row that goes from its milestone or PP unlock to a pause switch, its current interval and its speed upgrade — no more hopping between three tabs to manage one automation. Double PP, the production speed bonus, DeGoogol and Buy max live on Prestige (the speed bonus now stays listed with a ✓ once bought).
-- **Perks automation is a compact grid.** A fully upgraded automation is just its name and a pause switch on one line, three tiers per row on a phone (tiers shown by symbol: KB, MB, …); the interval and upgrade button appear only while there's something left to buy.
+- **Perks automation is a compact grid.** A fully upgraded automation is just its name and a pause switch on one line, each tier's tickspeed autobuyer and autobuyer share one line in the same left/right positions as that tier's Factory row (tiers shown by symbol: KB, MB, …); the interval and upgrade button appear only while there's something left to buy.
 - **Guide moved into the More menu**; the bottom bar is now Foundry → Boosters → Compute → Factory → Perks → More.
 - **Level numbers are no longer shown** (Perks rows, Double PP, Speed Up) — only the effect, interval and cost.
 - **Autobuyer speed upgrades now start at 100 PP** for every tier, for both tier autobuyers and tier tickspeed autobuyers (previously 1 PP and 2 PP), still doubling per level.

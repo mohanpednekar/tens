@@ -746,14 +746,17 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) or a full-width
   🔓 PP unlock button (`"Enable <name> for N Purge Points"`). The Switch (`aria-pressed`, `aria-label`
   e.g. `"Auto Scale Up automation"`, `"<tier>'s autobuyer"`) sits at the head's right; the status is
-  `"<name> active|paused"` (`role="img"`). Grids: tier / tier-tickspeed / Flops cells are `$narrow`
+  `"<name> active|paused"` (`role="img"`). Tier autobuyers: one `TierPair` card per tier (`aria-label="<tier> automation"`, the tier's Factory
+  accent stripe, grid `1.9rem | 1fr | 1fr`) = tier symbol, then the ⚙ tickspeed autobuyer half (left — where the
+  Factory row's tickspeed button sits) and the 🤖 autobuyer half (right — where Buy sits); each half is a
+  `bare` `$narrow` `AutomationRow`, so with both capped a tier is one line. Flops cells are `$narrow`
   (`minmax(4.75rem, 1fr)` → three-up at 320px; label = tier **symbol** `KB`/`MF`, full name hidden +
   `title`; 0.88em font, Switch `zoom: 0.85`, button glyph hidden and the cost wraps instead of ellipsizing); global cells are
   `minmax(15rem, 1fr)` (one per row on a phone, two-up wider). Categories: *Global Automation* (cells
   `"<name> row"`, Auto Speed Up → Auto Restage → Auto Scale Up → Auto Overclock → Auto Purge; Restage
   and Scale Up both need Speed Up, Overclock needs both, Purge needs Overclock — engine-enforced),
-  *Tier Autobuyers* / *Tier Tickspeed Autobuyers* (all ten tiers always listed, cells
-  `"<tier> autobuyer"` / `"<tier> tickspeed autobuyer"`), *Booster Automation* (Auto Boost once Foundry
+  *Tier Autobuyers* (all ten tiers always listed; halves
+  `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Booster Automation* (Auto Boost once Foundry
   Compute unlocks; no Switch — its preset picker on Boosters is the control, owned shows `"Auto Boost
   unlocked"`), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.

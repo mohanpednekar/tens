@@ -27,6 +27,10 @@ and 2 PP, which made the first levels trivially cheap. The bulk cap became exact
 8/16/32/64 PP bases (`getSiCleanDoublingFactor` is now the shared ladder; `getAutobuyerIntervalUpgradeCost`
 applies the 100 PP base on top).
 
+Later in the same PR the two tier lists (autobuyers, tickspeed autobuyers) merged back into one card per
+tier, mirroring the Factory row's own positions — ⚙ tickspeed on the left, 🤖 buy on the right — so the
+same tier's automations sit where the player already looks for them; capped, a tier is one line.
+
 ### Fill multiplier 10× → 0.1× (log-linear) and a multiplicative tap bonus — 2026-10-30
 
 The original fill-based Speed/Bandwidth multiplier was linear in fill fraction: 150% empty, 100% at

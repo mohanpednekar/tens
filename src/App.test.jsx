@@ -1483,7 +1483,11 @@ test('Perks groups by feature: Automation holds every automation, Prestige the s
 
   expect(screen.getByLabelText(/^global automation category$/i)).toHaveTextContent(/global automation/i)
   expect(screen.getByLabelText(/^tier autobuyers category$/i)).toHaveTextContent(/tier autobuyers/i)
-  expect(screen.getByLabelText(/^tier tickspeed autobuyers category$/i)).toHaveTextContent(/tier tickspeed autobuyers/i)
+  // Each tier's two autobuyers share one card, in the Factory row's positions: ⚙ tickspeed left, 🤖 buy right.
+  expect(screen.queryByLabelText(/^tier tickspeed autobuyers category$/i)).not.toBeInTheDocument()
+  const kbCard = screen.getByLabelText(/^kilobytes automation$/i)
+  const halves = within(kbCard).getAllByLabelText(/^kilobytes (tickspeed )?autobuyer$/i).map(el => el.getAttribute('aria-label'))
+  expect(halves).toEqual(['Kilobytes tickspeed autobuyer', 'Kilobytes autobuyer'])
   expect(screen.queryByLabelText(/^purge points category$/i)).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('tab', { name: /open prestige/i }))
