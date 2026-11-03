@@ -24,15 +24,16 @@ Play it live at [mohanpednekar.github.io/tens](https://mohanpednekar.github.io/t
 ### Core economy
 
 - Base currency is **Bits** (resource id `base`, symbol `b`).
-- Ten tiers — **Kilobytes** through **Quettabytes** — are bought with Bits; each produces the tier below it (Kilobytes both costs and produces Bits).
+- Ten tiers — **Kilobytes** through **Quettabytes** — are bought with Bits; each produces the tier below it (Kilobytes cost Bits and produce Bytes, which are added to Bits at 8 Bits per Byte).
 - Bytes are **not** a purchasable tier. Every fresh save earns its first Kilobytes via the **Byte Foundry** tap screen; once that happens, Factory stays permanently reachable for every future Prestige/Era ascension in that save — no per-cycle re-gate.
-- Reaching **1 Googol Bytes** (8×10^100 Bits) freezes production until Prestige.
+- Reaching **1 Googol Bytes** (8×10^100 Bits) freezes production until Prestige (until the DeGoogol unlock makes Prestige optional).
+- **Era ascension** is a deeper, optional reset at 1 Googol unspent Prestige Points that awards Eons.
 
 Full formulas, Prestige Points, Storage, Compute, tickspeed, Scale Up, Overclock, and offline progress: [`docs/ECONOMY_REFERENCE.md`](docs/ECONOMY_REFERENCE.md). Current behavior summary: [`CLAUDE.md`](CLAUDE.md). Design rationale / superseded ideas: [`docs/DESIGN_HISTORY.md`](docs/DESIGN_HISTORY.md).
 
 ### Byte Foundry
 
-Tap to fill Memory, combine into a permanent Byte generator, grow via Sacrifice / Invest, then transfer Memory into free Kilobytes. Later: Disks (Storage) and Compute Cores → Megacomputer plus Compute Boost. Generator / Disks / Compute are permanent across Prestige; so is the main-game-unlock gate itself once ever triggered — only Memory (the Data Stream balance) resets each cycle.
+Tap to fill the Data Stream, combine bits into a permanent Byte generator, and grow it with Upgrade Capacity / Upgrade Speed; Data Stream bits auto-convert into free Kilobytes. Later: Storage pools of Disks that automatically complete Factory tier levels, Data Lakes that buy Boosters (Core → Megacomputer merge chain plus Compute Boost), and a PP-funded Compute (Flops) screen. The generator, Disks, Data Lakes and Compute entities are permanent across Prestige, as is the main-game unlock once earned — only the Data Stream balance resets each cycle.
 
 ### Guide
 
@@ -43,7 +44,7 @@ In-game **ℹ️ Guide** (`InfoPage`) holds evergreen, bullet-oriented explanati
 - `src/game/layers.js` — `TIER_DEFINITIONS` and economy constants.
 - `src/game/engine.js` — pure state helpers (no React, no side effects).
 - `src/game/useIncrementalGame.js` — React hook: state, tick timer, localStorage.
-- `src/App.jsx` — owns the single game hook; switches Byte Foundry / Main / Info / Storage / Compute via local `useState` (no router).
+- `src/App.jsx` — owns the single game hook; switches Byte Foundry / Boosters / Compute / Factory / Perks / Guide / Milestones / Settings via local `useState` plus a bottom nav (no router).
 - `src/pages/MainPage/index.jsx` — main game UI, data-driven from `TIER_DEFINITIONS`.
 
 ## Security notes
