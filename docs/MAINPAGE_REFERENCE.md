@@ -751,7 +751,9 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   `bare` `$narrow` `AutomationRow`, so with both capped a tier is one line. Flops cells are `$narrow`
   (`minmax(4.75rem, 1fr)` → three-up at 320px; label = tier **symbol** `KB`/`MF`, full name hidden +
   `title`; 0.88em font, Switch `zoom: 0.85`, button glyph hidden and the cost wraps instead of ellipsizing); global cells are
-  `minmax(15rem, 1fr)` (one per row on a phone, two-up wider). Categories: *Global Automation* (cells
+  `minmax(15rem, 1fr)` (one per row on a phone, two-up wider) and pass `inlineAction`, so their
+  upgrade/unlock button (glyph hidden, colour-coded) ends the head line — a global automation is always
+  exactly one line. Categories: *Global Automation* (cells
   `"<name> row"`, Auto Speed Up → Auto Restage → Auto Scale Up → Auto Overclock → Auto Purge; Restage
   and Scale Up both need Speed Up, Overclock needs both, Purge needs Overclock — engine-enforced),
   *Tier Autobuyers* (all ten tiers always listed; halves
@@ -766,7 +768,8 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
 Perks never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
 labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol
 once, its halves a ⚙/🤖 icon; Flops cells show the tier symbol (their category heading names the kind). Every automation is named
-`Auto <feature>` (no hyphen). Factory's Speed Up / Scale Up / Overclock cards share
+`Auto <feature>` (no hyphen) in every accessible name; on Perks the *visible* global/Booster label drops
+the redundant `Auto` (`Speed Up`, `Restage`, …, `Boost`) since the category heading already says it. Factory's Speed Up / Scale Up / Overclock cards share
 `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem heading); Auto Scale Up's status
 is an `AutoChip` in the Scale Up card header.
 Tab dots: Automation `automation perk available` (`hasAffordableAutomationPerk`: an automation unlock

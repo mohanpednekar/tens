@@ -1965,6 +1965,10 @@ test('Perks lists global automations in one order: Auto Speed Up → Restage →
   await openPerksTab(user, /open automation/i)
   const rows = within(screen.getByLabelText('global automation category')).getAllByLabelText(/ row$/)
   expect(rows.map(row => row.getAttribute('aria-label'))).toEqual(order.map(name => `${name} row`))
+  // Visible labels drop the redundant "Auto" (the category heading says it); accessible names keep it.
+  expect(rows.map(row => row.textContent)).toEqual(['Speed Up', 'Restage', 'Scale Up', 'Overclock', 'Purge'].map(n => expect.stringContaining(n)))
+  rows.forEach(row => expect(row).not.toHaveTextContent(/auto/i))
+  expect(screen.getByRole('button', { name: /^Auto Speed Up automation$/i })).toBeInTheDocument()
 })
 
 test('Auto Purge offers no speed upgrade or interval until it is bought', async () => {

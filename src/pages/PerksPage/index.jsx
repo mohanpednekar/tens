@@ -234,6 +234,21 @@ const InlineMeta = styled.span`
   white-space: nowrap;
 `
 
+// Wide (global) cells keep their upgrade/unlock button on the head line itself, right-aligned.
+const InlineAction = styled.span`
+  flex-shrink: 0;
+
+  & > button {
+    min-width: 3.75rem;
+    padding: 0.35em 0.5em;
+  }
+
+  /* Glyph dropped inline (colour already says upgrade vs unlock) so the name keeps its width. */
+  & > button > :first-child {
+    display: none;
+  }
+`
+
 // Full-width action under a cell's head (upgrade or unlock button). Narrow cells drop the button's
 // leading glyph (its colour already says upgrade vs unlock) so the PP cost keeps the whole width.
 const CellAction = styled.div`
@@ -387,9 +402,10 @@ const PpPurchaseButton = ({ ariaLabel, color, cost, points, disabled, onClick, t
 // One automation's whole lifecycle in a single compact cell (see CellGrid).
 // Head: label + (Switch once owned and pausable | `ownedBadge` | 🔒 `lockedBadge` milestone).
 // `subText` (compact interval, e.g. `2.9s` / `×8`) sits inline in the head. Below the head, only while
-// there's something left to buy: the
-// full-width `ownedAction` (⏫ speed upgrade) or `lockedAction` (🔓 PP unlock). Capped → head only.
-const AutomationRow = ({ ariaLabel, narrow = false, bare = false, icon, name, label = name, owned, enabled = true, onToggle, toggleLabel, statusTitle, title, subText, lockedBadge, lockedAction, ownedBadge, ownedAction }) => {
+// there's something left to buy: the full-width `ownedAction` (⏫ speed upgrade) or `lockedAction`
+// (🔓 PP unlock) — or, with `inlineAction` (wide global cells), the same button at the end of the head
+// line, so a global automation is always exactly one line. Capped → head only.
+const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction = false, icon, name, label = name, owned, enabled = true, onToggle, toggleLabel, statusTitle, title, subText, lockedBadge, lockedAction, ownedBadge, ownedAction }) => {
   const status = `${name} ${enabled ? 'active' : 'paused'}`
   const action = owned ? ownedAction : lockedAction
   return (
@@ -420,8 +436,9 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, icon, name, la
         )}
         {owned && !onToggle && ownedBadge}
         {!owned && lockedBadge}
+        {inlineAction && action && <InlineAction>{action}</InlineAction>}
       </CellHead>
-      {action && <CellAction $narrow={narrow}>{action}</CellAction>}
+      {!inlineAction && action && <CellAction $narrow={narrow}>{action}</CellAction>}
     </Cell>
   )
 }
@@ -529,6 +546,10 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               ariaLabel={`${auto.name.toLowerCase()} row`}
               enabled={enabled}
               icon={auto.icon}
+              inlineAction
+              // The category heading already says "Automation", so the visible name drops "Auto";
+              // every accessible name (status, Switch, buttons) keeps the full "Auto <feature>".
+              label={auto.name.replace(/^Auto /, '')}
               lockedAction={unlockButton({
                 name: auto.name,
                 cost: unlockCost,
@@ -671,6 +692,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               title: 'Spend Purge Points so a full tier waiting on its own in-flight merge automatically activates your preferred Boost preset (choose it on Boosters)',
             })}
             name="Auto Boost"
+            label="Boost"
+            inlineAction
             owned={isComputeAutoBoostActive}
             ownedBadge={<UnlockedBadge icon="🤖" name="Auto Boost" title="Auto Boost unlocked — choose its preset on Boosters" />}
           />
