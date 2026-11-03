@@ -739,11 +739,10 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   automation is a single line, label + Switch, nothing else (its interval moves to the cell's `title`).
   Before the cap the head also carries a terse inline interval (`InlineMeta`, `formatIntervalShort`:
   `64s`, `2.9s`, `212ms`; a tier autobuyer at the 10 ms floor shows only its bulk `×N`, up to 1024) —
-  never its own line — and the cell grows one line downward for a full-width ⏫ speed upgrade (visible text is the cost only — the
+  never its own line — and (tier / Flops cells) the cell grows one line downward for a full-width ⏫ speed upgrade (visible text is the cost only — the
   doubling to `M/buy` is in its `aria-label`/`title`; every tier autobuyer / tier tickspeed autobuyer
   chain starts at 100 PP). Locked: a 🔒
-  `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) or a full-width
-  🔓 PP unlock button (`"Enable <name> for N Purge Points"`). The Switch (`aria-pressed`, `aria-label`
+  `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) or a 🔓 PP unlock button (full-width below the head in narrow cells, inline for global ones) (`"Enable <name> for N Purge Points"`). The Switch (`aria-pressed`, `aria-label`
   e.g. `"Auto Scale Up automation"`, `"<tier>'s autobuyer"`) sits at the head's right; the status is
   `"<name> active|paused"` (`role="img"`). Tier autobuyers: one `TierPair` card per tier (`aria-label="<tier> automation"`, the tier's Factory
   accent stripe, grid `1.9rem | 1fr | 1fr`) = tier symbol, then the ⚙ tickspeed autobuyer half (left — where the
@@ -752,8 +751,9 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   (`minmax(4.75rem, 1fr)` → three-up at 320px; label = tier **symbol** `KB`/`MF`, full name hidden +
   `title`; 0.88em font, Switch `zoom: 0.85`, button glyph hidden and the cost wraps instead of ellipsizing); global cells are
   `minmax(15rem, 1fr)` (one per row on a phone, two-up wider) and pass `inlineAction`, so their
-  upgrade/unlock button (glyph hidden, colour-coded) ends the head line — a global automation is always
-  exactly one line. Categories: *Global Automation* (cells
+  upgrade/unlock button (glyph hidden, colour-coded) ends the head line — one line whenever it fits; the
+  head wraps (`CellHead $wrap`) so a very long cost drops the button to its own line rather than
+  ellipsizing the name. Categories: *Global Automation* (cells
   `"<name> row"`, Auto Speed Up → Auto Restage → Auto Scale Up → Auto Overclock → Auto Purge; Restage
   and Scale Up both need Speed Up, Overclock needs both, Purge needs Overclock — engine-enforced),
   *Tier Autobuyers* (all ten tiers always listed; halves

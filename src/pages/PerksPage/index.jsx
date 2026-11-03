@@ -212,7 +212,11 @@ const TierPairList = styled.div`
 const CellHead = styled.div`
   align-items: center;
   display: flex;
+  /* $wrap (inline-action cells): when a long cost won't fit, the button drops to its own line
+     instead of the name collapsing to an ellipsis — one line whenever it fits. */
+  flex-wrap: ${props => (props.$wrap ? 'wrap' : 'nowrap')};
   gap: 0.25rem;
+  row-gap: 0.3rem;
   justify-content: space-between;
   min-height: 1.9rem;
 
@@ -237,6 +241,7 @@ const InlineMeta = styled.span`
 // Wide (global) cells keep their upgrade/unlock button on the head line itself, right-aligned.
 const InlineAction = styled.span`
   flex-shrink: 0;
+  margin-left: auto;
 
   & > button {
     min-width: 3.75rem;
@@ -404,13 +409,13 @@ const PpPurchaseButton = ({ ariaLabel, color, cost, points, disabled, onClick, t
 // `subText` (compact interval, e.g. `2.9s` / `×8`) sits inline in the head. Below the head, only while
 // there's something left to buy: the full-width `ownedAction` (⏫ speed upgrade) or `lockedAction`
 // (🔓 PP unlock) — or, with `inlineAction` (wide global cells), the same button at the end of the head
-// line, so a global automation is always exactly one line. Capped → head only.
+// line — one line whenever it fits (the head wraps rather than ellipsizing the name). Capped → head only.
 const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction = false, icon, name, label = name, owned, enabled = true, onToggle, toggleLabel, statusTitle, title, subText, lockedBadge, lockedAction, ownedBadge, ownedAction }) => {
   const status = `${name} ${enabled ? 'active' : 'paused'}`
   const action = owned ? ownedAction : lockedAction
   return (
     <Cell $bare={bare} $narrow={narrow} aria-label={ariaLabel} title={title}>
-      <CellHead>
+      <CellHead $wrap={inlineAction}>
         <RowLabel>
           {/* Icon-less cells (tier/Flops lists, whose category heading names the kind) keep the
               status for assistive tech only — the Switch already shows it visually. */}
