@@ -348,8 +348,10 @@ import {
   queueIntroSpeedUpgrade,
   tickSpeedUpgradeDrain,
   isProvisionDiskInProgress,
+  getPoolTapMultiplier,
+  getDataStreamTapMultiplier,
 } from './engine'
-import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, REBOOT_THRESHOLD, REBOOT_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
+import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, REBOOT_THRESHOLD, REBOOT_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -761,9 +763,11 @@ describe('tapIntroBit', () => {
     expect(after.intro.dataStreamTapBonusPercent).toBe(FILL_MULTIPLIER_TAP_BONUS_PERCENT * 2)
   })
 
-  it('is still a no-op once already full, even in the post-reveal tap mode', () => {
+  it('still grants the bonus on a full Buffer in the post-reveal tap mode (it speeds consumers)', () => {
     const state = withIntro(createInitialGameState(), { bits: 10_000, capacity: 10_000 })
-    expect(tapIntroBit(state)).toBe(state)
+    const after = tapIntroBit(state)
+    expect(after.intro.dataStreamTapBonusPercent).toBe(FILL_MULTIPLIER_TAP_BONUS_PERCENT)
+    expect(after.intro.bits).toBe(10_000)
   })
 
   it('is a no-op once the stored tap bonus is already at FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT', () => {
@@ -783,8 +787,7 @@ describe('tapIntroBit', () => {
     })
     const after = tapIntroBit(state)
     expect(after.intro.dataStreamTapBonusPercent).toBe(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT)
-    // The combined reading still caps at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000).
-    expect(getDataStreamMultiplierPercent(after.intro)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
+    expect(getDataStreamTapMultiplier(after.intro)).toBe(2)
   })
 })
 
@@ -826,23 +829,31 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(getDataStreamFillFraction({ bits: 0, capacity: 0 })).toBe(0)
     })
 
-    it('getDataStreamMultiplierPercent applies any live tap bonus as ×(1 + bonus%) on the fill-based value', () => {
+    it('the Data Stream tap bonus never scales its fill — it is a ×(1 + bonus%) consumer multiplier', () => {
       const intro = { bits: 50, capacity: 100, dataStreamTapBonusPercent: 5 }
       expect(getDataStreamBaseMultiplierPercent(intro)).toBe(100)
-      expect(getDataStreamMultiplierPercent(intro)).toBe(105)
-      expect(getDataStreamEffectMultiplier(intro)).toBeCloseTo(1.05)
+      expect(getDataStreamMultiplierPercent(intro)).toBe(100)
+      expect(getDataStreamEffectMultiplier(intro)).toBeCloseTo(1)
+      expect(getDataStreamTapMultiplier(intro)).toBeCloseTo(1.05)
+      expect(getDataStreamTapMultiplier({})).toBe(1)
     })
 
-    it('applies the tap bonus multiplicatively: base × (1 + bonus%)', () => {
-      const intro = { bits: 0, capacity: 100, dataStreamTapBonusPercent: 50 }
-      expect(getDataStreamMultiplierPercent(intro)).toBe(FILL_MULTIPLIER_MAX_PERCENT * 1.5)
+    it('tickIntroProduction ignores the Data Stream tap bonus', () => {
+      const base = withIntro(createInitialGameState(), { byteCreated: true, bits: 0, capacity: 1_000_000 })
+      const tapped = withIntro(base, { dataStreamTapBonusPercent: 100 })
+      expect(tickIntroProduction(0.01)(tapped).intro.bits).toBeCloseTo(tickIntroProduction(0.01)(base).intro.bits, 9)
     })
 
-    it('caps the combined total at FILL_MULTIPLIER_TAP_CAP_PERCENT, not the tap bonus alone', () => {
-      const intro = { bits: 0, capacity: 100, dataStreamTapBonusPercent: 1_000 }
-      expect(getDataStreamBaseMultiplierPercent(intro)).toBe(FILL_MULTIPLIER_MAX_PERCENT)
-      expect(getDataStreamMultiplierPercent(intro)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
-      expect(getDataStreamEffectMultiplier(intro)).toBeCloseTo(FILL_MULTIPLIER_TAP_CAP_PERCENT / 100)
+    it('the tap bonus speeds the Upgrade Capacity / Upgrade Speed drains ×(1 + bonus%)', () => {
+      const base = withIntro(createInitialGameState(), { byteCreated: true, bits: 1e9, capacity: 1_000_000, capacityUpgradeQueued: true, capacityUpgradeProgress: 0, speedUpgradeQueued: false })
+      const tapped = withIntro(base, { dataStreamTapBonusPercent: 100 })
+      const rate = getIntroProductionRate(base.intro)
+      expect(tickCapacityUpgradeDrain(0.01)(base).intro.capacityUpgradeProgress).toBeCloseTo(rate * 0.01, 6)
+      expect(tickCapacityUpgradeDrain(0.01)(tapped).intro.capacityUpgradeProgress).toBeCloseTo(2 * rate * 0.01, 6)
+      const speedBase = withIntro(base, { capacityUpgradeQueued: false, speedUpgradeQueued: true, speedUpgradeProgress: 0 })
+      const speedTapped = withIntro(speedBase, { dataStreamTapBonusPercent: 100 })
+      expect(tickSpeedUpgradeDrain(0.01)(speedTapped).intro.speedUpgradeProgress).toBeCloseTo(2 * tickSpeedUpgradeDrain(0.01)(speedBase).intro.speedUpgradeProgress, 6)
+      expect(getRunningUpgradeDraw(tapped.intro).rate).toBeCloseTo(2 * rate, 6)
     })
   })
 
@@ -853,19 +864,20 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(getPoolBufferFillFraction(state, 1)).toBeCloseTo(0.5)
     })
 
-    it('getPoolMultiplierPercent applies that pool\'s own live tap bonus as ×(1 + bonus%) on its fill-based value', () => {
+    it('the pool tap bonus never scales the buffer fill — it is a ×(1 + bonus%) consumer multiplier', () => {
       const state = withIntro(withPoolBuffer(createInitialGameState(), 4, 1), { poolTapBonusPercents: { 1: 5 } })
       expect(getPoolBaseMultiplierPercent(state, 1)).toBe(100)
       expect(getPoolTapBonusPercent(state, 1)).toBe(5)
-      expect(getPoolMultiplierPercent(state, 1)).toBe(105)
-      expect(getPoolEffectMultiplier(state, 1)).toBeCloseTo(1.05)
+      expect(getPoolMultiplierPercent(state, 1)).toBe(100)
+      expect(getPoolEffectMultiplier(state, 1)).toBeCloseTo(1)
+      expect(getPoolTapMultiplier(state, 1)).toBeCloseTo(1.05)
+      expect(getPoolTapMultiplier(createInitialGameState(), 1)).toBe(1)
     })
 
-    it('caps the combined total at FILL_MULTIPLIER_TAP_CAP_PERCENT, not that pool\'s own tap bonus alone', () => {
-      const state = withIntro(createInitialGameState(), { poolTapBonusPercents: { 1: 1_000 } })
-      expect(getPoolBaseMultiplierPercent(state, 1)).toBe(FILL_MULTIPLIER_MAX_PERCENT) // pool 1's buffer starts empty
-      expect(getPoolMultiplierPercent(state, 1)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
-      expect(getPoolEffectMultiplier(state, 1)).toBeCloseTo(FILL_MULTIPLIER_TAP_CAP_PERCENT / 100)
+    it('tickPoolBufferFill ignores the pool tap bonus', () => {
+      const base = withIntro(createInitialGameState(), { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, bits: 1e9 })
+      const tapped = withIntro(base, { poolTapBonusPercents: { 1: 100 } })
+      expect(tickPoolBufferFill(0.1)(tapped).intro.poolBuffers[1]).toBeCloseTo(tickPoolBufferFill(0.1)(base).intro.poolBuffers[1], 9)
     })
 
     it('a locked/invalid pool has no fill fraction and no tap bonus', () => {
@@ -912,7 +924,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       })
       const after = tapPoolBuffer(1)(state)
       expect(after.intro.poolTapBonusPercents[1]).toBe(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT)
-      expect(getPoolMultiplierPercent(after, 1)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
+      expect(getPoolTapMultiplier(after, 1)).toBe(2)
     })
   })
 
@@ -948,29 +960,25 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
 
     // The stored bonus is its own 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT value — a save
     // carrying an over-large value (hand-edited, or written before the bonus had its own cap)
-    // is clamped on the next tick, independent of elapsedSeconds, while the COMBINED multiplier
-    // reading still caps at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000).
+    // is clamped on the next tick, independent of elapsedSeconds.
     it('clamps a stored Data Stream bonus above 100 down to the cap, even with elapsedSeconds=0', () => {
       const state = withIntro(createInitialGameState(), {
         bits: 0, capacity: 1000, dataStreamTapBonusPercent: 170,
       })
       const after = tickFillMultiplierDecay(0)(state)
       expect(after.intro.dataStreamTapBonusPercent).toBe(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT)
-      // base 1000 (empty buffer) × (1 + 100%) = 2000 → combined cap 2000.
-      expect(getDataStreamMultiplierPercent(after.intro)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
+      expect(getDataStreamTapMultiplier(after.intro)).toBe(2)
     })
 
-    it("forces a pool's own tap bonus to exactly 0 once its buffer is completely full — NOT merely headroom-truncated like the Data Stream's own bonus above (Devin finding on PR #562: a residual bonus riding on top of the retired fill-based reading)", () => {
-      const baseState = withIntro(createInitialGameState(), { poolTapBonusPercents: { 1: 170 } })
-      const fullBufferBits = getPoolBufferCapacity(baseState, 1)
-      const state = withIntro(baseState, { poolBuffers: { 1: fullBufferBits } })
-      const after = tickFillMultiplierDecay(0)(state)
-      expect(after.intro.poolTapBonusPercents[1]).toBe(0)
-      // The pool's own total multiplier reading is now exactly FILL_MULTIPLIER_MIN_PERCENT (10%).
-      expect(getPoolMultiplierPercent(after, 1)).toBe(FILL_MULTIPLIER_MIN_PERCENT)
+    it("keeps a pool's tap bonus on a full buffer (it speeds consumers) and only decays it", () => {
+      const baseState = withIntro(createInitialGameState(), { poolTapBonusPercents: { 1: 50 } })
+      const state = withIntro(baseState, { poolBuffers: { 1: getPoolBufferCapacity(baseState, 1) } })
+      expect(tickFillMultiplierDecay(0)(state)).toBe(state)
+      expect(tickFillMultiplierDecay(2)(state).intro.poolTapBonusPercents[1]).toBe(50 - 2 * FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND)
+      expect(getPoolMultiplierPercent(state, 1)).toBe(FILL_MULTIPLIER_MIN_PERCENT)
     })
 
-    it('does NOT force a pool\'s tap bonus to 0 while its buffer still has room — only a genuinely full buffer retires the fill-based reading', () => {
+    it('leaves a pool\'s tap bonus untouched at zero elapsed time while its buffer still has room', () => {
       const state = withIntro(withPoolBuffer(createInitialGameState(), 4, 1), { poolTapBonusPercents: { 1: 5 } })
       const after = tickFillMultiplierDecay(0)(state)
       expect(after.intro.poolTapBonusPercents[1]).toBe(5)
@@ -1597,6 +1605,12 @@ describe('tickDataLakePoolDrain (buffer priority: disk filling > provisioning in
     const state = pool({ disksBuiltTotal: partial, disks: partial })
     expect(isDataLakePoolDrainAvailable(state, 1)).toBe(true)
     expect(getDataLakeDepositedUnits(1)(tickDataLakePoolDrain(1e6)(state))).toBe(1)
+  })
+
+  it('the pool tap bonus speeds the drain ×(1 + bonus%) — the lake is a pool consumer', () => {
+    const drained = extra => 80_000 - tickDataLakePoolDrain(0.001)(pool(extra)).intro.poolBuffers[1]
+    expect(drained({})).toBeGreaterThan(0)
+    expect(drained({ poolTapBonusPercents: { 1: 100 } })).toBeCloseTo(2 * drained({}), 6)
   })
 
   it('moves bits from the pool buffer into its lake, even while an upgrade is diverting the Data Stream', () => {
@@ -3794,6 +3808,21 @@ describe('tickDiskWriteCache', () => {
     expect(after.intro.disks[level2Size]).toBe(DISK_ARRAY_LADDER_CAP - 1)
   })
 
+  it('the pool tap bonus speeds merge segments and the flush countdown ×(1 + bonus%)', () => {
+    const merging = (merge, extra = {}) => withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
+      disks: { [level2Size]: DISK_ARRAY_LADDER_CAP },
+      diskWriteCache: { [level3Size]: { sourceSize: level2Size, segmentTotalSeconds: 10, flushTotalSeconds: 10, ...merge } },
+      ...extra,
+    })
+    const collecting = { segmentsCollected: 0, segmentRemainingSeconds: 10, flushRemainingSeconds: 10 }
+    const tap = { poolTapBonusPercents: { 1: 100 } }
+    expect(getDiskWriteCacheMerge(tickDiskWriteCache(1)(merging(collecting)), level3Size).segmentRemainingSeconds).toBeCloseTo(9)
+    expect(getDiskWriteCacheMerge(tickDiskWriteCache(1)(merging(collecting, tap)), level3Size).segmentRemainingSeconds).toBeCloseTo(8)
+    const flushing = { segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER, segmentRemainingSeconds: 0, flushRemainingSeconds: 10 }
+    expect(getDiskWriteCacheMerge(tickDiskWriteCache(1)(merging(flushing, tap)), level3Size).flushRemainingSeconds).toBeCloseTo(8)
+  })
+
   // Regression: the write cache's own collect/flush threshold used to reuse DISK_ARRAY_LADDER_CAP
   // (the array-full ELIGIBILITY gate — how many disks make a full array) for the SEGMENT COUNT too
   // (how many source-disk segments a merge collects before flushing) — these happened to be equal
@@ -4247,6 +4276,19 @@ describe('tickDiskLevelOneCachePull', () => {
     expect(afterTick.intro.diskBuild?.size).toBe(FIRST_DISK_SIZE) // still mid-build
     expect(afterTick.owned[tensTier.id] ?? 0).toBe(0)
     expect(afterTick.intro.diskCache[FIRST_DISK_SIZE]).toBe(unitCost * 3)
+  })
+
+  it('the pool tap bonus speeds an in-flight read-cache flush countdown ×(1 + bonus%)', () => {
+    // Tier past this size's level, so the flush isn't paused by a tier claim (isDiskRedeemable).
+    const flushing = extra => ({ ...withIntro(createInitialGameState(), {
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+      diskReadCacheFlush: { [FIRST_DISK_SIZE]: { remainingSeconds: 5, totalSeconds: 10 } },
+      ...extra,
+    }), purchaseLevels: { [tensTier.id]: 2 } })
+    expect(tickDiskAutoFill(1)(flushing({})).intro.diskReadCacheFlush[FIRST_DISK_SIZE].remainingSeconds).toBeCloseTo(4)
+    expect(tickDiskAutoFill(1)(flushing({ poolTapBonusPercents: { 1: 100 } })).intro.diskReadCacheFlush[FIRST_DISK_SIZE].remainingSeconds).toBeCloseTo(3)
   })
 
   it('cancels an in-flight read-cache flush for the same size it just spent from (Devin Review finding — a preserved flush after a level reset otherwise blocks refill for its whole remaining duration, then produces no disk)', () => {
@@ -11689,29 +11731,75 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
     expect(tickAutoProvisionLowerDiskSizes(1)(state)).toBe(state)
   })
 
-  it('rebuilds each smaller-size disk for free at the pool\'s BASE Bandwidth, one at a time, ignoring the fill multiplier', () => {
-    const base = afterReset()
+  // A funded pool buffer: the cache reservation plus `disks` disks' worth of spendable bits.
+  const funded = (state, disks) => withIntro(state, {
+    poolBuffers: { 1: getPoolCacheReservationBits(state, 1) + disks * FIRST_DISK_SIZE },
+  })
+
+  it('the pool tap bonus speeds the rebuild ×(1 + bonus%)', () => {
+    const base = funded(afterReset(), 2)
+    const tapped = withIntro(base, { poolTapBonusPercents: { 1: 100 } })
+    const diskSeconds = getLowerRebuildDiskSeconds(base, FIRST_DISK_SIZE)
+    expect(getLowerRebuildDiskSeconds(tapped, FIRST_DISK_SIZE)).toBeCloseTo(diskSeconds / 2)
+    expect(tickAutoProvisionLowerDiskSizes(diskSeconds / 4)(tapped).intro.lowerRebuild.progress).toBeCloseTo(0.5, 9)
+    expect(getLowerRebuildSummary(tapped).seconds).toBeCloseTo(getLowerRebuildSummary(base).seconds / 2, 6)
+  })
+
+  it('rebuilds each smaller-size disk for one fill from the pool buffer at BASE Bandwidth, one at a time, ignoring the fill multiplier', () => {
+    const base = funded(afterReset(), 3)
+    const startBuffer = base.intro.poolBuffers[1]
     const diskSeconds = getLowerRebuildDiskSeconds(base, FIRST_DISK_SIZE)
     expect(diskSeconds).toBe(FIRST_DISK_SIZE / getStoragePoolBandwidth(base, 1))
-    expect(base.intro.poolBuffers?.[1] ?? 0).toBe(0) // nothing to pay with
     const half = tickAutoProvisionLowerDiskSizes(diskSeconds / 2)(base)
     expect(half.intro.lowerRebuild).toEqual({ size: FIRST_DISK_SIZE, progress: 0.5 })
     expect(half.intro.disksBuiltTotal[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(half.intro.poolBuffers[1]).toBeCloseTo(startBuffer - FIRST_DISK_SIZE / 2, 6)
     const one = tickAutoProvisionLowerDiskSizes(diskSeconds / 2)(half)
     expect(one.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(1)
     expect(one.intro.disks[FIRST_DISK_SIZE]).toBe(1) // lands full
     expect(one.intro.lowerRebuild).toBeNull()
-    expect(one.intro.poolBuffers?.[1] ?? 0).toBe(0) // free
+    // exactly one fill per disk — no extra provisioning cost
+    expect(one.intro.poolBuffers[1]).toBeCloseTo(startBuffer - FIRST_DISK_SIZE, 6)
     // an offline-sized gap rebuilds several disks in one call
     const three = tickAutoProvisionLowerDiskSizes(diskSeconds * 3)(base)
     expect(three.intro.disks[FIRST_DISK_SIZE]).toBe(3)
-    // the fill multiplier (a full vs empty tap bonus) never changes the pace
-    const boosted = withIntro(base, { dataStreamTapBonusPercent: 500 })
+    // the Data Stream's tap bonus never changes the pace
+    const boosted = withIntro(base, { dataStreamTapBonusPercent: 100 })
     expect(tickAutoProvisionLowerDiskSizes(diskSeconds)(boosted).intro.disks[FIRST_DISK_SIZE]).toBe(1)
   })
 
+  it('holds the Data Lake drain off its pool while the rebuild is pending, so the lake cannot take its funding', () => {
+    // One smallest disk built and full, so the lake is ready and every other drain condition holds.
+    const oneDisk = { disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 }, disks: { [FIRST_DISK_SIZE]: 1 } }
+    const state = funded(withIntro(afterReset(), oneDisk), 2)
+    expect(isLowerDiskSizePending(state)).toBe(true)
+    expect(isStoragePoolProvisioningInProgress(state, 1)).toBe(true)
+    expect(isDataLakePoolDrainAvailable(state, 1)).toBe(false)
+    expect(tickDataLakePoolDrain(1)(state)).toBe(state)
+    // The same pool with no rebuild pending (only one size unlocked) does drain — the rebuild alone blocks it.
+    const notPending = withIntro(state, { unlockedDiskSteps: 1 })
+    expect(isLowerDiskSizePending(notPending)).toBe(false)
+    expect(isDataLakePoolDrainAvailable(notPending, 1)).toBe(true)
+    // The rebuild gets the whole tick's draw.
+    const ticked = tickAutoProvisionLowerDiskSizes(1)(tickDataLakePoolDrain(1)(state))
+    expect(ticked.intro.poolBuffers[1]).toBeCloseTo(state.intro.poolBuffers[1] - getStoragePoolBandwidth(state, 1), 6)
+    const done = withIntro(state, { disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP }, disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP } })
+    expect(isStoragePoolProvisioningInProgress(done, 1)).toBe(false)
+  })
+
+  it('stalls on an empty buffer (same reference), never dips into the read cache\'s claim, and is limited by what the buffer holds', () => {
+    const empty = afterReset()
+    expect(tickAutoProvisionLowerDiskSizes(100)(empty)).toBe(empty)
+    const reserveOnly = funded(afterReset(), 0)
+    expect(tickAutoProvisionLowerDiskSizes(100)(reserveOnly)).toBe(reserveOnly)
+    const scarce = withIntro(afterReset(), { poolBuffers: { 1: getPoolCacheReservationBits(afterReset(), 1) + FIRST_DISK_SIZE / 10 } })
+    const after = tickAutoProvisionLowerDiskSizes(1e6)(scarce)
+    expect(after.intro.lowerRebuild.progress).toBeCloseTo(0.1, 9)
+    expect(after.intro.poolBuffers[1]).toBeCloseTo(getPoolCacheReservationBits(afterReset(), 1), 6)
+  })
+
   it('getLowerRebuildSummary totals the exact remaining time and counts in-flight progress', () => {
-    const base = afterReset()
+    const base = funded(afterReset(), 3)
     const diskSeconds = getLowerRebuildDiskSeconds(base, FIRST_DISK_SIZE)
     expect(getLowerRebuildSummary(base)).toEqual({ seconds: DISK_ARRAY_LADDER_CAP * diskSeconds, disksDone: 0, disksTotal: DISK_ARRAY_LADDER_CAP, projected: false })
     const part = tickAutoProvisionLowerDiskSizes(diskSeconds * 2.5)(base)
@@ -12030,11 +12118,18 @@ describe('Provision Disk (buffer-funded, fixed speed)', () => {
 
   it('runs at the fixed speed regardless of the fill multiplier and of how full the buffer is', () => {
     const seconds = provDiskSeconds(provBase())
-    for (const patch of [{}, { poolTapBonusPercents: { 1: 100 } }, { poolBuffers: { 1: 5e6 } }]) {
+    for (const patch of [{}, { poolBuffers: { 1: 5e6 } }]) {
       const state = withIntro(provBase(), patch)
       const after = tickQueuedDiskBuild(seconds / 4)(provisionDisk(state))
       expect(getDiskProvisionPassesCollected(after, PROV_FIRST)).toBeCloseTo(0.25, 9)
     }
+  })
+
+  it('the pool tap bonus speeds the draw ×(1 + bonus%) — provisioning is a pool consumer', () => {
+    const seconds = provDiskSeconds(provBase())
+    const state = withIntro(provBase(), { poolTapBonusPercents: { 1: 100 } })
+    const after = tickQueuedDiskBuild(seconds / 4)(provisionDisk(state))
+    expect(getDiskProvisionPassesCollected(after, PROV_FIRST)).toBeCloseTo(0.5, 9)
   })
 
   it('stalls on an empty buffer (same reference) and is limited by what the buffer holds', () => {

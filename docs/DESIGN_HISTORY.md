@@ -9093,3 +9093,28 @@ The player-facing name became **Restage** (autobuyer: **Auto Restage**) at the m
 At the maintainer's request, Latency + Restage (above the tier list) and Scale Up + Overclock (below
 it) each share one `SpeedCardsRow` that stays side by side at every width (`flex: 1 1 0`, no wrap),
 superseding the earlier below-40rem single-column stack of Scale Up / Overclock.
+
+## Tap bonuses moved from buffer fills to their consumers (2026-11)
+
+Taps used to multiply the Data Stream's and each pool's own fill (×(1 + bonus%) inside
+`tickIntroProduction`/`tickPoolBufferFill`, combined reading capped at the since-removed
+`FILL_MULTIPLIER_TAP_CAP_PERCENT` = 2000), and `tickFillMultiplierDecay` zeroed a pool's bonus once its
+buffer was full. Maintainer direction: the stream and pools already reach 10× on their own fill curve
+and their sources keep up, so a tap belongs on what DRAINS the buffer. `getDataStreamTapMultiplier`
+now scales the Upgrade Capacity / Speed drains; `getPoolTapMultiplier` scales the Provision Disk draw,
+the read-cache → disk flush countdown, write-cache merge countdowns, the lower-size rebuild and the
+Data Lake drain. `get*MultiplierPercent` are fill-only; the full-buffer reset and the post-reveal
+full-Buffer tap no-op were dropped (a full buffer is exactly when faster consumers help). Not applied:
+pool buffer fills (they are fill curves, not stream consumers needing help), full-buffer lake overflow
+(Data Stream sourced) and `getComputeMergeDurationSeconds` (reads the static flush duration).
+
+## "Free" Foundry-reset rebuild means one fill per disk, not zero bits (2026-11)
+
+The lower-size rebuild (`tickAutoProvisionLowerDiskSizes`) was implemented as a pure timer at base
+Bandwidth that spent nothing, reading "free" literally. Maintainer clarification: "free" meant only
+that the extra initial provisioning cost (the multi-pass `getDiskProvisionPassesRequired` draw) does
+not apply — filling the disk once is enough. Each rebuilt disk now draws exactly `size` bits from its
+pool buffer (minus the read cache's claim) at base Bandwidth × pool tap bonus and stalls (progress
+kept) on an empty buffer. Because it now competes for the buffer, a pending rebuild counts as
+provisioning-in-progress (`isStoragePoolProvisioningInProgress`) so the lower-priority Data Lake drain,
+which runs earlier in `tickGame`, cannot starve it.

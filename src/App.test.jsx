@@ -2561,7 +2561,7 @@ test('once mainGameUnlocked, the standalone Tap button is gone and Data Stream i
   expect(Number(balanceBar.getAttribute('aria-valuenow'))).toBeGreaterThanOrEqual(89)
 })
 
-test('the Data Stream tile stops accepting taps once Buffer is full, same as the old standalone button', () => {
+test('the Data Stream tile stays tappable on a full Buffer (the bonus speeds consumers) without crediting bits', () => {
   // Fake timers so auto-convert can't drain a full Buffer between mount and the assertion.
   vi.useFakeTimers()
 
@@ -2570,7 +2570,7 @@ test('the Data Stream tile stops accepting taps once Buffer is full, same as the
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   const tapTarget = screen.getByRole('button', { name: /tap to generate a bit/i })
-  expect(tapTarget).toBeDisabled()
+  expect(tapTarget).not.toBeDisabled()
 
   fireEvent.click(tapTarget)
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
@@ -3273,7 +3273,7 @@ describe('pool speed details popover', () => {
     expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
   })
 
-  it('explains a Data Stream limit, the share earlier pools take, and a capped multiplier', () => {
+  it('explains a Data Stream limit, the share earlier pools take, and the consumer tap bonus', () => {
     seedMainGameState({ intro: {
       mainGameUnlocked: true, bits: 0, capacity: 32_000_000, speedCapacity: 1024, byteCreated: true,
       dataLakes: { 1: { bandwidthSteps: 4 } },
@@ -3292,7 +3292,7 @@ describe('pool speed details popover', () => {
     const pool2Dialog = screen.getByRole('dialog', { name: 'MB Pool speed' })
     expect(within(pool2Dialog).getByText('Taken by earlier pools')).toBeInTheDocument()
     expect(within(pool2Dialog).getByText(/earlier pools take their Bandwidth first/)).toBeInTheDocument()
-    expect(within(pool2Dialog).getByText(/% \(capped\)$/)).toBeInTheDocument()
+    expect(within(pool2Dialog).getByText(`+${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}%`)).toBeInTheDocument()
   })
 
   it('closes on a wheel or touch-move outside, and toggles closed when the speed is clicked again', () => {
@@ -3696,6 +3696,48 @@ describe('Byte Foundry Storage', () => {
     expect(provisionButton).toHaveTextContent('⚡')
     expect(provisionButton).toHaveTextContent('33%')
     expect(screen.getByRole('progressbar', { name: /disk build progress/i })).toHaveAttribute('aria-valuenow', '33')
+  })
+
+  test('the rebuild status says it is waiting for an earlier pool while that pool\'s reset rebuild still holds the lock', () => {
+    // Pool 1 (ladder steps 1-3) fully built but its lake still flagged rebuilding; pool 2's first size
+    // (step 4) is the pending lower-size rebuild below the presented step 5.
+    const pool1Sizes = [currentBankSize, currentBankSize * 10, currentBankSize * 100]
+    const full = Object.fromEntries(pool1Sizes.map(size => [size, 9]))
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 5,
+      disks: full,
+      disksBuiltTotal: full,
+      dataLakes: { 1: { rebuilding: true } },
+    })
+    render(<App />)
+    expect(screen.getByRole('button', { name: /provision disk/i })).toHaveAttribute('aria-description', expect.stringMatching(/Rebuilding .* first · waiting for earlier pool/))
+  })
+
+  test('the rebuild status says it is waiting for buffer while the pool buffer cannot fund it, automatic once it can', () => {
+    const seed = poolBuffers => seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 2,
+      disks: { [currentBankSize]: 3 },
+      disksBuiltTotal: { [currentBankSize]: 3 },
+      poolBuffers,
+    })
+    seed({})
+    const { unmount } = render(<App />)
+    expect(screen.getByRole('button', { name: /provision disk/i })).toHaveAttribute('aria-description', expect.stringMatching(/Rebuilding .* first · waiting for buffer/))
+    unmount()
+    localStorage.clear()
+    // Once the read cache is full its claim is 0, so the buffer funds the rebuild.
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      unlockedDiskSteps: 2,
+      disks: { [currentBankSize]: 3 },
+      disksBuiltTotal: { [currentBankSize]: 3 },
+      diskCache: { [currentBankSize]: currentBankSize },
+      poolBuffers: { 1: currentBankSize / 2 },
+    })
+    render(<App />)
+    expect(screen.getByRole('button', { name: /provision disk/i })).toHaveAttribute('aria-description', expect.stringMatching(/Rebuilding .* first · automatic/))
   })
 
   test('a queued Provision Disk waiting behind Disk Fill never claims "now" for its time', () => {

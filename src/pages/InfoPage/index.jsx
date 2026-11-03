@@ -28,7 +28,6 @@ import {
   FILL_MULTIPLIER_MIN_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT,
-  FILL_MULTIPLIER_TAP_CAP_PERCENT,
   FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND,
   INTRO_BYTE_COMBINE_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -187,7 +186,7 @@ const InfoPage = () => {
           <li>
             <strong>Tap</strong> the Data Stream to add one second of its production. Once Storage
             appears (at {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)} Capacity), a tap
-            instead adds a temporary tap bonus to its speed (below).
+            instead adds a temporary tap bonus to what it feeds (below).
           </li>
           <li>
             <strong>Combine</strong> the first {INTRO_BYTE_COMBINE_COST} bits into a permanent Byte
@@ -203,7 +202,10 @@ const InfoPage = () => {
             (fast). Tapping the Data Stream (once Storage appears) or a pool’s Memory tile adds a +
             {FILL_MULTIPLIER_TAP_BONUS_PERCENT}% tap bonus (up to {FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}%),
             which fades by {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}% per second and shows as a
-            thin bar and “+x% 👆”. The combined multiplier is capped at {FILL_MULTIPLIER_TAP_CAP_PERCENT}%.
+            thin bar and “+x% 👆”. A tap never speeds the fill itself (it already reaches{' '}
+            {FILL_MULTIPLIER_MAX_PERCENT / 100}×); it speeds what that buffer feeds — on the Data Stream,
+            Upgrade Capacity / Speed; on a pool, disk provisioning, disk fills and merges, rebuilds and
+            the Data Lake.
           </li>
           <li>
             <strong>Upgrade Capacity</strong> costs your current Capacity and doubles it.{' '}

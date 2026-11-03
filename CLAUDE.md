@@ -686,7 +686,7 @@ Strict three-layer separation:
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
     dashboard, Legal (`LegalSection.jsx`: Privacy Policy / Terms links), and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
     Storage / Compute + upgrades wipe to scratch; Combine / Upgrade Capacity / Upgrade Speed
-    convenience-auto up to prior highs; smaller Disk sizes re-provision for free; Factory + Prestige kept). Takes `{ game, onReset,
+    convenience-auto up to prior highs; smaller Disk sizes re-provision with no provisioning cost (one buffer fill per disk); Factory + Prestige kept). Takes `{ game, onReset,
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
     aside from local form state.
@@ -785,8 +785,11 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
 
 **Hard rules (full text and the rest of the Foundry mechanics: `docs/FOUNDRY_MECHANICS_REFERENCE.md`):**
 - **Fill multiplier** (`FILL_MULTIPLIER_*`, `getFillMultiplierPercent`): displayed Speed/Bandwidth never
-  change; a fill-dependent multiplier (1000% empty → 100% at 50% → 10% full (log-linear), ×(1 + tap bonus%) decaying
-  1%/s, capped 2000%) scales only the real per-tick amount delivered (`getFillCurveDelta` integrates the curve so a 1s offline tick matches live 0.1s ticks).
+  change; a fill-dependent multiplier (1000% empty → 100% at 50% → 10% full (log-linear)) scales only the
+  real per-tick amount delivered (`getFillCurveDelta` integrates the curve so a 1s offline tick matches live 0.1s ticks).
+  **Tap bonuses never scale a fill** (the curve already reaches 10×); they speed CONSUMERS ×(1 + bonus%),
+  decaying 1%/s: Data Stream tap → Upgrade Capacity/Speed drains (`getDataStreamTapMultiplier`); pool tap →
+  Provision Disk draw, read-cache flush, write-cache merges, lower-size rebuild, Data Lake drain (`getPoolTapMultiplier`).
 - **Standing rule — `intro.capacity` keeps doubling plainly in binary** (IEC `KiB`/`MiB`, step 1024);
   non-binary (SI-clean/decade-power) transforms are for storage-pool-scoped values only
   (`getStoragePoolCapacity`, `getDecadePowerEquivalentBits`, `getSiCleanEquivalentBits`) — two earlier
@@ -966,11 +969,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-<<<<<<< HEAD
 - `yarn test` is green (run it for the current count — counts are deliberately not recorded here: every PR bumped them, so they went stale and made CLAUDE.md the top merge-conflict hot-spot). The four core test files (`engine.test.js`, `layers.test.js`,
-=======
-- `yarn test` is green (2187 tests). The four core test files (`engine.test.js`, `layers.test.js`,
->>>>>>> origin/main
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

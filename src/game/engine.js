@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, REBOOT_THRESHOLD, UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, REBOOT_THRESHOLD, UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -414,9 +414,9 @@ export const createInitialGameState = () => ({
     // Disk, Capacity) after a Foundry wipe. null when inactive. Survives Prestige like other
     // permanent intro fields; cleared only by a full save Reset.
     foundryResetCaps: null,
-    // Progress (0..1) of the one lower-size disk currently being rebuilt for free after a Foundry reset
-    // (tickAutoProvisionLowerDiskSizes): { size, progress } or null. Advances at the pool's BASE
-    // Bandwidth, never the fill multiplier. Wiped with the rest of the Foundry.
+    // Progress (0..1) of the one lower-size disk currently being rebuilt after a Foundry reset (one buffer fill, no provisioning cost)
+    // (tickAutoProvisionLowerDiskSizes): { size, progress } or null. Draws one disk's worth from the
+    // pool buffer at the pool's BASE Bandwidth × tap bonus, never the fill multiplier. Wiped with the rest of the Foundry.
     lowerRebuild: null,
     // PERMANENT — a one-time-ever latch, never reset by a real Prestige or an Era ascension (see
     // rebootGame/buildEraIntroReset). True the instant Storage's own capacity threshold is
@@ -643,13 +643,13 @@ export const createInitialGameState = () => ({
     // NOT permanent — resets to 0 on every real Prestige/Era ascension/Reset Byte Foundry (falls
     // out of the intro object entirely, same posture as computeBoostType), but carried through
     // untouched by Scale Up/Overclock like the rest of intro. The Data Stream's own decaying tap
-    // bonus (see FILL_MULTIPLIER_TAP_BONUS_PERCENT/tickFillMultiplierDecay/getDataStreamMultiplierPercent
-    // in engine.js) — added to by tapIntroBit once Storage pools are revealed at 1 KiB, decays back
+    // bonus (see FILL_MULTIPLIER_TAP_BONUS_PERCENT/tickFillMultiplierDecay/getDataStreamTapMultiplier
+    // in engine.js) — speeds the stream's upgrade drains; added to by tapIntroBit once Storage pools are revealed at 1 KiB, decays back
     // toward 0 at FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND per second.
     dataStreamTapBonusPercent: 0,
     // NOT permanent, same reset posture as dataStreamTapBonusPercent above — { [poolIndex]: decaying
-    // tap bonus percent } for each pool's own local Memory buffer (see tapPoolBuffer/
-    // getPoolMultiplierPercent in engine.js). Missing/zero entries are equivalent to "no bonus."
+    // tap bonus percent } for each pool (see tapPoolBuffer/getPoolTapMultiplier in engine.js) — speeds
+    // that pool's consumers. Missing/zero entries are equivalent to "no bonus."
     poolTapBonusPercents: {},
   },
 })
@@ -2403,13 +2403,18 @@ export const getDataStreamFillFraction = intro =>
 export const getDataStreamBaseMultiplierPercent = intro =>
   getFillMultiplierPercent(getDataStreamFillFraction(intro))
 
-// The Data Stream's currently active multiplier percent — fill-based value times (1 + live decaying
-// tap bonus %) (see tapIntroBit/tickFillMultiplierDecay). What ByteFoundryPage displays alongside the
-// Speed figure, and what getDataStreamEffectMultiplier below turns into the real production scale.
-// Fill-based value × (1 + live tap bonus %), hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000) — the
-// cap applies to this CUMULATIVE total, not to dataStreamTapBonusPercent alone (see layers.js).
+// The Data Stream's fill multiplier percent — the fill-based value only. The fill curve already reaches
+// FILL_MULTIPLIER_MAX_PERCENT on its own, so the Data Stream's tap bonus never scales this fill; it
+// speeds the stream's CONSUMERS instead (getDataStreamTapMultiplier). What ByteFoundryPage displays
+// alongside the Speed figure, and what getDataStreamEffectMultiplier turns into the production scale.
 export const getDataStreamMultiplierPercent = intro =>
-  Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getDataStreamBaseMultiplierPercent(intro) * (1 + (intro.dataStreamTapBonusPercent ?? 0) / 100))
+  getDataStreamBaseMultiplierPercent(intro)
+
+// ×(1 + live decaying Data Stream tap bonus %) on the stream's rate-limited consumers — the running
+// Upgrade Capacity / Upgrade Speed drain (tickCapacityUpgradeDrain/tickSpeedUpgradeDrain). Pool
+// buffers are fill curves of their own and don't take it.
+export const getDataStreamTapMultiplier = intro =>
+  1 + (intro?.dataStreamTapBonusPercent ?? 0) / 100
 
 export const getDataStreamEffectMultiplier = intro => getDataStreamMultiplierPercent(intro) / 100
 
@@ -2420,8 +2425,8 @@ export const getDataStreamDeliveredRate = intro =>
   getIntroProductionRate(intro) * getComputeBoostMultiplier(intro) * getDataStreamEffectMultiplier(intro)
 
 // The running Upgrade Capacity / Upgrade Speed bar's draw (null when none runs), mirroring
-// tickCapacityUpgradeDrain/tickSpeedUpgradeDrain: base Speed at a constant 1x (the fill multiplier
-// does not apply to upgrades). The drains run right after production, so the draw is never supply-limited.
+// tickCapacityUpgradeDrain/tickSpeedUpgradeDrain: base Speed × the Data Stream tap bonus (the fill
+// multiplier does not apply to upgrades). The drains run right after production, so the draw is never supply-limited.
 const UPGRADE_DRAW_MULTIPLIER_PERCENT = 100
 
 export const getRunningUpgradeDraw = intro => {
@@ -2430,8 +2435,9 @@ export const getRunningUpgradeDraw = intro => {
   const cost = speed ? getSpeedUpgradeCostBits(intro) : intro.capacity
   const stored = speed ? intro.speedUpgradeProgress : intro.capacityUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
-  const multiplierPercent = UPGRADE_DRAW_MULTIPLIER_PERCENT
-  const rate = getIntroProductionRate(intro)
+  const tapMultiplier = getDataStreamTapMultiplier(intro)
+  const multiplierPercent = UPGRADE_DRAW_MULTIPLIER_PERCENT * tapMultiplier
+  const rate = getIntroProductionRate(intro) * tapMultiplier
   return { kind: speed ? 'speed' : 'capacity', cost, progress, multiplierPercent, rate }
 }
 
@@ -2439,16 +2445,13 @@ export const getRunningUpgradeDraw = intro => {
 // credits "one second's worth" at the Byte generator's current rate (see getIntroProductionRate),
 // capped at capacity — the original flat 1-bit tap at the starting rate. Once Storage pools ARE
 // revealed, this direct-credit effect is REPLACED (see FILL_MULTIPLIER_* in layers.js): a tap
-// instead adds FILL_MULTIPLIER_TAP_BONUS_PERCENT to the Data Stream's own decaying multiplier
-// bonus (dataStreamTapBonusPercent) — tickFillMultiplierDecay drains it back down over time, and
-// tickIntroProduction is what actually spends the resulting multiplier against real per-tick
-// delivery; no bits are credited directly by the tap itself in this mode. Never freezes (no
-// completed-style flag — see createInitialGameState) — the only no-op condition, either mode, is
-// already being full (a full Buffer has no room left for either a direct credit or a faster fill
-// rate to matter) or, in the post-reveal mode, the stored tap bonus already sitting at
-// FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT (100) — another tap would have nothing left to add.
+// instead adds FILL_MULTIPLIER_TAP_BONUS_PERCENT to the Data Stream's own decaying consumer bonus
+// (dataStreamTapBonusPercent, see getDataStreamTapMultiplier) — tickFillMultiplierDecay drains it back
+// down over time; no bits are credited directly by the tap itself in this mode. Never freezes (no
+// completed-style flag — see createInitialGameState). No-op pre-reveal on a full Buffer (no room for
+// the credit); post-reveal only once the stored tap bonus sits at FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT
+// (100) — a full Buffer is fine, the bonus speeds consumers.
 export const tapIntroBit = state => {
-  if (state.intro.bits >= state.intro.capacity) return state
   // Fill-multiplier-bonus mode once Storage itself has been revealed — isStorageUnlocked directly
   // (NOT getVisibleStoragePoolCount(state) >= 1, which pool 1's own special-case always satisfies
   // regardless of actual Capacity — see that function's own doc comment).
@@ -2469,6 +2472,7 @@ export const tapIntroBit = state => {
   // Math.max(1, …) is a defensive floor (the derived rate is always >= BITS_PER_BYTE at the
   // starting 1-Byte capacity — but guards against a corrupted/hand-edited save where that
   // invariant doesn't hold) — the same posture as clampNonNegative elsewhere in this file.
+  if (state.intro.bits >= state.intro.capacity) return state
   const tapAmount = Math.max(1, Math.floor(getIntroProductionRate(state.intro)))
   return { ...state, intro: { ...state.intro, bits: Math.min(state.intro.capacity, state.intro.bits + tapAmount) } }
 }
@@ -2819,14 +2823,20 @@ export const getPoolBaseMultiplierPercent = (state, poolIndex) =>
 export const getPoolTapBonusPercent = (state, poolIndex) =>
   state.intro?.poolTapBonusPercents?.[poolIndex] ?? 0
 
-// The pool's currently active multiplier percent — fill-based value times (1 + live decaying tap
-// bonus %) (see tapPoolBuffer/tickFillMultiplierDecay below). What ByteFoundryPage displays alongside
-// that pool's Bandwidth figure. getPoolEffectMultiplier is the instantaneous scale;
-// tickPoolBufferFill integrates the curve via getFillCurveDelta.
-// Fill-based value × (1 + live tap bonus %), hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (2000) — same
-// "cumulative total, not the bonus alone" cap the Data Stream's own getDataStreamMultiplierPercent uses.
+// The pool's buffer-FILL multiplier percent — the fill-based value only. Unlike the Data Stream, a
+// pool's tap bonus does NOT scale its buffer's fill (the source is already paced by Speed/Bandwidth
+// and keeps up on its own); it scales the pool's CONSUMERS instead — see getPoolTapMultiplier.
+// getPoolEffectMultiplier is the instantaneous scale; tickPoolBufferFill integrates the curve via
+// getFillCurveDelta.
 export const getPoolMultiplierPercent = (state, poolIndex) =>
-  Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getPoolBaseMultiplierPercent(state, poolIndex) * (1 + getPoolTapBonusPercent(state, poolIndex) / 100))
+  getPoolBaseMultiplierPercent(state, poolIndex)
+
+// ×(1 + live decaying tap bonus %) on everything that DRAINS one pool or moves its disks
+// (tapPoolBuffer/tickFillMultiplierDecay): the Provision Disk draw (tickQueuedDiskBuild), the
+// read-cache → disk flush (tickDiskAutoFill), write-cache merges (tickDiskWriteCache), the lower-size
+// rebuild (getLowerRebuildDiskSeconds) and the Data Lake drain (tickDataLakePoolDrain).
+export const getPoolTapMultiplier = (state, poolIndex) =>
+  1 + getPoolTapBonusPercent(state, poolIndex) / 100
 
 // The boost's pool bonus (getComputeBoostPoolMultiplier) scales the real buffer fill on top of the
 // capped fill-based percent; the displayed percent/Bandwidth stay unboosted.
@@ -2846,11 +2856,10 @@ export const getPoolAvailableFillRate = (state, poolIndex) => {
 }
 
 // Manual tap on one pool's own local Memory buffer — adds FILL_MULTIPLIER_TAP_BONUS_PERCENT to
-// that pool's own decaying multiplier bonus (poolTapBonusPercents[poolIndex]), scoped to this one
-// pool only — never touches the Data Stream's own bonus or any other pool's (see FILL_MULTIPLIER_*
-// in layers.js). No-op only for a locked/invalid pool or one whose stored tap bonus is already at
-// FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT (100) — deliberately NOT for a full or lake-draining buffer:
-// a pool tap always grants its bonus, whether or not the faster fill can currently help.
+// that pool's own decaying consumer bonus (poolTapBonusPercents[poolIndex], see getPoolTapMultiplier),
+// scoped to this one pool only — never touches the Data Stream's own bonus or any other pool's. No-op
+// only for a locked/invalid pool or one whose stored tap bonus is already at
+// FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT (100) — a pool tap always grants its bonus, full buffer or not.
 export const tapPoolBuffer = poolIndex => state => {
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getVisibleStoragePoolCount(state)) return state
   // Same independent 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT clamp as tapIntroBit above.
@@ -2869,15 +2878,9 @@ export const tapPoolBuffer = poolIndex => state => {
 }
 
 // Decays the Data Stream's own tap bonus and every pool's own tap bonus by
-// FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND per elapsed second, floored at 0 (never below the
-// fill-based value alone) — see FILL_MULTIPLIER_* in layers.js. Runs once per tick, ahead of
-// tickIntroProduction/tickPoolBufferFill (see tickGame), so both read this tick's already-decayed
-// bonus.
-//
-// The stored bonus is its own value, clamped to FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT
-// independently of the fill-based reading — the combined-total cap
-// (FILL_MULTIPLIER_TAP_CAP_PERCENT) only ever applies to the derived multiplier reading itself
-// (see getDataStreamMultiplierPercent/getPoolMultiplierPercent), not to this stored amount.
+// FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND per elapsed second, floored at 0 — see FILL_MULTIPLIER_* in layers.js. Runs once per tick, ahead of every consumer
+// (see tickGame), so they read this tick's already-decayed bonus. The stored bonus is its own value,
+// clamped to FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT.
 export const tickFillMultiplierDecay = elapsedSeconds => state => {
   const decay = FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND * elapsedSeconds
 
@@ -2892,16 +2895,12 @@ export const tickFillMultiplierDecay = elapsedSeconds => state => {
   let poolsChanged = false
   const poolTapBonusPercents = {}
   Object.keys(priorPoolBonuses).forEach(poolIndexKey => {
-    const poolIndex = Number(poolIndexKey)
     const priorBonus = priorPoolBonuses[poolIndexKey]
-    // Once a pool's own buffer is completely full, its fill-based multiplier reading is retired.
-    // Force the tap bonus to 0 immediately rather than letting it decay at 1%/sec — a leftover
-    // bonus would keep the derived multiplier above FILL_MULTIPLIER_MIN_PERCENT after the buffer
-    // is already full. (The old 50% seam with DATA_LAKE_OVERFLOW_MAX_PERCENT applied to a
-    // since-removed lake-rate bar; see docs/DESIGN_HISTORY.md.)
-    const isBufferFull = getPoolBufferFillFraction(state, poolIndex) >= 1
-    const decayedBonus = !isBufferFull && decay > 0 ? Math.max(0, priorBonus - decay) : priorBonus
-    const finalBonus = isBufferFull ? 0 : Math.min(decayedBonus, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT)
+    // A pool's bonus speeds its consumers (getPoolTapMultiplier), which matter most on a full
+    // buffer, so it just decays — no full-buffer reset (that rule belonged to the retired
+    // fill-side pool bonus; see docs/DESIGN_HISTORY.md).
+    const decayedBonus = decay > 0 ? Math.max(0, priorBonus - decay) : priorBonus
+    const finalBonus = Math.min(decayedBonus, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT)
     if (finalBonus !== priorBonus) poolsChanged = true
     poolTapBonusPercents[poolIndexKey] = finalBonus
   })
@@ -2932,7 +2931,8 @@ export const tickFillMultiplierDecay = elapsedSeconds => state => {
 // runs earlier in the pipeline) until the next tick — imperceptible at TICK_RATE_MS. The
 // reservation bookkeeping above (poolRate/fillRate/remainingRate) stays on each pool's RAW
 // Bandwidth throughout — the actual bits transferred into a pool's buffer at the end of its own
-// iteration integrate that reserved rate × tap-bonus × pool Compute Boost via getFillCurveDelta
+// iteration integrate that reserved rate × pool Compute Boost via getFillCurveDelta (the pool tap
+// bonus speeds consumers, not this fill — getPoolTapMultiplier)
 // ("primary fill only" per FILL_MULTIPLIER_* in layers.js). getPoolEffectMultiplier remains the
 // instantaneous UI reading. Once a pool's own buffer is completely
 // full, its reserved share feeds that pool's own matching Data Lake instead, at a fill-based rate
@@ -2962,8 +2962,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     const current = poolBuffers[poolIndex] ?? 0
     const bufferCap = getPoolBufferCapacity(state, poolIndex)
     const room = Math.max(0, bufferCap - current)
-    const tapK = 1 + getPoolTapBonusPercent(state, poolIndex) / 100
-    const unmultipliedRate = fillRate * tapK * getComputeBoostPoolMultiplier(state.intro, poolIndex)
+    const unmultipliedRate = fillRate * getComputeBoostPoolMultiplier(state.intro, poolIndex)
 
     // How much of this tick's own elapsedSeconds interval is left over for lake overflow, once
     // the buffer-fill above has taken whatever it needed — 0 unless the buffer is (or just
@@ -3274,7 +3273,7 @@ export const isDiskFillAvailable = state =>
     .some(size => isDiskPullEligible(state, size))
 
 // "Provision Disk" — true whenever no array is already mid-build (intro.diskBuild — only one build slot exists at a
-// time), no smaller size is still being rebuilt for free, the disk ladder isn't exhausted for the active pools, that
+// time), no smaller size is still being rebuilt (tickAutoProvisionLowerDiskSizes), the disk ladder isn't exhausted for the active pools, that
 // size's pool isn't rebuilding, and the pool is LIVE (getStoragePoolBandwidth > 0) with a buffer whose CAPACITY can hold
 // one pass of this size (getPoolBufferCapacity >= size — the old implicit unlock, so the early game before Storage is
 // unchanged). It does NOT require bits in hand: provisioning is buffer-funded at a fixed speed (see
@@ -3300,7 +3299,7 @@ export const isProvisionDiskInProgress = state =>
 
 export const isProvisionDiskAvailable = state => {
   if (state.intro.diskBuild) return false
-  // Smaller sizes below the newest unlocked one are provisioned automatically and for free instead.
+  // Smaller sizes below the newest unlocked one are rebuilt automatically instead (one buffer fill per disk, no provisioning cost).
   if (isLowerDiskSizePending(state)) return false
   if (isDiskLadderExhaustedForActivePools(state)) return false
   const size = getDiskSize(state)
@@ -3472,7 +3471,7 @@ export const tickSpeedUpgradeDrain = elapsedSeconds => state => {
   const stored = state.intro.speedUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
   const cost = getSpeedUpgradeCostBits(state.intro)
-  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds, cost - progress)
+  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * getDataStreamTapMultiplier(state.intro) * elapsedSeconds, cost - progress)
   const intro = { ...state.intro, bits: state.intro.bits - pull, speedUpgradeProgress: progress + pull }
   if (intro.speedUpgradeProgress >= cost) {
     return { ...state, intro: { ...intro, speedCapacity: (state.intro.speedCapacity ?? state.intro.capacity) * INTRO_CAPACITY_DOUBLING_STEP, speedUpgradeQueued: false, speedUpgradeProgress: 0 } }
@@ -3490,13 +3489,13 @@ export const queueIntroCapacityUpgrade = state => {
   return { ...state, intro: { ...state.intro, capacityUpgradeQueued: true, capacityUpgradeProgress: 0 } }
 }
 
-// Runs right after production, before any other Data Stream consumer. Pulls min(Buffer, base Speed at a constant 1x) into the bar; fires the upgrade once the bar reaches Capacity.
+// Runs right after production, before any other Data Stream consumer. Pulls min(Buffer, base Speed × Data Stream tap bonus) into the bar; fires the upgrade once the bar reaches Capacity.
 export const tickCapacityUpgradeDrain = elapsedSeconds => state => {
   if (!state.intro?.capacityUpgradeQueued) return state
   if (isMemoryCapacityAtCap(state)) return clearIntroCapacityUpgradeQueue(state)
   const stored = state.intro.capacityUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
-  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds, state.intro.capacity - progress)
+  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * getDataStreamTapMultiplier(state.intro) * elapsedSeconds, state.intro.capacity - progress)
   const next = {
     ...state,
     intro: { ...state.intro, bits: state.intro.bits - pull, capacityUpgradeProgress: progress + pull },
@@ -3803,11 +3802,10 @@ export const tickIntroProduction = elapsedSeconds => state => {
 
   // Continuous delivery at the capacity-derived rate (see getIntroProductionRate) — no batching.
   // Integrates the log-linear fill curve (getFillCurveDelta) so a 1s offline tick matches ten
-  // live 0.1s ticks; tap bonus and Compute Boost are constant over the tick (decay already ran)
-  // and scale the unmultiplied rate. getDataStreamDeliveredRate remains the instantaneous reading
-  // ByteFoundryPage displays.
-  const tapK = 1 + (state.intro.dataStreamTapBonusPercent ?? 0) / 100
-  const unmultipliedRate = getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro) * tapK
+  // live 0.1s ticks; Compute Boost is constant over the tick and scales the unmultiplied rate (the
+  // tap bonus speeds consumers, not this fill — getDataStreamTapMultiplier).
+  // getDataStreamDeliveredRate remains the instantaneous reading ByteFoundryPage displays.
+  const unmultipliedRate = getIntroProductionRate(state.intro) * getComputeBoostMultiplier(state.intro)
   const bitsToAdd = getFillCurveDelta(state.intro.bits, state.intro.capacity, unmultipliedRate, elapsedSeconds)
 
   if (bitsToAdd <= 0) return state
@@ -3911,7 +3909,7 @@ export const isDiskSizeUnlockAvailable = state => {
 
 // The Foundry reset that unlocks the next disk size: a Reset Byte Foundry (Capacity, Disks, Lakes, Compute
 // wipe; Combine / Upgrade Capacity / Upgrade Speed convenience-replay up to prior highs; every smaller Disk size
-// re-provisions itself for free via tickAutoProvisionLowerDiskSizes)
+// re-provisions itself via tickAutoProvisionLowerDiskSizes — one buffer fill per disk, no provisioning cost)
 // plus one more unlocked disk step, which raises the speed exponent by DATA_STREAM_SPEED_EXPONENT_STEP.
 export const unlockNextDiskSizeByFoundryReset = state => {
   if (!isDiskSizeUnlockAvailable(state)) return state
@@ -4109,8 +4107,8 @@ export const clearDiskBuildQueue = state => {
 }
 
 // Advances an armed Provision Disk build. It is BUFFER-FUNDED at a FIXED speed: each tick it draws up to
-// elapsed × the pool's BASE Bandwidth (getStoragePoolBandwidth — re-read every tick, so a mid-build Speed/Capacity
-// upgrade raises the pace immediately; never the fill multiplier) out of the pool buffer (minus the read cache's
+// elapsed × the pool's BASE Bandwidth × its tap bonus (getStoragePoolBandwidth × getPoolTapMultiplier — re-read
+// every tick, so a mid-build Speed/Capacity upgrade raises the pace immediately; never the fill multiplier) out of the pool buffer (minus the read cache's
 // own claim, getPoolCacheReservationBits) and banks those bits as fractional passes in diskProvisionPasses[size].
 // The buffer itself still refills at the fill-multiplier pace, so an empty buffer stalls the build (nothing is
 // lost — progress is stored in bits) while a full one never makes it faster than the fixed speed. It only runs on
@@ -4132,7 +4130,7 @@ export const tickQueuedDiskBuild = (elapsedSeconds = 0) => state => {
   const stale = collected >= required
   const bufferBits = getPoolBufferBits(state, poolIndex)
   const spendable = Math.max(0, bufferBits - getPoolCacheReservationBits(state, poolIndex))
-  const bandwidth = getStoragePoolBandwidth(state, poolIndex)
+  const bandwidth = getStoragePoolBandwidth(state, poolIndex) * getPoolTapMultiplier(state, poolIndex)
   const headroomPasses = Math.max(0, Math.min(required - collected, allowance))
   const drawBits = stale ? 0 : Math.min(Math.max(0, elapsedSeconds) * bandwidth, spendable, headroomPasses * size)
   if (!stale && !(drawBits > 0)) return state
@@ -4164,18 +4162,24 @@ export const tickQueuedDiskBuild = (elapsedSeconds = 0) => state => {
   }
 }
 
-// Sizes below the newest unlocked one (rebuilt after a Foundry reset) provision themselves FOR FREE, one
-// disk at a time, smallest size first. Each disk takes exactly size / the pool's BASE Bandwidth
-// (getStoragePoolBandwidth) — independent of the fill multiplier, the pool buffer and the caches — so the
-// total time is predictable (getLowerRebuildSummary). Progress lives in intro.lowerRebuild ({ size,
-// progress 0..1 }); a finished disk lands full (a drained built disk is refilled before a new one is built).
+// Sizes below the newest unlocked one (rebuilt after a Foundry reset) provision themselves automatically,
+// one disk at a time, smallest size first. "Free" means no provisioning cost: each disk costs exactly ONE
+// fill — `size` bits drawn from its pool's buffer (minus the read cache's claim, getPoolCacheReservationBits)
+// at the pool's BASE Bandwidth × its tap bonus (getStoragePoolBandwidth × getPoolTapMultiplier, never the
+// fill multiplier) — and lands full. An empty buffer stalls it (progress is kept). getLowerRebuildSummary's
+// time ignores buffer stalls. Progress lives in intro.lowerRebuild ({ size, progress 0..1 }); a drained
+// built disk is refilled before a new one is built.
 // A size counts as done once DISK_ARRAY_LADDER_CAP disks are built (getDiskSize advances). `elapsedSeconds`
 // may span many disks (offline gaps). Same-reference no-op when nothing changed.
 const LOWER_REBUILD_MAX_STEPS = 200
-export const getLowerRebuildDiskSeconds = (state, size) =>
-  size / Math.max(getStoragePoolBandwidth(state, getPoolIndexForDiskSize(size)), Number.MIN_VALUE)
-const getLowerRebuildProjectedDiskSeconds = (state, size) =>
-  size / Math.max(getProjectedPoolBandwidth(state, getPoolIndexForDiskSize(size)), Number.MIN_VALUE)
+export const getLowerRebuildDiskSeconds = (state, size) => {
+  const poolIndex = getPoolIndexForDiskSize(size)
+  return size / Math.max(getStoragePoolBandwidth(state, poolIndex) * getPoolTapMultiplier(state, poolIndex), Number.MIN_VALUE)
+}
+const getLowerRebuildProjectedDiskSeconds = (state, size) => {
+  const poolIndex = getPoolIndexForDiskSize(size)
+  return size / Math.max(getProjectedPoolBandwidth(state, poolIndex) * getPoolTapMultiplier(state, poolIndex), Number.MIN_VALUE)
+}
 
 export const tickAutoProvisionLowerDiskSizes = (elapsedSeconds = 0) => state => {
   if (!state.intro?.byteCreated) return state
@@ -4195,21 +4199,24 @@ export const tickAutoProvisionLowerDiskSizes = (elapsedSeconds = 0) => state => 
     const built = intro.disksBuiltTotal?.[size] ?? 0
     const full = intro.disks?.[size] ?? 0
     if (built >= DISK_ARRAY_LADDER_CAP && full >= built) break
-    const diskSeconds = getLowerRebuildDiskSeconds(current, size)
-    if (!Number.isFinite(diskSeconds) || getStoragePoolBandwidth(current, poolIndex) <= 0) break
+    const rate = getStoragePoolBandwidth(current, poolIndex) * getPoolTapMultiplier(current, poolIndex)
+    if (!(rate > 0) || !Number.isFinite(rate)) break
     const progress = intro.lowerRebuild?.size === size ? intro.lowerRebuild.progress : 0
-    const gained = left / diskSeconds
-    if (progress + gained < 1 - TICK_ACCUMULATION_EPSILON) {
-      if (gained > 0) {
-        intro = { ...intro, lowerRebuild: { size, progress: progress + gained } }
-        changed = true
-      }
-      left = 0
+    const buffer = intro.poolBuffers?.[poolIndex] ?? 0
+    const spendable = Math.max(0, buffer - getPoolCacheReservationBits(current, poolIndex))
+    const drawBits = Math.min(left * rate, spendable, Math.max(0, 1 - progress) * size)
+    if (!(drawBits > 0)) break
+    const nextProgress = progress + drawBits / size
+    const poolBuffers = { ...intro.poolBuffers, [poolIndex]: buffer - drawBits }
+    left = Math.max(0, left - drawBits / rate)
+    if (nextProgress < 1 - TICK_ACCUMULATION_EPSILON) {
+      intro = { ...intro, poolBuffers, lowerRebuild: { size, progress: nextProgress } }
+      changed = true
       break
     }
-    left = Math.max(0, left - (1 - progress) * diskSeconds)
     intro = {
       ...intro,
+      poolBuffers,
       disks: { ...intro.disks, [size]: full + 1 },
       disksBuiltTotal: { ...intro.disksBuiltTotal, [size]: Math.max(built, full + 1) },
       lowerRebuild: null,
@@ -4220,7 +4227,8 @@ export const tickAutoProvisionLowerDiskSizes = (elapsedSeconds = 0) => state => 
 }
 
 // Time and progress of the whole post-Foundry-reset rebuild: every size below the presented one still short
-// of a full array, each remaining disk at size / its pool's base Bandwidth (the in-flight disk's progress
+// of a full array, each remaining disk at size / (its pool's base Bandwidth × tap bonus), assuming the
+// buffer keeps up (the in-flight disk's progress
 // already deducted). For a pool not live yet the Bandwidth is projected (getProjectedPoolBandwidth), so `seconds` is only Infinity if the Data Stream Speed is 0. `disksDone`/`disksTotal` count disks
 // (the in-flight one fractionally); `projected` is true when any remaining size's pool is not live yet (its part of `seconds` is an estimate). Zeros when nothing is pending.
 export const getLowerRebuildSummary = state => {
@@ -4467,7 +4475,8 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
         continue
       }
 
-      let segmentRemainingSeconds = merge.segmentRemainingSeconds - elapsedSeconds
+      // The pool's tap bonus speeds disk merges (getPoolTapMultiplier; source and target share a pool).
+      let segmentRemainingSeconds = merge.segmentRemainingSeconds - elapsedSeconds * getPoolTapMultiplier(state, getPoolIndexForDiskSize(targetSize))
       if (segmentRemainingSeconds > TICK_ACCUMULATION_EPSILON) {
         diskWriteCache[targetSize] = { ...merge, segmentRemainingSeconds }
         changed = true
@@ -4500,7 +4509,7 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
       continue
     }
 
-    let flushRemainingSeconds = merge.flushRemainingSeconds - elapsedSeconds
+    let flushRemainingSeconds = merge.flushRemainingSeconds - elapsedSeconds * getPoolTapMultiplier(state, getPoolIndexForDiskSize(targetSize))
     if (flushRemainingSeconds > TICK_ACCUMULATION_EPSILON) {
       diskWriteCache[targetSize] = { ...merge, flushRemainingSeconds }
       changed = true
@@ -4717,7 +4726,8 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
       continue
     }
 
-    let remainingSeconds = flush.remainingSeconds - elapsedSeconds
+    // The pool's tap bonus speeds this consumer: the countdown advances ×getPoolTapMultiplier.
+    let remainingSeconds = flush.remainingSeconds - elapsedSeconds * getPoolTapMultiplier(state, getPoolIndexForDiskSize(size))
     if (remainingSeconds > TICK_ACCUMULATION_EPSILON) {
       if (remainingSeconds !== flush.remainingSeconds) {
         diskReadCacheFlush[size] = { ...flush, remainingSeconds }
@@ -5738,11 +5748,13 @@ export const areStoragePoolDisksFull = (state, poolIndex) =>
     (state.intro?.disks?.[size] ?? 0) >= (state.intro?.disksBuiltTotal?.[size] ?? 0))
 
 // Whether a disk build in pool `poolIndex` has been STARTED and not finished: a queued/partially
-// funded Provision Disk on one of its sizes, a legacy timed build, or a pool-local reset rebuild.
+// funded Provision Disk on one of its sizes, a legacy timed build, a pool-local reset rebuild, or the
+// automatic post-Foundry-reset lower-size rebuild (buffer-funded — the lake drain must not starve it).
 // Merely being able to provision another disk doesn't count.
 export const isStoragePoolProvisioningInProgress = (state, poolIndex) => {
   const intro = state.intro ?? {}
   if (isStoragePoolRebuilding(state, poolIndex)) return true
+  if (isLowerDiskSizePending(state) && getPoolIndexForDiskSize(getDiskSize(state)) === poolIndex) return true
   if (intro.diskBuild && getPoolIndexForDiskSize(intro.diskBuild.size) === poolIndex) return true
   const sizes = getStoragePoolSizes(poolIndex)
   if (sizes.some(size => getDiskProvisionPassesCollected(state, size) > 0)) return true
@@ -5761,7 +5773,7 @@ export const isDataLakePoolDrainAvailable = (state, poolIndex) =>
   getPoolBufferBits(state, poolIndex) > getPoolCacheReservationBits(state, poolIndex)
 
 // A Data Lake draws directly from its pool's OWN buffer (isDataLakePoolDrainAvailable), at the pool's raw
-// Bandwidth, every tick — independent of the Data Stream. This keeps lakes filling while a running
+// Bandwidth × its tap bonus (getPoolTapMultiplier), every tick — independent of the Data Stream. This keeps lakes filling while a running
 // Upgrade Data Stream diverts the Data Stream's output, and generally lets a finished pool keep converting its
 // throughput into lake units rather than only via tickPoolBufferFill's full-buffer overflow. The
 // read cache's own refill claim (getPoolCacheReservationBits) is left untouched, and the whole pass
@@ -5776,7 +5788,7 @@ export const tickDataLakePoolDrain = elapsedSeconds => state => {
     const buffer = getPoolBufferBits(state, poolIndex)
     const spendable = Math.max(0, buffer - getPoolCacheReservationBits(state, poolIndex))
     if (spendable <= 0) continue
-    const rate = getStoragePoolBandwidth(state, poolIndex)
+    const rate = getStoragePoolBandwidth(state, poolIndex) * getPoolTapMultiplier(state, poolIndex)
     const { lake, remainingBits, changed } = applyDataLakeOverflow(state, poolIndex, rate, elapsedSeconds, spendable)
     if (!changed) continue
     poolBuffers = poolBuffers ?? { ...(state.intro.poolBuffers ?? {}) }
@@ -6966,7 +6978,7 @@ export const tickFoundryResetConvenience = state => {
     }
   }
 
-  // Sizes below the newest unlocked one are re-provisioned for free by tickAutoProvisionLowerDiskSizes —
+  // Sizes below the newest unlocked one are re-provisioned (one buffer fill per disk, no provisioning cost) by tickAutoProvisionLowerDiskSizes —
   // the paid replay must not also fund them (it would bank passes the free loop then ignores).
   if (!isLowerDiskSizePending(next) && isDiskBuildBelowCap(next, caps)) {
     // The replay just arms the ordinary timed build, marked replay-owned so tickQueuedDiskBuild stops at the

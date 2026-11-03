@@ -7,8 +7,8 @@ import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
-import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatSpeedText, formatThreeSignificant, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getLowerRebuildSummary, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolAvailableFillRate, getStoragePoolBandwidth, getProjectedPoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
-import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
+import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatSpeedText, formatThreeSignificant, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getLowerRebuildSummary, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolTapMultiplier, getPoolAvailableFillRate, getStoragePoolBandwidth, getProjectedPoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isLaterPoolProvisioningLocked } from 'game/engine'
+import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 
@@ -837,14 +837,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const capacityUpgradeProgress = clampPercent(((intro.capacityUpgradeProgress ?? 0) / capacityUpgradeCost) * 100)
   const speedUpgradeProgress = clampPercent(((intro.speedUpgradeProgress ?? 0) / speedUpgradeCost) * 100)
   const runningProgress = speedUpgradeQueued ? speedUpgradeProgress : capacityUpgradeProgress
-  // The bar draws at a constant 1x base Speed (getRunningUpgradeDraw), so the time left is linear.
+  // The bar draws at base Speed × the Data Stream tap bonus (getRunningUpgradeDraw), so the time left is linear.
   const runningDraw = getRunningUpgradeDraw(intro)
   const runningCost = runningDraw?.cost ?? 0
   const runningDone = runningDraw?.progress ?? 0
   const runningMultiplierPercent = runningDraw?.multiplierPercent ?? 100
   const runningRateText = formatStreamRate(runningDraw?.rate ?? 0)
-  const runningTimeLeftText = formatUpgradeTimeLeft(productionRate > 0 && runningCost > 0
-    ? Math.max(0, runningCost - runningDone) / productionRate
+  const runningRate = runningDraw?.rate ?? 0
+  const runningTimeLeftText = formatUpgradeTimeLeft(runningRate > 0 && runningCost > 0
+    ? Math.max(0, runningCost - runningDone) / runningRate
     : Infinity)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
 
@@ -870,12 +871,20 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // the buffer allows), so it alone gets the progressive title, the pulse and the hourglass — idle
   // states keep the imperative "Provision …" so the two never read alike.
   const diskProvisioningActive = Boolean(diskBuildQueued) && !diskBuildInProgress && !diskLadderExhausted && !lowerDiskSizePending
+  // Mirrors tickAutoProvisionLowerDiskSizes' stall conditions so a paused rebuild says why.
+  const rebuildPoolIndex = getPoolIndexForDiskSize(autoDiskSize)
+  const lowerRebuildWaitReason = !lowerDiskSizePending ? null
+    : intro.diskBuild ? 'waiting for build'
+      : isLaterPoolProvisioningLocked(state, rebuildPoolIndex) ? 'waiting for earlier pool'
+      : getStoragePoolBandwidth(state, rebuildPoolIndex) <= 0 ? 'waiting for pool'
+        : getPoolBufferBits(state, rebuildPoolIndex) <= getPoolCacheReservationBits(state, rebuildPoolIndex) ? 'waiting for buffer'
+          : null
   const diskBuildStatus = diskBuildInProgress
     ? { icon: '🏗', label: `Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk`, status: `${Math.ceil(diskBuildInProgress.remainingSeconds)}s left` }
     : diskLadderExhausted
       ? { icon: '✅', label: `All Pools Complete (${formatDiskSize(diskSize)})`, status: null }
       : lowerDiskSizePending
-        ? { icon: '🔁', label: diskOfferLabel, status: `Rebuilding ${formatDiskSize(autoDiskSize)} first · automatic` }
+        ? { icon: '🔁', label: diskOfferLabel, status: `Rebuilding ${formatDiskSize(autoDiskSize)} first · ${lowerRebuildWaitReason ?? 'automatic'}` }
       : diskBuildQueued
         ? {
             icon: '⏳',
@@ -890,19 +899,20 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               status: `${COST_ICON} ${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
               reason: diskBuildBlockedByPriority ? 'disk fill comes first' : 'pool not ready (offline, rebuilding or too small)',
             }
-  // Same stat layout as the running-upgrade tile. Provisioning (buffer-funded) and the post-Foundry-reset rebuild (free) both run at
-  // the pool's fixed BASE Bandwidth (no fill multiplier), so ⚡ is that base speed; ⏳ is the time left
+  // Same stat layout as the running-upgrade tile. Provisioning (buffer-funded) and the post-Foundry-reset rebuild (one buffer fill per disk, no provisioning cost) both run at
+  // the pool's BASE Bandwidth × its tap bonus (getPoolTapMultiplier; no fill multiplier), so ⚡ is that speed; ⏳ is the time left
   // (provisioning also waits on the buffer; rebuild: getLowerRebuildSummary; hidden for a build waiting behind Disk Fill) — a projection from the Bandwidth the pool will have once live while the size's pool isn't live yet.
-  const rebuildPoolIndex = getPoolIndexForDiskSize(autoDiskSize)
-  const diskFundingMultiplierPercent = 100 // both operations run at the pool's base Bandwidth (1x)
-  const diskFundingRate = lowerDiskSizePending ? getProjectedPoolBandwidth(state, rebuildPoolIndex) : getStoragePoolBandwidth(state, diskPoolIndex)
+  // Rebuild and provisioning are pool consumers, so the pool's tap bonus speeds both (getPoolTapMultiplier).
+  const diskFundingTapMultiplier = getPoolTapMultiplier(state, lowerDiskSizePending ? rebuildPoolIndex : diskPoolIndex)
+  const diskFundingMultiplierPercent = 100 * diskFundingTapMultiplier
+  const diskFundingRate = (lowerDiskSizePending ? getProjectedPoolBandwidth(state, rebuildPoolIndex) : getStoragePoolBandwidth(state, diskPoolIndex)) * diskFundingTapMultiplier
   const diskFundingSpeedText = `${formatSpeedText(formatDiskSize(diskFundingRate))}/s`
   const rebuildPoolNotLive = lowerDiskSizePending && getStoragePoolBandwidth(state, rebuildPoolIndex) <= 0
   const rebuildSummary = getLowerRebuildSummary(state)
   const rebuildProgress = rebuildSummary.disksTotal > 0 ? clampPercent((rebuildSummary.disksDone / rebuildSummary.disksTotal) * 100) : 0
   const rebuildSeconds = rebuildSummary.seconds
   const diskDisplayedProgress = lowerDiskSizePending ? rebuildProgress : diskBuildProgress
-  // Provisioning draws the remaining bits at the fixed base Bandwidth; whatever the buffer can't cover yet arrives
+  // Provisioning draws the remaining bits at base Bandwidth × tap bonus; whatever the buffer can't cover yet arrives
   // at the (fill-multiplied) buffer pace, capped by that same fixed speed.
   const provisionRemainingBits = Math.max(0, (diskPassesRequired - diskPassesExact) * diskSize)
   const provisionDeliveredRate = getPoolAvailableFillRate(state, diskPoolIndex) * getPoolMultiplierPercent(state, diskPoolIndex) / 100 * getComputeBoostPoolMultiplier(intro, diskPoolIndex)
@@ -942,7 +952,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           : diskLadderExhausted
             ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
             : lowerDiskSizePending
-              ? `Smaller sizes are re-provisioned for free first (${formatDiskSize(autoDiskSize)} now); ${formatDiskSize(diskSize)} unlocks for provisioning once they are done`
+              ? `Smaller sizes are rebuilt first (one buffer fill per disk, no provisioning cost) (${formatDiskSize(autoDiskSize)} now); ${formatDiskSize(diskSize)} unlocks for provisioning once they are done`
             : diskBuildQueued
               ? `Armed — draws from the pool buffer at the pool's fixed speed${diskBuildBlockedByPriority ? ' once Disk Fill is done' : ''} (${diskPassesCollected}/${diskPassesRequired} passes so far)`
               : canStartDiskBuild
@@ -992,10 +1002,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     </Button>
   )
 
-  const formatMultiplierValue = (totalPercent, basePercent, tapPercent) =>
-    basePercent * (1 + tapPercent / 100) >= FILL_MULTIPLIER_TAP_CAP_PERCENT
-      ? `${Math.round(totalPercent)}% (capped)`
-      : `${Math.round(totalPercent)}%`
   // Drop an open key whose speed button has gone (an upgrade finished, a pool hidden by a reset), so
   // it can't silently reopen when that speed comes back.
   const speedDetailsKeyAvailable = speedDetailsKey === null ||
@@ -1016,9 +1022,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       { label: 'Speed now', value: dataStreamRateText },
       { label: 'Base Speed', value: formatStreamRate(productionRate) },
       ...(boostMultiplier !== 1 ? [{ label: 'Compute Boost', value: `×${boostMultiplier}` }] : []),
-      { label: 'Fill multiplier', value: formatMultiplierValue(dataStreamMultiplierPercent, streamBasePercent, streamTapPercent) },
-      { label: '· from buffer fill', value: `${Math.round(streamBasePercent)}%` },
-      { label: '· tap bonus', value: `+${Math.round(streamTapPercent)}%` },
+      { label: 'Fill multiplier', value: `${Math.round(streamBasePercent)}%` },
+      { label: 'Tap bonus (upgrades)', value: `+${Math.round(streamTapPercent)}%` },
       { label: 'Speed exponent', value: speedExponentText },
       ...(storageRevealed && visiblePoolCount > 0
         ? [{ label: 'Reserved by pools', value: formatStreamRate(Math.min(productionRate, poolsBandwidth)) }]
@@ -1060,9 +1065,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             <PoolTapButton
               type="button"
               onClick={actions.tapIntroBit}
-              disabled={isFull || dataStreamMultiplierCapped}
+              disabled={dataStreamMultiplierCapped}
               aria-label="tap to generate a bit"
-              title={!isFull && dataStreamMultiplierCapped ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap` : undefined}
+              title={dataStreamMultiplierCapped ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap` : undefined}
             />
           )}
           <PoolTileContent>
@@ -1258,7 +1263,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const poolBufferFull = poolBufferBits >= poolBufferCapacity
         // Fill-based multiplier (see FILL_MULTIPLIER_* in game/layers.js): poolFillRate above
         // stays exactly what applies at 100% of this — the real per-tick buffer fill scales by
-        // this percent instead (see getPoolEffectMultiplier in game/engine).
+        // this percent instead (see getPoolEffectMultiplier in game/engine). The pool's tap bonus
+        // speeds its consumers (getPoolTapMultiplier), not this fill.
         const poolMultiplierPercent = getPoolMultiplierPercent(state, poolIndex)
         const poolTapBonusPercent = getPoolTapBonusPercent(state, poolIndex)
         const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolFillRate)
@@ -1285,12 +1291,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             ...(poolIndex > 1
               ? [{ label: 'Taken by earlier pools', value: formatPoolRate(Math.min(productionRate, earlierBandwidth)) }]
               : []),
-            { label: 'Fill multiplier', value: formatMultiplierValue(poolMultiplierPercent, poolBaseMultiplierPercent, poolTapBonusPercent) },
-            { label: '· from buffer fill', value: `${Math.round(poolBaseMultiplierPercent)}%` },
-            { label: '· tap bonus', value: `+${Math.round(poolTapBonusPercent)}%` },
+            { label: 'Fill multiplier', value: `${Math.round(poolBaseMultiplierPercent)}%` },
+            { label: 'Tap bonus (disks, merges, provisioning, lake)', value: `+${Math.round(poolTapBonusPercent)}%` },
             { label: 'Buffer', value: `${Math.floor(poolBufferPercent * 10) / 10}% full` },
             { label: 'Time to full', value: poolTimeLeftText ?? (poolBufferFull ? 'Full' : '—') },
-            ...(lakeDraining ? [{ label: 'Draining to Data Lake', value: formatPoolRate(poolBandwidth) }] : []),
+            ...(lakeDraining ? [{ label: 'Draining to Data Lake', value: formatPoolRate(poolBandwidth * getPoolTapMultiplier(state, poolIndex)) }] : []),
           ]
         }
         return (
