@@ -741,7 +741,9 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
     milestone progressbar). Rows never disappear, so reached milestones stay visible as unlock history.
   - *Global Automation* — a strict sequence, every row always listed, each purchasable only once the previous is
     owned (engine-enforced): Tickspeed Autobuyer → Auto Scale Up → Auto Overclock → Auto-Prestige. PP button (disabled until the previous step is bought), or an `UnlockedBadge`
-    (`"<name> unlocked"`) once bought; never a pause control here.
+    (`"<name> unlocked"`) once bought; never a pause control here. Outside that sequence, the 🧬 **Restage
+    Autobuyer** row (`XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` = 16 PP, no prerequisite, `buyXpTickspeedAutobuyer`)
+    sits between Auto Overclock and Auto-Prestige.
   - *Compute Automation* (Auto-Boost, once Foundry Compute unlocks), *Production Bonuses* (until bought), *Compute Autobuyers* (Era-milestone badges, once the Flops page
     is unlocked), and *Prestige* (DeGoogol: locked until Auto-Prestige's interval ≤ `UNBOUNDED_PRESTIGE_MAX_INTERVAL_SECONDS`).
   Each milestone appears only here — `MilestonesPage` no longer repeats them.
@@ -752,7 +754,7 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
 - 🎛 **Toggles** (`open toggles`, `aria-label="automation toggles page"`) — *Purchasing* (the Buy max
   button, `components/BuyMaxToggle`, removed from MainPage/ComputeFlopsPage), *Tier Autobuyers* (each
   reachable tier's ⚙/🤖 `AutomationToggle`, kept even for fully-automated tiers), *Global Automation*
-  (Tickspeed Autobuyer, Auto Scale Up, Auto-Prestige), *Compute Autobuyers*
+  (Tickspeed Autobuyer, Auto Scale Up, Auto Restage, Auto Overclock, Auto-Prestige), *Compute Autobuyers*
   (each Era-unlocked Flops autobuyer, `setComputeFlopsAutobuyerEnabled`). Each toggle is a status
   badge (`"<name> active|paused"`) + `components/Switch` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up
   automation"`, `"<tier>'s autobuyer"`). A `no toggles notice` empty state covers the (practically
@@ -767,7 +769,8 @@ progress fill + hidden `role="progressbar"` (`PpPurchaseButton`); see "Accessibi
 
 **Global Tickspeed card (Factory view).** Unlike every other automation upgrade, this one is
 Money-funded (not PP-funded) and lives on the Factory view as its own `GlobalTickspeedCard`, rendered
-alone at the very top of the Factory view — above `TierList`/tier 1, before anything else — since it's
+at the very top of the Factory view (side by side with the Restage card once that's revealed, in a
+`SpeedCardsRow`) — above `TierList`/tier 1, before anything else — since it's
 relevant from the very start of a run, well before Overclock or Prestige are, or even the tier list
 itself — `ScaleUpCard` is likewise always shown (unlike `OverclockCard`, still gated on the last
 tier having ever been unlocked — see below), but stays down in its own row below `TierList` rather
@@ -775,7 +778,7 @@ than joining this card, since its own target walks through the tier ladder one t
 "Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
 through. `ScaleUpCard` and `OverclockCard` (see below) render together in that shared row instead.
 (Earlier iterations tried grouping all three speed-related cards together at the top; this
-was reverted to the current split — Tickspeed alone at top, Scale Up/Overclock below the tier list —
+was reverted to the current split — Tickspeed (Latency, with Restage beside it) at top, Scale Up/Overclock below the tier list —
 per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying
 `engine.js` mechanics. The heading text itself never changes
 (`Tickspeed`, no level/percent readout — shortened first from `Global Tickspeed Multiplier` to
@@ -796,8 +799,8 @@ tickspeed multiplier" below) lands on fractional values, so it shows up to 2 dec
 (trimming a trailing `.00`/trailing zero, same style as `formatRate`) while the cumulative bonus is
 still under 100%, then rounds to a whole percent once it reaches/crosses 100% (×2.00), matching
 every other multiplier badge in the app once the numbers get large. The button carries `$progress`
-(Money ÷ cost) the same way Buy does, reading `🌐 Enable for {cost}` before the first purchase or
-`🌐 Upgrade for {cost}` after — its `aria-label` alone still spells out the current cumulative bonus
+(Money ÷ cost) the same way Buy does, reading just `🌐 {cost}` (compact, since it shares a row with Restage; the
+Enable/Upgrade wording lives in `aria-label`) — its `aria-label` alone still spells out the current cumulative bonus
 (same `formatGlobalTickspeedBonusPercent` formatting) for assistive tech, independent of the
 collapsed/expanded visual state. A `globalTickspeedCardEverRevealed` flag (seeded from/latched to
 `isGlobalTickspeedMultiplierUnlocked(state)`) follows the same `everRevealed` pattern as
@@ -831,24 +834,13 @@ many for a row already carrying the tier's autobuyer state (see "Unit autobuyer 
 cumulative figure is still in the row's own Details disclosure (see "Tier row details disclosure"
 below).
 
-Once the **last tier** has ever been the target of a successful Scale Up this cycle
-(`isLastTierTickspeedXpUnlocked` — a `scaleUpTierCounts`-based latch, NOT a live read of its
-current owned count, see docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), this
-Money-funded `UpgradeButton` is replaced — in the same grid slot, for the rest of the cycle — by
-the manual XP-consume button instead (`🧬 {current unspent XP} XP`,
-`actions.consumeXpForLastTierTickspeed`, behind a `window.confirm`). It's disabled whenever the
-last tier's own current owned count is 0 (nothing left to speed up — see
-`consumeXpForLastTierTickspeed`'s matching engine-level guard), unspent XP is below
-`getLastTierXpTickspeedMinConsumption`, or production is frozen; its `title` explains which. The
-same underlying action also fires automatically once per tick via the tier tickspeed autobuyer once
-bought (see "Automation" in docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), and
-its current unspent-XP balance/next-consumption minimum also show in the row's Details disclosure
-(as an "XP Tickspeed" line). The Details disclosure keeps working unchanged for the last tier
-otherwise, still reading the XP-funded multiplier instead of the Money-funded one. Only a
-Prestige/Overclock (which reset `scaleUpTierCounts`) reverts this slot back to the normal
-Money-funded button — the last tier's owned count merely dropping (e.g. from a Scale Up on an
-earlier tier, or from consuming XP itself) does NOT revert it, only disables the button — see "The
-last tier's XP-funded tickspeed" below for why.
+The **last tier's** button stays the ordinary resource-funded tickspeed button for the whole cycle,
+but its requirement and spend differ: it needs `getTickspeedMultiplierRequirement` owned (e.g. 100 for
+the 2nd upgrade) and spends only `getTickspeedMultiplierSpend` (10% — e.g. 10); the visible label shows
+the spend, the aria-label/progress bar the requirement. Its XP-funded tickspeed is a **separate**
+**Restage** card beside the Latency card (same `SpeedCardsRow`) (`aria-label="restage panel"`, shown once
+`isLastTierTickspeedXpUnlocked`) with a `🧬 {XP} XP` button — see docs/ECONOMY_REFERENCE.md's
+"The last tier's XP-funded tickspeed". The row's Details "tier ×N" multiplier includes the XP bonus.
 
 **No per-tier automation icon on the Factory view row.** A tier row's `name` grid area (shared by
 `TierNameTrigger` / `TierName`) holds the tier's symbol on the left and the owned count on the
@@ -871,14 +863,10 @@ unchanged by the move to Perks — see `docs/ECONOMY_REFERENCE.md` for costs/eff
 
 **Scale Up and Overclock cards, below the tier list.** `ScaleUpCard` and `OverclockCard` render
 together, in that order, inside a shared `SpeedCardsRow` flex row placed directly below `TierList` —
-not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why the three
-speed-related cards are split into a top card plus this separate bottom pair rather than one shared
-row). Above the 40rem mobile breakpoint, `SpeedCardsRow` uses the same layout mechanics the old top
-row did: each card shares the row equally (`flex: 1 1 8rem`). Below 40rem it switches to a single
-column instead (`flex-direction: column`) — Scale Up above Overclock, matching their JSX/render
-order — rather than staying side by side down to phone width (an earlier version's floor width was
-tuned specifically to keep the pair side by side down to ~360-430px, e.g. an iPhone 14's 393px; see
-`SpeedCardsRow`'s own comment for why that was superseded). `ScaleUpCard` always renders (see below),
+not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why Latency
+(paired with Restage) stays on top while this pair sits below the tier list). `SpeedCardsRow` keeps the pair side by side at every width, phone included (`flex: 1 1 0`,
+`min-width: 0`, no wrap) — the same row also holds Latency + Restage above the tier list. The earlier
+below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below),
 so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
 alongside it. Both soft-reset cards (and Latency) share `featureCard(accent)`: compact `0.6rem 0.75rem`
 padding, a `0.4rem` internal gap and a 3px left accent stripe; their headings have no default margin, their
@@ -925,9 +913,7 @@ Like `ScaleUpButton`'s `Lv.{scaleUpTargetTierLevelDisplay}/{scaleUpRequirementDi
 uses the completed-level display offset while eligibility continues to use the raw engine values;
 see `getOverclockRequirement`'s own comment in `engine.js` and "Overclock" in
 docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock button — Overclock is meant
-to be a deliberate, occasional decision reached via this card, not a frequent one-tap action (unlike
-the last tier's own row, which does grow a dedicated XP-consume tickspeed button once XP-unlocked —
-see "Tickspeed multiplier" above — but that's a different action entirely, not a Scale Up shortcut).
+to be a deliberate, occasional decision reached via this card, not a frequent one-tap action.
 
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
 whose body renders once `overclockCount > 0`: collapsed by default, clicking "Overclock" reveals a
@@ -1033,9 +1019,7 @@ in the `<ul>`: the tier's base tickspeed (`getTierBaseTickSpeedSeconds`, from `l
 tickspeed (`getEffectiveTierTickSpeedSeconds`, with the contributing tier/global tickspeed multipliers
 named inline), the purchase milestone multiplier and the lifetime purchase count driving it
 (`getPurchaseMilestoneMultiplier`), the Scale Up multiplier (only shown once `scaleUpCount > 0`), for
-the last tier once `isLastTierTickspeedXpUnlocked` an extra line with its current unspent XP balance
-and the minimum needed for the next `consumeXpForLastTierTickspeed` call (see "The last tier's
-XP-funded tickspeed" below), and the tier's cost/produces resource symbols. This — plus the
+and the tier's cost/produces resource symbols. This — plus the
 tickspeed button's own `title` tooltip — is now the only place `MainPage` surfaces a tier's
 base/effective tickspeed numbers at all, now that the compact per-tier badge that used to show the
 cumulative bonus at a glance is gone (see "No per-tier automation icon on the Factory view row" above).

@@ -716,17 +716,21 @@ export const OVERCLOCK_REQUIREMENT_STEP = 3
 // preferred Boost preset (default Standard). A mid-early automation that only
 // matters once Compute merges are timed.
 export const COMPUTE_AUTO_BOOST_UNLOCK_COST = 30
+// The last tier's own tickspeed multiplier (buyTickspeedMultiplier) keeps its normal requirement
+// (getTickspeedMultiplierCost — owned must reach it) but only actually spends this fraction of it:
+// e.g. tier10's 2nd upgrade unlocks at 100 owned and consumes 10.
+export const LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1
 // Once the last tier has ever been the target of a successful Scale Up this cycle (see engine.js's
-// isLastTierTickspeedXpUnlocked — a scaleUpTierCounts-based latch, NOT a live owned check), its
-// Money-funded tickspeed multiplier (see TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier
-// above) is replaced by an XP-funded one instead (see engine.js's
-// getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) — each XP ever consumed this way
-// compounds another LAST_TIER_XP_TICKSPEED_STEP (1%) into the last tier's own delivery frequency,
-// permanently (this accumulated bonus is never lost, even while the last tier's own owned count
-// dips to 0 and consumeXpForLastTierTickspeed's own guard pauses further consumption — it doesn't
-// disengage the unlock itself; only a Prestige/Overclock does that). "Last tier" (not a hardcoded
-// tier id) so this stays correct if TIER_DEFINITIONS ever grows a new final entry.
+// isLastTierTickspeedXpUnlocked — a scaleUpTierCounts-based latch, NOT a live owned check), a
+// separate XP-funded upgrade (shown beside Latency) becomes available — see engine.js's
+// getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed. Each XP consumed compounds another
+// LAST_TIER_XP_TICKSPEED_STEP (1%) into the last tier's delivery frequency, on top of (not instead
+// of) its own resource-funded tickspeed level. "Last tier" (not a hardcoded tier id) so this stays
+// correct if TIER_DEFINITIONS ever grows a new final entry.
 export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
+// One-time PP cost (Perks → Unlocks) for the Auto Restage — once bought, tickGame spends the
+// whole XP balance on the last tier's XP-funded tickspeed whenever consumeXpForLastTierTickspeed allows.
+export const XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = 16
 // Each single XP-consumption action must be at least this fraction of the cumulative XP already
 // consumed this way (see engine.js's getLastTierXpTickspeedMinConsumption) — so repeat
 // consumptions can't trickle in one XP at a time forever; the required minimum grows alongside
