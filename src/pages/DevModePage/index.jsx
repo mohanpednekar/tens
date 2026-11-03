@@ -492,7 +492,7 @@ const safeStringify = state => JSON.stringify(state, null, 2)
 const getJsonError = text => {
   try {
     const parsed = JSON.parse(text)
-    return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? null : 'Must be a JSON object'
+    return parsed !== null && Object.prototype.toString.call(parsed) === '[object Object]' && (Object.getPrototypeOf(parsed) === null || Object.getPrototypeOf(parsed) === Object.prototype) ? null : 'Must be a JSON object'
   } catch (error) {
     return error.message
   }
