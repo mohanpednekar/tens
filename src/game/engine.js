@@ -4708,19 +4708,25 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     flushSizes.push(Number(sizeStr))
   }
   flushSizes.sort((a, b) => a - b)
+
+  // ⚡ Bolt Optimization: Define state snapshot OUTSIDE the hot loop to avoid O(N) allocations.
+  // The local maps (poolBuffers, disks, diskCache, diskReadCacheFlush) are modified by reference
+  // so checkState automatically reflects changes within this loop as it iterates.
+  const checkState = {
+    ...state,
+    intro: {
+      ...state.intro,
+      poolBuffers,
+      disks,
+      diskCache,
+      diskReadCacheFlush,
+    },
+  }
+
   for (const size of flushSizes) {
     const flush = diskReadCacheFlush[size]
     if (!flush) continue
-    if (isDiskRedeemable({
-      ...state,
-      intro: {
-        ...state.intro,
-        poolBuffers,
-        disks,
-        diskCache,
-        diskReadCacheFlush,
-      },
-    }, size)) {
+    if (isDiskRedeemable(checkState, size)) {
       continue
     }
 
