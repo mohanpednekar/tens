@@ -629,7 +629,7 @@ const ComputePage = ({ game }) => {
                 aria-label={`set auto boost preference to ${boostType}`}
                 aria-pressed={selected}
                 onClick={() => actions.setComputeAutoBoostType(boostType)}
-                title={`Auto-Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
+                title={`Auto Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
                 type="button"
                 variant={selected ? 'reboot' : 'neutral'}
               >

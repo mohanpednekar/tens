@@ -1504,7 +1504,7 @@ test('an Enable Auto Scale Up button appears on the PP Upgrades page after the f
     resources: { base: 10 },
     owned: { tier09: 10 },
     everUnlockedTierIds: { tier01: true, tier10: true },
-    autoGlobalTickspeed: true, // global automations unlock sequentially: Tickspeed Autobuyer first
+    autoGlobalTickspeed: true, // global automations unlock sequentially: Auto Speed Up first
     reboot: { xp: 0, points: 16, count: 1, highestMilestone: 1 },
   })
   render(<App />)
@@ -1539,7 +1539,7 @@ test('an Enable Auto Restage button on Perks → Unlocks spends 16 PP to enable 
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('Auto-Boost is unlocked from Perks → Unlocks (30 PP), not on Boosters, which then shows its preset preference', async () => {
+test('Auto Boost is unlocked from Perks → Unlocks (30 PP), not on Boosters, which then shows its preset preference', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1549,14 +1549,14 @@ test('Auto-Boost is unlocked from Perks → Unlocks (30 PP), not on Boosters, wh
   render(<App />)
 
   fireEvent.click(screen.getByRole('button', { name: /open boosters/i }))
-  expect(screen.queryByRole('button', { name: /unlock compute auto boost/i })).not.toBeInTheDocument()
-  expect(screen.queryByLabelText(/^compute auto boost$/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /enable auto boost/i })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^auto boost$/i)).not.toBeInTheDocument()
 
   await openPerksTab(user, /open unlocks/i)
-  const unlock = screen.getByRole('button', { name: new RegExp(`unlock compute auto boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} prestige points`, 'i') })
+  const unlock = screen.getByRole('button', { name: new RegExp(`enable auto boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} prestige points`, 'i') })
   expect(unlock).toBeEnabled()
   await user.click(unlock)
-  expect(screen.getByLabelText('Auto-Boost unlocked')).toBeInTheDocument()
+  expect(screen.getByLabelText('Auto Boost unlocked')).toBeInTheDocument()
 
   fireEvent.click(screen.getByRole('button', { name: /open boosters/i }))
   expect(screen.getByRole('group', { name: /auto boost preference/i })).toBeInTheDocument()
@@ -1573,7 +1573,7 @@ test('the global latency panel renders above the tier list, not below it', () =>
   expect(regions.indexOf('global speed up panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after the first prestige, and spends 8 PP to enable it', async () => {
+test('an Enable Auto Speed Up button appears on the PP Upgrades page after the first prestige, and spends 8 PP to enable it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1585,13 +1585,13 @@ test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  const tickspeedAutobuyerButton = screen.getByRole('button', { name: /enable tickspeed autobuyer for 8 prestige points/i })
+  const tickspeedAutobuyerButton = screen.getByRole('button', { name: /enable auto speed up for 8 prestige points/i })
   expect(tickspeedAutobuyerButton).toBeEnabled()
 
   await user.click(tickspeedAutobuyerButton)
 
-  expect(screen.getByLabelText('Tickspeed Autobuyer unlocked')).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /enable tickspeed autobuyer/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Auto Speed Up unlocked')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /enable auto speed up/i })).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -1799,9 +1799,9 @@ const allTiersSmartSeed = () => ({
 // name, assert disabled) is identical across all of them and only the seed/cost/button name differ.
 test.each([
   {
-    name: 'Enable Tickspeed Autobuyer',
+    name: 'Enable Auto Speed Up',
     seed: { owned: { tier09: 10 }, reboot: { xp: 0, points: 7, count: 1, highestMilestone: 1 } },
-    buttonName: /enable tickspeed autobuyer for 8 prestige points/i,
+    buttonName: /enable auto speed up for 8 prestige points/i,
   },
   {
     name: 'Enable Auto Scale Up',
@@ -1814,9 +1814,9 @@ test.each([
     buttonName: /enable auto restage for 16 prestige points/i,
   },
   {
-    name: 'Auto-Reboot',
+    name: 'Auto Reboot',
     seed: { ...allTiersSmartSeed(), reboot: { xp: 0, points: 63, count: 1, highestMilestone: 1 } },
-    buttonName: /enable auto-reboot for 64 prestige points/i,
+    buttonName: /enable auto reboot for 64 prestige points/i,
   },
   {
     name: 'Unlock Speed Bonus',
@@ -1841,10 +1841,10 @@ test.each([
 // state and aria-label/name strings differ per automation.
 test.each([
   {
-    name: 'Tickspeed Autobuyer',
+    name: 'Auto Speed Up',
     seed: { owned: { tier09: 10 }, autoGlobalTickspeed: true },
-    pauseName: /^Tickspeed Autobuyer automation$/i,
-    resumeName: /^Tickspeed Autobuyer automation$/i,
+    pauseName: /^Auto Speed Up automation$/i,
+    resumeName: /^Auto Speed Up automation$/i,
   },
   {
     name: 'Auto Scale Up',
@@ -1859,10 +1859,10 @@ test.each([
     resumeName: /^Auto Restage automation$/i,
   },
   {
-    name: 'Auto-Reboot',
+    name: 'Auto Reboot',
     seed: { ...allTiersSmartSeed(), autoReboot: 1 },
-    pauseName: /^Auto-Reboot automation$/i,
-    resumeName: /^Auto-Reboot automation$/i,
+    pauseName: /^Auto Reboot automation$/i,
+    resumeName: /^Auto Reboot automation$/i,
   },
   {
     name: "Kilobytes's tickspeed autobuyer",
@@ -1898,7 +1898,7 @@ test.each([
   expect(screen.getByRole('button', { name: pauseName })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('Global Automation lists every step (Tickspeed → Auto Scale Up → Auto Overclock → Auto-Prestige) and gates each on the previous', async () => {
+test('Global Automation lists every step (Auto Speed Up → Auto Scale Up → Auto Overclock → Auto Reboot) and gates each on the previous', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1909,10 +1909,10 @@ test('Global Automation lists every step (Tickspeed → Auto Scale Up → Auto O
   await openPerksTab(user, /open unlocks/i)
 
   // Global automations are sequential: each is listed but only purchasable once the previous is bought.
-  expect(screen.getByRole('button', { name: /enable tickspeed autobuyer for 8 prestige points/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /enable auto speed up for 8 prestige points/i })).toBeEnabled()
   expect(screen.getByRole('button', { name: /enable auto scale up for 16 prestige points/i })).toBeDisabled()
   expect(screen.getByRole('button', { name: /enable auto overclock for 32 prestige points/i })).toBeDisabled()
-  expect(screen.getByRole('button', { name: /enable auto-reboot for 64 prestige points/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /enable auto reboot for 64 prestige points/i })).toBeDisabled()
 })
 
 test('the Auto-Prestige option stays out of Upgrades until Auto-Prestige is bought', async () => {
@@ -1925,8 +1925,8 @@ test('the Auto-Prestige option stays out of Upgrades until Auto-Prestige is boug
   render(<App />)
   await openPerksTab(user, /open upgrades/i)
 
-  expect(screen.queryByRole('button', { name: /auto-reboot/i })).not.toBeInTheDocument()
-  expect(screen.queryByText(/auto-reboot/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /auto reboot/i })).not.toBeInTheDocument()
+  expect(screen.queryByText(/auto reboot/i)).not.toBeInTheDocument()
 })
 
 test('an Auto-Prestige button appears in Perks → Unlocks (Global Automation) once every tier is Smart, and spends 64 PP to activate it', async () => {
@@ -1941,14 +1941,14 @@ test('an Auto-Prestige button appears in Perks → Unlocks (Global Automation) o
   render(<App />)
   await openPerksTab(user, /open unlocks/i)
 
-  const autoRebootButton = screen.getByRole('button', { name: /enable auto-reboot for 64 prestige points/i })
+  const autoRebootButton = screen.getByRole('button', { name: /enable auto reboot for 64 prestige points/i })
   expect(autoRebootButton).toBeEnabled()
 
   await user.click(autoRebootButton)
 
-  expect(screen.getByLabelText(/^auto-reboot upgrade$/i)).toHaveTextContent(/every 1024 s/i)
+  expect(screen.getByLabelText(/^auto reboot upgrade$/i)).toHaveTextContent(/every 1024 s/i)
   await openPerksTab(user, /open upgrades/i)
-  expect(screen.getByRole('button', { name: /upgrade reboot automation speed to level 1 for 64 prestige points/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /upgrade auto reboot speed to level 1 for 64 prestige points/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -1963,7 +1963,7 @@ test('no pause toggle appears for Auto-Prestige before it has ever been activate
   render(<App />)
   await openPerksTab(user, /open toggles/i)
 
-  expect(screen.queryByRole('button', { name: /^auto-reboot automation$/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^auto reboot automation$/i })).not.toBeInTheDocument()
 })
 
 test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled without enough points', async () => {
@@ -1978,8 +1978,8 @@ test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled withou
   render(<App />)
   await openPerksTab(user, /open upgrades/i)
 
-  expect(screen.getByLabelText(/^reboot automation speed upgrade$/i)).toHaveTextContent(/every 1024 s/i)
-  expect(screen.getByRole('button', { name: /upgrade reboot automation speed to level 1 for 64 prestige points/i })).toBeDisabled()
+  expect(screen.getByLabelText(/^auto reboot speed upgrade$/i)).toHaveTextContent(/every 1024 s/i)
+  expect(screen.getByRole('button', { name: /upgrade auto reboot speed to level 1 for 64 prestige points/i })).toBeDisabled()
 })
 
 test('prestige points and the production speed bonus are shown once the bonus is unlocked', () => {

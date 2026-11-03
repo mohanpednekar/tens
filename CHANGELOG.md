@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Perks automation names and layout made consistent.** Every automation is now named `Auto <feature>` (Tickspeed Autobuyer → Auto Speed Up; Auto-Reboot → Auto Reboot; Auto-Boost → Auto Boost), Compute Automation is now Booster Automation, Auto Restage moved after the Auto Speed Up → Auto Reboot chain on both Unlocks and Toggles, and every row's icon sits in a fixed-width cell so names line up.
+
 - **Renamed: Latency → Speed Up, Prestige → Reboot.** The Factory reset at 1 Googol Bytes is now called Reboot (Auto-Reboot, "Reboot Now", Reboot museum entries, autobuyer milestones "at Reboot N"). "Prestige" is now the umbrella term for every reset-for-rewards — Reboot, Era ascension, Reset Byte Foundry and pool resets — and Prestige Points keep their name. Earlier entries below use the old names. Existing saves carry over: the renamed save fields are converted on load.
 - **Latency and Restage sit side by side, as do Scale Up and Overclock** — on every screen size, including phones (Scale Up / Overclock used to stack on narrow screens).
 - **Quettabytes keeps its own tickspeed upgrade at 10% of the price.** Its tickspeed button no longer turns into the XP button after the first Quettabytes Scale Up; each level still needs the usual amount owned (10, 100, …) but only spends a tenth of it (1, 10, …).

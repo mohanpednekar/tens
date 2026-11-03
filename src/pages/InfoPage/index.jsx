@@ -431,7 +431,7 @@ const InfoPage = () => {
             after a confirmation.
           </li>
           <li>
-            <strong>Auto-Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time, on Perks → 🔓
+            <strong>Auto Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time, on Perks → 🔓
             Unlocks): when a tier is full and waiting on its own automatic merge, activates (or
             stacks) your preferred preset from the <strong>biggest</strong> such tier. Choose the
             preset on Boosters (default Standard). It never forfeits a running boost.
@@ -590,7 +590,7 @@ const InfoPage = () => {
           </li>
           <li>
             Available at 1 Googol Bytes (8×10^100 Bits), where production freezes until you
-            Reboot. Getting Auto-Reboot’s interval down to {UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS} s
+            Reboot. Getting Auto Reboot’s interval down to {UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS} s
             or less unlocks <strong>DeGoogol</strong>: production keeps running past 1 Googol Bytes
             and Reboot becomes optional.
           </li>
