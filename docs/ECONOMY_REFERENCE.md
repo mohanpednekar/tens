@@ -1800,8 +1800,9 @@ per-tier milestone, no PP spent, no button to click:
   the PP-purchase price scale. `getTierTickspeedAutobuyerCost` and `TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER` were
   removed entirely — nothing else needed that formula once the tier tickspeed autobuyer itself
   stopped costing PP.
-- Surfaced once, on Perks → 🤖 Automation's "Tier Autobuyers"/"Tier Tickspeed Autobuyers" categories (`pages/PerksPage`): each tier's
-  each track is its own row: a dimmed `🔒 {milestone}` `MilestoneBadge` plus a
+- Surfaced once, on Perks → 🤖 Automation's "Tier Autobuyers" category (`pages/PerksPage`): one `TierPair`
+  card per tier, ⚙ tickspeed half left / 🤖 autobuyer half right (the Factory row's own positions); each half
+  shows a dimmed `🔒 {milestone}` `MilestoneBadge` plus a
   `role="progressbar"` (`aria-valuenow = min(reboot.count, milestone)`) while pending, then the pause Switch + speed upgrade once reached. `MilestonesPage` no longer repeats this.
 
 #### Pause/resume for the global automations

@@ -565,8 +565,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           const tickCost = getTierTickspeedIntervalUpgradeCost(tickLevel)
           return (
             <TierPair key={tier.id} $accent={theme.tierAccents[tierIndex % theme.tierAccents.length]} aria-label={`${tier.name} automation`}>
-              <TierSymbol tier={tier} />
-    <AutomationRow
+                <TierSymbol tier={tier} />
+                <AutomationRow
                   ariaLabel={`${tier.name} tickspeed autobuyer`}
                   enabled={tickEnabled}
                   bare
@@ -597,7 +597,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   title={tickOwned && tickMaxed ? `${tier.name} tickspeed autobuyer: every ${formatInterval(getTierTickspeedIntervalSeconds(state, tier.id) * 1000)} (max)` : undefined}
                   toggleLabel={`${tier.name}'s tickspeed autobuyer`}
                 />
-    <AutomationRow
+                <AutomationRow
                   ariaLabel={`${tier.name} autobuyer`}
                   enabled={enabled}
                   bare

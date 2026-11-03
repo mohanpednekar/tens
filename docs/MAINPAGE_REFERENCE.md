@@ -681,14 +681,12 @@ live inside the selected tier):
   Headings with nothing left to show (`ScaleUpCard`'s `<h2>`, the page `Header`'s `<h1>`, the Tier
   Autobuyers category's old shared "How these controls work" panel, Perks → Automation's Tier
   Autobuyer Unlocks category) are now plain, non-interactive text — there's no click target because
-  there's nothing to reveal. `GlobalTickspeedCard`/`OverclockCard`'s own `<h2>` and the Milestones
-  view's Tier Tickspeed Autobuyers `CategoryHeading` still wrap a `Disclosure`
+  there's nothing to reveal. `GlobalTickspeedCard`/`OverclockCard`'s own `<h2>` still wrap a `Disclosure`
   (`styled.details`/`<summary>`, collapsed by default, the heading itself the only way to *open*
   it — no separate visible "expand" affordance) — but only when there's a genuinely *live game
   status* number to reveal (not a description of how the mechanic works): `GlobalTickspeedCard`'s
-  `+N% faster ticks on every tier.`, `OverclockCard`'s current per-level rate, and the
-  Perks → Automation's Tier Tickspeed Autobuyers start-Prestige/step pattern (see "Scale Up and
-  Overclock cards"/"Perks page" above) — each collapsed until the player clicks that heading.
+  `+N% faster ticks on every tier.` and `OverclockCard`'s current per-level rate (see "Scale Up and
+  Overclock cards" above) — each collapsed until the player clicks that heading.
   Only the heading (native `<summary>` toggle) opens or closes it — clicking the revealed status line does nothing. Each card's own
   action button sits *outside* its `Disclosure` as a sibling, so clicking Buy/Upgrade/Overclock
   never touches the disclosure. None of these is prose about *how* the mechanic works, only
@@ -765,8 +763,8 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   speed bonus unlocked"` once bought; DeGoogol, locked until Auto Purge's interval ≤
   `UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS`) and *Purchasing* (Buy max, `components/BuyMaxToggle`).
 Perks never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
-labels are `<RowIcon>` (fixed-width icon cell) + name; tier / tier-tickspeed / Flops cells show the
-tier symbol (their category heading names the kind). Every automation is named
+labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol
+once, its halves a ⚙/🤖 icon; Flops cells show the tier symbol (their category heading names the kind). Every automation is named
 `Auto <feature>` (no hyphen). Factory's Speed Up / Scale Up / Overclock cards share
 `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem heading); Auto Scale Up's status
 is an `AutoChip` in the Scale Up card header.
