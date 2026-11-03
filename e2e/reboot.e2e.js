@@ -15,11 +15,11 @@ test.beforeEach(async ({ page }) => {
   await page.reload()
 })
 
-test('prestiging from the first-time overlay resets resources, awards Prestige Points, and stays on MainPage', async ({ page }) => {
-  const overlay = page.getByRole('dialog', { name: /reboot required/i })
+test('prestiging from the first-time overlay resets resources, awards Purge Points, and stays on MainPage', async ({ page }) => {
+  const overlay = page.getByRole('dialog', { name: /purge required/i })
   await expect(overlay).toBeVisible()
 
-  await overlay.getByRole('button', { name: /reboot now/i }).click()
+  await overlay.getByRole('button', { name: /purge now/i }).click()
 
   await expect(overlay).not.toBeVisible()
   // intro.mainGameUnlocked is now a permanent, one-time-ever latch (see engine.js's

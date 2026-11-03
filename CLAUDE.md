@@ -656,7 +656,7 @@ Strict three-layer separation:
    names the page/feature only — entities drop the word in every player-visible label. Deliberately terse
    (icon-only controls, full sentence in `title`/`aria-label`; mechanic prose lives in the Guide). Order:
    top card = active Boost timer bar (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right,
-   enforced in the engine too; or "No boost running") + Auto-Boost pref; then per-tier rows — the ONE
+   enforced in the engine too; or "No boost running") + Auto Boost pref; then per-tier rows — the ONE
    selected tier (pre-selected to the active boost's tier on arrival) shows the 3 Boost presets inline (`COMPUTE_ENTITY_CAP` 10 slots,
    Merge ratio `COMPUTE_MERGE_RATIO` 8, Unlock Auto-merge, `COMPUTE_MERGE_RESERVE_CAP` 8 reserve). Cores
    come from buying Boosters from the matching Data Lake, not minted from Memory. Full detail:
@@ -724,9 +724,10 @@ this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop".
 
 ### Tiers, Prestige, Era ascension
 
-**Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Reboot, Era ascension,
-Reset Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Reboot** and the global
-tickspeed track is **Speed Up** (formerly Latency). Code follows suit — `state.reboot`, `rebootGame`,
+**Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Purge, Era ascension,
+Reset Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Purge** (formerly Reboot) and
+PP reads **Purge Points**; the global tickspeed track is **Speed Up** (formerly Latency). The Purge
+rename is player-facing only — code keeps the Reboot-era names: `state.reboot`, `rebootGame`,
 `REBOOT_THRESHOLD`, `autoReboot`, automation keys `'speedUp'`/`'reboot'` — while Prestige-Point,
 Double PP, speed-bonus, `prestigeMuseum` and `metaPrestige` identifiers keep `prestige`. Pre-rename
 save keys are renamed on load by `storage.js`'s `renamePreRebootKeys`.
@@ -756,7 +757,7 @@ free-unlocks the *N*th Flops tier's autobuyer (KFlops at Era 1, …). Hyperscale
 #414) add permanent +0.01%/s each to every Factory tier's Flops multiplier via
 `getHyperscalerFlopsBoostRate` — the engine/hook action (`buyHyperscaler`) is wired, but no page renders
 a purchase control yet (deferred to #414, blocked pending maintainer-approved spend design). Full detail:
-`docs/ECONOMY_REFERENCE.md`'s "Era ascension and Eons". Prestige Points are awarded by
+`docs/ECONOMY_REFERENCE.md`'s "Era ascension and Eons". Prestige (Purge) Points are awarded by
 `getPrestigePointsAwarded`: 1 base PP at 1 Googol Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64)
 additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Double PP
 upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then doubles PP-per-power; cost

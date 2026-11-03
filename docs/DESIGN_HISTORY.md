@@ -9094,6 +9094,17 @@ At the maintainer's request, Latency + Restage (above the tier list) and Scale U
 it) each share one `SpeedCardsRow` that stays side by side at every width (`flex: 1 1 0`, no wrap),
 superseding the earlier below-40rem single-column stack of Scale Up / Overclock.
 
+## Reboot → Purge (player-facing only); Auto Restage joins the automation chain (2026-11)
+
+The Factory reset was renamed **Purge** in the UI (PP now reads **Purge Points**). Unlike the earlier
+Prestige → Reboot rename, code identifiers and save keys (`state.reboot`, `rebootGame`, `autoReboot`,
+automation key `'reboot'`, `reboot.e2e.js`) were deliberately left alone: a code rename needs a
+save-key migration and touches thousands of lines for no player-visible gain, so it can be done
+separately if ever wanted. Auto Restage previously had no prerequisite and fired every tick; it now
+needs Auto Speed Up, unlocks in parallel with Auto Scale Up (player picks the order), gates Auto
+Overclock alongside Scale Up, and runs on its own `AUTOMATION_INTERVAL_CONFIG.restage` interval chain
+(16 PP / 64 s, same as Scale Up). Saves that already own Restage or Overclock keep them.
+
 ## Tap bonuses moved from buffer fills to their consumers (2026-11)
 
 Taps used to multiply the Data Stream's and each pool's own fill (×(1 + bonus%) inside

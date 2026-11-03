@@ -316,7 +316,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                     devModeActive
                       ? 'Disable Dev Mode first'
                       : frozen && slot.isActive
-                        ? 'Reboot first — production is frozen at 1 Googol Bytes'
+                        ? 'Purge first — production is frozen at 1 Googol Bytes'
                         : 'Erase this slot only (asks for confirmation)'
                   }
                   type="button"
@@ -334,8 +334,8 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         <h2>Prestige museum</h2>
         {!supporter ? (
           <LockedNote>
-            History still records in the background. Unlock Supporter to browse past reboots and pin up to {MUSEUM_PIN_CAP}.
-            {history.length > 0 && ` Latest: Reboot #${history[0].rebootNumber} (+${history[0].pointsAwarded} PP).`}
+            History still records in the background. Unlock Supporter to browse past purges and pin up to {MUSEUM_PIN_CAP}.
+            {history.length > 0 && ` Latest: Purge #${history[0].rebootNumber} (+${history[0].pointsAwarded} PP).`}
           </LockedNote>
         ) : (
           <>
@@ -343,17 +343,17 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
             {pinnedEntries.length > 0 && (
               <>
                 <LockedNote>Pinned</LockedNote>
-                <MuseumList aria-label="pinned reboot entries">
+                <MuseumList aria-label="pinned purge entries">
                   {pinnedEntries.map(entry => (
                     <MuseumItem key={`pin-${entry.id}`}>
                       <div>
-                        <strong>Reboot #{entry.rebootNumber}</strong>
+                        <strong>Purge #{entry.rebootNumber}</strong>
                         <div>
                           <span>+{entry.pointsAwarded} PP · {formatMoneyBalance(entry.moneyBits)}</span>
                         </div>
                       </div>
                       <Button
-                        aria-label={`unpin reboot ${entry.rebootNumber}`}
+                        aria-label={`unpin purge ${entry.rebootNumber}`}
                         onClick={() => game.actions.unpinMuseumEntry(entry.id)}
                         type="button"
                         variant="neutral"
@@ -367,20 +367,20 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
             )}
             <LockedNote>Recent history</LockedNote>
             {visibleHistory.length === 0 ? (
-              <LockedNote>No reboots recorded yet.</LockedNote>
+              <LockedNote>No purges recorded yet.</LockedNote>
             ) : (
               <MuseumList aria-label="prestige museum history">
                 {visibleHistory.map(entry => (
                   <MuseumItem key={entry.id}>
                     <div>
-                      <strong>Reboot #{entry.rebootNumber}</strong>
+                      <strong>Purge #{entry.rebootNumber}</strong>
                       <div>
                         <span>+{entry.pointsAwarded} PP · {formatCurrency(entry.moneyBits)}</span>
                       </div>
                     </div>
                     {pinnedSet.has(entry.id) ? (
                       <Button
-                        aria-label={`unpin reboot ${entry.rebootNumber}`}
+                        aria-label={`unpin purge ${entry.rebootNumber}`}
                         onClick={() => game.actions.unpinMuseumEntry(entry.id)}
                         type="button"
                         variant="neutral"
@@ -389,7 +389,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                       </Button>
                     ) : (
                       <Button
-                        aria-label={`pin reboot ${entry.rebootNumber}`}
+                        aria-label={`pin purge ${entry.rebootNumber}`}
                         disabled={pinnedSet.size >= MUSEUM_PIN_CAP}
                         onClick={() => game.actions.pinMuseumEntry(entry.id)}
                         type="button"
@@ -409,7 +409,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
       <Section aria-label="era ascension section">
         <h2>Era ascension</h2>
         <p>
-          Voluntary meta-prestige when you hold enough unspent Prestige Points — no production
+          Voluntary meta-prestige when you hold enough unspent Purge Points — no production
           freeze. Awards Eons for future upgrades.
         </p>
         <Row>
@@ -429,7 +429,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           aria-label={
             eraEligible
               ? 'Ascend an Era — open confirmation'
-              : 'Ascend an Era — requires 1 Googol unspent Prestige Points'
+              : 'Ascend an Era — requires 1 Googol unspent Purge Points'
           }
           disabled={!eraEligible}
           onClick={() => setEraConfirmOpen(true)}
@@ -443,7 +443,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
       <Section aria-label="ops dashboard section">
         <h2>Ops dashboard</h2>
         {!supporter ? (
-          <LockedNote>Unlock Supporter for live Bits and Prestige Point sparklines. Information only — no production change.</LockedNote>
+          <LockedNote>Unlock Supporter for live Bits and Purge Point sparklines. Information only — no production change.</LockedNote>
         ) : (
           <>
             <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.reboot?.points ?? 0}</p>
@@ -451,8 +451,8 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
             <SparklineSvg aria-label="bits sparkline" role="img" viewBox="0 0 100 40">
               <path d={moneyPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
             </SparklineSvg>
-            <LockedNote>Prestige Points</LockedNote>
-            <SparklineSvg aria-label="prestige points sparkline" role="img" viewBox="0 0 100 40">
+            <LockedNote>Purge Points</LockedNote>
+            <SparklineSvg aria-label="purge points sparkline" role="img" viewBox="0 0 100 40">
               <path d={ppPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
             </SparklineSvg>
           </>
@@ -497,7 +497,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           onClick={onReset}
           title={
             frozen
-              ? 'Reboot first — production is frozen at 1 Googol Bytes'
+              ? 'Purge first — production is frozen at 1 Googol Bytes'
               : 'Erases the active save slot and starts over (asks for confirmation)'
           }
           type="button"
@@ -512,7 +512,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           Restart the Byte Foundry on the active save — Capacity, Memory, Disks, Data Lakes and
           Compute entities. Combine, Upgrade Capacity, Upgrade Speed, Provision Disk and Data Lake
           upgrades/Boosters then replay automatically up to your pre-reset highs.
-          Byte Factory and Reboot progress stay.
+          Byte Factory and Purge progress stay.
         </p>
         <Button
           aria-describedby="settings-reset-foundry-description"
@@ -521,7 +521,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           onClick={onResetByteFoundry}
           title={
             frozen
-              ? 'Reboot first — production is frozen at 1 Googol Bytes'
+              ? 'Purge first — production is frozen at 1 Googol Bytes'
               : 'Restarts the Foundry; Combine, Data Stream upgrades, Disks and Data Lakes replay automatically up to prior highs'
           }
           type="button"
@@ -530,7 +530,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           <ButtonContent>↺ Reset Byte Foundry…</ButtonContent>
           <VisuallyHidden id="settings-reset-foundry-description">
             Restarts Capacity, Storage, Data Lakes and Compute from scratch, then replays upgrades,
-            Disks and Data Lakes automatically up to pre-reset highs; Byte Factory and Reboot progress stay
+            Disks and Data Lakes automatically up to pre-reset highs; Byte Factory and Purge progress stay
           </VisuallyHidden>
         </Button>
         <p>Wipe every slot’s progress on this device. Does not remove the Supporter unlock.</p>
@@ -542,7 +542,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
             devModeActive
               ? 'Disable Dev Mode first'
               : frozen
-                ? 'Reboot first — production is frozen at 1 Googol Bytes'
+                ? 'Purge first — production is frozen at 1 Googol Bytes'
                 : 'Erases all slots but keeps Supporter unlock (asks for confirmation)'
           }
           type="button"
@@ -567,7 +567,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         </p>
         <p>
           <strong>Resets:</strong> Foundry generator upgrades, Memory, Disks, Compute entities,
-          Byte Factory tiers and resources, unspent PP and Reboot count, Double PP level, and Compute
+          Byte Factory tiers and resources, unspent PP and Purge count, Double PP level, and Compute
           owned units.
         </p>
         <p>

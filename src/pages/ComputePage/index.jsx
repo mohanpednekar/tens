@@ -475,7 +475,7 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer, see
 // issues #280/#321) lives here too, alongside Boost — one page for everything Compute, rather
 // than a second dedicated screen. Render order top to bottom: a card with the current boost
-// effect, the active boost timer bar (Pop/Forfeit, Stack) and Auto-Boost preference, THEN the tier rows — the one selected
+// effect, the active boost timer bar (Pop/Forfeit, Stack) and Auto Boost preference, THEN the tier rows — the one selected
 // tier shows the armed status line + 3 preset buttons inside its own block, below its merge row.
 // Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1 is COMPUTE_ENTITY_CAP (10)
 // normal slots plus the tier's name/symbol; row 2 is, pre-unlock, an instant Merge button + an
@@ -629,7 +629,7 @@ const ComputePage = ({ game }) => {
                 aria-label={`set auto boost preference to ${boostType}`}
                 aria-pressed={selected}
                 onClick={() => actions.setComputeAutoBoostType(boostType)}
-                title={`Auto-Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
+                title={`Auto Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
                 type="button"
                 variant={selected ? 'reboot' : 'neutral'}
               >

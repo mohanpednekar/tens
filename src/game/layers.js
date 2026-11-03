@@ -654,12 +654,13 @@ export const AUTOBUYER_MIN_INTERVAL_SECONDS = 0.01
 // Interval upgrade chains for the global/per-tier automations (engine.js's
 // buyAutomationIntervalUpgrade / buyTierTickspeedIntervalUpgrade): cost = baseCost × the same
 // 1,2,4,…,64,125,… ladder as the tier autobuyer chain; interval = baseSeconds × 0.9^level, 10 ms floor.
-// baseCost is BOTH the one-time unlock cost of the automation (Speed Up / Scale Up / Overclock /
-// Auto-Prestige autobuyers) AND the first interval-upgrade level's cost. Automations unlocked by a
+// baseCost is BOTH the one-time unlock cost of the automation (Speed Up / Scale Up / Restage /
+// Overclock / Purge autobuyers) AND the first interval-upgrade level's cost. Automations unlocked by a
 // milestone (tier autobuyers, tier tickspeed autobuyers) have no unlock cost — only the upgrades.
 export const AUTOMATION_INTERVAL_CONFIG = {
   speedUp: { baseCost: 8, baseSeconds: 1 },
   scaleUp: { baseCost: 16, baseSeconds: 64 },
+  restage: { baseCost: 16, baseSeconds: 64 },
   overclock: { baseCost: 32, baseSeconds: 256 },
   reboot: { baseCost: 64, baseSeconds: 1024 },
 }
@@ -725,9 +726,10 @@ export const LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1
 // of) its own resource-funded tickspeed level. "Last tier" (not a hardcoded tier id) so this stays
 // correct if TIER_DEFINITIONS ever grows a new final entry.
 export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
-// One-time PP cost (Perks → Unlocks) for the Auto Restage — once bought, tickGame spends the
-// whole XP balance on the last tier's XP-funded tickspeed whenever consumeXpForLastTierTickspeed allows.
-export const XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = 16
+// One-time PP cost (Perks → Unlocks) for Auto Restage (= its interval chain's baseCost) — once bought,
+// tickGame spends the whole XP balance on the last tier's XP-funded tickspeed whenever
+// consumeXpForLastTierTickspeed allows, at most once per AUTOMATION_INTERVAL_CONFIG.restage interval.
+export const XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = AUTOMATION_INTERVAL_CONFIG.restage.baseCost
 // Each single XP-consumption action must be at least this fraction of the cumulative XP already
 // consumed this way (see engine.js's getLastTierXpTickspeedMinConsumption) — so repeat
 // consumptions can't trickle in one XP at a time forever; the required minimum grows alongside

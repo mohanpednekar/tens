@@ -161,15 +161,15 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: 0,
   }), {}),
-  // Permanent interval-upgrade levels for the global automations (speedUp/scaleUp/overclock/reboot —
-  // see AUTOMATION_INTERVAL_CONFIG) and per-tier tickspeed autobuyers; never reset by prestige.
-  automationIntervalLevels: { speedUp: 0, scaleUp: 0, overclock: 0, reboot: 0 },
+  // Permanent interval-upgrade levels for the global automations (speedUp/scaleUp/restage/overclock/
+  // reboot — see AUTOMATION_INTERVAL_CONFIG) and per-tier tickspeed autobuyers; never reset by prestige.
+  automationIntervalLevels: { speedUp: 0, scaleUp: 0, restage: 0, overclock: 0, reboot: 0 },
   tierTickspeedIntervalLevels: TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: 0 }), {}),
   // Run-scoped attempt budgets for those automations (accrue elapsed / interval; fire at >= 1).
   // Prestige keeps its own autoRebootAttemptBudget.
-  automationAttemptBudgets: { speedUp: 0, scaleUp: 0, overclock: 0 },
+  automationAttemptBudgets: { speedUp: 0, scaleUp: 0, restage: 0, overclock: 0 },
   tierTickspeedAttemptBudgets: TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: 0 }), {}),
-  // Permanent: Auto Overclock unlocked (PP, getAutomationUnlockCost('overclock'); needs Auto Scale Up) and its pause preference.
+  // Permanent: Auto Overclock unlocked (PP, getAutomationUnlockCost('overclock'); needs Auto Scale Up AND Auto Restage) and its pause preference.
   autoOverclock: false,
   autoOverclockEnabled: true,
   // Permanent per-tier flag: whether this tier's own (Money-funded) tickspeed multiplier upgrades
@@ -1963,18 +1963,23 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     ? runGlobalIntervalAutomation(stateAfterAutomation, elapsedSeconds, 'speedUp', buyGlobalTickspeedMultiplier)
     : stateAfterAutomation
 
-  // If Auto Scale Up is bought (see buyAutoScaleUp), trigger a Scale Up automatically the instant
-  // it's eligible — no manual click needed. scaleUpGame re-validates the current target's
-  // completed-level requirement (a multiple of 3 — see getScaleUpRequirement) and the production
-  // freeze, so this is a
-  // plain edge-triggered call, same convention as the autobuyer-automation loop above, not a
-  // rate-accumulating budget — Scale Up has no cadence to throttle, unlike Auto-Prestige. Gated on
-  // autoScaleUpEnabled (see setAutoScaleUpEnabled) — paused behaves exactly as if autoScaleUp were
-  // still false, for automation purposes only; the manual Scale Up button is unaffected.
-  const stateAfterAutoScaleUp = stateAfterGlobalTickspeedAutobuyer.autoScaleUp
-    && (stateAfterGlobalTickspeedAutobuyer.autoScaleUpEnabled ?? true)
-    ? runGlobalIntervalAutomation(stateAfterGlobalTickspeedAutobuyer, elapsedSeconds, 'scaleUp', scaleUpGame)
+  // Auto Restage (PP unlock, needs Auto Speed Up; parallel to Auto Scale Up): spends the whole XP
+  // balance on the last tier's XP tickspeed whenever consumeXpForLastTierTickspeed allows (unlocked,
+  // last tier owned > 0, XP >= minimum, not frozen), at most once per 'restage' interval — that
+  // function re-validates and no-ops otherwise.
+  const stateAfterAutoXp = stateAfterGlobalTickspeedAutobuyer.autoXpTickspeed
+    && (stateAfterGlobalTickspeedAutobuyer.autoXpTickspeedEnabled ?? true)
+    ? runGlobalIntervalAutomation(stateAfterGlobalTickspeedAutobuyer, elapsedSeconds, 'restage', s => consumeXpForLastTierTickspeed(s.reboot.xp)(s))
     : stateAfterGlobalTickspeedAutobuyer
+
+  // If Auto Scale Up is bought (see buyAutoScaleUp), trigger a Scale Up whenever eligible, at most
+  // once per 'scaleUp' interval. scaleUpGame re-validates the current target's completed-level
+  // requirement (see getScaleUpRequirement) and the production freeze. Gated on autoScaleUpEnabled
+  // (see setAutoScaleUpEnabled); the manual Scale Up button is unaffected.
+  const stateAfterAutoScaleUp = stateAfterAutoXp.autoScaleUp
+    && (stateAfterAutoXp.autoScaleUpEnabled ?? true)
+    ? runGlobalIntervalAutomation(stateAfterAutoXp, elapsedSeconds, 'scaleUp', scaleUpGame)
+    : stateAfterAutoXp
 
   // Auto Overclock (PP unlock): claims Overclock whenever eligible, at most once per interval.
   // overclockGame re-validates eligibility internally.
@@ -1983,17 +1988,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     ? runGlobalIntervalAutomation(stateAfterAutoScaleUp, elapsedSeconds, 'overclock', overclockGame)
     : stateAfterAutoScaleUp
 
-  // Auto Restage (PP unlock): spends the whole XP balance on the last tier's XP tickspeed
-  // whenever consumeXpForLastTierTickspeed allows (unlocked, last tier owned > 0, XP >= minimum,
-  // not frozen) — edge-triggered; that function re-validates and no-ops otherwise.
-  const stateAfterAutoXp = stateAfterScaleUp.autoXpTickspeed && (stateAfterScaleUp.autoXpTickspeedEnabled ?? true)
-    ? consumeXpForLastTierTickspeed(stateAfterScaleUp.reboot.xp)(stateAfterScaleUp)
-    : stateAfterScaleUp
-
   // Runs last, against this tick's final tier01 level (post autobuyer/Scale Up), so a Disk
   // sized for a level tier01 only just reached THIS tick can still redeem the same tick — see
   // tickStorage above (auto-fill itself already ran earlier, as part of stateAfterIntro).
-  let stateBeforeStorage = stateAfterAutoXp
+  let stateBeforeStorage = stateAfterScaleUp
 
   // DeGoogol (Auto-Prestige interval ≤ UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS): Auto-Prestige fires
   // here while production keeps running — the frozen branch above is skipped entirely.
@@ -6649,7 +6647,7 @@ export const buyAutobuyerIntervalUpgrade = tierId => state => {
 const getIntervalMaxLevelForBase = baseSeconds =>
   Math.max(0, Math.ceil(Math.log(AUTOBUYER_MIN_INTERVAL_SECONDS / baseSeconds) / Math.log(AUTOBUYER_INTERVAL_MULTIPLIER)))
 
-// Global automation interval chains (speedUp / scaleUp / overclock / reboot): AUTOMATION_INTERVAL_CONFIG.
+// Global automation interval chains (speedUp / scaleUp / restage / overclock / reboot): AUTOMATION_INTERVAL_CONFIG.
 export const getAutomationIntervalMaxLevel = key => getIntervalMaxLevelForBase(AUTOMATION_INTERVAL_CONFIG[key].baseSeconds)
 export const getAutomationIntervalSeconds = (state, key) =>
   Math.max(
@@ -6663,6 +6661,7 @@ export const getAutomationIntervalUpgradeCost = (key, level) =>
 const isAutomationIntervalChainAvailable = (state, key) => {
   if (key === 'speedUp') return Boolean(state.autoGlobalTickspeed)
   if (key === 'scaleUp') return Boolean(state.autoScaleUp)
+  if (key === 'restage') return Boolean(state.autoXpTickspeed)
   if (key === 'overclock') return Boolean(state.autoOverclock)
   if (key === 'reboot') return (state.autoReboot ?? null) !== null
   return false
@@ -6713,10 +6712,11 @@ export const buyTierTickspeedIntervalUpgrade = tierId => state => {
   }
 }
 
-// One-time PP unlock of Auto Overclock (getAutomationUnlockCost('overclock')); needs Auto Scale Up first.
+// One-time PP unlock of Auto Overclock (getAutomationUnlockCost('overclock')); needs BOTH Auto Scale Up
+// and Auto Restage first (those two unlock in parallel after Auto Speed Up, in either order).
 export const buyAutoOverclock = state => {
   if (isProductionFrozen(state)) return state
-  if (state.autoOverclock || !state.autoScaleUp) return state
+  if (state.autoOverclock || !state.autoScaleUp || !state.autoXpTickspeed) return state
   const cost = getAutomationUnlockCost('overclock')
   if (clampNonNegative(state.reboot.points) < cost) return state
 
@@ -7564,11 +7564,12 @@ export const buyComputeAutoBoost = state => {
 }
 
 // One-time XP_TICKSPEED_AUTOBUYER_UNLOCK_COST (16) PP purchase of the Auto Restage (see
-// autoXpTickspeed/tickGame). No prerequisite. A no-op if already bought, if there aren't enough
-// unspent points, or while production is frozen — same convention as buyAutoScaleUp.
+// autoXpTickspeed/tickGame). Needs Auto Speed Up (parallel to Auto Scale Up). A no-op if already
+// bought, if there aren't enough unspent points, or while production is frozen — same convention as
+// buyAutoScaleUp. Its cadence is upgraded via buyAutomationIntervalUpgrade('restage').
 export const buyXpTickspeedAutobuyer = state => {
   if (isProductionFrozen(state)) return state
-  if (state.autoXpTickspeed) return state
+  if (state.autoXpTickspeed || !state.autoGlobalTickspeed) return state
   if (clampNonNegative(state.reboot.points) < XP_TICKSPEED_AUTOBUYER_UNLOCK_COST) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)

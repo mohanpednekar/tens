@@ -207,7 +207,7 @@ const SpeedCardsRow = styled.div`
   }
 `
 
-// Shared by the Money and Prestige Point balance displays — the only top-of-page blocks besides
+// Shared by the Money and Purge Point balance displays — the only top-of-page blocks besides
 // Header that are centered rather than left-aligned. $actionable (used only by the PP display,
 // once Prestige is available) makes the whole card double as the Prestige button, rather than the
 // "don't combine those on a passive tile" call made for the offline notice card.
@@ -351,7 +351,7 @@ const RebootProgressLabel = styled.span`
 `
 
 
-// Prestige Points as a secondary header line beneath the money hero — same CenteredCard base
+// Purge Points as a secondary header line beneath the money hero — same CenteredCard base
 // (so it keeps $actionable's Prestige-button behavior once canReboot), just flattened (no
 // shadow, tighter padding) so it visually reads as subordinate to the money hero above it rather
 // than a second card of equal visual weight.
@@ -362,7 +362,7 @@ const PpHeaderCard = styled(CenteredCard)`
 
 // The Money balance card's click-to-expand breakdown of every global (not per-tier) production
 // multiplier currently in effect — Prestige's passive speed bonus, Scale Up, and the Global
-// Tickspeed Multiplier (see "The global tickspeed multiplier"/"Scale Up"/"Prestige Points,
+// Tickspeed Multiplier (see "The global tickspeed multiplier"/"Scale Up"/"Purge Points,
 // autobuyer unlock, and the tickspeed multiplier" in CLAUDE.md). Left-aligned (overriding
 // CenteredCard's own text-align: center) for list readability, same technique FullScreenCard's own
 // ul already uses.
@@ -818,9 +818,9 @@ const MainPage = ({ game }) => {
   // but the award on reaching it is always at least 1, so that's the effect worth advertising.
   const rebootAwardPreview = Math.max(1, prestigePointsPreview)
   const rebootLabel = isUnbounded && canReboot
-    ? 'Reboot (optional — claim accumulated PP)'
-    : 'Reboot (requires 1 Googol Bytes)'
-  const rebootAriaLabel = `${rebootLabel} — awards +${formatAmount(rebootAwardPreview)} Prestige Point${rebootAwardPreview === 1 ? '' : 's'}`
+    ? 'Purge (optional — claim accumulated PP)'
+    : 'Purge (requires 1 Googol Bytes)'
+  const rebootAriaLabel = `${rebootLabel} — awards +${formatAmount(rebootAwardPreview)} Purge Point${rebootAwardPreview === 1 ? '' : 's'}`
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
   // lazy initializer, from whatever loadGameState() returned) — a tier unlocked before this
   // load never plays the reveal animation, even though every unlocked row technically "mounts"
@@ -1092,9 +1092,9 @@ const MainPage = ({ game }) => {
 
   if (showFullScreenPrompt) {
     return (
-      <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Reboot required">
+      <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Purge required">
         <FullScreenCard>
-          <h2>✦ Reboot Available!</h2>
+          <h2>✦ Purge Available!</h2>
           <RebootMutedText>
             You've reached {formatCurrency(state.resources[MONEY_ID])} — 1 Googol Bytes. All
             production has stopped.
@@ -1102,22 +1102,22 @@ const MainPage = ({ game }) => {
           <ul>
             <li>Resets your resources, owned tiers, and purchases</li>
             <li>
-              Awards {formatAmount(prestigePointsPreview)} Prestige Point
+              Awards {formatAmount(prestigePointsPreview)} Purge Point
               {prestigePointsPreview === 1 ? '' : 's'} — spend them on the Perks page for
               automation and production bonuses
             </li>
-            <li>Keeps your unlocked autobuyers and Prestige Points</li>
+            <li>Keeps your unlocked autobuyers and Purge Points</li>
           </ul>
           <Button
             ref={fullScreenRebootButtonRef}
-            aria-label="Reboot now"
+            aria-label="Purge now"
             variant="prestige"
             onClick={actions.reboot}
-            title="Awards Prestige Points and resets your resources"
+            title="Awards Purge Points and resets your resources"
             type="button"
             $pulse
           >
-            <ButtonContent>✦ Reboot Now</ButtonContent>
+            <ButtonContent>✦ Purge Now</ButtonContent>
           </Button>
         </FullScreenCard>
       </FullScreenOverlay>
@@ -1128,35 +1128,35 @@ const MainPage = ({ game }) => {
     <RootDiv>
       {showTopRebootBar && (
         <>
-          <TopRebootBar ref={topRebootBarRef} aria-label="reboot available banner">
+          <TopRebootBar ref={topRebootBarRef} aria-label="purge available banner">
             <RebootMutedText>1 Googol Bytes reached — production has stopped.</RebootMutedText>
             <Button
               aria-label={rebootAriaLabel}
               variant="prestige"
               onClick={actions.reboot}
-              title="Awards Prestige Points and resets your resources"
+              title="Awards Purge Points and resets your resources"
               type="button"
               $pulse
             >
               <ButtonIcon>✦ </ButtonIcon>
-              <ButtonLabel>Reboot +{formatAmount(rebootAwardPreview)} PP</ButtonLabel>
+              <ButtonLabel>Purge +{formatAmount(rebootAwardPreview)} PP</ButtonLabel>
             </Button>
           </TopRebootBar>
           <TopRebootBarSpacer $height={topRebootBarHeight} />
         </>
       )}
 
-      <RebootProgressBar aria-label="reboot progress">
+      <RebootProgressBar aria-label="purge progress">
         <RebootProgressTrack $percent={rebootProgressPercent}>
           <VisuallyHidden
             role="progressbar"
-            aria-label="progress toward 1 Googol Bytes, when Reboot becomes available"
+            aria-label="progress toward 1 Googol Bytes, when Purge becomes available"
             aria-valuenow={rebootProgressPercent}
             aria-valuemin={0}
             aria-valuemax={100}
           />
           <RebootProgressLabel>
-            {`${rebootProgressPercent}% to Reboot`}
+            {`${rebootProgressPercent}% to Purge`}
           </RebootProgressLabel>
         </RebootProgressTrack>
       </RebootProgressBar>
@@ -1252,7 +1252,7 @@ const MainPage = ({ game }) => {
 
         {!isFirstRun && (
           <PpHeaderCard
-            aria-label="prestige points display"
+            aria-label="purge points display"
             $actionable={canReboot}
             onClick={canReboot ? actions.reboot : undefined}
             onKeyDown={event => {
@@ -1262,7 +1262,7 @@ const MainPage = ({ game }) => {
             }}
             role={canReboot ? 'button' : undefined}
             tabIndex={canReboot ? 0 : undefined}
-            title={canReboot ? 'Awards Prestige Points and resets your resources' : undefined}
+            title={canReboot ? 'Awards Purge Points and resets your resources' : undefined}
           >
             <HudMutedText>
               <HudGoldText>{formatAmount(reboot.points)} PP</HudGoldText>
