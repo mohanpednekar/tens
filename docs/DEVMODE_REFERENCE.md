@@ -40,7 +40,7 @@ no-op outside Dev Mode as a defense-in-depth guard, though the UI only renders t
   Prestige / Era) applying a small delta onto the live state via `game.setDevState(updater)`, e.g.
   unlocking the Byte Factory gate, Bits to the Prestige threshold, +1 Prestige count (run through
   `applyAutobuyerMilestones`, as a real Prestige does, so count-gated autobuyers unlock). They reference
-  the same `layers.js` constants (`REBOOT_THRESHOLD`/`ERA_ELIGIBILITY_PP`/etc.) the real game gates
+  the same `layers.js` constants (`PURGE_THRESHOLD`/`ERA_ELIGIBILITY_PP`/etc.) the real game gates
   on, so they can't drift.
 - **Variables** — not a hand-maintained field list: `FieldNode` recursively walks `game.state`, one
   row per leaf, nested under a collapsible `<details>` per object ancestor. Top-level keys are split

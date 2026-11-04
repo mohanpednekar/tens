@@ -21,7 +21,7 @@ commit as any change to the mechanics it describes.
    `actions.tapIntroBit`; see "Fill-based Speed/Bandwidth multiplier"). Compute lives on its own screen
    (4b); Storage's every-size detail (4a) is continuous sections on this Foundry screen (and the reusable
    `StoragePage` wrapper), not a separate AppNav item or tab. Data Stream owns the shared
-   Combine/Speed/Capacity actions and the common Provision Disk control; Storage pools 1–10 are derived
+   Compile/Bitrate/Capacity actions and the common Provision Disk control; Storage pools 1–10 are derived
    views over the one Data Stream, each with its own Bandwidth (`getStoragePoolBandwidth`, hard-capped at
    that pool's Capacity in Bytes ^ `getDataStreamSpeedExponent(intro)` — the same rising exponent as the Data Stream's own cap) and local buffer
    (`intro.poolBuffers[poolIndex]`, `getPoolBufferBits`/`getPoolBufferCapacity`) that every bit-costing
@@ -56,26 +56,26 @@ commit as any change to the mechanics it describes.
 
 ## Architecture 4b — `ComputePage/index.jsx`
 
-4b. **`ComputePage/index.jsx`** — Foundry **Boosters** screen (page id `'boosters'`), taking `{ game }`.
+4b. **`ComputePage/index.jsx`** — Foundry **Power** screen (label only) (page id `'boosters'`), taking `{ game }`.
    Reached via AppNav once `isComputeCoreConversionUnlocked`. Also hosts the nine-boundary merge chain
-   (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer —
+   (Cell → Battery → Pack → Bank → Generator → Turbine → Plant → Grid → Reactor → Fusion —
    see "Economy model", issues #280/#316/#321), behind its own later, one-time
    `intro.computeMergePageUnlocked` reveal. "Compute" names the page/feature only — entities drop the word
-   (`Core`/`Node`/…) in every player-visible label. Deliberately terse — icon-only controls, full sentence
+   (`Cell`/`Battery`/…) in every player-visible label. Deliberately terse — icon-only controls, full sentence
    in `title`/`aria-label`; mechanic prose lives in the Guide (`InfoPage`). Render order: a top card with the
    active Boost's timer bar — Pop (refund newest unused stack, no confirm) or, once none is unused,
    Forfeit (confirmed) on the left, Stack on the right (`canReclaimComputeBoost`/`canForfeitComputeBoost`
    enforce the same split in the engine) — or "No boost running"; while a boost runs, the matching
    preset stacks and any other preset is a confirmed switch that refunds unused stacks), THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
-   `COMPUTE_ENTITY_CAP` (10) normal-slot squares (never above 10/10, even once auto-merge is unlocked and
+   `COMPUTE_ENTITY_CAP` (10) normal-slot squares (never above 10/10, even once auto-charge is unlocked and
    the entity has grown into its reserve) plus a `TierSelectButton` selecting that tier — only the ONE selected tier block shows
-   `ArmedStatusText` + the 3 Burst/Standard/Sustain presets inline, at that tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
-   Auto-merge `TierActionButton`s (the latter with a live progress fill toward its
+   `ArmedStatusText` + the 3 Turbo/Balanced/Eco presets inline, at that tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-charge unlocks, Charge up (`COMPUTE_MERGE_RATIO`, 8) + Unlock
+   Auto-charge `TierActionButton`s (the latter with a live progress fill toward its
    `COMPUTE_ENTITY_CAP`-unit cost), or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot
-   squares (gradually filled, `getComputeReserveHeld`), labelled "🤖 Auto-merge", clickable as an instant
-   8→1 manual merge (only the automatic merge is timed); the selected tier's presets render below this row — Megacomputer has no
-   row 2. Cores come from buying Boosters from the matching Data Lake on Foundry's `DataLakePanel`, not
-   minted from Memory. Full button/gate/aria-label detail: `docs/MAINPAGE_REFERENCE.md`; render-order and
+   squares (gradually filled, `getComputeReserveHeld`), labelled "🤖 Auto-charge", clickable as an instant
+   8→1 manual charge (only the automatic charge is timed); the selected tier's presets render below this row — Fusion has no
+   row 2. Cells come from buying them from the matching Data Lake on Foundry's `DataLakePanel`, not
+   minted from Data Stream Capacity. Full button/gate/aria-label detail: `docs/MAINPAGE_REFERENCE.md`; render-order and
    Stack/Pop/Forfeit rationale: `docs/DESIGN_HISTORY.md`.
 
 ## Economy model — Byte Foundry (full text)
@@ -86,18 +86,18 @@ before the main game (`tier01`/Kilobytes onward) is reachable — a ONE-TIME-EVE
 `latchMainGameUnlocked`/`intro.mainGameUnlocked`): once Storage's capacity threshold is reached, the gate
 is permanently gone, across every future real Prestige and Era ascension. Tapping accumulates bits into
 the **Data Stream** (a Buffer-capped balance) that combines into a permanent, passively producing Byte
-generator. Combine creates the generator without snapping Capacity; save load via
+generator. Compile creates the generator without snapping Capacity; save load via
 `normalizePoolMemoryCapacity` preserves current Capacity and only clamps when necessary. Era ascension
 keeps the generator (`byteCreated`) and the `mainGameUnlocked` latch but resets Capacity to
 `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`) — Capacity is rebuilt each
-Era, Factory access never goes away again once earned. Production and storage grow via two **Upgrade Capacity** / **Upgrade Speed** actions, one at a time (`queueIntroSpeedUpgrade`; detail: `docs/ECONOMY_REFERENCE.md`'s "Upgrade Speed"): a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
+Era, Factory access never goes away again once earned. Production and storage grow via two **Upgrade Capacity** / **Upgrade Bitrate** actions, one at a time (`queueIntroSpeedUpgrade`; detail: `docs/ECONOMY_REFERENCE.md`'s "Upgrade Speed"): a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
 and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at base Speed × the
 Data Stream tap bonus (`getDataStreamTapMultiplier` — no fill multiplier) into `intro.capacityUpgradeProgress`, ahead of
 every other consumer — nothing is paused or raced; when the bar
 reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
 running, the same button becomes an inert progress bar (no cancel; the tile is unchanged). Displayed Speed is *derived* from the Speed basis
-(`getDataStreamSpeedBytesPerSecond`): it's `basisBytes ** e` B/s, capped at `Capacity^e`, where `e = getDataStreamSpeedExponent(intro)` = `DATA_STREAM_SPEED_EXPONENT_BASE` (0.5) + `DATA_STREAM_SPEED_EXPONENT_STEP` (0.01) per unlocked Disk size beyond the first (`intro.unlockedDiskSteps`, default 1). Provisioning a size beyond the unlocked ones needs a **Foundry reset** (`unlockNextDiskSizeByFoundryReset`/`isDiskSizeUnlockAvailable`; `resetByteFoundry` + one more step, convenience replay rebuilds prior highs); steps survive Prestige/Reset Byte Foundry, reset on Era ascension, and old saves are grandfathered in `normalizePoolMemoryCapacity`. Detail: `docs/ECONOMY_REFERENCE.md`. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,
-nav **Boosters**) unlock; a separate **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
+(`getDataStreamSpeedBytesPerSecond`): it's `basisBytes ** e` B/s, capped at `Capacity^e`, where `e = getDataStreamSpeedExponent(intro)` = `DATA_STREAM_SPEED_EXPONENT_BASE` (0.5) + `DATA_STREAM_SPEED_EXPONENT_STEP` (0.01) per unlocked Disk size beyond the first (`intro.unlockedDiskSteps`, default 1). Provisioning a size beyond the unlocked ones needs a **Foundry reset** (`unlockNextDiskSizeByFoundryReset`/`isDiskSizeUnlockAvailable`; `resetByteFoundry` + one more step, convenience replay rebuilds prior highs); steps survive Prestige/Reset Byte Foundry, reset on Era ascension, and old saves are grandfathered in `normalizePoolMemoryCapacity`. Detail: `docs/ECONOMY_REFERENCE.md`. Later, Disks (`StoragePage`) and Compute Cells/Batteries/Compute Boost (`ComputePage`,
+nav **Power**) unlock; a separate **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
 unlocks at 100 PP — see Architecture 4c. Recurring "upgrade" actions are ranked in a fixed **forced
 priority order** — Disk Fill > Provision Disk > Compute Boost — so a lower-ranked action is disabled (in **Boost pool bonus:** a boost also scales the buffer-fill speed of the Storage pools matching the Factory tiers it covers (pool N ↔ tier N) by `1 + poolBonusPercent/100` (`COMPUTE_BOOST_PRESETS`: +200% / +50% / +10%; `getComputeBoostPoolMultiplier`, applied in `getPoolEffectMultiplier` on top of the capped fill percent); covered pool cards glow.
 the UI and in the engine reducer) whenever a higher one is available. **Upgrade Capacity / Speed themselves sit
@@ -112,7 +112,7 @@ auto-convert alone carries the player through the gate. `convertIntroBitsToKilob
 exported/tested — only its one UI caller was removed. The generator, Disks, Data Lakes
 (`depositedUnits`/`fillBits` / purchased Boosters / `autoConvertActive` / `capacityLevel`), and every
 compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric, Cloud, Datacenter, Supercomputer,
-Megacomputer (every tier past Node mergeable manually, 8:1 per tier, once unlocked — "Compute" names the
+Fusion (every tier past Battery mergeable manually, 8:1 per tier, once unlocked — "Compute" names the
 page/feature only, not any entity) — are all permanent across every real Prestige, as is the
 main-game-unlock gate once latched; only Data Stream balance and tier01's purchase-block progress reset
 each cycle. Nothing here ever fully freezes — every action stays live indefinitely, every cycle.
@@ -214,7 +214,7 @@ array's cache standing in for its 10th disk (`getDataLakeNextFillSubSize`/
 `getDataLakeSlotRepresentableUnits`); a mixed-radix decomposition (`decomposeDataLakeUnits`) keeps the
 disk-square breakdown exact with no leftover. Capacity is a purchasable decade-power ladder
 (1/10/100/1,000 units, capped at level 3), advancing only once the CORRESPONDING Storage array size is
-fully built. **Buying Boosters** (`buyBooster`) spends only banked lake units — outside the forced
+fully built. **Buying Cells** (`buyBooster`) spends only banked lake units — outside the forced
 priority order, available the instant affordable — at a `purchased + 1` cost (capped once capacity-maxed)
 and instantly grants 1 compute-ladder entity, up to its effective cap (`COMPUTE_ENTITY_CAP`, 10 — or
 `COMPUTE_ENTITY_AUTO_MERGE_CAP`, 18, once that tier's outbound merge boundary has auto-merge unlocked, see

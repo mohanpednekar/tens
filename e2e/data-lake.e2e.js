@@ -5,7 +5,7 @@ import { INTRO_COMPUTE_CORE_UNLOCK_CAPACITY } from '../src/game/layers.js'
 const seedDataLakeSave = () => {
   const state = createInitialGameState()
   return {
-    saveSchemaVersion: 2,
+    saveSchemaVersion: 3,
     ...state,
     intro: {
       ...state.intro,
@@ -40,10 +40,10 @@ test('data lake disk display and manual Booster buy', async ({ page }) => {
   await expect(page.getByText('Lake')).toBeVisible()
   await expect(page.getByLabelText(/full 1 KB lake disk/i)).toBeVisible()
 
-  const buyButton = page.getByRole('button', { name: /buy 1 Cores from the KB Data Lake/i })
+  const buyButton = page.getByRole('button', { name: /buy 1 Cells from the KB Data Lake/i })
   await expect(buyButton).toBeEnabled()
   await buyButton.click()
 
-  await page.getByRole('button', { name: 'open boosters' }).click()
-  await expect(page.getByText('Cores 1/10')).toBeVisible()
+  await page.getByRole('button', { name: 'open power' }).click()
+  await expect(page.getByText('Cells 1/10')).toBeVisible()
 })

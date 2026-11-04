@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react'
 import Button, { ButtonContent } from 'components/Button'
-import { ThemeProvider } from 'theme'
+import { ThemeProvider, themes } from 'theme'
 
 const renderButton = children => render(
   <ThemeProvider mode="dark"><Button type="button">{children}</Button></ThemeProvider>,
@@ -27,5 +27,21 @@ describe('ButtonContent', () => {
   it('renders element children as-is rather than "[object Object]"', () => {
     const button = renderButton(<ButtonContent><span>1,000 PP</span></ButtonContent>)
     expect(button.textContent).toBe('1,000 PP')
+  })
+})
+
+describe('variant', () => {
+  it('maps prestige to the warn/prestige-gold token', () => {
+    const button = render(
+      <ThemeProvider mode="dark"><Button type="button" variant="prestige">Go</Button></ThemeProvider>,
+    ).container.querySelector('button')
+    expect(button).toHaveStyle({ color: themes.dark.color.warn })
+  })
+
+  it('does not treat purge as a semantic variant — callers must use prestige (#988)', () => {
+    const button = render(
+      <ThemeProvider mode="dark"><Button type="button" variant="purge">Go</Button></ThemeProvider>,
+    ).container.querySelector('button')
+    expect(button).not.toHaveStyle({ color: themes.dark.color.warn })
   })
 })

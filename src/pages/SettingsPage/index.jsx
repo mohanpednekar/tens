@@ -142,7 +142,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
   const eonsBalance = game.state.eons?.balance ?? 0
   const eraEligible = isEraEligible(game.state)
   const eonsAwarded = getEonsAwarded(game.state)
-  const unspentPp = game.state.reboot?.points ?? 0
+  const unspentPp = game.state.purge?.points ?? 0
   const eonWord = count => (count === 1 ? 'Eon' : 'Eons')
 
   const museum = game.state.prestigeMuseum ?? { history: [], pinnedIds: [] }
@@ -335,7 +335,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         {!supporter ? (
           <LockedNote>
             History still records in the background. Unlock Supporter to browse past purges and pin up to {MUSEUM_PIN_CAP}.
-            {history.length > 0 && ` Latest: Purge #${history[0].rebootNumber} (+${history[0].pointsAwarded} PP).`}
+            {history.length > 0 && ` Latest: Purge #${history[0].purgeNumber} (+${history[0].pointsAwarded} PP).`}
           </LockedNote>
         ) : (
           <>
@@ -347,13 +347,13 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                   {pinnedEntries.map(entry => (
                     <MuseumItem key={`pin-${entry.id}`}>
                       <div>
-                        <strong>Purge #{entry.rebootNumber}</strong>
+                        <strong>Purge #{entry.purgeNumber}</strong>
                         <div>
                           <span>+{entry.pointsAwarded} PP · {formatMoneyBalance(entry.moneyBits)}</span>
                         </div>
                       </div>
                       <Button
-                        aria-label={`unpin purge ${entry.rebootNumber}`}
+                        aria-label={`unpin purge ${entry.purgeNumber}`}
                         onClick={() => game.actions.unpinMuseumEntry(entry.id)}
                         type="button"
                         variant="neutral"
@@ -373,14 +373,14 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                 {visibleHistory.map(entry => (
                   <MuseumItem key={entry.id}>
                     <div>
-                      <strong>Purge #{entry.rebootNumber}</strong>
+                      <strong>Purge #{entry.purgeNumber}</strong>
                       <div>
                         <span>+{entry.pointsAwarded} PP · {formatCurrency(entry.moneyBits)}</span>
                       </div>
                     </div>
                     {pinnedSet.has(entry.id) ? (
                       <Button
-                        aria-label={`unpin purge ${entry.rebootNumber}`}
+                        aria-label={`unpin purge ${entry.purgeNumber}`}
                         onClick={() => game.actions.unpinMuseumEntry(entry.id)}
                         type="button"
                         variant="neutral"
@@ -389,7 +389,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                       </Button>
                     ) : (
                       <Button
-                        aria-label={`pin purge ${entry.rebootNumber}`}
+                        aria-label={`pin purge ${entry.purgeNumber}`}
                         disabled={pinnedSet.size >= MUSEUM_PIN_CAP}
                         onClick={() => game.actions.pinMuseumEntry(entry.id)}
                         type="button"
@@ -446,7 +446,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           <LockedNote>Unlock Supporter for live Bits and Purge Point sparklines. Information only — no production change.</LockedNote>
         ) : (
           <>
-            <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.reboot?.points ?? 0}</p>
+            <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.purge?.points ?? 0}</p>
             <LockedNote>Bits</LockedNote>
             <SparklineSvg aria-label="bits sparkline" role="img" viewBox="0 0 100 40">
               <path d={moneyPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -509,9 +509,9 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           </VisuallyHidden>
         </Button>
         <p>
-          Restart the Byte Foundry on the active save — Capacity, Memory, Disks, Data Lakes and
-          Compute entities. Combine, Upgrade Capacity, Upgrade Speed, Provision Disk and Data Lake
-          upgrades/Boosters then replay automatically up to your pre-reset highs.
+          Restart the Byte Foundry on the active save — Data Stream Capacity, Disks, Data Lakes and
+          Compute entities. Compile, Upgrade Capacity, Upgrade Bitrate, Provision Disk and Data Lake
+          upgrades/Cells then replay automatically up to your pre-reset highs.
           Byte Factory and Purge progress stay.
         </p>
         <Button
@@ -522,7 +522,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           title={
             frozen
               ? 'Purge first — production is frozen at 1 Googol Bytes'
-              : 'Restarts the Foundry; Combine, Data Stream upgrades, Disks and Data Lakes replay automatically up to prior highs'
+              : 'Restarts the Foundry; Compile, Data Stream upgrades, Disks and Data Lakes replay automatically up to prior highs'
           }
           type="button"
           variant="danger"
@@ -563,15 +563,15 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
       >
         <p>
           Awards {eonsAwarded} {eonWord(eonsAwarded)} and resets the Byte Foundry for a deep reset —
-          Factory itself stays permanently reachable, no gate to tap back through.
+          Factory itself stays permanently reachable, no gate to ping back through.
         </p>
         <p>
-          <strong>Resets:</strong> Foundry generator upgrades, Memory, Disks, Compute entities,
+          <strong>Resets:</strong> Foundry generator upgrades, Data Stream Capacity, Disks, Compute entities,
           Byte Factory tiers and resources, unspent PP and Purge count, Double PP level, and Compute
           owned units.
         </p>
         <p>
-          <strong>Keeps:</strong> automation unlocks and pause flags, DeGoogol latch,
+          <strong>Keeps:</strong> automation unlocks and pause flags, Overflow mode latch,
           museum, Compute page reveal, Flops autobuyer unlocks, Eons (+ award), and hyperscalers.
         </p>
       </ConfirmDialog>

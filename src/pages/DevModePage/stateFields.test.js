@@ -15,8 +15,8 @@ describe('prettifySegment', () => {
   it('maps ladder and Flops tier ids to their display names', () => {
     expect(prettifySegment('tier01')).toBe('Kilobytes')
     expect(prettifySegment('tier10')).toBe('Quettabytes')
-    expect(prettifySegment('flop01')).toBe('KFlops')
-    expect(prettifySegment('flop10')).toBe('QFlops')
+    expect(prettifySegment('flop01')).toBe('Cores · KFlops')
+    expect(prettifySegment('flop10')).toBe('Superclouds · QFlops')
   })
 
   it('returns unknown keys unchanged', () => {
@@ -58,13 +58,13 @@ describe('setValueAtPath', () => {
         mainGameUnlocked: false,
         dataLakes: { 1: { purchased: 0, deposited: 2 }, 2: { purchased: 1 } },
       },
-      reboot: { points: 5 },
+      purge: { points: 5 },
     }
     const next = setValueAtPath(original, ['intro', 'dataLakes', '1', 'purchased'], 3)
     expect(next.intro.dataLakes['1']).toEqual({ purchased: 3, deposited: 2 })
     expect(next.intro.dataLakes['2']).toEqual({ purchased: 1 })
     expect(next.intro.mainGameUnlocked).toBe(false)
-    expect(next.reboot).toEqual({ points: 5 })
+    expect(next.purge).toEqual({ points: 5 })
     expect(original.intro.dataLakes['1'].purchased).toBe(0)
   })
 
@@ -124,11 +124,11 @@ describe('getVariableAreaId', () => {
     ['era', 'era'],
     ['eonsUpgrades', 'era'],
     ['hyperscalerCount', 'era'],
-    ['reboot', 'reboot'],
-    ['autoReboot', 'reboot'],
-    ['prestigeDoublePpLevel', 'reboot'],
-    ['prestigeMuseum', 'reboot'],
-    ['prestigeSpeedBonusUnlocked', 'reboot'],
+    ['purge', 'purge'],
+    ['autoPurge', 'purge'],
+    ['prestigeDoublePpLevel', 'purge'],
+    ['prestigeMuseum', 'purge'],
+    ['prestigeSpeedBonusUnlocked', 'purge'],
     ['autobuyers', 'perks'],
     ['autoOverclock', 'perks'],
     ['tierTickspeedIntervalLevels', 'perks'],

@@ -26,13 +26,13 @@ import {
   isBuyMaxUnlocked,
   isComputeCoreConversionUnlocked,
   isProductionFrozen,
-  isUnboundedRebootUnlocked,
+  isOverflowModeUnlocked,
 } from 'game/engine'
 import {
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
-  UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS,
+  OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   XP_TICKSPEED_AUTOBUYER_UNLOCK_COST,
 } from 'game/layers'
@@ -450,7 +450,7 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction =
 
 export const PERKS_TABS = [
   { id: 'automation', icon: '🤖', ariaLabel: 'open automation', title: 'Automation — unlock, pause/resume and speed up every automation' },
-  { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Double PP, production speed bonus, DeGoogol and Buy max' },
+  { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Double PP, production speed bonus, Overflow mode and Buy max' },
 ]
 
 const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Math.round(ms * 10) / 10} ms`)
@@ -458,21 +458,21 @@ const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Mat
 const formatIntervalShort = ms => (ms >= 1000 ? `${Number((ms / 1000).toFixed(ms >= 10000 ? 0 : 1))}s` : `${Math.round(ms)}ms`)
 
 const GLOBAL_AUTOMATIONS = [
-  { key: 'speedUp', name: 'Auto Speed Up', icon: '🌐', owned: s => s.autoGlobalTickspeed ?? false, enabled: s => s.autoGlobalTickspeedEnabled ?? true, setEnabled: 'setAutoGlobalTickspeedEnabled', buy: 'buyTickspeedAutobuyer', canBuy: () => true, unlockTitle: 'Spend Purge Points so the global tickspeed multiplier upgrades itself automatically, forever, whenever affordable' },
+  { key: 'speedUp', name: 'Auto Clock Speed', icon: '🌐', owned: s => s.autoGlobalTickspeed ?? false, enabled: s => s.autoGlobalTickspeedEnabled ?? true, setEnabled: 'setAutoGlobalTickspeedEnabled', buy: 'buyTickspeedAutobuyer', canBuy: () => true, unlockTitle: 'Spend Purge Points so the global tickspeed multiplier upgrades itself automatically, forever, whenever affordable' },
   { key: 'restage', name: 'Auto Restage', icon: '🧬', owned: s => s.autoXpTickspeed ?? false, enabled: s => s.autoXpTickspeedEnabled ?? true, setEnabled: 'setAutoXpTickspeedEnabled', buy: 'buyXpTickspeedAutobuyer', canBuy: s => Boolean(s.autoGlobalTickspeed), cost: XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, unlockTitle: 'Spend Purge Points so XP is automatically consumed for Restage whenever possible (each consumption resets every other tier\'s owned quantity and Bits)' },
   { key: 'scaleUp', name: 'Auto Scale Up', icon: '⏩', owned: s => s.autoScaleUp ?? false, enabled: s => s.autoScaleUpEnabled ?? true, setEnabled: 'setAutoScaleUpEnabled', buy: 'buyAutoScaleUp', canBuy: s => Boolean(s.autoGlobalTickspeed), unlockTitle: 'Spend Purge Points so eligible Scale Ups happen automatically until the final tier, where they stay manual for Overclock', statusTitle: enabled => (enabled ? "Scale Up triggers automatically the instant it's eligible" : 'Auto Scale Up is paused — it will not trigger until resumed') },
   { key: 'overclock', name: 'Auto Overclock', icon: '🚀', owned: s => s.autoOverclock ?? false, enabled: s => s.autoOverclockEnabled ?? true, setEnabled: 'setAutoOverclockEnabled', buy: 'buyAutoOverclock', canBuy: s => Boolean(s.autoScaleUp) && Boolean(s.autoXpTickspeed), unlockTitle: 'Spend Purge Points so Overclock is claimed automatically whenever it is eligible' },
-  { key: 'reboot', name: 'Auto Purge', icon: '✦', owned: s => (s.autoReboot ?? null) !== null, enabled: s => s.autoRebootEnabled ?? true, setEnabled: 'setAutoRebootEnabled', buy: 'buyAutoReboot', canBuy: s => Boolean(s.autoOverclock), allowFirstRun: true, unlockTitle: 'Spend Purge Points so Purge happens automatically once your balance reaches 1 Googol Bytes' },
+  { key: 'purge', name: 'Auto Purge', icon: '✦', owned: s => (s.autoPurge ?? null) !== null, enabled: s => s.autoPurgeEnabled ?? true, setEnabled: 'setAutoPurgeEnabled', buy: 'buyAutoPurge', canBuy: s => Boolean(s.autoOverclock), allowFirstRun: true, unlockTitle: 'Spend Purge Points so Purge happens automatically once your balance reaches 1 Googol Bytes' },
 ]
 
 const PerksPage = ({ game, focusNonce = 0 }) => {
   const { state, actions } = game
   const theme = useTheme()
-  const { reboot } = state
-  const points = reboot.points ?? 0
-  const rebootCount = reboot.count ?? 0
+  const { purge } = state
+  const points = purge.points ?? 0
+  const purgeCount = purge.count ?? 0
   const eraCount = state.era?.count ?? 0
-  const isFirstRun = rebootCount === 0
+  const isFirstRun = purgeCount === 0
   const isFrozen = isProductionFrozen(state)
 
   const [tab, setTab] = useState('automation')
@@ -614,7 +614,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   narrow
                   lockedBadge={(
                     <MilestoneBadge
-                      current={rebootCount}
+                      current={purgeCount}
                       milestone={getTierTickspeedAutobuyerMilestone(tier.id)}
                       progressLabel={`${tier.name} tickspeed autobuyer milestone progress`}
                       subject={`${tier.name}'s tickspeed autobuyer`}
@@ -645,7 +645,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   narrow
                   lockedBadge={(
                     <MilestoneBadge
-                      current={rebootCount}
+                      current={purgeCount}
                       milestone={milestone}
                       progressLabel={`${tier.name} autobuyer unlock milestone progress`}
                       subject={`${tier.name}'s autobuyer`}
@@ -682,10 +682,10 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
       </Category>
 
       {showComputeAutoBoost && (
-        <Category aria-label="booster automation category">
-          <CategoryHeading>Booster Automation</CategoryHeading>
+        <Category aria-label="power automation category">
+          <CategoryHeading>Power Automation</CategoryHeading>
           <CellGrid>
-          {/* No pause Switch: the Auto Boost preset picker on Boosters (incl. its off choice) is its control. */}
+          {/* No pause Switch: the Auto Boost preset picker on Power (incl. its off choice) is its control. */}
           <AutomationRow
             ariaLabel="auto boost row"
             icon="🤖"
@@ -694,13 +694,13 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               cost: COMPUTE_AUTO_BOOST_UNLOCK_COST,
               canBuy: canBuyComputeAutoBoost,
               onClick: actions.buyComputeAutoBoost,
-              title: 'Spend Purge Points so a full tier waiting on its own in-flight merge automatically activates your preferred Boost preset (choose it on Boosters)',
+              title: 'Spend Purge Points so a full tier waiting on its own in-flight charge automatically activates your preferred Boost preset (choose it on Power)',
             })}
             name="Auto Boost"
             label="Boost"
             inlineAction
             owned={isComputeAutoBoostActive}
-            ownedBadge={<UnlockedBadge icon="🤖" name="Auto Boost" title="Auto Boost unlocked — choose its preset on Boosters" />}
+            ownedBadge={<UnlockedBadge icon="🤖" name="Auto Boost" title="Auto Boost unlocked — choose its preset on Power" />}
           />
           </CellGrid>
         </Category>
@@ -716,7 +716,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             return (
               <AutomationRow
                 key={flopTier.id}
-                ariaLabel={`${flopTier.name} autobuyer`}
+                ariaLabel={`${flopTier.name} · ${flopTier.outputLabel} autobuyer`}
                 enabled={enabled}
                 label={<TierSymbol tier={flopTier} />}
                 narrow
@@ -724,15 +724,15 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   <MilestoneBadge
                     current={eraCount}
                     milestone={getFlopsAutobuyerUnlockEra(flopTier.id)}
-                    progressLabel={`${flopTier.name} autobuyer unlock milestone progress`}
-                    subject={`${flopTier.name}'s autobuyer`}
+                    progressLabel={`${flopTier.name} (${flopTier.outputLabel}) autobuyer unlock milestone progress`}
+                    subject={`${flopTier.name} (${flopTier.outputLabel}) autobuyer`}
                     unit="Era"
                   />
                 )}
-                name={`${flopTier.name}'s autobuyer`}
+                name={`${flopTier.name} (${flopTier.outputLabel}) autobuyer`}
                 onToggle={() => actions.setComputeFlopsAutobuyerEnabled(flopTier.id, !enabled)}
                 owned={owned}
-                toggleLabel={`${flopTier.name}'s autobuyer`}
+                toggleLabel={`${flopTier.name} (${flopTier.outputLabel}) autobuyer`}
               />
             )
           })}
@@ -787,19 +787,19 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             />
           )}
         </Row>
-        <Row aria-label="degoogol unlock">
+        <Row aria-label="overflow mode unlock">
           <RowLabelStack>
-            <RowLabel title="Earn past 1 Googol Bytes without freezing; Purge voluntarily to claim PP"><RowIcon>♾</RowIcon>DeGoogol</RowLabel>
-            {!isUnboundedRebootUnlocked(state) && (
+            <RowLabel title="Earn past 1 Googol Bytes without freezing; Purge voluntarily to claim PP"><RowIcon>♾</RowIcon>Overflow mode</RowLabel>
+            {!isOverflowModeUnlocked(state) && (
               <SubText>
-                Auto Purge ≤ {UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS} s
+                Auto Purge ≤ {OVERFLOW_MODE_MAX_INTERVAL_SECONDS} s
               </SubText>
             )}
           </RowLabelStack>
-          {isUnboundedRebootUnlocked(state) ? (
-            <UnlockedBadge icon="♾" name="DeGoogol" />
+          {isOverflowModeUnlocked(state) ? (
+            <UnlockedBadge icon="♾" name="Overflow mode" />
           ) : (
-            <Badge $color={theme.color.disabled} $dimmed aria-label="DeGoogol locked" title="Unlocks when Auto Purge's interval reaches 1 s or less">
+            <Badge $color={theme.color.disabled} $dimmed aria-label="Overflow mode locked" title="Unlocks when Auto Purge's interval reaches 1 s or less">
               ♾ 🔒
             </Badge>
           )}

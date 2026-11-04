@@ -20,7 +20,7 @@ import {
   BITS_PER_BYTE,
   MONEY_ID,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
-  REBOOT_THRESHOLD,
+  PURGE_THRESHOLD,
   TIER_DEFINITIONS,
 } from 'game/layers'
 import {
@@ -167,7 +167,7 @@ describe('navAttention', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true },
-      resources: { ...createInitialGameState().resources, [MONEY_ID]: REBOOT_THRESHOLD },
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: PURGE_THRESHOLD },
     }
     expect(hasTiersGameAttention(state)).toBe(true)
     expect(getNavAttention(state).game).toBe('high')
@@ -339,7 +339,7 @@ describe('navAttention', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      reboot: { count: 1, points: getAutomationUnlockCost('speedUp') },
+      purge: { count: 1, points: getAutomationUnlockCost('speedUp') },
       autoGlobalTickspeed: false,
       // Keep money low so Factory high-cues (full purchase level) stay off.
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
@@ -357,28 +357,28 @@ describe('navAttention', () => {
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
       prestigeSpeedBonusUnlocked: true,
     }
-    const automationOnly = { ...base, reboot: { count: 1, points: getAutomationUnlockCost('speedUp') }, autoGlobalTickspeed: false }
+    const automationOnly = { ...base, purge: { count: 1, points: getAutomationUnlockCost('speedUp') }, autoGlobalTickspeed: false }
     expect(hasAffordableAutomationPerk(automationOnly)).toBe(true)
     expect(hasAffordablePrestigePerk(automationOnly)).toBe(false)
 
     const doublePpCost = getPrestigeDoublePpUpgradeCost(0)
     const prestigeOnly = {
       ...base,
-      reboot: { count: 1, points: doublePpCost },
+      purge: { count: 1, points: doublePpCost },
       // Every automation already owned and maxed, so only the leveled Double PP is affordable.
       autoScaleUp: true,
       autoOverclock: true,
       autoGlobalTickspeed: true,
       autoXpTickspeed: true,
-      autoReboot: 1,
-      automationIntervalLevels: { reboot: 1e9 },
+      autoPurge: 1,
+      automationIntervalLevels: { purge: 1e9 },
     }
     expect(hasAffordableAutomationPerk(prestigeOnly)).toBe(false)
     expect(hasAffordablePrestigePerk(prestigeOnly)).toBe(true)
     expect(hasAffordablePpUpgrade(prestigeOnly)).toBe(true)
 
     // The production speed bonus is a prestige perk, not an automation one.
-    const speedBonusOnly = { ...prestigeOnly, prestigeSpeedBonusUnlocked: false, prestigeDoublePpLevel: 5, reboot: { count: 1, points: PRESTIGE_SPEED_BONUS_UNLOCK_COST } }
+    const speedBonusOnly = { ...prestigeOnly, prestigeSpeedBonusUnlocked: false, prestigeDoublePpLevel: 5, purge: { count: 1, points: PRESTIGE_SPEED_BONUS_UNLOCK_COST } }
     expect(hasAffordablePrestigePerk(speedBonusOnly)).toBe(true)
     expect(hasAffordableAutomationPerk(speedBonusOnly)).toBe(false)
 
@@ -386,20 +386,20 @@ describe('navAttention', () => {
     const purgeSpeedOnly = {
       ...prestigeOnly,
       prestigeDoublePpLevel: 5,
-      automationIntervalLevels: { reboot: 0 },
-      reboot: { count: 1, points: getAutomationIntervalUpgradeCost('reboot', 0) },
+      automationIntervalLevels: { purge: 0 },
+      purge: { count: 1, points: getAutomationIntervalUpgradeCost('purge', 0) },
     }
     expect(hasAffordableAutomationPerk(purgeSpeedOnly)).toBe(true)
 
     // Global automations are sequential: each counts only once the previous one is owned.
-    const autoRebootUnlockOnly = {
+    const autoPurgeUnlockOnly = {
       ...prestigeOnly,
-      reboot: { count: 1, points: getAutomationUnlockCost('reboot') },
+      purge: { count: 1, points: getAutomationUnlockCost('purge') },
       prestigeDoublePpLevel: 5,
-      autoReboot: null,
+      autoPurge: null,
     }
-    expect(hasAffordableAutomationPerk(autoRebootUnlockOnly)).toBe(true)
-    expect(hasAffordableAutomationPerk({ ...autoRebootUnlockOnly, reboot: { count: 1, points: getAutomationUnlockCost('reboot') - 1 } })).toBe(false)
+    expect(hasAffordableAutomationPerk(autoPurgeUnlockOnly)).toBe(true)
+    expect(hasAffordableAutomationPerk({ ...autoPurgeUnlockOnly, purge: { count: 1, points: getAutomationUnlockCost('purge') - 1 } })).toBe(false)
   })
 
   it('lights the Perks automation dot for an affordable Auto Boost only once Boosters is available and it is not owned', () => {
@@ -407,7 +407,7 @@ describe('navAttention', () => {
     const ownedEverythingElse = {
       ...init,
       resources: { ...init.resources, [MONEY_ID]: 0 },
-      reboot: { count: 1, points: COMPUTE_AUTO_BOOST_UNLOCK_COST },
+      purge: { count: 1, points: COMPUTE_AUTO_BOOST_UNLOCK_COST },
       prestigeSpeedBonusUnlocked: true,
       autoScaleUp: true,
       autoGlobalTickspeed: true,
@@ -423,7 +423,7 @@ describe('navAttention', () => {
     expect(hasAffordableAutomationPerk({ ...withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY), computeAutoBoostUnlocked: true })).toBe(false)
     expect(hasAffordableAutomationPerk({
       ...withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY),
-      reboot: { count: 1, points: COMPUTE_AUTO_BOOST_UNLOCK_COST - 1 },
+      purge: { count: 1, points: COMPUTE_AUTO_BOOST_UNLOCK_COST - 1 },
     })).toBe(false)
   })
 
@@ -431,18 +431,18 @@ describe('navAttention', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      reboot: { count: 0, points: getAutomationUnlockCost('speedUp') },
+      purge: { count: 0, points: getAutomationUnlockCost('speedUp') },
       autoGlobalTickspeed: false,
     }
     expect(hasAffordablePpUpgrade(state)).toBe(false)
   })
 
-  it('lights Factory when Speed Up is affordable from the Bits balance', () => {
+  it('lights Factory when Clock Speed is affordable from the Bits balance', () => {
     const tier01 = TIER_DEFINITIONS[0]
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      // Speed Up unlocks once level 1 of the first tier completes (purchaseLevels advances to 2).
+      // Clock Speed unlocks once level 1 of the first tier completes (purchaseLevels advances to 2).
       purchaseLevels: { [tier01.id]: 2 },
       resources: {
         ...createInitialGameState().resources,
@@ -455,7 +455,7 @@ describe('navAttention', () => {
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })
 
-  it('does not light Speed Up when the Bits balance is short of the cost', () => {
+  it('does not light Clock Speed when the Bits balance is short of the cost', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
@@ -470,7 +470,7 @@ describe('navAttention', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      reboot: { count: 1, points: COMPUTE_FLOPS_REVEAL_PP - 1 },
+      purge: { count: 1, points: COMPUTE_FLOPS_REVEAL_PP - 1 },
     }
     expect(hasAffordableComputeFlopsTier(state)).toBe(false)
     expect(getNavAttention(state).compute).toBe(false)
@@ -480,7 +480,7 @@ describe('navAttention', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      reboot: { count: 1, points: COMPUTE_FLOPS_REVEAL_PP },
+      purge: { count: 1, points: COMPUTE_FLOPS_REVEAL_PP },
       computeFlops: { pageUnlocked: true, owned: {}, cumulativeBoost: {} },
     }
     expect(hasAffordableComputeFlopsTier(state)).toBe(false)
@@ -491,7 +491,7 @@ describe('navAttention', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      reboot: { count: 1, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP },
+      purge: { count: 1, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP },
       computeFlops: { pageUnlocked: true, owned: {}, cumulativeBoost: {} },
     }
     expect(hasAffordableComputeFlopsTier(state)).toBe(true)

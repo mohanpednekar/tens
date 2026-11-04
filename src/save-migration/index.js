@@ -1,5 +1,6 @@
 import { SAVE_SCHEMA_VERSION } from './constants'
 import { getSaveIncompatibilityReason } from './detectLegacy'
+import { migrateToV3 } from './migrateToV3'
 
 const isPlainObject = value =>
   Boolean(value) &&
@@ -27,8 +28,8 @@ export const adaptSaveForCurrentSchema = raw => {
     return { ok: true, payload: stripSaveEnvelope(raw) }
   }
 
-  if (raw.saveSchemaVersion === 1) {
-    return { ok: true, payload: stripSaveEnvelope(raw) }
+  if (raw.saveSchemaVersion === 1 || raw.saveSchemaVersion === 2) {
+    return { ok: true, payload: migrateToV3(stripSaveEnvelope(raw)) }
   }
 
   const legacyReason = getSaveIncompatibilityReason(raw)
@@ -37,9 +38,10 @@ export const adaptSaveForCurrentSchema = raw => {
     return { ok: false, reason: legacyReason }
   }
 
-  // Unstamped save that already matches the current shape — pass through to mergeState.
-  return { ok: true, payload: raw }
+  // Unstamped save that already matches the current shape — rename legacy keys, then mergeState.
+  return { ok: true, payload: migrateToV3(raw) }
 }
 
 export { SAVE_SCHEMA_VERSION } from './constants'
 export { getSaveIncompatibilityReason } from './detectLegacy'
+export { migrateToV3 } from './migrateToV3'

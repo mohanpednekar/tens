@@ -5,8 +5,8 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getRebootProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedRebootUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, REBOOT_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
 
@@ -14,10 +14,10 @@ import styled, { css, keyframes, useTheme } from 'styled-components'
 // status bar, see docs/PWA_REFERENCE.md) draws edge-to-edge; without this padding the bottom-most
 // tier row's Buy button ends up under the home-indicator safe area, where iOS won't let the page
 // scroll far enough for it to become reachable at all (not just visually clipped).
-// Fixed height of the pinned prestige-progress bar (see RebootProgressBar below) — single-line,
-// never wraps, so unlike TopRebootBarSpacer this doesn't need a live ResizeObserver measurement.
+// Fixed height of the pinned prestige-progress bar (see PurgeProgressBar below) — single-line,
+// never wraps, so unlike TopPurgeBarSpacer this doesn't need a live ResizeObserver measurement.
 // Reused by RootDiv's own bottom padding so page content never scrolls out from under the bar.
-const REBOOT_PROGRESS_BAR_HEIGHT = '2.5rem'
+const PURGE_PROGRESS_BAR_HEIGHT = '2.5rem'
 
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));
@@ -25,7 +25,7 @@ const RootDiv = styled.main`
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  padding: calc(1.25rem + env(safe-area-inset-top)) 0 calc(1.25rem + env(safe-area-inset-bottom) + ${REBOOT_PROGRESS_BAR_HEIGHT});
+  padding: calc(1.25rem + env(safe-area-inset-top)) 0 calc(1.25rem + env(safe-area-inset-bottom) + ${PURGE_PROGRESS_BAR_HEIGHT});
   font-variant-numeric: tabular-nums;
 `
 
@@ -126,7 +126,7 @@ const TierLine = styled(StatCard)`
 
 // Feature cards share one shape: neutral border, a 3px left accent stripe (same treatment as the
 // tier rows' stripe), compact padding and a 1rem heading — previously each card had its own
-// full-border hue and Speed Up had a much larger heading/padding than its siblings.
+// full-border hue and Clock Speed had a much larger heading/padding than its siblings.
 const featureCard = accent => css`
   border-left: 3px solid ${accent};
   gap: 0.4rem;
@@ -192,7 +192,7 @@ const OverclockButton = styled(Button)`
   }
 `
 
-// Lays a pair of compact feature cards side by side at every width (maintainer request): Speed Up +
+// Lays a pair of compact feature cards side by side at every width (maintainer request): Clock Speed +
 // Restage above the tier list, Scale Up + Overclock below it. Each card shares the row equally
 // (flex: 1 1 0) and never wraps, so the pair stays side by side even at phone width; a lone card
 // (Restage / Overclock not yet revealed) fills the row. Supersedes the earlier below-40rem
@@ -315,9 +315,9 @@ const BytePowerSegmentFill = styled.span`
 
 // Prestige progress, pinned just above AppNav (position: fixed, bottom: APP_NAV_BOTTOM_PAD) so
 // it's always visible regardless of scroll position, rather than scrolling away with the rest of
-// the page content near the top. RootDiv's own bottom padding reserves REBOOT_PROGRESS_BAR_HEIGHT
+// the page content near the top. RootDiv's own bottom padding reserves PURGE_PROGRESS_BAR_HEIGHT
 // so page content never ends up hidden underneath it.
-const RebootProgressBar = styled.div`
+const PurgeProgressBar = styled.div`
   background: ${props => props.theme.color.surfaceRaised};
   border-top: 1px solid ${props => props.theme.color.border};
   bottom: ${APP_NAV_BOTTOM_PAD};
@@ -328,11 +328,11 @@ const RebootProgressBar = styled.div`
   z-index: 39;
 `
 
-// The "N% to Prestige" label renders INSIDE this track (RebootProgressLabel below), via the
+// The "N% to Prestige" label renders INSIDE this track (PurgeProgressLabel below), via the
 // same low-alpha progressFill gradient the Buy/Upgrade buttons use for their own cost-progress
 // fills (see components/Button) — already contrast-validated for `theme.color.text` on top of it
 // (see tokens.contrast.test.js), rather than a separate label rendered below a solid fill bar.
-const RebootProgressTrack = styled.div`
+const PurgeProgressTrack = styled.div`
   ${props => progressFill({ $progress: props.$percent, $progressColor: props.theme.color.accent, theme: props.theme })}
   align-items: center;
   border-radius: ${props => props.theme.radius.pill};
@@ -344,7 +344,7 @@ const RebootProgressTrack = styled.div`
   width: 100%;
 `
 
-const RebootProgressLabel = styled.span`
+const PurgeProgressLabel = styled.span`
   color: ${props => props.theme.color.text};
   font-size: ${props => props.theme.type.scale.xs.size};
   font-weight: 600;
@@ -352,7 +352,7 @@ const RebootProgressLabel = styled.span`
 
 
 // Purge Points as a secondary header line beneath the money hero — same CenteredCard base
-// (so it keeps $actionable's Prestige-button behavior once canReboot), just flattened (no
+// (so it keeps $actionable's Prestige-button behavior once canPurge), just flattened (no
 // shadow, tighter padding) so it visually reads as subordinate to the money hero above it rather
 // than a second card of equal visual weight.
 const PpHeaderCard = styled(CenteredCard)`
@@ -383,8 +383,8 @@ const GlobalMultipliersList = styled.ul`
 // bar while stuck ($compressed — tracked via an IntersectionObserver on the sentinel rendered
 // just above, since CSS alone can't detect "currently stuck"). The solid page-background fill
 // stops scrolled tier rows showing through the gap between the two cards, and when the fixed
-// TopRebootBar is showing ($belowBar), the stick position drops below it by $belowBarHeight
-// (measured live, see topRebootBarHeight below) instead of underlapping it.
+// TopPurgeBar is showing ($belowBar), the stick position drops below it by $belowBarHeight
+// (measured live, see topPurgeBarHeight below) instead of underlapping it.
 const StickyBalances = styled.div`
   background: ${props => props.theme.color.page};
   display: flex;
@@ -489,9 +489,9 @@ const TierDetailsContent = styled.div`
   }
 `
 
-// Mandatory full-screen takeover shown only the very first time Money reaches REBOOT_THRESHOLD (before the
-// player has ever rebooted) — covers the whole viewport so the frozen, disabled page underneath
-// is never visible/reachable; there's deliberately no close/dismiss control (see RebootButton
+// Mandatory full-screen takeover shown only the very first time Money reaches PURGE_THRESHOLD (before the
+// player has ever purged) — covers the whole viewport so the frozen, disabled page underneath
+// is never visible/reachable; there's deliberately no close/dismiss control (see PurgeButton
 // below, the only thing left clickable while frozen).
 const FullScreenOverlay = styled.div`
   align-items: center;
@@ -544,10 +544,10 @@ const FullScreenCard = styled.div`
   }
 `
 
-// From the 2nd prestige onward, reaching REBOOT_THRESHOLD again shows a compact banner pinned to the top
+// From the 2nd prestige onward, reaching PURGE_THRESHOLD again shows a compact banner pinned to the top
 // of the viewport instead of the full-screen takeover — the player already knows what Prestige
 // does, so a persistent-but-unobtrusive reminder is enough.
-const TopRebootBar = styled.div`
+const TopPurgeBar = styled.div`
   align-items: center;
   background: ${props => props.theme.color.surfaceRaised};
   border-bottom: 2px solid ${props => props.theme.color.warn};
@@ -568,18 +568,18 @@ const TopRebootBar = styled.div`
   z-index: 900;
 `
 
-// Reserves space at the top of the page so TopRebootBar (position: fixed) never overlaps the
-// Header underneath it. $height is measured live from the bar itself (see topRebootBarHeight)
-// rather than a fixed constant — TopRebootBar's flex-wrap lets its content wrap to two lines on
+// Reserves space at the top of the page so TopPurgeBar (position: fixed) never overlaps the
+// Header underneath it. $height is measured live from the bar itself (see topPurgeBarHeight)
+// rather than a fixed constant — TopPurgeBar's flex-wrap lets its content wrap to two lines on
 // narrow viewports (the reminder sentence is long enough to wrap well before 40rem), and a
 // hardcoded single-line height would silently let the taller bar overlap the Header below it.
-const TopRebootBarSpacer = styled.div`
+const TopPurgeBarSpacer = styled.div`
   height: ${props => props.$height}px;
 `
 
 // Prestige-surface copy only — forked from the app-wide MutedText (still hardcoded elsewhere) so
 // this region's AA audit stays meaningful without migrating TierList/ScaleUpCard in #138's scope.
-const RebootMutedText = styled.p`
+const PurgeMutedText = styled.p`
   color: ${props => props.theme.color.textMuted};
   font-size: ${props => props.theme.type.scale.sm.size};
   line-height: ${props => props.theme.type.scale.sm.lineHeight};
@@ -800,27 +800,27 @@ const formatBonusOrMultiplier = (multiplier, { precise = false } = {}) =>
 const MainPage = ({ game }) => {
   const { actions, claimOfflineAdReward, dismissOfflineProgress, offlineProgress, state } = game
   const theme = useTheme()
-  const { reboot } = state
-  const canReboot = state.resources[MONEY_ID] >= REBOOT_THRESHOLD
-  const isUnbounded = isUnboundedRebootUnlocked(state)
+  const { purge } = state
+  const canPurge = state.resources[MONEY_ID] >= PURGE_THRESHOLD
+  const isUnbounded = isOverflowModeUnlocked(state)
   const doublePpLevel = state.prestigeDoublePpLevel ?? 0
   // The passive PP production-speed bonus is inert until unlocked (see buyPrestigeSpeedBonus in
   // engine.js) — before that, it's a flat ×1 regardless of unspent PP balance.
   const prestigeBonus = state.prestigeSpeedBonusUnlocked
-    ? getPrestigeProductionMultiplier(reboot.points)
+    ? getPrestigeProductionMultiplier(purge.points)
     : 1
   const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel)
-  const rebootProgressPercent = getRebootProgressPercent(state.resources[MONEY_ID])
+  const purgeProgressPercent = getPurgePercent(state.resources[MONEY_ID])
   const bytePowerProgressFraction = getNextBytePowerProgressFraction(state.resources[MONEY_ID])
   const bytePowerProgressPercent = Math.round(bytePowerProgressFraction * 100)
   // What a Prestige would award — shown on the Prestige button itself (Buy-button style: the
   // effect lives on the control, not in a separate text line). Below Googol the formula reads 0,
   // but the award on reaching it is always at least 1, so that's the effect worth advertising.
-  const rebootAwardPreview = Math.max(1, prestigePointsPreview)
-  const rebootLabel = isUnbounded && canReboot
+  const purgeAwardPreview = Math.max(1, prestigePointsPreview)
+  const purgeLabel = isUnbounded && canPurge
     ? 'Purge (optional — claim accumulated PP)'
     : 'Purge (requires 1 Googol Bytes)'
-  const rebootAriaLabel = `${rebootLabel} — awards +${formatAmount(rebootAwardPreview)} Purge Point${rebootAwardPreview === 1 ? '' : 's'}`
+  const purgeAriaLabel = `${purgeLabel} — awards +${formatAmount(purgeAwardPreview)} Purge Point${purgeAwardPreview === 1 ? '' : 's'}`
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
   // lazy initializer, from whatever loadGameState() returned) — a tier unlocked before this
   // load never plays the reveal animation, even though every unlocked row technically "mounts"
@@ -897,13 +897,13 @@ const MainPage = ({ game }) => {
   const [showGlobalMultipliers, setShowGlobalMultipliers] = useState(false)
   const toggleGlobalMultipliers = () => setShowGlobalMultipliers(previous => !previous)
 
-  // All production and purchasing freezes the instant Money reaches REBOOT_THRESHOLD (see
+  // All production and purchasing freezes the instant Money reaches PURGE_THRESHOLD (see
   // isProductionFrozen in engine.js) — Prestige is the only remaining action. The first time
-  // this ever happens (before the player has rebooted even once) it's a mandatory full-screen
+  // this ever happens (before the player has purged even once) it's a mandatory full-screen
   // takeover; every time after that, it's a compact banner pinned to the top of the page instead,
   // since the player already knows what Prestige does.
   const isFrozen = isProductionFrozen(state)
-  const isFirstRun = reboot.count === 0
+  const isFirstRun = purge.count === 0
   const buyMaxActive = Boolean(game.buyMaxMode) && isBuyMaxUnlocked(state)
   // The purchase block size every tier's current level currently requires to complete — a single
   // global value (see getPurchaseBlockSize in engine.js), starting at DEFAULT_PURCHASE_BLOCK_SIZE
@@ -911,7 +911,7 @@ const MainPage = ({ game }) => {
   // every tier shares the same value.
   const purchaseBlockSize = getPurchaseBlockSize(state)
   const showFullScreenPrompt = isFrozen && isFirstRun
-  const showTopRebootBar = isFrozen && !isFirstRun
+  const showTopPurgeBar = isFrozen && !isFirstRun
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
   const lastTierLevel = state.purchaseLevels?.[lastTier.id] ?? 1
   const lastTierUnlocked = isTierUnlocked(state)(lastTier)
@@ -998,7 +998,7 @@ const MainPage = ({ game }) => {
   // of the Perks page — see isGlobalTickspeedMultiplierUnlocked in engine.js: it only becomes
   // purchasable once at least 1 of the second tier is owned, so a player can't spend their Bytes
   // on it before Kilobytes are producing any. The level itself resets to not-yet-bought on both
-  // Up (see rebootGame/scaleUpGame in engine.js), same as tier02's owned count, so re-unlocking
+  // Up (see purgeGame/scaleUpGame in engine.js), same as tier02's owned count, so re-unlocking
   // always requires owning tier02 again after either reset. overclockCount, by contrast, is NOT
   // reset by Scale Up — its boost to the per-level step survives across a re-unlock within the
   // same Prestige cycle.
@@ -1008,7 +1008,7 @@ const MainPage = ({ game }) => {
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
   const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && isGlobalTickspeedAffordable(state)
-  // The last tier's XP-funded tickspeed — a separate upgrade shown beside Speed Up once the last tier
+  // The last tier's XP-funded tickspeed — a separate upgrade shown beside Clock Speed once the last tier
   // has been a Scale Up target this cycle (isLastTierTickspeedXpUnlocked). Always spends the entire
   // XP balance in one action, since every consumption resets every other tier's owned quantity and
   // Bits; disabled while the last tier owns nothing (nothing to speed up — see
@@ -1017,7 +1017,7 @@ const MainPage = ({ game }) => {
   const isLastTierXpUnlocked = isLastTierTickspeedXpUnlocked(state)
   const lastTierOwned = state.owned[lastTier.id] ?? 0
   const lastTierXpConsumed = state.lastTierXpConsumed ?? 0
-  const lastTierXpBalance = Math.floor(state.reboot.xp ?? 0)
+  const lastTierXpBalance = Math.floor(state.purge.xp ?? 0)
   const lastTierXpMinConsumption = getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)
   const lastTierXpProgressPercent = progressPercent(lastTierXpBalance, lastTierXpMinConsumption)
   const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && lastTierOwned > 0 && lastTierXpBalance >= lastTierXpMinConsumption
@@ -1041,9 +1041,9 @@ const MainPage = ({ game }) => {
 
   // Auto-focus the full-screen prompt's Prestige button when it appears — it's the only
   // interactive element on screen while it's showing (no close/dismiss control by design).
-  const fullScreenRebootButtonRef = useRef(null)
+  const fullScreenPurgeButtonRef = useRef(null)
   useEffect(() => {
-    if (showFullScreenPrompt) fullScreenRebootButtonRef.current?.focus()
+    if (showFullScreenPrompt) fullScreenPurgeButtonRef.current?.focus()
   }, [showFullScreenPrompt])
 
   // Compress the sticky balance bar once its normal position scrolls out of view: the sentinel
@@ -1074,31 +1074,31 @@ const MainPage = ({ game }) => {
     }
   }, [showFullScreenPrompt])
 
-  // TopRebootBar's own rendered height, measured live rather than assumed — its flex-wrap lets
-  // the reminder sentence wrap to two lines on narrow viewports, and both TopRebootBarSpacer
+  // TopPurgeBar's own rendered height, measured live rather than assumed — its flex-wrap lets
+  // the reminder sentence wrap to two lines on narrow viewports, and both TopPurgeBarSpacer
   // (below) and StickyBalances' stuck offset need the bar's *actual* height to avoid the fixed bar
   // overlapping the Header/balances underneath it. 60 (3.75rem at the default 16px root) is the
   // single-line fallback used before this was measured, kept as the initial/no-ResizeObserver
   // value so behavior is unchanged in environments without ResizeObserver (e.g. jsdom in tests).
-  const topRebootBarRef = useRef(null)
-  const [topRebootBarHeight, setTopRebootBarHeight] = useState(60)
+  const topPurgeBarRef = useRef(null)
+  const [topPurgeBarHeight, setTopPurgeBarHeight] = useState(60)
   useEffect(() => {
-    const bar = topRebootBarRef.current
+    const bar = topPurgeBarRef.current
     if (!bar || typeof ResizeObserver === 'undefined') return undefined
-    const observer = new ResizeObserver(() => setTopRebootBarHeight(bar.offsetHeight))
+    const observer = new ResizeObserver(() => setTopPurgeBarHeight(bar.offsetHeight))
     observer.observe(bar)
     return () => observer.disconnect()
-  }, [showTopRebootBar])
+  }, [showTopPurgeBar])
 
   if (showFullScreenPrompt) {
     return (
       <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Purge required">
         <FullScreenCard>
-          <h2>✦ Purge Available!</h2>
-          <RebootMutedText>
+          <h2>💾 Disk full</h2>
+          <PurgeMutedText>
             You've reached {formatCurrency(state.resources[MONEY_ID])} — 1 Googol Bytes. All
             production has stopped.
-          </RebootMutedText>
+          </PurgeMutedText>
           <ul>
             <li>Resets your resources, owned tiers, and purchases</li>
             <li>
@@ -1109,10 +1109,10 @@ const MainPage = ({ game }) => {
             <li>Keeps your unlocked autobuyers and Purge Points</li>
           </ul>
           <Button
-            ref={fullScreenRebootButtonRef}
+            ref={fullScreenPurgeButtonRef}
             aria-label="Purge now"
             variant="prestige"
-            onClick={actions.reboot}
+            onClick={actions.purge}
             title="Awards Purge Points and resets your resources"
             type="button"
             $pulse
@@ -1126,40 +1126,40 @@ const MainPage = ({ game }) => {
 
   return (
     <RootDiv>
-      {showTopRebootBar && (
+      {showTopPurgeBar && (
         <>
-          <TopRebootBar ref={topRebootBarRef} aria-label="purge available banner">
-            <RebootMutedText>1 Googol Bytes reached — production has stopped.</RebootMutedText>
+          <TopPurgeBar ref={topPurgeBarRef} aria-label="purge available banner">
+            <PurgeMutedText>1 Googol Bytes reached — production has stopped.</PurgeMutedText>
             <Button
-              aria-label={rebootAriaLabel}
+              aria-label={purgeAriaLabel}
               variant="prestige"
-              onClick={actions.reboot}
+              onClick={actions.purge}
               title="Awards Purge Points and resets your resources"
               type="button"
               $pulse
             >
               <ButtonIcon>✦ </ButtonIcon>
-              <ButtonLabel>Purge +{formatAmount(rebootAwardPreview)} PP</ButtonLabel>
+              <ButtonLabel>Purge +{formatAmount(purgeAwardPreview)} PP</ButtonLabel>
             </Button>
-          </TopRebootBar>
-          <TopRebootBarSpacer $height={topRebootBarHeight} />
+          </TopPurgeBar>
+          <TopPurgeBarSpacer $height={topPurgeBarHeight} />
         </>
       )}
 
-      <RebootProgressBar aria-label="purge progress">
-        <RebootProgressTrack $percent={rebootProgressPercent}>
+      <PurgeProgressBar aria-label="purge progress">
+        <PurgeProgressTrack $percent={purgeProgressPercent}>
           <VisuallyHidden
             role="progressbar"
             aria-label="progress toward 1 Googol Bytes, when Purge becomes available"
-            aria-valuenow={rebootProgressPercent}
+            aria-valuenow={purgeProgressPercent}
             aria-valuemin={0}
             aria-valuemax={100}
           />
-          <RebootProgressLabel>
-            {`${rebootProgressPercent}% to Purge`}
-          </RebootProgressLabel>
-        </RebootProgressTrack>
-      </RebootProgressBar>
+          <PurgeProgressLabel>
+            {`${purgeProgressPercent}% to Purge`}
+          </PurgeProgressLabel>
+        </PurgeProgressTrack>
+      </PurgeProgressBar>
 
       <Header>
         <h1>Byte Factory</h1>
@@ -1172,8 +1172,8 @@ const MainPage = ({ game }) => {
       <BalancesSentinel ref={balancesSentinelRef} aria-hidden="true" />
       <StickyBalances
         $compressed={balancesCompressed}
-        $belowBar={showTopRebootBar}
-        $belowBarHeight={topRebootBarHeight}
+        $belowBar={showTopPurgeBar}
+        $belowBarHeight={topPurgeBarHeight}
       >
         <CenteredCard $raised>
           <MoneyHeroToggle
@@ -1223,7 +1223,7 @@ const MainPage = ({ game }) => {
               {!isFirstRun && (
                 <li>
                   Prestige speed bonus: {state.prestigeSpeedBonusUnlocked
-                    ? `${formatBonusOrMultiplier(prestigeBonus)} production speed from ${formatAmount(reboot.points)} unspent PP`
+                    ? `${formatBonusOrMultiplier(prestigeBonus)} production speed from ${formatAmount(purge.points)} unspent PP`
                     : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on Perks → Prestige)`}
                 </li>
               )}
@@ -1234,7 +1234,7 @@ const MainPage = ({ game }) => {
               </li>
               {globalTickspeedCardEverRevealed && (
                 <li>
-                  Speed Up: {isGlobalTickspeedActive
+                  Clock Speed: {isGlobalTickspeedActive
                     ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier`
                     : 'not yet active'}
                 </li>
@@ -1242,7 +1242,7 @@ const MainPage = ({ game }) => {
               {overclockEverRevealed && (
                 <li>
                   Overclock: {overclockCount > 0
-                    ? `Speed Up's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from ${formatAmount(overclockCount)} banked completed levels`
+                    ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from ${formatAmount(overclockCount)} banked completed levels`
                     : `not yet claimed (reach ${formatAmount(overclockRequirementDisplay)} completed levels on ${lastTier.name})`}
                 </li>
               )}
@@ -1253,19 +1253,19 @@ const MainPage = ({ game }) => {
         {!isFirstRun && (
           <PpHeaderCard
             aria-label="purge points display"
-            $actionable={canReboot}
-            onClick={canReboot ? actions.reboot : undefined}
+            $actionable={canPurge}
+            onClick={canPurge ? actions.purge : undefined}
             onKeyDown={event => {
-              if (!canReboot || (event.key !== 'Enter' && event.key !== ' ')) return
+              if (!canPurge || (event.key !== 'Enter' && event.key !== ' ')) return
               event.preventDefault()
-              actions.reboot()
+              actions.purge()
             }}
-            role={canReboot ? 'button' : undefined}
-            tabIndex={canReboot ? 0 : undefined}
-            title={canReboot ? 'Awards Purge Points and resets your resources' : undefined}
+            role={canPurge ? 'button' : undefined}
+            tabIndex={canPurge ? 0 : undefined}
+            title={canPurge ? 'Awards Purge Points and resets your resources' : undefined}
           >
             <HudMutedText>
-              <HudGoldText>{formatAmount(reboot.points)} PP</HudGoldText>
+              <HudGoldText>{formatAmount(purge.points)} PP</HudGoldText>
               {state.prestigeSpeedBonusUnlocked && ` · ${formatBonusOrMultiplier(prestigeBonus)} production speed`}
             </HudMutedText>
           </PpHeaderCard>
@@ -1276,9 +1276,9 @@ const MainPage = ({ game }) => {
       {(globalTickspeedCardEverRevealed || isLastTierXpUnlocked) && (
       <SpeedCardsRow>
       {globalTickspeedCardEverRevealed && (
-        <GlobalTickspeedCard aria-label="global speed up panel">
+        <GlobalTickspeedCard aria-label="global clock speed panel">
           <Disclosure>
-            <summary><h2>Speed Up</h2></summary>
+            <summary><h2>Clock Speed</h2></summary>
             {isGlobalTickspeedActive && (
               <MutedText>
                 {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
@@ -1288,8 +1288,8 @@ const MainPage = ({ game }) => {
           <Button
             aria-label={
               isGlobalTickspeedActive
-                ? `Upgrade Speed Up for ${formatBytes(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
-                : `Enable Speed Up for ${formatBytes(globalTickspeedCost)}`
+                ? `Upgrade Clock Speed for ${formatBytes(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
+                : `Enable Clock Speed for ${formatBytes(globalTickspeedCost)}`
             }
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
             disabled={!canBuyGlobalTickspeed}
@@ -1304,7 +1304,7 @@ const MainPage = ({ game }) => {
             <ButtonLabel>{formatBytes(globalTickspeedCost)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
-              aria-label="Speed Up progress"
+              aria-label="Clock Speed progress"
               aria-valuenow={globalTickspeedProgressPercent}
               aria-valuemin={0}
               aria-valuemax={100}
@@ -1380,7 +1380,7 @@ const MainPage = ({ game }) => {
           // level 1 is the baseline ×1, no bonus yet, each further level speeds up this tier's own
           // delivery frequency by another 10% (see getEffectiveTierTickSpeedSeconds in engine.js) —
           // it does NOT change how much lands per delivery, only how often one arrives. The last
-          // tier's separate XP-funded upgrade (beside Speed Up) multiplies on top of this.
+          // tier's separate XP-funded upgrade (beside Clock Speed) multiplies on top of this.
           const tickspeedLevel = state.tickspeedLevels?.[tier.id] ?? 1
           const tickspeedMultiplier = getTickspeedProductionMultiplier(tickspeedLevel)
             * (tier.id === lastTier.id ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0) : 1)
@@ -1592,16 +1592,16 @@ const MainPage = ({ game }) => {
             <summary><h2>Overclock</h2></summary>
             {overclockCount > 0 && (
               <MutedText>
-                Speed Up's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from {formatAmount(overclockCount)} banked completed levels.
+                Clock Speed's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from {formatAmount(overclockCount)} banked completed levels.
               </MutedText>
             )}
           </Disclosure>
           <OverclockButton
-            aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus and raises Speed Up's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
+            aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
             onClick={actions.overclock}
-            title={`Resets tiers (and Scale Up's bonus) and raises Speed Up's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}% — requires ${overclockRequirementDisplay} completed ${lastTier.name} levels`}
+            title={`Resets tiers (and Scale Up's bonus) and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}% — requires ${overclockRequirementDisplay} completed ${lastTier.name} levels`}
             type="button"
             $progress={overclockProgressPercent}
             $progressColor="#fb923c"
