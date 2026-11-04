@@ -140,7 +140,7 @@ const LakeSpeedText = styled.span`
   white-space: nowrap;
 `
 
-// Shown in the sub-row's right slot (under the fill speed) while neither Reset Pool nor Scale Out is
+// Shown in the sub-row's right slot (under the fill speed) while neither Compact Pool nor Scale Out is
 // offered — those buttons take the slot over whenever they are.
 const LakeTimeText = styled.span`
   flex-shrink: 0;

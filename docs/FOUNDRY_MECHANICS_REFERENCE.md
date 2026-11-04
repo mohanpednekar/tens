@@ -74,7 +74,7 @@ commit as any change to the mechanics it describes.
    `COMPUTE_ENTITY_CAP`-unit cost), or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot
    squares (gradually filled, `getComputeReserveHeld`), labelled "🤖 Auto-charge", clickable as an instant
    8→1 manual charge (only the automatic charge is timed); the selected tier's presets render below this row — Fusion has no
-   row 2. Cells come from buying them from the matching Data Lake on Foundry's `DataLakePanel`, not
+   row 2. Cells (`computeCores`) come from buying them from the matching Data Lake on Foundry's `DataLakePanel`, not
    minted from Data Stream Capacity. Full button/gate/aria-label detail: `docs/MAINPAGE_REFERENCE.md`; render-order and
    Stack/Pop/Forfeit rationale: `docs/DESIGN_HISTORY.md`.
 

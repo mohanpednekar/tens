@@ -299,7 +299,7 @@ const AutoBoostLabel = styled.p`
 // once that boundary's auto-charge is unlocked (see intro.autoMergeCoresIntoNode/
 // autoMergeNodesIntoCluster/… in engine.js) — moves to the "🤖 Auto-charge" slot row: tapping it still merges
 // instantly, while engine.js's automatic merge uses the timed reserve pool (see issue #321). Core → Node is included as an ordinary
-  // boundary here, same as every other one. Cells themselves are obtained by buying them from
+// boundary here, same as every other one. Cells themselves are obtained by buying them from
 // the matching Data Lake on Foundry (buyBooster — spent from that lake's own banked units, not
 // minted from Memory); the buy/auto-buy control itself lives on Foundry's DataLakePanel, not here
 // — the earlier "Claim Core"/auto-claim mechanic was removed once Data Lakes superseded it.

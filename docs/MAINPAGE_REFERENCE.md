@@ -71,10 +71,10 @@ below). Before `intro.mainGameUnlocked` the tile is a plain, non-interactive `<s
 `aria-label="data stream balance"`; once unlocked it becomes the tap target itself, built like a pool
 tile: a `DataStreamTile` div with a stretched `PoolTapButton` behind its readouts
 (`onClick={actions.tapIntroBit}`, `disabled={dataStreamMultiplierCapped}` — a full Buffer stays tappable, the bonus speeds consumers,
-`aria-label="tap to generate a bit"`), so the ⚡ speed can be its own button opening
+`aria-label="ping to generate a bit"`), so the ⚡ speed can be its own button opening
 `SpeedDetailsPopover` without nesting interactive elements.
 
-A large, always-full-width tap button (`aria-label="tap to generate a bit"`, `disabled={isFull ||
+A large, always-full-width tap button (`aria-label="ping to generate a bit"`, `disabled={isFull ||
 dataStreamMultiplierCapped}`) calling `actions.tapIntroBit` — renders LAST on the page, after
 `DataStreamCard` and every pool's `PoolCard`, since once `byteCreated`
 passive production is the primary loop and tapping is a secondary/backup action; it stays exactly
@@ -86,7 +86,7 @@ or hidden progressbar of its own — Data Stream's own tile above already shows 
 fill, so a second meter on the tap button would just duplicate it; its `background` is set explicitly
 (`theme.color.surfaceSunken`) since it doesn't get that from `progressFill`'s own gradient (which
 used to double as the button's base fill). A "Compile into a
-Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
+Byte" button (`aria-label="compile 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
 INTRO_BYTE_COMBINE_COST`. Once `byteCreated`, a single **"Upgrade Data Stream"** button
 (`aria-label="upgrade data stream"`, no icon; not rendered while an upgrade is armed) consolidates the former paired Speed ×2 (Invest) and
@@ -105,7 +105,7 @@ docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
 once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
-INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cells themselves are obtained via `buyBooster`, bought
+INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cells (`computeCores`) themselves are obtained via `buyBooster`, bought
 instantly from the matching Data Lake's own banked units on that pool's own `PoolCard`
 (a click either buys immediately if already affordable or arms a one-shot auto-convert that finishes
 the purchase automatically over subsequent ticks — see "Storage pools render as their own
@@ -122,7 +122,7 @@ renders its own separate `PoolCard`
 (`styled(StatCard)`, `aria-label="pool {n}"`), stacked below `DataStreamCard` in ascending order —
 NOT one continuous card shared across pools or with Data Stream. A pool's own title/Speed,
 balance/capacity, and bars all render in ONE `PoolTile` (a `FillableStatCard` div) whose tap target is a
-transparent stretched `PoolTapButton` (`aria-label="tap pool {n} memory"`, calling
+transparent stretched `PoolTapButton` (`aria-label="ping pool {n} staging"`, calling
 `actions.tapPoolBuffer(poolIndex)`, never disabled) behind
 the `PoolTileContent` readouts (`pointer-events: none`) — a `TitleRow` is the content's first line:
 title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
@@ -436,7 +436,7 @@ live inside the selected tier):
    a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cells:
-   The timer bar / idle status line and (once unlocked) the Auto Boost preference picker all live in one `BoostCard`. The Auto Boost UNLOCK itself is a Perks → Automation → Booster Automation row (`aria-label="auto boost row"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordableAutomationPerk`); Power shows nothing for it while locked
+   The timer bar / idle status line and (once unlocked) the Auto Boost preference picker all live in one `BoostCard`. The Auto Boost UNLOCK itself is a Perks → Automation → Power Automation row (`aria-label="auto boost row"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordableAutomationPerk`); Power shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
    a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
@@ -522,7 +522,7 @@ live inside the selected tier):
          `isCompute*MergeStartAvailable` allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the
          normal + reserve slots and room under the output's effective cap, counting the 1 an in-flight
          automatic charge still owes — `isComputeMergeStartAvailableAtBoundary`).
-         `aria-label`: "instantly charge 8 <input> into 1 <output>, N/8 auto-charge slots filled" (or
+         `aria-label`: "instantly charge up 8 <input> into 1 <output>, N/8 auto-charge slots filled" (or
          ", auto-charge in progress, <time> left") when available, "<Tier> auto-charge in progress, <time> left" while an automatic charge runs, else
          "<Tier> auto-charge slots, N/8 filled". While an automatic charge is in
          flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
@@ -757,13 +757,13 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   `"<name> row"`, Auto Clock Speed → Auto Restage → Auto Scale Up → Auto Overclock → Auto Purge; Restage
   and Scale Up both need Clock Speed, Overclock needs both, Purge needs Overclock — engine-enforced),
   *Tier Autobuyers* (all ten tiers always listed; halves
-  `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Booster Automation* (Auto Boost once Foundry
+  `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Power Automation* (Auto Boost once Foundry
   Compute unlocks; no Switch — its preset picker on Power is the control, owned shows `"Auto Boost
   unlocked"`), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
   *Purge Points* (Double PP leveled upgrade; Production speed bonus one-time unlock, `"Production
-  speed bonus unlocked"` once bought; DeGoogol, locked until Auto Purge's interval ≤
+  speed bonus unlocked"` once bought; Overflow mode, locked until Auto Purge's interval ≤
   `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`) and *Purchasing* (Buy max, `components/BuyMaxToggle`).
 Perks never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
 labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol
