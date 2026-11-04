@@ -9191,6 +9191,23 @@ slots is not a Ping), locked MB+ lakes naming Batteries not Cells, "charge it up
 called Power `⚡ Compute` / the charge chain Core/Node. Visual-regression baselines were left
 for a dedicated e2e pass — that suite is not in CI.
 
+## Write caches fill from the pool buffer; click-to-expedite consumes smaller disks (2026-11)
+
+Previously every size above a pool's smallest filled only by merging: once its source array held all 9 full
+disks, the write cache collected 10 of them (timed) and flushed into one target disk — so filling a larger disk
+always drained the smaller array. Per maintainer request, disks now fill from the pool buffer by default: a
+write cache starts whenever its array has an empty disk and draws pool-buffer bits (after the read cache's
+reservation, smallest target first — the pool's fill order is unchanged), so lower disks stay available to the
+Factory. Lower disks are consumed only on demand: clicking an empty disk (`expediteDiskFill`) makes its merge
+consume full smaller disks of the same pool (largest first that still fits, timed at 5× Bandwidth) simultaneously
+with the pool draw — the in-flight disk's size is reserved from the pool draw so the sources never overshoot, and
+a fast pool means fewer smaller disks are consumed (an initial sequential "disks first, then pool" version was
+revised the same day per maintainer feedback).
+Merges now track `collectedBits` (pool draws are fractional; `segmentsCollected` is derived) and wait instead of
+completing while the target has no empty disk, since a pool-funded merge's bits would otherwise be lost. The
+"source array full" start condition and its 9-vs-10 constant distinction no longer apply; the 10-segment
+(size-ratio) conservation still does.
+
 ## Naming pass (2026-11, #986)
 
 Epic #986 gave the game a coherent computing/operating-system vocabulary in three steps: #987

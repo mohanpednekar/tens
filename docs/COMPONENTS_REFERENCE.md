@@ -37,13 +37,16 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 
 ## `DiskArrayRow/index.jsx`
 
-styled (`.jsx` — needs JSX) one Disk array's full STATUS detail for a single size — purely a
-display, nothing here is ever clickable. Byte Foundry funds Byte Factory pull-based and fully
+styled (`.jsx` — needs JSX) one Disk array's full STATUS detail for a single size. The ONE clickable
+element is an empty disk of a write-cache size (any size above its pool's smallest, while
+`isDiskFillExpediteAvailable`): it renders as a `<button>` calling `actions.expediteDiskFill(size)`,
+which fills it from smaller full disks and Staging at once; the queued disk then reads
+`aria-label="empty … disk queued for filling"` with a dashed info border. Byte Foundry funds Byte Factory pull-based and fully
 automatically, every tick (`tickDiskPull`/`tickDiskLevelOneCachePull` in `engine.js` — see
 CLAUDE.md's "Economy model"); the manual Redeem button and the cache-release-to-Bits control this
 component used to expose were both retired along with that mechanic. Only when
 `isDiskReadCacheEligible(size)` is true (the pool's own smallest size, the one whose Data Lake
-sub-slot is ×1 — every larger size fills exclusively via write-cache ripple and renders no read
+sub-slot is ×1 — every larger size fills via its write cache (from Staging) and renders no read
 cache strip at all) does it show a `DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of squares
 (`aria-label="… read cache"`), each labeled inside with its bit-scale block size (`formatCacheSize`
 — e.g. `1 Kb`). A full block gets an accent-colored border (matching a full `DiskSquare`'s own
@@ -53,11 +56,8 @@ colored while filling, info-colored while flushing — so the fill level itself 
 just the full/empty extremes (`title` also reads e.g. "Filling from Staging (40%)" once partially
 filled). Then an optional **write cache** progress row when
 `intro.diskWriteCache[size]` is active (`DISK_LADDER_SIZE_MULTIPLIER` (10) segmented squares while
-collecting from the source size below — the actual source→target SIZE RATIO, NOT
-`DISK_ARRAY_LADDER_CAP` below, a different constant since it dropped to 9 (see
-`canStartDiskWriteCacheMerge`'s own doc comment in `engine.js`); solid bar draining left-to-right
-while flushing — collect pauses on tier match, flush never
-does), then a fixed `DISK_ARRAY_LADDER_CAP`-circle (9) disk strip that **always** keeps all 9
+collecting — each a tenth of the disk, filling from Staging or, when expedited, from smaller disks; solid
+bar draining left-to-right while flushing — an expedited transfer pauses on tier match), then a fixed `DISK_ARRAY_LADDER_CAP`-circle (9) disk strip that **always** keeps all 9
 circles on one unbroken row at every viewport (circles flex-shrink together — never wraps to a
 second row), each labeled inside at `0.65rem` with a BARE number, no unit
 (`formatDiskSizeBare` — the surrounding pool card already establishes the scale; e.g. `1`, not
