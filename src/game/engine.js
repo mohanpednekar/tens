@@ -469,8 +469,8 @@ export const createInitialGameState = () => ({
     // not affect Byte Foundry in any way" (see purgeGame, docs/DESIGN_HISTORY.md).
     diskReadCacheFlush: {},
     // PERMANENT — in-flight write caches (every size above its pool's smallest): { [targetSizeBits]:
-    // { sourceSize, collectedBits, segmentsCollected (derived), transferSize, segmentRemainingSeconds,
-    // segmentTotalSeconds, flushRemainingSeconds, flushTotalSeconds, expedite } }. Empty at rest;
+    // { sourceSize, collectedBits, segmentsCollected (derived), transfers: [{ size, remainingSeconds,
+    // totalSeconds }], flushRemainingSeconds, flushTotalSeconds, expedite } }. Empty at rest;
     // collect (from the pool buffer, plus smaller disks when expedited) then flush (solid drain) into
     // one target disk — see tickDiskWriteCache. Rides through a real Prestige untouched (see purgeGame):
     // real banked progress toward a real, permanent disk is never discarded mid-collection.
@@ -4304,16 +4304,27 @@ export const getDiskWriteCacheCollectedBits = merge => {
   return Math.max(0, merge.segmentsCollected ?? 0) * (merge.sourceSize ?? 0)
 }
 
-// Progress (0..1) toward the NEXT segment: the partial pool-buffer bits past the last whole segment
-// plus any in-flight smaller-disk transfer (expedited merges only) — 0 once collection is done.
+// An expedited merge's in-flight smaller-disk transfers ([{ size, remainingSeconds, totalSeconds }]),
+// all running in parallel. A save from before parallel transfers carries one `transferSize` instead.
+export const getDiskWriteCacheTransfers = merge => {
+  if (!merge) return []
+  if (Array.isArray(merge.transfers)) return merge.transfers
+  return merge.transferSize
+    ? [{ size: merge.transferSize, remainingSeconds: merge.segmentRemainingSeconds ?? 0, totalSeconds: merge.segmentTotalSeconds ?? 0 }]
+    : []
+}
+
+const getTransferProgressBits = transfer =>
+  transfer.totalSeconds > 0 ? transfer.size * (1 - transfer.remainingSeconds / transfer.totalSeconds) : 0
+
+// Progress (0..1) toward the NEXT segment: the partial bits past the last whole segment plus the
+// in-flight smaller-disk transfers' progress (expedited merges only) — 0 once collection is done.
 export const getDiskWriteCacheSegmentFill = merge => {
   if (!merge || merge.segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER) return 0
   const sourceSize = merge.sourceSize ?? 0
   if (!(sourceSize > 0)) return 0
   const partialBits = Math.max(0, getDiskWriteCacheCollectedBits(merge) - (merge.segmentsCollected ?? 0) * sourceSize)
-  const transferBits = merge.transferSize && merge.segmentTotalSeconds > 0
-    ? merge.transferSize * (1 - merge.segmentRemainingSeconds / merge.segmentTotalSeconds)
-    : 0
+  const transferBits = getDiskWriteCacheTransfers(merge).reduce((sum, transfer) => sum + getTransferProgressBits(transfer), 0)
   return Math.min(1, Math.max(0, (partialBits + transferBits) / sourceSize))
 }
 
@@ -4323,14 +4334,15 @@ export const getDiskWriteCacheFlushFill = merge => {
   return 1 - merge.flushRemainingSeconds / merge.flushTotalSeconds
 }
 
-// The only pause: an EXPEDITED merge's in-flight transfer from a smaller disk waits while that disk's
-// size has an active tier claim (isDiskRedeemable — the Factory gets first crack at a disk it could
-// pull this tick). Stranded status never pauses anything (see docs/DESIGN_HISTORY.md). A merge
-// filling from the pool buffer is never "paused" — an empty buffer simply means it waits for bits.
+// The only pause: an EXPEDITED merge whose every in-flight smaller-disk transfer waits on an active tier
+// claim of that disk's size (isDiskRedeemable — the Factory gets first crack at a disk it could pull this
+// tick). Stranded status never pauses anything (see docs/DESIGN_HISTORY.md). A merge filling from the
+// pool buffer is never "paused" — an empty buffer simply means it waits for bits.
 export const isDiskWriteCacheCollectPaused = (state, targetSize) => {
   const merge = getDiskWriteCacheMerge(state, targetSize)
   if (!merge || merge.segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER) return false
-  return Boolean(merge.transferSize) && isDiskRedeemable(state, merge.transferSize)
+  const transfers = getDiskWriteCacheTransfers(merge)
+  return transfers.length > 0 && transfers.every(transfer => isDiskRedeemable(state, transfer.size))
 }
 
 // The size one ladder step below `size` when it is in the SAME pool (the write cache's segment unit),
@@ -4355,26 +4367,25 @@ const canStartDiskWriteCacheMerge = (state, targetSize) => {
 }
 
 const createDiskWriteCacheMerge = (state, targetSize, expedite = false) => {
-  const flushTotalSeconds = getDiskWriteCacheFlushSeconds(state, targetSize)
+  const flushTotalSeconds = getDiskWriteCacheFlushSeconds(state, targetSize, expedite)
   return {
     sourceSize: getDiskWriteCacheSourceSize(targetSize),
     segmentsCollected: 0,
     collectedBits: 0,
-    transferSize: null,
-    segmentRemainingSeconds: 0,
-    segmentTotalSeconds: 0,
+    transfers: [],
     flushRemainingSeconds: flushTotalSeconds,
     flushTotalSeconds,
     expedite,
   }
 }
 
-// Clicking an EMPTY disk of a write-cache size queues it for filling ahead of the default pool fill:
-// its merge consumes full smaller disks of the same pool (largest first, each a timed transfer at
-// CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, sized to fit what is still needed) WHILE the pool buffer
-// keeps funding it too — two sources at once, so not every smaller disk need be consumed. The pool's own
-// fill ORDER is unchanged (read cache, then write caches smallest size first) — expediting only adds
-// the smaller-disk source. Outside the forced priority order (it is a preference flag, not a spend).
+// Clicking an EMPTY disk of a write-cache size expedites it, three ways at once:
+//   1. it takes every full smaller disk of the same pool it still needs IN PARALLEL (largest first,
+//      each a timed transfer at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER), alongside the pool buffer;
+//   2. it draws the pool buffer AHEAD of every non-expedited write cache (the read cache keeps first claim);
+//   3. its flush writes at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER instead of
+//      DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER.
+// Outside the forced priority order (it is a preference flag, not a spend).
 export const isDiskFillExpediteAvailable = (state, size) => {
   if (!getDiskWriteCacheSourceSize(size)) return false
   if (state.intro?.diskBuild?.size === size) return false
@@ -4388,13 +4399,16 @@ export const isDiskFillExpedited = (state, size) => Boolean(getDiskWriteCacheMer
 export const expediteDiskFill = size => state => {
   if (!isDiskFillExpediteAvailable(state, size)) return state
   const merge = getDiskWriteCacheMerge(state, size)
+  const flushTotalSeconds = getDiskWriteCacheFlushSeconds(state, size, true)
   return {
     ...state,
     intro: {
       ...state.intro,
       diskWriteCache: {
         ...(state.intro.diskWriteCache ?? {}),
-        [size]: merge ? { ...merge, expedite: true } : createDiskWriteCacheMerge(state, size, true),
+        [size]: merge
+          ? { ...merge, expedite: true, flushTotalSeconds, flushRemainingSeconds: flushTotalSeconds }
+          : createDiskWriteCacheMerge(state, size, true),
       },
     },
   }
@@ -4410,12 +4424,12 @@ const decrementFullDiskCount = (disks, size) => {
 }
 
 // The write-cache flush into the target's own empty container is a DISK filling FROM a cache — the
-// same DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER rate a read-cache flush uses — sized to the
-// target's own full capacity.
-const getDiskWriteCacheFlushSeconds = (state, targetSize) => {
+// same DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER rate a read-cache flush uses — sized to the target's
+// own full capacity. An expedited disk's flush runs at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER instead.
+const getDiskWriteCacheFlushSeconds = (state, targetSize, expedite = false) => {
   const poolIndex = getPoolIndexForDiskSize(targetSize)
   const rate = getStoragePoolBandwidth(state, poolIndex)
-    * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER
+    * (expedite ? CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER : DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)
   return targetSize / Math.max(rate, Number.MIN_VALUE)
 }
 
@@ -4428,31 +4442,43 @@ const getDiskWriteCacheSegmentSeconds = (state, sourceSize) => {
   return sourceSize / Math.max(rate, Number.MIN_VALUE)
 }
 
-// Largest full smaller disk in the target's pool that still fits the merge's remaining need, is not
-// claimed by its tier this tick (or mid-legacy-build), and is not already being transferred by ANOTHER
-// expedited merge — the next source an expedited merge consumes.
-const pickDiskWriteCacheTransferSize = (state, targetSize, needBits) => {
+// Every full smaller disk (same pool) an expedited merge should start transferring now, largest first,
+// until the transfers cover `needBits`: skips disks claimed by their tier this tick, a legacy mid-build
+// size, and disks already being transferred by ANY merge (including this merge's own running transfers).
+const pickDiskWriteCacheTransferSizes = (state, targetSize, needBits, ownTransfers) => {
   const poolIndex = getPoolIndexForDiskSize(targetSize)
   const claimed = {}
   for (const [key, merge] of Object.entries(state.intro.diskWriteCache ?? {})) {
-    if (Number(key) === targetSize || !merge?.transferSize) continue
-    claimed[merge.transferSize] = (claimed[merge.transferSize] ?? 0) + 1
+    if (Number(key) === targetSize) continue
+    for (const transfer of getDiskWriteCacheTransfers(merge)) claimed[transfer.size] = (claimed[transfer.size] ?? 0) + 1
   }
+  for (const transfer of ownTransfers) claimed[transfer.size] = (claimed[transfer.size] ?? 0) + 1
+  const picked = []
+  let remaining = needBits
   const candidates = getStoragePoolSizes(poolIndex).filter(size => size < targetSize).sort((a, b) => b - a)
-  return candidates.find(size =>
-    (state.intro.disks?.[size] ?? 0) - (claimed[size] ?? 0) > 0 &&
-    size <= needBits * (1 + TICK_ACCUMULATION_EPSILON) &&
-    state.intro.diskBuild?.size !== size &&
-    !isDiskRedeemable(state, size)) ?? null
+  for (const size of candidates) {
+    if (state.intro.diskBuild?.size === size || isDiskRedeemable(state, size)) continue
+    let available = (state.intro.disks?.[size] ?? 0) - (claimed[size] ?? 0)
+    while (available > 0 && size <= remaining * (1 + TICK_ACCUMULATION_EPSILON)) {
+      picked.push(size)
+      remaining -= size
+      available -= 1
+    }
+  }
+  return picked
 }
 
 const WRITE_CACHE_COMPLETE_RATIO = 1 - 1e-9
 
-// Write caches for every size above its pool's smallest. Collect: draw from the pool buffer (after the
-// read cache's reservation; smallest target size first, so the pool's fill order is read cache → write
-// caches ascending); an EXPEDITED merge additionally consumes smaller full disks of the same pool (timed
-// transfers) at the same time. Collect and flush only advance while the target array has a
-// built-but-empty disk, so nothing banked is ever lost; flush is timed at the disk-from-cache rate.
+const sameTransfers = (a, b) =>
+  a.length === b.length && a.every((transfer, index) =>
+    transfer.size === b[index].size && transfer.remainingSeconds === b[index].remainingSeconds)
+
+// Write caches for every size above its pool's smallest. Collect: draw from the pool buffer after the read
+// cache's reservation — expedited targets first, then the rest, each group smallest size first; an
+// EXPEDITED merge additionally consumes smaller full disks of the same pool, all needed transfers in
+// parallel. Collect and flush only advance while the target array has a built-but-empty disk, so nothing
+// banked is ever lost; flush is timed at the disk-from-cache rate (faster when expedited).
 export const tickDiskWriteCache = elapsedSeconds => state => {
   let intro = state.intro
   let disks = intro.disks ?? {}
@@ -4499,7 +4525,11 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     changed = true
   }
 
-  for (const targetSize of Object.keys(diskWriteCache).map(Number).sort((a, b) => a - b)) {
+  // Expedited targets jump the pool queue (after the read cache, which already claimed its share).
+  const order = Object.keys(diskWriteCache).map(Number).sort((a, b) =>
+    (diskWriteCache[b]?.expedite ? 1 : 0) - (diskWriteCache[a]?.expedite ? 1 : 0) || a - b)
+
+  for (const targetSize of order) {
     const merge = diskWriteCache[targetSize]
     if (!merge) continue
     const poolIndex = getPoolIndexForDiskSize(targetSize)
@@ -4526,37 +4556,36 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     if (!hasEmptyContainer) continue
     const sourceSize = merge.sourceSize ?? getDiskWriteCacheSourceSize(targetSize)
     if (!(sourceSize > 0)) continue
-    let next = { ...merge, sourceSize }
+    const previousTransfers = getDiskWriteCacheTransfers(merge)
     let collected = getDiskWriteCacheCollectedBits(merge)
+    let transfers = []
 
-    // 1. An expedited merge's in-flight transfer from a smaller disk.
-    if (next.transferSize) {
-      if (!isDiskRedeemable(snapshot(), next.transferSize)) {
-        const segmentRemainingSeconds = next.segmentRemainingSeconds - elapsedSeconds * tap
-        if (segmentRemainingSeconds > TICK_ACCUMULATION_EPSILON) {
-          next.segmentRemainingSeconds = segmentRemainingSeconds
-        } else {
-          if ((disks[next.transferSize] ?? 0) > 0) {
-            disks = decrementFullDiskCount(disks, next.transferSize)
-            collected += next.transferSize
-          }
-          next = { ...next, transferSize: null, segmentRemainingSeconds: 0, segmentTotalSeconds: 0 }
-        }
+    // 1. Advance every in-flight smaller-disk transfer (each pauses only on its own size's tier claim).
+    for (const transfer of previousTransfers) {
+      if (isDiskRedeemable(snapshot(), transfer.size)) {
+        transfers.push(transfer)
+        continue
+      }
+      const remainingSeconds = transfer.remainingSeconds - elapsedSeconds * tap
+      if (remainingSeconds > TICK_ACCUMULATION_EPSILON) {
+        transfers.push({ ...transfer, remainingSeconds })
+      } else if ((disks[transfer.size] ?? 0) > 0) {
+        disks = decrementFullDiskCount(disks, transfer.size)
+        collected += transfer.size
       }
     }
 
-    // 2. The pool buffer funds the cache (after the read cache's own claim, so the pool's fill order is
-    // unchanged). An in-flight smaller-disk transfer keeps its size reserved so the two sources together
-    // never overshoot — unless the buffer can now cover the whole remaining need, in which case the
-    // transfer is dropped (its disk was never taken) so expediting is never slower than the default fill.
+    // 2. The pool buffer funds the cache (after the read cache's own claim). In-flight transfers keep
+    // their sizes reserved so the sources together never overshoot — unless the buffer can now cover the
+    // whole remaining need, in which case they are dropped (their disks were never taken), so expediting
+    // is never slower than the default fill.
     if (poolIndex) {
       const buffer = (poolBuffers ?? intro.poolBuffers ?? {})[poolIndex] ?? 0
       const spendable = Math.max(0, buffer - getPoolCacheReservationBits(snapshot(), poolIndex))
       const need = Math.max(0, targetSize - collected)
-      if (next.transferSize && spendable >= need) {
-        next = { ...next, transferSize: null, segmentRemainingSeconds: 0, segmentTotalSeconds: 0 }
-      }
-      const drawBits = Math.min(spendable, Math.max(0, need - (next.transferSize ?? 0)))
+      if (transfers.length > 0 && spendable >= need) transfers = []
+      const reserved = transfers.reduce((sum, transfer) => sum + transfer.size, 0)
+      const drawBits = Math.min(spendable, Math.max(0, need - reserved))
       if (drawBits > 0) {
         poolBuffers = poolBuffers ?? { ...(intro.poolBuffers ?? {}) }
         poolBuffers[poolIndex] = buffer - drawBits
@@ -4564,23 +4593,24 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
       }
     }
 
-    // 3. An expedited merge covers whatever the buffer could not, simultaneously, from the next smaller
-    // full disk that still fits — so only as many smaller disks as needed are consumed.
-    if (next.expedite && !next.transferSize && collected < targetSize * WRITE_CACHE_COMPLETE_RATIO) {
-      const transferSize = pickDiskWriteCacheTransferSize(snapshot(), targetSize, targetSize - collected)
-      if (transferSize) {
-        const total = getDiskWriteCacheSegmentSeconds(state, transferSize)
-        next = { ...next, transferSize, segmentRemainingSeconds: total, segmentTotalSeconds: total }
+    // 3. An expedited merge covers whatever the buffer could not, simultaneously, with every smaller full
+    // disk that still fits — all transferring in parallel — so only as many as needed are consumed.
+    if (merge.expedite && collected < targetSize * WRITE_CACHE_COMPLETE_RATIO) {
+      const reserved = transfers.reduce((sum, transfer) => sum + transfer.size, 0)
+      for (const size of pickDiskWriteCacheTransferSizes(snapshot(), targetSize, targetSize - collected - reserved, transfers)) {
+        const totalSeconds = getDiskWriteCacheSegmentSeconds(state, size)
+        transfers.push({ size, remainingSeconds: totalSeconds, totalSeconds })
       }
     }
 
+    const { transferSize: _legacyTransfer, segmentRemainingSeconds: _legacyRemaining, segmentTotalSeconds: _legacyTotal, ...rest } = merge
+    let next = { ...rest, sourceSize, transfers }
     if (collected >= targetSize * WRITE_CACHE_COMPLETE_RATIO) {
       next = {
         ...next,
         collectedBits: targetSize,
         segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER,
-        transferSize: null,
-        segmentRemainingSeconds: 0,
+        transfers: [],
         flushRemainingSeconds: next.flushTotalSeconds,
       }
     } else {
@@ -4590,8 +4620,8 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     if (
       next.collectedBits !== merge.collectedBits ||
       next.segmentsCollected !== merge.segmentsCollected ||
-      next.transferSize !== merge.transferSize ||
-      next.segmentRemainingSeconds !== merge.segmentRemainingSeconds ||
+      !Array.isArray(merge.transfers) ||
+      !sameTransfers(next.transfers, merge.transfers) ||
       next.flushRemainingSeconds !== merge.flushRemainingSeconds ||
       next.sourceSize !== merge.sourceSize
     ) {

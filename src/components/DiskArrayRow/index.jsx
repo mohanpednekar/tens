@@ -12,6 +12,7 @@ import {
   getDiskWriteCacheFlushFill,
   getDiskWriteCacheMerge,
   getDiskWriteCacheSegmentFill,
+  getDiskWriteCacheTransfers,
   getPoolBufferBits,
   getPoolCacheReservationBits,
   getPoolIndexForDiskSize,
@@ -313,7 +314,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
   const writeFlushing = writeMerge && writeMerge.segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER
   const expediteAvailable = isDiskFillExpediteAvailable(state, size) && typeof actions?.expediteDiskFill === 'function'
   const expedited = isDiskFillExpedited(state, size)
-  const writeTransferring = Boolean(writeMerge?.transferSize)
+  const writeTransferring = getDiskWriteCacheTransfers(writeMerge).length > 0
   const readFlush = getDiskReadCacheFlush(state, size)
   const readFlushing = Boolean(readFlush)
   const readFlushPaused = readFlushing && isDiskReadCacheFlushPaused(state, size)
@@ -410,11 +411,11 @@ const DiskArrayRow = ({ actions, size, state }) => {
                   $active={isActive || (index === filledSegments && !writeCollectPaused)}
                   title={
                     writeCollectPaused
-                      ? 'Collect paused — matching tier claims that smaller disk first'
+                      ? 'Collect paused — matching tier claims those smaller disks first'
                       : isFilled
                         ? 'Collected'
                         : isActive
-                          ? (writeTransferring ? 'Collecting from a smaller disk' : 'Filling from Staging')
+                          ? (writeTransferring ? 'Collecting from smaller disks and Staging' : 'Filling from Staging')
                           : (expedited ? 'Filling from smaller disks and Staging' : 'Waiting for Staging')
                   }
                 />
