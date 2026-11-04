@@ -173,8 +173,8 @@ finish a countdown an older save may still carry. The smallest size per pool has
 blocks) with first claim on that pool's buffer (`getPoolCacheReservationBits`, honoured by `tickQueuedDiskBuild`), so
 it keeps filling while a build runs; every larger size fills via its own **write cache**, which draws from
 the pool buffer by default (after the read cache, smallest size first) — lower disks are consumed only when
-the player clicks an empty disk to expedite it (`expediteDiskFill`: smaller full disks of the same pool first,
-largest first, then the pool buffer, in the same unchanged fill order). Byte Foundry funds Byte Factory **pull-based**, with no proactive knowledge
+the player clicks an empty disk to expedite it (`expediteDiskFill`: smaller full disks of the same pool, largest
+first, consumed simultaneously with the pool buffer, whose fill order is unchanged — so not every smaller disk is needed). Byte Foundry funds Byte Factory **pull-based**, with no proactive knowledge
 of tier state: every tick `tickDiskPull` pulls one FULL, clean-slate (zero purchase-level progress) disk
 into its fixed (tier, level) correspondence (`getDataLakeTierIndex` grouping) whenever that tier sits at
 exactly the disk's required level, completing the tier's whole current purchase block in one shot;

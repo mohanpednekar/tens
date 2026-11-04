@@ -4374,8 +4374,9 @@ const createDiskWriteCacheMerge = (state, targetSize, expedite = false) => {
 }
 
 // Clicking an EMPTY disk of a write-cache size queues it for filling ahead of the default pool fill:
-// its merge first consumes full smaller disks of the same pool (largest first, each a timed transfer
-// at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER), then tops up from the pool buffer. The pool's own
+// its merge consumes full smaller disks of the same pool (largest first, each a timed transfer at
+// CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, sized to fit what is still needed) WHILE the pool buffer
+// keeps funding it too — two sources at once, so not every smaller disk need be consumed. The pool's own
 // fill ORDER is unchanged (read cache, then write caches smallest size first) — expediting only adds
 // the smaller-disk source. Outside the forced priority order (it is a preference flag, not a spend).
 export const isDiskFillExpediteAvailable = (state, size) => {
@@ -4447,8 +4448,8 @@ const WRITE_CACHE_COMPLETE_RATIO = 1 - 1e-9
 
 // Write caches for every size above its pool's smallest. Collect: draw from the pool buffer (after the
 // read cache's reservation; smallest target size first, so the pool's fill order is read cache → write
-// caches ascending), or — for an EXPEDITED merge — first consume smaller full disks of the same pool
-// (timed transfers), then the pool buffer. Collect and flush only advance while the target array has a
+// caches ascending); an EXPEDITED merge additionally consumes smaller full disks of the same pool (timed
+// transfers) at the same time. Collect and flush only advance while the target array has a
 // built-but-empty disk, so nothing banked is ever lost; flush is timed at the disk-from-cache rate.
 export const tickDiskWriteCache = elapsedSeconds => state => {
   let intro = state.intro
@@ -4551,11 +4552,13 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
       }
     }
 
-    // 3. Otherwise top up from the pool buffer, after the read cache's own claim.
-    if (!next.transferSize && poolIndex) {
+    // 3. The pool buffer funds the cache too (after the read cache's own claim) — for an expedited merge
+    // SIMULTANEOUSLY with its smaller-disk transfer, whose size stays reserved so the two sources together
+    // never overshoot the target; the faster the pool, the fewer smaller disks get consumed.
+    if (poolIndex) {
       const buffer = (poolBuffers ?? intro.poolBuffers ?? {})[poolIndex] ?? 0
       const spendable = Math.max(0, buffer - getPoolCacheReservationBits(snapshot(), poolIndex))
-      const drawBits = Math.min(spendable, Math.max(0, targetSize - collected))
+      const drawBits = Math.min(spendable, Math.max(0, targetSize - collected - (next.transferSize ?? 0)))
       if (drawBits > 0) {
         poolBuffers = poolBuffers ?? { ...(intro.poolBuffers ?? {}) }
         poolBuffers[poolIndex] = buffer - drawBits

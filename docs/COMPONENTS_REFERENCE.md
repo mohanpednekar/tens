@@ -40,7 +40,7 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 styled (`.jsx` — needs JSX) one Disk array's full STATUS detail for a single size. The ONE clickable
 element is an empty disk of a write-cache size (any size above its pool's smallest, while
 `isDiskFillExpediteAvailable`): it renders as a `<button>` calling `actions.expediteDiskFill(size)`,
-which fills it from smaller full disks first, then Staging; the queued disk then reads
+which fills it from smaller full disks and Staging at once; the queued disk then reads
 `aria-label="empty … disk queued for filling"` with a dashed info border. Byte Foundry funds Byte Factory pull-based and fully
 automatically, every tick (`tickDiskPull`/`tickDiskLevelOneCachePull` in `engine.js` — see
 CLAUDE.md's "Economy model"); the manual Redeem button and the cache-release-to-Bits control this

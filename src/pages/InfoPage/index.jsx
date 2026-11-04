@@ -294,8 +294,9 @@ const InfoPage = () => {
             would at {DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}× your Foundry production rate. Every
             larger size fills through its own write Cache straight from Staging (after the smaller
             sizes’ caches), then is written at {DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}×. Click an
-            empty disk to fill it sooner: it first takes full smaller disks from the same pool
-            (collected at {CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER}× your rate), then Staging.
+            empty disk to fill it sooner: it also takes full smaller disks from the same pool
+            (collected at {CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER}× your rate) while Staging keeps
+            filling it, so only as many smaller disks as needed are used.
             Nothing ever crosses from one pool into another.
           </li>
           <li>

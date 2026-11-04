@@ -415,7 +415,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
                         ? 'Collected'
                         : isActive
                           ? (writeTransferring ? 'Collecting from a smaller disk' : 'Filling from Staging')
-                          : (expedited ? 'Waiting for smaller disks, then Staging' : 'Waiting for Staging')
+                          : (expedited ? 'Filling from smaller disks and Staging' : 'Waiting for Staging')
                   }
                 />
               )
@@ -472,9 +472,9 @@ const DiskArrayRow = ({ actions, size, state }) => {
                       ? (hasReadCache
                         ? 'Built, waiting to fill from read cache'
                         : isQueued
-                          ? 'Queued — filling from smaller disks first, then Staging'
+                          ? 'Queued — filling from smaller disks and Staging at once'
                           : isClickable
-                            ? 'Filling from Staging — click to fill it first from smaller disks'
+                            ? 'Filling from Staging — click to also fill it from smaller disks'
                             : 'Built, filling from Staging')
                       : 'Not yet built'
               }

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Click an empty disk to fill it sooner.** Clicking an empty disk (any size above its pool's smallest) queues it: its write cache first takes full smaller disks from the same pool, then Staging.
+- **Click an empty disk to fill it sooner.** Clicking an empty disk (any size above its pool's smallest) queues it: its write cache then takes full smaller disks from the same pool while Staging keeps filling it, so not every smaller disk is used.
 
 - **Auto Restage (16 PP, Perks → Unlocks).** Once bought, XP is spent on Restage automatically whenever possible (each spend still resets every other tier's owned quantity and Bits). Pause it on Perks → Toggles.
 - **Dev build published beside production**: `yarn build:dev` produces a build with Dev Mode enabled (presets, Variables tree, state-JSON editor), and the Pages deploy now serves it at `/tens/dev/` while production stays at `/tens/`. The dev build keeps its own separate saves (every storage key is `dev:`-prefixed), invisible to the main game, and, like Dev Mode itself, carries no backward-compatibility burden (any save loads; missing fields are filled in, no "incompatible save" notice).

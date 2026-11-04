@@ -3856,6 +3856,25 @@ describe('tickDiskWriteCache', () => {
     expect(getDiskWriteCacheMerge(afterThird, level3Size).collectedBits).toBe(level2Size + FIRST_DISK_SIZE + 1_000)
   })
 
+  it('an expedited merge is funded by a smaller-disk transfer and the pool buffer at once, reserving the transfer so it never overshoots', () => {
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), {
+      disksBuiltTotal: { [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
+      disks: { [level2Size]: DISK_ARRAY_LADDER_CAP },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+      poolBuffers: { 1: level3Size },
+    })
+    const after = tickDiskWriteCache(0)(expediteDiskFill(level3Size)(state))
+    const merge = getDiskWriteCacheMerge(after, level3Size)
+    expect(merge.transferSize).toBe(level2Size)
+    // Pool funds everything except the in-flight transfer's reserved share.
+    expect(merge.collectedBits).toBe(level3Size - level2Size)
+    expect(after.intro.poolBuffers[1]).toBe(level2Size)
+    // The one transfer completes the cache: only 1 of the 9 smaller disks was consumed.
+    const done = tickDiskWriteCache(merge.segmentTotalSeconds)(after)
+    expect(getDiskWriteCacheMerge(done, level3Size).segmentsCollected).toBe(DISK_LADDER_SIZE_MULTIPLIER)
+    expect(done.intro.disks[level2Size]).toBe(DISK_ARRAY_LADDER_CAP - 1)
+  })
+
   it('expediteDiskFill only queues an empty disk of a write-cache size, once', () => {
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 2 },
