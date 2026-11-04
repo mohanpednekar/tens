@@ -321,7 +321,7 @@ bit amount actually spent out of Memory's own binary-scaled balance renders thro
 A real Prestige resets Memory (`bits`/`productionAccumulator`) back to fresh — along with tier01's
 own `purchaseLevels`/`purchaseLevelProgress` (see `purgeGame` in docs/ECONOMY_REFERENCE.md) — but
 NOT the main-game-unlock gate (`mainGameUnlocked`) any more: that's now a PERMANENT, one-time-ever
-latch (`latchMainGameUnlocked`), never reset by a real Prestige or an Reboot. So this page's
+latch (`latchMainGameUnlocked`), never reset by a real Prestige or a Reboot. So this page's
 gate only ever reappears once, on a save's very first cycle — every cycle after that starts with
 Factory already reachable, no gate replay at all. The
 Byte generator itself (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
@@ -722,10 +722,10 @@ live inside the selected tier):
 (`GlobalTickspeedCard`, `TierList`, `ScaleUpCard`, `OverclockCard`) — it no longer has a tab bar or any
 PP-spending control. Its sticky Money/PP balances stay; the speed-bonus breakdown points at "Firmware →
 Prestige" while the bonus is locked. Every PP purchase, every free autobuyer milestone, Buy max, and every
-automation pause toggle live on the separate **Firmware** page (below). Chapters / Era status live on
+automation pause toggle live on the separate **Firmware** page (below). Releases / Reboot status live on
 `MilestonesPage` (AppNav → More). Full-save Reset lives only under More → Settings → Danger zone.
 
-**Firmware page (`pages/PerksPage`).** Its own AppNav destination (page id `'perks'`, item `open perks`, ✨,
+**Firmware page (`pages/PerksPage`).** Its own AppNav destination (page id `'perks'`, item `open firmware`, 🔧,
 between Factory and Manual), shown once `isPerksPageRevealed` (= `isBuyMaxUnlocked`: first Prestige or
 Era) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
 attention). Header shows the spendable PP (`aria-label="purge points display"`). Two **icon-only**

@@ -11,7 +11,7 @@ Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open by
 **Power** (`open power`, page id `'boosters'`, once `isComputeCoreConversionUnlocked`) →
 **Compute** (`open compute`, page id `'compute'`, once `isComputeFlopsPageRevealed`) →
 **Factory** (`open byte factory`, page id `'game'`, only once `mainGameUnlocked`) → **Firmware**
-(`open perks`, once first Prestige/Era) → **More** (`open more menu`, always — opens `AppMenu`,
+(`open firmware`, once first Prestige/Reboot) → **More** (`open more menu`, always — opens `AppMenu`,
 which holds Manual / Releases / Settings). Storage is
 **not** a top-level item — it lives under Foundry as continuous Data Stream + Disk sections on the
 same screen.

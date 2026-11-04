@@ -3859,7 +3859,7 @@ Foundry upgrade state reset. Era *N* free-unlocks the *N*th Compute tier’s aut
 - **Eon spend tree in the same PR** — deferred to #414 (`blocked` until spend design lands); engine
   ships hyperscaler/`buyHyperscaler` hooks but shop UI waits.
 
-See `docs/ECONOMY_REFERENCE.md` “Era ascension and Eons” for the live constant table; issues #407
+See `docs/ECONOMY_REFERENCE.md` “Reboot and Kernels” (formerly “Era ascension and Eons”) for the live constant table; issues #407
 (parent epic), #405 (Unbounded), #410 (engine), #411 (UI).
 
 ### Pool 1 byte generator: binary Memory units, doubling capacity cap, ×4 Bandwidth ladder (#457, epic #456)

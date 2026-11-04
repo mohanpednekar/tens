@@ -1661,7 +1661,7 @@ never cleared by Reboot — full save Reset only). `storage.js` still grandfathe
 compute ladder entities, `intro.foundryResetCaps`), ordinary Factory cycle (same fields as `purgeGame`),
 `purge.points`/`count`/`prestigeDoublePpLevel` → 0, `computeFlops.owned` → 0,
 `computeFlops.cumulativeBoost` fresh. Keeps `intro.byteCreated` if already combined, but resets
-`intro.capacity` to `INTRO_STARTING_CAPACITY` with the rest of the Reformat; the Capacity ×2
+`intro.capacity` to `INTRO_STARTING_CAPACITY` with the rest of the Foundry wipe; the Capacity ×2
 ladder remains available up to the FINAL pool's own end bound (`isMemoryCapacityAtCap`), same as any
 other cycle — not any one pool's own. Does NOT reset
 `intro.mainGameUnlocked` (the gate — see `latchMainGameUnlocked` above) — a much bigger reset than an

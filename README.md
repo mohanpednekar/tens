@@ -37,7 +37,7 @@ Tap to fill the Data Stream, combine bits into a permanent Byte generator, and g
 
 ### Manual
 
-In-game **ℹ️ Manual** (`InfoPage`) holds evergreen, bullet-oriented explanations of every mechanic. Numbers there are derived from the same `engine.js` / `layers.js` constants the game uses.
+In-game **📖 Manual** (`InfoPage`) holds evergreen, bullet-oriented explanations of every mechanic. Numbers there are derived from the same `engine.js` / `layers.js` constants the game uses.
 
 ## Game architecture
 

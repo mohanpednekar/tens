@@ -174,13 +174,13 @@ const InfoPage = () => {
       <Section aria-label="prestige ladder section">
         <h2>Prestige ladder</h2>
         <p>
-          Each layer is a bigger reset than the one below it, and keeps everything the layer below
-          keeps.
+          Each layer resets everything the layer below it resets, plus more — so a higher layer keeps
+          less, but awards a longer-lasting currency.
         </p>
         <ul>
           <li>
             <strong>Purge</strong> — at 1 Googol Bytes. <em>Resets:</em> Bits and resources, owned
-            Factory tiers, Scale Ups, Overclocks, Clock Speed and the Data Stream balance.{' '}
+            Factory tiers, Scale Ups, Overclocks, Clock Speed, Restage XP, the per-cycle Compute (Flops) boost and the Data Stream balance.{' '}
             <em>Keeps:</em> Purge Points, Compression levels, automation unlocks, Overflow mode, the
             Byte generator, Capacity, Disks, Data Lakes, Compute entities, owned Compute (Flops)
             units and the System log.
@@ -190,7 +190,7 @@ const InfoPage = () => {
             resets, plus unspent PP, the Purge count, Compression levels, owned Compute (Flops) units,
             and the whole Foundry (Capacity, Disks, Data Lakes, Compute entities).{' '}
             <em>Keeps:</em> automation unlocks, Overflow mode, the main-game unlock, the System log,
-            Flops autobuyer unlocks, Kernels and hyperscalers. Awards Kernels.
+            Flops autobuyer unlocks, the Production speed bonus, Kernels and hyperscalers. Awards Kernels.
           </li>
           <li>
             <strong>Reinstall</strong> — a future layer above Reboot, not yet in the game.
