@@ -435,12 +435,12 @@ live inside the selected tier):
    re-clicking the selected tier, or clicking anywhere outside every tier block (`data-boost-tier`;
    a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
-   Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cores:
-   The timer bar / idle status line and (once unlocked) the Auto Boost preference picker all live in one `BoostCard`. The Auto Boost UNLOCK itself is a Perks → Automation → Power Automation row (`aria-label="auto boost row"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordableAutomationPerk`); Boosters shows nothing for it while locked
+   Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cells:
+   The timer bar / idle status line and (once unlocked) the Auto Boost preference picker all live in one `BoostCard`. The Auto Boost UNLOCK itself is a Perks → Automation → Power Automation row (`aria-label="auto boost row"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordableAutomationPerk`); Power shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
    a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
-      initialized on arrival to the active boost's own tier (`intro.computeBoostTierIndex`), else none; always Cores (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
+      initialized on arrival to the active boost's own tier (`intro.computeBoostTierIndex`), else none; always Cells (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
       tier that can hold a balance that early. Clicking a different tier mid-boost arms a
       confirmed switch (per `canActivateComputeBoost`); the timer bar, Stack and Pop always describe
       the ACTIVE tier, not the armed one. The row

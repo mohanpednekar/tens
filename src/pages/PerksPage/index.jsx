@@ -694,7 +694,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               cost: COMPUTE_AUTO_BOOST_UNLOCK_COST,
               canBuy: canBuyComputeAutoBoost,
               onClick: actions.buyComputeAutoBoost,
-              title: 'Spend Purge Points so a full tier waiting on its own in-flight merge automatically activates your preferred Boost preset (choose it on Power)',
+              title: 'Spend Purge Points so a full tier waiting on its own in-flight charge automatically activates your preferred Boost preset (choose it on Power)',
             })}
             name="Auto Boost"
             label="Boost"

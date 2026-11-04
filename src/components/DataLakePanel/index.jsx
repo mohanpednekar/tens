@@ -424,7 +424,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                     {costLabel}
                   </StatusText>
                 ) : entityAtCap ? (
-                  <StatusText title={`${boosterLabel} is already at the max — spend or merge it down first`}>
+                  <StatusText title={`${boosterLabel} is already at the max — spend or charge it up first`}>
                     {costLabel}
                   </StatusText>
                 ) : boosterAuto ? (

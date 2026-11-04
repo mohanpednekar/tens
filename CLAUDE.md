@@ -659,8 +659,8 @@ Strict three-layer separation:
    top card = active Boost timer bar (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right,
    enforced in the engine too; or "No boost running") + Auto Boost pref; then per-tier rows — the ONE
    selected tier (pre-selected to the active boost's tier on arrival) shows the 3 Boost presets inline (`COMPUTE_ENTITY_CAP` 10 slots,
-   Merge ratio `COMPUTE_MERGE_RATIO` 8, Unlock Auto-merge, `COMPUTE_MERGE_RESERVE_CAP` 8 reserve). Cores
-   come from buying Cells from the matching Data Lake, not minted from Data Stream Capacity. Full detail:
+   Merge ratio `COMPUTE_MERGE_RATIO` 8, Unlock Auto-charge, `COMPUTE_MERGE_RESERVE_CAP` 8 reserve). Cells
+   (`computeCores`) come from buying them from the matching Data Lake, not minted from Data Stream Capacity. Full detail:
    **`docs/FOUNDRY_MECHANICS_REFERENCE.md`**, `docs/MAINPAGE_REFERENCE.md`, `docs/DESIGN_HISTORY.md`.
 4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), taking
    `{ game }`. Reached via AppNav once `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in
