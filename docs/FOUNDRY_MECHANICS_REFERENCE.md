@@ -69,10 +69,10 @@ commit as any change to the mechanics it describes.
    preset stacks and any other preset is a confirmed switch that refunds unused stacks), THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
    `COMPUTE_ENTITY_CAP` (10) normal-slot squares (never above 10/10, even once auto-merge is unlocked and
    the entity has grown into its reserve) plus a `TierSelectButton` selecting that tier — only the ONE selected tier block shows
-   `ArmedStatusText` + the 3 Turbo/Balanced/Eco presets inline, at that tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
-   Auto-merge `TierActionButton`s (the latter with a live progress fill toward its
+   `ArmedStatusText` + the 3 Turbo/Balanced/Eco presets inline, at that tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-charge unlocks, Charge up (`COMPUTE_MERGE_RATIO`, 8) + Unlock
+   Auto-charge `TierActionButton`s (the latter with a live progress fill toward its
    `COMPUTE_ENTITY_CAP`-unit cost), or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot
-   squares (gradually filled, `getComputeReserveHeld`), labelled "🤖 Auto-merge", clickable as an instant
+   squares (gradually filled, `getComputeReserveHeld`), labelled "🤖 Auto-charge", clickable as an instant
    8→1 manual merge (only the automatic merge is timed); the selected tier's presets render below this row — Fusion has no
    row 2. Cells (`computeCores`) come from buying them from the matching Data Lake on Foundry's `DataLakePanel`, not
    minted from Data Stream Capacity. Full button/gate/aria-label detail: `docs/MAINPAGE_REFERENCE.md`; render-order and

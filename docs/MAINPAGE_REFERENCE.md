@@ -490,7 +490,7 @@ live inside the selected tier):
        (`$selected`/`aria-pressed`, plus a highlighted `TierBlock` border) while armed.
      - **Row 2** (`TierMergeRow`) is progressively disclosed (`showDetail`): rendered only for the
        armed tier, or when that tier is merging, a merge is startable/possible, reserve slots hold
-       tokens, or (pre-auto) Auto-merge unlock progress is above 0 — otherwise the tier is one line.
+       tokens, or (pre-auto) Auto-charge unlock progress is above 0 — otherwise the tier is one line.
        For every tier except the last (Megacomputer, no row 2 at all —
        see issue #280's "Out of scope" — though its row 1 is still Boost-selectable, the only place
        a Megacomputer has any use at all):
@@ -501,7 +501,7 @@ live inside the selected tier):
          e.g. "charge up 8 batteries into 1 pack") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
          tier is held and the produced tier is under its effective cap (`getComputeFieldEffectiveCap` — 18
          once that tier's own auto-merge is unlocked), calling the matching
-         `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-merge button filling the
+         `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-charge button filling the
          other half (`TierActionButton`, `variant="info"`, `$progress` set to the live percentage
          toward its own unlock cost — the same `Button` `progressFill` mechanic Factory's own Buy
          buttons use for cost-block progress — visible content `` "🤖 <held>/<COMPUTE_ENTITY_CAP>" ``
