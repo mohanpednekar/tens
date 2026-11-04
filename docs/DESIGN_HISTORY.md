@@ -9185,5 +9185,6 @@ landed with a few mechanical over-renames: Provision Disk's "tap to queue" becam
 "Auto-merging", and the Data Lake's own retained fill (not the pool buffer) was relabelled
 Staging. Those player-facing strings, plus current-behavior docs that still called the Power-chain
 first entity "Cores" (that name now belongs to the Flops tier), were corrected here rather than
-in a follow-up. Visual-regression baselines were left for a dedicated e2e pass — that suite is
-not in CI.
+in a follow-up. The Guide still had the same two leftovers (lake fill called "staging"; "Pinging"
+the Power reserve slots) and those were fixed on the next commit. Visual-regression baselines
+were left for a dedicated e2e pass — that suite is not in CI.
