@@ -17,7 +17,7 @@ it. You are not the author's advocate, and the author's PR description/commit me
 to be falsified, not facts — verify each stated behavior against the code before believing it. A
 clean report must be earned by evidence ("I checked X, Y, Z and each holds because …"), never by
 running out of attention. For every changed behavior, actively construct the input, state, or
-sequence of events that would break it — locked tiers, frozen production, `reboot.count === 0`,
+sequence of events that would break it — locked tiers, frozen production, `purge.count === 0`,
 a legacy save missing new state keys, tier01's special cases, StrictMode double-render, fractional
 0.1s ticks summing with float drift, an autobuyer with 0 owned generators — and check the code
 survives it.

@@ -107,6 +107,30 @@ describe('saveGameState / loadGameState round-trip', () => {
     expect(loaded.prestigeMuseum.history[0]).not.toHaveProperty('prestigeNumber')
   })
 
+  it('migrates a v2-stamped reboot-keyed save to the purge names (#987)', () => {
+    const { purge: _r, autoPurge: _a, autoPurgeEnabled: _e, autoPurgeAttemptBudget: _b, ...base } = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify({
+      ...base,
+      saveSchemaVersion: 2,
+      reboot: { xp: 1, points: 7, count: 2, highestMilestone: 0, unboundedUnlocked: true },
+      autoReboot: 2,
+      autoRebootEnabled: false,
+      autoRebootAttemptBudget: 0.75,
+      automationIntervalLevels: { speedUp: 1, scaleUp: 0, overclock: 0, reboot: 4 },
+      prestigeMuseum: { history: [{ id: 'p2-1', rebootNumber: 2, pointsAwarded: 1 }], pinnedIds: [] },
+    }))
+    const loaded = loadGameState()
+    expect(loaded.purge).toMatchObject({ points: 7, count: 2, xp: 1, unboundedUnlocked: true })
+    expect(loaded.autoPurge).toBe(2)
+    expect(loaded.autoPurgeEnabled).toBe(false)
+    expect(loaded.autoPurgeAttemptBudget).toBe(0.75)
+    expect(loaded.automationIntervalLevels).toMatchObject({ speedUp: 1, purge: 4 })
+    expect(loaded.automationIntervalLevels).not.toHaveProperty('reboot')
+    expect(loaded).not.toHaveProperty('reboot')
+    expect(loaded).not.toHaveProperty('autoReboot')
+    expect(loaded.prestigeMuseum.history[0]).toMatchObject({ purgeNumber: 2 })
+  })
+
   it('preserves prestige count, points, and XP', () => {
     const state = {
       ...createInitialGameState(),
@@ -1228,6 +1252,12 @@ describe('importSaveJson (production shape check)', () => {
 describe('adaptSaveForLoad (dev build: no backward compatibility)', () => {
   it('accepts any plain-object save as-is, dropping only the schema envelope', () => {
     expect(adaptSaveForLoad({ saveSchemaVersion: 0, legacy: true, x: 1 }, true)).toEqual({ ok: true, payload: { legacy: true, x: 1 } })
+  })
+
+  it('still applies the migrateToV3 key renames in the dev build', () => {
+    const { ok, payload } = adaptSaveForLoad({ reboot: { points: 5 }, autoRebootEnabled: true, automationIntervalLevels: { reboot: 3 } }, true)
+    expect(ok).toBe(true)
+    expect(payload).toEqual({ purge: { points: 5 }, autoPurgeEnabled: true, automationIntervalLevels: { purge: 3 } })
   })
 
   it('still rejects non-objects in the dev build', () => {
