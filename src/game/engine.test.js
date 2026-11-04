@@ -3875,6 +3875,17 @@ describe('tickDiskWriteCache', () => {
     expect(done.intro.disks[level2Size]).toBe(DISK_ARRAY_LADDER_CAP - 1)
   })
 
+  it('two expedited merges never both claim the same single smaller disk', () => {
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1, [level3Size]: 1 },
+      disks: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
+    const after = tickDiskWriteCache(0)(expediteDiskFill(level3Size)(expediteDiskFill(level2Size)(state)))
+    expect(getDiskWriteCacheMerge(after, level2Size).transferSize).toBe(FIRST_DISK_SIZE)
+    expect(getDiskWriteCacheMerge(after, level3Size).transferSize).toBeNull()
+  })
+
   it('expediteDiskFill only queues an empty disk of a write-cache size, once', () => {
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 2 },

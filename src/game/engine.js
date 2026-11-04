@@ -468,16 +468,12 @@ export const createInitialGameState = () => ({
     // untouched, same as diskWriteCache below and disks/disksBuiltTotal above — "Prestige shall
     // not affect Byte Foundry in any way" (see purgeGame, docs/DESIGN_HISTORY.md).
     diskReadCacheFlush: {},
-    // PERMANENT — in-flight upward merges (write cache): { [targetSizeBits]: { sourceSize,
-    // segmentsCollected, segmentRemainingSeconds, segmentTotalSeconds, flushRemainingSeconds,
-    // flushTotalSeconds } }. Empty at rest; collect (10 segments from source) then flush (solid
-    // drain) into one target disk. Rides through a real Prestige untouched (see purgeGame) —
-    // a merge paused because its source has an active tier claim can otherwise sit paused for a
-    // while, so resetting it on Prestige would silently lose the already-consumed source disks.
-    // Stranded status never pauses a merge (source's or target's — see canStartDiskWriteCacheMerge),
-    // so it's no longer the reason a merge might need this permanence, but the field stays
-    // Prestige-permanent regardless: real progress toward a real, permanent disk should never be
-    // discarded just because Prestige happened to fire mid-collection.
+    // PERMANENT — in-flight write caches (every size above its pool's smallest): { [targetSizeBits]:
+    // { sourceSize, collectedBits, segmentsCollected (derived), transferSize, segmentRemainingSeconds,
+    // segmentTotalSeconds, flushRemainingSeconds, flushTotalSeconds, expedite } }. Empty at rest;
+    // collect (from the pool buffer, plus smaller disks when expedited) then flush (solid drain) into
+    // one target disk — see tickDiskWriteCache. Rides through a real Prestige untouched (see purgeGame):
+    // real banked progress toward a real, permanent disk is never discarded mid-collection.
     diskWriteCache: {},
     // PERMANENT — null whenever no array is mid-build. provisionDisk itself never populates this
     // any more (see its own comment below): a disk completes the instant its final pass lands, with
@@ -1690,10 +1686,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // multiplier rather than lagging a tick behind.
   const stateAfterFillMultiplierDecay = tickFillMultiplierDecay(elapsedSeconds)(stateAfterMainGameLatch)
   const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickSpeedUpgradeDrain(elapsedSeconds)(tickCapacityUpgradeDrain(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay)))))
-  // First pass advances in-flight read-cache flushes (and may complete them) so write-cache
-  // collect can claim newly emptied source slots same tick. Second pass uses 0 elapsed so
-  // flush countdowns are not applied twice per tickGame — it only refills / starts new flushes
-  // after write-cache ripple.
+  // First pass advances in-flight read-cache flushes and refills the read cache, so write caches
+  // (which draw the pool buffer after the read cache's claim) run second. The last pass uses 0
+  // elapsed so flush countdowns are not applied twice per tickGame — it only refills / starts new
+  // flushes after an expedited transfer emptied a smaller disk.
   const stateAfterReadCache = tickDiskAutoFill(elapsedSeconds)(stateAfterProvision)
   const stateAfterWriteCache = tickDiskWriteCache(elapsedSeconds)(stateAfterReadCache)
   const stateAfterStorage = tickDiskAutoFill(0)(stateAfterWriteCache)
@@ -4432,13 +4428,19 @@ const getDiskWriteCacheSegmentSeconds = (state, sourceSize) => {
   return sourceSize / Math.max(rate, Number.MIN_VALUE)
 }
 
-// Largest full smaller disk in the target's pool that still fits the merge's remaining need and is not
-// claimed by its tier this tick (or mid-legacy-build) — the next source an expedited merge consumes.
+// Largest full smaller disk in the target's pool that still fits the merge's remaining need, is not
+// claimed by its tier this tick (or mid-legacy-build), and is not already being transferred by ANOTHER
+// expedited merge — the next source an expedited merge consumes.
 const pickDiskWriteCacheTransferSize = (state, targetSize, needBits) => {
   const poolIndex = getPoolIndexForDiskSize(targetSize)
+  const claimed = {}
+  for (const [key, merge] of Object.entries(state.intro.diskWriteCache ?? {})) {
+    if (Number(key) === targetSize || !merge?.transferSize) continue
+    claimed[merge.transferSize] = (claimed[merge.transferSize] ?? 0) + 1
+  }
   const candidates = getStoragePoolSizes(poolIndex).filter(size => size < targetSize).sort((a, b) => b - a)
   return candidates.find(size =>
-    (state.intro.disks?.[size] ?? 0) > 0 &&
+    (state.intro.disks?.[size] ?? 0) - (claimed[size] ?? 0) > 0 &&
     size <= needBits * (1 + TICK_ACCUMULATION_EPSILON) &&
     state.intro.diskBuild?.size !== size &&
     !isDiskRedeemable(state, size)) ?? null
@@ -4600,8 +4602,8 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
 // ladder use (tier match keeps first claim on disks/cache for Factory funding). Flush duration is
 // the time to fill one read-cache block — a DISK filling FROM a cache — at
 // DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER times the current Byte Foundry production rate (see
-// getDiskReadCacheFlushSeconds). Disks above the smallest ladder size also fill via write-cache
-// flush from the size below — see tickDiskWriteCache. Unconditional, bypasses isProductionFrozen.
+// getDiskReadCacheFlushSeconds). Disks above the smallest ladder size fill via their own write
+// cache (pool buffer) — see tickDiskWriteCache. Unconditional, bypasses isProductionFrozen.
 // Same-reference no-op when nothing changed. `elapsedSeconds` advances in-flight flushes (0 is
 // valid — start newly eligible flushes without counting time down).
 export const getDiskReadCacheFlush = (state, size) =>
@@ -4629,7 +4631,7 @@ export const isDiskReadCacheFlushPaused = (state, size) => {
 
 // Only the pool's own smallest disk size — the one whose sub-slot is DATA_LAKE_SUB_SIZES[0] — ever
 // keeps a read cache drawing straight from Memory; every larger size in the same pool fills
-// exclusively via write-cache ripple from the size below (see tickDiskWriteCache, which never
+// via its own write cache (see tickDiskWriteCache, which never
 // touches diskCache/diskReadCacheFlush at all). Running both fill paths on every size was pure
 // redundancy — two mechanisms pouring into the same container. A size with no Data Lake tier
 // mapping at all (getDataLakeSubSize returns null — no pool exists yet past DATA_LAKE_MAX_DISK_LADDER_STEP)

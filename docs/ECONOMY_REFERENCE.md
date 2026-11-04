@@ -646,8 +646,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    already flushing completes; one still collecting is cancelled, its collected disks returned up to the source
    array's built count and any excess credited, clamped, to that pool's buffer.
    `tickGame`'s storage pipeline runs
-   `tickDiskAutoFill` → `tickDiskWriteCache` → `tickDiskAutoFill` so source slots can ripple-refill
-   from read cache the same tick a segment completes. The second `tickDiskAutoFill` uses
+   `tickDiskAutoFill` → `tickDiskWriteCache` → `tickDiskAutoFill` so the read cache claims the pool buffer
+   before write caches, and a smaller disk an expedited transfer just emptied can start refilling the same tick. The second `tickDiskAutoFill` uses
    `elapsedSeconds = 0` so in-flight read-cache flush countdowns are not applied twice per
    `tickGame` tick (first pass advances them; second only refills / starts new flushes).
 
