@@ -9207,3 +9207,14 @@ Merges now track `collectedBits` (pool draws are fractional; `segmentsCollected`
 completing while the target has no empty disk, since a pool-funded merge's bits would otherwise be lost. The
 "source array full" start condition and its 9-vs-10 constant distinction no longer apply; the 10-segment
 (size-ratio) conservation still does.
+
+## Stronger expedite: queue jump, parallel transfers, 5× flush (2026-11)
+
+After PR #1000 a simulated expedite was only ~3–5% faster than the default fill: smaller disks were consumed one
+at a time, the 2× flush dominated, and the consumed smaller disks' own refills took Staging first (the pool
+fill order was kept as originally specified). Per maintainer choice, an expedited disk now (1) draws Staging
+ahead of all non-expedited write caches — a deliberate exception to "fill order unchanged"; the read cache
+keeps its reservation; (2) starts every needed smaller-disk transfer at once (`merge.transfers`), still sized
+so the sources never overshoot and dropped once Staging covers the rest; and (3) flushes at
+`CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER` (5×) instead of 2×. The 5× rate reuses the existing constant
+rather than adding a new economy constant to `layers.js`.

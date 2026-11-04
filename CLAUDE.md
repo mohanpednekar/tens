@@ -813,7 +813,8 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
   fully automatic (no click, no autobuyer gate). Disks/caches/builds are PERMANENT across Prestige.
   Every size above its pool's smallest fills via its write cache FROM THE POOL BUFFER by default (pool fill
   order: read cache, then write caches smallest size first); clicking an empty disk expedites it
-  (`expediteDiskFill`) — it also consumes smaller full disks of its pool, simultaneously with the pool buffer.
+  (`expediteDiskFill`) — it jumps ahead of the other write caches for the pool buffer, consumes the smaller full
+  disks of its pool it needs in parallel alongside that buffer, and flushes at 5× (`docs/ECONOMY_REFERENCE.md`).
   Stranded disks are never destroyed or swept into Bits; merges never cross a pool boundary.
 - **Data Lakes** (`intro.dataLakes`): Booster control is "one click, one full fill-then-buy conversion,
   then stop" until the pool's era-long `boosterAuto` latch is set (then it auto-buys); `buyBooster` spends only banked lake units, outside the

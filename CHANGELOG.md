@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Expediting a disk is much stronger.** A clicked empty disk now takes Staging ahead of the other larger disks (the smallest disk's cache still comes first), pulls in every smaller disk it needs at once instead of one at a time, and writes itself at 5× instead of 2×.
+
 - **Larger disks fill from Staging by default.** Every disk size above a pool's smallest now fills through its write cache straight from the pool's Staging (after the smaller sizes, in the same order as before) instead of by merging nine full smaller disks, so smaller disks stay in place for the Factory unless you click an empty disk to expedite it.
 
 - **Player-facing renames for clarity (#988).** The Boosters page and nav are now **Power** (⚡), with the chain Cell → Battery → Pack → Bank → Generator → Turbine → Plant → Grid → Reactor → Fusion (merging is now "Charge up" / "Auto-charge"); Boost presets are Turbo / Balanced / Eco; PP Compute tiers are Cores, Chips, Servers, … Superclouds, each showing its KFlops … QFlops output; the Factory nav icon is 🏭. On the Foundry, Combine is Compile, tapping is Ping, Data Stream Speed is Bitrate (Upgrade Bitrate), pool speed is Bandwidth, pool buffers are Staging, Memory reads Data Stream Capacity, and ↻ Reset Pool is 🗜 Compact Pool. Speed Up is now Clock Speed, the Purge threshold overlay reads "Disk full", and unbounded production is called Overflow mode. Game mechanics are unchanged.
