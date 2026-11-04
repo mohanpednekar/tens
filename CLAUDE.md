@@ -101,8 +101,8 @@ at draft creation; multiple rounds of adversarial review (Claude plus any other 
 humans) once marked ready, looping until nothing new turns up. This does not slow down any of
 `pr-auto-merge.yml`'s three enabled paths (below, and in "Automation workflows") — a qualifying human
 GitHub approval, a low-risk diff on green checks, or an adversarial `APPROVE` on a low-risk diff — all
-of which stay immediate by design. The 10-minute quiet period only applies on the rare occasion none of
-those three paths fires and a session is merging a PR directly itself (e.g. `gh pr merge`): wait for CI
+of which stay immediate by design — nor the agent-enabled auto-merge on any non-workflow `APPROVE`
+(below). The 10-minute quiet period only applies on the rare occasion none of those paths fires and a session is merging a PR directly itself (e.g. `gh pr merge`): wait for CI
 green plus 10 minutes with no further review activity first. Full detail: `docs/AUTOMATION.md`'s "PR
 review & testing cadence".
 
@@ -120,12 +120,14 @@ Then:
   **always** enable GitHub auto-merge — run
   `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (marks ready if
   still draft, then `gh pr merge --auto --merge`). This is a standing authorization to *enable*
-  auto-merge on qualifying PRs only; it is not permission to force-merge, push to `main`, approve
+  auto-merge on `APPROVE`d PRs (this bullet and the next) only; it is not permission to force-merge, push to `main`, approve
   the PR as a GitHub review, or bypass CODEOWNERS on `.github/workflows/**`.
-- **`APPROVE` but not low-risk**: mark ready and still enable GitHub auto-merge (`gh pr merge
-  --auto --merge`) — maintainer standing rule: always enable auto-merge on an adversarial `APPROVE`.
-  Branch protection (required human approval, CODEOWNERS on `.github/workflows/**`) still gates the
-  actual merge; this never bypasses it.
+- **`APPROVE` but not low-risk, diff touches no `.github/workflows/**` file**: mark ready and enable
+  GitHub auto-merge (`gh pr merge --ready` then `gh pr merge --auto --merge`) — maintainer standing
+  rule. The `main` ruleset currently requires no human approval, so this merges on green required
+  checks with no human review; the adversarial `APPROVE` is the gate.
+- **`APPROVE` but diff touches `.github/workflows/**`**: mark ready for the maintainer's review; never
+  enable auto-merge (CODEOWNERS isn't enforced by the ruleset yet, so this exclusion is the only gate).
 - **`NEEDS CHANGES` / `BLOCK`**: fix (or stop); do not enable auto-merge; re-run the reviewer after
   the next final commit so the marker matches the new HEAD.
 
@@ -250,8 +252,9 @@ milestone is `v0.7.0`, targeting Era ascension (`#407` / `#411–#414`, in progr
 The Claude-side and GitHub automation workflows under `.github/workflows/` run unattended — opening
 and fixing up PRs, and merging them only past an approval boundary: only a low-risk diff on an allowlisted
 bot-authored branch (`scripts/pr-low-risk-eligible.sh`) merges without human approval — on green checks
-alone, or via an adversarial `APPROVE` marker on that same eligible diff; every other PR waits for human
-approval. Their git/GitHub write operations authenticate via the
+alone, or via an adversarial `APPROVE` marker on that same eligible diff. Interactive sessions also enable
+auto-merge on any adversarially-`APPROVE`d PR not touching `.github/workflows/**` (see "Pull requests");
+every other PR waits for human approval. Their git/GitHub write operations authenticate via the
 `GH_AUTOMATION_PAT` secret, not `GITHUB_TOKEN` (whose pushes/merges can't trigger other workflows;
 read-only guard steps, `autonomous-maintenance.yml`'s "Surface a broken deploy.yml run" alert comment/issue, and
 some workflows, e.g. `devin-workflow-health.yml`/`deploy.yml`, use `GITHUB_TOKEN`). The PAT includes `Workflows: write`, so autonomous runs
