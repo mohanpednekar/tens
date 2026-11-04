@@ -171,8 +171,10 @@ the pool is live and its buffer capacity can hold a pass, and outranks Compute o
 (`isProvisionDiskInProgress`). `diskBuild`/`tickProvisionDisk` and every "IO blocked mid-build" guard remain solely to
 finish a countdown an older save may still carry. The smallest size per pool has an always-full **read cache** (8
 blocks) with first claim on that pool's buffer (`getPoolCacheReservationBits`, honoured by `tickQueuedDiskBuild`), so
-it keeps filling while a build runs; every larger size fills via **write cache** — both at their own
-bandwidth-multiplier rates. Byte Foundry funds Byte Factory **pull-based**, with no proactive knowledge
+it keeps filling while a build runs; every larger size fills via its own **write cache**, which draws from
+the pool buffer by default (after the read cache, smallest size first) — lower disks are consumed only when
+the player clicks an empty disk to expedite it (`expediteDiskFill`: smaller full disks of the same pool first,
+largest first, then the pool buffer, in the same unchanged fill order). Byte Foundry funds Byte Factory **pull-based**, with no proactive knowledge
 of tier state: every tick `tickDiskPull` pulls one FULL, clean-slate (zero purchase-level progress) disk
 into its fixed (tier, level) correspondence (`getDataLakeTierIndex` grouping) whenever that tier sits at
 exactly the disk's required level, completing the tier's whole current purchase block in one shot;
@@ -218,12 +220,12 @@ fully built. **Buying Cells** (`buyBooster`) spends only banked lake units — o
 priority order, available the instant affordable — at a `purchased + 1` cost (capped once capacity-maxed)
 and instantly grants 1 compute-ladder entity, up to its effective cap (`COMPUTE_ENTITY_CAP`, 10 — or
 `COMPUTE_ENTITY_AUTO_MERGE_CAP`, 18, once that tier's outbound merge boundary has auto-merge unlocked, see
-Architecture 4b); a same-reference no-op at cap. **Stranded disks are never destroyed, and they DO still
-feed the write cache — even when the target is stranded too.** A disk whose tier already moved past its
+Architecture 4b); a same-reference no-op at cap. **Stranded disks are never destroyed, and an expedited
+write cache may still consume them — even when the target is stranded too.** A disk whose tier already moved past its
 required level sits full and un-pullable for the rest of the cycle; nothing sweeps it into Bits (an
 earlier "idle disk liquidation" mechanic was removed per the maintainer's explicit instruction).
 `tickDiskWriteCache`/`canStartDiskWriteCacheMerge`/`isDiskWriteCacheCollectPaused` never gate on stranded
-status, source or target — folding it into the next size up is its one remaining productive use
+status, source or target — feeding a larger disk is its one remaining productive use
 (`disks`/`disksBuiltTotal`/`diskWriteCache` are Prestige-permanent, so nothing is wasted). **Pool
 isolation:** no pool ever consumes anything from another — a merge never crosses a pool boundary
 (`canStartDiskWriteCacheMerge` compares `getPoolIndexForDiskSize`; `canDiskSizeFeedWriteCache(size)` is
@@ -231,8 +233,8 @@ false for each pool's largest size and gates `DiskArrayRow`'s stranded-disk tool
 `tickDiskWriteCache` cancels a legacy in-flight cross-pool merge still collecting, returning collected
 disks to the source array and any excess as clamped bits to the source pool's buffer; one already
 flushing completes), so each pool's largest size ends its chain and the next pool's smallest size fills
-only via its own read cache. The only thing that still pauses a merge is an ACTIVE tier claim on the
-source (Factory gets first crack at a disk it could pull this exact tick); see
+only via its own read cache. The only thing that pauses an expedited transfer is an ACTIVE tier claim on
+that smaller disk (Factory gets first crack at a disk it could pull this exact tick); see
 `docs/DESIGN_HISTORY.md` for the two rounds of over-restriction this reverts. A stranded disk otherwise
 waits for the next real Prestige to reopen its pull window. Full overflow-segment math, the
 disk-breakdown mixed-radix proof, and every gating predicate: `docs/ECONOMY_REFERENCE.md`.

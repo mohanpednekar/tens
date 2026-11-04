@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Click an empty disk to fill it sooner.** Clicking an empty disk (any size above its pool's smallest) queues it: its write cache first takes full smaller disks from the same pool, then Staging.
+
 - **Auto Restage (16 PP, Perks → Unlocks).** Once bought, XP is spent on Restage automatically whenever possible (each spend still resets every other tier's owned quantity and Bits). Pause it on Perks → Toggles.
 - **Dev build published beside production**: `yarn build:dev` produces a build with Dev Mode enabled (presets, Variables tree, state-JSON editor), and the Pages deploy now serves it at `/tens/dev/` while production stays at `/tens/`. The dev build keeps its own separate saves (every storage key is `dev:`-prefixed), invisible to the main game, and, like Dev Mode itself, carries no backward-compatibility burden (any save loads; missing fields are filled in, no "incompatible save" notice).
 - Settings → Import / export save: copy, download, paste or choose a save file to replace the active slot — hand-built test saves can now be loaded directly on a phone/PWA, no second computer or dev build needed.
@@ -21,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Perks → Unlocks → Global Automation now always lists Auto Overclock (32 PP; needs Auto Scale Up first) and Auto-Prestige (64 PP); they were hidden until their prerequisites were met.
 
 ### Changed
+
+- **Larger disks fill from Staging by default.** Every disk size above a pool's smallest now fills through its write cache straight from the pool's Staging (after the smaller sizes, in the same order as before) instead of by merging nine full smaller disks, so smaller disks stay in place for the Factory unless you click an empty disk to expedite it.
 
 - **Player-facing renames for clarity (#988).** The Boosters page and nav are now **Power** (⚡), with the chain Cell → Battery → Pack → Bank → Generator → Turbine → Plant → Grid → Reactor → Fusion (merging is now "Charge up" / "Auto-charge"); Boost presets are Turbo / Balanced / Eco; PP Compute tiers are Cores, Chips, Servers, … Superclouds, each showing its KFlops … QFlops output; the Factory nav icon is 🏭. On the Foundry, Combine is Compile, tapping is Ping, Data Stream Speed is Bitrate (Upgrade Bitrate), pool speed is Bandwidth, pool buffers are Staging, Memory reads Data Stream Capacity, and ↻ Reset Pool is 🗜 Compact Pool. Speed Up is now Clock Speed, the Purge threshold overlay reads "Disk full", and unbounded production is called Overflow mode. Game mechanics are unchanged.
 - **Perks regrouped by feature.** The 🔓 Unlocks / ⏫ Upgrades / 🎛 Toggles tabs are now 🤖 Automation and ✦ Prestige. Each automation is a single row that goes from its milestone or PP unlock to a pause switch, its current interval and its speed upgrade — no more hopping between three tabs to manage one automation. Double PP, the production speed bonus, DeGoogol and Buy max live on Prestige (the speed bonus now stays listed with a ✓ once bought).

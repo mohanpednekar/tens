@@ -16,6 +16,8 @@ import {
   getPoolCacheReservationBits,
   getPoolIndexForDiskSize,
   getPoolTapMultiplier,
+  isDiskFillExpediteAvailable,
+  isDiskFillExpedited,
   isDiskPullEligible,
   isDiskReadCacheEligible,
   isDiskReadCacheFlushPaused,
@@ -86,9 +88,10 @@ const pullPulse = keyframes`
 // circles always stretches to fill the full row rather than staying small and centered with
 // leftover space around it. Fully round (border-radius: 50%) — deliberately distinct from
 // CacheBlock's square, chip-like shape below, so the two rows read apart at a glance (a physical
-// disk is round; a cache/memory block is square). Purely a status display — Byte Foundry pulls a
-// full, matching, clean-slate disk automatically (see isDiskPullEligible/tickDiskPull in
-// engine.js), nothing here is ever clickable. $full takes priority over $empty over the plain
+// disk is round; a cache/memory block is square). Byte Foundry pulls a full, matching, clean-slate
+// disk automatically (see isDiskPullEligible/tickDiskPull in engine.js); the ONLY clickable disk is
+// an empty one of a write-cache size ($clickable), which expedites its fill (expediteDiskFill) —
+// rendered as a <button>. $queued marks the empty disk an expedited write cache is filling. $full takes priority over $empty over the plain
 // not-yet-built placeholder. Among full disks: $pullEligible (good/green + pulse — about to be
 // auto-pulled this tick) vs merely full-and-waiting (blocked by partial tier progress, "too
 // early," or stranded past its tier's current level).
@@ -140,7 +143,16 @@ const DiskSquare = styled.div.attrs(props => ({
   ${props => (props.$activeKind
     ? `--disk-glow: ${activeDiskColor(props)}; box-shadow: 0 0 0 1px var(--disk-glow), 0 0 10px 2px var(--disk-glow);`
     : '')}
+  ${props => (props.$queued ? `border-style: dashed; border-color: ${props.theme.color.info};` : '')}
   animation: ${props => (props.$activeKind && !props.$paused ? diskGlowPulse : props.$pullEligible ? pullPulse : 'none')} 1.4s ease-in-out infinite;
+  font: inherit;
+  color: inherit;
+  cursor: ${props => (props.$clickable ? 'pointer' : 'default')};
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
 
   @media (prefers-reduced-motion: reduce) {
     animation: none;
@@ -199,12 +211,10 @@ const CacheFillIndicator = styled.div`
   pointer-events: none;
 `
 
-// Write cache — per-array upward merge buffer (empty at rest). Collect shows
-// DISK_LADDER_SIZE_MULTIPLIER (10) segments — the source→target SIZE RATIO, NOT
-// DISK_ARRAY_LADDER_CAP (9, the disk squares' own array-full count below): 10 segments of one
-// source disk each conserve exactly one target disk's own value; once full the same bar renders
-// solid and drains left-to-right during flush. See canStartDiskWriteCacheMerge's own doc comment
-// in engine.js for why these two constants must stay distinct.
+// Write cache — per-array fill buffer for every size above its pool's smallest (empty at rest).
+// Collect shows DISK_LADDER_SIZE_MULTIPLIER (10) segments, each one tenth of the target disk (one
+// size-below disk's worth), filled from Staging (the pool buffer) or, for an expedited disk, from
+// smaller full disks first; once full the same bar renders solid and drains left-to-right during flush.
 const WriteCacheRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
@@ -239,11 +249,11 @@ const WriteCacheFlushFill = styled.div`
 
 // One Disk array's full status detail for a single `size` — used by ByteFoundryPage (every size
 // from getDiskSizesToShow, ascending continuous sections) and the thin StoragePage wrapper. See
-// CLAUDE.md's "Byte Foundry"/"Economy model" sections. Purely a display: Byte Foundry funds tier
-// levels automatically via tickDiskPull/tickDiskLevelOneCachePull (see engine.js) — there is
-// nothing here for a player to click. Only this specific size's own array being mid-build (see
+// CLAUDE.md's "Byte Foundry"/"Economy model" sections. Byte Foundry funds tier levels automatically
+// via tickDiskPull/tickDiskLevelOneCachePull (see engine.js); the one player action is clicking an
+// empty write-cache-size disk to expedite its fill (actions.expediteDiskFill). Only this specific size's own array being mid-build (see
 // intro.diskBuild) changes what's rendered, swapping the cache strip for a rebuild status line.
-const DiskArrayRow = ({ actions: _actions, size, state }) => {
+const DiskArrayRow = ({ actions, size, state }) => {
   const { intro } = state
   const full = intro.disks?.[size] ?? 0
   const disksBuiltTotal = intro.disksBuiltTotal ?? {}
@@ -301,6 +311,9 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
   const writeFlushFill = writeMerge ? getDiskWriteCacheFlushFill(writeMerge) : 0
   const writeCollecting = writeMerge && writeMerge.segmentsCollected < DISK_LADDER_SIZE_MULTIPLIER
   const writeFlushing = writeMerge && writeMerge.segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER
+  const expediteAvailable = isDiskFillExpediteAvailable(state, size) && typeof actions?.expediteDiskFill === 'function'
+  const expedited = isDiskFillExpedited(state, size)
+  const writeTransferring = Boolean(writeMerge?.transferSize)
   const readFlush = getDiskReadCacheFlush(state, size)
   const readFlushing = Boolean(readFlush)
   const readFlushPaused = readFlushing && isDiskReadCacheFlushPaused(state, size)
@@ -397,12 +410,12 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
                   $active={isActive || (index === filledSegments && !writeCollectPaused)}
                   title={
                     writeCollectPaused
-                      ? 'Collect paused — matching tier claims disks at the source size first'
+                      ? 'Collect paused — matching tier claims that smaller disk first'
                       : isFilled
-                        ? 'Collected from source disk'
+                        ? 'Collected'
                         : isActive
-                          ? 'Collecting from source disk'
-                          : 'Waiting for next source disk'
+                          ? (writeTransferring ? 'Collecting from a smaller disk' : 'Filling from Staging')
+                          : (expedited ? 'Waiting for smaller disks, then Staging' : 'Waiting for Staging')
                   }
                 />
               )
@@ -420,11 +433,16 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
           const isFull = index < full
           const isEmpty = !isFull && index < full + emptyCount
           const isActive = activeKind !== null && index === activeIndex
+          const isClickable = isEmpty && !isActive && expediteAvailable
+          const isQueued = isEmpty && !isActive && expedited && index === full
           return (
             <DiskSquare
               key={index}
               {...(isActive
                 ? { role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': activePercent }
+                : null)}
+              {...(isClickable
+                ? { as: 'button', type: 'button', onClick: () => actions.expediteDiskFill(size) }
                 : null)}
               aria-label={
                 isActive
@@ -434,7 +452,7 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
                     ? `${sizeLabel} disk pulling into ${redeemTierName}`
                     : `full ${sizeLabel} disk`)
                   : isEmpty
-                    ? `empty ${sizeLabel} disk`
+                    ? (isQueued ? `empty ${sizeLabel} disk queued for filling` : `empty ${sizeLabel} disk`)
                     : `not yet built ${sizeLabel} disk`
               }
               title={
@@ -444,14 +462,20 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
                   ? 'This array is offline while it rebuilds'
                   : isFull
                     ? (pullEligible
-                      ? `Pulling into 1 free ${redeemTierName} — empties it, ready to fill again${hasReadCache ? ' from Staging' : ' from the size below'}`
+                      ? `Pulling into 1 free ${redeemTierName} — empties it, ready to fill again from Staging`
                       : stranded
-                        ? `${redeemTierName ?? 'Its matching tier'} has already moved past this size — can't fund that tier again until the next Purge${canDiskSizeFeedWriteCache(size) ? ', but may still feed the write cache into the next size up' : ''}`
+                        ? `${redeemTierName ?? 'Its matching tier'} has already moved past this size — can't fund that tier again until the next Purge${canDiskSizeFeedWriteCache(size) ? ', but can still fill a queued larger disk' : ''}`
                         : redeemable
                           ? 'Waiting its turn — the matching tier already has progress toward this level'
                           : `Pulls automatically once ${sizeLabel}'s own fixed corresponding tier reaches its matching level`)
                     : isEmpty
-                      ? (hasReadCache ? 'Built, waiting to fill from read cache' : 'Built, waiting to fill from the size below')
+                      ? (hasReadCache
+                        ? 'Built, waiting to fill from read cache'
+                        : isQueued
+                          ? 'Queued — filling from smaller disks first, then Staging'
+                          : isClickable
+                            ? 'Filling from Staging — click to fill it first from smaller disks'
+                            : 'Built, filling from Staging')
                       : 'Not yet built'
               }
               $full={isFull}
@@ -460,6 +484,8 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
               $activeKind={isActive ? activeKind : null}
               $progress={isActive ? activeProgress : 0}
               $paused={isActive && activePaused}
+              $clickable={isClickable}
+              $queued={isQueued}
             >
               <CellLabel $emphasis={isFull || isEmpty}>{bareSizeLabel}</CellLabel>
             </DiskSquare>

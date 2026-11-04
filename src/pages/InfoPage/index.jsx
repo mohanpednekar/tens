@@ -292,9 +292,11 @@ const InfoPage = () => {
           <li>
             That array’s empty disks fill from its read Cache, taking as long as one cache block
             would at {DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}× your Foundry production rate. Every
-            larger size fills only by merging full disks from the size below — collected at{' '}
-            {CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER}× your rate, then written at{' '}
-            {DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}×. Merges never cross from one pool into another.
+            larger size fills through its own write Cache straight from Staging (after the smaller
+            sizes’ caches), then is written at {DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}×. Click an
+            empty disk to fill it sooner: it first takes full smaller disks from the same pool
+            (collected at {CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER}× your rate), then Staging.
+            Nothing ever crosses from one pool into another.
           </li>
           <li>
             Every disk size matches one tier and level (KB sizes → Kilobytes, MB sizes → Megabytes, …;

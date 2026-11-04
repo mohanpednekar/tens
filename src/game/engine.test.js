@@ -291,6 +291,8 @@ import {
   tickDiskLevelOneCachePull,
   tickProvisionDisk,
   tickDiskWriteCache,
+  expediteDiskFill,
+  isDiskFillExpediteAvailable,
   getDiskReadCacheFlush,
   getDiskReadCacheFlushSeconds,
   doubleDataLakeCapacity,
@@ -3730,148 +3732,192 @@ describe('tickDiskWriteCache', () => {
   const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
   const level3Size = getTierCost(tensTier, 3) * BITS_PER_BYTE
 
-  it('starts collecting when 10 full disks exist at the source size and the target has an empty container', () => {
+  const expediting = (merge, extra = {}) => ({
+    sourceSize: FIRST_DISK_SIZE,
+    segmentsCollected: 0,
+    collectedBits: 0,
+    transferSize: null,
+    segmentRemainingSeconds: 0,
+    segmentTotalSeconds: 0,
+    flushRemainingSeconds: 10,
+    flushTotalSeconds: 10,
+    expedite: true,
+    ...merge,
+    ...extra,
+  })
+
+  it('starts a merge for any size above its pool\'s smallest as soon as that array has an empty disk — no full source array needed', () => {
     const state = withIntro(createInitialGameState(), {
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
-      disks: {
-        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
-        [level2Size]: 0,
-      },
+      disksBuiltTotal: { [level2Size]: 1 },
+      disks: {},
     })
     const after = tickDiskWriteCache(0)(state)
     const merge = getDiskWriteCacheMerge(after, level2Size)
     expect(merge).toBeTruthy()
     expect(merge.sourceSize).toBe(FIRST_DISK_SIZE)
     expect(merge.segmentsCollected).toBe(0)
+    expect(merge.expedite).toBe(false)
     expect(merge.flushTotalSeconds).toBeGreaterThan(0)
   })
 
-  it('times a freshly-started merge off the current production rate — flush is a DISK filling FROM cache (2x), each collect segment is a CACHE filling FROM Disks (5x)', () => {
-    const state = withIntro(createInitialGameState(), {
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
-      disks: {
-        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
-        [level2Size]: 0,
-      },
-    })
-    const after = tickDiskWriteCache(0)(state)
-    const merge = getDiskWriteCacheMerge(after, level2Size)
-    // At the starting capacity both pools' bandwidth is the raw 1 B/s derived rate = 8 bits/sec.
-    expect(merge.flushTotalSeconds).toBe(level2Size / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 1))
-    expect(merge.segmentTotalSeconds).toBe(FIRST_DISK_SIZE / CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 1))
-    // DISK_LADDER_SIZE_MULTIPLIER (10) source-disk segments sum to exactly one target's own size —
-    // NOT DISK_ARRAY_LADDER_CAP (9, the array-full eligibility gate above, a different constant
-    // since it dropped from 10 to 9 — see canStartDiskWriteCacheMerge's own doc comment) — but the
-    // two multipliers are deliberately different rates (5x collect vs. 2x flush — see the doc
-    // comment on getDiskWriteCacheSegmentSeconds in engine.js), so the full collect phase is faster
-    // overall than the flush phase, not equal to it.
-    expect(merge.segmentTotalSeconds * DISK_LADDER_SIZE_MULTIPLIER).toBeLessThan(merge.flushTotalSeconds)
+  it('never starts a write cache for a pool\'s smallest size (it fills via its read cache)', () => {
+    const state = withIntro(createInitialGameState(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 }, disks: {} })
+    expect(getDiskWriteCacheMerge(tickDiskWriteCache(0)(state), FIRST_DISK_SIZE)).toBeNull()
   })
 
-  it('scales a freshly-started merge\'s timings with Byte Foundry production rate', () => {
+  it('times the flush off the pool Bandwidth (disk-from-cache 2x) and an expedited smaller-disk transfer at cache-from-disk 5x', () => {
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
+      disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
+    })
+    const merge = getDiskWriteCacheMerge(tickDiskWriteCache(0)(state), level2Size)
+    expect(merge.flushTotalSeconds).toBe(level2Size / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 1))
+    // tier01 at level 2 so FIRST_DISK_SIZE isn't claimed by its tier this tick.
+    const expedited = tickDiskWriteCache(0)(expediteDiskFill(level2Size)(withPurchaseLevel(state, tensTier.id, 2)))
+    const transfer = getDiskWriteCacheMerge(expedited, level2Size)
+    expect(transfer.transferSize).toBe(FIRST_DISK_SIZE)
+    expect(transfer.segmentTotalSeconds).toBe(FIRST_DISK_SIZE / CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 1))
+  })
+
+  it('scales a freshly-started merge\'s flush timing with Byte Foundry production rate', () => {
     const fast = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP, [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
       disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 0 },
-      // Pool 1's own Capacity ceiling bounds its bandwidth at a clean 250 B/s (2,000 bits/sec)
-      // regardless of how high the derived Data Stream speed climbs past it.
       capacity: INTRO_CAPACITY_CAP_BITS,
     })
-    const after = tickDiskWriteCache(0)(fast)
-    const merge = getDiskWriteCacheMerge(after, level2Size)
+    const merge = getDiskWriteCacheMerge(tickDiskWriteCache(0)(fast), level2Size)
     expect(getStoragePoolBandwidth(fast, 1)).toBe(2_000)
     expect(merge.flushTotalSeconds).toBe(level2Size / (getStoragePoolBandwidth(fast, 1) * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER))
-    expect(merge.segmentTotalSeconds).toBe(FIRST_DISK_SIZE / (getStoragePoolBandwidth(fast, 1) * CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER))
   })
 
-  it('collects one segment per timed slice and empties a source disk on each segment completion', () => {
-    // Source is level2Size (required tier level 2) with tier01 still at its default level 1 — "too
-    // early" (not yet redeemable, not stranded either), the one state that leaves collection fully
-    // unblocked. FIRST_DISK_SIZE can't be used here any more: its own required level is 1, so it's
-    // either currently redeemable (level 1) or already stranded (level 2+) — never "too early."
+  it('fills from the pool buffer by default (after the read cache\'s claim) and never consumes lower disks', () => {
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
       disks: { [level2Size]: DISK_ARRAY_LADDER_CAP },
-      diskWriteCache: {
-        [level3Size]: {
-          sourceSize: level2Size,
-          segmentsCollected: 0,
-          segmentRemainingSeconds: 1,
-          segmentTotalSeconds: 1,
-          flushRemainingSeconds: 10,
-          flushTotalSeconds: 10,
-        },
-      },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE - 100 },
+      poolBuffers: { 1: 5_000 },
     })
-    const after = tickDiskWriteCache(1)(state)
+    const after = tickDiskWriteCache(0)(state)
     const merge = getDiskWriteCacheMerge(after, level3Size)
-    expect(merge.segmentsCollected).toBe(1)
-    expect(after.intro.disks[level2Size]).toBe(DISK_ARRAY_LADDER_CAP - 1)
+    const reserved = getPoolCacheReservationBits(state, 1)
+    expect(reserved).toBe(100)
+    expect(merge.collectedBits).toBe(5_000 - reserved)
+    expect(after.intro.poolBuffers[1]).toBe(reserved)
+    expect(after.intro.disks[level2Size]).toBe(DISK_ARRAY_LADDER_CAP)
   })
 
-  it('the pool tap bonus speeds merge segments and the flush countdown ×(1 + bonus%)', () => {
+  it('keeps the pool fill order: the smaller write-cache target draws from the buffer before the larger one', () => {
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [level2Size]: 1, [level3Size]: 1 },
+      disks: {},
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+      poolBuffers: { 1: level2Size + 50 },
+    })
+    const after = tickDiskWriteCache(0)(state)
+    expect(getDiskWriteCacheMerge(after, level2Size).segmentsCollected).toBe(DISK_LADDER_SIZE_MULTIPLIER)
+    expect(getDiskWriteCacheMerge(after, level3Size).collectedBits).toBe(50)
+    expect(after.intro.poolBuffers[1]).toBe(0)
+  })
+
+  it('an expedited merge consumes one smaller full disk per timed transfer, largest size first, then the pool buffer', () => {
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
+      disks: { [FIRST_DISK_SIZE]: 1, [level2Size]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+      poolBuffers: { 1: 0 },
+    })
+    const queued = tickDiskWriteCache(0)(expediteDiskFill(level3Size)(state))
+    let merge = getDiskWriteCacheMerge(queued, level3Size)
+    expect(merge.transferSize).toBe(level2Size)
+    const afterFirst = tickDiskWriteCache(merge.segmentTotalSeconds)(queued)
+    merge = getDiskWriteCacheMerge(afterFirst, level3Size)
+    expect(afterFirst.intro.disks[level2Size] ?? 0).toBe(0)
+    expect(merge.collectedBits).toBe(level2Size)
+    expect(merge.segmentsCollected).toBe(1)
+    expect(merge.transferSize).toBe(FIRST_DISK_SIZE)
+    const afterSecond = tickDiskWriteCache(merge.segmentTotalSeconds)(withIntro(afterFirst, { poolBuffers: { 1: 1_000 } }))
+    merge = getDiskWriteCacheMerge(afterSecond, level3Size)
+    expect(afterSecond.intro.disks[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    // No smaller disk left, so it would top up from the pool — but the pool's fill order is unchanged:
+    // the now-empty smaller (level2Size) disk's own write cache draws the buffer first.
+    expect(merge.transferSize).toBeNull()
+    expect(merge.collectedBits).toBe(level2Size + FIRST_DISK_SIZE)
+    expect(getDiskWriteCacheMerge(afterSecond, level2Size).collectedBits).toBe(1_000)
+    expect(afterSecond.intro.poolBuffers[1]).toBe(0)
+    // Once that smaller disk's cache is satisfied, the expedited merge takes the rest from the pool.
+    const refilled = withIntro(afterSecond, {
+      diskWriteCache: { ...afterSecond.intro.diskWriteCache, [level2Size]: undefined },
+      // Drop the smaller array so nothing smaller is left to consume or refill first.
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
+      disks: {},
+      poolBuffers: { 1: 1_000 },
+    })
+    const afterThird = tickDiskWriteCache(0)(refilled)
+    expect(getDiskWriteCacheMerge(afterThird, level3Size).collectedBits).toBe(level2Size + FIRST_DISK_SIZE + 1_000)
+  })
+
+  it('expediteDiskFill only queues an empty disk of a write-cache size, once', () => {
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 2 },
+      disks: { [FIRST_DISK_SIZE]: 1, [level2Size]: 1 },
+    })
+    expect(isDiskFillExpediteAvailable(state, FIRST_DISK_SIZE)).toBe(false)
+    expect(expediteDiskFill(FIRST_DISK_SIZE)(state)).toBe(state)
+    expect(isDiskFillExpediteAvailable(state, level2Size)).toBe(true)
+    const queued = expediteDiskFill(level2Size)(state)
+    expect(getDiskWriteCacheMerge(queued, level2Size).expedite).toBe(true)
+    expect(isDiskFillExpediteAvailable(queued, level2Size)).toBe(false)
+    expect(expediteDiskFill(level2Size)(queued)).toBe(queued)
+    const noEmpty = withIntro(state, { disks: { [FIRST_DISK_SIZE]: 1, [level2Size]: 2 } })
+    expect(isDiskFillExpediteAvailable(noEmpty, level2Size)).toBe(false)
+  })
+
+  it('the pool tap bonus speeds expedited transfers and the flush countdown ×(1 + bonus%)', () => {
     const merging = (merge, extra = {}) => withIntro(createInitialGameState(), {
       disksBuiltTotal: { [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
       disks: { [level2Size]: DISK_ARRAY_LADDER_CAP },
-      diskWriteCache: { [level3Size]: { sourceSize: level2Size, segmentTotalSeconds: 10, flushTotalSeconds: 10, ...merge } },
+      diskWriteCache: { [level3Size]: expediting({ sourceSize: level2Size, segmentTotalSeconds: 10, flushTotalSeconds: 10, ...merge }) },
       ...extra,
     })
-    const collecting = { segmentsCollected: 0, segmentRemainingSeconds: 10, flushRemainingSeconds: 10 }
+    const collecting = { transferSize: level2Size, segmentRemainingSeconds: 10, flushRemainingSeconds: 10 }
     const tap = { poolTapBonusPercents: { 1: 100 } }
     expect(getDiskWriteCacheMerge(tickDiskWriteCache(1)(merging(collecting)), level3Size).segmentRemainingSeconds).toBeCloseTo(9)
     expect(getDiskWriteCacheMerge(tickDiskWriteCache(1)(merging(collecting, tap)), level3Size).segmentRemainingSeconds).toBeCloseTo(8)
-    const flushing = { segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER, segmentRemainingSeconds: 0, flushRemainingSeconds: 10 }
+    const flushing = { segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER, collectedBits: level3Size, flushRemainingSeconds: 10 }
     expect(getDiskWriteCacheMerge(tickDiskWriteCache(1)(merging(flushing, tap)), level3Size).flushRemainingSeconds).toBeCloseTo(8)
   })
 
-  // Regression: the write cache's own collect/flush threshold used to reuse DISK_ARRAY_LADDER_CAP
-  // (the array-full ELIGIBILITY gate — how many disks make a full array) for the SEGMENT COUNT too
-  // (how many source-disk segments a merge collects before flushing) — these happened to be equal
-  // (both 10) before DISK_ARRAY_LADDER_CAP dropped to 9, at which point reusing it for the segment
-  // count would have manufactured 1 sourceSize-unit of value out of nothing per merge (9 segments
-  // of sourceSize flushed into 1 targetSize disk worth 10x sourceSize). The segment count must stay
-  // tied to DISK_LADDER_SIZE_MULTIPLIER (10, the actual source->target size ratio) regardless of
-  // how many disks an array can physically hold at once. Caught by adversarial review before merge.
+  // Regression: the segment count must stay DISK_LADDER_SIZE_MULTIPLIER (10, the source→target size
+  // ratio), not DISK_ARRAY_LADDER_CAP (9) — otherwise a merge would manufacture value.
   it('needs DISK_LADDER_SIZE_MULTIPLIER (10) segments to flush, not DISK_ARRAY_LADDER_CAP (9) — conserves value across the merge (regression)', () => {
     const almostDone = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
-      disks: { [level2Size]: 1 }, // one more full disk on hand, ready for a final segment
+      disks: { [level2Size]: 1 },
       diskWriteCache: {
-        [level3Size]: {
+        [level3Size]: expediting({
           sourceSize: level2Size,
-          segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER - 1, // 9 of 10 — NOT yet flush-eligible
+          segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER - 1,
+          collectedBits: (DISK_LADDER_SIZE_MULTIPLIER - 1) * level2Size,
+          transferSize: level2Size,
           segmentRemainingSeconds: 1,
           segmentTotalSeconds: 1,
-          flushRemainingSeconds: 10,
-          flushTotalSeconds: 10,
-        },
+        }),
       },
     })
-    expect(getDiskWriteCacheFlushFill(getDiskWriteCacheMerge(almostDone, level3Size))).toBe(0) // still collecting
-    const afterNinthSegment = tickDiskWriteCache(1)(almostDone)
-    const merge = getDiskWriteCacheMerge(afterNinthSegment, level3Size)
-    // The 10th segment lands and the flush phase arms itself in the same tick — collect is DONE
-    // (getDiskWriteCacheSegmentFill reads 0 — nothing left to collect) and the flush countdown
-    // starts fresh at its own full duration.
+    expect(getDiskWriteCacheFlushFill(getDiskWriteCacheMerge(almostDone, level3Size))).toBe(0)
+    const merge = getDiskWriteCacheMerge(tickDiskWriteCache(1)(almostDone), level3Size)
     expect(merge.segmentsCollected).toBe(DISK_LADDER_SIZE_MULTIPLIER)
     expect(getDiskWriteCacheSegmentFill(merge)).toBe(0)
     expect(merge.flushRemainingSeconds).toBe(merge.flushTotalSeconds)
   })
 
-  it('pauses collect while the source size has an active tier claim, and resumes once the tier instead moves past it into stranded territory — a stranded source still has real, permanent value', () => {
-    const flushTotalSeconds = 10
-    const segmentTotalSeconds = flushTotalSeconds / DISK_LADDER_SIZE_MULTIPLIER
+  it('pauses an expedited transfer while that smaller disk has an active tier claim, and resumes once the tier moves past it', () => {
+    const segmentTotalSeconds = 1
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
       disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
       diskWriteCache: {
-        [level2Size]: {
-          sourceSize: FIRST_DISK_SIZE,
-          segmentsCollected: 0,
-          segmentRemainingSeconds: segmentTotalSeconds,
-          segmentTotalSeconds,
-          flushRemainingSeconds: flushTotalSeconds,
-          flushTotalSeconds,
-        },
+        [level2Size]: expediting({ transferSize: FIRST_DISK_SIZE, segmentRemainingSeconds: segmentTotalSeconds, segmentTotalSeconds }),
       },
     })
     expect(isDiskWriteCacheCollectPaused(state, level2Size)).toBe(true)
@@ -3879,36 +3925,27 @@ describe('tickDiskWriteCache', () => {
     expect(getDiskWriteCacheMerge(paused, level2Size).segmentsCollected).toBe(0)
     expect(paused.intro.disks[FIRST_DISK_SIZE]).toBe(DISK_ARRAY_LADDER_CAP)
 
-    // FIRST_DISK_SIZE's own required level is 1, so tier01 moving to level 2 strands it. A source
-    // that's merely stranded is no longer a pause reason at all (see docs/DESIGN_HISTORY.md):
-    // collection resumes regardless of whether the target (level2Size) is itself stranded too.
     const resumed = withPurchaseLevel(paused, tensTier.id, 2)
     expect(isDiskWriteCacheCollectPaused(resumed, level2Size)).toBe(false)
     const after = tickDiskWriteCache(segmentTotalSeconds)(resumed)
-    const merge = getDiskWriteCacheMerge(after, level2Size)
-    expect(merge.segmentsCollected).toBe(1)
+    expect(getDiskWriteCacheMerge(after, level2Size).segmentsCollected).toBe(1)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(DISK_ARRAY_LADDER_CAP - 1)
   })
 
-  it('clears write cache on flush without overfilling when read cache already filled the target slot', () => {
-    const flushTotalSeconds = 10
-    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 3), {
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
-      disks: { [FIRST_DISK_SIZE]: 0, [level2Size]: 1 },
+  it('holds a finished write cache until its target has an empty disk — nothing banked is lost', () => {
+    const full = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 3), {
+      disksBuiltTotal: { [level2Size]: 1 },
+      disks: { [level2Size]: 1 },
       diskWriteCache: {
-        [level2Size]: {
-          sourceSize: FIRST_DISK_SIZE,
-          segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER,
-          segmentRemainingSeconds: 0,
-          segmentTotalSeconds: 1,
-          flushRemainingSeconds: 0,
-          flushTotalSeconds,
-        },
+        [level2Size]: expediting({ segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER, collectedBits: level2Size, flushRemainingSeconds: 0 }),
       },
     })
-    const afterFlush = tickDiskWriteCache(0)(state)
-    expect(getDiskWriteCacheMerge(afterFlush, level2Size)).toBeNull()
-    expect(afterFlush.intro.disks[level2Size]).toBe(1)
+    const held = tickDiskWriteCache(1)(full)
+    expect(held).toBe(full)
+    const emptied = withIntro(full, { disks: {} })
+    const after = tickDiskWriteCache(0)(emptied)
+    expect(getDiskWriteCacheMerge(after, level2Size)).toBeNull()
+    expect(after.intro.disks[level2Size]).toBe(1)
   })
 
   it('DOES start a new merge from an already-stranded source — a disk its own tier can never redeem again this cycle still has real value feeding the array above it (see docs/DESIGN_HISTORY.md)', () => {
@@ -4059,56 +4096,26 @@ describe('tickDiskWriteCache', () => {
     expect(after.intro.disks[level3Size]).toBe(DISK_ARRAY_LADDER_CAP)
   })
 
-  it('resumes collection once the source becomes stranded mid-merge — progress already collected stays banked and collection continues using the stranded source', () => {
-    const flushTotalSeconds = 10
-    const segmentTotalSeconds = flushTotalSeconds / DISK_LADDER_SIZE_MULTIPLIER
-    // 1 segment already collected while tier01 was still at the required level 1; tier01 has since
-    // advanced to level 2, stranding the rest of this merge's own source size.
-    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
-      disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP - 1 },
-      diskWriteCache: {
-        [level2Size]: {
-          sourceSize: FIRST_DISK_SIZE,
-          segmentsCollected: 1,
-          segmentRemainingSeconds: segmentTotalSeconds,
-          segmentTotalSeconds,
-          flushRemainingSeconds: flushTotalSeconds,
-          flushTotalSeconds,
-        },
-      },
-    })
-    expect(isDiskWriteCacheCollectPaused(state, level2Size)).toBe(false)
-    const after = tickDiskWriteCache(segmentTotalSeconds)(state)
-    const merge = getDiskWriteCacheMerge(after, level2Size)
-    expect(merge.segmentsCollected).toBe(2) // continued past what was already collected
-    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(DISK_ARRAY_LADDER_CAP - 2)
-  })
-
-  it('KEEPS collecting once the TARGET becomes stranded mid-merge too — a doubly-stranded merge still banks real, permanent progress (regression for the over-restriction a Devin Review finding on PR #603 caught: blocking here broke a still-useful further chain)', () => {
-    const flushTotalSeconds = 10
-    const segmentTotalSeconds = flushTotalSeconds / DISK_LADDER_SIZE_MULTIPLIER
-    // 1 segment already collected while tier01 sat exactly at level2Size's own required level (2);
-    // tier01 has since advanced to level 3, stranding level2Size itself (the merge's TARGET) too.
+  it('an expedited merge keeps consuming a stranded smaller disk — progress stays banked', () => {
+    const segmentTotalSeconds = 1
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 3), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
       disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP - 1 },
       diskWriteCache: {
-        [level2Size]: {
-          sourceSize: FIRST_DISK_SIZE,
+        [level2Size]: expediting({
           segmentsCollected: 1,
+          collectedBits: FIRST_DISK_SIZE,
+          transferSize: FIRST_DISK_SIZE,
           segmentRemainingSeconds: segmentTotalSeconds,
           segmentTotalSeconds,
-          flushRemainingSeconds: flushTotalSeconds,
-          flushTotalSeconds,
-        },
+        }),
       },
     })
+    expect(isDiskStrandedByAdvancedTier(state, FIRST_DISK_SIZE)).toBe(true)
     expect(isDiskStrandedByAdvancedTier(state, level2Size)).toBe(true)
     expect(isDiskWriteCacheCollectPaused(state, level2Size)).toBe(false)
     const after = tickDiskWriteCache(segmentTotalSeconds)(state)
-    const merge = getDiskWriteCacheMerge(after, level2Size)
-    expect(merge.segmentsCollected).toBe(2) // continued past what was already collected
+    expect(getDiskWriteCacheMerge(after, level2Size).segmentsCollected).toBe(2)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(DISK_ARRAY_LADDER_CAP - 2)
   })
 })
@@ -5665,6 +5672,8 @@ describe('purgeGame keeps Storage permanent', () => {
     const merge = {
       sourceSize: level2Size,
       segmentsCollected: 3,
+      transferSize: level2Size,
+      expedite: true,
       segmentRemainingSeconds: 1,
       segmentTotalSeconds: 1,
       flushRemainingSeconds: 10,

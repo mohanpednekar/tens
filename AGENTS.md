@@ -157,7 +157,8 @@ Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator 
 *derived* from the Speed basis as `basis^e` via `getDataStreamSpeedBytesPerSecond`, capped at `Capacity^e`, where `e` = 0.5 + 0.01 per Disk size unlocked beyond the first via Foundry reset (`getDataStreamSpeedExponent`), not purchased) — entirely OUTSIDE the
 forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a separate fill-based
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer
-fullness; taps never speed a fill — a Data Stream tap speeds Upgrade Capacity/Speed, a pool tap speeds that pool's consumers (disks, merges, provisioning, lake). Disks (`StoragePage`) fill and pull into Factory automatically, with no manual
+fullness; taps never speed a fill — a Data Stream tap speeds Upgrade Capacity/Speed, a pool tap speeds that pool's consumers (disks, merges, provisioning, lake). Disks (`StoragePage`) fill from their pool buffer (larger sizes via a write cache; clicking an empty disk
+expedites it from smaller disks first) and pull into Factory automatically, with no manual
 redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too — but Cells,
 which spend banked Data Lake units for Cells/Batteries/Boost (`ComputePage`, nav **Power**), only
 buy via a single per-lake "🏷️ `<cost>`" control: it buys immediately if affordable, or arms a one-shot

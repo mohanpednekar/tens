@@ -620,45 +620,29 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `isDiskRedeemable` is false; (3) count down an in-flight flush (pause on tier match) and complete
    into one disk. Leftover Memory stays as its ordinary balance.
 
-   **The write cache (upward ladder merge).** When `DISK_ARRAY_LADDER_CAP` (9) full disks exist at size N and size N+1
-   (`getNextDiskLadderSize`) has an empty container, `tickDiskWriteCache(elapsedSeconds)` starts
-   collecting into `intro.diskWriteCache[N+1]` — empty at rest. Stranded status blocks NOTHING here
-   any more, for either size N (the source) or N+1 (the target): a disk can never be redeemed by its
-   own tier again this cycle once stranded, so folding it into the array above is exactly the
-   productive use write-cache exists for, and since `disks`/`disksBuiltTotal`/`diskWriteCache` are
-   all Prestige-permanent, that progress is never wasted even if the target is ALSO currently
-   stranded — it may still be a necessary stepping stone toward a further, still-useful size in the
-   SAME pool. Merges never cross a pool boundary (pool isolation: a pool's largest size, e.g. 100 KB,
-   never feeds the next pool's smallest, e.g. 1 MB, which fills only from its own read cache; a legacy
-   cross-pool merge already flushing completes (nothing more is taken); one still collecting is
-   cancelled before any new merge starts, its collected source disks returned up to the source
-   array's built count and any excess credited as bits to that pool's own buffer, clamped to its
-   ceiling);
-   see `docs/DESIGN_HISTORY.md` for the two rounds of over-restriction this reverts — refusing a
-   stranded source outright first, then refusing a stranded target, each permanently starved a
-   different part of the ladder). Collect runs `DISK_LADDER_SIZE_MULTIPLIER` (10 — the source→target
-   SIZE RATIO, NOT `DISK_ARRAY_LADDER_CAP` above, a different constant since it dropped to 9 — see
-   `canStartDiskWriteCacheMerge`'s own doc comment in `engine.js`) timed segments — a
-   CACHE filling FROM Disks — each segment's own duration = that source disk's own size ÷
-   (`getIntroProductionRate` × `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, 5)
-   (`getDiskWriteCacheSegmentSeconds`); each completed segment empties one
-   full source disk at N into the write cache. Collect **pauses** ONLY while `isDiskRedeemable` is
-   true at the source size — an active tier claim, the one genuine contention write-cache and
-   Factory redemption can ever have over the same physical disk (the Factory gets first crack at a
-   disk it could pull THIS tick); this is temporary — collection resumes the moment that claim
-   clears, whether the source becomes "too early" or stranded. `isDiskWriteCacheCollectPaused` is
-   the UI-facing read of this same pause state. **Flush never pauses**. Once `DISK_LADDER_SIZE_MULTIPLIER` (10) segments are collected, flush
-   runs — a DISK filling FROM a cache, same rate class the read-cache flush above uses — for the
-   target's own size ÷ (`getIntroProductionRate` × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2)
-   (`getDiskWriteCacheFlushSeconds` — deliberately independent of a fresh disk's own 1x-bandwidth
-   funding pace (see `provisionDisk`); refilling an already-built empty container from cache is a
-   pure bandwidth-limited transfer, not a build), then credits one full
-   disk at N+1 and clears the write cache. `DISK_LADDER_SIZE_MULTIPLIER` (10) segments of one source disk each sum to exactly one
-   target's own size, but the collect phase (`CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, 5) and the
-   flush phase (`DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2) are deliberately paced at different
-   rates — collecting an already-built disk's contents into the write cache is a faster bulk
-   transfer than the bandwidth-limited flush that follows, so the full collect phase now finishes
-   well before the flush phase does.
+   **The write cache (pool-funded by default; expedited from smaller disks on click).** Every size above
+   its pool's smallest fills through `intro.diskWriteCache[size]` (empty at rest). `tickDiskWriteCache(elapsedSeconds)`
+   starts a merge whenever that array has a built-but-empty disk (`canStartDiskWriteCacheMerge` — no
+   source-array condition; the pool's smallest size has no write cache, so a merge never crosses a pool) and
+   COLLECTS from the pool buffer: each tick it draws `min(buffer − getPoolCacheReservationBits, remaining)` into
+   `merge.collectedBits`, smallest target size first — so the pool's fill order is read cache, then write caches
+   ascending. Lower disks are NOT consumed by default. **Expedite** (`expediteDiskFill(size)`, gated by
+   `isDiskFillExpediteAvailable` — an empty disk of a write-cache size, not already expedited/flushing; the
+   player clicks that empty disk in `DiskArrayRow`) sets `merge.expedite`: the merge then first consumes full
+   smaller disks of the same pool, largest size first, while each still fits the remaining need
+   (`pickDiskWriteCacheTransferSize`), each a timed transfer (`merge.transferSize`, `segmentRemainingSeconds`) of
+   that disk's size ÷ (pool Bandwidth × `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, 5) that decrements the disk on
+   completion; only with no eligible smaller disk does it draw from the pool buffer, in the same unchanged order.
+   An in-flight transfer **pauses** only while that smaller size has an active tier claim (`isDiskRedeemable`,
+   read by `isDiskWriteCacheCollectPaused`); stranded status never blocks anything. `segmentsCollected` =
+   ⌊collectedBits ÷ sourceSize⌋ (`sourceSize` = the size one step below, the 1/`DISK_LADDER_SIZE_MULTIPLIER`
+   segment unit); a legacy merge without `collectedBits` converts `segmentsCollected × sourceSize`. At
+   `DISK_LADDER_SIZE_MULTIPLIER` (10) segments the flush runs — target size ÷ (pool Bandwidth ×
+   `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2) (`getDiskWriteCacheFlushSeconds`) — then credits one full
+   disk and clears the merge (and its expedite flag). Collect and flush only advance while the target has an
+   empty disk, so banked bits are never lost. Tap bonus speeds both countdowns. A legacy cross-pool merge
+   already flushing completes; one still collecting is cancelled, its collected disks returned up to the source
+   array's built count and any excess credited, clamped, to that pool's buffer.
    `tickGame`'s storage pipeline runs
    `tickDiskAutoFill` → `tickDiskWriteCache` → `tickDiskAutoFill` so source slots can ripple-refill
    from read cache the same tick a segment completes. The second `tickDiskAutoFill` uses
@@ -2807,7 +2791,8 @@ purchases were manual or automatic.
 | `tickDiskAutoFill` | `(elapsedSeconds = 0) → state → state` | Byte Foundry Disks: three ascending passes over every known size (skipping mid-build — `intro.diskBuild?.size`): (1) refill each size's **read cache** toward full in whole-block transfers, instantly, whenever that size's own POOL BUFFER holds ≥ one block (or dump a full-but-sub-block balance when the pool buffer's own capacity is &lt; one block) — skips sizes mid-flush, no bandwidth cap; (2) start a timed flush into one empty disk when `diskCache[size] >= size`, no write-cache merge, and `isDiskRedeemable` is false — duration `getDiskReadCacheFlushSeconds` (one block ÷ (that pool's Bandwidth × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2)); (3) count down `intro.diskReadCacheFlush` (pause on tier match) and complete into one disk. Same-reference no-op when nothing changed. Called from `tickGame` before `tickDiskWriteCache` with real elapsed (advances flushes) and after it with `0` elapsed (refill/start only — avoids double-countdown), and again after a successful `tickDiskPull` with 0 elapsed — unconditional, bypasses `isProductionFrozen` |
 | `getDiskReadCacheFlushSeconds` | `(state, size) → number` | Duration for a new read-cache → disk flush (a DISK filling FROM a cache): `(size / DISK_CACHE_BLOCK_COUNT) / (getStoragePoolBandwidth(state, getPoolIndexForDiskSize(size)) * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)` |
 | `getDiskReadCacheFlush` / `getDiskReadCacheFlushFill` / `isDiskReadCacheFlushPaused` | helpers | In-flight flush lookup, 0..1 progress fill, and whether tier match is currently pausing the countdown |
-| `tickDiskWriteCache` | `elapsedSeconds → state → state` | Byte Foundry Disks upward ladder: when 10 full disks exist at source size N and target N+1 has an empty container, collects 10 timed segments — a CACHE filling FROM Disks, each segment's duration = source size / (production rate × `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, 5) — into `intro.diskWriteCache[N+1]` (pausing collect ONLY while source size has an active tier claim — `isDiskRedeemable`, genuine contention with Factory redemption over the same physical disk; stranded status of either N or N+1 never blocks or pauses anything, since `disks`/`disksBuiltTotal`/`diskWriteCache` are all Prestige-permanent and there is no competing use to protect — see `docs/DESIGN_HISTORY.md`), then flushes — a DISK filling FROM a cache, duration = target size / (production rate × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2), independent of `getDiskBuildSeconds`'s own 1x-bandwidth fresh-build duration — into one disk at N+1. Empty at rest. Called from `tickGame` between the two `tickDiskAutoFill` passes |
+| `tickDiskWriteCache` | `elapsedSeconds → state → state` | Byte Foundry Disks write caches (every size above its pool's smallest): starts a merge whenever the array has an empty disk; collects from the pool buffer after the read cache's reservation, smallest target first; an expedited merge (`expediteDiskFill`) first consumes smaller full disks of the same pool (largest first, timed at `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, pausing only on that size's tier claim), then the pool; then flushes into one disk at `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`. Collect/flush wait while the target has no empty disk. Called from `tickGame` between the two `tickDiskAutoFill` passes |
+| `expediteDiskFill` / `isDiskFillExpediteAvailable` / `isDiskFillExpedited` | `size → state → state` / `(state, size) → bool` | Queue an empty write-cache-size disk for filling from smaller disks first (click on the empty disk in `DiskArrayRow`); outside the forced priority order |
 | `isDiskRedeemable` | `(state, capacityBits) → bool` | Byte Foundry Disks: true whenever `capacityBits`' own FIXED, PERMANENT corresponding tier (via the internal `getMatchingTierForDiskSize`/`getDiskRequiredTierLevel` helpers — the tier sharing that disk-ladder step's Data Lake grouping, `getDataLakeTierIndex`, and that step's 1st/2nd/3rd position within its 3-step group as the required level) is CURRENTLY sitting at exactly that required level (`purchaseLevels[tier.id] ?? 1 === requiredLevel`) — a genuine one-tick-only EXACT match, same as before, but now against a fixed (tier, level) pair rather than a live price comparison (superseded the earlier "whichever tier's current per-unit cost happens to coincidentally match its size" design — see `docs/DESIGN_HISTORY.md`). Does NOT also require zero progress (unlike `isDiskPullEligible` above) — used by write-cache/read-cache-flush pause logic and UI display, where "tier match" alone (regardless of progress) is the relevant fact. A tier already past its required level, or not yet there, makes the disk simply wait, full and untouched, until the tier's level matches again — which only happens after the next real Prestige resets purchase levels (see "Data Lakes" above) |
 
 | `pullDiskForCurrentLevel` | `capacityBits → state → state` (private, invoked only from `tickDiskPull`) | Byte Foundry Disks: no-op unless `isDiskPullEligible`; otherwise decrements `intro.disks[capacityBits]` (removing the key entirely once it reaches 0 — `intro.disksBuiltTotal[capacityBits]` is untouched, so the disk re-enters the fillable pool) and grants `getPurchaseBlockSize(state)` free units of that fixed tier via `grantTierUnits` — always the FULL block, since `isDiskPullEligible` already guarantees zero progress (an earlier `redeemDisk` design granted `getPurchaseBlockSize(state) - progress` instead, back when a partial-progress level was still poolable by a disk — see `docs/DESIGN_HISTORY.md`) — completing the tier's WHOLE current level in one shot, not a single unit — bypasses `isProductionFrozen`/`isTierUnlocked`/cost entirely, and deliberately bypasses `convertIntroBitsToKilobytes`/`tickIntroAutoInvest` too (a disk's contents came from Memory via `tickDiskAutoFill`, not a further bit-to-Kilobyte conversion at pull time) |
@@ -2973,7 +2958,7 @@ purchases were manual or automatic.
 - `DISK_ARRAY_LADDER_CAP = 9` — Byte Foundry Disks: how many disks can ever be built at the buildable ladder's current size before it advances to the next size (see `getDiskSize`) — tracked via the cumulative, never-decremented `intro.disksBuiltTotal`; the array's own always-full cache substitutes for what would have been a 10th disk
 - `DISK_CACHE_BLOCK_COUNT = 8` — Byte Foundry Disks: a disk array's own cache (`intro.diskCache`, see `tickDiskAutoFill`) is split into this many equal blocks, each holding `size / DISK_CACHE_BLOCK_COUNT` bits, purely for display (`formatCacheSize`) — the pool's smallest size's cache also funds its own tier's level 1 automatically in bulk units, not by these display blocks (see `tickDiskLevelOneCachePull`)
 - `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER = 2` — Byte Foundry Disks: every DISK filling FROM a cache runs at this multiple of the owning pool's own Bandwidth (`getStoragePoolBandwidth` — the Byte Foundry production rate, hard-capped per pool at `(getStoragePoolCapacity(state, poolIndex) / BITS_PER_BYTE) ** DATA_STREAM_SPEED_EXPONENT * BITS_PER_BYTE` — the power (0.75) operates on Capacity converted to Bytes, with the result converted back to bits/sec, so a pool with a small Capacity window can lag behind the raw rate once production outgrows it; Storage pools display this figure in SI units). A fresh disk's own funding passes (`provisionDisk`) bank at 1x that same capped rate — no separate multiplier of its own, since 1x is the rate itself
-- `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 5` — Byte Foundry Disks: a write-cache's collect-from-Disks phase (`getDiskWriteCacheSegmentSeconds`, one segment per full source disk) runs at this multiple of the current production rate — moving an already-built disk's contents into the write cache is a bulk transfer, faster than `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2)'s bandwidth-limited disk-from-cache flush that follows it (see `tickDiskWriteCache`)
+- `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 5` — Byte Foundry Disks: an expedited write cache's transfer of one smaller full disk (`getDiskWriteCacheSegmentSeconds`) runs at this multiple of the pool's Bandwidth — faster than `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2)'s disk-from-cache flush that follows it (see `tickDiskWriteCache`)
 - `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP = 400_000` — Byte Foundry Compute Cores: Buffer / pool Memory Capacity threshold (50 KB SI, half of pool 1's end bound — historically one Capacity doubling short of the cap) at which Boosters/`ComputePage` becomes visible — scales automatically with `INTRO_CAPACITY_CAP_BITS` (10x smaller since the pool-Capacity-ceiling shrink); unrelated to Disks (see `isComputeCoreConversionUnlocked`). Capacity reaches this threshold through the full-Buffer doubling ladder rather than a Combine snap (subject to other gates)
 - `COMPUTE_CORES_PER_NODE = 8` — Byte Foundry Compute Cores: how many Compute Cores 1 Compute Node costs via the separate, unrelated `latchComputeMergePageIfNeeded`/`computeCoresEverEarned` lifetime-counter bookkeeping (NOT the Core → Node merge boundary below, which reuses the same ratio via `COMPUTE_MERGE_RATIO` instead)
 - `COMPUTE_ENTITY_CAP = 10` — Byte Foundry Compute Cores: maximum permanent balance of any compute-ladder entity (`computeCores`/`computeNodes`/`computeClusters`/`computeNetworks`/`computeGrids`/`computeFabrics`/`computeClouds`/`computeDatacenters`/`computeSupercomputers`/`computeMegacomputers`) whose own outbound merge boundary doesn't yet have auto-merge unlocked (or, for `computeMegacomputers`, always — no outbound boundary of its own) — see every `mergeCompute*Into*` function/the reserve-timer system below. Merges INTO an entity respect that entity's own effective cap (`getComputeFieldEffectiveCap`), so a lower-tier merge can fill its reserve
@@ -2985,7 +2970,7 @@ purchases were manual or automatic.
 - `COMPUTE_BOOST_PRESETS = { burst: { multiplier: 32, durationSeconds: 60 }, standard: { multiplier: 8, durationSeconds: 600 }, sustain: { multiplier: 2, durationSeconds: 3600 } }` — Byte Foundry Compute Boost: base (tier 1 / Core) strength/duration tradeoffs; activating spends 1 token of whichever compute-ladder tier the player arms (Cell through Fusion — see `COMPUTE_BOOST_TIER_FIELDS` / issue #326), not always a Core — higher tiers scale multiplier by `COMPUTE_BOOST_TIER_POWER_STEP` (4) per step; duration stays at the base preset (issue #363) — see `activateComputeBoost`/`getComputeBoostTierMultiplier`/`getComputeBoostMultiplier`
 - `COMPUTE_BOOST_MAX_STACKS = 10` — Byte Foundry Compute Boost: how many times `stackComputeBoost` can extend the currently active boost's remaining duration by spending another token of that boost's own funding tier (the multiplier itself never compounds; replacing an active boost with a different preset/tier requires an explicit forfeit confirmation and refunds its unused stacks first — see `forfeitComputeBoost` / `activateComputeBoost(..., forfeitConfirmed)` / `docs/DESIGN_HISTORY.md`) — see `stackComputeBoost`/`canStackComputeBoost`/`activateComputeBoost`
 - `FILL_MULTIPLIER_*` (`layers.js`) — `FILL_MULTIPLIER_MAX_PERCENT` (1000, empty buffer), `FILL_MULTIPLIER_MIN_PERCENT` (10, multiplier at a full buffer), `FILL_MULTIPLIER_TAP_BONUS_PERCENT` (5pp stored per tap, applied as ×(1 + bonus%) to consumers, never to the fill), `FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND` (1), `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` (100, independent cap on the tap bonus alone, enforced by `tapIntroBit`/`tapPoolBuffer`)
-- `canDiskSizeFeedWriteCache(size)` (`engine.js`) — false for each pool's largest disk size (a write-cache merge never crosses a pool boundary); gates `DiskArrayRow`'s stranded-disk tooltip
+- `canDiskSizeFeedWriteCache(size)` (`engine.js`) — false for each pool's largest disk size (no larger size in its pool can consume it when expedited); gates `DiskArrayRow`'s stranded-disk tooltip
 
 ### Upgrade Capacity / Upgrade Speed
 
