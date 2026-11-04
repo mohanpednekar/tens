@@ -286,7 +286,7 @@ test('the Byte Factory screen has no second-level tabs; Firmware is its own AppN
   }
   expect(within(tablist).getByRole('tab', { name: /open automation/i })).toHaveAttribute('aria-selected', 'true')
 })
-test('after an Reboot (prestige count 0, era 1) Firmware stays reachable with every owned automation\'s toggle', async () => {
+test('after a Reboot (prestige count 0, era 1) Firmware stays reachable with every owned automation\'s toggle', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     autobuyers: { tier01: 1 },
@@ -303,7 +303,7 @@ test('after an Reboot (prestige count 0, era 1) Firmware stays reachable with ev
   expect(screen.getByRole('button', { name: /buy max mode/i })).toBeInTheDocument()
 })
 
-test('an Reboot-unlocked Compute (Flops) autobuyer gets its own pause toggle on Firmware → Automation', async () => {
+test('a Reboot-unlocked Compute (Flops) autobuyer gets its own pause toggle on Firmware → Automation', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     era: { count: 1 },
