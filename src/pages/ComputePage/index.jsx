@@ -299,7 +299,7 @@ const AutoBoostLabel = styled.p`
 // once that boundary's auto-charge is unlocked (see intro.autoMergeCoresIntoNode/
 // autoMergeNodesIntoCluster/… in engine.js) — moves to the "🤖 Auto-charge" slot row: tapping it still merges
 // instantly, while engine.js's automatic merge uses the timed reserve pool (see issue #321). Core → Node is included as an ordinary
-// boundary here, same as every other one. Cores themselves are obtained by buying Boosters from
+  // boundary here, same as every other one. Cells themselves are obtained by buying them from
 // the matching Data Lake on Foundry (buyBooster — spent from that lake's own banked units, not
 // minted from Memory); the buy/auto-buy control itself lives on Foundry's DataLakePanel, not here
 // — the earlier "Claim Core"/auto-claim mechanic was removed once Data Lakes superseded it.
@@ -729,7 +729,7 @@ const ComputePage = ({ game }) => {
                             startAvailable
                               ? `Charge up now: instantly turn ${COMPUTE_MERGE_RATIO} ${row.label} into 1 ${row.mergeOutputLabel}. Auto-charge slots fill past ${COMPUTE_ENTITY_CAP} and charge on their own when all ${COMPUTE_MERGE_RESERVE_CAP} are full${merging ? ` (auto-charging: ${formatOfflineDuration(remainingSeconds)} left)` : ''}`
                               : merging
-                                ? `Auto-merging: ${formatOfflineDuration(remainingSeconds)} left`
+                                ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
                                 : (intro[row.mergeOutputField] ?? 0) >= outputCap
                                   ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
                                   : `Auto-charge slots: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — they charge on their own when full; tap to charge up instantly once you hold ${COMPUTE_MERGE_RATIO} ${row.label}`

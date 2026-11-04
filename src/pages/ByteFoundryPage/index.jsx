@@ -896,7 +896,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           : {
               icon: '🏦',
               label: diskOfferLabel,
-              status: `${COST_ICON} ${formatDiskSize(diskCost)}${diskPassesText} · ping to queue`,
+              status: `${COST_ICON} ${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
               reason: diskBuildBlockedByPriority ? 'disk fill comes first' : 'pool not ready (offline, rebuilding or too small)',
             }
   // Same stat layout as the running-upgrade tile. Provisioning (buffer-funded) and the post-Foundry-reset rebuild (one staging fill per disk, no provisioning cost) both run at
@@ -1224,7 +1224,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     disabled={!speedUpgradeArmable}
                     onClick={actions.queueIntroSpeedUpgrade}
                     title={speedUpgradeArmable
-                      ? 'Pull the Data Stream\'s base Speed into the upgrade; its bar filling raises Bitrate'
+                      ? 'Pull the Data Stream\'s base Bitrate into the upgrade; its bar filling raises Bitrate'
                       : `Base Bitrate cannot exceed Capacity^${speedExponentText} — upgrade Capacity first`}
                     aria-description={speedUpgradeArmable ? `Costs ${formatBitsInNearestUnit(speedUpgradeCost)}; bitrate ${nextRateText} after upgrading` : undefined}
                     type="button"

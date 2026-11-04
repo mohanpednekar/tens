@@ -61,20 +61,20 @@ commit as any change to the mechanics it describes.
    (Cell → Battery → Pack → Bank → Generator → Turbine → Plant → Grid → Reactor → Fusion —
    see "Economy model", issues #280/#316/#321), behind its own later, one-time
    `intro.computeMergePageUnlocked` reveal. "Compute" names the page/feature only — entities drop the word
-   (`Core`/`Node`/…) in every player-visible label. Deliberately terse — icon-only controls, full sentence
+   (`Cell`/`Battery`/…) in every player-visible label. Deliberately terse — icon-only controls, full sentence
    in `title`/`aria-label`; mechanic prose lives in the Guide (`InfoPage`). Render order: a top card with the
    active Boost's timer bar — Pop (refund newest unused stack, no confirm) or, once none is unused,
    Forfeit (confirmed) on the left, Stack on the right (`canReclaimComputeBoost`/`canForfeitComputeBoost`
    enforce the same split in the engine) — or "No boost running"; while a boost runs, the matching
    preset stacks and any other preset is a confirmed switch that refunds unused stacks), THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
-   `COMPUTE_ENTITY_CAP` (10) normal-slot squares (never above 10/10, even once auto-merge is unlocked and
+   `COMPUTE_ENTITY_CAP` (10) normal-slot squares (never above 10/10, even once auto-charge is unlocked and
    the entity has grown into its reserve) plus a `TierSelectButton` selecting that tier — only the ONE selected tier block shows
-   `ArmedStatusText` + the 3 Turbo/Balanced/Eco presets inline, at that tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
-   Auto-merge `TierActionButton`s (the latter with a live progress fill toward its
+   `ArmedStatusText` + the 3 Turbo/Balanced/Eco presets inline, at that tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-charge unlocks, Charge up (`COMPUTE_MERGE_RATIO`, 8) + Unlock
+   Auto-charge `TierActionButton`s (the latter with a live progress fill toward its
    `COMPUTE_ENTITY_CAP`-unit cost), or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot
-   squares (gradually filled, `getComputeReserveHeld`), labelled "🤖 Auto-merge", clickable as an instant
-   8→1 manual merge (only the automatic merge is timed); the selected tier's presets render below this row — Fusion has no
-   row 2. Cores come from buying Cells from the matching Data Lake on Foundry's `DataLakePanel`, not
+   squares (gradually filled, `getComputeReserveHeld`), labelled "🤖 Auto-charge", clickable as an instant
+   8→1 manual charge (only the automatic charge is timed); the selected tier's presets render below this row — Fusion has no
+   row 2. Cells come from buying them from the matching Data Lake on Foundry's `DataLakePanel`, not
    minted from Data Stream Capacity. Full button/gate/aria-label detail: `docs/MAINPAGE_REFERENCE.md`; render-order and
    Stack/Pop/Forfeit rationale: `docs/DESIGN_HISTORY.md`.
 
@@ -96,7 +96,7 @@ Data Stream tap bonus (`getDataStreamTapMultiplier` — no fill multiplier) into
 every other consumer — nothing is paused or raced; when the bar
 reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
 running, the same button becomes an inert progress bar (no cancel; the tile is unchanged). Displayed Speed is *derived* from the Speed basis
-(`getDataStreamSpeedBytesPerSecond`): it's `basisBytes ** e` B/s, capped at `Capacity^e`, where `e = getDataStreamSpeedExponent(intro)` = `DATA_STREAM_SPEED_EXPONENT_BASE` (0.5) + `DATA_STREAM_SPEED_EXPONENT_STEP` (0.01) per unlocked Disk size beyond the first (`intro.unlockedDiskSteps`, default 1). Provisioning a size beyond the unlocked ones needs a **Foundry reset** (`unlockNextDiskSizeByFoundryReset`/`isDiskSizeUnlockAvailable`; `resetByteFoundry` + one more step, convenience replay rebuilds prior highs); steps survive Prestige/Reset Byte Foundry, reset on Era ascension, and old saves are grandfathered in `normalizePoolMemoryCapacity`. Detail: `docs/ECONOMY_REFERENCE.md`. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,
+(`getDataStreamSpeedBytesPerSecond`): it's `basisBytes ** e` B/s, capped at `Capacity^e`, where `e = getDataStreamSpeedExponent(intro)` = `DATA_STREAM_SPEED_EXPONENT_BASE` (0.5) + `DATA_STREAM_SPEED_EXPONENT_STEP` (0.01) per unlocked Disk size beyond the first (`intro.unlockedDiskSteps`, default 1). Provisioning a size beyond the unlocked ones needs a **Foundry reset** (`unlockNextDiskSizeByFoundryReset`/`isDiskSizeUnlockAvailable`; `resetByteFoundry` + one more step, convenience replay rebuilds prior highs); steps survive Prestige/Reset Byte Foundry, reset on Era ascension, and old saves are grandfathered in `normalizePoolMemoryCapacity`. Detail: `docs/ECONOMY_REFERENCE.md`. Later, Disks (`StoragePage`) and Compute Cells/Batteries/Compute Boost (`ComputePage`,
 nav **Power**) unlock; a separate **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
 unlocks at 100 PP — see Architecture 4c. Recurring "upgrade" actions are ranked in a fixed **forced
 priority order** — Disk Fill > Provision Disk > Compute Boost — so a lower-ranked action is disabled (in **Boost pool bonus:** a boost also scales the buffer-fill speed of the Storage pools matching the Factory tiers it covers (pool N ↔ tier N) by `1 + poolBonusPercent/100` (`COMPUTE_BOOST_PRESETS`: +200% / +50% / +10%; `getComputeBoostPoolMultiplier`, applied in `getPoolEffectMultiplier` on top of the capped fill percent); covered pool cards glow.

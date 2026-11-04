@@ -9176,3 +9176,14 @@ code meaning. The save schema moved to v3: `save-migration/migrateToV3.js` maps 
 `renamePreRebootKeys` (removed). `adaptSaveForLoad`'s dev/Dev Mode bypass also runs `migrateToV3`,
 since it skips `adaptSaveForCurrentSchema`. The internal `unboundedUnlocked` field name under `purge`
 is unchanged.
+
+## #988 leftover mixed labels after stacking onto #990 (2026-11)
+
+The Foundry/Power/Compute label rename (#988 / #994) stacked onto this Purge-code-rename PR and
+landed with a few mechanical over-renames: Provision Disk's "tap to queue" became "ping to queue"
+(Ping is only the Data Stream / pool tap), the in-flight Auto-charge title still said
+"Auto-merging", and the Data Lake's own retained fill (not the pool buffer) was relabelled
+Staging. Those player-facing strings, plus current-behavior docs that still called the Power-chain
+first entity "Cores" (that name now belongs to the Flops tier), were corrected here rather than
+in a follow-up. Visual-regression baselines were left for a dedicated e2e pass — that suite is
+not in CI.

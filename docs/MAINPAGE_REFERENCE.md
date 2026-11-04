@@ -105,7 +105,7 @@ docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
 once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
-INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained via `buyBooster`, bought
+INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cells themselves are obtained via `buyBooster`, bought
 instantly from the matching Data Lake's own banked units on that pool's own `PoolCard`
 (a click either buys immediately if already affordable or arms a one-shot auto-convert that finishes
 the purchase automatically over subsequent ticks — see "Storage pools render as their own
@@ -435,12 +435,12 @@ live inside the selected tier):
    re-clicking the selected tier, or clicking anywhere outside every tier block (`data-boost-tier`;
    a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
-   Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cores:
-   The timer bar / idle status line and (once unlocked) the Auto Boost preference picker all live in one `BoostCard`. The Auto Boost UNLOCK itself is a Perks → Automation → Booster Automation row (`aria-label="auto boost row"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordableAutomationPerk`); Boosters shows nothing for it while locked
+   Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cells:
+   The timer bar / idle status line and (once unlocked) the Auto Boost preference picker all live in one `BoostCard`. The Auto Boost UNLOCK itself is a Perks → Automation → Booster Automation row (`aria-label="auto boost row"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordableAutomationPerk`); Power shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
    a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
-      initialized on arrival to the active boost's own tier (`intro.computeBoostTierIndex`), else none; always Cores (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
+      initialized on arrival to the active boost's own tier (`intro.computeBoostTierIndex`), else none; always Cells (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
       tier that can hold a balance that early. Clicking a different tier mid-boost arms a
       confirmed switch (per `canActivateComputeBoost`); the timer bar, Stack and Pop always describe
       the ACTIVE tier, not the armed one. The row
@@ -490,41 +490,41 @@ live inside the selected tier):
        (`$selected`/`aria-pressed`, plus a highlighted `TierBlock` border) while armed.
      - **Row 2** (`TierMergeRow`) is progressively disclosed (`showDetail`): rendered only for the
        armed tier, or when that tier is merging, a merge is startable/possible, reserve slots hold
-       tokens, or (pre-auto) Auto-merge unlock progress is above 0 — otherwise the tier is one line.
-       For every tier except the last (Megacomputer, no row 2 at all —
+       tokens, or (pre-auto) Auto-charge unlock progress is above 0 — otherwise the tier is one line.
+       For every tier except the last (Fusion, no row 2 at all —
        see issue #280's "Out of scope" — though its row 1 is still Boost-selectable, the only place
-       a Megacomputer has any use at all):
-       - **Before that boundary's auto-merge is unlocked:** an instant Merge button (`TierActionButton`,
+       a Fusion has any use at all):
+       - **Before that boundary's auto-charge is unlocked:** an instant Charge up button (`TierActionButton`,
          `flex: 1 1 0; width: 100%` — fills exactly half the row, the same "two equal-width buttons"
          look `MainPage`'s own tier-row Buy/Upgrade pair uses, rather than a small icon-only square —
          `variant="prestige"`, visible content "⬆ 8→1 <Output>", `aria-label` spelling out the full action
-         e.g. "merge 8 nodes into 1 cluster") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
+         e.g. "charge up 8 batteries into 1 pack") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
          tier is held and the produced tier is under its effective cap (`getComputeFieldEffectiveCap` — 18
-         once that tier's own auto-merge is unlocked), calling the matching
-         `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-merge button filling the
+         once that tier's own auto-charge is unlocked), calling the matching
+         `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-charge button filling the
          other half (`TierActionButton`, `variant="info"`, `$progress` set to the live percentage
          toward its own unlock cost — the same `Button` `progressFill` mechanic Factory's own Buy
          buttons use for cost-block progress — visible content `` "🤖 <held>/<COMPUTE_ENTITY_CAP>" ``
          instead of a bare "🤖 Auto", so the button is self-explanatory the same way a Factory Buy
-         button is; `aria-label="enable auto-merge for <…> into <…>"` stays unchanged) — enabled once
+         button is; `aria-label="enable auto-charge for <…> into <…>"` stays unchanged) — enabled once
          `COMPUTE_ENTITY_CAP` (10) of the produced tier is held, calling the matching
          `game.actions.enableAutoMerge*` action.
        - **Once unlocked:** a `ReserveSlotsRow` — a single `<button>` wrapping `COMPUTE_MERGE_RESERVE_CAP`
          (8) `ReserveSlot` squares — reading `getComputeReserveHeld(state, tierIndex)` (0..8), NOT an
          atomic empty/full toggle: a squares fills in one at a time as the entity's own held count
-         keeps growing past its primary 10 (via continued Booster purchases or a lower-tier merge),
-         up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a merge is actually in flight
+         keeps growing past its primary 10 (via continued Booster purchases or a lower-tier charge),
+         up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a charge is actually in flight
          the reserve instead reads as fully committed regardless of the live count (which has by then
          dropped back toward 10 and may be accumulating the next batch) — a `MergeCue` on its left always
-         names it ("🤖 Auto-merge", muted), switching to an accent "🤖 ⬆ 8→1 <output>" (plus accent
-         border/raised background) while clicking would INSTANTLY merge 8 → 1 ("slots are the
+         names it ("🤖 Auto-charge", muted), switching to an accent "🤖 ⬆ 8→1 <output>" (plus accent
+         border/raised background) while clicking would INSTANTLY charge 8 → 1 ("slots are the
          button"), calling the matching `game.actions.startCompute*Merge` action, enabled once
          `isCompute*MergeStartAvailable` allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the
          normal + reserve slots and room under the output's effective cap, counting the 1 an in-flight
-         automatic merge still owes — `isComputeMergeStartAvailableAtBoundary`).
-         `aria-label`: "instantly merge 8 <input> into 1 <output>, N/8 auto-merge slots filled" (or
-         ", auto-merge in progress, <time> left") when available, "<Tier> auto-merge in progress, <time> left" while an automatic merge runs, else
-         "<Tier> auto-merge slots, N/8 filled". While an automatic merge is in
+         automatic charge still owes — `isComputeMergeStartAvailableAtBoundary`).
+         `aria-label`: "instantly charge 8 <input> into 1 <output>, N/8 auto-charge slots filled" (or
+         ", auto-charge in progress, <time> left") when available, "<Tier> auto-charge in progress, <time> left" while an automatic charge runs, else
+         "<Tier> auto-charge slots, N/8 filled". While an automatic charge is in
          flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
          inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
          live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` filled count. There is
