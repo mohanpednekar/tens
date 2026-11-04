@@ -452,8 +452,8 @@ src/
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic `variant`
                                prop resolved against theme color tokens, deprecated raw `color` prop
                                still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
-    DiskArrayRow/index.jsx  ← one Disk array's STATUS display (nothing clickable), `{ actions, size, state }`
-                               (`actions` unused); shared by ByteFoundryPage and StoragePage (why standalone: `docs/DESIGN_HISTORY.md`)
+    DiskArrayRow/index.jsx  ← one Disk array's status display, `{ actions, size, state }`; the only click is
+                               an empty write-cache-size disk → `actions.expediteDiskFill(size)`; shared by ByteFoundryPage and StoragePage (why standalone: `docs/DESIGN_HISTORY.md`)
     DataLakePanel/index.jsx ← one Data Lake's block, `{ actions, state, bare, tierIndex }`, embedded per pool
                                card (unused omitted-`tierIndex` mode in the reference); mechanic: "Economy model"
     icons.js                ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Data Lake Booster, Upgrade Data Stream,
@@ -811,6 +811,9 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
 - **Disks** (`provisionDisk`, `tickDiskAutoFill`, `tickDiskPull`, `tickDiskLevelOneCachePull`): ladder
   advances every `DISK_ARRAY_LADDER_CAP` (9) disks; Factory is funded **pull-based** from full disks,
   fully automatic (no click, no autobuyer gate). Disks/caches/builds are PERMANENT across Prestige.
+  Every size above its pool's smallest fills via its write cache FROM THE POOL BUFFER by default (pool fill
+  order: read cache, then write caches smallest size first); clicking an empty disk expedites it
+  (`expediteDiskFill`) — it also consumes smaller full disks of its pool, simultaneously with the pool buffer.
   Stranded disks are never destroyed or swept into Bits; merges never cross a pool boundary.
 - **Data Lakes** (`intro.dataLakes`): Booster control is "one click, one full fill-then-buy conversion,
   then stop" until the pool's era-long `boosterAuto` latch is set (then it auto-buys); `buyBooster` spends only banked lake units, outside the
