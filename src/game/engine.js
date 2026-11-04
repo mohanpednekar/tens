@@ -4545,26 +4545,32 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
       }
     }
 
-    // 2. An expedited merge consumes the next smaller full disk before touching the pool buffer.
-    if (next.expedite && !next.transferSize) {
-      const transferSize = pickDiskWriteCacheTransferSize(snapshot(), targetSize, targetSize - collected)
-      if (transferSize) {
-        const total = getDiskWriteCacheSegmentSeconds(state, transferSize)
-        next = { ...next, transferSize, segmentRemainingSeconds: total, segmentTotalSeconds: total }
-      }
-    }
-
-    // 3. The pool buffer funds the cache too (after the read cache's own claim) — for an expedited merge
-    // SIMULTANEOUSLY with its smaller-disk transfer, whose size stays reserved so the two sources together
-    // never overshoot the target; the faster the pool, the fewer smaller disks get consumed.
+    // 2. The pool buffer funds the cache (after the read cache's own claim, so the pool's fill order is
+    // unchanged). An in-flight smaller-disk transfer keeps its size reserved so the two sources together
+    // never overshoot — unless the buffer can now cover the whole remaining need, in which case the
+    // transfer is dropped (its disk was never taken) so expediting is never slower than the default fill.
     if (poolIndex) {
       const buffer = (poolBuffers ?? intro.poolBuffers ?? {})[poolIndex] ?? 0
       const spendable = Math.max(0, buffer - getPoolCacheReservationBits(snapshot(), poolIndex))
-      const drawBits = Math.min(spendable, Math.max(0, targetSize - collected - (next.transferSize ?? 0)))
+      const need = Math.max(0, targetSize - collected)
+      if (next.transferSize && spendable >= need) {
+        next = { ...next, transferSize: null, segmentRemainingSeconds: 0, segmentTotalSeconds: 0 }
+      }
+      const drawBits = Math.min(spendable, Math.max(0, need - (next.transferSize ?? 0)))
       if (drawBits > 0) {
         poolBuffers = poolBuffers ?? { ...(intro.poolBuffers ?? {}) }
         poolBuffers[poolIndex] = buffer - drawBits
         collected += drawBits
+      }
+    }
+
+    // 3. An expedited merge covers whatever the buffer could not, simultaneously, from the next smaller
+    // full disk that still fits — so only as many smaller disks as needed are consumed.
+    if (next.expedite && !next.transferSize && collected < targetSize * WRITE_CACHE_COMPLETE_RATIO) {
+      const transferSize = pickDiskWriteCacheTransferSize(snapshot(), targetSize, targetSize - collected)
+      if (transferSize) {
+        const total = getDiskWriteCacheSegmentSeconds(state, transferSize)
+        next = { ...next, transferSize, segmentRemainingSeconds: total, segmentTotalSeconds: total }
       }
     }
 

@@ -632,9 +632,10 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    smaller disks of the same pool, largest size first, while each still fits the remaining need
    (`pickDiskWriteCacheTransferSize`), each a timed transfer (`merge.transferSize`, `segmentRemainingSeconds`) of
    that disk's size ÷ (pool Bandwidth × `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, 5) that decrements the disk on
-   completion — while the pool buffer keeps funding it in parallel (same unchanged order), its draw capped at
-   target − collected − the in-flight transfer's size so the two sources never overshoot; a fast pool means fewer
-   smaller disks are consumed.
+   completion — simultaneously with the pool buffer (same unchanged order): the buffer draws first, capped at
+   target − collected − the in-flight transfer's size so the two never overshoot; a transfer starts only for
+   what the buffer could not cover, and an in-flight one is dropped (disk kept) once the buffer covers the whole
+   remaining need, so expediting is never slower than the default fill.
    An in-flight transfer **pauses** only while that smaller size has an active tier claim (`isDiskRedeemable`,
    read by `isDiskWriteCacheCollectPaused`); stranded status never blocks anything. `segmentsCollected` =
    ⌊collectedBits ÷ sourceSize⌋ (`sourceSize` = the size one step below, the 1/`DISK_LADDER_SIZE_MULTIPLIER`
@@ -741,8 +742,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    **PERMANENT**, carried through `purgeGame` unchanged exactly like the Byte generator itself —
    a disk already FULL when Prestige fires stays full, its contents intact even though Memory
    itself resets to 0, letting banked-up Disks give a fresh cycle a head start; an in-flight
-   write-cache merge or read-cache flush survives too, including one paused mid-collection because
-   its SOURCE has an active tier claim (a real Prestige resetting purchase levels is, in fact,
+   write-cache merge or read-cache flush survives too, including an expedited one whose smaller-disk
+   transfer is paused because that disk's size has an active tier claim (a real Prestige resetting purchase levels is, in fact,
    exactly what clears that claim again — see "Stranded disks are never destroyed" above and
    `docs/DESIGN_HISTORY.md` for the Devin Review finding that caught these two fields still
    resetting unconditionally). There
@@ -1048,9 +1049,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    the level it requires (see "Disks always take priority" above) simply stays full and
    unredeemable BY THAT TIER for the rest of the cycle — its slot doesn't recycle back to empty, and
    nothing converts it to Bits. It sits exactly as built until the next real Prestige resets purchase
-   levels and reopens that size's redemption window — UNLESS the write cache picks it up first: a
-   stranded disk still has one real, non-destructive use left (folding into the next disk size up via
-   `tickDiskWriteCache`, above), which it remains eligible for unconditionally — even when that next
+   levels and reopens that size's redemption window — UNLESS an expedited write cache consumes it first: a
+   stranded disk still has one real, non-destructive use left (feeding a larger disk the player
+   expedited, via `tickDiskWriteCache`, above), stranded status never blocking it — even when that larger
    size is ALSO already stranded, since the progress is Prestige-permanent either way (merges never
    leave the disk's own pool — see pool isolation above). An earlier version ("idle disk liquidation") swept such stranded,
    fully-built disks straight into `intro.bits` instead once the Foundry had nothing higher-priority

@@ -452,7 +452,11 @@ const DiskArrayRow = ({ actions, size, state }) => {
                     ? `${sizeLabel} disk pulling into ${redeemTierName}`
                     : `full ${sizeLabel} disk`)
                   : isEmpty
-                    ? (isQueued ? `empty ${sizeLabel} disk queued for filling` : `empty ${sizeLabel} disk`)
+                    ? (isQueued
+                      ? `empty ${sizeLabel} disk queued for filling`
+                      : isClickable
+                        ? `empty ${sizeLabel} disk — fill sooner from smaller disks`
+                        : `empty ${sizeLabel} disk`)
                     : `not yet built ${sizeLabel} disk`
               }
               title={
