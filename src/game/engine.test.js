@@ -844,7 +844,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(tickIntroProduction(0.01)(tapped).intro.bits).toBeCloseTo(tickIntroProduction(0.01)(base).intro.bits, 9)
     })
 
-    it('the tap bonus speeds the Upgrade Capacity / Upgrade Speed drains ×(1 + bonus%)', () => {
+    it('the tap bonus speeds the Upgrade Capacity / Upgrade Bitrate drains ×(1 + bonus%)', () => {
       const base = withIntro(createInitialGameState(), { byteCreated: true, bits: 1e9, capacity: 1_000_000, capacityUpgradeQueued: true, capacityUpgradeProgress: 0, speedUpgradeQueued: false })
       const tapped = withIntro(base, { dataStreamTapBonusPercent: 100 })
       const rate = getIntroProductionRate(base.intro)
@@ -8260,7 +8260,7 @@ describe('isGlobalTickspeedMultiplierUnlocked', () => {
 })
 
 describe('buyGlobalTickspeedMultiplier', () => {
-  it('spends 10 Bytes to activate Speed Up (global tickspeed multiplier) at level 1', () => {
+  it('spends 10 Bytes to activate Clock Speed (global tickspeed multiplier) at level 1', () => {
     const state = withBytes(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)
     const after = buyGlobalTickspeedMultiplier(state)
     expect(after.globalTickspeedMultiplier).toBe(1)
@@ -9610,7 +9610,7 @@ describe('buyTickspeedAutobuyer', () => {
 // ─── setAutoScaleUpEnabled / setAutoGlobalTickspeedEnabled / setAutoPurgeEnabled ─────────────
 
 describe('buyXpTickspeedAutobuyer / setAutoXpTickspeedEnabled', () => {
-  it('spends 16 PP to unlock, needing only Auto Speed Up (not Auto Scale Up)', () => {
+  it('spends 16 PP to unlock, needing only Auto Clock Speed (not Auto Scale Up)', () => {
     const noSpeedUp = withPrestigePoints(createInitialGameState(), 20)
     expect(buyXpTickspeedAutobuyer(noSpeedUp)).toBe(noSpeedUp)
     const after = buyXpTickspeedAutobuyer({ ...noSpeedUp, autoGlobalTickspeed: true })
@@ -11500,7 +11500,7 @@ describe('Buy max mode', () => {
   })
 })
 
-describe('Upgrade Speed (separate from Capacity)', () => {
+describe('Upgrade Bitrate (separate from Capacity)', () => {
   const base = () => {
     const s = createInitialGameState()
     return { ...s, intro: { ...s.intro, byteCreated: true, capacity: 64, bits: 0 } }
@@ -11558,7 +11558,7 @@ describe('getSpeedUpgradeCostBits', () => {
   })
 })
 
-describe('Upgrade Speed cross-system paths', () => {
+describe('Upgrade Bitrate cross-system paths', () => {
   const seeded = intro => {
     const s = createInitialGameState()
     return { ...s, intro: { ...s.intro, byteCreated: true, ...intro } }
@@ -12088,7 +12088,7 @@ describe('automation interval chains', () => {
     expect(getAutomationIntervalSeconds(upgraded, 'restage')).toBeCloseTo(57.6)
   })
 
-  it('Speed Up autobuyer waits for its interval timer', () => {
+  it('Clock Speed autobuyer waits for its interval timer', () => {
     const state = { ...base(), autoGlobalTickspeed: true, automationIntervalLevels: { ...base().automationIntervalLevels, speedUp: 0 } }
     const half = tickGame(0.5)(state)
     expect(half.automationAttemptBudgets.speedUp).toBeCloseTo(0.5)

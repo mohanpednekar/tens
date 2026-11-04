@@ -27,7 +27,7 @@ describe('BoostBadge helpers', () => {
   it('describes the multiplier, preset, time left and stacks', () => {
     const description = getComputeBoostDescription({ ...activeIntro, computeBoostStacks: 3 })
     expect(description).toContain(`×${multiplier}`)
-    expect(description).toContain('Standard Compute Boost')
+    expect(description).toContain('Balanced Compute Boost')
     expect(description).toContain('left')
     expect(description).toContain('3 stacked')
   })

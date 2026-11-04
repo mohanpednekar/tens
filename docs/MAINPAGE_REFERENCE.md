@@ -11,7 +11,7 @@ deliberately purely game — live controls, numbers, and status text only. Every
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via AppNav's Guide
 item; see CLAUDE.md's Architecture section for the split. Top-level page switching lives in
-`App.jsx`'s shared `components/AppNav` (Foundry → Boosters → Compute → Factory → Perks → More; Guide / Milestones / Settings in More) — pages
+`App.jsx`'s shared `components/AppNav` (Foundry → Power → Compute → Factory → Perks → More; Guide / Milestones / Settings in More) — pages
 themselves take `{ game }` only and carry no Back / open-* navigation props. Storage is not a
 top-level AppNav item (continuous Foundry sections). `MainPage` is only
 ever rendered while the Byte Foundry gate isn't active — i.e. `state.intro.mainGameUnlocked` is
@@ -85,7 +85,7 @@ loop at all. Deliberately carries no `$progress` fill
 or hidden progressbar of its own — Data Stream's own tile above already shows the identical bits/Buffer
 fill, so a second meter on the tap button would just duplicate it; its `background` is set explicitly
 (`theme.color.surfaceSunken`) since it doesn't get that from `progressFill`'s own gradient (which
-used to double as the button's base fill). A "Combine into a
+used to double as the button's base fill). A "Compile into a
 Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
 INTRO_BYTE_COMBINE_COST`. Once `byteCreated`, a single **"Upgrade Data Stream"** button
@@ -424,7 +424,7 @@ live inside the selected tier):
    - Middle: a `TimerBar` (`aria-label="active compute boost"`) whose fill is remaining time over the
      total stacked duration (`stacks × getComputeBoostTierDurationSeconds`), with one line on top,
      `"<icon> <label> ×<multiplier> on <KB–covered tier> · <funding tier symbol> · <countdown> left[ · <N> stacked]"`
-     (e.g. `"💥 Burst ×20 on KB–MB · 🔗 · 2m59s left"`); the full sentence lives in that span's `title`.
+     (e.g. `"💥 Turbo ×20 on KB–MB · 🔗 · 2m59s left"`); the full sentence lives in that span's `title`.
    - Right: **Stack** (`aria-label="stack the active compute boost"`, `+`,
      `disabled={!isStackComputeBoostTurnAvailable(state)}`, `actions.stackComputeBoost`).
    `MainPage` shows a matching read-only status line while a boost is active.
@@ -449,7 +449,7 @@ live inside the selected tier):
       buttons, each a small `CompactButton` (`variant="prestige"`,
       `aria-label="activate <type> compute boost"`, visible label `"<icon> ×<multiplier> · <duration>"` computed
       for the CURRENTLY ARMED tier via `getComputeBoostTierMultiplier(boostType, armedTierIndex)` —
-      e.g. `"💥 ×20 · 10m"` for Burst (`formatPresetDuration` drops a zero trailing unit) — the preset
+      e.g. `"💥 ×20 · 10m"` for Turbo (`formatPresetDuration` drops a zero trailing unit) — the preset
       name itself lives only in `title`). While a boost is active each preset becomes one of:
       - the SAME preset + tier as the running boost → **Stack** (`aria-label="stack <type> compute
         boost"`, label prefixed `"+ "`, `actions.stackComputeBoost`, gated by
@@ -468,10 +468,10 @@ live inside the selected tier):
 
    - **Before unlocked:** just a `StatusText` line with the current `intro.computeCores`/
      `intro.computeNodes` counts as two symbol-prefixed fractions (`"⬡ N/10 · 🔗 N/10"`).
-   - **Once unlocked:** TWO rows per compute-ladder entity Core through Megacomputer (issues
+   - **Once unlocked:** TWO rows per compute-ladder entity Cell through Fusion (issues
      #321/#326), each pair wrapped in a `TierBlock` inside a `TierBlocksGroup`
      (`aria-label="compute entities"`), driven off an `ENTITY_ROWS` array (10 entries, in the same
-     Core-through-Megacomputer order `COMPUTE_BOOST_TIER_FIELDS` in `layers.js` uses, so a row's
+     Cell-through-Fusion order `COMPUTE_BOOST_TIER_FIELDS` in `layers.js` uses, so a row's
      array index + 1 IS its Boost `tierIndex`).
      - **Row 1** (`TierHeaderRow`): a `TierSelectButton` (its own clickable `<button>`) wrapping the
        tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label (`TierLabel`, e.g. `"Clusters"`; the
@@ -692,7 +692,7 @@ live inside the selected tier):
   never touches the disclosure. None of these is prose about *how* the mechanic works, only
   *what its current numbers are*.
 - **Page title.** The MainPage header is `<h1>Byte Factory</h1>` (screen name; AppNav short label **Factory** — not the game name
-  “Tens”). Top-level destinations (Foundry → Boosters → Compute → Factory → Perks → More) live in
+  “Tens”). Top-level destinations (Foundry → Power → Compute → Factory → Perks → More) live in
   `App.jsx`'s shared `AppNav`, not as header buttons here.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against
@@ -700,7 +700,7 @@ live inside the selected tier):
   (`components/BuyMaxToggle`, rendered only on Perks → ✦ Prestige once `isBuyMaxUnlocked`): while on, a click that can afford at least one FULL level
   from zero progress buys every such level (`buyTierMaxLevels`) and the button previews it as
   `+N Lv` with the summed cost (`getTierMaxLevelsPreview`; aria-label `Buy N full level(s) for …`);
-  otherwise the button keeps the normal single-level text and behavior below. Speed Up, tier tickspeed,
+  otherwise the button keeps the normal single-level text and behavior below. Clock Speed, tier tickspeed,
   Double PP, Auto Purge and Flops buttons keep their single-level cost text but buy every
   affordable level per click in that mode (`repeatPurchaseMax`). Renders its cost-block progress as an
   on-button gradient fill via `Button`'s `$progress`/`$secondaryProgress` props (green = units already
@@ -754,11 +754,11 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   upgrade/unlock button (glyph hidden, colour-coded) ends the head line — one line whenever it fits; the
   head wraps (`CellHead $wrap`) so a very long cost drops the button to its own line rather than
   ellipsizing the name. Categories: *Global Automation* (cells
-  `"<name> row"`, Auto Speed Up → Auto Restage → Auto Scale Up → Auto Overclock → Auto Purge; Restage
-  and Scale Up both need Speed Up, Overclock needs both, Purge needs Overclock — engine-enforced),
+  `"<name> row"`, Auto Clock Speed → Auto Restage → Auto Scale Up → Auto Overclock → Auto Purge; Restage
+  and Scale Up both need Clock Speed, Overclock needs both, Purge needs Overclock — engine-enforced),
   *Tier Autobuyers* (all ten tiers always listed; halves
   `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Booster Automation* (Auto Boost once Foundry
-  Compute unlocks; no Switch — its preset picker on Boosters is the control, owned shows `"Auto Boost
+  Compute unlocks; no Switch — its preset picker on Power is the control, owned shows `"Auto Boost
   unlocked"`), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
@@ -769,7 +769,7 @@ Perks never shows level numbers (only intervals, `N/buy` and costs). Global-auto
 labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol
 once, its halves a ⚙/🤖 icon; Flops cells show the tier symbol (their category heading names the kind). Every automation is named
 `Auto <feature>` (no hyphen) in every accessible name; on Perks the *visible* global/Booster label drops
-the redundant `Auto` (`Speed Up`, `Restage`, …, `Boost`) since the category heading already says it. Factory's Speed Up / Scale Up / Overclock cards share
+the redundant `Auto` (`Speed Up`, `Restage`, …, `Boost`) since the category heading already says it. Factory's Clock Speed / Scale Up / Overclock cards share
 `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem heading); Auto Scale Up's status
 is an `AutoChip` in the Scale Up card header.
 Tab dots: Automation `automation perk available` (`hasAffordableAutomationPerk`: an automation unlock
@@ -848,7 +848,7 @@ The **last tier's** button stays the ordinary resource-funded tickspeed button f
 but its requirement and spend differ: it needs `getTickspeedMultiplierRequirement` owned (e.g. 100 for
 the 2nd upgrade) and spends only `getTickspeedMultiplierSpend` (10% — e.g. 10); the visible label shows
 the spend, the aria-label/progress bar the requirement. Its XP-funded tickspeed is a **separate**
-**Restage** card beside the Speed Up card (same `SpeedCardsRow`) (`aria-label="restage panel"`, shown once
+**Restage** card beside the Clock Speed card (same `SpeedCardsRow`) (`aria-label="restage panel"`, shown once
 `isLastTierTickspeedXpUnlocked`) with a `🧬 {XP} XP` button — see docs/ECONOMY_REFERENCE.md's
 "The last tier's XP-funded tickspeed". The row's Details "tier ×N" multiplier includes the XP bonus.
 
@@ -873,12 +873,12 @@ unchanged by the move to Perks — see `docs/ECONOMY_REFERENCE.md` for costs/eff
 
 **Scale Up and Overclock cards, below the tier list.** `ScaleUpCard` and `OverclockCard` render
 together, in that order, inside a shared `SpeedCardsRow` flex row placed directly below `TierList` —
-not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why Speed Up
+not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why Clock Speed
 (paired with Restage) stays on top while this pair sits below the tier list). `SpeedCardsRow` keeps the pair side by side at every width, phone included (`flex: 1 1 0`,
-`min-width: 0`, no wrap) — the same row also holds Speed Up + Restage above the tier list. The earlier
+`min-width: 0`, no wrap) — the same row also holds Clock Speed + Restage above the tier list. The earlier
 below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below),
 so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
-alongside it. Both soft-reset cards (and Speed Up) share `featureCard(accent)`: compact `0.6rem 0.75rem`
+alongside it. Both soft-reset cards (and Clock Speed) share `featureCard(accent)`: compact `0.6rem 0.75rem`
 padding, a `0.4rem` internal gap and a 3px left accent stripe; their headings have no default margin, their
 buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`.
 
@@ -1117,12 +1117,12 @@ the Googol freeze" below.
 
 `App.jsx` switches screens via a local `page` `useState` (`'game'`/`'info'`/`'foundry'`/`'boosters'`/
 `'compute'`/`'perks'`/`'milestones'`/`'settings'`/`'dev'`, default `'game'`) — not a routing library —
-plus a shared fixed bottom `AppNav` (Foundry → Boosters → Compute → Factory → Perks → More; Guide is in More) and
+plus a shared fixed bottom `AppNav` (Foundry → Power → Compute → Factory → Perks → More; Guide is in More) and
 `AppMenu` (More sheet → Milestones / Settings / Dev Mode in dev builds). Legacy `page === 'storage'`
 rewrites to `'foundry'`. Which screen renders is derived, not `page` directly:
 `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked || page === 'foundry')`.
 `GATE_EXEMPT_PAGES` = `'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`, so those
-stay reachable during the gate — Boosters only once capacity reveals it, Compute only once 100 PP
+stay reachable during the gate — Power only once capacity reveals it, Compute only once 100 PP
 (Architecture 4b/4c). ByteFoundryPage is both a *mandatory gate* (while `intro.mainGameUnlocked` is
 false) and, once unlocked, a permanent revisitable screen (`page = 'foundry'`). `intro.mainGameUnlocked`
 is PERMANENT (`latchMainGameUnlocked` in `engine.js`; never reset by a real Prestige or Era ascension),

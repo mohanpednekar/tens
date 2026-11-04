@@ -3,16 +3,16 @@ import { canForfeitComputeBoost, canReclaimComputeBoost, formatOfflineDuration, 
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
-// The active Compute Boost's timer bar, shared by the Boosters screen and the Byte Factory header:
+// The active Compute Boost's timer bar, shared by the Power screen and the Byte Factory header:
 // Pop (refund the newest unused stack, no confirm) — or Forfeit (confirmed) once no unused stack
 // remains — on the left, the bar itself (fill = remaining time over the total stacked duration,
 // effect text on top) in the middle, Stack on the right. Renders nothing while no boost is active.
 
 // A small leading icon + display label per COMPUTE_BOOST_PRESETS key.
 export const COMPUTE_BOOST_DISPLAY = {
-  burst: { icon: '💥', label: 'Burst' },
-  standard: { icon: '⏱️', label: 'Standard' },
-  sustain: { icon: '🔋', label: 'Sustain' },
+  burst: { icon: '💥', label: 'Turbo' },
+  standard: { icon: '⏱️', label: 'Balanced' },
+  sustain: { icon: '🔋', label: 'Eco' },
 }
 
 // Drops zero-valued trailing units ("10m 0s" → "10m"); countdowns keep formatOfflineDuration as-is.

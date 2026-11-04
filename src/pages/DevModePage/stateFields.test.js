@@ -15,8 +15,8 @@ describe('prettifySegment', () => {
   it('maps ladder and Flops tier ids to their display names', () => {
     expect(prettifySegment('tier01')).toBe('Kilobytes')
     expect(prettifySegment('tier10')).toBe('Quettabytes')
-    expect(prettifySegment('flop01')).toBe('KFlops')
-    expect(prettifySegment('flop10')).toBe('QFlops')
+    expect(prettifySegment('flop01')).toBe('Cores · KFlops')
+    expect(prettifySegment('flop10')).toBe('Superclouds · QFlops')
   })
 
   it('returns unknown keys unchanged', () => {

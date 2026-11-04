@@ -437,12 +437,12 @@ describe('navAttention', () => {
     expect(hasAffordablePpUpgrade(state)).toBe(false)
   })
 
-  it('lights Factory when Speed Up is affordable from the Bits balance', () => {
+  it('lights Factory when Clock Speed is affordable from the Bits balance', () => {
     const tier01 = TIER_DEFINITIONS[0]
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      // Speed Up unlocks once level 1 of the first tier completes (purchaseLevels advances to 2).
+      // Clock Speed unlocks once level 1 of the first tier completes (purchaseLevels advances to 2).
       purchaseLevels: { [tier01.id]: 2 },
       resources: {
         ...createInitialGameState().resources,
@@ -455,7 +455,7 @@ describe('navAttention', () => {
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })
 
-  it('does not light Speed Up when the Bits balance is short of the cost', () => {
+  it('does not light Clock Speed when the Bits balance is short of the cost', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },

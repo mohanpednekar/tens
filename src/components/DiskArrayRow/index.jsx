@@ -356,8 +356,8 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
                     : isFull
                       ? `${blockLabel} banked toward ${redeemTierName ?? 'the matching tier'}`
                       : partialFill > 0
-                        ? `Filling from Memory (${Math.round(partialFill * 100)}%)`
-                        : 'Filling from Memory'
+                        ? `Filling from Staging (${Math.round(partialFill * 100)}%)`
+                        : 'Filling from Staging'
                 }
                 $full={isFull}
                 $flushing={readFlushing && (isFull || partialFill > 0)}
@@ -444,7 +444,7 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
                   ? 'This array is offline while it rebuilds'
                   : isFull
                     ? (pullEligible
-                      ? `Pulling into 1 free ${redeemTierName} — empties it, ready to fill again${hasReadCache ? ' from Memory' : ' from the size below'}`
+                      ? `Pulling into 1 free ${redeemTierName} — empties it, ready to fill again${hasReadCache ? ' from Staging' : ' from the size below'}`
                       : stranded
                         ? `${redeemTierName ?? 'Its matching tier'} has already moved past this size — can't fund that tier again until the next Purge${canDiskSizeFeedWriteCache(size) ? ', but may still feed the write cache into the next size up' : ''}`
                         : redeemable

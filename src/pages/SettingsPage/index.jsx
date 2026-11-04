@@ -509,9 +509,9 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           </VisuallyHidden>
         </Button>
         <p>
-          Restart the Byte Foundry on the active save — Capacity, Memory, Disks, Data Lakes and
-          Compute entities. Combine, Upgrade Capacity, Upgrade Speed, Provision Disk and Data Lake
-          upgrades/Boosters then replay automatically up to your pre-reset highs.
+          Restart the Byte Foundry on the active save — Data Stream Capacity, Disks, Data Lakes and
+          Compute entities. Compile, Upgrade Capacity, Upgrade Bitrate, Provision Disk and Data Lake
+          upgrades/Cells then replay automatically up to your pre-reset highs.
           Byte Factory and Purge progress stay.
         </p>
         <Button
@@ -522,7 +522,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           title={
             frozen
               ? 'Purge first — production is frozen at 1 Googol Bytes'
-              : 'Restarts the Foundry; Combine, Data Stream upgrades, Disks and Data Lakes replay automatically up to prior highs'
+              : 'Restarts the Foundry; Compile, Data Stream upgrades, Disks and Data Lakes replay automatically up to prior highs'
           }
           type="button"
           variant="danger"
@@ -563,15 +563,15 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
       >
         <p>
           Awards {eonsAwarded} {eonWord(eonsAwarded)} and resets the Byte Foundry for a deep reset —
-          Factory itself stays permanently reachable, no gate to tap back through.
+          Factory itself stays permanently reachable, no gate to ping back through.
         </p>
         <p>
-          <strong>Resets:</strong> Foundry generator upgrades, Memory, Disks, Compute entities,
+          <strong>Resets:</strong> Foundry generator upgrades, Data Stream Capacity, Disks, Compute entities,
           Byte Factory tiers and resources, unspent PP and Purge count, Double PP level, and Compute
           owned units.
         </p>
         <p>
-          <strong>Keeps:</strong> automation unlocks and pause flags, DeGoogol latch,
+          <strong>Keeps:</strong> automation unlocks and pause flags, Overflow mode latch,
           museum, Compute page reveal, Flops autobuyer unlocks, Eons (+ award), and hyperscalers.
         </p>
       </ConfirmDialog>

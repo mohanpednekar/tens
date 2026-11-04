@@ -7,7 +7,7 @@ import { COMPUTE_BOOST_PRESETS } from 'game/layers'
 // (tickGame): a glow on the boosted element's own card via `boostGlow` (no badge — the glow is
 // self-explanatory; the timer bar states what is boosted).
 
-export const COMPUTE_BOOST_LABELS = { burst: 'Burst', standard: 'Standard', sustain: 'Sustain' }
+export const COMPUTE_BOOST_LABELS = { burst: 'Turbo', standard: 'Balanced', sustain: 'Eco' }
 
 // Mirrors the engine: an unknown preset or invalid funding tier applies ×1 to nothing.
 const isBoostActive = intro => Boolean(intro?.computeBoostType && COMPUTE_BOOST_PRESETS[intro.computeBoostType]) && getComputeBoostCoveredTierCount(intro) > 0
