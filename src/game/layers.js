@@ -424,15 +424,15 @@ export const COMPUTE_ENTITY_AUTO_MERGE_CAP = COMPUTE_ENTITY_CAP + COMPUTE_MERGE_
 // getComputeMergeDurationSeconds in engine.js). No boundary-to-boundary multiplier.
 // Metadata per merge boundary (lowest first) — boundary i's input tier maps to Storage pool i+1.
 export const COMPUTE_MERGE_BOUNDARIES = [
-  { inputField: 'computeCores', outputField: 'computeNodes', autoFlagField: 'autoMergeCoresIntoNode', timerField: 'computeCoresMergeRemainingSeconds', label: 'Cores→Nodes' },
-  { inputField: 'computeNodes', outputField: 'computeClusters', autoFlagField: 'autoMergeNodesIntoCluster', timerField: 'computeNodesMergeRemainingSeconds', label: 'Nodes→Clusters' },
-  { inputField: 'computeClusters', outputField: 'computeNetworks', autoFlagField: 'autoMergeClustersIntoNetwork', timerField: 'computeClustersMergeRemainingSeconds', label: 'Clusters→Networks' },
-  { inputField: 'computeNetworks', outputField: 'computeGrids', autoFlagField: 'autoMergeNetworksIntoGrid', timerField: 'computeNetworksMergeRemainingSeconds', label: 'Networks→Grids' },
-  { inputField: 'computeGrids', outputField: 'computeFabrics', autoFlagField: 'autoMergeGridsIntoFabric', timerField: 'computeGridsMergeRemainingSeconds', label: 'Grids→Fabrics' },
-  { inputField: 'computeFabrics', outputField: 'computeClouds', autoFlagField: 'autoMergeFabricsIntoCloud', timerField: 'computeFabricsMergeRemainingSeconds', label: 'Fabrics→Clouds' },
-  { inputField: 'computeClouds', outputField: 'computeDatacenters', autoFlagField: 'autoMergeCloudsIntoDatacenter', timerField: 'computeCloudsMergeRemainingSeconds', label: 'Clouds→Datacenters' },
-  { inputField: 'computeDatacenters', outputField: 'computeSupercomputers', autoFlagField: 'autoMergeDatacentersIntoSupercomputer', timerField: 'computeDatacentersMergeRemainingSeconds', label: 'Datacenters→Supercomputers' },
-  { inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', autoFlagField: 'autoMergeSupercomputersIntoMegacomputer', timerField: 'computeSupercomputersMergeRemainingSeconds', label: 'Supercomputers→Megacomputers' },
+  { inputField: 'computeCores', outputField: 'computeNodes', autoFlagField: 'autoMergeCoresIntoNode', timerField: 'computeCoresMergeRemainingSeconds', label: 'Cells→Batteries' },
+  { inputField: 'computeNodes', outputField: 'computeClusters', autoFlagField: 'autoMergeNodesIntoCluster', timerField: 'computeNodesMergeRemainingSeconds', label: 'Batteries→Packs' },
+  { inputField: 'computeClusters', outputField: 'computeNetworks', autoFlagField: 'autoMergeClustersIntoNetwork', timerField: 'computeClustersMergeRemainingSeconds', label: 'Packs→Banks' },
+  { inputField: 'computeNetworks', outputField: 'computeGrids', autoFlagField: 'autoMergeNetworksIntoGrid', timerField: 'computeNetworksMergeRemainingSeconds', label: 'Banks→Generators' },
+  { inputField: 'computeGrids', outputField: 'computeFabrics', autoFlagField: 'autoMergeGridsIntoFabric', timerField: 'computeGridsMergeRemainingSeconds', label: 'Generators→Turbines' },
+  { inputField: 'computeFabrics', outputField: 'computeClouds', autoFlagField: 'autoMergeFabricsIntoCloud', timerField: 'computeFabricsMergeRemainingSeconds', label: 'Turbines→Plants' },
+  { inputField: 'computeClouds', outputField: 'computeDatacenters', autoFlagField: 'autoMergeCloudsIntoDatacenter', timerField: 'computeCloudsMergeRemainingSeconds', label: 'Plants→Grids' },
+  { inputField: 'computeDatacenters', outputField: 'computeSupercomputers', autoFlagField: 'autoMergeDatacentersIntoSupercomputer', timerField: 'computeDatacentersMergeRemainingSeconds', label: 'Grids→Reactors' },
+  { inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', autoFlagField: 'autoMergeSupercomputersIntoMegacomputer', timerField: 'computeSupercomputersMergeRemainingSeconds', label: 'Reactors→Fusions' },
 ]
 
 // --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/
@@ -464,9 +464,13 @@ export const COMPUTE_BOOST_PRESETS = {
 // getComputeBoostCoveredTierCount).
 // Plural labels for COMPUTE_BOOST_TIER_FIELDS (same order), for Foundry Bandwidth-via-compute copy.
 export const COMPUTE_TIER_LABELS = [
-  'Cores', 'Nodes', 'Clusters', 'Networks', 'Grids',
-  'Fabrics', 'Clouds', 'Datacenters', 'Supercomputers', 'Megacomputers',
+  'Cells', 'Batteries', 'Packs', 'Banks', 'Generators',
+  'Turbines', 'Plants', 'Grids', 'Reactors', 'Fusions',
 ]
+// State field -> player-visible label (singular): computeCores=Cell, computeNodes=Battery,
+// computeClusters=Pack, computeNetworks=Bank, computeGrids=Generator, computeFabrics=Turbine,
+// computeClouds=Plant, computeDatacenters=Grid, computeSupercomputers=Reactor,
+// computeMegacomputers=Fusion. (Code identifiers keep the old names.)
 // One entry per compute-ladder entity a Compute Boost can be funded from, lowest tier first (index
 // 0 = Core / tier 1, … index 9 = Megacomputer / tier 10) — the intro state field a Boost
 // activation/stack at that tier spends, and reclaimComputeBoost refunds into. The only place
@@ -760,16 +764,16 @@ export const COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC = 0.0001
 // purchase via the same linear-increment 10-power epoch as Factory tiers (getCostEpochExponent),
 // not Factory's 8-purchase level blocks.
 export const COMPUTE_FLOPS_TIER_DEFINITIONS = [
-  { id: 'flop01', name: 'KFlops', symbol: 'KF', baseCostPP: 1E3,  boostsTierId: 'tier01' },
-  { id: 'flop02', name: 'MFlops', symbol: 'MF', baseCostPP: 1E6,  boostsTierId: 'tier02' },
-  { id: 'flop03', name: 'GFlops', symbol: 'GF', baseCostPP: 1E9,  boostsTierId: 'tier03' },
-  { id: 'flop04', name: 'TFlops', symbol: 'TF', baseCostPP: 1E12, boostsTierId: 'tier04' },
-  { id: 'flop05', name: 'PFlops', symbol: 'PF', baseCostPP: 1E15, boostsTierId: 'tier05' },
-  { id: 'flop06', name: 'EFlops', symbol: 'EF', baseCostPP: 1E18, boostsTierId: 'tier06' },
-  { id: 'flop07', name: 'ZFlops', symbol: 'ZF', baseCostPP: 1E21, boostsTierId: 'tier07' },
-  { id: 'flop08', name: 'YFlops', symbol: 'YF', baseCostPP: 1E24, boostsTierId: 'tier08' },
-  { id: 'flop09', name: 'RFlops', symbol: 'RF', baseCostPP: 1E27, boostsTierId: 'tier09' },
-  { id: 'flop10', name: 'QFlops', symbol: 'QF', baseCostPP: 1E30, boostsTierId: 'tier10' },
+  { id: 'flop01', name: 'Cores', outputLabel: 'KFlops', symbol: 'KF', baseCostPP: 1E3,  boostsTierId: 'tier01' },
+  { id: 'flop02', name: 'Chips', outputLabel: 'MFlops', symbol: 'MF', baseCostPP: 1E6,  boostsTierId: 'tier02' },
+  { id: 'flop03', name: 'Servers', outputLabel: 'GFlops', symbol: 'GF', baseCostPP: 1E9,  boostsTierId: 'tier03' },
+  { id: 'flop04', name: 'Racks', outputLabel: 'TFlops', symbol: 'TF', baseCostPP: 1E12, boostsTierId: 'tier04' },
+  { id: 'flop05', name: 'Pods', outputLabel: 'PFlops', symbol: 'PF', baseCostPP: 1E15, boostsTierId: 'tier05' },
+  { id: 'flop06', name: 'Clusters', outputLabel: 'EFlops', symbol: 'EF', baseCostPP: 1E18, boostsTierId: 'tier06' },
+  { id: 'flop07', name: 'Datacenters', outputLabel: 'ZFlops', symbol: 'ZF', baseCostPP: 1E21, boostsTierId: 'tier07' },
+  { id: 'flop08', name: 'Regions', outputLabel: 'YFlops', symbol: 'YF', baseCostPP: 1E24, boostsTierId: 'tier08' },
+  { id: 'flop09', name: 'Clouds', outputLabel: 'RFlops', symbol: 'RF', baseCostPP: 1E27, boostsTierId: 'tier09' },
+  { id: 'flop10', name: 'Superclouds', outputLabel: 'QFlops', symbol: 'QF', baseCostPP: 1E30, boostsTierId: 'tier10' },
 ]
 export const COMPUTE_FLOPS_TIER_BY_ID = Object.assign(Object.create(null), Object.fromEntries(
   COMPUTE_FLOPS_TIER_DEFINITIONS.map(t => [t.id, t])

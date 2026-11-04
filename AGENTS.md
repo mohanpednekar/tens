@@ -5,14 +5,16 @@ of truth — `CLAUDE.md` (plus its `docs/*.md` references) is authoritative for 
 anything below ever conflicts with `CLAUDE.md`, `CLAUDE.md` wins; fix this file to match in the same
 change rather than letting the two drift (a stale mirror here is worse than no mirror at all).
 
-Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Purge** (formerly Reboot; PP = Purge Points), the global tickspeed track is **Speed Up** (formerly Latency). Code and state use the Purge names too (`purge`, `purgeGame`, `PURGE_THRESHOLD`, automation keys `speedUp`/`purge`; older `prestige`/`reboot` save keys migrate via `save-migration/migrateToV3`); only Prestige-Point/museum identifiers keep `prestige`.
+Player labels (issue #988; code identifiers unchanged): Power page = id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers`; Cores → Superclouds (KFlops → QFlops outputs) = `flop01`–`flop10`; Clock Speed = global tickspeed; Bitrate/Bandwidth/Staging/Compile/Ping/Compact Pool/Turbo-Balanced-Eco replace the old Speed/pool speed/buffer/Combine/tap/Reset Pool/Burst-Standard-Sustain. Full table: `CLAUDE.md`.
+
+Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Purge** (formerly Reboot; PP = Purge Points), the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). Code and state use the Purge names too (`purge`, `purgeGame`, `PURGE_THRESHOLD`, automation keys `speedUp`/`purge`; older `prestige`/`reboot` save keys migrate via `save-migration/migrateToV3`); only Prestige-Point/museum identifiers keep `prestige`.
 
 ## Project
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
-shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute → Factory → Perks → More**. Storage
+shared bottom `AppNav` in progression order: **Foundry → Power → Compute → Factory → Perks → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
-item, and no second-level Memory | Storage tabs). **Perks** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
+item, and no second-level Data Stream | Storage tabs). **Perks** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
 unlock/milestone → pause Switch → speed upgrade / Double PP, speed bonus, DeGoogol, Buy max). More (Guide, Milestones, Settings) is always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
@@ -63,7 +65,7 @@ docs/
                             check before changing a formula/workflow a past iteration may have tried
   AUTOMATION.md           ← full autonomous-workflow phase-by-phase reference
   ECONOMY_REFERENCE.md    ← full economy/prestige/tickspeed mechanic + engine function/constants reference
-  FOUNDRY_MECHANICS_REFERENCE.md ← full Byte Foundry/Storage/Disks/Data Lakes/Boosters prose (moved out of CLAUDE.md)
+  FOUNDRY_MECHANICS_REFERENCE.md ← full Byte Foundry/Storage/Disks/Data Lakes/Power prose (moved out of CLAUDE.md)
   MAINPAGE_REFERENCE.md   ← full MainPage UI field-by-field reference
   COMPONENTS_REFERENCE.md ← full Button/Money/StatCard prop/styling reference
   THEMING_REFERENCE.md    ← full design-token/font/ThemeProvider reference
@@ -77,7 +79,7 @@ src/
     storage.js             ← localStorage persistence; calls save-migration on every load, then mergeState.
                               Also Dev Mode's own isolated `'dev'` slot (separate from numbered player slots)
   components/
-    AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Compute → Factory → Perks → More) + More sheet (Guide / Milestones / Settings)
+    AppNav/, AppMenu/      ← bottom nav (Foundry → Power → Compute → Factory → Perks → More) + More sheet (Guide / Milestones / Settings)
     Button/, BuyMaxToggle/, Switch/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/, BoostBadge/, SpeedDetailsPopover/, LeadIcon/
                             ← shared styled components; see docs/COMPONENTS_REFERENCE.md
     DataLakePanel/          ← one Data Lake's own self-contained block (title + disk-square rows
@@ -88,7 +90,7 @@ src/
     ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Data Stream + Disks continuous sections; see
                                "Byte Foundry" below
     StoragePage/index.jsx  ← thin Disks list wrapper (primary UI is Foundry; not top-level AppNav)
-    ComputePage/index.jsx  ← Foundry Boosters (Cores/merge/Boost); nav Boosters, page id `'boosters'`
+    ComputePage/index.jsx  ← Foundry Power (Cells/charge chain/Boost); nav Power, page id `'boosters'`
     ComputeFlopsPage/index.jsx ← PP Compute (Flops); nav Compute, page id `'compute'`; reveals at 100 PP
     MainPage/index.jsx     ← the game (Byte Factory); data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← Guide; static mechanic explanations; reads no game state
@@ -124,7 +126,7 @@ persistence), called once in `App.jsx` and shared by every page via a `game` pro
 `InfoPage/index.jsx` is a static page (evergreen mechanic explanations only, reads no game state);
 `StoragePage`/`ComputePage`/`ComputeFlopsPage`/`MilestonesPage`/`SettingsPage`/`DevModePage` are pure
 renderers. `App.jsx` switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry →
-Boosters → Compute → Factory → Perks → More), with `ByteFoundryPage` additionally forced onto screen —
+Power → Compute → Factory → Perks → More), with `ByteFoundryPage` additionally forced onto screen —
 overriding whatever `page` says, except on gate-exempt utility pages
 (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`) — whenever
 `intro.mainGameUnlocked` is still false (see "Byte Foundry"). Storage is continuous Foundry sections
@@ -151,13 +153,13 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 one-time-ever gate (`latchMainGameUnlocked` — see above) before `MainPage` (`tier01`/Kilobytes onward)
 is reachable. Tapping accumulates bits into the **Data Stream** (Buffer-capped, binary units —
 Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator grown via a single
-**Upgrade Capacity** / **Upgrade Speed** actions (one at a time; cost = current capacity / current Speed basis, a click starts a progress bar fed from the Buffer at base Speed × the Data Stream tap bonus; displayed Speed is
+**Upgrade Capacity** / **Upgrade Bitrate** actions (one at a time; cost = current capacity / current Speed basis, a click starts a progress bar fed from the Buffer at base Speed × the Data Stream tap bonus; displayed Speed is
 *derived* from the Speed basis as `basis^e` via `getDataStreamSpeedBytesPerSecond`, capped at `Capacity^e`, where `e` = 0.5 + 0.01 per Disk size unlocked beyond the first via Foundry reset (`getDataStreamSpeedExponent`), not purchased) — entirely OUTSIDE the
 forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a separate fill-based
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer
 fullness; taps never speed a fill — a Data Stream tap speeds Upgrade Capacity/Speed, a pool tap speeds that pool's consumers (disks, merges, provisioning, lake). Disks (`StoragePage`) fill and pull into Factory automatically, with no manual
-redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too — but Boosters,
-which spend banked Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**), only
+redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too — but Cells,
+which spend banked Data Lake units for Cells/Batteries/Boost (`ComputePage`, nav **Power**), only
 buy via a single per-lake "🏷️ `<cost>`" control: it buys immediately if affordable, or arms a one-shot
 `autoConvertActive` flag that fills-then-buys exactly 1 over subsequent ticks and stops (never a
 persistent auto-buy loop) while its Storage pool is incomplete. Once that pool reaches 9/9/9 (latched per lake for the Era via `boosterAuto`, surviving resets), the control

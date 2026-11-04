@@ -1,7 +1,7 @@
 import styled, { css, keyframes } from 'styled-components'
 import { ATTENTION_HIGH } from 'game/navAttention'
 
-// Bottom bar order follows play progression: Foundry → Boosters → Compute → Factory → Perks, then More (Guide / Milestones / Settings).
+// Bottom bar order follows play progression: Foundry → Power → Compute → Factory → Perks, then More (Guide / Milestones / Settings).
 // Storage is folded into Foundry as continuous Memory + Disk sections (same Memory pool +
 // DiskArrayRow). Factory stays progress-gated; More stays available during the Foundry gate.
 // Accessible names: open byte foundry / open boosters / open compute / open byte factory / open perks / open more menu.
@@ -110,12 +110,12 @@ const AppNav = ({
   moreOpen = false,
   attention = {},
 }) => {
-  // Progression order: Foundry family → Boosters → Compute (Flops) → Factory → utilities.
+  // Progression order: Foundry family → Power → Compute (Flops) → Factory → utilities.
   const items = [
-    { id: 'foundry', ariaLabel: 'open byte foundry', icon: '🔥', label: 'Foundry', title: 'Byte Foundry — Memory and Storage' },
-    showBoosters && { id: 'boosters', ariaLabel: 'open boosters', icon: '⚡', label: 'Boosters', title: 'Boosters — Cores, merge chain, Compute Boost' },
+    { id: 'foundry', ariaLabel: 'open byte foundry', icon: '🔥', label: 'Foundry', title: 'Byte Foundry — Data Stream and Storage' },
+    showBoosters && { id: 'boosters', ariaLabel: 'open power', icon: '⚡', label: 'Power', title: 'Power — Cells, charge chain, Boost' },
     showComputeFlops && { id: 'compute', ariaLabel: 'open compute', icon: '🖥', label: 'Compute', title: 'Compute — PP Flops tiers boost Factory production' },
-    showTiers && { id: 'game', ariaLabel: 'open byte factory', icon: '📶', label: 'Factory', title: 'Byte Factory — buy and produce' },
+    showTiers && { id: 'game', ariaLabel: 'open byte factory', icon: '🏭', label: 'Factory', title: 'Byte Factory — buy and produce' },
     showPerks && { id: 'perks', ariaLabel: 'open perks', icon: '✨', label: 'Perks', title: 'Perks — automation and prestige perks' },
   ].filter(Boolean)
 

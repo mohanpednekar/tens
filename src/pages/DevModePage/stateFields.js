@@ -7,7 +7,7 @@ import { COMPUTE_FLOPS_TIER_DEFINITIONS, TIER_DEFINITIONS } from 'game/layers'
 // sync; unknown keys are just as valid a state shape as known ones).
 const TIER_NAME_BY_ID = TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: tier.name }), {})
 const FLOPS_TIER_NAME_BY_ID = COMPUTE_FLOPS_TIER_DEFINITIONS.reduce(
-  (acc, tier) => ({ ...acc, [tier.id]: tier.name }),
+  (acc, tier) => ({ ...acc, [tier.id]: `${tier.name} · ${tier.outputLabel}` }),
   {},
 )
 

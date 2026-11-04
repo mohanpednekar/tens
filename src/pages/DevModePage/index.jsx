@@ -410,7 +410,7 @@ const PRESET_GROUPS = [
       },
       {
         id: 'unlock-boosters',
-        label: '🔧 Unlock Boosters (Core)',
+        label: '🔧 Unlock Power (Cells)',
         apply: state => ({
           ...state,
           intro: {

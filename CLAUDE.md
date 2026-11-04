@@ -10,13 +10,13 @@ changing a formula, workflow, or mechanic a past iteration may already have trie
 **Tens** — a React incremental game; every mechanic (costs, production, prestige) is themed around
 powers of ten. No routing library, no backend — state lives in React and persists to `localStorage`.
 `App.jsx` switches top-level screens via a plain `useState` toggle plus a shared bottom `AppNav`
-(Foundry → Boosters → Compute → Factory → Perks → More) — not a router (see "Architecture"):
+(Foundry → Power → Compute → Factory → Perks → More) — not a router (see "Architecture"):
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
 `MainPage` (tier ladder), `PerksPage` (after first Prestige: 🤖 Automation / ✦ Prestige icon
-tabs — one row per automation spanning unlock → pause → speed; Double PP, speed bonus, DeGoogol, Buy max), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Boosters
+tabs — one row per automation spanning unlock → pause → speed; Double PP, speed bonus, DeGoogol, Buy max), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
-disk arrays live under Foundry as continuous Memory + Storage sections on the same screen (no
+disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
 second-level tabs). More (Guide / Milestones / Settings) is always available, including during the
 Byte Foundry gate; only Factory stays progress-gated. A third More entry, **Dev Mode**
 (`DevModePage`), renders only in a dev build (`import.meta.env.DEV`) — see "Dev Mode".
@@ -412,7 +412,7 @@ docs/
                                iteration may already have tried
   AUTOMATION.md                ← full Automation workflows reference
   ECONOMY_REFERENCE.md         ← full Economy model reference
-  FOUNDRY_MECHANICS_REFERENCE.md ← full Byte Foundry / Storage / Disks / Data Lakes / Boosters prose
+  FOUNDRY_MECHANICS_REFERENCE.md ← full Byte Foundry / Storage / Disks / Data Lakes / Power (Boosters) prose
                                (moved out of CLAUDE.md; read before touching ByteFoundryPage/ComputePage/disk+lake engine code)
   MAINPAGE_REFERENCE.md        ← full MainPage reference, including ComputePage
   COMPONENTS_REFERENCE.md      ← full Button/Money/StatCard prop/styling reference
@@ -438,7 +438,7 @@ src/
                                current-compatible game state (or failure); runs on every load; see
                                DESIGN_HISTORY.md "Save persistence".
   components/
-    AppNav/index.jsx        ← fixed bottom bar, progression order Foundry → Boosters → Compute → Factory →
+    AppNav/index.jsx        ← fixed bottom bar, progression order Foundry → Power → Compute → Factory →
                                Perks → More; Factory omits during the Foundry gate (More stays);
                                green attention dots via game/navAttention.js
     AppMenu/index.jsx       ← More sheet — Guide / Milestones / Settings (always reachable; Reset / Reset Byte
@@ -475,7 +475,7 @@ src/
                                Pool Memory derives from the shared Data Stream Capacity, which doubles up to
                                the FINAL pool's end bound (`isMemoryCapacityAtCap`) — see "Pool liveness is Capacity-only"
     StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow list (Architecture 4a)
-    ComputePage/index.jsx   ← Foundry Boosters screen: merge chain + Boost (Architecture 4b)
+    ComputePage/index.jsx   ← Foundry Power screen (label only; page id `'boosters'`): merge chain + Boost (Architecture 4b)
     ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen; page id `'compute'`. Takes `{ game }` (Architecture 4c)
     MainPage/index.jsx      ← the tier ladder (see "Architecture"). Takes `{ game }`.
                                No second-level tabs. Full reference: `docs/MAINPAGE_REFERENCE.md`
@@ -551,7 +551,7 @@ e2e/
   purge.e2e.js                ← purging from the first-time overlay resets resources, awards PP
   meta-prestige.e2e.js        ← Settings Era ascension from 1 Googol PP seed; era/Eons + Foundry gate
   data-lake.e2e.js            ← a seeded KB Data Lake renders its disk-square breakdown on Foundry, then a
-                               manual Buy Booster click grants a Core (verified on the Boosters page)
+                               manual Buy Cell click grants a Cell (verified on the Power page)
   visual-regression.e2e.js    ← Linux-only full-page screenshot baselines (Byte Foundry / Byte Factory, both
                                themes) in `visual-regression.e2e.js-snapshots/`; update process: `e2e/README.md`
 scripts/
@@ -638,12 +638,12 @@ Strict three-layer separation:
    is false (AppNav omits Factory; More stays), permanently latched true the instant Storage's
    capacity threshold ("1 KiB") is crossed (`latchMainGameUnlocked`/`isStorageUnlocked`) — one-time-ever,
    never resets. Once latched, the Data Stream tile itself is the tap target (`actions.tapIntroBit`).
-   Shows Data Stream (shared Combine/Speed/Capacity + Provision Disk in its own card) then one `PoolCard`
+   Shows Data Stream (shared Compile/Bitrate/Capacity + Provision Disk in its own card) then one `PoolCard`
    per VISIBLE pool (`getVisibleStoragePoolCount`: PURE Capacity-based, independent of
    `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount`, which stay disk-build-only — see "Pool liveness"
    below); each pool embeds its `DiskArrayRow`s and `DataLakePanel` (`bare`, `tierIndex={poolIndex}`).
    Disk Fill is automatic. Every action is gated by the forced priority order — Data Lake Booster
-   purchases, its capacity Upgrade, and Upgrade Capacity / Speed are the three exceptions. Pool/buffer/
+   purchases, its capacity Upgrade, and Upgrade Capacity / Bitrate are the three exceptions. Pool/staging/
    Bandwidth/Provision Disk/queue detail: **`docs/FOUNDRY_MECHANICS_REFERENCE.md`**; UI layout:
    `docs/MAINPAGE_REFERENCE.md`; formulas: `docs/ECONOMY_REFERENCE.md`; component contracts:
    `docs/COMPONENTS_REFERENCE.md`.
@@ -651,26 +651,26 @@ Strict three-layer separation:
    `getDiskSizesToShow`) — NOT the Provision Disk button, which stays on ByteFoundryPage. Takes
    `{ game }`. Primary UI path is Foundry's continuous sections; this file remains for reuse/tests. A
    pure renderer ("engine re-validates, UI just mirrors it", like every page here).
-4b. **`ComputePage/index.jsx`** — Foundry **Boosters** screen (page id `'boosters'`), taking `{ game }`;
-   reached via AppNav once `isComputeCoreConversionUnlocked`. Hosts the nine-boundary merge chain (Core →
-   Node → … → Megacomputer) behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute"
+4b. **`ComputePage/index.jsx`** — Foundry **Power** screen (page id `'boosters'`; player label only), taking `{ game }`;
+   reached via AppNav once `isComputeCoreConversionUnlocked`. Hosts the nine-boundary merge chain (Cell →
+   Battery → … → Fusion, charged up via "Charge up"/"Auto-charge") behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute"
    names the page/feature only — entities drop the word in every player-visible label. Deliberately terse
    (icon-only controls, full sentence in `title`/`aria-label`; mechanic prose lives in the Guide). Order:
    top card = active Boost timer bar (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right,
    enforced in the engine too; or "No boost running") + Auto Boost pref; then per-tier rows — the ONE
    selected tier (pre-selected to the active boost's tier on arrival) shows the 3 Boost presets inline (`COMPUTE_ENTITY_CAP` 10 slots,
    Merge ratio `COMPUTE_MERGE_RATIO` 8, Unlock Auto-merge, `COMPUTE_MERGE_RESERVE_CAP` 8 reserve). Cores
-   come from buying Boosters from the matching Data Lake, not minted from Memory. Full detail:
+   come from buying Cells from the matching Data Lake, not minted from Data Stream Capacity. Full detail:
    **`docs/FOUNDRY_MECHANICS_REFERENCE.md`**, `docs/MAINPAGE_REFERENCE.md`, `docs/DESIGN_HISTORY.md`.
 4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), taking
    `{ game }`. Reached via AppNav once `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in
-   `computeFlops.pageUnlocked`). Ten tiers KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`), PP-funded
+   `computeFlops.pageUnlocked`). Ten tiers Cores→Superclouds, outputs KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`; page keeps "Compute" + 🖥), PP-funded
    on the same 10³ base ladder as Factory tiers, priced per-unit via `getCostEpochExponent` (not
    Factory's 8-buy blocks). Owned counts permanent across Prestige; per-cycle boost resets on
    Prestige. Pure renderer — full spec: `docs/ECONOMY_REFERENCE.md`'s "PP Compute (Flops)" section.
 5. **`InfoPage/index.jsx`** — a static Guide page holding every mechanic's evergreen explanation in
    short bullets/sub-headings (what used to be MainPage's click-to-expand `InfoDetails` disclosures —
-   Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Speed Up, Scale Up, Overclock, Tier
+   Overview, Byte Foundry, Storage, Power, Compute (Flops), Clock Speed, Scale Up, Overclock, Tier
    Autobuyers, Milestones, Prestige, Offline progress, Era ascension). Numbers come from the same `engine.js`/`layers.js`
    constants the game uses, so they can't drift. Reads no `useIncrementalGame` state — only pure
    constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
@@ -686,7 +686,7 @@ Strict three-layer separation:
     (`StoreSection.jsx`, only when IAP is on), multi-slot saves, Prestige museum, Era ascension
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
     dashboard, Legal (`LegalSection.jsx`: Privacy Policy / Terms links), and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
-    Storage / Compute + upgrades wipe to scratch; Combine / Upgrade Capacity / Upgrade Speed
+    Storage / Compute + upgrades wipe to scratch; Compile / Upgrade Capacity / Upgrade Bitrate
     convenience-auto up to prior highs; smaller Disk sizes re-provision with no provisioning cost (one buffer fill per disk); Factory + Prestige kept). Takes `{ game, onReset,
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
@@ -725,9 +725,11 @@ this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop".
 
 ### Tiers, Prestige, Era ascension
 
+**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Compact Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`.
+
 **Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Purge, Era ascension,
 Reset Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Purge** (formerly Reboot) and
-PP reads **Purge Points**; the global tickspeed track is **Speed Up** (formerly Latency). The Purge
+PP reads **Purge Points**; the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). The Purge
 rename is carried through the code too (#987): `state.purge`, `purgeGame`,
 `PURGE_THRESHOLD`, `autoPurge`, automation keys `'speedUp'`/`'purge'` — while Prestige-Point,
 Double PP, speed-bonus, `prestigeMuseum` and `metaPrestige` identifiers keep `prestige`. Pre-rename
@@ -739,7 +741,7 @@ display names `Kilobytes` through `Quettabytes`. Every tier is bought directly w
 cascading down the ladder; `tier01` (Kilobytes) is the special case where cost is still Bits but
 production is a whole-Byte amount (`BYTES_ID = 'bytes'`, displayed as `B`) credited to Bits at
 `BITS_PER_BYTE` (8) per Byte. **Bytes and Bits are ONE pool** (`resources.base`) — there is no separate
-Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Speed Up** (the global
+Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Clock Speed** (the global
 tickspeed multiplier on MainPage, formerly "Latency"/"Tickspeed"/"Clock Speed"; code: `globalTickspeed*`, automation key `speedUp`) is paid from that Bits balance —
 initial activation costs **10 Bytes (80 Bits)**. It unlocks once level 1 of tier01 is purchased; there
 are no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
@@ -754,7 +756,7 @@ entities, Memory/gate) plus the ordinary Factory cycle (`purge.points`/`count`/`
 → 0, `computeFlops.owned` → 0, `cumulativeBoost` fresh), while keeping automation unlocks/pause flags
 (except Double PP level), tier/tickspeed autobuyer milestone objects, `purge.unboundedUnlocked`,
 museum, hyperscalers, Eon upgrade levels, Flops autobuyer unlock flags, and page latches. Era *N*
-free-unlocks the *N*th Flops tier's autobuyer (KFlops at Era 1, …). Hyperscalers (bought with Eons in
+free-unlocks the *N*th Flops tier's autobuyer (Cores (KFlops) at Era 1, …). Hyperscalers (bought with Eons in
 #414) add permanent +0.01%/s each to every Factory tier's Flops multiplier via
 `getHyperscalerFlopsBoostRate` — the engine/hook action (`buyHyperscaler`) is wired, but no page renders
 a purchase control yet (deferred to #414, blocked pending maintainer-approved spend design). Full detail:
@@ -773,8 +775,8 @@ upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then do
 Bytes are produced entirely by the **Byte Foundry** (`ByteFoundryPage`), a tap-to-earn screen every fresh
 save passes through once before the main game — a ONE-TIME-EVER gate (`latchMainGameUnlocked`/
 `intro.mainGameUnlocked`) gone permanently across every Prestige and Era ascension once Storage's
-capacity threshold is reached. Tapping fills the **Data Stream** (Buffer-capped) which Combine turns into
-a permanent Byte generator; **Upgrade Capacity** / **Upgrade Speed** grow it one at a time
+capacity threshold is reached. Pinging fills the **Data Stream** (Buffer-capped) which Compile turns into
+a permanent Byte generator; **Upgrade Capacity** / **Upgrade Bitrate** grow it one at a time
 (`queueIntroSpeedUpgrade`, `tickCapacityUpgradeDrain`; sit OUTSIDE the forced priority order). Displayed
 Speed is derived (`getDataStreamSpeedBytesPerSecond`, exponent `getDataStreamSpeedExponent`); extra Disk
 sizes need a Foundry reset (`unlockNextDiskSizeByFoundryReset`). Era ascension keeps the generator and
@@ -782,7 +784,7 @@ gate latch but resets Capacity (`buildEraIntroReset`). Recurring actions follow 
 order** Disk Fill > Provision Disk > Compute Boost (a lower one is disabled, in UI and engine, while a
 higher one is available; Provision Disk outranks Compute only while ARMED — `isProvisionDiskInProgress`). An always-on auto-convert (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`)
 turns Data Stream bits into free `tier01` units. Generator, Disks, Data Lakes, and every compute-ladder
-entity (Core → … → Megacomputer) are PERMANENT across real Prestige; only Data Stream balance and
+entity (Cell → … → Fusion) are PERMANENT across real Prestige; only Data Stream balance and
 tier01's purchase-block progress reset per cycle. Nothing here ever fully freezes.
 
 **Hard rules (full text and the rest of the Foundry mechanics: `docs/FOUNDRY_MECHANICS_REFERENCE.md`):**
@@ -790,7 +792,7 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
   change; a fill-dependent multiplier (1000% empty → 100% at 50% → 10% full (log-linear)) scales only the
   real per-tick amount delivered (`getFillCurveDelta` integrates the curve so a 1s offline tick matches live 0.1s ticks).
   **Tap bonuses never scale a fill** (the curve already reaches 10×); they speed CONSUMERS ×(1 + bonus%),
-  decaying 1%/s: Data Stream tap → Upgrade Capacity/Speed drains (`getDataStreamTapMultiplier`); pool tap →
+  decaying 1%/s: Data Stream ping → Upgrade Capacity/Bitrate drains (`getDataStreamTapMultiplier`); pool tap →
   Provision Disk draw, read-cache flush, write-cache merges, lower-size rebuild, Data Lake drain (`getPoolTapMultiplier`).
 - **Standing rule — `intro.capacity` keeps doubling plainly in binary** (IEC `KiB`/`MiB`, step 1024);
   non-binary (SI-clean/decade-power) transforms are for storage-pool-scoped values only
@@ -816,7 +818,7 @@ Cores/Nodes/Boost, every forced-priority-order predicate, cost/production formul
 growing) purchase block size and level system, Prestige Points and every PP-funded automation, the
 per-tier and global tickspeed multipliers, the last tier's XP-funded tickspeed, Scale Up, Overclock,
 Reset, the complete game state shape, and the engine function/constants tables — lives in
-`docs/ECONOMY_REFERENCE.md`. Read it (and `docs/FOUNDRY_MECHANICS_REFERENCE.md` for Foundry/Storage/Lake/Boosters) before touching `src/game/engine.js`, `src/game/layers.js`,
+`docs/ECONOMY_REFERENCE.md`. Read it (and `docs/FOUNDRY_MECHANICS_REFERENCE.md` for Foundry/Storage/Lake/Power) before touching `src/game/engine.js`, `src/game/layers.js`,
 `TIER_DEFINITIONS`, `ByteFoundryPage`/`StoragePage`/`ComputePage`, or any economy/prestige/tickspeed
 constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about to change a
 formula/gate a past iteration may already have tried and rejected (e.g. the `<=` vs. `===`
@@ -836,7 +838,7 @@ from the re-reveal mechanic: after a reset, a tier already unlocked by a previou
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
 Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
 completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`,
-not a fixed 5/8/11/14 ladder (Speed Up's Overclock-scaled 1% step is under "Tiers, Prestige, Era
+not a fixed 5/8/11/14 ladder (Clock Speed's Overclock-scaled 1% step is under "Tiers, Prestige, Era
 ascension" above).
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
@@ -850,7 +852,7 @@ new file per run** onto the stable orphan branch `ideal-run-strategy` via
 `publish-strategy.sh` (`runs/<UTC-stamp>-<sha>.md` + `README.md` index) — never merge that branch
 into `main`, and do not rename it with an agent/session suffix.
 
-**Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Speed Up/Overclock
+**Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Clock Speed/Overclock
 heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
 **No link styling:** it's a game — never underline (solid, dotted or on hover) just because something is
 clickable; use `cursor: pointer` and a `:focus-visible` outline instead.

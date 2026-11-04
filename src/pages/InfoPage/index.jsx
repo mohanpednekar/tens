@@ -161,7 +161,7 @@ const InfoPage = () => {
           </li>
           <li>
             Reaching <strong>1 Googol Bytes</strong> (8×10^100 Bits) freezes production until you
-            Purge — unless you have unlocked DeGoogol (see Purge).
+            Purge — unless you have unlocked Overflow mode (see Purge).
           </li>
           <li>
             After your first Purge, the <strong>Buy max</strong> toggle (Perks → ✦ Prestige) makes
@@ -184,43 +184,43 @@ const InfoPage = () => {
         <h3>The loop</h3>
         <ul>
           <li>
-            <strong>Tap</strong> the Data Stream to add one second of its production. Once Storage
-            appears (at {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)} Capacity), a tap
-            instead adds a temporary tap bonus to what it feeds (below).
+            <strong>Ping</strong> the Data Stream to add one second of its production. Once Storage
+            appears (at {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)} Capacity), a ping
+            instead adds a temporary ping bonus to what it feeds (below).
           </li>
           <li>
-            <strong>Combine</strong> the first {INTRO_BYTE_COMBINE_COST} bits into a permanent Byte
+            <strong>Compile</strong> the first {INTRO_BYTE_COMBINE_COST} bits into a permanent Byte
             generator that produces on its own from then on. Capacity starts at{' '}
             {formatBitsInNearestUnit(getStoragePoolMemoryBounds(1).startBits)} and doubles with each
             Capacity upgrade, up to the last storage pool’s limit.
           </li>
           <li>
-            <strong>Fill multiplier</strong> — the Data Stream’s Speed and each pool’s speed are shown
+            <strong>Fill multiplier</strong> — the Data Stream’s Bitrate and each pool’s Bandwidth are shown
             as the rate actually delivered: the base rate times a multiplier that depends on how full
-            that buffer is. It is {FILL_MULTIPLIER_MAX_PERCENT / 100}× when empty, 1× at half full and{' '}
+            that buffer is. (A pool’s buffer is called its Staging.) It is {FILL_MULTIPLIER_MAX_PERCENT / 100}× when empty, 1× at half full and{' '}
             {FILL_MULTIPLIER_MIN_PERCENT / 100}× when full; the color runs red (slow) → blue → green
-            (fast). Tapping the Data Stream (once Storage appears) or a pool’s Memory tile adds a +
-            {FILL_MULTIPLIER_TAP_BONUS_PERCENT}% tap bonus (up to {FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}%),
+            (fast). Pinging the Data Stream (once Storage appears) or a pool’s Staging tile adds a +
+            {FILL_MULTIPLIER_TAP_BONUS_PERCENT}% ping bonus (up to {FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}%),
             which fades by {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}% per second and shows as a
-            thin bar and “+x% 👆”. A tap never speeds the fill itself (it already reaches{' '}
+            thin bar and “+x% 👆”. A ping never speeds the fill itself (it already reaches{' '}
             {FILL_MULTIPLIER_MAX_PERCENT / 100}×); it speeds what that buffer feeds — on the Data Stream,
-            Upgrade Capacity / Speed; on a pool, disk provisioning, disk fills and merges, rebuilds and
+            Upgrade Capacity / Bitrate; on a pool, disk provisioning, disk fills and merges, rebuilds and
             the Data Lake.
           </li>
           <li>
             <strong>Upgrade Capacity</strong> costs your current Capacity and doubles it.{' '}
-            <strong>Upgrade Speed</strong> costs your current Speed level. Only one runs at a time: it
-            becomes a progress bar that draws the Data Stream’s base Speed from the Buffer, ahead of
-            everything else, and applies when full. Base Speed is (Speed level in Bytes)
+            <strong>Upgrade Bitrate</strong> costs your current Bitrate level. Only one runs at a time: it
+            becomes a progress bar that draws the Data Stream’s base Bitrate from the Buffer, ahead of
+            everything else, and applies when full. Base Bitrate is (Bitrate level in Bytes)
             <sup>exponent</sup> per second and can never exceed Capacity<sup>exponent</sup>, so raise
-            Capacity to unlock more Speed. The exponent starts at {DATA_STREAM_SPEED_EXPONENT_BASE} (a
-            square root); pool speed is capped by the same exponent.
+            Capacity to unlock more Bitrate. The exponent starts at {DATA_STREAM_SPEED_EXPONENT_BASE} (a
+            square root); pool Bandwidth is capped by the same exponent.
           </li>
           <li>
             <strong>Foundry reset</strong> — when every unlocked disk size is complete, this button
             replaces Provision Disk. It unlocks the next disk size and raises the exponent by{' '}
-            {DATA_STREAM_SPEED_EXPONENT_STEP}. The Foundry restarts from scratch, then Combine,
-            Capacity, Speed, Disks and Data Lake upgrades/Boosters are replayed automatically up to
+            {DATA_STREAM_SPEED_EXPONENT_STEP}. The Foundry restarts from scratch, then Compile,
+            Capacity, Bitrate, Disks and Data Lake upgrades/Cells are replayed automatically up to
             your previous highs.
           </li>
           <li>
@@ -238,7 +238,7 @@ const InfoPage = () => {
             {firstTierName} level.
           </li>
           <li>
-            <strong>Kept through Purge:</strong> the Byte generator, Capacity/Speed upgrades,
+            <strong>Kept through Purge:</strong> the Byte generator, Capacity/Bitrate upgrades,
             Disks, Data Lakes, every Compute entity, and the main-game unlock. Era ascension resets
             most of this (see Era ascension).
           </li>
@@ -250,7 +250,7 @@ const InfoPage = () => {
         <ul>
           <li>Disk Fill → Provision Disk → Compute Boost</li>
           <li>
-            Upgrade Capacity / Upgrade Speed, Data Lake Booster purchases and Data Lake capacity
+            Upgrade Capacity / Upgrade Bitrate, Data Lake Cell purchases and Data Lake capacity
             upgrades are outside this order — they are never blocked by it.
           </li>
         </ul>
@@ -261,7 +261,7 @@ const InfoPage = () => {
         <p>
           Appears on the Foundry screen once the Data Stream’s Capacity reaches{' '}
           {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}. There are ten pools (KB … QB), all fed
-          by the shared Data Stream — earlier pools take their share of its speed first. Pool N
+          by the shared Data Stream — earlier pools take their share of its bitrate first. Pool N
           appears once Capacity reaches 1024<sup>N</sup> Bytes (1 KiB, 1 MiB, …), whatever disks you
           have built.
         </p>
@@ -269,8 +269,8 @@ const InfoPage = () => {
         <h3>Provisioning Disks</h3>
         <ul>
           <li>
-            Click Provision Disk once to start a build; it draws its cost from the pool’s buffer at
-            the pool’s base speed and pauses (losing nothing) whenever the buffer is empty. The Nth
+            Click Provision Disk once to start a build; it draws its cost from the pool’s Staging at
+            the pool’s base Bandwidth and pauses (losing nothing) whenever the Staging is empty. The Nth
             disk of an array costs N× the disk’s size.
           </li>
           <li>
@@ -286,7 +286,7 @@ const InfoPage = () => {
           <li>
             Each pool’s smallest array keeps a read Cache of {DISK_CACHE_BLOCK_COUNT} blocks that
             together hold one disk’s worth of bits (e.g. a 1 MB array → 8 × 1 Mb). Whenever the
-            pool’s Memory holds a full block and the Cache has room, the block moves into the Cache
+            pool’s Staging holds a full block and the Cache has room, the block moves into the Cache
             instantly.
           </li>
           <li>
@@ -312,30 +312,30 @@ const InfoPage = () => {
         </ul>
       </Section>
 
-      <Section aria-label="boosters section">
-        <h2>Boosters</h2>
+      <Section aria-label="power section">
+        <h2>Power</h2>
         <p>
           Unlocks once the Data Stream’s Capacity reaches{' '}
           {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}. Open it from the bottom
-          nav’s Boosters item.
+          nav’s Power item.
         </p>
 
         <h3>Data Lakes</h3>
         <ul>
           <li>
             Each pool has its own Data Lake (KB … QB), shown in its pool card. A lake unlocks once its
-            pool has built at least one disk, and turns stored data into Boosters.
+            pool has built at least one disk, and turns stored data into Cells.
           </li>
           <li>
-            A lake fills from its own pool’s buffer at the pool’s speed whenever every built disk in
+            A lake fills from its own pool’s Staging at the pool’s Bandwidth whenever every built disk in
             that pool is full and nothing is being provisioned there. Clicking its 🏷️ cost control
-            also draws from the pool’s buffer until the next Booster is affordable, buys one, then
+            also draws from the pool’s Staging until the next Cell is affordable, buys one, then
             stops. Once all of the pool’s disks are built, its overflow also pours into the lake.
           </li>
           <li>
             A lake shows its contents as disk squares, filled smallest first: up to{' '}
             {DATA_LAKE_SUB_SIZE_DISK_CAPS.join('/')} disks of ×1/×10/×100 its unit. The last unit of
-            each capacity level sits in the lake’s own buffer instead of a square, just as a Storage
+            each capacity level sits in the lake’s own staging instead of a square, just as a Storage
             array’s Cache stands in for a 10th disk.
           </li>
           <li>
@@ -344,24 +344,24 @@ const InfoPage = () => {
             unlocks once the matching Storage array is fully built, and buying it empties the lake.
           </li>
           <li>
-            The nth Booster bought from a lake costs n units and instantly grants 1 compute entity of
-            that lake’s tier (KB → Core, MB → Node, …). Once a pool has all of its disks built, its
-            lake buys every affordable Booster automatically for the rest of the Era — through pool
-            resets, Foundry resets and Purges.
+            The nth Cell bought from a lake costs n units and instantly grants 1 compute entity of
+            that lake’s tier (KB → Cell, MB → Battery, …). Once a pool has all of its disks built, its
+            lake buys every affordable Cell automatically for the rest of the Era — through pool
+            compactions, Foundry resets and Purges.
           </li>
         </ul>
 
-        <h3>Pool resets</h3>
+        <h3>Compaction</h3>
         <ul>
           <li>
-            When a pool has every disk built, its lake is completely full, and the next Booster costs
-            more than the lake can hold, a <strong>↻ Reset Pool</strong> button appears. It never
+            When a pool has every disk built, its lake is completely full, and the next Cell costs
+            more than the lake can hold, a <strong>🗜 Compact Pool</strong> button appears. It never
             fires on its own.
           </li>
           <li>
-            A reset empties that pool’s disks, buffer and lake (Boosters bought and earlier reset
+            Compaction empties that pool’s disks, Staging and lake (Cells bought and earlier compaction
             rewards stay) and permanently adds 1,000 units of lake capacity. The first reset also
-            locks lake filling at 50% speed; later resets raise the pool’s speed.
+            locks lake filling at 50% speed; later compactions raise the pool’s Bandwidth.
           </li>
           <li>
             Afterwards the pool rebuilds its disks for free, one at a time, smallest first. Until it
@@ -369,30 +369,30 @@ const InfoPage = () => {
           </li>
         </ul>
 
-        <h3>Cores and the merge chain</h3>
+        <h3>Cells and the charge chain</h3>
         <ul>
           <li>
-            Chain: Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter →
-            Supercomputer → Megacomputer. Cores only come from KB Data Lake Boosters.
+            Chain: Cell → Battery → Pack → Bank → Generator → Turbine → Plant → Grid →
+            Reactor → Fusion. Cells only come from KB Data Lake purchases.
           </li>
           <li>
-            Each entity caps at {COMPUTE_ENTITY_CAP} held; Booster purchases pause at the cap until
-            you spend some (a merge or a Compute Boost).
+            Each entity caps at {COMPUTE_ENTITY_CAP} held; Cell purchases pause at the cap until
+            you spend some (a charge-up or a Boost).
           </li>
           <li>
-            Manual merge: turn {COMPUTE_MERGE_RATIO} of one entity into 1 of the next (needs{' '}
+            Charge up: turn {COMPUTE_MERGE_RATIO} of one entity into 1 of the next (needs{' '}
             {COMPUTE_MERGE_RATIO} held). It is instant.
           </li>
           <li>
-            Sacrifice {COMPUTE_ENTITY_CAP} of the next entity to unlock auto-merge for that step. This
+            Sacrifice {COMPUTE_ENTITY_CAP} of the next entity to unlock auto-charge for that step. This
             adds an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve ({COMPUTE_ENTITY_AUTO_MERGE_CAP} held in
-            total) that fills as the entity keeps growing past {COMPUTE_ENTITY_CAP}. Tapping the
-            reserve slots merges {COMPUTE_MERGE_RATIO} → 1 instantly.
+            total) that fills as the entity keeps growing past {COMPUTE_ENTITY_CAP}. Pinging the
+            reserve slots charges {COMPUTE_MERGE_RATIO} → 1 instantly.
           </li>
           <li>
-            An automatic merge starts only when all {COMPUTE_ENTITY_AUTO_MERGE_CAP} slots are full and
+            An automatic charge starts only when all {COMPUTE_ENTITY_AUTO_MERGE_CAP} slots are full and
             runs on a timer: the time {COMPUTE_MERGE_RATIO} of the smallest disks in that entity’s own
-            pool take to fill from its read Cache (Cores use the KB pool, Nodes the MB pool, …). It
+            pool take to fill from its read Cache (Cells use the KB pool, Batteries the MB pool, …). It
             waits until that pool is visible and speeds up as the pool gets faster.
           </li>
         </ul>
@@ -400,25 +400,25 @@ const InfoPage = () => {
         <h3>Compute Boost</h3>
         <ul>
           <li>
-            Select a tier on Boosters to show its Burst / Standard / Sustain presets; activating one
+            Select a tier on Power to show its Turbo / Balanced / Eco presets; activating one
             spends 1 of that entity. Every tier gives the same multiplier and duration — higher tiers
-            boost more Factory tiers (Core: Kilobytes only, Node: Kilobytes and Megabytes, Cluster:
+            boost more Factory tiers (Cell: Kilobytes only, Battery: Kilobytes and Megabytes, Pack:
             the first three, …).
           </li>
           <li>
-            Burst ×{COMPUTE_BOOST_PRESETS.burst.multiplier} for{' '}
-            {formatOfflineDuration(COMPUTE_BOOST_PRESETS.burst.durationSeconds)}; Standard ×
+            Turbo ×{COMPUTE_BOOST_PRESETS.burst.multiplier} for{' '}
+            {formatOfflineDuration(COMPUTE_BOOST_PRESETS.burst.durationSeconds)}; Balanced ×
             {COMPUTE_BOOST_PRESETS.standard.multiplier} for{' '}
-            {formatOfflineDuration(COMPUTE_BOOST_PRESETS.standard.durationSeconds)}; Sustain ×
+            {formatOfflineDuration(COMPUTE_BOOST_PRESETS.standard.durationSeconds)}; Eco ×
             {COMPUTE_BOOST_PRESETS.sustain.multiplier} for{' '}
             {formatOfflineDuration(COMPUTE_BOOST_PRESETS.sustain.durationSeconds)}.
           </li>
           <li>
             A boost also multiplies the Byte generator’s production and speeds up the matching
-            Storage pools’ buffers (pool N for Factory tier N) by +
+            Storage pools’ Staging (pool N for Factory tier N) by +
             {COMPUTE_BOOST_PRESETS.burst.poolBonusPercent}% / +
             {COMPUTE_BOOST_PRESETS.standard.poolBonusPercent}% / +
-            {COMPUTE_BOOST_PRESETS.sustain.poolBonusPercent}% for Burst / Standard / Sustain.
+            {COMPUTE_BOOST_PRESETS.sustain.poolBonusPercent}% for Turbo / Balanced / Eco.
           </li>
           <li>
             Only one boost runs at a time. Picking the same preset and tier again{' '}
@@ -434,11 +434,11 @@ const InfoPage = () => {
           </li>
           <li>
             <strong>Auto Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time, on Perks → 🤖
-            Automation): when a tier is full and waiting on its own automatic merge, activates (or
+            Automation): when a tier is full and waiting on its own automatic charge, activates (or
             stacks) your preferred preset from the <strong>biggest</strong> such tier. Choose the
-            preset on Boosters (default Standard). It never forfeits a running boost.
+            preset on Power (default Balanced). It never forfeits a running boost.
           </li>
-          <li>Megacomputers are used only to fund Boosts.</li>
+          <li>Fusions are used only to fund Boosts.</li>
         </ul>
       </Section>
 
@@ -446,8 +446,8 @@ const InfoPage = () => {
         <h2>Compute</h2>
         <p>
           A separate screen (nav <strong>Compute</strong>) with ten tiers,{' '}
-          <strong>KFlops → QFlops</strong>, bought with Purge Points; each boosts the matching
-          Factory tier. It appears once you hold {COMPUTE_FLOPS_REVEAL_PP} PP; the first tier costs{' '}
+          <strong>Cores → Superclouds</strong> (outputting KFlops → QFlops), bought with Purge Points;
+          each boosts the matching Factory tier. It appears once you hold {COMPUTE_FLOPS_REVEAL_PP} PP; the first tier costs{' '}
           {COMPUTE_FLOPS_FIRST_TIER_COST_PP.toLocaleString()} PP.
         </p>
         <ul>
@@ -470,8 +470,8 @@ const InfoPage = () => {
         </ul>
       </Section>
 
-      <Section aria-label="speed up section">
-        <h2>Speed Up</h2>
+      <Section aria-label="clock speed section">
+        <h2>Clock Speed</h2>
         <ul>
           <li>
             Spend Bytes to make every tier’s production ticks 1% faster per level, compounding — more
@@ -489,10 +489,10 @@ const InfoPage = () => {
           </li>
           <li>
             After {TIER_DEFINITIONS.length} Scale Ups in a run (the first onto {lastTierName}), the
-            Restage upgrade appears beside Speed Up: spend XP for +1% faster {lastTierName} ticks per XP
+            Restage upgrade appears beside Clock Speed: spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
             It resets every other tier’s owned quantity and your Bits. A 16 PP Auto Restage
-            (Perks → Automation, after Auto Speed Up) spends it for you, every 64 s at first —
+            (Perks → Automation, after Auto Clock Speed) spends it for you, every 64 s at first —
             faster with its speed upgrades.
           </li>
         </ul>
@@ -533,7 +533,7 @@ const InfoPage = () => {
             and Purge Points are kept.
           </li>
           <li>
-            In exchange, permanently multiplies Speed Up’s per-level rate by ×1.1 for each completed
+            In exchange, permanently multiplies Clock Speed’s per-level rate by ×1.1 for each completed
             level banked (1% → 1.1% → 1.21% → …).
           </li>
           <li>
@@ -590,12 +590,12 @@ const InfoPage = () => {
         <ul>
           <li>
             <strong>Prestige</strong> is the umbrella term for every reset-for-rewards: Purge, Era
-            ascension, Reset Byte Foundry and a pool’s Data Lake reset. Purge is the Factory one.
+            ascension, Reset Byte Foundry and a pool’s Compaction. Purge is the Factory one.
           </li>
           <li>
             Available at 1 Googol Bytes (8×10^100 Bits), where production freezes until you
             Purge. Getting Auto Purge’s interval down to {OVERFLOW_MODE_MAX_INTERVAL_SECONDS} s
-            or less unlocks <strong>DeGoogol</strong>: production keeps running past 1 Googol Bytes
+            or less unlocks <strong>Overflow mode</strong>: production keeps running past 1 Googol Bytes
             and Purge becomes optional.
           </li>
           <li>
@@ -614,7 +614,7 @@ const InfoPage = () => {
           </li>
           <li>
             Resets resources, owned tiers and this run’s progress. Unlocked autobuyers stay, and
-            Foundry, Storage and Boosters progress carries over.
+            Foundry, Storage and Power progress carries over.
           </li>
           <li>
             Your first Purge uses a full-screen prompt; after that, use the Purge bar at the top
@@ -657,7 +657,7 @@ const InfoPage = () => {
             count, and owned Compute (Flops) units.
           </li>
           <li>
-            <strong>Keeps:</strong> automation unlocks and pause settings, DeGoogol, the main-game
+            <strong>Keeps:</strong> automation unlocks and pause settings, Overflow mode, the main-game
             unlock, the Prestige museum, the Compute screen, Flops autobuyer unlocks, Eons and
             hyperscalers. Era <em>N</em> also unlocks the <em>N</em>th Compute tier’s autobuyer for
             free.

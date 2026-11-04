@@ -131,12 +131,12 @@ const ComputeFlopsPage = ({ game }) => {
           const factoryTier = tierNameById[flopTier.boostsTierId] ?? flopTier.boostsTierId
 
           return (
-            <TierRow key={flopTier.id} aria-label={`${flopTier.name} compute tier`}>
+            <TierRow key={flopTier.id} aria-label={`${flopTier.name} · ${flopTier.outputLabel} compute tier`}>
               <TierName>
-                {flopTier.name}
+                {flopTier.name} · {flopTier.outputLabel}
               </TierName>
               <BuyButton
-                aria-label={`buy ${flopTier.name} for ${formatAmount(cost)} Purge Points`}
+                aria-label={`buy ${flopTier.name} (${flopTier.outputLabel}) for ${formatAmount(cost)} Purge Points`}
                 disabled={!revealed || !canBuy}
                 onClick={() => actions.buyComputeFlopsTier(flopTier.id)}
                 title={
