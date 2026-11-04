@@ -491,16 +491,16 @@ live inside the selected tier):
      - **Row 2** (`TierMergeRow`) is progressively disclosed (`showDetail`): rendered only for the
        armed tier, or when that tier is merging, a merge is startable/possible, reserve slots hold
        tokens, or (pre-auto) Auto-charge unlock progress is above 0 — otherwise the tier is one line.
-       For every tier except the last (Megacomputer, no row 2 at all —
+       For every tier except the last (Fusion, no row 2 at all —
        see issue #280's "Out of scope" — though its row 1 is still Boost-selectable, the only place
-       a Megacomputer has any use at all):
-       - **Before that boundary's auto-merge is unlocked:** an instant Merge button (`TierActionButton`,
+       a Fusion has any use at all):
+       - **Before that boundary's auto-charge is unlocked:** an instant Charge up button (`TierActionButton`,
          `flex: 1 1 0; width: 100%` — fills exactly half the row, the same "two equal-width buttons"
          look `MainPage`'s own tier-row Buy/Upgrade pair uses, rather than a small icon-only square —
          `variant="prestige"`, visible content "⬆ 8→1 <Output>", `aria-label` spelling out the full action
          e.g. "charge up 8 batteries into 1 pack") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
          tier is held and the produced tier is under its effective cap (`getComputeFieldEffectiveCap` — 18
-         once that tier's own auto-merge is unlocked), calling the matching
+         once that tier's own auto-charge is unlocked), calling the matching
          `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-charge button filling the
          other half (`TierActionButton`, `variant="info"`, `$progress` set to the live percentage
          toward its own unlock cost — the same `Button` `progressFill` mechanic Factory's own Buy
@@ -512,19 +512,19 @@ live inside the selected tier):
        - **Once unlocked:** a `ReserveSlotsRow` — a single `<button>` wrapping `COMPUTE_MERGE_RESERVE_CAP`
          (8) `ReserveSlot` squares — reading `getComputeReserveHeld(state, tierIndex)` (0..8), NOT an
          atomic empty/full toggle: a squares fills in one at a time as the entity's own held count
-         keeps growing past its primary 10 (via continued Booster purchases or a lower-tier merge),
-         up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a merge is actually in flight
+         keeps growing past its primary 10 (via continued Booster purchases or a lower-tier charge),
+         up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a charge is actually in flight
          the reserve instead reads as fully committed regardless of the live count (which has by then
          dropped back toward 10 and may be accumulating the next batch) — a `MergeCue` on its left always
          names it ("🤖 Auto-charge", muted), switching to an accent "🤖 ⬆ 8→1 <output>" (plus accent
-         border/raised background) while clicking would INSTANTLY merge 8 → 1 ("slots are the
+         border/raised background) while clicking would INSTANTLY charge 8 → 1 ("slots are the
          button"), calling the matching `game.actions.startCompute*Merge` action, enabled once
          `isCompute*MergeStartAvailable` allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the
          normal + reserve slots and room under the output's effective cap, counting the 1 an in-flight
-         automatic merge still owes — `isComputeMergeStartAvailableAtBoundary`).
+         automatic charge still owes — `isComputeMergeStartAvailableAtBoundary`).
          `aria-label`: "instantly charge up 8 <input> into 1 <output>, N/8 auto-charge slots filled" (or
          ", auto-charge in progress, <time> left") when available, "<Tier> auto-charge in progress, <time> left" while an automatic charge runs, else
-         "<Tier> auto-charge slots, N/8 filled". While an automatic merge is in
+         "<Tier> auto-charge slots, N/8 filled". While an automatic charge is in
          flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
          inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
          live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` filled count. There is

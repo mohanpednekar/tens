@@ -10,16 +10,17 @@ state each is currently in.
 Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open byte foundry`) →
 **Power** (`open power`, page id `'boosters'`, once `isComputeCoreConversionUnlocked`) →
 **Compute** (`open compute`, page id `'compute'`, once `isComputeFlopsPageRevealed`) →
-**Factory** (`open byte factory`, page id `'game'`, only once `mainGameUnlocked`) → **Guide**
-(`open guide`, always) → **More** (`open more menu`, always — opens `AppMenu`). Storage is
-**not** a top-level item — it lives under Foundry as continuous Memory + Disk sections on the
+**Factory** (`open byte factory`, page id `'game'`, only once `mainGameUnlocked`) → **Perks**
+(`open perks`, once first Prestige/Era) → **More** (`open more menu`, always — opens `AppMenu`,
+which holds Guide / Milestones / Settings). Storage is
+**not** a top-level item — it lives under Foundry as continuous Data Stream + Disk sections on the
 same screen.
 Active item uses `aria-current="page"` plus accent/surface styling from theme tokens. Exports
 `APP_NAV_BOTTOM_PAD` so `App.jsx`'s `PageShell` can reserve the same clearance the fixed bar
 occupies (including `env(safe-area-inset-bottom)`). Takes `{ currentPage, onNavigate, onOpenMore,
 showTiers, showBoosters, showComputeFlops, moreOpen, attention }`. `attention` is a map of page
 id → `'high'` | `'normal'` | false from `game/navAttention.getNavAttention` (Storage cues fold
-into `foundry`; Boosters use `boosters`; Compute Flops affordability uses `compute`; high =
+into `foundry`; Power uses `boosters`; Compute Flops affordability uses `compute`; high =
 larger pulsing green dot).
 
 ## `AppMenu/index.jsx`

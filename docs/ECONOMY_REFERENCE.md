@@ -1200,18 +1200,18 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
 
    **`ComputePage` shows two rows per tier** (issue #321): row 1 is the tier's name/symbol plus
    `COMPUTE_ENTITY_CAP` (10) normal-slot squares — always reading `min(held, 10)/10`, never
-   overflowing past "10/10" even once auto-merge is unlocked and the entity itself has grown into its
-   own reserve (the "extra" shows up in row 2 instead); row 2 is, before that boundary's auto-merge is
-   unlocked, an instant `TierActionButton` Merge (disabled below `COMPUTE_MERGE_RATIO` held) plus an
+   overflowing past "10/10" even once auto-charge is unlocked and the entity itself has grown into its
+   own reserve (the "extra" shows up in row 2 instead); row 2 is, before that boundary's auto-charge is
+   unlocked, an instant `TierActionButton` Charge up (disabled below `COMPUTE_MERGE_RATIO` held) plus an
    Unlock Auto-charge `TierActionButton` (disabled below `COMPUTE_ENTITY_CAP` of the output entity
    held, showing a live `$progress` fill and its own held/cap figure toward that cost) — or, once
    unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot squares themselves, with no separate
    button: clicking that row ("🤖 Auto-charge", or "🤖 ⬆ 8→1 <output>" while available) instantly
-   merges 8 → 1 ("slots are the button"), showing a countdown while an automatic merge is in flight, or gradually filling (`getComputeReserveHeld`) while accumulating
+   charges 8 → 1 ("slots are the button"), showing a countdown while an automatic charge is in flight, or gradually filling (`getComputeReserveHeld`) while accumulating
    toward the next automatic trigger. Cells' (`computeCores`) own row 2 follows the identical charge-boundary shape as
    every other tier (Cell → Battery) — obtaining Cells themselves happens on Foundry's own
    `DataLakePanel` (its Booster-conversion control, see "Buying Boosters" above), not on `ComputePage`
-   at all. Megacomputer (the last tier) has no row 2 at all — nothing to merge into or automate past it.
+   at all. Fusion (the last tier) has no row 2 at all — nothing to charge into or automate past it.
 
    A new, permanent, one-time reveal latch, `intro.computeMergePageUnlocked` (defaults `false`,
    never re-clears once set, carried over unchanged by every real Prestige exactly like the
