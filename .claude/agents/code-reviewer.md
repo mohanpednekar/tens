@@ -67,11 +67,11 @@ documented invariants the diff could plausibly violate. The recurring high-value
   a possibly-fractional multiplier must be floored ("Multiplier outcomes are floored"), while
   attempt-budget accumulators are deliberately fractional and must **not** be floored.
 - **Frozen-state discipline**: once `isProductionFrozen`, every mutating action except
-  `rebootGame` (and Auto-Prestige's budget accumulation) must no-op — check any new action
+  `purgeGame` (and Auto-Prestige's budget accumulation) must no-op — check any new action
   respects this in the engine, not just via a disabled button.
-- **Prestige reset boundary**: which state is wiped by `rebootGame` vs. permanent
+- **Prestige reset boundary**: which state is wiped by `purgeGame` vs. permanent
   meta-progression is enumerated in `docs/ECONOMY_REFERENCE.md`'s "Game state shape" section — a new
-  state field must explicitly pick a side, and `rebootGame`/`createInitialGameState`/`storage.js`
+  state field must explicitly pick a side, and `purgeGame`/`createInitialGameState`/`storage.js`
   migration must all agree.
 - **Save-data compatibility** (`src/game/storage.js`): renamed/removed/added state keys need
   migration coverage so an existing player's save loads without silently orphaning data.

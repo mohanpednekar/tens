@@ -201,15 +201,15 @@ Used on ByteFoundryPage's `DataStreamCard` (glow + badge after the Speed figure,
 
 Styled `<button type="button">` on/off switch (pill track + sliding knob; `$on` drives the visual,
 `theme.color.good` when on / `textMuted` when off; reduced-motion aware). Callers pass
-`aria-pressed` and an `aria-label` for the accessible name. Used by `BuyMaxToggle` and every Perks →
-Toggles automation row.
+`aria-pressed` and an `aria-label` for the accessible name. Used by `BuyMaxToggle` and every owned Perks →
+Automation row.
 
 ## `BuyMaxToggle/index.jsx`
 
 `{ game }` — the Buy max mode toggle. Renders nothing until `isBuyMaxUnlocked(game.state)` (first
 Prestige or any Era ascension); then a `components/Switch` (`aria-label="Toggle buy max mode"`,
 `aria-pressed`, `$on`) that calls
-`game.setBuyMaxMode(!game.buyMaxMode)`. Used only on Perks → 🎛 Toggles (`pages/PerksPage`'s Purchasing row); mechanic in
+`game.setBuyMaxMode(!game.buyMaxMode)`. Used only on Perks → ✦ Prestige (`pages/PerksPage`'s Purchasing row); mechanic in
 `docs/ECONOMY_REFERENCE.md`'s "Buy max mode".
 
 ## `ConfirmDialog/index.jsx`

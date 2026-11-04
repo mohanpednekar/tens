@@ -12983,6 +12983,28 @@
       "source_location": "L2"
     },
     {
+      "id": "src_save_migration_migratetov3",
+      "label": "migrateToV3.js",
+      "_origin": "ast",
+      "community": 19,
+      "community_name": "storage.js",
+      "file_type": "code",
+      "norm_label": "migratetov3.js",
+      "source_file": "src/save-migration/migrateToV3.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_save_migration_migratetov3_migratetov3",
+      "label": "migrateToV3()",
+      "_origin": "ast",
+      "community": 19,
+      "community_name": "storage.js",
+      "file_type": "code",
+      "norm_label": "migratetov3()",
+      "source_file": "src/save-migration/migrateToV3.js",
+      "source_location": "L29"
+    },
+    {
       "id": "src_save_migration_detectlegacy",
       "label": "detectLegacy.js",
       "_origin": "ast",
@@ -121218,6 +121240,17 @@
       "context": "import",
       "source_file": "src/components/DataLakePanel/index.jsx",
       "source_location": "L1",
+      "weight": 1
+    },
+    {
+      "source": "src_save_migration_migratetov3",
+      "target": "src_save_migration_migratetov3_migratetov3",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "src/save-migration/migrateToV3.js",
+      "source_location": "L29",
       "weight": 1
     }
   ],

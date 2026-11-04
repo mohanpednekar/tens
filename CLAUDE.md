@@ -10,14 +10,14 @@ changing a formula, workflow, or mechanic a past iteration may already have trie
 **Tens** — a React incremental game; every mechanic (costs, production, prestige) is themed around
 powers of ten. No routing library, no backend — state lives in React and persists to `localStorage`.
 `App.jsx` switches top-level screens via a plain `useState` toggle plus a shared bottom `AppNav`
-(Foundry → Boosters → Compute → Factory → Perks → Guide → More) — not a router (see "Architecture"):
+(Foundry → Boosters → Compute → Factory → Perks → More) — not a router (see "Architecture"):
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
-`MainPage` (tier ladder), `PerksPage` (after first Prestige: 🔓 Unlocks / ⏫ Upgrades / 🎛 Toggles icon
-tabs — PP purchases, autobuyer milestones, Buy max + automation pause toggles), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Boosters
+`MainPage` (tier ladder), `PerksPage` (after first Prestige: 🤖 Automation / ✦ Prestige icon
+tabs — one row per automation spanning unlock → pause → speed; Double PP, speed bonus, DeGoogol, Buy max), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Boosters
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Memory + Storage sections on the same screen (no
-second-level tabs). Guide and More (Milestones / Settings) are always available, including during the
+second-level tabs). More (Guide / Milestones / Settings) is always available, including during the
 Byte Foundry gate; only Factory stays progress-gated. A third More entry, **Dev Mode**
 (`DevModePage`), renders only in a dev build (`import.meta.env.DEV`) — see "Dev Mode".
 
@@ -439,9 +439,9 @@ src/
                                DESIGN_HISTORY.md "Save persistence".
   components/
     AppNav/index.jsx        ← fixed bottom bar, progression order Foundry → Boosters → Compute → Factory →
-                               Perks → Guide → More; Factory omits during the Foundry gate (Guide/More stay);
+                               Perks → More; Factory omits during the Foundry gate (More stays);
                                green attention dots via game/navAttention.js
-    AppMenu/index.jsx       ← More sheet — Milestones / Settings (always reachable; Reset / Reset Byte
+    AppMenu/index.jsx       ← More sheet — Guide / Milestones / Settings (always reachable; Reset / Reset Byte
                                Foundry are Settings → Danger zone only)
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic `variant`
                                prop resolved against theme color tokens, deprecated raw `color` prop
@@ -457,9 +457,9 @@ src/
     BoostTimerBar/index.jsx ← active Compute Boost timer bar (Pop/Forfeit · bar · Stack), shared by ComputePage and MainPage's header
     SpeedDetailsPopover/index.jsx ← non-modal portal panel behind every Foundry ⚡ speed (Data Stream, running upgrade, each pool)
     LeadIcon/index.js       ← a line's leading emoji in a fixed-size, aria-hidden box (Foundry tile rows)
-    Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`): Perks → Toggles, Buy max
+    Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`): Perks automation rows, Buy max
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums
-    BuyMaxToggle/index.jsx  ← Buy max mode toggle (Perks → Toggles only); renders nothing until
+    BuyMaxToggle/index.jsx  ← Buy max mode toggle (Perks → Prestige only); renders nothing until
                                `isBuyMaxUnlocked` (first Prestige). See "Buy max mode" below
     ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); SettingsPage's Era ascension
     OfflineProgressNotice/index.jsx ← the "Welcome back!" notice (`.jsx`), shared by MainPage and
@@ -480,8 +480,8 @@ src/
     MainPage/index.jsx      ← the tier ladder (see "Architecture"). Takes `{ game }`.
                                No second-level tabs. Full reference: `docs/MAINPAGE_REFERENCE.md`
     PerksPage/index.jsx     ← page id `'perks'`, AppNav item once `isPerksPageRevealed` (first Prestige/
-                               Era). Takes `{ game, focusNonce }`. Icon tabs 🔓 Unlocks / ⏫ Upgrades / 🎛
-                               Toggles — detail + tab dots: `docs/MAINPAGE_REFERENCE.md`
+                               Era). Takes `{ game, focusNonce }`. Icon tabs 🤖 Automation / ✦ Prestige
+                               (feature-grouped) — detail + tab dots: `docs/MAINPAGE_REFERENCE.md`
     InfoPage/index.jsx      ← the Guide page (Architecture 5); takes no navigation props (AppNav is the exit)
     MilestonesPage/index.jsx ← Chapters / Era ascension status (Architecture 6)
     SettingsPage/index.jsx  ← Supporter pack, save slots, Prestige museum, Era ascension, Appearance,
@@ -635,7 +635,7 @@ Strict three-layer separation:
    open-* links. Full layout: `docs/MAINPAGE_REFERENCE.md`.
 4. **`ByteFoundryPage/index.jsx`** — the tap screen, a pure renderer taking `{ game, focusNonce }`; how a
    save's first Prestige cycle earns its first Kilobytes. A mandatory gate while `intro.mainGameUnlocked`
-   is false (AppNav omits Factory; Guide/More stay), permanently latched true the instant Storage's
+   is false (AppNav omits Factory; More stays), permanently latched true the instant Storage's
    capacity threshold ("1 KiB") is crossed (`latchMainGameUnlocked`/`isStorageUnlocked`) — one-time-ever,
    never resets. Once latched, the Data Stream tile itself is the tap target (`actions.tapIntroBit`).
    Shows Data Stream (shared Combine/Speed/Capacity + Provision Disk in its own card) then one `PoolCard`
@@ -674,9 +674,9 @@ Strict three-layer separation:
    Autobuyers, Milestones, Prestige, Offline progress, Era ascension). Numbers come from the same `engine.js`/`layers.js`
    constants the game uses, so they can't drift. Reads no `useIncrementalGame` state — only pure
    constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
-   import) — the **only** in-app version surface. Reached via AppNav's Guide item.
+   import) — the **only** in-app version surface. Reached via AppNav → More → Guide.
 6. **`MilestonesPage/index.jsx`** — Chapters / Era ascension status screen (autobuyer unlock
-   milestones live once, on Perks → Unlocks — not repeated here). Chapters: the first Kilobyte, Go Googol, Open
+   milestones live once, on Perks → Automation — not repeated here). Chapters: the first Kilobyte, Go Googol, Open
    Compute, DeGoogoled, Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always
    reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
@@ -822,7 +822,7 @@ constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about
 formula/gate a past iteration may already have tried and rejected (e.g. the `<=` vs. `===`
 bank-redeemability check, the flat vs. dynamic transfer cost).
 
-**Buy max mode** (unlocked after the first Prestige, `isBuyMaxUnlocked`; toggled on Perks → Toggles) — a per-device toggle
+**Buy max mode** (unlocked after the first Prestige, `isBuyMaxUnlocked`; toggled on Perks → Prestige) — a per-device toggle
 (`tens_buy_max_mode`, not game state) making each manual leveled purchase buy every affordable level:
 `buyTierMaxLevels` for Factory tiers (FULL levels only; partial progress or an unaffordable full level
 falls back to the ordinary single-level click) and `repeatPurchaseMax` for single-level ladders.

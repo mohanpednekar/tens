@@ -27,11 +27,11 @@ test('an already-unlocked tier autobuyer stays unlocked after a reload', async (
 
   await page.getByRole('button', { name: /^open perks$/i }).click()
 
-  const unlockRow = page.locator('[aria-label="Kilobytes PP unlocks"]')
-  await expect(unlockRow).toBeVisible()
+  const row = page.locator('[aria-label="Kilobytes autobuyer"]')
+  await expect(row).toBeVisible()
 
-  // The autobuyer was already unlocked in the seeded save — it must read as unlocked, not locked
-  // (a locked badge would mean the reload silently relocked it).
-  await expect(unlockRow.getByLabel(/^kilobytes's autobuyer unlocked at purge 1$/i)).toBeVisible()
-  await expect(unlockRow.getByLabel(/^kilobytes's autobuyer unlocks at purge/i)).toHaveCount(0)
+  // The autobuyer was already unlocked in the seeded save — its row must show the pause Switch, not
+  // a locked milestone badge (which would mean the reload silently relocked it).
+  await expect(row.getByRole('button', { name: /^kilobytes's autobuyer$/i })).toBeVisible()
+  await expect(row.getByLabel(/^kilobytes's autobuyer unlocks at purge/i)).toHaveCount(0)
 })

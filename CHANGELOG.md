@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Perks regrouped by feature.** The 🔓 Unlocks / ⏫ Upgrades / 🎛 Toggles tabs are now 🤖 Automation and ✦ Prestige. Each automation is a single row that goes from its milestone or PP unlock to a pause switch, its current interval and its speed upgrade — no more hopping between three tabs to manage one automation. Double PP, the production speed bonus, DeGoogol and Buy max live on Prestige (the speed bonus now stays listed with a ✓ once bought).
+- **Perks automation is a compact grid.** A fully upgraded automation is just its name and a pause switch on one line, each tier's tickspeed autobuyer and autobuyer share one line in the same left/right positions as that tier's Factory row (tiers shown by symbol: KB, MB, …); a terse interval (`64s`, `×8`) sits inline and the upgrade button appears only while there's something left to buy. Global automations drop the redundant "Auto" (Speed Up, Restage, …) and fit on a single line, button included (a very long cost drops to its own line rather than cutting the name).
+- **Guide moved into the More menu**; the bottom bar is now Foundry → Boosters → Compute → Factory → Perks → More.
+- **Level numbers are no longer shown** (Perks rows, Double PP, Speed Up) — only the effect, interval and cost.
+- **Autobuyer speed upgrades now start at 100 PP** for every tier, for both tier autobuyers and tier tickspeed autobuyers (previously 1 PP and 2 PP), still doubling per level.
+- **Autobuyer bulk now goes up to 1024 levels per attempt** (was 512); Buy max's per-click safety cap is 1024 to match.
 - **Reboot is now called Purge, and PP are Purge Points.** Same reset, same rewards; existing saves are unaffected.
 - **Auto Restage now unlocks after Auto Speed Up, alongside Auto Scale Up** — buy either first; Auto Overclock now needs both. Auto Restage also fires on its own interval (64 s to start) with a speed upgrade chain on Perks → Upgrades, like the other automations. Saves that already own it keep it.
 - **Perks automation names and layout made consistent.** Every automation is now named `Auto <feature>` (Tickspeed Autobuyer → Auto Speed Up; Auto-Reboot → Auto Purge; Auto-Boost → Auto Boost), Compute Automation is now Booster Automation, Unlocks and Toggles list automations in the same order, every row's icon sits in a fixed-width cell so names line up, and Production speed bonus now uses 📈 instead of sharing Overclock's 🚀.
