@@ -333,7 +333,7 @@ const computeInitialGame = () => {
 
   const dismissOfflineProgress = useCallback(() => setOfflineProgress(null), [])
 
-  // Rewarded-video bonus on the "Welcome back!" notice: tops one offline catch-up up from 50% to
+  // Rewarded-video bonus on the "Resumed from sleep" notice: tops one offline catch-up up from 50% to
   // 100% speed (applyOfflineRewardBonus). Keyed on the summary object the notice was showing when
   // the video started, so it still pays out if the notice auto-dismissed during the video, and can
   // never be claimed twice for the same absence.

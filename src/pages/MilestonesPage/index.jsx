@@ -6,9 +6,9 @@ import {
 import { ERA_ELIGIBILITY_PP } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
 
-// Standalone Milestones screen — Chapters and Era ascension status (autobuyer unlock milestones live
-// once, on Perks → Automation); reachable from every screen via AppNav → More without requiring the main game to be unlocked
-// first (Chapters in particular is useful during the Foundry gate).
+// Standalone Releases screen (page id 'milestones') — story Releases (formerly Chapters) and Reboot
+// status (autobuyer unlock milestones live once, on Firmware → Automation); reachable from every screen via AppNav → More without requiring the main game to be unlocked
+// first (Releases in particular is useful during the Foundry gate).
 
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));
@@ -63,6 +63,10 @@ const Row = styled.div`
   }
 `
 
+const Subtitle = styled.span`
+  color: ${props => props.theme.color.textMuted};
+`
+
 const Badge = styled.span`
   color: ${props => props.$color ?? props.theme.color.textMuted};
   font-size: 0.82em;
@@ -77,29 +81,31 @@ const MilestonesPage = ({ game }) => {
   const eonsBalance = state.eons?.balance ?? 0
   const eraEligible = isEraEligible(state)
   const chapters = [
-    { label: 'The first Kilobyte', reached: !!state.intro?.mainGameUnlocked },
-    { label: 'Go Googol', reached: (purge.count ?? 0) > 0 },
-    { label: 'Open Compute', reached: !!state.computeFlops?.pageUnlocked },
-    { label: 'DeGoogoled', reached: isOverflowModeUnlocked(state) },
-    { label: 'Ascend an Era', reached: eraCount > 0 },
+    { version: 'v1.0', label: 'The first Kilobyte', reached: !!state.intro?.mainGameUnlocked },
+    { version: 'v2.0', label: 'Go Googol', reached: (purge.count ?? 0) > 0 },
+    { version: 'v3.0', label: 'Open Compute', reached: !!state.computeFlops?.pageUnlocked },
+    { version: 'v4.0', label: 'DeGoogoled', reached: isOverflowModeUnlocked(state) },
+    { version: 'v5.0', label: 'First Reboot', reached: eraCount > 0 },
   ]
 
   return (
     <RootDiv>
       <Header>
-        <h1>Milestones</h1>
+        <h1>Releases</h1>
       </Header>
 
-      <List aria-label="milestones page">
-        <Category aria-label="chapters category">
-          <CategoryHeading>Chapters</CategoryHeading>
+      <List aria-label="releases page">
+        <Category aria-label="releases category">
+          <CategoryHeading>Releases</CategoryHeading>
           {chapters.map(chapter => (
-            <Row key={chapter.label} aria-label={`${chapter.label} chapter`}>
-              <span>{chapter.label}</span>
+            <Row key={chapter.label} aria-label={`${chapter.version} ${chapter.label} release`}>
+              <span>
+                <strong>{chapter.version}</strong> <Subtitle>{chapter.label}</Subtitle>
+              </span>
               <Badge
                 $color={chapter.reached ? theme.color.good : theme.color.disabled}
                 $dimmed={!chapter.reached}
-                aria-label={`${chapter.label} chapter ${chapter.reached ? 'complete' : 'not yet complete'}`}
+                aria-label={`${chapter.version} ${chapter.label} release ${chapter.reached ? 'complete' : 'not yet complete'}`}
               >
                 {chapter.reached ? '✅' : '🔒'}
               </Badge>
@@ -107,31 +113,31 @@ const MilestonesPage = ({ game }) => {
           ))}
         </Category>
 
-        <Category aria-label="era ascension category">
-          <CategoryHeading>Era ascension</CategoryHeading>
-          <Row aria-label="eras ascended status">
-            <span>Eras ascended</span>
-            <Badge $color={theme.color.good} aria-label={`${eraCount} eras ascended`}>
+        <Category aria-label="reboot category">
+          <CategoryHeading>Reboot</CategoryHeading>
+          <Row aria-label="reboots status">
+            <span>Reboots</span>
+            <Badge $color={theme.color.good} aria-label={`${eraCount} reboots`}>
               {eraCount}
             </Badge>
           </Row>
-          <Row aria-label="eons balance status">
-            <span>Eons</span>
-            <Badge $color={theme.color.good} aria-label={`${eonsBalance} eons held`}>
+          <Row aria-label="kernels balance status">
+            <span>Kernels</span>
+            <Badge $color={theme.color.good} aria-label={`${eonsBalance} kernels held`}>
               {eonsBalance}
             </Badge>
           </Row>
-          <Row aria-label="era ascension eligibility">
-            <span>Ascend when ready</span>
+          <Row aria-label="reboot eligibility">
+            <span>Reboot when ready</span>
             {eraEligible ? (
-              <Badge $color={theme.color.good} aria-label="era ascension eligible now">
+              <Badge $color={theme.color.good} aria-label="reboot eligible now">
                 ✅ Eligible
               </Badge>
             ) : (
               <Badge
                 $color={theme.color.disabled}
                 $dimmed
-                aria-label={`era ascension locked — requires ${ERA_ELIGIBILITY_PP.toExponential(0).replace('+', '')} unspent Purge Points`}
+                aria-label={`reboot locked — requires ${ERA_ELIGIBILITY_PP.toExponential(0).replace('+', '')} unspent Purge Points`}
               >
                 🔒 1 Googol PP
               </Badge>

@@ -1,7 +1,7 @@
 import styled from 'styled-components'
 
 // Accessible on/off switch (a <button> with aria-pressed): a pill track + sliding knob, used for
-// every Perks automation pause/resume control and Buy max. Callers pass `$on` (visual state) alongside
+// every Firmware automation pause/resume control and Buy max. Callers pass `$on` (visual state) alongside
 // `aria-pressed`; the accessible name comes from the caller's aria-label. The off track uses
 // `textMuted` (not `borderStrong`) so the control clears WCAG 1.4.11's 3:1 against `surface` in both
 // themes (borderStrong measured ~1.7:1); see tokens.contrast.test.js.

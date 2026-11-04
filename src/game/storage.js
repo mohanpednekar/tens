@@ -197,7 +197,7 @@ export const getActiveSlotId = () => (isDevModeActive() ? DEV_SLOT_ID : loadSave
 
 export const isSupporterUnlocked = () => Boolean(loadSavesMeta().supporterUnlocked)
 
-/** Permanently unlocks the Supporter pack (slots + museum + ops). Idempotent. */
+/** Permanently unlocks the Supporter pack (slots + System log + Task Manager). Idempotent. */
 export const grantSupporterUnlock = (source = 'code') => {
   const meta = loadSavesMeta()
   if (meta.supporterUnlocked) {
@@ -284,7 +284,7 @@ export const renameSaveSlot = (slotId, name) => {
 
 /**
  * Redeems the placeholder supporter unlock code. Unlocks the full Supporter pack
- * (extra save slots, Prestige museum, Ops dashboard). Real payment replaces this later.
+ * (extra save slots, System log, Task Manager). Real payment replaces this later.
  */
 export const redeemSupporterUnlockCode = code => {
   if (normalizeUnlockCode(code) !== SUPPORTER_UNLOCK_CODE) {
@@ -326,7 +326,7 @@ export const buildResetActiveSlotConfirmMessage = () => {
 export const buildResetByteFoundryConfirmMessage = () => {
   const name = getActiveSlotDisplayName()
   return (
-    `Reset Byte Foundry on "${name}"?\n\n` +
+    `Reformat Byte Foundry on "${name}"?\n\n` +
     `Use this if Capacity (or Storage / Compute) went too far.\n\n` +
     `Erased: Data Stream Buffer, Data Stream Capacity (and pool staging), Data Stream upgrade progress, all Disks/Storage, and all Compute. Multipliers restart from scratch.\n\n` +
     `Convenience: Compile, Upgrade Data Stream, and Provision Disk all auto-press again up to your pre-reset highs as soon as each is affordable — you do not need to click them. Capacity remains on its doubling ladder up to the active pool ceiling.\n\n` +

@@ -142,7 +142,7 @@ const InfoPage = () => {
   return (
     <RootDiv>
       <Header>
-        <h1>Tens — Guide</h1>
+        <h1>Tens — Manual</h1>
         <VersionText>v{version}</VersionText>
       </Header>
 
@@ -164,9 +164,36 @@ const InfoPage = () => {
             Purge — unless you have unlocked Overflow mode (see Purge).
           </li>
           <li>
-            After your first Purge, the <strong>Buy max</strong> toggle (Perks → ✦ Prestige) makes
+            After your first Purge, the <strong>Buy max</strong> toggle (Firmware → ✦ Prestige) makes
             each purchase buy as many levels as you can afford. Tiers buy full levels only — a
             partly bought level takes its own click.
+          </li>
+        </ul>
+      </Section>
+
+      <Section aria-label="prestige ladder section">
+        <h2>Prestige ladder</h2>
+        <p>
+          Each layer is a bigger reset than the one below it, and keeps everything the layer below
+          keeps.
+        </p>
+        <ul>
+          <li>
+            <strong>Purge</strong> — at 1 Googol Bytes. <em>Resets:</em> Bits and resources, owned
+            Factory tiers, Scale Ups, Overclocks, Clock Speed and the Data Stream balance.{' '}
+            <em>Keeps:</em> Purge Points, Compression levels, automation unlocks, Overflow mode, the
+            Byte generator, Capacity, Disks, Data Lakes, Compute entities, owned Compute (Flops)
+            units and the System log.
+          </li>
+          <li>
+            <strong>Reboot</strong> — at 1 Googol unspent PP. <em>Resets:</em> everything Purge
+            resets, plus unspent PP, the Purge count, Compression levels, owned Compute (Flops) units,
+            and the whole Foundry (Capacity, Disks, Data Lakes, Compute entities).{' '}
+            <em>Keeps:</em> automation unlocks, Overflow mode, the main-game unlock, the System log,
+            Flops autobuyer unlocks, Kernels and hyperscalers. Awards Kernels.
+          </li>
+          <li>
+            <strong>Reinstall</strong> — a future layer above Reboot, not yet in the game.
           </li>
         </ul>
       </Section>
@@ -175,7 +202,7 @@ const InfoPage = () => {
         <h2>Byte Foundry</h2>
         <p>
           Every new save starts here, before any {firstTierName} exist. Unlocking the main game is
-          permanent — no Purge or Era ascension sends you back through this gate. Reopen the
+          permanent — no Purge or Reboot sends you back through this gate. Reopen the
           Foundry any time from the bottom nav. The Data Stream’s Capacity uses binary units (KiB,
           MiB, …; 1 KiB = 1,024 Bytes); Storage pools, Disks and Data Lakes use decimal units (KB,
           MB, …; 1 KB = 1,000 Bytes).
@@ -217,7 +244,7 @@ const InfoPage = () => {
             square root); pool Bandwidth is capped by the same exponent.
           </li>
           <li>
-            <strong>Foundry reset</strong> — when every unlocked disk size is complete, this button
+            <strong>Reformat</strong> — when every unlocked disk size is complete, this button
             replaces Provision Disk. It unlocks the next disk size and raises the exponent by{' '}
             {DATA_STREAM_SPEED_EXPONENT_STEP}. The Foundry restarts from scratch, then Compile,
             Capacity, Bitrate, Disks and Data Lake upgrades/Cells are replayed automatically up to
@@ -239,8 +266,8 @@ const InfoPage = () => {
           </li>
           <li>
             <strong>Kept through Purge:</strong> the Byte generator, Capacity/Bitrate upgrades,
-            Disks, Data Lakes, every Compute entity, and the main-game unlock. Era ascension resets
-            most of this (see Era ascension).
+            Disks, Data Lakes, every Compute entity, and the main-game unlock. Reboot resets
+            most of this (see Reboot).
           </li>
           <li>Later cycles are a quick pit stop, not a full replay.</li>
         </ul>
@@ -277,7 +304,7 @@ const InfoPage = () => {
             Up to {DISK_ARRAY_LADDER_CAP} disks can be built at each size before the next size opens,
             stepping through every power of ten (1 KB → 10 KB → 100 KB → 1 MB …). Each pool holds
             three sizes; to build in a pool, every array in the earlier pools must be complete. Sizes
-            beyond those already unlocked need a Foundry reset.
+            beyond those already unlocked need a Reformat.
           </li>
         </ul>
 
@@ -310,15 +337,6 @@ const InfoPage = () => {
           </li>
           <li>Disks are permanent across Purges; a full disk stays full.</li>
         </ul>
-      </Section>
-
-      <Section aria-label="power section">
-        <h2>Power</h2>
-        <p>
-          Unlocks once the Data Stream’s Capacity reaches{' '}
-          {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}. Open it from the bottom
-          nav’s Power item.
-        </p>
 
         <h3>Data Lakes</h3>
         <ul>
@@ -346,8 +364,8 @@ const InfoPage = () => {
           <li>
             The nth Cell bought from a lake costs n units and instantly grants 1 compute entity of
             that lake’s tier (KB → Cell, MB → Battery, …). Once a pool has all of its disks built, its
-            lake buys every affordable Cell automatically for the rest of the Era — through pool
-            compactions, Foundry resets and Purges.
+            lake buys every affordable Cell automatically for the rest of the Reboot cycle — through pool
+            compactions, Reformats and Purges.
           </li>
         </ul>
 
@@ -368,6 +386,15 @@ const InfoPage = () => {
             is complete again, later pools can’t start new disk builds.
           </li>
         </ul>
+      </Section>
+
+      <Section aria-label="power section">
+        <h2>Power</h2>
+        <p>
+          Unlocks once the Data Stream’s Capacity reaches{' '}
+          {formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)}. Open it from the bottom
+          nav’s Power item. Cells come from the Data Lakes described under Storage.
+        </p>
 
         <h3>Cells and the charge chain</h3>
         <ul>
@@ -433,7 +460,7 @@ const InfoPage = () => {
             after a confirmation.
           </li>
           <li>
-            <strong>Auto Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time, on Perks → 🤖
+            <strong>Auto Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time, on Firmware → 🤖
             Automation): when a tier is full and waiting on its own automatic charge, activates (or
             stacks) your preferred preset from the <strong>biggest</strong> such tier. Choose the
             preset on Power (default Balanced). It never forfeits a running boost.
@@ -492,7 +519,7 @@ const InfoPage = () => {
             Restage upgrade appears beside Clock Speed: spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
             It resets every other tier’s owned quantity and your Bits. A 16 PP Auto Restage
-            (Perks → Automation, after Auto Clock Speed) spends it for you, every 64 s at first —
+            (Firmware → Automation, after Auto Clock Speed) spends it for you, every 64 s at first —
             faster with its speed upgrades.
           </li>
         </ul>
@@ -553,7 +580,7 @@ const InfoPage = () => {
         <ul>
           <li>
             Each tier’s autobuyer and its tickspeed autobuyer unlock automatically as your Purge
-            count grows — see Perks → 🤖 Automation for the exact thresholds.
+            count grows — see Firmware → 🤖 Automation for the exact thresholds.
           </li>
           <li>
             Once unlocked, the same row pauses or resumes it without losing it.
@@ -568,8 +595,8 @@ const InfoPage = () => {
         </ul>
       </Section>
 
-      <Section aria-label="milestones section">
-        <h2>Milestones</h2>
+      <Section aria-label="releases section">
+        <h2>Releases</h2>
         <ul>
           <li>
             <strong>Tier autobuyers:</strong> one tier per Purge, from Purge{' '}
@@ -581,7 +608,7 @@ const InfoPage = () => {
             {firstTierTickspeedAutobuyerMilestone}, then every{' '}
             {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP === 1 ? 'Purge' : `${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Purges`} after that.
           </li>
-          <li>More → Milestones tracks your story chapters and Era progress.</li>
+          <li>More → Releases tracks your story releases (v1.0 … v5.0) and Reboot progress.</li>
         </ul>
       </Section>
 
@@ -589,8 +616,8 @@ const InfoPage = () => {
         <h2>Purge</h2>
         <ul>
           <li>
-            <strong>Prestige</strong> is the umbrella term for every reset-for-rewards: Purge, Era
-            ascension, Reset Byte Foundry and a pool’s Compaction. Purge is the Factory one.
+            <strong>Prestige</strong> is the umbrella term for every reset-for-rewards: Purge, Reboot,
+            Reformat Byte Foundry and a pool’s Compaction. Purge is the Factory one.
           </li>
           <li>
             Available at 1 Googol Bytes (8×10^100 Bits), where production freezes until you
@@ -600,15 +627,15 @@ const InfoPage = () => {
           </li>
           <li>
             Awards 1 Purge Point (PP) at 1 Googol Bytes, plus 1 PP for every{' '}
-            {PRESTIGE_POWERS_PER_PP_BASE} further powers of ten in your balance. Each Double PP
+            {PRESTIGE_POWERS_PER_PP_BASE} further powers of ten in your balance. Each Compression
             upgrade halves the powers needed per PP, and once that reaches 1, doubles the PP per power.
           </li>
           <li>
-            Double PP costs 100^(level+1) PP (100, 10,000, 1,000,000, …) on Perks → ✦ Prestige and
+            Compression costs 100^(level+1) PP (100, 10,000, 1,000,000, …) on Firmware → ✦ Prestige and
             is permanent across Purges.
           </li>
           <li>
-            Spend PP on Perks for automation and bonuses — e.g. the one-time Production speed bonus
+            Spend PP on Firmware for automation and bonuses — e.g. the one-time Production speed bonus
             ({PRESTIGE_SPEED_BONUS_UNLOCK_COST.toLocaleString()} PP) gives +
             {PRESTIGE_POINT_SPEED_BONUS * 100}% production speed per unspent PP.
           </li>
@@ -623,20 +650,20 @@ const InfoPage = () => {
         </ul>
       </Section>
 
-      <Section aria-label="offline progress section">
-        <h2>Offline progress</h2>
+      <Section aria-label="sleep mode section">
+        <h2>Sleep mode</h2>
         <ul>
           <li>
             Time away (up to {formatOfflineDuration(MAX_OFFLINE_SECONDS)}) is simulated when you come
             back. Absences of {formatOfflineDuration(OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS)}{' '}
             or less run at full speed; longer ones run at{' '}
-            {OFFLINE_PROGRESS_SPEED_MULTIPLIER * 100}% speed and show a “Welcome back!” summary.
+            {OFFLINE_PROGRESS_SPEED_MULTIPLIER * 100}% speed and show a “Resumed from sleep” summary.
           </li>
         </ul>
       </Section>
 
-      <Section aria-label="era ascension section">
-        <h2>Era ascension</h2>
+      <Section aria-label="reboot section">
+        <h2>Reboot</h2>
         <ul>
           <li>
             An optional deeper reset once you hold{' '}
@@ -644,22 +671,22 @@ const InfoPage = () => {
             freezes at that point.
           </li>
           <li>
-            Each ascension awards 1 Eon plus {EON_AMPLIFIER_AWARD_PER_LEVEL} per Eon Amplifier level.
-            Ways to spend Eons are coming in a later update.
+            Each Reboot awards 1 Kernel plus {EON_AMPLIFIER_AWARD_PER_LEVEL} per Kernel Amplifier level.
+            Ways to spend Kernels are coming in a later update.
           </li>
           <li>
-            Ascend from More → Settings → Era ascension (asks for confirmation). More → Milestones
-            shows your Eras, Eons and eligibility.
+            Reboot from More → Settings → Reboot (asks for confirmation). More → Releases
+            shows your Reboots, Kernels and eligibility.
           </li>
           <li>
             <strong>Resets:</strong> Foundry upgrades and Capacity, Disks, Data Lakes, Compute
-            entities, the Factory (resources, owned tiers, Double PP level), unspent PP, Purge
+            entities, the Factory (resources, owned tiers, Compression level), unspent PP, Purge
             count, and owned Compute (Flops) units.
           </li>
           <li>
             <strong>Keeps:</strong> automation unlocks and pause settings, Overflow mode, the main-game
-            unlock, the Prestige museum, the Compute screen, Flops autobuyer unlocks, Eons and
-            hyperscalers. Era <em>N</em> also unlocks the <em>N</em>th Compute tier’s autobuyer for
+            unlock, the System log, the Compute screen, Flops autobuyer unlocks, Kernels and
+            hyperscalers. Reboot <em>N</em> also unlocks the <em>N</em>th Compute tier’s autobuyer for
             free.
           </li>
         </ul>

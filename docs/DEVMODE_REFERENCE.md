@@ -32,8 +32,8 @@ toggling on for the first time starts from a fresh `createInitialGameState()`.
 `isDevModeActive`/`setDevModeActive` persist the flag itself (`tens_dev_mode_active`) separately from
 `tens_saves_meta`, so flipping it never touches player slot bookkeeping.
 
-`DevModePage` mirrors the real game's UI: a header card with a Perks-style `Switch` (`aria-label="dev
-mode"`) and HUD-style readouts (Bits, PP, Prestiges, Era · Eons, Capacity in binary units), then three ways to
+`DevModePage` mirrors the real game's UI: a header card with a Firmware-style `Switch` (`aria-label="dev
+mode"`) and HUD-style readouts (Bits, PP, Prestiges, Era · Kernels, Capacity in binary units), then three ways to
 seed/experiment, all going through `useIncrementalGame`'s `setDevState`/`applyDevStateJson` (both
 no-op outside Dev Mode as a defense-in-depth guard, though the UI only renders them while active):
 - **Quick seed** — one-click presets (`PRESET_GROUPS` in `DevModePage`, grouped Foundry / Factory /
@@ -44,7 +44,7 @@ no-op outside Dev Mode as a defense-in-depth guard, though the UI only renders t
   on, so they can't drift.
 - **Variables** — not a hand-maintained field list: `FieldNode` recursively walks `game.state`, one
   row per leaf, nested under a collapsible `<details>` per object ancestor. Top-level keys are split
-  into AppNav-style icon tabs (Foundry / Compute / Factory / Perks / Prestige / Era) by
+  into AppNav-style icon tabs (Foundry / Compute / Factory / Firmware / Prestige / Era) by
   `stateFields.js`'s rule-based `VARIABLE_AREAS`/`getVariableAreaId` (key-pattern match, unmatched
   keys fall through to Factory — never dropped). A `type="search"` box (`collectLeaves` +
   `leafMatchesQuery`) filters every leaf across all tabs by dotted path or prettified label

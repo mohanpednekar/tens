@@ -1,10 +1,10 @@
 import styled, { css, keyframes } from 'styled-components'
 import { ATTENTION_HIGH } from 'game/navAttention'
 
-// Bottom bar order follows play progression: Foundry → Power → Compute → Factory → Perks, then More (Guide / Milestones / Settings).
+// Bottom bar order follows play progression: Foundry → Power → Compute → Factory → Firmware, then More (Manual / Releases / Settings).
 // Storage is folded into Foundry as continuous Memory + Disk sections (same Memory pool +
 // DiskArrayRow). Factory stays progress-gated; More stays available during the Foundry gate.
-// Accessible names: open byte foundry / open power / open compute / open byte factory / open perks / open more menu.
+// Accessible names: open byte foundry / open power / open compute / open byte factory / open firmware / open more menu.
 // Attention: 'high' = larger pulsing dot; 'normal' = smaller cue (game/navAttention.js).
 
 const NAV_HEIGHT = '3.25rem'
@@ -116,7 +116,7 @@ const AppNav = ({
     showBoosters && { id: 'boosters', ariaLabel: 'open power', icon: '⚡', label: 'Power', title: 'Power — Cells, charge chain, Boost' },
     showComputeFlops && { id: 'compute', ariaLabel: 'open compute', icon: '🖥', label: 'Compute', title: 'Compute — PP Flops tiers boost Factory production' },
     showTiers && { id: 'game', ariaLabel: 'open byte factory', icon: '🏭', label: 'Factory', title: 'Byte Factory — buy and produce' },
-    showPerks && { id: 'perks', ariaLabel: 'open perks', icon: '✨', label: 'Perks', title: 'Perks — automation and prestige perks' },
+    showPerks && { id: 'perks', ariaLabel: 'open firmware', icon: '🔧', label: 'Firmware', title: 'Firmware — automation and prestige upgrades' },
   ].filter(Boolean)
 
   const utilityActive = currentPage === 'info' || currentPage === 'milestones' || currentPage === 'settings' || currentPage === 'dev' || moreOpen
@@ -153,7 +153,7 @@ const AppNav = ({
         aria-label="open more menu"
         $active={utilityActive}
         onClick={onOpenMore}
-        title="Milestones, Settings"
+        title="Manual, Releases, Settings"
         type="button"
       >
         <Icon aria-hidden="true">⋯</Icon>

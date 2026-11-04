@@ -472,11 +472,11 @@ const PRESET_GROUPS = [
   },
   {
     id: 'era',
-    label: '🌌 Era',
+    label: '⏻ Reboot',
     presets: [
       {
         id: 'era-ready',
-        label: '🏆 PP → Era-ready (1 Googol)',
+        label: '🏆 PP → Reboot-ready (1 Googol)',
         apply: state => ({ ...state, purge: { ...state.purge, points: ERA_ELIGIBILITY_PP } }),
       },
     ],
@@ -563,7 +563,7 @@ const DevModePage = ({ game }) => {
     ['Bits', formatCurrency(state.resources?.base ?? 0)],
     ['Purge Points', `✦ ${formatAmount(state.purge?.points ?? 0)}`],
     ['Purges', formatAmount(state.purge?.count ?? 0)],
-    ['Era · Eons', `${formatAmount(state.era?.count ?? 0)} · ${formatAmount(state.eons?.balance ?? 0)}`],
+    ['Reboot · Kernels', `${formatAmount(state.era?.count ?? 0)} · ${formatAmount(state.eons?.balance ?? 0)}`],
     ['Capacity', formatBitsInNearestUnit(state.intro?.capacity ?? 0)],
   ]
 

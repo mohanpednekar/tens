@@ -9190,3 +9190,34 @@ slots is not a Ping), locked MB+ lakes naming Batteries not Cells, "charge it up
 "merge it down", Auto Boost waiting on an in-flight charge, and current-behavior docs that still
 called Power `⚡ Compute` / the charge chain Core/Node. Visual-regression baselines were left
 for a dedicated e2e pass — that suite is not in CI.
+
+## Naming pass (2026-11, #986)
+
+Epic #986 gave the game a coherent computing/operating-system vocabulary in three steps: #987
+renamed Reboot → Purge in code and UI (freeing "Reboot"); #988 renamed the Foundry/Power/Compute
+labels (Power, Cell → Fusion, Cores → Superclouds, Clock Speed, Bitrate, Bandwidth, Staging,
+Compile, Ping, Compact Pool, Turbo/Balanced/Eco, Overflow mode); #989 renamed the meta layer and
+chrome. Player labels only — code identifiers, state fields (`era`, `eons`, `eonAmplifier*`,
+`prestigeDoublePpLevel`, `prestigeMuseum`), page ids (`'perks'`, `'info'`, `'milestones'`,
+`'settings'`) and localStorage keys are unchanged, so no save migration was needed.
+
+Rationale for #989: the Purge → Reboot → Reinstall ladder reads as escalating resets of a machine,
+so Era ascension became **Reboot** (Eons → **Kernels**, Eon Amplifier → Kernel Amplifier); Perks
+became **Firmware** (upgrades that persist across resets); Double PP became **Compression**;
+"Foundry reset" / Reset Byte Foundry became **Reformat**; Milestones/Chapters became **Releases**
+(v1.0 – v5.0, old chapter names kept as subtitles, the last "Ascend an Era" becoming "First
+Reboot"); Prestige museum became the **System log**, Ops dashboard the **Task Manager**, Import /
+export save **Backup / Restore**; the "Welcome back!" notice reads "Resumed from sleep" with the
+mechanic named **Sleep mode**; the Guide became the **Manual**, restructured to follow the new
+names, with a Prestige ladder section after Overview and Data Lakes / Compaction moved from Power
+into Storage (they are Storage-pool mechanics fed by pool Staging). Visual-regression baselines
+still passed unchanged (the captured screens do not show the renamed nav item).
+
+**Reserved names (not yet implemented; do not reuse for other things):**
+
+- Prestige ladder: Purge → Reboot → Reinstall (currency Images, doubling as challenge runs) →
+  Migrate (permanent Architecture paths x86 / ARM / RISC-V) → Quantum (Qubits; Superposition runs
+  two Factory branches) → Singularity (endgame).
+- Side mechanics: Snapshot / Rollback, Uptime, Hotfix.
+- Others: Garbage Collector (auto-Compaction), Latency, Cache hit, Thermal throttling,
+  Parity / RAID, Lakehouse / Data Warehouse, Tape / Cold storage.

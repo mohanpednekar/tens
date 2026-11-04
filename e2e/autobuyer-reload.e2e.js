@@ -26,7 +26,7 @@ test('an already-unlocked tier autobuyer stays unlocked after a reload', async (
   await expect(kilobytesLayer).toContainText(/owned: ([5-9]\d|\d{3,})\b/i)
   await expect(kilobytesLayer.getByRole('button', { name: /^buy .*for .*completed levels/i })).toBeVisible()
 
-  await page.getByRole('button', { name: /^open perks$/i }).click()
+  await page.getByRole('button', { name: /^open firmware$/i }).click()
 
   const row = page.locator('[aria-label="Kilobytes autobuyer"]')
   await expect(row).toBeVisible()

@@ -65,7 +65,7 @@ const ManualSaveSection = ({ game }) => {
 
   return (
     <Section aria-label="manual save section">
-      <h2>Import / export save</h2>
+      <h2>Backup / Restore</h2>
       <SaveText aria-label="save JSON" onChange={e => setText(e.target.value)} placeholder="Paste save JSON here to import" value={text} />
       <Row>
         <Button onClick={doExport} type="button"><ButtonContent>Copy save</ButtonContent></Button>

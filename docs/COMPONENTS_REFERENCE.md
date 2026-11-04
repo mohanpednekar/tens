@@ -10,9 +10,9 @@ state each is currently in.
 Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open byte foundry`) →
 **Power** (`open power`, page id `'boosters'`, once `isComputeCoreConversionUnlocked`) →
 **Compute** (`open compute`, page id `'compute'`, once `isComputeFlopsPageRevealed`) →
-**Factory** (`open byte factory`, page id `'game'`, only once `mainGameUnlocked`) → **Perks**
+**Factory** (`open byte factory`, page id `'game'`, only once `mainGameUnlocked`) → **Firmware**
 (`open perks`, once first Prestige/Era) → **More** (`open more menu`, always — opens `AppMenu`,
-which holds Guide / Milestones / Settings). Storage is
+which holds Manual / Releases / Settings). Storage is
 **not** a top-level item — it lives under Foundry as continuous Data Stream + Disk sections on the
 same screen.
 Active item uses `aria-current="page"` plus accent/surface styling from theme tokens. Exports
@@ -202,15 +202,15 @@ Used on ByteFoundryPage's `DataStreamCard` (glow + badge after the Speed figure,
 
 Styled `<button type="button">` on/off switch (pill track + sliding knob; `$on` drives the visual,
 `theme.color.good` when on / `textMuted` when off; reduced-motion aware). Callers pass
-`aria-pressed` and an `aria-label` for the accessible name. Used by `BuyMaxToggle` and every owned Perks →
+`aria-pressed` and an `aria-label` for the accessible name. Used by `BuyMaxToggle` and every owned Firmware →
 Automation row.
 
 ## `BuyMaxToggle/index.jsx`
 
 `{ game }` — the Buy max mode toggle. Renders nothing until `isBuyMaxUnlocked(game.state)` (first
-Prestige or any Era ascension); then a `components/Switch` (`aria-label="Toggle buy max mode"`,
+Prestige or any Reboot); then a `components/Switch` (`aria-label="Toggle buy max mode"`,
 `aria-pressed`, `$on`) that calls
-`game.setBuyMaxMode(!game.buyMaxMode)`. Used only on Perks → ✦ Prestige (`pages/PerksPage`'s Purchasing row); mechanic in
+`game.setBuyMaxMode(!game.buyMaxMode)`. Used only on Firmware → ✦ Prestige (`pages/PerksPage`'s Purchasing row); mechanic in
 `docs/ECONOMY_REFERENCE.md`'s "Buy max mode".
 
 ## `ConfirmDialog/index.jsx`
@@ -220,7 +220,7 @@ dimmed backdrop, Escape / backdrop-click cancel. Replaces native `window.confirm
 actions so the prompt matches the rest of the UI. Takes `{ open, title, children,
 confirmLabel, cancelLabel, confirmVariant, onConfirm, onCancel, ariaLabel, confirmDisabled = false }`
 (`confirmDisabled` blocks a double confirm while async work runs; `onCancel` is read through a ref,
-so an inline arrow doesn't re-steal focus each render). Used by `SettingsPage` for Era ascension and
+so an inline arrow doesn't re-steal focus each render). Used by `SettingsPage` for Reboot and
 Cloud save's Delete account and data. Capacity ×2 on `ByteFoundryPage` does **not** use
 this component — it fires immediately on click, with no confirm prompt (see `docs/DESIGN_HISTORY.md`).
 
@@ -230,7 +230,7 @@ styled money/amount display; color from `theme.color.text`, with its own `font-v
 
 ## `OfflineProgressNotice/index.jsx`
 
-styled (`.jsx` — needs JSX) "Welcome back! ... simulated N of progress at 50% speed" notice,
+styled (`.jsx` — needs JSX) "Resumed from sleep ... simulated N of progress at 50% speed" notice,
 extracted out of `MainPage` so both `MainPage` and `ByteFoundryPage` can render it — offline progress
 (computed at mount by `useIncrementalGame.js`'s `computeInitialGame`, and again at any point
 mid-session that its live tick loop detects a real-world gap since its own last tick — see

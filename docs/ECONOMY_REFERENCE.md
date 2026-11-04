@@ -103,7 +103,7 @@ from legacy `purchased` counts.
 
 ### Buy max mode
 
-`isBuyMaxUnlocked(state)` — true once `purge.count >= 1` or `era.count >= 1` (Era ascension resets
+`isBuyMaxUnlocked(state)` — true once `purge.count >= 1` or `era.count >= 1` (Reboot resets
 the Prestige count but implies an earlier Prestige). The toggle itself is a per-device UI preference
 (`storage.js`'s `loadBuyMaxPreference`/`saveBuyMaxPreference`, key `tens_buy_max_mode`), not game
 state, so no reset path needs to carry it; `useIncrementalGame` exposes `buyMaxMode`/`setBuyMaxMode`
@@ -116,7 +116,7 @@ updated. Autobuyers and offline progress are unaffected.
   level never shares a click with full levels. `getTierMaxLevelsPreview(state, tierId)` returns
   `{ levels, cost }` for the Buy button (`levels: 0` → show the normal single-level preview).
 - **Single-level ladders** — `repeatPurchaseMax(action)` chains a one-level purchase action until it
-  returns the same reference: per-tier tickspeed, Clock Speed, Double PP, Auto Purge level, Flops tiers.
+  returns the same reference: per-tier tickspeed, Clock Speed, Compression, Auto Purge level, Flops tiers.
 - `BUY_MAX_ITERATION_CAP` (1024, `layers.js`) bounds both loops (only reachable with an Infinity
   balance — every ladder's costs rise exponentially).
 
@@ -168,11 +168,11 @@ Capacity-only" below for why the tap-mode switch reads `isStorageUnlocked` direc
 `getVisibleStoragePoolCount(state) >= 1` (the two are only EQUAL at pool 1's own threshold; for pool
 2+, `getVisibleStoragePoolCount` can already be >= 1 well before `isStorageUnlocked` would need
 checking again, since pool 1 alone already satisfies it). `purgeGame` and `buildEraIntroReset`
-(Era ascension) both now carry
+(Reboot) both now carry
 `mainGameUnlocked` forward from `state` unchanged (`state.intro?.mainGameUnlocked ??
 initial.intro.mainGameUnlocked`) instead of resetting it — the same "preserve if already true"
 pattern `resetByteFoundry` already used (see its own table row) and `computeMergePageUnlocked`
-already uses across Era ascension.
+already uses across Reboot.
 
 Nothing here ever fully "freezes" — there is no `completed`-style flag, and no cap either.
 Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
@@ -335,7 +335,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      (100): `tapIntroBit`'s post-reveal branch and `tapPoolBuffer` no-op once the stored bonus is
      already at that cap, and each tap adds `min(BONUS_CAP, prior + FILL_MULTIPLIER_TAP_BONUS_PERCENT)` (5).
    - Both bonus fields, like `computeBoostType`, are NOT permanent — they reset to 0/`{}` on every
-     real Prestige, Era ascension, and Reset Byte Foundry, but are carried through Scale Up/Overclock
+     real Prestige, Reboot, and Reformat Byte Foundry, but are carried through Scale Up/Overclock
      untouched (the whole `intro` object passes through those unchanged either way).
    - `intro.bits` is no longer always an integer as a result — `tickIntroProduction`'s own per-tick
      delivery is now continuous (`getDataStreamEffectMultiplier` is rarely exactly 1); every existing
@@ -365,7 +365,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    capacity (a full Buffer, drained on purchase) and doubles `intro.capacity`
    (`INTRO_CAPACITY_DOUBLING_STEP`). Speed is purely *derived* from the Speed basis (`intro.speedCapacity`, falling back to Capacity) — never
    priced directly — via `getDataStreamSpeedBytesPerSecond(basisBits)` = `(basisBytes) ** e` B/s, with `e = getDataStreamSpeedExponent(intro)` =
-   `DATA_STREAM_SPEED_EXPONENT_BASE` (0.5) + `DATA_STREAM_SPEED_EXPONENT_STEP` (0.01) × (`getUnlockedDiskSteps(intro)` − 1), so each Speed upgrade multiplies Speed by 2^e (×1.41 at the base). At e = 0.5: 1 B → 1 B/s, 1 KiB → 32 B/s, 1 MiB → 1 KiB/s. `intro.unlockedDiskSteps` (default 1) gates the Disk ladder: `getMaxActiveDiskLadderStep` = min(pool-reachable step, unlocked steps), so a full unlocked array reads as exhausted and blocks Provision Disk. `isDiskSizeUnlockAvailable` surfaces the **Foundry reset: unlock <size> Disks** button; `unlockNextDiskSizeByFoundryReset` runs `resetByteFoundry` (the convenience replay rebuilds prior highs from the Data Stream) and adds one step. Steps persist across Prestige and Reset Byte Foundry, reset to 1 on Era ascension, and `normalizePoolMemoryCapacity` grandfathers old saves up to the highest built size. Max e after unlocking all 30 sizes = 0.79.
+   `DATA_STREAM_SPEED_EXPONENT_BASE` (0.5) + `DATA_STREAM_SPEED_EXPONENT_STEP` (0.01) × (`getUnlockedDiskSteps(intro)` − 1), so each Speed upgrade multiplies Speed by 2^e (×1.41 at the base). At e = 0.5: 1 B → 1 B/s, 1 KiB → 32 B/s, 1 MiB → 1 KiB/s. `intro.unlockedDiskSteps` (default 1) gates the Disk ladder: `getMaxActiveDiskLadderStep` = min(pool-reachable step, unlocked steps), so a full unlocked array reads as exhausted and blocks Provision Disk. `isDiskSizeUnlockAvailable` surfaces the **Reformat: unlock <size> Disks** button; `unlockNextDiskSizeByFoundryReset` runs `resetByteFoundry` (the convenience replay rebuilds prior highs from the Data Stream) and adds one step. Steps persist across Prestige and Reformat Byte Foundry, reset to 1 on Reboot, and `normalizePoolMemoryCapacity` grandfathers old saves up to the highest built size. Max e after unlocking all 30 sizes = 0.79.
    `getIntroProductionRate(intro)` returns that derived speed × `BITS_PER_BYTE` bits/sec — the
    displayed base Speed. `getDataStreamDeliveredRate` is the instantaneous ⚡ reading;
    `tickIntroProduction` integrates the fill curve via `getFillCurveDelta` rather than multiplying
@@ -1052,7 +1052,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    tick. The net effect: one click "fully automates the sequence to fill up and then convert it into
    a Booster, then stop" — always exactly 1 conversion per activation, never a persistent bulk
    auto-buy loop until the lake's `boosterAuto` latch is set. Once the matching Storage pool reaches 9/9/9 (latched as `dataLakes[n].boosterAuto` for the whole Era —
-   kept through pool reset, Reset Byte Foundry and Prestige; only Era ascension clears it),
+   kept through pool reset, Reformat Byte Foundry and Prestige; only Reboot clears it),
    `DataLakePanel` permanently renders the next cost as an inert label instead of a conversion
    button, and `tickDataLakeAutoConvert` buys each affordable Booster automatically even when
    `autoConvertActive` is false. It stops naturally when the entity is full or the next cost is
@@ -1316,7 +1316,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    "⚙️ Byte Foundry" link (`onOpenFoundry`). Since `mainGameUnlocked` is now a one-time-ever
    permanent latch (`latchMainGameUnlocked` above), this transition from mandatory gate to
    voluntary screen happens (at most) exactly once per save, on its very first cycle — never again
-   on any later Prestige or Era ascension. Nothing about it goes read-only when reached this way —
+   on any later Prestige or Reboot. Nothing about it goes read-only when reached this way —
    Tap/Speed/Storage stay just as interactive as on the mandatory gate, and the always-on
    auto-convert keeps working too — there's no per-cycle cap to exhaust (see
    docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" section for the render-level detail).
@@ -1513,7 +1513,7 @@ as read-only accessors, currently unused by `MainPage` (see `docs/DESIGN_HISTORY
 Time away from the game is simulated when the page is reopened, capped at `MAX_OFFLINE_SECONDS` (24
 hours) of real elapsed time before any speed reduction is applied. A short absence — at or below
 `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` (10 minutes) — is simulated at **100% speed**, as if
-the screen had been on the whole time, and never surfaces the "Welcome back!" notice (there's nothing
+the screen had been on the whole time, and never surfaces the "Resumed from sleep" notice (there's nothing
 notable to report). Only once the (capped) elapsed duration exceeds that threshold does the entire
 duration get scaled down to **50% speed** (`OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.5`) and the notice
 appear — see `getOfflineEffectiveSeconds` in `engine.js`. `getOfflineEffectiveSeconds`/
@@ -1566,11 +1566,11 @@ identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
   notice. This was a real, user-reported bug (offline progress "not working" despite being away for
   hours) before this second detection path existed. Because of it, `offlineProgress` is **not**
   actually one-shot per app lifetime — a single mount can produce a fresh `offlineProgress` object
-  (and re-show the "Welcome back!" notice) any number of times across a session, once per detected
+  (and re-show the "Resumed from sleep" notice) any number of times across a session, once per detected
   gap; `components/OfflineProgressNotice` re-arms its own countdown/fade timing via an effect keyed
   on the   `offlineProgress` object reference (not a one-time lazy initializer) to handle this.
 
-**Rewarded-video bonus (ads builds only).** When the "Welcome back!" notice shows a reduced-speed
+**Rewarded-video bonus (ads builds only).** When the "Resumed from sleep" notice shows a reduced-speed
 catch-up and rewarded ads are available (`services/monetization`, `ADS_ENABLED`), it offers
 **▶ 100% speed**. A completed video calls `useIncrementalGame`'s `claimOfflineAdReward(summary)`, which
 replays `getOfflineRewardBonusSeconds(elapsedRealSeconds)` more simulated seconds
@@ -1625,7 +1625,7 @@ Production multipliers remain `(1 + cumulativeBoost[tierId])` with no tier weigh
 **Prestige:** `purgeGame` keeps `computeFlops.owned` and `pageUnlocked`; resets
 `cumulativeBoost` to fresh zeros (same as Memory — per-cycle boost, permanent ownership).
 
-Gate-exempt alongside Boosters/Guide/More (`GATE_EXEMPT_PAGES` includes `'compute'`).
+Gate-exempt alongside Boosters/Manual/More (`GATE_EXEMPT_PAGES` includes `'compute'`).
 
 ### Prestige Points, autobuyer unlock, and the tickspeed multiplier
 
@@ -1634,7 +1634,7 @@ never resets and stacks across every future prestige (see `docs/DESIGN_HISTORY.m
 replaced direct production doubling). `getPrestigePointsAwarded(money, doublePpLevel)` requires Money ≥
 `PURGE_THRESHOLD` (1 Googol Bytes in Bits); below that it returns 0. At threshold it awards at
 least 1 PP, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64) additional money-exponent powers beyond
-Googol's own 10^100 exponent — scaled by permanent Double PP upgrades (`prestigeDoublePpLevel`: each
+Googol's own 10^100 exponent — scaled by permanent Compression upgrades (`prestigeDoublePpLevel`: each
 level halves powers-per-PP until 1, then doubles PP-per-power; cost `100^(level+1)` PP via
 `buyPrestigeDoublePp`). `purgeGame` adds newly-awarded points on top of any already-unspent balance.
 
@@ -1643,33 +1643,33 @@ Until Overflow mode is unlocked, reaching `PURGE_THRESHOLD` freezes production u
 interval is upgraded to `OVERFLOW_MODE_MAX_INTERVAL_SECONDS` (1 s) or faster — production then
 continues past 1 Googol Bytes and Prestige is voluntary to claim accumulated PP. The latch is stored
 permanently on `purge.unboundedUnlocked` (set by `purgeGame`/`eraGame` once the condition holds;
-never cleared by Era ascension — full save Reset only). `storage.js` still grandfathers saves with
+never cleared by Reboot — full save Reset only). `storage.js` still grandfathers saves with
 `purge.count >= PURGE_UNBOUNDED_MIN_COUNT` (100, legacy rule).
 
-### Era ascension and Eons (#407)
+### Reboot and Kernels (#407)
 
-**Era** is the meta-prestige layer above ordinary Prestige. **Eons** are the meta currency (display
-"1 Eon", "2 Eons"). Era ascension is **voluntary** — no production freeze at the threshold.
+**Era** is the meta-prestige layer above ordinary Prestige. **Kernels** are the meta currency (display
+"1 Kernel", "2 Kernels"). Reboot is **voluntary** — no production freeze at the threshold.
 
 **Eligibility:** `isEraEligible(state)` when unspent `purge.points >= ERA_ELIGIBILITY_PP`
 (`GOOGOL` — 1 Googol PP balance, not lifetime earned).
 
 **Award:** `getEonsAwarded(state)` returns `1 + eonAmplifierLevel * EON_AMPLIFIER_AWARD_PER_LEVEL`
-(Eon Amplifier shop upgrade deferred to #414).
+(Kernel Amplifier shop upgrade deferred to #414).
 
 **On `eraGame` — resets:** full Foundry (generator upgrades, Data Stream balance, Disks, Data Lakes,
 compute ladder entities, `intro.foundryResetCaps`), ordinary Factory cycle (same fields as `purgeGame`),
 `purge.points`/`count`/`prestigeDoublePpLevel` → 0, `computeFlops.owned` → 0,
 `computeFlops.cumulativeBoost` fresh. Keeps `intro.byteCreated` if already combined, but resets
-`intro.capacity` to `INTRO_STARTING_CAPACITY` with the rest of the Foundry reset; the Capacity ×2
+`intro.capacity` to `INTRO_STARTING_CAPACITY` with the rest of the Reformat; the Capacity ×2
 ladder remains available up to the FINAL pool's own end bound (`isMemoryCapacityAtCap`), same as any
 other cycle — not any one pool's own. Does NOT reset
 `intro.mainGameUnlocked` (the gate — see `latchMainGameUnlocked` above) — a much bigger reset than an
 ordinary Prestige, but still never re-gates the main game once it's ever been revealed.
 
-**On `eraGame` — persists:** automation unlocks + pause flags (except Double PP level, which resets),
+**On `eraGame` — persists:** automation unlocks + pause flags (except Compression level, which resets),
 tier/tickspeed autobuyer milestone objects, `purge.unboundedUnlocked`, museum, `era.count` (+1),
-Eons balance (+ award), hyperscalers, Eon upgrade levels, Flops autobuyer unlock flags,
+Kernels balance (+ award), hyperscalers, Kernel upgrade levels, Flops autobuyer unlock flags,
 `computeFlops.pageUnlocked`, `intro.mainGameUnlocked`.
 
 **Flops autobuyer milestones:** Era *N* free-unlocks the *N*th Flops tier's autobuyer
@@ -1682,7 +1682,7 @@ rather than one purchase per attempt — a large elapsed gap (e.g. offline progr
 affordable unit in one state update instead of looping. Any attempts left unaffordable simply stay
 banked in the budget for a later tick, same end result as buying one at a time.
 
-**Hyperscalers:** `buyHyperscaler` spends escalating Eons (`HYPERSCALER_EON_COST_BASE` ×
+**Hyperscalers:** `buyHyperscaler` spends escalating Kernels (`HYPERSCALER_EON_COST_BASE` ×
 `HYPERSCALER_EON_COST_MULTIPLIER^owned`). Each adds permanent rate via
 `getHyperscalerFlopsBoostRate`, folded into `getComputeFlopsTierProductionMultiplier` alongside
 per-cycle `cumulativeBoost`. Hyperscaler Efficiency levels add
@@ -1701,7 +1701,7 @@ milestones" below), spending no PP at all.
   points` (`PRESTIGE_POINT_SPEED_BONUS = 0.01`) — +1% production speed per unspent point, applied
   uniformly to every tier in `tickGame`. A pure formula, not auto-applied — inert (every caller uses a
   flat ×1) until `state.prestigeSpeedBonusUnlocked` is true.
-- **Active — Double PP:** `buyPrestigeDoublePp(state)` permanently spends `getPrestigeDoublePpUpgradeCost(level)`
+- **Active — Compression:** `buyPrestigeDoublePp(state)` permanently spends `getPrestigeDoublePpUpgradeCost(level)`
   PP (`100^(level+1)` — 100, 10_000, 1_000_000, …) to increment `prestigeDoublePpLevel`. Not blocked
   by production freeze. Halves powers-per-PP through level 6, then doubles PP-per-power.
 - **Active — unlock the speed bonus:** `buyPrestigeSpeedBonus(state)` permanently spends
@@ -1714,7 +1714,7 @@ milestones" below), spending no PP at all.
   `autobuyerIntervalLevels[tierId]`, floored at `AUTOBUYER_MIN_INTERVAL_SECONDS` (10 ms; max level
   `getAutobuyerIntervalMaxLevel(tierId)`, e.g. 44 for tier01, 66 for tier10). `tickGame` accrues attempt budget at
   `elapsedSeconds / getAutobuyerIntervalSeconds(state, tierId)`. Needs the autobuyer unlocked; kept
-  through Prestige/Scale Up/Overclock/Era. UI: the tier's row on Perks → Automation → Tier Autobuyers.
+  through Prestige/Scale Up/Overclock/Era. UI: the tier's row on Firmware → Automation → Tier Autobuyers.
 - **Active — Automation interval chains:** `AUTOMATION_INTERVAL_CONFIG` (`speedUp` 8 PP/1 s, `scaleUp`
   16 PP/64 s, `restage` 16 PP/64 s, `overclock` 32 PP/256 s, `purge` 64 PP/1024 s) and `TIER_TICKSPEED_INTERVAL_CONFIG`
   (100 PP/16 s per tier). Cost = baseCost × the shared doubling ladder (`getSiCleanDoublingFactor`: 1, 2, 4, …, 64, 125, …);
@@ -1723,7 +1723,7 @@ milestones" below), spending no PP at all.
   `tierTickspeedIntervalLevels`, permanent). Each automation accrues a run-scoped budget
   (`automationAttemptBudgets`, `tierTickspeedAttemptBudgets`, `autoPurgeAttemptBudget`) at
   elapsed ÷ interval via `runIntervalAutomation`; a no-op attempt clamps the bank to 1. Auto Purge
-  is activation-only (`buyAutoPurge`); its speed chain is bought separately (same Perks → Automation row, once active). **Auto Overclock**
+  is activation-only (`buyAutoPurge`); its speed chain is bought separately (same Firmware → Automation row, once active). **Auto Overclock**
   is a separate 32 PP unlock (needs Auto Scale Up), pausable via `autoOverclockEnabled`.
 - **Active — Autobuyer bulk (past the speed floor):** a tier's autobuyer buys ONE whole level (all 8
   blocks) per attempt, only when fully affordable; with partial level progress it completes the rest
@@ -1798,7 +1798,7 @@ per-tier milestone, no PP spent, no button to click:
   the PP-purchase price scale. `getTierTickspeedAutobuyerCost` and `TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER` were
   removed entirely — nothing else needed that formula once the tier tickspeed autobuyer itself
   stopped costing PP.
-- Surfaced once, on Perks → 🤖 Automation's "Tier Autobuyers" category (`pages/PerksPage`): one `TierPair`
+- Surfaced once, on Firmware → 🤖 Automation's "Tier Autobuyers" category (`pages/PerksPage`): one `TierPair`
   card per tier, ⚙ tickspeed half left / 🤖 autobuyer half right (the Factory row's own positions); each half
   shows a dimmed `🔒 {milestone}` `MilestoneBadge` plus a
   `role="progressbar"` (`aria-valuenow = min(purge.count, milestone)`) while pending, then the pause Switch + speed upgrade once reached. `MilestonesPage` no longer repeats this.
@@ -1825,7 +1825,7 @@ predating this feature — see `storage.js` below): a paused automation behaves 
 never been bought, for automation purposes only — the level/PP already spent are untouched, and (for
 Auto Purge) the manual Prestige button keeps working regardless. Pausing Auto Purge stops both its
 per-tick `autoPurgeAttemptBudget` accumulation and its automatic `purgeGame` firing, not just the
-firing. Each owned row on Perks → 🤖 Automation renders a pause/resume `components/Switch` (`aria-pressed`)
+firing. Each owned row on Firmware → 🤖 Automation renders a pause/resume `components/Switch` (`aria-pressed`)
 beside an icon status (`"<name> active|paused"`) for each of the five global automations once bought.
 
 #### Pause/resume for per-tier automations
@@ -1850,7 +1850,7 @@ Restage — `autoXpTickspeed`/`autoXpTickspeedEnabled` — see "The last tier's 
 `purgeGame`/`scaleUpGame` carry both fields through unchanged, same permanence as
 `autobuyers`/`tierTickspeedAutobuyer` themselves. 
 `autobuyersEnabled`/`tierTickspeedAutobuyerEnabled` keys from fresh defaults (`true` for every tier)
-but does not transform legacy save formats. See "Unit autobuyer status (Factory view, per tier)" above and `docs/MAINPAGE_REFERENCE.md`'s "Perks page" — every toggle renders in its automation's row on Perks → 🤖 Automation.
+but does not transform legacy save formats. See "Unit autobuyer status (Factory view, per tier)" above and `docs/MAINPAGE_REFERENCE.md`'s "Firmware page" — every toggle renders in its automation's row on Firmware → 🤖 Automation.
 
 XP (`purge.xp`) has otherwise been removed from the UI — see `docs/DESIGN_HISTORY.md`; the
 underlying earning mechanic (`checkMilestones`) is untouched in `engine.js`. Its one exception is
@@ -1954,11 +1954,11 @@ its one purpose.
   (`purchased`/levels untouched; the last tier's own counts untouched). No-op if not unlocked, if the
   last tier's own `owned` is 0 (nothing to speed up — see `docs/DESIGN_HISTORY.md`), if `amount` isn't a
   positive integer, is below the minimum, exceeds unspent XP, or production is frozen.
-- **Automation: the Auto Restage** (`autoXpTickspeed`, bought once on Perks → Automation for
+- **Automation: the Auto Restage** (`autoXpTickspeed`, bought once on Firmware → Automation for
   `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` = 16 PP = `AUTOMATION_INTERVAL_CONFIG.restage.baseCost` via
   `buyXpTickspeedAutobuyer`; needs Auto Clock Speed, parallel to Auto Scale Up; permanent across
   Prestige/Scale Up/Overclock/Era like the other global automations). While bought and
-  `autoXpTickspeedEnabled` (pause via `setAutoXpTickspeedEnabled`, same Perks row), `tickGame` calls
+  `autoXpTickspeedEnabled` (pause via `setAutoXpTickspeedEnabled`, same Firmware row), `tickGame` calls
   `consumeXpForLastTierTickspeed(purge.xp)` through `runGlobalIntervalAutomation(…, 'restage', …)` —
   at most once per `getAutomationIntervalSeconds(state, 'restage')` (64 s × 0.9^level, upgraded via
   `buyAutomationIntervalUpgrade('restage')`), after Auto Clock Speed and before Auto Scale Up — and
@@ -2024,7 +2024,7 @@ see "Balances (top HUD)" above, already doubles as the Prestige button once `can
 purely informational: prestige progress/award preview, purged count, unspent PP, and Auto Purge
 status. It has been removed entirely as redundant with the `TopPurgeBar`/`FullScreenOverlay`/
 PP-header-as-button ways to trigger and observe Prestige — none of that information had anywhere else to
-go for it to lose. Auto Purge's current interval (terse inline `formatIntervalShort`, e.g. `1024s`) shows on its Perks → 🤖 Automation Global Automation row, which also carries its speed upgrade and pause Switch. Global automations are sequential (each needs the previous one, in the UI and the engine).
+go for it to lose. Auto Purge's current interval (terse inline `formatIntervalShort`, e.g. `1024s`) shows on its Firmware → 🤖 Automation Global Automation row, which also carries its speed upgrade and pause Switch. Global automations are sequential (each needs the previous one, in the UI and the engine).
 
 ### Scale Up
 
@@ -2102,7 +2102,7 @@ requirement is already in completed levels; the displayed current count is
 `state.purchaseLevels[targetTier.id] − 1`. Enabled once the raw engine requirement is met and disabled
 while frozen — no `window.confirm` guard, since this is beneficial not destructive. Once `!isFirstRun`
 and `autoScaleUp` bought, an `AutoChip` in the Scale Up card header reads "⏩ Auto" (or "⏩ Paused";
-`aria-label` "Auto Scale Up active|paused"; the purchase button itself lives on Perks → Automation).
+`aria-label` "Auto Scale Up active|paused"; the purchase button itself lives on Firmware → Automation).
 
 ### Overclock
 
@@ -2192,12 +2192,12 @@ Prestige Points don't exist as a concept for the player until `isFirstRun` (`pur
 false, so `MainPage` keeps every PP-related display/control out of the page during the first run:
 
 - The top-level PP display `StatCard` doesn't render until `!isFirstRun` (`purge.count > 0`); the
-  Perks AppNav item appears once `isPerksPageRevealed` (first Prestige, or any Era ascension — so it
+  Firmware AppNav item appears once `isPerksPageRevealed` (first Prestige, or any Reboot — so it
   stays reachable after an Era resets the Prestige count to 0).
 - Once that page is reachable, every purchase on it shows immediately — no separate "reveal one by
   one" teaser gate. The only exceptions are real prerequisites: Global Automation is a
   chain: Auto Clock Speed → {Auto Restage, Auto Scale Up} (both open once Clock Speed is owned, either order)
-  → Auto Overclock (needs both) → Auto Purge (`autoPurge`) — engine-enforced. Every tier's Perks → Automation rows (milestone badge until owned) are always listed.
+  → Auto Overclock (needs both) → Auto Purge (`autoPurge`) — engine-enforced. Every tier's Firmware → Automation rows (milestone badge until owned) are always listed.
 - The sticky PP header display (`PpHeaderCard`, unspent PP + production-speed suffix once
   `state.prestigeSpeedBonusUnlocked`) only renders once `!isFirstRun`.
 
@@ -2215,7 +2215,7 @@ always rendered in Settings → Danger zone. It gates the actual `resetGame()` c
 untouched. On acceptance, alongside `resetGame()`, the App handler navigates back toward the default
 page (`'game'`, which the Foundry gate then overrides until `mainGameUnlocked`).
 
-A second Danger-zone control, **"↺ Reset Byte Foundry…"**, calls `resetByteFoundry` (also behind
+A second Danger-zone control, **"↺ Reformat Byte Foundry…"**, calls `resetByteFoundry` (also behind
 `window.confirm` via `buildResetByteFoundryConfirmMessage`). It replaces `state.intro` with a fresh
 `createInitialGameState().intro` — Data Stream balance → 0, Buffer → `INTRO_STARTING_CAPACITY`,
 Combine / Speed multipliers and Disks/Storage and every Compute ladder entity / boost /
@@ -2495,7 +2495,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // flag, not a counter (only ever one)
     mainGameUnlocked: false,                              // PERMANENT — a one-time-ever latch (see
                                                           // latchMainGameUnlocked above), never reset by
-                                                          // purgeGame or Era ascension. True the instant
+                                                          // purgeGame or Reboot. True the instant
                                                           // Storage's own capacity threshold is crossed
                                                           // (isStorageUnlocked) — drives App.jsx's page
                                                           // routing gate. NOT a freeze flag — the Byte
@@ -2558,9 +2558,9 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // { depositedUnits, fillBits, purchased,
                                                           // boostersUnlocked, autoConvertActive, capacityLevel,
                                                           // boosterAuto (era-long auto-buy latch) }.
-                                                          // Era ascension resets with the
+                                                          // Reboot resets with the
                                                           // rest of the Foundry via buildEraIntroReset
-                                                          // (...initial.intro) — see "Era ascension" above
+                                                          // (...initial.intro) — see "Reboot" above
     computeCores: 0,                                      // PERMANENT, capped at COMPUTE_ENTITY_CAP (10), or the
                                                           // extended COMPUTE_ENTITY_AUTO_MERGE_CAP (18) once the
                                                           // Core -> Node boundary's own auto-merge is unlocked (see
@@ -2697,7 +2697,7 @@ purchases were manual or automatic.
 | Function | Signature | Purpose |
 |----------|-----------|---------|
 | `isBuyMaxUnlocked` | `state → boolean` | Buy max mode unlock: `purge.count >= 1 \|\| era.count >= 1` |
-| `isPerksPageRevealed` | `state → boolean` | Perks AppNav page reveal — alias of `isBuyMaxUnlocked` |
+| `isPerksPageRevealed` | `state → boolean` | Firmware AppNav page reveal — alias of `isBuyMaxUnlocked` |
 | `buyTierMaxLevels` | `tierId → state → state` | Buy max for a Factory tier: every affordable FULL level from zero progress; partial progress / no affordable full level falls back to `buyTierQuantity`; no-op while frozen |
 | `getTierMaxLevelsPreview` | `(state, tierId) → { levels, cost }` | What one `buyTierMaxLevels` click would buy (`levels: 0` when it would fall back) |
 | `repeatPurchaseMax` | `action → state → state` | Chains a one-level purchase action until it returns the same reference (cap `BUY_MAX_ITERATION_CAP`) |
@@ -2864,17 +2864,17 @@ purchases were manual or automatic.
 | `getAutoPurgeAttemptRate` | `state → number` | `1 / getAutomationIntervalSeconds(state, 'purge')` — attempts per second (base interval 1024 s, ×0.9 per speed level) |
 | `getGlobalTickspeedMultiplierCost` | `currentLevel → number` | `10 ** (currentLevel + 1)` — the Money cost to activate (level 0→1, costing 10 Money) or upgrade (level N→N+1) the global tickspeed multiplier; doubles the exponent each level (100, 1000, …) |
 | `getGlobalTickspeedProductionMultiplier` | `(level, overclockCount = 0) → number` | `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)) ** level`; every level uses the same step and milestones add no bonus |
-| `getPrestigePointsAwarded` | `(money, doublePpLevel = 0) → number` | 0 below `PURGE_THRESHOLD`; otherwise `(1 + floor(excessPowers / getPrestigePowersPerPp(doublePpLevel))) * getPrestigePpPerPower(doublePpLevel)` where `excessPowers = max(0, getMoneyExponent(money) - floor(log10(GOOGOL)))` — 1 base PP at 1 Googol Bytes, +1 PP unit per 64 excess powers (halved by each Double PP upgrade through level 6, then PP-per-power doubles) |
+| `getPrestigePointsAwarded` | `(money, doublePpLevel = 0) → number` | 0 below `PURGE_THRESHOLD`; otherwise `(1 + floor(excessPowers / getPrestigePowersPerPp(doublePpLevel))) * getPrestigePpPerPower(doublePpLevel)` where `excessPowers = max(0, getMoneyExponent(money) - floor(log10(GOOGOL)))` — 1 base PP at 1 Googol Bytes, +1 PP unit per 64 excess powers (halved by each Compression upgrade through level 6, then PP-per-power doubles) |
 | `getPrestigePowersPerPp` | `doublePpLevel → number` | `PRESTIGE_POWERS_PER_PP_BASE / 2^min(level, log2(64))` — 64 down to 1 |
 | `getPrestigePpPerPower` | `doublePpLevel → number` | `2^max(0, level - log2(64))` — 1 until level 7, then 2, 4, … |
 | `getPrestigeDoublePpUpgradeCost` | `currentLevel → number` | `100^(currentLevel + 1)` PP |
 | `buyPrestigeDoublePp` | `state → state` | Spends `getPrestigeDoublePpUpgradeCost(prestigeDoublePpLevel)` PP and increments `prestigeDoublePpLevel`; not blocked by production freeze |
 | `isOverflowModeUnlocked` | `state → boolean` | `purge.unboundedUnlocked` OR (Auto Purge bought AND its interval ≤ `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`, 1 s) |
 | `isEraEligible` | `state → boolean` | `purge.points >= ERA_ELIGIBILITY_PP` (1 Googol PP balance) |
-| `getEonsAwarded` | `state → number` | `1 + eonAmplifierLevel * EON_AMPLIFIER_AWARD_PER_LEVEL` Eons awarded on Era ascension |
-| `eraGame` | `state → state` | Requires `isEraEligible`; meta-prestige reset/carry per "Era ascension and Eons" above; same-reference no-op when ineligible |
+| `getEonsAwarded` | `state → number` | `1 + eonAmplifierLevel * EON_AMPLIFIER_AWARD_PER_LEVEL` Kernels awarded on Reboot |
+| `eraGame` | `state → state` | Requires `isEraEligible`; meta-prestige reset/carry per "Reboot and Kernels" above; same-reference no-op when ineligible |
 | `getHyperscalerFlopsBoostRate` | `state → number` | Permanent hyperscaler Flops rate (0.01%/s each at base, +efficiency levels) |
-| `buyHyperscaler` | `state → state` | Spends escalating Eons; increments `hyperscalerCount`; no-op if unaffordable |
+| `buyHyperscaler` | `state → state` | Spends escalating Kernels; increments `hyperscalerCount`; no-op if unaffordable |
 | `applyFlopsAutobuyerMilestones` | `state → state` | Unlocks Flops autobuyers free at Era milestones; called from `eraGame` |
 | `setComputeFlopsAutobuyerEnabled` | `(flopId, enabled) → state → state` | Pause/resume a unlocked Flops autobuyer |
 | `getPrestigeProductionMultiplier` | `points → number` | `1 + PRESTIGE_POINT_SPEED_BONUS * points` — a flat +1% production speed per unspent Prestige Point. A pure formula, not auto-applied — callers must check `prestigeSpeedBonusUnlocked` first; before that's bought, every caller uses a flat `1` instead. Fractional whenever `points` isn't a multiple of 100; `tickGame` floors its production credit to absorb this |
@@ -2989,8 +2989,8 @@ purchases were manual or automatic.
 
 ### Upgrade Capacity / Upgrade Speed
 
-Two Byte Foundry upgrades replace the single "Upgrade Data Stream"; only one runs at a time (both buttons give way to one status bar). `intro.speedCapacity` is the Speed basis (absent = follows Capacity, which is how pre-split saves load; the first Capacity upgrade materializes it). Capacity upgrades double `intro.capacity` and leave Speed alone. Speed derives from `speedCapacity` via `getDataStreamSpeedBytesPerSecond`; an Upgrade Speed doubles that basis and costs `getSpeedUpgradeCostBits` (the current basis). Base Speed is capped at Capacity^0.75: an upgrade is armable only while the doubled basis still fits within Capacity, so Speed trails Capacity by at most one doubling. With both upgrades alternated, each upgrade at Capacity C takes about C^0.25 s (cost ÷ Speed), so reaching the 128 QiB cap takes on the order of 38 years of uninterrupted play at 0.75 (hand model; boosts shorten it). 0.8 would take about a year; the plan is to start at 0.75 and let later upgrades raise the exponent. `speedUpgradeQueued`/`speedUpgradeProgress` mirror the Capacity pair. Speed survives Prestige and Foundry-reset replay (`captureFoundryUpgradeCaps.speedCapacity`), and resets with Capacity on Era ascension.
+Two Byte Foundry upgrades replace the single "Upgrade Data Stream"; only one runs at a time (both buttons give way to one status bar). `intro.speedCapacity` is the Speed basis (absent = follows Capacity, which is how pre-split saves load; the first Capacity upgrade materializes it). Capacity upgrades double `intro.capacity` and leave Speed alone. Speed derives from `speedCapacity` via `getDataStreamSpeedBytesPerSecond`; an Upgrade Speed doubles that basis and costs `getSpeedUpgradeCostBits` (the current basis). Base Speed is capped at Capacity^0.75: an upgrade is armable only while the doubled basis still fits within Capacity, so Speed trails Capacity by at most one doubling. With both upgrades alternated, each upgrade at Capacity C takes about C^0.25 s (cost ÷ Speed), so reaching the 128 QiB cap takes on the order of 38 years of uninterrupted play at 0.75 (hand model; boosts shorten it). 0.8 would take about a year; the plan is to start at 0.75 and let later upgrades raise the exponent. `speedUpgradeQueued`/`speedUpgradeProgress` mirror the Capacity pair. Speed survives Prestige and Foundry-reset replay (`captureFoundryUpgradeCaps.speedCapacity`), and resets with Capacity on Reboot.
 
-**Smaller sizes after a Foundry reset (auto-provisioning, one fill per disk).** `getPresentedDiskSize` is the newest unlocked size (`getDiskLadderSizeBits(intro.unlockedDiskSteps)`, shown immediately even before its pool is reachable); `isLowerDiskSizePending` is true while `getDiskSize` (the smallest incomplete array) is smaller than it. In that state `tickAutoProvisionLowerDiskSizes` (in `tickStorage`, before `tickQueuedDiskBuild`) rebuilds the smallest incomplete array with no provisioning cost, one disk at a time: each disk costs exactly ONE fill — `size` bits drawn from the pool buffer (minus `getPoolCacheReservationBits`) at `getStoragePoolBandwidth × getPoolTapMultiplier` (BASE Bandwidth × pool tap bonus, never the fill multiplier), so it takes `size / (Bandwidth × tap)` while the buffer keeps up and stalls (progress kept) when it is empty; progress in `intro.lowerRebuild = { size, progress }` and landing FULL (a drained built disk is refilled before a new one is built; a long/offline `elapsedSeconds` completes several disks in one call). `getLowerRebuildSummary` returns the remaining `seconds` (exact for live pools; a pool not live yet uses `getProjectedPoolBandwidth` — the Bandwidth that pool will have once live (Capacity at its unlock threshold) — as a stand-in, so that part is an estimate and does not count down until the pool goes live; the summary's `projected` flag is true when any remaining size's pool is not live) and disks done/total for the UI. It skips while that pool (or an earlier one) is rebuilding, during a legacy `diskBuild`, or before the Byte exists. While pending, `isProvisionDiskAvailable`/`queueDiskBuild` (hence `provisionDisk`, `tickQueuedDiskBuild`) are no-ops and `tickFoundryResetConvenience` skips its paid Provision Disk branch, so nothing is ever paid twice. `ByteFoundryPage` presents only the newest size, disabled with a "Rebuilding <size> first" note.
+**Smaller sizes after a Reformat (auto-provisioning, one fill per disk).** `getPresentedDiskSize` is the newest unlocked size (`getDiskLadderSizeBits(intro.unlockedDiskSteps)`, shown immediately even before its pool is reachable); `isLowerDiskSizePending` is true while `getDiskSize` (the smallest incomplete array) is smaller than it. In that state `tickAutoProvisionLowerDiskSizes` (in `tickStorage`, before `tickQueuedDiskBuild`) rebuilds the smallest incomplete array with no provisioning cost, one disk at a time: each disk costs exactly ONE fill — `size` bits drawn from the pool buffer (minus `getPoolCacheReservationBits`) at `getStoragePoolBandwidth × getPoolTapMultiplier` (BASE Bandwidth × pool tap bonus, never the fill multiplier), so it takes `size / (Bandwidth × tap)` while the buffer keeps up and stalls (progress kept) when it is empty; progress in `intro.lowerRebuild = { size, progress }` and landing FULL (a drained built disk is refilled before a new one is built; a long/offline `elapsedSeconds` completes several disks in one call). `getLowerRebuildSummary` returns the remaining `seconds` (exact for live pools; a pool not live yet uses `getProjectedPoolBandwidth` — the Bandwidth that pool will have once live (Capacity at its unlock threshold) — as a stand-in, so that part is an estimate and does not count down until the pool goes live; the summary's `projected` flag is true when any remaining size's pool is not live) and disks done/total for the UI. It skips while that pool (or an earlier one) is rebuilding, during a legacy `diskBuild`, or before the Byte exists. While pending, `isProvisionDiskAvailable`/`queueDiskBuild` (hence `provisionDisk`, `tickQueuedDiskBuild`) are no-ops and `tickFoundryResetConvenience` skips its paid Provision Disk branch, so nothing is ever paid twice. `ByteFoundryPage` presents only the newest size, disabled with a "Rebuilding <size> first" note.
 
-**Replay order.** After a Foundry reset `tickFoundryResetConvenience` replays Capacity and Speed upgrades up to their prior highs in order of increasing cost (Capacity costs the current Capacity, Speed its current basis; Speed is prioritised while armable, so it reaches the "needs Capacity" state before a Capacity upgrade is chosen): when no upgrade is running, the next pending, armable one is started through the ordinary progress-bar queue (`queueIntroCapacityUpgrade`/`queueIntroSpeedUpgrade`), so it is paid from the Data Stream by the usual drain; one at a time.
+**Replay order.** After a Reformat `tickFoundryResetConvenience` replays Capacity and Speed upgrades up to their prior highs in order of increasing cost (Capacity costs the current Capacity, Speed its current basis; Speed is prioritised while armable, so it reaches the "needs Capacity" state before a Capacity upgrade is chosen): when no upgrade is running, the next pending, armable one is started through the ordinary progress-bar queue (`queueIntroCapacityUpgrade`/`queueIntroSpeedUpgrade`), so it is paid from the Data Stream by the usual drain; one at a time.

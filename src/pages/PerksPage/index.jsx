@@ -40,13 +40,13 @@ import { hasAffordableAutomationPerk, hasAffordablePrestigePerk } from 'game/nav
 import { useEffect, useState } from 'react'
 import styled, { useTheme } from 'styled-components'
 
-// Perks — its own AppNav destination (page id 'perks', revealed by isPerksPageRevealed), grouped by
+// Firmware (formerly Perks) — its own AppNav destination (page id 'perks', revealed by isPerksPageRevealed), grouped by
 // feature rather than by purchase kind, in two icon tabs:
 // - 🤖 Automation: ONE row per automation covering its whole lifecycle — locked (🔒 milestone badge
 //   or 🔓 PP unlock button) → owned (pause/resume Switch in the lead cell, `every <interval>` subtext,
 //   ⏫ speed upgrade button). Global automations, tier autobuyers, tier tickspeed autobuyers, Auto
-//   Boost, and Era-unlocked Compute autobuyers. Each milestone is shown exactly once, here.
-// - ✦ Prestige: non-automation perks that stand on their own — Double PP (leveled), Production
+//   Boost, and Reboot-unlocked Compute autobuyers. Each milestone is shown exactly once, here.
+// - ✦ Prestige: non-automation perks that stand on their own — Compression (leveled), Production
 //   speed bonus (one-time), DeGoogol (milestone), and the Buy max purchasing toggle.
 
 const RootDiv = styled.main`
@@ -450,7 +450,7 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction =
 
 export const PERKS_TABS = [
   { id: 'automation', icon: '🤖', ariaLabel: 'open automation', title: 'Automation — unlock, pause/resume and speed up every automation' },
-  { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Double PP, production speed bonus, Overflow mode and Buy max' },
+  { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Compression, production speed bonus, Overflow mode and Buy max' },
 ]
 
 const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Math.round(ms * 10) / 10} ms`)
@@ -491,7 +491,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
 
   const isComputeAutoBoostActive = state.computeAutoBoostUnlocked ?? false
-  // Stays listed once bought, even after Era ascension / Reset Byte Foundry drops Capacity back below the Boosters threshold.
+  // Stays listed once bought, even after Reboot / Reformat Byte Foundry drops Capacity back below the Boosters threshold.
   const showComputeAutoBoost = isComputeAutoBoostActive || isComputeCoreConversionUnlocked(state)
   const canBuyComputeAutoBoost = !isFrozen && !isComputeAutoBoostActive && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST
 
@@ -532,7 +532,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   )
 
   const renderAutomation = () => (
-    <List aria-label="automation perks page">
+    <List aria-label="automation firmware page">
       <Category aria-label="global automation category">
         <CategoryHeading>Global Automation</CategoryHeading>
         <CellGrid>
@@ -726,7 +726,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                     milestone={getFlopsAutobuyerUnlockEra(flopTier.id)}
                     progressLabel={`${flopTier.name} (${flopTier.outputLabel}) autobuyer unlock milestone progress`}
                     subject={`${flopTier.name} (${flopTier.outputLabel}) autobuyer`}
-                    unit="Era"
+                    unit="Reboot"
                   />
                 )}
                 name={`${flopTier.name} (${flopTier.outputLabel}) autobuyer`}
@@ -743,18 +743,18 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   )
 
   const renderPrestige = () => (
-    <List aria-label="prestige perks page">
+    <List aria-label="prestige firmware page">
       <Category aria-label="purge points category">
         <CategoryHeading>Purge Points</CategoryHeading>
         <Row aria-label="double PP upgrade">
           <RowLabelStack>
             <RowLabel>
-              <RowIcon>✦</RowIcon>Double PP
+              <RowIcon>✦</RowIcon>Compression
             </RowLabel>
             <SubText>{doublePpUpgradeSummary}</SubText>
           </RowLabelStack>
           <PpPurchaseButton
-            ariaLabel={`Buy Double PP level ${doublePpLevel + 1} for ${formatAmount(doublePpCost)} Purge Points — ${doublePpLevel < 6 ? 'halves powers needed per PP' : 'doubles PP per power'}`}
+            ariaLabel={`Buy Compression level ${doublePpLevel + 1} for ${formatAmount(doublePpCost)} Purge Points — ${doublePpLevel < 6 ? 'halves powers needed per PP' : 'doubles PP per power'}`}
             color="#fbbf24"
             cost={doublePpCost}
             disabled={!canBuyDoublePp}
@@ -762,7 +762,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             label={`${formatAmount(doublePpCost)} PP`}
             onClick={actions.buyPrestigeDoublePp}
             points={points}
-            progressLabel="Double PP upgrade PP progress"
+            progressLabel="Compression upgrade PP progress"
             title={doublePpLevel < 6
               ? 'Halves how many money-exponent powers are needed per Purge Point (claimable once you reach 1 Googol Bytes)'
               : 'Doubles how many Purge Points each power earns (claimable once you reach 1 Googol Bytes)'}
@@ -820,10 +820,10 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   return (
     <RootDiv>
       <Header>
-        <h1>Perks</h1>
+        <h1>Firmware</h1>
         <PpBalance aria-label="purge points display">✦ {formatAmount(points)} PP</PpBalance>
       </Header>
-      <TabBar role="tablist" aria-label="perks view">
+      <TabBar role="tablist" aria-label="firmware view">
         {PERKS_TABS.map(item => (
           <TabButton
             key={item.id}
