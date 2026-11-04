@@ -91,8 +91,8 @@ Always create a pull request after pushing changes to a branch — do not ask th
 one first. This applies to every change made in this repo.
 
 PRs are opened as drafts by default, but stay draft only while real, known work is pending (a queued
-commit, a fix in progress, unrun tests). Mark ready the moment it reflects genuinely finished work
-(local checks pass, nothing further planned) — a draft isn't reviewed or auto-merge-eligible, so
+commit, a fix in progress, unrun tests). Always mark ready the moment it reflects genuinely finished work
+(local checks pass, nothing further planned — maintainer standing rule) — a draft isn't reviewed or auto-merge-eligible, so
 leaving a finished one draft just stalls it. Applies to every PR, autonomous or interactive.
 
 **Verification effort scales with how public the PR is**: minimal testing (one `yarn test` after a
@@ -122,7 +122,10 @@ Then:
   still draft, then `gh pr merge --auto --merge`). This is a standing authorization to *enable*
   auto-merge on qualifying PRs only; it is not permission to force-merge, push to `main`, approve
   the PR as a GitHub review, or bypass CODEOWNERS on `.github/workflows/**`.
-- **`APPROVE` but not low-risk**: mark ready for human review; do not enable auto-merge.
+- **`APPROVE` but not low-risk**: mark ready and still enable GitHub auto-merge (`gh pr merge
+  --auto --merge`) — maintainer standing rule: always enable auto-merge on an adversarial `APPROVE`.
+  Branch protection (required human approval, CODEOWNERS on `.github/workflows/**`) still gates the
+  actual merge; this never bypasses it.
 - **`NEEDS CHANGES` / `BLOCK`**: fix (or stop); do not enable auto-merge; re-run the reviewer after
   the next final commit so the marker matches the new HEAD.
 

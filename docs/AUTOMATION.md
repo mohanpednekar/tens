@@ -567,8 +567,9 @@ that defaults to squash — see issue #343):
    eligibility **before** marking a draft ready, so an ineligible PR is never promoted.
 
 **After final commit (agent duty).** For every finished autonomous or interactive PR: run the
-adversarial reviewer on the final head → post the marker comment → on APPROVE+low-risk always
-enable auto-merge (script above). Enabling auto-merge here is an explicit standing exception to
+adversarial reviewer on the final head → post the marker comment → on any APPROVE always mark
+ready and enable auto-merge (script above for low-risk; plain `gh pr merge --auto --merge`
+otherwise, which still waits on branch protection's required human/CODEOWNERS review). Enabling auto-merge here is an explicit standing exception to
 "never self-merge"; force-merging, pushing to `main`, and GitHub-approving your own PR remain
 forbidden. Workflow-file PRs remain human-gated via CODEOWNERS + Path 2/3 exclusions.
 
