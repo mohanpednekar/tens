@@ -452,7 +452,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                     <ButtonContent>{costLabel}</ButtonContent>
                   </ActionButton>
                 ) : (
-                  <StatusText title={`Build a ${formatDiskSize(unitBits)} disk in Storage to unlock Cells here`}>
+                  <StatusText title={`Build a ${formatDiskSize(unitBits)} disk in Storage to unlock ${boosterLabel} here`}>
                     {costLabel}
                   </StatusText>
                 )}

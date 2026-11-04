@@ -402,15 +402,15 @@ be the one place it was shown) is gone (see `docs/DESIGN_HISTORY.md`); `purchase
 is still tracked internally and still drives the disk pull/auto-convert eligibility exactly as
 before, just with no dedicated progress display.
 
-**Compute page** (`src/pages/ComputePage/index.jsx`). Compute's own dedicated screen, split out of
-ByteFoundryPage — reached via AppNav once Compute is revealed. Takes `{ game }`. A centered title
-`⚡ Compute` is the page chrome (top-level navigation lives in AppNav).
+**Power page** (`src/pages/ComputePage/index.jsx`, page id `'boosters'`). Power's own dedicated
+screen, split out of ByteFoundryPage — reached via AppNav once Power is revealed. Takes `{ game }`.
+A centered title `⚡ Power` is the page chrome (top-level navigation lives in AppNav).
 
 The whole page is deliberately terse — every string beyond a single-word entity label lives in a
 `title`/`aria-label` instead of visible text, and every compute-ladder tier fits its own row in one
 line (see issue #316's "fit every compute tier in one line ... clever symbols ... intuitive with no
 or single word labels" ask). The full prose explanation of every mechanic here lives in the Guide
-(`InfoPage`'s "Compute" section) — this page shows live state and controls only, not descriptions.
+(`InfoPage`'s "Power" section) — this page shows live state and controls only, not descriptions.
 
 Render order top to bottom (a top `BoostCard` with the current effect, then tier rows; the presets
 live inside the selected tier):

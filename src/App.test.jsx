@@ -1571,6 +1571,7 @@ test('Auto Boost is unlocked from Perks → Automation (30 PP), not on Boosters,
 
   await openPerksTab(user, /open automation/i)
   const unlock = screen.getByRole('button', { name: new RegExp(`enable auto boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} purge points`, 'i') })
+  expect(unlock).toHaveAttribute('title', expect.stringMatching(/in-flight charge/i))
   expect(unlock).toBeEnabled()
   await user.click(unlock)
   expect(screen.getByLabelText('Auto Boost unlocked')).toBeInTheDocument()
@@ -4384,6 +4385,22 @@ describe('Byte Foundry Storage', () => {
     const lakeBlock = within(pool1).getByLabelText('KB lake')
     expect(within(lakeBlock).queryByRole('button', { name: /start converting toward 1 cells from the kb data lake/i })).not.toBeInTheDocument()
     expect(within(lakeBlock).getByTitle('Build a 1 KB disk in Storage to unlock Cells here')).toBeInTheDocument()
+  })
+
+  test('a locked MB lake names Batteries, not Cells, as the entity it unlocks (#988 leftover)', () => {
+    seedIntroState({
+      bits: 0,
+      capacity: POOL_2_VISIBLE_CAPACITY,
+      byteCreated: true,
+      dataLakes: { 2: { depositedUnits: 0, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
+    })
+    render(<App />)
+    openStorage()
+
+    const pool2 = screen.getByRole('region', { name: 'pool 2' })
+    const lakeBlock = within(pool2).getByLabelText('MB lake')
+    expect(within(lakeBlock).getByTitle('Build a 1 MB disk in Storage to unlock Batteries here')).toBeInTheDocument()
+    expect(within(lakeBlock).queryByTitle(/unlock Cells here/)).not.toBeInTheDocument()
   })
 
   test('Data Lake capacity can be increased ×10 by clicking its ⚡ Scale Out button', () => {
