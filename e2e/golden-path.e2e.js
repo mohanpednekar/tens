@@ -4,35 +4,30 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await page.evaluate(() => {
     window.localStorage.clear()
-    // Bytes are no longer a purchasable tier — they're earned via the separate Byte Foundry
-    // pre-game tap screen (see CLAUDE.md's Economy model section). Seed mainGameUnlocked so this
-    // spec lands directly on MainPage, same as every other seeded e2e spec.
-    window.localStorage.setItem('tens_game_state', JSON.stringify({ intro: { mainGameUnlocked: true } }))
+    // Seed mainGameUnlocked so this spec lands directly on MainPage, plus 2,500 Bits —
+    // enough for two Kilobytes purchases at 1,000 b each (flat within the first block).
+    window.localStorage.setItem('tens_game_state', JSON.stringify({ intro: { mainGameUnlocked: true }, resources: { base: 2500 } }))
   })
   await page.reload()
 })
 
-test('buying Kilobytes increases Owned and grows the money balance over time', async ({ page }) => {
-  await expect(page.getByRole('heading', { level: 1, name: /tens/i })).toBeVisible()
+test('buying Kilobytes increases Owned and updates the money balance', async ({ page }) => {
+  await expect(page.getByRole('heading', { level: 1, name: /byte factory/i })).toBeVisible()
 
   const kilobytesLayer = page.getByLabel(/^kilobytes layer$/i)
   await expect(kilobytesLayer).toBeVisible()
   await expect(kilobytesLayer).toContainText(/owned: 0\b/i)
+  const money = page.getByRole('button', { name: /^money display$/i })
+  await expect(money).toContainText(/^2,500\s*b/i)
 
-  const buyButton = page.getByRole('button', { name: /^buy for \$10\b/i })
+  // A manual Buy batches every unit affordable inside the current cost block: 2,500 b buys two
+  // Kilobytes at 1,000 b each (flat within the block), shown on the button as "Buy ×2 for 2,000 b".
+  const buyButton = kilobytesLayer.getByRole('button', { name: /^buy ×2 for 2,000 b\b/i })
   await expect(buyButton).toBeEnabled()
   await buyButton.click()
 
-  await expect(bytesLayer).toContainText(/owned: 1\b/i)
-  // Money is spent down to $0, so the same $10 unit is no longer affordable — flat cost within
-  // the first block of 10 purchases (see getTierCost in engine.js).
-  await expect(page.getByRole('button', { name: /^buy for \$10\b/i })).toBeDisabled()
-
-  // Owning 1 Byte produces $1/tick at the base 1s tickspeed — wait for enough production ticks
-  // to afford the next $10 unit again, then buy a second time.
-  const buyAgain = page.getByRole('button', { name: /^buy for \$10\b/i })
-  await expect(buyAgain).toBeEnabled({ timeout: 15000 })
-  await buyAgain.click()
-
-  await expect(bytesLayer).toContainText(/owned: 2\b/i)
+  await expect(kilobytesLayer).toContainText(/owned: 2\b/i)
+  // The 2,000 b spend leaves ~500 b (production only adds a little on top).
+  await expect(money).toContainText(/^[5-9]\d\d\s*b/i)
+  await expect(kilobytesLayer.getByRole('button', { name: /^buy for 1,000 b\b/i })).toBeDisabled()
 })

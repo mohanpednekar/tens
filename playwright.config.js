@@ -19,6 +19,7 @@ export default defineConfig({
   },
   use: {
     baseURL: BASE_URL,
+    launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
   },
   projects: [
     {
