@@ -22,7 +22,7 @@ const resolveInitialThemeMode = () => resolveThemeMode(loadThemePreference())
 
 // Utilities stay reachable during the Byte Foundry gate. Storage is no longer a top-level page —
 // it lives under Foundry as continuous sections — so it is not gate-exempt on its own. 'dev' is
-// exempt for the same reason Settings/Milestones are — Dev Mode has to be reachable precisely
+// exempt for the same reason Settings/Releases are — Dev Mode has to be reachable precisely
 // when you want to seed past the gate, and it's a dev-build-only destination regardless (see
 // AppMenu's `import.meta.env.DEV` guard).
 const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'settings', 'dev'])
@@ -39,12 +39,12 @@ function App() {
   // Local page toggle — not a router. Defaults to 'game'; the gate override below forces Foundry
   // whenever mainGameUnlocked is false and the player isn't on a gate-exempt utility page.
   // mainGameUnlocked is now a PERMANENT, one-time-ever latch (see latchMainGameUnlocked in
-  // engine.js) — never reset by a real Prestige or an Era ascension — so this override can only
+  // engine.js) — never reset by a real Prestige or a Reboot — so this override can only
   // ever fire before the very first time the main game is revealed on this save; every subsequent
   // cycle goes straight to Factory with no replay of the gate.
   const [page, setPage] = useState('game')
   const [menuOpen, setMenuOpen] = useState(false)
-  // Bumped when AppNav selects Perks so it resets to its Automation tab.
+  // Bumped when AppNav selects Firmware so it resets to its Automation tab.
   const [perksFocusNonce, setPerksFocusNonce] = useState(0)
   // Bumped on legacy `storage` navigations (and available for future Foundry focus resets).
   // ByteFoundryPage no longer has Memory | Storage tabs; focusNonce is accepted for API parity.
@@ -58,7 +58,7 @@ function App() {
 
   const showBoosters = isComputeCoreConversionUnlocked(game.state)
   const showComputeFlops = isComputeFlopsPageRevealed(game.state)
-  // Factory is the only progress-gated primary destination — utilities (Guide / More) stay available
+  // Factory is the only progress-gated primary destination — utilities (Manual / More) stay available
   // from the first launch, including during the mandatory gate.
   const showTiers = mainGameUnlocked
   const showPerks = mainGameUnlocked && isPerksPageRevealed(game.state)

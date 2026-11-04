@@ -726,8 +726,8 @@ automation pause toggle live on the separate **Firmware** page (below). Releases
 `MilestonesPage` (AppNav → More). Full-save Reset lives only under More → Settings → Danger zone.
 
 **Firmware page (`pages/PerksPage`).** Its own AppNav destination (page id `'perks'`, item `open firmware`, 🔧,
-between Factory and Manual), shown once `isPerksPageRevealed` (= `isBuyMaxUnlocked`: first Prestige or
-Era) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
+between Factory and More), shown once `isPerksPageRevealed` (= `isBuyMaxUnlocked`: first Prestige or
+Reboot) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
 attention). Header shows the spendable PP (`aria-label="purge points display"`). Two **icon-only**
 tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyph, the full name is in
 `aria-label`/`title`), defaulting to Automation and reset to it by `focusNonce` on each AppNav visit.
@@ -1118,7 +1118,7 @@ the Googol freeze" below.
 `App.jsx` switches screens via a local `page` `useState` (`'game'`/`'info'`/`'foundry'`/`'boosters'`/
 `'compute'`/`'perks'`/`'milestones'`/`'settings'`/`'dev'`, default `'game'`) — not a routing library —
 plus a shared fixed bottom `AppNav` (Foundry → Power → Compute → Factory → Firmware → More; Manual is in More) and
-`AppMenu` (More sheet → Milestones / Settings / Dev Mode in dev builds). Legacy `page === 'storage'`
+`AppMenu` (More sheet → Manual / Releases / Settings / Dev Mode in dev builds). Legacy `page === 'storage'`
 rewrites to `'foundry'`. Which screen renders is derived, not `page` directly:
 `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked || page === 'foundry')`.
 `GATE_EXEMPT_PAGES` = `'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`, so those

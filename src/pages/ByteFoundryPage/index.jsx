@@ -722,7 +722,7 @@ const getSpeedColor = percent => {
 }
 
 // Before intro.mainGameUnlocked this page is a mandatory gate with no way out via Tiers (AppNav
-// still shows Guide/More). Once unlocked, AppNav's Foundry item reopens it at any time — nothing
+// still shows Manual/More). Once unlocked, AppNav's Foundry item reopens it at any time — nothing
 // here is read-only. Data Stream + per-pool Memory/Storage are continuous sections on this one
 // screen (no second-level tabs). Forced priority: Disk Fill > Speed > Provision Disk > Compute.
 // focusNonce is accepted for App.jsx parity with MainPage; Foundry no longer has a tab to reset.

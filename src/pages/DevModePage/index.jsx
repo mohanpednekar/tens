@@ -27,9 +27,9 @@ import styled from 'styled-components'
 // unreachable — and, once tree-shaken by `yarn build`, absent — from a production bundle. Everything
 // here operates on a save separate from every real player slot (game/storage.js's DEV_SLOT_ID).
 //
-// Layout mirrors the real game: a header balance strip like MainPage/Perks, quick-seed presets and
-// Variables grouped by the same AppNav destinations (Foundry / Compute / Factory / Perks / …) with
-// Perks-style icon tabs, Perks-style Switches for booleans. The Variables tree is not a
+// Layout mirrors the real game: a header balance strip like MainPage/Firmware, quick-seed presets and
+// Variables grouped by the same AppNav destinations (Foundry / Compute / Factory / Firmware / …) with
+// Firmware-style icon tabs, Firmware-style Switches for booleans. The Variables tree is not a
 // hand-maintained field list: it's a recursive walk of the live `game.state` (FieldNode), so a new
 // field added to createInitialGameState() shows up with zero changes here.
 
