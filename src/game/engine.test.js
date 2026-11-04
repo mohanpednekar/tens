@@ -3736,9 +3736,7 @@ describe('tickDiskWriteCache', () => {
     sourceSize: FIRST_DISK_SIZE,
     segmentsCollected: 0,
     collectedBits: 0,
-    transferSize: null,
-    segmentRemainingSeconds: 0,
-    segmentTotalSeconds: 0,
+    transfers: [],
     flushRemainingSeconds: 10,
     flushTotalSeconds: 10,
     expedite: true,
@@ -3765,18 +3763,18 @@ describe('tickDiskWriteCache', () => {
     expect(getDiskWriteCacheMerge(tickDiskWriteCache(0)(state), FIRST_DISK_SIZE)).toBeNull()
   })
 
-  it('times the flush off the pool Bandwidth (disk-from-cache 2x) and an expedited smaller-disk transfer at cache-from-disk 5x', () => {
+  it('times the flush at disk-from-cache 2x, an expedited flush and each smaller-disk transfer at cache-from-disk 5x', () => {
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
       disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
     })
+    const bandwidth = getStoragePoolBandwidth(state, 1)
     const merge = getDiskWriteCacheMerge(tickDiskWriteCache(0)(state), level2Size)
-    expect(merge.flushTotalSeconds).toBe(level2Size / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 1))
+    expect(merge.flushTotalSeconds).toBe(level2Size / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER / bandwidth)
     // tier01 at level 2 so FIRST_DISK_SIZE isn't claimed by its tier this tick.
-    const expedited = tickDiskWriteCache(0)(expediteDiskFill(level2Size)(withPurchaseLevel(state, tensTier.id, 2)))
-    const transfer = getDiskWriteCacheMerge(expedited, level2Size)
-    expect(transfer.transferSize).toBe(FIRST_DISK_SIZE)
-    expect(transfer.segmentTotalSeconds).toBe(FIRST_DISK_SIZE / CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 1))
+    const expedited = getDiskWriteCacheMerge(tickDiskWriteCache(0)(expediteDiskFill(level2Size)(withPurchaseLevel(state, tensTier.id, 2))), level2Size)
+    expect(expedited.flushTotalSeconds).toBe(level2Size / CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER / bandwidth)
+    expect(expedited.transfers[0].totalSeconds).toBe(FIRST_DISK_SIZE / CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER / bandwidth)
   })
 
   it('scales a freshly-started merge\'s flush timing with Byte Foundry production rate', () => {
@@ -3819,67 +3817,58 @@ describe('tickDiskWriteCache', () => {
     expect(after.intro.poolBuffers[1]).toBe(0)
   })
 
-  it('an expedited merge consumes one smaller full disk per timed transfer, largest size first, then the pool buffer', () => {
+  it('an expedited merge transfers every smaller disk it needs IN PARALLEL, largest first, and only as many as fit', () => {
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
-      disks: { [FIRST_DISK_SIZE]: 1, [level2Size]: 1 },
+      disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: DISK_ARRAY_LADDER_CAP },
       diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
       poolBuffers: { 1: 0 },
     })
     const queued = tickDiskWriteCache(0)(expediteDiskFill(level3Size)(state))
-    let merge = getDiskWriteCacheMerge(queued, level3Size)
-    expect(merge.transferSize).toBe(level2Size)
-    const afterFirst = tickDiskWriteCache(merge.segmentTotalSeconds)(queued)
-    merge = getDiskWriteCacheMerge(afterFirst, level3Size)
-    expect(afterFirst.intro.disks[level2Size] ?? 0).toBe(0)
-    expect(merge.collectedBits).toBe(level2Size)
-    expect(merge.segmentsCollected).toBe(1)
-    expect(merge.transferSize).toBe(FIRST_DISK_SIZE)
-    const afterSecond = tickDiskWriteCache(merge.segmentTotalSeconds)(withIntro(afterFirst, { poolBuffers: { 1: 1_000 } }))
-    merge = getDiskWriteCacheMerge(afterSecond, level3Size)
-    expect(afterSecond.intro.disks[FIRST_DISK_SIZE] ?? 0).toBe(0)
-    // No smaller disk left, so it would top up from the pool — but the pool's fill order is unchanged:
-    // the now-empty smaller (level2Size) disk's own write cache draws the buffer first.
-    expect(merge.transferSize).toBeNull()
-    expect(merge.collectedBits).toBe(level2Size + FIRST_DISK_SIZE)
-    expect(getDiskWriteCacheMerge(afterSecond, level2Size).collectedBits).toBe(1_000)
-    expect(afterSecond.intro.poolBuffers[1]).toBe(0)
-    // Once that smaller disk's cache is satisfied, the expedited merge takes the rest from the pool.
-    const refilled = withIntro(afterSecond, {
-      diskWriteCache: { ...afterSecond.intro.diskWriteCache, [level2Size]: undefined },
-      // Drop the smaller array so nothing smaller is left to consume or refill first.
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
-      disks: {},
-      poolBuffers: { 1: 1_000 },
-    })
-    const afterThird = tickDiskWriteCache(0)(refilled)
-    expect(getDiskWriteCacheMerge(afterThird, level3Size).collectedBits).toBe(level2Size + FIRST_DISK_SIZE + 1_000)
+    const merge = getDiskWriteCacheMerge(queued, level3Size)
+    // 9 × 80,000 + 9 × 8,000 = 792,000 of the 800,000 needed, all started at once.
+    expect(merge.transfers.map(transfer => transfer.size)).toEqual([
+      ...Array(DISK_ARRAY_LADDER_CAP).fill(level2Size),
+      ...Array(DISK_ARRAY_LADDER_CAP).fill(FIRST_DISK_SIZE),
+    ])
+    // They all land within one transfer of the largest size.
+    const landed = tickDiskWriteCache(merge.transfers[0].totalSeconds)(queued)
+    expect(getDiskWriteCacheMerge(landed, level3Size).collectedBits).toBe(DISK_ARRAY_LADDER_CAP * (level2Size + FIRST_DISK_SIZE))
+    expect(landed.intro.disks[level2Size] ?? 0).toBe(0)
+    expect(landed.intro.disks[FIRST_DISK_SIZE] ?? 0).toBe(0)
   })
 
-  it('an expedited merge is funded by a smaller-disk transfer and the pool buffer at once, reserving the transfer so it never overshoots', () => {
+  it('an expedited write cache jumps the Staging queue ahead of smaller, non-expedited write caches (the read cache keeps first claim)', () => {
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [level2Size]: 1, [level3Size]: 1 },
+      disks: {},
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE - 100 },
+      poolBuffers: { 1: 50_100 },
+    })
+    const after = tickDiskWriteCache(0)(expediteDiskFill(level3Size)(state))
+    expect(getDiskWriteCacheMerge(after, level3Size).collectedBits).toBe(50_000)
+    expect(getDiskWriteCacheMerge(after, level2Size).collectedBits).toBe(0)
+    expect(after.intro.poolBuffers[1]).toBe(100) // the read cache's reservation is untouched
+  })
+
+  it('an expedited merge is funded by smaller-disk transfers and the pool buffer at once, reserving the transfers so it never overshoots', () => {
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), {
       disksBuiltTotal: { [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
-      disks: { [level2Size]: DISK_ARRAY_LADDER_CAP },
+      disks: { [level2Size]: 2 },
       diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
       poolBuffers: { 1: 50_000 },
     })
     const after = tickDiskWriteCache(0)(expediteDiskFill(level3Size)(state))
     let merge = getDiskWriteCacheMerge(after, level3Size)
-    // The buffer pays what it can; a smaller disk covers part of the rest at the same time.
     expect(merge.collectedBits).toBe(50_000)
-    expect(merge.transferSize).toBe(level2Size)
-    // More buffer arrives mid-transfer (not enough for everything): it pays all but the transfer's
-    // reserved share, and the transfer keeps running alongside it.
+    expect(merge.transfers.map(transfer => transfer.size)).toEqual([level2Size, level2Size])
+    // More buffer mid-transfer (not enough for everything): it pays all but the reserved transfers.
     const topped = tickDiskWriteCache(0)(withIntro(after, { poolBuffers: { 1: 600_000 } }))
     merge = getDiskWriteCacheMerge(topped, level3Size)
-    expect(merge.collectedBits).toBe(650_000)
-    expect(merge.transferSize).toBe(level2Size)
-    const landed = tickDiskWriteCache(merge.segmentTotalSeconds)(topped)
-    merge = getDiskWriteCacheMerge(landed, level3Size)
-    expect(merge.collectedBits).toBe(650_000 + level2Size)
-    // Only 1 of the 9 smaller disks was consumed; the last 70,000 bits don't fit another, so Staging finishes it.
-    expect(landed.intro.disks[level2Size]).toBe(DISK_ARRAY_LADDER_CAP - 1)
-    expect(merge.transferSize).toBeNull()
+    expect(merge.collectedBits).toBe(level3Size - 2 * level2Size)
+    const done = tickDiskWriteCache(merge.transfers[0].totalSeconds)(topped)
+    expect(getDiskWriteCacheMerge(done, level3Size).segmentsCollected).toBe(DISK_LADDER_SIZE_MULTIPLIER)
+    expect(done.intro.disks[level2Size] ?? 0).toBe(0)
   })
 
   it('expediting is never slower than the default fill: a buffer that covers the need takes no smaller disk', () => {
@@ -3890,14 +3879,11 @@ describe('tickDiskWriteCache', () => {
       poolBuffers: { 1: level3Size },
     })
     const expedited = tickDiskWriteCache(0)(expediteDiskFill(level3Size)(state))
-    const plain = tickDiskWriteCache(0)(state)
     expect(getDiskWriteCacheMerge(expedited, level3Size).segmentsCollected).toBe(DISK_LADDER_SIZE_MULTIPLIER)
-    expect(getDiskWriteCacheMerge(plain, level3Size).segmentsCollected).toBe(DISK_LADDER_SIZE_MULTIPLIER)
     expect(expedited.intro.disks[level2Size]).toBe(DISK_ARRAY_LADDER_CAP)
-    // An in-flight transfer is dropped (disk kept) once the buffer can cover the whole remaining need.
-    const mid = withIntro(state, { poolBuffers: { 1: 0 } })
-    const inFlight = tickDiskWriteCache(0)(expediteDiskFill(level3Size)(mid))
-    expect(getDiskWriteCacheMerge(inFlight, level3Size).transferSize).toBe(level2Size)
+    // In-flight transfers are dropped (disks kept) once the buffer can cover the whole remaining need.
+    const inFlight = tickDiskWriteCache(0)(expediteDiskFill(level3Size)(withIntro(state, { poolBuffers: { 1: 0 } })))
+    expect(getDiskWriteCacheMerge(inFlight, level3Size).transfers.length).toBeGreaterThan(0)
     const covered = tickDiskWriteCache(0)(withIntro(inFlight, { poolBuffers: { 1: level3Size } }))
     expect(getDiskWriteCacheMerge(covered, level3Size).segmentsCollected).toBe(DISK_LADDER_SIZE_MULTIPLIER)
     expect(covered.intro.disks[level2Size]).toBe(DISK_ARRAY_LADDER_CAP)
@@ -3910,8 +3896,8 @@ describe('tickDiskWriteCache', () => {
       diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     const after = tickDiskWriteCache(0)(expediteDiskFill(level3Size)(expediteDiskFill(level2Size)(state)))
-    expect(getDiskWriteCacheMerge(after, level2Size).transferSize).toBe(FIRST_DISK_SIZE)
-    expect(getDiskWriteCacheMerge(after, level3Size).transferSize).toBeNull()
+    const claims = [level2Size, level3Size].flatMap(size => getDiskWriteCacheMerge(after, size).transfers.map(transfer => transfer.size))
+    expect(claims).toEqual([FIRST_DISK_SIZE])
   })
 
   it('expediteDiskFill only queues an empty disk of a write-cache size, once', () => {
@@ -3934,13 +3920,13 @@ describe('tickDiskWriteCache', () => {
     const merging = (merge, extra = {}) => withIntro(createInitialGameState(), {
       disksBuiltTotal: { [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
       disks: { [level2Size]: DISK_ARRAY_LADDER_CAP },
-      diskWriteCache: { [level3Size]: expediting({ sourceSize: level2Size, segmentTotalSeconds: 10, flushTotalSeconds: 10, ...merge }) },
+      diskWriteCache: { [level3Size]: expediting({ sourceSize: level2Size, flushTotalSeconds: 10, ...merge }) },
       ...extra,
     })
-    const collecting = { transferSize: level2Size, segmentRemainingSeconds: 10, flushRemainingSeconds: 10 }
+    const collecting = { transfers: [{ size: level2Size, remainingSeconds: 10, totalSeconds: 10 }], flushRemainingSeconds: 10 }
     const tap = { poolTapBonusPercents: { 1: 100 } }
-    expect(getDiskWriteCacheMerge(tickDiskWriteCache(1)(merging(collecting)), level3Size).segmentRemainingSeconds).toBeCloseTo(9)
-    expect(getDiskWriteCacheMerge(tickDiskWriteCache(1)(merging(collecting, tap)), level3Size).segmentRemainingSeconds).toBeCloseTo(8)
+    expect(getDiskWriteCacheMerge(tickDiskWriteCache(1)(merging(collecting)), level3Size).transfers[0].remainingSeconds).toBeCloseTo(9)
+    expect(getDiskWriteCacheMerge(tickDiskWriteCache(1)(merging(collecting, tap)), level3Size).transfers[0].remainingSeconds).toBeCloseTo(8)
     const flushing = { segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER, collectedBits: level3Size, flushRemainingSeconds: 10 }
     expect(getDiskWriteCacheMerge(tickDiskWriteCache(1)(merging(flushing, tap)), level3Size).flushRemainingSeconds).toBeCloseTo(8)
   })
@@ -3956,9 +3942,7 @@ describe('tickDiskWriteCache', () => {
           sourceSize: level2Size,
           segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER - 1,
           collectedBits: (DISK_LADDER_SIZE_MULTIPLIER - 1) * level2Size,
-          transferSize: level2Size,
-          segmentRemainingSeconds: 1,
-          segmentTotalSeconds: 1,
+          transfers: [{ size: level2Size, remainingSeconds: 1, totalSeconds: 1 }],
         }),
       },
     })
@@ -3975,7 +3959,7 @@ describe('tickDiskWriteCache', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
       disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
       diskWriteCache: {
-        [level2Size]: expediting({ transferSize: FIRST_DISK_SIZE, segmentRemainingSeconds: segmentTotalSeconds, segmentTotalSeconds }),
+        [level2Size]: expediting({ transfers: [{ size: FIRST_DISK_SIZE, remainingSeconds: segmentTotalSeconds, totalSeconds: segmentTotalSeconds }] }),
       },
     })
     expect(isDiskWriteCacheCollectPaused(state, level2Size)).toBe(true)
@@ -4163,9 +4147,7 @@ describe('tickDiskWriteCache', () => {
         [level2Size]: expediting({
           segmentsCollected: 1,
           collectedBits: FIRST_DISK_SIZE,
-          transferSize: FIRST_DISK_SIZE,
-          segmentRemainingSeconds: segmentTotalSeconds,
-          segmentTotalSeconds,
+          transfers: [{ size: FIRST_DISK_SIZE, remainingSeconds: segmentTotalSeconds, totalSeconds: segmentTotalSeconds }],
         }),
       },
     })
