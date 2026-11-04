@@ -702,7 +702,8 @@ cheap while work is still private to the session, heavier once other reviewers c
    PR should use `send_later` (or an equivalent short check-in) to re-check after the quiet window.
    The point is to give a concurrently-posting reviewer a moment to land one more comment before the
    PR locks in. This never overrides the existing rule that a PR touching `.github/workflows/**` stays
-   human-gated via CODEOWNERS.
+   human-gated (Path 2/3 exclusions + the agent auto-merge rule's workflow carve-out; CODEOWNERS
+   review isn't ruleset-enforced yet).
 
 ### AI-instruction file cost hygiene
 
