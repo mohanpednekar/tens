@@ -746,7 +746,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     <List aria-label="prestige firmware page">
       <Category aria-label="purge points category">
         <CategoryHeading>Purge Points</CategoryHeading>
-        <Row aria-label="double PP upgrade">
+        <Row aria-label="compression upgrade">
           <RowLabelStack>
             <RowLabel>
               <RowIcon>✦</RowIcon>Compression

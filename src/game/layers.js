@@ -782,8 +782,8 @@ export const COMPUTE_FLOPS_TIER_INDEX_BY_ID = Object.assign(Object.create(null),
   COMPUTE_FLOPS_TIER_DEFINITIONS.map((t, index) => [t.id, index])
 ))
 
-// --- Era / Eons meta layer (#407) — see docs/ECONOMY_REFERENCE.md "Era ascension" ---
-// Era ascension requires this many unspent Prestige Points (1 Googol PP).
+// --- Era / Eons meta layer (#407) — see docs/ECONOMY_REFERENCE.md "Reboot and Kernels" ---
+// Reboot (`eraGame`) requires this many unspent Prestige Points (1 Googol PP).
 export const ERA_ELIGIBILITY_PP = GOOGOL
 // Flops autobuyer milestone: Era N unlocks the Nth Flops tier's autobuyer (KFlops at Era 1, …).
 export const FLOPS_AUTOBUYER_ERA_START = 1
@@ -793,5 +793,5 @@ export const HYPERSCALER_EON_COST_BASE = 1
 export const HYPERSCALER_EON_COST_MULTIPLIER = 10
 // Each Hyperscaler Efficiency level adds this much extra rate per hyperscaler (+0.001%/s at 0.00001).
 export const HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL = 0.00001
-// Each Eon Amplifier level adds this many extra Eons awarded per Era ascension.
+// Each Kernel Amplifier level adds this many extra Kernels awarded per Reboot.
 export const EON_AMPLIFIER_AWARD_PER_LEVEL = 1
