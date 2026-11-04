@@ -157,7 +157,8 @@ Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator 
 *derived* from the Speed basis as `basis^e` via `getDataStreamSpeedBytesPerSecond`, capped at `Capacity^e`, where `e` = 0.5 + 0.01 per Disk size unlocked beyond the first via Foundry reset (`getDataStreamSpeedExponent`), not purchased) — entirely OUTSIDE the
 forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a separate fill-based
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer
-fullness; taps never speed a fill — a Data Stream tap speeds Upgrade Capacity/Speed, a pool tap speeds that pool's consumers (disks, merges, provisioning, lake). Disks (`StoragePage`) fill and pull into Factory automatically, with no manual
+fullness; taps never speed a fill — a Data Stream tap speeds Upgrade Capacity/Speed, a pool tap speeds that pool's consumers (disks, merges, provisioning, lake). Disks (`StoragePage`) fill from their pool buffer (larger sizes via a write cache; clicking an empty disk
+also feeds it from smaller disks at the same time) and pull into Factory automatically, with no manual
 redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too — but Cells,
 which spend banked Data Lake units for Cells/Batteries/Boost (`ComputePage`, nav **Power**), only
 buy via a single per-lake "🏷️ `<cost>`" control: it buys immediately if affordable, or arms a one-shot
@@ -324,9 +325,11 @@ path (see below). Full detail: `docs/AUTOMATION.md`'s "PR review & testing caden
 
 **After the final commit** on a finished PR: run the adversarial `code-reviewer`, post its
 `<!-- adversarial-review sha=… verdict=… -->` marker as a PR comment, mark the PR ready, and —
-when the verdict is `APPROVE` and the PR meets the low-risk bar — **always** enable auto-merge
-immediately via `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (or
-rely on `pr-auto-merge.yml` Path 3 reacting to the marker) — this automatic path is not subject to
+on `APPROVE` — **always** enable auto-merge: low-risk diffs via
+`scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (or `pr-auto-merge.yml`
+Path 3 reacting to the marker); any other diff via `gh pr merge --auto --merge`, **except** diffs
+touching `.github/workflows/**`, which stay marked-ready for human review (the ruleset requires no
+approval, so nothing else gates them) — this automatic path is not subject to
 the quiet period above. That enables GitHub auto-merge only; never force-merge, never push to
 `main`, never GitHub-approve your own PR. Full detail: `CLAUDE.md` Pull requests +
 `docs/AUTOMATION.md` Auto-merge.

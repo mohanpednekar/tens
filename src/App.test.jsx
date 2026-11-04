@@ -4,7 +4,7 @@ import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
 import { ThemeProvider } from 'theme'
 import { themes } from 'theme/tokens'
-import { applyAutobuyerMilestones, createInitialGameState, getAutobuyerIntervalMaxLevel, getAutobuyerSpeedUpgradeMaxLevel, getAutomationIntervalMaxLevel, getTierTickspeedIntervalMaxLevel, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, formatOfflineDuration, getIntroProductionRate, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
+import { applyAutobuyerMilestones, createInitialGameState, getAutobuyerIntervalMaxLevel, getAutobuyerSpeedUpgradeMaxLevel, getAutomationIntervalMaxLevel, getTierTickspeedIntervalMaxLevel, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, formatOfflineDuration, expediteDiskFill, getIntroProductionRate, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   BITS_PER_BYTE,
   COMPUTE_BOOST_MAX_STACKS,
@@ -44,6 +44,7 @@ import {
 import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
+import DiskArrayRow from 'components/DiskArrayRow'
 import ByteFoundryPage, { formatBitsTransition, getBufferSecondsToFull } from 'pages/ByteFoundryPage'
 
 // Enough Data Stream Capacity for Storage pool 2 (MB) to be visible — Battery merges are timed off
@@ -6022,5 +6023,43 @@ describe('formatBitsTransition (running-upgrade from → to)', () => {
   it('re-expresses a from-value that would have read in a smaller unit in the target unit', () => {
     expect(formatBitsTransition(512 * 8, 1 * KIB, '/s')).toBe('512 → 1,024 B/s')
     expect(formatBitsTransition(512 * KIB, 1024 * KIB)).toBe('512 → 1,024 KiB')
+  })
+})
+
+// DiskArrayRow's one click: expediting an empty write-cache-size disk.
+const EXPEDITE_FIRST_DISK_SIZE = getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE
+const EXPEDITE_SECOND_DISK_SIZE = EXPEDITE_FIRST_DISK_SIZE * 10
+
+const withExpediteDisks = intro => {
+  const state = createInitialGameState()
+  return { ...state, intro: { ...state.intro, ...intro } }
+}
+
+const renderDiskArrayRow = (state, size, actions = {}) => render(
+  <ThemeProvider>
+    <DiskArrayRow actions={actions} size={size} state={state} />
+  </ThemeProvider>,
+)
+
+describe('DiskArrayRow expedite click', () => {
+  it('clicking an empty disk of a write-cache size queues it via actions.expediteDiskFill', async () => {
+    const expedite = vi.fn()
+    const state = withExpediteDisks({ disksBuiltTotal: { [EXPEDITE_SECOND_DISK_SIZE]: 2 }, disks: { [EXPEDITE_SECOND_DISK_SIZE]: 1 } })
+    renderDiskArrayRow(state, EXPEDITE_SECOND_DISK_SIZE, { expediteDiskFill: expedite })
+    await userEvent.click(screen.getByRole('button', { name: /empty 10 kb disk/i }))
+    expect(expedite).toHaveBeenCalledWith(EXPEDITE_SECOND_DISK_SIZE)
+  })
+
+  it('shows an expedited disk as queued and no longer clickable', () => {
+    const base = withExpediteDisks({ disksBuiltTotal: { [EXPEDITE_SECOND_DISK_SIZE]: 1 }, disks: {} })
+    renderDiskArrayRow(expediteDiskFill(EXPEDITE_SECOND_DISK_SIZE)(base), EXPEDITE_SECOND_DISK_SIZE, { expediteDiskFill: vi.fn() })
+    expect(screen.getByLabelText(/empty 10 kb disk queued for filling/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('never makes the pool\'s smallest (read-cache) size clickable', () => {
+    const state = withExpediteDisks({ disksBuiltTotal: { [EXPEDITE_FIRST_DISK_SIZE]: 2 }, disks: { [EXPEDITE_FIRST_DISK_SIZE]: 1 } })
+    renderDiskArrayRow(state, EXPEDITE_FIRST_DISK_SIZE, { expediteDiskFill: vi.fn() })
+    expect(screen.queryByRole('button')).toBeNull()
   })
 })

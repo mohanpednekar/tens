@@ -563,14 +563,19 @@ that defaults to squash — see issue #343):
    the marker (via `scripts/adversarialReviewMarker.js`'s formatter), then run
    `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (or rely on this
    path firing from the comment). `NEEDS_CHANGES` / `BLOCK` markers never enable auto-merge.
-   Non-low-risk APPROVEs still need a human via Path 1. The enable script checks low-risk
+   Non-low-risk APPROVEs aren't enabled by this path; the agent enables them itself (below)
+   unless the diff touches `.github/workflows/**`, which needs a human via Path 1. The enable script checks low-risk
    eligibility **before** marking a draft ready, so an ineligible PR is never promoted.
 
 **After final commit (agent duty).** For every finished autonomous or interactive PR: run the
-adversarial reviewer on the final head → post the marker comment → on APPROVE+low-risk always
-enable auto-merge (script above). Enabling auto-merge here is an explicit standing exception to
+adversarial reviewer on the final head → post the marker comment → on any APPROVE always mark
+ready; enable auto-merge via the script above for low-risk diffs, or plain `gh pr merge --auto
+--merge` for any other diff that touches no `.github/workflows/**` file (maintainer standing rule —
+the `main` ruleset requires no human approval today, so the adversarial APPROVE is the gate).
+Workflow-file diffs: mark ready only, never enable auto-merge. Enabling auto-merge here is an explicit standing exception to
 "never self-merge"; force-merging, pushing to `main`, and GitHub-approving your own PR remain
-forbidden. Workflow-file PRs remain human-gated via CODEOWNERS + Path 2/3 exclusions.
+forbidden. Workflow-file PRs remain human-gated via the Path 2/3 exclusions and the agent rule above (CODEOWNERS
+review is not yet enforced by the ruleset — #62).
 
 **Three one-time manual prerequisites** (not settable through tools available to a Claude Code
 session):
@@ -697,7 +702,8 @@ cheap while work is still private to the session, heavier once other reviewers c
    PR should use `send_later` (or an equivalent short check-in) to re-check after the quiet window.
    The point is to give a concurrently-posting reviewer a moment to land one more comment before the
    PR locks in. This never overrides the existing rule that a PR touching `.github/workflows/**` stays
-   human-gated via CODEOWNERS.
+   human-gated (Path 2/3 exclusions + the agent auto-merge rule's workflow carve-out; CODEOWNERS
+   review isn't ruleset-enforced yet).
 
 ### AI-instruction file cost hygiene
 
