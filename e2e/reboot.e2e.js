@@ -14,17 +14,17 @@ test.beforeEach(async ({ page }) => {
   await page.reload()
 })
 
-test('ascending an Era from Settings awards Eons and resets Foundry Capacity, but keeps the gate permanently unlocked', async ({ page }) => {
+test('rebooting from Settings awards Kernels and resets Foundry Capacity, but keeps the gate permanently unlocked', async ({ page }) => {
   await page.getByRole('button', { name: /open more menu/i }).click()
   await page.getByRole('button', { name: /open settings/i }).click()
-  await page.getByRole('button', { name: /ascend an era — open confirmation/i }).click()
-  await page.getByRole('button', { name: /^ascend era$/i }).click()
+  await page.getByRole('button', { name: /reboot — open confirmation/i }).click()
+  await page.getByRole('button', { name: /^reboot$/i }).click()
 
   const saved = await page.evaluate(() => JSON.parse(window.localStorage.getItem('tens_game_state')))
   expect(saved.era.count).toBe(1)
   expect(saved.eons.balance).toBeGreaterThanOrEqual(1)
   // intro.mainGameUnlocked is now a permanent, one-time-ever latch (see engine.js's
-  // latchMainGameUnlocked/buildEraIntroReset) — Era ascension resets the rest of the Foundry but
+  // latchMainGameUnlocked/buildEraIntroReset) — Reboot resets the rest of the Foundry but
   // carries this flag forward once it's ever been set.
   expect(saved.intro.mainGameUnlocked).toBe(true)
   expect(saved.intro.capacity).toBe(8)

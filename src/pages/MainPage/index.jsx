@@ -596,7 +596,7 @@ const MutedText = styled.p`
 // bonus badge and an autobuyer status icon — both removed to keep the row down to just the tier
 // name plus live production/owned figures and the two action buttons; the tickspeed bonus is
 // still visible in the row's own Details disclosure below, and autobuyer status still shows on
-// the Perks page.
+// the Firmware page.
 const TierName = styled.h3`
   align-items: baseline;
   column-gap: ${props => props.theme.space.sm};
@@ -975,7 +975,7 @@ const MainPage = ({ game }) => {
   const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)
   const canOverclock = !isFrozen && lastTierLevelDisplay >= overclockRequirement
 
-  // Auto Scale Up (bought on Perks → Automation; see buyAutoScaleUp in engine.js) — Factory only shows
+  // Auto Scale Up (bought on Firmware → Automation; see buyAutoScaleUp in engine.js) — Factory only shows
   // its status note.
   const isAutoScaleUpActive = state.autoScaleUp ?? false
   // Whether Auto Scale Up currently acts, independent of whether it's been bought (see
@@ -987,7 +987,7 @@ const MainPage = ({ game }) => {
     ? "Scale Up now triggers automatically the instant it's eligible"
     : 'Auto Scale Up is currently paused — it will not trigger until resumed'
 
-  // PP-funded unlocks/upgrades/toggles live on the Perks page (pages/PerksPage).
+  // PP-funded unlocks/upgrades/toggles live on the Firmware page (pages/PerksPage).
 
   // The global tickspeed multiplier is a single global (not per-tier) leveled upgrade, mirroring
   // Auto-Prestige's null/level pattern — each REGULAR level speeds up *every* tier's delivery
@@ -995,7 +995,7 @@ const MainPage = ({ game }) => {
   // permanently raised by Overclock — see above), not the amount delivered (see
   // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike every other
   // automation upgrade on this page, it's Bytes-funded (not PP) and lives on the Factory view instead
-  // of the Perks page — see isGlobalTickspeedMultiplierUnlocked in engine.js: it only becomes
+  // of the Firmware page — see isGlobalTickspeedMultiplierUnlocked in engine.js: it only becomes
   // purchasable once at least 1 of the second tier is owned, so a player can't spend their Bytes
   // on it before Kilobytes are producing any. The level itself resets to not-yet-bought on both
   // Up (see purgeGame/scaleUpGame in engine.js), same as tier02's owned count, so re-unlocking
@@ -1103,7 +1103,7 @@ const MainPage = ({ game }) => {
             <li>Resets your resources, owned tiers, and purchases</li>
             <li>
               Awards {formatAmount(prestigePointsPreview)} Purge Point
-              {prestigePointsPreview === 1 ? '' : 's'} — spend them on the Perks page for
+              {prestigePointsPreview === 1 ? '' : 's'} — spend them on the Firmware page for
               automation and production bonuses
             </li>
             <li>Keeps your unlocked autobuyers and Purge Points</li>
@@ -1224,7 +1224,7 @@ const MainPage = ({ game }) => {
                 <li>
                   Prestige speed bonus: {state.prestigeSpeedBonusUnlocked
                     ? `${formatBonusOrMultiplier(prestigeBonus)} production speed from ${formatAmount(purge.points)} unspent PP`
-                    : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on Perks → Prestige)`}
+                    : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on Firmware → Prestige)`}
                 </li>
               )}
               <li>

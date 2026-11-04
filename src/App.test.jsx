@@ -120,13 +120,13 @@ const openSettings = async user => {
 }
 
 
-// Perks (AppNav → Perks) has two icon tabs: Automation and Prestige.
+// Firmware (AppNav → Firmware) has two icon tabs: Automation and Prestige.
 const openPerksTab = async (user, tab) => {
-  await user.click(screen.getByRole('button', { name: /^open perks$/i }))
+  await user.click(screen.getByRole('button', { name: /^open firmware$/i }))
   await user.click(screen.getByRole('tab', { name: tab }))
 }
 const openPerksTabSync = tab => {
-  fireEvent.click(screen.getByRole('button', { name: /^open perks$/i }))
+  fireEvent.click(screen.getByRole('button', { name: /^open firmware$/i }))
   fireEvent.click(screen.getByRole('tab', { name: tab }))
 }
 const openFactorySync = () => fireEvent.click(screen.getByRole('button', { name: /^open byte factory$/i }))
@@ -141,7 +141,7 @@ test('renders the game title and the Kilobytes tier', () => {
   expect(screen.getByRole('button', { name: /buy for 1,000 b\b/i })).toBeDisabled()
 })
 
-test('shows the app version only on the Guide page', async () => {
+test('shows the app version only on the Manual page', async () => {
   const user = userEvent.setup()
   seedMainGameState()
   render(<App />)
@@ -149,7 +149,7 @@ test('shows the app version only on the Guide page', async () => {
   expect(screen.queryByText(`v${version}`)).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open guide/i }))
+  await user.click(screen.getByRole('button', { name: /open manual/i }))
   expect(screen.getByText(`v${version}`)).toBeInTheDocument()
 
   await openSettings(user)
@@ -174,10 +174,10 @@ test('shows a blocking notice and starts fresh when an incompatible save is dete
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 })
 
-// Regression: AppNav exposes Foundry/Guide (and later Storage/Compute) as accessibly-labeled
+// Regression: AppNav exposes Foundry/Manual (and later Storage/Compute) as accessibly-labeled
 // buttons once the main game is unlocked — this only asserts the accessible surface
 // (role + aria-label), since jsdom doesn't render CSS for a visual check.
-test('AppNav exposes accessibly-labeled Foundry, Guide, and More once unlocked', () => {
+test('AppNav exposes accessibly-labeled Foundry, Manual, and More once unlocked', () => {
   seedMainGameState()
   render(<App />)
 
@@ -201,16 +201,16 @@ test('AppNav exposes accessibly-labeled Foundry, Guide, and More once unlocked',
   // Storage is folded into Foundry → Disks — not a top-level AppNav item.
   expect(screen.queryByRole('button', { name: /open storage/i })).not.toBeInTheDocument()
 
-  // Guide lives in the More sheet, not on the bottom bar.
-  expect(within(screen.getByRole('navigation', { name: /main navigation/i })).queryByRole('button', { name: /open guide/i })).not.toBeInTheDocument()
+  // Manual lives in the More sheet, not on the bottom bar.
+  expect(within(screen.getByRole('navigation', { name: /main navigation/i })).queryByRole('button', { name: /open manual/i })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: /open more menu/i }))
-  expect(screen.getByRole('button', { name: /open guide/i })).toHaveTextContent(/guide/i)
+  expect(screen.getByRole('button', { name: /open manual/i })).toHaveTextContent(/manual/i)
   fireEvent.click(screen.getByRole('button', { name: /open more menu/i }))
 
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
 })
 
-test('More menu reaches Milestones and Settings from any screen without progress gates', async () => {
+test('More menu reaches Releases and Settings from any screen without progress gates', async () => {
   const user = userEvent.setup()
   render(<App />) // fresh gate — no mainGameUnlocked yet
 
@@ -222,9 +222,9 @@ test('More menu reaches Milestones and Settings from any screen without progress
   // Reset is not duplicated in the More sheet — only under Settings → Danger zone.
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
 
-  await user.click(screen.getByRole('button', { name: /open milestones/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /^milestones$/i })).toBeInTheDocument()
-  expect(screen.getByLabelText(/chapters category/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open releases/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /^releases$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/releases category/i)).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
@@ -233,13 +233,13 @@ test('More menu reaches Milestones and Settings from any screen without progress
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/supporter pack section/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/save slots section/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/prestige museum section/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/ops dashboard section/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/system log section/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/task manager section/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /dummy supporter checkout/i })).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open guide/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open manual/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /tens — manual/i })).toBeInTheDocument()
 })
 
 // Attention dots on AppNav — Data Stream full on Foundry; affordable full purchase level on Tiers.
@@ -267,18 +267,18 @@ test('AppNav Factory attention dot lights when a full purchase level is affordab
 
   const tiersButton = screen.getByRole('button', { name: /open byte factory/i })
   expect(within(tiersButton).getByLabelText(/important action available/i)).toBeInTheDocument()
-  // Perks (Automation / Prestige) only appears after prestige.
-  expect(screen.queryByRole('button', { name: /^open perks$/i })).not.toBeInTheDocument()
+  // Firmware (Automation / Prestige) only appears after prestige.
+  expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
 })
 
-test('the Byte Factory screen has no second-level tabs; Perks is its own AppNav page with two icon tabs', async () => {
+test('the Byte Factory screen has no second-level tabs; Firmware is its own AppNav page with two icon tabs', async () => {
   seedMainGameState({ purge: { xp: 0, points: 10, count: 1, highestMilestone: 1 } })
   render(<App />)
 
   expect(screen.queryByRole('tablist', { name: /factory view/i })).not.toBeInTheDocument()
-  await userEvent.setup().click(screen.getByRole('button', { name: /^open perks$/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /perks/i })).toBeInTheDocument()
-  const tablist = screen.getByRole('tablist', { name: /perks view/i })
+  await userEvent.setup().click(screen.getByRole('button', { name: /^open firmware$/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /firmware/i })).toBeInTheDocument()
+  const tablist = screen.getByRole('tablist', { name: /firmware view/i })
   for (const name of [/open automation/i, /open prestige/i]) {
     const tab = within(tablist).getByRole('tab', { name })
     // Icon-only: visible text carries no words.
@@ -286,7 +286,7 @@ test('the Byte Factory screen has no second-level tabs; Perks is its own AppNav 
   }
   expect(within(tablist).getByRole('tab', { name: /open automation/i })).toHaveAttribute('aria-selected', 'true')
 })
-test('after an Era ascension (prestige count 0, era 1) Perks stays reachable with every owned automation\'s toggle', async () => {
+test('after a Reboot (prestige count 0, era 1) Firmware stays reachable with every owned automation\'s toggle', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     autobuyers: { tier01: 1 },
@@ -303,7 +303,7 @@ test('after an Era ascension (prestige count 0, era 1) Perks stays reachable wit
   expect(screen.getByRole('button', { name: /buy max mode/i })).toBeInTheDocument()
 })
 
-test('an Era-unlocked Compute (Flops) autobuyer gets its own pause toggle on Perks → Automation', async () => {
+test('a Reboot-unlocked Compute (Flops) autobuyer gets its own pause toggle on Firmware → Automation', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     era: { count: 1 },
@@ -322,7 +322,7 @@ test('an Era-unlocked Compute (Flops) autobuyer gets its own pause toggle on Per
   expect(JSON.parse(localStorage.getItem('tens_game_state')).computeFlopsAutobuyersEnabled.flop01).toBe(false)
 })
 
-test('a fully-automated tier keeps its pause toggles on Perks → Automation', async () => {
+test('a fully-automated tier keeps its pause toggles on Firmware → Automation', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     autobuyers: { tier01: 1 },
@@ -336,7 +336,7 @@ test('a fully-automated tier keeps its pause toggles on Perks → Automation', a
   expect(screen.getByRole('button', { name: /^Kilobytes's tickspeed autobuyer$/i })).toBeInTheDocument()
 })
 
-test('the Guide nav item opens the Info page and Factory returns, preserving game state', async () => {
+test('the Manual nav item opens the Info page and Factory returns, preserving game state', async () => {
   const user = userEvent.setup()
 
   // Kilobytes now costs 1,000/unit (baseCost) — seed enough Money for exactly 1 unit.
@@ -347,9 +347,9 @@ test('the Guide nav item opens the Info page and Factory returns, preserving gam
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open guide/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
-  // Guide sections covering the Byte Foundry pre-game (Data Stream/tapping/Speed, Storage,
+  await user.click(screen.getByRole('button', { name: /open manual/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /tens — manual/i })).toBeInTheDocument()
+  // Manual sections covering the Byte Foundry pre-game (Data Stream/tapping/Speed, Storage,
   // and Compute — including the full merge chain) render alongside the pre-existing main-game
   // sections (Tickspeed, Scale Up, …) plus Prestige.
   expect(screen.getByRole('heading', { level: 2, name: /^byte foundry$/i })).toBeInTheDocument()
@@ -389,16 +389,16 @@ test('Reset appears only in Settings → Danger zone, not on the Byte Factory sc
   render(<App />)
 
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /reset byte foundry/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /reformat byte foundry/i })).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /reset byte foundry/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /reformat byte foundry/i })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /open settings/i }))
 
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /reset byte foundry/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /reformat byte foundry/i })).toBeInTheDocument()
 })
 
 test('reset game restores starting state once the confirm dialog is accepted', async () => {
@@ -467,7 +467,7 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
   expect(saved.owned.tier01).toBe(1)
 })
 
-test('Reset Byte Foundry wipes upgrades to scratch and stores convenience caps', async () => {
+test('Reformat Byte Foundry wipes upgrades to scratch and stores convenience caps', async () => {
   const user = userEvent.setup()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
 
@@ -495,7 +495,7 @@ test('Reset Byte Foundry wipes upgrades to scratch and stores convenience caps',
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 5\b/i)
 
   await openSettings(user)
-  const resetFoundry = screen.getByRole('button', { name: /reset byte foundry/i })
+  const resetFoundry = screen.getByRole('button', { name: /reformat byte foundry/i })
   expect(resetFoundry.title).toMatch(/data stream/i)
   expect(resetFoundry.title).not.toMatch(/including Capacity/)
   await user.click(resetFoundry)
@@ -528,7 +528,7 @@ test('Reset Byte Foundry wipes upgrades to scratch and stores convenience caps',
   expect(screen.queryByRole('button', { name: /open power/i })).not.toBeInTheDocument()
 })
 
-test('cancelling Reset Byte Foundry leaves Foundry progress untouched', async () => {
+test('cancelling Reformat Byte Foundry leaves Foundry progress untouched', async () => {
   const user = userEvent.setup()
   vi.spyOn(window, 'confirm').mockReturnValue(false)
 
@@ -549,7 +549,7 @@ test('cancelling Reset Byte Foundry leaves Foundry progress untouched', async ()
   render(<App />)
 
   await openSettings(user)
-  await user.click(screen.getByRole('button', { name: /reset byte foundry/i }))
+  await user.click(screen.getByRole('button', { name: /reformat byte foundry/i }))
 
   expect(window.confirm).toHaveBeenCalled()
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
@@ -1473,7 +1473,7 @@ test('the Overclock button is disabled once production freezes at a googol', () 
   expect(screen.getByRole('button', { name: /overclock \(requires 5 completed quettabytes levels/i })).toBeDisabled()
 })
 
-test('Perks groups by feature: Automation holds every automation, Prestige the standalone perks', async () => {
+test('Firmware groups by feature: Automation holds every automation, Prestige the standalone perks', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1495,7 +1495,7 @@ test('Perks groups by feature: Automation holds every automation, Prestige the s
   await user.click(screen.getByRole('tab', { name: /open prestige/i }))
   // No separate reveal gate — the speed bonus shows as soon as the page itself is reachable.
   expect(screen.getByLabelText(/^purge points category$/i)).toHaveTextContent(/production speed bonus/i)
-  expect(screen.getByLabelText(/^purge points category$/i)).toHaveTextContent(/double pp/i)
+  expect(screen.getByLabelText(/^purge points category$/i)).toHaveTextContent(/compression/i)
   expect(screen.getByLabelText(/^purchasing category$/i)).toBeInTheDocument()
   expect(screen.queryByLabelText(/^global automation category$/i)).not.toBeInTheDocument()
 })
@@ -1514,7 +1514,7 @@ test('the production speed bonus stays listed with an unlocked badge once bought
   expect(screen.queryByRole('button', { name: /unlock purge point production speed bonus/i })).not.toBeInTheDocument()
 })
 
-test('an Enable Auto Scale Up button appears on Perks → Automation after the first prestige, and spends 16 PP to enable it', async () => {
+test('an Enable Auto Scale Up button appears on Firmware → Automation after the first prestige, and spends 16 PP to enable it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1537,7 +1537,7 @@ test('an Enable Auto Scale Up button appears on Perks → Automation after the f
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('an Enable Auto Restage button on Perks → Automation spends 16 PP to enable it', async () => {
+test('an Enable Auto Restage button on Firmware → Automation spends 16 PP to enable it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1557,7 +1557,7 @@ test('an Enable Auto Restage button on Perks → Automation spends 16 PP to enab
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('Auto Boost is unlocked from Perks → Automation (30 PP), not on Boosters, which then shows its preset preference', async () => {
+test('Auto Boost is unlocked from Firmware → Automation (30 PP), not on Boosters, which then shows its preset preference', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1618,7 +1618,7 @@ test('the global latency panel renders above the tier list, not below it', () =>
   expect(regions.indexOf('global clock speed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('an Enable Auto Clock Speed button appears on Perks → Automation after the first prestige, and spends 8 PP to enable it', async () => {
+test('an Enable Auto Clock Speed button appears on Firmware → Automation after the first prestige, and spends 8 PP to enable it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1640,7 +1640,7 @@ test('an Enable Auto Clock Speed button appears on Perks → Automation after th
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('a static "unlocked" badge shows on Perks → Automation once Auto Scale Up has been bought', async () => {
+test('a static "unlocked" badge shows on Firmware → Automation once Auto Scale Up has been bought', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1692,7 +1692,7 @@ test('pausing Auto Scale Up via its toggle stops it from firing automatically, e
   // Still eligible (purchaseLevels.tier01 untouched) since Auto Scale Up starts paused.
   expect(screen.getByRole('button', { name: /scale up \(requires 3 completed kilobytes levels/i })).toBeEnabled()
 
-  // The pause toggle lives on Perks → Automation; the tick timer itself keeps running
+  // The pause toggle lives on Firmware → Automation; the tick timer itself keeps running
   // regardless of which view is currently rendered.
   openPerksTabSync(/open automation/i)
   fireEvent.click(screen.getByRole('button', { name: /^Auto Scale Up automation$/i }))
@@ -1916,7 +1916,7 @@ test.each([
     pauseName: /^Kilobytes's tickspeed autobuyer$/i,
     resumeName: /^Kilobytes's tickspeed autobuyer$/i,
   },
-])('a pause toggle appears beside the $name badge once bought on Perks → Automation, and pausing/resuming updates it', async ({ seed, pauseName, resumeName, name }) => {
+])('a pause toggle appears beside the $name badge once bought on Firmware → Automation, and pausing/resuming updates it', async ({ seed, pauseName, resumeName, name }) => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1978,7 +1978,7 @@ test('after Auto Clock Speed, Auto Restage and Auto Scale Up are both buyable (e
   expect(screen.getByRole('button', { name: /enable auto overclock for 32 purge points/i })).toBeEnabled()
 })
 
-test('Perks lists global automations in one order: Auto Clock Speed → Restage → Scale Up → Overclock → Purge', async () => {
+test('Firmware lists global automations in one order: Auto Clock Speed → Restage → Scale Up → Overclock → Purge', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
@@ -2014,7 +2014,7 @@ test('Auto Purge offers no speed upgrade or interval until it is bought', async 
   expect(screen.getByLabelText(/^auto purge row$/i)).not.toHaveTextContent(/1024s/)
 })
 
-test('an Auto-Prestige button appears in Perks → Automation (Global Automation) once every tier is Smart, and spends 64 PP to activate it', async () => {
+test('an Auto-Prestige button appears in Firmware → Automation (Global Automation) once every tier is Smart, and spends 64 PP to activate it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2079,7 +2079,7 @@ test('purge points and the production speed bonus are shown once the bonus is un
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('+50% production speed')
 })
 
-test('the production speed bonus reads as locked, and an unlock button is offered on Perks → Prestige, before it has been bought', async () => {
+test('the production speed bonus reads as locked, and an unlock button is offered on Firmware → Prestige, before it has been bought', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2122,13 +2122,13 @@ test('PP-spending buttons report how much of their cost the current balance cove
   expect(autoScaleUpProgress).toHaveAttribute('aria-valuemax', '16')
 })
 
-test('a locked badge appears on Perks → Automation for a tier whose autobuyer milestone has not been reached yet', async () => {
+test('a locked badge appears on Firmware → Automation for a tier whose autobuyer milestone has not been reached yet', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 10 },
     // tier01's autobuyer unlocks automatically at Prestige 1, so it's already unlocked the moment
-    // the Perks page itself is reachable (!isFirstRun) — there's no PP cost, no button, and
+    // the Firmware page itself is reachable (!isFirstRun) — there's no PP cost, no button, and
     // no locked state to observe for it. tier02's own milestone (Prestige 2) isn't met yet at
     // count 1, so it's the one that stays locked here.
     owned: { tier01: 16 }, // fully purchases two levels, unlocking Megabytes
@@ -2159,7 +2159,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent(/2,?000 PP/)
 })
 
-test('no PP tabs or PP-based controls appear before the player has ever purged, even with an active autobuyer and unspent PP — Milestones stays via More', async () => {
+test('no PP tabs or PP-based controls appear before the player has ever purged, even with an active autobuyer and unspent PP — Releases stays via More', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
@@ -2169,11 +2169,11 @@ test('no PP tabs or PP-based controls appear before the player has ever purged, 
   render(<App />)
 
   expect(screen.queryByLabelText(/^purge points display$/i)).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /^open perks$/i })).not.toBeInTheDocument()
-  // Chapters (Milestones) stays reachable pre-prestige via AppNav → More.
+  expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
+  // Chapters (Releases) stays reachable pre-prestige via AppNav → More.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open milestones/i }))
-  expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open releases/i }))
+  expect(screen.getByLabelText(/^releases page$/i)).toBeInTheDocument()
 })
 
 test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) prestige milestone is reached, independent of the unit-buying autobuyer', async () => {
@@ -2298,18 +2298,18 @@ test.each([
   expect(capped).toHaveAttribute('title', expect.stringMatching(/every .* \(max\)$/))
 })
 
-test('the Perks Prestige tab NavDot lights up when a leveled Double PP purchase is affordable', async () => {
+test('the Firmware Prestige tab NavDot lights up when a leveled Double PP purchase is affordable', async () => {
   seedMainGameState({
     resources: { base: 10 },
     purge: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  await userEvent.setup().click(screen.getByRole('button', { name: /^open perks$/i }))
+  await userEvent.setup().click(screen.getByRole('button', { name: /^open firmware$/i }))
 
   expect(screen.getByLabelText(/^prestige perk available$/i)).toBeInTheDocument()
 })
 
-test('the Perks tab NavDots stay dark when only a locked (milestone-gated) tier autobuyer/tier tickspeed autobuyer is pending, since neither costs PP', async () => {
+test('the Firmware tab NavDots stay dark when only a locked (milestone-gated) tier autobuyer/tier tickspeed autobuyer is pending, since neither costs PP', async () => {
   seedMainGameState({
     resources: { base: 10 },
     // tier01's autobuyer is already unlocked (milestone 1, met by count 1) but there's no PP to
@@ -2319,13 +2319,13 @@ test('the Perks tab NavDots stay dark when only a locked (milestone-gated) tier 
   })
   render(<App />)
 
-  const perksButton = screen.getByRole('button', { name: /^open perks$/i })
+  const perksButton = screen.getByRole('button', { name: /^open firmware$/i })
   expect(within(perksButton).queryByLabelText(/action available$/i)).not.toBeInTheDocument()
   await userEvent.setup().click(perksButton)
   expect(screen.queryByLabelText(/perk available$/i)).not.toBeInTheDocument()
 })
 
-test('the Perks tab NavDots go dark once a tier is fully done and nothing else is affordable', async () => {
+test('the Firmware tab NavDots go dark once a tier is fully done and nothing else is affordable', async () => {
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 },
@@ -2335,13 +2335,13 @@ test('the Perks tab NavDots go dark once a tier is fully done and nothing else i
   })
   render(<App />)
 
-  const perksButton = screen.getByRole('button', { name: /^open perks$/i })
+  const perksButton = screen.getByRole('button', { name: /^open firmware$/i })
   expect(within(perksButton).queryByLabelText(/action available$/i)).not.toBeInTheDocument()
   await userEvent.setup().click(perksButton)
   expect(screen.queryByLabelText(/perk available$/i)).not.toBeInTheDocument()
 })
 
-test('Milestones is reachable via More both before and after the first prestige (unlike Perks)', async () => {
+test('Releases is reachable via More both before and after the first prestige (unlike Firmware)', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2353,11 +2353,11 @@ test('Milestones is reachable via More both before and after the first prestige 
   expect(screen.queryByRole('tab', { name: /open automation/i })).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open milestones/i }))
-  expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open releases/i }))
+  expect(screen.getByLabelText(/^releases page$/i)).toBeInTheDocument()
 })
 
-test('Perks → Automation lists every tier\'s autobuyer/tier-tickspeed-autobuyer unlock milestone once, reflecting what\'s already unlocked', async () => {
+test('Firmware → Automation lists every tier\'s autobuyer/tier-tickspeed-autobuyer unlock milestone once, reflecting what\'s already unlocked', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2380,14 +2380,14 @@ test('Perks → Automation lists every tier\'s autobuyer/tier-tickspeed-autobuye
   expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '3')
   expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '11')
 
-  // Milestones no longer repeats these — it keeps only Chapters / Era ascension.
+  // Releases no longer repeats these — it keeps only Chapters / Reboot.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  await user.click(screen.getByRole('button', { name: /open releases/i }))
   expect(screen.queryByLabelText(/autobuyer unlock milestones category$/i)).not.toBeInTheDocument()
   expect(screen.queryByLabelText(/^tier tickspeed autobuyer milestones category$/i)).not.toBeInTheDocument()
 })
 
-test('an autobuyer active/paused badge appears on Perks → Automation once its autobuyer is unlocked, toggled by its own pause button', async () => {
+test('an autobuyer active/paused badge appears on Firmware → Automation once its autobuyer is unlocked, toggled by its own pause button', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2411,11 +2411,11 @@ test('an autobuyer active/paused badge appears on Perks → Automation once its 
   expect(screen.getByLabelText("Kilobytes's autobuyer active")).toBeInTheDocument()
 })
 
-test('no autobuyer pause button appears on Perks → Automation before its autobuyer is unlocked', async () => {
+test('no autobuyer pause button appears on Firmware → Automation before its autobuyer is unlocked', async () => {
   const user = userEvent.setup()
 
   // Megabytes' autobuyer unlocks at Prestige 2 (getAutobuyerUnlockMilestone) — Prestige 1 is
-  // enough to leave isFirstRun and reach Perks, but not enough to unlock it, unlike
+  // enough to leave isFirstRun and reach Firmware, but not enough to unlock it, unlike
   // Kilobytes (milestone 1) which would already be unlocked at this same count.
   seedMainGameState({
     resources: { base: 10 },
@@ -2430,7 +2430,7 @@ test('no autobuyer pause button appears on Perks → Automation before its autob
   expect(screen.getByRole('button', { name: /^Kilobytes's autobuyer$/i })).toBeInTheDocument()
 })
 
-test('pausing a tier\'s autobuyer via its Perks toggle stops it from buying automatically; resuming resumes it', () => {
+test('pausing a tier\'s autobuyer via its Firmware toggle stops it from buying automatically; resuming resumes it', () => {
   vi.useFakeTimers()
 
   seedMainGameState({
@@ -2461,7 +2461,7 @@ test('pausing a tier\'s autobuyer via its Perks toggle stops it from buying auto
   vi.useRealTimers()
 })
 
-test('pausing a tier\'s tickspeed autobuyer via its Perks toggle stops it from upgrading automatically; resuming resumes it', () => {
+test('pausing a tier\'s tickspeed autobuyer via its Firmware toggle stops it from upgrading automatically; resuming resumes it', () => {
   vi.useFakeTimers()
 
   // tier09 (Ronnabytes, tierIndex 8) has a much cheaper tickspeed multiplier base cost (100) than
@@ -2566,7 +2566,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
   await user.click(screen.getByRole('button', { name: /^money display$/i }))
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
-  expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on perks → prestige\)/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on firmware → prestige\)/i)
   expect(breakdown).toHaveTextContent(/scale up: not yet activated \(reach 3 completed levels on kilobytes\)/i)
   expect(breakdown).toHaveTextContent(/clock speed: not yet active/i)
 })
@@ -3942,17 +3942,17 @@ describe('Byte Foundry Storage', () => {
     })
     render(<App />)
     expect(screen.queryByRole('button', { name: /^provision disk/i })).not.toBeInTheDocument()
-    const unlockButton = screen.getByRole('button', { name: /foundry reset to unlock disk size/i })
+    const unlockButton = screen.getByRole('button', { name: /reformat to unlock disk size/i })
     expect(unlockButton).toHaveTextContent('10 KB')
 
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
     fireEvent.click(unlockButton)
     expect(confirmSpy).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole('button', { name: /foundry reset to unlock disk size/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /reformat to unlock disk size/i })).toBeInTheDocument()
 
     confirmSpy.mockReturnValue(true)
-    fireEvent.click(screen.getByRole('button', { name: /foundry reset to unlock disk size/i }))
-    expect(screen.queryByRole('button', { name: /foundry reset to unlock disk size/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /reformat to unlock disk size/i }))
+    expect(screen.queryByRole('button', { name: /reformat to unlock disk size/i })).not.toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.unlockedDiskSteps).toBe(2)
     confirmSpy.mockRestore()
   })
@@ -5324,7 +5324,7 @@ test('completing the Byte Foundry again after a Prestige navigates forward into 
   vi.useRealTimers()
 })
 
-test('a Prestige firing while on the Guide page does not disrupt the page — mainGameUnlocked stays permanently true', () => {
+test('a Prestige firing while on the Manual page does not disrupt the page — mainGameUnlocked stays permanently true', () => {
   vi.useFakeTimers()
 
   // autoPurgeAttemptBudget seeded at 1 (the fire threshold) so the very next tick's elapsed
@@ -5339,19 +5339,19 @@ test('a Prestige firing while on the Guide page does not disrupt the page — ma
   const { unmount } = render(<App />)
 
   fireEvent.click(screen.getByRole('button', { name: /open more menu/i }))
-  fireEvent.click(screen.getByRole('button', { name: /open guide/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /open manual/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /tens — manual/i })).toBeInTheDocument()
 
-  // Auto-Prestige fires in the background — the Guide page stays exactly where it was regardless
+  // Auto-Prestige fires in the background — the Manual page stays exactly where it was regardless
   // (App.jsx's routing has no sync effect at all), and mainGameUnlocked (now permanent — see
   // latchMainGameUnlocked in engine.js) is untouched by the Prestige, so there's no gate to defer.
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
-  expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /tens — manual/i })).toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.intro.mainGameUnlocked).toBe(true)
 
-  // Leaving Guide via AppNav's Foundry item reaches the Byte Foundry as a voluntary screen, not a
+  // Leaving Manual via AppNav's Foundry item reaches the Byte Foundry as a voluntary screen, not a
   // gate — Factory stays reachable directly too (see the dedicated always-interactive test below).
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
@@ -5401,13 +5401,13 @@ test('AppNav\'s Foundry item navigates to the always-interactive screen; Factory
   expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
 })
 
-test('the mandatory Byte Foundry gate (before mainGameUnlocked) blocks Factory but keeps Guide and More reachable', () => {
+test('the mandatory Byte Foundry gate (before mainGameUnlocked) blocks Factory but keeps Manual and More reachable', () => {
   render(<App />) // fresh, empty localStorage — lands on the mandatory gate, per the ByteFoundryPage tests above
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /open byte factory/i })).not.toBeInTheDocument()
-  // Utilities must not require progress — More (Guide / Milestones / Settings) stays available.
+  // Utilities must not require progress — More (Manual / Releases / Settings) stays available.
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
 })
@@ -5449,7 +5449,7 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry leaves Factor
   vi.useRealTimers()
 })
 
-// --- Chapters (Milestones page) ---
+// --- Chapters (Releases page) ---
 // Chapter rows read intro.mainGameUnlocked, purge.count, computeFlops.pageUnlocked,
 // isOverflowModeUnlocked, and era.count — see CLAUDE.md / MAINPAGE_REFERENCE. "The first Kilobyte"
 // is always ✅ once this view is reachable; Go Googol varies with purge.count; separate tests cover
@@ -5467,13 +5467,13 @@ test.each([
   })
   render(<App />)
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  await user.click(screen.getByRole('button', { name: /open releases/i }))
 
-  expect(screen.getByLabelText(/^chapters category$/i)).toBeInTheDocument()
-  const firstKilobyteRow = screen.getByLabelText(/^the first kilobyte chapter$/i)
+  expect(screen.getByLabelText(/^releases category$/i)).toBeInTheDocument()
+  const firstKilobyteRow = screen.getByLabelText(/^v1.0 the first kilobyte release$/i)
   expect(firstKilobyteRow).toHaveTextContent('✅')
 
-  const goGoogolRow = screen.getByLabelText(/^go googol chapter$/i)
+  const goGoogolRow = screen.getByLabelText(/^v2.0 go googol release$/i)
   expect(goGoogolRow).toHaveTextContent(reached ? '✅' : '🔒')
 })
 
@@ -5488,11 +5488,11 @@ test('Chapters track Compute, DeGoogol, and Era milestones', async () => {
   })
   render(<App />)
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  await user.click(screen.getByRole('button', { name: /open releases/i }))
 
-  expect(screen.getByLabelText(/^open compute chapter$/i)).toHaveTextContent('✅')
-  expect(screen.getByLabelText(/^degoogoled chapter$/i)).toHaveTextContent('✅')
-  expect(screen.getByLabelText(/^ascend an era chapter$/i)).toHaveTextContent('✅')
+  expect(screen.getByLabelText(/^v3.0 open compute release$/i)).toHaveTextContent('✅')
+  expect(screen.getByLabelText(/^v4.0 degoogoled release$/i)).toHaveTextContent('✅')
+  expect(screen.getByLabelText(/^v5.0 first reboot release$/i)).toHaveTextContent('✅')
   expect(screen.queryByLabelText(/^coming soon/i)).not.toBeInTheDocument()
 })
 
@@ -5527,7 +5527,7 @@ test('Compute autobuyer milestones list Era unlocks once Compute is revealed', a
   expect(screen.getByLabelText(/^Chips · MFlops autobuyer$/i)).toHaveTextContent('🔒 2')
 })
 
-test('Settings Era ascension confirms, resets Foundry assets, and keeps automation', async () => {
+test('Settings Reboot confirms, resets Foundry assets, and keeps automation', async () => {
   // Only setInterval is faked: the live tick loop never fires, while setTimeout stays real so
   // userEvent / Testing Library's async wrappers still resolve.
   vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
@@ -5548,12 +5548,12 @@ test('Settings Era ascension confirms, resets Foundry assets, and keeps automati
   render(<App />)
   await openSettings(user)
 
-  expect(screen.getByLabelText(/^era ascension section$/i)).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /ascend an era — open confirmation/i }))
-  await user.click(screen.getByRole('button', { name: /^ascend era$/i }))
+  expect(screen.getByLabelText(/^reboot section$/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /reboot — open confirmation/i }))
+  await user.click(screen.getByRole('button', { name: /^reboot$/i }))
 
-  expect(screen.getByLabelText(/^era ascension section$/i)).toHaveTextContent('1 Eon')
-  expect(screen.getByLabelText(/^era ascension section$/i)).toHaveTextContent('Eras ascended')
+  expect(screen.getByLabelText(/^reboot section$/i)).toHaveTextContent('1 Kernel')
+  expect(screen.getByLabelText(/^reboot section$/i)).toHaveTextContent('Reboots')
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.autobuyers[tier0]).toBe(1)
@@ -5562,8 +5562,8 @@ test('Settings Era ascension confirms, resets Foundry assets, and keeps automati
   expect(saved.era.count).toBe(1)
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open milestones/i }))
-  expect(screen.getByLabelText(/^ascend an era chapter$/i)).toHaveTextContent('✅')
+  await user.click(screen.getByRole('button', { name: /open releases/i }))
+  expect(screen.getByLabelText(/^v5.0 first reboot release$/i)).toHaveTextContent('✅')
 
   await user.click(screen.getByRole('button', { name: /open byte foundry/i }))
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
@@ -5589,7 +5589,7 @@ test('full Reset clears Era and Eons meta progress', async () => {
   expect(saved.hyperscalerCount).toBe(0)
 })
 
-test('Reset Byte Foundry preserves Era and Eons', async () => {
+test('Reformat Byte Foundry preserves Era and Eons', async () => {
   const user = userEvent.setup()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
 
@@ -5606,7 +5606,7 @@ test('Reset Byte Foundry preserves Era and Eons', async () => {
   })
   render(<App />)
   await openSettings(user)
-  await user.click(screen.getByRole('button', { name: /reset byte foundry/i }))
+  await user.click(screen.getByRole('button', { name: /reformat byte foundry/i }))
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.era.count).toBe(2)
@@ -5615,7 +5615,7 @@ test('Reset Byte Foundry preserves Era and Eons', async () => {
   expect(saved.intro.disks).toEqual({})
 })
 
-test('Era ascension survives a page reload', async () => {
+test('Reboot survives a page reload', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     purge: { xp: 0, points: ERA_ELIGIBILITY_PP, count: 1, highestMilestone: 1 },
@@ -5623,14 +5623,14 @@ test('Era ascension survives a page reload', async () => {
   })
   const { unmount } = render(<App />)
   await openSettings(user)
-  await user.click(screen.getByRole('button', { name: /ascend an era — open confirmation/i }))
-  await user.click(screen.getByRole('button', { name: /^ascend era$/i }))
+  await user.click(screen.getByRole('button', { name: /reboot — open confirmation/i }))
+  await user.click(screen.getByRole('button', { name: /^reboot$/i }))
   unmount()
 
   render(<App />)
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
-  expect(screen.getByLabelText(/^era ascension section$/i)).toHaveTextContent('1 Eon')
+  expect(screen.getByLabelText(/^reboot section$/i)).toHaveTextContent('1 Kernel')
 })
 
 describe('Compute (Flops) screen', () => {
@@ -5858,7 +5858,7 @@ describe('Dev Mode', { timeout: 20000 }, () => {
     [/^💰 Bits → 99% to Purge$/, state => expect(state.resources.base).toBe(PURGE_THRESHOLD * 0.99)],
     [/^💰 Bits → Purge threshold$/, state => expect(state.resources.base).toBe(PURGE_THRESHOLD)],
     [/^🏆 \+1,000 PP$/, state => expect(state.purge.points).toBe(1000)],
-    [/^🏆 PP → Era-ready \(1 Googol\)$/, state => expect(state.purge.points).toBe(ERA_ELIGIBILITY_PP)],
+    [/^🏆 PP → Reboot-ready \(1 Googol\)$/, state => expect(state.purge.points).toBe(ERA_ELIGIBILITY_PP)],
     [/^🖥️ Unlock Compute \(Flops\)$/, state => {
       expect(state.purge.points).toBe(COMPUTE_FLOPS_REVEAL_PP)
       expect(state.computeFlops.pageUnlocked).toBe(true)
@@ -5920,7 +5920,7 @@ describe('Buy max mode', () => {
     seedMainGameState({ resources: { base: 1e6 } })
     render(<App />)
     expect(screen.queryByRole('button', { name: /buy max mode/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^open perks$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
   })
 
   test('once unlocked, toggling it on makes the tier Buy button buy every affordable full level', async () => {
@@ -5933,7 +5933,7 @@ describe('Buy max mode', () => {
     })
     render(<App />)
 
-    // The toggle lives only on Perks → Prestige, not on the Factory screen.
+    // The toggle lives only on Firmware → Prestige, not on the Factory screen.
     expect(screen.queryByRole('button', { name: /buy max mode/i })).not.toBeInTheDocument()
     await openPerksTab(user, /open prestige/i)
     const toggle = screen.getByRole('button', { name: /buy max mode/i })

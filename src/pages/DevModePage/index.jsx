@@ -27,9 +27,9 @@ import styled from 'styled-components'
 // unreachable — and, once tree-shaken by `yarn build`, absent — from a production bundle. Everything
 // here operates on a save separate from every real player slot (game/storage.js's DEV_SLOT_ID).
 //
-// Layout mirrors the real game: a header balance strip like MainPage/Perks, quick-seed presets and
-// Variables grouped by the same AppNav destinations (Foundry / Compute / Factory / Perks / …) with
-// Perks-style icon tabs, Perks-style Switches for booleans. The Variables tree is not a
+// Layout mirrors the real game: a header balance strip like MainPage/Firmware, quick-seed presets and
+// Variables grouped by the same AppNav destinations (Foundry / Compute / Factory / Firmware / …) with
+// Firmware-style icon tabs, Firmware-style Switches for booleans. The Variables tree is not a
 // hand-maintained field list: it's a recursive walk of the live `game.state` (FieldNode), so a new
 // field added to createInitialGameState() shows up with zero changes here.
 
@@ -472,11 +472,11 @@ const PRESET_GROUPS = [
   },
   {
     id: 'era',
-    label: '🌌 Era',
+    label: '⏻ Reboot',
     presets: [
       {
         id: 'era-ready',
-        label: '🏆 PP → Era-ready (1 Googol)',
+        label: '🏆 PP → Reboot-ready (1 Googol)',
         apply: state => ({ ...state, purge: { ...state.purge, points: ERA_ELIGIBILITY_PP } }),
       },
     ],
@@ -563,7 +563,7 @@ const DevModePage = ({ game }) => {
     ['Bits', formatCurrency(state.resources?.base ?? 0)],
     ['Purge Points', `✦ ${formatAmount(state.purge?.points ?? 0)}`],
     ['Purges', formatAmount(state.purge?.count ?? 0)],
-    ['Era · Eons', `${formatAmount(state.era?.count ?? 0)} · ${formatAmount(state.eons?.balance ?? 0)}`],
+    ['Reboot · Kernels', `${formatAmount(state.era?.count ?? 0)} · ${formatAmount(state.eons?.balance ?? 0)}`],
     ['Capacity', formatBitsInNearestUnit(state.intro?.capacity ?? 0)],
   ]
 

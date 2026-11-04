@@ -722,7 +722,7 @@ const getSpeedColor = percent => {
 }
 
 // Before intro.mainGameUnlocked this page is a mandatory gate with no way out via Tiers (AppNav
-// still shows Guide/More). Once unlocked, AppNav's Foundry item reopens it at any time — nothing
+// still shows Manual/More). Once unlocked, AppNav's Foundry item reopens it at any time — nothing
 // here is read-only. Data Stream + per-pool Memory/Storage are continuous sections on this one
 // screen (no second-level tabs). Forced priority: Disk Fill > Speed > Provision Disk > Compute.
 // focusNonce is accepted for App.jsx parity with MainPage; Foundry no longer has a tab to reset.
@@ -794,7 +794,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const nextUnlockDiskSizeText = formatDiskSize(getDiskLadderSizeBits(getUnlockedDiskSteps(intro) + 1))
   const handleUnlockDiskSizeClick = () => {
     const confirmed = typeof window === 'undefined' || typeof window.confirm !== 'function' || window.confirm(
-      `Foundry reset to unlock ${nextUnlockDiskSizeText} disks? The Foundry restarts from scratch (Capacity, Disks, Data Lakes, pool compactions and Compute entities); Compile, Capacity, Bitrate, Disks and Data Lake upgrades/Cells are then auto-rebuilt up to your prior highs. Bitrate exponent ${speedExponentText} → ${nextSpeedExponentText}.`
+      `Reformat to unlock ${nextUnlockDiskSizeText} disks? The Foundry restarts from scratch (Capacity, Disks, Data Lakes, pool compactions and Compute entities); Compile, Capacity, Bitrate, Disks and Data Lake upgrades/Cells are then auto-rebuilt up to your prior highs. Bitrate exponent ${speedExponentText} → ${nextSpeedExponentText}.`
     )
     if (confirmed) actions.unlockNextDiskSize()
   }
@@ -928,14 +928,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskShowsFundingStats = storageRevealed && !diskLadderExhausted && !diskBuildInProgress && diskFundingRate > 0 && (lowerDiskSizePending || diskBuildQueued)
   const unlockDiskSizeButton = (
     <Button
-      aria-label="foundry reset to unlock disk size"
+      aria-label="reformat to unlock disk size"
       onClick={handleUnlockDiskSizeClick}
-      title={`Reset the Byte Foundry to unlock ${nextUnlockDiskSizeText} disks. The Foundry restarts from scratch, then Compile, Capacity, Bitrate, Disks and Data Lake upgrades/Cells are auto-rebuilt up to your prior highs; Compute entities and pool compactions are not. The bitrate exponent rises ${speedExponentText} → ${nextSpeedExponentText}.`}
+      title={`Reformat the Byte Foundry to unlock ${nextUnlockDiskSizeText} disks. The Foundry restarts from scratch, then Compile, Capacity, Bitrate, Disks and Data Lake upgrades/Cells are auto-rebuilt up to your prior highs; Compute entities and pool compactions are not. The bitrate exponent rises ${speedExponentText} → ${nextSpeedExponentText}.`}
       type="button"
       variant="prestige"
     >
       <MilestoneButtonContent>
-        <span>🔁 Foundry reset: unlock {nextUnlockDiskSizeText} Disks</span>
+        <span>🔁 Reformat: unlock {nextUnlockDiskSizeText} Disks</span>
         <MilestoneCostLine>{`Bitrate exponent ${speedExponentText} → ${nextSpeedExponentText} · auto-rebuilds to your highs`}</MilestoneCostLine>
       </MilestoneButtonContent>
     </Button>

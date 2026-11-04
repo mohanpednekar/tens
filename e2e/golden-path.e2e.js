@@ -30,4 +30,9 @@ test('buying Kilobytes increases Owned and updates the money balance', async ({ 
   // The 2,000 b spend leaves ~500 b (production only adds a little on top).
   await expect(money).toContainText(/^[5-9]\d\d\s*b/i)
   await expect(kilobytesLayer.getByRole('button', { name: /^buy for 1,000 b\b/i })).toBeDisabled()
+
+  // Production then adds to the balance over time: the owned Kilobytes produce Bytes (8 b each).
+  const readBits = async () => Number((((await money.textContent()) ?? '').match(/([\d,]+)\s*b/i)?.[1] ?? '0').replace(/,/g, ''))
+  const afterPurchase = await readBits()
+  await expect.poll(readBits, { timeout: 10000 }).toBeGreaterThan(afterPurchase)
 })

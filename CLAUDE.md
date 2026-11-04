@@ -10,14 +10,14 @@ changing a formula, workflow, or mechanic a past iteration may already have trie
 **Tens** — a React incremental game; every mechanic (costs, production, prestige) is themed around
 powers of ten. No routing library, no backend — state lives in React and persists to `localStorage`.
 `App.jsx` switches top-level screens via a plain `useState` toggle plus a shared bottom `AppNav`
-(Foundry → Power → Compute → Factory → Perks → More) — not a router (see "Architecture"):
+(Foundry → Power → Compute → Factory → Firmware → More) — not a router (see "Architecture"):
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
 `MainPage` (tier ladder), `PerksPage` (after first Prestige: 🤖 Automation / ✦ Prestige icon
-tabs — one row per automation spanning unlock → pause → speed; Double PP, speed bonus, Overflow mode, Buy max), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Power
+tabs — one row per automation spanning unlock → pause → speed; Compression, speed bonus, Overflow mode, Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
-second-level tabs). More (Guide / Milestones / Settings) is always available, including during the
+second-level tabs). More (Manual / Releases / Settings) is always available, including during the
 Byte Foundry gate; only Factory stays progress-gated. A third More entry, **Dev Mode**
 (`DevModePage`), renders only in a dev build (`import.meta.env.DEV`) — see "Dev Mode".
 
@@ -243,7 +243,7 @@ Milestone answers "what's targeted for this release", with a native due-date and
 Interactive sessions and Planning (#53) should assign player-facing feature/economy issues to the next
 release's milestone; process and infrastructure `claude-task` issues typically stay off a versioned
 milestone. `v0.6.0` (UI-revamp chain #138/#139/#140) has fully shipped; the current next-release
-milestone is `v0.7.0`, targeting Era ascension (`#407` / `#411–#414`, in progress).
+milestone is `v0.7.0`, targeting Era ascension / Reboot (`#407` / `#411–#414`, in progress).
 `scripts/sync-release-milestones.sh` keeps milestones and assignments idempotent, running on every
 `autonomous-maintenance.yml` invocation.
 
@@ -445,9 +445,9 @@ src/
                                DESIGN_HISTORY.md "Save persistence".
   components/
     AppNav/index.jsx        ← fixed bottom bar, progression order Foundry → Power → Compute → Factory →
-                               Perks → More; Factory omits during the Foundry gate (More stays);
+                               Firmware → More; Factory omits during the Foundry gate (More stays);
                                green attention dots via game/navAttention.js
-    AppMenu/index.jsx       ← More sheet — Guide / Milestones / Settings (always reachable; Reset / Reset Byte
+    AppMenu/index.jsx       ← More sheet — Manual / Releases / Settings (always reachable; Reset / Reset Byte
                                Foundry are Settings → Danger zone only)
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic `variant`
                                prop resolved against theme color tokens, deprecated raw `color` prop
@@ -463,12 +463,12 @@ src/
     BoostTimerBar/index.jsx ← active Compute Boost timer bar (Pop/Forfeit · bar · Stack), shared by ComputePage and MainPage's header
     SpeedDetailsPopover/index.jsx ← non-modal portal panel behind every Foundry ⚡ speed (Data Stream, running upgrade, each pool)
     LeadIcon/index.js       ← a line's leading emoji in a fixed-size, aria-hidden box (Foundry tile rows)
-    Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`): Perks automation rows, Buy max
+    Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`): Firmware automation rows, Buy max
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums
-    BuyMaxToggle/index.jsx  ← Buy max mode toggle (Perks → Prestige only); renders nothing until
+    BuyMaxToggle/index.jsx  ← Buy max mode toggle (Firmware → Prestige only); renders nothing until
                                `isBuyMaxUnlocked` (first Prestige). See "Buy max mode" below
-    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); SettingsPage's Era ascension
-    OfflineProgressNotice/index.jsx ← the "Welcome back!" notice (`.jsx`), shared by MainPage and
+    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); SettingsPage's Reboot
+    OfflineProgressNotice/index.jsx ← the "Resumed from sleep" notice (`.jsx`), shared by MainPage and
                                ByteFoundryPage (extraction rationale: `docs/DESIGN_HISTORY.md`)
     IncompatibleSaveNotice/index.jsx ← blocking overlay when an on-disk save was cleared on load
                                because it predates the current schema; single **Start fresh**
@@ -486,12 +486,12 @@ src/
     MainPage/index.jsx      ← the tier ladder (see "Architecture"). Takes `{ game }`.
                                No second-level tabs. Full reference: `docs/MAINPAGE_REFERENCE.md`
     PerksPage/index.jsx     ← page id `'perks'`, AppNav item once `isPerksPageRevealed` (first Prestige/
-                               Era). Takes `{ game, focusNonce }`. Icon tabs 🤖 Automation / ✦ Prestige
+                               Reboot). Takes `{ game, focusNonce }`. Icon tabs 🤖 Automation / ✦ Prestige
                                (feature-grouped) — detail + tab dots: `docs/MAINPAGE_REFERENCE.md`
-    InfoPage/index.jsx      ← the Guide page (Architecture 5); takes no navigation props (AppNav is the exit)
-    MilestonesPage/index.jsx ← Chapters / Era ascension status (Architecture 6)
-    SettingsPage/index.jsx  ← Supporter pack, save slots, Prestige museum, Era ascension, Appearance,
-                               Ops dashboard, Danger zone (Architecture 7)
+    InfoPage/index.jsx      ← the Manual page (Architecture 5); takes no navigation props (AppNav is the exit)
+    MilestonesPage/index.jsx ← Releases / Reboot status; page id `'milestones'` (Architecture 6)
+    SettingsPage/index.jsx  ← Supporter pack, save slots, System log, Reboot, Appearance,
+                               Task Manager, Danger zone (Architecture 7)
     DevModePage/index.jsx   ← dev-only sandbox (see "Dev Mode"); reached via AppNav → More, rendered only
                                when `import.meta.env.DEV`. Takes `{ game }`
       stateFields.js         ← pure helpers backing the Variables tree: prettifySegment (tier-id →
@@ -555,7 +555,7 @@ e2e/
   golden-path.e2e.js          ← buying Kilobytes via the real Buy button; Owned/money-balance updates
   autobuyer-reload.e2e.js     ← an already-unlocked tier autobuyer survives a real page reload
   purge.e2e.js                ← purging from the first-time overlay resets resources, awards PP
-  meta-prestige.e2e.js        ← Settings Era ascension from 1 Googol PP seed; era/Eons + Foundry gate
+  reboot.e2e.js        ← Settings Reboot from 1 Googol PP seed; era/Kernels + Foundry gate
   data-lake.e2e.js            ← a seeded KB Data Lake renders its disk-square breakdown on Foundry, then a
                                manual Buy Cell click grants a Cell (verified on the Power page)
   visual-regression.e2e.js    ← Linux-only full-page screenshot baselines (Byte Foundry / Byte Factory, both
@@ -627,7 +627,7 @@ Strict three-layer separation:
    `getSaveIncompatibilityReason`), loads any saved state, and folds in offline progress
    (`applyOfflineProgress`) before first render whenever elapsed real time (`loadLastSaveTimestamp()`
    vs. now) warrants it, surfacing an `offlineProgress` summary (dismissed via
-   `dismissOfflineProgress`/`resetGame`) for the "Welcome back!" notice only past
+   `dismissOfflineProgress`/`resetGame`) for the "Resumed from sleep" notice only past
    `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` (10 minutes). Mount only covers time the app was
    fully torn down (a backgrounded/suspended tab or PWA never remounts), so the live tick loop also
    tracks its own last firing's wall-clock time and replays any gap past
@@ -661,7 +661,7 @@ Strict three-layer separation:
    reached via AppNav once `isComputeCoreConversionUnlocked`. Hosts the nine-boundary merge chain (Cell →
    Battery → … → Fusion, charged up via "Charge up"/"Auto-charge") behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute"
    names the page/feature only — entities drop the word in every player-visible label. Deliberately terse
-   (icon-only controls, full sentence in `title`/`aria-label`; mechanic prose lives in the Guide). Order:
+   (icon-only controls, full sentence in `title`/`aria-label`; mechanic prose lives in the Manual). Order:
    top card = active Boost timer bar (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right,
    enforced in the engine too; or "No boost running") + Auto Boost pref; then per-tier rows — the ONE
    selected tier (pre-selected to the active boost's tier on arrival) shows the 3 Boost presets inline (`COMPUTE_ENTITY_CAP` 10 slots,
@@ -674,31 +674,31 @@ Strict three-layer separation:
    on the same 10³ base ladder as Factory tiers, priced per-unit via `getCostEpochExponent` (not
    Factory's 8-buy blocks). Owned counts permanent across Prestige; per-cycle boost resets on
    Prestige. Pure renderer — full spec: `docs/ECONOMY_REFERENCE.md`'s "PP Compute (Flops)" section.
-5. **`InfoPage/index.jsx`** — a static Guide page holding every mechanic's evergreen explanation in
+5. **`InfoPage/index.jsx`** — a static Manual page holding every mechanic's evergreen explanation in
    short bullets/sub-headings (what used to be MainPage's click-to-expand `InfoDetails` disclosures —
    Overview, Byte Foundry, Storage, Power, Compute (Flops), Clock Speed, Scale Up, Overclock, Tier
-   Autobuyers, Milestones, Prestige, Offline progress, Era ascension). Numbers come from the same `engine.js`/`layers.js`
+   Autobuyers, Releases, Prestige, Sleep mode, Reboot). Numbers come from the same `engine.js`/`layers.js`
    constants the game uses, so they can't drift. Reads no `useIncrementalGame` state — only pure
    constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
-   import) — the **only** in-app version surface. Reached via AppNav → More → Guide.
-6. **`MilestonesPage/index.jsx`** — Chapters / Era ascension status screen (autobuyer unlock
-   milestones live once, on Perks → Automation — not repeated here). Chapters: the first Kilobyte, Go Googol, Open
-   Compute, DeGoogoled, Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always
+   import) — the **only** in-app version surface. Reached via AppNav → More → Manual.
+6. **`MilestonesPage/index.jsx`** — Releases / Reboot status screen (autobuyer unlock
+   milestones live once, on Firmware → Automation — not repeated here). Releases: v1.0 The first Kilobyte, v2.0 Go Googol, v3.0 Open
+   Compute, v4.0 DeGoogoled, v5.0 First Reboot. Reached via AppNav → More (`page = 'milestones'`); always
    reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
     Supporter pack (unlock code / dummy checkout), Cloud save (`CloudSaveSection.jsx`, only when
-    `CLOUD_SAVE_ENABLED`: sign-in, upload/download, Delete account and data), Import / export save
+    `CLOUD_SAVE_ENABLED`: sign-in, upload/download, Delete account and data), Backup / Restore
     (`ManualSaveSection.jsx`, always: copy/download/paste/file → `applyCloudSave`), Store
-    (`StoreSection.jsx`, only when IAP is on), multi-slot saves, Prestige museum, Era ascension
-    (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
-    dashboard, Legal (`LegalSection.jsx`: Privacy Policy / Terms links), and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
+    (`StoreSection.jsx`, only when IAP is on), multi-slot saves, System log, Reboot
+    (Reboots/Kernels display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Task
+    Manager, Legal (`LegalSection.jsx`: Privacy Policy / Terms links), and Danger zone — Reset (full save wipe) and **Reformat Byte Foundry** (Capacity /
     Storage / Compute + upgrades wipe to scratch; Compile / Upgrade Capacity / Upgrade Bitrate
     convenience-auto up to prior highs; smaller Disk sizes re-provision with no provisioning cost (one buffer fill per disk); Factory + Prestige kept). Takes `{ game, onReset,
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
     aside from local form state.
 8. **`DevModePage/index.jsx`** — dev-build-only sandbox, see "Dev Mode". Reached via AppNav → More
-   (`page = 'dev'`), gate-exempt like Settings/Milestones. Takes `{ game }`.
+   (`page = 'dev'`), gate-exempt like Settings/Releases. Takes `{ game }`.
 
 ## Dev Mode
 
@@ -724,21 +724,21 @@ advance the pool through the existing bandwidth steps, non-final reward growth l
 half the following pool's bandwidth. After reset the pool provisions its disks automatically and for
 free, one at a time smallest-first, waiting for each disk to fill; while it rebuilds, later pools cannot
 start new provisioning (already-active work may finish). Whenever all 9/9/9 disks are provisioned
-(including before the first reset) — a status latched per lake (`boosterAuto`) for the whole Era, surviving pool resets, Reset Byte Foundry and Prestige — the lake's Booster control becomes a non-clickable cost label and
+(including before the first reset) — a status latched per lake (`boosterAuto`) for the whole Reboot cycle, surviving pool resets, Reformat Byte Foundry and Prestige — the lake's Booster control becomes a non-clickable cost label and
 the lake automatically buys every affordable Booster until slots fill or the next cost exceeds capacity;
 filling the lake at that wall enables the next reset. Pools never transfer or share resources through
 this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop".
 
-### Tiers, Prestige, Era ascension
+### Tiers, Prestige, Reboot (Era ascension)
 
-**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Compact Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`.
+**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Compact Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
 
-**Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Purge, Era ascension,
-Reset Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Purge** (formerly Reboot) and
+**Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Purge, Reboot,
+Reformat Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Purge** (formerly the name Reboot, now the Era-ascension layer) and
 PP reads **Purge Points**; the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). The Purge
 rename is carried through the code too (#987): `state.purge`, `purgeGame`,
 `PURGE_THRESHOLD`, `autoPurge`, automation keys `'speedUp'`/`'purge'` — while Prestige-Point,
-Double PP, speed-bonus, `prestigeMuseum` and `metaPrestige` identifiers keep `prestige`. Pre-rename
+Compression, speed-bonus, `prestigeMuseum` and `metaPrestige` identifiers keep `prestige`. Pre-rename
 save keys (`prestige`/`reboot` → `purge`, etc.) are renamed on load by `save-migration/migrateToV3`.
 
 There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
@@ -754,21 +754,21 @@ are no milestone bonus levels — every level compounds the same Overclock-scale
 Reaching Money ≥ `PURGE_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
 since a Byte is 8 Bits) freezes the economy except for Prestige — unless `isOverflowModeUnlocked(state)`
 is true (permanent `purge.unboundedUnlocked` latch; unlocked once Auto-Prestige's interval is upgraded to
-`OVERFLOW_MODE_MAX_INTERVAL_SECONDS` (1 s) or less, carried through Era ascension), in which case production
-continues and Prestige is optional (see `isProductionFrozen`). **Era ascension** (`eraGame`) is a separate voluntary meta-prestige at **1 Googol unspent PP**
-(`ERA_ELIGIBILITY_PP`): it awards **Eons** (+1 base, +1 per Eon Amplifier level — shop deferred to #414),
+`OVERFLOW_MODE_MAX_INTERVAL_SECONDS` (1 s) or less, carried through Reboot), in which case production
+continues and Prestige is optional (see `isProductionFrozen`). **Reboot** (`eraGame`) is a separate voluntary meta-prestige at **1 Googol unspent PP**
+(`ERA_ELIGIBILITY_PP`): it awards **Kernels** (+1 base, +1 per Kernel Amplifier level — shop deferred to #414),
 increments `era.count`, resets the full Foundry (generator upgrades, Disks, Data Lakes, compute ladder
 entities, Memory/gate) plus the ordinary Factory cycle (`purge.points`/`count`/`prestigeDoublePpLevel`
 → 0, `computeFlops.owned` → 0, `cumulativeBoost` fresh), while keeping automation unlocks/pause flags
-(except Double PP level), tier/tickspeed autobuyer milestone objects, `purge.unboundedUnlocked`,
-museum, hyperscalers, Eon upgrade levels, Flops autobuyer unlock flags, and page latches. Era *N*
-free-unlocks the *N*th Flops tier's autobuyer (Cores (KFlops) at Era 1, …). Hyperscalers (bought with Eons in
+(except Compression level), tier/tickspeed autobuyer milestone objects, `purge.unboundedUnlocked`,
+System log, hyperscalers, Kernel upgrade levels, Flops autobuyer unlock flags, and page latches. Reboot *N*
+free-unlocks the *N*th Flops tier's autobuyer (Cores (KFlops) at Reboot 1, …). Hyperscalers (bought with Kernels in
 #414) add permanent +0.01%/s each to every Factory tier's Flops multiplier via
 `getHyperscalerFlopsBoostRate` — the engine/hook action (`buyHyperscaler`) is wired, but no page renders
 a purchase control yet (deferred to #414, blocked pending maintainer-approved spend design). Full detail:
-`docs/ECONOMY_REFERENCE.md`'s "Era ascension and Eons". Prestige (Purge) Points are awarded by
+`docs/ECONOMY_REFERENCE.md`'s "Reboot and Kernels". Prestige (Purge) Points are awarded by
 `getPrestigePointsAwarded`: 1 base PP at 1 Googol Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64)
-additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Double PP
+additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Compression
 upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then doubles PP-per-power; cost
 `100^(level+1)` PP). `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
 (`getMoneyExponent`/`getPurgePercent`) — only the live freeze/Prestige trigger moved to
@@ -780,12 +780,12 @@ upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then do
 
 Bytes are produced entirely by the **Byte Foundry** (`ByteFoundryPage`), a tap-to-earn screen every fresh
 save passes through once before the main game — a ONE-TIME-EVER gate (`latchMainGameUnlocked`/
-`intro.mainGameUnlocked`) gone permanently across every Prestige and Era ascension once Storage's
+`intro.mainGameUnlocked`) gone permanently across every Prestige and Reboot once Storage's
 capacity threshold is reached. Pinging fills the **Data Stream** (Buffer-capped) which Compile turns into
 a permanent Byte generator; **Upgrade Capacity** / **Upgrade Bitrate** grow it one at a time
 (`queueIntroSpeedUpgrade`, `tickCapacityUpgradeDrain`; sit OUTSIDE the forced priority order). Displayed
 Speed is derived (`getDataStreamSpeedBytesPerSecond`, exponent `getDataStreamSpeedExponent`); extra Disk
-sizes need a Foundry reset (`unlockNextDiskSizeByFoundryReset`). Era ascension keeps the generator and
+sizes need a Reformat (`unlockNextDiskSizeByFoundryReset`). Reboot keeps the generator and
 gate latch but resets Capacity (`buildEraIntroReset`). Recurring actions follow a **forced priority
 order** Disk Fill > Provision Disk > Compute Boost (a lower one is disabled, in UI and engine, while a
 higher one is available; Provision Disk outranks Compute only while ARMED — `isProvisionDiskInProgress`). An always-on auto-convert (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`)
@@ -834,7 +834,7 @@ constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about
 formula/gate a past iteration may already have tried and rejected (e.g. the `<=` vs. `===`
 bank-redeemability check, the flat vs. dynamic transfer cost).
 
-**Buy max mode** (unlocked after the first Prestige, `isBuyMaxUnlocked`; toggled on Perks → Prestige) — a per-device toggle
+**Buy max mode** (unlocked after the first Prestige, `isBuyMaxUnlocked`; toggled on Firmware → Prestige) — a per-device toggle
 (`tens_buy_max_mode`, not game state) making each manual leveled purchase buy every affordable level:
 `buyTierMaxLevels` for Factory tiers (FULL levels only; partial progress or an unaffordable full level
 falls back to the ordinary single-level click) and `repeatPurchaseMax` for single-level ladders.
@@ -848,8 +848,7 @@ from the re-reveal mechanic: after a reset, a tier already unlocked by a previou
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
 Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
 completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`,
-not a fixed 5/8/11/14 ladder (Clock Speed's Overclock-scaled 1% step is under "Tiers, Prestige, Era
-ascension" above).
+not a fixed 5/8/11/14 ladder (Clock Speed's Overclock-scaled 1% step is under "Tiers, Prestige, Reboot" above).
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill
@@ -1029,8 +1028,8 @@ base path.
   `intro: { mainGameUnlocked: true }`, needed by every spec that seeds state to land directly on MainPage
   rather than the Byte Foundry intro screen.
 - Current specs (see "Repo layout" `e2e/` for one-line descriptions): `golden-path`, `autobuyer-reload`,
-  `purge` (seeding Money ≥ `PURGE_THRESHOLD`; first-time `FullScreenOverlay`), `meta-prestige`
-  (seed at 1 Googol PP → Settings Era ascension → assert `era.count`, Eons award, and the permanent
+  `purge` (seeding Money ≥ `PURGE_THRESHOLD`; first-time `FullScreenOverlay`), `reboot`
+  (seed at 1 Googol PP → Settings Reboot → assert `era.count`, Kernels award, and the permanent
   `intro.mainGameUnlocked` latch carrying forward), `data-lake`, and `visual-regression` (Linux-only
   full-page screenshot baselines of Byte Foundry/Byte Factory in both themes; see `e2e/README.md`).
 - **Not wired into `ci.yml`** — deliberately. Wiring it in (installing Playwright's browser on the

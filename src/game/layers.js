@@ -95,11 +95,11 @@ export const OVERFLOW_MODE_MAX_INTERVAL_SECONDS = 1
 // it before DeGoogol moved to the Auto-Prestige interval above.
 export const PURGE_UNBOUNDED_MIN_COUNT = 100
 // Base PP earning rate beyond Googol: 1 PP per this many additional money-exponent "powers"
-// (orders of magnitude above GOOGOL's own 10^100 exponent). Each Double PP upgrade halves this
+// (orders of magnitude above GOOGOL's own 10^100 exponent). Each Compression upgrade halves this
 // until 1 power per PP, then doubles PP per power instead (see getPrestigePowersPerPp/
 // getPrestigePpPerPower in engine.js).
 export const PRESTIGE_POWERS_PER_PP_BASE = 64
-// Each Double PP upgrade costs 100^(level+1) PP — 100, 10_000, 1_000_000, …
+// Each Compression upgrade costs 100^(level+1) PP — 100, 10_000, 1_000_000, …
 export const PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE = 100
 // The global tick fires 10x a second (a sub-second granularity, not "one tick = one real
 // second") — engine.js's tickGame receives elapsedSeconds = TICK_RATE_MS / 1000 = 0.1 per call,
@@ -733,7 +733,7 @@ export const LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1
 // of) its own resource-funded tickspeed level. "Last tier" (not a hardcoded tier id) so this stays
 // correct if TIER_DEFINITIONS ever grows a new final entry.
 export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
-// One-time PP cost (Perks → Automation) for Auto Restage (= its interval chain's baseCost) — once bought,
+// One-time PP cost (Firmware → Automation) for Auto Restage (= its interval chain's baseCost) — once bought,
 // tickGame spends the whole XP balance on the last tier's XP-funded tickspeed whenever
 // consumeXpForLastTierTickspeed allows, at most once per AUTOMATION_INTERVAL_CONFIG.restage interval.
 export const XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = AUTOMATION_INTERVAL_CONFIG.restage.baseCost
@@ -782,8 +782,8 @@ export const COMPUTE_FLOPS_TIER_INDEX_BY_ID = Object.assign(Object.create(null),
   COMPUTE_FLOPS_TIER_DEFINITIONS.map((t, index) => [t.id, index])
 ))
 
-// --- Era / Eons meta layer (#407) — see docs/ECONOMY_REFERENCE.md "Era ascension" ---
-// Era ascension requires this many unspent Prestige Points (1 Googol PP).
+// --- Era / Eons meta layer (#407) — see docs/ECONOMY_REFERENCE.md "Reboot and Kernels" ---
+// Reboot (`eraGame`) requires this many unspent Prestige Points (1 Googol PP).
 export const ERA_ELIGIBILITY_PP = GOOGOL
 // Flops autobuyer milestone: Era N unlocks the Nth Flops tier's autobuyer (KFlops at Era 1, …).
 export const FLOPS_AUTOBUYER_ERA_START = 1
@@ -793,5 +793,5 @@ export const HYPERSCALER_EON_COST_BASE = 1
 export const HYPERSCALER_EON_COST_MULTIPLIER = 10
 // Each Hyperscaler Efficiency level adds this much extra rate per hyperscaler (+0.001%/s at 0.00001).
 export const HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL = 0.00001
-// Each Eon Amplifier level adds this many extra Eons awarded per Era ascension.
+// Each Kernel Amplifier level adds this many extra Kernels awarded per Reboot.
 export const EON_AMPLIFIER_AWARD_PER_LEVEL = 1

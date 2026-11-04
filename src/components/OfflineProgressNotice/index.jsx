@@ -152,7 +152,7 @@ const OfflineProgressNotice = ({
     <OfflineNoticeOverlay>
       <OfflineNoticeCard aria-label="offline progress notice" $fading={offlineNoticeFading}>
         <NoticeText>
-          Welcome back! You were away for {formatOfflineDuration(offlineProgress.elapsedRealSeconds)}
+          Resumed from sleep! You were away for {formatOfflineDuration(offlineProgress.elapsedRealSeconds)}
           {' — simulated '}{formatOfflineDuration(offlineProgress.effectiveSeconds)} of progress at{' '}
           {offlineProgress.rewardClaimed ? '100% speed (video bonus).' : '50% speed.'}
         </NoticeText>
