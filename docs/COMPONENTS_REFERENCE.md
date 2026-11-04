@@ -47,10 +47,10 @@ sub-slot is ×1 — every larger size fills exclusively via write-cache ripple a
 cache strip at all) does it show a `DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of squares
 (`aria-label="… read cache"`), each labeled inside with its bit-scale block size (`formatCacheSize`
 — e.g. `1 Kb`). A full block gets an accent-colored border (matching a full `DiskSquare`'s own
-convention below); a partially-filled block (whether filling UP from Memory or draining DOWN during
+convention below); a partially-filled block (whether filling UP from Staging or draining DOWN during
 a flush to disk) renders a proportional `CacheFillIndicator` overlay growing left-to-right — accent-
 colored while filling, info-colored while flushing — so the fill level itself is always visible, not
-just the full/empty extremes (`title` also reads e.g. "Filling from Memory (40%)" once partially
+just the full/empty extremes (`title` also reads e.g. "Filling from Staging (40%)" once partially
 filled). Then an optional **write cache** progress row when
 `intro.diskWriteCache[size]` is active (`DISK_LADDER_SIZE_MULTIPLIER` (10) segmented squares while
 collecting from the source size below — the actual source→target SIZE RATIO, NOT

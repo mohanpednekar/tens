@@ -813,8 +813,8 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
   (`formatDiskSizeInPoolUnit`); buffer BALANCE self-sizes (`formatPoolBalance`).
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
-loop, auto-convert conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
-Cores/Nodes/Boost, every forced-priority-order predicate, cost/production formulas, the (configurable,
+loop, auto-convert conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Power
+Cells/Batteries/Boost, every forced-priority-order predicate, cost/production formulas, the (configurable,
 growing) purchase block size and level system, Prestige Points and every PP-funded automation, the
 per-tier and global tickspeed multipliers, the last tier's XP-funded tickspeed, Scale Up, Overclock,
 Reset, the complete game state shape, and the engine function/constants tables — lives in
