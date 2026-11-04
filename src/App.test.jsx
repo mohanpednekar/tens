@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
 import { ThemeProvider } from 'theme'
+import { themes } from 'theme/tokens'
 import { applyAutobuyerMilestones, createInitialGameState, getAutobuyerIntervalMaxLevel, getAutobuyerSpeedUpgradeMaxLevel, getAutomationIntervalMaxLevel, getTierTickspeedIntervalMaxLevel, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, formatOfflineDuration, getIntroProductionRate, getPoolBufferBits, getPoolBufferCapacity, getPoolAvailableFillRate, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   BITS_PER_BYTE,
@@ -1576,6 +1577,32 @@ test('Auto Boost is unlocked from Perks → Automation (30 PP), not on Boosters,
 
   fireEvent.click(screen.getByRole('button', { name: /open power/i }))
   expect(screen.getByRole('group', { name: /auto boost preference/i })).toBeInTheDocument()
+})
+
+test('Upgrade Capacity and the selected Auto Boost preset render with the prestige (warn) variant', () => {
+  const warn = themes.dark.color.warn
+  seedIntroState({ bits: 5, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
+  const { unmount } = render(<App />)
+  expect(screen.getByRole('button', { name: /upgrade data stream capacity/i })).toHaveStyle({ color: warn })
+  unmount()
+  cleanup()
+  localStorage.clear()
+  seedIntroState({ capacity: 512, speedCapacity: 256, bits: 0, byteCreated: true })
+  render(<App />)
+  expect(screen.getByRole('button', { name: /upgrade data stream bitrate/i })).toHaveStyle({ color: warn })
+  cleanup()
+  localStorage.clear()
+
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY },
+    purge: { xp: 0, points: COMPUTE_AUTO_BOOST_UNLOCK_COST, count: 1, highestMilestone: 1 },
+    computeAutoBoostUnlocked: true,
+  })
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+  const selected = within(screen.getByRole('group', { name: /auto boost preference/i }))
+    .getAllByRole('button').find(b => b.getAttribute('aria-pressed') === 'true')
+  expect(selected).toHaveStyle({ color: warn })
 })
 
 test('the global latency panel renders above the tier list, not below it', () => {

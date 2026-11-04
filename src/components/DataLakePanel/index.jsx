@@ -507,7 +507,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               const openSlotSizeLabel = formatDiskSize(openSlotSizeBits)
               // Once every real disk slot for this level is already full, `currentFillSubSize`
               // still reads 1 — the "virtual final unit" fallback (getDataLakeNextFillSubSize in
-              // engine.js) that lets the lake's own retained staging supply the level's last unit,
+              // engine.js) that lets the lake's own retained buffer supply the level's last unit,
               // the same way a Storage array's cache substitutes for its own 10th disk. That fill
               // creates no new disk square, so it's labeled distinctly from a real disk fill rather
               // than claiming "fills the next disk" when there is no such disk left to fill.
@@ -516,14 +516,14 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               return (
                 <LakePoolTile
                   role="progressbar"
-                  aria-label={`${label} lake pool — ${isBufferOnlyFill ? 'tops up its own retained staging toward capacity' : `fills the next ${openSlotSizeLabel} disk`}`}
+                  aria-label={`${label} lake pool — ${isBufferOnlyFill ? 'tops up its own retained buffer toward capacity' : `fills the next ${openSlotSizeLabel} disk`}`}
                   aria-valuenow={Math.round(openSlotFraction * 100)}
                   aria-valuemin={0}
                   aria-valuemax={100}
                   title={
                     poolReady
                       ? isBufferOnlyFill
-                        ? `${label} Lake pool — tops up its own retained staging toward capacity (every disk slot is already full; no new disk square is created)`
+                        ? `${label} Lake pool — tops up its own retained buffer toward capacity (every disk slot is already full; no new disk square is created)`
                         : `${label} Lake pool — fills toward the next ${openSlotSizeLabel} disk; completing it deposits instantly`
                       : `${label} Lake pool — waiting on a ${formatDiskSize(unitBits)} disk to be built in Storage before this can start filling`
                   }
@@ -531,7 +531,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                   <LakePoolFill $fill={openSlotFraction} />
                   <LakePoolLabel>
                     {poolReady
-                      ? `${formatDiskSize(fillBits)}${isBufferOnlyFill ? ' staging' : ''} / ${openSlotSizeLabel}`
+                      ? `${formatDiskSize(fillBits)}${isBufferOnlyFill ? ' buffer' : ''} / ${openSlotSizeLabel}`
                       : `Locked · 0 / ${openSlotSizeLabel}`}
                   </LakePoolLabel>
                 </LakePoolTile>

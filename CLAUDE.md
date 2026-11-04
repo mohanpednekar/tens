@@ -14,7 +14,7 @@ powers of ten. No routing library, no backend — state lives in React and persi
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
 `MainPage` (tier ladder), `PerksPage` (after first Prestige: 🤖 Automation / ✦ Prestige icon
-tabs — one row per automation spanning unlock → pause → speed; Double PP, speed bonus, DeGoogol, Buy max), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Power
+tabs — one row per automation spanning unlock → pause → speed; Double PP, speed bonus, Overflow mode, Buy max), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
 second-level tabs). More (Guide / Milestones / Settings) is always available, including during the
@@ -792,7 +792,7 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
   change; a fill-dependent multiplier (1000% empty → 100% at 50% → 10% full (log-linear)) scales only the
   real per-tick amount delivered (`getFillCurveDelta` integrates the curve so a 1s offline tick matches live 0.1s ticks).
   **Tap bonuses never scale a fill** (the curve already reaches 10×); they speed CONSUMERS ×(1 + bonus%),
-  decaying 1%/s: Data Stream ping → Upgrade Capacity/Bitrate drains (`getDataStreamTapMultiplier`); pool tap →
+  decaying 1%/s: Data Stream ping → Upgrade Capacity/Bitrate drains (`getDataStreamTapMultiplier`); pool ping →
   Provision Disk draw, read-cache flush, write-cache merges, lower-size rebuild, Data Lake drain (`getPoolTapMultiplier`).
 - **Standing rule — `intro.capacity` keeps doubling plainly in binary** (IEC `KiB`/`MiB`, step 1024);
   non-binary (SI-clean/decade-power) transforms are for storage-pool-scoped values only

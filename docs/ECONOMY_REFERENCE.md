@@ -3,7 +3,7 @@
 ## Pool-local reset loop
 
 At a pool's terminal state (9/9/9 disks, full lake, and next Booster cost above lake capacity), the
-pool becomes eligible to reset — reaching that state only unlocks the "↻ Reset Pool" button
+pool becomes eligible to reset — reaching that state only unlocks the "🗜 Compact Pool" button
 (`isStoragePoolResetAvailable`/`resetStoragePool` in `engine.js`); the player must click it, it
 never fires on its own. Its Storage contents, buffer, and lake are emptied, while Booster
 progress and earlier reset rewards remain. Capacity grows by 1,000 lake units per reset. Disk
@@ -1585,7 +1585,7 @@ web builds.
 ### PP Compute (Flops)
 
 A separate top-level screen (nav **Compute**, page id `'compute'`, `ComputeFlopsPage`) from the
-Foundry **Power** screen (label only) (nav **Power**, page id `'boosters'`, `ComputePage` — Cores/merge/Boost).
+Foundry **Power** screen (label only) (nav **Power**, page id `'boosters'`, `ComputePage` — Cells/charge/Boost).
 Ten PP-funded tiers **KFlops → QFlops** (`COMPUTE_FLOPS_TIER_DEFINITIONS` in `layers.js`, ids
 `flop01`…`flop10`), each 1:1 with a Factory tier via `boostsTierId`. Constants:
 
@@ -1640,7 +1640,7 @@ Googol's own 10^100 exponent — scaled by permanent Double PP upgrades (`presti
 level halves powers-per-PP until 1, then doubles PP-per-power; cost `100^(level+1)` PP via
 `buyPrestigeDoublePp`). `purgeGame` adds newly-awarded points on top of any already-unspent balance.
 
-Until DeGoogol is unlocked, reaching `PURGE_THRESHOLD` freezes production until Prestige
+Until Overflow mode is unlocked, reaching `PURGE_THRESHOLD` freezes production until Prestige
 (`isProductionFrozen`). `isOverflowModeUnlocked` becomes true once Auto Purge is bought and its
 interval is upgraded to `OVERFLOW_MODE_MAX_INTERVAL_SECONDS` (1 s) or faster — production then
 continues past 1 Googol Bytes and Prestige is voluntary to claim accumulated PP. The latch is stored
@@ -2754,7 +2754,7 @@ purchases were manual or automatic.
 | `getStoragePoolMemoryBounds` | `(poolIndex?) → { startBits, endBits }` | Per-pool SI Capacity windows (`layers.js`); pool 1's end is the documented `INTRO_CAPACITY_CAP_BITS` alias |
 | `getStoragePoolCapacity` | `(state, poolIndex) → bits` | A pool's own decade-power Capacity — `0` for a not-yet-visible/locked/invalid pool, else delegates to the shared, ungated `getStoragePoolCapacityAtRawCapacity(rawCapacityBits, poolIndex)` (private helper: `getDecadePowerEquivalentBits(rawCapacityBits)` clamped to that pool's `getStoragePoolMemoryBounds` window) called with the LIVE `intro.capacity`. `getPoolBufferClampCeilingBits` above calls the same shared helper with a SYNTHETIC capacity value instead, for a not-yet-visible pool |
 | `getStoragePoolBandwidth` | `(state, poolIndex) → bits/sec` | A pool's own throughput — `getSiCleanEquivalentBits(min(rawProductionRate, (getStoragePoolCapacity(...) in Bytes) ** getDataStreamSpeedExponent(intro)) in bits)`: the raw rate follows its OWN finer SI-clean transform (distinct from Capacity's decade-power one), with `Capacity ** e` only bounding the RAW value before that transform is applied (a guideline for bounds, not the formula). `0` for a locked/invalid pool. This is the DISPLAYED Bandwidth — see point 4a above. `tickPoolBufferFill` integrates the curve via `getFillCurveDelta`; `getPoolEffectMultiplier` is the instantaneous reading |
-| `isStoragePoolResetAvailable` | `(state, poolIndex) → bool` | Pool-local reset eligibility: 9/9/9 disks, a completely full Data Lake, and the next Booster costing more than that lake can hold. Reaching this only unlocks `DataLakePanel`'s "↻ Reset Pool" button — it never fires on its own |
+| `isStoragePoolResetAvailable` | `(state, poolIndex) → bool` | Pool-local reset eligibility: 9/9/9 disks, a completely full Data Lake, and the next Booster costing more than that lake can hold. Reaching this only unlocks `DataLakePanel`'s "🗜 Compact Pool" button — it never fires on its own |
 | `resetStoragePool` | `poolIndex → state → newState` | The manual reset action itself, only ever invoked from that button's `onClick`; a no-op (same-reference return) whenever `isStoragePoolResetAvailable` is false |
 | `getDecadePowerEquivalentBits` | `rawBits → bits` (private) | `N = round(log2(rawBits / BITS_PER_BYTE))` (the SAME doubling-step calculation `getSiCleanEquivalentBits` below uses), then `decadeExponent = floor(N * log10(2))`, returning `10 ** decadeExponent` Bytes — a single closed-form computation. Used ONLY by `getStoragePoolCapacity`, not Bandwidth. `log10(2)` is irrational, so `N * log10(2)` is never exactly an integer for `N > 0` — unlike the SI-clean sequence below, which was deliberately constructed to land exactly on decade boundaries, there's no analogous boundary ambiguity here to guard against with rounding instead of flooring. Non-finite input returns `0`; values below 1 Byte pass through unchanged |
 | `getSiCleanEquivalentBits` | `rawBits → bits` (private) | `N = round(log2(rawBits / BITS_PER_BYTE))`, then `SI_CLEAN_LOCAL_SEQUENCE[N % 10] * 1000 ** floor(N / 10)` — a closed-form computation, not an iterative walk of `getNextSiDoubledValue` (which would drift at very large N — see "Pool Memory Capacity" above). Used ONLY by `getStoragePoolBandwidth` now — `getStoragePoolCapacity` uses the separate `getDecadePowerEquivalentBits` above instead (see `docs/DESIGN_HISTORY.md`); a rounded log2 (not a discrete search) avoids floating-point drift misclassifying a value right at a doubling boundary. Non-finite input returns `0`; values below 1 Byte pass through unchanged |

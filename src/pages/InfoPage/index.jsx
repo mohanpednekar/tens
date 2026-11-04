@@ -335,7 +335,7 @@ const InfoPage = () => {
           <li>
             A lake shows its contents as disk squares, filled smallest first: up to{' '}
             {DATA_LAKE_SUB_SIZE_DISK_CAPS.join('/')} disks of ×1/×10/×100 its unit. The last unit of
-            each capacity level sits in the lake’s own staging instead of a square, just as a Storage
+            each capacity level sits in the lake’s own buffer instead of a square, just as a Storage
             array’s Cache stands in for a 10th disk.
           </li>
           <li>
@@ -386,7 +386,7 @@ const InfoPage = () => {
           <li>
             Sacrifice {COMPUTE_ENTITY_CAP} of the next entity to unlock auto-charge for that step. This
             adds an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve ({COMPUTE_ENTITY_AUTO_MERGE_CAP} held in
-            total) that fills as the entity keeps growing past {COMPUTE_ENTITY_CAP}. Pinging the
+            total) that fills as the entity keeps growing past {COMPUTE_ENTITY_CAP}. Tapping the
             reserve slots charges {COMPUTE_MERGE_RATIO} → 1 instantly.
           </li>
           <li>

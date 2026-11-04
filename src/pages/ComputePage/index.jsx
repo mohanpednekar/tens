@@ -729,7 +729,7 @@ const ComputePage = ({ game }) => {
                             startAvailable
                               ? `Charge up now: instantly turn ${COMPUTE_MERGE_RATIO} ${row.label} into 1 ${row.mergeOutputLabel}. Auto-charge slots fill past ${COMPUTE_ENTITY_CAP} and charge on their own when all ${COMPUTE_MERGE_RESERVE_CAP} are full${merging ? ` (auto-charging: ${formatOfflineDuration(remainingSeconds)} left)` : ''}`
                               : merging
-                                ? `Auto-merging: ${formatOfflineDuration(remainingSeconds)} left`
+                                ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
                                 : (intro[row.mergeOutputField] ?? 0) >= outputCap
                                   ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
                                   : `Auto-charge slots: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — they charge on their own when full; tap to charge up instantly once you hold ${COMPUTE_MERGE_RATIO} ${row.label}`

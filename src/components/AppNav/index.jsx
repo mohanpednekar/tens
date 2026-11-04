@@ -4,7 +4,7 @@ import { ATTENTION_HIGH } from 'game/navAttention'
 // Bottom bar order follows play progression: Foundry → Power → Compute → Factory → Perks, then More (Guide / Milestones / Settings).
 // Storage is folded into Foundry as continuous Memory + Disk sections (same Memory pool +
 // DiskArrayRow). Factory stays progress-gated; More stays available during the Foundry gate.
-// Accessible names: open byte foundry / open boosters / open compute / open byte factory / open perks / open more menu.
+// Accessible names: open byte foundry / open power / open compute / open byte factory / open perks / open more menu.
 // Attention: 'high' = larger pulsing dot; 'normal' = smaller cue (game/navAttention.js).
 
 const NAV_HEIGHT = '3.25rem'

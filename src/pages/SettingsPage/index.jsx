@@ -563,7 +563,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
       >
         <p>
           Awards {eonsAwarded} {eonWord(eonsAwarded)} and resets the Byte Foundry for a deep reset —
-          Factory itself stays permanently reachable, no gate to ping back through.
+          Factory itself stays permanently reachable, no gate to tap back through.
         </p>
         <p>
           <strong>Resets:</strong> Foundry generator upgrades, Data Stream Capacity, Disks, Compute entities,

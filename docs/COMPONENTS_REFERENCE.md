@@ -8,7 +8,7 @@ state each is currently in.
 ## `AppNav/index.jsx`
 
 Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open byte foundry`) →
-**Boosters** (`open boosters`, page id `'boosters'`, once `isComputeCoreConversionUnlocked`) →
+**Power** (`open power`, page id `'boosters'`, once `isComputeCoreConversionUnlocked`) →
 **Compute** (`open compute`, page id `'compute'`, once `isComputeFlopsPageRevealed`) →
 **Factory** (`open byte factory`, page id `'game'`, only once `mainGameUnlocked`) → **Guide**
 (`open guide`, always) → **More** (`open more menu`, always — opens `AppMenu`). Storage is
