@@ -99,7 +99,7 @@ leaving a finished one draft just stalls it. Applies to every PR, autonomous or 
 coherent batch of changes, not after every edit) before anything is opened; one full local check at
 draft creation; multiple rounds of adversarial review (Claude plus any bots/humans) once marked ready,
 looping until nothing new turns up. None of this slows `pr-auto-merge.yml`'s three immediate paths
-(qualifying human approval; low-risk diff on green checks; adversarial `APPROVE` on a low-risk diff)
+(below and "Automation workflows": qualifying human approval; low-risk diff on green checks; adversarial `APPROVE` on a low-risk diff)
 nor the agent-enabled auto-merge on any non-workflow `APPROVE` (below). The 10-minute quiet period
 applies only when none of those fires and a session merges directly (e.g. `gh pr merge`): wait for CI
 green plus 10 minutes with no further review activity. Detail: `docs/AUTOMATION.md`'s "PR review &
@@ -157,8 +157,8 @@ won't merge a conflicted PR however green its checks. Check `mergeable_state` wh
 look (a "merge conflict" notice, a push to base, a routine check-in) and, if conflicted, resolve
 immediately: merge (or rebase, matching repo convention) the base into the PR branch, resolve for real
 (never blindly take one side wholesale on a file with actual logic), rerun `yarn test`, push. Prefer merge
-over rebase when review comments/approvals are tied to specific commits (rebasing orphans them). Trivial
-conflicts (unrelated doc/changelog bullets; `graphify-out/` generated files — take incoming and
+over rebase when review comments/approvals are tied to specific commits (rebasing orphans them). This applies to trivial
+conflicts (unrelated doc/changelog bullets; `graphify-out/` generated files — safe to take incoming, then
 regenerate) and substantive ones (overlapping logic) alike; the latter needs a real read of both sides,
 not `git checkout --theirs`.
 
@@ -171,7 +171,7 @@ unauthorized economy change) that general review doesn't look for. It supplement
 ordinary review flow.
 
 The `code-reviewer` subagent (`.claude/agents/code-reviewer.md`) does an adversarial, evidence-based,
-read-only review (file:line-cited, CONFIRMED/PLAUSIBLE findings, explicit verdict, checked-clean list,
+read-only review (every finding verified against the checked-out code, file:line-cited, CONFIRMED/PLAUSIBLE findings, explicit verdict, checked-clean list,
 stated coverage gaps). Spawn it via the Agent tool before merging any non-trivial change or when asked
 to review a branch/PR; on economy diffs it folds in the `economy-change-review` cross-check as a
 required step rather than replacing it.
@@ -398,11 +398,11 @@ cadence".
     graphify/                ← third-party, tool-generated — not hand-edited
 docs/                        ← DESIGN_HISTORY.md (the "why": superseded formulas, incidents, rejected
                                alternatives — check before changing a formula/workflow/mechanic a past
-                               iteration may have tried), AUTOMATION, ECONOMY_REFERENCE,
-                               FOUNDRY_MECHANICS_REFERENCE (Byte Foundry/Storage/Disks/Data Lakes/Power; read
+                               iteration may have tried), AUTOMATION.md (Automation workflows reference), ECONOMY_REFERENCE.md,
+                               FOUNDRY_MECHANICS_REFERENCE.md (Byte Foundry/Storage/Disks/Data Lakes/Power; read
                                before touching ByteFoundryPage/ComputePage/disk+lake engine code),
-                               MAINPAGE_REFERENCE (incl. ComputePage), COMPONENTS_REFERENCE, THEMING_REFERENCE,
-                               PWA_REFERENCE, DEVMODE_REFERENCE, RELEASE_ANDROID/IOS, STORE_LISTING (each `*_REFERENCE.md` = full reference for its area)
+                               MAINPAGE_REFERENCE.md (incl. ComputePage), COMPONENTS_REFERENCE.md (Button/Money/StatCard props/styling), THEMING_REFERENCE.md (tokens/fonts/ThemeProvider),
+                               PWA_REFERENCE.md (installable PWA), DEVMODE_REFERENCE.md, RELEASE_ANDROID/IOS.md, STORE_LISTING.md
 src/
   game/
     layers.js             ← TIER_DEFINITIONS + all game constants (single source of truth)
@@ -433,13 +433,13 @@ src/
                             (omitted-`tierIndex` mode is unused); mechanic: "Economy model"
     icons.js              ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Booster, Upgrade Data Stream,
                             Provision Disk status line)
-    BoostBadge/index.jsx  ← Compute-Boosted glow: `boostGlow` css + `isDataStreamBoosted`/`isFactoryTierBoosted`
+    BoostBadge/index.jsx  ← Compute-Boosted glow: `boostGlow` css + `isDataStreamBoosted`/`isFactoryTierBoosted` (ByteFoundryPage Data Stream, MainPage tier rows)
     BoostTimerBar/index.jsx ← active Boost timer bar (Pop/Forfeit · bar · Stack); ComputePage + MainPage header
-    SpeedDetailsPopover/index.jsx ← non-modal portal panel behind every Foundry ⚡ speed
+    SpeedDetailsPopover/index.jsx ← non-modal portal panel behind every Foundry ⚡ speed (Data Stream, running upgrade, each pool)
     LeadIcon/index.js     ← a line's leading emoji in a fixed-size aria-hidden box (Foundry tile rows)
     Switch/index.js       ← accessible on/off switch (`$on` + `aria-pressed`): Firmware automation rows, Buy max
     Money/index.js        ← money/amount display, `theme.color.text` + tabular-nums
-    BuyMaxToggle/index.jsx ← Buy max toggle (Firmware → Prestige); renders nothing until `isBuyMaxUnlocked`
+    BuyMaxToggle/index.jsx ← Buy max toggle (Firmware → Prestige); renders nothing until `isBuyMaxUnlocked` (first Prestige); see "Buy max mode" below
     ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); SettingsPage's Reboot
     OfflineProgressNotice/index.jsx ← "Resumed from sleep" notice, shared by MainPage and ByteFoundryPage
                             (DESIGN_HISTORY.md)
@@ -501,7 +501,7 @@ src/
   reportWebVitals.js      ← optional web-vitals reporter; no-op unless passed a callback (currently none)
 capacitor.config.js       ← app id/name, `webDir: dist`, SystemBars/SplashScreen, `includePlugins` from ad/IAP flags (#70)
 firestore.rules           ← owner-only `saves/{uid}` rules for cloud save
-android/, ios/            ← committed Capacitor projects (generated by `cap add`; "Native apps")
+android/, ios/            ← committed Capacitor projects (generated by `cap add`; build output ignored by their own `.gitignore`s; "Native apps")
 vite.config.js            ← thin wrapper: `defineConfig(createViteConfig({ srcPath }))`
 viteConfigFactory.js      ← the real Vite config: aliases, dev/test server, VitePWA (skipped when `CAPACITOR=1`,
                             along with the `/tens/` base). Split out so `capacitorConfig.test.js` can pin the
@@ -522,15 +522,15 @@ scripts/
                                    via `sharp` into public/pwa-*.png + apple-touch-icon.png and hand-assembles
                                    favicon.ico (PNG-frame ICO, no extra dep); not in the build — re-run only if
                                    the icon design/palette changes
-  adversarialReviewMarker.js (+test) ← pure helpers for the `<!-- adversarial-review sha=… verdict=… -->` marker
+  adversarialReviewMarker.js (+test) ← pure helpers for the `<!-- adversarial-review sha=… verdict=… -->` marker ("Pull requests")
   pr-low-risk-eligible.sh (+test) ← shared low-risk-auto-merge bar for `enable-auto-merge-if-eligible.sh` and
                                    `pr-auto-merge.yml`
-  enable-auto-merge-if-eligible.sh ← marks a PR ready + enables auto-merge once adversarial-APPROVEd and low-risk
+  enable-auto-merge-if-eligible.sh ← marks a PR ready + enables auto-merge once adversarial-APPROVEd and low-risk ("Pull requests")
   resolve-pr-threads.sh          ← lists/resolves review threads by ID on automation-owned PRs (`claude/*`/
                                    `devin/*`, repo-owner/bot-authored only); `list` read-only, `resolve` takes
-                                   explicit caller-selected IDs, never bulk "resolve all"; used by
+                                   explicit caller-selected IDs, never bulk "resolve all"; see "Pull requests"; used by
                                    `autonomous-maintenance.yml` and `autonomous-pr-followup.yml`
-  backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh ← idempotent issue-hygiene sweeps run on every
+  backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh ← idempotent issue-hygiene sweeps (close shipped/stray issues, unblock/label ready work) run on every
                                    `autonomous-maintenance.yml` invocation (docs/AUTOMATION.md)
   configure-ios-plist.mjs (+test) ← Info.plist GADApplicationIdentifier / NSUserTrackingUsageDescription /
                                    SKAdNetworkItems from the ads flag
