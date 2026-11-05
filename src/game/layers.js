@@ -81,25 +81,25 @@ export const GOOGOL = 1e100
 export const BITS_PER_BYTE = 8
 // Money (Bits) balance required to Prestige — "1 Googol Bytes," expressed in Bits since
 // resources[MONEY_ID] is Bits-denominated, not Bytes (Bytes aren't even a purchasable tier any
-// more — see TIER_DEFINITIONS above). This is the threshold isProductionFrozen/rebootGame
+// more — see TIER_DEFINITIONS above). This is the threshold isProductionFrozen/purgeGame
 // actually gate on. GOOGOL itself stays unchanged/exported — the exponent-based formulas
-// (getPrestigePointsAwarded/getMoneyExponent/getRebootProgressPercent in engine.js) deliberately
+// (getPrestigePointsAwarded/getMoneyExponent/getPurgePercent in engine.js) deliberately
 // keep keying off GOOGOL's own clean 10^100 rather than this messier ~10^100.9 value, since an 8x
 // constant factor is negligible at that scale — see docs/DESIGN_HISTORY.md.
-export const REBOOT_THRESHOLD = GOOGOL * BITS_PER_BYTE
+export const PURGE_THRESHOLD = GOOGOL * BITS_PER_BYTE
 // DeGoogol: once Auto-Prestige's interval is upgraded to this many seconds or less, Money may
-// exceed REBOOT_THRESHOLD without freezing production — the player keeps earning and may Prestige
-// voluntarily to claim accumulated PP. Permanent once reached (reboot.unboundedUnlocked latch).
-export const UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS = 1
+// exceed PURGE_THRESHOLD without freezing production — the player keeps earning and may Prestige
+// voluntarily to claim accumulated PP. Permanent once reached (purge.unboundedUnlocked latch).
+export const OVERFLOW_MODE_MAX_INTERVAL_SECONDS = 1
 // Legacy rule (lifetime prestige count), kept only so storage.js can grandfather saves that reached
 // it before DeGoogol moved to the Auto-Prestige interval above.
-export const REBOOT_UNBOUNDED_MIN_COUNT = 100
+export const PURGE_UNBOUNDED_MIN_COUNT = 100
 // Base PP earning rate beyond Googol: 1 PP per this many additional money-exponent "powers"
-// (orders of magnitude above GOOGOL's own 10^100 exponent). Each Double PP upgrade halves this
+// (orders of magnitude above GOOGOL's own 10^100 exponent). Each Compression upgrade halves this
 // until 1 power per PP, then doubles PP per power instead (see getPrestigePowersPerPp/
 // getPrestigePpPerPower in engine.js).
 export const PRESTIGE_POWERS_PER_PP_BASE = 64
-// Each Double PP upgrade costs 100^(level+1) PP — 100, 10_000, 1_000_000, …
+// Each Compression upgrade costs 100^(level+1) PP — 100, 10_000, 1_000_000, …
 export const PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE = 100
 // The global tick fires 10x a second (a sub-second granularity, not "one tick = one real
 // second") — engine.js's tickGame receives elapsedSeconds = TICK_RATE_MS / 1000 = 0.1 per call,
@@ -248,7 +248,7 @@ export const FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT = 100
 // convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a disk's contents came from Data
 // Stream via the read-cache flush, not a further transfer out of it at pull time.
 // Disks (and their arrays' cache) are themselves PERMANENT, like the Byte generator itself (see
-// rebootGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
+// purgeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
 // even though Data Stream itself resets, letting banked-up Storage give a fresh cycle a head start.
 // The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
 // until Buffer / pool Memory Capacity reaches this many bits — deliberately set to EQUAL pool 1's
@@ -357,7 +357,7 @@ export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTR
 // engine.js) uses as its own threshold — NOT the Core -> Node merge boundary itself, which reuses
 // the same ratio via COMPUTE_MERGE_RATIO below instead (see issue #321). Both intro.computeCores
 // and intro.computeNodes are permanent counters, carried over every real
-// Prestige exactly like the Byte generator/Disks themselves — see rebootGame.
+// Prestige exactly like the Byte generator/Disks themselves — see purgeGame.
 export const COMPUTE_CORES_PER_NODE = 8
 // Maximum permanent balance of ANY compute-ladder entity a player can hold at once — Core, Node,
 // Cluster, Network, Grid, Fabric, Cloud, Datacenter, Supercomputer, Megacomputer alike. Once an
@@ -424,15 +424,15 @@ export const COMPUTE_ENTITY_AUTO_MERGE_CAP = COMPUTE_ENTITY_CAP + COMPUTE_MERGE_
 // getComputeMergeDurationSeconds in engine.js). No boundary-to-boundary multiplier.
 // Metadata per merge boundary (lowest first) — boundary i's input tier maps to Storage pool i+1.
 export const COMPUTE_MERGE_BOUNDARIES = [
-  { inputField: 'computeCores', outputField: 'computeNodes', autoFlagField: 'autoMergeCoresIntoNode', timerField: 'computeCoresMergeRemainingSeconds', label: 'Cores→Nodes' },
-  { inputField: 'computeNodes', outputField: 'computeClusters', autoFlagField: 'autoMergeNodesIntoCluster', timerField: 'computeNodesMergeRemainingSeconds', label: 'Nodes→Clusters' },
-  { inputField: 'computeClusters', outputField: 'computeNetworks', autoFlagField: 'autoMergeClustersIntoNetwork', timerField: 'computeClustersMergeRemainingSeconds', label: 'Clusters→Networks' },
-  { inputField: 'computeNetworks', outputField: 'computeGrids', autoFlagField: 'autoMergeNetworksIntoGrid', timerField: 'computeNetworksMergeRemainingSeconds', label: 'Networks→Grids' },
-  { inputField: 'computeGrids', outputField: 'computeFabrics', autoFlagField: 'autoMergeGridsIntoFabric', timerField: 'computeGridsMergeRemainingSeconds', label: 'Grids→Fabrics' },
-  { inputField: 'computeFabrics', outputField: 'computeClouds', autoFlagField: 'autoMergeFabricsIntoCloud', timerField: 'computeFabricsMergeRemainingSeconds', label: 'Fabrics→Clouds' },
-  { inputField: 'computeClouds', outputField: 'computeDatacenters', autoFlagField: 'autoMergeCloudsIntoDatacenter', timerField: 'computeCloudsMergeRemainingSeconds', label: 'Clouds→Datacenters' },
-  { inputField: 'computeDatacenters', outputField: 'computeSupercomputers', autoFlagField: 'autoMergeDatacentersIntoSupercomputer', timerField: 'computeDatacentersMergeRemainingSeconds', label: 'Datacenters→Supercomputers' },
-  { inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', autoFlagField: 'autoMergeSupercomputersIntoMegacomputer', timerField: 'computeSupercomputersMergeRemainingSeconds', label: 'Supercomputers→Megacomputers' },
+  { inputField: 'computeCores', outputField: 'computeNodes', autoFlagField: 'autoMergeCoresIntoNode', timerField: 'computeCoresMergeRemainingSeconds', label: 'Cells→Batteries' },
+  { inputField: 'computeNodes', outputField: 'computeClusters', autoFlagField: 'autoMergeNodesIntoCluster', timerField: 'computeNodesMergeRemainingSeconds', label: 'Batteries→Packs' },
+  { inputField: 'computeClusters', outputField: 'computeNetworks', autoFlagField: 'autoMergeClustersIntoNetwork', timerField: 'computeClustersMergeRemainingSeconds', label: 'Packs→Banks' },
+  { inputField: 'computeNetworks', outputField: 'computeGrids', autoFlagField: 'autoMergeNetworksIntoGrid', timerField: 'computeNetworksMergeRemainingSeconds', label: 'Banks→Generators' },
+  { inputField: 'computeGrids', outputField: 'computeFabrics', autoFlagField: 'autoMergeGridsIntoFabric', timerField: 'computeGridsMergeRemainingSeconds', label: 'Generators→Turbines' },
+  { inputField: 'computeFabrics', outputField: 'computeClouds', autoFlagField: 'autoMergeFabricsIntoCloud', timerField: 'computeFabricsMergeRemainingSeconds', label: 'Turbines→Plants' },
+  { inputField: 'computeClouds', outputField: 'computeDatacenters', autoFlagField: 'autoMergeCloudsIntoDatacenter', timerField: 'computeCloudsMergeRemainingSeconds', label: 'Plants→Grids' },
+  { inputField: 'computeDatacenters', outputField: 'computeSupercomputers', autoFlagField: 'autoMergeDatacentersIntoSupercomputer', timerField: 'computeDatacentersMergeRemainingSeconds', label: 'Grids→Reactors' },
+  { inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', autoFlagField: 'autoMergeSupercomputersIntoMegacomputer', timerField: 'computeSupercomputersMergeRemainingSeconds', label: 'Reactors→Fusions' },
 ]
 
 // --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/
@@ -464,9 +464,13 @@ export const COMPUTE_BOOST_PRESETS = {
 // getComputeBoostCoveredTierCount).
 // Plural labels for COMPUTE_BOOST_TIER_FIELDS (same order), for Foundry Bandwidth-via-compute copy.
 export const COMPUTE_TIER_LABELS = [
-  'Cores', 'Nodes', 'Clusters', 'Networks', 'Grids',
-  'Fabrics', 'Clouds', 'Datacenters', 'Supercomputers', 'Megacomputers',
+  'Cells', 'Batteries', 'Packs', 'Banks', 'Generators',
+  'Turbines', 'Plants', 'Grids', 'Reactors', 'Fusions',
 ]
+// State field -> player-visible label (singular): computeCores=Cell, computeNodes=Battery,
+// computeClusters=Pack, computeNetworks=Bank, computeGrids=Generator, computeFabrics=Turbine,
+// computeClouds=Plant, computeDatacenters=Grid, computeSupercomputers=Reactor,
+// computeMegacomputers=Fusion. (Code identifiers keep the old names.)
 // One entry per compute-ladder entity a Compute Boost can be funded from, lowest tier first (index
 // 0 = Core / tier 1, … index 9 = Megacomputer / tier 10) — the intro state field a Boost
 // activation/stack at that tier spends, and reclaimComputeBoost refunds into. The only place
@@ -585,7 +589,7 @@ export const DEFAULT_PURCHASE_BLOCK_SIZE = 8
 // Every this many levels the LAST tier completes, the (global, shared-by-every-tier) purchase
 // block size grows by PURCHASE_BLOCK_SIZE_GROWTH_STEP (see engine.js's getPurchaseBlockSize) — ties
 // growth to the same "flagship" progress marker getScaleUpRequirement/isLastTierTickspeedXpUnlocked/
-// rebootCardEverRevealed already key off, rather than any other tier or a global total.
+// purgeCardEverRevealed already key off, rather than any other tier or a global total.
 export const PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100
 // The amount the block size grows by every PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS.
 export const PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1
@@ -665,11 +669,11 @@ export const AUTOMATION_INTERVAL_CONFIG = {
   scaleUp: { baseCost: 16, baseSeconds: 64 },
   restage: { baseCost: 16, baseSeconds: 64 },
   overclock: { baseCost: 32, baseSeconds: 256 },
-  reboot: { baseCost: 64, baseSeconds: 1024 },
+  purge: { baseCost: 64, baseSeconds: 1024 },
 }
 // Per-tier tickspeed autobuyer: same 100 PP start as the tier autobuyer chain, 16 s base.
 export const TIER_TICKSPEED_INTERVAL_CONFIG = { baseCost: 100, baseSeconds: 16 }
-// How many times the player must have rebooted before a tier's unit-buying autobuyer unlocks
+// How many times the player must have purged before a tier's unit-buying autobuyer unlocks
 // automatically (see engine.js's getAutobuyerUnlockMilestone/applyAutobuyerMilestones) — replaces
 // the old PP-cost-funded unlock entirely: no purchase, no PP spent, just a milestone reached by
 // prestige count. tier01 unlocks after the very first prestige, tier02 after the second, … tier10
@@ -729,7 +733,7 @@ export const LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1
 // of) its own resource-funded tickspeed level. "Last tier" (not a hardcoded tier id) so this stays
 // correct if TIER_DEFINITIONS ever grows a new final entry.
 export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
-// One-time PP cost (Perks → Automation) for Auto Restage (= its interval chain's baseCost) — once bought,
+// One-time PP cost (Firmware → Automation) for Auto Restage (= its interval chain's baseCost) — once bought,
 // tickGame spends the whole XP balance on the last tier's XP-funded tickspeed whenever
 // consumeXpForLastTierTickspeed allows, at most once per AUTOMATION_INTERVAL_CONFIG.restage interval.
 export const XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = AUTOMATION_INTERVAL_CONFIG.restage.baseCost
@@ -760,16 +764,16 @@ export const COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC = 0.0001
 // purchase via the same linear-increment 10-power epoch as Factory tiers (getCostEpochExponent),
 // not Factory's 8-purchase level blocks.
 export const COMPUTE_FLOPS_TIER_DEFINITIONS = [
-  { id: 'flop01', name: 'KFlops', symbol: 'KF', baseCostPP: 1E3,  boostsTierId: 'tier01' },
-  { id: 'flop02', name: 'MFlops', symbol: 'MF', baseCostPP: 1E6,  boostsTierId: 'tier02' },
-  { id: 'flop03', name: 'GFlops', symbol: 'GF', baseCostPP: 1E9,  boostsTierId: 'tier03' },
-  { id: 'flop04', name: 'TFlops', symbol: 'TF', baseCostPP: 1E12, boostsTierId: 'tier04' },
-  { id: 'flop05', name: 'PFlops', symbol: 'PF', baseCostPP: 1E15, boostsTierId: 'tier05' },
-  { id: 'flop06', name: 'EFlops', symbol: 'EF', baseCostPP: 1E18, boostsTierId: 'tier06' },
-  { id: 'flop07', name: 'ZFlops', symbol: 'ZF', baseCostPP: 1E21, boostsTierId: 'tier07' },
-  { id: 'flop08', name: 'YFlops', symbol: 'YF', baseCostPP: 1E24, boostsTierId: 'tier08' },
-  { id: 'flop09', name: 'RFlops', symbol: 'RF', baseCostPP: 1E27, boostsTierId: 'tier09' },
-  { id: 'flop10', name: 'QFlops', symbol: 'QF', baseCostPP: 1E30, boostsTierId: 'tier10' },
+  { id: 'flop01', name: 'Cores', outputLabel: 'KFlops', symbol: 'KF', baseCostPP: 1E3,  boostsTierId: 'tier01' },
+  { id: 'flop02', name: 'Chips', outputLabel: 'MFlops', symbol: 'MF', baseCostPP: 1E6,  boostsTierId: 'tier02' },
+  { id: 'flop03', name: 'Servers', outputLabel: 'GFlops', symbol: 'GF', baseCostPP: 1E9,  boostsTierId: 'tier03' },
+  { id: 'flop04', name: 'Racks', outputLabel: 'TFlops', symbol: 'TF', baseCostPP: 1E12, boostsTierId: 'tier04' },
+  { id: 'flop05', name: 'Pods', outputLabel: 'PFlops', symbol: 'PF', baseCostPP: 1E15, boostsTierId: 'tier05' },
+  { id: 'flop06', name: 'Clusters', outputLabel: 'EFlops', symbol: 'EF', baseCostPP: 1E18, boostsTierId: 'tier06' },
+  { id: 'flop07', name: 'Datacenters', outputLabel: 'ZFlops', symbol: 'ZF', baseCostPP: 1E21, boostsTierId: 'tier07' },
+  { id: 'flop08', name: 'Regions', outputLabel: 'YFlops', symbol: 'YF', baseCostPP: 1E24, boostsTierId: 'tier08' },
+  { id: 'flop09', name: 'Clouds', outputLabel: 'RFlops', symbol: 'RF', baseCostPP: 1E27, boostsTierId: 'tier09' },
+  { id: 'flop10', name: 'Superclouds', outputLabel: 'QFlops', symbol: 'QF', baseCostPP: 1E30, boostsTierId: 'tier10' },
 ]
 export const COMPUTE_FLOPS_TIER_BY_ID = Object.assign(Object.create(null), Object.fromEntries(
   COMPUTE_FLOPS_TIER_DEFINITIONS.map(t => [t.id, t])
@@ -778,8 +782,8 @@ export const COMPUTE_FLOPS_TIER_INDEX_BY_ID = Object.assign(Object.create(null),
   COMPUTE_FLOPS_TIER_DEFINITIONS.map((t, index) => [t.id, index])
 ))
 
-// --- Era / Eons meta layer (#407) — see docs/ECONOMY_REFERENCE.md "Era ascension" ---
-// Era ascension requires this many unspent Prestige Points (1 Googol PP).
+// --- Era / Eons meta layer (#407) — see docs/ECONOMY_REFERENCE.md "Reboot and Kernels" ---
+// Reboot (`eraGame`) requires this many unspent Prestige Points (1 Googol PP).
 export const ERA_ELIGIBILITY_PP = GOOGOL
 // Flops autobuyer milestone: Era N unlocks the Nth Flops tier's autobuyer (KFlops at Era 1, …).
 export const FLOPS_AUTOBUYER_ERA_START = 1
@@ -789,5 +793,5 @@ export const HYPERSCALER_EON_COST_BASE = 1
 export const HYPERSCALER_EON_COST_MULTIPLIER = 10
 // Each Hyperscaler Efficiency level adds this much extra rate per hyperscaler (+0.001%/s at 0.00001).
 export const HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL = 0.00001
-// Each Eon Amplifier level adds this many extra Eons awarded per Era ascension.
+// Each Kernel Amplifier level adds this many extra Kernels awarded per Reboot.
 export const EON_AMPLIFIER_AWARD_PER_LEVEL = 1

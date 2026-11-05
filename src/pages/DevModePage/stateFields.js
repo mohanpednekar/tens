@@ -7,7 +7,7 @@ import { COMPUTE_FLOPS_TIER_DEFINITIONS, TIER_DEFINITIONS } from 'game/layers'
 // sync; unknown keys are just as valid a state shape as known ones).
 const TIER_NAME_BY_ID = TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: tier.name }), {})
 const FLOPS_TIER_NAME_BY_ID = COMPUTE_FLOPS_TIER_DEFINITIONS.reduce(
-  (acc, tier) => ({ ...acc, [tier.id]: tier.name }),
+  (acc, tier) => ({ ...acc, [tier.id]: `${tier.name} · ${tier.outputLabel}` }),
   {},
 )
 
@@ -34,12 +34,12 @@ export const setValueAtPath = (obj, path, value) => {
 export const VARIABLE_AREAS = [
   { id: 'foundry', icon: '🔥', label: 'Foundry', match: key => /^intro$|^computeAutoBoost/.test(key) },
   { id: 'compute', icon: '🖥', label: 'Compute', match: key => /^computeFlops/.test(key) },
-  { id: 'era', icon: '🌌', label: 'Era', match: key => /^(era|eons|eonsUpgrades|hyperscaler)/i.test(key) },
-  { id: 'reboot', icon: '🏆', label: 'Prestige', match: key => /^reboot|^autoReboot|^prestige/.test(key) },
+  { id: 'era', icon: '⏻', label: 'Reboot', match: key => /^(era|eons|eonsUpgrades|hyperscaler)/i.test(key) },
+  { id: 'purge', icon: '🏆', label: 'Prestige', match: key => /^purge|^autoPurge|^prestige/.test(key) },
   {
     id: 'perks',
-    icon: '✨',
-    label: 'Perks',
+    icon: '🔧',
+    label: 'Firmware',
     match: key => /autobuyer|^auto|IntervalLevels$|AttemptBudgets?$|BonusUnlocked$/i.test(key),
   },
   { id: 'factory', icon: '📶', label: 'Factory', match: () => true },

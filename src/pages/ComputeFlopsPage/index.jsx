@@ -97,7 +97,7 @@ const tierNameById = Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, t.name]
 
 const ComputeFlopsPage = ({ game }) => {
   const { actions, state } = game
-  const pp = state.reboot?.points ?? 0
+  const pp = state.purge?.points ?? 0
   const totalFlops = getComputeFlopsTotal(state)
   const revealed = isComputeFlopsPageRevealed(state)
 
@@ -131,12 +131,12 @@ const ComputeFlopsPage = ({ game }) => {
           const factoryTier = tierNameById[flopTier.boostsTierId] ?? flopTier.boostsTierId
 
           return (
-            <TierRow key={flopTier.id} aria-label={`${flopTier.name} compute tier`}>
+            <TierRow key={flopTier.id} aria-label={`${flopTier.name} · ${flopTier.outputLabel} compute tier`}>
               <TierName>
-                {flopTier.name}
+                {flopTier.name} · {flopTier.outputLabel}
               </TierName>
               <BuyButton
-                aria-label={`buy ${flopTier.name} for ${formatAmount(cost)} Purge Points`}
+                aria-label={`buy ${flopTier.name} (${flopTier.outputLabel}) for ${formatAmount(cost)} Purge Points`}
                 disabled={!revealed || !canBuy}
                 onClick={() => actions.buyComputeFlopsTier(flopTier.id)}
                 title={

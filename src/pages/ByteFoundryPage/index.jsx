@@ -679,7 +679,7 @@ const TapIcon = styled.span`
 // Speed/Bandwidth figure (right, "+x% 👆" — or, while no bonus is active, the time until the buffer is full), and between them a narrow bonus bar that only shows
 // while a bonus is active (the fill-based multiplier itself is the tinted Speed figure, see
 // getSpeedColor/formatSpeedText).
-const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel, timeLeftText = null }) => {
+const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel, timeLeftText = null, bufferNoun = 'buffer' }) => {
   const clampedBonus = Math.min(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, Math.max(0, bonusPercent))
   const hasBonus = clampedBonus > 0
   return (
@@ -688,7 +688,7 @@ const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel, timeLeftT
       {hasBonus && (
         <BarTrack
           role="progressbar"
-          aria-label={`${ariaLabel} tap bonus`}
+          aria-label={`${ariaLabel} ping bonus`}
           aria-valuenow={Math.round(clampedBonus)}
           aria-valuetext={`+${Math.round(clampedBonus)}%`}
           aria-valuemin={0}
@@ -698,7 +698,7 @@ const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel, timeLeftT
         </BarTrack>
       )}
       {hasBonus && <BonusText>+{Math.round(clampedBonus)}% <TapIcon>👆</TapIcon></BonusText>}
-      {!hasBonus && timeLeftText && <TimeText title="Estimated time until this buffer is full, following the fill multiplier and assuming nothing else draws from it">⏳ {timeLeftText}</TimeText>}
+      {!hasBonus && timeLeftText && <TimeText title={`Estimated time until this ${bufferNoun} is full, following the fill multiplier and assuming nothing else draws from it`}>⏳ {timeLeftText}</TimeText>}
     </SubRow>
   )
 }
@@ -722,7 +722,7 @@ const getSpeedColor = percent => {
 }
 
 // Before intro.mainGameUnlocked this page is a mandatory gate with no way out via Tiers (AppNav
-// still shows Guide/More). Once unlocked, AppNav's Foundry item reopens it at any time — nothing
+// still shows Manual/More). Once unlocked, AppNav's Foundry item reopens it at any time — nothing
 // here is read-only. Data Stream + per-pool Memory/Storage are continuous sections on this one
 // screen (no second-level tabs). Forced priority: Disk Fill > Speed > Provision Disk > Compute.
 // focusNonce is accepted for App.jsx parity with MainPage; Foundry no longer has a tab to reset.
@@ -794,7 +794,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const nextUnlockDiskSizeText = formatDiskSize(getDiskLadderSizeBits(getUnlockedDiskSteps(intro) + 1))
   const handleUnlockDiskSizeClick = () => {
     const confirmed = typeof window === 'undefined' || typeof window.confirm !== 'function' || window.confirm(
-      `Foundry reset to unlock ${nextUnlockDiskSizeText} disks? The Foundry restarts from scratch (Capacity, Disks, Data Lakes, pool resets and Compute entities); Combine, Capacity, Speed, Disks and Data Lake upgrades/Boosters are then auto-rebuilt up to your prior highs. Speed exponent ${speedExponentText} → ${nextSpeedExponentText}.`
+      `Reformat to unlock ${nextUnlockDiskSizeText} disks? The Foundry restarts from scratch (Capacity, Disks, Data Lakes, pool compactions and Compute entities); Compile, Capacity, Bitrate, Disks and Data Lake upgrades/Cells are then auto-rebuilt up to your prior highs. Bitrate exponent ${speedExponentText} → ${nextSpeedExponentText}.`
     )
     if (confirmed) actions.unlockNextDiskSize()
   }
@@ -853,7 +853,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // in the Data Stream card's own actions, directly below Upgrade Data Stream; hidden only while
   // the pool its current offer belongs to is rebuilding after a pool-local reset.
   // Clicking arms the build (provisionDisk when it is Provision Disk's turn, otherwise queueDiskBuild so it starts the
-  // instant it can); an armed build then draws from the pool buffer at the pool's fixed speed on every tick.
+  // instant it can); an armed build then draws from the pool staging at the pool's fixed bandwidth on every tick.
   const handleProvisionDiskClick = () => {
     if (canStartDiskBuild) {
       actions.provisionDisk()
@@ -877,7 +877,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     : intro.diskBuild ? 'waiting for build'
       : isLaterPoolProvisioningLocked(state, rebuildPoolIndex) ? 'waiting for earlier pool'
       : getStoragePoolBandwidth(state, rebuildPoolIndex) <= 0 ? 'waiting for pool'
-        : getPoolBufferBits(state, rebuildPoolIndex) <= getPoolCacheReservationBits(state, rebuildPoolIndex) ? 'waiting for buffer'
+        : getPoolBufferBits(state, rebuildPoolIndex) <= getPoolCacheReservationBits(state, rebuildPoolIndex) ? 'waiting for staging'
           : null
   const diskBuildStatus = diskBuildInProgress
     ? { icon: '🏗', label: `Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk`, status: `${Math.ceil(diskBuildInProgress.remainingSeconds)}s left` }
@@ -889,7 +889,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         ? {
             icon: '⏳',
             label: `Provisioning ${formatDiskSize(diskSize)} Disk`,
-            status: `${diskPassesCollected > 0 ? diskPassesFraction : 'Queued'} · ${canStartDiskBuild ? (diskPoolSpendableBufferBits > 0 ? 'building' : 'waiting for buffer') : diskBuildBlockedByPriority ? 'after disk fill' : 'waiting for pool'}`,
+            status: `${diskPassesCollected > 0 ? diskPassesFraction : 'Queued'} · ${canStartDiskBuild ? (diskPoolSpendableBufferBits > 0 ? 'building' : 'waiting for staging') : diskBuildBlockedByPriority ? 'after disk fill' : 'waiting for pool'}`,
           }
         : canStartDiskBuild
           ? { icon: '🏦', label: diskOfferLabel, status: `Ready · ${COST_ICON} ${formatDiskSize(diskCost)}${diskPassesText}` }
@@ -899,7 +899,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               status: `${COST_ICON} ${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
               reason: diskBuildBlockedByPriority ? 'disk fill comes first' : 'pool not ready (offline, rebuilding or too small)',
             }
-  // Same stat layout as the running-upgrade tile. Provisioning (buffer-funded) and the post-Foundry-reset rebuild (one buffer fill per disk, no provisioning cost) both run at
+  // Same stat layout as the running-upgrade tile. Provisioning (buffer-funded) and the post-Foundry-reset rebuild (one staging fill per disk, no provisioning cost) both run at
   // the pool's BASE Bandwidth × its tap bonus (getPoolTapMultiplier; no fill multiplier), so ⚡ is that speed; ⏳ is the time left
   // (provisioning also waits on the buffer; rebuild: getLowerRebuildSummary; hidden for a build waiting behind Disk Fill) — a projection from the Bandwidth the pool will have once live while the size's pool isn't live yet.
   // Rebuild and provisioning are pool consumers, so the pool's tap bonus speeds both (getPoolTapMultiplier).
@@ -928,15 +928,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskShowsFundingStats = storageRevealed && !diskLadderExhausted && !diskBuildInProgress && diskFundingRate > 0 && (lowerDiskSizePending || diskBuildQueued)
   const unlockDiskSizeButton = (
     <Button
-      aria-label="foundry reset to unlock disk size"
+      aria-label="reformat to unlock disk size"
       onClick={handleUnlockDiskSizeClick}
-      title={`Reset the Byte Foundry to unlock ${nextUnlockDiskSizeText} disks. The Foundry restarts from scratch, then Combine, Capacity, Speed, Disks and Data Lake upgrades/Boosters are auto-rebuilt up to your prior highs; Compute entities and pool resets are not. The speed exponent rises ${speedExponentText} → ${nextSpeedExponentText}.`}
+      title={`Reformat the Byte Foundry to unlock ${nextUnlockDiskSizeText} disks. The Foundry restarts from scratch, then Compile, Capacity, Bitrate, Disks and Data Lake upgrades/Cells are auto-rebuilt up to your prior highs; Compute entities and pool compactions are not. The bitrate exponent rises ${speedExponentText} → ${nextSpeedExponentText}.`}
       type="button"
       variant="prestige"
     >
       <MilestoneButtonContent>
-        <span>🔁 Foundry reset: unlock {nextUnlockDiskSizeText} Disks</span>
-        <MilestoneCostLine>{`Speed exponent ${speedExponentText} → ${nextSpeedExponentText} · auto-rebuilds to your highs`}</MilestoneCostLine>
+        <span>🔁 Reformat: unlock {nextUnlockDiskSizeText} Disks</span>
+        <MilestoneCostLine>{`Bitrate exponent ${speedExponentText} → ${nextSpeedExponentText} · auto-rebuilds to your highs`}</MilestoneCostLine>
       </MilestoneButtonContent>
     </Button>
   )
@@ -952,9 +952,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           : diskLadderExhausted
             ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
             : lowerDiskSizePending
-              ? `Smaller sizes are rebuilt first (one buffer fill per disk, no provisioning cost) (${formatDiskSize(autoDiskSize)} now); ${formatDiskSize(diskSize)} unlocks for provisioning once they are done`
+              ? `Smaller sizes are rebuilt first (one staging fill per disk, no provisioning cost) (${formatDiskSize(autoDiskSize)} now); ${formatDiskSize(diskSize)} unlocks for provisioning once they are done`
             : diskBuildQueued
-              ? `Armed — draws from the pool buffer at the pool's fixed speed${diskBuildBlockedByPriority ? ' once Disk Fill is done' : ''} (${diskPassesCollected}/${diskPassesRequired} passes so far)`
+              ? `Armed — draws from the pool staging at the pool's fixed bandwidth${diskBuildBlockedByPriority ? ' once Disk Fill is done' : ''} (${diskPassesCollected}/${diskPassesRequired} passes so far)`
               : canStartDiskBuild
                 ? (diskRedeemTierName
                   ? `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache fills it automatically, and once full it is pulled right away to complete a ${diskRedeemTierName} level`
@@ -976,7 +976,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             return maxRebuildSize > autoDiskSize ? `${formatDiskSize(autoDiskSize)} → ${formatDiskSize(maxRebuildSize)}` : `${formatDiskSize(autoDiskSize)} disks`
           })() : diskPassesCollected > 0 ? diskPassesFraction : 'Queued'}</RunningChange>
           <RunningPercent>{Math.floor(diskDisplayedProgress)}%</RunningPercent>
-          <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent), ...(lowerDiskSizePending && rebuildSummary.projected ? { opacity: 0.55 } : null) }} title={rebuildPoolNotLive ? "Projected speed — this rebuild waits for the pool's Capacity" : lowerDiskSizePending && rebuildSummary.projected ? "Pool speed — a later pool is not live yet, so the total time is an estimate" : "Pool fill speed funding this disk"}>⚡ {lowerDiskSizePending && rebuildSummary.projected ? '~' : ''}{diskFundingSpeedText}</ProvisionSpeed>
+          <ProvisionSpeed style={{ color: getSpeedColor(diskFundingMultiplierPercent), ...(lowerDiskSizePending && rebuildSummary.projected ? { opacity: 0.55 } : null) }} title={rebuildPoolNotLive ? "Projected bandwidth — this rebuild waits for the pool's Capacity" : lowerDiskSizePending && rebuildSummary.projected ? "Pool bandwidth — a later pool is not live yet, so the total time is an estimate" : "Pool fill bandwidth funding this disk"}>⚡ {lowerDiskSizePending && rebuildSummary.projected ? '~' : ''}{diskFundingSpeedText}</ProvisionSpeed>
           {diskFundingTimeText !== '—' && (
             <RunningTime
               style={rebuildSummary.projected ? { opacity: 0.5, fontStyle: 'italic' } : undefined}
@@ -1019,31 +1019,31 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     let poolsBandwidth = 0
     for (let index = 1; index <= visiblePoolCount; index += 1) poolsBandwidth += getStoragePoolBandwidth(state, index)
     streamSpeedDetailRows = [
-      { label: 'Speed now', value: dataStreamRateText },
-      { label: 'Base Speed', value: formatStreamRate(productionRate) },
+      { label: 'Bitrate now', value: dataStreamRateText },
+      { label: 'Base Bitrate', value: formatStreamRate(productionRate) },
       ...(boostMultiplier !== 1 ? [{ label: 'Compute Boost', value: `×${boostMultiplier}` }] : []),
       { label: 'Fill multiplier', value: `${Math.round(streamBasePercent)}%` },
-      { label: 'Tap bonus (upgrades)', value: `+${Math.round(streamTapPercent)}%` },
-      { label: 'Speed exponent', value: speedExponentText },
+      { label: 'Ping bonus (upgrades)', value: `+${Math.round(streamTapPercent)}%` },
+      { label: 'Bitrate exponent', value: speedExponentText },
       ...(storageRevealed && visiblePoolCount > 0
         ? [{ label: 'Reserved by pools', value: formatStreamRate(Math.min(productionRate, poolsBandwidth)) }]
         : []),
       ...(runningDraw ? [{ label: 'Upgrade bar drawing', value: runningRateText }] : []),
       { label: 'Buffer', value: `${Math.floor(fullProgress * 10) / 10}% full` },
       { label: 'Time to full', value: dataStreamTimeLeftText ?? (isFull ? 'Full' : '—') },
-      ...(speedUpgradeArmable && !upgradeRunning ? [{ label: 'After Upgrade Speed', value: `${nextRateText} (${speedGainText})` }] : []),
+      ...(speedUpgradeArmable && !upgradeRunning ? [{ label: 'After Upgrade Bitrate', value: `${nextRateText} (${speedGainText})` }] : []),
     ]
   }
   const upgradeSpeedDetailsOpen = speedDetailsKey === 'upgrade' && Boolean(runningDraw)
   const upgradeSpeedDetailRows = upgradeSpeedDetailsOpen
     ? [
         { label: 'Draw now', value: runningRateText },
-        { label: 'Base Speed', value: formatStreamRate(productionRate) },
+        { label: 'Base Bitrate', value: formatStreamRate(productionRate) },
         { label: 'Data Stream delivers', value: dataStreamRateText },
         { label: 'Progress', value: `${formatBitsInNearestUnit(runningDone)} / ${formatBitsInNearestUnit(runningCost)}` },
         { label: 'Time left', value: runningTimeLeftText },
         runningDraw.kind === 'speed'
-          ? { label: 'Speed after', value: formatBitsTransition(productionRate, nextRate, '/s') }
+          ? { label: 'Bitrate after', value: formatBitsTransition(productionRate, nextRate, '/s') }
           : { label: 'Capacity after', value: formatBitsTransition(intro.capacity, nextCapacity) },
       ]
     : null
@@ -1066,8 +1066,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               type="button"
               onClick={actions.tapIntroBit}
               disabled={dataStreamMultiplierCapped}
-              aria-label="tap to generate a bit"
-              title={dataStreamMultiplierCapped ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap` : undefined}
+              aria-label="ping to generate a bit"
+              title={dataStreamMultiplierCapped ? `Ping bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap` : undefined}
             />
           )}
           <PoolTileContent>
@@ -1082,8 +1082,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 ref={streamSpeedDetailsOpen ? speedDetailsAnchorRef : undefined}
                 $centered={!(intro.dataStreamTapBonusPercent > 0) && !dataStreamTimeLeftText}
                 $color={getSpeedColor(dataStreamMultiplierPercent)}
-                title={`Delivered speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}
-                aria-label={`data stream speed ${dataStreamRateText}, show speed details`}
+                title={`Delivered bitrate at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}
+                aria-label={`data stream bitrate ${dataStreamRateText}, show bitrate details`}
                 aria-haspopup="dialog"
                 aria-expanded={streamSpeedDetailsOpen}
                 aria-controls={streamSpeedDetailsOpen ? 'data-stream-speed-details' : undefined}
@@ -1097,7 +1097,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 anchorRef={speedDetailsAnchorRef}
                 id="data-stream-speed-details"
                 onClose={closeSpeedDetails}
-                title="Data Stream speed"
+                title="Data Stream bitrate"
                 rows={streamSpeedDetailRows}
               />
             )}
@@ -1106,7 +1106,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             capacityText={formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
             bonusPercent={intro.dataStreamTapBonusPercent ?? 0}
             timeLeftText={dataStreamTimeLeftText}
-            ariaLabel="data stream fill-based speed multiplier"
+            ariaLabel="data stream fill-based bitrate multiplier"
           />
           </TileHeader>
           <VisuallyHidden
@@ -1121,11 +1121,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
         {intro.byteCreated && upgradeRunning && (
           <UpgradeStatusTile
-            aria-label={speedUpgradeQueued ? 'upgrade speed' : 'upgrade capacity'}
+            aria-label={speedUpgradeQueued ? 'upgrade bitrate' : 'upgrade capacity'}
             as="section"
             title={speedUpgradeQueued
-              ? 'Upgrading Speed — pulling the Data Stream\'s Speed into the bar'
-              : `Upgrading to ${nextCapacityText} — pulling the Data Stream's base Speed into the bar`}
+              ? 'Upgrading Bitrate — pulling the Data Stream\'s Bitrate into the bar'
+              : `Upgrading to ${nextCapacityText} — pulling the Data Stream's base Bitrate into the bar`}
             $progress={runningProgress}
           >
             <RunningUpgradeContent>
@@ -1141,8 +1141,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 ref={upgradeSpeedDetailsOpen ? speedDetailsAnchorRef : undefined}
                 $color={getSpeedColor(runningMultiplierPercent)}
                 style={{ gridColumn: 3, gridRow: 1, justifySelf: 'end' }}
-                title="Upgrade draw at a constant 1x Speed"
-                aria-label={`upgrade draw speed ${runningRateText}, show speed details`}
+                title="Upgrade draw at a constant 1x Bitrate"
+                aria-label={`upgrade draw bitrate ${runningRateText}, show bitrate details`}
                 aria-haspopup="dialog"
                 aria-expanded={upgradeSpeedDetailsOpen}
                 aria-controls={upgradeSpeedDetailsOpen ? 'upgrade-speed-details' : undefined}
@@ -1155,7 +1155,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   anchorRef={speedDetailsAnchorRef}
                   id="upgrade-speed-details"
                   onClose={closeSpeedDetails}
-                  title={runningDraw.kind === 'speed' ? 'Upgrade Speed draw' : 'Upgrade Capacity draw'}
+                  title={runningDraw.kind === 'speed' ? 'Upgrade Bitrate draw' : 'Upgrade Capacity draw'}
                   rows={upgradeSpeedDetailRows}
                 />
               )}
@@ -1175,16 +1175,16 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         <ActionsRow>
           {canCombine && (
             <Button
-              aria-label="combine 8 bits into a Byte"
+              aria-label="compile 8 bits into a Byte"
               onClick={actions.combineIntroByte}
               type="button"
               variant="primary"
               $progress={combineProgress}
             >
-              <ButtonContent>🔗 Combine into a Byte</ButtonContent>
+              <ButtonContent>🔗 Compile into a Byte</ButtonContent>
               <VisuallyHidden
                 role="progressbar"
-                aria-label="byte foundry combine progress"
+                aria-label="byte foundry compile progress"
                 aria-valuenow={intro.bits}
                 aria-valuemin={0}
                 aria-valuemax={INTRO_BYTE_COMBINE_COST}
@@ -1204,11 +1204,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     disabled={!capacityUpgradeArmable}
                     onClick={actions.pickIntroCapacityMilestone}
                     title={capacityUpgradeArmable
-                      ? 'Pull the Data Stream\'s base Speed into the upgrade; its bar filling doubles Capacity'
+                      ? 'Pull the Data Stream\'s base Bitrate into the upgrade; its bar filling doubles Capacity'
                       : 'Capacity is already at its maximum'}
                     aria-description={capacityUpgradeArmable ? `Costs ${formatBitsInNearestUnit(capacityUpgradeCost)}; capacity ${nextCapacityText} after upgrading` : undefined}
                     type="button"
-                    variant={capacityUpgradeArmable ? 'reboot' : 'neutral'}
+                    variant={capacityUpgradeArmable ? 'prestige' : 'neutral'}
                   >
                     <MilestoneButtonContent>
                       <span>Upgrade Capacity</span>
@@ -1220,18 +1220,18 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     </MilestoneButtonContent>
                   </Button>
                   <Button
-                    aria-label="upgrade data stream speed"
+                    aria-label="upgrade data stream bitrate"
                     disabled={!speedUpgradeArmable}
                     onClick={actions.queueIntroSpeedUpgrade}
                     title={speedUpgradeArmable
-                      ? 'Pull the Data Stream\'s base Speed into the upgrade; its bar filling raises Speed'
-                      : `Base Speed cannot exceed Capacity^${speedExponentText} — upgrade Capacity first`}
-                    aria-description={speedUpgradeArmable ? `Costs ${formatBitsInNearestUnit(speedUpgradeCost)}; speed ${nextRateText} after upgrading` : undefined}
+                      ? 'Pull the Data Stream\'s base Bitrate into the upgrade; its bar filling raises Bitrate'
+                      : `Base Bitrate cannot exceed Capacity^${speedExponentText} — upgrade Capacity first`}
+                    aria-description={speedUpgradeArmable ? `Costs ${formatBitsInNearestUnit(speedUpgradeCost)}; bitrate ${nextRateText} after upgrading` : undefined}
                     type="button"
-                    variant={speedUpgradeArmable ? 'reboot' : 'neutral'}
+                    variant={speedUpgradeArmable ? 'prestige' : 'neutral'}
                   >
                     <MilestoneButtonContent>
-                      <span>Upgrade Speed</span>
+                      <span>Upgrade Bitrate</span>
                       <MilestoneCostLine>
                         {speedUpgradeArmable
                           ? `${COST_ICON} ${formatBitsInNearestUnit(speedUpgradeCost)} · ⚡ ${speedGainText}`
@@ -1284,16 +1284,16 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           for (let index = 1; index < poolIndex; index += 1) earlierBandwidth += getStoragePoolBandwidth(state, index)
           const poolBaseMultiplierPercent = getPoolBaseMultiplierPercent(state, poolIndex)
           poolSpeedDetailRows = [
-            { label: 'Fill speed now', value: poolSpeedText },
+            { label: 'Fill bandwidth now', value: poolSpeedText },
             { label: 'Available (before multiplier)', value: formatPoolRate(poolFillRate) },
             { label: 'Bandwidth (theoretical)', value: formatPoolRate(poolBandwidth) },
-            { label: 'Data Stream speed', value: formatPoolRate(productionRate) },
+            { label: 'Data Stream bitrate', value: formatPoolRate(productionRate) },
             ...(poolIndex > 1
               ? [{ label: 'Taken by earlier pools', value: formatPoolRate(Math.min(productionRate, earlierBandwidth)) }]
               : []),
             { label: 'Fill multiplier', value: `${Math.round(poolBaseMultiplierPercent)}%` },
-            { label: 'Tap bonus (disks, merges, provisioning, lake)', value: `+${Math.round(poolTapBonusPercent)}%` },
-            { label: 'Buffer', value: `${Math.floor(poolBufferPercent * 10) / 10}% full` },
+            { label: 'Ping bonus (disks, merges, provisioning, lake)', value: `+${Math.round(poolTapBonusPercent)}%` },
+            { label: 'Staging', value: `${Math.floor(poolBufferPercent * 10) / 10}% full` },
             { label: 'Time to full', value: poolTimeLeftText ?? (poolBufferFull ? 'Full' : '—') },
             ...(lakeDraining ? [{ label: 'Draining to Data Lake', value: formatPoolRate(poolBandwidth * getPoolTapMultiplier(state, poolIndex)) }] : []),
           ]
@@ -1308,7 +1308,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 type="button"
                 // Always tappable: every tap grants the bonus (up to its cap), whether or not it can help.
                 onClick={() => actions.tapPoolBuffer(poolIndex)}
-                aria-label={`tap pool ${poolIndex} memory`}
+                aria-label={`ping pool ${poolIndex} staging`}
               />
               <PoolTileContent>
                 <TileHeader>
@@ -1329,8 +1329,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     ref={speedDetailsOpen ? speedDetailsAnchorRef : undefined}
                     $centered={poolTapBonusPercent <= 0 && !poolTimeLeftText}
                     $color={getSpeedColor(poolMultiplierPercent)}
-                    title={`Available fill speed at ${Math.round(poolMultiplierPercent)}% fill multiplier`}
-                    aria-label={`pool ${poolIndex} speed ${poolSpeedText}, show speed details`}
+                    title={`Available fill bandwidth at ${Math.round(poolMultiplierPercent)}% fill multiplier`}
+                    aria-label={`pool ${poolIndex} bandwidth ${poolSpeedText}, show bandwidth details`}
                     aria-haspopup="dialog"
                     aria-expanded={speedDetailsOpen}
                     aria-controls={speedDetailsOpen ? `pool-${poolIndex}-speed-details` : undefined}
@@ -1343,13 +1343,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                       anchorRef={speedDetailsAnchorRef}
                       id={`pool-${poolIndex}-speed-details`}
                       onClose={closeSpeedDetails}
-                      title={`${poolSymbol} Pool speed`}
+                      title={`${poolSymbol} Pool bandwidth`}
                       rows={poolSpeedDetailRows}
                       note={poolFillRate >= poolBandwidth
                         ? undefined
                         : poolIndex > 1
                           ? 'Limited by the Data Stream: earlier pools take their Bandwidth first.'
-                          : 'Limited by the Data Stream\'s own speed.'}
+                          : 'Limited by the Data Stream\'s own bitrate.'}
                     />
                   )}
                 </TitleRow>
@@ -1357,12 +1357,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   capacityText={formatDiskSizeInPoolUnit(poolBufferCapacity, poolIndex)}
                   bonusPercent={poolTapBonusPercent}
                   timeLeftText={poolTimeLeftText}
+                  bufferNoun="staging"
                   ariaLabel={`pool ${poolIndex} fill-based bandwidth multiplier`}
                 />
                 </TileHeader>
                 <VisuallyHidden
                   role="progressbar"
-                  aria-label={`pool ${poolIndex} memory buffer`}
+                  aria-label={`pool ${poolIndex} staging`}
                   aria-valuenow={Math.round(poolBufferPercent)}
                   aria-valuemin={0}
                   aria-valuemax={100}
@@ -1388,13 +1389,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
       {!intro.mainGameUnlocked && (
         <TapArea
-          aria-label="tap to generate a bit"
+          aria-label="ping to generate a bit"
           disabled={isFull || dataStreamMultiplierCapped}
-          title={!isFull && dataStreamMultiplierCapped ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap` : undefined}
+          title={!isFull && dataStreamMultiplierCapped ? `Ping bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap` : undefined}
           onClick={actions.tapIntroBit}
           type="button"
         >
-          👆 Tap
+          👆 Ping
         </TapArea>
       )}
     </RootDiv>
