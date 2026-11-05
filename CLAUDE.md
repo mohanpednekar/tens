@@ -509,34 +509,20 @@ viteConfigFactory.js      ← the real Vite config: aliases, dev/test server, Vi
 stryker.config.json       ← Stryker mutation testing of `engine.js` (weekly non-blocking `mutation-testing.yml`;
                             `yarn stryker run`; docs/AUTOMATION.md)
 playwright.config.js      ← e2e config ("End-to-end testing"); separate from vite.config.js's Vitest `test` block
-e2e/                      ← `.e2e.js` specs: golden-path (buy Kilobytes via the real Buy button; Owned/balance
-                            update), autobuyer-reload (unlocked autobuyer survives a real reload), purge
-                            (first-time overlay resets resources, awards PP), reboot (Settings Reboot from
-                            1 Googol PP; era/Kernels + Foundry gate), data-lake (seeded KB Data Lake renders
-                            its disk-square breakdown; manual Buy Cell grants a Cell, verified on Power),
-                            visual-regression (Linux-only full-page baselines of Byte Foundry / Byte Factory,
-                            both themes, in `visual-regression.e2e.js-snapshots/`; update process `e2e/README.md`)
+e2e/                      ← `.e2e.js` Playwright specs (spec list + visual-regression baselines: "End-to-end testing", `e2e/README.md`)
 scripts/
-  bump-version.mjs (+test)       ← `yarn bump-version` ("Changelog convention") — #52
-  generate-pwa-icons.mjs         ← one-off `yarn gen-pwa-icons`: rasterizes an inline "byte grid" SVG (PWA_REFERENCE)
-                                   via `sharp` into public/pwa-*.png + apple-touch-icon.png and hand-assembles
-                                   favicon.ico (PNG-frame ICO, no extra dep); not in the build — re-run only if
-                                   the icon design/palette changes
-  adversarialReviewMarker.js (+test) ← pure helpers for the `<!-- adversarial-review sha=… verdict=… -->` marker ("Pull requests")
-  pr-low-risk-eligible.sh (+test) ← shared low-risk-auto-merge bar for `enable-auto-merge-if-eligible.sh` and
-                                   `pr-auto-merge.yml`
-  enable-auto-merge-if-eligible.sh ← marks a PR ready + enables auto-merge once adversarial-APPROVEd and low-risk ("Pull requests")
-  resolve-pr-threads.sh          ← lists/resolves review threads by ID on automation-owned PRs (`claude/*`/
-                                   `devin/*`, repo-owner/bot-authored only); `list` read-only, `resolve` takes
-                                   explicit caller-selected IDs, never bulk "resolve all"; see "Pull requests"; used by
-                                   `autonomous-maintenance.yml` and `autonomous-pr-followup.yml`
-  backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh ← idempotent issue-hygiene sweeps (close shipped/stray issues, unblock/label ready work) run on every
-                                   `autonomous-maintenance.yml` invocation (docs/AUTOMATION.md)
-  configure-ios-plist.mjs (+test) ← Info.plist GADApplicationIdentifier / NSUserTrackingUsageDescription /
-                                   SKAdNetworkItems from the ads flag
-  android-boot-smoke.sh          ← installs + launches an APK on an emulator, fails on crash / no UI
-                                   (mobile-build.yml minified-release boot check)
-  sync-release-milestones.sh     ← idempotent Milestone create/assign ("GitHub Milestones")
+  bump-version.mjs, generate-pwa-icons.mjs ← `yarn bump-version` ("Changelog convention") / one-off `yarn gen-pwa-icons`
+                                   (inline "byte grid" SVG via `sharp` → public/pwa-*.png + apple-touch-icon.png +
+                                   hand-built favicon.ico; PWA_REFERENCE; re-run only if the icon design changes)
+  adversarialReviewMarker.js, pr-low-risk-eligible.sh, enable-auto-merge-if-eligible.sh ← APPROVE-marker helpers,
+                                   shared low-risk bar, mark-ready + auto-merge ("Pull requests"; each has a `.test`)
+  resolve-pr-threads.sh          ← lists/resolves review threads by ID on automation-owned PRs (`claude/*`/`devin/*`,
+                                   owner/bot-authored only); `list` read-only, `resolve` takes explicit IDs, never bulk;
+                                   used by `autonomous-maintenance.yml` and `autonomous-pr-followup.yml`
+  backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh, sync-release-milestones.sh ← idempotent issue/milestone sweeps run
+                                   every `autonomous-maintenance.yml` invocation (docs/AUTOMATION.md; "GitHub Milestones")
+  configure-ios-plist.mjs (+test) ← Info.plist ad keys from the ads flag
+  android-boot-smoke.sh          ← installs + launches an APK on an emulator, fails on crash / no UI (mobile-build.yml)
   sweep-stalled-auto-prs.sh (+test) ← comments on `claude/auto-*` PRs idle 24h+ with failing check / conflict to
                                    re-fire follow-up; 3 retries, then `automation-retro` (#60)
 public/                   ← generated PWA icons (pwa-192x192/512x512/maskable-512x512, apple-touch-icon;
