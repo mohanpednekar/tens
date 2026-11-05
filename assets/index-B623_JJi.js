@@ -2421,6 +2421,11 @@ Error generating stack: `+e.message+`
   padding: 0.5rem 0.65rem;
   resize: vertical;
   width: 100%;
+
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
+  }
 `,ux={invalid_json:`That is not valid save JSON.`,incompatible_save:`That save is from an incompatible version.`,invalid_state:`That save could not be loaded.`},dx=({game:e})=>{let[t,n]=(0,I.useState)(``),[r,i]=(0,I.useState)(null),a=(0,I.useRef)(null),o=async()=>{let t=e.exportSaveJson();n(t);try{await navigator.clipboard.writeText(t),i({text:`Save copied to clipboard (also shown below).`})}catch{i({text:`Save shown below — copy it manually.`})}},s=()=>{let t=URL.createObjectURL(new Blob([e.exportSaveJson()],{type:`application/json`})),n=document.createElement(`a`);n.href=t,n.download=`tens-save.json`,n.click(),setTimeout(()=>URL.revokeObjectURL(t),1e3)},c=t=>{if(!t.trim())return i({error:!0,text:`Paste a save or choose a file first.`});if(!window.confirm(`Replace the active save slot with this save? Current progress in the slot is lost.`))return;let r=e.applyCloudSave(t);i(r.ok?{text:`Save imported.`}:{error:!0,text:ux[r.reason]??`Import failed.`}),r.ok&&n(``)};return(0,z.jsxs)(tx,{"aria-label":`manual save section`,children:[(0,z.jsx)(`h2`,{children:`Backup / Restore`}),(0,z.jsx)(lx,{"aria-label":`save JSON`,onChange:e=>n(e.target.value),placeholder:`Paste save JSON here to import`,value:t}),(0,z.jsxs)(nx,{children:[(0,z.jsx)(Q,{onClick:o,type:`button`,children:(0,z.jsx)($,{children:`Copy save`})}),(0,z.jsx)(Q,{onClick:s,type:`button`,children:(0,z.jsx)($,{children:`Download file`})}),(0,z.jsx)(Q,{onClick:()=>a.current?.click(),type:`button`,children:(0,z.jsx)($,{children:`Choose file…`})}),(0,z.jsx)(Q,{onClick:()=>c(t),type:`button`,children:(0,z.jsx)($,{children:`Import`})}),(0,z.jsx)(`input`,{accept:`application/json,.json`,"aria-label":`save file`,hidden:!0,onChange:async e=>{let t=e.target.files?.[0];e.target.value=``,t&&n(await t.text())},ref:a,type:`file`})]}),r&&(0,z.jsx)(ax,{$error:r.error,children:r.text})]})},fx=R.div`
   display: flex;
   flex-wrap: wrap;
