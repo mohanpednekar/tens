@@ -3859,7 +3859,7 @@ Foundry upgrade state reset. Era *N* free-unlocks the *N*th Compute tier’s aut
 - **Eon spend tree in the same PR** — deferred to #414 (`blocked` until spend design lands); engine
   ships hyperscaler/`buyHyperscaler` hooks but shop UI waits.
 
-See `docs/ECONOMY_REFERENCE.md` “Era ascension and Eons” for the live constant table; issues #407
+See `docs/ECONOMY_REFERENCE.md` “Reboot and Kernels” (formerly “Era ascension and Eons”) for the live constant table; issues #407
 (parent epic), #405 (Unbounded), #410 (engine), #411 (UI).
 
 ### Pool 1 byte generator: binary Memory units, doubling capacity cap, ×4 Bandwidth ladder (#457, epic #456)
@@ -9160,3 +9160,92 @@ pool buffer (minus the read cache's claim) at base Bandwidth × pool tap bonus a
 kept) on an empty buffer. Because it now competes for the buffer, a pending rebuild counts as
 provisioning-in-progress (`isStoragePoolProvisioningInProgress`) so the lower-priority Data Lake drain,
 which runs earlier in `tickGame`, cannot starve it.
+
+## Purge code rename: reboot → purge (2026-11, #987)
+
+Follow-up to the player-facing Reboot → Purge rename above, part of epic #986. Code identifiers now
+match the UI: `state.reboot` → `state.purge`, `rebootGame` → `purgeGame`, `REBOOT_*` → `PURGE_*`,
+`autoReboot*` → `autoPurge*`, automation key `'reboot'` → `'purge'`, museum entry `rebootNumber` →
+`purgeNumber`, `isUnboundedRebootUnlocked` → `isOverflowModeUnlocked`,
+`UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS` → `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`,
+`getRebootProgressPercent` → `getPurgePercent`, `e2e/reboot.e2e.js` → `e2e/purge.e2e.js`. This frees
+"Reboot" to become the player-facing name for Era ascension (#986) without colliding with a legacy
+code meaning. The save schema moved to v3: `save-migration/migrateToV3.js` maps every legacy spelling
+(`prestige` and `reboot` keys, their `auto*` flags, automation-map keys, `latency` → `speedUp`, museum
+`prestigeNumber`/`rebootNumber`) straight to the purge names, absorbing the old `storage.js`
+`renamePreRebootKeys` (removed). `adaptSaveForLoad`'s dev/Dev Mode bypass also runs `migrateToV3`,
+since it skips `adaptSaveForCurrentSchema`. The internal `unboundedUnlocked` field name under `purge`
+is unchanged.
+
+## #988 leftover mixed labels after stacking onto #990 (2026-11)
+
+The Foundry/Power/Compute label rename (#988 / #994) stacked onto this Purge-code-rename PR and
+landed with a few mechanical over-renames: Provision Disk's "tap to queue" became "ping to queue"
+(Ping is only the Data Stream / pool tap), the in-flight Auto-charge title still said
+"Auto-merging", and the Data Lake's own retained fill (not the pool buffer) was relabelled
+Staging. Those player-facing strings, plus current-behavior docs that still called the Power-chain
+first entity "Cores" (that name now belongs to the Flops tier), were corrected here rather than
+in a follow-up. Later commits also fixed the Guide (lake fill "buffer"; tapping Power reserve
+slots is not a Ping), locked MB+ lakes naming Batteries not Cells, "charge it up" instead of
+"merge it down", Auto Boost waiting on an in-flight charge, and current-behavior docs that still
+called Power `⚡ Compute` / the charge chain Core/Node. Visual-regression baselines were left
+for a dedicated e2e pass — that suite is not in CI.
+
+## Write caches fill from the pool buffer; click-to-expedite consumes smaller disks (2026-11)
+
+Previously every size above a pool's smallest filled only by merging: once its source array held all 9 full
+disks, the write cache collected 10 of them (timed) and flushed into one target disk — so filling a larger disk
+always drained the smaller array. Per maintainer request, disks now fill from the pool buffer by default: a
+write cache starts whenever its array has an empty disk and draws pool-buffer bits (after the read cache's
+reservation, smallest target first — the pool's fill order is unchanged), so lower disks stay available to the
+Factory. Lower disks are consumed only on demand: clicking an empty disk (`expediteDiskFill`) makes its merge
+consume full smaller disks of the same pool (largest first that still fits, timed at 5× Bandwidth) simultaneously
+with the pool draw — the in-flight disk's size is reserved from the pool draw so the sources never overshoot, and
+a fast pool means fewer smaller disks are consumed (an initial sequential "disks first, then pool" version was
+revised the same day per maintainer feedback).
+Merges now track `collectedBits` (pool draws are fractional; `segmentsCollected` is derived) and wait instead of
+completing while the target has no empty disk, since a pool-funded merge's bits would otherwise be lost. The
+"source array full" start condition and its 9-vs-10 constant distinction no longer apply; the 10-segment
+(size-ratio) conservation still does.
+
+## Stronger expedite: queue jump, parallel transfers, 5× flush (2026-11)
+
+After PR #1000 a simulated expedite was only ~3–5% faster than the default fill: smaller disks were consumed one
+at a time, the 2× flush dominated, and the consumed smaller disks' own refills took Staging first (the pool
+fill order was kept as originally specified). Per maintainer choice, an expedited disk now (1) draws Staging
+ahead of all non-expedited write caches — a deliberate exception to "fill order unchanged"; the read cache
+keeps its reservation; (2) starts every needed smaller-disk transfer at once (`merge.transfers`), still sized
+so the sources never overshoot and dropped once Staging covers the rest; and (3) flushes at
+`CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER` (5×) instead of 2×. The 5× rate reuses the existing constant
+rather than adding a new economy constant to `layers.js`.
+
+## Naming pass (2026-11, #986)
+
+Epic #986 gave the game a coherent computing/operating-system vocabulary in three steps: #987
+renamed Reboot → Purge in code and UI (freeing "Reboot"); #988 renamed the Foundry/Power/Compute
+labels (Power, Cell → Fusion, Cores → Superclouds, Clock Speed, Bitrate, Bandwidth, Staging,
+Compile, Ping, Compact Pool, Turbo/Balanced/Eco, Overflow mode); #989 renamed the meta layer and
+chrome. Player labels only — code identifiers, state fields (`era`, `eons`, `eonAmplifier*`,
+`prestigeDoublePpLevel`, `prestigeMuseum`), page ids (`'perks'`, `'info'`, `'milestones'`,
+`'settings'`) and localStorage keys are unchanged, so no save migration was needed.
+
+Rationale for #989: the Purge → Reboot → Reinstall ladder reads as escalating resets of a machine,
+so Era ascension became **Reboot** (Eons → **Kernels**, Eon Amplifier → Kernel Amplifier); Perks
+became **Firmware** (upgrades that persist across resets); Double PP became **Compression**;
+"Foundry reset" / Reset Byte Foundry became **Reformat**; Milestones/Chapters became **Releases**
+(v1.0 – v5.0, old chapter names kept as subtitles, the last "Ascend an Era" becoming "First
+Reboot"); Prestige museum became the **System log**, Ops dashboard the **Task Manager**, Import /
+export save **Backup / Restore**; the "Welcome back!" notice reads "Resumed from sleep" with the
+mechanic named **Sleep mode**; the Guide became the **Manual**, restructured to follow the new
+names, with a Prestige ladder section after Overview and Data Lakes / Compaction moved from Power
+into Storage (they are Storage-pool mechanics fed by pool Staging). Visual-regression baselines
+still passed unchanged (the captured screens do not show the renamed nav item).
+
+**Reserved names (not yet implemented; do not reuse for other things):**
+
+- Prestige ladder: Purge → Reboot → Reinstall (currency Images, doubling as challenge runs) →
+  Migrate (permanent Architecture paths x86 / ARM / RISC-V) → Quantum (Qubits; Superposition runs
+  two Factory branches) → Singularity (endgame).
+- Side mechanics: Snapshot / Rollback, Uptime, Hotfix.
+- Others: Garbage Collector (auto-Compaction), Latency, Cache hit, Thermal throttling,
+  Parity / RAID, Lakehouse / Data Warehouse, Tape / Cold storage.

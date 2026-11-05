@@ -24,7 +24,7 @@
 //       Never enable permanent auto-merge.
 //   Main ladder (every tick):
 //     - Autobuyers wherever applicable: unlocked tiers (autobuyers[tierId] non-null from
-//       applyAutobuyerMilestones / reboot.count) are left to tickGame's autobuyer loop with the
+//       applyAutobuyerMilestones / purge.count) are left to tickGame's autobuyer loop with the
 //       real BUY_QUANTITY = Number.MAX_SAFE_INTEGER batch — matching useIncrementalGame.js.
 //     - Manual buyTierQuantity on any tier with no autobuyer, OR whose autobuyer would stall this
 //       tick (affordable > 0 but less than the full cost-block batch the autobuyer waits for).
@@ -38,12 +38,12 @@
 //       Other PP automations (Smart / Auto-Scale-Up / Auto-Prestige / tickspeed autobuyer) are NOT
 //       bought — those are separate levers; this bot isolates Foundry + ladder + free/Money/XP
 //       tickspeed + prestige-count autobuyer milestones.
-//   Cycle end: loop exits the instant isProductionFrozen (Money ≥ REBOOT_THRESHOLD). Career mode
-//   then calls rebootGame (permanent Foundry carry + applyAutobuyerMilestones) and continues.
+//   Cycle end: loop exits the instant isProductionFrozen (Money ≥ PURGE_THRESHOLD). Career mode
+//   then calls purgeGame (permanent Foundry carry + applyAutobuyerMilestones) and continues.
 //
 // Usage:
-//   node run-simulation.mjs                         # career table (reboots 0..10) + PP sweep
-//   node run-simulation.mjs --pp 0 100 10000         # PP sweep only (fresh reboot.count = 0)
+//   node run-simulation.mjs                         # career table (purges 0..10) + PP sweep
+//   node run-simulation.mjs --pp 0 100 10000         # PP sweep only (fresh purge.count = 0)
 //   node run-simulation.mjs --career 0 5 10          # career cycles at those prestige counts
 //   node run-simulation.mjs --capacity-cap           # default early-stop floor/hard cap/unlimited sweep
 //   node run-simulation.mjs --capacity-cap 4194304 8388608 unlimited
@@ -78,7 +78,7 @@ import {
   isProductionFrozen,
   isTierUnlocked,
   overclockGame,
-  rebootGame,
+  purgeGame,
   queueIntroCapacityUpgrade,
   upgradePoolCapacity,
   scaleUpGame,
@@ -314,7 +314,7 @@ function actTickspeed(state) {
       s = next
     }
   }
-  const xp = s.reboot?.xp ?? 0
+  const xp = s.purge?.xp ?? 0
   if (xp > 0) {
     const min = getLastTierXpTickspeedMinConsumption(s.lastTierXpConsumed ?? 0)
     if (xp >= min) s = consumeXpForLastTierTickspeed(xp)(s)
@@ -334,7 +334,7 @@ function actSoftResets(state) {
 }
 
 function actSpeedBonus(state) {
-  if (!state.prestigeSpeedBonusUnlocked && (state.reboot?.points ?? 0) >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) {
+  if (!state.prestigeSpeedBonusUnlocked && (state.purge?.points ?? 0) >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) {
     return buyPrestigeSpeedBonus(state)
   }
   return state
@@ -408,13 +408,13 @@ function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = 
   }
 }
 
-function seedState({ rebootCount = 0, startingPP = 0 } = {}) {
+function seedState({ purgeCount = 0, startingPP = 0 } = {}) {
   let state = createInitialGameState()
   state = {
     ...state,
-    reboot: {
-      ...state.reboot,
-      count: rebootCount,
+    purge: {
+      ...state.purge,
+      count: purgeCount,
       points: startingPP,
     },
   }
@@ -481,7 +481,7 @@ function parseArgs(argv) {
 }
 
 const defaultPPValues = [0, 10, 25, 50, 100, 250, 500, 1000, 2000, 5000, 10000, 25000, 50000]
-const defaultCareerReboots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+const defaultCareerPurges = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 const {
   pp: cliPP,
@@ -496,7 +496,7 @@ const onlyCapacity = runCapacitySweep && cliPP.length === 0 && cliCareer.length 
 const runPP = !onlyCapacity && (cliPP.length > 0 || (cliPP.length === 0 && cliCareer.length === 0 && !runCapacitySweep))
 const runCareer = !onlyCapacity && (cliCareer.length > 0 || (cliPP.length === 0 && cliCareer.length === 0 && !runCapacitySweep))
 const ppValues = cliPP.length > 0 ? cliPP : defaultPPValues
-const careerTargets = cliCareer.length > 0 ? cliCareer : defaultCareerReboots
+const careerTargets = cliCareer.length > 0 ? cliCareer : defaultCareerPurges
 const capacityCapValues = cliCapacityCaps.length > 0 ? cliCapacityCaps : DEFAULT_CAPACITY_CAPS_BITS
 
 const outputLines = []
@@ -539,7 +539,7 @@ if (runCapacitySweep || onlyCapacity) {
 
   let bestTicks = Infinity
   for (const cap of capacityCapValues) {
-    const result = simulateCycle(seedState({ rebootCount: 0, startingPP: 0 }), {
+    const result = simulateCycle(seedState({ purgeCount: 0, startingPP: 0 }), {
       capacityCapBits: cap,
     })
     const durationCell = result.reached
@@ -564,17 +564,17 @@ if (runCareer) {
   emit('## Career cycles (fresh start → prestige N, permanent Foundry carry)')
   emit('')
   emit(
-    '| After reboots | Starting PP (banked) | Foundry | Main → Googol | Total cycle | Autobuyers | Scale Ups | Overclock Δ | Money at Googol |',
+    '| After purges | Starting PP (banked) | Foundry | Main → Googol | Total cycle | Autobuyers | Scale Ups | Overclock Δ | Money at Googol |',
   )
   emit('|---|---|---|---|---|---|---|---|---|')
 
-  let state = seedState({ rebootCount: 0, startingPP: 0 })
+  let state = seedState({ purgeCount: 0, startingPP: 0 })
   let nextTargetIndex = 0
   const targets = [...new Set(careerTargets)].sort((a, b) => a - b)
 
   while (nextTargetIndex < targets.length) {
-    const countAtStart = state.reboot.count
-    const ppAtStart = state.reboot.points
+    const countAtStart = state.purge.count
+    const ppAtStart = state.purge.points
     const result = simulateCycle(state)
 
     if (countAtStart === 0) {
@@ -589,16 +589,16 @@ if (runCareer) {
 
     if (!result.reached) {
       emit('')
-      emit(`Stopped early: cycle at reboot.count=${countAtStart} hit the ${MAX_TICKS.toLocaleString()}-tick cap.`)
+      emit(`Stopped early: cycle at purge.count=${countAtStart} hit the ${MAX_TICKS.toLocaleString()}-tick cap.`)
       break
     }
 
     if (nextTargetIndex >= targets.length) break
 
-    state = rebootGame(result.state)
-    if (state.reboot.count <= countAtStart) {
+    state = purgeGame(result.state)
+    if (state.purge.count <= countAtStart) {
       emit('')
-      emit('Stopped early: rebootGame did not increment reboot.count.')
+      emit('Stopped early: purgeGame did not increment purge.count.')
       break
     }
   }
@@ -606,15 +606,15 @@ if (runCareer) {
 }
 
 if (runPP) {
-  emit('## PP sweep (fresh reboot.count = 0 — no tier autobuyers; manual buys unstall)')
+  emit('## PP sweep (fresh purge.count = 0 — no tier autobuyers; manual buys unstall)')
   emit('')
   emit(
     '| PP balance | Speed bonus | Foundry | Main → Googol | Total | Autobuyers | Scale Ups | Overclock Δ | Money at Googol |',
   )
   emit('|---|---|---|---|---|---|---|---|---|')
   for (const pp of ppValues) {
-    const result = simulateCycle(seedState({ rebootCount: 0, startingPP: pp }))
-    const remainingPP = result.state.reboot.points
+    const result = simulateCycle(seedState({ purgeCount: 0, startingPP: pp }))
+    const remainingPP = result.state.purge.points
     const bonusCell = result.speedBonusUnlocked
       ? `+${remainingPP}% (spent ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} to unlock)`
       : 'locked'
@@ -657,7 +657,7 @@ Ideal attentive player (authoritative detail: \`.claude/skills/simulate-run-time
 3. **Factory:** Autobuyers when unlocked; manual \`buyTierQuantity\` when an autobuyer would stall on a full cost-block.
 4. **Tickspeed:** Buy global + per-tier tickspeed whenever affordable; dump run XP into last-tier XP tickspeed.
 5. **Soft resets:** Scale Up first while advancing through the tier ladder (flat level 3); at the final-tier target, skip Scale Up and keep climbing until Overclock fires so its level-5 gate is reachable.
-6. **PP:** Unlock reboot speed bonus at 10000 PP (spends 10000); do not buy Smart / Auto-Scale-Up / Auto-Prestige in this baseline.
+6. **PP:** Unlock purge speed bonus at 10000 PP (spends 10000); do not buy Smart / Auto-Scale-Up / Auto-Prestige in this baseline.
 
 ## Simulation results
 

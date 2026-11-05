@@ -12,7 +12,7 @@ import StoreSection from './StoreSection'
 import { CodeForm, CodeInput, Row, Section, StatusText } from './styles'
 
 // Always-reachable Settings screen (via AppNav → More). Holds Supporter pack
-// (unlock code / dummy checkout), save slots, Prestige museum, Ops dashboard, and Reset —
+// (unlock code / dummy checkout), save slots, System log, Task Manager, and Reset —
 // utilities that must not depend on unlocking Byte Factory or any other progress gate.
 
 const RootDiv = styled.main`
@@ -142,8 +142,8 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
   const eonsBalance = game.state.eons?.balance ?? 0
   const eraEligible = isEraEligible(game.state)
   const eonsAwarded = getEonsAwarded(game.state)
-  const unspentPp = game.state.reboot?.points ?? 0
-  const eonWord = count => (count === 1 ? 'Eon' : 'Eons')
+  const unspentPp = game.state.purge?.points ?? 0
+  const eonWord = count => (count === 1 ? 'Kernel' : 'Kernels')
 
   const museum = game.state.prestigeMuseum ?? { history: [], pinnedIds: [] }
   const pinnedSet = new Set(museum.pinnedIds ?? [])
@@ -216,15 +216,15 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
       <Section aria-label="supporter pack section">
         <h2>Supporter pack</h2>
         <p>
-          Optional meta extras only — extra save slots, Prestige museum pins, and the Ops
-          dashboard. Never changes Bits, PP, Disks, Compute, or unlock order. Real payment comes
+          Optional meta extras only — extra save slots, System log pins, and the Task
+          Manager. Never changes Bits, PP, Disks, Compute, or unlock order. Real payment comes
           later; for now use a code or the dummy checkout.
         </p>
         {supporter ? (
           <StatusText>
             Unlocked
             {game.savesMeta?.supporterSource === 'dummy_purchase' ? ' (dummy checkout)' : ' (unlock code)'}.
-            {' '}{SUPPORTER_SLOT_COUNT} save slots · museum · ops.
+            {' '}{SUPPORTER_SLOT_COUNT} save slots · System log · Task Manager.
           </StatusText>
         ) : (
           <>
@@ -330,12 +330,12 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         ))}
       </Section>
 
-      <Section aria-label="prestige museum section">
-        <h2>Prestige museum</h2>
+      <Section aria-label="system log section">
+        <h2>System log</h2>
         {!supporter ? (
           <LockedNote>
             History still records in the background. Unlock Supporter to browse past purges and pin up to {MUSEUM_PIN_CAP}.
-            {history.length > 0 && ` Latest: Purge #${history[0].rebootNumber} (+${history[0].pointsAwarded} PP).`}
+            {history.length > 0 && ` Latest: Purge #${history[0].purgeNumber} (+${history[0].pointsAwarded} PP).`}
           </LockedNote>
         ) : (
           <>
@@ -347,13 +347,13 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                   {pinnedEntries.map(entry => (
                     <MuseumItem key={`pin-${entry.id}`}>
                       <div>
-                        <strong>Purge #{entry.rebootNumber}</strong>
+                        <strong>Purge #{entry.purgeNumber}</strong>
                         <div>
                           <span>+{entry.pointsAwarded} PP · {formatMoneyBalance(entry.moneyBits)}</span>
                         </div>
                       </div>
                       <Button
-                        aria-label={`unpin purge ${entry.rebootNumber}`}
+                        aria-label={`unpin purge ${entry.purgeNumber}`}
                         onClick={() => game.actions.unpinMuseumEntry(entry.id)}
                         type="button"
                         variant="neutral"
@@ -369,18 +369,18 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
             {visibleHistory.length === 0 ? (
               <LockedNote>No purges recorded yet.</LockedNote>
             ) : (
-              <MuseumList aria-label="prestige museum history">
+              <MuseumList aria-label="system log history">
                 {visibleHistory.map(entry => (
                   <MuseumItem key={entry.id}>
                     <div>
-                      <strong>Purge #{entry.rebootNumber}</strong>
+                      <strong>Purge #{entry.purgeNumber}</strong>
                       <div>
                         <span>+{entry.pointsAwarded} PP · {formatCurrency(entry.moneyBits)}</span>
                       </div>
                     </div>
                     {pinnedSet.has(entry.id) ? (
                       <Button
-                        aria-label={`unpin purge ${entry.rebootNumber}`}
+                        aria-label={`unpin purge ${entry.purgeNumber}`}
                         onClick={() => game.actions.unpinMuseumEntry(entry.id)}
                         type="button"
                         variant="neutral"
@@ -389,7 +389,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                       </Button>
                     ) : (
                       <Button
-                        aria-label={`pin purge ${entry.rebootNumber}`}
+                        aria-label={`pin purge ${entry.purgeNumber}`}
                         disabled={pinnedSet.size >= MUSEUM_PIN_CAP}
                         onClick={() => game.actions.pinMuseumEntry(entry.id)}
                         type="button"
@@ -406,47 +406,47 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         )}
       </Section>
 
-      <Section aria-label="era ascension section">
-        <h2>Era ascension</h2>
+      <Section aria-label="reboot section">
+        <h2>Reboot</h2>
         <p>
           Voluntary meta-prestige when you hold enough unspent Purge Points — no production
-          freeze. Awards Eons for future upgrades.
+          freeze. Awards Kernels for future upgrades.
         </p>
         <Row>
-          <span>Eras ascended</span>
+          <span>Reboots</span>
           <strong>{eraCount}</strong>
         </Row>
         <Row>
-          <span>Eons</span>
+          <span>Kernels</span>
           <strong>{eonsBalance} {eonWord(eonsBalance)}</strong>
         </Row>
         <p>
           {eraEligible
-            ? `Ready — next ascension awards ${eonsAwarded} ${eonWord(eonsAwarded)}.`
+            ? `Ready — next Reboot awards ${eonsAwarded} ${eonWord(eonsAwarded)}.`
             : `Requires 1 Googol PP unspent (you have ${formatAmount(unspentPp)} PP).`}
         </p>
         <Button
           aria-label={
             eraEligible
-              ? 'Ascend an Era — open confirmation'
-              : 'Ascend an Era — requires 1 Googol unspent Purge Points'
+              ? 'Reboot — open confirmation'
+              : 'Reboot — requires 1 Googol unspent Purge Points'
           }
           disabled={!eraEligible}
           onClick={() => setEraConfirmOpen(true)}
           type="button"
           variant="prestige"
         >
-          <ButtonContent>Ascend Era…</ButtonContent>
+          <ButtonContent>⏻ Reboot…</ButtonContent>
         </Button>
       </Section>
 
-      <Section aria-label="ops dashboard section">
-        <h2>Ops dashboard</h2>
+      <Section aria-label="task manager section">
+        <h2>Task Manager</h2>
         {!supporter ? (
           <LockedNote>Unlock Supporter for live Bits and Purge Point sparklines. Information only — no production change.</LockedNote>
         ) : (
           <>
-            <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.reboot?.points ?? 0}</p>
+            <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.purge?.points ?? 0}</p>
             <LockedNote>Bits</LockedNote>
             <SparklineSvg aria-label="bits sparkline" role="img" viewBox="0 0 100 40">
               <path d={moneyPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -509,25 +509,25 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           </VisuallyHidden>
         </Button>
         <p>
-          Restart the Byte Foundry on the active save — Capacity, Memory, Disks, Data Lakes and
-          Compute entities. Combine, Upgrade Capacity, Upgrade Speed, Provision Disk and Data Lake
-          upgrades/Boosters then replay automatically up to your pre-reset highs.
+          Restart the Byte Foundry on the active save — Data Stream Capacity, Disks, Data Lakes and
+          Compute entities. Compile, Upgrade Capacity, Upgrade Bitrate, Provision Disk and Data Lake
+          upgrades/Cells then replay automatically up to your pre-reset highs.
           Byte Factory and Purge progress stay.
         </p>
         <Button
           aria-describedby="settings-reset-foundry-description"
-          aria-label="Reset Byte Foundry"
+          aria-label="Reformat Byte Foundry"
           disabled={frozen}
           onClick={onResetByteFoundry}
           title={
             frozen
               ? 'Purge first — production is frozen at 1 Googol Bytes'
-              : 'Restarts the Foundry; Combine, Data Stream upgrades, Disks and Data Lakes replay automatically up to prior highs'
+              : 'Restarts the Foundry; Compile, Data Stream upgrades, Disks and Data Lakes replay automatically up to prior highs'
           }
           type="button"
           variant="danger"
         >
-          <ButtonContent>↺ Reset Byte Foundry…</ButtonContent>
+          <ButtonContent>↺ Reformat Byte Foundry…</ButtonContent>
           <VisuallyHidden id="settings-reset-foundry-description">
             Restarts Capacity, Storage, Data Lakes and Compute from scratch, then replays upgrades,
             Disks and Data Lakes automatically up to pre-reset highs; Byte Factory and Purge progress stay
@@ -554,25 +554,25 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
 
       <ConfirmDialog
         cancelLabel="Cancel"
-        confirmLabel="Ascend Era"
+        confirmLabel="Reboot"
         confirmVariant="prestige"
         onCancel={() => setEraConfirmOpen(false)}
         onConfirm={confirmEraAscend}
         open={eraConfirmOpen}
-        title="Ascend an Era?"
+        title="Reboot?"
       >
         <p>
           Awards {eonsAwarded} {eonWord(eonsAwarded)} and resets the Byte Foundry for a deep reset —
           Factory itself stays permanently reachable, no gate to tap back through.
         </p>
         <p>
-          <strong>Resets:</strong> Foundry generator upgrades, Memory, Disks, Compute entities,
-          Byte Factory tiers and resources, unspent PP and Purge count, Double PP level, and Compute
+          <strong>Resets:</strong> Foundry generator upgrades, Data Stream Capacity, Disks, Compute entities,
+          Byte Factory tiers and resources, unspent PP and Purge count, Compression level, and Compute
           owned units.
         </p>
         <p>
-          <strong>Keeps:</strong> automation unlocks and pause flags, DeGoogol latch,
-          museum, Compute page reveal, Flops autobuyer unlocks, Eons (+ award), and hyperscalers.
+          <strong>Keeps:</strong> automation unlocks and pause flags, Overflow mode latch,
+          System log, Compute page reveal, Flops autobuyer unlocks, Kernels (+ award), and hyperscalers.
         </p>
       </ConfirmDialog>
     </RootDiv>

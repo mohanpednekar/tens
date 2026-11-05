@@ -2,16 +2,16 @@
 
 Referenced from `CLAUDE.md`'s Architecture section. Read this before touching
 `src/pages/MainPage/index.jsx` or its styled sub-components/layout — it's the full field-by-field
-reference for the compact tier-row grid, the sticky HUD balances, the Factory view, the Perks page
+reference for the compact tier-row grid, the sticky HUD balances, the Factory view, the Firmware page
 toggle, and every disclosure/badge/accessibility convention `MainPage` follows. Also covers
 `ByteFoundryPage` and the two dedicated screens split out of it, `StoragePage`/`ComputePage` (see
 below), since all four pages are tightly coupled around the same `game` prop and Byte Foundry
 mechanic. `MainPage` is
 deliberately purely game — live controls, numbers, and status text only. Every mechanic's
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
-now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via AppNav's Guide
+now lives on the separate `src/pages/InfoPage/index.jsx` ("Manual"), reachable via AppNav's Manual
 item; see CLAUDE.md's Architecture section for the split. Top-level page switching lives in
-`App.jsx`'s shared `components/AppNav` (Foundry → Boosters → Compute → Factory → Perks → More; Guide / Milestones / Settings in More) — pages
+`App.jsx`'s shared `components/AppNav` (Foundry → Power → Compute → Factory → Firmware → More; Manual / Releases / Settings in More) — pages
 themselves take `{ game }` only and carry no Back / open-* navigation props. Storage is not a
 top-level AppNav item (continuous Foundry sections). `MainPage` is only
 ever rendered while the Byte Foundry gate isn't active — i.e. `state.intro.mainGameUnlocked` is
@@ -24,13 +24,13 @@ simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, acti
 view-tab system of its own. Unlike the old design, nothing here ever goes read-only — the page
 renders identically whether reached as the mandatory gate or voluntarily; AppNav
 omits Factory during the gate so there is still no escape hatch via the production screen
-(More — Guide / Milestones / Settings — stays reachable).
+(More — Manual / Releases / Settings — stays reachable).
 
 Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
 `docs/COMPONENTS_REFERENCE.md`), rendered right after the page title whenever the hook reports a
 non-null `offlineProgress` — the Byte generator's passive production and auto-transfers already
 catch up correctly during offline progress regardless of which page is active, so this page shows
-the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a centered
+the same "Resumed from sleep" notice `MainPage` does, not just a silent balance jump; a centered
 `Header` with the page title (top-level navigation lives in AppNav, not here); **no** second-level
 Memory | Storage tabs. Data Stream and Storage are separate, independently-boxed `StatCard`s, not
 one continuous card sharing a single `Divider`: a single `DataStreamCard` (`styled(StatCard)`) holds
@@ -71,10 +71,10 @@ below). Before `intro.mainGameUnlocked` the tile is a plain, non-interactive `<s
 `aria-label="data stream balance"`; once unlocked it becomes the tap target itself, built like a pool
 tile: a `DataStreamTile` div with a stretched `PoolTapButton` behind its readouts
 (`onClick={actions.tapIntroBit}`, `disabled={dataStreamMultiplierCapped}` — a full Buffer stays tappable, the bonus speeds consumers,
-`aria-label="tap to generate a bit"`), so the ⚡ speed can be its own button opening
+`aria-label="ping to generate a bit"`), so the ⚡ speed can be its own button opening
 `SpeedDetailsPopover` without nesting interactive elements.
 
-A large, always-full-width tap button (`aria-label="tap to generate a bit"`, `disabled={isFull ||
+A large, always-full-width tap button (`aria-label="ping to generate a bit"`, `disabled={isFull ||
 dataStreamMultiplierCapped}`) calling `actions.tapIntroBit` — renders LAST on the page, after
 `DataStreamCard` and every pool's `PoolCard`, since once `byteCreated`
 passive production is the primary loop and tapping is a secondary/backup action; it stays exactly
@@ -85,8 +85,8 @@ loop at all. Deliberately carries no `$progress` fill
 or hidden progressbar of its own — Data Stream's own tile above already shows the identical bits/Buffer
 fill, so a second meter on the tap button would just duplicate it; its `background` is set explicitly
 (`theme.color.surfaceSunken`) since it doesn't get that from `progressFill`'s own gradient (which
-used to double as the button's base fill). A "Combine into a
-Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
+used to double as the button's base fill). A "Compile into a
+Byte" button (`aria-label="compile 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
 INTRO_BYTE_COMBINE_COST`. Once `byteCreated`, a single **"Upgrade Data Stream"** button
 (`aria-label="upgrade data stream"`, no icon; not rendered while an upgrade is armed) consolidates the former paired Speed ×2 (Invest) and
@@ -105,7 +105,7 @@ docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
 once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
-INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained via `buyBooster`, bought
+INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cells (`computeCores`) themselves are obtained via `buyBooster`, bought
 instantly from the matching Data Lake's own banked units on that pool's own `PoolCard`
 (a click either buys immediately if already affordable or arms a one-shot auto-convert that finishes
 the purchase automatically over subsequent ticks — see "Storage pools render as their own
@@ -122,7 +122,7 @@ renders its own separate `PoolCard`
 (`styled(StatCard)`, `aria-label="pool {n}"`), stacked below `DataStreamCard` in ascending order —
 NOT one continuous card shared across pools or with Data Stream. A pool's own title/Speed,
 balance/capacity, and bars all render in ONE `PoolTile` (a `FillableStatCard` div) whose tap target is a
-transparent stretched `PoolTapButton` (`aria-label="tap pool {n} memory"`, calling
+transparent stretched `PoolTapButton` (`aria-label="ping pool {n} staging"`, calling
 `actions.tapPoolBuffer(poolIndex)`, never disabled) behind
 the `PoolTileContent` readouts (`pointer-events: none`) — a `TitleRow` is the content's first line:
 title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
@@ -146,7 +146,7 @@ Storage is continuous on this same page: **Provision Disk** — the common disk-
 hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary
 scale, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and
 pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-bit ("1,000 B") one above).
-Presents only the newest unlocked size (`getPresentedDiskSize`); smaller incomplete sizes (after a Foundry reset) rebuild by themselves (`tickAutoProvisionLowerDiskSizes`) while the button is disabled — Storage-revealed rebuilds with a pool fill rate use the same speed/time tile as a queued build (`Rebuilding`, `{current} → {largest}`, percent of smaller-size disks done (`getLowerRebuildSummary`), ⚡ the pool's BASE Bandwidth, ⏳ the total rebuild time at that speed — for a pool not live yet the Bandwidth the pool will have once live stands in (`getProjectedPoolBandwidth`), so the time is never unknown); otherwise (Storage not revealed, or Data Stream Speed 0) the `Rebuilding {size} first · <state>` status line, where `<state>` mirrors `tickAutoProvisionLowerDiskSizes`' stall conditions — `waiting for build` (legacy `intro.diskBuild`), `waiting for earlier pool` (`isLaterPoolProvisioningLocked`), `waiting for pool` (Bandwidth 0), `waiting for buffer` (buffer ≤ `getPoolCacheReservationBits`), else `automatic` — this status (with its suffix) is always the Provision Disk button's `aria-description`, even while the speed/time tile is shown; the ⏳ is toned down (italic, prefixed `~`) whenever any remaining size's pool isn't live yet (`getLowerRebuildSummary().projected`), and so is the ⚡ (title "Projected speed" when the current size's pool isn't live). Renders as soon as the Byte exists (`intro.byteCreated`, no Storage-reveal gate — a click before pool 1 can fund a pass simply queues the build) in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
+Presents only the newest unlocked size (`getPresentedDiskSize`); smaller incomplete sizes (after a Reformat) rebuild by themselves (`tickAutoProvisionLowerDiskSizes`) while the button is disabled — Storage-revealed rebuilds with a pool fill rate use the same speed/time tile as a queued build (`Rebuilding`, `{current} → {largest}`, percent of smaller-size disks done (`getLowerRebuildSummary`), ⚡ the pool's BASE Bandwidth, ⏳ the total rebuild time at that speed — for a pool not live yet the Bandwidth the pool will have once live stands in (`getProjectedPoolBandwidth`), so the time is never unknown); otherwise (Storage not revealed, or Data Stream Speed 0) the `Rebuilding {size} first · <state>` status line, where `<state>` mirrors `tickAutoProvisionLowerDiskSizes`' stall conditions — `waiting for build` (legacy `intro.diskBuild`), `waiting for earlier pool` (`isLaterPoolProvisioningLocked`), `waiting for pool` (Bandwidth 0), `waiting for buffer` (buffer ≤ `getPoolCacheReservationBits`), else `automatic` — this status (with its suffix) is always the Provision Disk button's `aria-description`, even while the speed/time tile is shown; the ⏳ is toned down (italic, prefixed `~`) whenever any remaining size's pool isn't live yet (`getLowerRebuildSummary().projected`), and so is the ⚡ (title "Projected speed" when the current size's pool isn't live). Renders as soon as the Byte exists (`intro.byteCreated`, no Storage-reveal gate — a click before pool 1 can fund a pass simply queues the build) in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
 location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
 only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows only
 relative gains (current values are on the tile): `🏷️ <current Capacity (= cost)> · 📦 ×2 · ⚡ ×<speed
@@ -319,9 +319,9 @@ through `formatDiskSize` (SI, since the cost is itself a fixed multiple of that 
 bit amount actually spent out of Memory's own binary-scaled balance renders through
 `formatBitsInNearestUnit` (binary) instead.
 A real Prestige resets Memory (`bits`/`productionAccumulator`) back to fresh — along with tier01's
-own `purchaseLevels`/`purchaseLevelProgress` (see `rebootGame` in docs/ECONOMY_REFERENCE.md) — but
+own `purchaseLevels`/`purchaseLevelProgress` (see `purgeGame` in docs/ECONOMY_REFERENCE.md) — but
 NOT the main-game-unlock gate (`mainGameUnlocked`) any more: that's now a PERMANENT, one-time-ever
-latch (`latchMainGameUnlocked`), never reset by a real Prestige or an Era ascension. So this page's
+latch (`latchMainGameUnlocked`), never reset by a real Prestige or a Reboot. So this page's
 gate only ever reappears once, on a save's very first cycle — every cycle after that starts with
 Factory already reachable, no gate replay at all. The
 Byte generator itself (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
@@ -402,15 +402,15 @@ be the one place it was shown) is gone (see `docs/DESIGN_HISTORY.md`); `purchase
 is still tracked internally and still drives the disk pull/auto-convert eligibility exactly as
 before, just with no dedicated progress display.
 
-**Compute page** (`src/pages/ComputePage/index.jsx`). Compute's own dedicated screen, split out of
-ByteFoundryPage — reached via AppNav once Compute is revealed. Takes `{ game }`. A centered title
-`⚡ Compute` is the page chrome (top-level navigation lives in AppNav).
+**Power page** (`src/pages/ComputePage/index.jsx`, page id `'boosters'`). Power's own dedicated
+screen, split out of ByteFoundryPage — reached via AppNav once Power is revealed. Takes `{ game }`.
+A centered title `⚡ Power` is the page chrome (top-level navigation lives in AppNav).
 
 The whole page is deliberately terse — every string beyond a single-word entity label lives in a
 `title`/`aria-label` instead of visible text, and every compute-ladder tier fits its own row in one
 line (see issue #316's "fit every compute tier in one line ... clever symbols ... intuitive with no
-or single word labels" ask). The full prose explanation of every mechanic here lives in the Guide
-(`InfoPage`'s "Compute" section) — this page shows live state and controls only, not descriptions.
+or single word labels" ask). The full prose explanation of every mechanic here lives in the Manual
+(`InfoPage`'s "Power" section) — this page shows live state and controls only, not descriptions.
 
 Render order top to bottom (a top `BoostCard` with the current effect, then tier rows; the presets
 live inside the selected tier):
@@ -424,7 +424,7 @@ live inside the selected tier):
    - Middle: a `TimerBar` (`aria-label="active compute boost"`) whose fill is remaining time over the
      total stacked duration (`stacks × getComputeBoostTierDurationSeconds`), with one line on top,
      `"<icon> <label> ×<multiplier> on <KB–covered tier> · <funding tier symbol> · <countdown> left[ · <N> stacked]"`
-     (e.g. `"💥 Burst ×20 on KB–MB · 🔗 · 2m59s left"`); the full sentence lives in that span's `title`.
+     (e.g. `"💥 Turbo ×20 on KB–MB · 🔗 · 2m59s left"`); the full sentence lives in that span's `title`.
    - Right: **Stack** (`aria-label="stack the active compute boost"`, `+`,
      `disabled={!isStackComputeBoostTurnAvailable(state)}`, `actions.stackComputeBoost`).
    `MainPage` shows a matching read-only status line while a boost is active.
@@ -435,12 +435,12 @@ live inside the selected tier):
    re-clicking the selected tier, or clicking anywhere outside every tier block (`data-boost-tier`;
    a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
-   Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cores:
-   The timer bar / idle status line and (once unlocked) the Auto Boost preference picker all live in one `BoostCard`. The Auto Boost UNLOCK itself is a Perks → Automation → Booster Automation row (`aria-label="auto boost row"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordableAutomationPerk`); Boosters shows nothing for it while locked
+   Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cells:
+   The timer bar / idle status line and (once unlocked) the Auto Boost preference picker all live in one `BoostCard`. The Auto Boost UNLOCK itself is a Firmware → Automation → Power Automation row (`aria-label="auto boost row"`, shown once `isComputeCoreConversionUnlocked`, also lights the Firmware dot via `hasAffordableAutomationPerk`); Power shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
    a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
-      initialized on arrival to the active boost's own tier (`intro.computeBoostTierIndex`), else none; always Cores (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
+      initialized on arrival to the active boost's own tier (`intro.computeBoostTierIndex`), else none; always Cells (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
       tier that can hold a balance that early. Clicking a different tier mid-boost arms a
       confirmed switch (per `canActivateComputeBoost`); the timer bar, Stack and Pop always describe
       the ACTIVE tier, not the armed one. The row
@@ -449,7 +449,7 @@ live inside the selected tier):
       buttons, each a small `CompactButton` (`variant="prestige"`,
       `aria-label="activate <type> compute boost"`, visible label `"<icon> ×<multiplier> · <duration>"` computed
       for the CURRENTLY ARMED tier via `getComputeBoostTierMultiplier(boostType, armedTierIndex)` —
-      e.g. `"💥 ×20 · 10m"` for Burst (`formatPresetDuration` drops a zero trailing unit) — the preset
+      e.g. `"💥 ×20 · 10m"` for Turbo (`formatPresetDuration` drops a zero trailing unit) — the preset
       name itself lives only in `title`). While a boost is active each preset becomes one of:
       - the SAME preset + tier as the running boost → **Stack** (`aria-label="stack <type> compute
         boost"`, label prefixed `"+ "`, `actions.stackComputeBoost`, gated by
@@ -468,10 +468,10 @@ live inside the selected tier):
 
    - **Before unlocked:** just a `StatusText` line with the current `intro.computeCores`/
      `intro.computeNodes` counts as two symbol-prefixed fractions (`"⬡ N/10 · 🔗 N/10"`).
-   - **Once unlocked:** TWO rows per compute-ladder entity Core through Megacomputer (issues
+   - **Once unlocked:** TWO rows per compute-ladder entity Cell through Fusion (issues
      #321/#326), each pair wrapped in a `TierBlock` inside a `TierBlocksGroup`
      (`aria-label="compute entities"`), driven off an `ENTITY_ROWS` array (10 entries, in the same
-     Core-through-Megacomputer order `COMPUTE_BOOST_TIER_FIELDS` in `layers.js` uses, so a row's
+     Cell-through-Fusion order `COMPUTE_BOOST_TIER_FIELDS` in `layers.js` uses, so a row's
      array index + 1 IS its Boost `tierIndex`).
      - **Row 1** (`TierHeaderRow`): a `TierSelectButton` (its own clickable `<button>`) wrapping the
        tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label (`TierLabel`, e.g. `"Clusters"`; the
@@ -490,41 +490,41 @@ live inside the selected tier):
        (`$selected`/`aria-pressed`, plus a highlighted `TierBlock` border) while armed.
      - **Row 2** (`TierMergeRow`) is progressively disclosed (`showDetail`): rendered only for the
        armed tier, or when that tier is merging, a merge is startable/possible, reserve slots hold
-       tokens, or (pre-auto) Auto-merge unlock progress is above 0 — otherwise the tier is one line.
-       For every tier except the last (Megacomputer, no row 2 at all —
+       tokens, or (pre-auto) Auto-charge unlock progress is above 0 — otherwise the tier is one line.
+       For every tier except the last (Fusion, no row 2 at all —
        see issue #280's "Out of scope" — though its row 1 is still Boost-selectable, the only place
-       a Megacomputer has any use at all):
-       - **Before that boundary's auto-merge is unlocked:** an instant Merge button (`TierActionButton`,
+       a Fusion has any use at all):
+       - **Before that boundary's auto-charge is unlocked:** an instant Charge up button (`TierActionButton`,
          `flex: 1 1 0; width: 100%` — fills exactly half the row, the same "two equal-width buttons"
          look `MainPage`'s own tier-row Buy/Upgrade pair uses, rather than a small icon-only square —
          `variant="prestige"`, visible content "⬆ 8→1 <Output>", `aria-label` spelling out the full action
-         e.g. "merge 8 nodes into 1 cluster") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
+         e.g. "charge up 8 batteries into 1 pack") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
          tier is held and the produced tier is under its effective cap (`getComputeFieldEffectiveCap` — 18
-         once that tier's own auto-merge is unlocked), calling the matching
-         `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-merge button filling the
+         once that tier's own auto-charge is unlocked), calling the matching
+         `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-charge button filling the
          other half (`TierActionButton`, `variant="info"`, `$progress` set to the live percentage
          toward its own unlock cost — the same `Button` `progressFill` mechanic Factory's own Buy
          buttons use for cost-block progress — visible content `` "🤖 <held>/<COMPUTE_ENTITY_CAP>" ``
          instead of a bare "🤖 Auto", so the button is self-explanatory the same way a Factory Buy
-         button is; `aria-label="enable auto-merge for <…> into <…>"` stays unchanged) — enabled once
+         button is; `aria-label="enable auto-charge for <…> into <…>"` stays unchanged) — enabled once
          `COMPUTE_ENTITY_CAP` (10) of the produced tier is held, calling the matching
          `game.actions.enableAutoMerge*` action.
        - **Once unlocked:** a `ReserveSlotsRow` — a single `<button>` wrapping `COMPUTE_MERGE_RESERVE_CAP`
          (8) `ReserveSlot` squares — reading `getComputeReserveHeld(state, tierIndex)` (0..8), NOT an
          atomic empty/full toggle: a squares fills in one at a time as the entity's own held count
-         keeps growing past its primary 10 (via continued Booster purchases or a lower-tier merge),
-         up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a merge is actually in flight
+         keeps growing past its primary 10 (via continued Booster purchases or a lower-tier charge),
+         up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a charge is actually in flight
          the reserve instead reads as fully committed regardless of the live count (which has by then
          dropped back toward 10 and may be accumulating the next batch) — a `MergeCue` on its left always
-         names it ("🤖 Auto-merge", muted), switching to an accent "🤖 ⬆ 8→1 <output>" (plus accent
-         border/raised background) while clicking would INSTANTLY merge 8 → 1 ("slots are the
+         names it ("🤖 Auto-charge", muted), switching to an accent "🤖 ⬆ 8→1 <output>" (plus accent
+         border/raised background) while clicking would INSTANTLY charge 8 → 1 ("slots are the
          button"), calling the matching `game.actions.startCompute*Merge` action, enabled once
          `isCompute*MergeStartAvailable` allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the
          normal + reserve slots and room under the output's effective cap, counting the 1 an in-flight
-         automatic merge still owes — `isComputeMergeStartAvailableAtBoundary`).
-         `aria-label`: "instantly merge 8 <input> into 1 <output>, N/8 auto-merge slots filled" (or
-         ", auto-merge in progress, <time> left") when available, "<Tier> auto-merge in progress, <time> left" while an automatic merge runs, else
-         "<Tier> auto-merge slots, N/8 filled". While an automatic merge is in
+         automatic charge still owes — `isComputeMergeStartAvailableAtBoundary`).
+         `aria-label`: "instantly charge up 8 <input> into 1 <output>, N/8 auto-charge slots filled" (or
+         ", auto-charge in progress, <time> left") when available, "<Tier> auto-charge in progress, <time> left" while an automatic charge runs, else
+         "<Tier> auto-charge slots, N/8 filled". While an automatic charge is in
          flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
          inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
          live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` filled count. There is
@@ -557,9 +557,9 @@ live inside the selected tier):
   tier row's cost figure starts at the same x position (the button's horizontal center) regardless of
   digit count, instead of drifting as the progress or cost strings change length. This scoped pair
   lives only in `MainPage/index.jsx` and doesn't affect the shared `Button`/`ButtonIcon`/`ButtonLabel`
-  components used elsewhere in the app (Prestige, Reset, Perks, …), which keep their default
+  components used elsewhere in the app (Prestige, Reset, Firmware, …), which keep their default
   fixed-icon/centered-label layout.
-- **Tier name display.** The tier row heading (`TierName`, a `styled.h3`) and the Perks page's
+- **Tier name display.** The tier row heading (`TierName`, a `styled.h3`) and the Firmware page's
   per-tier row label both render `tier.symbol` (e.g. `B`, `KB`) as the visible text, not the full
   `tier.name` — a decluttering choice, since the compact symbol already appears throughout the row
   (cost/production strings via `RESOURCE_SYMBOL`) and the full name would be redundant clutter at this
@@ -579,8 +579,8 @@ live inside the selected tier):
   between the two cards): once scrolled past their normal position they pin to the viewport top and
   compress into a compact side-by-side bar, detected via an IntersectionObserver on a zero-height
   `BalancesSentinel` (falls back to always-expanded when IntersectionObserver is unavailable, e.g.
-  jsdom); the stick position drops below `TopRebootBar` when it's showing, by that bar's own
-  live-measured height (`topRebootBarHeight`, see below) rather than a guessed constant, to avoid
+  jsdom); the stick position drops below `TopPurgeBar` when it's showing, by that bar's own
+  live-measured height (`topPurgeBarHeight`, see below) rather than a guessed constant, to avoid
   underlap. There is no aggregate `+X/sec` line — each tier row's own `+X` figure is the per-tier
   replacement. In the compressed side-by-side layout, `CenteredCard`'s `align-items: center` (needed
   so its content centers when expanded) would otherwise let a flex-column child shrink-wrap to its own
@@ -596,15 +596,15 @@ live inside the selected tier):
   speed bonus locked" caveat before it's bought; that fuller wording used to also show in the bottom
   `PrestigeCard`'s expandable description before that whole card was removed (see "Prestige and the
   Googol freeze" below) as purely informational and redundant with this button. Once Prestige is
-  actually available (`canReboot`, i.e. Money `>= REBOOT_THRESHOLD`), the PP display card itself doubles as a
+  actually available (`canPurge`, i.e. Money `>= PURGE_THRESHOLD`), the PP display card itself doubles as a
   Prestige button — the whole card gets `role="button"`, `tabIndex={0}`, an Enter/Space `onKeyDown`
-  handler, `onClick={actions.reboot}`, and a `title` ("Awards Prestige Points and resets your
+  handler, `onClick={actions.purge}`, and a `title` ("Awards Prestige Points and resets your
   resources", the same wording used on every other Prestige button), driven by a `$actionable` prop on
   `CenteredCard` (cursor/hover/focus-visible styling only — its outline color is `theme.color.warn`, the
   same "prestige gold" token `Button`'s own `prestige` variant resolves to — no visible border/color
   change otherwise, since the disabled/enabled convention used elsewhere in the app relies on button
   `color`, which this plain `<section>` doesn't have). It's an additional, optional way to trigger
-  Prestige alongside the `TopRebootBar`/`FullScreenOverlay` buttons. Before `canReboot`, none of
+  Prestige alongside the `TopPurgeBar`/`FullScreenOverlay` buttons. Before `canPurge`, none of
   these props are set, so the card stays a plain, non-interactive display exactly as before. The Money
   display card never gets `$actionable` — only the PP display can trigger Prestige.
 - **Money hero + byte-power / Prestige progress.** The Money `CenteredCard` renders a `MoneyHero`
@@ -633,17 +633,17 @@ live inside the selected tier):
   Bytes via `getNextBytePowerProgressFraction` (Bits toward `nextPowerBytes × BITS_PER_BYTE`; each
   segment is 12.5% and fills progressively within that band — e.g. 5e7 Bytes → 4/8 filled). Paired
   with a `VisuallyHidden role="progressbar"` (`aria-label="progress toward the next power of ten
-  Bytes"`). Prestige progress no longer lives in this card: a separate `RebootProgressBar` is
+  Bytes"`). Prestige progress no longer lives in this card: a separate `PurgeProgressBar` is
   pinned via `position: fixed` just above `AppNav` (`bottom: APP_NAV_BOTTOM_PAD`, imported from
   `components/AppNav`), always visible regardless of scroll position — `RootDiv`'s own bottom
-  padding reserves a fixed `REBOOT_PROGRESS_BAR_HEIGHT` (2.5rem, single-line, never wraps) so
-  page content never scrolls out from underneath it. Its `RebootProgressTrack` renders the
-  `"N% to Reboot"` label (`RebootProgressLabel`) INSIDE the bar itself, centered over a
+  padding reserves a fixed `PURGE_PROGRESS_BAR_HEIGHT` (2.5rem, single-line, never wraps) so
+  page content never scrolls out from underneath it. Its `PurgeProgressTrack` renders the
+  `"N% to Purge"` label (`PurgeProgressLabel`) INSIDE the bar itself, centered over a
   `progressFill` gradient (imported from `components/Button`, `$progressColor:
   theme.color.accent`) — the same low-alpha progress-fill convention the Buy/Upgrade buttons use
   for their own cost-progress fills, already contrast-validated for `theme.color.text` on top of
   it (see `tokens.contrast.test.js`) — rather than a separate label rendered below a solid fill
-  bar. Its own `VisuallyHidden role="progressbar"` reuses `getRebootProgressPercent`.
+  bar. Its own `VisuallyHidden role="progressbar"` reuses `getPurgePercent`.
 - **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
   `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
   `TierList`/`ScaleUpCard`/`GlobalTickspeedCard`) — token-driven
@@ -679,7 +679,7 @@ live inside the selected tier):
 - **No description prose on this page.** Every mechanic's evergreen explanation (what used to live
   inline as `InfoDetails` disclosure bodies) moved to `InfoPage` (see the file header note above).
   Headings with nothing left to show (`ScaleUpCard`'s `<h2>`, the page `Header`'s `<h1>`, the Tier
-  Autobuyers category's old shared "How these controls work" panel, Perks → Automation's Tier
+  Autobuyers category's old shared "How these controls work" panel, Firmware → Automation's Tier
   Autobuyer Unlocks category) are now plain, non-interactive text — there's no click target because
   there's nothing to reveal. `GlobalTickspeedCard`/`OverclockCard`'s own `<h2>` still wrap a `Disclosure`
   (`styled.details`/`<summary>`, collapsed by default, the heading itself the only way to *open*
@@ -692,22 +692,22 @@ live inside the selected tier):
   never touches the disclosure. None of these is prose about *how* the mechanic works, only
   *what its current numbers are*.
 - **Page title.** The MainPage header is `<h1>Byte Factory</h1>` (screen name; AppNav short label **Factory** — not the game name
-  “Tens”). Top-level destinations (Foundry → Boosters → Compute → Factory → Perks → More) live in
+  “Tens”). Top-level destinations (Foundry → Power → Compute → Factory → Firmware → More) live in
   `App.jsx`'s shared `AppNav`, not as header buttons here.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against
   `getPurchaseBlockSize(state)`). The one player-facing control over this is **Buy max mode**
-  (`components/BuyMaxToggle`, rendered only on Perks → ✦ Prestige once `isBuyMaxUnlocked`): while on, a click that can afford at least one FULL level
+  (`components/BuyMaxToggle`, rendered only on Firmware → ✦ Prestige once `isBuyMaxUnlocked`): while on, a click that can afford at least one FULL level
   from zero progress buys every such level (`buyTierMaxLevels`) and the button previews it as
   `+N Lv` with the summed cost (`getTierMaxLevelsPreview`; aria-label `Buy N full level(s) for …`);
-  otherwise the button keeps the normal single-level text and behavior below. Speed Up, tier tickspeed,
-  Double PP, Auto Reboot and Flops buttons keep their single-level cost text but buy every
+  otherwise the button keeps the normal single-level text and behavior below. Clock Speed, tier tickspeed,
+  Compression, Auto Purge and Flops buttons keep their single-level cost text but buy every
   affordable level per click in that mode (`repeatPurchaseMax`). Renders its cost-block progress as an
   on-button gradient fill via `Button`'s `$progress`/`$secondaryProgress` props (green = units already
   bought this level, amber = units affordable now but not yet bought). Prestige gets the same single-tone fill
-  treatment (spendable ÷ cost, or `rebootProgressPercent`), and both pulse (`$pulse`) when
+  treatment (spendable ÷ cost, or `purgeProgressPercent`), and both pulse (`$pulse`) when
   actionable. Every PP-spending button (per-tier speed upgrades, Auto Scale Up, Unlock Speed Bonus,
-  Auto Reboot — all on the Perks page) carries the same single-tone fill (unspent PP ÷ that
+  Auto Purge — all on the Firmware page) carries the same single-tone fill (unspent PP ÷ that
   button's cost, `ppProgressPercent`), each nesting a `VisuallyHidden` `role="progressbar"`
   (`aria-valuenow` = PP balance capped at cost, `aria-valuemax` = cost).
 - **Compact labels.** Buy/Prestige/Reset render compact visible text — an icon in place of the action
@@ -720,14 +720,14 @@ live inside the selected tier):
 
 **Factory view (no second-level tabs).** `MainPage` renders only the tier ladder and its cards
 (`GlobalTickspeedCard`, `TierList`, `ScaleUpCard`, `OverclockCard`) — it no longer has a tab bar or any
-PP-spending control. Its sticky Money/PP balances stay; the speed-bonus breakdown points at "Perks →
+PP-spending control. Its sticky Money/PP balances stay; the speed-bonus breakdown points at "Firmware →
 Prestige" while the bonus is locked. Every PP purchase, every free autobuyer milestone, Buy max, and every
-automation pause toggle live on the separate **Perks** page (below). Chapters / Era status live on
+automation pause toggle live on the separate **Firmware** page (below). Releases / Reboot status live on
 `MilestonesPage` (AppNav → More). Full-save Reset lives only under More → Settings → Danger zone.
 
-**Perks page (`pages/PerksPage`).** Its own AppNav destination (page id `'perks'`, item `open perks`, ✨,
-between Factory and Guide), shown once `isPerksPageRevealed` (= `isBuyMaxUnlocked`: first Prestige or
-Era) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
+**Firmware page (`pages/PerksPage`).** Its own AppNav destination (page id `'perks'`, item `open firmware`, 🔧,
+between Factory and More), shown once `isPerksPageRevealed` (= `isBuyMaxUnlocked`: first Prestige or
+Reboot) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
 attention). Header shows the spendable PP (`aria-label="purge points display"`). Two **icon-only**
 tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyph, the full name is in
 `aria-label`/`title`), defaulting to Automation and reset to it by `focusNonce` on each AppNav visit.
@@ -754,26 +754,26 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   upgrade/unlock button (glyph hidden, colour-coded) ends the head line — one line whenever it fits; the
   head wraps (`CellHead $wrap`) so a very long cost drops the button to its own line rather than
   ellipsizing the name. Categories: *Global Automation* (cells
-  `"<name> row"`, Auto Speed Up → Auto Restage → Auto Scale Up → Auto Overclock → Auto Purge; Restage
-  and Scale Up both need Speed Up, Overclock needs both, Purge needs Overclock — engine-enforced),
+  `"<name> row"`, Auto Clock Speed → Auto Restage → Auto Scale Up → Auto Overclock → Auto Purge; Restage
+  and Scale Up both need Clock Speed, Overclock needs both, Purge needs Overclock — engine-enforced),
   *Tier Autobuyers* (all ten tiers always listed; halves
-  `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Booster Automation* (Auto Boost once Foundry
-  Compute unlocks; no Switch — its preset picker on Boosters is the control, owned shows `"Auto Boost
+  `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Power Automation* (Auto Boost once Foundry
+  Compute unlocks; no Switch — its preset picker on Power is the control, owned shows `"Auto Boost
   unlocked"`), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
-  *Purge Points* (Double PP leveled upgrade; Production speed bonus one-time unlock, `"Production
-  speed bonus unlocked"` once bought; DeGoogol, locked until Auto Purge's interval ≤
-  `UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS`) and *Purchasing* (Buy max, `components/BuyMaxToggle`).
-Perks never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
+  *Purge Points* (Compression leveled upgrade; Production speed bonus one-time unlock, `"Production
+  speed bonus unlocked"` once bought; Overflow mode, locked until Auto Purge's interval ≤
+  `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`) and *Purchasing* (Buy max, `components/BuyMaxToggle`).
+Firmware never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
 labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol
 once, its halves a ⚙/🤖 icon; Flops cells show the tier symbol (their category heading names the kind). Every automation is named
-`Auto <feature>` (no hyphen) in every accessible name; on Perks the *visible* global/Booster label drops
-the redundant `Auto` (`Speed Up`, `Restage`, …, `Boost`) since the category heading already says it. Factory's Speed Up / Scale Up / Overclock cards share
+`Auto <feature>` (no hyphen) in every accessible name; on Firmware the *visible* global/Booster label drops
+the redundant `Auto` (`Speed Up`, `Restage`, …, `Boost`) since the category heading already says it. Factory's Clock Speed / Scale Up / Overclock cards share
 `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem heading); Auto Scale Up's status
 is an `AutoChip` in the Scale Up card header.
 Tab dots: Automation `automation perk available` (`hasAffordableAutomationPerk`: an automation unlock
-or Auto Purge speed level), Prestige `prestige perk available` (`hasAffordablePrestigePerk`: Double PP
+or Auto Purge speed level), Prestige `prestige perk available` (`hasAffordablePrestigePerk`: Compression
 or the speed bonus). Every PP button keeps the shared live
 progress fill + hidden `role="progressbar"` (`PpPurchaseButton`); see "Accessibility" below.
 
@@ -817,7 +817,7 @@ collapsed/expanded visual state. A `globalTickspeedCardEverRevealed` flag (seede
 `OverclockCard` (see below) — once tier02 has ever been owned (or the multiplier is already active),
 the card stays visible rather than disappearing if tier02's owned count is later reset by a
 Prestige/Scale Up; Reset clears the flag alongside `overclockEverRevealed`. It
-needs no `!isFirstRun` gate — unlike the Perks page, it has nothing to do with Prestige Points, so
+needs no `!isFirstRun` gate — unlike the Firmware page, it has nothing to do with Prestige Points, so
 it's available (once tier02 is owned) even during a player's very first run. Clicking is optional: once
 `buyTickspeedAutobuyer` is bought (PP-funded, see "Prestige Points, autobuyer unlock, and the tickspeed
 multiplier" below), `tickGame` calls `buyGlobalTickspeedMultiplier` automatically every tick, so the
@@ -833,7 +833,7 @@ tier's own delivery frequency by another 10% (`getTickspeedProductionMultiplier`
 tier's effective period rather than multiplied into its production credit — see "Tier production
 tickspeed" below); it changes **neither** the amount delivered per batch **nor** autobuyer
 purchase-attempt frequency (that rate is flat). Visible text is `⚙ {cost} {symbol}` — a single ⚙
-icon (matching the tier tickspeed autobuyer's own icon-only status icon on Perks → Automation)
+icon (matching the tier tickspeed autobuyer's own icon-only status icon on Firmware → Automation)
 identifies the button as the tickspeed control; no separate icon marks the marginal effect, since
 it's always exactly `TICKSPEED_PRODUCTION_STEP` (every level adds the same fixed 10% step) and
 implied by the button itself — `aria-label`/`title` still spell out the full "+10% faster ticks"
@@ -848,7 +848,7 @@ The **last tier's** button stays the ordinary resource-funded tickspeed button f
 but its requirement and spend differ: it needs `getTickspeedMultiplierRequirement` owned (e.g. 100 for
 the 2nd upgrade) and spends only `getTickspeedMultiplierSpend` (10% — e.g. 10); the visible label shows
 the spend, the aria-label/progress bar the requirement. Its XP-funded tickspeed is a **separate**
-**Restage** card beside the Speed Up card (same `SpeedCardsRow`) (`aria-label="restage panel"`, shown once
+**Restage** card beside the Clock Speed card (same `SpeedCardsRow`) (`aria-label="restage panel"`, shown once
 `isLastTierTickspeedXpUnlocked`) with a `🧬 {XP} XP` button — see docs/ECONOMY_REFERENCE.md's
 "The last tier's XP-funded tickspeed". The row's Details "tier ×N" multiplier includes the XP bonus.
 
@@ -858,27 +858,27 @@ same first line, right-aligned to the row center — no tickspeed-bonus badge (s
 above) and no autobuyer status icon. An earlier version showed an always-visible, read-only
 `PpUpgradeBadge` here (a single 🤖 glyph, full opacity while active / dimmed `$dimmed` while paused,
 via the same icon-instead-of-text convention every other automation status badge in the app still
-uses — the tier tickspeed/global tickspeed/Auto Scale Up statuses on Perks →
-Automation, and the Auto Reboot/Auto Scale Up status lines — see their own sections below) once
+uses — the tier tickspeed/global tickspeed/Auto Scale Up statuses on Firmware →
+Automation, and the Auto Purge/Auto Scale Up status lines — see their own sections below) once
 a tier's unit-buying autobuyer was unlocked (`autobuyers`/`applyAutobuyerMilestones` — a free,
 prestige-count-milestone-triggered unlock, not a PP purchase). Both removed to keep the Factory view
 row down to just the tier name plus live production/owned figures and the two action buttons —
 autobuyer active/paused status is still visible (and, unlike the old read-only Game-view badge,
-directly toggleable) on Perks → 🤖 Automation's Tier Autobuyers category, via the same
-`autobuyersEnabled`/`setAutobuyerEnabled` state (see "Perks page" above).
+directly toggleable) on Firmware → 🤖 Automation's Tier Autobuyers category, via the same
+`autobuyersEnabled`/`setAutobuyerEnabled` state (see "Firmware page" above).
 
-**PP purchase rationale.** The global automations, Auto Reboot and Double PP mechanics are
-unchanged by the move to Perks — see `docs/ECONOMY_REFERENCE.md` for costs/effects and
+**PP purchase rationale.** The global automations, Auto Purge and Compression mechanics are
+unchanged by the move to Firmware — see `docs/ECONOMY_REFERENCE.md` for costs/effects and
 `docs/DESIGN_HISTORY.md` ("PP Upgrades tab split…") for why the page is split three ways.
 
 **Scale Up and Overclock cards, below the tier list.** `ScaleUpCard` and `OverclockCard` render
 together, in that order, inside a shared `SpeedCardsRow` flex row placed directly below `TierList` —
-not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why Speed Up
+not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why Clock Speed
 (paired with Restage) stays on top while this pair sits below the tier list). `SpeedCardsRow` keeps the pair side by side at every width, phone included (`flex: 1 1 0`,
-`min-width: 0`, no wrap) — the same row also holds Speed Up + Restage above the tier list. The earlier
+`min-width: 0`, no wrap) — the same row also holds Clock Speed + Restage above the tier list. The earlier
 below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below),
 so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
-alongside it. Both soft-reset cards (and Speed Up) share `featureCard(accent)`: compact `0.6rem 0.75rem`
+alongside it. Both soft-reset cards (and Clock Speed) share `featureCard(accent)`: compact `0.6rem 0.75rem`
 padding, a `0.4rem` internal gap and a 3px left accent stripe; their headings have no default margin, their
 buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`.
 
@@ -889,8 +889,8 @@ the first tier — see "Scale Up" in docs/ECONOMY_REFERENCE.md — rather than s
 tier the way it used to). `getScaleUpTargetTier(state)` (`engine.js`) determines which tier's name/
 level the card's button currently reads against; `getScaleUpRequirement(state)` determines the
 level it requires. There is no equivalent card for Prestige — the bottom Prestige panel that used to
-mirror this pattern (via a `rebootCardEverRevealed` flag) was removed as purely informational and
-redundant with the `TopRebootBar`/`FullScreenOverlay`/PP-display-as-button ways to trigger Prestige
+mirror this pattern (via a `purgeCardEverRevealed` flag) was removed as purely informational and
+redundant with the `TopPurgeBar`/`FullScreenOverlay`/PP-display-as-button ways to trigger Prestige
 (see "Prestige and the Googol freeze" below).
 
 Player-facing purchase levels on both reset cards are zero-indexed **completed-level** counts: the
@@ -955,7 +955,7 @@ colliding with affordability semantics — those now resolve from `theme.color.g
 `disabled`/`text`/`textMuted`/`borderStrong` rather than raw hex: `TierDetailsContent`'s
 `ul`, `OwnedText`/`ProductionText` (token-native spans — `textMuted` for owned, `text`/`font-weight: 500`
 for production), and the
-Buy/tickspeed/XP-consume buttons all migrated in the same pass; the Perks page's
+Buy/tickspeed/XP-consume buttons all migrated in the same pass; the Firmware page's
 own instances of these same shared components are a separate surface and weren't touched), and plays
 a one-shot CSS reveal animation when a tier unlocks *during the
 current session* (tracked via a mount-time `Set` snapshot of already-unlocked tier ids, not live mount
@@ -1063,7 +1063,7 @@ Uses the default `IntersectionObserver` threshold (`0`), so a row only collapses
 overlap with the viewport — "scrolled beyond screen," not merely partially cut off — and is guarded
 for environments without `IntersectionObserver` (e.g. jsdom in tests), where a disclosure simply
 stays open once expanded. The native `<details>`-based `Disclosure` instances elsewhere on this page
-(`GlobalTickspeedCard`/`OverclockCard`/Perks → Automation's tier milestone badges — see
+(`GlobalTickspeedCard`/`OverclockCard`/Firmware → Automation's tier milestone badges — see
 "No description prose on this page" above) do **not** auto-collapse on scroll — there's no
 `useAutoCollapseDetails()`-style hook wired to them; each stays open until the player clicks its
 heading again, which is enough for a short one-line body that isn't competing with the rest of the
@@ -1087,7 +1087,7 @@ repainting it from scratch every frame (a secondary contributor to the same flic
 described below) used to live inline in this file, but was extracted so `ByteFoundryPage` can render
 the exact same notice too (offline progress already applies to the Byte Foundry mechanically
 regardless of which page is active; only the notice itself was previously MainPage-exclusive). A
-dismissible `OfflineNoticeCard` ("Welcome back! …", via `formatOfflineDuration`) renders inside a
+dismissible `OfflineNoticeCard` ("Resumed from sleep …", via `formatOfflineDuration`) renders inside a
 fixed, viewport-centered `OfflineNoticeOverlay` — a true overlay/dialog presentation (centered
 regardless of scroll position) rather than an inline card pushed into the page's normal document
 flow; never reappears once dismissed or state is reset. `OfflineNoticeOverlay` sets
@@ -1102,13 +1102,13 @@ Self-dismisses via a countdown (`OFFLINE_NOTICE_AUTO_DISMISS_MS`, 10s) driving t
 `dismissOfflineProgress` removes it.
 
 **Prestige surfaces (#139).** The first-run freeze uses `FullScreenOverlay` (`role="dialog"`
-`aria-modal="true"` `aria-label="Reboot required"`) with a dark scrim (`rgba(0,0,0,0.92)`) and a
+`aria-modal="true"` `aria-label="Purge required"`) with a dark scrim (`rgba(0,0,0,0.92)`) and a
 token-driven `FullScreenCard` (`surfaceRaised` panel, `warn` heading via `font.display`/`type.scale.xl`,
-`RebootMutedText` body, `textMuted` bullet list). Repeat-run reminders use `TopRebootBar`
-(`surfaceRaised` + `warn` bottom border + `shadow.sm`) with the same `RebootMutedText` + a
+`PurgeMutedText` body, `textMuted` bullet list). Repeat-run reminders use `TopPurgeBar`
+(`surfaceRaised` + `warn` bottom border + `shadow.sm`) with the same `PurgeMutedText` + a
 `variant="prestige"` `$pulse` button. Both prestige buttons keep their existing `aria-label`s; the
 full-screen button still auto-focuses on mount. Presentation gates (`showFullScreenPrompt` /
-`showTopRebootBar`) are unchanged.
+`showTopPurgeBar`) are unchanged.
 
 Once `isProductionFrozen(state)` is true, every control except Prestige disables — see "Prestige and
 the Googol freeze" below.
@@ -1117,15 +1117,15 @@ the Googol freeze" below.
 
 `App.jsx` switches screens via a local `page` `useState` (`'game'`/`'info'`/`'foundry'`/`'boosters'`/
 `'compute'`/`'perks'`/`'milestones'`/`'settings'`/`'dev'`, default `'game'`) — not a routing library —
-plus a shared fixed bottom `AppNav` (Foundry → Boosters → Compute → Factory → Perks → More; Guide is in More) and
-`AppMenu` (More sheet → Milestones / Settings / Dev Mode in dev builds). Legacy `page === 'storage'`
+plus a shared fixed bottom `AppNav` (Foundry → Power → Compute → Factory → Firmware → More; Manual is in More) and
+`AppMenu` (More sheet → Manual / Releases / Settings / Dev Mode in dev builds). Legacy `page === 'storage'`
 rewrites to `'foundry'`. Which screen renders is derived, not `page` directly:
 `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked || page === 'foundry')`.
 `GATE_EXEMPT_PAGES` = `'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`, so those
-stay reachable during the gate — Boosters only once capacity reveals it, Compute only once 100 PP
+stay reachable during the gate — Power only once capacity reveals it, Compute only once 100 PP
 (Architecture 4b/4c). ByteFoundryPage is both a *mandatory gate* (while `intro.mainGameUnlocked` is
 false) and, once unlocked, a permanent revisitable screen (`page = 'foundry'`). `intro.mainGameUnlocked`
-is PERMANENT (`latchMainGameUnlocked` in `engine.js`; never reset by a real Prestige or Era ascension),
+is PERMANENT (`latchMainGameUnlocked` in `engine.js`; never reset by a real Prestige or Reboot),
 so `!intro.mainGameUnlocked` is true only on a save's very first cycle. `page` is independent of it, so
 no syncing effect is needed: the gate resolving just reveals whatever `page` already was (typically
 `'game'`).

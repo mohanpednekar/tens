@@ -7,7 +7,7 @@ import {
   COMPUTE_FLOPS_REVEAL_PP,
   ERA_ELIGIBILITY_PP,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-  REBOOT_THRESHOLD,
+  PURGE_THRESHOLD,
 } from 'game/layers'
 import {
   VARIABLE_AREAS,
@@ -27,9 +27,9 @@ import styled from 'styled-components'
 // unreachable — and, once tree-shaken by `yarn build`, absent — from a production bundle. Everything
 // here operates on a save separate from every real player slot (game/storage.js's DEV_SLOT_ID).
 //
-// Layout mirrors the real game: a header balance strip like MainPage/Perks, quick-seed presets and
-// Variables grouped by the same AppNav destinations (Foundry / Compute / Factory / Perks / …) with
-// Perks-style icon tabs, Perks-style Switches for booleans. The Variables tree is not a
+// Layout mirrors the real game: a header balance strip like MainPage/Firmware, quick-seed presets and
+// Variables grouped by the same AppNav destinations (Foundry / Compute / Factory / Firmware / …) with
+// Firmware-style icon tabs, Firmware-style Switches for booleans. The Variables tree is not a
 // hand-maintained field list: it's a recursive walk of the live `game.state` (FieldNode), so a new
 // field added to createInitialGameState() shows up with zero changes here.
 
@@ -410,7 +410,7 @@ const PRESET_GROUPS = [
       },
       {
         id: 'unlock-boosters',
-        label: '🔧 Unlock Boosters (Core)',
+        label: '🔧 Unlock Power (Cells)',
         apply: state => ({
           ...state,
           intro: {
@@ -428,17 +428,17 @@ const PRESET_GROUPS = [
       {
         id: 'near-prestige',
         label: '💰 Bits → 99% to Purge',
-        apply: state => ({ ...state, resources: { ...state.resources, base: REBOOT_THRESHOLD * 0.99 } }),
+        apply: state => ({ ...state, resources: { ...state.resources, base: PURGE_THRESHOLD * 0.99 } }),
       },
       {
         id: 'prestige-ready',
         label: '💰 Bits → Purge threshold',
-        apply: state => ({ ...state, resources: { ...state.resources, base: REBOOT_THRESHOLD } }),
+        apply: state => ({ ...state, resources: { ...state.resources, base: PURGE_THRESHOLD } }),
       },
     ],
   },
   {
-    id: 'reboot',
+    id: 'purge',
     label: '🏆 Purge',
     presets: [
       {
@@ -446,17 +446,17 @@ const PRESET_GROUPS = [
         label: '🏆 +1,000 PP',
         apply: state => ({
           ...state,
-          reboot: { ...state.reboot, points: (state.reboot?.points ?? 0) + 1000 },
+          purge: { ...state.purge, points: (state.purge?.points ?? 0) + 1000 },
         }),
       },
       {
         id: 'add-prestige',
         label: '🏆 +1 Purge count',
-        // Same milestone unlocks a real Prestige applies (rebootGame), so the count-gated
+        // Same milestone unlocks a real Prestige applies (purgeGame), so the count-gated
         // autobuyers this preset exists to test actually unlock.
         apply: state => applyAutobuyerMilestones({
           ...state,
-          reboot: { ...state.reboot, count: (state.reboot?.count ?? 0) + 1 },
+          purge: { ...state.purge, count: (state.purge?.count ?? 0) + 1 },
         }),
       },
       {
@@ -464,7 +464,7 @@ const PRESET_GROUPS = [
         label: '🖥️ Unlock Compute (Flops)',
         apply: state => ({
           ...state,
-          reboot: { ...state.reboot, points: Math.max(state.reboot?.points ?? 0, COMPUTE_FLOPS_REVEAL_PP) },
+          purge: { ...state.purge, points: Math.max(state.purge?.points ?? 0, COMPUTE_FLOPS_REVEAL_PP) },
           computeFlops: { ...state.computeFlops, pageUnlocked: true },
         }),
       },
@@ -472,19 +472,19 @@ const PRESET_GROUPS = [
   },
   {
     id: 'era',
-    label: '🌌 Era',
+    label: '⏻ Reboot',
     presets: [
       {
         id: 'era-ready',
-        label: '🏆 PP → Era-ready (1 Googol)',
-        apply: state => ({ ...state, reboot: { ...state.reboot, points: ERA_ELIGIBILITY_PP } }),
+        label: '🏆 PP → Reboot-ready (1 Googol)',
+        apply: state => ({ ...state, purge: { ...state.purge, points: ERA_ELIGIBILITY_PP } }),
       },
     ],
   },
 ]
 
 // Tabs follow AppNav's left-to-right order; VARIABLE_AREAS' own order is match priority.
-const VARIABLE_AREA_TABS = ['foundry', 'compute', 'factory', 'perks', 'reboot', 'era']
+const VARIABLE_AREA_TABS = ['foundry', 'compute', 'factory', 'perks', 'purge', 'era']
   .map(id => VARIABLE_AREAS.find(area => area.id === id))
 
 const safeStringify = state => JSON.stringify(state, null, 2)
@@ -561,9 +561,9 @@ const DevModePage = ({ game }) => {
   const { state } = game
   const readouts = [
     ['Bits', formatCurrency(state.resources?.base ?? 0)],
-    ['Purge Points', `✦ ${formatAmount(state.reboot?.points ?? 0)}`],
-    ['Purges', formatAmount(state.reboot?.count ?? 0)],
-    ['Era · Eons', `${formatAmount(state.era?.count ?? 0)} · ${formatAmount(state.eons?.balance ?? 0)}`],
+    ['Purge Points', `✦ ${formatAmount(state.purge?.points ?? 0)}`],
+    ['Purges', formatAmount(state.purge?.count ?? 0)],
+    ['Reboot · Kernels', `${formatAmount(state.era?.count ?? 0)} · ${formatAmount(state.eons?.balance ?? 0)}`],
     ['Capacity', formatBitsInNearestUnit(state.intro?.capacity ?? 0)],
   ]
 

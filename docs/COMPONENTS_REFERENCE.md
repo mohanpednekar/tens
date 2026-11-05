@@ -8,24 +8,25 @@ state each is currently in.
 ## `AppNav/index.jsx`
 
 Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open byte foundry`) →
-**Boosters** (`open boosters`, page id `'boosters'`, once `isComputeCoreConversionUnlocked`) →
+**Power** (`open power`, page id `'boosters'`, once `isComputeCoreConversionUnlocked`) →
 **Compute** (`open compute`, page id `'compute'`, once `isComputeFlopsPageRevealed`) →
-**Factory** (`open byte factory`, page id `'game'`, only once `mainGameUnlocked`) → **Guide**
-(`open guide`, always) → **More** (`open more menu`, always — opens `AppMenu`). Storage is
-**not** a top-level item — it lives under Foundry as continuous Memory + Disk sections on the
+**Factory** (`open byte factory`, page id `'game'`, only once `mainGameUnlocked`) → **Firmware**
+(`open firmware`, once first Prestige/Reboot) → **More** (`open more menu`, always — opens `AppMenu`,
+which holds Manual / Releases / Settings). Storage is
+**not** a top-level item — it lives under Foundry as continuous Data Stream + Disk sections on the
 same screen.
 Active item uses `aria-current="page"` plus accent/surface styling from theme tokens. Exports
 `APP_NAV_BOTTOM_PAD` so `App.jsx`'s `PageShell` can reserve the same clearance the fixed bar
 occupies (including `env(safe-area-inset-bottom)`). Takes `{ currentPage, onNavigate, onOpenMore,
 showTiers, showBoosters, showComputeFlops, moreOpen, attention }`. `attention` is a map of page
 id → `'high'` | `'normal'` | false from `game/navAttention.getNavAttention` (Storage cues fold
-into `foundry`; Boosters use `boosters`; Compute Flops affordability uses `compute`; high =
+into `foundry`; Power uses `boosters`; Compute Flops affordability uses `compute`; high =
 larger pulsing green dot).
 
 ## `AppMenu/index.jsx`
 
 Bottom sheet / dialog (`.jsx`) opened from AppNav's More item. Always-available utilities that
-must not depend on unlocking Factory: **Milestones** and **Settings**. Destructive **Reset** / **Reset
+must not depend on unlocking Factory: **Manual**, **Releases** and **Settings**. Destructive **Reset** / **Reformat
 Byte Foundry** live only under Settings → Danger zone (not duplicated in this sheet or on MainPage).
 Closes on backdrop
 click, Escape, or any action. Takes `{ open, onClose, onNavigate }`.
@@ -36,27 +37,27 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 
 ## `DiskArrayRow/index.jsx`
 
-styled (`.jsx` — needs JSX) one Disk array's full STATUS detail for a single size — purely a
-display, nothing here is ever clickable. Byte Foundry funds Byte Factory pull-based and fully
+styled (`.jsx` — needs JSX) one Disk array's full STATUS detail for a single size. The ONE clickable
+element is an empty disk of a write-cache size (any size above its pool's smallest, while
+`isDiskFillExpediteAvailable`): it renders as a `<button>` calling `actions.expediteDiskFill(size)`,
+which fills it from smaller full disks and Staging at once; the queued disk then reads
+`aria-label="empty … disk queued for filling"` with a dashed info border. Byte Foundry funds Byte Factory pull-based and fully
 automatically, every tick (`tickDiskPull`/`tickDiskLevelOneCachePull` in `engine.js` — see
 CLAUDE.md's "Economy model"); the manual Redeem button and the cache-release-to-Bits control this
 component used to expose were both retired along with that mechanic. Only when
 `isDiskReadCacheEligible(size)` is true (the pool's own smallest size, the one whose Data Lake
-sub-slot is ×1 — every larger size fills exclusively via write-cache ripple and renders no read
+sub-slot is ×1 — every larger size fills via its write cache (from Staging) and renders no read
 cache strip at all) does it show a `DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of squares
 (`aria-label="… read cache"`), each labeled inside with its bit-scale block size (`formatCacheSize`
 — e.g. `1 Kb`). A full block gets an accent-colored border (matching a full `DiskSquare`'s own
-convention below); a partially-filled block (whether filling UP from Memory or draining DOWN during
+convention below); a partially-filled block (whether filling UP from Staging or draining DOWN during
 a flush to disk) renders a proportional `CacheFillIndicator` overlay growing left-to-right — accent-
 colored while filling, info-colored while flushing — so the fill level itself is always visible, not
-just the full/empty extremes (`title` also reads e.g. "Filling from Memory (40%)" once partially
+just the full/empty extremes (`title` also reads e.g. "Filling from Staging (40%)" once partially
 filled). Then an optional **write cache** progress row when
 `intro.diskWriteCache[size]` is active (`DISK_LADDER_SIZE_MULTIPLIER` (10) segmented squares while
-collecting from the source size below — the actual source→target SIZE RATIO, NOT
-`DISK_ARRAY_LADDER_CAP` below, a different constant since it dropped to 9 (see
-`canStartDiskWriteCacheMerge`'s own doc comment in `engine.js`); solid bar draining left-to-right
-while flushing — collect pauses on tier match, flush never
-does), then a fixed `DISK_ARRAY_LADDER_CAP`-circle (9) disk strip that **always** keeps all 9
+collecting — each a tenth of the disk, filling from Staging or, when expedited, from smaller disks; solid
+bar draining left-to-right while flushing — an expedited transfer pauses on tier match), then a fixed `DISK_ARRAY_LADDER_CAP`-circle (9) disk strip that **always** keeps all 9
 circles on one unbroken row at every viewport (circles flex-shrink together — never wraps to a
 second row), each labeled inside at `0.65rem` with a BARE number, no unit
 (`formatDiskSizeBare` — the surrounding pool card already establishes the scale; e.g. `1`, not
@@ -95,7 +96,7 @@ is Capacity-only" in CLAUDE.md, in ascending order, `aria-label="pool N"`),
 titled "`<symbol>` Pool" (e.g. "KB Pool" — no index number or tier name), all inside one
 `FillableStatCard` tap tile (the same component the Data Stream card's own tile uses): a `TitleRow`
 (title top-left, that pool's own current full-disk count top-right), then the Memory buffer balance
-alone in a bigger centered `BalanceText`, then a `CapacityBonusRow` (Capacity left, narrow tap-bonus bar, "+x% 👆" right; bar/text hidden at 0). The ⚡ Speed/Bandwidth figure is the effective value, tinted by the fill multiplier; a pool's is its actually-available fill speed (`getPoolAvailableFillRate` × multiplier), not its theoretical Bandwidth, even while its lake drains. A pool's figure is a button (`aria-expanded`, above the stretched tap button) that opens `SpeedDetailsPopover` with: fill speed now, available rate before the multiplier, theoretical Bandwidth, Data Stream speed, the share earlier pools take (pool 2+), the fill multiplier split into fill-level and tap-bonus parts, buffer %, time to full, and the Data Lake drain rate while draining. A note appears when the Data Stream limits the pool below its Bandwidth. The Data Stream tile works the same way: once the main game unlocks it is a `DataStreamTile` div with a stretched `PoolTapButton` ("tap to generate a bit") behind `PoolTileContent`, so its ⚡ figure (`getDataStreamDeliveredRate` — base Speed × Compute Boost × fill multiplier) is its own button. That button opens "Data Stream speed": speed now, base Speed, Compute Boost (when active), the fill multiplier and its two parts, speed exponent, what pools reserve, the upgrade bar's draw, buffer %, time to full, and the next Speed upgrade's result. The running upgrade tile's ⚡ draw (`getRunningUpgradeDraw`) opens "Upgrade Capacity/Speed draw": draw now, base Speed, what the stream delivers, progress, time left, and the result. One popover is open at a time. Pool 1's own threshold — 1 KiB — is
+alone in a bigger centered `BalanceText`, then a `CapacityBonusRow` (Capacity left, narrow ping-bonus bar, "+x% 👆" right; bar/text hidden at 0). The ⚡ Speed/Bandwidth figure is the effective value, tinted by the fill multiplier; a pool's is its actually-available fill speed (`getPoolAvailableFillRate` × multiplier), not its theoretical Bandwidth, even while its lake drains. A pool's figure is a button (`aria-expanded`, above the stretched tap button) that opens `SpeedDetailsPopover` with: fill speed now, available rate before the multiplier, theoretical Bandwidth, Data Stream bitrate, the share earlier pools take (pool 2+), the fill multiplier split into fill-level and ping-bonus parts, staging %, time to full, and the Data Lake drain rate while draining. A note appears when the Data Stream limits the pool below its Bandwidth. The Data Stream tile works the same way: once the main game unlocks it is a `DataStreamTile` div with a stretched `PoolTapButton` ("ping to generate a bit") behind `PoolTileContent`, so its ⚡ figure (`getDataStreamDeliveredRate` — base Bitrate × Compute Boost × fill multiplier) is its own button. That button opens "Data Stream bitrate": Bitrate now, Base Bitrate, Compute Boost (when active), the fill multiplier and its two parts, Bitrate exponent, what pools reserve, the upgrade bar's draw, buffer %, time to full, and the next Bitrate upgrade's result. The running upgrade tile's ⚡ draw (`getRunningUpgradeDraw`) opens "Upgrade Capacity/Bitrate draw": draw now, Base Bitrate, what the stream delivers, progress, time left, and the result. One popover is open at a time. Pool 1's own threshold — 1 KiB — is
 deliberately set equal to `isStorageUnlocked`'s own reveal gate (`INTRO_DISK_UNLOCK_CAPACITY`), so
 the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already showing
 a clean "1 KB" Capacity rather than a value mid-decade. Only the largest unlocked pool is expanded
@@ -112,7 +113,7 @@ directly below its disks, not in a separate panel after all the pool cards.
 not a labelled table row: a header row pairing the lake's title ("`<symbol>` Lake", e.g. "KB Lake" —
 the size unit is always part of the visible name) with a single next-Booster-cost control in place of
 a lifetime-purchased-count readout (the cost figure alone is self-explanatory — see below for what
-this control does); laid out like a pool/Data Stream tile (`LakeHeader`): name top-left with the Booster target price + buy control (🏷️) under it, ⚡ current fill speed top-right (the pool's Bandwidth while the lake drains/overflows automatically, else 0), the filled amount (full disks plus the open slot, `formatPoolBalance`) big and centered, and Reset Pool / Scale Out under the speed when offered (otherwise `⏳ time left` there — `(next Booster cost − filled) / fill speed`, shown only while still short of the cost, the lake can hold it, the Booster entity isn't at cap, and the lake is filling); then a dedicated `LakePoolTile` (own
+this control does); laid out like a pool/Data Stream tile (`LakeHeader`): name top-left with the Booster target price + buy control (🏷️) under it, ⚡ current fill speed top-right (the pool's Bandwidth while the lake drains/overflows automatically, else 0), the filled amount (full disks plus the open slot, `formatPoolBalance`) big and centered, and 🗜 Compact Pool / Scale Out under the speed when offered (otherwise `⏳ time left` there — `(next Booster cost − filled) / fill speed`, shown only while still short of the cost, the lake can hold it, the Booster entity isn't at cap, and the lake is filling); then a dedicated `LakePoolTile` (own
 `FillableStatCard`-style element, purely additive over the per-square fill overlay below — same
 `fillBits`/`getDataLakeCurrentFillSubSize` data, no separate mechanic) showing "`<fillBits>` /
 `<open slot size>`" — ALWAYS rendered whenever an open slot exists (`currentFillSubSize !== null`),
@@ -201,15 +202,15 @@ Used on ByteFoundryPage's `DataStreamCard` (glow + badge after the Speed figure,
 
 Styled `<button type="button">` on/off switch (pill track + sliding knob; `$on` drives the visual,
 `theme.color.good` when on / `textMuted` when off; reduced-motion aware). Callers pass
-`aria-pressed` and an `aria-label` for the accessible name. Used by `BuyMaxToggle` and every owned Perks →
+`aria-pressed` and an `aria-label` for the accessible name. Used by `BuyMaxToggle` and every owned Firmware →
 Automation row.
 
 ## `BuyMaxToggle/index.jsx`
 
 `{ game }` — the Buy max mode toggle. Renders nothing until `isBuyMaxUnlocked(game.state)` (first
-Prestige or any Era ascension); then a `components/Switch` (`aria-label="Toggle buy max mode"`,
+Prestige or any Reboot); then a `components/Switch` (`aria-label="Toggle buy max mode"`,
 `aria-pressed`, `$on`) that calls
-`game.setBuyMaxMode(!game.buyMaxMode)`. Used only on Perks → ✦ Prestige (`pages/PerksPage`'s Purchasing row); mechanic in
+`game.setBuyMaxMode(!game.buyMaxMode)`. Used only on Firmware → ✦ Prestige (`pages/PerksPage`'s Purchasing row); mechanic in
 `docs/ECONOMY_REFERENCE.md`'s "Buy max mode".
 
 ## `ConfirmDialog/index.jsx`
@@ -219,7 +220,7 @@ dimmed backdrop, Escape / backdrop-click cancel. Replaces native `window.confirm
 actions so the prompt matches the rest of the UI. Takes `{ open, title, children,
 confirmLabel, cancelLabel, confirmVariant, onConfirm, onCancel, ariaLabel, confirmDisabled = false }`
 (`confirmDisabled` blocks a double confirm while async work runs; `onCancel` is read through a ref,
-so an inline arrow doesn't re-steal focus each render). Used by `SettingsPage` for Era ascension and
+so an inline arrow doesn't re-steal focus each render). Used by `SettingsPage` for Reboot and
 Cloud save's Delete account and data. Capacity ×2 on `ByteFoundryPage` does **not** use
 this component — it fires immediately on click, with no confirm prompt (see `docs/DESIGN_HISTORY.md`).
 
@@ -229,7 +230,7 @@ styled money/amount display; color from `theme.color.text`, with its own `font-v
 
 ## `OfflineProgressNotice/index.jsx`
 
-styled (`.jsx` — needs JSX) "Welcome back! ... simulated N of progress at 50% speed" notice,
+styled (`.jsx` — needs JSX) "Resumed from sleep ... simulated N of progress at 50% speed" notice,
 extracted out of `MainPage` so both `MainPage` and `ByteFoundryPage` can render it — offline progress
 (computed at mount by `useIncrementalGame.js`'s `computeInitialGame`, and again at any point
 mid-session that its live tick loop detects a real-world gap since its own last tick — see

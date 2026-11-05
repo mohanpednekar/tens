@@ -5,6 +5,8 @@ automatically via `playwright.config.js`'s `webServer`). One-time setup:
 `npx playwright install --with-deps chromium` (`--with-deps` installs the Linux system libraries
 Chromium needs; see `CLAUDE.md`'s "End-to-end testing" section).
 
+If the installed Chromium build doesn't match Playwright's expected one, set `PW_CHROMIUM_PATH` to its binary, e.g. `/opt/pw-browsers/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell`.
+
 Most specs seed `localStorage`'s `tens_game_state` directly, then reload — same convention as the
 Vitest suite. The visual-regression spec instead seeds via `page.addInitScript` before its only
 `page.goto`, so the app never mounts with fresh state and can't persist it over the seed during a

@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test'
-import { createInitialGameState } from '../src/game/engine.js'
+import { createInitialGameState, getDataLakeUnitBits } from '../src/game/engine.js'
 import { INTRO_COMPUTE_CORE_UNLOCK_CAPACITY } from '../src/game/layers.js'
 
 const seedDataLakeSave = () => {
   const state = createInitialGameState()
   return {
-    saveSchemaVersion: 2,
+    saveSchemaVersion: 3,
     ...state,
     intro: {
       ...state.intro,
@@ -19,6 +19,9 @@ const seedDataLakeSave = () => {
       // already latched, as it would be the moment a lake's own first (×1) disk ever completes
       // (see fillDataLakeDisks in engine.js). Seeded directly rather than played through the real
       // pool-overflow fill (a real-time mechanic) to keep this e2e spec fast and deterministic.
+      // The manual Booster buy additionally needs the pool "ready" (a built 1 KB disk, see
+      // isDataLakePoolReady) — the engine rejects startDataLakeAutoConvert without it.
+      disksBuiltTotal: { ...state.intro.disksBuiltTotal, [getDataLakeUnitBits(1)]: 1 },
       dataLakes: {
         ...state.intro.dataLakes,
         1: { depositedUnits: 1, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 },
@@ -38,12 +41,12 @@ test('data lake disk display and manual Booster buy', async ({ page }) => {
   // The largest unlocked pool is expanded by default, so its embedded (bare) Data Lake panel is
   // already visible with no extra click — see components/DataLakePanel.
   await expect(page.getByText('Lake')).toBeVisible()
-  await expect(page.getByLabelText(/full 1 KB lake disk/i)).toBeVisible()
+  await expect(page.getByLabel(/full 1 KB lake disk/i)).toBeVisible()
 
-  const buyButton = page.getByRole('button', { name: /buy 1 Cores from the KB Data Lake/i })
+  const buyButton = page.getByRole('button', { name: /buy 1 Cells from the KB Data Lake/i })
   await expect(buyButton).toBeEnabled()
   await buyButton.click()
 
-  await page.getByRole('button', { name: 'open boosters' }).click()
-  await expect(page.getByText('Cores 1/10')).toBeVisible()
+  await page.getByRole('button', { name: 'open power' }).click()
+  await expect(page.getByText('Cells 1/10')).toBeVisible()
 })

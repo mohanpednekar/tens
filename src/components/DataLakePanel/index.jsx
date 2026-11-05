@@ -140,7 +140,7 @@ const LakeSpeedText = styled.span`
   white-space: nowrap;
 `
 
-// Shown in the sub-row's right slot (under the fill speed) while neither Reset Pool nor Scale Out is
+// Shown in the sub-row's right slot (under the fill speed) while neither Compact Pool nor Scale Out is
 // offered — those buttons take the slot over whenever they are.
 const LakeTimeText = styled.span`
   flex-shrink: 0;
@@ -151,7 +151,7 @@ const LakeTimeText = styled.span`
   white-space: nowrap;
 `
 
-// "45s" / "12m 5s" / "3h 20m" / "2d 4h" — time left until the lake has banked the next Booster's cost.
+// "45s" / "12m 5s" / "3h 20m" / "2d 4h" — time left until the lake has banked the next Cell's cost.
 const formatLakeTimeLeft = totalSeconds => {
   const seconds = Math.max(1, Math.ceil(totalSeconds))
   const days = Math.floor(seconds / 86400)
@@ -322,7 +322,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
       {visibleTiers.map(tierIndex => {
         const label = getDataLakeTierLabel(tierIndex)
         const nextCost = getBoosterPurchaseCost(tierIndex)(state)
-        const boosterLabel = COMPUTE_TIER_LABELS[tierIndex - 1] ?? 'Booster'
+        const boosterLabel = COMPUTE_TIER_LABELS[tierIndex - 1] ?? 'Cell'
         // Deposited/capacity/next-cost are all abstract unit counts internally, but every figure
         // shown here converts through unitBits into the same Byte-scale currency Disks themselves
         // display — per "Data lake uses the same currency as disks" — rather than a bare unit
@@ -374,7 +374,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
         // own doc comment in engine.js).
         const entityAtCap = !canBuy && isBoosterEntityAtCap(state, tierIndex)
         // While true, tickDataLakeAutoConvert (engine.js) is automatically drawing from this pool's
-        // own buffer every tick toward the next Booster, on its way to buying 1 and stopping — see
+        // own staging every tick toward the next Booster, on its way to buying 1 and stopping — see
         // startDataLakeAutoConvert. The header's own cost control renders as an inert label rather
         // than a button for the whole duration (below).
         const converting = isDataLakeAutoConvertActive(state, tierIndex)
@@ -394,7 +394,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
           : getStoragePoolBandwidth(state, tierIndex) * (draining ? getPoolTapMultiplier(state, tierIndex) : 1)
         const scaleOutShown = upgradeAvailable && !converting && !entityAtCap && !canBuy
         const rightSlotButton = resetAvailable || scaleOutShown
-        // Time until the next Booster's cost is banked at the current fill speed — only while it is still
+        // Time until the next Cell's cost is banked at the current fill speed — only while it is still
         // short of that cost, the lake can actually hold it, Boosters can still be bought, and it is filling.
         const nextCostBits = nextCost * unitBits
         const timeLeftText = !rightSlotButton && poolReady && !entityAtCap && fillSpeed > 0 && nextCost <= capacity && filledBits < nextCostBits
@@ -417,14 +417,14 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                     under it (that price is also the lake's Booster control — clicking it buys
                     immediately if already affordable, or starts the one-shot fill-then-buy automation,
                     see startDataLakeAutoConvert), fill speed on the right, and the amount filled big
-                    centered on the title row. Reset Pool / Scale Out, when offered, sit under the speed. */}
+                    centered on the title row. Compact Pool / Scale Out, when offered, sit under the speed. */}
                 <LakeSubRow>
                   {converting ? (
-                  <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own buffer until ${nextCostSize} is banked, then buys 1 and stops`}>
+                  <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own staging until ${nextCostSize} is banked, then buys 1 and stops`}>
                     {costLabel}
                   </StatusText>
                 ) : entityAtCap ? (
-                  <StatusText title={`${boosterLabel} is already at the max — spend or merge it down first`}>
+                  <StatusText title={`${boosterLabel} is already at the max — spend or charge it up first`}>
                     {costLabel}
                   </StatusText>
                 ) : boosterAuto ? (
@@ -445,26 +445,26 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                   <ActionButton
                     aria-label={`start converting toward 1 ${boosterLabel} from the ${label} Data Lake`}
                     onClick={() => actions.startDataLakeAutoConvert(tierIndex)}
-                    title={`Draws from this pool's own buffer automatically until ${nextCostSize} is banked, then buys 1 ${boosterLabel} and stops — automatic overflow fill takes over once this entire pool is built`}
+                    title={`Draws from this pool's own staging automatically until ${nextCostSize} is banked, then buys 1 ${boosterLabel} and stops — automatic overflow fill takes over once this entire pool is built`}
                     type="button"
                     variant="success"
                   >
                     <ButtonContent>{costLabel}</ButtonContent>
                   </ActionButton>
                 ) : (
-                  <StatusText title={`Build a ${formatDiskSize(unitBits)} disk in Storage to unlock Boosters here`}>
+                  <StatusText title={`Build a ${formatDiskSize(unitBits)} disk in Storage to unlock ${boosterLabel} here`}>
                     {costLabel}
                   </StatusText>
                 )}
                   {resetAvailable ? (
                 <ActionButton
-                  aria-label={`reset the ${label} Storage Pool`}
+                  aria-label={`compact the ${label} Storage Pool`}
                   onClick={() => actions.resetStoragePool(tierIndex)}
                   title={`Empty this pool and lake, add 1000 ${label} of permanent lake capacity, and begin free automatic disk rebuilding`}
                   type="button"
                   variant="prestige"
                 >
-                  <ButtonContent>↻ Reset Pool</ButtonContent>
+                  <ButtonContent>🗜 Compact Pool</ButtonContent>
                 </ActionButton>
               ) : upgradeAvailable && !converting && !entityAtCap && !canBuy ? (
                 <ActionButton
@@ -477,7 +477,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                   <ButtonContent>⚡ Scale Out</ButtonContent>
                 </ActionButton>
               ) : timeLeftText ? (
-                <LakeTimeText title="Time until the next Booster's cost is banked at the current fill speed">⏳ {timeLeftText}</LakeTimeText>
+                <LakeTimeText title="Time until the next Cell's cost is banked at the current fill speed">⏳ {timeLeftText}</LakeTimeText>
               ) : null}
 
                 </LakeSubRow>

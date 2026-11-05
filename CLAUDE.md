@@ -10,14 +10,14 @@ changing a formula, workflow, or mechanic a past iteration may already have trie
 **Tens** — a React incremental game; every mechanic (costs, production, prestige) is themed around
 powers of ten. No routing library, no backend — state lives in React and persists to `localStorage`.
 `App.jsx` switches top-level screens via a plain `useState` toggle plus a shared bottom `AppNav`
-(Foundry → Boosters → Compute → Factory → Perks → More) — not a router (see "Architecture"):
+(Foundry → Power → Compute → Factory → Firmware → More) — not a router (see "Architecture"):
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
 `MainPage` (tier ladder), `PerksPage` (after first Prestige: 🤖 Automation / ✦ Prestige icon
-tabs — one row per automation spanning unlock → pause → speed; Double PP, speed bonus, DeGoogol, Buy max), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Boosters
+tabs — one row per automation spanning unlock → pause → speed; Compression, speed bonus, Overflow mode, Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
-disk arrays live under Foundry as continuous Memory + Storage sections on the same screen (no
-second-level tabs). More (Guide / Milestones / Settings) is always available, including during the
+disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
+second-level tabs). More (Manual / Releases / Settings) is always available, including during the
 Byte Foundry gate; only Factory stays progress-gated. A third More entry, **Dev Mode**
 (`DevModePage`), renders only in a dev build (`import.meta.env.DEV`) — see "Dev Mode".
 
@@ -91,20 +91,19 @@ Always create a pull request after pushing changes to a branch — do not ask th
 one first. This applies to every change made in this repo.
 
 PRs are opened as drafts by default, but stay draft only while real, known work is pending (a queued
-commit, a fix in progress, unrun tests). Mark ready the moment it reflects genuinely finished work
-(local checks pass, nothing further planned) — a draft isn't reviewed or auto-merge-eligible, so
+commit, a fix in progress, unrun tests). Always mark ready the moment it reflects genuinely finished work
+(local checks pass, nothing further planned — maintainer standing rule) — a draft isn't reviewed or auto-merge-eligible, so
 leaving a finished one draft just stalls it. Applies to every PR, autonomous or interactive.
 
 **Verification effort scales with how public the PR is**: minimal testing (one `yarn test` after a
-coherent batch of changes, not after every edit) while nothing's been opened yet; one full local check
-at draft creation; multiple rounds of adversarial review (Claude plus any other reviewer — bots,
-humans) once marked ready, looping until nothing new turns up. This does not slow down any of
-`pr-auto-merge.yml`'s three enabled paths (below, and in "Automation workflows") — a qualifying human
-GitHub approval, a low-risk diff on green checks, or an adversarial `APPROVE` on a low-risk diff — all
-of which stay immediate by design. The 10-minute quiet period only applies on the rare occasion none of
-those three paths fires and a session is merging a PR directly itself (e.g. `gh pr merge`): wait for CI
-green plus 10 minutes with no further review activity first. Full detail: `docs/AUTOMATION.md`'s "PR
-review & testing cadence".
+coherent batch of changes, not after every edit) before anything is opened; one full local check at
+draft creation; multiple rounds of adversarial review (Claude plus any bots/humans) once marked ready,
+looping until nothing new turns up. None of this slows `pr-auto-merge.yml`'s three immediate paths
+(below and "Automation workflows": qualifying human approval; low-risk diff on green checks; adversarial `APPROVE` on a low-risk diff)
+nor the agent-enabled auto-merge on any non-workflow `APPROVE` (below). The 10-minute quiet period
+applies only when none of those fires and a session merges directly (e.g. `gh pr merge`): wait for CI
+green plus 10 minutes with no further review activity. Detail: `docs/AUTOMATION.md`'s "PR review &
+testing cadence".
 
 **After the final commit** on a finished PR (nothing further planned; local checks green), always
 run the adversarial `code-reviewer` subagent (`.claude/agents/code-reviewer.md`) against that head
@@ -120,9 +119,14 @@ Then:
   **always** enable GitHub auto-merge — run
   `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (marks ready if
   still draft, then `gh pr merge --auto --merge`). This is a standing authorization to *enable*
-  auto-merge on qualifying PRs only; it is not permission to force-merge, push to `main`, approve
+  auto-merge on `APPROVE`d PRs (this bullet and the next) only; it is not permission to force-merge, push to `main`, approve
   the PR as a GitHub review, or bypass CODEOWNERS on `.github/workflows/**`.
-- **`APPROVE` but not low-risk**: mark ready for human review; do not enable auto-merge.
+- **`APPROVE` but not low-risk, diff touches no `.github/workflows/**` file**: mark ready and enable
+  GitHub auto-merge (`gh pr ready <pr>` then `gh pr merge <pr> --auto --merge`) — maintainer standing
+  rule. The `main` ruleset currently requires no human approval, so this merges on green required
+  checks with no human review; the adversarial `APPROVE` is the gate.
+- **`APPROVE` but diff touches `.github/workflows/**`**: mark ready for the maintainer's review; never
+  enable auto-merge (CODEOWNERS isn't enforced by the ruleset yet, so this exclusion is the only gate).
 - **`NEEDS CHANGES` / `BLOCK`**: fix (or stop); do not enable auto-merge; re-run the reviewer after
   the next final commit so the marker matches the new HEAD.
 
@@ -148,18 +152,15 @@ Keep PRs green through genuine fixes only — never `--no-verify`, never disable
 test to make it pass, never weaken a check just to get past it. If a check itself is wrong, flaky, or
 needs updating, fix the workflow/check definition instead of routing around it.
 
-Once auto-merge is enabled on a PR (by anyone — human approval or `pr-auto-merge.yml`'s low-risk path),
-it silently sits inert if the PR falls out of sync with its base branch — GitHub won't merge a
-conflicted PR however green its checks. Actively check mergeable state whenever there's reason to look
-at such a PR (a "merge conflict" notice, a push to the base branch, a routine check-in): fetch its
-`mergeable_state` and, if conflicted, resolve immediately — merge (or rebase, matching repo convention)
-the base branch into the PR branch, resolve the conflicts for real (never blindly take one side
-wholesale on a file with actual logic), rerun `yarn test` locally, and push. Prefer a merge over a
-rebase when the PR already has review comments/approvals tied to specific commits (rebasing rewrites
-SHAs and can orphan that context). This applies whether the conflict is trivial (two unrelated
-doc/changelog bullets, `graphify-out/`'s generated files — safe to take the incoming side and
-regenerate) or substantive (overlapping logic in one function) — the latter still needs a real read of
-both sides, not just `git checkout --theirs`.
+Auto-merge silently sits inert once a PR (any auto-merge source) falls out of sync with its base — GitHub
+won't merge a conflicted PR however green its checks. Check `mergeable_state` whenever there's reason to
+look (a "merge conflict" notice, a push to base, a routine check-in) and, if conflicted, resolve
+immediately: merge (or rebase, matching repo convention) the base into the PR branch, resolve for real
+(never blindly take one side wholesale on a file with actual logic), rerun `yarn test`, push. Prefer merge
+over rebase when review comments/approvals are tied to specific commits (rebasing orphans them). This applies to trivial
+conflicts (unrelated doc/changelog bullets; `graphify-out/` generated files — safe to take incoming, then
+regenerate) and substantive ones (overlapping logic) alike; the latter needs a real read of both sides,
+not `git checkout --theirs`.
 
 Before merging any PR that touches `TIER_DEFINITIONS` or other economy constants/formulas in
 `src/game/layers.js` (autonomous or interactive), run the `economy-change-review` skill
@@ -169,20 +170,16 @@ wrong `baseCost` exponent, a mis-chained `producesResourceId`, a migration missi
 unauthorized economy change) that general review doesn't look for. It supplements, not replaces, the
 ordinary review flow.
 
-The reviewer subagent `.claude/agents/code-reviewer.md` does a comprehensive, adversarial,
-evidence-based, read-only review of a PR or working diff — every finding verified against the
-checked-out code and cited by `file:line` with a CONFIRMED/PLAUSIBLE label, an explicit merge verdict
-(APPROVE / NEEDS CHANGES / BLOCK), a checked-and-clean invariants list, and a statement of anything it
-didn't cover. Use it (spawn via the Agent tool) before merging any non-trivial change, or whenever
-asked to review a branch/PR; on economy diffs it folds in the `economy-change-review` cross-check as a
+The `code-reviewer` subagent (`.claude/agents/code-reviewer.md`) does an adversarial, evidence-based,
+read-only review (every finding verified against the checked-out code, file:line-cited, CONFIRMED/PLAUSIBLE findings, explicit verdict, checked-clean list,
+stated coverage gaps). Spawn it via the Agent tool before merging any non-trivial change or when asked
+to review a branch/PR; on economy diffs it folds in the `economy-change-review` cross-check as a
 required step rather than replacing it.
 
-When filing a new `claude-task` issue for the backlog below, or splitting a large feature into a
-sequence of them, use the `file-task-issue` skill (`.claude/skills/file-task-issue/SKILL.md`): issue-template
-guidance, size/priority labeling, the conflict-avoidance `Blocked by #N` sequencing heuristic, the
-`blocked` label's two distinct meanings, epic/sub-issue grouping, the narrow cases where an issue needs
-no PR, and the "specs go stale" lesson from issues like #45/#138 whose bodies described UI since
-rebuilt out from under them. Also useful when tightening an existing issue's spec.
+To file a `claude-task` backlog issue, split a large feature into a sequence of them, or tighten an
+existing spec, use the `file-task-issue` skill (`.claude/skills/file-task-issue/SKILL.md`): template,
+size/priority labels, the `Blocked by #N` conflict-avoidance heuristic, the `blocked` label's two
+meanings, epics/sub-issues, the narrow no-PR cases, and the "specs go stale" lesson (#45/#138).
 
 ## Issue tracking for interactive sessions
 
@@ -191,17 +188,14 @@ tab via GitHub's native pinned-issues feature and deliberately carries **no labe
 `claude-task` work item, only a standing manual setup checklist that #63 keeps auto-verified. Do not add
 `claude-task` to it or unpin it without understanding why.
 
-Every session that does non-trivial work — interactive sessions, not only `autonomous-maintenance.yml`
-runs — files a GitHub issue to track that work and keeps it updated, giving interactive work the same
-at-a-glance visibility the `claude-task` backlog has. File it as soon as the scope is clear (before or
-alongside the first commit); the `file-task-issue` skill's template conventions (Goal/Context/Spec) make
-a good body even for a non-backlog issue. **Don't** apply the `claude-task` label to it — that label is
-reserved for items meant for `autonomous-maintenance.yml`'s Phase A backlog, and a live interactive
-tracking issue labeled that way would be picked up as unclaimed work. For the same reason, don't file
-it from the `claude-task.yml` issue template (its frontmatter auto-applies the label) — file a blank
-issue and borrow the template's section structure by hand. Comment at meaningful status changes (PR
-opened, a review round landed, work blocked/descoped) and close it once the PR merges or the task
-otherwise concludes.
+Every session that does non-trivial work — interactive, not only `autonomous-maintenance.yml` — files a
+GitHub issue tracking it and keeps it updated. File it once scope is clear (before or alongside the first
+commit); the `file-task-issue` skill's Goal/Context/Spec structure makes a good body. **Don't** apply the
+`claude-task` label (reserved for `autonomous-maintenance.yml`'s Phase A backlog; a live tracking issue
+so labeled would be picked up as unclaimed work), and don't file it from the `claude-task.yml` template
+(its frontmatter auto-applies the label) — file a blank issue and borrow the sections by hand. Comment at
+meaningful status changes (PR opened, review round landed, work blocked/descoped); close it when the PR
+merges or the task concludes.
 
 For work that naturally splits into multiple pieces, file a parent "epic" issue and attach each piece as
 a GitHub sub-issue — the `file-task-issue` skill's "Epics and sub-issues" convention (see #87–#92,
@@ -214,12 +208,11 @@ stays one tracking issue), split the epic's sub-issues along **coding / testing 
 lines rather than only by feature-slice, so the coding sub-issue can land without waiting on the other
 two, while the deferred ones stay tracked with the epic's context:
 
-- **Coding** — the core implementation. Its PR is not exempt from the repo's hard requirements: `yarn
-  test` must stay green, the core logic needs tests, a behavior change gets its `CHANGELOG.md` entry,
-  and — if it touches anything `CLAUDE.md` documents (signatures, constants, state shape, conventions)
-  — `CLAUDE.md` is updated in the *same commit*, per "Documentation" below. That same-commit rule is a
-  hard invariant and does not relax under this split; only work never required to land with the code
-  gets deferred.
+- **Coding** — the core implementation. Its PR keeps the hard requirements: `yarn test` green, tests for
+  the core logic, a `CHANGELOG.md` entry for behavior changes, and — if it touches anything `CLAUDE.md`
+  documents (signatures, constants, state shape, conventions) — `CLAUDE.md` updated in the *same commit*
+  ("Documentation" below). That same-commit rule is a hard invariant, not relaxed by this split; only work
+  never required to land with the code gets deferred.
 - **Testing** — coverage beyond what the coding sub-issue needed for green CI: additional scenarios,
   edge cases, regression tests, e2e specs. Can lag behind the coding sub-issue's merge.
 - **Documentation** — narrative/rationale writing not required to keep `CLAUDE.md` accurate:
@@ -238,7 +231,7 @@ Milestone answers "what's targeted for this release", with a native due-date and
 Interactive sessions and Planning (#53) should assign player-facing feature/economy issues to the next
 release's milestone; process and infrastructure `claude-task` issues typically stay off a versioned
 milestone. `v0.6.0` (UI-revamp chain #138/#139/#140) has fully shipped; the current next-release
-milestone is `v0.7.0`, targeting Era ascension (`#407` / `#411–#414`, in progress).
+milestone is `v0.7.0`, targeting Era ascension / Reboot (`#407` / `#411–#414`, in progress).
 `scripts/sync-release-milestones.sh` keeps milestones and assignments idempotent, running on every
 `autonomous-maintenance.yml` invocation.
 
@@ -247,8 +240,9 @@ milestone is `v0.7.0`, targeting Era ascension (`#407` / `#411–#414`, in progr
 The Claude-side and GitHub automation workflows under `.github/workflows/` run unattended — opening
 and fixing up PRs, and merging them only past an approval boundary: only a low-risk diff on an allowlisted
 bot-authored branch (`scripts/pr-low-risk-eligible.sh`) merges without human approval — on green checks
-alone, or via an adversarial `APPROVE` marker on that same eligible diff; every other PR waits for human
-approval. Their git/GitHub write operations authenticate via the
+alone, or via an adversarial `APPROVE` marker on that same eligible diff. Sessions (interactive and autonomous) also enable
+auto-merge on any adversarially-`APPROVE`d PR not touching `.github/workflows/**` (see "Pull requests");
+every other PR waits for human approval. Their git/GitHub write operations authenticate via the
 `GH_AUTOMATION_PAT` secret, not `GITHUB_TOKEN` (whose pushes/merges can't trigger other workflows;
 read-only guard steps, `autonomous-maintenance.yml`'s "Surface a broken deploy.yml run" alert comment/issue, and
 some workflows, e.g. `devin-workflow-health.yml`/`deploy.yml`, use `GITHUB_TOKEN`). The PAT includes `Workflows: write`, so autonomous runs
@@ -389,206 +383,165 @@ cadence".
 
 ```
 .claude/
-  CLAUDE.md                   ← nested memory file (auto-loaded alongside the root one) pointing at the
-                               graphify skill — tool-generated, see "graphify"
-  settings.json              ← registers the SessionStart hook (see "Interactive session startup") and
-                               the graphify PreToolUse hooks (see "graphify") — neither is read by the
-                               autonomous workflow, which invokes claude-code-action with its own inline
-                               `settings:`/`claude_args:`
-  hooks/session-start.sh      ← yarn install --frozen-lockfile + yarn test at session start; always exits 0
-  agents/code-reviewer.md     ← read-only PR/diff review subagent (see "Pull requests")
+  CLAUDE.md                  ← nested memory file pointing at the graphify skill (tool-generated; "graphify")
+  settings.json              ← SessionStart hook ("Interactive session startup") + graphify PreToolUse hooks;
+                               neither is read by the autonomous workflow (own inline `settings:`/`claude_args:`)
+  hooks/session-start.sh     ← yarn install --frozen-lockfile + yarn test at session start; always exits 0
+  agents/                    ← code-reviewer (read-only PR/diff review, "Pull requests"); dev-team roles:
+                               designer (opus, spec), programmer (sonnet, implement), qa (haiku, verify)
   skills/
-    economy-change-review/    ← cross-checks a TIER_DEFINITIONS/economy diff against its issue's spec
-    file-task-issue/          ← authors a well-formed claude-task backlog issue; also reused for
-                               interactive-session tracking issues (see "Issue tracking")
-    simulate-run-times/       ← simulates playthroughs to show how starting PP affects time-to-prestige
-                               (see "Economy model")
-    optimize-ai-files/        ← meaning-preserving token-reduction pass over CLAUDE.md/AGENTS.md/agent+
-                               skill files (see "AI-instruction file cost hygiene")
-    graphify/                 ← third-party skill (see "graphify"), tool-generated — not hand-edited
-docs/
-  DESIGN_HISTORY.md            ← the "why": superseded formulas, incident write-ups, rejected
+    dev-team/                ← orchestrates designer → programmer → qa → code-reviewer on one task
+    economy-change-review/   ← cross-checks a TIER_DEFINITIONS/economy diff against its issue's spec
+    file-task-issue/         ← authors claude-task backlog issues; reused for interactive tracking issues
+    simulate-run-times/      ← playthrough simulation of time-to-prestige ("Economy model")
+    optimize-ai-files/       ← meaning-preserving token-reduction pass ("AI-instruction file cost hygiene")
+    graphify/                ← third-party, tool-generated — not hand-edited
+docs/                        ← DESIGN_HISTORY.md (the "why": superseded formulas, incidents, rejected
                                alternatives — check before changing a formula/workflow/mechanic a past
-                               iteration may already have tried
-  AUTOMATION.md                ← full Automation workflows reference
-  ECONOMY_REFERENCE.md         ← full Economy model reference
-  FOUNDRY_MECHANICS_REFERENCE.md ← full Byte Foundry / Storage / Disks / Data Lakes / Boosters prose
-                               (moved out of CLAUDE.md; read before touching ByteFoundryPage/ComputePage/disk+lake engine code)
-  MAINPAGE_REFERENCE.md        ← full MainPage reference, including ComputePage
-  COMPONENTS_REFERENCE.md      ← full Button/Money/StatCard prop/styling reference
-  THEMING_REFERENCE.md         ← full design-token/font/ThemeProvider reference
-  PWA_REFERENCE.md             ← full installable-PWA reference
-  DEVMODE_REFERENCE.md         ← full Dev Mode mechanism reference
+                               iteration may have tried), AUTOMATION.md (Automation workflows reference), ECONOMY_REFERENCE.md,
+                               FOUNDRY_MECHANICS_REFERENCE.md (Byte Foundry/Storage/Disks/Data Lakes/Power; read
+                               before touching ByteFoundryPage/ComputePage/disk+lake engine code),
+                               MAINPAGE_REFERENCE.md (incl. ComputePage), COMPONENTS_REFERENCE.md (Button/Money/StatCard props/styling), THEMING_REFERENCE.md (tokens/fonts/ThemeProvider),
+                               PWA_REFERENCE.md (installable PWA), DEVMODE_REFERENCE.md, RELEASE_ANDROID/IOS.md, STORE_LISTING.md
 src/
   game/
-    layers.js             ← TIER_DEFINITIONS array + all game constants (single source of truth)
-    engine.js              ← pure state functions (no React, no side effects)
-    navAttention.js         ← pure predicates for AppNav attention dots (high/normal levels; Storage cues
-                               fold into Foundry; Compute Flops affordability → `compute`)
-    useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
-    storage.js              ← localStorage read/write; offloads every load to save-migration/, then
-                               forward field merge (`mergeState`); multi-slot saves + Supporter
-                               entitlement (unlock code / dummy checkout), clearSaveSlot /
-                               clearAllSaveProgress (never revokes unlock), plus the separately keyed
-                               last-save timestamp for offline progress (slot 0 keeps legacy
-                               `tens_game_state` keys). Also owns Dev Mode's isolated `'dev'` slot
-                               (`isDevModeActive`/`setDevModeActive`/`clearDevGameState`/
-                               `applyDevGameStateJson`) — see "Dev Mode"; separate from numbered slots.
-    save-migration/         ← save-schema assistant only — `adaptSaveForCurrentSchema(raw)` returns
-                               current-compatible game state (or failure); runs on every load; see
-                               DESIGN_HISTORY.md "Save persistence".
+    layers.js             ← TIER_DEFINITIONS + all game constants (single source of truth)
+    engine.js             ← pure state functions (no React, no side effects)
+    navAttention.js       ← pure predicates for AppNav attention dots (high/normal; Storage cues fold into
+                            Foundry; Compute Flops affordability → `compute`)
+    useIncrementalGame.js ← React hook: engine ↔ useState + localStorage + tick timer
+    storage.js            ← localStorage read/write; every load goes through save-migration/, then forward
+                            field merge (`mergeState`); multi-slot saves + Supporter entitlement (unlock
+                            code / dummy checkout), clearSaveSlot / clearAllSaveProgress (never revokes
+                            unlock), separately keyed last-save timestamp for offline progress (slot 0 keeps
+                            legacy `tens_game_state` keys). Owns Dev Mode's isolated `'dev'` slot
+                            (`isDevModeActive`/`setDevModeActive`/`clearDevGameState`/`applyDevGameStateJson`;
+                            "Dev Mode"), separate from numbered slots.
+    save-migration/       ← `adaptSaveForCurrentSchema(raw)` → current-compatible state or failure; runs on
+                            every load (DESIGN_HISTORY.md "Save persistence")
   components/
-    AppNav/index.jsx        ← fixed bottom bar, progression order Foundry → Boosters → Compute → Factory →
-                               Perks → More; Factory omits during the Foundry gate (More stays);
-                               green attention dots via game/navAttention.js
-    AppMenu/index.jsx       ← More sheet — Guide / Milestones / Settings (always reachable; Reset / Reset Byte
-                               Foundry are Settings → Danger zone only)
-    Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic `variant`
-                               prop resolved against theme color tokens, deprecated raw `color` prop
-                               still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
-    DiskArrayRow/index.jsx  ← one Disk array's STATUS display (nothing clickable), `{ actions, size, state }`
-                               (`actions` unused); shared by ByteFoundryPage and StoragePage (why standalone: `docs/DESIGN_HISTORY.md`)
-    DataLakePanel/index.jsx ← one Data Lake's block, `{ actions, state, bare, tierIndex }`, embedded per pool
-                               card (unused omitted-`tierIndex` mode in the reference); mechanic: "Economy model"
-    icons.js                ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Data Lake Booster, Upgrade Data Stream,
-                               Provision Disk status line)
-    BoostBadge/index.jsx    ← Compute-Boosted glow helpers: `boostGlow` card css + `isDataStreamBoosted`/
-                               `isFactoryTierBoosted` (ByteFoundryPage Data Stream, MainPage tier rows)
-    BoostTimerBar/index.jsx ← active Compute Boost timer bar (Pop/Forfeit · bar · Stack), shared by ComputePage and MainPage's header
+    AppNav/index.jsx      ← fixed bottom bar: Foundry → Power → Compute → Factory → Firmware → More; Factory
+                            omitted during the Foundry gate (More stays); attention dots via navAttention.js
+    AppMenu/index.jsx     ← More sheet — Manual / Releases / Settings (always reachable; Reset / Reformat Byte
+                            Foundry only in Settings → Danger zone)
+    Button/index.jsx      ← `.jsx` (JSX in `ButtonContent`); semantic `variant` prop → theme tokens, deprecated
+                            raw `color` still supported. Contract: `docs/COMPONENTS_REFERENCE.md`
+    DiskArrayRow/index.jsx ← one Disk array's status, `{ actions, size, state }`; only click = empty
+                            write-cache-size disk → `actions.expediteDiskFill(size)`; shared by ByteFoundryPage
+                            and StoragePage (why standalone: DESIGN_HISTORY.md)
+    DataLakePanel/index.jsx ← one Data Lake block, `{ actions, state, bare, tierIndex }`, embedded per pool card
+                            (omitted-`tierIndex` mode is unused); mechanic: "Economy model"
+    icons.js              ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Booster, Upgrade Data Stream,
+                            Provision Disk status line)
+    BoostBadge/index.jsx  ← Compute-Boosted glow: `boostGlow` css + `isDataStreamBoosted`/`isFactoryTierBoosted` (ByteFoundryPage Data Stream, MainPage tier rows)
+    BoostTimerBar/index.jsx ← active Boost timer bar (Pop/Forfeit · bar · Stack); ComputePage + MainPage header
     SpeedDetailsPopover/index.jsx ← non-modal portal panel behind every Foundry ⚡ speed (Data Stream, running upgrade, each pool)
-    LeadIcon/index.js       ← a line's leading emoji in a fixed-size, aria-hidden box (Foundry tile rows)
-    Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`): Perks automation rows, Buy max
-    Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums
-    BuyMaxToggle/index.jsx  ← Buy max mode toggle (Perks → Prestige only); renders nothing until
-                               `isBuyMaxUnlocked` (first Prestige). See "Buy max mode" below
-    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); SettingsPage's Era ascension
-    OfflineProgressNotice/index.jsx ← the "Welcome back!" notice (`.jsx`), shared by MainPage and
-                               ByteFoundryPage (extraction rationale: `docs/DESIGN_HISTORY.md`)
-    IncompatibleSaveNotice/index.jsx ← blocking overlay when an on-disk save was cleared on load
-                               because it predates the current schema; single **Start fresh**
-                               acknowledge action. Rendered by `App.jsx` when `useIncrementalGame`'s
-                               `incompatibleSaveReason` is set.
-    StatCard/index.js       ← styled card container used for every panel, fully token-driven
-                               (every component's full prop/styling contract: `docs/COMPONENTS_REFERENCE.md`)
+    LeadIcon/index.js     ← a line's leading emoji in a fixed-size aria-hidden box (Foundry tile rows)
+    Switch/index.js       ← accessible on/off switch (`$on` + `aria-pressed`): Firmware automation rows, Buy max
+    Money/index.js        ← money/amount display, `theme.color.text` + tabular-nums
+    BuyMaxToggle/index.jsx ← Buy max toggle (Firmware → Prestige); renders nothing until `isBuyMaxUnlocked` (first Prestige); see "Buy max mode" below
+    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); SettingsPage's Reboot
+    OfflineProgressNotice/index.jsx ← "Resumed from sleep" notice, shared by MainPage and ByteFoundryPage
+                            (DESIGN_HISTORY.md)
+    IncompatibleSaveNotice/index.jsx ← blocking overlay when a load cleared a pre-schema save; single
+                            **Start fresh** action; rendered by `App.jsx` when `incompatibleSaveReason` is set
+    StatCard/index.js     ← token-driven card container for every panel (all contracts: COMPONENTS_REFERENCE)
   pages/
-    ByteFoundryPage/index.jsx ← the "Byte Foundry" tap screen (Architecture 4). Takes `{ game, focusNonce }`.
-                               Pool Memory derives from the shared Data Stream Capacity, which doubles up to
-                               the FINAL pool's end bound (`isMemoryCapacityAtCap`) — see "Pool liveness is Capacity-only"
-    StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow list (Architecture 4a)
-    ComputePage/index.jsx   ← Foundry Boosters screen: merge chain + Boost (Architecture 4b)
-    ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen; page id `'compute'`. Takes `{ game }` (Architecture 4c)
-    MainPage/index.jsx      ← the tier ladder (see "Architecture"). Takes `{ game }`.
-                               No second-level tabs. Full reference: `docs/MAINPAGE_REFERENCE.md`
-    PerksPage/index.jsx     ← page id `'perks'`, AppNav item once `isPerksPageRevealed` (first Prestige/
-                               Era). Takes `{ game, focusNonce }`. Icon tabs 🤖 Automation / ✦ Prestige
-                               (feature-grouped) — detail + tab dots: `docs/MAINPAGE_REFERENCE.md`
-    InfoPage/index.jsx      ← the Guide page (Architecture 5); takes no navigation props (AppNav is the exit)
-    MilestonesPage/index.jsx ← Chapters / Era ascension status (Architecture 6)
-    SettingsPage/index.jsx  ← Supporter pack, save slots, Prestige museum, Era ascension, Appearance,
-                               Ops dashboard, Danger zone (Architecture 7)
-    DevModePage/index.jsx   ← dev-only sandbox (see "Dev Mode"); reached via AppNav → More, rendered only
-                               when `import.meta.env.DEV`. Takes `{ game }`
-      stateFields.js         ← pure helpers backing the Variables tree: prettifySegment (tier-id →
-                               display-name label lookup), isEditableScalar, setValueAtPath (immutable
-                               set-by-path at any depth), VARIABLE_AREAS/getVariableAreaId (tab grouping),
-                               parseNumberDraft, collectLeaves/describePath/leafMatchesQuery (search)
+    ByteFoundryPage/index.jsx ← Byte Foundry tap screen (Architecture 4), `{ game, focusNonce }`. Pool Memory
+                            derives from shared Data Stream Capacity, doubling up to the FINAL pool's end
+                            bound (`isMemoryCapacityAtCap`) — see "Pool liveness is Capacity-only"
+    StoragePage/index.jsx ← thin reusable every-size DiskArrayRow list (4a)
+    ComputePage/index.jsx ← Foundry Power screen (label only; id `'boosters'`): merge chain + Boost (4b)
+    ComputeFlopsPage/index.jsx ← PP Compute (Flops); id `'compute'`, `{ game }` (4c)
+    MainPage/index.jsx    ← tier ladder (Architecture 3), `{ game }`, no second-level tabs (MAINPAGE_REFERENCE)
+    PerksPage/index.jsx   ← id `'perks'` (Firmware); AppNav item once `isPerksPageRevealed` (first Prestige/
+                            Reboot); `{ game, focusNonce }`; icon tabs 🤖 Automation / ✦ Prestige
+                            (feature-grouped) — MAINPAGE_REFERENCE
+    InfoPage/index.jsx    ← Manual (5); no navigation props (AppNav is the exit)
+    MilestonesPage/index.jsx ← Releases / Reboot status; id `'milestones'` (6)
+    SettingsPage/index.jsx ← Supporter pack, save slots, System log, Reboot, Appearance, Task Manager,
+                            Danger zone (7)
+    DevModePage/index.jsx ← dev-only sandbox ("Dev Mode"), via AppNav → More, only when `import.meta.env.DEV`;
+                            `{ game }`
+      stateFields.js      ← pure Variables-tree helpers: prettifySegment (tier-id → display-name),
+                            isEditableScalar, setValueAtPath (immutable, any depth), VARIABLE_AREAS/
+                            getVariableAreaId (tabs), parseNumberDraft, collectLeaves/describePath/
+                            leafMatchesQuery (search)
   theme/
-    tokens.js               ← design-token single source of truth: per-mode (dark/light) color, shadow &
-                               tier-accent sets + mode-independent space/radius/motion/font/type scales;
-                               exports buildTheme(mode) + themes.{dark,light}. Full reference:
-                               `docs/THEMING_REFERENCE.md`
-    fonts.js                 ← locally bundles the `font.display`/`font.body` faces (Space Grotesk /
-                               Inter, via @fontsource) as side-effect CSS imports — no runtime CDN
-                               fetch. Full reference: `docs/THEMING_REFERENCE.md`
-    contrast.js              ← standalone WCAG relative-luminance contrast-ratio utility (see "Testing")
-    GlobalStyle.js          ← createGlobalStyle: box-sizing reset, base font/smoothing, form `font: inherit`,
-                               and the token-driven page background/text (absorbs the removed index.css/App.css)
-    index.jsx               ← <ThemeProvider mode> wrapper (styled-components ThemeProvider) + re-exports;
-                               imports `./fonts` as a side effect; `mode` defaults to dark, driven from
-                               system pref + Settings → Appearance toggle (#140)
+    tokens.js             ← design-token source of truth: per-mode (dark/light) color/shadow/tier-accent +
+                            mode-independent space/radius/motion/font/type; exports buildTheme(mode) +
+                            themes.{dark,light} (THEMING_REFERENCE)
+    fonts.js              ← locally bundles `font.display`/`font.body` (Space Grotesk / Inter, @fontsource) as
+                            side-effect CSS imports — no runtime CDN fetch (THEMING_REFERENCE)
+    contrast.js           ← standalone WCAG contrast-ratio utility ("Testing")
+    GlobalStyle.js        ← createGlobalStyle: box-sizing reset, base font/smoothing, form `font: inherit`,
+                            token-driven page background/text (absorbed removed index.css/App.css)
+    index.jsx             ← <ThemeProvider mode> wrapper + re-exports; imports `./fonts`; `mode` defaults dark,
+                            driven by system pref + Settings → Appearance (#140)
   services/
-    config.js               ← feature flags (`ADS_ENABLED`/`IAP_ENABLED`/`CLOUD_SAVE_ENABLED`/
-                               `IS_NATIVE_BUILD`, re-exported from `virtual:tens-features`), AdMob test/real
-                               unit ids, RevenueCat keys, `IAP_PRODUCTS`, policy URLs
-    monetization/           ← MonetizationService (`init`/`showRewarded`/`purchase`/`restore`/
-                               `getEntitlements`): `noop.js` (web / flags off), `admobAdapter.js` (+ `rewardedAdCache.js`: one
-                               video preloaded at init and after each show, refreshed past 55 min),
-                               `revenueCatAdapter.js`, composed by `index.js` `getMonetizationService()`
-    cloudSave/              ← Firebase Auth (email/password) + Firestore `saves/{uid}` backend
-                               (`firebaseBackend.js`, lazy) and `deleteAccountAndData` (reauth → data → user)
-    nativeShell.js          ← native start-up: hide splash, init monetization (no-op on web)
-  App.jsx                   ← root component; owns the single `useIncrementalGame()` call, wraps
-                               <ThemeProvider><GlobalStyle/>, and switches pages via a local `page`
-                               useState (`'game'`/`'info'`/`'foundry'`/`'boosters'`/`'compute'`/`'perks'`/
-                               `'milestones'`/`'settings'`/`'dev'`, default `'game'`; legacy `'storage'`
-                               → `'foundry'`) — not a router — plus the shared bottom `AppNav` and
-                               `AppMenu` (More sheet). Rendered screen is derived: `showingFoundry =
-                               !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked || page ===
-                               'foundry')`; `intro.mainGameUnlocked` is a permanent latch, so the gate
-                               exists only on a save's very first cycle. Full routing/gate detail:
-                               `docs/MAINPAGE_REFERENCE.md`'s "App.jsx routing and the Foundry gate"
-  index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
-  reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless passed
-                               a callback — currently called with none, so a no-op in practice
-capacitor.config.js          ← Capacitor app id/name + `webDir: dist`, SystemBars/SplashScreen config, and
-                               `includePlugins` derived from the ad/IAP flags (#70; see "Native apps")
-firestore.rules              ← owner-only `saves/{uid}` rules for cloud save
-android/, ios/               ← committed Capacitor native projects (generated by `cap add`; build
-                               output ignored by their own `.gitignore`s) — see "Native apps" below
-vite.config.js               ← thin wrapper: `defineConfig(createViteConfig({ srcPath }))`
-viteConfigFactory.js          ← the real Vite config — path aliases, dev/test server, and the VitePWA
-                               plugin (skipped when `CAPACITOR=1`, along with the GitHub Pages `/tens/`
-                               base). Extracted from `vite.config.js` so `capacitorConfig.test.js` can
-                               pin the CAPACITOR=1 behavior (`import.meta.url` isn't a `file:` URL under
-                               Vitest). Full PWA reference: `docs/PWA_REFERENCE.md`
-stryker.config.json          ← Stryker mutation-testing config for `engine.js` (weekly, non-blocking
-                               `mutation-testing.yml`; `yarn stryker run` — see docs/AUTOMATION.md)
-playwright.config.js         ← Playwright e2e config (see "End-to-end testing") — separate from
-                               vite.config.js's own `test` block, which only configures Vitest
-e2e/
-  golden-path.e2e.js          ← buying Kilobytes via the real Buy button; Owned/money-balance updates
-  autobuyer-reload.e2e.js     ← an already-unlocked tier autobuyer survives a real page reload
-  reboot.e2e.js               ← rebooting from the first-time overlay resets resources, awards PP
-  meta-prestige.e2e.js        ← Settings Era ascension from 1 Googol PP seed; era/Eons + Foundry gate
-  data-lake.e2e.js            ← a seeded KB Data Lake renders its disk-square breakdown on Foundry, then a
-                               manual Buy Booster click grants a Core (verified on the Boosters page)
-  visual-regression.e2e.js    ← Linux-only full-page screenshot baselines (Byte Foundry / Byte Factory, both
-                               themes) in `visual-regression.e2e.js-snapshots/`; update process: `e2e/README.md`
+    config.js             ← feature flags (`ADS_ENABLED`/`IAP_ENABLED`/`CLOUD_SAVE_ENABLED`/`IS_NATIVE_BUILD`,
+                            re-exported from `virtual:tens-features`), AdMob test/real ids, RevenueCat keys,
+                            `IAP_PRODUCTS`, policy URLs
+    monetization/         ← MonetizationService (`init`/`showRewarded`/`purchase`/`restore`/`getEntitlements`):
+                            `noop.js` (web / flags off), `admobAdapter.js` (+ `rewardedAdCache.js`: one video
+                            preloaded at init and after each show, refreshed past 55 min),
+                            `revenueCatAdapter.js`, composed by `index.js` `getMonetizationService()`
+    cloudSave/            ← Firebase Auth (email/password) + Firestore `saves/{uid}` (`firebaseBackend.js`,
+                            lazy) and `deleteAccountAndData` (reauth → data → user)
+    nativeShell.js        ← native start-up: hide splash, init monetization (no-op on web)
+  App.jsx                 ← root; owns the single `useIncrementalGame()` call, wraps <ThemeProvider><GlobalStyle/>,
+                            switches pages via local `page` useState (`'game'`/`'info'`/`'foundry'`/`'boosters'`/
+                            `'compute'`/`'perks'`/`'milestones'`/`'settings'`/`'dev'`, default `'game'`; legacy
+                            `'storage'` → `'foundry'`) — not a router — plus shared `AppNav` and `AppMenu`.
+                            `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked ||
+                            page === 'foundry')`; `intro.mainGameUnlocked` is a permanent latch, so the gate
+                            exists only on a save's very first cycle. Detail: MAINPAGE_REFERENCE "App.jsx
+                            routing and the Foundry gate"
+  index.jsx               ← ReactDOM.createRoot entry; calls reportWebVitals()
+  reportWebVitals.js      ← optional web-vitals reporter; no-op unless passed a callback (currently none)
+capacitor.config.js       ← app id/name, `webDir: dist`, SystemBars/SplashScreen, `includePlugins` from ad/IAP flags (#70)
+firestore.rules           ← owner-only `saves/{uid}` rules for cloud save
+android/, ios/            ← committed Capacitor projects (generated by `cap add`; build output ignored by their own `.gitignore`s; "Native apps")
+vite.config.js            ← thin wrapper: `defineConfig(createViteConfig({ srcPath }))`
+viteConfigFactory.js      ← the real Vite config: aliases, dev/test server, VitePWA (skipped when `CAPACITOR=1`,
+                            along with the `/tens/` base). Split out so `capacitorConfig.test.js` can pin the
+                            CAPACITOR=1 path (`import.meta.url` isn't a `file:` URL under Vitest). PWA_REFERENCE
+stryker.config.json       ← Stryker mutation testing of `engine.js` (weekly non-blocking `mutation-testing.yml`;
+                            `yarn stryker run`; docs/AUTOMATION.md)
+playwright.config.js      ← e2e config ("End-to-end testing"); separate from vite.config.js's Vitest `test` block
+e2e/                      ← `.e2e.js` specs: golden-path (buy Kilobytes via the real Buy button; Owned/balance
+                            update), autobuyer-reload (unlocked autobuyer survives a real reload), purge
+                            (first-time overlay resets resources, awards PP), reboot (Settings Reboot from
+                            1 Googol PP; era/Kernels + Foundry gate), data-lake (seeded KB Data Lake renders
+                            its disk-square breakdown; manual Buy Cell grants a Cell, verified on Power),
+                            visual-regression (Linux-only full-page baselines of Byte Foundry / Byte Factory,
+                            both themes, in `visual-regression.e2e.js-snapshots/`; update process `e2e/README.md`)
 scripts/
-  bump-version.mjs (+ `.test.js`) ← `yarn bump-version` (see "Changelog convention") — #52
-  generate-pwa-icons.mjs     ← one-off script (`yarn gen-pwa-icons`) rasterizing an inline "byte grid"
-                               SVG (see `docs/PWA_REFERENCE.md`) with `sharp` into public/pwa-*.png +
-                               apple-touch-icon.png, and hand-assembling public/favicon.ico (minimal ICO
-                               of PNG frames, no extra dependency); not part of the build — re-run only
-                               if the icon design/palette changes
-  adversarialReviewMarker.js (+ `.test.js`) ← pure helpers for the `<!-- adversarial-review sha=…
-                               verdict=… -->` marker (see "Pull requests")
-  pr-low-risk-eligible.sh (+ `.test.js`) ← shared low-risk-auto-merge eligibility bar, used by
-                               `enable-auto-merge-if-eligible.sh` and `pr-auto-merge.yml`
-  enable-auto-merge-if-eligible.sh ← marks a PR ready + enables GitHub auto-merge once it's
-                               adversarial-APPROVEd and low-risk (see "Pull requests")
-  resolve-pr-threads.sh      ← lists/resolves PR review threads by ID for automation-owned PRs
-                               (`claude/*`/`devin/*`, repo-owner/bot-authored only); `list` is
-                               read-only, `resolve` only accepts explicit caller-selected IDs, never a
-                               bulk "resolve all" — used by `autonomous-maintenance.yml` and
-                               `autonomous-pr-followup.yml` (see "Pull requests")
-  backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh ← idempotent GitHub issue-hygiene sweeps
-                               (close shipped/stray issues, unblock/label ready work) run on every
-                               `autonomous-maintenance.yml` invocation — see docs/AUTOMATION.md
-  configure-ios-plist.mjs (+ `.test.js`) ← manages Info.plist's GADApplicationIdentifier /
-                               NSUserTrackingUsageDescription / SKAdNetworkItems from the ads flag
-  android-boot-smoke.sh      ← installs + launches an APK on an emulator, fails on crash / no UI
-                               (mobile-build.yml's minified-release boot check)
-  sync-release-milestones.sh ← idempotent GitHub Milestone create/assign (see "GitHub Milestones")
-  sweep-stalled-auto-prs.sh (+ `.test.js`) ← comments on `claude/auto-*` PRs idle 24h+ with a failing
-                               check or merge conflict to re-fire follow-up; 3 retries, then `automation-retro` (#60)
-public/
-  pwa-192x192.png, pwa-512x512.png, pwa-maskable-512x512.png, apple-touch-icon.png
-                               ← generated PWA icon assets (see `docs/PWA_REFERENCE.md`); the old
-                               create-react-app-era `index.html`/`manifest.json`/`logo192.png`/
-                               `logo512.png` files that used to live here were removed — see
-                               `docs/DESIGN_HISTORY.md` for why
-  favicon.ico, robots.txt     ← unchanged, still served as-is from this directory
+  bump-version.mjs (+test)       ← `yarn bump-version` ("Changelog convention") — #52
+  generate-pwa-icons.mjs         ← one-off `yarn gen-pwa-icons`: rasterizes an inline "byte grid" SVG (PWA_REFERENCE)
+                                   via `sharp` into public/pwa-*.png + apple-touch-icon.png and hand-assembles
+                                   favicon.ico (PNG-frame ICO, no extra dep); not in the build — re-run only if
+                                   the icon design/palette changes
+  adversarialReviewMarker.js (+test) ← pure helpers for the `<!-- adversarial-review sha=… verdict=… -->` marker ("Pull requests")
+  pr-low-risk-eligible.sh (+test) ← shared low-risk-auto-merge bar for `enable-auto-merge-if-eligible.sh` and
+                                   `pr-auto-merge.yml`
+  enable-auto-merge-if-eligible.sh ← marks a PR ready + enables auto-merge once adversarial-APPROVEd and low-risk ("Pull requests")
+  resolve-pr-threads.sh          ← lists/resolves review threads by ID on automation-owned PRs (`claude/*`/
+                                   `devin/*`, repo-owner/bot-authored only); `list` read-only, `resolve` takes
+                                   explicit caller-selected IDs, never bulk "resolve all"; see "Pull requests"; used by
+                                   `autonomous-maintenance.yml` and `autonomous-pr-followup.yml`
+  backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh ← idempotent issue-hygiene sweeps (close shipped/stray issues, unblock/label ready work) run on every
+                                   `autonomous-maintenance.yml` invocation (docs/AUTOMATION.md)
+  configure-ios-plist.mjs (+test) ← Info.plist GADApplicationIdentifier / NSUserTrackingUsageDescription /
+                                   SKAdNetworkItems from the ads flag
+  android-boot-smoke.sh          ← installs + launches an APK on an emulator, fails on crash / no UI
+                                   (mobile-build.yml minified-release boot check)
+  sync-release-milestones.sh     ← idempotent Milestone create/assign ("GitHub Milestones")
+  sweep-stalled-auto-prs.sh (+test) ← comments on `claude/auto-*` PRs idle 24h+ with failing check / conflict to
+                                   re-fire follow-up; 3 retries, then `automation-retro` (#60)
+public/                   ← generated PWA icons (pwa-192x192/512x512/maskable-512x512, apple-touch-icon;
+                            PWA_REFERENCE), favicon.ico, robots.txt. The old create-react-app-era
+                            `index.html`/`manifest.json`/`logo*.png` were removed (DESIGN_HISTORY.md)
 ```
 
 ## Architecture
@@ -621,7 +574,7 @@ Strict three-layer separation:
    `getSaveIncompatibilityReason`), loads any saved state, and folds in offline progress
    (`applyOfflineProgress`) before first render whenever elapsed real time (`loadLastSaveTimestamp()`
    vs. now) warrants it, surfacing an `offlineProgress` summary (dismissed via
-   `dismissOfflineProgress`/`resetGame`) for the "Welcome back!" notice only past
+   `dismissOfflineProgress`/`resetGame`) for the "Resumed from sleep" notice only past
    `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` (10 minutes). Mount only covers time the app was
    fully torn down (a backgrounded/suspended tab or PWA never remounts), so the live tick loop also
    tracks its own last firing's wall-clock time and replays any gap past
@@ -638,12 +591,12 @@ Strict three-layer separation:
    is false (AppNav omits Factory; More stays), permanently latched true the instant Storage's
    capacity threshold ("1 KiB") is crossed (`latchMainGameUnlocked`/`isStorageUnlocked`) — one-time-ever,
    never resets. Once latched, the Data Stream tile itself is the tap target (`actions.tapIntroBit`).
-   Shows Data Stream (shared Combine/Speed/Capacity + Provision Disk in its own card) then one `PoolCard`
+   Shows Data Stream (shared Compile/Bitrate/Capacity + Provision Disk in its own card) then one `PoolCard`
    per VISIBLE pool (`getVisibleStoragePoolCount`: PURE Capacity-based, independent of
    `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount`, which stay disk-build-only — see "Pool liveness"
    below); each pool embeds its `DiskArrayRow`s and `DataLakePanel` (`bare`, `tierIndex={poolIndex}`).
    Disk Fill is automatic. Every action is gated by the forced priority order — Data Lake Booster
-   purchases, its capacity Upgrade, and Upgrade Capacity / Speed are the three exceptions. Pool/buffer/
+   purchases, its capacity Upgrade, and Upgrade Capacity / Bitrate are the three exceptions. Pool/staging/
    Bandwidth/Provision Disk/queue detail: **`docs/FOUNDRY_MECHANICS_REFERENCE.md`**; UI layout:
    `docs/MAINPAGE_REFERENCE.md`; formulas: `docs/ECONOMY_REFERENCE.md`; component contracts:
    `docs/COMPONENTS_REFERENCE.md`.
@@ -651,48 +604,48 @@ Strict three-layer separation:
    `getDiskSizesToShow`) — NOT the Provision Disk button, which stays on ByteFoundryPage. Takes
    `{ game }`. Primary UI path is Foundry's continuous sections; this file remains for reuse/tests. A
    pure renderer ("engine re-validates, UI just mirrors it", like every page here).
-4b. **`ComputePage/index.jsx`** — Foundry **Boosters** screen (page id `'boosters'`), taking `{ game }`;
-   reached via AppNav once `isComputeCoreConversionUnlocked`. Hosts the nine-boundary merge chain (Core →
-   Node → … → Megacomputer) behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute"
+4b. **`ComputePage/index.jsx`** — Foundry **Power** screen (page id `'boosters'`; player label only), taking `{ game }`;
+   reached via AppNav once `isComputeCoreConversionUnlocked`. Hosts the nine-boundary merge chain (Cell →
+   Battery → … → Fusion, charged up via "Charge up"/"Auto-charge") behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute"
    names the page/feature only — entities drop the word in every player-visible label. Deliberately terse
-   (icon-only controls, full sentence in `title`/`aria-label`; mechanic prose lives in the Guide). Order:
+   (icon-only controls, full sentence in `title`/`aria-label`; mechanic prose lives in the Manual). Order:
    top card = active Boost timer bar (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right,
    enforced in the engine too; or "No boost running") + Auto Boost pref; then per-tier rows — the ONE
    selected tier (pre-selected to the active boost's tier on arrival) shows the 3 Boost presets inline (`COMPUTE_ENTITY_CAP` 10 slots,
-   Merge ratio `COMPUTE_MERGE_RATIO` 8, Unlock Auto-merge, `COMPUTE_MERGE_RESERVE_CAP` 8 reserve). Cores
-   come from buying Boosters from the matching Data Lake, not minted from Memory. Full detail:
+   Merge ratio `COMPUTE_MERGE_RATIO` 8, Unlock Auto-charge, `COMPUTE_MERGE_RESERVE_CAP` 8 reserve). Cells
+   (`computeCores`) come from buying them from the matching Data Lake, not minted from Data Stream Capacity. Full detail:
    **`docs/FOUNDRY_MECHANICS_REFERENCE.md`**, `docs/MAINPAGE_REFERENCE.md`, `docs/DESIGN_HISTORY.md`.
 4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), taking
    `{ game }`. Reached via AppNav once `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in
-   `computeFlops.pageUnlocked`). Ten tiers KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`), PP-funded
+   `computeFlops.pageUnlocked`). Ten tiers Cores→Superclouds, outputs KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`; page keeps "Compute" + 🖥), PP-funded
    on the same 10³ base ladder as Factory tiers, priced per-unit via `getCostEpochExponent` (not
    Factory's 8-buy blocks). Owned counts permanent across Prestige; per-cycle boost resets on
    Prestige. Pure renderer — full spec: `docs/ECONOMY_REFERENCE.md`'s "PP Compute (Flops)" section.
-5. **`InfoPage/index.jsx`** — a static Guide page holding every mechanic's evergreen explanation in
+5. **`InfoPage/index.jsx`** — a static Manual page holding every mechanic's evergreen explanation in
    short bullets/sub-headings (what used to be MainPage's click-to-expand `InfoDetails` disclosures —
-   Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Speed Up, Scale Up, Overclock, Tier
-   Autobuyers, Milestones, Prestige, Offline progress, Era ascension). Numbers come from the same `engine.js`/`layers.js`
+   Overview, Byte Foundry, Storage, Power, Compute (Flops), Clock Speed, Scale Up, Overclock, Tier
+   Autobuyers, Releases, Prestige, Sleep mode, Reboot). Numbers come from the same `engine.js`/`layers.js`
    constants the game uses, so they can't drift. Reads no `useIncrementalGame` state — only pure
    constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
-   import) — the **only** in-app version surface. Reached via AppNav → More → Guide.
-6. **`MilestonesPage/index.jsx`** — Chapters / Era ascension status screen (autobuyer unlock
-   milestones live once, on Perks → Automation — not repeated here). Chapters: the first Kilobyte, Go Googol, Open
-   Compute, DeGoogoled, Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always
+   import) — the **only** in-app version surface. Reached via AppNav → More → Manual.
+6. **`MilestonesPage/index.jsx`** — Releases / Reboot status screen (autobuyer unlock
+   milestones live once, on Firmware → Automation — not repeated here). Releases: v1.0 The first Kilobyte, v2.0 Go Googol, v3.0 Open
+   Compute, v4.0 DeGoogoled, v5.0 First Reboot. Reached via AppNav → More (`page = 'milestones'`); always
    reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
     Supporter pack (unlock code / dummy checkout), Cloud save (`CloudSaveSection.jsx`, only when
-    `CLOUD_SAVE_ENABLED`: sign-in, upload/download, Delete account and data), Import / export save
+    `CLOUD_SAVE_ENABLED`: sign-in, upload/download, Delete account and data), Backup / Restore
     (`ManualSaveSection.jsx`, always: copy/download/paste/file → `applyCloudSave`), Store
-    (`StoreSection.jsx`, only when IAP is on), multi-slot saves, Prestige museum, Era ascension
-    (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
-    dashboard, Legal (`LegalSection.jsx`: Privacy Policy / Terms links), and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
-    Storage / Compute + upgrades wipe to scratch; Combine / Upgrade Capacity / Upgrade Speed
+    (`StoreSection.jsx`, only when IAP is on), multi-slot saves, System log, Reboot
+    (Reboots/Kernels display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Task
+    Manager, Legal (`LegalSection.jsx`: Privacy Policy / Terms links), and Danger zone — Reset (full save wipe) and **Reformat Byte Foundry** (Capacity /
+    Storage / Compute + upgrades wipe to scratch; Compile / Upgrade Capacity / Upgrade Bitrate
     convenience-auto up to prior highs; smaller Disk sizes re-provision with no provisioning cost (one buffer fill per disk); Factory + Prestige kept). Takes `{ game, onReset,
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
     aside from local form state.
 8. **`DevModePage/index.jsx`** — dev-build-only sandbox, see "Dev Mode". Reached via AppNav → More
-   (`page = 'dev'`), gate-exempt like Settings/Milestones. Takes `{ game }`.
+   (`page = 'dev'`), gate-exempt like Settings/Releases. Takes `{ game }`.
 
 ## Dev Mode
 
@@ -718,20 +671,22 @@ advance the pool through the existing bandwidth steps, non-final reward growth l
 half the following pool's bandwidth. After reset the pool provisions its disks automatically and for
 free, one at a time smallest-first, waiting for each disk to fill; while it rebuilds, later pools cannot
 start new provisioning (already-active work may finish). Whenever all 9/9/9 disks are provisioned
-(including before the first reset) — a status latched per lake (`boosterAuto`) for the whole Era, surviving pool resets, Reset Byte Foundry and Prestige — the lake's Booster control becomes a non-clickable cost label and
+(including before the first reset) — a status latched per lake (`boosterAuto`) for the whole Reboot cycle, surviving pool resets, Reformat Byte Foundry and Prestige — the lake's Booster control becomes a non-clickable cost label and
 the lake automatically buys every affordable Booster until slots fill or the next cost exceeds capacity;
 filling the lake at that wall enables the next reset. Pools never transfer or share resources through
 this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop".
 
-### Tiers, Prestige, Era ascension
+### Tiers, Prestige, Reboot (Era ascension)
 
-**Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Purge, Era ascension,
-Reset Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Purge** (formerly Reboot) and
-PP reads **Purge Points**; the global tickspeed track is **Speed Up** (formerly Latency). The Purge
-rename is player-facing only — code keeps the Reboot-era names: `state.reboot`, `rebootGame`,
-`REBOOT_THRESHOLD`, `autoReboot`, automation keys `'speedUp'`/`'reboot'` — while Prestige-Point,
-Double PP, speed-bonus, `prestigeMuseum` and `metaPrestige` identifiers keep `prestige`. Pre-rename
-save keys are renamed on load by `storage.js`'s `renamePreRebootKeys`.
+**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Compact Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
+
+**Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Purge, Reboot,
+Reformat Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Purge** (formerly the name Reboot, now the Era-ascension layer) and
+PP reads **Purge Points**; the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). The Purge
+rename is carried through the code too (#987): `state.purge`, `purgeGame`,
+`PURGE_THRESHOLD`, `autoPurge`, automation keys `'speedUp'`/`'purge'` — while Prestige-Point,
+Compression, speed-bonus, `prestigeMuseum` and `metaPrestige` identifiers keep `prestige`. Pre-rename
+save keys (`prestige`/`reboot` → `purge`, etc.) are renamed on load by `save-migration/migrateToV3`.
 
 There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
 display names `Kilobytes` through `Quettabytes`. Every tier is bought directly with the base currency
@@ -739,32 +694,32 @@ display names `Kilobytes` through `Quettabytes`. Every tier is bought directly w
 cascading down the ladder; `tier01` (Kilobytes) is the special case where cost is still Bits but
 production is a whole-Byte amount (`BYTES_ID = 'bytes'`, displayed as `B`) credited to Bits at
 `BITS_PER_BYTE` (8) per Byte. **Bytes and Bits are ONE pool** (`resources.base`) — there is no separate
-Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Speed Up** (the global
+Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Clock Speed** (the global
 tickspeed multiplier on MainPage, formerly "Latency"/"Tickspeed"/"Clock Speed"; code: `globalTickspeed*`, automation key `speedUp`) is paid from that Bits balance —
 initial activation costs **10 Bytes (80 Bits)**. It unlocks once level 1 of tier01 is purchased; there
 are no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
-Reaching Money ≥ `REBOOT_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
-since a Byte is 8 Bits) freezes the economy except for Prestige — unless `isUnboundedRebootUnlocked(state)`
-is true (permanent `reboot.unboundedUnlocked` latch; unlocked once Auto-Prestige's interval is upgraded to
-`UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS` (1 s) or less, carried through Era ascension), in which case production
-continues and Prestige is optional (see `isProductionFrozen`). **Era ascension** (`eraGame`) is a separate voluntary meta-prestige at **1 Googol unspent PP**
-(`ERA_ELIGIBILITY_PP`): it awards **Eons** (+1 base, +1 per Eon Amplifier level — shop deferred to #414),
+Reaching Money ≥ `PURGE_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
+since a Byte is 8 Bits) freezes the economy except for Prestige — unless `isOverflowModeUnlocked(state)`
+is true (permanent `purge.unboundedUnlocked` latch; unlocked once Auto-Prestige's interval is upgraded to
+`OVERFLOW_MODE_MAX_INTERVAL_SECONDS` (1 s) or less, carried through Reboot), in which case production
+continues and Prestige is optional (see `isProductionFrozen`). **Reboot** (`eraGame`) is a separate voluntary meta-prestige at **1 Googol unspent PP**
+(`ERA_ELIGIBILITY_PP`): it awards **Kernels** (+1 base, +1 per Kernel Amplifier level — shop deferred to #414),
 increments `era.count`, resets the full Foundry (generator upgrades, Disks, Data Lakes, compute ladder
-entities, Memory/gate) plus the ordinary Factory cycle (`reboot.points`/`count`/`prestigeDoublePpLevel`
+entities, Memory/gate) plus the ordinary Factory cycle (`purge.points`/`count`/`prestigeDoublePpLevel`
 → 0, `computeFlops.owned` → 0, `cumulativeBoost` fresh), while keeping automation unlocks/pause flags
-(except Double PP level), tier/tickspeed autobuyer milestone objects, `reboot.unboundedUnlocked`,
-museum, hyperscalers, Eon upgrade levels, Flops autobuyer unlock flags, and page latches. Era *N*
-free-unlocks the *N*th Flops tier's autobuyer (KFlops at Era 1, …). Hyperscalers (bought with Eons in
+(except Compression level), tier/tickspeed autobuyer milestone objects, `purge.unboundedUnlocked`,
+System log, hyperscalers, Kernel upgrade levels, Flops autobuyer unlock flags, and page latches. Reboot *N*
+free-unlocks the *N*th Flops tier's autobuyer (Cores (KFlops) at Reboot 1, …). Hyperscalers (bought with Kernels in
 #414) add permanent +0.01%/s each to every Factory tier's Flops multiplier via
 `getHyperscalerFlopsBoostRate` — the engine/hook action (`buyHyperscaler`) is wired, but no page renders
 a purchase control yet (deferred to #414, blocked pending maintainer-approved spend design). Full detail:
-`docs/ECONOMY_REFERENCE.md`'s "Era ascension and Eons". Prestige (Purge) Points are awarded by
+`docs/ECONOMY_REFERENCE.md`'s "Reboot and Kernels". Prestige (Purge) Points are awarded by
 `getPrestigePointsAwarded`: 1 base PP at 1 Googol Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64)
-additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Double PP
+additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Compression
 upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then doubles PP-per-power; cost
 `100^(level+1)` PP). `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
-(`getMoneyExponent`/`getRebootProgressPercent`) — only the live freeze/Prestige trigger moved to
-`REBOOT_THRESHOLD`; see `docs/DESIGN_HISTORY.md` for why. MainPage's headline balance (`MoneyHero`) switches from Bits to whole Bytes once the balance reaches
+(`getMoneyExponent`/`getPurgePercent`) — only the live freeze/Prestige trigger moved to
+`PURGE_THRESHOLD`; see `docs/DESIGN_HISTORY.md` for why. MainPage's headline balance (`MoneyHero`) switches from Bits to whole Bytes once the balance reaches
 8000 Bits (`formatMoneyBalance`, `MONEY_BYTES_DISPLAY_THRESHOLD`) — every other `formatCurrency` call
 (costs, production, the Prestige-threshold overlay) keeps reading in Bits.
 
@@ -772,17 +727,17 @@ upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then do
 
 Bytes are produced entirely by the **Byte Foundry** (`ByteFoundryPage`), a tap-to-earn screen every fresh
 save passes through once before the main game — a ONE-TIME-EVER gate (`latchMainGameUnlocked`/
-`intro.mainGameUnlocked`) gone permanently across every Prestige and Era ascension once Storage's
-capacity threshold is reached. Tapping fills the **Data Stream** (Buffer-capped) which Combine turns into
-a permanent Byte generator; **Upgrade Capacity** / **Upgrade Speed** grow it one at a time
+`intro.mainGameUnlocked`) gone permanently across every Prestige and Reboot once Storage's
+capacity threshold is reached. Pinging fills the **Data Stream** (Buffer-capped) which Compile turns into
+a permanent Byte generator; **Upgrade Capacity** / **Upgrade Bitrate** grow it one at a time
 (`queueIntroSpeedUpgrade`, `tickCapacityUpgradeDrain`; sit OUTSIDE the forced priority order). Displayed
 Speed is derived (`getDataStreamSpeedBytesPerSecond`, exponent `getDataStreamSpeedExponent`); extra Disk
-sizes need a Foundry reset (`unlockNextDiskSizeByFoundryReset`). Era ascension keeps the generator and
+sizes need a Reformat (`unlockNextDiskSizeByFoundryReset`). Reboot keeps the generator and
 gate latch but resets Capacity (`buildEraIntroReset`). Recurring actions follow a **forced priority
 order** Disk Fill > Provision Disk > Compute Boost (a lower one is disabled, in UI and engine, while a
 higher one is available; Provision Disk outranks Compute only while ARMED — `isProvisionDiskInProgress`). An always-on auto-convert (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`)
 turns Data Stream bits into free `tier01` units. Generator, Disks, Data Lakes, and every compute-ladder
-entity (Core → … → Megacomputer) are PERMANENT across real Prestige; only Data Stream balance and
+entity (Cell → … → Fusion) are PERMANENT across real Prestige; only Data Stream balance and
 tier01's purchase-block progress reset per cycle. Nothing here ever fully freezes.
 
 **Hard rules (full text and the rest of the Foundry mechanics: `docs/FOUNDRY_MECHANICS_REFERENCE.md`):**
@@ -790,7 +745,7 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
   change; a fill-dependent multiplier (1000% empty → 100% at 50% → 10% full (log-linear)) scales only the
   real per-tick amount delivered (`getFillCurveDelta` integrates the curve so a 1s offline tick matches live 0.1s ticks).
   **Tap bonuses never scale a fill** (the curve already reaches 10×); they speed CONSUMERS ×(1 + bonus%),
-  decaying 1%/s: Data Stream tap → Upgrade Capacity/Speed drains (`getDataStreamTapMultiplier`); pool tap →
+  decaying 1%/s: Data Stream ping → Upgrade Capacity/Bitrate drains (`getDataStreamTapMultiplier`); pool ping →
   Provision Disk draw, read-cache flush, write-cache merges, lower-size rebuild, Data Lake drain (`getPoolTapMultiplier`).
 - **Standing rule — `intro.capacity` keeps doubling plainly in binary** (IEC `KiB`/`MiB`, step 1024);
   non-binary (SI-clean/decade-power) transforms are for storage-pool-scoped values only
@@ -803,6 +758,10 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
 - **Disks** (`provisionDisk`, `tickDiskAutoFill`, `tickDiskPull`, `tickDiskLevelOneCachePull`): ladder
   advances every `DISK_ARRAY_LADDER_CAP` (9) disks; Factory is funded **pull-based** from full disks,
   fully automatic (no click, no autobuyer gate). Disks/caches/builds are PERMANENT across Prestige.
+  Every size above its pool's smallest fills via its write cache FROM THE POOL BUFFER by default (pool fill
+  order: read cache, then write caches smallest size first); clicking an empty disk expedites it
+  (`expediteDiskFill`) — it jumps ahead of the other write caches for the pool buffer, consumes the smaller full
+  disks of its pool it needs in parallel alongside that buffer, and flushes at 5× (`docs/ECONOMY_REFERENCE.md`).
   Stranded disks are never destroyed or swept into Bits; merges never cross a pool boundary.
 - **Data Lakes** (`intro.dataLakes`): Booster control is "one click, one full fill-then-buy conversion,
   then stop" until the pool's era-long `boosterAuto` latch is set (then it auto-buys); `buyBooster` spends only banked lake units, outside the
@@ -811,18 +770,18 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
   (`formatDiskSizeInPoolUnit`); buffer BALANCE self-sizes (`formatPoolBalance`).
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
-loop, auto-convert conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
-Cores/Nodes/Boost, every forced-priority-order predicate, cost/production formulas, the (configurable,
+loop, auto-convert conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Power
+Cells/Batteries/Boost, every forced-priority-order predicate, cost/production formulas, the (configurable,
 growing) purchase block size and level system, Prestige Points and every PP-funded automation, the
 per-tier and global tickspeed multipliers, the last tier's XP-funded tickspeed, Scale Up, Overclock,
 Reset, the complete game state shape, and the engine function/constants tables — lives in
-`docs/ECONOMY_REFERENCE.md`. Read it (and `docs/FOUNDRY_MECHANICS_REFERENCE.md` for Foundry/Storage/Lake/Boosters) before touching `src/game/engine.js`, `src/game/layers.js`,
+`docs/ECONOMY_REFERENCE.md`. Read it (and `docs/FOUNDRY_MECHANICS_REFERENCE.md` for Foundry/Storage/Lake/Power) before touching `src/game/engine.js`, `src/game/layers.js`,
 `TIER_DEFINITIONS`, `ByteFoundryPage`/`StoragePage`/`ComputePage`, or any economy/prestige/tickspeed
 constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about to change a
 formula/gate a past iteration may already have tried and rejected (e.g. the `<=` vs. `===`
 bank-redeemability check, the flat vs. dynamic transfer cost).
 
-**Buy max mode** (unlocked after the first Prestige, `isBuyMaxUnlocked`; toggled on Perks → Prestige) — a per-device toggle
+**Buy max mode** (unlocked after the first Prestige, `isBuyMaxUnlocked`; toggled on Firmware → Prestige) — a per-device toggle
 (`tens_buy_max_mode`, not game state) making each manual leveled purchase buy every affordable level:
 `buyTierMaxLevels` for Factory tiers (FULL levels only; partial progress or an unaffordable full level
 falls back to the ordinary single-level click) and `repeatPurchaseMax` for single-level ladders.
@@ -836,8 +795,7 @@ from the re-reveal mechanic: after a reset, a tier already unlocked by a previou
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
 Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
 completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`,
-not a fixed 5/8/11/14 ladder (Speed Up's Overclock-scaled 1% step is under "Tiers, Prestige, Era
-ascension" above).
+not a fixed 5/8/11/14 ladder (Clock Speed's Overclock-scaled 1% step is under "Tiers, Prestige, Reboot" above).
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill
@@ -850,7 +808,7 @@ new file per run** onto the stable orphan branch `ideal-run-strategy` via
 `publish-strategy.sh` (`runs/<UTC-stamp>-<sha>.md` + `README.md` index) — never merge that branch
 into `main`, and do not rename it with an agent/session suffix.
 
-**Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Speed Up/Overclock
+**Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Clock Speed/Overclock
 heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
 **No link styling:** it's a game — never underline (solid, dotted or on hover) just because something is
 clickable; use `cursor: pointer` and a `:focus-visible` outline instead.
@@ -980,8 +938,8 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `resources.bytes`, `intro.mainGameUnlocked`, tier ids `tier01`–`tier10`);
   `save-migration/adaptSaveForCurrentSchema` runs on every load; `storage.js`'s `mergeState` only fills
   in missing fields from `createInitialGameState()`. Legacy payloads with no migration step yet are
-  discarded and surfaced via `IncompatibleSaveNotice`. Current saves stamp `saveSchemaVersion: 2` on
-  every write (v1 saves forward-fill via `mergeState`). `src/theme/contrast.js` (a standalone WCAG
+  discarded and surfaced via `IncompatibleSaveNotice`. Current saves stamp `saveSchemaVersion: 3` on
+  every write (v1/v2 saves run `migrateToV3` then forward-fill via `mergeState`). `src/theme/contrast.js` (a standalone WCAG
   contrast-ratio utility) plus `contrast.test.js` and `tokens.contrast.test.js` add two more files — the
   latter audits the design tokens' plain (unblended) text/UI-component color pairs for AA compliance in
   both themes, see `docs/THEMING_REFERENCE.md`. `engine.computeFlops.test.js` covers the PP Compute
@@ -1017,8 +975,8 @@ base path.
   `intro: { mainGameUnlocked: true }`, needed by every spec that seeds state to land directly on MainPage
   rather than the Byte Foundry intro screen.
 - Current specs (see "Repo layout" `e2e/` for one-line descriptions): `golden-path`, `autobuyer-reload`,
-  `reboot` (seeding Money ≥ `REBOOT_THRESHOLD`; first-time `FullScreenOverlay`), `meta-prestige`
-  (seed at 1 Googol PP → Settings Era ascension → assert `era.count`, Eons award, and the permanent
+  `purge` (seeding Money ≥ `PURGE_THRESHOLD`; first-time `FullScreenOverlay`), `reboot`
+  (seed at 1 Googol PP → Settings Reboot → assert `era.count`, Kernels award, and the permanent
   `intro.mainGameUnlocked` latch carrying forward), `data-lake`, and `visual-regression` (Linux-only
   full-page screenshot baselines of Byte Foundry/Byte Factory in both themes; see `e2e/README.md`).
 - **Not wired into `ci.yml`** — deliberately. Wiring it in (installing Playwright's browser on the
