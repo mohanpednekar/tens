@@ -11104,6 +11104,18 @@ describe('Data Lakes', () => {
       expect(startDataLakeAutoConvert(1)(legacyLatchPoolNotReady)).toBe(legacyLatchPoolNotReady)
     })
 
+    it('startDataLakeAutoConvert still buys an already-affordable Cell under the legacy latch with no built disk (#1002)', () => {
+      // The panel shows an enabled Buy button here (isBoosterPurchaseAvailable), so the click must work:
+      // an immediate buy only spends banked units and never arms the conversion that gate guards.
+      const legacyFunded = withLake(createInitialGameState(), 1, { depositedUnits: 1, boostersUnlocked: true })
+      expect(isDataLakePoolReady(legacyFunded, 1)).toBe(false)
+      expect(isBoosterPurchaseAvailable(legacyFunded, 1)).toBe(true)
+      const after = startDataLakeAutoConvert(1)(legacyFunded)
+      expect(after.intro.dataLakes[1].purchased).toBe(1)
+      expect(after.intro.computeCores).toBe(1)
+      expect(isDataLakeAutoConvertActive(after, 1)).toBe(false)
+    })
+
     it('tickDataLakeAutoConvert fills from the pool buffer, then buys exactly 1 and stops — never a bulk/repeating buy', () => {
       let state = withIntro(withPoolBuffer(createInitialGameState(), kb1), {
         disksBuiltTotal: { [kb1]: 1 },
