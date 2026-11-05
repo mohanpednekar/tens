@@ -317,6 +317,9 @@ branch.
 - `.claude/skills/economy-change-review/SKILL.md` — a narrow, mechanical spec-vs-implementation
   cross-check for diffs touching `TIER_DEFINITIONS`/economy constants in `src/game/layers.js`; the
   code-reviewer agent invokes its checklist as a required step on economy-touching diffs.
+- `.claude/agents/{designer,programmer,qa}.md` + `.claude/skills/dev-team/SKILL.md` — a producer loop
+  (designer spec → programmer → qa → code-reviewer) for one task at a time; it opens a PR and follows
+  the normal PR rules, never merging itself.
 
 Verification effort scales with how public a PR is — minimal testing before one exists, one full
 check at draft creation, multiple adversarial-review rounds once ready, then a 10-minute
