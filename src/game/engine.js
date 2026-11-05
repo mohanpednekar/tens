@@ -5631,9 +5631,16 @@ export const resetStoragePool = tierIndex => state => {
 // buffer (the same source a manual 💧 Fill click always used) until enough is banked, buys exactly
 // 1, then clears the flag — a single conversion per click, never a standing auto-buy loop. Same-
 // reference no-op below isDataLakeAutoConvertStartAvailable's own gate.
+// An already-affordable purchase buys immediately even without isDataLakePoolReady (a legacy
+// `boostersUnlocked` latch with no built disk, #1002): buying only spends banked units and arms
+// nothing, so the stuck-conversion hazard that gate guards against can't arise — the panel shows
+// an enabled Buy button in exactly that state, which must not be a dead click.
 export const startDataLakeAutoConvert = tierIndex => state => {
+  const lake = getDataLakeTier(state, tierIndex)
+  if (lake && !lake.autoConvertActive && !lake.boosterAuto && isBoosterPurchaseAvailable(state, tierIndex)) {
+    return buyBooster(tierIndex, 1)(state)
+  }
   if (!isDataLakeAutoConvertStartAvailable(state, tierIndex)) return state
-  if (isBoosterPurchaseAvailable(state, tierIndex)) return buyBooster(tierIndex, 1)(state)
   return setDataLakeAutoConvertActive(tierIndex, true)(state)
 }
 
