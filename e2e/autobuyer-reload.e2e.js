@@ -7,7 +7,7 @@ const seededState = {
   owned: { tier01: 50 },
   purchased: { tier01: 50 },
   autobuyers: { tier01: 1 },
-  reboot: { points: 50, count: 1, xp: 0, highestMilestone: 1 },
+  purge: { points: 50, count: 1, xp: 0, highestMilestone: 1 },
 }
 
 test.beforeEach(async ({ page }) => {
@@ -22,10 +22,14 @@ test.beforeEach(async ({ page }) => {
 test('an already-unlocked tier autobuyer stays unlocked after a reload', async ({ page }) => {
   // Owned/purchased ("level") counts round-tripped through the save/load cycle correctly.
   const kilobytesLayer = page.getByLabel(/^kilobytes layer$/i)
-  await expect(kilobytesLayer).toContainText(/owned: 50\b/i)
-  await expect(page.getByRole('button', { name: /level 50\)/i })).toBeVisible()
+  // The seeded 50 owned survived the load, and the autobuyer kept buying afterwards (it, not
+  // production, is what raises Owned here), so poll for Owned climbing past the seeded 50.
+  await expect(kilobytesLayer).toContainText(/owned: ([5-9]\d|\d{3,})\b/i)
+  const readOwned = async () => Number((((await kilobytesLayer.textContent()) ?? '').match(/owned: ([\d,]+)/i)?.[1] ?? '0').replace(/,/g, ''))
+  await expect.poll(readOwned, { timeout: 10000 }).toBeGreaterThan(50)
+  await expect(kilobytesLayer.getByRole('button', { name: /^buy .*for .*completed levels/i })).toBeVisible()
 
-  await page.getByRole('button', { name: /^open perks$/i }).click()
+  await page.getByRole('button', { name: /^open firmware$/i }).click()
 
   const row = page.locator('[aria-label="Kilobytes autobuyer"]')
   await expect(row).toBeVisible()

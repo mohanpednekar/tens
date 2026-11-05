@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, REBOOT_THRESHOLD, UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -22,8 +22,8 @@ const TICK_ACCUMULATION_EPSILON = 1e-9
 // ticksElapsed * tickSpeed` collapses to `Infinity * 0 = NaN`, permanently corrupting that tier's
 // production accumulator (and, via clampNonNegative treating NaN as "not finite", silently
 // zeroing the produced tier's owned/resources every tick from then on — not a one-off glitch,
-// since the NaN accumulator never recovers on its own). lastTierXpConsumed/reboot.xp reset to 0
-// on every Prestige/Scale Up (see rebootGame/scaleUpGame), which makes this overflow far less
+// since the NaN accumulator never recovers on its own). lastTierXpConsumed/purge.xp reset to 0
+// on every Prestige/Scale Up (see purgeGame/scaleUpGame), which makes this overflow far less
 // reachable in practice than when this guard was first added, but this floor is kept regardless as
 // defense in depth — a single long enough run before the next reset could still in principle drive
 // it there. Clamping the period to this floor instead keeps ticksElapsed a large-but-finite
@@ -162,11 +162,11 @@ export const createInitialGameState = () => ({
     [tier.id]: 0,
   }), {}),
   // Permanent interval-upgrade levels for the global automations (speedUp/scaleUp/restage/overclock/
-  // reboot — see AUTOMATION_INTERVAL_CONFIG) and per-tier tickspeed autobuyers; never reset by prestige.
-  automationIntervalLevels: { speedUp: 0, scaleUp: 0, restage: 0, overclock: 0, reboot: 0 },
+  // purge — see AUTOMATION_INTERVAL_CONFIG) and per-tier tickspeed autobuyers; never reset by prestige.
+  automationIntervalLevels: { speedUp: 0, scaleUp: 0, restage: 0, overclock: 0, purge: 0 },
   tierTickspeedIntervalLevels: TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: 0 }), {}),
   // Run-scoped attempt budgets for those automations (accrue elapsed / interval; fire at >= 1).
-  // Prestige keeps its own autoRebootAttemptBudget.
+  // Prestige keeps its own autoPurgeAttemptBudget.
   automationAttemptBudgets: { speedUp: 0, scaleUp: 0, restage: 0, overclock: 0 },
   tierTickspeedAttemptBudgets: TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: 0 }), {}),
   // Permanent: Auto Overclock unlocked (PP, getAutomationUnlockCost('overclock'); needs Auto Scale Up AND Auto Restage) and its pause preference.
@@ -202,17 +202,17 @@ export const createInitialGameState = () => ({
   }), {}),
   // Permanent global level (not per-tier — there's only one to buy), null = not yet bought: how
   // many times Prestige Points have been spent to make Prestige itself automatic and faster (see
-  // buyAutoReboot/getAutoRebootAttemptRate) — never reset by prestige.
-  autoReboot: null,
-  // Permanent GLOBAL flag, default true: whether Auto-Prestige (once bought — see autoReboot
+  // buyAutoPurge/getAutoPurgeAttemptRate) — never reset by prestige.
+  autoPurge: null,
+  // Permanent GLOBAL flag, default true: whether Auto-Prestige (once bought — see autoPurge
   // above) currently acts, independent of whether it's been bought at all. Split "unlocked" (the
-  // autoReboot level above, permanent, unaffected) from "enabled" (this field, also permanent —
+  // autoPurge level above, permanent, unaffected) from "enabled" (this field, also permanent —
   // pausing is a standing preference, not run-scoped state) so a player can temporarily stop
   // Auto-Prestige from firing without losing the level/PP already invested — see
-  // setAutoRebootEnabled/tickGame. Meaningless while autoReboot is null; toggling it then is a
-  // no-op (see setAutoRebootEnabled).
-  autoRebootEnabled: true,
-  // Run-scoped global level (not per-tier — there's only one to buy, mirroring autoReboot
+  // setAutoPurgeEnabled/tickGame. Meaningless while autoPurge is null; toggling it then is a
+  // no-op (see setAutoPurgeEnabled).
+  autoPurgeEnabled: true,
+  // Run-scoped global level (not per-tier — there's only one to buy, mirroring autoPurge
   // above), null = not yet bought: how many times Money has been spent on the global tickspeed
   // multiplier (unlocked once at least 1 of the second tier is owned — see
   // isGlobalTickspeedMultiplierUnlocked), which speeds up *every* tier's delivery frequency by
@@ -222,14 +222,14 @@ export const createInitialGameState = () => ({
   // tickspeedLevels, since it's funded from the same Money balance both wipe.
   globalTickspeedMultiplier: null,
   // Fractional Auto-Prestige attempt budget, accumulated every tick (frozen or not) by
-  // getAutoRebootAttemptRate(autoReboot) once bought — see tickGame. Unlike the per-tier
+  // getAutoPurgeAttemptRate(autoPurge) once bought — see tickGame. Unlike the per-tier
   // autobuyerAttemptBudgets, this is a single global counter; resets to 0 on every prestige
   // (manual or automatic) same as they do.
-  autoRebootAttemptBudget: 0,
+  autoPurgeAttemptBudget: 0,
   // Permanent global flag, false = not yet bought: whether the passive +1%-per-unspent-point
   // production speed bonus (getPrestigeProductionMultiplier) is active at all — see
   // buyPrestigeSpeedBonus. Never reset by prestige, like
-  // autoReboot above.
+  // autoPurge above.
   prestigeSpeedBonusUnlocked: false,
   // Permanent count of Double PP upgrades bought (see buyPrestigeDoublePp) — never reset by
   // Prestige or Scale Up. Each level halves powers-per-PP until 1, then doubles PP-per-power.
@@ -237,7 +237,7 @@ export const createInitialGameState = () => ({
   // RUN-SCOPED total of how many times Scale Up has been triggered (see scaleUpGame); the per-tier
   // counts below, rather than this display/history total, drive production. Never reset by Scale Up
   // itself (it's the thing being incremented), but IS reset to 0 by a real Prestige (see
-  // rebootGame) — unlike the automation toggles/levels around it (autoReboot/
+  // purgeGame) — unlike the automation toggles/levels around it (autoPurge/
   // prestigeSpeedBonusUnlocked/autoScaleUp), the Scale Up multiplier itself doesn't survive a real
   // Prestige and has to be rebuilt from scratch each Prestige cycle.
   scaleUpCount: 0,
@@ -285,7 +285,7 @@ export const createInitialGameState = () => ({
   // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
   // make eligible Scale Ups trigger automatically (see buyAutoScaleUp/tickGame), including the
   // final tier. Its 3/6/9 cadence leaves Overclock reachable at level 5. Never reset by prestige or by Scale Up itself, like
-  // autoReboot/prestigeSpeedBonusUnlocked above.
+  // autoPurge/prestigeSpeedBonusUnlocked above.
   autoScaleUp: false,
   // Permanent GLOBAL flag, false = not yet bought: whether the Auto Restage
   // (XP_TICKSPEED_AUTOBUYER_UNLOCK_COST PP — see buyXpTickspeedAutobuyer/tickGame) is owned.
@@ -299,8 +299,8 @@ export const createInitialGameState = () => ({
   // autoScaleUp above. Preferred preset lives on intro.computeAutoBoostType (default 'standard').
   computeAutoBoostUnlocked: false,
   // Permanent GLOBAL flag, default true: whether Auto Scale Up (once bought — see autoScaleUp
-  // above) currently acts — split from "unlocked" the same way autoRebootEnabled splits from
-  // autoReboot (see its own comment above). Never reset by prestige or Scale Up. Meaningless
+  // above) currently acts — split from "unlocked" the same way autoPurgeEnabled splits from
+  // autoPurge (see its own comment above). Never reset by prestige or Scale Up. Meaningless
   // (and a no-op to toggle, see setAutoScaleUpEnabled) while autoScaleUp is false.
   autoScaleUpEnabled: true,
   // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
@@ -310,14 +310,14 @@ export const createInitialGameState = () => ({
   autoGlobalTickspeed: false,
   // Permanent GLOBAL flag, default true: whether the global Tickspeed Autobuyer (once bought —
   // see autoGlobalTickspeed above) currently acts — split from "unlocked" the same way
-  // autoRebootEnabled/autoScaleUpEnabled split from their own parent flags above. Never reset by
+  // autoPurgeEnabled/autoScaleUpEnabled split from their own parent flags above. Never reset by
   // prestige or Scale Up. Meaningless (and a no-op to toggle, see
   // setAutoGlobalTickspeedEnabled) while autoGlobalTickspeed is false.
   autoGlobalTickspeedEnabled: true,
   // Run-scoped cumulative total of XP ever spent via consumeXpForLastTierTickspeed — each XP spent
   // compounds another 1% into the last tier's own delivery frequency (see
   // getLastTierXpTickspeedMultiplier), so this counter alone drives that bonus. Reset to 0 by both
-  // rebootGame and scaleUpGame (same as reboot.xp, the currency that funds it) — never reset by
+  // purgeGame and scaleUpGame (same as purge.xp, the currency that funds it) — never reset by
   // consumeXpForLastTierTickspeed itself, though (it only ever grows within a run).
   lastTierXpConsumed: 0,
   // Run-scoped record of tiers earned through successful Scale Up claims. A recorded tier
@@ -328,22 +328,22 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: index === 0,
   }), {}),
-  reboot: {
+  purge: {
     xp: 0,
-    // Spendable Prestige Point balance — earned via rebootGame (see getPrestigePointsAwarded),
+    // Spendable Prestige Point balance — earned via purgeGame (see getPrestigePointsAwarded),
     // spent via buyPrestigeSpeedBonus/etc. (tier autobuyer unlock itself no
     // longer spends PP — see applyAutobuyerMilestones). Unspent points also drive
     // production speed (see getPrestigeProductionMultiplier), but only once
     // prestigeSpeedBonusUnlocked is true.
     points: 0,
-    // Number of times ever rebooted — drives only the first-run-vs-repeat UI presentation
+    // Number of times ever purged — drives only the first-run-vs-repeat UI presentation
     // (MainPage), not production or cost. Renamed from the old `level` field now that prestige
     // grants points instead of directly doubling production.
     count: 0,
     highestMilestone: Math.floor(Math.log10(MONEY_STARTING_AMOUNT)),
-    // Permanent latch: once true (first prestige/Era while Auto-Prestige interval ≤ UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS, or carried
-    // through Era ascension), production never freezes at REBOOT_THRESHOLD again — see
-    // isUnboundedRebootUnlocked. Full save Reset only.
+    // Permanent latch: once true (first prestige/Era while Auto-Prestige interval ≤ OVERFLOW_MODE_MAX_INTERVAL_SECONDS, or carried
+    // through Era ascension), production never freezes at PURGE_THRESHOLD again — see
+    // isOverflowModeUnlocked. Full save Reset only.
     unboundedUnlocked: false,
   },
   // Era ascension count — meta layer above Prestige (#407). Never reset except full save Reset.
@@ -367,7 +367,7 @@ export const createInitialGameState = () => ({
   computeFlopsAutobuyersEnabled: COMPUTE_FLOPS_TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: true }), {}),
   computeFlopsAutobuyerAttemptBudgets: COMPUTE_FLOPS_TIER_DEFINITIONS.reduce((acc, tier) => ({ ...acc, [tier.id]: 0 }), {}),
   // Prestige museum — permanent per save slot. Every real Prestige appends one history entry
-  // (see rebootGame); players may pin a subset for the Supporter museum UI. Meta QoL only —
+  // (see purgeGame); players may pin a subset for the Supporter museum UI. Meta QoL only —
   // never affects production, costs, or unlocks.
   prestigeMuseum: {
     history: [],
@@ -386,7 +386,7 @@ export const createInitialGameState = () => ({
   // Field naming ('intro') is deliberately decoupled from the page's own themed name ("Byte
   // Foundry"), same id/name decoupling convention TIER_DEFINITIONS' own `id` vs `name` uses.
   //
-  // Three distinct groups, per rebootGame (see there): Data Stream balance (bits/
+  // Three distinct groups, per purgeGame (see there): Data Stream balance (bits/
   // productionAccumulator) resets to fresh every real Prestige — a new cycle always starts this
   // screen's balance from 0. mainGameUnlocked itself, despite living in this same object, is a
   // PERMANENT one-time-ever latch (see latchMainGameUnlocked below) — once ever set true by
@@ -419,7 +419,7 @@ export const createInitialGameState = () => ({
     // pool buffer at the pool's BASE Bandwidth × tap bonus, never the fill multiplier. Wiped with the rest of the Foundry.
     lowerRebuild: null,
     // PERMANENT — a one-time-ever latch, never reset by a real Prestige or an Era ascension (see
-    // rebootGame/buildEraIntroReset). True the instant Storage's own capacity threshold is
+    // purgeGame/buildEraIntroReset). True the instant Storage's own capacity threshold is
     // crossed (isStorageUnlocked — the same "1 KiB" threshold that reveals pool 1's card and
     // switches the Data Stream tap into fill-multiplier-bonus mode — see latchMainGameUnlocked);
     // drives App.jsx's page-routing gate away from this screen and into MainPage. Once true, the
@@ -466,18 +466,14 @@ export const createInitialGameState = () => ({
     // totalSeconds } }. Empty at rest. Duration at start is one cache block at the current Byte
     // Foundry production rate (see getDiskReadCacheFlushSeconds). Rides through a real Prestige
     // untouched, same as diskWriteCache below and disks/disksBuiltTotal above — "Prestige shall
-    // not affect Byte Foundry in any way" (see rebootGame, docs/DESIGN_HISTORY.md).
+    // not affect Byte Foundry in any way" (see purgeGame, docs/DESIGN_HISTORY.md).
     diskReadCacheFlush: {},
-    // PERMANENT — in-flight upward merges (write cache): { [targetSizeBits]: { sourceSize,
-    // segmentsCollected, segmentRemainingSeconds, segmentTotalSeconds, flushRemainingSeconds,
-    // flushTotalSeconds } }. Empty at rest; collect (10 segments from source) then flush (solid
-    // drain) into one target disk. Rides through a real Prestige untouched (see rebootGame) —
-    // a merge paused because its source has an active tier claim can otherwise sit paused for a
-    // while, so resetting it on Prestige would silently lose the already-consumed source disks.
-    // Stranded status never pauses a merge (source's or target's — see canStartDiskWriteCacheMerge),
-    // so it's no longer the reason a merge might need this permanence, but the field stays
-    // Prestige-permanent regardless: real progress toward a real, permanent disk should never be
-    // discarded just because Prestige happened to fire mid-collection.
+    // PERMANENT — in-flight write caches (every size above its pool's smallest): { [targetSizeBits]:
+    // { sourceSize, collectedBits, segmentsCollected (derived), transfers: [{ size, remainingSeconds,
+    // totalSeconds }], flushRemainingSeconds, flushTotalSeconds, expedite } }. Empty at rest;
+    // collect (from the pool buffer, plus smaller disks when expedited) then flush (solid drain) into
+    // one target disk — see tickDiskWriteCache. Rides through a real Prestige untouched (see purgeGame):
+    // real banked progress toward a real, permanent disk is never discarded mid-collection.
     diskWriteCache: {},
     // PERMANENT — null whenever no array is mid-build. provisionDisk itself never populates this
     // any more (see its own comment below): a disk completes the instant its final pass lands, with
@@ -531,7 +527,7 @@ export const createInitialGameState = () => ({
     poolResetRebuildingCount: 0,
     poolResetCount: 0,
     // PERMANENT — like the Byte generator/Disks above, carried over every real Prestige
-    // (see rebootGame). Granted by buyBooster (tier 1) below — spending that lake's own banked
+    // (see purgeGame). Granted by buyBooster (tier 1) below — spending that lake's own banked
     // units — and spent 1 at a time by activateComputeBoost — see the "Byte Foundry Compute Boost"
     // section of layers.js.
     computeCores: 0,
@@ -757,7 +753,7 @@ export const getCostEpochExponent = epoch => {
 // constant, so it can grow over the course of a run instead of staying fixed forever. Starts at
 // DEFAULT_PURCHASE_BLOCK_SIZE and grows by PURCHASE_BLOCK_SIZE_GROWTH_STEP every
 // PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS the LAST tier completes — the same "flagship" tier
-// getScaleUpRequirement/isLastTierTickspeedXpUnlocked/rebootCardEverRevealed already key off.
+// getScaleUpRequirement/isLastTierTickspeedXpUnlocked/purgeCardEverRevealed already key off.
 // Tying growth to the last tier specifically (rather than any other tier, or a global total) means
 // a later increase never retroactively changes an already-unlocked tier's own unlock threshold:
 // every earlier tier must already be unlocked (and hence latched via everUnlockedTierIds) by the
@@ -863,7 +859,7 @@ export const getAutobuyerUnlockCost = tierId => {
   return AUTOBUYER_UNLOCK_BASE_COST * (tierIndex + 1)
 }
 
-// Number of reboots required before a tier's unit-buying autobuyer unlocks automatically (see
+// Number of purges required before a tier's unit-buying autobuyer unlocks automatically (see
 // applyAutobuyerMilestones) — no PP cost at all: tier01 unlocks after the 1st prestige, tier02
 // after the 2nd, … tier10 after the 10th.
 export const getAutobuyerUnlockMilestone = tierId => {
@@ -871,7 +867,7 @@ export const getAutobuyerUnlockMilestone = tierId => {
   return AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP
 }
 
-// Number of reboots required before a tier's own tickspeed autobuyer unlocks automatically (see
+// Number of purges required before a tier's own tickspeed autobuyer unlocks automatically (see
 // applyAutobuyerMilestones) — starts at TIER_TICKSPEED_AUTOBUYER_MILESTONE_START (prestige 11 for
 // tier01) and adds TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP (1) per tier after that, up through
 // prestige 20 for tier10. Also no PP cost.
@@ -881,13 +877,13 @@ export const getTierTickspeedAutobuyerMilestone = tierId => {
 }
 
 // Auto-unlocks every tier's autobuyer/tier-tickspeed-autobuyer whose milestone (see
-// getAutobuyerUnlockMilestone/getTierTickspeedAutobuyerMilestone) is met by state.reboot.count —
-// called from rebootGame right after count is incremented. Never revokes an
+// getAutobuyerUnlockMilestone/getTierTickspeedAutobuyerMilestone) is met by state.purge.count —
+// called from purgeGame right after count is incremented. Never revokes an
 // already-unlocked tier and returns the same state reference if nothing newly qualifies, matching
 // every other engine function's no-op convention — safe to call as often as needed since
-// reboot.count only ever grows.
+// purge.count only ever grows.
 export const applyAutobuyerMilestones = state => {
-  const count = clampNonNegative(state.reboot?.count ?? 0)
+  const count = clampNonNegative(state.purge?.count ?? 0)
   let changed = false
   const nextAutobuyers = { ...state.autobuyers }
   const nextTierTickspeedAutobuyer = { ...state.tierTickspeedAutobuyer }
@@ -955,8 +951,8 @@ export const getGlobalTickspeedProductionMultiplier = (level, overclockCount = 0
 // the final tier is not enough. With TIER_DEFINITIONS.length tiers this is exactly the run's
 // TIER_DEFINITIONS.length-th (10th) Scale Up (scaleUpCount >= 10) — the intended "first Restage
 // after 10 Scale Ups" rule (maintainer-confirmed). Deliberately live, not a permanent latch: Overclock/Prestige reset
-// scaleUpTierCounts back to 0 (and also reset lastTierXpConsumed/reboot.xp to 0 — see
-// overclockGame/rebootGame), hiding the upgrade again — re-Scaling-Up to the final tier re-engages it, from the fresh (0)
+// scaleUpTierCounts back to 0 (and also reset lastTierXpConsumed/purge.xp to 0 — see
+// overclockGame/purgeGame), hiding the upgrade again — re-Scaling-Up to the final tier re-engages it, from the fresh (0)
 // lastTierXpConsumed baseline a Prestige/Overclock left behind.
 export const isLastTierTickspeedXpUnlocked = state => (state.scaleUpTierCounts?.[getLastTierId()] ?? 0) >= 1
 
@@ -983,7 +979,7 @@ export const getLastTierXpTickspeedMinConsumption = xpConsumed => Math.max(
 // is a pure formula, not a gate — callers must check state.prestigeSpeedBonusUnlocked themselves
 // (see buyPrestigeSpeedBonus/tickGame) before applying it, since the bonus is inert until that
 // one-time PP cost is paid; before then, every caller uses a flat ×1 instead of calling this at
-// all. Spending points (see buyAutoReboot/etc.) reduces the points available
+// all. Spending points (see buyAutoPurge/etc.) reduces the points available
 // to this formula in exchange for permanent automation.
 export const getPrestigeProductionMultiplier = points =>
   1 + PRESTIGE_POINT_SPEED_BONUS * clampNonNegative(points)
@@ -991,16 +987,16 @@ export const getPrestigeProductionMultiplier = points =>
 // One-time PP cost to unlock getPrestigeProductionMultiplier's passive bonus (see
 // PRESTIGE_SPEED_BONUS_UNLOCK_COST) — a no-op if already unlocked, if there aren't enough unspent
 // points, or while production is frozen. Permanent once bought, like
-// autoReboot.
+// autoPurge.
 export const buyPrestigeSpeedBonus = state => {
   if (isProductionFrozen(state)) return state
   if (state.prestigeSpeedBonusUnlocked) return state
-  if (clampNonNegative(state.reboot.points) < PRESTIGE_SPEED_BONUS_UNLOCK_COST) return state
+  if (clampNonNegative(state.purge.points) < PRESTIGE_SPEED_BONUS_UNLOCK_COST) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
   return {
     ...latched,
-    reboot: { ...latched.reboot, points: latched.reboot.points - PRESTIGE_SPEED_BONUS_UNLOCK_COST },
+    purge: { ...latched.purge, points: latched.purge.points - PRESTIGE_SPEED_BONUS_UNLOCK_COST },
     prestigeSpeedBonusUnlocked: true,
   }
 }
@@ -1009,11 +1005,11 @@ export const buyPrestigeSpeedBonus = state => {
 
 export const isComputeFlopsPageRevealed = state =>
   Boolean(state.computeFlops?.pageUnlocked)
-  || clampNonNegative(state.reboot?.points ?? 0) >= COMPUTE_FLOPS_REVEAL_PP
+  || clampNonNegative(state.purge?.points ?? 0) >= COMPUTE_FLOPS_REVEAL_PP
 
 export const latchComputeFlopsPageUnlocked = state => {
   if (state.computeFlops?.pageUnlocked) return state
-  if (clampNonNegative(state.reboot?.points ?? 0) < COMPUTE_FLOPS_REVEAL_PP) return state
+  if (clampNonNegative(state.purge?.points ?? 0) < COMPUTE_FLOPS_REVEAL_PP) return state
   return {
     ...state,
     computeFlops: { ...state.computeFlops, pageUnlocked: true },
@@ -1024,7 +1020,7 @@ export const getComputeFlopsAffordableAndCost = (state, flopId, maxQuantity) => 
   const flopTier = COMPUTE_FLOPS_TIER_BY_ID[flopId]
   if (!flopTier) return { affordable: 0, totalCost: 0 }
   const owned = clampNonNegative(state.computeFlops?.owned?.[flopId] ?? 0)
-  let spendable = clampNonNegative(state.reboot?.points ?? 0)
+  let spendable = clampNonNegative(state.purge?.points ?? 0)
 
   // ⚡ Bolt Optimization: Infinity check short-circuit
   // Prevents NaN corruption from Infinity - Infinity and avoids evaluating loop unnecessarily
@@ -1053,7 +1049,7 @@ export const buyComputeFlopsTierQuantity = (flopId, quantity, totalCost) => stat
   const owned = clampNonNegative(latched.computeFlops?.owned?.[flopId] ?? 0)
   return {
     ...latched,
-    reboot: { ...latched.reboot, points: (latched.reboot?.points ?? 0) - totalCost },
+    purge: { ...latched.purge, points: (latched.purge?.points ?? 0) - totalCost },
     computeFlops: {
       ...latched.computeFlops,
       owned: {
@@ -1073,7 +1069,7 @@ export const canBuyComputeFlopsTier = (state, flopId) => {
   if (!flopTier) return false
   const owned = clampNonNegative(state.computeFlops?.owned?.[flopId] ?? 0)
   const cost = getComputeFlopsTierCost(flopTier, owned)
-  return clampNonNegative(state.reboot?.points ?? 0) >= cost
+  return clampNonNegative(state.purge?.points ?? 0) >= cost
 }
 
 export const getComputeFlopsAffordableQuantity = (flopTier, ownedCount, spendable, requestedQuantity) => {
@@ -1104,14 +1100,14 @@ export const buyComputeFlopsTier = (flopId, quantity = 1) => state => {
   
   const latched = latchComputeFlopsPageUnlocked(state)
   const owned = clampNonNegative(latched.computeFlops?.owned?.[flopId] ?? 0)
-  const spendable = clampNonNegative(latched.reboot?.points ?? 0)
+  const spendable = clampNonNegative(latched.purge?.points ?? 0)
   
   const { affordable, totalCost } = getComputeFlopsAffordableQuantity(flopTier, owned, spendable, quantity)
   if (affordable === 0) return state
 
   return {
     ...latched,
-    reboot: { ...latched.reboot, points: latched.reboot.points - totalCost },
+    purge: { ...latched.purge, points: latched.purge.points - totalCost },
     computeFlops: {
       ...latched.computeFlops,
       owned: {
@@ -1186,7 +1182,7 @@ export const tickComputeFlops = elapsedSeconds => state => {
 // --- Era / Eons meta layer (#407) ---
 
 export const isEraEligible = state =>
-  clampNonNegative(state.reboot?.points ?? 0) >= ERA_ELIGIBILITY_PP
+  clampNonNegative(state.purge?.points ?? 0) >= ERA_ELIGIBILITY_PP
 
 export const getEonsAwarded = state => {
   const amplifierLevel = clampNonNegative(state.eonsUpgrades?.eonAmplifierLevel ?? 0)
@@ -1301,7 +1297,7 @@ export const eraGame = state => {
   const initial = createInitialGameState()
   const eonsAwarded = getEonsAwarded(state)
   const nextEraCount = clampNonNegative(state.era?.count ?? 0) + 1
-  const unboundedUnlocked = isUnboundedRebootUnlocked(state)
+  const unboundedUnlocked = isOverflowModeUnlocked(state)
 
   const base = {
     ...initial,
@@ -1314,8 +1310,8 @@ export const eraGame = state => {
     tierTickspeedIntervalLevels: state.tierTickspeedIntervalLevels ?? initial.tierTickspeedIntervalLevels,
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
     tierTickspeedAutobuyerEnabled: state.tierTickspeedAutobuyerEnabled ?? initial.tierTickspeedAutobuyerEnabled,
-    autoReboot: state.autoReboot ?? initial.autoReboot,
-    autoRebootEnabled: state.autoRebootEnabled ?? initial.autoRebootEnabled,
+    autoPurge: state.autoPurge ?? initial.autoPurge,
+    autoPurgeEnabled: state.autoPurgeEnabled ?? initial.autoPurgeEnabled,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     autoScaleUp: state.autoScaleUp ?? initial.autoScaleUp,
     autoScaleUpEnabled: state.autoScaleUpEnabled ?? initial.autoScaleUpEnabled,
@@ -1338,8 +1334,8 @@ export const eraGame = state => {
     eons: { balance: clampNonNegative(state.eons?.balance ?? 0) + eonsAwarded },
     hyperscalerCount: clampNonNegative(state.hyperscalerCount ?? 0),
     eonsUpgrades: state.eonsUpgrades ?? initial.eonsUpgrades,
-    reboot: {
-      ...initial.reboot,
+    purge: {
+      ...initial.purge,
       unboundedUnlocked,
       points: 0,
       count: 0,
@@ -1356,12 +1352,12 @@ export const eraGame = state => {
 export const buyPrestigeDoublePp = state => {
   const currentLevel = state.prestigeDoublePpLevel ?? 0
   const cost = getPrestigeDoublePpUpgradeCost(currentLevel)
-  if (clampNonNegative(state.reboot.points) < cost) return state
+  if (clampNonNegative(state.purge.points) < cost) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
   return {
     ...latched,
-    reboot: { ...latched.reboot, points: latched.reboot.points - cost },
+    purge: { ...latched.purge, points: latched.purge.points - cost },
     prestigeDoublePpLevel: currentLevel + 1,
   }
 }
@@ -1440,28 +1436,28 @@ export const getOverclockRequirement = state => {
 export const getOverclockMultiplier = overclockCount =>
   (1 + OVERCLOCK_MULTIPLIER_STEP) ** clampNonNegative(overclockCount)
 
-// One-time PP unlock cost of a global automation (speedUp / scaleUp / overclock / reboot) — the
+// One-time PP unlock cost of a global automation (speedUp / scaleUp / overclock / purge) — the
 // same amount as its first interval-upgrade level (AUTOMATION_INTERVAL_CONFIG[key].baseCost).
 export const getAutomationUnlockCost = key => AUTOMATION_INTERVAL_CONFIG[key].baseCost
 
 // Auto-Prestige attempts per second: 1 / its interval (1024 s base, ×0.9 per speed level — see
-// AUTOMATION_INTERVAL_CONFIG), as a per-tick budget increment (tickGame's autoRebootAttemptBudget)
+// AUTOMATION_INTERVAL_CONFIG), as a per-tick budget increment (tickGame's autoPurgeAttemptBudget)
 // so the same "accumulate until it crosses 1" mechanism as tier autobuyers applies.
-export const getAutoRebootAttemptRate = state => 1 / getAutomationIntervalSeconds(state, 'reboot')
+export const getAutoPurgeAttemptRate = state => 1 / getAutomationIntervalSeconds(state, 'purge')
 
-// Once Money reaches REBOOT_THRESHOLD ("1 Googol Bytes," expressed in Bits — see layers.js), all
+// Once Money reaches PURGE_THRESHOLD ("1 Googol Bytes," expressed in Bits — see layers.js), all
 // production and purchasing (manual and automatic) freezes — the only action left is to Prestige —
-// unless Auto-Prestige has been upgraded to UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS or faster, in which
-// case production continues and Prestige is optional (see isUnboundedRebootUnlocked). Exported so the
+// unless Auto-Prestige has been upgraded to OVERFLOW_MODE_MAX_INTERVAL_SECONDS or faster, in which
+// case production continues and Prestige is optional (see isOverflowModeUnlocked). Exported so the
 // UI can drive the same gate (disabling every other control) that the engine itself enforces on
 // tickGame/buyTier/buyAutobuyer below.
-export const isUnboundedRebootUnlocked = state =>
-  Boolean(state.reboot?.unboundedUnlocked)
-  || ((state.autoReboot ?? null) !== null
-    && getAutomationIntervalSeconds(state, 'reboot') <= UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS)
+export const isOverflowModeUnlocked = state =>
+  Boolean(state.purge?.unboundedUnlocked)
+  || ((state.autoPurge ?? null) !== null
+    && getAutomationIntervalSeconds(state, 'purge') <= OVERFLOW_MODE_MAX_INTERVAL_SECONDS)
 
 export const isProductionFrozen = state =>
-  !isUnboundedRebootUnlocked(state) && clampNonNegative(state.resources[MONEY_ID]) >= REBOOT_THRESHOLD
+  !isOverflowModeUnlocked(state) && clampNonNegative(state.resources[MONEY_ID]) >= PURGE_THRESHOLD
 
 // The previous tier's LEVEL that "two fully purchased levels" corresponds to: completing level 1
 // advances purchaseLevels from 1 to 2, and completing level 2 advances it from 2 to 3 — so a tier
@@ -1492,7 +1488,7 @@ export const getMoneyExponent = money => {
 }
 
 // How far the current money exponent is toward GOOGOL's exponent (100), as a whole percent.
-export const getRebootProgressPercent = money => {
+export const getPurgePercent = money => {
   const googolExponent = Math.floor(Math.log10(GOOGOL))
   const percent = (getMoneyExponent(money) / googolExponent) * 100
   return Math.min(100, Math.max(0, Math.round(percent)))
@@ -1558,7 +1554,7 @@ export const getTierProductionProgressPercent = (state, tierId, previousAccumula
 }
 
 // How many Prestige Points a prestige action awards at the current money balance, given how many
-// Double PP upgrades have been bought. Requires at least REBOOT_THRESHOLD money (1 Googol
+// Double PP upgrades have been bought. Requires at least PURGE_THRESHOLD money (1 Googol
 // Bytes) — below that, returns 0. At exactly Googol-scale money the award is always at least 1 PP
 // (× getPrestigePpPerPower when past the halving phase). Beyond Googol, each additional block of
 // getPrestigePowersPerPp money-exponent "powers" adds another PP unit, scaled by getPrestigePpPerPower.
@@ -1581,7 +1577,7 @@ export const getPrestigeDoublePpUpgradeCost = (currentLevel = 0) =>
 
 export const getPrestigePointsAwarded = (money, doublePpLevel = 0) => {
   const safeMoney = clampNonNegative(money)
-  if (safeMoney < REBOOT_THRESHOLD) return 0
+  if (safeMoney < PURGE_THRESHOLD) return 0
 
   const googolExponent = Math.floor(Math.log10(GOOGOL))
   const excessPowers = Math.max(0, getMoneyExponent(safeMoney) - googolExponent)
@@ -1592,12 +1588,12 @@ export const getPrestigePointsAwarded = (money, doublePpLevel = 0) => {
 }
 
 // Progress (0–100) toward the next PP-earning step once Googol-scale money is reached — within
-// the current powers-per-PP block. Below Googol, falls back to getRebootProgressPercent.
+// the current powers-per-PP block. Below Googol, falls back to getPurgePercent.
 export const getPrestigePpEarnProgressPercent = (money, doublePpLevel = 0) => {
   const safeMoney = clampNonNegative(money)
   const googolExponent = Math.floor(Math.log10(GOOGOL))
   const moneyExponent = getMoneyExponent(safeMoney)
-  if (moneyExponent < googolExponent) return getRebootProgressPercent(safeMoney)
+  if (moneyExponent < googolExponent) return getPurgePercent(safeMoney)
 
   const excessPowers = moneyExponent - googolExponent
   const powersPerPp = getPrestigePowersPerPp(doublePpLevel)
@@ -1605,16 +1601,16 @@ export const getPrestigePpEarnProgressPercent = (money, doublePpLevel = 0) => {
   return Math.round((remainder / powersPerPp) * 100)
 }
 
-const checkMilestones = (resources, reboot) => {
+const checkMilestones = (resources, purge) => {
   const money = clampNonNegative(resources[MONEY_ID])
-  if (money < 10) return reboot
+  if (money < 10) return purge
 
   const currentMilestone = getMoneyExponent(money)
-  if (currentMilestone <= reboot.highestMilestone) return reboot
+  if (currentMilestone <= purge.highestMilestone) return purge
 
   return {
-    ...reboot,
-    xp: reboot.xp + (currentMilestone - reboot.highestMilestone),
+    ...purge,
+    xp: purge.xp + (currentMilestone - purge.highestMilestone),
     highestMilestone: currentMilestone,
   }
 }
@@ -1690,10 +1686,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // multiplier rather than lagging a tick behind.
   const stateAfterFillMultiplierDecay = tickFillMultiplierDecay(elapsedSeconds)(stateAfterMainGameLatch)
   const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickSpeedUpgradeDrain(elapsedSeconds)(tickCapacityUpgradeDrain(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay)))))
-  // First pass advances in-flight read-cache flushes (and may complete them) so write-cache
-  // collect can claim newly emptied source slots same tick. Second pass uses 0 elapsed so
-  // flush countdowns are not applied twice per tickGame — it only refills / starts new flushes
-  // after write-cache ripple.
+  // First pass advances in-flight read-cache flushes and refills the read cache, so write caches
+  // (which draw the pool buffer after the read cache's claim) run second. The last pass uses 0
+  // elapsed so flush countdowns are not applied twice per tickGame — it only refills / starts new
+  // flushes after an expedited transfer emptied a smaller disk.
   const stateAfterReadCache = tickDiskAutoFill(elapsedSeconds)(stateAfterProvision)
   const stateAfterWriteCache = tickDiskWriteCache(elapsedSeconds)(stateAfterReadCache)
   const stateAfterStorage = tickDiskAutoFill(0)(stateAfterWriteCache)
@@ -1727,12 +1723,12 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     tickComputeFlops(elapsedSeconds)(stateAfterDataLakeAutoConvert),
   )
 
-  const autoRebootLevel = stateAfterFlops.autoReboot ?? null
-  // Paused (see setAutoRebootEnabled/CLAUDE.md's "pause/resume" bullet) is treated exactly like
+  const autoPurgeLevel = stateAfterFlops.autoPurge ?? null
+  // Paused (see setAutoPurgeEnabled/CLAUDE.md's "pause/resume" bullet) is treated exactly like
   // "never bought" for every automation purpose below — the level and any PP already spent stay
   // untouched, and the manual Prestige button keeps working regardless, but tickGame itself
-  // neither accumulates the attempt budget nor fires rebootGame automatically while paused.
-  const autoRebootActive = autoRebootLevel !== null && (stateAfterFlops.autoRebootEnabled ?? true)
+  // neither accumulates the attempt budget nor fires purgeGame automatically while paused.
+  const autoPurgeActive = autoPurgeLevel !== null && (stateAfterFlops.autoPurgeEnabled ?? true)
 
   // Storage's own pull-based funding runs last, through every branch below, against this tick's
   // FINAL tier levels (post autobuyer/Scale Up) — isDiskPullEligible depends on them, so a level
@@ -1765,33 +1761,33 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     return afterQueuedBuild === state ? state : tickDiskAutoFill(0)(afterQueuedBuild)
   }
 
-  // Once at/above REBOOT_THRESHOLD, everything freezes — no passive production, no autobuyer
-  // purchases — until the player reboots. Returning the same reference (rather than an
+  // Once at/above PURGE_THRESHOLD, everything freezes — no passive production, no autobuyer
+  // purchases — until the player purges. Returning the same reference (rather than an
   // equivalent copy) lets React's setState bail out of re-rendering while frozen, same as any
   // other no-op action; that optimization only applies when Auto-Prestige isn't bought (or is
   // currently paused) at all, since its attempt budget (see below) needs to keep accumulating
   // even while otherwise frozen. Storage's own auto-fill/auto-pull still run through every
   // branch here — like tickDiskPull/convertIntroBitsToKilobytes, they pay from a separate currency
   // pool and deliberately bypass this freeze entirely, so a player who's crossed the Prestige
-  // threshold hasn't manually rebooted yet still gets disks pulled into fresh tier levels
+  // threshold hasn't manually purged yet still gets disks pulled into fresh tier levels
   // automatically.
   if (isProductionFrozen(stateAfterFlops)) {
-    if (!autoRebootActive) return tickStorage(stateAfterFlops)
-    const nextBudget = (stateAfterFlops.autoRebootAttemptBudget ?? 0) + getAutoRebootAttemptRate(stateAfterFlops) * elapsedSeconds
+    if (!autoPurgeActive) return tickStorage(stateAfterFlops)
+    const nextBudget = (stateAfterFlops.autoPurgeAttemptBudget ?? 0) + getAutoPurgeAttemptRate(stateAfterFlops) * elapsedSeconds
     // A completed attempt (budget >= 1, with a small epsilon tolerance for the same repeated-
     // fractional-elapsedSeconds floating-point drift described on TICK_ACCUMULATION_EPSILON)
-    // only actually reboots once Money has reached REBOOT_THRESHOLD — which it already has,
+    // only actually purges once Money has reached PURGE_THRESHOLD — which it already has,
     // here, by definition of this branch — so it always fires as soon as the budget crosses 1.
-    // rebootGame's own reset zeroes the budget back out; no need to pass the incremented value
+    // purgeGame's own reset zeroes the budget back out; no need to pass the incremented value
     // in, it would just be discarded.
-    if (nextBudget >= 1 - TICK_ACCUMULATION_EPSILON) return tickStorage(rebootGame(stateAfterFlops))
-    return tickStorage({ ...stateAfterFlops, autoRebootAttemptBudget: nextBudget })
+    if (nextBudget >= 1 - TICK_ACCUMULATION_EPSILON) return tickStorage(purgeGame(stateAfterFlops))
+    return tickStorage({ ...stateAfterFlops, autoPurgeAttemptBudget: nextBudget })
   }
 
   // The passive PP production-speed bonus is inert until unlocked (see buyPrestigeSpeedBonus) —
   // before that, every tier produces at the flat ×1 baseline regardless of unspent PP balance.
   const multiplier = stateAfterFlops.prestigeSpeedBonusUnlocked
-    ? getPrestigeProductionMultiplier(stateAfterFlops.reboot.points)
+    ? getPrestigeProductionMultiplier(stateAfterFlops.purge.points)
     : 1
   // Scale Up's per-tier multipliers, unlike the PP bonus above, need no unlock step — each applies
   // as soon as that tier has a positive scaleUpTierCounts entry (see scaleUpGame).
@@ -1921,15 +1917,15 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     resources: newResources,
     owned: newOwned,
     tierProductionAccumulators: newAccumulators,
-    reboot: checkMilestones(newResources, stateAfterAutobuyers.reboot),
+    purge: checkMilestones(newResources, stateAfterAutobuyers.purge),
     // Auto-Prestige's attempt budget keeps accumulating during ordinary (non-frozen) play too —
     // "every 1000 seconds once unlocked" runs continuously in the background, it doesn't only
-    // start counting once Money first reaches REBOOT_THRESHOLD — but it can only ever actually fire from
+    // start counting once Money first reaches PURGE_THRESHOLD — but it can only ever actually fire from
     // the frozen branch above once Money has actually gotten there, or from the DeGoogol branch below
-    // once DeGoogol is unlocked. Paused (autoRebootActive
+    // once DeGoogol is unlocked. Paused (autoPurgeActive
     // false) stops this accumulation too, same as the frozen branch above.
-    ...(autoRebootActive ? {
-      autoRebootAttemptBudget: (stateAfterAutobuyers.autoRebootAttemptBudget ?? 0) + getAutoRebootAttemptRate(stateAfterAutobuyers) * elapsedSeconds,
+    ...(autoPurgeActive ? {
+      autoPurgeAttemptBudget: (stateAfterAutobuyers.autoPurgeAttemptBudget ?? 0) + getAutoPurgeAttemptRate(stateAfterAutobuyers) * elapsedSeconds,
     } : {}),
   }
 
@@ -1969,7 +1965,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // function re-validates and no-ops otherwise.
   const stateAfterAutoXp = stateAfterGlobalTickspeedAutobuyer.autoXpTickspeed
     && (stateAfterGlobalTickspeedAutobuyer.autoXpTickspeedEnabled ?? true)
-    ? runGlobalIntervalAutomation(stateAfterGlobalTickspeedAutobuyer, elapsedSeconds, 'restage', s => consumeXpForLastTierTickspeed(s.reboot.xp)(s))
+    ? runGlobalIntervalAutomation(stateAfterGlobalTickspeedAutobuyer, elapsedSeconds, 'restage', s => consumeXpForLastTierTickspeed(s.purge.xp)(s))
     : stateAfterGlobalTickspeedAutobuyer
 
   // If Auto Scale Up is bought (see buyAutoScaleUp), trigger a Scale Up whenever eligible, at most
@@ -1993,16 +1989,16 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // tickStorage above (auto-fill itself already ran earlier, as part of stateAfterIntro).
   let stateBeforeStorage = stateAfterScaleUp
 
-  // DeGoogol (Auto-Prestige interval ≤ UNBOUNDED_REBOOT_MAX_INTERVAL_SECONDS): Auto-Prestige fires
+  // DeGoogol (Auto-Prestige interval ≤ OVERFLOW_MODE_MAX_INTERVAL_SECONDS): Auto-Prestige fires
   // here while production keeps running — the frozen branch above is skipped entirely.
   if (
-    isUnboundedRebootUnlocked(stateBeforeStorage)
-    && autoRebootActive
-    && clampNonNegative(stateBeforeStorage.resources[MONEY_ID]) >= REBOOT_THRESHOLD
+    isOverflowModeUnlocked(stateBeforeStorage)
+    && autoPurgeActive
+    && clampNonNegative(stateBeforeStorage.resources[MONEY_ID]) >= PURGE_THRESHOLD
   ) {
-    const budget = stateBeforeStorage.autoRebootAttemptBudget ?? 0
+    const budget = stateBeforeStorage.autoPurgeAttemptBudget ?? 0
     if (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
-      stateBeforeStorage = rebootGame(stateBeforeStorage)
+      stateBeforeStorage = purgeGame(stateBeforeStorage)
     }
   }
 
@@ -2176,9 +2172,9 @@ export const buyTierQuantity = (tierId, quantity) => state => {
 // --- Buy max mode --- a player-facing toggle (persisted as a UI preference, see storage.js's
 // loadBuyMaxPreference) that makes each manual purchase click buy as many levels as are
 // affordable instead of one. Unlocked once the save has completed its first Prestige (or any Era
-// ascension, which resets reboot.count but implies earlier Prestiges). Autobuyers are unaffected.
+// ascension, which resets purge.count but implies earlier Prestiges). Autobuyers are unaffected.
 export const isBuyMaxUnlocked = state =>
-  clampNonNegative(state.reboot?.count ?? 0) >= 1 || clampNonNegative(state.era?.count ?? 0) >= 1
+  clampNonNegative(state.purge?.count ?? 0) >= 1 || clampNonNegative(state.era?.count ?? 0) >= 1
 
 // The Perks page (Automation / Prestige) appears on the same first-Prestige-ever condition.
 export const isPerksPageRevealed = isBuyMaxUnlocked
@@ -3776,7 +3772,7 @@ export const convertIntroBitsToKilobytes = state => {
 // pool 1's card and switches the Data Stream tap into fill-multiplier-bonus mode — rather than the
 // much smaller, slightly-earlier threshold the auto-convert mechanic above happens to fire at
 // (tier01's own starting per-unit cost). Once latched (mainGameUnlocked: true), it's PERMANENT:
-// never reset by a real Prestige (see rebootGame) or an Era ascension (see buildEraIntroReset) —
+// never reset by a real Prestige (see purgeGame) or an Era ascension (see buildEraIntroReset) —
 // the standalone Tap button is a one-time-ever onboarding step, not something replayed every
 // cycle. Called unconditionally every tick (see tickGame) — a no-op once already latched or before
 // the threshold — so it takes effect within one tick (TICK_RATE_MS) of capacity crossing it,
@@ -4300,10 +4296,36 @@ export const canDiskSizeFeedWriteCache = size => {
 export const getDiskWriteCacheMerge = (state, targetSize) =>
   state.intro?.diskWriteCache?.[targetSize] ?? null
 
+// Bits a merge has banked toward its target (pool-buffer draws plus smaller disks it consumed). A
+// legacy save's merge only carries `segmentsCollected` (whole source disks), so that converts 1:1.
+export const getDiskWriteCacheCollectedBits = merge => {
+  if (!merge) return 0
+  if (Number.isFinite(merge.collectedBits)) return Math.max(0, merge.collectedBits)
+  return Math.max(0, merge.segmentsCollected ?? 0) * (merge.sourceSize ?? 0)
+}
+
+// An expedited merge's in-flight smaller-disk transfers ([{ size, remainingSeconds, totalSeconds }]),
+// all running in parallel. A save from before parallel transfers carries one `transferSize` instead.
+export const getDiskWriteCacheTransfers = merge => {
+  if (!merge) return []
+  if (Array.isArray(merge.transfers)) return merge.transfers
+  return merge.transferSize
+    ? [{ size: merge.transferSize, remainingSeconds: merge.segmentRemainingSeconds ?? 0, totalSeconds: merge.segmentTotalSeconds ?? 0 }]
+    : []
+}
+
+const getTransferProgressBits = transfer =>
+  transfer.totalSeconds > 0 ? transfer.size * (1 - transfer.remainingSeconds / transfer.totalSeconds) : 0
+
+// Progress (0..1) toward the NEXT segment: the partial bits past the last whole segment plus the
+// in-flight smaller-disk transfers' progress (expedited merges only) — 0 once collection is done.
 export const getDiskWriteCacheSegmentFill = merge => {
   if (!merge || merge.segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER) return 0
-  if (merge.segmentTotalSeconds <= 0) return 0
-  return 1 - merge.segmentRemainingSeconds / merge.segmentTotalSeconds
+  const sourceSize = merge.sourceSize ?? 0
+  if (!(sourceSize > 0)) return 0
+  const partialBits = Math.max(0, getDiskWriteCacheCollectedBits(merge) - (merge.segmentsCollected ?? 0) * sourceSize)
+  const transferBits = getDiskWriteCacheTransfers(merge).reduce((sum, transfer) => sum + getTransferProgressBits(transfer), 0)
+  return Math.min(1, Math.max(0, (partialBits + transferBits) / sourceSize))
 }
 
 export const getDiskWriteCacheFlushFill = merge => {
@@ -4312,50 +4334,84 @@ export const getDiskWriteCacheFlushFill = merge => {
   return 1 - merge.flushRemainingSeconds / merge.flushTotalSeconds
 }
 
-// Collect pauses ONLY while the SOURCE has an active tier claim (isDiskRedeemable — the Factory
-// gets first crack at a disk it could pull THIS tick): that is the one genuine contention write-
-// cache and Factory redemption can ever have over the same physical disk. Stranded status —
-// source's or target's — is NOT a pause reason: disks/disksBuiltTotal/diskWriteCache are all
-// PERMANENT across Prestige (see docs/ECONOMY_REFERENCE.md), so filling a container that can't be
-// redeemed by ITS OWN tier this cycle is still real, banked progress toward next cycle, never
-// wasted effort — and, since the write-cache ladder is a strict single chain (each size feeds
-// exactly one next size, never a choice between several), there is no competing use it could ever
-// be diverted from. See canStartDiskWriteCacheMerge below and docs/DESIGN_HISTORY.md for the two
-// rounds of over-restriction (source-stranded, then target-stranded) this reverts.
+// The only pause: an EXPEDITED merge whose every in-flight smaller-disk transfer waits on an active tier
+// claim of that disk's size (isDiskRedeemable — the Factory gets first crack at a disk it could pull this
+// tick). Stranded status never pauses anything (see docs/DESIGN_HISTORY.md). A merge filling from the
+// pool buffer is never "paused" — an empty buffer simply means it waits for bits.
 export const isDiskWriteCacheCollectPaused = (state, targetSize) => {
   const merge = getDiskWriteCacheMerge(state, targetSize)
   if (!merge || merge.segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER) return false
-  return isDiskRedeemable(state, merge.sourceSize)
+  const transfers = getDiskWriteCacheTransfers(merge)
+  return transfers.length > 0 && transfers.every(transfer => isDiskRedeemable(state, transfer.size))
 }
 
-// Stranded status — of the SOURCE or the TARGET — never blocks starting a write-cache merge.
-// A disk whose own tier has moved past the level it requires (isDiskStrandedByAdvancedTier) can
-// never be redeemed by that tier again this cycle, so folding it into the next size up is the only
-// productive thing left to do with it — the "simply ignored"/"never destroyed" rule
-// (docs/DESIGN_HISTORY.md) is about never converting a disk to Bits or otherwise discarding it, not
-// about refusing to let it feed a real disk array. Checking the TARGET's own stranded status was
-// tried next and ALSO reverted (a Devin Review finding on PR #603). The chain never crosses a pool
-// boundary (pool isolation — see docs/DESIGN_HISTORY.md): each pool's largest size is the end of
-// its own chain, and the next pool's smallest size fills only via its own read cache. There is no lookahead
-// needed to get this right: since every built container is PERMANENT progress regardless of
-// whether ITS OWN tier can currently redeem it, there is simply no case where filling one is worse
-// than leaving a source's otherwise-idle full disks sitting unused.
-const canStartDiskWriteCacheMerge = (state, sourceSize, targetSize) => {
-  // Pool isolation: no pool ever consumes another pool's disks. A pool's largest size is the top of
-  // its own chain; the next pool's smallest size fills only from its own read cache.
-  if (getPoolIndexForDiskSize(sourceSize) !== getPoolIndexForDiskSize(targetSize)) return false
-  if (state.intro.diskBuild?.size === sourceSize || state.intro.diskBuild?.size === targetSize) return false
+// The size one ladder step below `size` when it is in the SAME pool (the write cache's segment unit),
+// else null — each pool's smallest size has no write cache and fills via its own read cache.
+const getDiskWriteCacheSourceSize = size => {
+  const step = getDiskLadderStep(size)
+  if (!step || step <= 1) return null
+  const sourceSize = getDiskLadderSizeBits(step - 1)
+  const poolIndex = getPoolIndexForDiskSize(size)
+  return poolIndex && getPoolIndexForDiskSize(sourceSize) === poolIndex ? sourceSize : null
+}
+
+// Every size above its pool's smallest fills through its own write cache, FROM THE POOL BUFFER by
+// default: a merge starts whenever the array has a built-but-empty disk (no source-array condition).
+// Lower disks are only consumed when the player expedites a disk (expediteDiskFill). Pool isolation
+// holds by construction — a pool's smallest size has no write cache, so no merge ever crosses a pool.
+const canStartDiskWriteCacheMerge = (state, targetSize) => {
+  if (!getDiskWriteCacheSourceSize(targetSize)) return false
+  if (state.intro.diskBuild?.size === targetSize) return false
   if (state.intro.diskWriteCache?.[targetSize]) return false
-  // Only starts once the SOURCE array is entirely full (DISK_ARRAY_LADDER_CAP, 9) — a different
-  // constant from the COLLECT phase's own segment count below (DISK_LADDER_SIZE_MULTIPLIER, 10):
-  // this one gates ELIGIBILITY ("don't start draining this array upward until it's completely
-  // built"), while the segment count must equal the actual source→target SIZE RATIO for the merge
-  // to conserve value (10 segments of sourceSize sum to exactly one targetSize disk). The two
-  // happened to share one value before DISK_ARRAY_LADDER_CAP dropped to 9; conflating them again
-  // would silently manufacture 1 sourceSize-unit of value per merge. See docs/DESIGN_HISTORY.md.
-  if ((state.intro.disks?.[sourceSize] ?? 0) < DISK_ARRAY_LADDER_CAP) return false
-  if ((state.intro.disksBuiltTotal?.[targetSize] ?? 0) <= 0) return false
-  return (state.intro.disksBuiltTotal[targetSize] ?? 0) > (state.intro.disks?.[targetSize] ?? 0)
+  return (state.intro.disksBuiltTotal?.[targetSize] ?? 0) > (state.intro.disks?.[targetSize] ?? 0)
+}
+
+const createDiskWriteCacheMerge = (state, targetSize, expedite = false) => {
+  const flushTotalSeconds = getDiskWriteCacheFlushSeconds(state, targetSize, expedite)
+  return {
+    sourceSize: getDiskWriteCacheSourceSize(targetSize),
+    segmentsCollected: 0,
+    collectedBits: 0,
+    transfers: [],
+    flushRemainingSeconds: flushTotalSeconds,
+    flushTotalSeconds,
+    expedite,
+  }
+}
+
+// Clicking an EMPTY disk of a write-cache size expedites it, three ways at once:
+//   1. it takes every full smaller disk of the same pool it still needs IN PARALLEL (largest first,
+//      each a timed transfer at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER), alongside the pool buffer;
+//   2. it draws the pool buffer AHEAD of every non-expedited write cache (the read cache keeps first claim);
+//   3. its flush writes at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER instead of
+//      DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER.
+// Outside the forced priority order (it is a preference flag, not a spend).
+export const isDiskFillExpediteAvailable = (state, size) => {
+  if (!getDiskWriteCacheSourceSize(size)) return false
+  if (state.intro?.diskBuild?.size === size) return false
+  if ((state.intro?.disksBuiltTotal?.[size] ?? 0) <= (state.intro?.disks?.[size] ?? 0)) return false
+  const merge = getDiskWriteCacheMerge(state, size)
+  return !merge || (!merge.expedite && merge.segmentsCollected < DISK_LADDER_SIZE_MULTIPLIER)
+}
+
+export const isDiskFillExpedited = (state, size) => Boolean(getDiskWriteCacheMerge(state, size)?.expedite)
+
+export const expediteDiskFill = size => state => {
+  if (!isDiskFillExpediteAvailable(state, size)) return state
+  const merge = getDiskWriteCacheMerge(state, size)
+  const flushTotalSeconds = getDiskWriteCacheFlushSeconds(state, size, true)
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      diskWriteCache: {
+        ...(state.intro.diskWriteCache ?? {}),
+        [size]: merge
+          ? { ...merge, expedite: true, flushTotalSeconds, flushRemainingSeconds: flushTotalSeconds }
+          : createDiskWriteCacheMerge(state, size, true),
+      },
+    },
+  }
 }
 
 const decrementFullDiskCount = (disks, size) => {
@@ -4368,25 +4424,17 @@ const decrementFullDiskCount = (disks, size) => {
 }
 
 // The write-cache flush into the target's own empty container is a DISK filling FROM a cache — the
-// same DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER rate a read-cache flush uses — sized to the
-// target's own full capacity. Unlike a fresh disk's own funding, this isn't scaled by ordinal:
-// refilling an already-built empty container from cache is a pure bandwidth-limited transfer, not
-// a build.
-const getDiskWriteCacheFlushSeconds = (state, targetSize) => {
+// same DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER rate a read-cache flush uses — sized to the target's
+// own full capacity. An expedited disk's flush runs at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER instead.
+const getDiskWriteCacheFlushSeconds = (state, targetSize, expedite = false) => {
   const poolIndex = getPoolIndexForDiskSize(targetSize)
   const rate = getStoragePoolBandwidth(state, poolIndex)
-    * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER
+    * (expedite ? CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER : DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)
   return targetSize / Math.max(rate, Number.MIN_VALUE)
 }
 
-// Each of the 10 collect segments is a CACHE filling FROM Disks — one full source disk's worth of
-// bits, at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER (5) times the current production rate. 10
-// segments of one source disk each sum to exactly one target disk's own size (source ×
-// DISK_LADDER_SIZE_MULTIPLIER = target), but the collect phase's own total time is independent of
-// the flush phase below's — DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER (2, disk-from-cache) and
-// CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER (5, cache-from-disk) pace conceptually distinct fills
-// and are deliberately set to different rates: collecting an already-built disk's contents into the
-// write cache is a faster bulk transfer than the bandwidth-limited disk-from-cache flush that follows.
+// An expedited merge's transfer of one smaller full disk into the write cache — a CACHE filling FROM
+// Disks, at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER (5) times the pool's Bandwidth.
 const getDiskWriteCacheSegmentSeconds = (state, sourceSize) => {
   const poolIndex = getPoolIndexForDiskSize(sourceSize)
   const rate = getStoragePoolBandwidth(state, poolIndex)
@@ -4394,10 +4442,43 @@ const getDiskWriteCacheSegmentSeconds = (state, sourceSize) => {
   return sourceSize / Math.max(rate, Number.MIN_VALUE)
 }
 
-// Upward ladder merges via per-target write cache — collect 10 segments from the source size
-// (timed; pauses while that source size has an active tier claim), then flush into one target
-// disk (timed independently — see getDiskWriteCacheFlushSeconds/getDiskWriteCacheSegmentSeconds
-// above; never pauses). Empty at rest. Smallest source sizes first.
+// Every full smaller disk (same pool) an expedited merge should start transferring now, largest first,
+// until the transfers cover `needBits`: skips disks claimed by their tier this tick, a legacy mid-build
+// size, and disks already being transferred by ANY merge (including this merge's own running transfers).
+const pickDiskWriteCacheTransferSizes = (state, targetSize, needBits, ownTransfers) => {
+  const poolIndex = getPoolIndexForDiskSize(targetSize)
+  const claimed = {}
+  for (const [key, merge] of Object.entries(state.intro.diskWriteCache ?? {})) {
+    if (Number(key) === targetSize) continue
+    for (const transfer of getDiskWriteCacheTransfers(merge)) claimed[transfer.size] = (claimed[transfer.size] ?? 0) + 1
+  }
+  for (const transfer of ownTransfers) claimed[transfer.size] = (claimed[transfer.size] ?? 0) + 1
+  const picked = []
+  let remaining = needBits
+  const candidates = getStoragePoolSizes(poolIndex).filter(size => size < targetSize).sort((a, b) => b - a)
+  for (const size of candidates) {
+    if (state.intro.diskBuild?.size === size || isDiskRedeemable(state, size)) continue
+    let available = (state.intro.disks?.[size] ?? 0) - (claimed[size] ?? 0)
+    while (available > 0 && size <= remaining * (1 + TICK_ACCUMULATION_EPSILON)) {
+      picked.push(size)
+      remaining -= size
+      available -= 1
+    }
+  }
+  return picked
+}
+
+const WRITE_CACHE_COMPLETE_RATIO = 1 - 1e-9
+
+const sameTransfers = (a, b) =>
+  a.length === b.length && a.every((transfer, index) =>
+    transfer.size === b[index].size && transfer.remainingSeconds === b[index].remainingSeconds)
+
+// Write caches for every size above its pool's smallest. Collect: draw from the pool buffer after the read
+// cache's reservation — expedited targets first, then the rest, each group smallest size first; an
+// EXPEDITED merge additionally consumes smaller full disks of the same pool, all needed transfers in
+// parallel. Collect and flush only advance while the target array has a built-but-empty disk, so nothing
+// banked is ever lost; flush is timed at the disk-from-cache rate (faster when expedited).
 export const tickDiskWriteCache = elapsedSeconds => state => {
   let intro = state.intro
   let disks = intro.disks ?? {}
@@ -4407,10 +4488,9 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
 
   // A cross-pool merge can only come from a save predating pool isolation. One already in its flush
   // phase has finished taking from the lower pool, so it simply completes (nothing more is consumed
-  // and nothing is lost). One still collecting is cancelled BEFORE any new merge starts (so none
-  // targets a source array this refill is about to fill): its collected disks return to the source
-  // array up to what was ever built there; any excess (the slots were refilled meanwhile) becomes
-  // bits in that pool's own buffer, clamped to its ceiling like every other buffer value.
+  // and nothing is lost). One still collecting is cancelled BEFORE any new merge starts: its collected
+  // disks return to the source array up to what was ever built there; any excess becomes bits in that
+  // pool's own buffer, clamped to its ceiling like every other buffer value.
   for (const targetSize of Object.keys(diskWriteCache).map(Number)) {
     const merge = diskWriteCache[targetSize]
     if (!merge) continue
@@ -4434,106 +4514,132 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     diskWriteCache = rest
     changed = true
   }
-  if (poolBuffers) intro = { ...intro, poolBuffers }
 
-  const builtSizes = Object.keys(intro.disksBuiltTotal ?? {})
-    .map(Number)
-    .sort((a, b) => a - b)
+  const snapshot = () => ({ ...state, intro: { ...intro, disks, diskWriteCache, poolBuffers: poolBuffers ?? intro.poolBuffers } })
 
-  for (const sourceSize of builtSizes) {
-    const targetSize = getNextDiskLadderSize(sourceSize)
-    if (!canStartDiskWriteCacheMerge({ ...state, intro: { ...intro, disks, diskWriteCache } }, sourceSize, targetSize)) {
-      continue
-    }
-    const mergeState = { ...state, intro: { ...intro, disks, diskWriteCache } }
-    const flushTotalSeconds = getDiskWriteCacheFlushSeconds(mergeState, targetSize)
-    const segmentTotalSeconds = getDiskWriteCacheSegmentSeconds(mergeState, sourceSize)
-    diskWriteCache[targetSize] = {
-      sourceSize,
-      segmentsCollected: 0,
-      segmentRemainingSeconds: segmentTotalSeconds,
-      segmentTotalSeconds,
-      flushRemainingSeconds: flushTotalSeconds,
-      flushTotalSeconds,
-    }
+  const builtSizes = Object.keys(intro.disksBuiltTotal ?? {}).map(Number).sort((a, b) => a - b)
+  for (const targetSize of builtSizes) {
+    const current = snapshot()
+    if (!canStartDiskWriteCacheMerge(current, targetSize)) continue
+    diskWriteCache[targetSize] = createDiskWriteCacheMerge(current, targetSize)
     changed = true
   }
 
-  for (const targetSize of Object.keys(diskWriteCache).map(Number).sort((a, b) => a - b)) {
+  // Expedited targets jump the pool queue (after the read cache, which already claimed its share).
+  const order = Object.keys(diskWriteCache).map(Number).sort((a, b) =>
+    (diskWriteCache[b]?.expedite ? 1 : 0) - (diskWriteCache[a]?.expedite ? 1 : 0) || a - b)
+
+  for (const targetSize of order) {
     const merge = diskWriteCache[targetSize]
     if (!merge) continue
+    const poolIndex = getPoolIndexForDiskSize(targetSize)
+    const tap = getPoolTapMultiplier(state, poolIndex)
+    const hasEmptyContainer = (intro.disksBuiltTotal?.[targetSize] ?? 0) > (disks[targetSize] ?? 0)
 
-    if (merge.segmentsCollected < DISK_LADDER_SIZE_MULTIPLIER) {
-      const mergeSnapshot = { ...state, intro: { ...intro, disks, diskWriteCache } }
-      // Shares isDiskWriteCacheCollectPaused's own rule (see its doc comment above): pause ONLY
-      // while the source has an active tier claim (temporary — Factory gets first crack at a disk
-      // it could pull this exact tick). Neither the source nor the target becoming stranded is a
-      // pause reason any more — see canStartDiskWriteCacheMerge above.
-      if (isDiskWriteCacheCollectPaused(mergeSnapshot, targetSize)) {
-        continue
-      }
-
-      // The pool's tap bonus speeds disk merges (getPoolTapMultiplier; source and target share a pool).
-      let segmentRemainingSeconds = merge.segmentRemainingSeconds - elapsedSeconds * getPoolTapMultiplier(state, getPoolIndexForDiskSize(targetSize))
-      if (segmentRemainingSeconds > TICK_ACCUMULATION_EPSILON) {
-        diskWriteCache[targetSize] = { ...merge, segmentRemainingSeconds }
-        changed = true
-        continue
-      }
-
-      const sourceFull = disks[merge.sourceSize] ?? 0
-      if (sourceFull <= 0) {
-        diskWriteCache[targetSize] = { ...merge, segmentRemainingSeconds: 0 }
-        changed = true
-        continue
-      }
-
-      disks = decrementFullDiskCount(disks, merge.sourceSize)
-      const segmentsCollected = merge.segmentsCollected + 1
-      if (segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER) {
-        diskWriteCache[targetSize] = {
-          ...merge,
-          segmentsCollected,
-          flushRemainingSeconds: merge.flushTotalSeconds,
+    if ((merge.segmentsCollected ?? 0) >= DISK_LADDER_SIZE_MULTIPLIER) {
+      if (!hasEmptyContainer) continue // holds its full contents until a disk empties — nothing lost
+      const flushRemainingSeconds = merge.flushRemainingSeconds - elapsedSeconds * tap
+      if (flushRemainingSeconds > TICK_ACCUMULATION_EPSILON) {
+        if (flushRemainingSeconds !== merge.flushRemainingSeconds) {
+          diskWriteCache[targetSize] = { ...merge, flushRemainingSeconds }
+          changed = true
         }
-      } else {
-        diskWriteCache[targetSize] = {
-          ...merge,
-          segmentsCollected,
-          segmentRemainingSeconds: merge.segmentTotalSeconds,
-        }
+        continue
       }
+      disks = { ...disks, [targetSize]: (disks[targetSize] ?? 0) + 1 }
+      const { [targetSize]: _removed, ...remainingWriteCache } = diskWriteCache
+      diskWriteCache = remainingWriteCache
       changed = true
       continue
     }
 
-    let flushRemainingSeconds = merge.flushRemainingSeconds - elapsedSeconds * getPoolTapMultiplier(state, getPoolIndexForDiskSize(targetSize))
-    if (flushRemainingSeconds > TICK_ACCUMULATION_EPSILON) {
-      diskWriteCache[targetSize] = { ...merge, flushRemainingSeconds }
-      changed = true
-      continue
+    if (!hasEmptyContainer) continue
+    const sourceSize = merge.sourceSize ?? getDiskWriteCacheSourceSize(targetSize)
+    if (!(sourceSize > 0)) continue
+    const previousTransfers = getDiskWriteCacheTransfers(merge)
+    let collected = getDiskWriteCacheCollectedBits(merge)
+    let transfers = []
+
+    // 1. Advance every in-flight smaller-disk transfer (each pauses only on its own size's tier claim).
+    for (const transfer of previousTransfers) {
+      if (isDiskRedeemable(snapshot(), transfer.size)) {
+        transfers.push(transfer)
+        continue
+      }
+      const remainingSeconds = transfer.remainingSeconds - elapsedSeconds * tap
+      if (remainingSeconds > TICK_ACCUMULATION_EPSILON) {
+        transfers.push({ ...transfer, remainingSeconds })
+      } else if ((disks[transfer.size] ?? 0) > 0) {
+        disks = decrementFullDiskCount(disks, transfer.size)
+        collected += transfer.size
+      }
     }
 
-    const builtTotalAtTarget = intro.disksBuiltTotal?.[targetSize] ?? 0
-    const fullAtTarget = disks[targetSize] ?? 0
-    if (builtTotalAtTarget > fullAtTarget) {
-      disks = { ...disks, [targetSize]: fullAtTarget + 1 }
+    // 2. The pool buffer funds the cache (after the read cache's own claim). In-flight transfers keep
+    // their sizes reserved so the sources together never overshoot — unless the buffer can now cover the
+    // whole remaining need, in which case they are dropped (their disks were never taken), so expediting
+    // is never slower than the default fill.
+    if (poolIndex) {
+      const buffer = (poolBuffers ?? intro.poolBuffers ?? {})[poolIndex] ?? 0
+      const spendable = Math.max(0, buffer - getPoolCacheReservationBits(snapshot(), poolIndex))
+      const need = Math.max(0, targetSize - collected)
+      if (transfers.length > 0 && spendable >= need) transfers = []
+      const reserved = transfers.reduce((sum, transfer) => sum + transfer.size, 0)
+      const drawBits = Math.min(spendable, Math.max(0, need - reserved))
+      if (drawBits > 0) {
+        poolBuffers = poolBuffers ?? { ...(intro.poolBuffers ?? {}) }
+        poolBuffers[poolIndex] = buffer - drawBits
+        collected += drawBits
+      }
     }
-    const { [targetSize]: _removed, ...remainingWriteCache } = diskWriteCache
-    diskWriteCache = remainingWriteCache
-    changed = true
+
+    // 3. An expedited merge covers whatever the buffer could not, simultaneously, with every smaller full
+    // disk that still fits — all transferring in parallel — so only as many as needed are consumed.
+    if (merge.expedite && collected < targetSize * WRITE_CACHE_COMPLETE_RATIO) {
+      const reserved = transfers.reduce((sum, transfer) => sum + transfer.size, 0)
+      for (const size of pickDiskWriteCacheTransferSizes(snapshot(), targetSize, targetSize - collected - reserved, transfers)) {
+        const totalSeconds = getDiskWriteCacheSegmentSeconds(state, size)
+        transfers.push({ size, remainingSeconds: totalSeconds, totalSeconds })
+      }
+    }
+
+    const { transferSize: _legacyTransfer, segmentRemainingSeconds: _legacyRemaining, segmentTotalSeconds: _legacyTotal, ...rest } = merge
+    let next = { ...rest, sourceSize, transfers }
+    if (collected >= targetSize * WRITE_CACHE_COMPLETE_RATIO) {
+      next = {
+        ...next,
+        collectedBits: targetSize,
+        segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER,
+        transfers: [],
+        flushRemainingSeconds: next.flushTotalSeconds,
+      }
+    } else {
+      next.collectedBits = collected
+      next.segmentsCollected = Math.min(DISK_LADDER_SIZE_MULTIPLIER - 1, Math.floor(collected / sourceSize + 1e-9))
+    }
+    if (
+      next.collectedBits !== merge.collectedBits ||
+      next.segmentsCollected !== merge.segmentsCollected ||
+      !Array.isArray(merge.transfers) ||
+      !sameTransfers(next.transfers, merge.transfers) ||
+      next.flushRemainingSeconds !== merge.flushRemainingSeconds ||
+      next.sourceSize !== merge.sourceSize
+    ) {
+      diskWriteCache[targetSize] = next
+      changed = true
+    }
   }
 
   if (!changed) return state
-  return { ...state, intro: { ...intro, disks, diskWriteCache } }
+  return { ...state, intro: { ...intro, disks, diskWriteCache, ...(poolBuffers ? { poolBuffers } : null) } }
 }
 
 // Memory claim for read caches, then timed read-cache → disk flush when no tier claim blocks
 // ladder use (tier match keeps first claim on disks/cache for Factory funding). Flush duration is
 // the time to fill one read-cache block — a DISK filling FROM a cache — at
 // DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER times the current Byte Foundry production rate (see
-// getDiskReadCacheFlushSeconds). Disks above the smallest ladder size also fill via write-cache
-// flush from the size below — see tickDiskWriteCache. Unconditional, bypasses isProductionFrozen.
+// getDiskReadCacheFlushSeconds). Disks above the smallest ladder size fill via their own write
+// cache (pool buffer) — see tickDiskWriteCache. Unconditional, bypasses isProductionFrozen.
 // Same-reference no-op when nothing changed. `elapsedSeconds` advances in-flight flushes (0 is
 // valid — start newly eligible flushes without counting time down).
 export const getDiskReadCacheFlush = (state, size) =>
@@ -4561,7 +4667,7 @@ export const isDiskReadCacheFlushPaused = (state, size) => {
 
 // Only the pool's own smallest disk size — the one whose sub-slot is DATA_LAKE_SUB_SIZES[0] — ever
 // keeps a read cache drawing straight from Memory; every larger size in the same pool fills
-// exclusively via write-cache ripple from the size below (see tickDiskWriteCache, which never
+// via its own write cache (see tickDiskWriteCache, which never
 // touches diskCache/diskReadCacheFlush at all). Running both fill paths on every size was pure
 // redundancy — two mechanisms pouring into the same container. A size with no Data Lake tier
 // mapping at all (getDataLakeSubSize returns null — no pool exists yet past DATA_LAKE_MAX_DISK_LADDER_STEP)
@@ -6460,7 +6566,7 @@ export const getBiggestComputeTierWaitingOnMerge = state => {
 }
 
 // Player-facing preference for tickAutoComputeBoost — one of COMPUTE_BOOST_PRESETS' keys.
-// Same-reference no-op for an unknown key. Permanent across Prestige (see rebootGame).
+// Same-reference no-op for an unknown key. Permanent across Prestige (see purgeGame).
 export const setComputeAutoBoostType = boostType => state => {
   if (!COMPUTE_BOOST_PRESETS[boostType]) return state
   if ((state.intro?.computeAutoBoostType ?? 'standard') === boostType) return state
@@ -6547,7 +6653,7 @@ export const reclaimComputeBoost = state => {
 // Toggles whether a tier's unit-buying autobuyer currently acts (see autobuyersEnabled/tickGame) —
 // a plain preference, not a purchase: unconditional, not gated by isProductionFrozen (pausing
 // should always be possible), and independently permanent from the autobuyer's own unlock (never
-// reset by Prestige/Scale Up — see rebootGame/scaleUpGame). A no-op if this tier's autobuyer
+// reset by Prestige/Scale Up — see purgeGame/scaleUpGame). A no-op if this tier's autobuyer
 // hasn't been unlocked at all yet (autobuyers[tierId] is still null) — nothing to enable/disable
 // before that. The player can always still manually Buy regardless of this flag.
 export const setAutobuyerEnabled = (tierId, enabled) => state => {
@@ -6639,12 +6745,12 @@ export const buyAutobuyerIntervalUpgrade = tierId => state => {
   const level = state.autobuyerIntervalLevels?.[tierId] ?? 0
   if (level >= getAutobuyerSpeedUpgradeMaxLevel(tierId)) return state
   const cost = getAutobuyerIntervalUpgradeCost(level)
-  if (clampNonNegative(state.reboot.points) < cost) return state
+  if (clampNonNegative(state.purge.points) < cost) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
   return {
     ...latched,
-    reboot: { ...latched.reboot, points: latched.reboot.points - cost },
+    purge: { ...latched.purge, points: latched.purge.points - cost },
     autobuyerIntervalLevels: { ...latched.autobuyerIntervalLevels, [tierId]: level + 1 },
   }
 }
@@ -6652,7 +6758,7 @@ export const buyAutobuyerIntervalUpgrade = tierId => state => {
 const getIntervalMaxLevelForBase = baseSeconds =>
   Math.max(0, Math.ceil(Math.log(AUTOBUYER_MIN_INTERVAL_SECONDS / baseSeconds) / Math.log(AUTOBUYER_INTERVAL_MULTIPLIER)))
 
-// Global automation interval chains (speedUp / scaleUp / restage / overclock / reboot): AUTOMATION_INTERVAL_CONFIG.
+// Global automation interval chains (speedUp / scaleUp / restage / overclock / purge): AUTOMATION_INTERVAL_CONFIG.
 export const getAutomationIntervalMaxLevel = key => getIntervalMaxLevelForBase(AUTOMATION_INTERVAL_CONFIG[key].baseSeconds)
 export const getAutomationIntervalSeconds = (state, key) =>
   Math.max(
@@ -6668,7 +6774,7 @@ const isAutomationIntervalChainAvailable = (state, key) => {
   if (key === 'scaleUp') return Boolean(state.autoScaleUp)
   if (key === 'restage') return Boolean(state.autoXpTickspeed)
   if (key === 'overclock') return Boolean(state.autoOverclock)
-  if (key === 'reboot') return (state.autoReboot ?? null) !== null
+  if (key === 'purge') return (state.autoPurge ?? null) !== null
   return false
 }
 export const isAutomationIntervalChainUnlocked = isAutomationIntervalChainAvailable
@@ -6680,12 +6786,12 @@ export const buyAutomationIntervalUpgrade = key => state => {
   const level = state.automationIntervalLevels?.[key] ?? 0
   if (level >= getAutomationIntervalMaxLevel(key)) return state
   const cost = getAutomationIntervalUpgradeCost(key, level)
-  if (clampNonNegative(state.reboot.points) < cost) return state
+  if (clampNonNegative(state.purge.points) < cost) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
   return {
     ...latched,
-    reboot: { ...latched.reboot, points: latched.reboot.points - cost },
+    purge: { ...latched.purge, points: latched.purge.points - cost },
     automationIntervalLevels: { ...latched.automationIntervalLevels, [key]: level + 1 },
   }
 }
@@ -6707,12 +6813,12 @@ export const buyTierTickspeedIntervalUpgrade = tierId => state => {
   const level = state.tierTickspeedIntervalLevels?.[tierId] ?? 0
   if (level >= getTierTickspeedIntervalMaxLevel()) return state
   const cost = getTierTickspeedIntervalUpgradeCost(level)
-  if (clampNonNegative(state.reboot.points) < cost) return state
+  if (clampNonNegative(state.purge.points) < cost) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
   return {
     ...latched,
-    reboot: { ...latched.reboot, points: latched.reboot.points - cost },
+    purge: { ...latched.purge, points: latched.purge.points - cost },
     tierTickspeedIntervalLevels: { ...latched.tierTickspeedIntervalLevels, [tierId]: level + 1 },
   }
 }
@@ -6723,12 +6829,12 @@ export const buyAutoOverclock = state => {
   if (isProductionFrozen(state)) return state
   if (state.autoOverclock || !state.autoScaleUp || !state.autoXpTickspeed) return state
   const cost = getAutomationUnlockCost('overclock')
-  if (clampNonNegative(state.reboot.points) < cost) return state
+  if (clampNonNegative(state.purge.points) < cost) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
   return {
     ...latched,
-    reboot: { ...latched.reboot, points: latched.reboot.points - cost },
+    purge: { ...latched.purge, points: latched.purge.points - cost },
     autoOverclock: true,
   }
 }
@@ -6750,38 +6856,38 @@ export const setTierTickspeedAutobuyerEnabled = (tierId, enabled) => state => {
 
 // Activate (currentLevel null → 1) or upgrade (level N → N+1) Auto-Prestige, always by spending
 // Prestige Points — activation is just the N=0 case of the same cost formula
-// (getAutomationUnlockCost('reboot')). Once bought, tickGame accumulates an attempt
-// budget every tick at getAutoRebootAttemptRate(level) and calls rebootGame automatically the
-// first time that budget crosses 1 *while* Money is at/above REBOOT_THRESHOLD — the player never needs to
+// (getAutomationUnlockCost('purge')). Once bought, tickGame accumulates an attempt
+// budget every tick at getAutoPurgeAttemptRate(level) and calls purgeGame automatically the
+// first time that budget crosses 1 *while* Money is at/above PURGE_THRESHOLD — the player never needs to
 // see the full-screen prompt or top banner again. A single global upgrade track, not per-tier —
 // there's only one to buy/upgrade. A no-op if there aren't enough unspent points, or while
 // already frozen (buy/upgrade it ahead of the next Googol, not to retroactively affect the one
 // already in progress).
-export const buyAutoReboot = state => {
+export const buyAutoPurge = state => {
   if (isProductionFrozen(state)) return state
-  // Activation only — the cadence is upgraded separately (buyAutomationIntervalUpgrade('reboot')).
+  // Activation only — the cadence is upgraded separately (buyAutomationIntervalUpgrade('purge')).
   // Global automations unlock sequentially: Auto-Prestige needs Auto Overclock.
-  if ((state.autoReboot ?? null) !== null || !state.autoOverclock) return state
+  if ((state.autoPurge ?? null) !== null || !state.autoOverclock) return state
 
-  const cost = getAutomationUnlockCost('reboot')
-  if (clampNonNegative(state.reboot.points) < cost) return state
+  const cost = getAutomationUnlockCost('purge')
+  if (clampNonNegative(state.purge.points) < cost) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
   return {
     ...latched,
-    reboot: { ...latched.reboot, points: latched.reboot.points - cost },
-    autoReboot: 1,
+    purge: { ...latched.purge, points: latched.purge.points - cost },
+    autoPurge: 1,
   }
 }
 
-// Toggles whether Auto-Prestige currently acts (see autoRebootEnabled/tickGame) — a plain
+// Toggles whether Auto-Prestige currently acts (see autoPurgeEnabled/tickGame) — a plain
 // preference, not a purchase: unconditional, not gated by isProductionFrozen (pausing should
-// always be possible), and independently permanent from autoReboot itself (never reset by
-// Prestige/Scale Up — see rebootGame/scaleUpGame). A no-op if Auto-Prestige hasn't been bought
-// at all yet (autoReboot is null) — nothing to enable/disable before that.
-export const setAutoRebootEnabled = enabled => state => {
-  if ((state.autoReboot ?? null) === null) return state
-  return { ...state, autoRebootEnabled: !!enabled }
+// always be possible), and independently permanent from autoPurge itself (never reset by
+// Prestige/Scale Up — see purgeGame/scaleUpGame). A no-op if Auto-Prestige hasn't been bought
+// at all yet (autoPurge is null) — nothing to enable/disable before that.
+export const setAutoPurgeEnabled = enabled => state => {
+  if ((state.autoPurge ?? null) === null) return state
+  return { ...state, autoPurgeEnabled: !!enabled }
 }
 
 // Activate (currentLevel null → 1) or upgrade (level N → N+1) Speed Up (the global tickspeed
@@ -6807,8 +6913,8 @@ export const buyGlobalTickspeedMultiplier = state => {
   }
 }
 
-// Reaching REBOOT_THRESHOLD money awards Prestige Points (see getPrestigePointsAwarded) and resets all
-// progress. XP (reboot.xp) and lastTierXpConsumed — the cumulative counter the last tier's
+// Reaching PURGE_THRESHOLD money awards Prestige Points (see getPrestigePointsAwarded) and resets all
+// progress. XP (purge.xp) and lastTierXpConsumed — the cumulative counter the last tier's
 // XP-funded tickspeed multiplier is funded from (see "The last tier's XP-funded tickspeed" in
 // CLAUDE.md) — both reset to 0 on prestige, same as resources/owned/purchased: XP is a run-scoped
 // currency, not a permanent one like Prestige Points, and nothing invested via
@@ -7073,18 +7179,18 @@ export const resetByteFoundry = state => {
   }
 }
 
-export const rebootGame = state => {
-  if (clampNonNegative(state.resources[MONEY_ID]) < REBOOT_THRESHOLD) return state
+export const purgeGame = state => {
+  if (clampNonNegative(state.resources[MONEY_ID]) < PURGE_THRESHOLD) return state
 
   const doublePpLevel = state.prestigeDoublePpLevel ?? 0
   const pointsAwarded = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel)
   const initial = createInitialGameState()
-  const nextRebootNumber = state.reboot.count + 1
-  const unboundedUnlocked = isUnboundedRebootUnlocked(state)
+  const nextPurgeNumber = state.purge.count + 1
+  const unboundedUnlocked = isOverflowModeUnlocked(state)
   const museumEntry = {
-    id: `p${nextRebootNumber}-${Date.now()}`,
+    id: `p${nextPurgeNumber}-${Date.now()}`,
     at: Date.now(),
-    rebootNumber: nextRebootNumber,
+    purgeNumber: nextPurgeNumber,
     pointsAwarded,
     moneyBits: clampNonNegative(state.resources[MONEY_ID]),
   }
@@ -7092,7 +7198,7 @@ export const rebootGame = state => {
   const nextHistory = [museumEntry, ...(previousMuseum.history ?? [])].slice(0, MUSEUM_HISTORY_CAP)
   const nextHistoryIds = new Set(nextHistory.map(entry => entry.id))
   const nextPinnedIds = (previousMuseum.pinnedIds ?? []).filter(id => nextHistoryIds.has(id))
-  // applyAutobuyerMilestones runs last, against the freshly-incremented reboot.count below —
+  // applyAutobuyerMilestones runs last, against the freshly-incremented purge.count below —
   // it's what actually unlocks the next tier's autobuyer/tier-tickspeed-autobuyer the instant this
   // prestige crosses their milestone (see getAutobuyerUnlockMilestone/
   // getTierTickspeedAutobuyerMilestone), on top of whatever autobuyers/tierTickspeedAutobuyer were
@@ -7230,12 +7336,12 @@ export const rebootGame = state => {
     tierTickspeedIntervalLevels: state.tierTickspeedIntervalLevels ?? initial.tierTickspeedIntervalLevels,
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
     tierTickspeedAutobuyerEnabled: state.tierTickspeedAutobuyerEnabled ?? initial.tierTickspeedAutobuyerEnabled,
-    autoReboot: state.autoReboot ?? initial.autoReboot,
+    autoPurge: state.autoPurge ?? initial.autoPurge,
     // The four automations' "enabled" (pause/resume) flags are just as permanent as their parent
     // "unlocked" flags above — a paused preference should survive a Prestige exactly like the
-    // purchase itself does (see setAutoRebootEnabled/setAutoScaleUpEnabled/
+    // purchase itself does (see setAutoPurgeEnabled/setAutoScaleUpEnabled/
     // setAutoGlobalTickspeedEnabled).
-    autoRebootEnabled: state.autoRebootEnabled ?? initial.autoRebootEnabled,
+    autoPurgeEnabled: state.autoPurgeEnabled ?? initial.autoPurgeEnabled,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     prestigeDoublePpLevel: state.prestigeDoublePpLevel ?? initial.prestigeDoublePpLevel,
     autoScaleUp: state.autoScaleUp ?? initial.autoScaleUp,
@@ -7257,7 +7363,7 @@ export const rebootGame = state => {
     // so its own permanent bonus also has to be rebuilt from scratch each Prestige cycle rather
     // than compounding forever across every future Prestige.
     // lastTierXpConsumed is NOT carried over — it resets to 0 (initial.lastTierXpConsumed) along
-    // with reboot.xp below, since it's funded by spending XP, a run-scoped currency now.
+    // with purge.xp below, since it's funded by spending XP, a run-scoped currency now.
     // everUnlockedTierIds is deliberately NOT carried over here either — unlike every permanent
     // flag above, it resets to the fresh initial default (only the first tier true) same as
     // owned/purchased, so a real Prestige/Scale Up still relocks every tier beyond the first
@@ -7278,14 +7384,14 @@ export const rebootGame = state => {
     computeFlopsAutobuyersEnabled: state.computeFlopsAutobuyersEnabled ?? initial.computeFlopsAutobuyersEnabled,
     computeFlops: {
       pageUnlocked: Boolean(state.computeFlops?.pageUnlocked)
-        || clampNonNegative(state.reboot.points) + pointsAwarded >= COMPUTE_FLOPS_REVEAL_PP,
+        || clampNonNegative(state.purge.points) + pointsAwarded >= COMPUTE_FLOPS_REVEAL_PP,
       owned: state.computeFlops?.owned ?? initial.computeFlops.owned,
       cumulativeBoost: initial.computeFlops.cumulativeBoost,
     },
-    reboot: {
-      ...initial.reboot,
-      points: clampNonNegative(state.reboot.points) + pointsAwarded,
-      count: nextRebootNumber,
+    purge: {
+      ...initial.purge,
+      points: clampNonNegative(state.purge.points) + pointsAwarded,
+      count: nextPurgeNumber,
       unboundedUnlocked,
     },
   })
@@ -7318,20 +7424,20 @@ export const unpinMuseumEntry = entryId => state => {
   }
 }
 
-// A more frequent soft-reset than real Prestige, available well before Money reaches REBOOT_THRESHOLD:
+// A more frequent soft-reset than real Prestige, available well before Money reaches PURGE_THRESHOLD:
 // once the current scale-up target tier (see getScaleUpTargetTier) reaches getScaleUpRequirement(state)'s
 // target level — level 3 before the final tier, then 3/6/9/… there — resets
 // resources/owned/purchased (and every other per-run
 // field, including every tier's own tickspeed level, purchase level/progress, and the global
-// tickspeed multiplier, both back to not-yet-bought — same reset rebootGame now does) back to a
+// tickspeed multiplier, both back to not-yet-bought — same reset purgeGame now does) back to a
 // fresh game exactly like createInitialGameState, but permanently doubles the current target and
 // every earlier tier (see getTierScaleUpMultiplier). The successful claim records its successor in
 // `everUnlockedTierIds`; reaching the predecessor threshold alone never records a tier. Autobuyer unlock/
-// tierTickspeedAutobuyer/autoReboot/prestigeSpeedBonusUnlocked/autoScaleUp/autoGlobalTickspeed
+// tierTickspeedAutobuyer/autoPurge/prestigeSpeedBonusUnlocked/autoScaleUp/autoGlobalTickspeed
 // (the *automation toggles*, as opposed to the global tickspeed multiplier's own level) carry over
 // unchanged — so if the global tickspeed Autobuyer was already bought, tickGame simply starts
 // re-buying the multiplier back up from scratch once Money allows. lastTierXpConsumed resets to 0
-// here too, same as rebootGame — the last tier's own owned/purchased count also resets to 0 like
+// here too, same as purgeGame — the last tier's own owned/purchased count also resets to 0 like
 // every other tier's, so the XP-funded mechanic (see isLastTierTickspeedXpUnlocked's live
 // owned-vs-block-size check) is doubly disengaged: not just inactive until owned is bought back up
 // to a full level, but with nothing banked to re-engage with even then, since Scale Up wipes the XP
@@ -7342,11 +7448,11 @@ export const unpinMuseumEntry = entryId => state => {
 // plus successor (when one exists). Prestige/Overclock still reset this progression. `scaleUpTargetTierIndex`
 // simply increments by 1 unconditionally (see its own comment in createInitialGameState) — no
 // separate phase check needed, since getScaleUpRequirement already reads however far past the last
-// tier it's climbed directly. Unlike rebootGame, `reboot.points`/`count` are passed through
+// tier it's climbed directly. Unlike purgeGame, `purge.points`/`count` are passed through
 // completely untouched — Scale Up is unrelated to real Prestige or Prestige Points, and doesn't
-// award or spend any — but `reboot.xp` resets to 0, same as lastTierXpConsumed, since XP is a
-// run-scoped currency now. `reboot.highestMilestone` (the money-exponent watermark checkMilestones
-// grants further XP against) resets to the fresh initial value here too, same as rebootGame
+// award or spend any — but `purge.xp` resets to 0, same as lastTierXpConsumed, since XP is a
+// run-scoped currency now. `purge.highestMilestone` (the money-exponent watermark checkMilestones
+// grants further XP against) resets to the fresh initial value here too, same as purgeGame
 // already did — it must track the reset resources, not the previous run's peak, or a fresh run would
 // earn no XP at all until money climbs back past wherever the last run left off (previously an
 // asymmetry between the two reset paths — see docs/DESIGN_HISTORY.md). A no-op (returns the same
@@ -7373,22 +7479,22 @@ export const scaleUpGame = state => {
   }
   return {
     ...initial,
-    // Unlike rebootGame (which resets the Data Stream balance every cycle but keeps the
+    // Unlike purgeGame (which resets the Data Stream balance every cycle but keeps the
     // generator itself and the mainGameUnlocked latch permanent — see there), this is an
     // intra-cycle soft reset and carries the whole intro object through completely untouched,
     // Memory included.
     intro: state.intro ?? initial.intro,
     autobuyers: state.autobuyers ?? initial.autobuyers,
-    // Same permanence as rebootGame gives these two "enabled" flags — see there.
+    // Same permanence as purgeGame gives these two "enabled" flags — see there.
     autobuyersEnabled: state.autobuyersEnabled ?? initial.autobuyersEnabled,
     autobuyerIntervalLevels: state.autobuyerIntervalLevels ?? initial.autobuyerIntervalLevels,
     automationIntervalLevels: state.automationIntervalLevels ?? initial.automationIntervalLevels,
     tierTickspeedIntervalLevels: state.tierTickspeedIntervalLevels ?? initial.tierTickspeedIntervalLevels,
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
     tierTickspeedAutobuyerEnabled: state.tierTickspeedAutobuyerEnabled ?? initial.tierTickspeedAutobuyerEnabled,
-    autoReboot: state.autoReboot ?? initial.autoReboot,
-    // Same permanence as rebootGame gives these four "enabled" flags above — see there.
-    autoRebootEnabled: state.autoRebootEnabled ?? initial.autoRebootEnabled,
+    autoPurge: state.autoPurge ?? initial.autoPurge,
+    // Same permanence as purgeGame gives these four "enabled" flags above — see there.
+    autoPurgeEnabled: state.autoPurgeEnabled ?? initial.autoPurgeEnabled,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     prestigeDoublePpLevel: state.prestigeDoublePpLevel ?? initial.prestigeDoublePpLevel,
     autoScaleUp: state.autoScaleUp ?? initial.autoScaleUp,
@@ -7401,7 +7507,7 @@ export const scaleUpGame = state => {
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
     // lastTierXpConsumed is NOT carried over — it resets to 0 (initial.lastTierXpConsumed) along
-    // with reboot.xp below.
+    // with purge.xp below.
     // Preserve prior records and add the target/successor earned by this successful claim.
     everUnlockedTierIds,
     // Museum is permanent per save — Scale Up must not wipe prestige history/pins.
@@ -7409,7 +7515,7 @@ export const scaleUpGame = state => {
     // Era ascension progress (era count, banked Eons, purchased hyperscalers, Eon upgrade levels)
     // is permanent meta-progression above even a real Prestige (see eraGame) — an intra-cycle Scale
     // Up must not wipe it either. See issue #626 for the same fields' missing carry-over in
-    // rebootGame itself (a separate, pre-existing bug, out of scope here).
+    // purgeGame itself (a separate, pre-existing bug, out of scope here).
     era: state.era ?? initial.era,
     eons: state.eons ?? initial.eons,
     hyperscalerCount: state.hyperscalerCount ?? initial.hyperscalerCount,
@@ -7425,7 +7531,7 @@ export const scaleUpGame = state => {
       owned: state.computeFlops?.owned ?? initial.computeFlops.owned,
       cumulativeBoost: initial.computeFlops.cumulativeBoost,
     },
-    reboot: { ...state.reboot, xp: initial.reboot.xp, highestMilestone: initial.reboot.highestMilestone },
+    purge: { ...state.purge, xp: initial.purge.xp, highestMilestone: initial.purge.highestMilestone },
     scaleUpCount: (state.scaleUpCount ?? 0) + 1,
     scaleUpTierCounts,
     // Unconditional +1 — see this function's own comment above and scaleUpTargetTierIndex's own
@@ -7433,7 +7539,7 @@ export const scaleUpGame = state => {
     scaleUpTargetTierIndex: clampNonNegative(state.scaleUpTargetTierIndex ?? 0) + 1,
     // overclockCount is carried over unchanged (NOT incremented, NOT reset) — an ordinary Scale Up
     // is a smaller reset than Overclock and must not touch its permanent bonus either way; only
-    // overclockGame itself increments it, and only rebootGame/overclockGame's own reset of
+    // overclockGame itself increments it, and only purgeGame/overclockGame's own reset of
     // scaleUpCount ever wipe anything Overclock-related. overclockLastClaimCompletedLevels (the
     // completed-level count the previous Overclock was taken at) rides along with it — a Scale Up
     // resets the final tier's level progress but must NOT reset where the next Overclock gate
@@ -7471,22 +7577,22 @@ export const overclockGame = state => {
   const initial = createInitialGameState()
   return {
     ...initial,
-    // Unlike rebootGame (which resets the Data Stream balance every cycle but keeps the
+    // Unlike purgeGame (which resets the Data Stream balance every cycle but keeps the
     // generator itself and the mainGameUnlocked latch permanent — see there), this is an
     // intra-cycle soft reset and carries the whole intro object through completely untouched,
     // same as scaleUpGame.
     intro: state.intro ?? initial.intro,
     autobuyers: state.autobuyers ?? initial.autobuyers,
-    // Same permanence as scaleUpGame/rebootGame give these two "enabled" flags — see there.
+    // Same permanence as scaleUpGame/purgeGame give these two "enabled" flags — see there.
     autobuyersEnabled: state.autobuyersEnabled ?? initial.autobuyersEnabled,
     autobuyerIntervalLevels: state.autobuyerIntervalLevels ?? initial.autobuyerIntervalLevels,
     automationIntervalLevels: state.automationIntervalLevels ?? initial.automationIntervalLevels,
     tierTickspeedIntervalLevels: state.tierTickspeedIntervalLevels ?? initial.tierTickspeedIntervalLevels,
     tierTickspeedAutobuyer: state.tierTickspeedAutobuyer ?? initial.tierTickspeedAutobuyer,
     tierTickspeedAutobuyerEnabled: state.tierTickspeedAutobuyerEnabled ?? initial.tierTickspeedAutobuyerEnabled,
-    autoReboot: state.autoReboot ?? initial.autoReboot,
-    // Same permanence as scaleUpGame/rebootGame give these four "enabled" flags above — see there.
-    autoRebootEnabled: state.autoRebootEnabled ?? initial.autoRebootEnabled,
+    autoPurge: state.autoPurge ?? initial.autoPurge,
+    // Same permanence as scaleUpGame/purgeGame give these four "enabled" flags above — see there.
+    autoPurgeEnabled: state.autoPurgeEnabled ?? initial.autoPurgeEnabled,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     prestigeDoublePpLevel: state.prestigeDoublePpLevel ?? initial.prestigeDoublePpLevel,
     autoScaleUp: state.autoScaleUp ?? initial.autoScaleUp,
@@ -7516,7 +7622,7 @@ export const overclockGame = state => {
       owned: state.computeFlops?.owned ?? initial.computeFlops.owned,
       cumulativeBoost: initial.computeFlops.cumulativeBoost,
     },
-    reboot: { ...state.reboot, xp: initial.reboot.xp, highestMilestone: initial.reboot.highestMilestone },
+    purge: { ...state.purge, xp: initial.purge.xp, highestMilestone: initial.purge.highestMilestone },
     // scaleUpCount/scaleUpTierCounts are deliberately NOT carried over (unlike scaleUpGame's own
     // increments) — both reset through ...initial, wiping Scale Up's per-tier bonuses. This is Overclock's
     // defining trade: a steeper reset, in exchange for a permanent, much smaller, but
@@ -7541,12 +7647,12 @@ export const overclockGame = state => {
 export const buyAutoScaleUp = state => {
   if (isProductionFrozen(state)) return state
   if (state.autoScaleUp || !state.autoGlobalTickspeed) return state
-  if (clampNonNegative(state.reboot.points) < getAutomationUnlockCost('scaleUp')) return state
+  if (clampNonNegative(state.purge.points) < getAutomationUnlockCost('scaleUp')) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
   return {
     ...latched,
-    reboot: { ...latched.reboot, points: latched.reboot.points - getAutomationUnlockCost('scaleUp') },
+    purge: { ...latched.purge, points: latched.purge.points - getAutomationUnlockCost('scaleUp') },
     autoScaleUp: true,
   }
 }
@@ -7558,12 +7664,12 @@ export const buyAutoScaleUp = state => {
 export const buyComputeAutoBoost = state => {
   if (isProductionFrozen(state)) return state
   if (state.computeAutoBoostUnlocked) return state
-  if (clampNonNegative(state.reboot.points) < COMPUTE_AUTO_BOOST_UNLOCK_COST) return state
+  if (clampNonNegative(state.purge.points) < COMPUTE_AUTO_BOOST_UNLOCK_COST) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
   return {
     ...latched,
-    reboot: { ...latched.reboot, points: latched.reboot.points - COMPUTE_AUTO_BOOST_UNLOCK_COST },
+    purge: { ...latched.purge, points: latched.purge.points - COMPUTE_AUTO_BOOST_UNLOCK_COST },
     computeAutoBoostUnlocked: true,
   }
 }
@@ -7575,12 +7681,12 @@ export const buyComputeAutoBoost = state => {
 export const buyXpTickspeedAutobuyer = state => {
   if (isProductionFrozen(state)) return state
   if (state.autoXpTickspeed || !state.autoGlobalTickspeed) return state
-  if (clampNonNegative(state.reboot.points) < XP_TICKSPEED_AUTOBUYER_UNLOCK_COST) return state
+  if (clampNonNegative(state.purge.points) < XP_TICKSPEED_AUTOBUYER_UNLOCK_COST) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
   return {
     ...latched,
-    reboot: { ...latched.reboot, points: latched.reboot.points - XP_TICKSPEED_AUTOBUYER_UNLOCK_COST },
+    purge: { ...latched.purge, points: latched.purge.points - XP_TICKSPEED_AUTOBUYER_UNLOCK_COST },
     autoXpTickspeed: true,
   }
 }
@@ -7592,7 +7698,7 @@ export const setAutoXpTickspeedEnabled = enabled => state => {
 }
 
 // Toggles whether Auto Scale Up currently acts (see autoScaleUpEnabled/tickGame) — same
-// unconditional, permanent-preference convention as setAutoRebootEnabled above. A no-op if
+// unconditional, permanent-preference convention as setAutoPurgeEnabled above. A no-op if
 // Auto Scale Up hasn't been bought yet.
 export const setAutoScaleUpEnabled = enabled => state => {
   if (!state.autoScaleUp) return state
@@ -7608,19 +7714,19 @@ export const setAutoScaleUpEnabled = enabled => state => {
 export const buyTickspeedAutobuyer = state => {
   if (isProductionFrozen(state)) return state
   if (state.autoGlobalTickspeed) return state
-  if (clampNonNegative(state.reboot.points) < getAutomationUnlockCost('speedUp')) return state
+  if (clampNonNegative(state.purge.points) < getAutomationUnlockCost('speedUp')) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
   return {
     ...latched,
-    reboot: { ...latched.reboot, points: latched.reboot.points - getAutomationUnlockCost('speedUp') },
+    purge: { ...latched.purge, points: latched.purge.points - getAutomationUnlockCost('speedUp') },
     autoGlobalTickspeed: true,
   }
 }
 
 // Toggles whether the global Tickspeed Autobuyer currently acts (see
 // autoGlobalTickspeedEnabled/tickGame) — same unconditional, permanent-preference convention as
-// setAutoRebootEnabled/setAutoScaleUpEnabled above. A no-op if it hasn't been bought yet.
+// setAutoPurgeEnabled/setAutoScaleUpEnabled above. A no-op if it hasn't been bought yet.
 export const setAutoGlobalTickspeedEnabled = enabled => state => {
   if (!state.autoGlobalTickspeed) return state
   return { ...state, autoGlobalTickspeedEnabled: !!enabled }
@@ -7628,8 +7734,8 @@ export const setAutoGlobalTickspeedEnabled = enabled => state => {
 
 // Spends XP to compound another LAST_TIER_XP_TICKSPEED_STEP (1%) into the last tier's own
 // tickspeed multiplier per XP consumed (see getLastTierXpTickspeedMultiplier) — durable within the
-// current run (never decays or reverts on its own), but reset to 0 by rebootGame/scaleUpGame
-// along with reboot.xp itself, same as every other run-scoped field. Only available while
+// current run (never decays or reverts on its own), but reset to 0 by purgeGame/scaleUpGame
+// along with purge.xp itself, same as every other run-scoped field. Only available while
 // isLastTierTickspeedXpUnlocked (a scaleUpTierCounts-based latch — the last tier has EVER been
 // the target of a successful Scale Up this cycle, NOT a live owned check), which is when it's
 // a separate upgrade shown beside Speed Up, composing with that tier's own tickspeed level —
@@ -7667,7 +7773,7 @@ export const consumeXpForLastTierTickspeed = amount => state => {
   const xpConsumedSoFar = state.lastTierXpConsumed ?? 0
   if (safeAmount < getLastTierXpTickspeedMinConsumption(xpConsumedSoFar)) return state
 
-  const availableXp = clampNonNegative(state.reboot.xp)
+  const availableXp = clampNonNegative(state.purge.xp)
   if (safeAmount > availableXp) return state
 
   const resetTierIds = TIER_DEFINITIONS
@@ -7676,7 +7782,7 @@ export const consumeXpForLastTierTickspeed = amount => state => {
 
   return {
     ...state,
-    reboot: { ...state.reboot, xp: availableXp - safeAmount },
+    purge: { ...state.purge, xp: availableXp - safeAmount },
     lastTierXpConsumed: xpConsumedSoFar + safeAmount,
     owned: {
       ...state.owned,

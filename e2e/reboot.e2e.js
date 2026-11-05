@@ -4,31 +4,31 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await page.evaluate(() => {
     window.localStorage.clear()
-    // 8e100 (REBOOT_THRESHOLD = GOOGOL * BITS_PER_BYTE — "1 Googol Bytes," in Bits) is the real
-    // freeze/Prestige trigger now, not the bare 1e100 GOOGOL value. mainGameUnlocked: true lands
-    // this seed directly on MainPage rather than the Byte Foundry intro screen.
     window.localStorage.setItem('tens_game_state', JSON.stringify({
-      intro: { mainGameUnlocked: true },
-      resources: { base: 8e100 },
+      intro: { mainGameUnlocked: true, byteCreated: true },
+      purge: { xp: 0, points: 1e100, count: 5, highestMilestone: 1 },
+      era: { count: 0 },
+      eons: { balance: 0 },
     }))
   })
   await page.reload()
 })
 
-test('prestiging from the first-time overlay resets resources, awards Purge Points, and stays on MainPage', async ({ page }) => {
-  const overlay = page.getByRole('dialog', { name: /purge required/i })
-  await expect(overlay).toBeVisible()
-
-  await overlay.getByRole('button', { name: /purge now/i }).click()
-
-  await expect(overlay).not.toBeVisible()
-  // intro.mainGameUnlocked is now a permanent, one-time-ever latch (see engine.js's
-  // latchMainGameUnlocked/rebootGame) — a real Prestige no longer re-gates the player behind the
-  // Byte Foundry, so the app stays on MainPage (Factory) instead of navigating back there; money/
-  // owned-tier assertions for the main game itself are already covered by golden-path.e2e.js.
-  await expect(page.getByRole('heading', { level: 1, name: /byte foundry/i })).not.toBeVisible()
+test('rebooting from Settings awards Kernels and resets Foundry Capacity, but keeps the gate permanently unlocked', async ({ page }) => {
+  await page.getByRole('button', { name: /open more menu/i }).click()
+  await page.getByRole('button', { name: /open settings/i }).click()
+  await page.getByRole('button', { name: /reboot — open confirmation/i }).click()
+  await page.getByRole('button', { name: /^reboot$/i }).click()
 
   const saved = await page.evaluate(() => JSON.parse(window.localStorage.getItem('tens_game_state')))
+  expect(saved.era.count).toBe(1)
+  expect(saved.eons.balance).toBeGreaterThanOrEqual(1)
+  // intro.mainGameUnlocked is now a permanent, one-time-ever latch (see engine.js's
+  // latchMainGameUnlocked/buildEraIntroReset) — Reboot resets the rest of the Foundry but
+  // carries this flag forward once it's ever been set.
   expect(saved.intro.mainGameUnlocked).toBe(true)
-  expect(saved.reboot.points).toBeGreaterThan(0)
+  expect(saved.intro.capacity).toBe(8)
+
+  await page.getByRole('button', { name: /open byte foundry/i }).click()
+  await expect(page.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeVisible()
 })

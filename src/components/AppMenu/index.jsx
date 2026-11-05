@@ -1,6 +1,6 @@
 import styled from 'styled-components'
 
-// Overflow sheet for always-available utilities (Guide, Milestones, Settings) — reachable from every
+// Overflow sheet for always-available utilities (Manual, Releases, Settings) — reachable from every
 // screen, including the mandatory Byte Foundry gate, without requiring any progress; none of them
 // earns a bottom-bar slot. Reset
 // lives only under Settings → Danger zone (not duplicated here). Opened from AppNav's More item;
@@ -98,13 +98,13 @@ const AppMenu = ({ open, onClose, onNavigate }) => {
         role="dialog"
       >
         <SheetTitle>More</SheetTitle>
-        <MenuButton aria-label="open guide" onClick={() => go('info')} type="button">
-          <Icon aria-hidden="true">ℹ️</Icon>
-          Guide
+        <MenuButton aria-label="open manual" onClick={() => go('info')} type="button">
+          <Icon aria-hidden="true">📖</Icon>
+          Manual
         </MenuButton>
-        <MenuButton aria-label="open milestones" onClick={() => go('milestones')} type="button">
+        <MenuButton aria-label="open releases" onClick={() => go('milestones')} type="button">
           <Icon aria-hidden="true">🏁</Icon>
-          Milestones
+          Releases
         </MenuButton>
         <MenuButton aria-label="open settings" onClick={() => go('settings')} type="button">
           <Icon aria-hidden="true">⚙️</Icon>

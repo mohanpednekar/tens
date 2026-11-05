@@ -38,7 +38,7 @@ const StatusText = styled.p`
 
 // One block per compute-ladder entity — two rows apiece (see TierHeaderRow/TierMergeRow below),
 // replacing the old single-row-per-tier layout now that a boundary's own reserve-merge slots (see
-// issue #321) need a dedicated second row once auto-merge is unlocked for it.
+// issue #321) need a dedicated second row once auto-charge is unlocked for it.
 const TierBlocksGroup = styled.div`
   display: flex;
   flex-direction: column;
@@ -161,8 +161,8 @@ const NormalSlot = styled.span`
   background: ${props => (props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
 `
 
-// Row 2: pre-unlock, an instant Merge button + an Unlock Auto-merge button; post-unlock, the 8
-// auto-merge slots themselves, clickable as an instant manual merge — "2nd row has merge button and
+// Row 2: pre-unlock, an instant Merge button + an Unlock Auto-charge button; post-unlock, the 8
+// auto-charge slots themselves, clickable as an instant manual merge — "2nd row has merge button and
 // unlock automerge button (in place of the reserved slots before unlocking them)" (issue #321).
 // The post-unlock ReserveSlotsRow branch stretches itself via flex: 1 1 auto and right-aligns its
 // own slots internally, filling the row exactly like MainPage's own tier-row Buy/Upgrade pair;
@@ -182,7 +182,7 @@ const CompactButton = styled(Button)`
   flex: 0 0 auto;
 `
 
-// Row 2's pre-unlock Merge/Auto-merge pair — each fills exactly half the row (flex: 1 1 0,
+// Row 2's pre-unlock Merge/Auto-charge pair — each fills exactly half the row (flex: 1 1 0,
 // width: 100%), the same "two equal-width buttons split the row" look MainPage's own tier rows use
 // for their Upgrade/Buy pair, rather than small icon-only squares hugging one edge with the rest of
 // the row left empty.
@@ -236,7 +236,7 @@ const ReserveSlot = styled.span`
   background: ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
 `
 
-// Left-edge label naming the row as auto-merge slots ("🤖 Auto-merge"), switching to an accent
+// Left-edge label naming the row as auto-charge slots ("🤖 Auto-charge"), switching to an accent
 // "🤖 ⬆ 8→1 <output>" while an instant manual merge is available, so the row reads as a button.
 const MergeCue = styled.span`
   flex: 0 0 auto;
@@ -296,10 +296,10 @@ const AutoBoostLabel = styled.p`
 
 // The full ten-tier progression this page walks top to bottom. Every row past Cores through
 // Supercomputers shares the exact same shape: a merge boundary into the tier above it, which —
-// once that boundary's auto-merge is unlocked (see intro.autoMergeCoresIntoNode/
-// autoMergeNodesIntoCluster/… in engine.js) — moves to the "🤖 Auto-merge" slot row: tapping it still merges
+// once that boundary's auto-charge is unlocked (see intro.autoMergeCoresIntoNode/
+// autoMergeNodesIntoCluster/… in engine.js) — moves to the "🤖 Auto-charge" slot row: tapping it still merges
 // instantly, while engine.js's automatic merge uses the timed reserve pool (see issue #321). Core → Node is included as an ordinary
-// boundary here, same as every other one. Cores themselves are obtained by buying Boosters from
+// boundary here, same as every other one. Cells themselves are obtained by buying them from
 // the matching Data Lake on Foundry (buyBooster — spent from that lake's own banked units, not
 // minted from Memory); the buy/auto-buy control itself lives on Foundry's DataLakePanel, not here
 // — the earlier "Claim Core"/auto-claim mechanic was removed once Data Lakes superseded it.
@@ -308,151 +308,151 @@ const AutoBoostLabel = styled.p`
 const ENTITY_ROWS = [
   {
     key: 'core',
-    label: 'Cores',
+    label: 'Cells',
     symbol: '⬡',
     countField: 'computeCores',
-    mergeOutputLabel: 'Node',
+    mergeOutputLabel: 'Battery',
     mergeOutputField: 'computeNodes',
     mergeAction: 'mergeComputeCoresIntoNode',
     autoFlagField: 'autoMergeCoresIntoNode',
-    autoCostLabel: 'Nodes',
+    autoCostLabel: 'Batteries',
     autoCostField: 'computeNodes',
     enableAutoAction: 'enableAutoMergeCoresIntoNode',
-    autoAriaLabel: 'enable auto-merge for Cores into Nodes',
+    autoAriaLabel: 'enable auto-charge for Cells into Batteries',
     startAction: 'startComputeCoresMerge',
     timerField: 'computeCoresMergeRemainingSeconds',
   },
   {
     key: 'nodesIntoCluster',
-    label: 'Nodes',
+    label: 'Batteries',
     symbol: '🔗',
     countField: 'computeNodes',
-    mergeOutputLabel: 'Cluster',
+    mergeOutputLabel: 'Pack',
     mergeOutputField: 'computeClusters',
     mergeAction: 'mergeComputeNodesIntoCluster',
     autoFlagField: 'autoMergeNodesIntoCluster',
-    autoCostLabel: 'Clusters',
+    autoCostLabel: 'Packs',
     autoCostField: 'computeClusters',
     enableAutoAction: 'enableAutoMergeNodesIntoCluster',
-    autoAriaLabel: 'enable auto-merge for Nodes into Clusters',
+    autoAriaLabel: 'enable auto-charge for Batteries into Packs',
     startAction: 'startComputeNodesMerge',
     timerField: 'computeNodesMergeRemainingSeconds',
   },
   {
     key: 'clustersIntoNetwork',
-    label: 'Clusters',
+    label: 'Packs',
     symbol: '🧩',
     countField: 'computeClusters',
-    mergeOutputLabel: 'Network',
+    mergeOutputLabel: 'Bank',
     mergeOutputField: 'computeNetworks',
     mergeAction: 'mergeComputeClustersIntoNetwork',
     autoFlagField: 'autoMergeClustersIntoNetwork',
-    autoCostLabel: 'Networks',
+    autoCostLabel: 'Banks',
     autoCostField: 'computeNetworks',
     enableAutoAction: 'enableAutoMergeClustersIntoNetwork',
-    autoAriaLabel: 'enable auto-merge for Clusters into Networks',
+    autoAriaLabel: 'enable auto-charge for Packs into Banks',
     startAction: 'startComputeClustersMerge',
     timerField: 'computeClustersMergeRemainingSeconds',
   },
   {
     key: 'networksIntoGrid',
-    label: 'Networks',
+    label: 'Banks',
     symbol: '🕸️',
     countField: 'computeNetworks',
-    mergeOutputLabel: 'Grid',
+    mergeOutputLabel: 'Generator',
     mergeOutputField: 'computeGrids',
     mergeAction: 'mergeComputeNetworksIntoGrid',
     autoFlagField: 'autoMergeNetworksIntoGrid',
-    autoCostLabel: 'Grids',
+    autoCostLabel: 'Generators',
     autoCostField: 'computeGrids',
     enableAutoAction: 'enableAutoMergeNetworksIntoGrid',
-    autoAriaLabel: 'enable auto-merge for Networks into Grids',
+    autoAriaLabel: 'enable auto-charge for Banks into Generators',
     startAction: 'startComputeNetworksMerge',
     timerField: 'computeNetworksMergeRemainingSeconds',
   },
   {
     key: 'gridsIntoFabric',
-    label: 'Grids',
+    label: 'Generators',
     symbol: '▦',
     countField: 'computeGrids',
-    mergeOutputLabel: 'Fabric',
+    mergeOutputLabel: 'Turbine',
     mergeOutputField: 'computeFabrics',
     mergeAction: 'mergeComputeGridsIntoFabric',
     autoFlagField: 'autoMergeGridsIntoFabric',
-    autoCostLabel: 'Fabrics',
+    autoCostLabel: 'Turbines',
     autoCostField: 'computeFabrics',
     enableAutoAction: 'enableAutoMergeGridsIntoFabric',
-    autoAriaLabel: 'enable auto-merge for Grids into Fabrics',
+    autoAriaLabel: 'enable auto-charge for Generators into Turbines',
     startAction: 'startComputeGridsMerge',
     timerField: 'computeGridsMergeRemainingSeconds',
   },
   {
     key: 'fabricsIntoCloud',
-    label: 'Fabrics',
+    label: 'Turbines',
     symbol: '🧵',
     countField: 'computeFabrics',
-    mergeOutputLabel: 'Cloud',
+    mergeOutputLabel: 'Plant',
     mergeOutputField: 'computeClouds',
     mergeAction: 'mergeComputeFabricsIntoCloud',
     autoFlagField: 'autoMergeFabricsIntoCloud',
-    autoCostLabel: 'Clouds',
+    autoCostLabel: 'Plants',
     autoCostField: 'computeClouds',
     enableAutoAction: 'enableAutoMergeFabricsIntoCloud',
-    autoAriaLabel: 'enable auto-merge for Fabrics into Clouds',
+    autoAriaLabel: 'enable auto-charge for Turbines into Plants',
     startAction: 'startComputeFabricsMerge',
     timerField: 'computeFabricsMergeRemainingSeconds',
   },
   {
     key: 'cloudsIntoDatacenter',
-    label: 'Clouds',
+    label: 'Plants',
     symbol: '☁️',
     countField: 'computeClouds',
-    mergeOutputLabel: 'Datacenter',
+    mergeOutputLabel: 'Grid',
     mergeOutputField: 'computeDatacenters',
     mergeAction: 'mergeComputeCloudsIntoDatacenter',
     autoFlagField: 'autoMergeCloudsIntoDatacenter',
-    autoCostLabel: 'Datacenters',
+    autoCostLabel: 'Grids',
     autoCostField: 'computeDatacenters',
     enableAutoAction: 'enableAutoMergeCloudsIntoDatacenter',
-    autoAriaLabel: 'enable auto-merge for Clouds into Datacenters',
+    autoAriaLabel: 'enable auto-charge for Plants into Grids',
     startAction: 'startComputeCloudsMerge',
     timerField: 'computeCloudsMergeRemainingSeconds',
   },
   {
     key: 'datacentersIntoSupercomputer',
-    label: 'Datacenters',
+    label: 'Grids',
     symbol: '🏢',
     countField: 'computeDatacenters',
-    mergeOutputLabel: 'Supercomputer',
+    mergeOutputLabel: 'Reactor',
     mergeOutputField: 'computeSupercomputers',
     mergeAction: 'mergeComputeDatacentersIntoSupercomputer',
     autoFlagField: 'autoMergeDatacentersIntoSupercomputer',
-    autoCostLabel: 'Supercomputers',
+    autoCostLabel: 'Reactors',
     autoCostField: 'computeSupercomputers',
     enableAutoAction: 'enableAutoMergeDatacentersIntoSupercomputer',
-    autoAriaLabel: 'enable auto-merge for Datacenters into Supercomputers',
+    autoAriaLabel: 'enable auto-charge for Grids into Reactors',
     startAction: 'startComputeDatacentersMerge',
     timerField: 'computeDatacentersMergeRemainingSeconds',
   },
   {
     key: 'supercomputersIntoMegacomputer',
-    label: 'Supercomputers',
+    label: 'Reactors',
     symbol: '🖥️',
     countField: 'computeSupercomputers',
-    mergeOutputLabel: 'Megacomputer',
+    mergeOutputLabel: 'Fusion',
     mergeOutputField: 'computeMegacomputers',
     mergeAction: 'mergeComputeSupercomputersIntoMegacomputer',
     autoFlagField: 'autoMergeSupercomputersIntoMegacomputer',
-    autoCostLabel: 'Megacomputers',
+    autoCostLabel: 'Fusions',
     autoCostField: 'computeMegacomputers',
     enableAutoAction: 'enableAutoMergeSupercomputersIntoMegacomputer',
-    autoAriaLabel: 'enable auto-merge for Supercomputers into Megacomputers',
+    autoAriaLabel: 'enable auto-charge for Reactors into Fusions',
     startAction: 'startComputeSupercomputersMerge',
     timerField: 'computeSupercomputersMergeRemainingSeconds',
   },
   {
     key: 'megacomputer',
-    label: 'Megacomputers',
+    label: 'Fusions',
     symbol: '👑',
     countField: 'computeMegacomputers',
     // The top of the chain — no merge/auto row (see issue #280's "Out of scope").
@@ -479,8 +479,8 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // tier shows the armed status line + 3 preset buttons inside its own block, below its merge row.
 // Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1 is COMPUTE_ENTITY_CAP (10)
 // normal slots plus the tier's name/symbol; row 2 is, pre-unlock, an instant Merge button + an
-// Unlock Auto-merge button, or, post-unlock, the "🤖 Auto-merge" row of COMPUTE_MERGE_RESERVE_CAP
-// (8) auto-merge slots — clicking it instantly merges 8 → 1 whenever isCompute*MergeStartAvailable
+// Unlock Auto-charge button, or, post-unlock, the "🤖 Auto-charge" row of COMPUTE_MERGE_RESERVE_CAP
+// (8) auto-charge slots — clicking it instantly charges 8 → 1 whenever isCompute*MergeStartAvailable
 // allows it. Only the automatic merge (at the full extended cap) commits 8 tokens to the reserve
 // and counts down that boundary's live duration (see getComputeMergeDurationSeconds in the engine).
 // "Compute" names the page/feature only — individual entities drop the word (Core, Node,
@@ -504,7 +504,7 @@ const ComputePage = ({ game }) => {
   // A click anywhere outside every tier block deselects, collapsing the presets. Clicks inside a
   // tier block (its select button, presets, merge row) are left to that block's own handlers.
   // Capture phase + composedPath: decided before React re-renders, so a click that removes its own
-  // target (e.g. Unlock Auto-merge swapping in the auto-merge row) still counts as inside.
+  // target (e.g. Unlock Auto-charge swapping in the auto-charge row) still counts as inside.
   useEffect(() => {
     if (selectedBoostTierIndex === null) return undefined
     const deselectOnOutsideClick = event => {
@@ -558,10 +558,10 @@ const ComputePage = ({ game }) => {
             <CompactButton
               key={boostType}
               aria-label={sameAsActive
-                ? `stack ${boostType} compute boost`
+                ? `stack ${nextLabel.toLowerCase()} compute boost`
                 : needsForfeit
-                  ? `forfeit active boost and activate ${boostType} compute boost`
-                  : `activate ${boostType} compute boost`}
+                  ? `forfeit active boost and activate ${nextLabel.toLowerCase()} compute boost`
+                  : `activate ${nextLabel.toLowerCase()} compute boost`}
               disabled={!turnAvailable}
               onClick={() => {
                 if (sameAsActive) {
@@ -601,7 +601,7 @@ const ComputePage = ({ game }) => {
   return (
     <RootDiv>
       <Header>
-        <Title>⚡ Boosters</Title>
+        <Title>⚡ Power</Title>
       </Header>
 
       {boostActive && <BoostTimerBar actions={actions} state={state} />}
@@ -618,7 +618,7 @@ const ComputePage = ({ game }) => {
       {state.computeAutoBoostUnlocked && (
       <AutoBoostRow aria-label="compute auto boost">
         <AutoBoostLabel>
-          Auto from biggest tier waiting on merge — preference:
+          Auto from biggest tier waiting to charge — preference:
         </AutoBoostLabel>
         <BoostRow role="group" aria-label="auto boost preference">
           {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
@@ -626,12 +626,12 @@ const ComputePage = ({ game }) => {
             return (
               <CompactButton
                 key={`auto-${boostType}`}
-                aria-label={`set auto boost preference to ${boostType}`}
+                aria-label={`set auto boost preference to ${COMPUTE_BOOST_DISPLAY[boostType].label.toLowerCase()}`}
                 aria-pressed={selected}
                 onClick={() => actions.setComputeAutoBoostType(boostType)}
                 title={`Auto Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
                 type="button"
-                variant={selected ? 'reboot' : 'neutral'}
+                variant={selected ? 'prestige' : 'neutral'}
               >
                 <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon}${selected ? ' ✓' : ''}`}</ButtonContent>
               </CompactButton>
@@ -658,7 +658,7 @@ const ComputePage = ({ game }) => {
               const merging = remainingSeconds > 0
               const outputCap = hasMergeRow ? getComputeFieldEffectiveCap(state, row.mergeOutputField) : COMPUTE_ENTITY_CAP
               const startAvailable = hasMergeRow && isComputeMergeStartAvailableAtBoundary(state, rowIndex)
-              // Once auto-merge is unlocked, `count` can climb past COMPUTE_ENTITY_CAP into the
+              // Once auto-charge is unlocked, `count` can climb past COMPUTE_ENTITY_CAP into the
               // boundary's own gradually-filling reserve (see getComputeReserveHeld) — the primary
               // slot row always reads at most COMPUTE_ENTITY_CAP/COMPUTE_ENTITY_CAP; the "extra"
               // shows up as reserve fill in row 2 instead, never as an overflowing "14/10".
@@ -717,27 +717,27 @@ const ComputePage = ({ game }) => {
                         <ReserveSlotsRow
                           aria-label={
                             startAvailable
-                              ? `instantly merge ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}, ${merging ? `auto-merge in progress, ${formatOfflineDuration(remainingSeconds)} left` : `${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} auto-merge slots filled`}`
+                              ? `instantly charge up ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}, ${merging ? `auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left` : `${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} auto-charge slots filled`}`
                               : merging
-                                ? `${row.label} auto-merge in progress, ${formatOfflineDuration(remainingSeconds)} left`
-                                : `${row.label} auto-merge slots, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
+                                ? `${row.label} auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left`
+                                : `${row.label} auto-charge slots, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
                           }
                           disabled={!startAvailable}
                           onClick={startAvailable ? () => actions[row.startAction]() : undefined}
                           $clickable={startAvailable}
                           title={
                             startAvailable
-                              ? `Merge now: instantly turn ${COMPUTE_MERGE_RATIO} ${row.label} into 1 ${row.mergeOutputLabel}. Auto-merge slots fill past ${COMPUTE_ENTITY_CAP} and merge on their own when all ${COMPUTE_MERGE_RESERVE_CAP} are full${merging ? ` (auto-merging: ${formatOfflineDuration(remainingSeconds)} left)` : ''}`
+                              ? `Charge up now: instantly turn ${COMPUTE_MERGE_RATIO} ${row.label} into 1 ${row.mergeOutputLabel}. Auto-charge slots fill past ${COMPUTE_ENTITY_CAP} and charge on their own when all ${COMPUTE_MERGE_RESERVE_CAP} are full${merging ? ` (auto-charging: ${formatOfflineDuration(remainingSeconds)} left)` : ''}`
                               : merging
-                                ? `Auto-merging: ${formatOfflineDuration(remainingSeconds)} left`
+                                ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
                                 : (intro[row.mergeOutputField] ?? 0) >= outputCap
                                   ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
-                                  : `Auto-merge slots: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — they merge on their own when full; tap to merge instantly once you hold ${COMPUTE_MERGE_RATIO} ${row.label}`
+                                  : `Auto-charge slots: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — they charge on their own when full; tap to charge up instantly once you hold ${COMPUTE_MERGE_RATIO} ${row.label}`
                           }
                           type="button"
                         >
                           <MergeCue aria-hidden="true" $active={startAvailable}>
-                            {startAvailable ? `🤖 ⬆ ${COMPUTE_MERGE_RATIO}→1 ${row.mergeOutputLabel}` : '🤖 Auto-merge'}
+                            {startAvailable ? `🤖 ⬆ ${COMPUTE_MERGE_RATIO}→1 ${row.mergeOutputLabel}` : '🤖 Auto-charge'}
                           </MergeCue>
                           {merging && <MergeCountdown>{formatOfflineDuration(remainingSeconds)}</MergeCountdown>}
                           {Array.from({ length: COMPUTE_MERGE_RESERVE_CAP }, (_, index) => (
@@ -747,13 +747,13 @@ const ComputePage = ({ game }) => {
                       ) : (
                         <>
                           <TierActionButton
-                            aria-label={`merge ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
+                            aria-label={`charge up ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
                             disabled={!canMerge(count, intro[row.mergeOutputField] ?? 0, outputCap)}
                             onClick={() => actions[row.mergeAction]()}
                             title={
                               (intro[row.mergeOutputField] ?? 0) >= outputCap
                                 ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
-                                : `Merge: spend ${COMPUTE_MERGE_RATIO} ${row.label} for 1 ${row.mergeOutputLabel}`
+                                : `Charge up: spend ${COMPUTE_MERGE_RATIO} ${row.label} for 1 ${row.mergeOutputLabel}`
                             }
                             type="button"
                             variant="prestige"
@@ -765,7 +765,7 @@ const ComputePage = ({ game }) => {
                             aria-label={row.autoAriaLabel}
                             disabled={!canEnableAuto}
                             onClick={() => actions[row.enableAutoAction]()}
-                            title={`Auto: sacrifice ${COMPUTE_ENTITY_CAP} of your ${formatAmount(autoCostHeld)} ${row.autoCostLabel} to permanently automate this step whenever ${row.label} is full, via a timed reserve merge`}
+                            title={`Auto: sacrifice ${COMPUTE_ENTITY_CAP} of your ${formatAmount(autoCostHeld)} ${row.autoCostLabel} to permanently automate this step whenever ${row.label} is full, via a timed reserve charge`}
                             type="button"
                             variant="info"
                             $progress={autoUnlockProgress}

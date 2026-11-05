@@ -52,7 +52,7 @@ icon, standalone display with no browser chrome, offline-capable after a first v
   install) to pair with non-zero `env(safe-area-inset-*)` values; without `viewport-fit=cover` those
   env vars always resolve to `0`. `MainPage/index.jsx`'s `RootDiv` (the page's own top/bottom
   padding) and every `position: fixed`/`sticky` element (`OfflineNoticeOverlay`, `FullScreenOverlay`,
-  `TopRebootBar`, `StickyBalances`) pad/offset for the relevant insets so page content always
+  `TopPurgeBar`, `StickyBalances`) pad/offset for the relevant insets so page content always
   scrolls fully clear of the status bar and home indicator, and fixed/sticky chrome never renders
   underneath either — see the "Fixed" entry in `CHANGELOG.md` for the bug this closes (a tier row's
   Buy button could become unscrollable-to, not just visually clipped, once the tier list grew tall
