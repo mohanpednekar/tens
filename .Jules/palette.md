@@ -34,6 +34,6 @@
 ## 2026-10-30 - Settings LegalSection Keyboard Accessibility
 **Learning:** Native anchor (`<a>`) tags within styled-components structures (like `LinkRow` in `LegalSection`) do not automatically inherit global keyboard focus styles if they aren't using the core `Button` component, leading to hidden focus states.
 **Action:** When styling layout containers for native links, explicitly declare `&:focus-visible` on the nested `a` selector using `props.theme.color.accent` to guarantee keyboard accessibility.
-## $(date +%Y-%m-%d) - Missing focus-visible states on textarea
-**Learning:** Some custom interactive elements using \`styled.textarea\` in this application might miss explicit keyboard focus indicators (e.g. \`&:focus-visible\`). The \`SaveText\` textarea in the Manual Save section lacked these focus outlines.
-**Action:** When adding or auditing \`styled.textarea\` or \`styled.input\` components, actively verify that a clear \`&:focus-visible\` state is defined in the styled-components template literal, using the app's standard \`outline: 2px solid \${props => props.theme.color.accent}; outline-offset: 2px;\` pattern for consistent keyboard accessibility.
+## 2026-11-04 - Missing focus-visible states on textarea
+**Learning:** Some custom interactive elements using `styled.textarea` in this application might miss explicit keyboard focus indicators (e.g. `&:focus-visible`). The `SaveText` textarea in the Manual Save section lacked these focus outlines.
+**Action:** When adding or auditing `styled.textarea` or `styled.input` components, actively verify that a clear `&:focus-visible` state is defined in the styled-components template literal, using the app's standard `outline: 2px solid ${props => props.theme.color.accent}; outline-offset: 2px;` pattern for consistent keyboard accessibility.
