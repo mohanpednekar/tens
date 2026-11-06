@@ -266,26 +266,24 @@ code/secret-scanning alerts not already tracked get the same (Dependabot alerts 
 0(c)/B). Phase A may weigh Impact to reorder *within* a priority tier (`priority:high` still jumps
 outright), saying so when it deviates from lowest-number order.
 
-- `devin-autonomous-maintenance.yml` — Devin-CLI counterpart, every 4h (UTC :17), opens `devin/auto-*`
-  PRs (auth `DEVIN_CLI_CREDENTIALS`; git/`gh` via `GH_AUTOMATION_PAT`). 5-open-PR ceiling counts
-  `devin/auto-*` + `claude/auto-*` together. No file-scope restriction (may edit workflows incl. its own);
-  every change still lands via PR, and workflow-file changes stay human-gated (`pr-auto-merge.yml` excludes `.github/workflows/**` from green-checks auto-merge).
-  Follows the Pull-requests convention; post-run feedback stays `autonomous-pr-followup.yml`'s job.
-- `devin-workflow-health.yml` — daily 00:00 UTC; files an `automation-failure` issue if the Devin workflow
-  doesn't parse, hasn't started in 26h, or its latest completed run wasn't `success`.
-- `pr-conflict-sweep.yml` — on every push to `main`, flags newly conflicted open PRs; on
-  `claude/auto-*`/`devin/auto-*` the comment triggers the follow-up agent to merge-and-resolve.
-- `release.yml` — deterministic: on a `package.json` push to `main`, tags `v<x.y.z>` if absent and
-  creates the GitHub Release from that version's `CHANGELOG.md` section (see "Changelog convention").
-- `revert-deploy.yml` — manual `workflow_dispatch` only (#594): given a known-good `target_sha`, opens a PR
-  restoring `main`'s tree to it (never pushes to `main`); merging it makes `deploy.yml` redeploy.
-- `autonomous-pr-followup.yml` — review comments/CI failures on `claude/auto-*`/`devin/auto-*` PRs;
-  `dependabot-pr-followup.yml` — failing checks on `dependabot/*` PRs when the bump broke call sites
-  (Phase 0 owns `@dependabot rebase` for merely-behind branches).
-- `pr-auto-merge.yml` — native auto-merge on human approval (any PR) or green checks alone for
-  `claude/*`/`devin/auto-*` when the diff meets the conservative low-risk bar.
-- `automation-self-heal.yml` — opens a draft `claude/self-heal-*` fix or an `automation-failure` issue
-  for failed orchestration runs; never edits `ci.yml`/`deploy.yml`/itself.
+- `devin-autonomous-maintenance.yml` — Devin-CLI counterpart, every 4h (UTC :17), opens `devin/auto-*` PRs
+  (auth `DEVIN_CLI_CREDENTIALS`; git/`gh` via `GH_AUTOMATION_PAT`). The 5-open-PR ceiling counts `devin/auto-*` +
+  `claude/auto-*` together. May edit workflows incl. its own, but workflow-file changes stay human-gated
+  (`pr-auto-merge.yml` excludes `.github/workflows/**` from green-checks auto-merge). Every change still lands via PR. Follows the Pull-requests
+  convention; post-run feedback is `autonomous-pr-followup.yml`'s job.
+- `devin-workflow-health.yml` — daily 00:00 UTC; files an `automation-failure` issue if the Devin workflow doesn't
+  parse, hasn't started in 26h, or its latest completed run wasn't `success`.
+- `pr-conflict-sweep.yml` — on every push to `main`, flags newly conflicted open PRs (on `claude/auto-*`/`devin/auto-*`
+  the comment triggers the follow-up agent to merge-and-resolve).
+- `release.yml` — deterministic: on a `package.json` push to `main`, tags `v<x.y.z>` if absent and creates the GitHub
+  Release from that version's `CHANGELOG.md` section ("Changelog convention").
+- `revert-deploy.yml` — manual only (#594): given a known-good `target_sha`, opens a PR restoring `main`'s tree to it
+  (never pushes to `main`).
+- `autonomous-pr-followup.yml` (review comments/CI failures on `claude/auto-*`/`devin/auto-*`),
+  `dependabot-pr-followup.yml` (failing checks on `dependabot/*` PRs when the bump broke call sites; Phase 0 owns
+  `@dependabot rebase`), `pr-auto-merge.yml` (native auto-merge on human approval, or green checks alone for
+  `claude/*`/`devin/auto-*` meeting the low-risk bar), `automation-self-heal.yml` (draft `claude/self-heal-*` fix or
+  `automation-failure` issue for failed orchestration runs; never edits `ci.yml`/`deploy.yml`/itself).
 
 **Maintainer checklist (#62) verification (#63).** `scripts/verify-maintainer-checklist.mjs` runs each
 `autonomous-maintenance.yml` invocation and strikes through API-verifiable #62 items that now pass.
@@ -325,7 +323,7 @@ cost, and duplicated facts drift when only one copy is updated. It needed a dedi
 because feature PRs kept adding formula-/UI-rendering-level prose here instead of to the reference doc
 for that area (`docs/ECONOMY_REFERENCE.md` for economy/engine mechanics, `docs/MAINPAGE_REFERENCE.md`
 for MainPage/ByteFoundryPage/ComputePage field layout, `docs/COMPONENTS_REFERENCE.md` for component prop
-contracts, `docs/THEMING_REFERENCE.md`/`docs/PWA_REFERENCE.md`/`docs/AUTOMATION.md` for their own
+contracts, `docs/THEMING_REFERENCE.md`/`docs/PWA_REFERENCE.md`/`docs/NATIVE_APPS_REFERENCE.md`/`docs/AUTOMATION.md` for their own
 areas). Default to one or two orientation sentences (what changed, the function/constant name to grep
 for) plus a pointer to the reference doc — write the full detail there, not here. Only put something in
 full here if no reference doc exists yet for that area (then consider whether the change warrants
@@ -383,151 +381,91 @@ cadence".
 
 ```
 .claude/
-  CLAUDE.md                  ← nested memory file pointing at the graphify skill (tool-generated; "graphify")
-  settings.json              ← SessionStart hook ("Interactive session startup") + graphify PreToolUse hooks;
-                               neither is read by the autonomous workflow (own inline `settings:`/`claude_args:`)
+  CLAUDE.md, settings.json   ← graphify pointer; SessionStart hook ("Interactive session startup") + graphify
+                               PreToolUse hooks (the autonomous workflow reads neither; it has its own inline settings)
   hooks/session-start.sh     ← yarn install --frozen-lockfile + yarn test at session start; always exits 0
-  agents/                    ← code-reviewer (read-only PR/diff review, "Pull requests"); dev-team roles:
-                               designer (opus, spec), programmer (sonnet, implement), qa (haiku, verify)
-  skills/
-    dev-team/                ← orchestrates designer → programmer → qa → code-reviewer on one task
-    economy-change-review/   ← cross-checks a TIER_DEFINITIONS/economy diff against its issue's spec
-    file-task-issue/         ← authors claude-task backlog issues; reused for interactive tracking issues
-    simulate-run-times/      ← playthrough simulation of time-to-prestige ("Economy model")
-    optimize-ai-files/       ← meaning-preserving token-reduction pass ("AI-instruction file cost hygiene")
-    graphify/                ← third-party, tool-generated — not hand-edited
-docs/                        ← DESIGN_HISTORY.md (the "why": superseded formulas, incidents, rejected
-                               alternatives — check before changing a formula/workflow/mechanic a past
-                               iteration may have tried), AUTOMATION.md (Automation workflows reference), ECONOMY_REFERENCE.md,
-                               FOUNDRY_MECHANICS_REFERENCE.md (Byte Foundry/Storage/Disks/Data Lakes/Power; read
-                               before touching ByteFoundryPage/ComputePage/disk+lake engine code),
-                               MAINPAGE_REFERENCE.md (incl. ComputePage), COMPONENTS_REFERENCE.md (Button/Money/StatCard props/styling), THEMING_REFERENCE.md (tokens/fonts/ThemeProvider),
-                               PWA_REFERENCE.md (installable PWA), DEVMODE_REFERENCE.md, RELEASE_ANDROID/IOS.md, STORE_LISTING.md
+  agents/                    ← code-reviewer (read-only review, "Pull requests"); dev-team roles: designer (opus,
+                               spec), programmer (sonnet, implement), qa (haiku, verify)
+  skills/                    ← dev-team (designer → programmer → qa → code-reviewer), economy-change-review,
+                               file-task-issue, simulate-run-times, optimize-ai-files, graphify (third-party,
+                               tool-generated — not hand-edited)
+docs/                        ← DESIGN_HISTORY.md (the "why": superseded formulas, incidents, rejected alternatives
+                               — check before changing a formula/workflow/mechanic a past iteration may have tried),
+                               AUTOMATION.md, ECONOMY_REFERENCE.md, FOUNDRY_MECHANICS_REFERENCE.md (Byte Foundry/
+                               Storage/Disks/Data Lakes/Power; read before touching ByteFoundryPage/ComputePage/disk+
+                               lake engine code), MAINPAGE_REFERENCE.md (incl. ComputePage), COMPONENTS_REFERENCE.md
+                               (component props/styling), THEMING_REFERENCE.md, PWA_REFERENCE.md,
+                               NATIVE_APPS_REFERENCE.md, DEVMODE_REFERENCE.md, RELEASE_ANDROID/IOS.md, STORE_LISTING.md
 src/
   game/
     layers.js             ← TIER_DEFINITIONS + all game constants (single source of truth)
     engine.js             ← pure state functions (no React, no side effects)
-    navAttention.js       ← pure predicates for AppNav attention dots (high/normal; Storage cues fold into
-                            Foundry; Compute Flops affordability → `compute`)
+    navAttention.js       ← pure predicates for AppNav attention dots (high/normal; Storage cues fold into Foundry;
+                            Compute Flops affordability → `compute`)
     useIncrementalGame.js ← React hook: engine ↔ useState + localStorage + tick timer
-    storage.js            ← localStorage read/write; every load goes through save-migration/, then forward
-                            field merge (`mergeState`); multi-slot saves + Supporter entitlement (unlock
-                            code / dummy checkout), clearSaveSlot / clearAllSaveProgress (never revokes
-                            unlock), separately keyed last-save timestamp for offline progress (slot 0 keeps
-                            legacy `tens_game_state` keys). Owns Dev Mode's isolated `'dev'` slot
-                            (`isDevModeActive`/`setDevModeActive`/`clearDevGameState`/`applyDevGameStateJson`;
-                            "Dev Mode"), separate from numbered slots.
-    save-migration/       ← `adaptSaveForCurrentSchema(raw)` → current-compatible state or failure; runs on
-                            every load (DESIGN_HISTORY.md "Save persistence")
-  components/
-    AppNav/index.jsx      ← fixed bottom bar: Foundry → Power → Compute → Factory → Firmware → More; Factory
-                            omitted during the Foundry gate (More stays); attention dots via navAttention.js
-    AppMenu/index.jsx     ← More sheet — Manual / Releases / Settings (always reachable; Reset / Reformat Byte
+    storage.js            ← localStorage read/write; every load goes through save-migration/, then forward field
+                            merge (`mergeState`); multi-slot saves + Supporter entitlement (unlock code / dummy
+                            checkout), clearSaveSlot / clearAllSaveProgress (never revokes unlock), separately keyed
+                            last-save timestamp for offline progress (slot 0 keeps legacy `tens_game_state` keys).
+                            Owns Dev Mode's isolated `'dev'` slot ("Dev Mode").
+    save-migration/       ← `adaptSaveForCurrentSchema(raw)` → current-compatible state or failure; runs on every
+                            load (DESIGN_HISTORY.md "Save persistence")
+  components/             ← prop contracts/styling: docs/COMPONENTS_REFERENCE.md (Button, Money, StatCard, ...)
+    AppNav                ← fixed bottom bar Foundry → Power → Compute → Factory → Firmware → More; Factory omitted
+                            during the Foundry gate; attention dots via navAttention.js
+    AppMenu               ← More sheet — Manual / Releases / Settings (always reachable; Reset / Reformat Byte
                             Foundry only in Settings → Danger zone)
-    Button/index.jsx      ← `.jsx` (JSX in `ButtonContent`); semantic `variant` prop → theme tokens, deprecated
-                            raw `color` still supported. Contract: `docs/COMPONENTS_REFERENCE.md`
-    DiskArrayRow/index.jsx ← one Disk array's status, `{ actions, size, state }`; only click = empty
-                            write-cache-size disk → `actions.expediteDiskFill(size)`; shared by ByteFoundryPage
-                            and StoragePage (why standalone: DESIGN_HISTORY.md)
-    DataLakePanel/index.jsx ← one Data Lake block, `{ actions, state, bare, tierIndex }`, embedded per pool card
-                            (omitted-`tierIndex` mode is unused); mechanic: "Economy model"
-    icons.js              ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Booster, Upgrade Data Stream,
-                            Provision Disk status line)
-    BoostBadge/index.jsx  ← Compute-Boosted glow: `boostGlow` css + `isDataStreamBoosted`/`isFactoryTierBoosted` (ByteFoundryPage Data Stream, MainPage tier rows)
-    BoostTimerBar/index.jsx ← active Boost timer bar (Pop/Forfeit · bar · Stack); ComputePage + MainPage header
-    SpeedDetailsPopover/index.jsx ← non-modal portal panel behind every Foundry ⚡ speed (Data Stream, running upgrade, each pool)
-    LeadIcon/index.js     ← a line's leading emoji in a fixed-size aria-hidden box (Foundry tile rows)
-    Switch/index.js       ← accessible on/off switch (`$on` + `aria-pressed`): Firmware automation rows, Buy max
-    Money/index.js        ← money/amount display, `theme.color.text` + tabular-nums
-    BuyMaxToggle/index.jsx ← Buy max toggle (Firmware → Prestige); renders nothing until `isBuyMaxUnlocked` (first Prestige); see "Buy max mode" below
-    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); SettingsPage's Reboot
-    OfflineProgressNotice/index.jsx ← "Resumed from sleep" notice, shared by MainPage and ByteFoundryPage
-                            (DESIGN_HISTORY.md)
-    IncompatibleSaveNotice/index.jsx ← blocking overlay when a load cleared a pre-schema save; single
-                            **Start fresh** action; rendered by `App.jsx` when `incompatibleSaveReason` is set
-    StatCard/index.js     ← token-driven card container for every panel (all contracts: COMPONENTS_REFERENCE)
-  pages/
-    ByteFoundryPage/index.jsx ← Byte Foundry tap screen (Architecture 4), `{ game, focusNonce }`. Pool Memory
-                            derives from shared Data Stream Capacity, doubling up to the FINAL pool's end
-                            bound (`isMemoryCapacityAtCap`) — see "Pool liveness is Capacity-only"
-    StoragePage/index.jsx ← thin reusable every-size DiskArrayRow list (4a)
-    ComputePage/index.jsx ← Foundry Power screen (label only; id `'boosters'`): merge chain + Boost (4b)
-    ComputeFlopsPage/index.jsx ← PP Compute (Flops); id `'compute'`, `{ game }` (4c)
-    MainPage/index.jsx    ← tier ladder (Architecture 3), `{ game }`, no second-level tabs (MAINPAGE_REFERENCE)
-    PerksPage/index.jsx   ← id `'perks'` (Firmware); AppNav item once `isPerksPageRevealed` (first Prestige/
-                            Reboot); `{ game, focusNonce }`; icon tabs 🤖 Automation / ✦ Prestige
-                            (feature-grouped) — MAINPAGE_REFERENCE
-    InfoPage/index.jsx    ← Manual (5); no navigation props (AppNav is the exit)
-    MilestonesPage/index.jsx ← Releases / Reboot status; id `'milestones'` (6)
-    SettingsPage/index.jsx ← Supporter pack, save slots, System log, Reboot, Appearance, Task Manager,
-                            Danger zone (7)
-    DevModePage/index.jsx ← dev-only sandbox ("Dev Mode"), via AppNav → More, only when `import.meta.env.DEV`;
-                            `{ game }`
-      stateFields.js      ← pure Variables-tree helpers: prettifySegment (tier-id → display-name),
-                            isEditableScalar, setValueAtPath (immutable, any depth), VARIABLE_AREAS/
-                            getVariableAreaId (tabs), parseNumberDraft, collectLeaves/describePath/
-                            leafMatchesQuery (search)
-  theme/
-    tokens.js             ← design-token source of truth: per-mode (dark/light) color/shadow/tier-accent +
-                            mode-independent space/radius/motion/font/type; exports buildTheme(mode) +
-                            themes.{dark,light} (THEMING_REFERENCE)
-    fonts.js              ← locally bundles `font.display`/`font.body` (Space Grotesk / Inter, @fontsource) as
-                            side-effect CSS imports — no runtime CDN fetch (THEMING_REFERENCE)
-    contrast.js           ← standalone WCAG contrast-ratio utility ("Testing")
-    GlobalStyle.js        ← createGlobalStyle: box-sizing reset, base font/smoothing, form `font: inherit`,
-                            token-driven page background/text (absorbed removed index.css/App.css)
-    index.jsx             ← <ThemeProvider mode> wrapper + re-exports; imports `./fonts`; `mode` defaults dark,
-                            driven by system pref + Settings → Appearance (#140)
-  services/
-    config.js             ← feature flags (`ADS_ENABLED`/`IAP_ENABLED`/`CLOUD_SAVE_ENABLED`/`IS_NATIVE_BUILD`,
-                            re-exported from `virtual:tens-features`), AdMob test/real ids, RevenueCat keys,
-                            `IAP_PRODUCTS`, policy URLs
-    monetization/         ← MonetizationService (`init`/`showRewarded`/`purchase`/`restore`/`getEntitlements`):
-                            `noop.js` (web / flags off), `admobAdapter.js` (+ `rewardedAdCache.js`: one video
-                            preloaded at init and after each show, refreshed past 55 min),
-                            `revenueCatAdapter.js`, composed by `index.js` `getMonetizationService()`
-    cloudSave/            ← Firebase Auth (email/password) + Firestore `saves/{uid}` (`firebaseBackend.js`,
-                            lazy) and `deleteAccountAndData` (reauth → data → user)
-    nativeShell.js        ← native start-up: hide splash, init monetization (no-op on web)
+    Button (`.jsx`)       ← semantic `variant` prop → theme tokens; deprecated raw `color` still supported
+    DiskArrayRow          ← one Disk array's status `{ actions, size, state }`; only click = empty write-cache-size
+                            disk → `actions.expediteDiskFill(size)`; shared by ByteFoundryPage and StoragePage (why standalone:
+                            DESIGN_HISTORY.md)
+    DataLakePanel         ← one Data Lake block `{ actions, state, bare, tierIndex }`, embedded per pool card
+    icons.js              ← shared glyphs (`COST_ICON` 🏷️ marks every cost)
+    BoostBadge, BoostTimerBar, SpeedDetailsPopover, LeadIcon, Switch, Money, BuyMaxToggle (renders nothing until
+    `isBuyMaxUnlocked`), ConfirmDialog, OfflineProgressNotice, StatCard — see COMPONENTS_REFERENCE
+    IncompatibleSaveNotice ← blocking overlay when a load cleared a pre-schema save; single **Start fresh** action;
+                            rendered by `App.jsx` when `incompatibleSaveReason` is set
+  pages/                  ← ByteFoundryPage, StoragePage, ComputePage, ComputeFlopsPage, MainPage, PerksPage,
+                            InfoPage, MilestonesPage, SettingsPage, DevModePage (+ `stateFields.js`: pure
+                            Variables-tree helpers) — roles in "Architecture"; layout in MAINPAGE_REFERENCE.
+                            Page ids: `'foundry'` (also holds Storage), `'boosters'` (Power), `'compute'` (Flops),
+                            `'game'` (Factory), `'perks'` (Firmware), `'milestones'`, `'info'`, `'settings'`, `'dev'`
+  theme/                  ← tokens.js (design-token source of truth: per-mode color/shadow/tier-accent +
+                            mode-independent space/radius/motion/font/type; `buildTheme(mode)`, `themes.{dark,light}`),
+                            fonts.js (locally bundled Space Grotesk/Inter), contrast.js (WCAG utility), GlobalStyle.js,
+                            index.jsx (`<ThemeProvider mode>`) — THEMING_REFERENCE
+  services/               ← config.js (feature flags, AdMob/RevenueCat ids, `IAP_PRODUCTS`, policy URLs),
+                            `IS_NATIVE_BUILD`; monetization/ (`MonetizationService`: `init`/`showRewarded`/`purchase`/`restore`/
+                            `getEntitlements`; `noop.js` for web/flags off, `admobAdapter` + `rewardedAdCache` — one video
+                            preloaded at init and after each show, refreshed past 55 min — `revenueCatAdapter`; composed by
+                            `getMonetizationService()`), cloudSave/ (Firebase Auth email/password + Firestore `saves/{uid}`,
+                            `deleteAccountAndData`: reauth → data → user), nativeShell.js (hide splash, init monetization)
   App.jsx                 ← root; owns the single `useIncrementalGame()` call, wraps <ThemeProvider><GlobalStyle/>,
-                            switches pages via local `page` useState (`'game'`/`'info'`/`'foundry'`/`'boosters'`/
-                            `'compute'`/`'perks'`/`'milestones'`/`'settings'`/`'dev'`, default `'game'`; legacy
-                            `'storage'` → `'foundry'`) — not a router — plus shared `AppNav` and `AppMenu`.
+                            switches pages via local `page` useState (default `'game'`; legacy `'storage'` →
+                            `'foundry'`) — not a router — plus shared `AppNav` and `AppMenu`.
                             `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked ||
-                            page === 'foundry')`; `intro.mainGameUnlocked` is a permanent latch, so the gate
-                            exists only on a save's very first cycle. Detail: MAINPAGE_REFERENCE "App.jsx
-                            routing and the Foundry gate"
-  index.jsx               ← ReactDOM.createRoot entry; calls reportWebVitals()
-  reportWebVitals.js      ← optional web-vitals reporter; no-op unless passed a callback (currently none)
-capacitor.config.js       ← app id/name, `webDir: dist`, SystemBars/SplashScreen, `includePlugins` from ad/IAP flags (#70)
-firestore.rules           ← owner-only `saves/{uid}` rules for cloud save
-android/, ios/            ← committed Capacitor projects (generated by `cap add`; build output ignored by their own `.gitignore`s; "Native apps")
-vite.config.js            ← thin wrapper: `defineConfig(createViteConfig({ srcPath }))`
-viteConfigFactory.js      ← the real Vite config: aliases, dev/test server, VitePWA (skipped when `CAPACITOR=1`,
-                            along with the `/tens/` base). Split out so `capacitorConfig.test.js` can pin the
-                            CAPACITOR=1 path (`import.meta.url` isn't a `file:` URL under Vitest). PWA_REFERENCE
-stryker.config.json       ← Stryker mutation testing of `engine.js` (weekly non-blocking `mutation-testing.yml`;
-                            `yarn stryker run`; docs/AUTOMATION.md)
-playwright.config.js      ← e2e config ("End-to-end testing"); separate from vite.config.js's Vitest `test` block
-e2e/                      ← `.e2e.js` Playwright specs (spec list + visual-regression baselines: "End-to-end testing", `e2e/README.md`)
-scripts/
-  bump-version.mjs, generate-pwa-icons.mjs ← `yarn bump-version` ("Changelog convention") / one-off `yarn gen-pwa-icons`
-                                   (inline "byte grid" SVG via `sharp` → public/pwa-*.png + apple-touch-icon.png +
-                                   hand-built favicon.ico; PWA_REFERENCE; re-run only if the icon design changes)
-  adversarialReviewMarker.js, pr-low-risk-eligible.sh, enable-auto-merge-if-eligible.sh ← APPROVE-marker helpers,
-                                   shared low-risk bar, mark-ready + auto-merge ("Pull requests"; each has a `.test`)
-  resolve-pr-threads.sh          ← lists/resolves review threads by ID on automation-owned PRs (`claude/*`/`devin/*`,
-                                   owner/bot-authored only); `list` read-only, `resolve` takes explicit IDs, never bulk;
-                                   used by `autonomous-maintenance.yml` and `autonomous-pr-followup.yml`
-  backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh, sync-release-milestones.sh ← idempotent issue/milestone sweeps run
-                                   every `autonomous-maintenance.yml` invocation (docs/AUTOMATION.md; "GitHub Milestones")
-  configure-ios-plist.mjs (+test) ← Info.plist ad keys from the ads flag
-  android-boot-smoke.sh          ← installs + launches an APK on an emulator, fails on crash / no UI (mobile-build.yml)
-  sweep-stalled-auto-prs.sh (+test) ← comments on `claude/auto-*` PRs idle 24h+ with failing check / conflict to
-                                   re-fire follow-up; 3 retries, then `automation-retro` (#60)
-public/                   ← generated PWA icons (pwa-192x192/512x512/maskable-512x512, apple-touch-icon;
-                            PWA_REFERENCE), favicon.ico, robots.txt. The old create-react-app-era
-                            `index.html`/`manifest.json`/`logo*.png` were removed (DESIGN_HISTORY.md)
+                            page === 'foundry')`; `intro.mainGameUnlocked` is a permanent latch, so the gate exists
+                            only on a save's very first cycle. Detail: MAINPAGE_REFERENCE "App.jsx routing and the Foundry gate"
+  index.jsx, reportWebVitals.js ← ReactDOM entry; optional web-vitals reporter (no-op, no callback)
+capacitor.config.js, android/, ios/ ← Capacitor wrap ("Native apps")
+vite.config.js            ← thin wrapper over `viteConfigFactory.js` (aliases, dev/test server, VitePWA — skipped when
+                            `CAPACITOR=1`, along with the `/tens/` base; split out so `capacitorConfig.test.js` can pin that path —
+                            `import.meta.url` isn't a `file:` URL under Vitest)
+firestore.rules           ← owner-only `saves/{uid}` rules; stryker.config.json ← Stryker mutation testing of `engine.js`
+                            (weekly non-blocking `mutation-testing.yml`; `yarn stryker run`)
+playwright.config.js, e2e/ ← real-browser suite, specs in "End-to-end testing"
+scripts/                  ← bump-version.mjs ("Changelog convention"); generate-pwa-icons.mjs (`yarn gen-pwa-icons`, not
+                            in the build; re-run only if the icon design changes); adversarialReviewMarker.js
+                            ("Pull requests"); pr-low-risk-eligible.sh, enable-auto-merge-if-eligible.sh,
+                            resolve-pr-threads.sh (`list` read-only; `resolve` takes explicit IDs, never bulk; only repo-owner/
+                            bot-authored `claude/*`/`devin/*` PRs; used by `autonomous-maintenance.yml` and
+                            `autonomous-pr-followup.yml`), backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh,
+                            sweep-stalled-auto-prs.sh (#60), sync-release-milestones.sh, configure-ios-plist.mjs,
+                            android-boot-smoke.sh, lint-workflow-shell.mjs, verify-maintainer-checklist.mjs —
+                            roles in docs/AUTOMATION.md (except resolve-pr-threads/generate-pwa-icons/configure-ios-plist, above and
+                            in their own headers); most have a sibling `*.test.js`
+public/                   ← generated PWA icons, favicon.ico, robots.txt (old CRA `index.html`/`manifest.json`/`logo*.png`
+                            removed — DESIGN_HISTORY.md)
 ```
 
 ## Architecture
@@ -590,23 +528,20 @@ Strict three-layer separation:
    `getDiskSizesToShow`) — NOT the Provision Disk button, which stays on ByteFoundryPage. Takes
    `{ game }`. Primary UI path is Foundry's continuous sections; this file remains for reuse/tests. A
    pure renderer ("engine re-validates, UI just mirrors it", like every page here).
-4b. **`ComputePage/index.jsx`** — Foundry **Power** screen (page id `'boosters'`; player label only), taking `{ game }`;
-   reached via AppNav once `isComputeCoreConversionUnlocked`. Hosts the nine-boundary merge chain (Cell →
-   Battery → … → Fusion, charged up via "Charge up"/"Auto-charge") behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute"
-   names the page/feature only — entities drop the word in every player-visible label. Deliberately terse
-   (icon-only controls, full sentence in `title`/`aria-label`; mechanic prose lives in the Manual). Order:
-   top card = active Boost timer bar (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right,
-   enforced in the engine too; or "No boost running") + Auto Boost pref; then per-tier rows — the ONE
-   selected tier (pre-selected to the active boost's tier on arrival) shows the 3 Boost presets inline (`COMPUTE_ENTITY_CAP` 10 slots,
-   Merge ratio `COMPUTE_MERGE_RATIO` 8, Unlock Auto-charge, `COMPUTE_MERGE_RESERVE_CAP` 8 reserve). Cells
-   (`computeCores`) come from buying them from the matching Data Lake, not minted from Data Stream Capacity. Full detail:
-   **`docs/FOUNDRY_MECHANICS_REFERENCE.md`**, `docs/MAINPAGE_REFERENCE.md`, `docs/DESIGN_HISTORY.md`.
-4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), taking
-   `{ game }`. Reached via AppNav once `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in
-   `computeFlops.pageUnlocked`). Ten tiers Cores→Superclouds, outputs KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`; page keeps "Compute" + 🖥), PP-funded
-   on the same 10³ base ladder as Factory tiers, priced per-unit via `getCostEpochExponent` (not
-   Factory's 8-buy blocks). Owned counts permanent across Prestige; per-cycle boost resets on
-   Prestige. Pure renderer — full spec: `docs/ECONOMY_REFERENCE.md`'s "PP Compute (Flops)" section.
+4b. **`ComputePage/index.jsx`** — Foundry **Power** screen (page id `'boosters'`; player label only), `{ game }`; reached
+   via AppNav once `isComputeCoreConversionUnlocked`. Hosts the nine-boundary merge chain (Cell → Battery → … → Fusion,
+   "Charge up"/"Auto-charge") behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute" names the
+   page/feature only — entities drop the word in every player-visible label. Deliberately terse (icon-only controls,
+   full sentence in `title`/`aria-label`; mechanic prose lives in the Manual). Top card = active Boost timer bar
+   (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right, enforced in the engine too) + Auto Boost pref;
+   then per-tier rows — the ONE selected tier shows the 3 Boost presets inline. Constants: `COMPUTE_ENTITY_CAP` 10,
+   `COMPUTE_MERGE_RATIO` 8, `COMPUTE_MERGE_RESERVE_CAP` 8. Cells (`computeCores`) are bought from the matching Data Lake,
+   not minted from Capacity. Detail: `docs/FOUNDRY_MECHANICS_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`, `docs/DESIGN_HISTORY.md`.
+4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), `{ game }`; AppNav once
+   `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in `computeFlops.pageUnlocked`). Ten tiers Cores→Superclouds,
+   outputs KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`; page keeps "Compute" + 🖥), PP-funded on the same 10³ ladder as Factory tiers, priced
+   per-unit via `getCostEpochExponent` (not 8-buy blocks). Owned counts permanent across Prestige; per-cycle boost resets.
+   Pure renderer — spec: `docs/ECONOMY_REFERENCE.md` "PP Compute (Flops)".
 5. **`InfoPage/index.jsx`** — a static Manual page holding every mechanic's evergreen explanation in
    short bullets/sub-headings (what used to be MainPage's click-to-expand `InfoDetails` disclosures —
    Overview, Byte Foundry, Storage, Power, Compute (Flops), Clock Speed, Scale Up, Overclock, Tier
@@ -830,41 +765,15 @@ fields, or `public/pwa-*`/`scripts/generate-pwa-icons.mjs`.
 
 ### Native apps (Capacitor — #70)
 
-Android and iOS apps wrap the same web build via Capacitor 8 (not yet store-signed):
-
-- `@capacitor/core`/`android`/`ios` + `@capacitor/cli`; `capacitor.config.js` names the app **Tens**
-  (`appId: com.mohanpednekar.tens`, `webDir: dist`). It is ESM loaded by the CLI via `require(esm)`
-  (`export { config as 'module.exports' }`); `includePlugins` syncs `@capacitor/splash-screen` always
-  and AdMob / RevenueCat only when `VITE_TENS_ADS_ENABLED` / `VITE_TENS_IAP_ENABLED` are `true` in
-  the shell env, so flags-off binaries carry no ad/billing SDK or permission. `android/` (Gradle) and `ios/` (Xcode project,
-  Swift Package Manager — no CocoaPods) are committed; regenerate only via `npx cap add`, never by hand.
-- Minimum OS = oldest still receiving security updates (maintainer policy; no older OS support):
-  Android 14 (`minSdkVersion = 34`, `android/variables.gradle`) and iOS 18
-  (`IPHONEOS_DEPLOYMENT_TARGET`, which `cap sync` also writes into `CapApp-SPM/Package.swift`; `.v18`
-  needs `experimental.ios.spm.swiftToolsVersion: "6.0"` in `capacitor.config.js`). Raise both as
-  vendors drop security support.
-- `yarn build:capacitor` sets `CAPACITOR=1` so Vite uses `base: './'` and omits `VitePWA` — a
-  Workbox SW under Capacitor's origin is redundant/harmful; `yarn build` for Pages is unchanged.
-  Then `cap sync` (or `yarn cap:android`/`yarn cap:ios`) copies `dist/` into both projects.
-- Native icons/splash come from `yarn gen-pwa-icons` (see `docs/PWA_REFERENCE.md`). Splash hides on
-  React mount (`services/nativeShell.js`); edge-to-edge via `SystemBars.insetsHandling: 'native'` +
-  `viewport-fit=cover` + per-page `env(safe-area-inset-*)` padding.
-- **Release:** compile/target SDK 36; `android/app/build.gradle` signs release from
-  `TENS_UPLOAD_*` Gradle props/env/`android/keystore.properties` (gitignored; release tasks fail if
-  unset), runs R8 (`minifyEnabled` + `shrinkResources`), derives versionName/versionCode from
-  `package.json`, and fails if Play Billing < 8 resolves. Manifest declares only `INTERNET`.
-  Full steps: `docs/RELEASE_ANDROID.md`, `docs/RELEASE_IOS.md`, `docs/STORE_LISTING.md`.
-- **Optional features (all off by default):** `viteConfigFactory.js`'s `resolveFeatureFlags` +
-  `virtual:tens-features` module export the flags and one loader per feature — `null` when off, so
-  ad/IAP/Firebase code is never bundled (web builds can never enable ads/IAP). Cloud save turns on
-  when `VITE_FIREBASE_API_KEY`/`_PROJECT_ID`/`_APP_ID` are set. See `docs/DESIGN_HISTORY.md`.
-- `.github/workflows/mobile-build.yml` builds an unsigned debug APK, a throwaway-key-signed minified
-  release (AAB + emulator boot check via `scripts/android-boot-smoke.sh`) and an iOS Simulator `.app`
-  as workflow artifacts (manual dispatch, or native-path changes) — see `docs/AUTOMATION.md`.
-- The one rewarded-ad placement is the offline notice's **▶ 100% speed** bonus (`claimOfflineAdReward`,
-  `applyOfflineRewardBonus` — see `docs/ECONOMY_REFERENCE.md`'s "Offline progress").
-- Saves are `localStorage` inside each app's WebView, separate from the browser/PWA's saves; the
-  optional cloud save (`storage.js` `serializeSaveForExport`/`importSaveJson`) bridges devices.
+Android/iOS apps wrap the web build via Capacitor 8 (app id `com.mohanpednekar.tens`, `webDir: dist`;
+`capacitor.config.js`). Key commands: `yarn build:capacitor` (`CAPACITOR=1`: relative base, no PWA plugin),
+`yarn cap:sync`, `yarn cap:android`/`cap:ios`. `android/` and `ios/` are committed — regenerate only via
+`npx cap add`, never by hand. Min OS is Android 14 / iOS 18 (maintainer policy). Ads/IAP/cloud-save are
+off by default and never bundled in web builds (`virtual:tens-features`). Saves are per-WebView
+`localStorage`, separate from the browser/PWA. **Read `docs/NATIVE_APPS_REFERENCE.md`** (release signing,
+SDK targets, feature flags, mobile-build.yml, rewarded-ad placement) before touching `capacitor.config.js`,
+`android/`, `ios/`, `services/*` or `viteConfigFactory.js`'s feature flags; release steps:
+`docs/RELEASE_ANDROID.md`, `docs/RELEASE_IOS.md`, `docs/STORE_LISTING.md`.
 
 ## Funding
 
@@ -925,18 +834,11 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `save-migration/adaptSaveForCurrentSchema` runs on every load; `storage.js`'s `mergeState` only fills
   in missing fields from `createInitialGameState()`. Legacy payloads with no migration step yet are
   discarded and surfaced via `IncompatibleSaveNotice`. Current saves stamp `saveSchemaVersion: 3` on
-  every write (v1/v2 saves run `migrateToV3` then forward-fill via `mergeState`). `src/theme/contrast.js` (a standalone WCAG
-  contrast-ratio utility) plus `contrast.test.js` and `tokens.contrast.test.js` add two more files — the
-  latter audits the design tokens' plain (unblended) text/UI-component color pairs for AA compliance in
-  both themes, see `docs/THEMING_REFERENCE.md`. `engine.computeFlops.test.js` covers the PP Compute
-  (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
-  `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
-  (`prettifySegment`/`isEditableScalar`/`setValueAtPath`/`parseNumberDraft`/`getVariableAreaId`/search helpers). The rest of the test files sit beside their source — `save-migration/`, `navAttention`,
-  `components/*` (Button, BoostBadge, OfflineProgressNotice), `services/*` (config, monetization, rewardedAdCache,
-  cloudSave/deleteAccount), `game/useIncrementalGame.offlineReward.test.jsx`, `game/storagePrefix.test.js`, `pages/SettingsPage/sections.test.jsx`,
-  and `scripts/*.test.js` (maintainer checklist, iOS plist, adversarial marker, low-risk bar, bump-version,
-  graphify freshness, failure classifier, workflow-shell lint, stalled-PR sweep, autonomous-maintenance workflow) —
-  all picked up by Vitest's default glob since `vite.config.js`'s `test` block sets no custom `include`.
+  every write (v1/v2 saves run `migrateToV3` then forward-fill via `mergeState`). `src/theme/contrast.js` (standalone WCAG utility) has `contrast.test.js`, and `tokens.contrast.test.js` audits the
+  design tokens' plain text/UI color pairs for AA in both themes (`docs/THEMING_REFERENCE.md`). All other tests sit beside
+  their source (`engine.computeFlops.test.js` = PP Compute screen; `capacitorConfig.test.js` = Capacitor Vite path;
+  `pages/DevModePage/stateFields.test.js` = Dev Mode helpers; components, services, `save-migration/`, `scripts/*.test.js`)
+  and are all picked up by Vitest's default glob (`vite.config.js`'s `test` block sets no custom `include`).
 
 ### End-to-end testing
 
@@ -960,10 +862,10 @@ base path.
   `storage.js`'s `mergeState` fills in the rest from `createInitialGameState()` — including
   `intro: { mainGameUnlocked: true }`, needed by every spec that seeds state to land directly on MainPage
   rather than the Byte Foundry intro screen.
-- Current specs (see "Repo layout" `e2e/` for one-line descriptions): `golden-path`, `autobuyer-reload`,
-  `purge` (seeding Money ≥ `PURGE_THRESHOLD`; first-time `FullScreenOverlay`), `reboot`
+- Current specs: `golden-path` (buy Kilobytes via the real Buy button; Owned/balance update), `autobuyer-reload`
+  (an unlocked autobuyer survives a real reload), `purge` (seeding Money ≥ `PURGE_THRESHOLD`; first-time `FullScreenOverlay`), `reboot`
   (seed at 1 Googol PP → Settings Reboot → assert `era.count`, Kernels award, and the permanent
-  `intro.mainGameUnlocked` latch carrying forward), `data-lake`, and `visual-regression` (Linux-only
+  `intro.mainGameUnlocked` latch carrying forward), `data-lake` (seeded KB Data Lake renders its disk-square breakdown; manual Buy Cell grants a Cell, verified on Power), and `visual-regression` (Linux-only
   full-page screenshot baselines of Byte Foundry/Byte Factory in both themes; see `e2e/README.md`).
 - **Not wired into `ci.yml`** — deliberately. Wiring it in (installing Playwright's browser on the
   runner, adding a job/step) means editing `ci.yml`, which is off-limits to `autonomous-maintenance.yml`
@@ -982,37 +884,17 @@ base path.
 
 ## graphify
 
-[Graphify](https://github.com/Graphify-Labs/graphify) is registered as a project-scoped Claude Code skill
-(`.claude/skills/graphify/SKILL.md`, installed via `graphify install --project --platform claude`) — a
-CLI (`graphifyy` on PyPI, requires Python 3.10+; install with `uv tool install graphifyy` or
-`pipx`/`pip install graphifyy`) that turns a codebase into a queryable knowledge graph (`graphify-out/`:
-`graph.json` + `graph.html` + `GRAPH_REPORT.md`), parsed locally via tree-sitter AST with no LLM
-involved. It's a dev-tool aid for Claude Code sessions, not a runtime dependency — nothing under
+[Graphify](https://github.com/Graphify-Labs/graphify) is a project-scoped Claude Code skill
+(`.claude/skills/graphify/SKILL.md`; CLI `graphifyy` on PyPI, Python 3.10+; installed via `graphify install --project --platform claude`) that builds a queryable knowledge graph of
+code + markdown docs (`graphify-out/`), parsed locally via tree-sitter with no LLM. A dev aid only — nothing in
 `graphify-out/` is imported by `src/`.
 
-`graph.json`/`graph.html`/`GRAPH_REPORT.md`/`.graphify_labels.json` (+ `.sig`) are committed so every
-session starts from the same map. Everything else under `graphify-out/` is gitignored (see `.gitignore`)
-as machine-local or regenerable state: `cost.json` (local API-cost tracking), the machine-local staging
-files `.graphify_python`/`.graphify_root` (regenerated on demand), the dated `graphify-out/YYYY-MM-DD/`
-rollback folder `graphify update` creates before overwriting curated files, `graphify-out/cache/` (the
-incremental AST/semantic cache, namespaced by graphify's installed version so it conflicted across
-sessions) and `manifest.json` (per-file mtime/hash cache, non-deterministic across machines) — both
-regenerable via `graphify update .` — and `.graphify_analysis.json` plus its intermediate siblings
-(`.graphify_detect.json`/`.graphify_extract.json`/`.graphify_ast.json`/`.graphify_semantic.json`/etc.),
-scratch state deleted (`rm -f`) at the end of a normal run. The initial build (`graphify extract .
---code-only`) covered code only; a later `graphify update .` added this repo's markdown docs
-(structural parsing — headings/links — 0 token cost), so the graph spans source and docs.
-
-Now that `graphify-out/graph.json` exists:
-- For codebase questions, prefer `graphify query "<question>"` over grepping — it returns a scoped
-  subgraph instead of raw file contents. Use `graphify path "<A>" "<B>"` for relationships and
-  `graphify explain "<concept>"` for a focused concept.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost) —
-  do this in the same session/commit as any non-trivial code change, so the committed graph doesn't
-  drift stale against `graph.json`'s own "Built from commit" pointer in `GRAPH_REPORT.md`.
-- `.claude/settings.json`'s `PreToolUse` hooks (`graphify hook-guard search`/`read`, on
-  `Bash`/`Grep`/`Read`/`Glob`) nudge toward the graph before a raw file read; they no-op if the
-  `graphify` CLI isn't on `PATH` or no graph exists yet, so a machine without it installed is unaffected.
-
-See `.claude/skills/graphify/SKILL.md` for the full command reference (query/path/explain, `--wiki`/
-`--obsidian`/`--graphml` export, `graphify hook install` for auto-rebuild on commit, etc.).
+- Committed: `graph.json`, `graph.html`, `GRAPH_REPORT.md`, `.graphify_labels.json` (+ `.sig`). Everything else under
+  `graphify-out/` is gitignored machine-local/regenerable state (`cost.json`, `cache/`, `manifest.json`, dated rollback
+  folders, `.graphify_*` scratch).
+- For codebase questions prefer `graphify query "<question>"` over grepping; `graphify path "<A>" "<B>"` for
+  relationships, `graphify explain "<concept>"` for a concept.
+- After modifying code run `graphify update .` (AST-only, no API cost) in the same session/commit so the committed graph
+  doesn't drift from `GRAPH_REPORT.md`'s "Built from commit" pointer.
+- `.claude/settings.json` `PreToolUse` hooks (`graphify hook-guard`) nudge toward the graph before raw reads; they no-op
+  if the CLI or graph is absent. Full command reference: `.claude/skills/graphify/SKILL.md`.
