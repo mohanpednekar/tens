@@ -28630,6 +28630,30 @@
       "file_type": "code",
       "source_file": "scripts/lint-conflict-markers.test.js",
       "_file_checksum": "0000000000000000000000000000000000000000"
+    },
+    {
+      "id": "docs_native_apps_reference",
+      "label": "NATIVE_APPS_REFERENCE.md",
+      "node_kind": "page",
+      "norm_label": "native_apps_reference.md",
+      "_origin": "ast",
+      "community": 99,
+      "community_name": "PWA_REFERENCE.md",
+      "file_type": "document",
+      "source_file": "docs/NATIVE_APPS_REFERENCE.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "docs_native_apps_reference_native_apps_capacitor_reference",
+      "label": "Native apps (Capacitor) reference",
+      "node_kind": "heading",
+      "norm_label": "native apps (capacitor) reference",
+      "_origin": "ast",
+      "community": 99,
+      "community_name": "PWA_REFERENCE.md",
+      "file_type": "document",
+      "source_file": "docs/NATIVE_APPS_REFERENCE.md",
+      "source_location": "L1"
     }
   ],
   "links": [
@@ -121251,6 +121275,17 @@
       "confidence_score": 1,
       "source_file": "src/save-migration/migrateToV3.js",
       "source_location": "L29",
+      "weight": 1
+    },
+    {
+      "source": "docs_native_apps_reference",
+      "target": "docs_native_apps_reference_native_apps_capacitor_reference",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/NATIVE_APPS_REFERENCE.md",
+      "source_location": "L1",
       "weight": 1
     }
   ],
