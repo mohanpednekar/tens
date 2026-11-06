@@ -269,7 +269,7 @@ outright), saying so when it deviates from lowest-number order.
 - `devin-autonomous-maintenance.yml` — Devin-CLI counterpart, every 4h (UTC :17), opens `devin/auto-*` PRs
   (auth `DEVIN_CLI_CREDENTIALS`; git/`gh` via `GH_AUTOMATION_PAT`). The 5-open-PR ceiling counts `devin/auto-*` +
   `claude/auto-*` together. May edit workflows incl. its own, but workflow-file changes stay human-gated
-  (`pr-auto-merge.yml` excludes `.github/workflows/**` from green-checks auto-merge). Follows the Pull-requests
+  (`pr-auto-merge.yml` excludes `.github/workflows/**` from green-checks auto-merge). Every change still lands via PR. Follows the Pull-requests
   convention; post-run feedback is `autonomous-pr-followup.yml`'s job.
 - `devin-workflow-health.yml` — daily 00:00 UTC; files an `automation-failure` issue if the Devin workflow doesn't
   parse, hasn't started in 26h, or its latest completed run wasn't `success`.
@@ -323,7 +323,7 @@ cost, and duplicated facts drift when only one copy is updated. It needed a dedi
 because feature PRs kept adding formula-/UI-rendering-level prose here instead of to the reference doc
 for that area (`docs/ECONOMY_REFERENCE.md` for economy/engine mechanics, `docs/MAINPAGE_REFERENCE.md`
 for MainPage/ByteFoundryPage/ComputePage field layout, `docs/COMPONENTS_REFERENCE.md` for component prop
-contracts, `docs/THEMING_REFERENCE.md`/`docs/PWA_REFERENCE.md`/`docs/AUTOMATION.md` for their own
+contracts, `docs/THEMING_REFERENCE.md`/`docs/PWA_REFERENCE.md`/`docs/NATIVE_APPS_REFERENCE.md`/`docs/AUTOMATION.md` for their own
 areas). Default to one or two orientation sentences (what changed, the function/constant name to grep
 for) plus a pointer to the reference doc — write the full detail there, not here. Only put something in
 full here if no reference doc exists yet for that area (then consider whether the change warrants
@@ -417,7 +417,8 @@ src/
                             Foundry only in Settings → Danger zone)
     Button (`.jsx`)       ← semantic `variant` prop → theme tokens; deprecated raw `color` still supported
     DiskArrayRow          ← one Disk array's status `{ actions, size, state }`; only click = empty write-cache-size
-                            disk → `actions.expediteDiskFill(size)`; shared by ByteFoundryPage and StoragePage
+                            disk → `actions.expediteDiskFill(size)`; shared by ByteFoundryPage and StoragePage (why standalone:
+                            DESIGN_HISTORY.md)
     DataLakePanel         ← one Data Lake block `{ actions, state, bare, tierIndex }`, embedded per pool card
     icons.js              ← shared glyphs (`COST_ICON` 🏷️ marks every cost)
     BoostBadge, BoostTimerBar, SpeedDetailsPopover, LeadIcon, Switch, Money, BuyMaxToggle (renders nothing until
@@ -434,9 +435,11 @@ src/
                             fonts.js (locally bundled Space Grotesk/Inter), contrast.js (WCAG utility), GlobalStyle.js,
                             index.jsx (`<ThemeProvider mode>`) — THEMING_REFERENCE
   services/               ← config.js (feature flags, AdMob/RevenueCat ids, `IAP_PRODUCTS`, policy URLs),
-                            monetization/ (noop / admobAdapter + rewardedAdCache / revenueCatAdapter, composed by
-                            `getMonetizationService()`), cloudSave/ (Firebase Auth + Firestore `saves/{uid}`,
-                            `deleteAccountAndData`), nativeShell.js (native start-up)
+                            `IS_NATIVE_BUILD`; monetization/ (`MonetizationService`: `init`/`showRewarded`/`purchase`/`restore`/
+                            `getEntitlements`; `noop.js` for web/flags off, `admobAdapter` + `rewardedAdCache` — one video
+                            preloaded at init and after each show, refreshed past 55 min — `revenueCatAdapter`; composed by
+                            `getMonetizationService()`), cloudSave/ (Firebase Auth email/password + Firestore `saves/{uid}`,
+                            `deleteAccountAndData`: reauth → data → user), nativeShell.js (hide splash, init monetization)
   App.jsx                 ← root; owns the single `useIncrementalGame()` call, wraps <ThemeProvider><GlobalStyle/>,
                             switches pages via local `page` useState (default `'game'`; legacy `'storage'` →
                             `'foundry'`) — not a router — plus shared `AppNav` and `AppMenu`.
@@ -446,18 +449,21 @@ src/
   index.jsx, reportWebVitals.js ← ReactDOM entry; optional web-vitals reporter (no-op, no callback)
 capacitor.config.js, android/, ios/ ← Capacitor wrap ("Native apps")
 vite.config.js            ← thin wrapper over `viteConfigFactory.js` (aliases, dev/test server, VitePWA — skipped when
-                            `CAPACITOR=1`, along with the `/tens/` base; split out so `capacitorConfig.test.js` can pin it)
+                            `CAPACITOR=1`, along with the `/tens/` base; split out so `capacitorConfig.test.js` can pin that path —
+                            `import.meta.url` isn't a `file:` URL under Vitest)
 firestore.rules           ← owner-only `saves/{uid}` rules; stryker.config.json ← Stryker mutation testing of `engine.js`
                             (weekly non-blocking `mutation-testing.yml`; `yarn stryker run`)
 playwright.config.js, e2e/ ← real-browser suite, specs in "End-to-end testing"
 scripts/                  ← bump-version.mjs ("Changelog convention"); generate-pwa-icons.mjs (`yarn gen-pwa-icons`, not
                             in the build; re-run only if the icon design changes); adversarialReviewMarker.js
                             ("Pull requests"); pr-low-risk-eligible.sh, enable-auto-merge-if-eligible.sh,
-                            resolve-pr-threads.sh (lists/resolves threads on automation-owned `claude/*`/`devin/*` PRs
-                            by explicit ID, never bulk), backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh,
+                            resolve-pr-threads.sh (`list` read-only; `resolve` takes explicit IDs, never bulk; only repo-owner/
+                            bot-authored `claude/*`/`devin/*` PRs; used by `autonomous-maintenance.yml` and
+                            `autonomous-pr-followup.yml`), backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh,
                             sweep-stalled-auto-prs.sh (#60), sync-release-milestones.sh, configure-ios-plist.mjs,
                             android-boot-smoke.sh, lint-workflow-shell.mjs, verify-maintainer-checklist.mjs —
-                            roles in docs/AUTOMATION.md; most have a sibling `*.test.js`
+                            roles in docs/AUTOMATION.md (except resolve-pr-threads/generate-pwa-icons/configure-ios-plist, above and
+                            in their own headers); most have a sibling `*.test.js`
 public/                   ← generated PWA icons, favicon.ico, robots.txt (old CRA `index.html`/`manifest.json`/`logo*.png`
                             removed — DESIGN_HISTORY.md)
 ```
@@ -530,10 +536,10 @@ Strict three-layer separation:
    (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right, enforced in the engine too) + Auto Boost pref;
    then per-tier rows — the ONE selected tier shows the 3 Boost presets inline. Constants: `COMPUTE_ENTITY_CAP` 10,
    `COMPUTE_MERGE_RATIO` 8, `COMPUTE_MERGE_RESERVE_CAP` 8. Cells (`computeCores`) are bought from the matching Data Lake,
-   not minted from Capacity. Detail: `docs/FOUNDRY_MECHANICS_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`.
+   not minted from Capacity. Detail: `docs/FOUNDRY_MECHANICS_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`, `docs/DESIGN_HISTORY.md`.
 4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), `{ game }`; AppNav once
    `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in `computeFlops.pageUnlocked`). Ten tiers Cores→Superclouds,
-   outputs KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`), PP-funded on the same 10³ ladder as Factory tiers, priced
+   outputs KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`; page keeps "Compute" + 🖥), PP-funded on the same 10³ ladder as Factory tiers, priced
    per-unit via `getCostEpochExponent` (not 8-buy blocks). Owned counts permanent across Prestige; per-cycle boost resets.
    Pure renderer — spec: `docs/ECONOMY_REFERENCE.md` "PP Compute (Flops)".
 5. **`InfoPage/index.jsx`** — a static Manual page holding every mechanic's evergreen explanation in
@@ -856,10 +862,10 @@ base path.
   `storage.js`'s `mergeState` fills in the rest from `createInitialGameState()` — including
   `intro: { mainGameUnlocked: true }`, needed by every spec that seeds state to land directly on MainPage
   rather than the Byte Foundry intro screen.
-- Current specs (see "Repo layout" `e2e/` for one-line descriptions): `golden-path`, `autobuyer-reload`,
-  `purge` (seeding Money ≥ `PURGE_THRESHOLD`; first-time `FullScreenOverlay`), `reboot`
+- Current specs ): `golden-path` (buy Kilobytes via the real Buy button; Owned/balance update), `autobuyer-reload`
+  (an unlocked autobuyer survives a real reload), `purge` (seeding Money ≥ `PURGE_THRESHOLD`; first-time `FullScreenOverlay`), `reboot`
   (seed at 1 Googol PP → Settings Reboot → assert `era.count`, Kernels award, and the permanent
-  `intro.mainGameUnlocked` latch carrying forward), `data-lake`, and `visual-regression` (Linux-only
+  `intro.mainGameUnlocked` latch carrying forward), `data-lake` (seeded KB Data Lake renders its disk-square breakdown; manual Buy Cell grants a Cell, verified on Power), and `visual-regression` (Linux-only
   full-page screenshot baselines of Byte Foundry/Byte Factory in both themes; see `e2e/README.md`).
 - **Not wired into `ci.yml`** — deliberately. Wiring it in (installing Playwright's browser on the
   runner, adding a job/step) means editing `ci.yml`, which is off-limits to `autonomous-maintenance.yml`
@@ -879,7 +885,7 @@ base path.
 ## graphify
 
 [Graphify](https://github.com/Graphify-Labs/graphify) is a project-scoped Claude Code skill
-(`.claude/skills/graphify/SKILL.md`; CLI `graphifyy` on PyPI, Python 3.10+) that builds a queryable knowledge graph of
+(`.claude/skills/graphify/SKILL.md`; CLI `graphifyy` on PyPI, Python 3.10+; installed via `graphify install --project --platform claude`) that builds a queryable knowledge graph of
 code + markdown docs (`graphify-out/`), parsed locally via tree-sitter with no LLM. A dev aid only — nothing in
 `graphify-out/` is imported by `src/`.
 
