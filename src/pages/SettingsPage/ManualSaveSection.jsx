@@ -14,6 +14,11 @@ const SaveText = styled.textarea`
   padding: 0.5rem 0.65rem;
   resize: vertical;
   width: 100%;
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
 `
 
 const IMPORT_ERRORS = {

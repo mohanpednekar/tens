@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Backup / Restore save textarea shows a keyboard focus ring.** Settings → Backup / Restore now uses the same accent `:focus-visible` outline as other interactive controls.
 - A Data Lake's enabled **buy 1 Cells** button no longer does nothing on older saves that unlocked Cells before building that pool's first disk — an already-affordable Cell now buys immediately (#1002).
 - Leftover mixed labels from the #988 rename: Provision Disk again says "tap to queue" (Ping is only the Data Stream / pool tap), Auto-charge status says "Auto-charging" rather than "Auto-merging", the Data Lake's own fill is "buffer" again (Staging is the pool buffer), Upgrade Bitrate's tooltip says Bitrate throughout, the Guide no longer calls the lake fill "staging" or "Ping" the Power reserve slots, a locked MB+ lake unlocks Batteries (not Cells), a full entity says "charge it up" (not "merge it down"), and Auto Boost waits on an in-flight charge.
 - Upgrade Capacity / Upgrade Bitrate and the selected Auto Boost preset buttons regain their prestige color.
