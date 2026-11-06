@@ -862,7 +862,7 @@ base path.
   `storage.js`'s `mergeState` fills in the rest from `createInitialGameState()` — including
   `intro: { mainGameUnlocked: true }`, needed by every spec that seeds state to land directly on MainPage
   rather than the Byte Foundry intro screen.
-- Current specs ): `golden-path` (buy Kilobytes via the real Buy button; Owned/balance update), `autobuyer-reload`
+- Current specs: `golden-path` (buy Kilobytes via the real Buy button; Owned/balance update), `autobuyer-reload`
   (an unlocked autobuyer survives a real reload), `purge` (seeding Money ≥ `PURGE_THRESHOLD`; first-time `FullScreenOverlay`), `reboot`
   (seed at 1 Googol PP → Settings Reboot → assert `era.count`, Kernels award, and the permanent
   `intro.mainGameUnlocked` latch carrying forward), `data-lake` (seeded KB Data Lake renders its disk-square breakdown; manual Buy Cell grants a Cell, verified on Power), and `visual-regression` (Linux-only
