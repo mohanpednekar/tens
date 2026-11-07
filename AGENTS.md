@@ -70,6 +70,7 @@ docs/
   COMPONENTS_REFERENCE.md ← full Button/Money/StatCard prop/styling reference
   THEMING_REFERENCE.md    ← full design-token/font/ThemeProvider reference
   PWA_REFERENCE.md        ← full installable-PWA (manifest/icons/service-worker) reference
+  NATIVE_APPS_REFERENCE.md ← Capacitor Android/iOS wrap: SDK targets, release signing, feature flags, mobile-build.yml
 src/
   game/
     layers.js             ← TIER_DEFINITIONS array + all constants (single source of truth)
