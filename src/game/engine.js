@@ -4515,11 +4515,19 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     changed = true
   }
 
-  const snapshot = () => ({ ...state, intro: { ...intro, disks, diskWriteCache, poolBuffers: poolBuffers ?? intro.poolBuffers } })
+  // ⚡ Bolt Optimization: Define state snapshot OUTSIDE the hot loop using getters to avoid O(N) allocations.
+  // The local maps (poolBuffers, disks, diskWriteCache) are modified by reference
+  // so snapshot automatically reflects changes within this loop as it iterates.
+  const snapshot = { ...state, intro: { ...intro } }
+  Object.defineProperties(snapshot.intro, {
+    disks: { get: () => disks, enumerable: true },
+    diskWriteCache: { get: () => diskWriteCache, enumerable: true },
+    poolBuffers: { get: () => poolBuffers ?? intro.poolBuffers, enumerable: true },
+  })
 
   const builtSizes = Object.keys(intro.disksBuiltTotal ?? {}).map(Number).sort((a, b) => a - b)
   for (const targetSize of builtSizes) {
-    const current = snapshot()
+    const current = snapshot
     if (!canStartDiskWriteCacheMerge(current, targetSize)) continue
     diskWriteCache[targetSize] = createDiskWriteCacheMerge(current, targetSize)
     changed = true
@@ -4562,7 +4570,7 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
 
     // 1. Advance every in-flight smaller-disk transfer (each pauses only on its own size's tier claim).
     for (const transfer of previousTransfers) {
-      if (isDiskRedeemable(snapshot(), transfer.size)) {
+      if (isDiskRedeemable(snapshot, transfer.size)) {
         transfers.push(transfer)
         continue
       }
@@ -4581,7 +4589,7 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     // is never slower than the default fill.
     if (poolIndex) {
       const buffer = (poolBuffers ?? intro.poolBuffers ?? {})[poolIndex] ?? 0
-      const spendable = Math.max(0, buffer - getPoolCacheReservationBits(snapshot(), poolIndex))
+      const spendable = Math.max(0, buffer - getPoolCacheReservationBits(snapshot, poolIndex))
       const need = Math.max(0, targetSize - collected)
       if (transfers.length > 0 && spendable >= need) transfers = []
       const reserved = transfers.reduce((sum, transfer) => sum + transfer.size, 0)
@@ -4597,7 +4605,7 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     // disk that still fits — all transferring in parallel — so only as many as needed are consumed.
     if (merge.expedite && collected < targetSize * WRITE_CACHE_COMPLETE_RATIO) {
       const reserved = transfers.reduce((sum, transfer) => sum + transfer.size, 0)
-      for (const size of pickDiskWriteCacheTransferSizes(snapshot(), targetSize, targetSize - collected - reserved, transfers)) {
+      for (const size of pickDiskWriteCacheTransferSizes(snapshot, targetSize, targetSize - collected - reserved, transfers)) {
         const totalSeconds = getDiskWriteCacheSegmentSeconds(state, size)
         transfers.push({ size, remainingSeconds: totalSeconds, totalSeconds })
       }
@@ -4822,12 +4830,14 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     ...state,
     intro: {
       ...state.intro,
-      poolBuffers,
-      disks,
-      diskCache,
-      diskReadCacheFlush,
     },
   }
+  Object.defineProperties(checkState.intro, {
+    poolBuffers: { get: () => poolBuffers, enumerable: true },
+    disks: { get: () => disks, enumerable: true },
+    diskCache: { get: () => diskCache, enumerable: true },
+    diskReadCacheFlush: { get: () => diskReadCacheFlush, enumerable: true },
+  })
 
   for (const size of flushSizes) {
     const flush = diskReadCacheFlush[size]
