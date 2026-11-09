@@ -192,7 +192,7 @@ const InfoPage = () => {
             resets, plus unspent PP, the Purge count, Compression levels, owned Compute (Flops) units,
             and the whole Foundry (Capacity, Disks, Data Lakes, Compute entities).{' '}
             <em>Keeps:</em> automation unlocks, Overflow mode, the main-game unlock, the System log,
-            Flops autobuyer unlocks, the Production speed bonus, Kernels and hyperscalers. Awards Kernels.
+            Flops autobuyer unlocks, Kernels and hyperscalers. Awards Kernels.
           </li>
           <li>
             <strong>Reinstall</strong> — a future layer above Reboot, not yet in the game.

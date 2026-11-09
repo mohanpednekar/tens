@@ -46,8 +46,8 @@ import styled, { useTheme } from 'styled-components'
 //   or 🔓 PP unlock button) → owned (pause/resume Switch in the lead cell, `every <interval>` subtext,
 //   ⏫ speed upgrade button). Global automations, tier autobuyers, tier tickspeed autobuyers, Auto
 //   Boost, and Reboot-unlocked Compute autobuyers. Each milestone is shown exactly once, here.
-// - ✦ Prestige: non-automation perks that stand on their own — Compression (leveled), Production
-//   speed bonus (one-time), DeGoogol (milestone), and the Buy max purchasing toggle.
+// - ✦ Prestige: non-automation perks that stand on their own — Compression (leveled), Playtime
+//   bonus (one-time PP), Overflow mode (milestone), and the Buy max purchasing toggle.
 
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));
