@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Removed the `+n/8` purchase-progress text from Factory tier Buy buttons; the cost label stands alone.
+- **Autobuyer priority restored to KB → QB.** When tiers compete for the same Bits, lower tiers buy first again, except a tier you own none of goes first.
 
 - **Production speed bonus now unlocks at 10 Purges** and is ×log₁₀ of your Purge count, replacing the 10,000 PP unlock and +1%-per-unspent-PP bonus. It is automatic — nothing to buy on Firmware.
 
