@@ -1445,6 +1445,8 @@ const MainPage = ({ game }) => {
           // Every count carries a "+" and zero parts are omitted: Buy-max shows "+<levels>" /
           // "+<levels> +<n>/<block>", the ordinary Buy shows "+<affordable>/<block>" when anything
           // is affordable, else "+<done>/<block>", and nothing at 0/<block>.
+          // Buy-max mode only: "+<levels>" full levels; the per-block "+n/8" progress is not shown.
+          const buyLevelQuantityText = maxLevelsPreview.levels > 0 ? `+${formatAmount(maxLevelsPreview.levels)}` : ''
           // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
           // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
           // no separate icon for "+10%" is needed, since that step is fixed
@@ -1545,7 +1547,7 @@ const MainPage = ({ game }) => {
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
               >
-                <BuyButtonIcon>🛒</BuyButtonIcon>
+                <BuyButtonIcon>🛒{buyLevelQuantityText && ` ${buyLevelQuantityText}`} </BuyButtonIcon>
                 <BuyButtonCostLabel>{formatCurrency(maxLevelsPreview.levels > 0 ? (maxLevelsPreview.partialQuantity > 0 ? maxLevelsPreview.partialCost : maxLevelsPreview.lastLevelCost) : displayCost)}</BuyButtonCostLabel>
                 <VisuallyHidden
                   role="progressbar"
