@@ -2346,10 +2346,10 @@ export const getIntroProductionRate = intro =>
 // multiplier scales only the REAL per-tick amount tickIntroProduction/tickPoolBufferFill actually
 // deliver, "primary fill only" (see layers.js for the full scope note).
 //
-// Percent value (100 = "no change") from a 0..1 fill fraction: `maxPercent` when empty (the Data
-// Stream's FILL_MULTIPLIER_MAX_PERCENT, 1000, or a pool's POOL_FILL_MULTIPLIER_MAX_PERCENT, 500),
-// FILL_MULTIPLIER_MIN_PERCENT once completely full — the same log-linear shape either way, exactly 100
-// at 50% full only for the Data Stream's 1000/10 pair. fillFraction is clamped defensively — both real callers already clamp their
+// Percent value (100 = "no change") from a 0..1 fill fraction: FILL_MULTIPLIER_MAX_PERCENT when
+// empty, exactly 100 at 50% full, FILL_MULTIPLIER_MIN_PERCENT once completely full. Shared by the
+// Data Stream itself and every pool's own local buffer below — same log-linear "1000% down to 10%"
+// curve either way. fillFraction is clamped defensively — both real callers already clamp their
 // own fraction to at most 1 before calling this, so this only guards a corrupted/hand-edited save.
 export const getFillMultiplierPercent = (fillFraction, maxPercent = FILL_MULTIPLIER_MAX_PERCENT) => {
   const clampedFraction = Math.min(1, Math.max(0, fillFraction))

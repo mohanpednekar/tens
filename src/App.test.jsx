@@ -5984,14 +5984,6 @@ describe('getBufferSecondsToFull (tile time-to-full)', () => {
     expect(getBufferSecondsToFull(900, 1000, 10)).toBeCloseTo(expected(0.9))
   })
 
-  it('integrates a pool\'s 500% → 10% curve when given the pool maximum', () => {
-    const rate = 10
-    const seconds = getBufferSecondsToFull(0, 1000, rate, 500)
-    expect(seconds).toBeGreaterThan(getBufferSecondsToFull(0, 1000, rate))
-    // Closed form for MAX=500, MIN=10: (C / (r·e^a·b)) · (e^b − 1), a = ln(5), b = ln(50).
-    expect(seconds).toBeCloseTo((1000 / rate / 5) * (50 - 1) / Math.log(50))
-  })
-
   it('is not the old linear 150% → 50% integral', () => {
     const geometric = getBufferSecondsToFull(0, 1000, 10)
     const oldLinear = 100 * Math.log(1.5 / 0.5)

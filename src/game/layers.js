@@ -212,9 +212,8 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // raw, un-multiplied rate exactly as before this mechanic existed). The
 // multiplier itself is fill-dependent: starts at FILL_MULTIPLIER_MAX_PERCENT when the Data Stream
 // Buffer / a pool's own local buffer (getPoolBufferBits/getPoolBufferCapacity) is empty, and falls
-// geometrically (Data Stream: 10x -> 1x over the first half, 1x -> 0.1x over the second, exactly 100% at
-// 50% full; a pool's buffer starts at POOL_FILL_MULTIPLIER_MAX_PERCENT, 5x, instead), reaching
-// FILL_MULTIPLIER_MIN_PERCENT once completely full (getFillMultiplierPercent). A manual tap on the
+// geometrically (10x -> 1x over the first half, 1x -> 0.1x over the second), reaching exactly 100%
+// at 50% full and FILL_MULTIPLIER_MIN_PERCENT once completely full (getFillMultiplierPercent). A manual tap on the
 // Data Stream (once Storage pools are revealed at 1 KiB — see getVisibleStoragePoolCount/
 // tapIntroBit) or a pool's own Memory tile (tapPoolBuffer) adds FILL_MULTIPLIER_TAP_BONUS_PERCENT to a
 // decaying tap bonus that NEVER scales the fill itself (the fill curve already reaches
