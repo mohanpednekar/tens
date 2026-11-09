@@ -582,24 +582,22 @@ state to the active slot, then redirects every save read/write to an isolated `'
 
 ## Economy model
 
-### Pool-local resets
+### Pool-local flushes
 
-Each Storage pool has an independent end-of-progression reset, offered only at 9/9/9 disks, with a
+Each Storage pool has an independent end-of-progression **flush** (`flushStoragePool`; formerly "reset"), offered only at 9/9/9 disks, with a
 completely full Data Lake, when the next Booster costs more than the lake can hold. It empties only that
 pool's disks, buffer, and lake (Booster state and prior reset rewards remain) and permanently adds 1,000
-units of lake-only capacity. The first reset fixes lake overflow speed at 50%; the second and later also
-advance the pool through the existing bandwidth steps, non-final reward growth limited dynamically by
-half the following pool's bandwidth. After reset the pool provisions its disks automatically and for
+units of lake-only capacity. Lake speed is 10% of its pool's base Bandwidth, +10% additive per flush (`getDataLakeSpeedMultiplier`; 70% after 6); flushes no longer change pool Bandwidth. After a flush the pool provisions its disks automatically and for
 free, one at a time smallest-first, waiting for each disk to fill; while it rebuilds, later pools cannot
 start new provisioning (already-active work may finish). Whenever all 9/9/9 disks are provisioned
 (including before the first reset) — a status latched per lake (`boosterAuto`) for the whole Reboot cycle, surviving pool resets, Reformat Byte Foundry and Prestige — the lake's Booster control becomes a non-clickable cost label and
 the lake automatically buys every affordable Booster until slots fill or the next cost exceeds capacity;
 filling the lake at that wall enables the next reset. Pools never transfer or share resources through
-this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop".
+this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop" (now the flush loop).
 
 ### Tiers, Prestige, Reboot (Era ascension)
 
-**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Compact Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
+**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Flush Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
 
 **Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Purge, Reboot,
 Reformat Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Purge** (formerly the name Reboot, now the Era-ascension layer) and

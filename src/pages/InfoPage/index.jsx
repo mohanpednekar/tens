@@ -372,21 +372,21 @@ const InfoPage = () => {
             The nth Cell bought from a lake costs n units and instantly grants 1 compute entity of
             that lake’s tier (KB → Cell, MB → Battery, …). Once a pool has all of its disks built, its
             lake buys every affordable Cell automatically for the rest of the Reboot cycle — through pool
-            compactions, Reformats and Purges.
+            flushes, Reformats and Purges.
           </li>
         </ul>
 
-        <h3>Compaction</h3>
+        <h3>Flushing</h3>
         <ul>
           <li>
             When a pool has every disk built, its lake is completely full, and the next Cell costs
-            more than the lake can hold, a <strong>🗜 Compact Pool</strong> button appears. It never
+            more than the lake can hold, a <strong>🗜 Flush Pool</strong> button appears. It never
             fires on its own.
           </li>
           <li>
-            Compaction empties that pool’s disks, Staging and lake (Cells bought and earlier compaction
-            rewards stay) and permanently adds 1,000 units of lake capacity. The first reset also
-            locks lake filling at 50% speed; later compactions raise the pool’s Bandwidth.
+            A flush empties that pool’s disks, Staging and lake (Cells bought and earlier flush
+            rewards stay) and permanently adds 1,000 units of lake capacity. Lakes fill at 10% of
+            their pool’s Bandwidth, plus 10% (additive) per flush.
           </li>
           <li>
             Afterwards the pool rebuilds its disks for free, one at a time, smallest first. Until it
@@ -624,7 +624,7 @@ const InfoPage = () => {
         <ul>
           <li>
             <strong>Prestige</strong> is the umbrella term for every reset-for-rewards: Purge, Reboot,
-            Reformat Byte Foundry and a pool’s Compaction. Purge is the Factory one.
+            Reformat Byte Foundry and a pool’s Flush. Purge is the Factory one.
           </li>
           <li>
             Available at 1 Googol Bytes (8×10^100 Bits), where production freezes until you
