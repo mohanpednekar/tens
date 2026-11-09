@@ -3597,7 +3597,7 @@ test('Data Stream tile no longer shows a separate "bits this cycle" transfer-blo
 // engine.js). Disks are a storage MEDIUM, not a one-shot pre-paid item: starting a build spends
 // the cost immediately (DISK_BUILD_COST_MULTIPLIER times its own Byte-accurate size — see
 // getDiskCost) but only constructs an EMPTY container once a real build TIME finishes (see
-// tickProvisionDisk); Memory then keeps each array's Cache full (whole-block transfers) and
+// tickProvisionDisk); Memory then keeps each array's Cache full (a timed 5× transfer) and
 // auto-fills empty disks from a full read cache on a later tick (see tickDiskAutoFill), smallest
 // size first. A FULL disk's pull-eligibility is gated on SOME tier's CURRENT per-unit level cost
 // catching up to that disk's size AND that level having zero progress already (see
