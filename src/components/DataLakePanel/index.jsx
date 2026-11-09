@@ -13,6 +13,7 @@ import {
   getDataLakeCapacity,
   getDataLakeCapacityDoublingCost,
   getDataLakeCapacityLevel,
+  getDataLakeCurrentDiskFillFraction,
   getDataLakeCurrentFillSubSize,
   getDataLakeDepositedUnits,
   getDataLakeDiskCounts,
@@ -118,7 +119,8 @@ const LakeSubRow = styled.div`
 const LakeFilledText = styled.span`
   position: absolute;
   left: 50%;
-  top: 50%;
+  /* With the collapsed header's bar below, center on the title + sub rows only (bar = 4px + 0.3rem margin). */
+  top: ${props => (props.$withBar ? 'calc(50% - 2px - 0.15rem)' : '50%')};
   transform: translate(-50%, -50%);
   pointer-events: none;
   color: ${props => props.theme.color.text};
@@ -129,6 +131,30 @@ const LakeFilledText = styled.span`
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-shadow: 0 0 2px ${props => props.theme.color.surface};
+`
+
+// Thin progress bar under the balance, shown on a collapsed lake header: progress toward the next
+// disk (the same fraction the expanded LakePoolTile shows). `ThinProgressBar` is reused by
+// ByteFoundryPage's running-upgrade tile so both read the same. Default top margin spaces the bar
+// under the lake title/sub rows (LakeHeader has no flex gap); the upgrade tile zeroes it via a
+// local wrapper so it does not stack on FillableStatCard's gap.
+export const ThinProgressBar = styled.div`
+  position: relative;
+  width: 100%;
+  height: 4px;
+  margin-top: 0.3rem;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, ${props => props.theme.color.surfaceSunken} 70%, ${props => props.theme.color.surface});
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: ${props => props.theme.color.accent};
+    transform-origin: left center;
+    transform: scaleX(${props => props.$fill ?? 0});
+  }
 `
 
 const LakeSpeedText = styled.span`
@@ -403,6 +429,10 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
           ? formatLakeTimeLeft((nextCostBits - filledBits) / fillSpeed)
           : null
 
+        // Same fraction as the expanded LakePoolTile (open-slot fill, or 1 once this level has
+        // nothing left to fill). A 0 here when currentFillSubSize is null would paint an empty bar
+        // on a completed lake. Locked lakes stay at 0 so leftover fillBits never look live.
+        const headerFillFraction = poolReady ? getDataLakeCurrentDiskFillFraction(state, tierIndex) : 0
         const costLabel = <><LeadIcon>{COST_ICON}</LeadIcon>{nextCostSize}</>
         return (
           <LakeBlock aria-label={showHeader ? `${label} lake` : undefined} key={tierIndex}>
@@ -483,7 +513,17 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               ) : null}
 
                 </LakeSubRow>
-                <LakeFilledText title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>
+                <LakeFilledText $withBar={headerOnly} title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>
+                {headerOnly && (
+                  <ThinProgressBar
+                    role="progressbar"
+                    aria-label={`${label} lake fill progress`}
+                    aria-valuenow={Math.round(headerFillFraction * 100)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    $fill={headerFillFraction}
+                  />
+                )}
               </LakeHeader>
             )}
 

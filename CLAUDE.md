@@ -170,6 +170,8 @@ wrong `baseCost` exponent, a mis-chained `producesResourceId`, a migration missi
 unauthorized economy change) that general review doesn't look for. It supplements, not replaces, the
 ordinary review flow.
 
+**Aesthetic review on every UI change.** Any change to what a player sees (layout, spacing, font size, alignment, colors, new/removed elements) needs a visual check before the PR is marked ready: render the real screen (Playwright at ~430px wide, both themes; seed `localStorage` as in "End-to-end testing"; throwaway scripts, not committed), look at the screenshot, and fix anything misaligned, cramped, off-center, inconsistent with neighbouring components (same font sizes/bar styles for the same kind of value), or that changes a component's size unintentionally. Share the screenshots with the user. Passing tests don't cover this.
+
 The `code-reviewer` subagent (`.claude/agents/code-reviewer.md`) does an adversarial, evidence-based,
 read-only review (every finding verified against the checked-out code, file:line-cited, CONFIRMED/PLAUSIBLE findings, explicit verdict, checked-clean list,
 stated coverage gaps). Spawn it via the Agent tool before merging any non-trivial change or when asked

@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Foundry running-upgrade tile: the percent now matches the Data Lake balance font size, and the four corner labels are spaced apart (top pair to the top, bottom pair to the bottom, wider column gap) without changing the tile size.
+
+- Collapsed Data Lake header shows a thin progress bar (toward the next disk) under its balance; the running-upgrade tile uses the same bar instead of a background fill. A lake that has already filled every slot at its current capacity reads as full on that bar, not empty.
+
 - **XP now counts powers of ten of Bytes, not Bits.** One XP per new power of ten of the Bytes balance (the headline unit). Saves mid-run may wait up to one level before XP resumes.
 
 - The small Bits balance under the Bytes headline no longer adds height to the Factory header; it sits in the existing gap above the segment bar.
