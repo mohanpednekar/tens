@@ -1802,9 +1802,12 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // budget already accumulated for this attempt — it stays banked so a stretch of being broke
   // doesn't cost any attempts, only delays them until funds catch up. buyTierQuantity re-validates
   // internally and returns the state unchanged when a purchase fails. Every tier is costed in the
-  // same resource (Money), so autobuyers compete for the same pool — processed highest tier first
-  // so a higher tier always gets first claim on limited funds.
-  const stateAfterAutobuyers = [...TIER_DEFINITIONS].reverse().reduce((s, tier) => {
+  // same resource (Money), so autobuyers compete for the same pool — processed lowest tier first
+  // (KB → QB), except tiers with zero owned units go first (stable sort keeps ladder order).
+  const autobuyerOrder = [...TIER_DEFINITIONS].sort(
+    (a, b) => Number((stateAfterFlops.owned?.[a.id] ?? 0) > 0) - Number((stateAfterFlops.owned?.[b.id] ?? 0) > 0),
+  )
+  const stateAfterAutobuyers = autobuyerOrder.reduce((s, tier) => {
     const level = s.autobuyers[tier.id] ?? null
     // Paused (see setAutobuyerEnabled) is treated exactly like "never unlocked" here — the
     // attempt-budget accumulation below is skipped entirely too, so a paused stretch banks no
