@@ -1132,7 +1132,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             title={speedUpgradeQueued
               ? 'Upgrading Bitrate — pulling the Data Stream\'s Bitrate into the bar'
               : `Upgrading to ${nextCapacityText} — pulling the Data Stream's base Bitrate into the bar`}
-            $progress={0}
           >
             <RunningUpgradeContent>
               <RunningTitle><LeadIcon>⏫</LeadIcon>Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
@@ -1167,7 +1166,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               )}
               <RunningTime>⏳ {runningTimeLeftText}</RunningTime>
             </RunningUpgradeContent>
-            <ThinProgressBar $fill={Math.min(1, Math.max(0, runningProgress / 100))} aria-hidden="true" />
+            <ThinProgressBar $flush $fill={Math.min(1, Math.max(0, runningProgress / 100))} aria-hidden="true" />
             <VisuallyHidden
               role="progressbar"
               aria-label="data stream upgrade progress"

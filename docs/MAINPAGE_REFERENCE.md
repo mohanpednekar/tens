@@ -98,9 +98,10 @@ derived Speed stay visible above the button on the Data Stream tile's own footer
 after-upgrade preview. `disabled={!capacityUpgradeClickable}` where `capacityUpgradeClickable =
 isMemoryCapacityUpgradeArmable(state)`: a click at any fill (byte combined, not at cap, not already
 running) starts the upgrade (`intro.capacityUpgradeQueued`); `tickCapacityUpgradeDrain` then pulls 100% of
-base Speed from the Buffer into `intro.capacityUpgradeProgress`. While running, the SAME `Button` becomes
-an inert progress bar ("⏫ Upgrading Data Stream…", fill = progress/Capacity, hidden `progressbar`
-`aria-label="data stream upgrade progress"`); there is no cancel, and the tile is unchanged. Upgrade Data Stream sits outside the forced priority order (see
+base Speed from the Buffer into `intro.capacityUpgradeProgress`. While running, an inert
+`UpgradeStatusTile` ("⏫ Upgrading…") sits under the Data Stream tile with a thin progress bar
+(same `ThinProgressBar` as a collapsed Data Lake header; fill = progress/Capacity) plus a hidden
+`progressbar` (`aria-label="data stream upgrade progress"`); there is no cancel. Upgrade Data Stream sits outside the forced priority order (see
 docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
@@ -128,7 +129,8 @@ the `PoolTileContent` readouts (`pointer-events: none`) — a `TitleRow` is the 
 title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
 or tier name in the visible text) on the left, the
 Memory buffer balance and Capacity (`balance / capacity-unit`) in a centered `BalanceText` in the middle, and Bandwidth on the right
-(same as Data Stream's own tile above, including the narrow-phone wrap). Its second line is the same `CapacityBonusRow` (pool Capacity, tap bonus). While `isDataLakePoolDrainAvailable` the lake drains the buffer directly; the tile stays tappable (the tap bonus is granted regardless). The lake's title/action row also shows on a collapsed pool (`DataLakePanel section="header"`). Only ONE pool is expanded at a time by default — the
+(same as Data Stream's own tile above, including the narrow-phone wrap). Its second line is the same `CapacityBonusRow` (pool Capacity, tap bonus). While `isDataLakePoolDrainAvailable` the lake drains the buffer directly; the tile stays tappable (the tap bonus is granted regardless). The lake's title/action row also shows on a collapsed pool (`DataLakePanel section="header"`),
+with a thin bar toward the next disk under the filled amount. Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
 pool, an explicit `0` means "all collapsed", any other value pins one specific pool) — toggled by a
 `PoolTitleToggle` — the "<symbol> Pool" title alone (`aria-expanded`,

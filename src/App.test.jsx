@@ -3532,6 +3532,11 @@ test('a collapsed pool still shows its Data Lake heading and action row', () => 
   expect(within(pool1).getByRole('button', { name: /expand pool 1/i })).toBeInTheDocument()
   expect(within(pool1).getByText('Lake')).toBeInTheDocument()
   expect(within(pool1).queryByRole('group', { name: /lake .* disks/i })).not.toBeInTheDocument()
+  const headerBar = within(pool1).getByRole('progressbar', { name: /KB lake fill progress/i })
+  expect(headerBar).toHaveAttribute('aria-valuemin', '0')
+  expect(headerBar).toHaveAttribute('aria-valuemax', '100')
+  fireEvent.click(within(pool1).getByRole('button', { name: /expand pool 1/i }))
+  expect(within(pool1).queryByRole('progressbar', { name: /KB lake fill progress/i })).not.toBeInTheDocument()
 })
 
 test('tapping a pool\'s own Memory buffer shows only that pool\'s tap bonus bar, leaving the Data Stream\'s untouched', () => {
