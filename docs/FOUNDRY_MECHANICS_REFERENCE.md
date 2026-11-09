@@ -119,8 +119,8 @@ each cycle. Nothing here ever fully freezes — every action stays live indefini
 
 **Fill-based Speed/Bandwidth multiplier** (`FILL_MULTIPLIER_*` in `layers.js`; `getFillMultiplierPercent`/
 `getDataStreamEffectMultiplier`/`getPoolEffectMultiplier`/`tickFillMultiplierDecay`/`tapPoolBuffer` in
-`engine.js`) — the displayed Speed/Bandwidth never change; a separate fill-dependent multiplier (1000%
-empty → 100% at 50% full → 10% at full buffer, log-linear) scales only the real per-tick amount delivered into the
+`engine.js`) — the displayed Speed/Bandwidth never change; a separate fill-dependent multiplier (Data Stream 1000%
+empty → 100% at 50% full → 10% at full buffer, log-linear; pool Staging 500% empty → 10% full) scales only the real per-tick amount delivered into the
 buffer. Tapping never boosts the fill: it adds a +5% bonus (decaying 1%/sec, capped at +100%) that speeds that buffer's consumers ×(1 + bonus%) — see `getDataStreamTapMultiplier`/`getPoolTapMultiplier`.
 `ByteFoundryPage` no longer draws a multiplier bar: the Data Stream's Speed and each pool's Bandwidth
 show the EFFECTIVE value (base × multiplier, 3 significant digits, `formatSpeedText`), tinted

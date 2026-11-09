@@ -9249,3 +9249,11 @@ still passed unchanged (the captured screens do not show the renamed nav item).
 - Side mechanics: Snapshot / Rollback, Uptime, Hotfix.
 - Others: Garbage Collector (auto-Compaction), Latency, Cache hit, Thermal throttling,
   Parity / RAID, Lakehouse / Data Warehouse, Tape / Cold storage.
+
+## Pool Staging empty multiplier 10× → 5× (2026-11)
+
+Per maintainer request, a pool's buffer ("array buffer") no longer starts at the shared 10× (`FILL_MULTIPLIER_MAX_PERCENT`
+1000%) when empty: `POOL_FILL_MULTIPLIER_MAX_PERCENT` = 500% applies to pool buffers only; the Data Stream keeps 1000%.
+`getFillMultiplierPercent`/`getFillCurveDelta`/`getFillCurveSeconds` gained an optional `maxPercent` (default 1000) rather than
+forking the curve. `FILL_MULTIPLIER_MIN_PERCENT` (10%) is unchanged, so a pool's curve is no longer symmetric
+(100% is crossed a little before half full). Slows empty-pool refills, so pacing runs a little longer.

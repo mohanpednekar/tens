@@ -663,9 +663,9 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
 
 **Hard rules (full text and the rest of the Foundry mechanics: `docs/FOUNDRY_MECHANICS_REFERENCE.md`):**
 - **Fill multiplier** (`FILL_MULTIPLIER_*`, `getFillMultiplierPercent`): displayed Speed/Bandwidth never
-  change; a fill-dependent multiplier (1000% empty → 100% at 50% → 10% full (log-linear)) scales only the
+  change; a fill-dependent multiplier (Data Stream 1000% empty → 100% at 50% → 10% full (log-linear); a pool's Staging starts at `POOL_FILL_MULTIPLIER_MAX_PERCENT` 500%) scales only the
   real per-tick amount delivered (`getFillCurveDelta` integrates the curve so a 1s offline tick matches live 0.1s ticks).
-  **Tap bonuses never scale a fill** (the curve already reaches 10×); they speed CONSUMERS ×(1 + bonus%),
+  **Tap bonuses never scale a fill** (the curve already reaches 10×/5×); they speed CONSUMERS ×(1 + bonus%),
   decaying 1%/s: Data Stream ping → Upgrade Capacity/Bitrate drains (`getDataStreamTapMultiplier`); pool ping →
   Provision Disk draw, read-cache flush, write-cache merges, lower-size rebuild, Data Lake drain (`getPoolTapMultiplier`).
 - **Standing rule — `intro.capacity` keeps doubling plainly in binary** (IEC `KiB`/`MiB`, step 1024);

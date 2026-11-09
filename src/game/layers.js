@@ -225,6 +225,10 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // of bits" effect instead (tapIntroBit) — this multiplier has no bearing pre-reveal.
 export const FILL_MULTIPLIER_MAX_PERCENT = 1000
 export const FILL_MULTIPLIER_MIN_PERCENT = 10
+// A pool's own Staging buffer starts at this lower empty-buffer multiplier (5x) instead of the Data
+// Stream's FILL_MULTIPLIER_MAX_PERCENT (10x); the curve is the same log-linear shape down to
+// FILL_MULTIPLIER_MIN_PERCENT when full (so a pool crosses 100% a little before half full).
+export const POOL_FILL_MULTIPLIER_MAX_PERCENT = 500
 export const FILL_MULTIPLIER_TAP_BONUS_PERCENT = 5
 export const FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND = 1
 // Hard ceiling on the manual tap bonus ITSELF (stored separately from the fill-based value — see
