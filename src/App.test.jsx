@@ -357,6 +357,10 @@ test('the Manual nav item opens the Info page and Factory returns, preserving ga
   expect(screen.getByRole('heading', { level: 2, name: /^power$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^compute$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^purge$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 2, name: /^prestige ladder$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/prestige ladder section/i)).not.toHaveTextContent(
+    /the Production speed bonus/i,
+  )
   expect(screen.getByLabelText(/byte foundry section/i)).toHaveTextContent(/forced priority/i)
   expect(screen.getByLabelText(/storage section/i)).toHaveTextContent(/clean-slate disk/i)
   expect(screen.getByLabelText(/power section/i)).toHaveTextContent(/stack/i)
@@ -1496,6 +1500,11 @@ test('Firmware groups by feature: Automation holds every automation, Prestige th
   expect(screen.getByLabelText(/^purge points category$/i)).toHaveTextContent(/compression/i)
   expect(screen.getByLabelText(/^purchasing category$/i)).toBeInTheDocument()
   expect(screen.queryByLabelText(/^global automation category$/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^production speed bonus upgrade$/i)).not.toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: /open prestige/i })).toHaveAttribute(
+    'title',
+    'Prestige — Compression, Overflow mode and Buy max',
+  )
 })
 
 test('an Enable Auto Scale Up button appears on Firmware → Automation after the first prestige, and spends 16 PP to enable it', async () => {

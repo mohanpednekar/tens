@@ -45,8 +45,8 @@ import styled, { useTheme } from 'styled-components'
 //   or 🔓 PP unlock button) → owned (pause/resume Switch in the lead cell, `every <interval>` subtext,
 //   ⏫ speed upgrade button). Global automations, tier autobuyers, tier tickspeed autobuyers, Auto
 //   Boost, and Reboot-unlocked Compute autobuyers. Each milestone is shown exactly once, here.
-// - ✦ Prestige: non-automation perks that stand on their own — Compression (leveled), Production
-//   speed bonus (one-time), DeGoogol (milestone), and the Buy max purchasing toggle.
+// - ✦ Prestige: non-automation perks that stand on their own — Compression (leveled), Overflow
+//   mode (milestone), and the Buy max purchasing toggle.
 
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));
@@ -449,7 +449,7 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction =
 
 export const PERKS_TABS = [
   { id: 'automation', icon: '🤖', ariaLabel: 'open automation', title: 'Automation — unlock, pause/resume and speed up every automation' },
-  { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Compression, production speed bonus, Overflow mode and Buy max' },
+  { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Compression, Overflow mode and Buy max' },
 ]
 
 const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Math.round(ms * 10) / 10} ms`)
