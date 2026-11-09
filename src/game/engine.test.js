@@ -7646,14 +7646,46 @@ describe('tickGame', () => {
     expect(after.purchaseLevels[tensTier.id]).toBe(2)
   })
 
-  it('when multiple autobuyers compete for the same money, the higher tier is bought first', () => {
-    // $8,000,000 affords exactly 1 Megabyte level (8 × $1,000,000), leaving nothing for a
-    // Kilobyte purchase.
+  it('when multiple autobuyers compete for the same money and both have owned units, the lower tier is bought first', () => {
+    // $8,000,000 affords exactly 1 Megabyte level (8 × $1,000,000). Kilobytes at purchase
+    // level 3 costs 8 × $100,000 = $800,000, so if Kilobytes buys first the remainder cannot
+    // afford Megabytes. tickGame(2) gives both autobuyers a chance (KB interval 1s, MB 2s).
+    const state = withAutobuyer(
+      withAutobuyer(
+        withMoney(
+          withOwned(
+            withEverUnlockedTierIds(
+              withPurchaseLevel(withOwned(createInitialGameState(), tensTier.id, 16), tensTier.id, 3),
+              thousandsTier.id,
+              true,
+            ),
+            thousandsTier.id,
+            1,
+          ),
+          8_000_000
+        ),
+        tensTier.id
+      ),
+      thousandsTier.id
+    )
+    const after = tickGame(2)(state)
+    expect(after.purchased[tensTier.id]).toBe(8)
+    expect(after.purchased[thousandsTier.id]).toBe(0)
+  })
+
+  it('when multiple autobuyers compete for the same money, a tier with zero owned units is bought first', () => {
+    // Same $8,000,000 / 1 Megabyte-level budget as the both-owned case, but Megabytes has
+    // never been owned — zero-owned tiers jump the KB → QB queue, so Megabytes spends the
+    // whole pool and Kilobytes gets nothing.
     const state = withAutobuyer(
       withAutobuyer(
         withMoney(
           // Predecessor needs 2 completed levels (purchaseLevels 3) for the recorded tier to re-reveal.
-      withEverUnlockedTierIds(withPurchaseLevel(withOwned(createInitialGameState(), tensTier.id, 16), tensTier.id, 3), thousandsTier.id, true),
+          withEverUnlockedTierIds(
+            withPurchaseLevel(withOwned(createInitialGameState(), tensTier.id, 16), tensTier.id, 3),
+            thousandsTier.id,
+            true,
+          ),
           8_000_000
         ),
         tensTier.id
