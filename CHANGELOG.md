@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **XP now counts powers of ten of Bytes, not Bits.** One XP per new power of ten of the Bytes balance (the headline unit). Saves mid-run may wait up to one level before XP resumes.
+
 - The small Bits balance under the Bytes headline no longer adds height to the Factory header; it sits in the existing gap above the segment bar.
 
 - Removed the `+n/8` purchase-progress text from Factory tier Buy buttons; the cost label stands alone.

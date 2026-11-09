@@ -1844,7 +1844,7 @@ Restage — `autoXpTickspeed`/`autoXpTickspeedEnabled` — see "The last tier's 
 but does not transform legacy save formats. See "Unit autobuyer status (Factory view, per tier)" above and `docs/MAINPAGE_REFERENCE.md`'s "Firmware page" — every toggle renders in its automation's row on Firmware → 🤖 Automation.
 
 XP (`purge.xp`) has otherwise been removed from the UI — see `docs/DESIGN_HISTORY.md`; the
-underlying earning mechanic (`checkMilestones`) is untouched in `engine.js`. Its one exception is
+underlying earning mechanic (`checkMilestones`) awards 1 XP per new power of ten of **Bytes** (`getXpMilestoneExponent` = exponent of Bits ÷ 8), not of Bits. Its one exception is
 "The last tier's XP-funded tickspeed" below, where it's spent directly.
 
 #### Tickspeed multiplier
