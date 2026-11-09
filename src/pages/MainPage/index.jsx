@@ -282,6 +282,13 @@ const MoneyHero = styled(Money)`
   padding: 0;
 `
 
+// Small exact-Bits readout under the hero balance (shown once the hero switches to Bytes).
+const BitsBalance = styled.div`
+  text-align: center;
+  font-size: 0.75em;
+  opacity: 0.7;
+`
+
 // Visual (not accessible-name-bearing — see the sibling VisuallyHidden role="progressbar" at the
 // call site) 8-segment progress toward the next power-of-ten Bytes, living under MoneyHero.
 // Each segment is 12.5% (1/BITS_PER_BYTE); the active segment fills progressively.
@@ -1190,6 +1197,9 @@ const MainPage = ({ game }) => {
           >
             <MoneyHero>{formatMoneyBalance(state.resources[MONEY_ID])}</MoneyHero>
           </MoneyHeroToggle>
+          {!balancesCompressed && state.resources[MONEY_ID] >= 8000 && (
+            <BitsBalance aria-label="balance in bits">{formatCurrency(state.resources[MONEY_ID])}</BitsBalance>
+          )}
           {!balancesCompressed && (
             <>
               <BytePowerSegments aria-hidden="true">
@@ -1435,14 +1445,6 @@ const MainPage = ({ game }) => {
           // Every count carries a "+" and zero parts are omitted: Buy-max shows "+<levels>" /
           // "+<levels> +<n>/<block>", the ordinary Buy shows "+<affordable>/<block>" when anything
           // is affordable, else "+<done>/<block>", and nothing at 0/<block>.
-          const blockText = formatAmount(purchaseBlockSize)
-          const buyLevelQuantityText = maxLevelsPreview.levels > 0
-            ? `+${formatAmount(maxLevelsPreview.levels)}${maxLevelsPreview.partialQuantity > 0 ? ` +${formatAmount(maxLevelsPreview.partialQuantity)}/${blockText}` : ''}`
-            : affordableQuantity > 0
-              ? `+${formatAmount(affordableQuantity)}/${blockText}`
-              : doneInBlock > 0
-                ? `+${formatAmount(doneInBlock)}/${blockText}`
-                : ''
           // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
           // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
           // no separate icon for "+10%" is needed, since that step is fixed
@@ -1543,7 +1545,7 @@ const MainPage = ({ game }) => {
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
               >
-                <BuyButtonIcon>🛒{buyLevelQuantityText && ` ${buyLevelQuantityText}`} </BuyButtonIcon>
+                <BuyButtonIcon>🛒</BuyButtonIcon>
                 <BuyButtonCostLabel>{formatCurrency(maxLevelsPreview.levels > 0 ? (maxLevelsPreview.partialQuantity > 0 ? maxLevelsPreview.partialCost : maxLevelsPreview.lastLevelCost) : displayCost)}</BuyButtonCostLabel>
                 <VisuallyHidden
                   role="progressbar"
