@@ -15,7 +15,7 @@ Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rew
 shared bottom `AppNav` in progression order: **Foundry → Power → Compute → Factory → Firmware → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
 item, and no second-level Data Stream | Storage tabs). **Firmware** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
-unlock/milestone → pause Switch → speed upgrade / Compression, speed bonus, Overflow mode, Buy max). More (Manual, Releases, Settings) is always available — even
+unlock/milestone → pause Switch → speed upgrade / Compression, Overflow mode, Buy max). More (Manual, Releases, Settings) is always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
 production bundle; `yarn build:dev` builds a Dev-Mode-enabled variant published at `/tens/dev/` (own `dev:`-prefixed saves, no backward-compat); see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
@@ -189,7 +189,8 @@ already have tried and rejected.
 
 After **100 lifetime Purges**, production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Compression
-upgrades on Firmware → Prestige.
+upgrades on Firmware → Prestige. Production speed bonus is automatic at 10 Purges (×log10 of the
+Purge count) — see `docs/ECONOMY_REFERENCE.md`, not a Firmware purchase.
 
 For run times / pacing questions — and after any change that can significantly affect ideal Foundry
 or prestige timings — use the `simulate-run-times` skill and publish via `publish-strategy.sh`.

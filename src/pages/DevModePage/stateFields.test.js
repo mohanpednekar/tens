@@ -128,7 +128,6 @@ describe('getVariableAreaId', () => {
     ['autoPurge', 'purge'],
     ['prestigeDoublePpLevel', 'purge'],
     ['prestigeMuseum', 'purge'],
-    ['prestigeSpeedBonusUnlocked', 'purge'],
     ['autobuyers', 'perks'],
     ['autoOverclock', 'perks'],
     ['tierTickspeedIntervalLevels', 'perks'],

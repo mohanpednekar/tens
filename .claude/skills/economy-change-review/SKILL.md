@@ -13,7 +13,7 @@ explicit pass/fail per check.
 
 Get the diff (`git diff main...HEAD`, or `gh pr diff <number>` if reviewing an already-open PR).
 If it does not touch `src/game/layers.js`'s `TIER_DEFINITIONS` array or any economy constant
-(`MONEY_ID`, `GOOGOL`, `MONEY_STARTING_AMOUNT`, `PRESTIGE_POINT_SPEED_BONUS`, or similar), this
+(`MONEY_ID`, `GOOGOL`, `MONEY_STARTING_AMOUNT`, `PRESTIGE_SPEED_BONUS_UNLOCK_PURGES`, or similar), this
 skill doesn't apply — say so and stop rather than forcing the rest of the checklist.
 
 ## 2. Find the originating issue
