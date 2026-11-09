@@ -1688,8 +1688,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickSpeedUpgradeDrain(elapsedSeconds)(tickCapacityUpgradeDrain(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay)))))
   // First pass advances in-flight read-cache flushes and refills the read cache, so write caches
   // (which draw the pool buffer after the read cache's claim) run second. The last pass uses 0
-  // elapsed so flush countdowns are not applied twice per tickGame — it only refills / starts new
-  // flushes after an expedited transfer emptied a smaller disk.
+  // elapsed so flush countdowns are not applied twice per tickGame — it only starts new flushes
+  // (the timed refill needs elapsed time), e.g. after an expedited transfer emptied a smaller disk.
   const stateAfterReadCache = tickDiskAutoFill(elapsedSeconds)(stateAfterProvision)
   const stateAfterWriteCache = tickDiskWriteCache(elapsedSeconds)(stateAfterReadCache)
   const stateAfterStorage = tickDiskAutoFill(0)(stateAfterWriteCache)
@@ -1739,9 +1739,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // stateAfterStorage / the storage pipeline), ahead of tickIntroAutoInvest, since it has no such
   // dependency on any tier's level. A same-reference no-op when nothing qualifies, so calling it
   // costs nothing when Storage isn't in play at all.
-  // When a pull actually empties a disk, re-run tickDiskAutoFill so that size's cache can start
-  // topping up ASAP the same tick (smallest→largest) — scoped to a real pull change so a no-op
-  // pass does not pull leftover Memory into caches ahead of Upgrade Data Stream.
+  // When a pull actually empties a disk, re-run tickDiskAutoFill (0 elapsed) so a newly eligible
+  // read-cache flush can start the same tick — scoped to a real pull change. The cache's timed refill
+  // from Staging resumes on the next real tick.
   // tickDiskLevelOneCachePull runs after that: every tier still sitting at its own level 1 with no
   // fresh disk pull this tick draws directly from its pool's own local cache instead (see
   // isDiskPullEligible's disk-vs-cache ordering) — the only path any level past 1 ever had into a
@@ -3856,7 +3856,7 @@ export const tickIntroAutoInvest = state => {
 // TIME — the time its own funding passes naturally take to bank at the pool's current production
 // rate — and, once complete, only constructs a permanent, EMPTY container of a given size —
 // Memory (intro.bits) then keeps each array's Cache
-// full (whole-block transfers) and flushes a full read cache into an empty disk over one
+// full (a timed 5× transfer) and flushes a full read cache into an empty disk over one
 // cache-block production duration when no tier claim blocks that size (see tickDiskAutoFill),
 // smallest size first. `intro.disks[size]` counts how many disks of that size
 // are currently FULL (this is

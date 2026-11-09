@@ -3412,7 +3412,7 @@ describe('tickDiskAutoFill', () => {
     expect(tickDiskAutoFill(0)(state)).toBe(state)
   })
 
-  it('dumps the whole pool buffer balance when the pool buffer\'s own clamped capacity is smaller than one cache block', () => {
+  it('moves the whole pool buffer balance into the cache when it is smaller than one cache block and the budget allows', () => {
     const state = withIntro(withPoolBuffer(createInitialGameState(), INTRO_STARTING_CAPACITY), {
       capacity: INTRO_STARTING_CAPACITY,
       disksBuiltTotal: {
@@ -3494,7 +3494,7 @@ describe('tickDiskAutoFill', () => {
     })
     const after = tickDiskAutoFill(0)(state)
     expect(after.intro.diskCache?.[level2Size] ?? 0).toBe(0)
-    // The refund lands in the buffer, where the pool's own read cache may instantly take whole blocks.
+    // The refund lands in the buffer, where the pool's own read cache may later take it.
     expect(after.intro.poolBuffers[1] + (after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0)).toBe(level2Size)
   })
 
@@ -3518,7 +3518,7 @@ describe('tickDiskAutoFill', () => {
     // The stale cache itself is still refunded to its pool buffer (same as the sibling test above)
     // — the flush entry is just the timer wrapped around it, dropped alongside.
     expect(after.intro.diskCache?.[level2Size] ?? 0).toBe(0)
-    // The refund lands in the buffer, where the pool's own read cache may instantly take whole blocks.
+    // The refund lands in the buffer, where the pool's own read cache may later take it.
     expect(after.intro.poolBuffers[1] + (after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0)).toBe(level2Size)
     // No disk was ever credited from this stale, now-abandoned flush.
     expect(after.intro.disks?.[level2Size] ?? 0).toBe(0)
@@ -3592,9 +3592,7 @@ describe('tickDiskAutoFill', () => {
   })
 
   it('still tops up cache when every disk of that size is already full', () => {
-    // See the "sub-block remainder" test above for why this needs a buffer capacity larger than
-    // storageCapacity alone would give (getPoolBufferCapacity < one block would otherwise dump the
-    // whole balance instead of stopping cleanly at a whole-block boundary).
+    // A roomy pool buffer capacity (storageCapacity alone would be tiny).
     const ampleCapacity = blockBits * MEMORY_BINARY_UNIT_STEP * 2
     const state = withIntro(withPoolBuffer(createInitialGameState(), blockBits * 2 + 100), {
       capacity: ampleCapacity,

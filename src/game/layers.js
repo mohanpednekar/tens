@@ -237,7 +237,7 @@ export const FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT = 100
 // diskProvisionPasses in createInitialGameState. Disks are a genuine storage MEDIUM, not a one-shot
 // pre-paid item: building one only constructs a permanent, EMPTY container (after its own build
 // cost is paid in installments, then a real build TIME — see below); Data Stream (intro.bits) then
-// keeps each array's Cache full (whole-block transfers —
+// keeps each array's Cache full (a timed 5× transfer —
 // see the cache comment / tickDiskAutoFill) and flushes a full read cache into an empty disk over
 // one cache-block production duration when no tier claim blocks that size — leftover Data Stream
 // stays as its own balance. Pulling a FULL disk grants 1 free tier01 unit once tier01's own
@@ -299,7 +299,7 @@ export const DISK_LADDER_SIZE_MULTIPLIER = 10
 // DISK_CACHE_BLOCK_COUNT below) economically substitutes for the 10th disk, so only 9 need to be
 // actually built and paid for. See docs/DESIGN_HISTORY.md.
 export const DISK_ARRAY_LADDER_CAP = 9
-// A disk array's cache — a permanent always-full reserve Memory tops up in whole-block transfers
+// A disk array's cache — a permanent always-full reserve Memory tops up as a timed 5× transfer
 // (see tickDiskAutoFill in engine.js). Split into this many equal blocks, each holding
 // `size / DISK_CACHE_BLOCK_COUNT` bits (a real 1 KB/8000-bit array → 8 × 1000 bits/"1 Kb"; a 1 MB
 // array → 8 × 1 Mb — lowercase 'b' bit-scale via formatCacheSize, distinct from Disks' uppercase

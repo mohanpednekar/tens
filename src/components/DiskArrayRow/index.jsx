@@ -163,7 +163,7 @@ const DiskSquare = styled.div.attrs(props => ({
 // The array's own always-full cache row — DISK_CACHE_BLOCK_COUNT blocks, each worth
 // size / DISK_CACHE_BLOCK_COUNT bits (shown in the bit-scale Kb/Mb/… unit via formatCacheSize, not
 // formatDiskSize's Byte-scale one — see CLAUDE.md's "Economy model"). Steady state is full; Memory
-// refills whole blocks when the size was just unlocked/built, a read-cache flush just drained one,
+// refills continuously from Staging when the size was just unlocked/built, a read-cache flush just drained one,
 // or (this size's own tier sitting at level 1) tickDiskLevelOneCachePull just spent some of it —
 // a pure status display, never clickable (see "Economy model"'s Disks section — the cache-release-
 // to-Bits mechanic this row used to expose was retired in favor of the automatic level-1 pull).
