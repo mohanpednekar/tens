@@ -13,6 +13,7 @@ import {
   getDataLakeCapacity,
   getDataLakeCapacityDoublingCost,
   getDataLakeCapacityLevel,
+  getDataLakeCurrentDiskFillFraction,
   getDataLakeCurrentFillSubSize,
   getDataLakeDepositedUnits,
   getDataLakeDiskCounts,
@@ -428,8 +429,10 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
           ? formatLakeTimeLeft((nextCostBits - filledBits) / fillSpeed)
           : null
 
-        const headerFillSizeBits = currentFillSubSize !== null ? unitBits * currentFillSubSize : 0
-        const headerFillFraction = poolReady && headerFillSizeBits > 0 ? clampFraction(fillBits / headerFillSizeBits) : 0
+        // Same fraction as the expanded LakePoolTile (open-slot fill, or 1 once this level has
+        // nothing left to fill). A 0 here when currentFillSubSize is null would paint an empty bar
+        // on a completed lake. Locked lakes stay at 0 so leftover fillBits never look live.
+        const headerFillFraction = poolReady ? getDataLakeCurrentDiskFillFraction(state, tierIndex) : 0
         const costLabel = <><LeadIcon>{COST_ICON}</LeadIcon>{nextCostSize}</>
         return (
           <LakeBlock aria-label={showHeader ? `${label} lake` : undefined} key={tierIndex}>

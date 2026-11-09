@@ -3523,6 +3523,7 @@ test('a collapsed pool still shows its Data Lake heading and action row', () => 
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
     poolBuffers: { 1: poolCapacity },
     disksBuiltTotal: { 8000: 1 },
+    dataLakes: { 1: { depositedUnits: 0, fillBits: DISK_LADDER_BASE_SIZE_BITS / 2, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
   })
   render(<App />)
 
@@ -3535,8 +3536,29 @@ test('a collapsed pool still shows its Data Lake heading and action row', () => 
   const headerBar = within(pool1).getByRole('progressbar', { name: /KB lake fill progress/i })
   expect(headerBar).toHaveAttribute('aria-valuemin', '0')
   expect(headerBar).toHaveAttribute('aria-valuemax', '100')
+  expect(headerBar).toHaveAttribute('aria-valuenow', '50')
   fireEvent.click(within(pool1).getByRole('button', { name: /expand pool 1/i }))
   expect(within(pool1).queryByRole('progressbar', { name: /KB lake fill progress/i })).not.toBeInTheDocument()
+})
+
+test('a collapsed completed Data Lake header bar reads full, not empty', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: 1 },
+    dataLakes: { 1: { depositedUnits: 10, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
+  })
+  render(<App />)
+
+  const pool1 = screen.getByRole('region', { name: 'pool 1' })
+  const toggle = within(pool1).getByRole('button', { name: /(collapse|expand) pool 1/i })
+  if (toggle.getAttribute('aria-expanded') === 'true') fireEvent.click(toggle)
+  expect(within(pool1).getByRole('progressbar', { name: /KB lake fill progress/i }))
+    .toHaveAttribute('aria-valuenow', '100')
 })
 
 test('tapping a pool\'s own Memory buffer shows only that pool\'s tap bonus bar, leaving the Data Stream\'s untouched', () => {

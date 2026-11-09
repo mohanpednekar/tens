@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Foundry running-upgrade tile: the percent now matches the Data Lake balance font size, and the four corner labels are spaced apart (top pair to the top, bottom pair to the bottom, wider column gap) without changing the tile size.
 
-- Collapsed Data Lake header shows a thin progress bar (toward the next disk) under its balance; the running-upgrade tile uses the same bar instead of a background fill.
+- Collapsed Data Lake header shows a thin progress bar (toward the next disk) under its balance; the running-upgrade tile uses the same bar instead of a background fill. A lake that has already filled every slot at its current capacity reads as full on that bar, not empty.
 
 - **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - Removed the `+n/8` purchase-progress text from Factory tier Buy buttons; the cost label stands alone.
