@@ -185,6 +185,9 @@ import {
   getPrestigePowersPerPp,
   getPrestigePpPerPower,
   getPrestigeProductionMultiplier,
+  getPlaytimeProductionMultiplier,
+  buyPlaytimeBonus,
+  addActivePlaySeconds,
   getPurgePercent,
   getNextBytePowerProgressFraction,
   getPurchaseBlockSize,
@@ -12268,5 +12271,51 @@ describe('Provision Disk (buffer-funded, fixed speed)', () => {
     expect(getDiskSize(state)).toBe(PROV_FIRST)
     for (let i = 0; i < 4000 && (state.intro.disksBuiltTotal?.[PROV_FIRST] ?? 0) < 1; i += 1) state = tickGame(1)(state)
     expect(state.intro.disksBuiltTotal[PROV_FIRST]).toBe(1)
+  })
+})
+
+// ─── Playtime bonus ──────────────────────────────────────────────────────────
+
+describe('playtime bonus', () => {
+  const unlocked = (hours, state = createInitialGameState()) =>
+    ({ ...state, playtimeBonusUnlocked: true, activePlaySeconds: hours * 3600 })
+
+  it('is ×1 until unlocked, regardless of play time', () => {
+    expect(getPlaytimeProductionMultiplier({ ...createInitialGameState(), activePlaySeconds: 36000 })).toBe(1)
+  })
+
+  it('adds +1% per hour of active play once unlocked', () => {
+    expect(getPlaytimeProductionMultiplier(unlocked(0))).toBe(1)
+    expect(getPlaytimeProductionMultiplier(unlocked(1))).toBeCloseTo(1.01)
+    expect(getPlaytimeProductionMultiplier(unlocked(50))).toBeCloseTo(1.5)
+  })
+
+  it('applies to tick production', () => {
+    const base = withOwned(createInitialGameState(), tensTier.id, 100)
+    const boosted = unlocked(100, base) // ×2
+    expect(bytesOf(tickGame(1)(boosted))).toBe(bytesOf(base) + 200)
+  })
+
+  it('buyPlaytimeBonus spends 100 PP once, and no-ops when unaffordable or already owned', () => {
+    const state = withPrestigePoints(createInitialGameState(), 150)
+    const after = buyPlaytimeBonus(state)
+    expect(after.playtimeBonusUnlocked).toBe(true)
+    expect(after.purge.points).toBe(50)
+    expect(buyPlaytimeBonus(after)).toBe(after)
+    const poor = withPrestigePoints(createInitialGameState(), 99)
+    expect(buyPlaytimeBonus(poor)).toBe(poor)
+  })
+
+  it('addActivePlaySeconds accumulates; offline catch-up (applyOfflineProgress) does not', () => {
+    const s = addActivePlaySeconds(0.1)(addActivePlaySeconds(0.1)(createInitialGameState()))
+    expect(s.activePlaySeconds).toBeCloseTo(0.2)
+    expect(applyOfflineProgress(600, 1)(createInitialGameState()).activePlaySeconds).toBe(0)
+  })
+
+  it('survives Purge', () => {
+    const state = unlocked(5, withMoney(createInitialGameState(), PURGE_THRESHOLD))
+    const after = purgeGame(state)
+    expect(after.playtimeBonusUnlocked).toBe(true)
+    expect(after.activePlaySeconds).toBe(5 * 3600)
   })
 })

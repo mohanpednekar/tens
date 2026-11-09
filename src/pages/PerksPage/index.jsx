@@ -34,6 +34,7 @@ import {
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   XP_TICKSPEED_AUTOBUYER_UNLOCK_COST,
+  PLAYTIME_BONUS_UNLOCK_COST,
 } from 'game/layers'
 import { hasAffordableAutomationPerk, hasAffordablePrestigePerk } from 'game/navAttention'
 import { useEffect, useState } from 'react'
@@ -449,7 +450,7 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction =
 
 export const PERKS_TABS = [
   { id: 'automation', icon: '🤖', ariaLabel: 'open automation', title: 'Automation — unlock, pause/resume and speed up every automation' },
-  { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Compression, production speed bonus, Overflow mode and Buy max' },
+  { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Compression, playtime bonus, Overflow mode and Buy max' },
 ]
 
 const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Math.round(ms * 10) / 10} ms`)
@@ -487,6 +488,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const doublePpUpgradeSummary = ppPerPower > 1
     ? `${formatAmount(ppPerPower)} PP per power`
     : `1 PP per ${formatAmount(powersPerPp)} power${powersPerPp === 1 ? '' : 's'}`
+
+  const canBuyPlaytimeBonus = !state.playtimeBonusUnlocked && points >= PLAYTIME_BONUS_UNLOCK_COST
 
   const isComputeAutoBoostActive = state.computeAutoBoostUnlocked ?? false
   // Stays listed once bought, even after Reboot / Reformat Byte Foundry drops Capacity back below the Boosters threshold.
@@ -765,6 +768,25 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               ? 'Halves how many money-exponent powers are needed per Purge Point (claimable once you reach 1 Googol Bytes)'
               : 'Doubles how many Purge Points each power earns (claimable once you reach 1 Googol Bytes)'}
           />
+        </Row>
+        <Row aria-label="playtime bonus upgrade">
+          <RowLabel title="+1% production speed per hour of active play (offline time excluded)"><RowIcon>⏱</RowIcon>Playtime bonus</RowLabel>
+          {state.playtimeBonusUnlocked ? (
+            <UnlockedBadge icon="⏱" name="Playtime bonus" />
+          ) : (
+            <PpPurchaseButton
+              ariaLabel={`Unlock playtime bonus for ${PLAYTIME_BONUS_UNLOCK_COST} Purge Points`}
+              color="#38bdf8"
+              cost={PLAYTIME_BONUS_UNLOCK_COST}
+              disabled={!canBuyPlaytimeBonus}
+              icon="🔓"
+              label={`${formatAmount(PLAYTIME_BONUS_UNLOCK_COST)} PP`}
+              onClick={actions.buyPlaytimeBonus}
+              points={points}
+              progressLabel="Playtime bonus unlock PP progress"
+              title="Spend Purge Points once to enable +1% production speed per hour of active play"
+            />
+          )}
         </Row>
         <Row aria-label="overflow mode unlock">
           <RowLabelStack>

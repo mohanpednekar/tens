@@ -1689,6 +1689,10 @@ milestones" below), spending no PP at all.
 - **Passive (Purge count):** `getPrestigeProductionMultiplier(purgeCount)` = `log10(purgeCount)` once
   `purge.count >= PRESTIGE_SPEED_BONUS_UNLOCK_PURGES` (10), else flat ×1 — applied uniformly to every tier
   in `tickGame`. No PP cost or stored flag (`isPrestigeSpeedBonusUnlocked(state)` is derived).
+- **Active — Playtime bonus:** `buyPlaytimeBonus(state)` spends `PLAYTIME_BONUS_UNLOCK_COST` (100) PP once to set
+  `playtimeBonusUnlocked`; `getPlaytimeProductionMultiplier(state)` = `1 + PLAYTIME_BONUS_PER_HOUR (0.01) * activePlaySeconds / 3600`,
+  multiplied into `tickGame`'s production multiplier. `activePlaySeconds` only grows via `addActivePlaySeconds`, called by the live
+  tick loop in `useIncrementalGame` — never by offline/background catch-up. Both fields survive Purge/Scale Up/Overclock/Reboot.
 - **Active — Compression:** `buyPrestigeDoublePp(state)` permanently spends `getPrestigeDoublePpUpgradeCost(level)`
   PP (`100^(level+1)` — 100, 10_000, 1_000_000, …) to increment `prestigeDoublePpLevel`. Not blocked
   by production freeze. Halves powers-per-PP through level 6, then doubles PP-per-power.

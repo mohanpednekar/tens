@@ -1,5 +1,6 @@
 import {
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
+  PLAYTIME_BONUS_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   COMPUTE_MERGE_RATIO,
   INTRO_BYTE_COMBINE_COST,
@@ -170,7 +171,7 @@ export const hasTiersGameAttention = state =>
   hasOverclockAvailable(state)
 
 // The Perks page's tabs (see pages/PerksPage), grouped by feature: Automation = every automation's
-// one-time PP unlock plus its PP speed chain; Prestige = Double PP.
+// one-time PP unlock plus its PP speed chain; Prestige = Double PP and the playtime bonus.
 // Pause/resume toggles are never "affordable".
 export const hasAffordableAutomationPerk = state => {
   if ((state.purge?.count ?? 0) < 1) return false
@@ -192,7 +193,8 @@ export const hasAffordableAutomationPerk = state => {
 export const hasAffordablePrestigePerk = state => {
   if ((state.purge?.count ?? 0) < 1) return false
   const points = state.purge?.points ?? 0
-  return points >= getPrestigeDoublePpUpgradeCost(state.prestigeDoublePpLevel ?? 0)
+  if (points >= getPrestigeDoublePpUpgradeCost(state.prestigeDoublePpLevel ?? 0)) return true
+  return !state.playtimeBonusUnlocked && points >= PLAYTIME_BONUS_UNLOCK_COST
 }
 
 export const hasAffordablePpUpgrade = state =>

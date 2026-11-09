@@ -2067,6 +2067,21 @@ test('the production speed bonus is hidden from the Purge Points bar below 10 Pu
   expect(screen.getByLabelText(/^purge points display$/i)).not.toHaveTextContent(/production speed/i)
 })
 
+test('the playtime bonus is unlocked for 100 PP on Firmware → Prestige', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    resources: { base: 10 },
+    purge: { xp: 0, points: 150, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+  await openPerksTab(user, /open prestige/i)
+
+  await user.click(screen.getByRole('button', { name: /unlock playtime bonus for 100 purge points/i }))
+
+  expect(screen.getByLabelText('Playtime bonus unlocked')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /unlock playtime bonus/i })).not.toBeInTheDocument()
+})
+
 test('PP-spending buttons report how much of their cost the current balance covers, like the tier buttons', async () => {
   const user = userEvent.setup()
 

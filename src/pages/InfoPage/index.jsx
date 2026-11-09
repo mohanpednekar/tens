@@ -40,6 +40,8 @@ import {
   OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS,
   OFFLINE_PROGRESS_SPEED_MULTIPLIER,
   PRESTIGE_POWERS_PER_PP_BASE,
+  PLAYTIME_BONUS_PER_HOUR,
+  PLAYTIME_BONUS_UNLOCK_COST,
   PRESTIGE_SPEED_BONUS_UNLOCK_PURGES,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
@@ -645,6 +647,11 @@ const InfoPage = () => {
           <li>
             From {PRESTIGE_SPEED_BONUS_UNLOCK_PURGES} Purges on, production speed gets a bonus of
             ×log₁₀ of your Purge count.
+          </li>
+          <li>
+            The one-time Playtime bonus ({PLAYTIME_BONUS_UNLOCK_COST} PP on Firmware → Prestige) adds
+            +{PLAYTIME_BONUS_PER_HOUR * 100}% production speed per hour of active play; offline and
+            background catch-up time doesn't count.
           </li>
           <li>
             Resets resources, owned tiers and this run’s progress. Unlocked autobuyers stay, and

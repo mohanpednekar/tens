@@ -5,8 +5,8 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
 
@@ -1218,6 +1218,13 @@ const MainPage = ({ game }) => {
           )}
           {showGlobalMultipliers && !balancesCompressed && (
             <GlobalMultipliersList id="global-multipliers-details" aria-label="global production multipliers">
+              {!isFirstRun && (
+                <li>
+                  Playtime bonus: {state.playtimeBonusUnlocked
+                    ? `${formatBonusOrMultiplier(getPlaytimeProductionMultiplier(state))} production speed from ${formatAmount(Math.floor((state.activePlaySeconds ?? 0) / 3600))}h active play`
+                    : `not yet unlocked (${formatAmount(PLAYTIME_BONUS_UNLOCK_COST)} PP on Firmware → Prestige)`}
+                </li>
+              )}
               {!isFirstRun && (
                 <li>
                   Prestige speed bonus: {prestigeBonusUnlocked

@@ -620,6 +620,11 @@ export const PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10
 // getPrestigeProductionMultiplier): unlocked once the save has Purged
 // PRESTIGE_SPEED_BONUS_UNLOCK_PURGES times, then ×log10(purge count). No PP cost.
 export const PRESTIGE_SPEED_BONUS_UNLOCK_PURGES = 10
+// One-time PP unlock for the playtime bonus: +1% production per hour of ACTIVE play (live ticks
+// only — simulated offline/background catch-up never counts). See engine.js's
+// getPlaytimeProductionMultiplier/buyPlaytimeBonus.
+export const PLAYTIME_BONUS_UNLOCK_COST = 100
+export const PLAYTIME_BONUS_PER_HOUR = 0.01
 // Per-tier base cost for the tickspeed multiplier ladder (see engine.js's
 // getTickspeedMultiplierBaseCost/getTickspeedMultiplierCost) — 10^10 for the first tier (index 0),
 // decreasing by a power of ten per subsequent tier (10^9, 10^8, … 10^1 for the 10th/last tier).
