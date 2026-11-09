@@ -15,6 +15,13 @@ to the cart icon. That fraction duplicated the dual-tone fill and the visually-h
 progressbar; the cost label now stands alone. Buy max still previews `+N` full levels in the icon
 slot, because that click actually buys N levels and the fill can't say so.
 
+### Bits subline adds no Factory header height — 2026-11-09
+
+The in-flow `BitsBalance` from the previous entry sat in StatCard's flex column and grew the Factory
+header once the hero switched to Bytes. Follow-up: wrap the hero in `MoneyHeroGroup`
+(`position: relative`) and absolutely position `BitsBalance` in the existing hero→bar gap so header
+height is the same with or without the line.
+
 ### Production speed bonus: 10k PP unlock +1%/PP → automatic log10(Purge count) — 2026-11-09
 
 The previous bonus was a 10,000 PP Firmware unlock (`buyPrestigeSpeedBonus` /
