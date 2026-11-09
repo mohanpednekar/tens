@@ -23,6 +23,7 @@ import {
   getDataLakeUnitBits,
   getPoolBufferBits,
   getPoolBufferCapacity,
+  getDataLakeSpeedMultiplier,
   getStoragePoolBandwidth,
   getPoolTapMultiplier,
   isBoosterEntityAtCap,
@@ -391,7 +392,8 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
         const fillingAutomatically = draining || (currentFillSubSize !== null &&
           poolComplete && getPoolBufferBits(state, tierIndex) >= getPoolBufferCapacity(state, tierIndex))
         const fillSpeed = !fillingAutomatically ? 0
-          : getStoragePoolBandwidth(state, tierIndex) * (draining ? getPoolTapMultiplier(state, tierIndex) : 1)
+          : getStoragePoolBandwidth(state, tierIndex) * (draining ? getPoolTapMultiplier(state, tierIndex) : 1) *
+            getDataLakeSpeedMultiplier(state, tierIndex)
         const scaleOutShown = upgradeAvailable && !converting && !entityAtCap && !canBuy
         const rightSlotButton = resetAvailable || scaleOutShown
         // Time until the next Cell's cost is banked at the current fill speed — only while it is still
