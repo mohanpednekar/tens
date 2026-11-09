@@ -620,15 +620,20 @@ live inside the selected tier):
   `formatCurrency`'s own exponential-notation threshold once converted) — a more natural headline
   figure than an ever-growing raw bit count once there's at least a full Byte's worth to show. Once
   those two strings differ, a small `BitsBalance` line (`aria-label="balance in bits: …"`,
-  `theme.color.textMuted`, `theme.type.scale.sm`) under the hero shows the exact Bits via
-  `formatCurrency` — not `role="status"`, which would live-announce every tick — suppressed while
-  `balancesCompressed`, and omitted below the threshold so it isn't a duplicate of the Bits
-  headline. Visibility is `formatMoneyBalance !== formatCurrency`, not a hardcoded 8000, so it
-  stays in lockstep with the headline switch. Every other `formatCurrency` call on this page —
+  `theme.color.textMuted`, `theme.type.scale.sm`, `line-height: 1`) shows the exact Bits via
+  `formatCurrency` — absolutely positioned in the existing gap between the hero and the segment
+  bar (`MoneyHeroGroup` is `position: relative`; `BitsBalance` is `top: 100%` with `margin-top:
+  0.1rem` and `pointer-events: none`), so it adds no Factory header height — not `role="status"`,
+  which would live-announce every tick — suppressed while `balancesCompressed`, and omitted below
+  the threshold so it isn't a duplicate of the Bits headline. Visibility is
+  `formatMoneyBalance !== formatCurrency`, not a hardcoded 8000, so it stays in lockstep with the
+  headline switch. Every other `formatCurrency` call on this page —
   tier costs/production, the global tickspeed cost, the `FullScreenOverlay`'s "You've reached…"
   line, the Buy button's cost label — is unaffected and still shows raw Bits, its actual
-  priced/spent denomination. Beneath the hero (and the Bits subline when shown; suppressed while
-  `balancesCompressed`, since the compact sticky bar has no room for it), an 8-segment
+  priced/spent denomination. Beneath the hero (`BytePowerSegments` `margin-top: 0.5rem`; the Bits
+  overlay sits in that gap plus StatCard's uncompressed `0.6rem` gap and does not push the bar
+  down; suppressed while `balancesCompressed`, since the compact sticky bar has no room for it),
+  an 8-segment
   `BytePowerSegments` bar shows progress toward the next power-of-ten
   Bytes via `getNextBytePowerProgressFraction` (Bits toward `nextPowerBytes × BITS_PER_BYTE`; each
   segment is 12.5% and fills progressively within that band — e.g. 5e7 Bytes → 4/8 filled). Paired

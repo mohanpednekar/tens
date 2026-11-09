@@ -175,6 +175,7 @@ import {
   getLastTierXpTickspeedMultiplier,
   getMemoryUnit,
   getMoneyExponent,
+  getXpMilestoneExponent,
   getOfflineEffectiveSeconds,
   getOfflineRewardBonusSeconds,
   applyOfflineRewardBonus,
@@ -7503,6 +7504,14 @@ describe('tickGame', () => {
     // The 30th tick crosses the 3s threshold and delivers exactly one tick's worth (owned × 1).
     state = tickGame(0.1)(state)
     expect(state.resources[thousandsTier.id]).toBe(5)
+  })
+
+  it('counts XP milestones in powers of ten of Bytes, not Bits', () => {
+    expect(getXpMilestoneExponent(7)).toBe(0) // < 1 Byte
+    expect(getXpMilestoneExponent(8)).toBe(0) // 1 Byte
+    expect(getXpMilestoneExponent(80)).toBe(1) // 10 Bytes
+    expect(getXpMilestoneExponent(79)).toBe(0) // 9.875 Bytes (would be exponent 1 in Bits)
+    expect(getXpMilestoneExponent(8000)).toBe(3) // 1000 Bytes
   })
 
   it('awards XP when money crosses a power-of-10 milestone', () => {

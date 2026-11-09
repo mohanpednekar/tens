@@ -289,7 +289,19 @@ const MoneyHero = styled(Money)`
 const BitsBalance = styled(HudMutedText)`
   text-align: center;
   font-size: ${props => props.theme.type.scale.sm.size};
-  line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  line-height: 1;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 0.1rem;
+  pointer-events: none;
+`
+
+// Wraps the hero toggle so BitsBalance can sit absolutely in the gap that already separates the
+// hero from the segment bar below it — the Bits line adds no layout height.
+const MoneyHeroGroup = styled.div`
+  position: relative;
 `
 
 // Visual (not accessible-name-bearing — see the sibling VisuallyHidden role="progressbar" at the
@@ -1187,6 +1199,7 @@ const MainPage = ({ game }) => {
         $belowBarHeight={topPurgeBarHeight}
       >
         <CenteredCard $raised>
+          <MoneyHeroGroup>
           <MoneyHeroToggle
             aria-controls="global-multipliers-details"
             aria-expanded={showGlobalMultipliers}
@@ -1208,6 +1221,7 @@ const MainPage = ({ game }) => {
               {moneyBitsText}
             </BitsBalance>
           )}
+          </MoneyHeroGroup>
           {!balancesCompressed && (
             <>
               <BytePowerSegments aria-hidden="true">

@@ -338,7 +338,7 @@ export const createInitialGameState = () => ({
     // (MainPage), not production or cost. Renamed from the old `level` field now that prestige
     // grants points instead of directly doubling production.
     count: 0,
-    highestMilestone: Math.floor(Math.log10(MONEY_STARTING_AMOUNT)),
+    highestMilestone: getXpMilestoneExponent(MONEY_STARTING_AMOUNT),
     // Permanent latch: once true (first prestige/Era while Auto-Prestige interval ≤ OVERFLOW_MODE_MAX_INTERVAL_SECONDS, or carried
     // through Era ascension), production never freezes at PURGE_THRESHOLD again — see
     // isOverflowModeUnlocked. Full save Reset only.
@@ -1489,6 +1489,10 @@ export const isTierUnlocked = state => tier => {
 }
 
 // Money's order of magnitude, floored (money < 1 has no positive exponent, so reads as 0).
+// XP milestones count powers of ten of BYTES (the headline unit), not of the Bits the balance is
+// stored in: 1 Byte = 8 Bits, so the exponent is that of money / BITS_PER_BYTE.
+export const getXpMilestoneExponent = moneyBits => getMoneyExponent(clampNonNegative(moneyBits) / BITS_PER_BYTE)
+
 export const getMoneyExponent = money => {
   const safeMoney = clampNonNegative(money)
   return safeMoney < 1 ? 0 : Math.floor(Math.log10(safeMoney))
@@ -1610,9 +1614,9 @@ export const getPrestigePpEarnProgressPercent = (money, doublePpLevel = 0) => {
 
 const checkMilestones = (resources, purge) => {
   const money = clampNonNegative(resources[MONEY_ID])
-  if (money < 10) return purge
+  const currentMilestone = getXpMilestoneExponent(money)
+  if (currentMilestone <= 0) return purge
 
-  const currentMilestone = getMoneyExponent(money)
   if (currentMilestone <= purge.highestMilestone) return purge
 
   return {
