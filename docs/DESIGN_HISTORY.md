@@ -1,5 +1,20 @@
 # Design history & rationale
 
+### Bits subline under MoneyHero; `+n/8` dropped from tier Buy buttons — 2026-11-09
+
+Once `formatMoneyBalance` switches the Factory headline to whole Bytes (8000 Bits / 1000 B), the
+exact Bits amount disappeared from the HUD. A small `BitsBalance` line under the hero restores it
+via `formatCurrency`, but only while those two strings differ — below the threshold it would
+duplicate the Bits headline, and the compressed sticky bar has no room for it. Token-driven
+`textMuted` + `type.scale.sm` rather than `opacity: 0.7` on default text, so the pair stays on the
+same AA audit as other HUD muted copy. Not `role="status"`: that is a live region, and Bits change
+every tick.
+
+Same change: tier Buy buttons no longer render `{progress}+{affordable}/{blockSize}` (`5+3/8`) next
+to the cart icon. That fraction duplicated the dual-tone fill and the visually-hidden cost-block
+progressbar; the cost label now stands alone. Buy max still previews `+N` full levels in the icon
+slot, because that click actually buys N levels and the fill can't say so.
+
 ### Production speed bonus: 10k PP unlock +1%/PP → automatic log10(Purge count) — 2026-11-09
 
 The previous bonus was a 10,000 PP Firmware unlock (`buyPrestigeSpeedBonus` /
