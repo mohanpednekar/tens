@@ -353,7 +353,7 @@ import {
   getPoolTapMultiplier,
   getDataStreamTapMultiplier,
 } from './engine'
-import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, POOL_FILL_MULTIPLIER_MAX_PERCENT, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
+import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -868,11 +868,10 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
 
     it('the pool tap bonus never scales the buffer fill — it is a ×(1 + bonus%) consumer multiplier', () => {
       const state = withIntro(withPoolBuffer(createInitialGameState(), 4, 1), { poolTapBonusPercents: { 1: 5 } })
-      const base = getPoolBaseMultiplierPercent(state, 1)
-      expect(base).toBeCloseTo(getFillMultiplierPercent(getPoolBufferFillFraction(state, 1), POOL_FILL_MULTIPLIER_MAX_PERCENT))
+      expect(getPoolBaseMultiplierPercent(state, 1)).toBe(100)
       expect(getPoolTapBonusPercent(state, 1)).toBe(5)
-      expect(getPoolMultiplierPercent(state, 1)).toBe(base)
-      expect(getPoolEffectMultiplier(state, 1)).toBeCloseTo(base / 100)
+      expect(getPoolMultiplierPercent(state, 1)).toBe(100)
+      expect(getPoolEffectMultiplier(state, 1)).toBeCloseTo(1)
       expect(getPoolTapMultiplier(state, 1)).toBeCloseTo(1.05)
       expect(getPoolTapMultiplier(createInitialGameState(), 1)).toBe(1)
     })
@@ -1017,18 +1016,7 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       const bufferCap = getPoolBufferCapacity(state, 1)
       const after = tickPoolBufferFill(0.01)(state)
       expect(after.intro.poolBuffers[1]).toBeGreaterThan(rawRate * 0.01)
-      expect(after.intro.poolBuffers[1]).toBeCloseTo(getFillCurveDelta(0, bufferCap, rawRate, 0.01, POOL_FILL_MULTIPLIER_MAX_PERCENT))
-    })
-
-    it('a pool\'s empty Staging buffer starts at POOL_FILL_MULTIPLIER_MAX_PERCENT (5x), not the Data Stream\'s 10x', () => {
-      expect(POOL_FILL_MULTIPLIER_MAX_PERCENT).toBe(500)
-      const state = withIntro(createInitialGameState(), { byteCreated: true, bits: 1_000_000, capacity: 32_000_000 })
-      expect(getPoolBaseMultiplierPercent(state, 1)).toBeCloseTo(POOL_FILL_MULTIPLIER_MAX_PERCENT)
-      expect(getFillMultiplierPercent(0)).toBe(FILL_MULTIPLIER_MAX_PERCENT)
-      expect(getFillMultiplierPercent(0, POOL_FILL_MULTIPLIER_MAX_PERCENT)).toBeCloseTo(500)
-      expect(getFillMultiplierPercent(1, POOL_FILL_MULTIPLIER_MAX_PERCENT)).toBeCloseTo(FILL_MULTIPLIER_MIN_PERCENT)
-      const dt = getFillCurveSeconds(100, 400, 1000, 10, POOL_FILL_MULTIPLIER_MAX_PERCENT)
-      expect(100 + getFillCurveDelta(100, 1000, 10, dt, POOL_FILL_MULTIPLIER_MAX_PERCENT)).toBeCloseTo(400, 6)
+      expect(after.intro.poolBuffers[1]).toBeCloseTo(getFillCurveDelta(0, bufferCap, rawRate, 0.01))
     })
 
     it('a 1s tickIntroProduction matches ten 0.1s ticks on an empty small buffer', () => {
@@ -1101,7 +1089,7 @@ describe('getPoolAvailableFillRate', () => {
     const after = tickPoolBufferFill(1)(state)
     const tapK = 1 + getPoolTapBonusPercent(state, 1) / 100
     expect(after.intro.poolBuffers[1]).toBeCloseTo(
-      getFillCurveDelta(0, getPoolBufferCapacity(state, 1), available * tapK, 1, POOL_FILL_MULTIPLIER_MAX_PERCENT),
+      getFillCurveDelta(0, getPoolBufferCapacity(state, 1), available * tapK, 1),
     )
   })
 })
@@ -2047,7 +2035,7 @@ describe('pool buffers', () => {
     const pool2Transfer = after.intro.poolBuffers[2]
     const pool1Cap = getPoolBufferCapacity(state, 1)
     const pool1Rate = getPoolAvailableFillRate(state, 1)
-    expect(pool1Transfer).toBeCloseTo(getFillCurveDelta(400_000, pool1Cap, pool1Rate, 1, POOL_FILL_MULTIPLIER_MAX_PERCENT))
+    expect(pool1Transfer).toBeCloseTo(getFillCurveDelta(400_000, pool1Cap, pool1Rate, 1))
     expect(pool2Transfer).toBeGreaterThan(0)
     expect(after.intro.bits).toBe(1_000_000 - pool1Transfer - pool2Transfer)
   })

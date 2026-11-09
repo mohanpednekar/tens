@@ -25,7 +25,6 @@ import {
   ERA_ELIGIBILITY_PP,
   FILL_MULTIPLIER_MAX_PERCENT,
   FILL_MULTIPLIER_MIN_PERCENT,
-  POOL_FILL_MULTIPLIER_MAX_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
@@ -3264,10 +3263,10 @@ test('Data Stream and pool speeds show the fill-multiplied value, with no multip
   expect(screen.queryByRole('progressbar', { name: /data lake overflow rate/i })).not.toBeInTheDocument()
   const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  // Empty buffer -> POOL_FILL_MULTIPLIER_MAX_PERCENT (500%) of the pool's available fill rate, to 3 significant digits.
-  const expected = formatDiskSize(getPoolAvailableFillRate(savedState, 1) * POOL_FILL_MULTIPLIER_MAX_PERCENT / 100)
+  // Empty buffer -> FILL_MULTIPLIER_MAX_PERCENT (1000%) of the pool's available fill rate, to 3 significant digits.
+  const expected = formatDiskSize(getPoolAvailableFillRate(savedState, 1) * FILL_MULTIPLIER_MAX_PERCENT / 100)
   const speed = within(pool1).getByTitle(/^Available fill bandwidth at/)
-  expect(speed).toHaveAttribute('title', `Available fill bandwidth at ${POOL_FILL_MULTIPLIER_MAX_PERCENT}% fill multiplier`)
+  expect(speed).toHaveAttribute('title', `Available fill bandwidth at ${FILL_MULTIPLIER_MAX_PERCENT}% fill multiplier`)
   expect(speed.textContent.replace(/^⚡ /, '').replace(/\/s$/, '').split(' ')[1]).toBe(expected.split(' ')[1])
   expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
 })
@@ -3283,7 +3282,7 @@ test('a pool\'s speed shows the fill speed actually available, not its higher th
   const available = getPoolAvailableFillRate(savedState, 1)
   expect(available).toBeLessThan(getStoragePoolBandwidth(savedState, 1))
   const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByTitle(/^Available fill bandwidth at/)
-  const expected = formatDiskSize(available * POOL_FILL_MULTIPLIER_MAX_PERCENT / 100)
+  const expected = formatDiskSize(available * FILL_MULTIPLIER_MAX_PERCENT / 100)
   expect(speed.textContent.replace(/^⚡ /, '').replace(/\/s$/, '').split(' ')[1]).toBe(expected.split(' ')[1])
   expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
 })

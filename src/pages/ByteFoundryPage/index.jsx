@@ -8,7 +8,7 @@ import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
 import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatSpeedText, formatThreeSignificant, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getLowerRebuildSummary, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolTapMultiplier, getPoolAvailableFillRate, getStoragePoolBandwidth, getProjectedPoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isLaterPoolProvisioningLocked } from 'game/engine'
-import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, POOL_FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
+import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 
@@ -160,11 +160,11 @@ const formatUpgradeTimeLeft = totalSeconds => {
 // engine.getFillCurveSeconds so tile ETAs share the same closed form as production/pool fill.
 // Tiles only — the upgrade bar draws at a constant 1×. `baseRate` is Speed/Bandwidth before the
 // fill multiplier; assumes nothing else draws from the buffer.
-export const getBufferSecondsToFull = (bits, capacity, baseRate, maxPercent) =>
-  getFillCurveSeconds(bits, capacity, capacity, baseRate, maxPercent)
+export const getBufferSecondsToFull = (bits, capacity, baseRate) =>
+  getFillCurveSeconds(bits, capacity, capacity, baseRate)
 
-const formatBufferTimeToFull = (bits, capacity, baseRate, maxPercent) => {
-  const seconds = getBufferSecondsToFull(bits, capacity, baseRate, maxPercent)
+const formatBufferTimeToFull = (bits, capacity, baseRate) => {
+  const seconds = getBufferSecondsToFull(bits, capacity, baseRate)
   return seconds === null ? null : formatUpgradeTimeLeft(seconds)
 }
 
@@ -1267,7 +1267,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // speeds its consumers (getPoolTapMultiplier), not this fill.
         const poolMultiplierPercent = getPoolMultiplierPercent(state, poolIndex)
         const poolTapBonusPercent = getPoolTapBonusPercent(state, poolIndex)
-        const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolFillRate, POOL_FILL_MULTIPLIER_MAX_PERCENT)
+        const poolTimeLeftText = formatBufferTimeToFull(poolBufferBits, poolBufferCapacity, poolFillRate)
         // tickDataLakePoolDrain (engine.js) feeds the lake straight from this pool's buffer whenever
         // isDataLakePoolDrainAvailable (listed in the speed details below).
         const lakeDraining = isDataLakePoolDrainAvailable(state, poolIndex)

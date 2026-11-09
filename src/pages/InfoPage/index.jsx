@@ -26,7 +26,6 @@ import {
   ERA_ELIGIBILITY_PP,
   FILL_MULTIPLIER_MAX_PERCENT,
   FILL_MULTIPLIER_MIN_PERCENT,
-  POOL_FILL_MULTIPLIER_MAX_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT,
   FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND,
@@ -225,13 +224,13 @@ const InfoPage = () => {
           <li>
             <strong>Fill multiplier</strong> — the Data Stream’s Bitrate and each pool’s Bandwidth are shown
             as the rate actually delivered: the base rate times a multiplier that depends on how full
-            that buffer is. (A pool’s buffer is called its Staging.) It is {FILL_MULTIPLIER_MAX_PERCENT / 100}× on the Data Stream and {POOL_FILL_MULTIPLIER_MAX_PERCENT / 100}× on a pool’s Staging when empty, 1× at about half full and{' '}
+            that buffer is. (A pool’s buffer is called its Staging.) It is {FILL_MULTIPLIER_MAX_PERCENT / 100}× when empty, 1× at half full and{' '}
             {FILL_MULTIPLIER_MIN_PERCENT / 100}× when full; the color runs red (slow) → blue → green
             (fast). Pinging the Data Stream (once Storage appears) or a pool’s Staging tile adds a +
             {FILL_MULTIPLIER_TAP_BONUS_PERCENT}% ping bonus (up to {FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}%),
             which fades by {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}% per second and shows as a
             thin bar and “+x% 👆”. A ping never speeds the fill itself (it already reaches{' '}
-            {FILL_MULTIPLIER_MAX_PERCENT / 100}× / {POOL_FILL_MULTIPLIER_MAX_PERCENT / 100}×); it speeds what that buffer feeds — on the Data Stream,
+            {FILL_MULTIPLIER_MAX_PERCENT / 100}×); it speeds what that buffer feeds — on the Data Stream,
             Upgrade Capacity / Bitrate; on a pool, disk provisioning, disk fills and merges, rebuilds and
             the Data Lake.
           </li>

@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, POOL_FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -2351,12 +2351,10 @@ export const getIntroProductionRate = intro =>
 // Data Stream itself and every pool's own local buffer below — same log-linear "1000% down to 10%"
 // curve either way. fillFraction is clamped defensively — both real callers already clamp their
 // own fraction to at most 1 before calling this, so this only guards a corrupted/hand-edited save.
-export const getFillMultiplierPercent = (fillFraction, maxPercent = FILL_MULTIPLIER_MAX_PERCENT) => {
+export const getFillMultiplierPercent = fillFraction => {
   const clampedFraction = Math.min(1, Math.max(0, fillFraction))
-  // Log-linear: maxPercent at empty (10x for the Data Stream, 5x for a pool — see
-  // POOL_FILL_MULTIPLIER_MAX_PERCENT), FILL_MULTIPLIER_MIN_PERCENT (0.1x) when full; the Data Stream's
-  // 1000/10 pair is exactly 1x at 50%.
-  const maxLog = Math.log10(maxPercent)
+  // Log-linear: 10x at empty, exactly 1x at 50%, 0.1x when full (MAX/MIN are 1000/10 percent).
+  const maxLog = Math.log10(FILL_MULTIPLIER_MAX_PERCENT)
   const minLog = Math.log10(FILL_MULTIPLIER_MIN_PERCENT)
   return 10 ** (maxLog - clampedFraction * (maxLog - minLog))
 }
@@ -2366,33 +2364,28 @@ export const getFillMultiplierPercent = (fillFraction, maxPercent = FILL_MULTIPL
 // MAX/MIN is this steep; these two invert each other so production, pool fill, and tile ETAs
 // follow the continuous ODE. Upgrade drains stay a constant 1× Speed. ByteFoundryPage's
 // getBufferSecondsToFull is the start→cap special case of getFillCurveSeconds.
-// ln-form parameters for a curve starting at maxPercent (a = ln(MAX/100), b = ln(MAX/MIN)).
-const getFillCurveLogs = maxPercent => ({
-  a: Math.log(maxPercent / 100),
-  b: Math.log(maxPercent / FILL_MULTIPLIER_MIN_PERCENT),
-})
+const FILL_CURVE_LN_A = Math.log(FILL_MULTIPLIER_MAX_PERCENT / 100)
+const FILL_CURVE_LN_B = Math.log(FILL_MULTIPLIER_MAX_PERCENT / FILL_MULTIPLIER_MIN_PERCENT)
 
-export const getFillCurveSeconds = (startAmount, endAmount, capAmount, unmultipliedRate, maxPercent = FILL_MULTIPLIER_MAX_PERCENT) => {
+export const getFillCurveSeconds = (startAmount, endAmount, capAmount, unmultipliedRate) => {
   if (!(capAmount > 0) || !(unmultipliedRate > 0)) return null
   const start = Math.max(0, startAmount)
   const end = Math.min(capAmount, endAmount)
   if (end <= start) return null
-  const { a, b } = getFillCurveLogs(maxPercent)
   const fill0 = start / capAmount
   const fill1 = end / capAmount
-  return (capAmount / unmultipliedRate) * Math.exp(-a)
-    * (Math.exp(b * fill1) - Math.exp(b * fill0)) / b
+  return (capAmount / unmultipliedRate) * Math.exp(-FILL_CURVE_LN_A)
+    * (Math.exp(FILL_CURVE_LN_B * fill1) - Math.exp(FILL_CURVE_LN_B * fill0)) / FILL_CURVE_LN_B
 }
 
-export const getFillCurveDelta = (startAmount, capAmount, unmultipliedRate, elapsedSeconds, maxPercent = FILL_MULTIPLIER_MAX_PERCENT) => {
+export const getFillCurveDelta = (startAmount, capAmount, unmultipliedRate, elapsedSeconds) => {
   if (!(capAmount > 0) || !(unmultipliedRate > 0) || !(elapsedSeconds > 0)) return 0
   const start = Math.max(0, startAmount)
   if (start >= capAmount) return 0
-  const { a, b } = getFillCurveLogs(maxPercent)
   const fill0 = start / capAmount
-  const inside = Math.exp(b * fill0)
-    + (b * unmultipliedRate / capAmount) * Math.exp(a) * elapsedSeconds
-  const next = capAmount / b * Math.log(inside)
+  const inside = Math.exp(FILL_CURVE_LN_B * fill0)
+    + (FILL_CURVE_LN_B * unmultipliedRate / capAmount) * Math.exp(FILL_CURVE_LN_A) * elapsedSeconds
+  const next = capAmount / FILL_CURVE_LN_B * Math.log(inside)
   return Math.min(capAmount, next) - start
 }
 
@@ -2819,7 +2812,7 @@ export const getPoolBufferFillFraction = (state, poolIndex) => {
 
 // The pool's fill-based multiplier percent, before any tap bonus.
 export const getPoolBaseMultiplierPercent = (state, poolIndex) =>
-  getFillMultiplierPercent(getPoolBufferFillFraction(state, poolIndex), POOL_FILL_MULTIPLIER_MAX_PERCENT)
+  getFillMultiplierPercent(getPoolBufferFillFraction(state, poolIndex))
 
 export const getPoolTapBonusPercent = (state, poolIndex) =>
   state.intro?.poolTapBonusPercents?.[poolIndex] ?? 0
@@ -2978,7 +2971,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     // docs/DESIGN_HISTORY.md.
     let overflowSeconds = elapsedSeconds
     if (room > 0) {
-      const rawTransfer = getFillCurveDelta(current, bufferCap, unmultipliedRate, elapsedSeconds, POOL_FILL_MULTIPLIER_MAX_PERCENT)
+      const rawTransfer = getFillCurveDelta(current, bufferCap, unmultipliedRate, elapsedSeconds)
       const transfer = Math.min(rawTransfer, room, bits)
       if (transfer > 0) {
         bits -= transfer
@@ -2991,7 +2984,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
       // Time along the fill curve to actually fill the remaining room, so the overflow formula
       // below — deliberately UNmultiplied, see this function's own doc comment above — applies to
       // the genuinely-leftover portion of the interval.
-      const usedSeconds = getFillCurveSeconds(current, bufferCap, bufferCap, unmultipliedRate, POOL_FILL_MULTIPLIER_MAX_PERCENT) ?? elapsedSeconds
+      const usedSeconds = getFillCurveSeconds(current, bufferCap, bufferCap, unmultipliedRate) ?? elapsedSeconds
       overflowSeconds = Math.max(0, elapsedSeconds - usedSeconds)
     }
     if (overflowSeconds <= 0) continue
