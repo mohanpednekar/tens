@@ -134,15 +134,14 @@ const LakeFilledText = styled.span`
 
 // Thin progress bar under the balance, shown on a collapsed lake header: progress toward the next
 // disk (the same fraction the expanded LakePoolTile shows). `ThinProgressBar` is reused by
-// ByteFoundryPage's running-upgrade tile so both read the same.
-// Default top margin spaces the bar under the lake title/sub rows (LakeHeader has no flex gap).
-// The running-upgrade tile already has FillableStatCard's 0.3rem gap — pass `$flush` there so
-// the two spacings don't stack.
+// ByteFoundryPage's running-upgrade tile so both read the same. Default top margin spaces the bar
+// under the lake title/sub rows (LakeHeader has no flex gap); the upgrade tile zeroes it via a
+// local wrapper so it does not stack on FillableStatCard's gap.
 export const ThinProgressBar = styled.div`
   position: relative;
   width: 100%;
   height: 4px;
-  margin-top: ${props => (props.$flush ? 0 : '0.3rem')};
+  margin-top: 0.3rem;
   border-radius: 2px;
   overflow: hidden;
   background: color-mix(in srgb, ${props => props.theme.color.surfaceSunken} 70%, ${props => props.theme.color.surface});

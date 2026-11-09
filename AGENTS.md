@@ -327,6 +327,8 @@ check at draft creation, multiple adversarial-review rounds once ready, then a 1
 no-new-activity quiet period before merging a PR not already covered by an automatic auto-merge
 path (see below). Full detail: `docs/AUTOMATION.md`'s "PR review & testing cadence".
 
+**Aesthetic review on every UI change:** before marking a PR ready, render the real screen (Playwright, ~430px wide, both themes, seeded `localStorage`; throwaway script), inspect the screenshot, and fix misalignment, cramped spacing, inconsistency with neighbouring components, or unintended size changes; share the screenshots.
+
 **After the final commit** on a finished PR: run the adversarial `code-reviewer`, post its
 `<!-- adversarial-review sha=… verdict=… -->` marker as a PR comment, mark the PR ready, and —
 on `APPROVE` — **always** enable auto-merge: low-risk diffs via

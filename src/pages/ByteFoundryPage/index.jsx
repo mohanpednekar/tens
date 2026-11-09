@@ -296,6 +296,11 @@ const ProvisionSpeed = styled.span`
   white-space: nowrap;
 `
 
+// The tile's own column gap already spaces the bar from the labels (as the lake header's margin does).
+const UpgradeBar = styled(ThinProgressBar)`
+  margin-top: 0;
+`
+
 const MilestoneCostLine = styled.span`
   font-size: 0.75em;
   font-weight: 500;
@@ -1166,7 +1171,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               )}
               <RunningTime>⏳ {runningTimeLeftText}</RunningTime>
             </RunningUpgradeContent>
-            <ThinProgressBar $flush $fill={Math.min(1, Math.max(0, runningProgress / 100))} aria-hidden="true" />
+            <UpgradeBar $fill={Math.min(1, Math.max(0, runningProgress / 100))} aria-hidden="true" />
             <VisuallyHidden
               role="progressbar"
               aria-label="data stream upgrade progress"
