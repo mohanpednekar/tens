@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The small Bits balance under the Bytes headline no longer adds height to the Factory header; it sits in the existing gap above the segment bar.
+
 - Removed the `+n/8` purchase-progress text from Factory tier Buy buttons; the cost label stands alone.
 - **Autobuyer priority restored to KB → QB.** When tiers compete for the same Bits, lower tiers buy first again, except a tier you own none of goes first.
 
