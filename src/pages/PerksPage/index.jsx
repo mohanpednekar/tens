@@ -31,7 +31,6 @@ import {
 import {
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
-  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   XP_TICKSPEED_AUTOBUYER_UNLOCK_COST,
@@ -488,7 +487,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const doublePpUpgradeSummary = ppPerPower > 1
     ? `${formatAmount(ppPerPower)} PP per power`
     : `1 PP per ${formatAmount(powersPerPp)} power${powersPerPp === 1 ? '' : 's'}`
-  const canBuySpeedBonus = !isFrozen && !state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
 
   const isComputeAutoBoostActive = state.computeAutoBoostUnlocked ?? false
   // Stays listed once bought, even after Reboot / Reformat Byte Foundry drops Capacity back below the Boosters threshold.
@@ -767,25 +765,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               ? 'Halves how many money-exponent powers are needed per Purge Point (claimable once you reach 1 Googol Bytes)'
               : 'Doubles how many Purge Points each power earns (claimable once you reach 1 Googol Bytes)'}
           />
-        </Row>
-        <Row aria-label="production speed bonus upgrade">
-          <RowLabel title="+1% production speed per unspent Purge Point"><RowIcon>📈</RowIcon>Production speed bonus</RowLabel>
-          {state.prestigeSpeedBonusUnlocked ? (
-            <UnlockedBadge icon="📈" name="Production speed bonus" />
-          ) : (
-            <PpPurchaseButton
-              ariaLabel={`Unlock Purge Point production speed bonus for ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} Purge Points`}
-              color="#38bdf8"
-              cost={PRESTIGE_SPEED_BONUS_UNLOCK_COST}
-              disabled={!canBuySpeedBonus}
-              icon="🔓"
-              label={`${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP`}
-              onClick={actions.buyPrestigeSpeedBonus}
-              points={points}
-              progressLabel="Speed bonus unlock PP progress"
-              title="Spend Purge Points once to enable +1% production speed per unspent Purge Point"
-            />
-          )}
         </Row>
         <Row aria-label="overflow mode unlock">
           <RowLabelStack>

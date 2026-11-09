@@ -590,7 +590,7 @@ live inside the selected tier):
   `width: 100%` in the compressed styles specifically to pin them to the card's actual width so that
   truncation has something to truncate against (this selector matches `MoneyHero` too, below, since it
   extends `Money` and so still carries `Money`'s own generated class on the same DOM node). This
-  compact PP display shows the production speed bonus once unlocked (`formatBonusOrMultiplier` — a
+  compact PP display shows the production speed bonus once unlocked (10 Purges) (`formatBonusOrMultiplier` — a
   percentage below +100%, an `"Nx"` multiplier at/above it, see "Percentages vs. multipliers" below),
   but — being always-visible, sticky chrome rather than an expandable disclosure — omits the "production
   speed bonus locked" caveat before it's bought; that fuller wording used to also show in the bottom
@@ -762,8 +762,7 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   unlocked"`), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
-  *Purge Points* (Compression leveled upgrade; Production speed bonus one-time unlock, `"Production
-  speed bonus unlocked"` once bought; Overflow mode, locked until Auto Purge's interval ≤
+  *Purge Points* (Compression leveled upgrade; Overflow mode, locked until Auto Purge's interval ≤
   `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`) and *Purchasing* (Buy max, `components/BuyMaxToggle`).
 Firmware never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
 labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol

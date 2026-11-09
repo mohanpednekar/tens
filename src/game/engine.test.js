@@ -36,7 +36,6 @@ import {
   buyComputeFlopsTier,
   buyHyperscaler,
   buyPrestigeDoublePp,
-  buyPrestigeSpeedBonus,
   buyTickspeedAutobuyer,
   buyTickspeedMultiplier,
   buyTier,
@@ -353,7 +352,7 @@ import {
   getPoolTapMultiplier,
   getDataStreamTapMultiplier,
 } from './engine'
-import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
+import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -463,9 +462,10 @@ const withGlobalTickspeedMultiplier = (state, level = 1) => ({
   globalTickspeedMultiplier: level,
 })
 
-const withPrestigeSpeedBonusUnlocked = (state, unlocked = true) => ({
+// 10 Purges is the unlock threshold: ×(1 + log10(10)) = ×2.
+const withPrestigeSpeedBonusUnlocked = (state, count = 10) => ({
   ...state,
-  prestigeSpeedBonusUnlocked: unlocked,
+  purge: { ...state.purge, count },
 })
 
 const withScaleUpCount = (state, count) => ({
@@ -621,11 +621,6 @@ describe('createInitialGameState', () => {
     expect(purge.count).toBe(0)
     expect(purge.points).toBe(0)
     expect(purge.xp).toBe(0)
-  })
-
-  it('initialises prestigeSpeedBonusUnlocked as false', () => {
-    const state = createInitialGameState()
-    expect(state.prestigeSpeedBonusUnlocked).toBe(false)
   })
 
   it('initialises autoPurge to null (not yet bought) and its attempt budget to 0', () => {
@@ -6289,17 +6284,18 @@ describe('getOverclockMultiplier', () => {
 // ─── getPrestigeProductionMultiplier ─────────────────────────────────────────
 
 describe('getPrestigeProductionMultiplier', () => {
-  it('returns 1 with 0 unspent Prestige Points', () => {
+  it('is 1 below 10 Purges', () => {
     expect(getPrestigeProductionMultiplier(0)).toBe(1)
+    expect(getPrestigeProductionMultiplier(9)).toBe(1)
   })
 
-  it('adds a flat 1% per unspent point', () => {
-    expect(getPrestigeProductionMultiplier(1)).toBeCloseTo(1.01)
-    expect(getPrestigeProductionMultiplier(50)).toBeCloseTo(1.5)
-    expect(getPrestigeProductionMultiplier(100)).toBeCloseTo(2)
+  it('is 1 + log10(purge count) from 10 Purges on', () => {
+    expect(getPrestigeProductionMultiplier(10)).toBeCloseTo(2)
+    expect(getPrestigeProductionMultiplier(100)).toBeCloseTo(3)
+    expect(getPrestigeProductionMultiplier(1000)).toBeCloseTo(4)
   })
 
-  it('treats negative points as 0', () => {
+  it('treats negative counts as 0', () => {
     expect(getPrestigeProductionMultiplier(-10)).toBe(1)
   })
 })
@@ -7438,9 +7434,9 @@ describe('tickGame', () => {
     expect(bytesOf(tickGame(1)(boosted))).toBe(bytesOf(base) + 1)
   })
 
-  it('applies the Prestige Points production-speed bonus once unlocked', () => {
+  it('applies the Purge-count production-speed bonus once unlocked', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 1)
-    const boosted = withPrestigeSpeedBonusUnlocked(withPrestigePoints(base, 100)) // +100% → ×2
+    const boosted = withPrestigeSpeedBonusUnlocked(base) // 10 Purges → ×2
     expect(bytesOf(tickGame(1)(boosted))).toBe(
       bytesOf(base) + 2
     )
@@ -7448,10 +7444,10 @@ describe('tickGame', () => {
 
   it('floors a fractional Prestige Points production multiplier instead of crediting a fraction', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 1)
-    // +50% → ×1.5, raw production 1 × 1.5 = 1.5
-    const boosted = withPrestigeSpeedBonusUnlocked(withPrestigePoints(base, 50))
+    // 31 Purges → ×(1 + log10 31) ≈ ×2.49, raw production 1 × 2.49 floors to 2
+    const boosted = withPrestigeSpeedBonusUnlocked(base, 31)
     const after = tickGame(1)(boosted)
-    expect(bytesOf(after)).toBe(bytesOf(base) + 1) // floor(1.5) = 1
+    expect(bytesOf(after)).toBe(bytesOf(base) + 2) // floor(2.49) = 2
   })
 
   it('multiplies production by the Scale Up multiplier', () => {
@@ -7461,11 +7457,11 @@ describe('tickGame', () => {
     expect(bytesOf(after)).toBe(bytesOf(base) + 20) // 5 × 4
   })
 
-  it('stacks the Scale Up multiplier with the Prestige Point speed bonus', () => {
+  it('stacks the Scale Up multiplier with the Purge-count speed bonus', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 10)
-    // ×2 (Scale Up) × ×2 (+100% PP bonus) = ×4
+    // ×2 (Scale Up) × ×2 (10 Purges) = ×4
     const state = withScaleUpCount(
-      withPrestigeSpeedBonusUnlocked(withPrestigePoints(base, 100)), 1
+      withPrestigeSpeedBonusUnlocked(base), 1
     )
     const after = tickGame(1)(state)
     expect(bytesOf(after)).toBe(bytesOf(base) + 40) // 10 × 4
@@ -8377,43 +8373,6 @@ describe('buyGlobalTickspeedMultiplier', () => {
   })
 })
 
-// ─── buyPrestigeSpeedBonus ─────────────────────────────────────────────────────
-
-describe('buyPrestigeSpeedBonus', () => {
-  it(`spends ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP to permanently unlock the passive production-speed bonus`, () => {
-    const state = withPrestigePoints(createInitialGameState(), PRESTIGE_SPEED_BONUS_UNLOCK_COST)
-    const after = buyPrestigeSpeedBonus(state)
-    expect(after.prestigeSpeedBonusUnlocked).toBe(true)
-    expect(after.purge.points).toBe(0)
-  })
-
-  it('leaves any points beyond the cost unspent', () => {
-    const state = withPrestigePoints(createInitialGameState(), PRESTIGE_SPEED_BONUS_UNLOCK_COST + 50)
-    const after = buyPrestigeSpeedBonus(state)
-    expect(after.purge.points).toBe(50)
-  })
-
-  it('returns the same state when there are not enough points', () => {
-    const state = withPrestigePoints(createInitialGameState(), PRESTIGE_SPEED_BONUS_UNLOCK_COST - 1)
-    expect(buyPrestigeSpeedBonus(state)).toBe(state)
-  })
-
-  it('returns the same state when already unlocked (one-time purchase)', () => {
-    const state = withPrestigeSpeedBonusUnlocked(
-      withPrestigePoints(createInitialGameState(), PRESTIGE_SPEED_BONUS_UNLOCK_COST)
-    )
-    expect(buyPrestigeSpeedBonus(state)).toBe(state)
-  })
-
-  it('refuses to spend once production is frozen at PURGE_THRESHOLD', () => {
-    const state = withMoney(
-      withPrestigePoints(createInitialGameState(), PRESTIGE_SPEED_BONUS_UNLOCK_COST),
-      PURGE_THRESHOLD
-    )
-    expect(buyPrestigeSpeedBonus(state)).toBe(state)
-  })
-})
-
 // ─── buyPrestigeDoublePp / getPrestigeDoublePpUpgradeCost ────────────────────
 
 describe('getPrestigeDoublePpUpgradeCost', () => {
@@ -8663,14 +8622,6 @@ describe('purgeGame', () => {
     expect(after.globalTickspeedMultiplier).toBeNull()
   })
 
-  it('keeps the prestige speed bonus unlock permanently across prestige', () => {
-    const state = withPrestigeSpeedBonusUnlocked(
-      withMoney(createInitialGameState(), PURGE_THRESHOLD)
-    )
-    const after = purgeGame(state)
-    expect(after.prestigeSpeedBonusUnlocked).toBe(true)
-  })
-
   it('resets the Scale Up count to 0 across prestige', () => {
     const state = withScaleUpCount(
       withMoney(createInitialGameState(), PURGE_THRESHOLD), 3
@@ -8842,7 +8793,6 @@ describe('purgeGame', () => {
       withMoney(fresh, PURGE_THRESHOLD),
       'autobuyers', 'autobuyersEnabled', 'tierTickspeedAutobuyer',
       'tierTickspeedAutobuyerEnabled', 'autoPurge', 'autoPurgeEnabled',
-      'prestigeSpeedBonusUnlocked',
       'autoScaleUp', 'autoScaleUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
     )
     const after = purgeGame(state)
@@ -8856,7 +8806,6 @@ describe('purgeGame', () => {
     expect(after.tierTickspeedAutobuyerEnabled).toEqual(fresh.tierTickspeedAutobuyerEnabled)
     expect(after.autoPurge).toBe(fresh.autoPurge)
     expect(after.autoPurgeEnabled).toBe(fresh.autoPurgeEnabled)
-    expect(after.prestigeSpeedBonusUnlocked).toBe(fresh.prestigeSpeedBonusUnlocked)
     expect(after.autoScaleUp).toBe(fresh.autoScaleUp)
     expect(after.autoScaleUpEnabled).toBe(fresh.autoScaleUpEnabled)
     expect(after.autoGlobalTickspeed).toBe(fresh.autoGlobalTickspeed)
@@ -9100,12 +9049,6 @@ describe('scaleUpGame', () => {
     expect(after.globalTickspeedMultiplier).toBeNull()
   })
 
-  it('keeps the prestige speed bonus unlock permanently', () => {
-    const state = withPrestigeSpeedBonusUnlocked(eligibleState())
-    const after = scaleUpGame(state)
-    expect(after.prestigeSpeedBonusUnlocked).toBe(true)
-  })
-
   it('keeps prestigeDoublePpLevel permanently', () => {
     const state = { ...eligibleState(), prestigeDoublePpLevel: 3 }
     const after = scaleUpGame(state)
@@ -9214,7 +9157,6 @@ describe('scaleUpGame', () => {
       eligibleState(),
       'autobuyers', 'autobuyersEnabled', 'tierTickspeedAutobuyer',
       'tierTickspeedAutobuyerEnabled', 'autoPurge', 'autoPurgeEnabled',
-      'prestigeSpeedBonusUnlocked',
       'autoScaleUp', 'autoScaleUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
     )
     const after = scaleUpGame(state)
@@ -9224,7 +9166,6 @@ describe('scaleUpGame', () => {
     expect(after.tierTickspeedAutobuyerEnabled).toEqual(fresh.tierTickspeedAutobuyerEnabled)
     expect(after.autoPurge).toBe(fresh.autoPurge)
     expect(after.autoPurgeEnabled).toBe(fresh.autoPurgeEnabled)
-    expect(after.prestigeSpeedBonusUnlocked).toBe(fresh.prestigeSpeedBonusUnlocked)
     expect(after.autoScaleUp).toBe(fresh.autoScaleUp)
     expect(after.autoScaleUpEnabled).toBe(fresh.autoScaleUpEnabled)
     expect(after.autoGlobalTickspeed).toBe(fresh.autoGlobalTickspeed)
@@ -9463,12 +9404,6 @@ describe('overclockGame', () => {
     expect(after.globalTickspeedMultiplier).toBeNull()
   })
 
-  it('keeps the prestige speed bonus unlock permanently', () => {
-    const state = withPrestigeSpeedBonusUnlocked(eligibleState())
-    const after = overclockGame(state)
-    expect(after.prestigeSpeedBonusUnlocked).toBe(true)
-  })
-
   it('keeps prestigeDoublePpLevel permanently', () => {
     const state = { ...eligibleState(), prestigeDoublePpLevel: 3 }
     const after = overclockGame(state)
@@ -9548,7 +9483,6 @@ describe('overclockGame', () => {
       eligibleState(),
       'autobuyers', 'autobuyersEnabled', 'tierTickspeedAutobuyer',
       'tierTickspeedAutobuyerEnabled', 'autoPurge', 'autoPurgeEnabled',
-      'prestigeSpeedBonusUnlocked',
       'autoScaleUp', 'autoScaleUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
     )
     const after = overclockGame(state)
@@ -9558,7 +9492,6 @@ describe('overclockGame', () => {
     expect(after.tierTickspeedAutobuyerEnabled).toEqual(fresh.tierTickspeedAutobuyerEnabled)
     expect(after.autoPurge).toBe(fresh.autoPurge)
     expect(after.autoPurgeEnabled).toBe(fresh.autoPurgeEnabled)
-    expect(after.prestigeSpeedBonusUnlocked).toBe(fresh.prestigeSpeedBonusUnlocked)
     expect(after.autoScaleUp).toBe(fresh.autoScaleUp)
     expect(after.autoScaleUpEnabled).toBe(fresh.autoScaleUpEnabled)
     expect(after.autoGlobalTickspeed).toBe(fresh.autoGlobalTickspeed)

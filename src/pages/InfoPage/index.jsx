@@ -39,9 +39,8 @@ import {
   MAX_OFFLINE_SECONDS,
   OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS,
   OFFLINE_PROGRESS_SPEED_MULTIPLIER,
-  PRESTIGE_POINT_SPEED_BONUS,
   PRESTIGE_POWERS_PER_PP_BASE,
-  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
+  PRESTIGE_SPEED_BONUS_UNLOCK_PURGES,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
@@ -641,9 +640,11 @@ const InfoPage = () => {
             is permanent across Purges.
           </li>
           <li>
-            Spend PP on Firmware for automation and bonuses — e.g. the one-time Production speed bonus
-            ({PRESTIGE_SPEED_BONUS_UNLOCK_COST.toLocaleString()} PP) gives +
-            {PRESTIGE_POINT_SPEED_BONUS * 100}% production speed per unspent PP.
+            Spend PP on Firmware for automation and upgrades.
+          </li>
+          <li>
+            From {PRESTIGE_SPEED_BONUS_UNLOCK_PURGES} Purges on, production speed gets a bonus of
+            ×(1 + log₁₀ of your Purge count).
           </li>
           <li>
             Resets resources, owned tiers and this run’s progress. Unlocked autobuyers stay, and

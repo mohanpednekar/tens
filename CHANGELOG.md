@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Production speed bonus now unlocks at 10 Purges** and is ×(1 + log₁₀ of your Purge count), replacing the 10,000 PP unlock and +1%-per-unspent-PP bonus. It is automatic — nothing to buy on Firmware.
+
 - **Array read caches fill at 5× Bandwidth, not instantly.** A pool's smallest array's read cache now fills from Staging as a timed transfer at 5× the pool's Bandwidth (and pool tap bonus) instead of snapping in whole blocks, and shows partial fill. Disk fill speeds and the Data Stream / pool fill multiplier curves are unchanged.
 
 - **Player-facing renames, part 3 (#989, epic #986).** Perks is now **Firmware** (🔧); Double PP is **Compression**; Era ascension is **Reboot** (button "⏻ Reboot…"), Eons are **Kernels** and the Eon Amplifier the Kernel Amplifier; Reset Byte Foundry (and the disk-size "Foundry reset") is **Reformat**; Milestones/Chapters is **Releases** (v1.0 … v5.0, with the old chapter names as subtitles); Prestige museum is the **System log**, the Ops dashboard the **Task Manager**, Import / export save **Backup / Restore**; the "Welcome back!" notice reads "Resumed from sleep" and offline progress is **Sleep mode**; the Guide is the **Manual** (📖), which also gains a Prestige ladder section and holds Data Lakes and Compaction under Storage. Game mechanics and saves are unchanged.
