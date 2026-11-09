@@ -1538,7 +1538,9 @@ identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
   bigger than `BACKGROUND_TICK_GAP_THRESHOLD_SECONDS` (2 seconds — comfortably past ordinary
   `setInterval` scheduling jitter, which stays within tens of ms) is replayed via
   `applyOfflineProgress` as a **functional** `setState` update (so an update queued just before it — e.g. `claimOfflineAdReward` as a rewarded video closes — is built on, not overwritten), surfacing a fresh summary only past the full-speed threshold (a short gap leaves any notice already showing in place), instead of an ordinary `tickGame(TICK_RATE_MS / 1000, …)` call; anything
-  smaller runs the ordinary tick, unchanged from before. Both the interval and the visibilitychange
+  smaller runs the ordinary tick, unchanged from before — including while the tab is hidden, so a
+  throttled ~1 Hz background timer still progresses the game; `addActivePlaySeconds` is applied only
+  when `document.visibilityState === 'visible'`. Both the interval and the visibilitychange
   listener call the exact same function, and the tracked time is only ever restamped *after* that
   call's own tick/catch-up work finishes, never at entry — a large catch-up replays
   `applyOfflineProgress` one simulated second at a time (up to `MAX_OFFLINE_SECONDS` worth), which can
@@ -1692,7 +1694,8 @@ any more — they unlock automatically at a prestige-count milestone instead (se
 - **Active — Playtime bonus:** `buyPlaytimeBonus(state)` spends `PLAYTIME_BONUS_UNLOCK_COST` (100) PP once to set
   `playtimeBonusUnlocked`; `getPlaytimeProductionMultiplier(state)` = `1 + PLAYTIME_BONUS_PER_HOUR (0.01) * activePlaySeconds / 3600`,
   multiplied into `tickGame`'s production multiplier. `activePlaySeconds` only grows via `addActivePlaySeconds`, called by the live
-  tick loop in `useIncrementalGame` — never by offline/background catch-up. Both fields survive Purge/Scale Up/Overclock/Reboot.
+  tick loop in `useIncrementalGame` while `document.visibilityState === 'visible'` — never by offline/background catch-up, and never
+  by hidden-tab ticks (throttled background timers still run `tickGame`). Both fields survive Purge/Scale Up/Overclock/Reboot.
 - **Active — Compression:** `buyPrestigeDoublePp(state)` permanently spends `getPrestigeDoublePpUpgradeCost(level)`
   PP (`100^(level+1)` — 100, 10_000, 1_000_000, …) to increment `prestigeDoublePpLevel`. Not blocked
   by production freeze. Halves powers-per-PP through level 6, then doubles PP-per-power.

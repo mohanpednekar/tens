@@ -770,7 +770,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           />
         </Row>
         <Row aria-label="playtime bonus upgrade">
-          <RowLabel title="+1% production speed per hour of active play (offline time excluded)"><RowIcon>⏱</RowIcon>Playtime bonus</RowLabel>
+          <RowLabel title="+1% production speed per hour of active play (offline and background time excluded)"><RowIcon>⏱</RowIcon>Playtime bonus</RowLabel>
           {state.playtimeBonusUnlocked ? (
             <UnlockedBadge icon="⏱" name="Playtime bonus" />
           ) : (

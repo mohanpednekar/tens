@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState, getOfflineRewardBonusSeconds } from './engine'
+import { TICK_RATE_MS } from './layers'
 import { saveGameState } from './storage'
 import { useIncrementalGame } from './useIncrementalGame'
 
@@ -89,5 +90,53 @@ describe('useIncrementalGame background catch-up vs. a just-claimed bonus', () =
     expect(withClaim.money).toBeGreaterThan(withoutClaim.money)
     expect(withClaim.offlineProgress).toMatchObject({ rewardClaimed: true })
     expect(withoutClaim.offlineProgress).not.toBeNull()
+  })
+})
+
+describe('useIncrementalGame hidden-tab ticks vs active playtime', () => {
+  let visibility = 'visible'
+
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers()
+    visibility = 'visible'
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibility,
+    })
+  })
+
+  afterEach(() => {
+    localStorage.clear()
+  })
+
+  it('credits playtime while visible, not while hidden, and still ticks the game when hidden', () => {
+    const fresh = createInitialGameState()
+    saveGameState({
+      ...fresh,
+      intro: { ...fresh.intro, mainGameUnlocked: true },
+      owned: { ...fresh.owned, tier01: 5 },
+    })
+    const { result, unmount } = renderHook(() => useIncrementalGame())
+    const startPlay = result.current.state.activePlaySeconds
+
+    act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+    const afterVisiblePlay = result.current.state.activePlaySeconds
+    expect(afterVisiblePlay).toBeGreaterThan(startPlay)
+
+    visibility = 'hidden'
+    const moneyBeforeHidden = result.current.state.resources.base
+    // 1s gap is under BACKGROUND_TICK_GAP_THRESHOLD_SECONDS (2s) — the throttled-hidden-tab case.
+    vi.setSystemTime(Date.now() + 1000)
+    // One live tick is 0.1s; Kilobytes produce once per second, so ten ticks are needed
+    // to prove the hidden path still runs tickGame.
+    for (let i = 0; i < 10; i += 1) {
+      act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+    }
+    expect(result.current.state.activePlaySeconds).toBe(afterVisiblePlay)
+    expect(result.current.state.resources.base).toBeGreaterThan(moneyBeforeHidden)
+
+    unmount()
+    vi.useRealTimers()
   })
 })

@@ -143,7 +143,13 @@ const computeInitialGame = () => {
           }
         }
 
-        setState(prev => addActivePlaySeconds(TICK_RATE_MS / 1000)(tickGame(TICK_RATE_MS / 1000, BUY_QUANTITY)(prev)))
+        // Hidden tabs still get ordinary ticks (browsers often keep firing at ~1 Hz, under the
+        // 2s catch-up threshold) so production continues; only visible ticks count as active play.
+        const elapsed = TICK_RATE_MS / 1000
+        setState(prev => {
+          const next = tickGame(elapsed, BUY_QUANTITY)(prev)
+          return document.visibilityState === 'visible' ? addActivePlaySeconds(elapsed)(next) : next
+        })
         lastTickRealTime = Date.now()
       }
 

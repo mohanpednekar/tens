@@ -1000,8 +1000,8 @@ export const buyPlaytimeBonus = state => {
   }
 }
 
-// Called only by the live tick loop — never by offline/background catch-up — so simulated time
-// doesn't count as active play.
+// Called only by the live tick loop while the document is visible — never by offline/background
+// catch-up, and never by hidden-tab ticks — so simulated and unattended time don't count as active play.
 export const addActivePlaySeconds = seconds => state => ({
   ...state,
   activePlaySeconds: clampNonNegative(state.activePlaySeconds ?? 0) + clampNonNegative(seconds),

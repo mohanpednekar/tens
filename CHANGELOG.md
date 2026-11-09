@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Playtime bonus** (Firmware → Prestige, one-time 100 PP): +1% production speed per hour of active play. Offline and background catch-up time doesn't count; it persists across Purge and Reboot.
+- **Playtime bonus** (Firmware → Prestige, one-time 100 PP): +1% production speed per hour of active play. Offline, background catch-up, and hidden-tab ticks don't count; it persists across Purge and Reboot.
 
 - **Click an empty disk to fill it sooner.** Clicking an empty disk (any size above its pool's smallest) queues it: its write cache then takes full smaller disks from the same pool while Staging keeps filling it, so not every smaller disk is used.
 

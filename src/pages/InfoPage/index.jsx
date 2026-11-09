@@ -650,8 +650,8 @@ const InfoPage = () => {
           </li>
           <li>
             The one-time Playtime bonus ({PLAYTIME_BONUS_UNLOCK_COST} PP on Firmware → Prestige) adds
-            +{PLAYTIME_BONUS_PER_HOUR * 100}% production speed per hour of active play; offline and
-            background catch-up time doesn't count.
+            +{PLAYTIME_BONUS_PER_HOUR * 100}% production speed per hour of active play; offline,
+            hidden-tab, and background catch-up time doesn't count.
           </li>
           <li>
             Resets resources, owned tiers and this run’s progress. Unlocked autobuyers stay, and
