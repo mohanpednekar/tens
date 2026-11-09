@@ -641,7 +641,7 @@ Purges: ×`log10(count)` (else ×1) — no PP cost; see `docs/ECONOMY_REFERENCE.
 (`getMoneyExponent`/`getPurgePercent`) — only the live freeze/Prestige trigger moved to
 `PURGE_THRESHOLD`; see `docs/DESIGN_HISTORY.md` for why. MainPage's headline balance (`MoneyHero`) switches from Bits to whole Bytes once the balance reaches
 8000 Bits (`formatMoneyBalance`, `MONEY_BYTES_DISPLAY_THRESHOLD`); a small Bits subline then shows
-the exact `formatCurrency` amount (hidden while `balancesCompressed`). Every other `formatCurrency` call
+the exact `formatCurrency` amount (absolutely positioned in the existing gap — adds no height; hidden while `balancesCompressed`). Every other `formatCurrency` call
 (costs, production, the Prestige-threshold overlay) keeps reading in Bits.
 
 ### Byte Foundry
