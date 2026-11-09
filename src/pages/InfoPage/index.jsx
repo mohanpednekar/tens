@@ -20,6 +20,7 @@ import {
   COMPUTE_FLOPS_LAST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
   CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER,
+  CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER,
   DATA_LAKE_CAPACITY_BY_LEVEL,
   DATA_LAKE_SUB_SIZE_DISK_CAPS,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
@@ -313,8 +314,8 @@ const InfoPage = () => {
           <li>
             Each pool’s smallest array keeps a read Cache of {DISK_CACHE_BLOCK_COUNT} blocks that
             together hold one disk’s worth of bits (e.g. a 1 MB array → 8 × 1 Mb). Whenever the
-            pool’s Staging holds a full block and the Cache has room, the block moves into the Cache
-            instantly.
+            Cache has room, it fills from the pool’s Staging at {CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER}× the
+            pool’s Bandwidth.
           </li>
           <li>
             That array’s empty disks fill from its read Cache, taking as long as one cache block
