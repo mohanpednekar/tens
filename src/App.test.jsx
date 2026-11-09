@@ -1503,7 +1503,7 @@ test('Firmware groups by feature: Automation holds every automation, Prestige th
   expect(screen.queryByLabelText(/^production speed bonus upgrade$/i)).not.toBeInTheDocument()
   expect(screen.getByRole('tab', { name: /open prestige/i })).toHaveAttribute(
     'title',
-    'Prestige — Compression, Overflow mode and Buy max',
+    'Prestige — Compression, playtime bonus, Overflow mode and Buy max',
   )
 })
 
