@@ -1,5 +1,16 @@
 # Design history & rationale
 
+### Production speed bonus: 10k PP unlock +1%/PP → automatic log10(Purge count) — 2026-11-09
+
+The previous bonus was a 10,000 PP Firmware unlock (`buyPrestigeSpeedBonus` /
+`prestigeSpeedBonusUnlocked`) that then applied `1 + 0.01 × unspent PP` in `tickGame`. That made
+unspent PP a production lever (hoard vs spend) and gated the whole effect behind the priciest global
+unlock. Replaced with an automatic Purge-count formula: inert below 10 Purges, then `log10(count)`
+(×1 at 10, ×2 at 100). An earlier shape on the same PR was `1 + log10(count)` (×2 at 10); dropped so
+the threshold itself is a no-op identity rather than a sudden ×2 jump. `buyPrestigeSpeedBonus` and
+the stored flag are gone; Firmware no longer lists the perk. Existing saves that had bought the
+unlock keep the spent PP (no refund); the new formula applies from the live Purge count.
+
 ### Perks regrouped by feature: Unlocks / Upgrades / Toggles → Automation / Prestige — 2026-11-03
 
 Perks used three tabs split by *purchase kind* (🔓 one-time unlocks, ⏫ leveled upgrades, 🎛 pause

@@ -238,7 +238,7 @@ export const createInitialGameState = () => ({
   // counts below, rather than this display/history total, drive production. Never reset by Scale Up
   // itself (it's the thing being incremented), but IS reset to 0 by a real Prestige (see
   // purgeGame) — unlike the automation toggles/levels around it (autoPurge/
-  // prestigeSpeedBonusUnlocked/autoScaleUp), the Scale Up multiplier itself doesn't survive a real
+  // autoScaleUp), the Scale Up multiplier itself doesn't survive a real
   // Prestige and has to be rebuilt from scratch each Prestige cycle.
   scaleUpCount: 0,
   // Per-tier Scale Up counts let a claim boost its target tier and every earlier tier.
@@ -1391,8 +1391,8 @@ export const getPurchaseMilestoneMultiplier = level => {
 
 // The unconditional production-speed multiplier from Scale Up activations (see scaleUpGame):
 // SCALE_UP_MULTIPLIER_BASE raised to scaleUpCount, so each activation doubles it (1x, 2x, 4x,
-// 8x, …). Unlike getPrestigeProductionMultiplier, this needs no unlock purchase — it applies
-// automatically as soon as scaleUpCount > 0.
+// 8x, …). getPrestigeProductionMultiplier is a Purge-count formula (inert below 10); this
+// applies automatically as soon as scaleUpCount > 0.
 export const getScaleUpMultiplier = scaleUpCount =>
   SCALE_UP_MULTIPLIER_BASE ** clampNonNegative(scaleUpCount)
 
@@ -1793,8 +1793,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
 
   // Passive Purge-count production-speed bonus (1 until 10 Purges — see getPrestigeProductionMultiplier).
   const multiplier = getPrestigeProductionMultiplier(stateAfterFlops.purge.count) * getPlaytimeProductionMultiplier(stateAfterFlops)
-  // Scale Up's per-tier multipliers, unlike the PP bonus above, need no unlock step — each applies
-  // as soon as that tier has a positive scaleUpTierCounts entry (see scaleUpGame).
+  // Scale Up's per-tier multipliers, unlike the Purge-count bonus above, need no unlock
+  // threshold — each applies as soon as that tier has a positive scaleUpTierCounts entry
+  // (see scaleUpGame).
 
   // Apply autobuyers: for each unlocked (non-null) tier, accumulate a fractional purchase-attempt
   // budget (see createInitialGameState) at a flat rate of 1 per real second — the tickspeed
@@ -1885,7 +1886,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // getPurchaseMilestoneMultiplier), and computeBoostMultiplier (always one of
     // COMPUTE_BOOST_PRESETS' own integer multipliers, or 1) are already integers, so only the
     // fractional Purge-count production multiplier (getPrestigeProductionMultiplier, e.g. 100
-    // Purges → ×3) can introduce a fraction here — always >= 1, so flooring never zeroes
+    // Purges → ×2) can introduce a fraction here — always >= 1, so flooring never zeroes
     // out production for a tier with owned > 0. Neither tickspeed multiplier appears in this
     // formula at all anymore — they've already done their work by shrinking tickSpeed above, which
     // is what grew ticksElapsed.
