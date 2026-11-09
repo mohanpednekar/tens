@@ -282,6 +282,16 @@ const MoneyHero = styled(Money)`
   padding: 0;
 `
 
+// Small exact-Bits readout under the hero balance (shown once the hero switches to Bytes,
+// so it isn't a duplicate of the headline). Token-driven muted color rather than opacity, so
+// the pair stays on the same AA audit as other HUD muted text (textMuted on surfaceRaised).
+// Not role=status: Bits change every tick, and status is a live region.
+const BitsBalance = styled(HudMutedText)`
+  text-align: center;
+  font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
+`
+
 // Visual (not accessible-name-bearing — see the sibling VisuallyHidden role="progressbar" at the
 // call site) 8-segment progress toward the next power-of-ten Bytes, living under MoneyHero.
 // Each segment is 12.5% (1/BITS_PER_BYTE); the active segment fills progressively.
@@ -811,6 +821,9 @@ const MainPage = ({ game }) => {
   const purgeProgressPercent = getPurgePercent(state.resources[MONEY_ID])
   const bytePowerProgressFraction = getNextBytePowerProgressFraction(state.resources[MONEY_ID])
   const bytePowerProgressPercent = Math.round(bytePowerProgressFraction * 100)
+  const moneyBits = state.resources[MONEY_ID]
+  const moneyHeroText = formatMoneyBalance(moneyBits)
+  const moneyBitsText = formatCurrency(moneyBits)
   // What a Prestige would award — shown on the Prestige button itself (Buy-button style: the
   // effect lives on the control, not in a separate text line). Below Googol the formula reads 0,
   // but the award on reaching it is always at least 1, so that's the effect worth advertising.
@@ -1188,8 +1201,13 @@ const MainPage = ({ game }) => {
             tabIndex={0}
             title="Show or hide the global production multipliers currently in effect"
           >
-            <MoneyHero>{formatMoneyBalance(state.resources[MONEY_ID])}</MoneyHero>
+            <MoneyHero>{moneyHeroText}</MoneyHero>
           </MoneyHeroToggle>
+          {!balancesCompressed && moneyHeroText !== moneyBitsText && (
+            <BitsBalance aria-label={`balance in bits: ${moneyBitsText}`}>
+              {moneyBitsText}
+            </BitsBalance>
+          )}
           {!balancesCompressed && (
             <>
               <BytePowerSegments aria-hidden="true">
@@ -1424,25 +1442,11 @@ const MainPage = ({ game }) => {
           const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}${tickspeedRequirement > tickspeedCost + 1 ? ` (requires ${formatCost(tickspeedRequirement, tier.id)} owned)` : ''}`
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
           // (via formatCost) in place of its full name. The full sentence stays in aria-label/
-          // title for assistive tech. The block progress ("5+3/8" — how many of the current
-          // level's pieces are already bought, plus how many more are affordable right now, over
-          // the block size — mirroring the pre-level design's `purchased+affordable` convention,
-          // see docs/DESIGN_HISTORY.md) sits inside ButtonIcon alongside the 🛒 glyph rather than
-          // the centered ButtonLabel, so it's pinned immediately next to the icon and lines up in
-          // a column across tier rows regardless of the cost string's length. The level number
-          // itself isn't shown here (still available via aria-label and the row's Details
-          // disclosure) — this is purely "how close is the current level."
-          // Every count carries a "+" and zero parts are omitted: Buy-max shows "+<levels>" /
-          // "+<levels> +<n>/<block>", the ordinary Buy shows "+<affordable>/<block>" when anything
-          // is affordable, else "+<done>/<block>", and nothing at 0/<block>.
-          const blockText = formatAmount(purchaseBlockSize)
-          const buyLevelQuantityText = maxLevelsPreview.levels > 0
-            ? `+${formatAmount(maxLevelsPreview.levels)}${maxLevelsPreview.partialQuantity > 0 ? ` +${formatAmount(maxLevelsPreview.partialQuantity)}/${blockText}` : ''}`
-            : affordableQuantity > 0
-              ? `+${formatAmount(affordableQuantity)}/${blockText}`
-              : doneInBlock > 0
-                ? `+${formatAmount(doneInBlock)}/${blockText}`
-                : ''
+          // title for assistive tech. Cost-block progress lives on the button as the dual-tone
+          // fill plus a VisuallyHidden progressbar (and in the aria-label) — not as `+n/8` text
+          // next to the cart icon. Buy-max mode is the exception: "+<levels>" full levels sit
+          // beside the icon so the click still previews how many levels it will buy.
+          const buyLevelQuantityText = maxLevelsPreview.levels > 0 ? `+${formatAmount(maxLevelsPreview.levels)}` : ''
           // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
           // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
           // no separate icon for "+10%" is needed, since that step is fixed

@@ -540,25 +540,17 @@ live inside the selected tier):
   (`state.purchaseLevels[tierId]`, 1-indexed, and `state.purchaseLevelProgress[tierId]`, see
   docs/ECONOMY_REFERENCE.md) rather than derived from `purchased` via division — completing a level means
   buying `getPurchaseBlockSize(state)` pieces of it (a value that can grow over a run, see "Economy
-  model"). This shows on the Buy button's visible text as `{progress}+{affordable}/{blockSize}` (e.g.
-  `5+3/8` — how many of the current level's pieces are already bought, plus how many more are
-  affordable right now, over the block size; the `+{affordable}` segment is omitted once nothing is
-  currently affordable; while Buy max mode would buy N full levels it reads `+N Lv` instead, see "Buy
-  button" below) inside `ButtonIcon` alongside the 🛒 glyph, pinned immediately next to the icon
-  rather than centered — this keeps the progress text starting at the same x position across every
-  tier row regardless of the cost string's length. This deliberately doesn't show the level number
-  itself (unlike an earlier `Lv.{level} ({progress}/{blockSize})` version) — the zero-indexed count
-  of completed levels is still available via the `aria-label` and the row's Details
-  disclosure; the button text is purely "how close is the current level," echoing the even earlier
-  pre-level-system `{purchased}+{affordable}` convention (see `docs/DESIGN_HISTORY.md`) now expressed
-  as a fraction of the current block size instead of a raw lifetime count. The cost label itself
-  (`BuyButtonCostLabel`, a `styled(ButtonLabel)`) is left-aligned rather than centered, and both it and
-  the icon+progress slot (`BuyButtonIcon`) are pinned to a fixed half of the button's width — so every
-  tier row's cost figure starts at the same x position (the button's horizontal center) regardless of
-  digit count, instead of drifting as the progress or cost strings change length. This scoped pair
-  lives only in `MainPage/index.jsx` and doesn't affect the shared `Button`/`ButtonIcon`/`ButtonLabel`
-  components used elsewhere in the app (Prestige, Reset, Firmware, …), which keep their default
-  fixed-icon/centered-label layout.
+  model"). Cost-block progress is no longer a `+n/8` string on the Buy button — it lives on the
+  button as the dual-tone fill (`$progress` / `$secondaryProgress`) plus a `VisuallyHidden`
+  `role="progressbar"` and the Buy `aria-label` (`N of {blockSize} purchased toward the next`).
+  Buy max mode is the exception: while a click would buy N full levels the icon slot shows `+N`
+  (see "Buy button" below). The cost label itself (`BuyButtonCostLabel`, a `styled(ButtonLabel)`) is
+  left-aligned rather than centered, and both it and the icon slot (`BuyButtonIcon`) are pinned to a
+  fixed half of the button's width — so every tier row's cost figure starts at the same x position
+  (the button's horizontal center) regardless of digit count, instead of drifting as the cost
+  string's length changes. This scoped pair lives only in `MainPage/index.jsx` and doesn't affect
+  the shared `Button`/`ButtonIcon`/`ButtonLabel` components used elsewhere in the app (Prestige,
+  Reset, Firmware, …), which keep their default fixed-icon/centered-label layout.
 - **Tier name display.** The tier row heading (`TierName`, a `styled.h3`) and the Firmware page's
   per-tier row label both render `tier.symbol` (e.g. `B`, `KB`) as the visible text, not the full
   `tier.name` — a decluttering choice, since the compact symbol already appears throughout the row
@@ -619,17 +611,23 @@ live inside the selected tier):
   the display font here, but its more stylized, geometric letterforms read worse for a large numeric
   balance than Inter's tabular figures; the hero treatment is about size/elevation, not typeface.
   `MoneyHero`'s own content is `formatMoneyBalance(state.resources[MONEY_ID])` (`engine.js`), NOT
-  `formatCurrency` — the only balance readout on this page that differs: below
+  `formatCurrency` — the only *headline* balance readout on this page that differs: below
   `MONEY_BYTES_DISPLAY_THRESHOLD` (8000 Bits, exactly 1000 Bytes) it's byte-for-byte identical to
   `formatCurrency`'s own Bits display, but at/above that threshold it floors the balance, divides by
   `BITS_PER_BYTE`, and renders the result as whole Bytes with a trailing `" B"` (reusing
   `formatCurrency`'s own exponential-notation threshold once converted) — a more natural headline
-  figure than an ever-growing raw bit count once there's at least a full Byte's worth to show. Every
-  other `formatCurrency` call on this page — tier costs/production, the global tickspeed cost, the
-  `FullScreenOverlay`'s "You've reached…" line, the Buy button's cost label — is unaffected and still
-  shows raw Bits, its actual priced/spent denomination; `MoneyHero` is the one exception. Directly
-  beneath the hero figure (suppressed while `balancesCompressed`, since the compact sticky bar has no
-  room for it), an 8-segment `BytePowerSegments` bar shows progress toward the next power-of-ten
+  figure than an ever-growing raw bit count once there's at least a full Byte's worth to show. Once
+  those two strings differ, a small `BitsBalance` line (`aria-label="balance in bits: …"`,
+  `theme.color.textMuted`, `theme.type.scale.sm`) under the hero shows the exact Bits via
+  `formatCurrency` — not `role="status"`, which would live-announce every tick — suppressed while
+  `balancesCompressed`, and omitted below the threshold so it isn't a duplicate of the Bits
+  headline. Visibility is `formatMoneyBalance !== formatCurrency`, not a hardcoded 8000, so it
+  stays in lockstep with the headline switch. Every other `formatCurrency` call on this page —
+  tier costs/production, the global tickspeed cost, the `FullScreenOverlay`'s "You've reached…"
+  line, the Buy button's cost label — is unaffected and still shows raw Bits, its actual
+  priced/spent denomination. Beneath the hero (and the Bits subline when shown; suppressed while
+  `balancesCompressed`, since the compact sticky bar has no room for it), an 8-segment
+  `BytePowerSegments` bar shows progress toward the next power-of-ten
   Bytes via `getNextBytePowerProgressFraction` (Bits toward `nextPowerBytes × BITS_PER_BYTE`; each
   segment is 12.5% and fills progressively within that band — e.g. 5e7 Bytes → 4/8 filled). Paired
   with a `VisuallyHidden role="progressbar"` (`aria-label="progress toward the next power of ten
@@ -700,7 +698,7 @@ live inside the selected tier):
   `getPurchaseBlockSize(state)`). The one player-facing control over this is **Buy max mode**
   (`components/BuyMaxToggle`, rendered only on Firmware → ✦ Prestige once `isBuyMaxUnlocked`): while on, a click that can afford at least one FULL level
   from zero progress buys every such level (`buyTierMaxLevels`) and the button previews it as
-  `+N Lv` with the summed cost (`getTierMaxLevelsPreview`; aria-label `Buy N full level(s) for …`);
+  `+N` with the summed cost (`getTierMaxLevelsPreview`; aria-label `Buy N full level(s) for …`);
   otherwise the button keeps the normal single-level text and behavior below. Clock Speed, tier tickspeed,
   Compression, Auto Purge and Flops buttons keep their single-level cost text but buy every
   affordable level per click in that mode (`repeatPurchaseMax`). Renders its cost-block progress as an
@@ -715,9 +713,9 @@ live inside the selected tier):
   word (🛒 Buy, ✦ Prestige, ↺ Reset) plus the cost, and (via `formatCost`) the paying tier's short
   `RESOURCE_SYMBOL` (e.g. `Ks`) instead of its full name — while each button's `aria-label` carries the
   full descriptive sentence (`"Buy ×10 for $100"`, `"Prestige (requires 1 Googol Money)"`, `"Reset
-  game"`, …) used by assistive tech and `getByRole('button', { name })` tests. Buy's icon slot also
-  carries the level+progress text (see "Owned vs. level" above) — see there for why it's pinned next
-  to the icon rather than folded into the centered cost label.
+  game"`, …) used by assistive tech and `getByRole('button', { name })` tests. Buy's icon slot is
+  otherwise empty except in Buy max mode, where it carries `+N` full levels (see "Owned vs. level"
+  above); ordinary cost-block progress is the fill + hidden progressbar, not `+n/8` text.
 
 **Factory view (no second-level tabs).** `MainPage` renders only the tier ladder and its cards
 (`GlobalTickspeedCard`, `TierList`, `ScaleUpCard`, `OverclockCard`) — it no longer has a tab bar or any

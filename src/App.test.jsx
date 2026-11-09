@@ -607,6 +607,19 @@ test('money balance is shown once at the top in full currency format, centered, 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
   expect(screen.getByLabelText(/^money display$/i)).not.toHaveTextContent('/sec')
   expect(screen.queryAllByLabelText(/^money display$/i)).toHaveLength(1)
+  // Below the Bytes-headline threshold the Bits subline would duplicate the hero, so it stays hidden.
+  expect(screen.queryByLabelText(/balance in bits/i)).not.toBeInTheDocument()
+})
+
+test('once the hero switches to Bytes, a small Bits line shows the exact bit balance', () => {
+  seedMainGameState({ resources: { base: 8000 } })
+  render(<App />)
+
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1,000 B')
+  const bitsLine = screen.getByLabelText(/balance in bits/i)
+  expect(bitsLine).toHaveTextContent('8,000 b')
+  // Not a live region — Bits change every tick and role=status would spam assistive tech.
+  expect(bitsLine).not.toHaveAttribute('role', 'status')
 })
 
 test('a byte-producing tier shows its per-tick production amount with the currency format, not a per-second rate', () => {
@@ -795,6 +808,9 @@ test('the Buy button shows a cost-block progress bar reflecting purchases so far
   // 4 of 8 already done — 4 remain in the block; per-unit cost is 1,000, so 4 units cost $4,000 total.
   const buyButton = screen.getByRole('button', { name: /buy ×4 for 4,000 b \(0 completed levels, 4 of 8 purchased toward the next\)/i })
   expect(buyButton).toBeInTheDocument()
+  expect(buyButton).toHaveTextContent('4,000 b')
+  expect(buyButton).not.toHaveTextContent('+4/8')
+  expect(buyButton).not.toHaveTextContent('+4')
   expect(screen.queryByText(/^level: /i)).not.toBeInTheDocument()
   // Regression check for the Button component's `variant` prop: it's consumed internally to
   // resolve a theme color and must never leak onto the rendered DOM node as a raw attribute.
@@ -820,6 +836,7 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
   // MoneyHero (the "money display") switches to whole Bytes once the balance reaches 8000 Bits
   // (see engine.js's formatMoneyBalance) — 92,000 Bits = 11,500 Bytes.
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('11,500 B')
+  expect(screen.getByLabelText(/balance in bits/i)).toHaveTextContent('92,000 b')
 })
 
 test('manual Buy partially fills when funds only cover part of the cost block', async () => {
@@ -5926,7 +5943,9 @@ describe('Buy max mode', () => {
     expect(localStorage.getItem('tens_buy_max_mode')).toBe('true')
     await user.click(screen.getByRole('button', { name: /^open byte factory$/i }))
 
-    await user.click(screen.getByRole('button', { name: /^Buy 2 full levels/ }))
+    const buyMaxButton = screen.getByRole('button', { name: /^Buy 2 full levels/ })
+    expect(buyMaxButton).toHaveTextContent('+2')
+    await user.click(buyMaxButton)
     const kilobytesPanel = screen.getByLabelText(`${kilobytes.name} layer`)
     expect(within(kilobytesPanel).getByRole('progressbar', { name: `${kilobytes.name} cost-block progress` }))
       .toHaveAttribute('aria-valuenow', '0')
