@@ -103,7 +103,7 @@ For each inventory item, in decreasing order of blast radius:
    boundary values (0, exact-cost, block boundaries at `purchased % 10`, exactly-GOOGOL),
    off-by-one in exponents/indices, first/last tier, first run vs. post-prestige, missing state
    key on a legacy save, re-entrancy across ticks, and every invariant listed in step 2.
-3. For UI changes, check both render paths (desktop and the `40rem` breakpoint grid), disabled/
+3. For UI changes, confirm the PR shows the `CLAUDE.md` "Aesthetic review on every UI change" screenshots (~430px, both themes); absence is a NEEDS CHANGES finding. Also check both render paths (desktop and the `40rem` breakpoint grid), disabled/
    frozen states, and that visible text and `aria-label` stayed consistent with the tests.
 
 ### 4. Cross-cutting checks
