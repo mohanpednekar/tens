@@ -3022,7 +3022,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     // multiple disk completions this same tick isn't stuck using whichever rate applied to the
     // FIRST of them.
     const { lake: lakeAfterOverflow, remainingBits, changed: overflowChanged } =
-      applyDataLakeOverflow(state, poolIndex, fillRate, overflowSeconds, bits)
+      applyDataLakeOverflow(state, poolIndex, fillRate * getDataLakeSpeedMultiplier(state, poolIndex), overflowSeconds, bits)
     if (!overflowChanged) continue
     dataLakes[poolIndex] = lakeAfterOverflow
     bits = remainingBits
@@ -5280,10 +5280,12 @@ export const getDataLakeCurrentDiskFillFraction = (state, tierIndex) => {
 // the currently-filling disk approached completion; removed along with the rate taper itself (see
 // docs/DESIGN_HISTORY.md) now that overflow fills at the plain available rate, same as Storage's
 // own disk provisioning.
+// Lake speed = 10% of its pool's base Bandwidth, +10% (additive) per pool flush (70% after 6).
+export const getDataLakeSpeedMultiplier = (state, tierIndex) =>
+  0.1 + 0.1 * Math.max(0, getDataLakeTier(state, tierIndex)?.resetCount ?? 0)
+
 export const getDataLakeOverflowRatePercent = (state, tierIndex) =>
-  (getDataLakeTier(state, tierIndex)?.resetCount ?? 0) > 0
-    ? DATA_LAKE_OVERFLOW_MAX_PERCENT
-    : 5 + 45 * (1 - getDataLakeDepositedUnits(tierIndex)(state) / Math.max(1, getDataLakeCapacity(state, tierIndex)))
+  Math.round(getDataLakeSpeedMultiplier(state, tierIndex) * 1000) / 10
 
 // Whether this lake's own matching Storage pool has built at least one real disk (the pool's own
 // smallest, ×1 size) — the gate for the lake itself being "unlocked" at all: both feeding overflow
@@ -5587,7 +5589,7 @@ export const isDataLakeAutoConvertStartAvailable = (state, tierIndex) => {
   return getComputeEntityFieldRoom(state, tierIndex) > 0
 }
 
-export const isStoragePoolResetAvailable = (state, tierIndex) => {
+export const isStoragePoolFlushAvailable = (state, tierIndex) => {
   const lake = getDataLakeTier(state, tierIndex)
   if (!lake || lake.rebuilding || !isStoragePoolFullyBuilt(state, tierIndex)) return false
   return getDataLakeDepositedUnits(tierIndex)(state) >= getDataLakeCapacity(state, tierIndex) &&
@@ -5596,8 +5598,8 @@ export const isStoragePoolResetAvailable = (state, tierIndex) => {
 
 // Consumes only this pool's Storage and lake. Compute/Booster state is deliberately retained, as
 // are this lake's prior reset rewards; no neighbouring pool can contribute resources to the reset.
-export const resetStoragePool = tierIndex => state => {
-  if (!isStoragePoolResetAvailable(state, tierIndex)) return state
+export const flushStoragePool = tierIndex => state => {
+  if (!isStoragePoolFlushAvailable(state, tierIndex)) return state
   const lake = getDataLakeTier(state, tierIndex)
   const sizes = getStoragePoolSizes(tierIndex)
   const withoutSizes = source => Object.fromEntries(
@@ -5631,7 +5633,6 @@ export const resetStoragePool = tierIndex => state => {
           autoConvertActive: false,
           resetCount,
           rebuilding: true,
-          bandwidthSteps: (lake.bandwidthSteps ?? 0) + (resetCount >= 2 ? 1 : 0),
         },
       },
       poolResetRebuildingCount: (state.intro.poolResetRebuildingCount ?? 0) + 1,
@@ -5916,7 +5917,8 @@ export const tickDataLakePoolDrain = elapsedSeconds => state => {
     const buffer = getPoolBufferBits(state, poolIndex)
     const spendable = Math.max(0, buffer - getPoolCacheReservationBits(state, poolIndex))
     if (spendable <= 0) continue
-    const rate = getStoragePoolBandwidth(state, poolIndex) * getPoolTapMultiplier(state, poolIndex)
+    const rate = getStoragePoolBandwidth(state, poolIndex) * getPoolTapMultiplier(state, poolIndex) *
+      getDataLakeSpeedMultiplier(state, poolIndex)
     const { lake, remainingBits, changed } = applyDataLakeOverflow(state, poolIndex, rate, elapsedSeconds, spendable)
     if (!changed) continue
     poolBuffers = poolBuffers ?? { ...(state.intro.poolBuffers ?? {}) }
