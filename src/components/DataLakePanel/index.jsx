@@ -34,7 +34,7 @@ import {
   isDataLakePoolReady,
   isDataLakeBoosterAuto,
   isStoragePoolFullyBuilt,
-  isStoragePoolResetAvailable,
+  isStoragePoolFlushAvailable,
 } from 'game/engine'
 import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
 import styled from 'styled-components'
@@ -140,7 +140,7 @@ const LakeSpeedText = styled.span`
   white-space: nowrap;
 `
 
-// Shown in the sub-row's right slot (under the fill speed) while neither Compact Pool nor Scale Out is
+// Shown in the sub-row's right slot (under the fill speed) while neither Flush Pool nor Scale Out is
 // offered — those buttons take the slot over whenever they are.
 const LakeTimeText = styled.span`
   flex-shrink: 0;
@@ -378,7 +378,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
         // startDataLakeAutoConvert. The header's own cost control renders as an inert label rather
         // than a button for the whole duration (below).
         const converting = isDataLakeAutoConvertActive(state, tierIndex)
-        const resetAvailable = isStoragePoolResetAvailable(state, tierIndex)
+        const resetAvailable = isStoragePoolFlushAvailable(state, tierIndex)
         // Everything banked in this lake (full disks + the open slot's progress), self-sized below the
         // lake's own unit like a pool's buffer balance.
         const filledBits = getDataLakeDepositedUnits(tierIndex)(state) * unitBits + getDataLakeFillBits(state, tierIndex)
@@ -417,7 +417,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                     under it (that price is also the lake's Booster control — clicking it buys
                     immediately if already affordable, or starts the one-shot fill-then-buy automation,
                     see startDataLakeAutoConvert), fill speed on the right, and the amount filled big
-                    centered on the title row. Compact Pool / Scale Out, when offered, sit under the speed. */}
+                    centered on the title row. Flush Pool / Scale Out, when offered, sit under the speed. */}
                 <LakeSubRow>
                   {converting ? (
                   <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own staging until ${nextCostSize} is banked, then buys 1 and stops`}>
@@ -458,13 +458,13 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                 )}
                   {resetAvailable ? (
                 <ActionButton
-                  aria-label={`compact the ${label} Storage Pool`}
-                  onClick={() => actions.resetStoragePool(tierIndex)}
+                  aria-label={`flush the ${label} Storage Pool`}
+                  onClick={() => actions.flushStoragePool(tierIndex)}
                   title={`Empty this pool and lake, add 1000 ${label} of permanent lake capacity, and begin free automatic disk rebuilding`}
                   type="button"
                   variant="prestige"
                 >
-                  <ButtonContent>🗜 Compact Pool</ButtonContent>
+                  <ButtonContent>🗜 Flush Pool</ButtonContent>
                 </ActionButton>
               ) : upgradeAvailable && !converting && !entityAtCap && !canBuy ? (
                 <ActionButton

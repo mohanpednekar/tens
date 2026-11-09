@@ -5,7 +5,7 @@ of truth — `CLAUDE.md` (plus its `docs/*.md` references) is authoritative for 
 anything below ever conflicts with `CLAUDE.md`, `CLAUDE.md` wins; fix this file to match in the same
 change rather than letting the two drift (a stale mirror here is worse than no mirror at all).
 
-Player labels (issue #988; code identifiers unchanged): Power page = id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers`; Cores → Superclouds (KFlops → QFlops outputs) = `flop01`–`flop10`; Clock Speed = global tickspeed; Bitrate/Bandwidth/Staging/Compile/Ping/Compact Pool/Turbo-Balanced-Eco replace the old Speed/pool speed/buffer/Combine/tap/Reset Pool/Burst-Standard-Sustain. Full table: `CLAUDE.md`.
+Player labels (issue #988; code identifiers unchanged): Power page = id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers`; Cores → Superclouds (KFlops → QFlops outputs) = `flop01`–`flop10`; Clock Speed = global tickspeed; Bitrate/Bandwidth/Staging/Compile/Ping/Flush Pool/Turbo-Balanced-Eco replace the old Speed/pool speed/buffer/Combine/tap/Reset Pool/Burst-Standard-Sustain. Full table: `CLAUDE.md`.
 
 Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Purge** (formerly named Reboot, now the Era-ascension layer; PP = Purge Points), the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). Code and state use the Purge names too (`purge`, `purgeGame`, `PURGE_THRESHOLD`, automation keys `speedUp`/`purge`; older `prestige`/`reboot` save keys migrate via `save-migration/migrateToV3`); only Prestige-Point/museum identifiers keep `prestige`. Player labels (#986): Firmware = `'perks'`, Compression = `prestigeDoublePpLevel`, Reboot = `era`/`eraGame`, Kernels = `eons`, Reformat = `resetByteFoundry`, Releases = `'milestones'`, System log = `prestigeMuseum`, Manual = `'info'`; see CLAUDE.md.
 
@@ -169,11 +169,10 @@ becomes a non-clickable cost label and every affordable Booster converts automat
 compute-ladder entity caps at 10 normally, or 18 (10 primary + a gradually-filled 8-slot reserve) once
 that tier's outbound merge boundary has auto-merge unlocked. A separate PP **Compute (Flops)** screen
 (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP. At a pool's 9/9/9, full-lake,
-unreachable-next-Booster wall, its pool-local Reset adds 1,000 permanent lake-only capacity, empties that
+unreachable-next-Booster wall, its pool-local Flush adds 1,000 permanent lake-only capacity, empties that
 pool's Storage/lake, and free-rebuilds its disks sequentially before persistent automatic Booster
-conversion resumes; rebuilding blocks only new provisioning starts in later pools. The first reset fixes
-lake speed at 50%; reset two onward uses the normal bandwidth steps (dynamically limited by the
-following pool for non-final pools). The generator, Disks, Data Lakes, and Compute entities are
+conversion resumes; rebuilding blocks only new provisioning starts in later pools. Lake speed is 10% of
+its pool's base Bandwidth, +10% additive per flush; flushes don't change pool Bandwidth. The generator, Disks, Data Lakes, and Compute entities are
 permanent across every real Prestige; Reboot (`buildEraIntroReset`) wipes Disks/Data
 Lakes/Compute entity balances to scratch while keeping `byteCreated`, the `mainGameUnlocked` latch, and
 select automation-unlock flags. Only the Data Stream balance resets each ordinary cycle.

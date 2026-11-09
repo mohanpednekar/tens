@@ -322,10 +322,10 @@ import {
   startDataLakeAutoConvert,
   tickDataLakeAutoConvert,
   isDataLakeBoosterAuto,
-  isStoragePoolResetAvailable,
+  isStoragePoolFlushAvailable,
   isLaterPoolProvisioningLocked,
   isStoragePoolRebuilding,
-  resetStoragePool,
+  flushStoragePool,
   tickPoolResetReprovision,
   isComputeEntityAutoMergeUnlocked,
   getComputeReserveHeld,
@@ -1671,7 +1671,7 @@ describe('tickDataLakePoolDrain (buffer priority: disk filling > provisioning in
     const state = pool()
     const rate = getStoragePoolBandwidth(state, 1)
     const after = tickDataLakePoolDrain(0.001)(state)
-    expect(80_000 - after.intro.poolBuffers[1]).toBeCloseTo(rate * 0.001, 6)
+    expect(80_000 - after.intro.poolBuffers[1]).toBeCloseTo(rate * 0.1 * 0.001, 6) // lake speed = 10% of pool Bandwidth
   })
 })
 
@@ -10557,8 +10557,8 @@ describe('Data Lakes', () => {
         },
       })
       let state = level1
-      for (let i = 0; i < 20; i += 1) {
-        state = tickPoolBufferFill(1)(state) // 2,000 bits/sec each tick — vastly more than 1 unit needs
+      for (let i = 0; i < 200; i += 1) {
+        state = tickPoolBufferFill(1)(state) // 200 bits/sec each tick (10% lake speed)
       }
       expect(getDataLakeDepositedUnits(1)(state)).toBe(10) // capped exactly at capacity, never beyond
       expect(getDataLakeCurrentFillSubSize(state, 1)).toBe(null) // correctly reads as fully maxed
@@ -10567,11 +10567,11 @@ describe('Data Lakes', () => {
 
     it('feeds the matching Data Lake at the plain, un-tapered reserved rate once the pool\'s own buffer has no more room — no artificial slowdown, same posture Storage\'s own disk provisioning already uses', () => {
       const state = fullBufferState()
-      expect(getDataLakeOverflowRatePercent(state, 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT) // "receiving" indicator
+      expect(getDataLakeOverflowRatePercent(state, 1)).toBe(10) // 10% of pool base speed
       const after = tickPoolBufferFill(1)(state) // 1s elapsed, 2,000 bits/sec reserved for pool 1
       expect(after.intro.poolBuffers[1]).toBe(800_000) // untouched — buffer was already full
-      expect(getDataLakeFillBits(after, 1)).toBe(2000)
-      expect(after.intro.bits).toBe(1_000_000 - 2000)
+      expect(getDataLakeFillBits(after, 1)).toBe(200) // 10% of the 2,000 bits/sec reserved rate
+      expect(after.intro.bits).toBe(1_000_000 - 200)
       expect(getDataLakeDepositedUnits(1)(after)).toBe(0) // not a whole unit yet
     })
 
@@ -10581,7 +10581,7 @@ describe('Data Lakes', () => {
       // level-0 lake's capacity is exactly 1 unit, so completing this ONE disk maxes the whole lake
       // regardless of how much leftover time this tick still has, and fillDataLakeDisks resets
       // fillBits to exactly 0 once maxed either way.
-      const after = tickPoolBufferFill(35)(state)
+      const after = tickPoolBufferFill(350)(state) // 10% lake speed: 200 bits/sec
       expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
       expect(getDataLakeFillBits(after, 1)).toBe(0)
       expect(isDataLakeBoosterUnlocked(after, 1)).toBe(true)
@@ -10622,16 +10622,14 @@ describe('Data Lakes', () => {
       const partial = withCurrentFill(3)
       expect(getDataLakeCurrentDiskFillFraction(empty, 1)).toBeCloseTo(0.5)
       expect(getDataLakeCurrentDiskFillFraction(partial, 1)).toBeCloseTo(0.5)
-      expect(getDataLakeOverflowRatePercent(empty, 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT)
-      expect(getDataLakeOverflowRatePercent(partial, 1)).toBeCloseTo(36.5)
-      expect(getDataLakeOverflowRatePercent(createInitialGameState(), 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT) // fresh, empty disk
+      expect(getDataLakeOverflowRatePercent(empty, 1)).toBe(10)
+      expect(getDataLakeOverflowRatePercent(partial, 1)).toBe(10)
+      expect(getDataLakeOverflowRatePercent(createInitialGameState(), 1)).toBe(10)
 
-      // At capacity the original pre-reset taper reaches its 5% floor.
       const maxed = withIntro(createInitialGameState(), {
         dataLakes: { ...createInitialGameState().intro.dataLakes, 1: { capacityLevel: 0, depositedUnits: 1, fillBits: 0, boostersUnlocked: true, autoConvertActive: false, purchased: 0 } },
       })
-      expect(getDataLakeOverflowRatePercent(maxed, 1)).toBe(5)
-      expect(getDataLakeCurrentFillSubSize(maxed, 1)).toBe(null)
+            expect(getDataLakeCurrentFillSubSize(maxed, 1)).toBe(null)
       expect(getDataLakeCurrentDiskFillFraction(maxed, 1)).toBe(1)
     })
 
@@ -11361,10 +11359,10 @@ describe('Data Lakes', () => {
     it('requires 9/9/9, a full lake, and an unreachable next Booster', () => {
       let state = completePool(createInitialGameState())
       state = updateLake(state, 1, { capacityLevel: 3, depositedUnits: 1000, purchased: 999 })
-      expect(isStoragePoolResetAvailable(state, 1)).toBe(false) // next cost still fits
+      expect(isStoragePoolFlushAvailable(state, 1)).toBe(false) // next cost still fits
       state = updateLake(state, 1, { purchased: 1000 })
-      expect(isStoragePoolResetAvailable(state, 1)).toBe(true)
-      expect(isStoragePoolResetAvailable(updateLake(state, 1, { depositedUnits: 999 }), 1)).toBe(false)
+      expect(isStoragePoolFlushAvailable(state, 1)).toBe(true)
+      expect(isStoragePoolFlushAvailable(updateLake(state, 1, { depositedUnits: 999 }), 1)).toBe(false)
     })
 
     it('empties only its pool, permanently grows lake capacity, and rebuilds sequentially for free', () => {
@@ -11373,7 +11371,7 @@ describe('Data Lakes', () => {
         disks: { [kb1]: 9, [kb10]: 9, [kb100]: 9 },
         poolBuffers: { 1: 123, 2: 456 },
       })
-      const reset = resetStoragePool(1)(state)
+      const reset = flushStoragePool(1)(state)
       expect(getDataLakeCapacity(reset, 1)).toBe(2000)
       expect(reset.intro.dataLakes[1].resetCount).toBe(1)
       expect(reset.intro.dataLakes[1].purchased).toBe(1000)
@@ -11389,7 +11387,7 @@ describe('Data Lakes', () => {
       expect(tickPoolResetReprovision(first)).toBe(first) // first disk must fill before the next appears
       const filled = withIntro(first, { disks: { ...first.intro.disks, [kb1]: 1 } })
       expect(tickPoolResetReprovision(filled).intro.disksBuiltTotal[kb1]).toBe(2)
-      expect(getDataLakeOverflowRatePercent(reset, 1)).toBe(50)
+      expect(getDataLakeOverflowRatePercent(reset, 1)).toBe(20)
 
       const purged = purgeGame(withMoney(reset, PURGE_THRESHOLD))
       expect(purged.intro.poolResetRebuildingCount).toBe(1)
@@ -11406,9 +11404,10 @@ describe('Data Lakes', () => {
       expect(tickDataLakeAutoConvert(updateLake(afterPurge, 1, { depositedUnits: 1, purchased: 0 })).intro.dataLakes[1].purchased).toBe(1)
 
       let wall = updateLake(rebuilt, 1, { depositedUnits: 2000, purchased: 2000 })
-      const second = resetStoragePool(1)(wall)
+      const second = flushStoragePool(1)(wall)
       expect(second.intro.dataLakes[1].resetCount).toBe(2)
-      expect(second.intro.dataLakes[1].bandwidthSteps).toBe(1)
+      expect(getDataLakeOverflowRatePercent(second, 1)).toBe(30)
+      expect(second.intro.dataLakes[1].bandwidthSteps).toBe(0)
 
       const capacityVisible = withIntro(createInitialGameState(), { capacity: 8 * 1000 ** 4 })
       const capped = updateLake(updateLake(capacityVisible, 1, { bandwidthSteps: 20 }), 2, { bandwidthSteps: 0 })
