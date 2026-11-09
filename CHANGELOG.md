@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- **Production speed bonus now unlocks at 10 Purges** and is ×(1 + log₁₀ of your Purge count), replacing the 10,000 PP unlock and +1%-per-unspent-PP bonus. It is automatic — nothing to buy on Firmware.
+- **Production speed bonus now unlocks at 10 Purges** and is ×log₁₀ of your Purge count, replacing the 10,000 PP unlock and +1%-per-unspent-PP bonus. It is automatic — nothing to buy on Firmware.
 
 - **Array read caches fill at 5× Bandwidth, not instantly.** A pool's smallest array's read cache now fills from Staging as a timed transfer at 5× the pool's Bandwidth (and pool tap bonus) instead of snapping in whole blocks, and shows partial fill. Disk fill speeds and the Data Stream / pool fill multiplier curves are unchanged.
 

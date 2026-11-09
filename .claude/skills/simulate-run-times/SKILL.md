@@ -89,7 +89,7 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   continue climbing until Overclock (`getOverclockRequirement`) fires; otherwise repeatedly taking
   the level-3 Scale Up would prevent the first level-5 Overclock forever. This mirrors Auto Scale
   Up's own final-tier pause.
-- **PP lever:** the production-speed bonus is automatic at 10 Purges (×(1 + log10 count)), no PP spent. Other PP automations (Smart, Auto-Scale-Up, Auto-Prestige, tickspeed autobuyer) are
+- **PP lever:** the production-speed bonus is automatic at 10 Purges (×log10(count)), no PP spent. Other PP automations (Smart, Auto-Scale-Up, Auto-Prestige, tickspeed autobuyer) are
   **not** bought — those are separate levers; say so rather than silently enabling them if the
   user asks about those specifically.
 - Career mode calls `purgeGame` between cycles so permanent Foundry upgrades and

@@ -2048,7 +2048,7 @@ test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled withou
 test('purge points and the production speed bonus are shown once 10 Purges are reached', () => {
   seedMainGameState({
     resources: { base: 10 },
-    purge: { xp: 0, points: 50, count: 10, highestMilestone: 1 },
+    purge: { xp: 0, points: 50, count: 100, highestMilestone: 1 },
   })
   render(<App />)
 
@@ -2491,7 +2491,7 @@ test('clicking the money balance expands a breakdown of every global production 
     owned: { tier02: 1, tier10: 10 },
     scaleUpCount: 2,
     globalTickspeedMultiplier: 1,
-    purge: { xp: 0, points: 50, count: 10, highestMilestone: 1 },
+    purge: { xp: 0, points: 50, count: 100, highestMilestone: 1 },
   })
   render(<App />)
 
@@ -2503,7 +2503,7 @@ test('clicking the money balance expands a breakdown of every global production 
 
   expect(moneyDisplay).toHaveAttribute('aria-expanded', 'true')
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
-  expect(breakdown).toHaveTextContent(/prestige speed bonus: 2x production speed from 10 purges/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: 2x production speed from 100 purges/i)
   expect(breakdown).toHaveTextContent(/scale up: 2 activations; multiplier varies by tier/i)
   expect(breakdown).toHaveTextContent(/clock speed: \+[\d.]+% faster ticks on every tier(?! \(lv)/i)
 

@@ -331,7 +331,7 @@ function actSoftResets(state) {
   return overclockGame(scaleUpGame(state))
 }
 
-// The speed bonus is now automatic at 10 Purges (×(1 + log10 count)); nothing to buy.
+// The speed bonus is now automatic at 10 Purges (×log10(count)); nothing to buy.
 function actSpeedBonus(state) {
   return state
 }

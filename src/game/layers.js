@@ -618,7 +618,7 @@ export const PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10
 
 // Passive production-speed bonus, uniformly across every tier (see engine.js's
 // getPrestigeProductionMultiplier): unlocked once the save has Purged
-// PRESTIGE_SPEED_BONUS_UNLOCK_PURGES times, then ×(1 + log10(purge count)). No PP cost.
+// PRESTIGE_SPEED_BONUS_UNLOCK_PURGES times, then ×log10(purge count). No PP cost.
 export const PRESTIGE_SPEED_BONUS_UNLOCK_PURGES = 10
 // Per-tier base cost for the tickspeed multiplier ladder (see engine.js's
 // getTickspeedMultiplierBaseCost/getTickspeedMultiplierCost) — 10^10 for the first tier (index 0),

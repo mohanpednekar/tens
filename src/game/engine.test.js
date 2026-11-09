@@ -462,8 +462,8 @@ const withGlobalTickspeedMultiplier = (state, level = 1) => ({
   globalTickspeedMultiplier: level,
 })
 
-// 10 Purges is the unlock threshold: ×(1 + log10(10)) = ×2.
-const withPrestigeSpeedBonusUnlocked = (state, count = 10) => ({
+// 10 Purges is the unlock threshold: ×log10(10) = ×1; 100 Purges → ×2.
+const withPrestigeSpeedBonusUnlocked = (state, count = 100) => ({
   ...state,
   purge: { ...state.purge, count },
 })
@@ -6289,10 +6289,10 @@ describe('getPrestigeProductionMultiplier', () => {
     expect(getPrestigeProductionMultiplier(9)).toBe(1)
   })
 
-  it('is 1 + log10(purge count) from 10 Purges on', () => {
-    expect(getPrestigeProductionMultiplier(10)).toBeCloseTo(2)
-    expect(getPrestigeProductionMultiplier(100)).toBeCloseTo(3)
-    expect(getPrestigeProductionMultiplier(1000)).toBeCloseTo(4)
+  it('is log10(purge count) from 10 Purges on', () => {
+    expect(getPrestigeProductionMultiplier(10)).toBeCloseTo(1)
+    expect(getPrestigeProductionMultiplier(100)).toBeCloseTo(2)
+    expect(getPrestigeProductionMultiplier(1000)).toBeCloseTo(3)
   })
 
   it('treats negative counts as 0', () => {
@@ -7436,7 +7436,7 @@ describe('tickGame', () => {
 
   it('applies the Purge-count production-speed bonus once unlocked', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 1)
-    const boosted = withPrestigeSpeedBonusUnlocked(base) // 10 Purges → ×2
+    const boosted = withPrestigeSpeedBonusUnlocked(base) // 100 Purges → ×2
     expect(bytesOf(tickGame(1)(boosted))).toBe(
       bytesOf(base) + 2
     )
@@ -7444,10 +7444,10 @@ describe('tickGame', () => {
 
   it('floors a fractional Prestige Points production multiplier instead of crediting a fraction', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 1)
-    // 31 Purges → ×(1 + log10 31) ≈ ×2.49, raw production 1 × 2.49 floors to 2
-    const boosted = withPrestigeSpeedBonusUnlocked(base, 31)
+    // 316 Purges → ×log10(316) ≈ ×2.5, raw production 1 × 2.5 floors to 2
+    const boosted = withPrestigeSpeedBonusUnlocked(base, 316)
     const after = tickGame(1)(boosted)
-    expect(bytesOf(after)).toBe(bytesOf(base) + 2) // floor(2.49) = 2
+    expect(bytesOf(after)).toBe(bytesOf(base) + 2) // floor(2.5) = 2
   })
 
   it('multiplies production by the Scale Up multiplier', () => {
@@ -7459,7 +7459,7 @@ describe('tickGame', () => {
 
   it('stacks the Scale Up multiplier with the Purge-count speed bonus', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 10)
-    // ×2 (Scale Up) × ×2 (10 Purges) = ×4
+    // ×2 (Scale Up) × ×2 (100 Purges) = ×4
     const state = withScaleUpCount(
       withPrestigeSpeedBonusUnlocked(base), 1
     )

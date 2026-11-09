@@ -644,7 +644,7 @@ const InfoPage = () => {
           </li>
           <li>
             From {PRESTIGE_SPEED_BONUS_UNLOCK_PURGES} Purges on, production speed gets a bonus of
-            ×(1 + log₁₀ of your Purge count).
+            ×log₁₀ of your Purge count.
           </li>
           <li>
             Resets resources, owned tiers and this run’s progress. Unlocked autobuyers stay, and
