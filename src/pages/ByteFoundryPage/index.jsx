@@ -3,7 +3,7 @@ import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/
 import { COST_ICON } from 'components/icons'
 import DiskArrayRow from 'components/DiskArrayRow'
 import LeadIcon from 'components/LeadIcon'
-import DataLakePanel from 'components/DataLakePanel'
+import DataLakePanel, { ThinProgressBar } from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
@@ -1132,7 +1132,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             title={speedUpgradeQueued
               ? 'Upgrading Bitrate — pulling the Data Stream\'s Bitrate into the bar'
               : `Upgrading to ${nextCapacityText} — pulling the Data Stream's base Bitrate into the bar`}
-            $progress={runningProgress}
+            $progress={0}
           >
             <RunningUpgradeContent>
               <RunningTitle><LeadIcon>⏫</LeadIcon>Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
@@ -1167,6 +1167,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               )}
               <RunningTime>⏳ {runningTimeLeftText}</RunningTime>
             </RunningUpgradeContent>
+            <ThinProgressBar $fill={Math.min(1, Math.max(0, runningProgress / 100))} aria-hidden="true" />
             <VisuallyHidden
               role="progressbar"
               aria-label="data stream upgrade progress"

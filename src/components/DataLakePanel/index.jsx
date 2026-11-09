@@ -130,6 +130,28 @@ const LakeFilledText = styled.span`
   text-shadow: 0 0 2px ${props => props.theme.color.surface};
 `
 
+// Thin progress bar under the balance, shown on a collapsed lake header: progress toward the next
+// disk (the same fraction the expanded LakePoolTile shows). `ThinProgressBar` is reused by
+// ByteFoundryPage's running-upgrade tile so both read the same.
+export const ThinProgressBar = styled.div`
+  position: relative;
+  width: 100%;
+  height: 4px;
+  margin-top: 0.3rem;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, ${props => props.theme.color.surfaceSunken} 70%, ${props => props.theme.color.surface});
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: ${props => props.theme.color.accent};
+    transform-origin: left center;
+    transform: scaleX(${props => props.$fill});
+  }
+`
+
 const LakeSpeedText = styled.span`
   flex-shrink: 0;
   margin-left: auto;
@@ -401,6 +423,8 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
           ? formatLakeTimeLeft((nextCostBits - filledBits) / fillSpeed)
           : null
 
+        const headerFillSizeBits = currentFillSubSize !== null ? unitBits * currentFillSubSize : 0
+        const headerFillFraction = poolReady && headerFillSizeBits > 0 ? clampFraction(fillBits / headerFillSizeBits) : 0
         const costLabel = <><LeadIcon>{COST_ICON}</LeadIcon>{nextCostSize}</>
         return (
           <LakeBlock aria-label={showHeader ? `${label} lake` : undefined} key={tierIndex}>
@@ -482,6 +506,16 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
 
                 </LakeSubRow>
                 <LakeFilledText title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>
+                {headerOnly && (
+                  <ThinProgressBar
+                    role="progressbar"
+                    aria-label={`${label} lake fill progress`}
+                    aria-valuenow={Math.round(headerFillFraction * 100)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    $fill={headerFillFraction}
+                  />
+                )}
               </LakeHeader>
             )}
 
