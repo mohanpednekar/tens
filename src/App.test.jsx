@@ -3597,7 +3597,7 @@ test('Data Stream tile no longer shows a separate "bits this cycle" transfer-blo
 // engine.js). Disks are a storage MEDIUM, not a one-shot pre-paid item: starting a build spends
 // the cost immediately (DISK_BUILD_COST_MULTIPLIER times its own Byte-accurate size — see
 // getDiskCost) but only constructs an EMPTY container once a real build TIME finishes (see
-// tickProvisionDisk); Memory then keeps each array's Cache full (whole-block transfers) and
+// tickProvisionDisk); Memory then keeps each array's Cache full (a timed 5× transfer) and
 // auto-fills empty disks from a full read cache on a later tick (see tickDiskAutoFill), smallest
 // size first. A FULL disk's pull-eligibility is gated on SOME tier's CURRENT per-unit level cost
 // catching up to that disk's size AND that level having zero progress already (see
@@ -4157,10 +4157,11 @@ describe('Byte Foundry Storage', () => {
     unmount()
   })
 
-  test('the first empty read-cache block mirrors the pool buffer\'s progress, so the instant block fill still looks gradual', () => {
-    const bufferBits = currentBankSize / DISK_CACHE_BLOCK_COUNT / 4
+  test('a partly filled read-cache block shows its real fill progress (the cache fills continuously from Staging)', () => {
+    const cachedBits = currentBankSize / DISK_CACHE_BLOCK_COUNT / 4
     seedIntroState({
-      poolBuffers: { 1: bufferBits },
+      poolBuffers: { 1: 0 },
+      diskCache: { [currentBankSize]: cachedBits },
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: 1 },
@@ -4186,11 +4187,11 @@ describe('Byte Foundry Storage', () => {
     // well under pool 1's own Capacity^0.8 ceiling, so the large seeded Capacity doesn't bind it.
     // with intro.bits seeded at 0, tickPoolBufferFill stays inert throughout (nothing to
     // transfer), so it can't perturb the directly-seeded pool buffer either.
-    // A cache refill FROM the pool buffer is instant and whole-block (no bandwidth budget), so the
-    // seeded 16,000-bit buffer fills this size's 8,000-bit cache on the first tick; flushing the full
-    // cache into the empty disk (a DISK filling FROM a cache, at
+    // A cache refill FROM the pool buffer is a timed transfer at 5× the pool's 2,000 bits/s Bandwidth
+    // (10,000 bits/s), so the seeded 16,000-bit buffer fills this size's 8,000-bit cache in ~0.8s;
+    // flushing one cache block into the empty disk (a DISK filling FROM a cache, at
     // DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER × the pool's capped rate) then takes ~0.25s, after
-    // which the cache instantly refills from the remaining buffer.
+    // which the cache refills from the remaining buffer over another ~0.8s.
     const bandwidthCapBits = 2000
     // Pool Capacity advances in plain decade-power-of-10 steps (getDecadePowerEquivalentBits):
     // 2**17 bits lands on decade step 10**5 Bytes (800,000 bits), whose Capacity^0.8 ceiling
@@ -4214,7 +4215,7 @@ describe('Byte Foundry Storage', () => {
     openStorage()
     expect(screen.getByLabelText(/empty 1 kb disk/i)).toBeInTheDocument()
 
-    act(() => { vi.advanceTimersByTime(600) })
+    act(() => { vi.advanceTimersByTime(1300) })
 
     // Read cache topped up and flushed into the empty disk once fully staged. At tier level 2 the
     // filled disk is stranded (past its own required level) — assert the fill itself, not a pull
@@ -4227,19 +4228,17 @@ describe('Byte Foundry Storage', () => {
     // below the post-fill remainder rather than an exact balance. Same for the cache: it emptied
     // into the disk on flush, then immediately started bandwidth-limited refilling — assert it
     // flushed (well below full), not that it stays at 0.
-    // The cache refills instantly after the flush, so the buffer is largely spent.
-    expect(saved.intro.diskCache[currentBankSize]).toBe(currentBankSize)
+    // The cache is only partway through refilling after the flush (a timed transfer, not instant).
+    expect(saved.intro.diskCache[currentBankSize] ?? 0).toBeLessThan(currentBankSize)
     expect(saved.intro.disks[currentBankSize]).toBe(1)
     expect(saved.owned.tier01).toBe(0)
 
-    // The same capped bandwidth refills the cache from the remaining balance — another 4s (8,000 /
-    // 2,000, i.e. 400ms more of real ticks) — with no further flush this time (the array's only
-    // container is already full).
-    act(() => { vi.advanceTimersByTime(400) })
+    // The same 5× transfer finishes refilling the cache from the remaining balance — about another
+    // 0.8s of real ticks — with no further flush this time (the array's only container is already full).
+    act(() => { vi.advanceTimersByTime(1000) })
 
     saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    // Fully drained into the cache; only the small continuous top-up remains (< one cache-fill).
-    expect(saved.intro.poolBuffers['1']).toBeLessThan(currentBankSize * 3) // the 10x empty-buffer multiplier tops it up faster
+    // The cache is full again; the pool buffer keeps its own continuous top-up on top of what was spent.
     expect(saved.intro.diskCache[currentBankSize]).toBe(currentBankSize)
     expect(saved.intro.disks[currentBankSize]).toBe(1)
     expect(saved.owned.tier01).toBe(0)

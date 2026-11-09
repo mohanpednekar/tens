@@ -9249,3 +9249,13 @@ still passed unchanged (the captured screens do not show the renamed nav item).
 - Side mechanics: Snapshot / Rollback, Uptime, Hotfix.
 - Others: Garbage Collector (auto-Compaction), Latency, Cache hit, Thermal throttling,
   Parity / RAID, Lakehouse / Data Warehouse, Tape / Cold storage.
+
+## Read-cache refill from Staging: instant → timed 5× (2026-11)
+
+The maintainer asked for "10× speed as default for array (disk) buffers" to become 5×. A first reading changed the pool Staging
+buffer's empty fill multiplier (500%) and was reverted (the maintainer meant the disk buffers, not the pool buffer; the
+pool/Data Stream curves keep their symmetric 10×↔0.1×). The only 10× on the disk side was the long-unused
+`CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (cache refills had been made instant in PR #879), so `tickDiskAutoFill` Pass 1 is now a
+continuous timed transfer at `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` = 5 × pool Bandwidth × pool tap bonus, replacing the
+whole-block instant top-up (and its sub-block dump edge case). Rule from the maintainer: any speed curve starting at x ends at 1/x —
+not applicable to this constant-rate transfer, and the existing Data Stream/pool curves already satisfy it.

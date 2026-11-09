@@ -237,7 +237,7 @@ export const FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT = 100
 // diskProvisionPasses in createInitialGameState. Disks are a genuine storage MEDIUM, not a one-shot
 // pre-paid item: building one only constructs a permanent, EMPTY container (after its own build
 // cost is paid in installments, then a real build TIME — see below); Data Stream (intro.bits) then
-// keeps each array's Cache full (whole-block transfers —
+// keeps each array's Cache full (a timed 5× transfer —
 // see the cache comment / tickDiskAutoFill) and flushes a full read cache into an empty disk over
 // one cache-block production duration when no tier claim blocks that size — leftover Data Stream
 // stays as its own balance. Pulling a FULL disk grants 1 free tier01 unit once tier01's own
@@ -299,7 +299,7 @@ export const DISK_LADDER_SIZE_MULTIPLIER = 10
 // DISK_CACHE_BLOCK_COUNT below) economically substitutes for the 10th disk, so only 9 need to be
 // actually built and paid for. See docs/DESIGN_HISTORY.md.
 export const DISK_ARRAY_LADDER_CAP = 9
-// A disk array's cache — a permanent always-full reserve Memory tops up in whole-block transfers
+// A disk array's cache — a permanent always-full reserve Memory tops up as a timed 5× transfer
 // (see tickDiskAutoFill in engine.js). Split into this many equal blocks, each holding
 // `size / DISK_CACHE_BLOCK_COUNT` bits (a real 1 KB/8000-bit array → 8 × 1000 bits/"1 Kb"; a 1 MB
 // array → 8 × 1 Mb — lowercase 'b' bit-scale via formatCacheSize, distinct from Disks' uppercase
@@ -322,7 +322,9 @@ export const DISK_CACHE_BLOCK_COUNT = 8
 // A DISK filling FROM a cache (read-cache → disk, write-cache → disk) moves faster than Memory's
 // own live production, since the cache itself is a pre-staged buffer, not a live trickle.
 export const DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER = 2
-export const CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER = 10
+// An array's read cache (its disk buffer) filling FROM its pool's Staging buffer: a timed transfer at
+// this multiple of the pool's Bandwidth (tickDiskAutoFill Pass 1), 5x rather than the old 10x.
+export const CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER = 5
 // A CACHE filling FROM Disks (write-cache collecting from the source size's full disks) — faster
 // than a disk filling FROM a cache (DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER above): moving an
 // already-built Disk's contents into the write cache is a bulk transfer, not bandwidth-limited the

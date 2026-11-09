@@ -163,7 +163,7 @@ const DiskSquare = styled.div.attrs(props => ({
 // The array's own always-full cache row — DISK_CACHE_BLOCK_COUNT blocks, each worth
 // size / DISK_CACHE_BLOCK_COUNT bits (shown in the bit-scale Kb/Mb/… unit via formatCacheSize, not
 // formatDiskSize's Byte-scale one — see CLAUDE.md's "Economy model"). Steady state is full; Memory
-// refills whole blocks when the size was just unlocked/built, a read-cache flush just drained one,
+// refills continuously from Staging when the size was just unlocked/built, a read-cache flush just drained one,
 // or (this size's own tier sitting at level 1) tickDiskLevelOneCachePull just spent some of it —
 // a pure status display, never clickable (see "Economy model"'s Disks section — the cache-release-
 // to-Bits mechanic this row used to expose was retired in favor of the automatic level-1 pull).
@@ -322,14 +322,11 @@ const DiskArrayRow = ({ actions, size, state }) => {
   const readFlushRemainingFraction = readFlushing
     ? Math.max(0, 1 - getDiskReadCacheFlushFill(readFlush))
     : 1
-  // Blocks land in the cache instantly and whole (tickDiskAutoFill), so for display the first empty
-  // block mirrors the pool buffer's progress toward the next block — it reads as a gradual fill.
-  const bufferProgressBits = readFlushing || cached >= size
-    ? 0
-    : Math.min(blockBits, getPoolBufferBits(state, getPoolIndexForDiskSize(size)) ?? 0)
+  // The cache fills continuously from its pool's Staging (tickDiskAutoFill Pass 1), so a partial
+  // block is real progress, shown as-is.
   const displayCached = readFlushing
     ? size * readFlushRemainingFraction
-    : cached + bufferProgressBits
+    : cached
   // Only the pool's smallest size keeps a read cache at all (see isDiskReadCacheEligible in
   // engine.js) — every larger size fills exclusively via the write-cache ripple below, so there's
   // nothing here to render for it.

@@ -358,8 +358,8 @@ automatically now (`tickDiskPull`/`tickDiskLevelOneCachePull`), not through a pl
 
 - A `CacheBlocksRow` (`role="group"`, `aria-label="<size> read cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
-  array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Memory refills whole blocks after a
-  level-1 cache pull or new unlock (`tickDiskAutoFill`); a full cache flushes to an empty disk over
+  array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Staging refills it continuously at 5× the pool's Bandwidth after a
+  level-1 cache pull or new unlock (`tickDiskAutoFill`; a partly filled block shows its real fill); a full cache flushes to an empty disk over
   one cache-block production duration when no tier claim blocks. Each block shows its bit-scale
   size as an in-cell label and its own fill fraction only — a block reads **full** (`$full` — a
   raised fill) once its own share of `intro.diskCache[size]` is filled, or shows a partial/flushing
@@ -394,7 +394,7 @@ There is no pause/resume control for Disk Fill on this page, and no
 unconditional: `tickDiskPull` and `tickDiskLevelOneCachePull` run every tick regardless of any
 tier's own autobuyer state. Filling itself (`tickDiskAutoFill`) has no UI control at all
 either — it's fully automatic, every tick, no toggle: Memory first keeps every array's Cache full
-(whole-block transfers), then flushes a full read cache into an empty disk over one cache-block
+(a timed 5× transfer), then flushes a full read cache into an empty disk over one cache-block
 production duration when no tier claim blocks that size, smallest size first, whenever that size
 isn't mid-build. This page does not show tier01's own current purchase-block progress — nothing on
 either page renders it any more, now that ByteFoundryPage's manual transfer-block row (which used to
