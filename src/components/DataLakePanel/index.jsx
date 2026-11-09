@@ -117,7 +117,8 @@ const LakeSubRow = styled.div`
 const LakeFilledText = styled.span`
   position: absolute;
   left: 50%;
-  top: 50%;
+  /* With the collapsed header's bar below, center on the title + sub rows only (bar = 4px + 0.3rem margin). */
+  top: ${props => (props.$withBar ? 'calc(50% - 2px - 0.15rem)' : '50%')};
   transform: translate(-50%, -50%);
   pointer-events: none;
   color: ${props => props.theme.color.text};
@@ -505,7 +506,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               ) : null}
 
                 </LakeSubRow>
-                <LakeFilledText title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>
+                <LakeFilledText $withBar={headerOnly} title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>
                 {headerOnly && (
                   <ThinProgressBar
                     role="progressbar"
