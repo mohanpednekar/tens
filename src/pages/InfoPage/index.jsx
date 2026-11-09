@@ -39,9 +39,10 @@ import {
   MAX_OFFLINE_SECONDS,
   OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS,
   OFFLINE_PROGRESS_SPEED_MULTIPLIER,
-  PRESTIGE_POINT_SPEED_BONUS,
   PRESTIGE_POWERS_PER_PP_BASE,
-  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
+  PLAYTIME_BONUS_PER_HOUR,
+  PLAYTIME_BONUS_UNLOCK_COST,
+  PRESTIGE_SPEED_BONUS_UNLOCK_PURGES,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
@@ -191,7 +192,7 @@ const InfoPage = () => {
             resets, plus unspent PP, the Purge count, Compression levels, owned Compute (Flops) units,
             and the whole Foundry (Capacity, Disks, Data Lakes, Compute entities).{' '}
             <em>Keeps:</em> automation unlocks, Overflow mode, the main-game unlock, the System log,
-            Flops autobuyer unlocks, the Production speed bonus, Kernels and hyperscalers. Awards Kernels.
+            Flops autobuyer unlocks, Kernels and hyperscalers. Awards Kernels.
           </li>
           <li>
             <strong>Reinstall</strong> — a future layer above Reboot, not yet in the game.
@@ -641,9 +642,16 @@ const InfoPage = () => {
             is permanent across Purges.
           </li>
           <li>
-            Spend PP on Firmware for automation and bonuses — e.g. the one-time Production speed bonus
-            ({PRESTIGE_SPEED_BONUS_UNLOCK_COST.toLocaleString()} PP) gives +
-            {PRESTIGE_POINT_SPEED_BONUS * 100}% production speed per unspent PP.
+            Spend PP on Firmware for automation and upgrades.
+          </li>
+          <li>
+            From {PRESTIGE_SPEED_BONUS_UNLOCK_PURGES} Purges on, production speed gets a bonus of
+            ×log₁₀ of your Purge count.
+          </li>
+          <li>
+            The one-time Playtime bonus ({PLAYTIME_BONUS_UNLOCK_COST} PP on Firmware → Prestige) adds
+            +{PLAYTIME_BONUS_PER_HOUR * 100}% production speed per hour of active play; offline,
+            hidden-tab, and background catch-up time doesn't count.
           </li>
           <li>
             Resets resources, owned tiers and this run’s progress. Unlocked autobuyers stay, and

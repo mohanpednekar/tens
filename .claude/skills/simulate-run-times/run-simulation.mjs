@@ -34,7 +34,7 @@
 //     - Soft resets: Scale Up first while advancing through the tier ladder. At the final-tier
 //       target, defer Scale Up and wait for Overclock so a level-3 reset cannot starve its level-5
 //       gate (see actSoftResets below).
-//     - Unlock the passive PP speed bonus the instant PRESTIGE_SPEED_BONUS_UNLOCK_COST is banked.
+//     - (Speed bonus is automatic at 10 Purges — no PP spent.)
 //       Other PP automations (Smart / Auto-Scale-Up / Auto-Prestige / tickspeed autobuyer) are NOT
 //       bought — those are separate levers; this bot isolates Foundry + ladder + free/Money/XP
 //       tickspeed + prestige-count autobuyer milestones.
@@ -57,7 +57,6 @@ import {
   applyAutobuyerMilestones,
   buyBooster,
   buyGlobalTickspeedMultiplier,
-  buyPrestigeSpeedBonus,
   buyTierQuantity,
   buyTickspeedMultiplier,
   canActivateComputeBoost,
@@ -94,7 +93,6 @@ import {
   DATA_LAKE_TIER_COUNT,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   MONEY_ID,
-  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   TIER_DEFINITIONS,
   getStoragePoolMemoryBounds,
 } from '../../../src/game/layers.js'
@@ -333,10 +331,8 @@ function actSoftResets(state) {
   return overclockGame(scaleUpGame(state))
 }
 
+// The speed bonus is now automatic at 10 Purges (×log10(count)); nothing to buy.
 function actSpeedBonus(state) {
-  if (!state.prestigeSpeedBonusUnlocked && (state.purge?.points ?? 0) >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) {
-    return buyPrestigeSpeedBonus(state)
-  }
   return state
 }
 
@@ -368,7 +364,7 @@ function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = 
         finalMoney: state.resources[MONEY_ID],
         scaleUps: (state.scaleUpCount ?? 0) - scaleUpsAtStart,
         overclock: (state.overclockCount ?? 0) - overclocksAtStart,
-        speedBonusUnlocked: Boolean(state.prestigeSpeedBonusUnlocked),
+        speedBonusUnlocked: Boolean((state.purge?.count ?? 0) >= 10),
         autobuyers: countUnlockedAutobuyers(state),
         capacity: state.intro?.capacity ?? 0,
         coresEver: state.intro?.computeCoresEverEarned ?? 0,
@@ -399,7 +395,7 @@ function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = 
     finalMoney: state.resources[MONEY_ID],
     scaleUps: (state.scaleUpCount ?? 0) - scaleUpsAtStart,
     overclock: (state.overclockCount ?? 0) - overclocksAtStart,
-    speedBonusUnlocked: Boolean(state.prestigeSpeedBonusUnlocked),
+    speedBonusUnlocked: Boolean((state.purge?.count ?? 0) >= 10),
     autobuyers: countUnlockedAutobuyers(state),
     capacity: state.intro?.capacity ?? 0,
     coresEver: state.intro?.computeCoresEverEarned ?? 0,
@@ -616,7 +612,7 @@ if (runPP) {
     const result = simulateCycle(seedState({ purgeCount: 0, startingPP: pp }))
     const remainingPP = result.state.purge.points
     const bonusCell = result.speedBonusUnlocked
-      ? `+${remainingPP}% (spent ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} to unlock)`
+      ? `+${remainingPP}% (automatic at 10 Purges)`
       : 'locked'
     printCycleRow([String(pp), bonusCell], result)
   }
@@ -657,7 +653,7 @@ Ideal attentive player (authoritative detail: \`.claude/skills/simulate-run-time
 3. **Factory:** Autobuyers when unlocked; manual \`buyTierQuantity\` when an autobuyer would stall on a full cost-block.
 4. **Tickspeed:** Buy global + per-tier tickspeed whenever affordable; dump run XP into last-tier XP tickspeed.
 5. **Soft resets:** Scale Up first while advancing through the tier ladder (flat level 3); at the final-tier target, skip Scale Up and keep climbing until Overclock fires so its level-5 gate is reachable.
-6. **PP:** Unlock purge speed bonus at 10000 PP (spends 10000); do not buy Smart / Auto-Scale-Up / Auto-Prestige in this baseline.
+6. **PP:** Speed bonus is automatic at 10 Purges (no PP spent); do not buy Smart / Auto-Scale-Up / Auto-Prestige in this baseline.
 
 ## Simulation results
 

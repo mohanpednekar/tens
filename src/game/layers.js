@@ -616,18 +616,15 @@ export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.25
 // make up one level.
 export const PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10
 
-// Each unspent Prestige Point adds a flat 1% production-speed bonus, uniformly across every
-// tier (see engine.js's getPrestigeProductionMultiplier) — replaces the old "prestige level
-// doubles production" mechanic. Spending points on autobuyer automation trades this bonus away.
-// This bonus is inert until unlocked (see PRESTIGE_SPEED_BONUS_UNLOCK_COST below) — it no longer
-// applies automatically just from holding points.
-export const PRESTIGE_POINT_SPEED_BONUS = 0.01
-// One-time PP cost to unlock the passive production-speed bonus above (see engine.js's
-// buyPrestigeSpeedBonus) — before this is bought, unspent Prestige Points grant no production
-// bonus at all, regardless of balance. Permanent once bought, like autobuyer automation/
-// Auto-Prestige. Priced well above the global automation unlocks (see AUTOMATION_INTERVAL_CONFIG),
-// since it's a passive, always-on bonus rather than a one-shot action.
-export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000
+// Passive production-speed bonus, uniformly across every tier (see engine.js's
+// getPrestigeProductionMultiplier): unlocked once the save has Purged
+// PRESTIGE_SPEED_BONUS_UNLOCK_PURGES times, then ×log10(purge count). No PP cost.
+export const PRESTIGE_SPEED_BONUS_UNLOCK_PURGES = 10
+// One-time PP unlock for the playtime bonus: +1% production per hour of ACTIVE play (visible live
+// ticks only — simulated offline/background catch-up and hidden-tab ticks never count). See
+// engine.js's getPlaytimeProductionMultiplier/buyPlaytimeBonus.
+export const PLAYTIME_BONUS_UNLOCK_COST = 100
+export const PLAYTIME_BONUS_PER_HOUR = 0.01
 // Per-tier base cost for the tickspeed multiplier ladder (see engine.js's
 // getTickspeedMultiplierBaseCost/getTickspeedMultiplierCost) — 10^10 for the first tier (index 0),
 // decreasing by a power of ten per subsequent tier (10^9, 10^8, … 10^1 for the 10th/last tier).

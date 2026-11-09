@@ -14,7 +14,7 @@ powers of ten. No routing library, no backend — state lives in React and persi
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
 `MainPage` (tier ladder), `PerksPage` (after first Prestige: 🤖 Automation / ✦ Prestige icon
-tabs — one row per automation spanning unlock → pause → speed; Compression, speed bonus, Overflow mode, Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
+tabs — one row per automation spanning unlock → pause → speed; Compression, Overflow mode, Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
 second-level tabs). More (Manual / Releases / Settings) is always available, including during the
@@ -638,7 +638,8 @@ a purchase control yet (deferred to #414, blocked pending maintainer-approved sp
 `getPrestigePointsAwarded`: 1 base PP at 1 Googol Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64)
 additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Compression
 upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then doubles PP-per-power; cost
-`100^(level+1)` PP). `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
+`100^(level+1)` PP). Production speed bonus (`getPrestigeProductionMultiplier`) is automatic at 10
+Purges: ×`log10(count)` (else ×1) — no PP cost; see `docs/ECONOMY_REFERENCE.md`. `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
 (`getMoneyExponent`/`getPurgePercent`) — only the live freeze/Prestige trigger moved to
 `PURGE_THRESHOLD`; see `docs/DESIGN_HISTORY.md` for why. MainPage's headline balance (`MoneyHero`) switches from Bits to whole Bytes once the balance reaches
 8000 Bits (`formatMoneyBalance`, `MONEY_BYTES_DISPLAY_THRESHOLD`) — every other `formatCurrency` call

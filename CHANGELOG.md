@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Playtime bonus** (Firmware → Prestige, one-time 100 PP): +1% production speed per hour of active play. Offline, background catch-up, and hidden-tab ticks don't count; it persists across Purge and Reboot.
+
 - **Click an empty disk to fill it sooner.** Clicking an empty disk (any size above its pool's smallest) queues it: its write cache then takes full smaller disks from the same pool while Staging keeps filling it, so not every smaller disk is used.
 
 - **Auto Restage (16 PP, Perks → Unlocks).** Once bought, XP is spent on Restage automatically whenever possible (each spend still resets every other tier's owned quantity and Bits). Pause it on Perks → Toggles.
@@ -25,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Perks → Unlocks → Global Automation now always lists Auto Overclock (32 PP; needs Auto Scale Up first) and Auto-Prestige (64 PP); they were hidden until their prerequisites were met.
 
 ### Changed
+
+- **Production speed bonus now unlocks at 10 Purges** and is ×log₁₀ of your Purge count, replacing the 10,000 PP unlock and +1%-per-unspent-PP bonus. It is automatic — nothing to buy on Firmware.
 
 - **Array read caches fill at 5× Bandwidth, not instantly.** A pool's smallest array's read cache now fills from Staging as a timed transfer at 5× the pool's Bandwidth (and pool tap bonus) instead of snapping in whole blocks, and shows partial fill. Disk fill speeds and the Data Stream / pool fill multiplier curves are unchanged.
 

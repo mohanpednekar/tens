@@ -357,6 +357,10 @@ test('the Manual nav item opens the Info page and Factory returns, preserving ga
   expect(screen.getByRole('heading', { level: 2, name: /^power$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^compute$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^purge$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 2, name: /^prestige ladder$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/prestige ladder section/i)).not.toHaveTextContent(
+    /the Production speed bonus/i,
+  )
   expect(screen.getByLabelText(/byte foundry section/i)).toHaveTextContent(/forced priority/i)
   expect(screen.getByLabelText(/storage section/i)).toHaveTextContent(/clean-slate disk/i)
   expect(screen.getByLabelText(/power section/i)).toHaveTextContent(/stack/i)
@@ -1493,25 +1497,14 @@ test('Firmware groups by feature: Automation holds every automation, Prestige th
   expect(screen.queryByLabelText(/^purge points category$/i)).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('tab', { name: /open prestige/i }))
-  // No separate reveal gate — the speed bonus shows as soon as the page itself is reachable.
-  expect(screen.getByLabelText(/^purge points category$/i)).toHaveTextContent(/production speed bonus/i)
   expect(screen.getByLabelText(/^purge points category$/i)).toHaveTextContent(/compression/i)
   expect(screen.getByLabelText(/^purchasing category$/i)).toBeInTheDocument()
   expect(screen.queryByLabelText(/^global automation category$/i)).not.toBeInTheDocument()
-})
-
-test('the production speed bonus stays listed with an unlocked badge once bought', async () => {
-  const user = userEvent.setup()
-  seedMainGameState({
-    resources: { base: 10 },
-    prestigeSpeedBonusUnlocked: true,
-    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  })
-  render(<App />)
-  await openPerksTab(user, /open prestige/i)
-
-  expect(screen.getByLabelText('Production speed bonus unlocked')).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /unlock purge point production speed bonus/i })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^production speed bonus upgrade$/i)).not.toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: /open prestige/i })).toHaveAttribute(
+    'title',
+    'Prestige — Compression, playtime bonus, Overflow mode and Buy max',
+  )
 })
 
 test('an Enable Auto Scale Up button appears on Firmware → Automation after the first prestige, and spends 16 PP to enable it', async () => {
@@ -1863,12 +1856,6 @@ test.each([
     seed: { ...allTiersSmartSeed(), purge: { xp: 0, points: 63, count: 1, highestMilestone: 1 } },
     buttonName: /enable auto purge for 64 purge points/i,
   },
-  {
-    name: 'Unlock Speed Bonus',
-    seed: { purge: { xp: 0, points: 9999, count: 1, highestMilestone: 1 } },
-    buttonName: /unlock purge point production speed bonus for 10000 purge points/i,
-    tab: /open prestige/i,
-  },
 ])('the $name button stays disabled without enough Purge Points', async ({ seed, buttonName, tab = /open automation/i }) => {
   const user = userEvent.setup()
 
@@ -2067,43 +2054,41 @@ test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled withou
   expect(screen.getByRole('button', { name: /upgrade auto purge speed to level 1 for 64 purge points/i })).toBeDisabled()
 })
 
-test('purge points and the production speed bonus are shown once the bonus is unlocked', () => {
+test('purge points and the production speed bonus are shown once 10 Purges are reached', () => {
   seedMainGameState({
     resources: { base: 10 },
-    prestigeSpeedBonusUnlocked: true,
-    purge: { xp: 0, points: 50, count: 1, highestMilestone: 1 },
+    purge: { xp: 0, points: 50, count: 100, highestMilestone: 1 },
   })
   render(<App />)
 
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('50 PP')
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('+50% production speed')
+  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('2x production speed')
 })
 
-test('the production speed bonus reads as locked, and an unlock button is offered on Firmware → Prestige, before it has been bought', async () => {
-  const user = userEvent.setup()
-
+test('the production speed bonus is hidden from the Purge Points bar below 10 Purges', () => {
   seedMainGameState({
     resources: { base: 10 },
-    purge: { xp: 0, points: 10500, count: 1, highestMilestone: 1 },
+    purge: { xp: 0, points: 10500, count: 9, highestMilestone: 1 },
   })
   render(<App />)
 
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('10,500 PP')
-  // The compact sticky balance bar stays terse and omits the "locked" caveat entirely.
-  expect(screen.getByLabelText(/^purge points display$/i)).not.toHaveTextContent(/production speed bonus locked/i)
+  expect(screen.getByLabelText(/^purge points display$/i)).not.toHaveTextContent(/production speed/i)
+})
 
+test('the playtime bonus is unlocked for 100 PP on Firmware → Prestige', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    resources: { base: 10 },
+    purge: { xp: 0, points: 150, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
   await openPerksTab(user, /open prestige/i)
-  const unlockButton = screen.getByRole('button', { name: /unlock purge point production speed bonus for 10000 purge points/i })
-  expect(unlockButton).toBeEnabled()
 
-  await user.click(unlockButton)
+  await user.click(screen.getByRole('button', { name: /unlock playtime bonus for 100 purge points/i }))
 
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('500 PP')
-  expect(screen.queryByRole('button', { name: /unlock purge point production speed bonus/i })).not.toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /^open byte factory$/i }))
-  // 500 unspent PP → ×6 production speed (1 + 0.01×500) — at/above +100%, this shows as a "6x"
-  // multiplier (formatBonusOrMultiplier) rather than a percentage.
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('6x production speed')
+  expect(screen.getByLabelText('Playtime bonus unlocked')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /unlock playtime bonus/i })).not.toBeInTheDocument()
 })
 
 test('PP-spending buttons report how much of their cost the current balance covers, like the tier buttons', async () => {
@@ -2528,10 +2513,9 @@ test('clicking the money balance expands a breakdown of every global production 
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier02: 1, tier10: 10 },
-    prestigeSpeedBonusUnlocked: true,
     scaleUpCount: 2,
     globalTickspeedMultiplier: 1,
-    purge: { xp: 0, points: 50, count: 1, highestMilestone: 1 },
+    purge: { xp: 0, points: 50, count: 100, highestMilestone: 1 },
   })
   render(<App />)
 
@@ -2543,7 +2527,7 @@ test('clicking the money balance expands a breakdown of every global production 
 
   expect(moneyDisplay).toHaveAttribute('aria-expanded', 'true')
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
-  expect(breakdown).toHaveTextContent(/prestige speed bonus: \+50% production speed from 50 unspent pp/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: 2x production speed from 100 purges/i)
   expect(breakdown).toHaveTextContent(/scale up: 2 activations; multiplier varies by tier/i)
   expect(breakdown).toHaveTextContent(/clock speed: \+[\d.]+% faster ticks on every tier(?! \(lv)/i)
 
@@ -2566,7 +2550,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
   await user.click(screen.getByRole('button', { name: /^money display$/i }))
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
-  expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on firmware → prestige\)/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: unlocks at 10 purges \(1 so far\)/i)
   expect(breakdown).toHaveTextContent(/scale up: not yet activated \(reach 3 completed levels on kilobytes\)/i)
   expect(breakdown).toHaveTextContent(/clock speed: not yet active/i)
 })

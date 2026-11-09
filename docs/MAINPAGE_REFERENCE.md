@@ -590,10 +590,10 @@ live inside the selected tier):
   `width: 100%` in the compressed styles specifically to pin them to the card's actual width so that
   truncation has something to truncate against (this selector matches `MoneyHero` too, below, since it
   extends `Money` and so still carries `Money`'s own generated class on the same DOM node). This
-  compact PP display shows the production speed bonus once unlocked (`formatBonusOrMultiplier` — a
+  compact PP display shows the production speed bonus once unlocked (10 Purges) (`formatBonusOrMultiplier` — a
   percentage below +100%, an `"Nx"` multiplier at/above it, see "Percentages vs. multipliers" below),
-  but — being always-visible, sticky chrome rather than an expandable disclosure — omits the "production
-  speed bonus locked" caveat before it's bought; that fuller wording used to also show in the bottom
+  but — being always-visible, sticky chrome rather than an expandable disclosure — omits the "unlocks at
+  10 Purges" caveat before the threshold; that fuller wording used to also show in the bottom
   `PrestigeCard`'s expandable description before that whole card was removed (see "Prestige and the
   Googol freeze" below) as purely informational and redundant with this button. Once Prestige is
   actually available (`canPurge`, i.e. Money `>= PURGE_THRESHOLD`), the PP display card itself doubles as a
@@ -667,9 +667,10 @@ live inside the selected tier):
   (not per-tier) production multiplier and its current effect: the Prestige speed bonus (once
   `!isFirstRun`), Scale Up, Tickspeed, and Overclock — each gated on the same
   reveal/`everRevealed` flag its own card already uses (so a not-yet-relevant multiplier doesn't appear
-  here before its own card would show it either), reading either its live effect (e.g. "+50% production
-  speed from 50 unspent PP", "×4 production speed from 2 activations", "+1% faster ticks on every tier", "Tickspeed upgrade's per-level rate is now 1.21% (was 1%) from level 2") or a "not yet
-  unlocked/activated/active" status line when revealed but not yet bought. The
+  here before its own card would show it either), reading either its live effect (e.g. "2x production
+  speed from 100 Purges", "2 activations; multiplier varies by tier", "+1% faster ticks on every tier", "Tickspeed upgrade's per-level rate is now 1.21% (was 1%) from level 2") or a "not yet
+  unlocked/activated/active" status line when revealed but not yet active (Prestige speed bonus:
+  "unlocks at 10 Purges (N so far)"). The
   per-tier purchase milestone multiplier (`getPurchaseMilestoneMultiplier`) is deliberately not listed
   here — it's per-tier, not global, and already shown in each tier row's own Details disclosure. The
   list is suppressed entirely (not merely restyled) while `StickyBalances` is in its compressed
@@ -762,8 +763,7 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   unlocked"`), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
-  *Purge Points* (Compression leveled upgrade; Production speed bonus one-time unlock, `"Production
-  speed bonus unlocked"` once bought; Overflow mode, locked until Auto Purge's interval ≤
+  *Purge Points* (Compression leveled upgrade; Overflow mode, locked until Auto Purge's interval ≤
   `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`) and *Purchasing* (Buy max, `components/BuyMaxToggle`).
 Firmware never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
 labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol
@@ -773,8 +773,8 @@ the redundant `Auto` (`Speed Up`, `Restage`, …, `Boost`) since the category he
 `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem heading); Auto Scale Up's status
 is an `AutoChip` in the Scale Up card header.
 Tab dots: Automation `automation perk available` (`hasAffordableAutomationPerk`: an automation unlock
-or Auto Purge speed level), Prestige `prestige perk available` (`hasAffordablePrestigePerk`: Compression
-or the speed bonus). Every PP button keeps the shared live
+or Auto Purge speed level), Prestige `prestige perk available` (`hasAffordablePrestigePerk`:
+Compression). Every PP button keeps the shared live
 progress fill + hidden `role="progressbar"` (`PpPurchaseButton`); see "Accessibility" below.
 
 **Global Tickspeed card (Factory view).** Unlike every other automation upgrade, this one is
