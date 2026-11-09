@@ -285,6 +285,7 @@ const MoneyHero = styled(Money)`
 // Small exact-Bits readout under the hero balance (shown once the hero switches to Bytes,
 // so it isn't a duplicate of the headline). Token-driven muted color rather than opacity, so
 // the pair stays on the same AA audit as other HUD muted text (textMuted on surfaceRaised).
+// Not role=status: Bits change every tick, and status is a live region.
 const BitsBalance = styled(HudMutedText)`
   text-align: center;
   font-size: ${props => props.theme.type.scale.sm.size};
@@ -1203,7 +1204,7 @@ const MainPage = ({ game }) => {
             <MoneyHero>{moneyHeroText}</MoneyHero>
           </MoneyHeroToggle>
           {!balancesCompressed && moneyHeroText !== moneyBitsText && (
-            <BitsBalance role="status" aria-label={`balance in bits: ${moneyBitsText}`}>
+            <BitsBalance aria-label={`balance in bits: ${moneyBitsText}`}>
               {moneyBitsText}
             </BitsBalance>
           )}

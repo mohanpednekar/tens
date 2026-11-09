@@ -608,7 +608,7 @@ test('money balance is shown once at the top in full currency format, centered, 
   expect(screen.getByLabelText(/^money display$/i)).not.toHaveTextContent('/sec')
   expect(screen.queryAllByLabelText(/^money display$/i)).toHaveLength(1)
   // Below the Bytes-headline threshold the Bits subline would duplicate the hero, so it stays hidden.
-  expect(screen.queryByRole('status', { name: /balance in bits/i })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/balance in bits/i)).not.toBeInTheDocument()
 })
 
 test('once the hero switches to Bytes, a small Bits line shows the exact bit balance', () => {
@@ -616,7 +616,10 @@ test('once the hero switches to Bytes, a small Bits line shows the exact bit bal
   render(<App />)
 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1,000 B')
-  expect(screen.getByRole('status', { name: /balance in bits/i })).toHaveTextContent('8,000 b')
+  const bitsLine = screen.getByLabelText(/balance in bits/i)
+  expect(bitsLine).toHaveTextContent('8,000 b')
+  // Not a live region — Bits change every tick and role=status would spam assistive tech.
+  expect(bitsLine).not.toHaveAttribute('role', 'status')
 })
 
 test('a byte-producing tier shows its per-tick production amount with the currency format, not a per-second rate', () => {
@@ -833,7 +836,7 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
   // MoneyHero (the "money display") switches to whole Bytes once the balance reaches 8000 Bits
   // (see engine.js's formatMoneyBalance) — 92,000 Bits = 11,500 Bytes.
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('11,500 B')
-  expect(screen.getByRole('status', { name: /balance in bits/i })).toHaveTextContent('92,000 b')
+  expect(screen.getByLabelText(/balance in bits/i)).toHaveTextContent('92,000 b')
 })
 
 test('manual Buy partially fills when funds only cover part of the cost block', async () => {
@@ -5940,7 +5943,9 @@ describe('Buy max mode', () => {
     expect(localStorage.getItem('tens_buy_max_mode')).toBe('true')
     await user.click(screen.getByRole('button', { name: /^open byte factory$/i }))
 
-    await user.click(screen.getByRole('button', { name: /^Buy 2 full levels/ }))
+    const buyMaxButton = screen.getByRole('button', { name: /^Buy 2 full levels/ })
+    expect(buyMaxButton).toHaveTextContent('+2')
+    await user.click(buyMaxButton)
     const kilobytesPanel = screen.getByLabelText(`${kilobytes.name} layer`)
     expect(within(kilobytesPanel).getByRole('progressbar', { name: `${kilobytes.name} cost-block progress` }))
       .toHaveAttribute('aria-valuenow', '0')

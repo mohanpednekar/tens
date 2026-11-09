@@ -617,9 +617,9 @@ live inside the selected tier):
   `BITS_PER_BYTE`, and renders the result as whole Bytes with a trailing `" B"` (reusing
   `formatCurrency`'s own exponential-notation threshold once converted) — a more natural headline
   figure than an ever-growing raw bit count once there's at least a full Byte's worth to show. Once
-  those two strings differ, a small `BitsBalance` line (`role="status"`, `aria-label="balance in bits: …"`,
+  those two strings differ, a small `BitsBalance` line (`aria-label="balance in bits: …"`,
   `theme.color.textMuted`, `theme.type.scale.sm`) under the hero shows the exact Bits via
-  `formatCurrency` — suppressed while
+  `formatCurrency` — not `role="status"`, which would live-announce every tick — suppressed while
   `balancesCompressed`, and omitted below the threshold so it isn't a duplicate of the Bits
   headline. Visibility is `formatMoneyBalance !== formatCurrency`, not a hardcoded 8000, so it
   stays in lockstep with the headline switch. Every other `formatCurrency` call on this page —
@@ -698,7 +698,7 @@ live inside the selected tier):
   `getPurchaseBlockSize(state)`). The one player-facing control over this is **Buy max mode**
   (`components/BuyMaxToggle`, rendered only on Firmware → ✦ Prestige once `isBuyMaxUnlocked`): while on, a click that can afford at least one FULL level
   from zero progress buys every such level (`buyTierMaxLevels`) and the button previews it as
-  `+N Lv` with the summed cost (`getTierMaxLevelsPreview`; aria-label `Buy N full level(s) for …`);
+  `+N` with the summed cost (`getTierMaxLevelsPreview`; aria-label `Buy N full level(s) for …`);
   otherwise the button keeps the normal single-level text and behavior below. Clock Speed, tier tickspeed,
   Compression, Auto Purge and Flops buttons keep their single-level cost text but buy every
   affordable level per click in that mode (`repeatPurchaseMax`). Renders its cost-block progress as an

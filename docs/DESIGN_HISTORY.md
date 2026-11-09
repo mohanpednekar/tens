@@ -7,7 +7,8 @@ exact Bits amount disappeared from the HUD. A small `BitsBalance` line under the
 via `formatCurrency`, but only while those two strings differ — below the threshold it would
 duplicate the Bits headline, and the compressed sticky bar has no room for it. Token-driven
 `textMuted` + `type.scale.sm` rather than `opacity: 0.7` on default text, so the pair stays on the
-same AA audit as other HUD muted copy.
+same AA audit as other HUD muted copy. Not `role="status"`: that is a live region, and Bits change
+every tick.
 
 Same change: tier Buy buttons no longer render `{progress}+{affordable}/{blockSize}` (`5+3/8`) next
 to the cart icon. That fraction duplicated the dual-tone fill and the visually-hidden cost-block
