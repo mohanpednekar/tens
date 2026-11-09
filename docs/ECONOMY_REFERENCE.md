@@ -314,7 +314,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      `getPoolBufferBits / getPoolBufferCapacity` for a given pool (`getPoolBufferFillFraction`),
      each clamped to at most 1.
    - `getDataStreamMultiplierPercent`/`getPoolMultiplierPercent` are that fill-based value only (the
-     curve already reaches 10× on its own); those instantaneous readings (and
+     curve already reaches 10× on the Data Stream / 5× on a pool on its own); those instantaneous readings (and
      `getDataStreamDeliveredRate`) are what the UI shows. `tickIntroProduction`/`tickPoolBufferFill`
      integrate the same curve via `getFillCurveDelta` so a 1s offline tick matches ten live 0.1s ticks.
    - A manual tap on the Data Stream (once Storage pools are revealed at 1 KiB — point 1 above) or
@@ -349,7 +349,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      pool the base is `getPoolAvailableFillRate`, its Bandwidth limited by the Data Stream rate left after earlier
      pools, never the theoretical Bandwidth, and unaffected by any lake drain;
      truncated to 3 significant digits by `formatSpeedText`), tinted red (`FILL_MULTIPLIER_MIN_PERCENT`, 10%)
-     → blue (100%) → green (`FILL_MULTIPLIER_MAX_PERCENT`, 1000%+) by `getSpeedColor`; the old center-grow
+     → blue (100%) → green (`FILL_MULTIPLIER_MAX_PERCENT`, 1000%+) by `getSpeedColor` (an empty pool, at 500%, reads blue-green); the old center-grow
      multiplier bar and its lake-overflow-rate mode were removed (see `docs/DESIGN_HISTORY.md`). Each tile
      (the Data Stream's and every pool's `FillableStatCard`/`PoolTile`) has a `TileHeader` holding the
      `TitleRow` (title left, Speed/Bandwidth right) and a `CapacityBonusRow` (📦 Capacity left, a narrow
@@ -2708,8 +2708,8 @@ purchases were manual or automatic.
 | `getIntroProductionRate` | `intro → number` | Byte Foundry: current bits/sec, `getDataStreamSpeedBytesPerSecond(intro.speedCapacity ?? intro.capacity) * BITS_PER_BYTE` — derived from Capacity (see point 5 above), never independently upgraded. This is the DISPLAYED base Speed — see point 4a above. `tickIntroProduction` integrates the curve via `getFillCurveDelta` rather than multiplying this by the instantaneous `getDataStreamEffectMultiplier`. Used by `tapIntroBit`'s pre-reveal branch and the passive-production display |
 | `getDataStreamSpeedBytesPerSecond` | `basisBits → number` | Byte Foundry: derived Speed in Bytes/sec — `(basisBits / 8) ** exponent` (`exponent` defaults to `DATA_STREAM_SPEED_EXPONENT_BASE`, 0.5; callers pass `getDataStreamSpeedExponent(intro)`). `0` for non-positive input |
 | `getFillMultiplierPercent` | `fillFraction → percent` | `10 ** (log10(MAX) - clamp(fillFraction, 0, 1) * (log10(MAX) - log10(MIN)))` with MAX/MIN = `FILL_MULTIPLIER_MAX_PERCENT`/`FILL_MULTIPLIER_MIN_PERCENT` (1000/10), or `POOL_FILL_MULTIPLIER_MAX_PERCENT` (500) via the optional `maxPercent` argument for a pool — MAX% empty, 10% full (log-linear); see point 4a above |
-| `getFillCurveSeconds` | `(start, end, cap, unmultipliedRate) → seconds \| null` | Closed-form time to move a buffer from `start` to `end` along that curve; null when not filling. `getBufferSecondsToFull` is the start→cap wrapper |
-| `getFillCurveDelta` | `(start, cap, unmultipliedRate, elapsedSeconds) → amount` | Inverse of `getFillCurveSeconds`: bits added in `elapsedSeconds`, capped at `cap − start`. Used by `tickIntroProduction` and `tickPoolBufferFill` (upgrade drains run linearly at base Speed × `getDataStreamTapMultiplier`) |
+| `getFillCurveSeconds` | `(start, end, cap, unmultipliedRate, maxPercent = 1000) → seconds \| null` | Closed-form time to move a buffer from `start` to `end` along that curve; null when not filling. `getBufferSecondsToFull` is the start→cap wrapper |
+| `getFillCurveDelta` | `(start, cap, unmultipliedRate, elapsedSeconds, maxPercent = 1000) → amount` | Inverse of `getFillCurveSeconds`: bits added in `elapsedSeconds`, capped at `cap − start`. Used by `tickIntroProduction` and `tickPoolBufferFill` (upgrade drains run linearly at base Speed × `getDataStreamTapMultiplier`) |
 | `getDataStreamFillFraction` | `intro → number` | `min(1, bits / capacity)`, or 0 if `capacity <= 0` |
 | `getDataStreamBaseMultiplierPercent` | `intro → percent` | `getFillMultiplierPercent(getDataStreamFillFraction(intro))` |
 | `getDataStreamMultiplierPercent` | `intro → percent` | `getDataStreamBaseMultiplierPercent(intro)` — fill-based value only; what `ByteFoundryPage` displays next to Speed |
@@ -2979,7 +2979,7 @@ purchases were manual or automatic.
 - `COMPUTE_AUTO_BOOST_UNLOCK_COST = 30` — one-time PP cost for Compute auto-Boost (`buyComputeAutoBoost` / `tickAutoComputeBoost`)
 - `COMPUTE_BOOST_PRESETS = { burst: { multiplier: 32, durationSeconds: 60 }, standard: { multiplier: 8, durationSeconds: 600 }, sustain: { multiplier: 2, durationSeconds: 3600 } }` — Byte Foundry Compute Boost: base (tier 1 / Core) strength/duration tradeoffs; activating spends 1 token of whichever compute-ladder tier the player arms (Cell through Fusion — see `COMPUTE_BOOST_TIER_FIELDS` / issue #326), not always a Core — higher tiers scale multiplier by `COMPUTE_BOOST_TIER_POWER_STEP` (4) per step; duration stays at the base preset (issue #363) — see `activateComputeBoost`/`getComputeBoostTierMultiplier`/`getComputeBoostMultiplier`
 - `COMPUTE_BOOST_MAX_STACKS = 10` — Byte Foundry Compute Boost: how many times `stackComputeBoost` can extend the currently active boost's remaining duration by spending another token of that boost's own funding tier (the multiplier itself never compounds; replacing an active boost with a different preset/tier requires an explicit forfeit confirmation and refunds its unused stacks first — see `forfeitComputeBoost` / `activateComputeBoost(..., forfeitConfirmed)` / `docs/DESIGN_HISTORY.md`) — see `stackComputeBoost`/`canStackComputeBoost`/`activateComputeBoost`
-- `FILL_MULTIPLIER_*` (`layers.js`) — `FILL_MULTIPLIER_MAX_PERCENT` (1000, empty buffer), `FILL_MULTIPLIER_MIN_PERCENT` (10, multiplier at a full buffer), `FILL_MULTIPLIER_TAP_BONUS_PERCENT` (5pp stored per tap, applied as ×(1 + bonus%) to consumers, never to the fill), `FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND` (1), `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` (100, independent cap on the tap bonus alone, enforced by `tapIntroBit`/`tapPoolBuffer`)
+- `FILL_MULTIPLIER_*` (`layers.js`) — `FILL_MULTIPLIER_MAX_PERCENT` (1000, empty Data Stream buffer; pools use `POOL_FILL_MULTIPLIER_MAX_PERCENT`, 500), `FILL_MULTIPLIER_MIN_PERCENT` (10, multiplier at a full buffer), `FILL_MULTIPLIER_TAP_BONUS_PERCENT` (5pp stored per tap, applied as ×(1 + bonus%) to consumers, never to the fill), `FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND` (1), `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` (100, independent cap on the tap bonus alone, enforced by `tapIntroBit`/`tapPoolBuffer`)
 - `canDiskSizeFeedWriteCache(size)` (`engine.js`) — false for each pool's largest disk size (no larger size in its pool can consume it when expedited); gates `DiskArrayRow`'s stranded-disk tooltip
 
 ### Upgrade Capacity / Upgrade Speed
