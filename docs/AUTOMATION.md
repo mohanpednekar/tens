@@ -532,6 +532,23 @@ upstream); (3) not confidently fixable → `automation-failure` issue (deduped).
 never-self-merge / always-open-a-PR / PAT+OIDC auth / `ci.yml`/`deploy.yml` deny entries /
 duplicate-PR or budget guards; never `gh run rerun`s the failed run.
 
+### Main CI heal (`main-ci-heal.yml`, #37)
+
+Immediate (non-cron) reaction to a red `main`, complementing `autonomous-maintenance.yml` Phase 0(a).
+Trigger: `workflow_run: [completed]` on `CI`, filtered in-job to `head_branch == 'main'` and
+`conclusion == 'failure'`. Two deliberately distinct jobs:
+
+1. `rerun-check` (`run_attempt == 1`): `gh run rerun --failed` once, then `gh run watch --exit-status`
+   (needs `actions: write`). A green rerun means flakiness — nothing else happens.
+2. `diagnose-fix` (`run_attempt >= 2`, i.e. the rerun's own failure event): guard skips when any
+   `claude/heal-main-*` PR is open (cap 2) or `main` has moved past the broken SHA; otherwise
+   `anthropics/claude-code-action@v1` (`--max-turns 30`, PAT + OIDC) fixes the application code on a
+   `claude/heal-main-<desc>` branch and opens a PR. Never pushes to `main`, never self-merges.
+
+Deny list (via `scripts/claude-deny-settings.sh`): base files plus `main-ci-heal.yml`,
+`autonomous-pr-followup.yml`, `pr-auto-merge.yml`, `autonomous-maintenance.yml`. The same
+TIER_DEFINITIONS/economy-change ban applies. `deploy.yml` is still not gated on CI (out of scope).
+
 ### Auto-merge (`pr-auto-merge.yml`)
 
 Three independent paths, any of which calls `gh pr merge --auto --merge` to enable GitHub's native

@@ -1,0 +1,134 @@
+name: Main CI heal
+
+# When CI fails on `main`, first rerun the failed jobs once to rule out flakiness
+# (job 1, `rerun-check`); only if the rerun also fails, diagnose and open a fix PR on a
+# `claude/heal-main-*` branch (job 2, `diagnose-fix`). Never pushes to main, never merges.
+# Complements autonomous-maintenance.yml Phase 0(a) (cron-only) with immediate reaction.
+# See docs/AUTOMATION.md "Main CI heal" and issue #37.
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+  actions: write
+
+concurrency:
+  group: main-ci-heal
+  cancel-in-progress: false
+
+jobs:
+  # Stage 1 — flakiness check. Only the first attempt of a failed CI run on main.
+  rerun-check:
+    if: >-
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Rerun failed jobs once
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          gh run rerun "$RUN_ID" --failed --repo "$GITHUB_REPOSITORY"
+          sleep 20
+          if gh run watch "$RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status; then
+            echo "Rerun passed — flaky failure, nothing further to do."
+          else
+            echo "Rerun failed too — the diagnose-fix job (fired by the rerun's completion event) takes over."
+          fi
+
+  # Stage 2 — only after the one-shot rerun (run_attempt >= 2) also failed on main.
+  # A green rerun fires a `success` event that this job's `if` filters out.
+  diagnose-fix:
+    if: >-
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.run_attempt >= 2
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Guard — dedupe, cap, main still at broken commit
+        id: guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          open=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 100 \
+            --json headRefName --jq '[.[] | select(.headRefName | startswith("claude/heal-main-"))] | length')
+          if [ "$open" -ge 2 ]; then
+            echo "Already $open open claude/heal-main-* PRs (cap 2); skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$open" -ge 1 ]; then
+            echo "A claude/heal-main-* PR is already in flight; skipping to avoid duplicate fix attempts."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          tip=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY" refs/heads/main | cut -f1)
+          if [ "$tip" != "$HEAD_SHA" ]; then
+            echo "main moved on ($tip != $HEAD_SHA); a newer CI run owns it. Skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.guard.outputs.skip != 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
+
+      - uses: ./.github/actions/setup-node-yarn
+        if: steps.guard.outputs.skip != 'true'
+
+      - name: Compose deny settings
+        id: deny
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          echo "settings=$(scripts/claude-deny-settings.sh .github/workflows/main-ci-heal.yml .github/workflows/autonomous-pr-followup.yml .github/workflows/pr-auto-merge.yml .github/workflows/autonomous-maintenance.yml)" >> "$GITHUB_OUTPUT"
+
+      - name: Diagnose and open fix PR
+        if: steps.guard.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GH_AUTOMATION_PAT }}
+          claude_args: |
+            --max-turns 30
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh run:*),Bash(gh pr create:*),Bash(gh pr list:*)"
+          settings: ${{ steps.deny.outputs.settings }}
+          prompt: |
+            You are the main-branch CI healer for ${{ github.repository }}, running unattended.
+            Read CLAUDE.md first and follow it exactly.
+
+            CI failed on `main` at ${{ github.event.workflow_run.head_sha }} and a one-shot rerun
+            of the failed jobs ALSO failed, so treat it as a genuine regression, not flakiness.
+            Failed run: ${{ github.event.workflow_run.html_url }} (id ${{ github.event.workflow_run.id }}).
+
+            1. Read the failure with `gh run view ${{ github.event.workflow_run.id }} --log-failed`.
+            2. Create branch `claude/heal-main-<short-desc>` (lowercase kebab, <=40 chars).
+            3. Make the smallest correct application-code fix; `yarn test` (and `yarn build` if
+               build-related) must be green before pushing. Update CLAUDE.md if the fix touches
+               anything it documents.
+            4. Push and open a PR against main explaining the regression, the fix, and linking
+               the failed run. Never push to main, never self-merge, never approve.
+
+            Hard forbids: never `--no-verify`; never skip/delete the failing test that caught the
+            regression; never edit anything under `.github/workflows/`; never add/remove/reorder
+            TIER_DEFINITIONS or make economy/game-design changes. If you can't fix it
+            confidently, make no changes.
