@@ -4,7 +4,6 @@ import StatCard from 'components/StatCard'
 import {
   canBuyComputeFlopsTier,
   formatAmount,
-  formatComputeFlopsBoost,
   formatComputeFlopsTotal,
   getComputeFlopsTierCost,
   getComputeFlopsTierProductionMultiplier,
@@ -13,7 +12,6 @@ import {
 } from 'game/engine'
 import {
   COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC,
-  COMPUTE_FLOPS_FIRST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   TIER_DEFINITIONS,
@@ -111,20 +109,13 @@ const ComputeFlopsPage = ({ game }) => {
       </Header>
 
 
-      <Hint>
-        {!revealed && <>Unlocks at {COMPUTE_FLOPS_REVEAL_PP} PP — you have {formatAmount(pp)} PP. </>}
-        {pp < COMPUTE_FLOPS_FIRST_TIER_COST_PP && (
-          <>The first tier costs {formatAmount(COMPUTE_FLOPS_FIRST_TIER_COST_PP)} PP. </>
-        )}
-        Each owned unit adds {(COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * 100).toFixed(2)}% per
-        second to the matching Factory tier’s boost. The PP price rises with every purchase (not
-        every 8, as on Factory tiers). Boosts reset each Purge; owned units are permanent.
-      </Hint>
+      {!revealed && (
+        <Hint>Unlocks at {COMPUTE_FLOPS_REVEAL_PP} PP — you have {formatAmount(pp)} PP.</Hint>
+      )}
 
       <TierList aria-label="compute flops tiers">
         {COMPUTE_FLOPS_TIER_DEFINITIONS.map(flopTier => {
           const owned = state.computeFlops?.owned?.[flopTier.id] ?? 0
-          const tierBoost = (state.computeFlops?.cumulativeBoost?.[flopTier.boostsTierId] ?? 0)
           const liveMultiplier = getComputeFlopsTierProductionMultiplier(state, flopTier.boostsTierId)
           const cost = getComputeFlopsTierCost(flopTier, owned)
           const canBuy = canBuyComputeFlopsTier(state, flopTier.id)
@@ -151,8 +142,7 @@ const ComputeFlopsPage = ({ game }) => {
                 <ButtonContent>{formatAmount(cost)} PP</ButtonContent>
               </BuyButton>
               <TierMeta>
-                Owned {owned} · boosts {factoryTier} ·{' '}
-                {formatComputeFlopsBoost(tierBoost)} this cycle · ×{liveMultiplier.toFixed(4)} live
+                {owned} owned · {factoryTier} ×{liveMultiplier.toFixed(4)}
               </TierMeta>
             </TierRow>
           )
