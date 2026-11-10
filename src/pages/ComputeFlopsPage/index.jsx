@@ -142,7 +142,7 @@ const ComputeFlopsPage = ({ game }) => {
                 <ButtonContent>{formatAmount(cost)} PP</ButtonContent>
               </BuyButton>
               <TierMeta>
-                {owned} owned · {factoryTier} ×{liveMultiplier.toFixed(2)}
+                {owned} owned · {factoryTier} ×{liveMultiplier.toFixed(4)}
               </TierMeta>
             </TierRow>
           )
