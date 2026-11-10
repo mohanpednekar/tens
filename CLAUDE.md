@@ -292,6 +292,10 @@ outright), saying so when it deviates from lowest-number order.
 Convention: a new `claude-task` issue that adds a manual-only prerequisite must add a line to #62
 (what to check, why); extend the script's `CHECKS` if it's API-checkable. Detail: `docs/AUTOMATION.md`.
 
+**Run summary (#74):** each `autonomous-maintenance.yml` run's final "Write run summary" step copies the
+agent's closing `## RUN SUMMARY` (phase/task picked, why, budget estimate) into the job summary — the
+canonical place to see a run's reasoning, esp. Phase B runs that open no PR.
+
 Guard-step context feeds are bounded: any new feed passes an explicit `--limit` and display-cap with a
 "+N more" note; list feeds render number + title + labels only, never bodies (`docs/AUTOMATION.md`, #81).
 `autonomous-maintenance.yml` also feeds unpromoted GitHub Discussions "Ideas" (#66); Phase B item 6 may

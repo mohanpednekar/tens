@@ -283,6 +283,8 @@ when the workflow file stops parsing, no run has started in >26h, or the latest 
 annotated tag `v<x.y.z>` and creates a GitHub Release from that version's `CHANGELOG.md` section when
 the tag doesn't already exist — the post-merge half of #52 (pre-merge half: `yarn bump-version`).
 
+Each `autonomous-maintenance.yml` run's job summary carries the agent's closing `## RUN SUMMARY` (task
+picked, why, budget estimate) — the canonical place to see a run's reasoning, incl. no-PR Phase B runs (#74).
 Guard-step context feeds are bounded by standing rule (`docs/AUTOMATION.md`, #81): explicit `--limit`
 + display cap with a "+N more" note; list feeds render number + title + labels only, never bodies.
 `autonomous-maintenance.yml` also feeds unpromoted Discussions "Ideas" (#66); gap-analysis may promote a
