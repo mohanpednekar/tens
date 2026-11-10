@@ -357,6 +357,10 @@ test('the Manual nav item opens the Info page and Factory returns, preserving ga
   expect(screen.getByRole('heading', { level: 2, name: /^power$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^compute$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^purge$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 2, name: /^prestige ladder$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/prestige ladder section/i)).not.toHaveTextContent(
+    /the Production speed bonus/i,
+  )
   expect(screen.getByLabelText(/byte foundry section/i)).toHaveTextContent(/forced priority/i)
   expect(screen.getByLabelText(/storage section/i)).toHaveTextContent(/clean-slate disk/i)
   expect(screen.getByLabelText(/power section/i)).toHaveTextContent(/stack/i)
@@ -603,6 +607,19 @@ test('money balance is shown once at the top in full currency format, centered, 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
   expect(screen.getByLabelText(/^money display$/i)).not.toHaveTextContent('/sec')
   expect(screen.queryAllByLabelText(/^money display$/i)).toHaveLength(1)
+  // Below the Bytes-headline threshold the Bits subline would duplicate the hero, so it stays hidden.
+  expect(screen.queryByLabelText(/balance in bits/i)).not.toBeInTheDocument()
+})
+
+test('once the hero switches to Bytes, a small Bits line shows the exact bit balance', () => {
+  seedMainGameState({ resources: { base: 8000 } })
+  render(<App />)
+
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1,000 B')
+  const bitsLine = screen.getByLabelText(/balance in bits/i)
+  expect(bitsLine).toHaveTextContent('8,000 b')
+  // Not a live region — Bits change every tick and role=status would spam assistive tech.
+  expect(bitsLine).not.toHaveAttribute('role', 'status')
 })
 
 test('a byte-producing tier shows its per-tick production amount with the currency format, not a per-second rate', () => {
@@ -791,6 +808,9 @@ test('the Buy button shows a cost-block progress bar reflecting purchases so far
   // 4 of 8 already done — 4 remain in the block; per-unit cost is 1,000, so 4 units cost $4,000 total.
   const buyButton = screen.getByRole('button', { name: /buy ×4 for 4,000 b \(0 completed levels, 4 of 8 purchased toward the next\)/i })
   expect(buyButton).toBeInTheDocument()
+  expect(buyButton).toHaveTextContent('4,000 b')
+  expect(buyButton).not.toHaveTextContent('+4/8')
+  expect(buyButton).not.toHaveTextContent('+4')
   expect(screen.queryByText(/^level: /i)).not.toBeInTheDocument()
   // Regression check for the Button component's `variant` prop: it's consumed internally to
   // resolve a theme color and must never leak onto the rendered DOM node as a raw attribute.
@@ -816,6 +836,7 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
   // MoneyHero (the "money display") switches to whole Bytes once the balance reaches 8000 Bits
   // (see engine.js's formatMoneyBalance) — 92,000 Bits = 11,500 Bytes.
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('11,500 B')
+  expect(screen.getByLabelText(/balance in bits/i)).toHaveTextContent('92,000 b')
 })
 
 test('manual Buy partially fills when funds only cover part of the cost block', async () => {
@@ -1493,25 +1514,14 @@ test('Firmware groups by feature: Automation holds every automation, Prestige th
   expect(screen.queryByLabelText(/^purge points category$/i)).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('tab', { name: /open prestige/i }))
-  // No separate reveal gate — the speed bonus shows as soon as the page itself is reachable.
-  expect(screen.getByLabelText(/^purge points category$/i)).toHaveTextContent(/production speed bonus/i)
   expect(screen.getByLabelText(/^purge points category$/i)).toHaveTextContent(/compression/i)
   expect(screen.getByLabelText(/^purchasing category$/i)).toBeInTheDocument()
   expect(screen.queryByLabelText(/^global automation category$/i)).not.toBeInTheDocument()
-})
-
-test('the production speed bonus stays listed with an unlocked badge once bought', async () => {
-  const user = userEvent.setup()
-  seedMainGameState({
-    resources: { base: 10 },
-    prestigeSpeedBonusUnlocked: true,
-    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
-  })
-  render(<App />)
-  await openPerksTab(user, /open prestige/i)
-
-  expect(screen.getByLabelText('Production speed bonus unlocked')).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /unlock purge point production speed bonus/i })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^production speed bonus upgrade$/i)).not.toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: /open prestige/i })).toHaveAttribute(
+    'title',
+    'Prestige — Compression, playtime bonus, Overflow mode and Buy max',
+  )
 })
 
 test('an Enable Auto Scale Up button appears on Firmware → Automation after the first prestige, and spends 16 PP to enable it', async () => {
@@ -1863,12 +1873,6 @@ test.each([
     seed: { ...allTiersSmartSeed(), purge: { xp: 0, points: 63, count: 1, highestMilestone: 1 } },
     buttonName: /enable auto purge for 64 purge points/i,
   },
-  {
-    name: 'Unlock Speed Bonus',
-    seed: { purge: { xp: 0, points: 9999, count: 1, highestMilestone: 1 } },
-    buttonName: /unlock purge point production speed bonus for 10000 purge points/i,
-    tab: /open prestige/i,
-  },
 ])('the $name button stays disabled without enough Purge Points', async ({ seed, buttonName, tab = /open automation/i }) => {
   const user = userEvent.setup()
 
@@ -2067,43 +2071,41 @@ test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled withou
   expect(screen.getByRole('button', { name: /upgrade auto purge speed to level 1 for 64 purge points/i })).toBeDisabled()
 })
 
-test('purge points and the production speed bonus are shown once the bonus is unlocked', () => {
+test('purge points and the production speed bonus are shown once 10 Purges are reached', () => {
   seedMainGameState({
     resources: { base: 10 },
-    prestigeSpeedBonusUnlocked: true,
-    purge: { xp: 0, points: 50, count: 1, highestMilestone: 1 },
+    purge: { xp: 0, points: 50, count: 100, highestMilestone: 1 },
   })
   render(<App />)
 
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('50 PP')
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('+50% production speed')
+  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('2x production speed')
 })
 
-test('the production speed bonus reads as locked, and an unlock button is offered on Firmware → Prestige, before it has been bought', async () => {
-  const user = userEvent.setup()
-
+test('the production speed bonus is hidden from the Purge Points bar below 10 Purges', () => {
   seedMainGameState({
     resources: { base: 10 },
-    purge: { xp: 0, points: 10500, count: 1, highestMilestone: 1 },
+    purge: { xp: 0, points: 10500, count: 9, highestMilestone: 1 },
   })
   render(<App />)
 
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('10,500 PP')
-  // The compact sticky balance bar stays terse and omits the "locked" caveat entirely.
-  expect(screen.getByLabelText(/^purge points display$/i)).not.toHaveTextContent(/production speed bonus locked/i)
+  expect(screen.getByLabelText(/^purge points display$/i)).not.toHaveTextContent(/production speed/i)
+})
 
+test('the playtime bonus is unlocked for 100 PP on Firmware → Prestige', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    resources: { base: 10 },
+    purge: { xp: 0, points: 150, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
   await openPerksTab(user, /open prestige/i)
-  const unlockButton = screen.getByRole('button', { name: /unlock purge point production speed bonus for 10000 purge points/i })
-  expect(unlockButton).toBeEnabled()
 
-  await user.click(unlockButton)
+  await user.click(screen.getByRole('button', { name: /unlock playtime bonus for 100 purge points/i }))
 
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('500 PP')
-  expect(screen.queryByRole('button', { name: /unlock purge point production speed bonus/i })).not.toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /^open byte factory$/i }))
-  // 500 unspent PP → ×6 production speed (1 + 0.01×500) — at/above +100%, this shows as a "6x"
-  // multiplier (formatBonusOrMultiplier) rather than a percentage.
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('6x production speed')
+  expect(screen.getByLabelText('Playtime bonus unlocked')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /unlock playtime bonus/i })).not.toBeInTheDocument()
 })
 
 test('PP-spending buttons report how much of their cost the current balance covers, like the tier buttons', async () => {
@@ -2528,10 +2530,9 @@ test('clicking the money balance expands a breakdown of every global production 
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier02: 1, tier10: 10 },
-    prestigeSpeedBonusUnlocked: true,
     scaleUpCount: 2,
     globalTickspeedMultiplier: 1,
-    purge: { xp: 0, points: 50, count: 1, highestMilestone: 1 },
+    purge: { xp: 0, points: 50, count: 100, highestMilestone: 1 },
   })
   render(<App />)
 
@@ -2543,7 +2544,7 @@ test('clicking the money balance expands a breakdown of every global production 
 
   expect(moneyDisplay).toHaveAttribute('aria-expanded', 'true')
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
-  expect(breakdown).toHaveTextContent(/prestige speed bonus: \+50% production speed from 50 unspent pp/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: 2x production speed from 100 purges/i)
   expect(breakdown).toHaveTextContent(/scale up: 2 activations; multiplier varies by tier/i)
   expect(breakdown).toHaveTextContent(/clock speed: \+[\d.]+% faster ticks on every tier(?! \(lv)/i)
 
@@ -2566,7 +2567,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
   await user.click(screen.getByRole('button', { name: /^money display$/i }))
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
-  expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on firmware → prestige\)/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: unlocks at 10 purges \(1 so far\)/i)
   expect(breakdown).toHaveTextContent(/scale up: not yet activated \(reach 3 completed levels on kilobytes\)/i)
   expect(breakdown).toHaveTextContent(/clock speed: not yet active/i)
 })
@@ -3522,6 +3523,7 @@ test('a collapsed pool still shows its Data Lake heading and action row', () => 
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
     poolBuffers: { 1: poolCapacity },
     disksBuiltTotal: { 8000: 1 },
+    dataLakes: { 1: { depositedUnits: 0, fillBits: DISK_LADDER_BASE_SIZE_BITS / 2, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
   })
   render(<App />)
 
@@ -3531,6 +3533,32 @@ test('a collapsed pool still shows its Data Lake heading and action row', () => 
   expect(within(pool1).getByRole('button', { name: /expand pool 1/i })).toBeInTheDocument()
   expect(within(pool1).getByText('Lake')).toBeInTheDocument()
   expect(within(pool1).queryByRole('group', { name: /lake .* disks/i })).not.toBeInTheDocument()
+  const headerBar = within(pool1).getByRole('progressbar', { name: /KB lake fill progress/i })
+  expect(headerBar).toHaveAttribute('aria-valuemin', '0')
+  expect(headerBar).toHaveAttribute('aria-valuemax', '100')
+  expect(headerBar).toHaveAttribute('aria-valuenow', '50')
+  fireEvent.click(within(pool1).getByRole('button', { name: /expand pool 1/i }))
+  expect(within(pool1).queryByRole('progressbar', { name: /KB lake fill progress/i })).not.toBeInTheDocument()
+})
+
+test('a collapsed completed Data Lake header bar reads full, not empty', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: 1 },
+    dataLakes: { 1: { depositedUnits: 10, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
+  })
+  render(<App />)
+
+  const pool1 = screen.getByRole('region', { name: 'pool 1' })
+  const toggle = within(pool1).getByRole('button', { name: /(collapse|expand) pool 1/i })
+  if (toggle.getAttribute('aria-expanded') === 'true') fireEvent.click(toggle)
+  expect(within(pool1).getByRole('progressbar', { name: /KB lake fill progress/i }))
+    .toHaveAttribute('aria-valuenow', '100')
 })
 
 test('tapping a pool\'s own Memory buffer shows only that pool\'s tap bonus bar, leaving the Data Stream\'s untouched', () => {
@@ -3597,7 +3625,7 @@ test('Data Stream tile no longer shows a separate "bits this cycle" transfer-blo
 // engine.js). Disks are a storage MEDIUM, not a one-shot pre-paid item: starting a build spends
 // the cost immediately (DISK_BUILD_COST_MULTIPLIER times its own Byte-accurate size — see
 // getDiskCost) but only constructs an EMPTY container once a real build TIME finishes (see
-// tickProvisionDisk); Memory then keeps each array's Cache full (whole-block transfers) and
+// tickProvisionDisk); Memory then keeps each array's Cache full (a timed 5× transfer) and
 // auto-fills empty disks from a full read cache on a later tick (see tickDiskAutoFill), smallest
 // size first. A FULL disk's pull-eligibility is gated on SOME tier's CURRENT per-unit level cost
 // catching up to that disk's size AND that level having zero progress already (see
@@ -4157,10 +4185,11 @@ describe('Byte Foundry Storage', () => {
     unmount()
   })
 
-  test('the first empty read-cache block mirrors the pool buffer\'s progress, so the instant block fill still looks gradual', () => {
-    const bufferBits = currentBankSize / DISK_CACHE_BLOCK_COUNT / 4
+  test('a partly filled read-cache block shows its real fill progress (the cache fills continuously from Staging)', () => {
+    const cachedBits = currentBankSize / DISK_CACHE_BLOCK_COUNT / 4
     seedIntroState({
-      poolBuffers: { 1: bufferBits },
+      poolBuffers: { 1: 0 },
+      diskCache: { [currentBankSize]: cachedBits },
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: 1 },
@@ -4186,11 +4215,11 @@ describe('Byte Foundry Storage', () => {
     // well under pool 1's own Capacity^0.8 ceiling, so the large seeded Capacity doesn't bind it.
     // with intro.bits seeded at 0, tickPoolBufferFill stays inert throughout (nothing to
     // transfer), so it can't perturb the directly-seeded pool buffer either.
-    // A cache refill FROM the pool buffer is instant and whole-block (no bandwidth budget), so the
-    // seeded 16,000-bit buffer fills this size's 8,000-bit cache on the first tick; flushing the full
-    // cache into the empty disk (a DISK filling FROM a cache, at
+    // A cache refill FROM the pool buffer is a timed transfer at 5× the pool's 2,000 bits/s Bandwidth
+    // (10,000 bits/s), so the seeded 16,000-bit buffer fills this size's 8,000-bit cache in ~0.8s;
+    // flushing one cache block into the empty disk (a DISK filling FROM a cache, at
     // DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER × the pool's capped rate) then takes ~0.25s, after
-    // which the cache instantly refills from the remaining buffer.
+    // which the cache refills from the remaining buffer over another ~0.8s.
     const bandwidthCapBits = 2000
     // Pool Capacity advances in plain decade-power-of-10 steps (getDecadePowerEquivalentBits):
     // 2**17 bits lands on decade step 10**5 Bytes (800,000 bits), whose Capacity^0.8 ceiling
@@ -4214,7 +4243,7 @@ describe('Byte Foundry Storage', () => {
     openStorage()
     expect(screen.getByLabelText(/empty 1 kb disk/i)).toBeInTheDocument()
 
-    act(() => { vi.advanceTimersByTime(600) })
+    act(() => { vi.advanceTimersByTime(1300) })
 
     // Read cache topped up and flushed into the empty disk once fully staged. At tier level 2 the
     // filled disk is stranded (past its own required level) — assert the fill itself, not a pull
@@ -4227,19 +4256,17 @@ describe('Byte Foundry Storage', () => {
     // below the post-fill remainder rather than an exact balance. Same for the cache: it emptied
     // into the disk on flush, then immediately started bandwidth-limited refilling — assert it
     // flushed (well below full), not that it stays at 0.
-    // The cache refills instantly after the flush, so the buffer is largely spent.
-    expect(saved.intro.diskCache[currentBankSize]).toBe(currentBankSize)
+    // The cache is only partway through refilling after the flush (a timed transfer, not instant).
+    expect(saved.intro.diskCache[currentBankSize] ?? 0).toBeLessThan(currentBankSize)
     expect(saved.intro.disks[currentBankSize]).toBe(1)
     expect(saved.owned.tier01).toBe(0)
 
-    // The same capped bandwidth refills the cache from the remaining balance — another 4s (8,000 /
-    // 2,000, i.e. 400ms more of real ticks) — with no further flush this time (the array's only
-    // container is already full).
-    act(() => { vi.advanceTimersByTime(400) })
+    // The same 5× transfer finishes refilling the cache from the remaining balance — about another
+    // 0.8s of real ticks — with no further flush this time (the array's only container is already full).
+    act(() => { vi.advanceTimersByTime(1000) })
 
     saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    // Fully drained into the cache; only the small continuous top-up remains (< one cache-fill).
-    expect(saved.intro.poolBuffers['1']).toBeLessThan(currentBankSize * 3) // the 10x empty-buffer multiplier tops it up faster
+    // The cache is full again; the pool buffer keeps its own continuous top-up on top of what was spent.
     expect(saved.intro.diskCache[currentBankSize]).toBe(currentBankSize)
     expect(saved.intro.disks[currentBankSize]).toBe(1)
     expect(saved.owned.tier01).toBe(0)
@@ -5943,7 +5970,9 @@ describe('Buy max mode', () => {
     expect(localStorage.getItem('tens_buy_max_mode')).toBe('true')
     await user.click(screen.getByRole('button', { name: /^open byte factory$/i }))
 
-    await user.click(screen.getByRole('button', { name: /^Buy 2 full levels/ }))
+    const buyMaxButton = screen.getByRole('button', { name: /^Buy 2 full levels/ })
+    expect(buyMaxButton).toHaveTextContent('+2')
+    await user.click(buyMaxButton)
     const kilobytesPanel = screen.getByLabelText(`${kilobytes.name} layer`)
     expect(within(kilobytesPanel).getByRole('progressbar', { name: `${kilobytes.name} cost-block progress` }))
       .toHaveAttribute('aria-valuenow', '0')

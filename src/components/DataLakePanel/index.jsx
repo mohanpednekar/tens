@@ -13,6 +13,7 @@ import {
   getDataLakeCapacity,
   getDataLakeCapacityDoublingCost,
   getDataLakeCapacityLevel,
+  getDataLakeCurrentDiskFillFraction,
   getDataLakeCurrentFillSubSize,
   getDataLakeDepositedUnits,
   getDataLakeDiskCounts,
@@ -23,6 +24,7 @@ import {
   getDataLakeUnitBits,
   getPoolBufferBits,
   getPoolBufferCapacity,
+  getDataLakeSpeedMultiplier,
   getStoragePoolBandwidth,
   getPoolTapMultiplier,
   isBoosterEntityAtCap,
@@ -34,7 +36,7 @@ import {
   isDataLakePoolReady,
   isDataLakeBoosterAuto,
   isStoragePoolFullyBuilt,
-  isStoragePoolResetAvailable,
+  isStoragePoolFlushAvailable,
 } from 'game/engine'
 import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
 import styled from 'styled-components'
@@ -117,7 +119,8 @@ const LakeSubRow = styled.div`
 const LakeFilledText = styled.span`
   position: absolute;
   left: 50%;
-  top: 50%;
+  /* With the collapsed header's bar below, center on the title + sub rows only (bar = 4px + 0.3rem margin). */
+  top: ${props => (props.$withBar ? 'calc(50% - 2px - 0.15rem)' : '50%')};
   transform: translate(-50%, -50%);
   pointer-events: none;
   color: ${props => props.theme.color.text};
@@ -130,6 +133,30 @@ const LakeFilledText = styled.span`
   text-shadow: 0 0 2px ${props => props.theme.color.surface};
 `
 
+// Thin progress bar under the balance, shown on a collapsed lake header: progress toward the next
+// disk (the same fraction the expanded LakePoolTile shows). `ThinProgressBar` is reused by
+// ByteFoundryPage's running-upgrade tile so both read the same. Default top margin spaces the bar
+// under the lake title/sub rows (LakeHeader has no flex gap); the upgrade tile zeroes it via a
+// local wrapper so it does not stack on FillableStatCard's gap.
+export const ThinProgressBar = styled.div`
+  position: relative;
+  width: 100%;
+  height: 4px;
+  margin-top: 0.3rem;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, ${props => props.theme.color.surfaceSunken} 70%, ${props => props.theme.color.surface});
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: ${props => props.theme.color.accent};
+    transform-origin: left center;
+    transform: scaleX(${props => props.$fill ?? 0});
+  }
+`
+
 const LakeSpeedText = styled.span`
   flex-shrink: 0;
   margin-left: auto;
@@ -140,7 +167,7 @@ const LakeSpeedText = styled.span`
   white-space: nowrap;
 `
 
-// Shown in the sub-row's right slot (under the fill speed) while neither Compact Pool nor Scale Out is
+// Shown in the sub-row's right slot (under the fill speed) while neither Flush Pool nor Scale Out is
 // offered — those buttons take the slot over whenever they are.
 const LakeTimeText = styled.span`
   flex-shrink: 0;
@@ -378,7 +405,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
         // startDataLakeAutoConvert. The header's own cost control renders as an inert label rather
         // than a button for the whole duration (below).
         const converting = isDataLakeAutoConvertActive(state, tierIndex)
-        const resetAvailable = isStoragePoolResetAvailable(state, tierIndex)
+        const resetAvailable = isStoragePoolFlushAvailable(state, tierIndex)
         // Everything banked in this lake (full disks + the open slot's progress), self-sized below the
         // lake's own unit like a pool's buffer balance.
         const filledBits = getDataLakeDepositedUnits(tierIndex)(state) * unitBits + getDataLakeFillBits(state, tierIndex)
@@ -391,7 +418,8 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
         const fillingAutomatically = draining || (currentFillSubSize !== null &&
           poolComplete && getPoolBufferBits(state, tierIndex) >= getPoolBufferCapacity(state, tierIndex))
         const fillSpeed = !fillingAutomatically ? 0
-          : getStoragePoolBandwidth(state, tierIndex) * (draining ? getPoolTapMultiplier(state, tierIndex) : 1)
+          : getStoragePoolBandwidth(state, tierIndex) * (draining ? getPoolTapMultiplier(state, tierIndex) : 1) *
+            getDataLakeSpeedMultiplier(state, tierIndex)
         const scaleOutShown = upgradeAvailable && !converting && !entityAtCap && !canBuy
         const rightSlotButton = resetAvailable || scaleOutShown
         // Time until the next Cell's cost is banked at the current fill speed — only while it is still
@@ -401,6 +429,10 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
           ? formatLakeTimeLeft((nextCostBits - filledBits) / fillSpeed)
           : null
 
+        // Same fraction as the expanded LakePoolTile (open-slot fill, or 1 once this level has
+        // nothing left to fill). A 0 here when currentFillSubSize is null would paint an empty bar
+        // on a completed lake. Locked lakes stay at 0 so leftover fillBits never look live.
+        const headerFillFraction = poolReady ? getDataLakeCurrentDiskFillFraction(state, tierIndex) : 0
         const costLabel = <><LeadIcon>{COST_ICON}</LeadIcon>{nextCostSize}</>
         return (
           <LakeBlock aria-label={showHeader ? `${label} lake` : undefined} key={tierIndex}>
@@ -417,7 +449,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                     under it (that price is also the lake's Booster control — clicking it buys
                     immediately if already affordable, or starts the one-shot fill-then-buy automation,
                     see startDataLakeAutoConvert), fill speed on the right, and the amount filled big
-                    centered on the title row. Compact Pool / Scale Out, when offered, sit under the speed. */}
+                    centered on the title row. Flush Pool / Scale Out, when offered, sit under the speed. */}
                 <LakeSubRow>
                   {converting ? (
                   <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own staging until ${nextCostSize} is banked, then buys 1 and stops`}>
@@ -458,13 +490,13 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                 )}
                   {resetAvailable ? (
                 <ActionButton
-                  aria-label={`compact the ${label} Storage Pool`}
-                  onClick={() => actions.resetStoragePool(tierIndex)}
+                  aria-label={`flush the ${label} Storage Pool`}
+                  onClick={() => actions.flushStoragePool(tierIndex)}
                   title={`Empty this pool and lake, add 1000 ${label} of permanent lake capacity, and begin free automatic disk rebuilding`}
                   type="button"
                   variant="prestige"
                 >
-                  <ButtonContent>🗜 Compact Pool</ButtonContent>
+                  <ButtonContent>🗜 Flush Pool</ButtonContent>
                 </ActionButton>
               ) : upgradeAvailable && !converting && !entityAtCap && !canBuy ? (
                 <ActionButton
@@ -481,7 +513,17 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               ) : null}
 
                 </LakeSubRow>
-                <LakeFilledText title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>
+                <LakeFilledText $withBar={headerOnly} title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>
+                {headerOnly && (
+                  <ThinProgressBar
+                    role="progressbar"
+                    aria-label={`${label} lake fill progress`}
+                    aria-valuenow={Math.round(headerFillFraction * 100)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    $fill={headerFillFraction}
+                  />
+                )}
               </LakeHeader>
             )}
 

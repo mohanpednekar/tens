@@ -10,7 +10,7 @@ You are the producer. The backlog is the repo's `claude-task` GitHub issues (see
 1. **Pick:** use the issue or goal given. Otherwise take the next eligible `claude-task` issue (`priority:high`, then lowest number, then `priority:low`), skipping issues that are blocked or already have an open `claude/*` or `devin/auto-*` PR. Respect the shared 5-open-PR ceiling.
 2. **Design** (only for new mechanics or economy changes): spawn `designer`, get a spec with pass/fail acceptance checks.
 3. **Build:** spawn `programmer` on a `claude/<slug>` branch with the spec/issue. One small change.
-4. **Verify:** spawn `qa`. On FAIL, send the exact repro back to `programmer`. Max 2 fix rounds, then stop and file/comment what is blocking.
+4. **Verify:** spawn `qa` (for UI changes pass it the programmer's screenshot paths). On FAIL, send the exact repro back to `programmer`. Max 2 fix rounds, then stop and file/comment what is blocking.
 5. **Review:** spawn `code-reviewer` on the diff. Address CONFIRMED findings; mention PLAUSIBLE ones in the PR.
 6. **Ship:** open a PR referencing the issue (`Closes #N` or `Part of #N`) with judgment calls stated. Follow `CLAUDE.md`'s "Pull requests" (post the code-reviewer's adversarial-review marker on the final head SHA; enable auto-merge only on `APPROVE`, never on a diff touching `.github/workflows/**`). Never merge directly; auto-merge and follow-up workflows decide.
 

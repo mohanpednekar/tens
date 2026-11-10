@@ -5,8 +5,8 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
 
@@ -280,6 +280,28 @@ const MoneyHero = styled(Money)`
   font-size: ${props => props.theme.type.scale.hero.size};
   line-height: ${props => props.theme.type.scale.hero.lineHeight};
   padding: 0;
+`
+
+// Small exact-Bits readout under the hero balance (shown once the hero switches to Bytes,
+// so it isn't a duplicate of the headline). Token-driven muted color rather than opacity, so
+// the pair stays on the same AA audit as other HUD muted text (textMuted on surfaceRaised).
+// Not role=status: Bits change every tick, and status is a live region.
+const BitsBalance = styled(HudMutedText)`
+  text-align: center;
+  font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: 1;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 0.1rem;
+  pointer-events: none;
+`
+
+// Wraps the hero toggle so BitsBalance can sit absolutely in the gap that already separates the
+// hero from the segment bar below it — the Bits line adds no layout height.
+const MoneyHeroGroup = styled.div`
+  position: relative;
 `
 
 // Visual (not accessible-name-bearing — see the sibling VisuallyHidden role="progressbar" at the
@@ -768,7 +790,7 @@ const formatCost = (amount, resourceId) =>
 const progressPercent = (numerator, denominator) => Math.min(100, Math.round((numerator / denominator) * 100))
 
 // "1.1" / "1.21" / "1" — rounds to 2 decimal places and trims a trailing ".00"/trailing zero, used
-// for multiplier displays (Scale Up's next multiplier, the PP production speed bonus, the tier row's
+// for multiplier displays (Scale Up's next multiplier, the Purge-count production speed bonus, the tier row's
 // "Effective tickspeed" breakdown). Overclock's own boost is folded into the Tickspeed upgrade's
 // per-level rate and displayed as a percentage via formatGlobalTickspeedBonusPercent instead — see
 // "Overclock" below — not through this helper.
@@ -804,15 +826,16 @@ const MainPage = ({ game }) => {
   const canPurge = state.resources[MONEY_ID] >= PURGE_THRESHOLD
   const isUnbounded = isOverflowModeUnlocked(state)
   const doublePpLevel = state.prestigeDoublePpLevel ?? 0
-  // The passive PP production-speed bonus is inert until unlocked (see buyPrestigeSpeedBonus in
-  // engine.js) — before that, it's a flat ×1 regardless of unspent PP balance.
-  const prestigeBonus = state.prestigeSpeedBonusUnlocked
-    ? getPrestigeProductionMultiplier(purge.points)
-    : 1
+  // Passive Purge-count production-speed bonus: flat ×1 until 10 Purges (see engine.js).
+  const prestigeBonus = getPrestigeProductionMultiplier(purge.count)
+  const prestigeBonusUnlocked = isPrestigeSpeedBonusUnlocked(state)
   const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel)
   const purgeProgressPercent = getPurgePercent(state.resources[MONEY_ID])
   const bytePowerProgressFraction = getNextBytePowerProgressFraction(state.resources[MONEY_ID])
   const bytePowerProgressPercent = Math.round(bytePowerProgressFraction * 100)
+  const moneyBits = state.resources[MONEY_ID]
+  const moneyHeroText = formatMoneyBalance(moneyBits)
+  const moneyBitsText = formatCurrency(moneyBits)
   // What a Prestige would award — shown on the Prestige button itself (Buy-button style: the
   // effect lives on the control, not in a separate text line). Below Googol the formula reads 0,
   // but the award on reaching it is always at least 1, so that's the effect worth advertising.
@@ -1176,6 +1199,7 @@ const MainPage = ({ game }) => {
         $belowBarHeight={topPurgeBarHeight}
       >
         <CenteredCard $raised>
+          <MoneyHeroGroup>
           <MoneyHeroToggle
             aria-controls="global-multipliers-details"
             aria-expanded={showGlobalMultipliers}
@@ -1190,8 +1214,14 @@ const MainPage = ({ game }) => {
             tabIndex={0}
             title="Show or hide the global production multipliers currently in effect"
           >
-            <MoneyHero>{formatMoneyBalance(state.resources[MONEY_ID])}</MoneyHero>
+            <MoneyHero>{moneyHeroText}</MoneyHero>
           </MoneyHeroToggle>
+          {!balancesCompressed && moneyHeroText !== moneyBitsText && (
+            <BitsBalance aria-label={`balance in bits: ${moneyBitsText}`}>
+              {moneyBitsText}
+            </BitsBalance>
+          )}
+          </MoneyHeroGroup>
           {!balancesCompressed && (
             <>
               <BytePowerSegments aria-hidden="true">
@@ -1222,9 +1252,16 @@ const MainPage = ({ game }) => {
             <GlobalMultipliersList id="global-multipliers-details" aria-label="global production multipliers">
               {!isFirstRun && (
                 <li>
-                  Prestige speed bonus: {state.prestigeSpeedBonusUnlocked
-                    ? `${formatBonusOrMultiplier(prestigeBonus)} production speed from ${formatAmount(purge.points)} unspent PP`
-                    : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on Firmware → Prestige)`}
+                  Playtime bonus: {state.playtimeBonusUnlocked
+                    ? `${formatBonusOrMultiplier(getPlaytimeProductionMultiplier(state))} production speed from ${formatAmount(Math.floor((state.activePlaySeconds ?? 0) / 3600))}h active play`
+                    : `not yet unlocked (${formatAmount(PLAYTIME_BONUS_UNLOCK_COST)} PP on Firmware → Prestige)`}
+                </li>
+              )}
+              {!isFirstRun && (
+                <li>
+                  Prestige speed bonus: {prestigeBonusUnlocked
+                    ? `${formatBonusOrMultiplier(prestigeBonus)} production speed from ${formatAmount(purge.count)} Purges`
+                    : `unlocks at ${PRESTIGE_SPEED_BONUS_UNLOCK_PURGES} Purges (${formatAmount(purge.count)} so far)`}
                 </li>
               )}
               <li>
@@ -1266,7 +1303,7 @@ const MainPage = ({ game }) => {
           >
             <HudMutedText>
               <HudGoldText>{formatAmount(purge.points)} PP</HudGoldText>
-              {state.prestigeSpeedBonusUnlocked && ` · ${formatBonusOrMultiplier(prestigeBonus)} production speed`}
+              {prestigeBonusUnlocked && ` · ${formatBonusOrMultiplier(prestigeBonus)} production speed`}
             </HudMutedText>
           </PpHeaderCard>
         )}
@@ -1419,25 +1456,11 @@ const MainPage = ({ game }) => {
           const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}${tickspeedRequirement > tickspeedCost + 1 ? ` (requires ${formatCost(tickspeedRequirement, tier.id)} owned)` : ''}`
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
           // (via formatCost) in place of its full name. The full sentence stays in aria-label/
-          // title for assistive tech. The block progress ("5+3/8" — how many of the current
-          // level's pieces are already bought, plus how many more are affordable right now, over
-          // the block size — mirroring the pre-level design's `purchased+affordable` convention,
-          // see docs/DESIGN_HISTORY.md) sits inside ButtonIcon alongside the 🛒 glyph rather than
-          // the centered ButtonLabel, so it's pinned immediately next to the icon and lines up in
-          // a column across tier rows regardless of the cost string's length. The level number
-          // itself isn't shown here (still available via aria-label and the row's Details
-          // disclosure) — this is purely "how close is the current level."
-          // Every count carries a "+" and zero parts are omitted: Buy-max shows "+<levels>" /
-          // "+<levels> +<n>/<block>", the ordinary Buy shows "+<affordable>/<block>" when anything
-          // is affordable, else "+<done>/<block>", and nothing at 0/<block>.
-          const blockText = formatAmount(purchaseBlockSize)
-          const buyLevelQuantityText = maxLevelsPreview.levels > 0
-            ? `+${formatAmount(maxLevelsPreview.levels)}${maxLevelsPreview.partialQuantity > 0 ? ` +${formatAmount(maxLevelsPreview.partialQuantity)}/${blockText}` : ''}`
-            : affordableQuantity > 0
-              ? `+${formatAmount(affordableQuantity)}/${blockText}`
-              : doneInBlock > 0
-                ? `+${formatAmount(doneInBlock)}/${blockText}`
-                : ''
+          // title for assistive tech. Cost-block progress lives on the button as the dual-tone
+          // fill plus a VisuallyHidden progressbar (and in the aria-label) — not as `+n/8` text
+          // next to the cart icon. Buy-max mode is the exception: "+<levels>" full levels sit
+          // beside the icon so the click still previews how many levels it will buy.
+          const buyLevelQuantityText = maxLevelsPreview.levels > 0 ? `+${formatAmount(maxLevelsPreview.levels)}` : ''
           // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
           // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
           // no separate icon for "+10%" is needed, since that step is fixed

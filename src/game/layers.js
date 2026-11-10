@@ -237,7 +237,7 @@ export const FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT = 100
 // diskProvisionPasses in createInitialGameState. Disks are a genuine storage MEDIUM, not a one-shot
 // pre-paid item: building one only constructs a permanent, EMPTY container (after its own build
 // cost is paid in installments, then a real build TIME — see below); Data Stream (intro.bits) then
-// keeps each array's Cache full (whole-block transfers —
+// keeps each array's Cache full (a timed 5× transfer —
 // see the cache comment / tickDiskAutoFill) and flushes a full read cache into an empty disk over
 // one cache-block production duration when no tier claim blocks that size — leftover Data Stream
 // stays as its own balance. Pulling a FULL disk grants 1 free tier01 unit once tier01's own
@@ -299,7 +299,7 @@ export const DISK_LADDER_SIZE_MULTIPLIER = 10
 // DISK_CACHE_BLOCK_COUNT below) economically substitutes for the 10th disk, so only 9 need to be
 // actually built and paid for. See docs/DESIGN_HISTORY.md.
 export const DISK_ARRAY_LADDER_CAP = 9
-// A disk array's cache — a permanent always-full reserve Memory tops up in whole-block transfers
+// A disk array's cache — a permanent always-full reserve Memory tops up as a timed 5× transfer
 // (see tickDiskAutoFill in engine.js). Split into this many equal blocks, each holding
 // `size / DISK_CACHE_BLOCK_COUNT` bits (a real 1 KB/8000-bit array → 8 × 1000 bits/"1 Kb"; a 1 MB
 // array → 8 × 1 Mb — lowercase 'b' bit-scale via formatCacheSize, distinct from Disks' uppercase
@@ -322,7 +322,9 @@ export const DISK_CACHE_BLOCK_COUNT = 8
 // A DISK filling FROM a cache (read-cache → disk, write-cache → disk) moves faster than Memory's
 // own live production, since the cache itself is a pre-staged buffer, not a live trickle.
 export const DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER = 2
-export const CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER = 10
+// An array's read cache (its disk buffer) filling FROM its pool's Staging buffer: a timed transfer at
+// this multiple of the pool's Bandwidth (tickDiskAutoFill Pass 1), 5x rather than the old 10x.
+export const CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER = 5
 // A CACHE filling FROM Disks (write-cache collecting from the source size's full disks) — faster
 // than a disk filling FROM a cache (DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER above): moving an
 // already-built Disk's contents into the write cache is a bulk transfer, not bandwidth-limited the
@@ -614,18 +616,15 @@ export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.25
 // make up one level.
 export const PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10
 
-// Each unspent Prestige Point adds a flat 1% production-speed bonus, uniformly across every
-// tier (see engine.js's getPrestigeProductionMultiplier) — replaces the old "prestige level
-// doubles production" mechanic. Spending points on autobuyer automation trades this bonus away.
-// This bonus is inert until unlocked (see PRESTIGE_SPEED_BONUS_UNLOCK_COST below) — it no longer
-// applies automatically just from holding points.
-export const PRESTIGE_POINT_SPEED_BONUS = 0.01
-// One-time PP cost to unlock the passive production-speed bonus above (see engine.js's
-// buyPrestigeSpeedBonus) — before this is bought, unspent Prestige Points grant no production
-// bonus at all, regardless of balance. Permanent once bought, like autobuyer automation/
-// Auto-Prestige. Priced well above the global automation unlocks (see AUTOMATION_INTERVAL_CONFIG),
-// since it's a passive, always-on bonus rather than a one-shot action.
-export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000
+// Passive production-speed bonus, uniformly across every tier (see engine.js's
+// getPrestigeProductionMultiplier): unlocked once the save has Purged
+// PRESTIGE_SPEED_BONUS_UNLOCK_PURGES times, then ×log10(purge count). No PP cost.
+export const PRESTIGE_SPEED_BONUS_UNLOCK_PURGES = 10
+// One-time PP unlock for the playtime bonus: +1% production per hour of ACTIVE play (visible live
+// ticks only — simulated offline/background catch-up and hidden-tab ticks never count). See
+// engine.js's getPlaytimeProductionMultiplier/buyPlaytimeBonus.
+export const PLAYTIME_BONUS_UNLOCK_COST = 100
+export const PLAYTIME_BONUS_PER_HOUR = 0.01
 // Per-tier base cost for the tickspeed multiplier ladder (see engine.js's
 // getTickspeedMultiplierBaseCost/getTickspeedMultiplierCost) — 10^10 for the first tier (index 0),
 // decreasing by a power of ten per subsequent tier (10^9, 10^8, … 10^1 for the 10th/last tier).

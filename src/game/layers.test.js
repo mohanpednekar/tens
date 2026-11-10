@@ -39,9 +39,10 @@ import {
   OVERCLOCK_REQUIREMENT_STEP,
   POOL_CAPACITY_SI_STEP,
   PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE,
-  PRESTIGE_POINT_SPEED_BONUS,
   PRESTIGE_POWERS_PER_PP_BASE,
-  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
+  PLAYTIME_BONUS_PER_HOUR,
+  PLAYTIME_BONUS_UNLOCK_COST,
+  PRESTIGE_SPEED_BONUS_UNLOCK_PURGES,
   PURGE_THRESHOLD,
   PURGE_UNBOUNDED_MIN_COUNT,
   RESOURCE_SYMBOL,
@@ -233,10 +234,6 @@ describe('constants', () => {
     expect(TICK_RATE_MS).toBeGreaterThan(0)
   })
 
-  it('PRESTIGE_POINT_SPEED_BONUS is 0.01 (1% per unspent Prestige Point)', () => {
-    expect(PRESTIGE_POINT_SPEED_BONUS).toBe(0.01)
-  })
-
   it('TICKSPEED_MULTIPLIER_BASE_EXPONENT is 10 (first tier\'s base cost is 10^10)', () => {
     expect(TICKSPEED_MULTIPLIER_BASE_EXPONENT).toBe(10)
   })
@@ -250,8 +247,13 @@ describe('constants', () => {
     expect(AUTOBUYER_BULK_MAX_EXTRA_LEVELS).toBe(Math.floor(Math.log2(BUY_MAX_ITERATION_CAP)))
   })
 
-  it('PRESTIGE_SPEED_BONUS_UNLOCK_COST is 10000', () => {
-    expect(PRESTIGE_SPEED_BONUS_UNLOCK_COST).toBe(10000)
+  it('playtime bonus is 100 PP for +1% per hour', () => {
+    expect(PLAYTIME_BONUS_UNLOCK_COST).toBe(100)
+    expect(PLAYTIME_BONUS_PER_HOUR).toBe(0.01)
+  })
+
+  it('PRESTIGE_SPEED_BONUS_UNLOCK_PURGES is 10', () => {
+    expect(PRESTIGE_SPEED_BONUS_UNLOCK_PURGES).toBe(10)
   })
 
   it('SCALE_UP_MULTIPLIER_BASE is 2 (production doubles per activation)', () => {

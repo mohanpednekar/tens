@@ -14,7 +14,7 @@ powers of ten. No routing library, no backend — state lives in React and persi
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
 `MainPage` (tier ladder), `PerksPage` (after first Prestige: 🤖 Automation / ✦ Prestige icon
-tabs — one row per automation spanning unlock → pause → speed; Compression, speed bonus, Overflow mode, Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
+tabs — one row per automation spanning unlock → pause → speed; Compression, Overflow mode, Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
 second-level tabs). More (Manual / Releases / Settings) is always available, including during the
@@ -169,6 +169,8 @@ the originating issue's approved spec table and Explicit Authorizations section 
 wrong `baseCost` exponent, a mis-chained `producesResourceId`, a migration missing an old tier id, an
 unauthorized economy change) that general review doesn't look for. It supplements, not replaces, the
 ordinary review flow.
+
+**Aesthetic review on every UI change.** Any change to what a player sees (layout, spacing, font size, alignment, colors, new/removed elements) needs a visual check before the PR is marked ready: render the real screen (Playwright at ~430px wide, both themes; seed `localStorage` as in "End-to-end testing"; throwaway scripts, not committed), look at the screenshot, and fix anything misaligned, cramped, off-center, inconsistent with neighbouring components (same font sizes/bar styles for the same kind of value), or that changes a component's size unintentionally. Share the screenshots with the user. Passing tests don't cover this.
 
 The `code-reviewer` subagent (`.claude/agents/code-reviewer.md`) does an adversarial, evidence-based,
 read-only review (every finding verified against the checked-out code, file:line-cited, CONFIRMED/PLAUSIBLE findings, explicit verdict, checked-clean list,
@@ -582,24 +584,22 @@ state to the active slot, then redirects every save read/write to an isolated `'
 
 ## Economy model
 
-### Pool-local resets
+### Pool-local flushes
 
-Each Storage pool has an independent end-of-progression reset, offered only at 9/9/9 disks, with a
+Each Storage pool has an independent end-of-progression **flush** (`flushStoragePool`; formerly "reset"), offered only at 9/9/9 disks, with a
 completely full Data Lake, when the next Booster costs more than the lake can hold. It empties only that
 pool's disks, buffer, and lake (Booster state and prior reset rewards remain) and permanently adds 1,000
-units of lake-only capacity. The first reset fixes lake overflow speed at 50%; the second and later also
-advance the pool through the existing bandwidth steps, non-final reward growth limited dynamically by
-half the following pool's bandwidth. After reset the pool provisions its disks automatically and for
+units of lake-only capacity. Lake speed is 10% of its pool's base Bandwidth, +10% additive per flush (`getDataLakeSpeedMultiplier`; 70% after 6); flushes no longer change pool Bandwidth. After a flush the pool provisions its disks automatically and for
 free, one at a time smallest-first, waiting for each disk to fill; while it rebuilds, later pools cannot
 start new provisioning (already-active work may finish). Whenever all 9/9/9 disks are provisioned
 (including before the first reset) — a status latched per lake (`boosterAuto`) for the whole Reboot cycle, surviving pool resets, Reformat Byte Foundry and Prestige — the lake's Booster control becomes a non-clickable cost label and
 the lake automatically buys every affordable Booster until slots fill or the next cost exceeds capacity;
 filling the lake at that wall enables the next reset. Pools never transfer or share resources through
-this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop".
+this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop" (now the flush loop).
 
 ### Tiers, Prestige, Reboot (Era ascension)
 
-**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Compact Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
+**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Flush Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
 
 **Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Purge, Reboot,
 Reformat Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Purge** (formerly the name Reboot, now the Era-ascension layer) and
@@ -638,10 +638,12 @@ a purchase control yet (deferred to #414, blocked pending maintainer-approved sp
 `getPrestigePointsAwarded`: 1 base PP at 1 Googol Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64)
 additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Compression
 upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then doubles PP-per-power; cost
-`100^(level+1)` PP). `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
+`100^(level+1)` PP). Production speed bonus (`getPrestigeProductionMultiplier`) is automatic at 10
+Purges: ×`log10(count)` (else ×1) — no PP cost; see `docs/ECONOMY_REFERENCE.md`. `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
 (`getMoneyExponent`/`getPurgePercent`) — only the live freeze/Prestige trigger moved to
 `PURGE_THRESHOLD`; see `docs/DESIGN_HISTORY.md` for why. MainPage's headline balance (`MoneyHero`) switches from Bits to whole Bytes once the balance reaches
-8000 Bits (`formatMoneyBalance`, `MONEY_BYTES_DISPLAY_THRESHOLD`) — every other `formatCurrency` call
+8000 Bits (`formatMoneyBalance`, `MONEY_BYTES_DISPLAY_THRESHOLD`); a small Bits subline then shows
+the exact `formatCurrency` amount (absolutely positioned in the existing gap — adds no height; hidden while `balancesCompressed`). Every other `formatCurrency` call
 (costs, production, the Prestige-threshold overlay) keeps reading in Bits.
 
 ### Byte Foundry
@@ -679,7 +681,7 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
 - **Disks** (`provisionDisk`, `tickDiskAutoFill`, `tickDiskPull`, `tickDiskLevelOneCachePull`): ladder
   advances every `DISK_ARRAY_LADDER_CAP` (9) disks; Factory is funded **pull-based** from full disks,
   fully automatic (no click, no autobuyer gate). Disks/caches/builds are PERMANENT across Prestige.
-  Every size above its pool's smallest fills via its write cache FROM THE POOL BUFFER by default (pool fill
+  The pool's smallest size's read cache fills from its pool buffer as a timed 5× transfer (`CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER`). Every size above its pool's smallest fills via its write cache FROM THE POOL BUFFER by default (pool fill
   order: read cache, then write caches smallest size first); clicking an empty disk expedites it
   (`expediteDiskFill`) — it jumps ahead of the other write caches for the pool buffer, consumes the smaller full
   disks of its pool it needs in parallel alongside that buffer, and flushes at 5× (`docs/ECONOMY_REFERENCE.md`).

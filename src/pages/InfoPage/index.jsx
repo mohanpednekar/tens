@@ -20,6 +20,7 @@ import {
   COMPUTE_FLOPS_LAST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
   CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER,
+  CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER,
   DATA_LAKE_CAPACITY_BY_LEVEL,
   DATA_LAKE_SUB_SIZE_DISK_CAPS,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
@@ -38,9 +39,10 @@ import {
   MAX_OFFLINE_SECONDS,
   OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS,
   OFFLINE_PROGRESS_SPEED_MULTIPLIER,
-  PRESTIGE_POINT_SPEED_BONUS,
   PRESTIGE_POWERS_PER_PP_BASE,
-  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
+  PLAYTIME_BONUS_PER_HOUR,
+  PLAYTIME_BONUS_UNLOCK_COST,
+  PRESTIGE_SPEED_BONUS_UNLOCK_PURGES,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
@@ -190,7 +192,7 @@ const InfoPage = () => {
             resets, plus unspent PP, the Purge count, Compression levels, owned Compute (Flops) units,
             and the whole Foundry (Capacity, Disks, Data Lakes, Compute entities).{' '}
             <em>Keeps:</em> automation unlocks, Overflow mode, the main-game unlock, the System log,
-            Flops autobuyer unlocks, the Production speed bonus, Kernels and hyperscalers. Awards Kernels.
+            Flops autobuyer unlocks, Kernels and hyperscalers. Awards Kernels.
           </li>
           <li>
             <strong>Reinstall</strong> — a future layer above Reboot, not yet in the game.
@@ -313,8 +315,8 @@ const InfoPage = () => {
           <li>
             Each pool’s smallest array keeps a read Cache of {DISK_CACHE_BLOCK_COUNT} blocks that
             together hold one disk’s worth of bits (e.g. a 1 MB array → 8 × 1 Mb). Whenever the
-            pool’s Staging holds a full block and the Cache has room, the block moves into the Cache
-            instantly.
+            Cache has room, it fills from the pool’s Staging at {CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER}× the
+            pool’s Bandwidth.
           </li>
           <li>
             That array’s empty disks fill from its read Cache, taking as long as one cache block
@@ -370,21 +372,21 @@ const InfoPage = () => {
             The nth Cell bought from a lake costs n units and instantly grants 1 compute entity of
             that lake’s tier (KB → Cell, MB → Battery, …). Once a pool has all of its disks built, its
             lake buys every affordable Cell automatically for the rest of the Reboot cycle — through pool
-            compactions, Reformats and Purges.
+            flushes, Reformats and Purges.
           </li>
         </ul>
 
-        <h3>Compaction</h3>
+        <h3>Flushing</h3>
         <ul>
           <li>
             When a pool has every disk built, its lake is completely full, and the next Cell costs
-            more than the lake can hold, a <strong>🗜 Compact Pool</strong> button appears. It never
+            more than the lake can hold, a <strong>🗜 Flush Pool</strong> button appears. It never
             fires on its own.
           </li>
           <li>
-            Compaction empties that pool’s disks, Staging and lake (Cells bought and earlier compaction
-            rewards stay) and permanently adds 1,000 units of lake capacity. The first reset also
-            locks lake filling at 50% speed; later compactions raise the pool’s Bandwidth.
+            A flush empties that pool’s disks, Staging and lake (Cells bought and earlier flush
+            rewards stay) and permanently adds 1,000 units of lake capacity. Lakes fill at 10% of
+            their pool’s Bandwidth, plus 10% (additive) per flush.
           </li>
           <li>
             Afterwards the pool rebuilds its disks for free, one at a time, smallest first. Until it
@@ -622,7 +624,7 @@ const InfoPage = () => {
         <ul>
           <li>
             <strong>Prestige</strong> is the umbrella term for every reset-for-rewards: Purge, Reboot,
-            Reformat Byte Foundry and a pool’s Compaction. Purge is the Factory one.
+            Reformat Byte Foundry and a pool’s Flush. Purge is the Factory one.
           </li>
           <li>
             Available at 1 Googol Bytes (8×10^100 Bits), where production freezes until you
@@ -640,9 +642,16 @@ const InfoPage = () => {
             is permanent across Purges.
           </li>
           <li>
-            Spend PP on Firmware for automation and bonuses — e.g. the one-time Production speed bonus
-            ({PRESTIGE_SPEED_BONUS_UNLOCK_COST.toLocaleString()} PP) gives +
-            {PRESTIGE_POINT_SPEED_BONUS * 100}% production speed per unspent PP.
+            Spend PP on Firmware for automation and upgrades.
+          </li>
+          <li>
+            From {PRESTIGE_SPEED_BONUS_UNLOCK_PURGES} Purges on, production speed gets a bonus of
+            ×log₁₀ of your Purge count.
+          </li>
+          <li>
+            The one-time Playtime bonus ({PLAYTIME_BONUS_UNLOCK_COST} PP on Firmware → Prestige) adds
+            +{PLAYTIME_BONUS_PER_HOUR * 100}% production speed per hour of active play; offline,
+            hidden-tab, and background catch-up time doesn't count.
           </li>
           <li>
             Resets resources, owned tiers and this run’s progress. Unlocked autobuyers stay, and

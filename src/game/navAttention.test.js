@@ -19,7 +19,6 @@ import {
   INTRO_STARTING_CAPACITY,
   BITS_PER_BYTE,
   MONEY_ID,
-  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   PURGE_THRESHOLD,
   TIER_DEFINITIONS,
 } from 'game/layers'
@@ -355,7 +354,6 @@ describe('navAttention', () => {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
-      prestigeSpeedBonusUnlocked: true,
     }
     const automationOnly = { ...base, purge: { count: 1, points: getAutomationUnlockCost('speedUp') }, autoGlobalTickspeed: false }
     expect(hasAffordableAutomationPerk(automationOnly)).toBe(true)
@@ -376,11 +374,6 @@ describe('navAttention', () => {
     expect(hasAffordableAutomationPerk(prestigeOnly)).toBe(false)
     expect(hasAffordablePrestigePerk(prestigeOnly)).toBe(true)
     expect(hasAffordablePpUpgrade(prestigeOnly)).toBe(true)
-
-    // The production speed bonus is a prestige perk, not an automation one.
-    const speedBonusOnly = { ...prestigeOnly, prestigeSpeedBonusUnlocked: false, prestigeDoublePpLevel: 5, purge: { count: 1, points: PRESTIGE_SPEED_BONUS_UNLOCK_COST } }
-    expect(hasAffordablePrestigePerk(speedBonusOnly)).toBe(true)
-    expect(hasAffordableAutomationPerk(speedBonusOnly)).toBe(false)
 
     // An affordable Auto Purge speed level lights the Automation tab (its whole lifecycle lives there).
     const purgeSpeedOnly = {
@@ -408,7 +401,6 @@ describe('navAttention', () => {
       ...init,
       resources: { ...init.resources, [MONEY_ID]: 0 },
       purge: { count: 1, points: COMPUTE_AUTO_BOOST_UNLOCK_COST },
-      prestigeSpeedBonusUnlocked: true,
       autoScaleUp: true,
       autoGlobalTickspeed: true,
       autoXpTickspeed: true,

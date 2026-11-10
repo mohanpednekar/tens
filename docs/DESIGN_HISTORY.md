@@ -1,5 +1,38 @@
 # Design history & rationale
 
+### Bits subline under MoneyHero; `+n/8` dropped from tier Buy buttons — 2026-11-09
+
+Once `formatMoneyBalance` switches the Factory headline to whole Bytes (8000 Bits / 1000 B), the
+exact Bits amount disappeared from the HUD. A small `BitsBalance` line under the hero restores it
+via `formatCurrency`, but only while those two strings differ — below the threshold it would
+duplicate the Bits headline, and the compressed sticky bar has no room for it. Token-driven
+`textMuted` + `type.scale.sm` rather than `opacity: 0.7` on default text, so the pair stays on the
+same AA audit as other HUD muted copy. Not `role="status"`: that is a live region, and Bits change
+every tick.
+
+Same change: tier Buy buttons no longer render `{progress}+{affordable}/{blockSize}` (`5+3/8`) next
+to the cart icon. That fraction duplicated the dual-tone fill and the visually-hidden cost-block
+progressbar; the cost label now stands alone. Buy max still previews `+N` full levels in the icon
+slot, because that click actually buys N levels and the fill can't say so.
+
+### Bits subline adds no Factory header height — 2026-11-09
+
+The in-flow `BitsBalance` from the previous entry sat in StatCard's flex column and grew the Factory
+header once the hero switched to Bytes. Follow-up: wrap the hero in `MoneyHeroGroup`
+(`position: relative`) and absolutely position `BitsBalance` in the existing hero→bar gap so header
+height is the same with or without the line.
+
+### Production speed bonus: 10k PP unlock +1%/PP → automatic log10(Purge count) — 2026-11-09
+
+The previous bonus was a 10,000 PP Firmware unlock (`buyPrestigeSpeedBonus` /
+`prestigeSpeedBonusUnlocked`) that then applied `1 + 0.01 × unspent PP` in `tickGame`. That made
+unspent PP a production lever (hoard vs spend) and gated the whole effect behind the priciest global
+unlock. Replaced with an automatic Purge-count formula: inert below 10 Purges, then `log10(count)`
+(×1 at 10, ×2 at 100). An earlier shape on the same PR was `1 + log10(count)` (×2 at 10); dropped so
+the threshold itself is a no-op identity rather than a sudden ×2 jump. `buyPrestigeSpeedBonus` and
+the stored flag are gone; Firmware no longer lists the perk. Existing saves that had bought the
+unlock keep the spent PP (no refund); the new formula applies from the live Purge count.
+
 ### Perks regrouped by feature: Unlocks / Upgrades / Toggles → Automation / Prestige — 2026-11-03
 
 Perks used three tabs split by *purchase kind* (🔓 one-time unlocks, ⏫ leveled upgrades, 🎛 pause
@@ -9249,3 +9282,13 @@ still passed unchanged (the captured screens do not show the renamed nav item).
 - Side mechanics: Snapshot / Rollback, Uptime, Hotfix.
 - Others: Garbage Collector (auto-Compaction), Latency, Cache hit, Thermal throttling,
   Parity / RAID, Lakehouse / Data Warehouse, Tape / Cold storage.
+
+## Read-cache refill from Staging: instant → timed 5× (2026-11)
+
+The maintainer asked for "10× speed as default for array (disk) buffers" to become 5×. A first reading changed the pool Staging
+buffer's empty fill multiplier (500%) and was reverted (the maintainer meant the disk buffers, not the pool buffer; the
+pool/Data Stream curves keep their symmetric 10×↔0.1×). The only 10× on the disk side was the long-unused
+`CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (cache refills had been made instant in PR #879), so `tickDiskAutoFill` Pass 1 is now a
+continuous timed transfer at `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` = 5 × pool Bandwidth × pool tap bonus, replacing the
+whole-block instant top-up (and its sub-block dump edge case). Rule from the maintainer: any speed curve starting at x ends at 1/x —
+not applicable to this constant-rate transfer, and the existing Data Stream/pool curves already satisfy it.

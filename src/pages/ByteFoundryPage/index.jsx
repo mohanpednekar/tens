@@ -3,7 +3,7 @@ import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/
 import { COST_ICON } from 'components/icons'
 import DiskArrayRow from 'components/DiskArrayRow'
 import LeadIcon from 'components/LeadIcon'
-import DataLakePanel from 'components/DataLakePanel'
+import DataLakePanel, { ThinProgressBar } from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
@@ -214,15 +214,18 @@ const RunningUpgradeContent = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   grid-template-rows: auto auto;
-  column-gap: ${props => props.theme.space.sm};
+  column-gap: ${props => props.theme.space.md};
   width: 100%;
   min-width: 0;
   text-align: left;
 `
 
+// Corner labels hug their own corners (top row to the top, bottom row to the bottom) so the extra
+// height the 4 rows share is spread between them instead of the tile growing.
 const RunningTitle = styled.span`
   grid-column: 1;
   grid-row: 1;
+  align-self: start;
   justify-self: start;
   font-family: ${props => props.theme.font.display};
   font-size: ${props => props.theme.type.scale.sm.size};
@@ -238,6 +241,7 @@ const RunningTitle = styled.span`
 const RunningChange = styled.span`
   grid-column: 1;
   grid-row: 2;
+  align-self: end;
   justify-self: start;
   font-size: 0.7rem;
   font-weight: 500;
@@ -258,8 +262,9 @@ const RunningPercent = styled.span`
   align-self: center;
   justify-self: center;
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.xl.size};
-  /* Like the pool/stream balance, the big figure must not make the tile taller than its two text rows. */
+  /* Same size as the Data Lake's filled balance (LakeFilledText). */
+  font-size: ${props => props.theme.type.scale.lg.size};
+  /* Like the pool/stream balance, the figure must not make the tile taller than its two text rows. */
   line-height: 1;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -271,6 +276,7 @@ const RunningPercent = styled.span`
 const RunningTime = styled.span`
   grid-column: 3;
   grid-row: 2;
+  align-self: end;
   justify-self: end;
   font-size: 0.7rem;
   font-weight: 500;
@@ -288,6 +294,11 @@ const ProvisionSpeed = styled.span`
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+`
+
+// The tile's own column gap already spaces the bar from the labels (as the lake header's margin does).
+const UpgradeBar = styled(ThinProgressBar)`
+  margin-top: 0;
 `
 
 const MilestoneCostLine = styled.span`
@@ -1126,7 +1137,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             title={speedUpgradeQueued
               ? 'Upgrading Bitrate — pulling the Data Stream\'s Bitrate into the bar'
               : `Upgrading to ${nextCapacityText} — pulling the Data Stream's base Bitrate into the bar`}
-            $progress={runningProgress}
           >
             <RunningUpgradeContent>
               <RunningTitle><LeadIcon>⏫</LeadIcon>Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
@@ -1140,7 +1150,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               <SpeedButton
                 ref={upgradeSpeedDetailsOpen ? speedDetailsAnchorRef : undefined}
                 $color={getSpeedColor(runningMultiplierPercent)}
-                style={{ gridColumn: 3, gridRow: 1, justifySelf: 'end' }}
+                style={{ gridColumn: 3, gridRow: 1, alignSelf: 'start', justifySelf: 'end' }}
                 title="Upgrade draw at a constant 1x Bitrate"
                 aria-label={`upgrade draw bitrate ${runningRateText}, show bitrate details`}
                 aria-haspopup="dialog"
@@ -1161,6 +1171,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               )}
               <RunningTime>⏳ {runningTimeLeftText}</RunningTime>
             </RunningUpgradeContent>
+            <UpgradeBar $fill={Math.min(1, Math.max(0, runningProgress / 100))} aria-hidden="true" />
             <VisuallyHidden
               role="progressbar"
               aria-label="data stream upgrade progress"

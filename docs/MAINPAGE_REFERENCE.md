@@ -98,9 +98,10 @@ derived Speed stay visible above the button on the Data Stream tile's own footer
 after-upgrade preview. `disabled={!capacityUpgradeClickable}` where `capacityUpgradeClickable =
 isMemoryCapacityUpgradeArmable(state)`: a click at any fill (byte combined, not at cap, not already
 running) starts the upgrade (`intro.capacityUpgradeQueued`); `tickCapacityUpgradeDrain` then pulls 100% of
-base Speed from the Buffer into `intro.capacityUpgradeProgress`. While running, the SAME `Button` becomes
-an inert progress bar ("⏫ Upgrading Data Stream…", fill = progress/Capacity, hidden `progressbar`
-`aria-label="data stream upgrade progress"`); there is no cancel, and the tile is unchanged. Upgrade Data Stream sits outside the forced priority order (see
+base Speed from the Buffer into `intro.capacityUpgradeProgress`. While running, an inert
+`UpgradeStatusTile` ("⏫ Upgrading…") sits under the Data Stream tile with a thin progress bar
+(same `ThinProgressBar` as a collapsed Data Lake header; fill = progress/Capacity) plus a hidden
+`progressbar` (`aria-label="data stream upgrade progress"`); there is no cancel. Upgrade Data Stream sits outside the forced priority order (see
 docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
@@ -128,7 +129,8 @@ the `PoolTileContent` readouts (`pointer-events: none`) — a `TitleRow` is the 
 title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
 or tier name in the visible text) on the left, the
 Memory buffer balance and Capacity (`balance / capacity-unit`) in a centered `BalanceText` in the middle, and Bandwidth on the right
-(same as Data Stream's own tile above, including the narrow-phone wrap). Its second line is the same `CapacityBonusRow` (pool Capacity, tap bonus). While `isDataLakePoolDrainAvailable` the lake drains the buffer directly; the tile stays tappable (the tap bonus is granted regardless). The lake's title/action row also shows on a collapsed pool (`DataLakePanel section="header"`). Only ONE pool is expanded at a time by default — the
+(same as Data Stream's own tile above, including the narrow-phone wrap). Its second line is the same `CapacityBonusRow` (pool Capacity, tap bonus). While `isDataLakePoolDrainAvailable` the lake drains the buffer directly; the tile stays tappable (the tap bonus is granted regardless). The lake's title/action row also shows on a collapsed pool (`DataLakePanel section="header"`),
+with a thin bar toward the next disk under the filled amount. Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
 pool, an explicit `0` means "all collapsed", any other value pins one specific pool) — toggled by a
 `PoolTitleToggle` — the "<symbol> Pool" title alone (`aria-expanded`,
@@ -358,8 +360,8 @@ automatically now (`tickDiskPull`/`tickDiskLevelOneCachePull`), not through a pl
 
 - A `CacheBlocksRow` (`role="group"`, `aria-label="<size> read cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
-  array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Memory refills whole blocks after a
-  level-1 cache pull or new unlock (`tickDiskAutoFill`); a full cache flushes to an empty disk over
+  array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Staging refills it continuously at 5× the pool's Bandwidth after a
+  level-1 cache pull or new unlock (`tickDiskAutoFill`; a partly filled block shows its real fill); a full cache flushes to an empty disk over
   one cache-block production duration when no tier claim blocks. Each block shows its bit-scale
   size as an in-cell label and its own fill fraction only — a block reads **full** (`$full` — a
   raised fill) once its own share of `intro.diskCache[size]` is filled, or shows a partial/flushing
@@ -394,7 +396,7 @@ There is no pause/resume control for Disk Fill on this page, and no
 unconditional: `tickDiskPull` and `tickDiskLevelOneCachePull` run every tick regardless of any
 tier's own autobuyer state. Filling itself (`tickDiskAutoFill`) has no UI control at all
 either — it's fully automatic, every tick, no toggle: Memory first keeps every array's Cache full
-(whole-block transfers), then flushes a full read cache into an empty disk over one cache-block
+(a timed 5× transfer), then flushes a full read cache into an empty disk over one cache-block
 production duration when no tier claim blocks that size, smallest size first, whenever that size
 isn't mid-build. This page does not show tier01's own current purchase-block progress — nothing on
 either page renders it any more, now that ByteFoundryPage's manual transfer-block row (which used to
@@ -540,25 +542,17 @@ live inside the selected tier):
   (`state.purchaseLevels[tierId]`, 1-indexed, and `state.purchaseLevelProgress[tierId]`, see
   docs/ECONOMY_REFERENCE.md) rather than derived from `purchased` via division — completing a level means
   buying `getPurchaseBlockSize(state)` pieces of it (a value that can grow over a run, see "Economy
-  model"). This shows on the Buy button's visible text as `{progress}+{affordable}/{blockSize}` (e.g.
-  `5+3/8` — how many of the current level's pieces are already bought, plus how many more are
-  affordable right now, over the block size; the `+{affordable}` segment is omitted once nothing is
-  currently affordable; while Buy max mode would buy N full levels it reads `+N Lv` instead, see "Buy
-  button" below) inside `ButtonIcon` alongside the 🛒 glyph, pinned immediately next to the icon
-  rather than centered — this keeps the progress text starting at the same x position across every
-  tier row regardless of the cost string's length. This deliberately doesn't show the level number
-  itself (unlike an earlier `Lv.{level} ({progress}/{blockSize})` version) — the zero-indexed count
-  of completed levels is still available via the `aria-label` and the row's Details
-  disclosure; the button text is purely "how close is the current level," echoing the even earlier
-  pre-level-system `{purchased}+{affordable}` convention (see `docs/DESIGN_HISTORY.md`) now expressed
-  as a fraction of the current block size instead of a raw lifetime count. The cost label itself
-  (`BuyButtonCostLabel`, a `styled(ButtonLabel)`) is left-aligned rather than centered, and both it and
-  the icon+progress slot (`BuyButtonIcon`) are pinned to a fixed half of the button's width — so every
-  tier row's cost figure starts at the same x position (the button's horizontal center) regardless of
-  digit count, instead of drifting as the progress or cost strings change length. This scoped pair
-  lives only in `MainPage/index.jsx` and doesn't affect the shared `Button`/`ButtonIcon`/`ButtonLabel`
-  components used elsewhere in the app (Prestige, Reset, Firmware, …), which keep their default
-  fixed-icon/centered-label layout.
+  model"). Cost-block progress is no longer a `+n/8` string on the Buy button — it lives on the
+  button as the dual-tone fill (`$progress` / `$secondaryProgress`) plus a `VisuallyHidden`
+  `role="progressbar"` and the Buy `aria-label` (`N of {blockSize} purchased toward the next`).
+  Buy max mode is the exception: while a click would buy N full levels the icon slot shows `+N`
+  (see "Buy button" below). The cost label itself (`BuyButtonCostLabel`, a `styled(ButtonLabel)`) is
+  left-aligned rather than centered, and both it and the icon slot (`BuyButtonIcon`) are pinned to a
+  fixed half of the button's width — so every tier row's cost figure starts at the same x position
+  (the button's horizontal center) regardless of digit count, instead of drifting as the cost
+  string's length changes. This scoped pair lives only in `MainPage/index.jsx` and doesn't affect
+  the shared `Button`/`ButtonIcon`/`ButtonLabel` components used elsewhere in the app (Prestige,
+  Reset, Firmware, …), which keep their default fixed-icon/centered-label layout.
 - **Tier name display.** The tier row heading (`TierName`, a `styled.h3`) and the Firmware page's
   per-tier row label both render `tier.symbol` (e.g. `B`, `KB`) as the visible text, not the full
   `tier.name` — a decluttering choice, since the compact symbol already appears throughout the row
@@ -590,10 +584,10 @@ live inside the selected tier):
   `width: 100%` in the compressed styles specifically to pin them to the card's actual width so that
   truncation has something to truncate against (this selector matches `MoneyHero` too, below, since it
   extends `Money` and so still carries `Money`'s own generated class on the same DOM node). This
-  compact PP display shows the production speed bonus once unlocked (`formatBonusOrMultiplier` — a
+  compact PP display shows the production speed bonus once unlocked (10 Purges) (`formatBonusOrMultiplier` — a
   percentage below +100%, an `"Nx"` multiplier at/above it, see "Percentages vs. multipliers" below),
-  but — being always-visible, sticky chrome rather than an expandable disclosure — omits the "production
-  speed bonus locked" caveat before it's bought; that fuller wording used to also show in the bottom
+  but — being always-visible, sticky chrome rather than an expandable disclosure — omits the "unlocks at
+  10 Purges" caveat before the threshold; that fuller wording used to also show in the bottom
   `PrestigeCard`'s expandable description before that whole card was removed (see "Prestige and the
   Googol freeze" below) as purely informational and redundant with this button. Once Prestige is
   actually available (`canPurge`, i.e. Money `>= PURGE_THRESHOLD`), the PP display card itself doubles as a
@@ -619,17 +613,28 @@ live inside the selected tier):
   the display font here, but its more stylized, geometric letterforms read worse for a large numeric
   balance than Inter's tabular figures; the hero treatment is about size/elevation, not typeface.
   `MoneyHero`'s own content is `formatMoneyBalance(state.resources[MONEY_ID])` (`engine.js`), NOT
-  `formatCurrency` — the only balance readout on this page that differs: below
+  `formatCurrency` — the only *headline* balance readout on this page that differs: below
   `MONEY_BYTES_DISPLAY_THRESHOLD` (8000 Bits, exactly 1000 Bytes) it's byte-for-byte identical to
   `formatCurrency`'s own Bits display, but at/above that threshold it floors the balance, divides by
   `BITS_PER_BYTE`, and renders the result as whole Bytes with a trailing `" B"` (reusing
   `formatCurrency`'s own exponential-notation threshold once converted) — a more natural headline
-  figure than an ever-growing raw bit count once there's at least a full Byte's worth to show. Every
-  other `formatCurrency` call on this page — tier costs/production, the global tickspeed cost, the
-  `FullScreenOverlay`'s "You've reached…" line, the Buy button's cost label — is unaffected and still
-  shows raw Bits, its actual priced/spent denomination; `MoneyHero` is the one exception. Directly
-  beneath the hero figure (suppressed while `balancesCompressed`, since the compact sticky bar has no
-  room for it), an 8-segment `BytePowerSegments` bar shows progress toward the next power-of-ten
+  figure than an ever-growing raw bit count once there's at least a full Byte's worth to show. Once
+  those two strings differ, a small `BitsBalance` line (`aria-label="balance in bits: …"`,
+  `theme.color.textMuted`, `theme.type.scale.sm`, `line-height: 1`) shows the exact Bits via
+  `formatCurrency` — absolutely positioned in the existing gap between the hero and the segment
+  bar (`MoneyHeroGroup` is `position: relative`; `BitsBalance` is `top: 100%` with `margin-top:
+  0.1rem` and `pointer-events: none`), so it adds no Factory header height — not `role="status"`,
+  which would live-announce every tick — suppressed while `balancesCompressed`, and omitted below
+  the threshold so it isn't a duplicate of the Bits headline. Visibility is
+  `formatMoneyBalance !== formatCurrency`, not a hardcoded 8000, so it stays in lockstep with the
+  headline switch. Every other `formatCurrency` call on this page —
+  tier costs/production, the global tickspeed cost, the `FullScreenOverlay`'s "You've reached…"
+  line, the Buy button's cost label — is unaffected and still shows raw Bits, its actual
+  priced/spent denomination. Beneath the hero (`BytePowerSegments` `margin-top: 0.5rem`; the Bits
+  overlay sits in that gap plus StatCard's uncompressed `0.6rem` gap and does not push the bar
+  down; suppressed while `balancesCompressed`, since the compact sticky bar has no room for it),
+  an 8-segment
+  `BytePowerSegments` bar shows progress toward the next power-of-ten
   Bytes via `getNextBytePowerProgressFraction` (Bits toward `nextPowerBytes × BITS_PER_BYTE`; each
   segment is 12.5% and fills progressively within that band — e.g. 5e7 Bytes → 4/8 filled). Paired
   with a `VisuallyHidden role="progressbar"` (`aria-label="progress toward the next power of ten
@@ -667,9 +672,10 @@ live inside the selected tier):
   (not per-tier) production multiplier and its current effect: the Prestige speed bonus (once
   `!isFirstRun`), Scale Up, Tickspeed, and Overclock — each gated on the same
   reveal/`everRevealed` flag its own card already uses (so a not-yet-relevant multiplier doesn't appear
-  here before its own card would show it either), reading either its live effect (e.g. "+50% production
-  speed from 50 unspent PP", "×4 production speed from 2 activations", "+1% faster ticks on every tier", "Tickspeed upgrade's per-level rate is now 1.21% (was 1%) from level 2") or a "not yet
-  unlocked/activated/active" status line when revealed but not yet bought. The
+  here before its own card would show it either), reading either its live effect (e.g. "2x production
+  speed from 100 Purges", "2 activations; multiplier varies by tier", "+1% faster ticks on every tier", "Tickspeed upgrade's per-level rate is now 1.21% (was 1%) from level 2") or a "not yet
+  unlocked/activated/active" status line when revealed but not yet active (Prestige speed bonus:
+  "unlocks at 10 Purges (N so far)"). The
   per-tier purchase milestone multiplier (`getPurchaseMilestoneMultiplier`) is deliberately not listed
   here — it's per-tier, not global, and already shown in each tier row's own Details disclosure. The
   list is suppressed entirely (not merely restyled) while `StickyBalances` is in its compressed
@@ -699,7 +705,7 @@ live inside the selected tier):
   `getPurchaseBlockSize(state)`). The one player-facing control over this is **Buy max mode**
   (`components/BuyMaxToggle`, rendered only on Firmware → ✦ Prestige once `isBuyMaxUnlocked`): while on, a click that can afford at least one FULL level
   from zero progress buys every such level (`buyTierMaxLevels`) and the button previews it as
-  `+N Lv` with the summed cost (`getTierMaxLevelsPreview`; aria-label `Buy N full level(s) for …`);
+  `+N` with the summed cost (`getTierMaxLevelsPreview`; aria-label `Buy N full level(s) for …`);
   otherwise the button keeps the normal single-level text and behavior below. Clock Speed, tier tickspeed,
   Compression, Auto Purge and Flops buttons keep their single-level cost text but buy every
   affordable level per click in that mode (`repeatPurchaseMax`). Renders its cost-block progress as an
@@ -714,9 +720,9 @@ live inside the selected tier):
   word (🛒 Buy, ✦ Prestige, ↺ Reset) plus the cost, and (via `formatCost`) the paying tier's short
   `RESOURCE_SYMBOL` (e.g. `Ks`) instead of its full name — while each button's `aria-label` carries the
   full descriptive sentence (`"Buy ×10 for $100"`, `"Prestige (requires 1 Googol Money)"`, `"Reset
-  game"`, …) used by assistive tech and `getByRole('button', { name })` tests. Buy's icon slot also
-  carries the level+progress text (see "Owned vs. level" above) — see there for why it's pinned next
-  to the icon rather than folded into the centered cost label.
+  game"`, …) used by assistive tech and `getByRole('button', { name })` tests. Buy's icon slot is
+  otherwise empty except in Buy max mode, where it carries `+N` full levels (see "Owned vs. level"
+  above); ordinary cost-block progress is the fill + hidden progressbar, not `+n/8` text.
 
 **Factory view (no second-level tabs).** `MainPage` renders only the tier ladder and its cards
 (`GlobalTickspeedCard`, `TierList`, `ScaleUpCard`, `OverclockCard`) — it no longer has a tab bar or any
@@ -762,8 +768,7 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   unlocked"`), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
-  *Purge Points* (Compression leveled upgrade; Production speed bonus one-time unlock, `"Production
-  speed bonus unlocked"` once bought; Overflow mode, locked until Auto Purge's interval ≤
+  *Purge Points* (Compression leveled upgrade; Overflow mode, locked until Auto Purge's interval ≤
   `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`) and *Purchasing* (Buy max, `components/BuyMaxToggle`).
 Firmware never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
 labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol
@@ -773,8 +778,8 @@ the redundant `Auto` (`Speed Up`, `Restage`, …, `Boost`) since the category he
 `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem heading); Auto Scale Up's status
 is an `AutoChip` in the Scale Up card header.
 Tab dots: Automation `automation perk available` (`hasAffordableAutomationPerk`: an automation unlock
-or Auto Purge speed level), Prestige `prestige perk available` (`hasAffordablePrestigePerk`: Compression
-or the speed bonus). Every PP button keeps the shared live
+or Auto Purge speed level), Prestige `prestige perk available` (`hasAffordablePrestigePerk`:
+Compression). Every PP button keeps the shared live
 progress fill + hidden `role="progressbar"` (`PpPurchaseButton`); see "Accessibility" below.
 
 **Global Tickspeed card (Factory view).** Unlike every other automation upgrade, this one is

@@ -5,7 +5,7 @@ of truth — `CLAUDE.md` (plus its `docs/*.md` references) is authoritative for 
 anything below ever conflicts with `CLAUDE.md`, `CLAUDE.md` wins; fix this file to match in the same
 change rather than letting the two drift (a stale mirror here is worse than no mirror at all).
 
-Player labels (issue #988; code identifiers unchanged): Power page = id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers`; Cores → Superclouds (KFlops → QFlops outputs) = `flop01`–`flop10`; Clock Speed = global tickspeed; Bitrate/Bandwidth/Staging/Compile/Ping/Compact Pool/Turbo-Balanced-Eco replace the old Speed/pool speed/buffer/Combine/tap/Reset Pool/Burst-Standard-Sustain. Full table: `CLAUDE.md`.
+Player labels (issue #988; code identifiers unchanged): Power page = id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers`; Cores → Superclouds (KFlops → QFlops outputs) = `flop01`–`flop10`; Clock Speed = global tickspeed; Bitrate/Bandwidth/Staging/Compile/Ping/Flush Pool/Turbo-Balanced-Eco replace the old Speed/pool speed/buffer/Combine/tap/Reset Pool/Burst-Standard-Sustain. Full table: `CLAUDE.md`.
 
 Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Purge** (formerly named Reboot, now the Era-ascension layer; PP = Purge Points), the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). Code and state use the Purge names too (`purge`, `purgeGame`, `PURGE_THRESHOLD`, automation keys `speedUp`/`purge`; older `prestige`/`reboot` save keys migrate via `save-migration/migrateToV3`); only Prestige-Point/museum identifiers keep `prestige`. Player labels (#986): Firmware = `'perks'`, Compression = `prestigeDoublePpLevel`, Reboot = `era`/`eraGame`, Kernels = `eons`, Reformat = `resetByteFoundry`, Releases = `'milestones'`, System log = `prestigeMuseum`, Manual = `'info'`; see CLAUDE.md.
 
@@ -15,7 +15,7 @@ Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rew
 shared bottom `AppNav` in progression order: **Foundry → Power → Compute → Factory → Firmware → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
 item, and no second-level Data Stream | Storage tabs). **Firmware** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
-unlock/milestone → pause Switch → speed upgrade / Compression, speed bonus, Overflow mode, Buy max). More (Manual, Releases, Settings) is always available — even
+unlock/milestone → pause Switch → speed upgrade / Compression, Overflow mode, Buy max). More (Manual, Releases, Settings) is always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
 production bundle; `yarn build:dev` builds a Dev-Mode-enabled variant published at `/tens/dev/` (own `dev:`-prefixed saves, no backward-compat); see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
@@ -169,11 +169,10 @@ becomes a non-clickable cost label and every affordable Booster converts automat
 compute-ladder entity caps at 10 normally, or 18 (10 primary + a gradually-filled 8-slot reserve) once
 that tier's outbound merge boundary has auto-merge unlocked. A separate PP **Compute (Flops)** screen
 (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP. At a pool's 9/9/9, full-lake,
-unreachable-next-Booster wall, its pool-local Reset adds 1,000 permanent lake-only capacity, empties that
+unreachable-next-Booster wall, its pool-local Flush adds 1,000 permanent lake-only capacity, empties that
 pool's Storage/lake, and free-rebuilds its disks sequentially before persistent automatic Booster
-conversion resumes; rebuilding blocks only new provisioning starts in later pools. The first reset fixes
-lake speed at 50%; reset two onward uses the normal bandwidth steps (dynamically limited by the
-following pool for non-final pools). The generator, Disks, Data Lakes, and Compute entities are
+conversion resumes; rebuilding blocks only new provisioning starts in later pools. Lake speed is 10% of
+its pool's base Bandwidth, +10% additive per flush; flushes don't change pool Bandwidth. The generator, Disks, Data Lakes, and Compute entities are
 permanent across every real Prestige; Reboot (`buildEraIntroReset`) wipes Disks/Data
 Lakes/Compute entity balances to scratch while keeping `byteCreated`, the `mainGameUnlocked` latch, and
 select automation-unlock flags. Only the Data Stream balance resets each ordinary cycle.
@@ -189,7 +188,8 @@ already have tried and rejected.
 
 After **100 lifetime Purges**, production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Compression
-upgrades on Firmware → Prestige.
+upgrades on Firmware → Prestige. Production speed bonus is automatic at 10 Purges (×log10 of the
+Purge count) — see `docs/ECONOMY_REFERENCE.md`, not a Firmware purchase.
 
 For run times / pacing questions — and after any change that can significantly affect ideal Foundry
 or prestige timings — use the `simulate-run-times` skill and publish via `publish-strategy.sh`.
@@ -326,6 +326,8 @@ Verification effort scales with how public a PR is — minimal testing before on
 check at draft creation, multiple adversarial-review rounds once ready, then a 10-minute
 no-new-activity quiet period before merging a PR not already covered by an automatic auto-merge
 path (see below). Full detail: `docs/AUTOMATION.md`'s "PR review & testing cadence".
+
+**Aesthetic review on every UI change:** before marking a PR ready, render the real screen (Playwright, ~430px wide, both themes, seeded `localStorage`; throwaway script), inspect the screenshot, and fix misalignment, cramped spacing, inconsistency with neighbouring components, or unintended size changes; share the screenshots.
 
 **After the final commit** on a finished PR: run the adversarial `code-reviewer`, post its
 `<!-- adversarial-review sha=… verdict=… -->` marker as a PR comment, mark the PR ready, and —

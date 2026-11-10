@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Factory header shows the exact Bits balance in small text under the Bytes headline once it switches to Bytes.
+
+- **Playtime bonus** (Firmware → Prestige, one-time 100 PP): +1% production speed per hour of active play. Offline, background catch-up, and hidden-tab ticks don't count; it persists across Purge and Reboot.
+
 - **Click an empty disk to fill it sooner.** Clicking an empty disk (any size above its pool's smallest) queues it: its write cache then takes full smaller disks from the same pool while Staging keeps filling it, so not every smaller disk is used.
 
 - **Auto Restage (16 PP, Perks → Unlocks).** Once bought, XP is spent on Restage automatically whenever possible (each spend still resets every other tier's owned quantity and Bits). Pause it on Perks → Toggles.
@@ -25,6 +29,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Perks → Unlocks → Global Automation now always lists Auto Overclock (32 PP; needs Auto Scale Up first) and Auto-Prestige (64 PP); they were hidden until their prerequisites were met.
 
 ### Changed
+
+- Foundry running-upgrade tile: the percent now matches the Data Lake balance font size, and the four corner labels are spaced apart (top pair to the top, bottom pair to the bottom, wider column gap) without changing the tile size.
+
+- Collapsed Data Lake header shows a thin progress bar (toward the next disk) under its balance; the running-upgrade tile uses the same bar instead of a background fill. A lake that has already filled every slot at its current capacity reads as full on that bar, not empty.
+
+- **XP now counts powers of ten of Bytes, not Bits.** One XP per new power of ten of the Bytes balance (the headline unit). Saves mid-run may wait up to one level before XP resumes.
+
+- The small Bits balance under the Bytes headline no longer adds height to the Factory header; it sits in the existing gap above the segment bar.
+
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
+- Removed the `+n/8` purchase-progress text from Factory tier Buy buttons; the cost label stands alone.
+- **Autobuyer priority restored to KB → QB.** When tiers compete for the same Bits, lower tiers buy first again, except a tier you own none of goes first.
+
+- **Production speed bonus now unlocks at 10 Purges** and is ×log₁₀ of your Purge count, replacing the 10,000 PP unlock and +1%-per-unspent-PP bonus. It is automatic — nothing to buy on Firmware.
+
+- **Array read caches fill at 5× Bandwidth, not instantly.** A pool's smallest array's read cache now fills from Staging as a timed transfer at 5× the pool's Bandwidth (and pool tap bonus) instead of snapping in whole blocks, and shows partial fill. Disk fill speeds and the Data Stream / pool fill multiplier curves are unchanged.
 
 - **Player-facing renames, part 3 (#989, epic #986).** Perks is now **Firmware** (🔧); Double PP is **Compression**; Era ascension is **Reboot** (button "⏻ Reboot…"), Eons are **Kernels** and the Eon Amplifier the Kernel Amplifier; Reset Byte Foundry (and the disk-size "Foundry reset") is **Reformat**; Milestones/Chapters is **Releases** (v1.0 … v5.0, with the old chapter names as subtitles); Prestige museum is the **System log**, the Ops dashboard the **Task Manager**, Import / export save **Backup / Restore**; the "Welcome back!" notice reads "Resumed from sleep" and offline progress is **Sleep mode**; the Guide is the **Manual** (📖), which also gains a Prestige ladder section and holds Data Lakes and Compaction under Storage. Game mechanics and saves are unchanged.
 - **Expediting a disk is much stronger.** A clicked empty disk now takes Staging ahead of the other larger disks (the smallest disk's cache still comes first), pulls in every smaller disk it needs at once instead of one at a time, and writes itself at 5× instead of 2×.
@@ -171,6 +191,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Legal links show a keyboard focus ring.** Settings → Legal Privacy Policy and Terms of Use now use the same accent `:focus-visible` outline as other interactive controls.
 
 ### Changed
+
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 
 - **Automation unlock costs now match their first speed upgrade.** Latency autobuyer 8 PP (was 10), Auto Scale Up 16 PP (was 20), Auto-Prestige 64 PP (was 1000, with its levels already replaced by the speed chain), and Auto Overclock is now its own 32 PP unlock (needs Auto Scale Up) instead of unlocking with its first speed level. Milestone-unlocked automations (tier autobuyers, tier tickspeed autobuyers) have no unlock cost, only upgrades.
 
@@ -753,6 +775,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   step; a negative pool buffer gets the same defensive floor for consistency.
 
 ### Changed
+
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - **Provision Disk no longer imposes a separate build-time countdown after funding completes** —
   gathering a disk's funding passes at the pool's own production rate already takes exactly the
   intended build time, so an additional post-funding wait was pure duplication (an array's very
@@ -1173,6 +1197,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   no longer infers Supporter unlock from `unlockedSlotCount` alone — only `supporterUnlocked: true`.
 
 ### Changed
+
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - **Compute (Flops) cumulative total** — hero displays **E = k + 10M + 100G + 1000T + … + 10⁹Q**
   (each tier's cumulative boost weighted by 10<sup>n</sup>); production multipliers stay unweighted.
 - **Compute (Flops) costs** — per-unit PP price now rises after every purchase on the triangular
@@ -1275,6 +1301,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Idle disk liquidation**: once a storage pool's Data Lake is completely full (capacity maxed) and there's nothing else left to do in the Byte Foundry, that pool's LAST (largest) disk array's own idle output — full disks the Lake can no longer absorb — now automatically liquidates into Bits instead of sitting stranded, funding whatever Provision Disk needs next (typically the next pool's first disk). The lowest-priority action in the whole forced priority chain, ranked below even Lake Capacity doubling.
 
 ### Changed
+
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - **Compute reserve-merge durations** are no longer a fixed 1–256 minute doubling table. Core→Node
   takes **10× live Core earn time** (Memory capacity ÷ Byte generator bits/sec, before Boost); each
   next boundary is ×10 the previous, or ×5 after that boundary’s sequential duration upgrade
@@ -1428,6 +1456,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Pinned the `vite-plugin-pwa` build toolchain's `workbox-build > ajv > fast-uri` dependency to `^3.1.5` via a `resolutions` override, fixing a high-severity host-confusion advisory (`yarn audit`) in the `3.1.4` version it previously resolved to. Build-time only — no runtime/user-facing impact.
 
 ### Changed
+
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - **"Speed Up" renamed to "Scale Up," and redesigned to unlock tiers one at a time instead of gating only on the last tier.** A Scale Up is now available once the tier it's currently working through (starting with Kilobytes) hits level 3 (displayed Lv.2) — firing it doubles production speed (stacking, same as before) and permanently unlocks the next tier, on top of keeping every tier already reached. The Scale Up card is now always shown from the very first cycle, rather than staying hidden until the last tier unlocks. Once every tier has been reached, Scale Up settles into a repeating "every 3 levels of the last tier" endgame phase (level 3, then 6, then 9, …) instead of its old +1-per-activation last-tier-only ladder.
 - **Data Lake's capacity-increase button now reads "⚡ Scale Out"** (was "⚡ Upgrade") — same action, cost, and gating as before.
 
@@ -1445,6 +1475,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - The Bulk (×1/×10) toggle now persists across page reloads.
 
 ### Changed
+
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - Buttons use short symbols with a more compact tier row layout; autobuyer upgrades are now guarded against zeroing out a tier's own generator count.
 - Full agent output is now shown in maintenance workflow runs for diagnosability.
 
@@ -1458,6 +1490,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Cost-block progress folded into the Buy button's fill, with tooltips and a denser mobile layout.
 
 ### Changed
+
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - Buy button moved to the rightmost column, ahead of Upgrade/Unlock.
 - Pivoted autonomous maintenance to a GitHub Issues task backlog; raised unattended-run turn budgets.
 
@@ -1475,6 +1509,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - A pull request template.
 
 ### Changed
+
+- **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - Decoupled manual Buy from the ×1/×10 toggle; autobuyers now batch independently.
 - Autobuyers prioritize higher tiers when competing for shared funds.
 - Manual Buy grabs the maximum affordable quantity instead of always buying 1.
