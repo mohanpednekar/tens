@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Power/Compute (Flops) screen: removed the explanatory paragraph and shortened per-tier stats to "N owned · Tier ×multiplier".
+
 - Foundry running-upgrade tile: the percent now matches the Data Lake balance font size, and the four corner labels are spaced apart (top pair to the top, bottom pair to the bottom, wider column gap) without changing the tile size.
 
 - Collapsed Data Lake header shows a thin progress bar (toward the next disk) under its balance; the running-upgrade tile uses the same bar instead of a background fill. A lake that has already filled every slot at its current capacity reads as full on that bar, not empty.
