@@ -1697,12 +1697,11 @@ test('Auto Scale Up remains active at the final tier', async () => {
   })
   render(<App />)
 
-  // Factory carries no Auto status; it shows only on Firmware → Automation.
-  expect(screen.queryByLabelText('Auto Scale Up active')).not.toBeInTheDocument()
-  expect(screen.queryByLabelText('Auto Scale Up suspended at final tier')).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^scale up panel$/i)).not.toHaveTextContent(/auto|paused/i)
 
   await openPerksTab(userEvent.setup(), /open automation/i)
   expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Auto Scale Up suspended at final tier')).not.toBeInTheDocument()
 })
 
 test('pausing Auto Scale Up via its toggle stops it from firing automatically, even once eligible; resuming fires it again', () => {
