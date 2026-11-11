@@ -1446,7 +1446,7 @@ test('the Overclock card\'s disclosure shows no per-level rate line before the f
   expect(panel).not.toHaveTextContent(/per-level rate/i)
 })
 
-test('clicking Overclock once eligible banks the last tier\'s whole completed-level count, wipes the Scale Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {
+test('clicking Overclock once eligible records the last tier\'s whole completed-level count, wipes the Scale Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({

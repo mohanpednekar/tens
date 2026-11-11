@@ -1,5 +1,15 @@
 # Design history & rationale
 
+### Overclock no longer banks completed levels — 2026-11-11
+
+`overclockCount` was a running total of completed final-tier levels across every Overclock claim
+this cycle (`overclockCount += lastTierCompletedLevels`), so Clock Speed's per-level step compounded
+as ×1.1^(sum of every claim). Two claims of 3 therefore equalled one claim of 6, and successive
+claims grew the bonus without bound within a run. Replaced with a single Overclock level:
+`overclockLastClaimCompletedLevels` is set (not added) on each claim, and `getOverclockMultiplier`
+reads that via `getOverclockLevel`. Legacy saves still fall back to `overclockCount` until a Scale Up
+or new claim writes the new field. This is a nerf for anyone who had claimed more than once.
+
 ### Bits subline under MoneyHero; `+n/8` dropped from tier Buy buttons — 2026-11-09
 
 Once `formatMoneyBalance` switches the Factory headline to whole Bytes (8000 Bits / 1000 B), the
