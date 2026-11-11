@@ -722,7 +722,7 @@ const ComputePage = ({ game }) => {
                             variant="prestige"
                             $spacious
                           >
-                            <ButtonContent>{`⬆ ${COMPUTE_MERGE_RATIO}→1 ${row.mergeOutputLabel}`}</ButtonContent>
+                            <ButtonContent>{`${row.symbol} ${COMPUTE_MERGE_RATIO}→1 ${ENTITY_ROWS[rowIndex + 1]?.symbol ?? '⬆'}`}</ButtonContent>
                           </TierActionButton>
                           <TierActionButton
                             aria-label={row.autoAriaLabel}
@@ -734,7 +734,7 @@ const ComputePage = ({ game }) => {
                             $progress={autoUnlockProgress}
                             $spacious
                           >
-                            <ButtonContent>{`🤖 ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
+                            <ButtonContent>{`🤖 Auto ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
                           </TierActionButton>
                         </>
                       )

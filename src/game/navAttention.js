@@ -34,17 +34,8 @@ import {
   isAutoMergeNetworksIntoGridUnlockAvailable,
   isAutoMergeNodesIntoClusterUnlockAvailable,
   isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable,
-  isComputeCloudsMergeStartAvailable,
-  isComputeClustersMergeStartAvailable,
   isComputeCoreConversionUnlocked,
-  isComputeCoresMergeStartAvailable,
-  isComputeDatacentersMergeStartAvailable,
-  isComputeFabricsMergeStartAvailable,
-  isComputeGridsMergeStartAvailable,
-  isComputeNetworksMergeStartAvailable,
-  isComputeNodesMergeStartAvailable,
-  isComputeSupercomputersMergeStartAvailable,
-  isComputeUpgradeTurnAvailable,
+  isComputeChargeAvailable,
   isProvisionDiskTurnAvailable,
   isGlobalTickspeedMultiplierUnlocked,
   isIntroConversionUnlocked,
@@ -89,18 +80,9 @@ const COMPUTE_AUTO_MERGE_UNLOCKS = [
   isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable,
 ]
 
-const COMPUTE_RESERVE_MERGE_STARTS = [
-  isComputeCoresMergeStartAvailable,
-  isComputeNodesMergeStartAvailable,
-  isComputeClustersMergeStartAvailable,
-  isComputeNetworksMergeStartAvailable,
-  isComputeGridsMergeStartAvailable,
-  isComputeFabricsMergeStartAvailable,
-  isComputeCloudsMergeStartAvailable,
-  isComputeDatacentersMergeStartAvailable,
-  isComputeSupercomputersMergeStartAvailable,
-]
-
+// An automated boundary that can be charged right now (⚡ Charge: 8+ held, nothing running, output has room).
+const hasChargeAvailable = state =>
+  COMPUTE_INSTANT_MERGE_BOUNDARIES.some((_, index) => isComputeChargeAvailable(state, index))
 // Not "full" for attention purposes while an Upgrade Data Stream runs — nothing is waiting on the player.
 const isMemoryFull = state =>
   (state.intro?.bits ?? 0) >= (state.intro?.capacity ?? 0) && !state.intro?.capacityUpgradeQueued && !state.intro?.speedUpgradeQueued
@@ -238,18 +220,18 @@ const hasInstantMergeAvailable = state =>
 
 export const hasComputeAttention = state => {
   if (!isComputeCoreConversionUnlocked(state)) return false
+  // Only merging/charging and the Auto-charge unlock light Power's dot — Boost availability does not.
   return (
-    isComputeUpgradeTurnAvailable(state) ||
     hasInstantMergeAvailable(state) ||
     COMPUTE_AUTO_MERGE_UNLOCKS.some(fn => fn(state)) ||
-    COMPUTE_RESERVE_MERGE_STARTS.some(fn => fn(state))
+    hasChargeAvailable(state)
   )
 }
 
 export const getComputeAttentionLevel = state => {
   if (!isComputeCoreConversionUnlocked(state)) return false
   return pickLevel(
-    isComputeUpgradeTurnAvailable(state) || hasInstantMergeAvailable(state),
+    hasInstantMergeAvailable(state),
     hasComputeAttention(state),
   )
 }
