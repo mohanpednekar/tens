@@ -213,11 +213,9 @@ const OverclockButton = styled(Button)`
   }
 `
 
-// Lays a pair of compact feature cards side by side at every width (maintainer request): Clock Speed +
-// Restage above the tier list; Scale Up and Overclock each get their own full-width row below it. Each card shares the row equally
-// (flex: 1 1 0) and never wraps, so the pair stays side by side even at phone width; a lone card
-// (Restage / Overclock not yet revealed) fills the row. Supersedes the earlier below-40rem
-// single-column stack — see docs/DESIGN_HISTORY.md.
+// Clock Speed + Restage share one row above the tier list (side by side at every width, lone card
+// fills the row). Scale Up and Overclock each get their own full-width SpeedCardsRow below it.
+// Supersedes the earlier below-40rem single-column stack — see docs/DESIGN_HISTORY.md.
 const SpeedCardsRow = styled.div`
   display: flex;
   gap: 0.4rem;

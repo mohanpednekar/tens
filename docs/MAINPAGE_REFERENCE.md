@@ -876,14 +876,14 @@ directly toggleable) on Firmware → 🤖 Automation's Tier Autobuyers category,
 unchanged by the move to Firmware — see `docs/ECONOMY_REFERENCE.md` for costs/effects and
 `docs/DESIGN_HISTORY.md` ("PP Upgrades tab split…") for why the page is split three ways.
 
-**Scale Up and Overclock cards, below the tier list.** `ScaleUpCard` and `OverclockCard` render
-together, in that order, inside a shared `SpeedCardsRow` flex row placed directly below `TierList` —
+**Scale Up and Overclock cards, below the tier list.** `ScaleUpCard` and `OverclockCard` each render
+in their own full-width `SpeedCardsRow` placed directly below `TierList`, Scale Up first —
 not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why Clock Speed
-(paired with Restage) stays on top while this pair sits below the tier list). `SpeedCardsRow` keeps the pair side by side at every width, phone included (`flex: 1 1 0`,
-`min-width: 0`, no wrap) — the same row also holds Clock Speed + Restage above the tier list. The earlier
-below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below),
-so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
-alongside it. Both soft-reset cards (and Clock Speed) share `featureCard(accent)`: compact `0.6rem 0.75rem`
+(paired with Restage) stays on top while these sit below the tier list). Clock Speed + Restage still
+share one `SpeedCardsRow` (side by side at every width, `flex: 1 1 0`, `min-width: 0`, no wrap). The earlier
+below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below);
+`OverclockCard` is gated and, when revealed, sits in the next row rather than beside Scale Up.
+Both soft-reset cards (and Clock Speed) share `featureCard(accent)`: compact `0.6rem 0.75rem`
 padding, a `0.4rem` internal gap and a 3px left accent stripe; their headings have no default margin, their
 buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`.
 

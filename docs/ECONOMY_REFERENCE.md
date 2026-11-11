@@ -2079,7 +2079,7 @@ after a Prestige — it just starts re-accumulating `scaleUpCount`/`scaleUpTarge
 the next cycle. Can fire without a manual click once Auto Scale Up is bought.
 
 `MainPage` surfaces this as a `ScaleUpCard` (cyan accent; Factory view only), rendered directly below
-`TierList`, side by side with `OverclockCard` (inside a shared `SpeedCardsRow` flex row, side by side at every width) — `GlobalTickspeedCard` renders separately at the top of the Game
+`TierList` in its own full-width `SpeedCardsRow` (`OverclockCard` is the next row when revealed) — `GlobalTickspeedCard` renders separately at the top of the Game
 view (paired only with the Restage card), since it's the one control relevant before the last tier is even reachable (see "Global Tickspeed
 card" in docs/MAINPAGE_REFERENCE.md). Unlike `OverclockCard` (still gated on `overclockEverRevealed`,
 the last tier having ever been unlocked — see docs/MAINPAGE_REFERENCE.md), `ScaleUpCard` is always
@@ -2158,7 +2158,7 @@ occasional player decision given how much it costs the run (wiping Scale Up's bo
 everything else).
 
 `MainPage` surfaces this as an `OverclockCard` (orange accent; Factory view only), rendered directly below
-`TierList`, side by side with `ScaleUpCard` inside the shared `SpeedCardsRow` flex row (see "Scale Up"
+`ScaleUpCard` in its own full-width `SpeedCardsRow` (see "Scale Up"
 above) — not grouped with `GlobalTickspeedCard`, which renders separately at the top of the Factory view.
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as `scaleUpEverRevealed`. The button (`OverclockButton`, sized to match
