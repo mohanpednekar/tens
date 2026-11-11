@@ -38,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - Charger polish: the ⚡ Charge button shows `⏳ n/8` while charging; the unlock button's accessible name now reads "unlock the Charger for …"; Manual wording matches.
-
 - Factory feature cards (Clock Speed, Restage, Scale Up, Overclock) are each full width, and effect chips are percentages: `🏭 +1%/lvl`, `QB +1%/XP`, `🌐 +10%/lvl` (Scale Up keeps `🏭 ×2`).
 
 - Disk rebuilds (after Reformat or a pool flush) now wait until the disk's own pool Capacity can hold one disk of that size, matching Provision Disk. While waiting, the pool's Data Lake keeps filling and the Reformat replay keeps scaling lakes out and buying Boosters for the disk sizes already completed, up to prior highs.

@@ -507,7 +507,7 @@ live inside the selected tier):
          toward its own unlock cost — the same `Button` `progressFill` mechanic Factory's own Buy
          buttons use for cost-block progress — visible content `` "🤖 <held>/<COMPUTE_ENTITY_CAP>" ``
          instead of a bare "🤖 Auto", so the button is self-explanatory the same way a Factory Buy
-         button is; `aria-label="enable auto-charge for <…> into <…>"` stays unchanged) — enabled once
+         button is; `aria-label="unlock the Charger for <…> into <…>"`) — enabled once
          `COMPUTE_ENTITY_CAP` (10) of the produced tier is held, calling the matching
          `game.actions.enableAutoMerge*` action.
        - **Once unlocked:** a `ReserveSlotsRow` — a single `<button>` wrapping `COMPUTE_MERGE_RESERVE_CAP`
@@ -519,7 +519,7 @@ live inside the selected tier):
          dropped back toward 10 and may be accumulating the next batch) —
 The row is display-only: an explicit **⚡ Charge** button beside it
          (`aria-label` "charge <tier>: move units down one per second, then merge 8 into 1 <output>",
-         label `⚡ Charge`, `⏳ Charging` while running) calls `actions.startComputeCharge(boundaryIndex)`;
+         label `⚡ Charge`, `⏳ n/8` (Charger fill) while running) calls `actions.startComputeCharge(boundaryIndex)`;
          enabled per `isComputeChargeAvailable` (Auto-charge bought, ≥ `COMPUTE_MERGE_RATIO` (8) held, no
          timed merge or charge running, output has room). While charging the top row dims one slot per
          transferred unit and the bottom row fills. `aria-label`: "<Tier> charger, auto-charge in progress, <time> left"
