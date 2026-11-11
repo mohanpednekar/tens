@@ -922,11 +922,12 @@ docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock butto
 to be a deliberate, occasional decision reached via this card, not a frequent one-tap action.
 
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
-whose summary is a `CardTitleGroup` of the heading plus `CardEffect` (`×1.1/lvl 🌐`), so expanding
-never squeezes the body into a title-row column. The body renders once the Overclock level is > 0:
+whose summary is a `CardTitleGroup` of the heading plus `CardEffect` (`×1.1/lvl 🌐`; its click is
+stopped so only the "Overclock" name toggles), so expanding never squeezes the body into a
+title-row column. The body renders once the Overclock level is > 0:
 collapsed by default, clicking "Overclock" reveals a `MutedText` line, `Clock Speed's per-level rate is now {currentStep}% (was 1%)`.
 `{currentStep}` is `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate
-(`OverclockButton`'s own label shows only `{symbol} {completed}/{required}` — see above); this is the one Overclock-specific number not otherwise visible
+(`OverclockButton` shows only `{symbol} {completed}/{required}`; the ×1.1/lvl effect sits beside the card name — see above); this is the one Overclock-specific number not otherwise visible
 anywhere on the Factory view. Beyond that one figure, Overclock has no visible effect of its own to
 display separately from the Tickspeed card above it — raising the global tickspeed multiplier's own
 per-level step, rather than stacking a second multiplier alongside it, means the Tickspeed card's own
