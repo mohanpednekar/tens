@@ -2085,7 +2085,7 @@ card" in docs/MAINPAGE_REFERENCE.md). Unlike `OverclockCard` (still gated on `ov
 the last tier having ever been unlocked — see docs/MAINPAGE_REFERENCE.md), `ScaleUpCard` is always
 shown — relevant from the very first cycle, well before the last tier even exists. The button
 (`ScaleUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
-larger default `Button` size) shows `×2 · {targetTier.symbol} {completed}/{required}` plus a
+larger default `Button` size) shows `×2 🏭 · {targetTier.symbol} {completed}/{required}` (🏭 = tier production) plus a
 `· Unlock TB` suffix when the current target's successor is the Terabytes tier (`scaleUpUnlocksTB`)
 — naming the target tier's symbol inline so it's always clear *which* tier's completed levels the
 requirement is measured against (via `getScaleUpTargetTier`), not always the last tier's. The

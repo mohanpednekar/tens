@@ -1193,7 +1193,7 @@ test('the Scale Up button shows its per-claim ×2 effect, which tier it needs, a
   expect(screen.getByRole('button', {
     name: /scale up \(requires 3 completed kilobytes levels\) — doubles production for tiers unlocked so far/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2 · KB 1/3')
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2 🏭 · KB 1/3')
 })
 
 test('the scale up and overclock panels render below the tier list, not above it', () => {
@@ -1409,7 +1409,7 @@ test('the Overclock button shows the per-level Overclock effect and completed-le
   expect(screen.getByRole('button', {
     name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus; each completed quettabytes level \(7 now\) multiplies clock speed's per-level rate by ×1\.1/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ ×1.1/lvl · QB 7/7')
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ ×1.1/lvl 🌐 · QB 7/7')
 })
 
 test('the Overclock card\'s disclosure states the current per-level Tickspeed rate once claimed', () => {

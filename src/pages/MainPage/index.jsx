@@ -1596,7 +1596,7 @@ const MainPage = ({ game }) => {
             $pulse={canScaleUp}
           >
             <ButtonIcon>⏩ </ButtonIcon>
-            <ButtonLabel>×2{' · '}{scaleUpTargetTier.symbol}{' '}{formatAmount(scaleUpTargetTierLevelDisplay)}/{formatAmount(scaleUpRequirementDisplay)}{scaleUpUnlocksTB ? ' · Unlock TB' : ''}</ButtonLabel>
+            <ButtonLabel>×2 🏭{' · '}{scaleUpTargetTier.symbol}{' '}{formatAmount(scaleUpTargetTierLevelDisplay)}/{formatAmount(scaleUpRequirementDisplay)}{scaleUpUnlocksTB ? ' · Unlock TB' : ''}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Scale Up progress"
@@ -1629,7 +1629,7 @@ const MainPage = ({ game }) => {
             $pulse={canOverclock}
           >
             <ButtonIcon>⚡ </ButtonIcon>
-            <ButtonLabel>×{overclockLevelEffectDisplay}/lvl{' · '}{lastTier.symbol}{' '}{formatAmount(lastTierLevelDisplay)}/{formatAmount(overclockRequirementDisplay)}</ButtonLabel>
+            <ButtonLabel>×{overclockLevelEffectDisplay}/lvl 🌐{' · '}{lastTier.symbol}{' '}{formatAmount(lastTierLevelDisplay)}/{formatAmount(overclockRequirementDisplay)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Overclock progress"
