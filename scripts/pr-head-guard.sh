@@ -9,7 +9,7 @@
 # head lives in a fork or the branch matches none of the allowed globs.
 #
 # Design constraints (do not weaken):
-# - Event payloads are never trusted for identity: check_suite / issue_comment /
+# - Event payloads are never trusted for identity: workflow_run / issue_comment /
 #   pull_request_review all fire for fork PRs, and a fork's head branch can be
 #   named anything (including something that *looks* like claude/auto-*). Only
 #   a head that lives in THIS repository may be checked out by a privileged

@@ -466,8 +466,10 @@ copied per-workflow:
 
 Since no human (or live Claude Code session) is watching between scheduled runs, this workflow closes
 the loop on PRs the maintenance workflow opens. It fires on new PR reviews, new PR comments, and
-failing check suites, filters to PRs on `claude/auto-*` branches only, and re-invokes Claude
-(`--max-turns 40`) to read the actual feedback/CI failure and push a genuine fix to the *existing*
+failed `CI` runs (`workflow_run: [CI]`, conclusion `failure` — not `check_suite`, which
+`claude-code-action@v1` rejects as "Unsupported event type", so the CI-failure path never reached
+Claude until #1030's fix), filters to PRs on `claude/auto-*`/`devin/auto-*` branches only, and
+re-invokes Claude (`--max-turns 40`) to read the actual feedback/CI failure and push a genuine fix to the *existing*
 branch — it never opens a new PR and never merges or approves. Same hard constraints as the main
 workflow (no `--no-verify`, no faking a check green, no touching other workflow files). It resolves
 the target branch via `gh pr view --json headRefName,isCrossRepository` (refusing fork PRs), passes
@@ -491,7 +493,9 @@ Companion to `autonomous-pr-followup.yml` for Dependabot dependency-bump PRs. Ph
 workflow covers is the residual gap: a *real* breaking-change CI failure caused by the bumped
 dependency itself.
 
-It triggers only on `check_suite: [completed]`, skips unless conclusion is `failure`, an open
+It triggers only on `workflow_run: [CI]` `completed` (not `check_suite` — see the PR follow-up
+section above; `allowed_bots: "dependabot"` because the action sees the CI run's actor,
+`dependabot[bot]`), skips unless conclusion is `failure`, an open
 same-repo PR exists for the branch, and the branch starts with `dependabot/`. Untrusted event
 fields go through `env:` (never shell-spliced). Checkout is pinned to the `headRefOid` resolved at
 guard time (same TOCTOU rationale as the autonomous follow-up). It re-invokes Claude
