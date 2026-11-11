@@ -924,7 +924,7 @@ to be a deliberate, occasional decision reached via this card, not a frequent on
 
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
 whose body renders once the Overclock level is > 0: collapsed by default, clicking "Overclock" reveals a
-`MutedText` line, `Tickspeed upgrade's per-level rate is now {currentStep}% (was 1%)`.
+`MutedText` line, `Clock Speed's per-level rate is now {currentStep}% (was 1%)`.
 `{currentStep}` is `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate
 (`OverclockButton`'s own label shows only the fixed ×1.1/lvl effect and levels available — see above); this is the one Overclock-specific number not otherwise visible
 anywhere on the Factory view. Beyond that one figure, Overclock has no visible effect of its own to
