@@ -68,9 +68,9 @@ jobs:
 
           # Retry cap: a fix this job pushes re-runs CI, and a red result re-triggers
           # this job. Stop once the branch's last 3 completed CI runs all failed, so a
-          # failure Claude cannot fix (environment, flake) does not loop — review
-          # comments still trigger a follow-up, and autonomous-maintenance.yml's
-          # Phase 0 and the maintainer still see the red PR. Fail-open: if the run
+          # failure Claude cannot fix (environment, flake) does not loop. This
+          # workflow has no other trigger, so after that only
+          # autonomous-maintenance.yml's Phase 0 or the maintainer picks the PR up. Fail-open: if the run
           # list cannot be read, proceed as before.
           recent=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch "$CI_RUN_BRANCH" --status completed --limit 3 --json conclusion --jq '[.[].conclusion] | join(",")' || true)
           if [ "$recent" = "failure,failure,failure" ]; then

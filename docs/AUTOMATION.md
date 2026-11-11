@@ -488,8 +488,9 @@ branch name before running `git checkout -B <branch>` to un-detach HEAD. See
 **CI-failure retry cap.** A fix the follow-up pushes re-runs CI, and a red result re-triggers the
 follow-up. Both follow-up workflows therefore skip the CI-failure path once the branch's last 3
 completed `CI` runs all failed (`gh run list --workflow ci.yml --branch <head>`, needs
-`actions: read`; fail-open if the list can't be read). Review comments still trigger a follow-up, and
-Phase 0 of the scheduled run still sees the red PR.
+`actions: read`; fail-open if the list can't be read). On `claude/auto-*`/`devin/auto-*` PRs review comments still
+trigger a follow-up; a capped Dependabot PR (whose follow-up has no other trigger) is left to Phase 0
+of the scheduled run or the maintainer.
 
 **Config source on CI-failure runs.** On `pull_request_review`/`issue_comment` runs the action restores
 `.claude/`, `CLAUDE.md` and `.mcp.json` from the base branch; on `workflow_run` it does not (the action
