@@ -1624,8 +1624,7 @@ const MainPage = ({ game }) => {
             </summary>
             <MutedText>
               Resets tiers and doubles production of every tier unlocked so far
-              {scaleUpSuccessorTier ? `, and unlocks ${scaleUpSuccessorTier.name}` : ''}. Needs {formatAmount(scaleUpRequirementDisplay)} completed {scaleUpTargetTier.name} levels
-              {scaleUpCount > 0 ? ` (${formatAmount(scaleUpCount)} claimed so far)` : ''}.
+              {scaleUpSuccessorTier ? `, and unlocks ${scaleUpSuccessorTier.name}` : ''}. Needs {formatAmount(scaleUpRequirementDisplay)} completed {scaleUpTargetTier.name} levels.
             </MutedText>
           </Disclosure>
           <ScaleUpButton
