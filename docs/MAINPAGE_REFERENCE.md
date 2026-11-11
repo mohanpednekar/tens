@@ -684,15 +684,16 @@ live inside the selected tier):
   again once scrolled back to the uncompressed layout shows it immediately with no re-click needed.
 - **No description prose on this page.** Every mechanic's evergreen explanation (what used to live
   inline as `InfoDetails` disclosure bodies) moved to `InfoPage` (see the file header note above).
-  Headings with nothing left to show (`ScaleUpCard`'s `<h2>`, the page `Header`'s `<h1>`, the Tier
+  Headings with nothing left to show (the page `Header`'s `<h1>`, the Tier
   Autobuyers category's old shared "How these controls work" panel, Firmware → Automation's Tier
   Autobuyer Unlocks category) are now plain, non-interactive text — there's no click target because
-  there's nothing to reveal. `GlobalTickspeedCard`/`OverclockCard`'s own `<h2>` still wrap a `Disclosure`
-  (`styled.details`/`<summary>`, collapsed by default, the heading itself the only way to *open*
-  it — no separate visible "expand" affordance) — but only when there's a genuinely *live game
-  status* number to reveal (not a description of how the mechanic works): `GlobalTickspeedCard`'s
-  `+N% faster ticks on every tier.` and `OverclockCard`'s current per-level rate (see "Scale Up and
-  Overclock cards" above) — each collapsed until the player clicks that heading.
+  there's nothing to reveal. Each Factory feature card (`GlobalTickspeedCard` / Restage / `ScaleUpCard` /
+  `OverclockCard`) wraps its `<h2>` in a `Disclosure` (`styled.details`/`<summary>`, collapsed by default,
+  the heading itself the only way to *open* it — no separate visible "expand" affordance). The body is
+  always present (an unclaimed/inactive line before first use, then the live status): Clock Speed's
+  `+N% faster ticks on every tier.` (or "Not active yet…"), Restage's XP multiplier, Scale Up's reset
+  + doubling line, Overclock's current per-level rate (or "Not claimed yet…") — see "Scale Up and
+  Overclock cards" above. Each starts collapsed until the player clicks that heading.
   Only the heading (native `<summary>` toggle) opens or closes it — clicking the revealed status line does nothing. Each card's own
   action button sits *outside* its `Disclosure` as a sibling, so clicking Buy/Upgrade/Overclock
   never touches the disclosure. None of these is prose about *how* the mechanic works, only
@@ -802,10 +803,9 @@ own two-word heading; no behavior change, and the shortened heading stuck even a
 split back apart — the `GlobalTickspeedCard` component/prop names are unaffected either way, this is
 purely the rendered heading text), but it lives inside a `Disclosure`'s `<summary>` (see "No
 description prose on this page" above) — collapsed by default, clicking it is the only way to reveal
-the cumulative speed bonus line (`+N% faster ticks on every tier.` — no level number), which
-renders **only** once `isGlobalTickspeedActive` in the first place — so the card's shape stays the
-same both before the multiplier is ever bought (the line doesn't exist at all) and after (the line
-exists but starts collapsed). The `+N%` figure is rendered via `formatGlobalTickspeedBonusPercent` (`MainPage/index.jsx`),
+the cumulative speed bonus line (`+N% faster ticks on every tier.` — no level number) once
+`isGlobalTickspeedActive`, or "Not active yet — spend Bytes…" before the first purchase — the
+card's shape stays the same either way (the line always exists, starts collapsed). The `+N%` figure is rendered via `formatGlobalTickspeedBonusPercent` (`MainPage/index.jsx`),
 called with `precise: true` through `formatBonusOrMultiplier` (see "Percentages vs. multipliers"
 below), not the plain whole-number `formatBonusPercent` — the global
 multiplier's regular 1%-per-level compounding (see `GLOBAL_TICKSPEED_PRODUCTION_STEP`/"The global
@@ -883,7 +883,9 @@ below-40rem single-column stack was dropped at the maintainer's request (see `do
 `OverclockCard` is gated and, when revealed, sits in the next row rather than beside Scale Up.
 Both soft-reset cards (and Clock Speed) share `featureCard(accent)`: compact `0.6rem 0.75rem`
 padding, a `0.4rem` internal gap and a 3px left accent stripe; their headings have no default margin, their
-buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`.
+buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`. `ScaleUpCard`'s heading
+is a `Disclosure` like the others (collapsed by default): the body states the reset + doubling, the
+completed-level requirement, and how many Scale Ups have been claimed.
 
 Unlike every other soft/hard reset control on this page, `ScaleUpCard` carries no `everRevealed`
 progressive-disclosure gate at all — it's unconditionally rendered, since Scale Up is relevant from
@@ -922,8 +924,7 @@ to be a deliberate, occasional decision reached via this card, not a frequent on
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
 whose summary is a `CardTitleGroup` of the heading plus `CardEffect` (`🌐 ×1.1/lvl`; its click is
 stopped so only the "Overclock" name toggles), so expanding never squeezes the body into a
-title-row column. The body renders once the Overclock level is > 0:
-collapsed by default, clicking "Overclock" reveals a `MutedText` line, `Clock Speed's per-level rate is now {currentStep}% (was 1%)`.
+title-row column. The body is always present (collapsed by default): clicking "Overclock" reveals a `MutedText` line, `Clock Speed's per-level rate is now {currentStep}% (was 1%)` once claimed, or `Not claimed yet — reach {required} completed {lastTier.name} levels…` before the first claim.
 `{currentStep}` is `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate
 (`OverclockButton` shows only `{symbol} {completed}/{required}`; the ×1.1/lvl effect sits beside the card name — see above); this is the one Overclock-specific number not otherwise visible
 anywhere on the Factory view. Beyond that one figure, Overclock has no visible effect of its own to
