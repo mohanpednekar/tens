@@ -12,7 +12,6 @@ import {
   COMPUTE_MERGE_RATIO,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   INTRO_BYTE_COMBINE_COST,
-  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
@@ -392,30 +391,6 @@ describe('navAttention', () => {
     }
     expect(hasAffordableAutomationPerk(autoPurgeUnlockOnly)).toBe(true)
     expect(hasAffordableAutomationPerk({ ...autoPurgeUnlockOnly, purge: { count: 1, points: getAutomationUnlockCost('purge') - 1 } })).toBe(false)
-  })
-
-  it('lights the Perks automation dot for an affordable Auto Boost only once Boosters is available and it is not owned', () => {
-    const init = createInitialGameState()
-    const ownedEverythingElse = {
-      ...init,
-      resources: { ...init.resources, [MONEY_ID]: 0 },
-      purge: { count: 1, points: COMPUTE_AUTO_BOOST_UNLOCK_COST },
-      autoScaleUp: true,
-      autoGlobalTickspeed: true,
-      autoXpTickspeed: true,
-    }
-    const withBoosters = capacity => ({
-      ...ownedEverythingElse,
-      intro: { ...init.intro, mainGameUnlocked: true, byteCreated: true, capacity },
-    })
-
-    expect(hasAffordableAutomationPerk(withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY))).toBe(true)
-    expect(hasAffordableAutomationPerk(withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY / 2))).toBe(false)
-    expect(hasAffordableAutomationPerk({ ...withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY), computeAutoBoostUnlocked: true })).toBe(false)
-    expect(hasAffordableAutomationPerk({
-      ...withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY),
-      purge: { count: 1, points: COMPUTE_AUTO_BOOST_UNLOCK_COST - 1 },
-    })).toBe(false)
   })
 
   it('does not light PP upgrades before the first Prestige', () => {

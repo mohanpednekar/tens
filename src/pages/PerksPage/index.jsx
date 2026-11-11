@@ -25,12 +25,10 @@ import {
   getPrestigePpPerPower,
   getTierTickspeedAutobuyerMilestone,
   isBuyMaxUnlocked,
-  isComputeCoreConversionUnlocked,
   isProductionFrozen,
   isOverflowModeUnlocked,
 } from 'game/engine'
 import {
-  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_BOOST_PRESETS,
   COMPUTE_MERGE_BOUNDARIES,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
@@ -515,13 +513,11 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
 
   const canBuyPlaytimeBonus = !state.playtimeBonusUnlocked && points >= PLAYTIME_BONUS_UNLOCK_COST
 
-  const isComputeAutoBoostActive = state.computeAutoBoostUnlocked ?? false
-  // Stays listed once bought, even after Reboot / Reformat Byte Foundry drops Capacity back below the Boosters threshold.
-  const showComputeAutoBoost = isComputeAutoBoostActive || isComputeCoreConversionUnlocked(state)
-  // Auto-charge itself is bought per boundary on Power; Firmware only holds its one pause switch.
+  // Auto-charge itself is bought per boundary on Power; Firmware holds its pause switch. Auto Boost is automatic once any
+  // boundary is automated (no purchase); its on/off switch and preset live here too.
   const isAnyAutoChargeUnlocked = COMPUTE_MERGE_BOUNDARIES.some(boundary => Boolean(state.intro?.[boundary.autoFlagField]))
   const autoChargeEnabled = state.computeAutoChargeEnabled ?? true
-  const canBuyComputeAutoBoost = !isFrozen && !isComputeAutoBoostActive && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST
+  const autoBoostEnabled = state.intro?.computeAutoBoostEnabled ?? true
 
   const tabDots = {
     automation: hasAffordableAutomationPerk(state) && 'automation perk available',
@@ -709,7 +705,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </TierPairList>
       </Category>
 
-      {(showComputeAutoBoost || isAnyAutoChargeUnlocked) && (
+      {isAnyAutoChargeUnlocked && (
         <Category aria-label="power automation category">
           <CategoryHeading>Power Automation</CategoryHeading>
           <CellGrid>
@@ -728,25 +724,20 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               toggleLabel="Auto-charge"
             />
           )}
-          {/* No pause Switch for Boost: the preset picker below is Auto Boost's only control. */}
           <AutomationRow
             ariaLabel="auto boost row"
+            enabled={autoBoostEnabled}
             icon="🤖"
-            lockedAction={unlockButton({
-              name: 'Auto Boost',
-              cost: COMPUTE_AUTO_BOOST_UNLOCK_COST,
-              canBuy: canBuyComputeAutoBoost,
-              onClick: actions.buyComputeAutoBoost,
-              title: 'Spend Purge Points so a full tier waiting on its own in-flight charge automatically activates your preferred Boost preset (choose it below)',
-            })}
-            name="Auto Boost"
-            label="Boost"
             inlineAction
-            owned={isComputeAutoBoostActive}
-            ownedBadge={<UnlockedBadge icon="🤖" name="Auto Boost" title="Auto Boost unlocked — choose its preset below" />}
+            label="Boost"
+            name="Auto Boost"
+            onToggle={() => actions.setComputeAutoBoostEnabled(!autoBoostEnabled)}
+            owned
+            statusTitle={autoBoostEnabled ? 'Auto Boost spends one token on your preferred Boost preset with each automatic charge' : 'Auto Boost is paused'}
+            title="Automatic once any tier's Auto-charge is bought on Power; pause it and choose its preset here"
+            toggleLabel="Auto Boost"
           />
-          {isComputeAutoBoostActive && (
-            <Cell aria-label="compute auto boost" style={{ gridColumn: '1 / -1' }}>
+          <Cell aria-label="compute auto boost" style={{ gridColumn: '1 / -1' }}>
               <CellHead>
                 <RowLabel>Boost preset</RowLabel>
               </CellHead>
@@ -770,7 +761,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 })}
               </PresetRow>
             </Cell>
-          )}
           </CellGrid>
         </Category>
       )}

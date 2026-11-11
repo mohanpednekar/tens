@@ -30,7 +30,6 @@ import {
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_CAP_BITS,
-  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_STARTING_CAPACITY,
@@ -1602,27 +1601,34 @@ test('an Enable Auto Restage button on Firmware → Automation spends 16 PP to e
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('Auto Boost is unlocked from Firmware → Automation (30 PP), not on Boosters, and its preset preference is chosen there too', async () => {
-  const user = userEvent.setup()
-
+test('Power pre-selects the highest automated tier on arrival', () => {
   seedMainGameState({
-    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY },
-    purge: { xp: 0, points: COMPUTE_AUTO_BOOST_UNLOCK_COST, count: 1, highestMilestone: 1 },
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true, autoMergeNodesIntoCluster: true },
   })
   render(<App />)
-
   fireEvent.click(screen.getByRole('button', { name: /open power/i }))
-  expect(screen.queryByRole('button', { name: /enable auto boost/i })).not.toBeInTheDocument()
-  expect(screen.queryByLabelText(/^auto boost$/i)).not.toBeInTheDocument()
+  expect(within(screen.getByLabelText(/^batteries tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+  expect(within(screen.getByLabelText(/^cells tier$/i)).queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
+})
 
-  await openPerksTab(user, /open automation/i)
-  const unlock = screen.getByRole('button', { name: new RegExp(`enable auto boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} purge points`, 'i') })
-  expect(unlock).toHaveAttribute('title', expect.stringMatching(/in-flight charge/i))
-  expect(unlock).toBeEnabled()
-  await user.click(unlock)
-  expect(screen.getByLabelText('Auto Boost unlocked')).toBeInTheDocument()
+test('Auto Boost needs no purchase: its preset preference appears on Firmware (not Power) once any charge is automated', () => {
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY },
+  })
+  const { unmount } = render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+  expect(screen.queryByRole('group', { name: /auto boost preference/i })).not.toBeInTheDocument()
+  unmount()
+  cleanup()
+  localStorage.clear()
 
-  // The preset preference lives next to the unlock on Firmware, not on Power.
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true },
+    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+  // The Auto Boost switch and preset live on Firmware, never on Power.
+  openPerksTabSync(/open automation/i)
   expect(screen.getByRole('group', { name: /auto boost preference/i })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: /open power/i }))
   expect(screen.queryByRole('group', { name: /auto boost preference/i })).not.toBeInTheDocument()
@@ -1642,6 +1648,25 @@ test('Auto-charge is bought per tier on Power, but its single pause switch lives
   await user.click(toggle)
   expect(screen.getByRole('button', { name: /^auto-charge$/i })).toHaveAttribute('aria-pressed', 'false')
   expect(JSON.parse(localStorage.getItem('tens_game_state')).computeAutoChargeEnabled).toBe(false)
+})
+
+test('Auto Boost has its on/off Switch on Firmware → Automation (not on Power)', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true },
+    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+
+  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+  expect(screen.queryByRole('button', { name: /^auto boost$/i })).not.toBeInTheDocument()
+
+  await openPerksTab(user, /open automation/i)
+  const toggle = screen.getByRole('button', { name: /^auto boost$/i })
+  expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  await user.click(toggle)
+  expect(screen.getByRole('button', { name: /^auto boost$/i })).toHaveAttribute('aria-pressed', 'false')
+  expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.computeAutoBoostEnabled).toBe(false)
 })
 
 test('the Firmware Auto-charge switch is absent until a Power boundary has Auto-charge unlocked', async () => {
@@ -1671,9 +1696,8 @@ test('Upgrade Capacity and the selected Auto Boost preset render with the presti
   localStorage.clear()
 
   seedMainGameState({
-    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY },
-    purge: { xp: 0, points: COMPUTE_AUTO_BOOST_UNLOCK_COST, count: 1, highestMilestone: 1 },
-    computeAutoBoostUnlocked: true,
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true },
+    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   openPerksTabSync(/open automation/i)
@@ -5271,7 +5295,7 @@ describe('Compute auto-charge automation', () => {
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeClusters).toBe(0)
-    expect(saved.intro.computeNodes).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO)
+    expect(saved.intro.computeNodes).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO - 1) // one more token spent on the automatic Boost
     expect(saved.intro.computeNodesMergeRemainingSeconds).toBeGreaterThan(0)
 
     unmount()
@@ -5286,7 +5310,7 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /select cells to fund a compute boost/i }))
+    // Cells is the highest automated tier, so it is pre-selected on arrival.
     const autoRow = screen.getByRole('button', { name: /^cells auto-charge slots/i })
     const presets = within(screen.getByLabelText(/^cells tier$/i)).getByLabelText(/^compute boost$/i)
     expect(autoRow.compareDocumentPosition(presets) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -5314,7 +5338,6 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /select batteries to fund a compute boost/i }))
     const row = screen.getByRole('button', { name: /^batteries auto-charge slots/i })
     expect(row).toBeDisabled()
     expect(row).toHaveTextContent('🤖 Auto-charge')

@@ -714,12 +714,6 @@ export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // count the previous claim was taken at, plus this step (see getOverclockRequirement/
 // overclockGame in engine.js).
 export const OVERCLOCK_REQUIREMENT_STEP = 3
-// One-time PP cost to permanently unlock Compute auto-Boost (see engine.js's
-// buyComputeAutoBoost / tickAutoComputeBoost): while a reserve merge is in flight and any
-// compute-ladder tier is at COMPUTE_ENTITY_CAP, automatically activate (or stack) the player's
-// preferred Boost preset (default Standard). A mid-early automation that only
-// matters once Compute merges are timed.
-export const COMPUTE_AUTO_BOOST_UNLOCK_COST = 30
 // The last tier's own tickspeed multiplier (buyTickspeedMultiplier) keeps its normal requirement
 // (getTickspeedMultiplierCost — owned must reach it) but only actually spends this fraction of it:
 // e.g. tier10's 2nd upgrade unlocks at 100 owned and consumes 10.

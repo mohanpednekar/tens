@@ -1,5 +1,4 @@
 import {
-  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   PLAYTIME_BONUS_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   COMPUTE_MERGE_RATIO,
@@ -179,7 +178,6 @@ export const hasAffordableAutomationPerk = state => {
   const points = state.purge?.points ?? 0
   if (
     (Boolean(state.autoGlobalTickspeed) && !(state.autoScaleUp ?? false) && points >= getAutomationUnlockCost('scaleUp')) ||
-    (isComputeCoreConversionUnlocked(state) && !(state.computeAutoBoostUnlocked ?? false) && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST) ||
     (Boolean(state.autoScaleUp) && Boolean(state.autoXpTickspeed) && !(state.autoOverclock ?? false) && points >= getAutomationUnlockCost('overclock')) ||
     (!(state.autoGlobalTickspeed ?? false) && points >= getAutomationUnlockCost('speedUp')) ||
     (Boolean(state.autoGlobalTickspeed) && !(state.autoXpTickspeed ?? false) && points >= XP_TICKSPEED_AUTOBUYER_UNLOCK_COST) ||

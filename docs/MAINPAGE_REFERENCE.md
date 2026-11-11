@@ -438,7 +438,7 @@ live inside the selected tier):
    a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cells:
-   The timer bar / idle status line live above the (pre-merge-chain) `BoostCard`; the Auto Boost preference picker lives on Firmware → Automation → Power Automation, not on Power. The Auto Boost UNLOCK itself is a Firmware → Automation → Power Automation row (`aria-label="auto boost row"`, shown once `isComputeCoreConversionUnlocked`, also lights the Firmware dot via `hasAffordableAutomationPerk`); Power shows nothing for it while locked
+   The timer bar / idle status line live above the (pre-merge-chain) `BoostCard`. Auto Boost has no purchase: it is automatic per tier (`autoBoostFromTier`) once any tier's charge is automated, and Power pre-selects the highest automated tier on arrival; its on/off Switch (`intro.computeAutoBoostEnabled`, `setComputeAutoBoostEnabled`) and its full-width preset picker (`aria-label="auto boost preference"`) live on Firmware → Automation → Power Automation, not on Power.
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
    a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
@@ -764,9 +764,7 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   `"<name> row"`, Auto Clock Speed → Auto Restage → Auto Scale Up → Auto Overclock → Auto Purge; Restage
   and Scale Up both need Clock Speed, Overclock needs both, Purge needs Overclock — engine-enforced),
   *Tier Autobuyers* (all ten tiers always listed; halves
-  `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Power Automation* (an `auto-charge row` pause Switch — `computeAutoChargeEnabled` — once any tier's Auto-charge is bought on Power; Auto Boost once Foundry
-  Compute unlocks; no Switch — its preset picker (`aria-label="auto boost preference"`) beside the row is the control, owned shows `"Auto Boost
-  unlocked"`), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
+  `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Power Automation* (once any tier's Auto-charge is bought on Power: an `auto-charge row` pause Switch — `computeAutoChargeEnabled` — plus an `auto boost row` Switch and the full-width Boost preset picker), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
   *Purge Points* (Compression leveled upgrade; Overflow mode, locked until Auto Purge's interval ≤

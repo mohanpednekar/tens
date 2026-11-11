@@ -8,7 +8,6 @@ import {
   TIER_UNLOCK_PREV_LEVEL_REQUIREMENT,
 } from 'game/engine'
 import {
-  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_BOOST_MAX_STACKS,
   COMPUTE_BOOST_PRESETS,
   COMPUTE_ENTITY_CAP,
@@ -467,10 +466,10 @@ const InfoPage = () => {
             after a confirmation.
           </li>
           <li>
-            <strong>Auto Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time, on Firmware → 🤖
-            Automation): when a tier is full and waiting on its own automatic charge, activates (or
-            stacks) your preferred preset from the <strong>biggest</strong> such tier. Choose the
-            preset on Power (default Balanced). It never forfeits a running boost.
+            <strong>Auto Boost</strong> is automatic for every tier whose charge is automated: each
+            time that automatic charge starts, one of the tier's remaining tokens activates (or stacks)
+            your preferred preset. Choose the preset on Power (default Balanced). It never forfeits a
+            running boost.
           </li>
           <li>Fusions are used only to fund Boosts.</li>
         </ul>

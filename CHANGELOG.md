@@ -30,7 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- The Auto Boost preset picker moved from Power to Firmware → Automation (next to its unlock). Auto-charge gets one pause/resume switch on Firmware → Automation → Power Automation (shown once any tier's Auto-charge is unlocked); buying Auto-charge per tier stays on Power. Pausing stops new automatic timed charges; instant charge-ups still work.
+- Disk rebuilds (after Reformat or a pool flush) now wait until the disk's own pool Capacity can hold one disk of that size, matching Provision Disk. While waiting, the pool's Data Lake keeps filling and the Reformat replay keeps scaling lakes out and buying Boosters for the disk sizes already completed, up to prior highs.
+- Auto Boost is now automatic and free: once a tier's charge is automated, each automatic charge start spends one remaining token of that tier on your preferred Boost preset (once per charge). The 30 PP Firmware unlock is removed; a Switch on Power pauses/resumes it, and Power opens with the highest automated tier pre-selected.
+
+- Auto Boost's on/off Switch and its preset picker moved from Power to Firmware → Automation → Power Automation, and Auto-charge gets one pause/resume Switch there too (shown once any tier's Auto-charge is bought; buying Auto-charge per tier stays on Power). Pausing Auto-charge stops new automatic timed charges; instant charge-ups still work.
 
 - Every Factory feature card (Clock Speed, Restage, Scale Up, Overclock) now has an expandable details section, including before it's active/claimed; Scale Up previously had none.
 
