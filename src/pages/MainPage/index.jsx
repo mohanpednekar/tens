@@ -160,8 +160,10 @@ const CardEffect = styled.span`
 const CardTitleGroup = styled.div`
   align-items: baseline;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
-  min-width: min-content;
+  max-width: 100%;
+  min-width: 0;
 
   h2 {
     white-space: nowrap;
@@ -680,6 +682,7 @@ const Disclosure = styled.details`
     list-style: none;
     user-select: none;
     width: fit-content;
+    max-width: 100%;
     border-radius: ${props => props.theme.radius.sm};
   }
 
