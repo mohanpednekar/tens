@@ -1,5 +1,6 @@
 import BuyMaxToggle from 'components/BuyMaxToggle'
 import Button, { ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
+import { COMPUTE_BOOST_DISPLAY } from 'components/BoostTimerBar'
 import StatCard from 'components/StatCard'
 import Switch from 'components/Switch'
 import {
@@ -30,6 +31,7 @@ import {
 } from 'game/engine'
 import {
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
+  COMPUTE_BOOST_PRESETS,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
@@ -404,6 +406,17 @@ const PpPurchaseButton = ({ ariaLabel, color, cost, points, disabled, onClick, t
   </PpButton>
 )
 
+const PresetRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+`
+
+const PresetButton = styled(Button)`
+  font-size: 0.78em;
+  padding: 0.35em 0.6em;
+`
+
 // One automation's whole lifecycle in a single compact cell (see CellGrid).
 // Head: label + (Switch once owned and pausable | `ownedBadge` | 🔒 `lockedBadge` milestone).
 // `subText` (compact interval, e.g. `2.9s` / `×8`) sits inline in the head. Below the head, only while
@@ -686,7 +699,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <Category aria-label="power automation category">
           <CategoryHeading>Power Automation</CategoryHeading>
           <CellGrid>
-          {/* No pause Switch: the Auto Boost preset picker on Power (incl. its off choice) is its control. */}
+          {/* No pause Switch: the preset picker below is Auto Boost's only control. */}
           <AutomationRow
             ariaLabel="auto boost row"
             icon="🤖"
@@ -695,14 +708,39 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               cost: COMPUTE_AUTO_BOOST_UNLOCK_COST,
               canBuy: canBuyComputeAutoBoost,
               onClick: actions.buyComputeAutoBoost,
-              title: 'Spend Purge Points so a full tier waiting on its own in-flight charge automatically activates your preferred Boost preset (choose it on Power)',
+              title: 'Spend Purge Points so a full tier waiting on its own in-flight charge automatically activates your preferred Boost preset (choose it below)',
             })}
             name="Auto Boost"
             label="Boost"
             inlineAction
             owned={isComputeAutoBoostActive}
-            ownedBadge={<UnlockedBadge icon="🤖" name="Auto Boost" title="Auto Boost unlocked — choose its preset on Power" />}
+            ownedBadge={<UnlockedBadge icon="🤖" name="Auto Boost" title="Auto Boost unlocked — choose its preset below" />}
           />
+          {isComputeAutoBoostActive && (
+            <Cell aria-label="compute auto boost">
+              <CellHead>
+                <RowLabel>Boost preset</RowLabel>
+              </CellHead>
+              <PresetRow role="group" aria-label="auto boost preference">
+                {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
+                  const selected = (state.intro.computeAutoBoostType ?? 'standard') === boostType
+                  return (
+                    <PresetButton
+                      key={`auto-${boostType}`}
+                      aria-label={`set auto boost preference to ${COMPUTE_BOOST_DISPLAY[boostType].label.toLowerCase()}`}
+                      aria-pressed={selected}
+                      onClick={() => actions.setComputeAutoBoostType(boostType)}
+                      title={`Auto Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
+                      type="button"
+                      variant={selected ? 'prestige' : 'neutral'}
+                    >
+                      {`${COMPUTE_BOOST_DISPLAY[boostType].icon}${selected ? ' ✓' : ''}`}
+                    </PresetButton>
+                  )
+                })}
+              </PresetRow>
+            </Cell>
+          )}
           </CellGrid>
         </Category>
       )}

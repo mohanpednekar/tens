@@ -438,7 +438,7 @@ live inside the selected tier):
    a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cells:
-   The timer bar / idle status line and (once unlocked) the Auto Boost preference picker all live in one `BoostCard`. The Auto Boost UNLOCK itself is a Firmware → Automation → Power Automation row (`aria-label="auto boost row"`, shown once `isComputeCoreConversionUnlocked`, also lights the Firmware dot via `hasAffordableAutomationPerk`); Power shows nothing for it while locked
+   The timer bar / idle status line live above the (pre-merge-chain) `BoostCard`; the Auto Boost preference picker lives on Firmware → Automation → Power Automation, not on Power. The Auto Boost UNLOCK itself is a Firmware → Automation → Power Automation row (`aria-label="auto boost row"`, shown once `isComputeCoreConversionUnlocked`, also lights the Firmware dot via `hasAffordableAutomationPerk`); Power shows nothing for it while locked
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
    a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
@@ -765,7 +765,7 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   and Scale Up both need Clock Speed, Overclock needs both, Purge needs Overclock — engine-enforced),
   *Tier Autobuyers* (all ten tiers always listed; halves
   `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Power Automation* (Auto Boost once Foundry
-  Compute unlocks; no Switch — its preset picker on Power is the control, owned shows `"Auto Boost
+  Compute unlocks; no Switch — its preset picker (`aria-label="auto boost preference"`) beside the row is the control, owned shows `"Auto Boost
   unlocked"`), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:

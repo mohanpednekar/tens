@@ -1602,7 +1602,7 @@ test('an Enable Auto Restage button on Firmware → Automation spends 16 PP to e
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('Auto Boost is unlocked from Firmware → Automation (30 PP), not on Boosters, which then shows its preset preference', async () => {
+test('Auto Boost is unlocked from Firmware → Automation (30 PP), not on Boosters, and its preset preference is chosen there too', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1622,8 +1622,10 @@ test('Auto Boost is unlocked from Firmware → Automation (30 PP), not on Booste
   await user.click(unlock)
   expect(screen.getByLabelText('Auto Boost unlocked')).toBeInTheDocument()
 
-  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+  // The preset preference lives next to the unlock on Firmware, not on Power.
   expect(screen.getByRole('group', { name: /auto boost preference/i })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+  expect(screen.queryByRole('group', { name: /auto boost preference/i })).not.toBeInTheDocument()
 })
 
 test('Upgrade Capacity and the selected Auto Boost preset render with the prestige (warn) variant', () => {
@@ -1646,7 +1648,7 @@ test('Upgrade Capacity and the selected Auto Boost preset render with the presti
     computeAutoBoostUnlocked: true,
   })
   render(<App />)
-  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+  openPerksTabSync(/open automation/i)
   const selected = within(screen.getByRole('group', { name: /auto boost preference/i }))
     .getAllByRole('button').find(b => b.getAttribute('aria-pressed') === 'true')
   expect(selected).toHaveStyle({ color: warn })

@@ -279,21 +279,6 @@ const BoostRow = styled.div`
   }
 `
 
-const AutoBoostRow = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: ${props => props.theme.space.sm};
-  width: 100%;
-`
-
-const AutoBoostLabel = styled.p`
-  margin: 0;
-  color: ${props => props.theme.color.textMuted};
-  font-size: ${props => props.theme.type.scale.sm.size};
-  text-align: center;
-`
-
 // The full ten-tier progression this page walks top to bottom. Every row past Cores through
 // Supercomputers shares the exact same shape: a merge boundary into the tier above it, which —
 // once that boundary's auto-charge is unlocked (see intro.autoMergeCoresIntoNode/
@@ -611,35 +596,10 @@ const ComputePage = ({ game }) => {
         </ArmedStatusText>
       )}
 
-      {(!intro.computeMergePageUnlocked || state.computeAutoBoostUnlocked) && (
+      {!intro.computeMergePageUnlocked && (
       <BoostCard aria-label="boost">
-      {!intro.computeMergePageUnlocked && boostPresets}
+      {boostPresets}
 
-      {state.computeAutoBoostUnlocked && (
-      <AutoBoostRow aria-label="compute auto boost">
-        <AutoBoostLabel>
-          Auto from biggest tier waiting to charge — preference:
-        </AutoBoostLabel>
-        <BoostRow role="group" aria-label="auto boost preference">
-          {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
-            const selected = (intro.computeAutoBoostType ?? 'standard') === boostType
-            return (
-              <CompactButton
-                key={`auto-${boostType}`}
-                aria-label={`set auto boost preference to ${COMPUTE_BOOST_DISPLAY[boostType].label.toLowerCase()}`}
-                aria-pressed={selected}
-                onClick={() => actions.setComputeAutoBoostType(boostType)}
-                title={`Auto Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
-                type="button"
-                variant={selected ? 'prestige' : 'neutral'}
-              >
-                <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon}${selected ? ' ✓' : ''}`}</ButtonContent>
-              </CompactButton>
-            )
-          })}
-        </BoostRow>
-      </AutoBoostRow>
-      )}
       </BoostCard>
       )}
 
