@@ -9325,9 +9325,9 @@ describe('overclockGame', () => {
     expect(after.overclockLastClaimCompletedLevels).toBe(10)
   })
 
-  it('banks the whole current completed-level count in one claim — Overclocking at a count ABOVE the minimum is allowed and next-requirement grows from the actual claim', () => {
+  it('sets the Overclock level to the whole current completed-level count in one claim — Overclocking at a count ABOVE the minimum is allowed and next-requirement grows from the actual claim', () => {
     // Last claimed at 5 completed (requirement 8); the player keeps climbing to 11 completed —
-    // a single claim banks all 11 and pushes the next requirement to 14, not to a
+    // a single claim replaces the level with 11 and pushes the next requirement to 14, not to a
     // predetermined 8-then-11 slot.
     const state = {
       ...withPurchaseLevel(createInitialGameState(), lastTier.id, 12),
