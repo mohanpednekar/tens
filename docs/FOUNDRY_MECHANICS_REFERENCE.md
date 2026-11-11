@@ -72,8 +72,9 @@ commit as any change to the mechanics it describes.
    `ArmedStatusText` + the 3 Turbo/Balanced/Eco presets inline, at that tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-charge unlocks, Charge up (`COMPUTE_MERGE_RATIO`, 8) + Unlock
    Auto-charge `TierActionButton`s (the latter with a live progress fill toward its
    `COMPUTE_ENTITY_CAP`-unit cost), or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot
-   squares (gradually filled, `getComputeReserveHeld`), labelled "🤖 Auto-charge", clickable as an instant
-   8→1 manual charge (only the automatic charge is timed); the selected tier's presets render below this row — Fusion has no
+   squares (gradually filled, `getComputeReserveHeld`), labelled "🤖 Auto-charge" (display only) beside an explicit **⚡ Charge** button: Charge moves one unit per second
+   (`COMPUTE_CHARGE_TRANSFER_SECONDS`) from the top row into the bottom row — units already held past 10 count — then merges 8→1 instantly
+   (`startComputeCharge`/`tickComputeCharges`, state `intro.computeChargeSeconds`; cancels if input < 8 or the output is full; the automatic timed charge at 18 held still happens and waits while a Charge runs); the selected tier's presets render below this row — Fusion has no
    row 2. Cells (`computeCores`) come from buying them from the matching Data Lake on Foundry's `DataLakePanel`, not
    minted from Data Stream Capacity. Full button/gate/aria-label detail: `docs/MAINPAGE_REFERENCE.md`; render-order and
    Stack/Pop/Forfeit rationale: `docs/DESIGN_HISTORY.md`.

@@ -4919,19 +4919,16 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.queryByText(/held/)).not.toBeInTheDocument()
   })
 
-  test('clicking outside every tier block deselects the boost tier; clicks inside keep it', () => {
+  test('one tier is always selected: Cells on arrival, and clicking outside never clears it', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true, computeCores: 1, computeNodes: 2 })
     render(<App />)
     openBoosters()
 
     const cells = screen.getByRole('button', { name: /select cells to fund a compute boost/i })
-    fireEvent.click(cells)
-    fireEvent.click(within(screen.getByLabelText(/^cells tier$/i)).getByText('Boosts KB'))
     expect(cells).toHaveAttribute('aria-pressed', 'true')
-
     fireEvent.click(screen.getByRole('heading', { level: 1, name: /^⚡ power$/i }))
-    expect(cells).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
+    expect(cells).toHaveAttribute('aria-pressed', 'true')
+    expect(within(screen.getByLabelText(/^cells tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
   })
 
   test('preset buttons drop zero-valued trailing duration units', () => {
@@ -4981,16 +4978,14 @@ describe('Byte Foundry Compute Boost', () => {
     expect(within(screen.getByLabelText(/^batteries tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
   })
 
-  test('only the selected tier shows the presets; selecting another moves them, re-clicking collapses them', () => {
+  test('only the selected tier shows the presets; selecting another moves them, re-clicking keeps them', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true, computeCores: 1, computeNodes: 2 })
     render(<App />)
     openBoosters()
 
-    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
-    expect(screen.getByText(/no boost running · pick a tier/i)).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /select cells to fund a compute boost/i }))
+    // Cells (the default) hosts the presets on arrival; no "pick a tier" prompt.
     expect(within(screen.getByLabelText(/^cells tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+    expect(screen.queryByText(/pick a tier/i)).not.toBeInTheDocument()
 
     const batteries = screen.getByRole('button', { name: /select batteries to fund a compute boost/i })
     fireEvent.click(batteries)
@@ -4998,7 +4993,7 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.getAllByLabelText(/^compute boost$/i)).toHaveLength(1)
 
     fireEvent.click(batteries)
-    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
+    expect(within(screen.getByLabelText(/^batteries tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
   })
 
   test('no Pop control appears while no boost is active', () => {
@@ -5115,7 +5110,7 @@ describe('ComputePage merge chain', () => {
       render(<App />)
       openBoosters()
 
-      expect(screen.getByRole('button', { name: /batteries auto-charge in progress/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /batteries charger, auto-charge in progress/i })).toBeInTheDocument()
     })
 
     test('the selected tier is marked via aria-pressed and a single tier is armed at a time', () => {
@@ -5178,7 +5173,7 @@ describe('ComputePage merge chain', () => {
     expect(screen.queryByRole('button', { name: /^charge up 8 cells into 1 battery$/i })).not.toBeInTheDocument()
   })
 
-  test('once auto-charge is unlocked for Cells into Batteries, clicking the auto-charge slot row merges 8 → 1 instantly', () => {
+  test('once auto-charge is unlocked, pressing Charge starts a charge (units move down over time; nothing merges yet)', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 8, autoMergeCoresIntoNode: true,
@@ -5186,12 +5181,13 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /instantly charge up 8 cells into 1 battery/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^charge cells: move units down/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeCores).toBe(0)
-    expect(saved.intro.computeNodes).toBe(1)
-    expect(saved.intro.computeCoresMergeRemainingSeconds ?? 0).toBe(0)
+    expect(saved.intro.computeChargeSeconds?.[0]).toBeGreaterThanOrEqual(0)
+    expect(saved.intro.computeCores).toBe(8)
+    expect(saved.intro.computeNodes ?? 0).toBe(0)
+    expect(screen.getByRole('button', { name: /^charge cells: move units down/i })).toBeDisabled()
   })
 
   test('a merge button stays disabled once the output entity is already at COMPUTE_ENTITY_CAP', () => {
@@ -5327,7 +5323,7 @@ describe('Compute auto-charge automation', () => {
     vi.useRealTimers()
   })
 
-  test('on a selected automated tier, the auto-charge slot row renders above the Boost presets', () => {
+  test('on a selected automated tier, the Charger row renders above the Boost presets', () => {
     seedIntroState({
       bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 6, autoMergeCoresIntoNode: true,
@@ -5336,12 +5332,12 @@ describe('Compute auto-charge automation', () => {
     openBoosters()
 
     // Cells is the highest automated tier, so it is pre-selected on arrival.
-    const autoRow = screen.getByRole('button', { name: /^cells auto-charge slots/i })
+    const autoRow = screen.getByRole('button', { name: /^cells charger/i })
     const presets = within(screen.getByLabelText(/^cells tier$/i)).getByLabelText(/^compute boost$/i)
     expect(autoRow.compareDocumentPosition(presets) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  test('once auto-charge is enabled for a tier, the old instant Merge button is replaced by the clickable reserve-slot row itself (issue #321 — "slots are the button")', () => {
+  test('once auto-charge is enabled for a tier, the instant Merge button is replaced by an explicit Charge button', () => {
     seedIntroState({
       bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: 8, autoMergeNodesIntoCluster: true,
@@ -5350,12 +5346,12 @@ describe('Compute auto-charge automation', () => {
     openBoosters()
 
     expect(screen.queryByRole('button', { name: /^charge up 8 batteries into 1 pack/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /instantly charge up 8 batteries into 1 pack/i })).toBeEnabled()
-    // A visible merge cue marks the row as clickable while 8 are available.
-    expect(screen.getByRole('button', { name: /instantly charge up 8 batteries into 1 pack/i })).toHaveTextContent('🤖 ⬆ 8→1 Pack')
+    const charge = screen.getByRole('button', { name: /^charge batteries: move units down/i })
+    expect(charge).toBeEnabled()
+    expect(charge).toHaveTextContent('⚡ Charge')
   })
 
-  test('the reserve-slot row shows no merge cue below 8 of the input entity', () => {
+  test('the Charger row carries no label or merge cue (the Charge button sits to its left)', () => {
     seedIntroState({
       bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: 7, autoMergeNodesIntoCluster: true,
@@ -5363,9 +5359,9 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    const row = screen.getByRole('button', { name: /^batteries auto-charge slots/i })
+    const row = screen.getByRole('button', { name: /^batteries charger/i })
     expect(row).toBeDisabled()
-    expect(row).toHaveTextContent('🤖 Auto-charge')
+    expect(row).not.toHaveTextContent(/auto-charge/i) // no label on the slot row
     expect(row).not.toHaveTextContent('⬆')
   })
 
@@ -5378,7 +5374,7 @@ describe('Compute auto-charge automation', () => {
     openBoosters()
 
     const autoButton = screen.getByRole('button', { name: /enable auto-charge for cells into batteries/i })
-    expect(autoButton).toHaveTextContent('🤖 6/10')
+    expect(autoButton).toHaveTextContent('🔓 Charger 🔗 6/10')
     expect(autoButton).toBeDisabled() // below the 10-unit unlock cost
   })
 
@@ -5390,7 +5386,7 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /3\/8 auto-charge slots filled/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /batteries charger, 3\/8 filled/i })).toBeInTheDocument()
   })
 
 })

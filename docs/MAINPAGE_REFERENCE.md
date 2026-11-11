@@ -430,12 +430,11 @@ live inside the selected tier):
    - Right: **Stack** (`aria-label="stack the active compute boost"`, `+`,
      `disabled={!isStackComputeBoostTurnAvailable(state)}`, `actions.stackComputeBoost`).
    `MainPage` shows a matching read-only status line while a boost is active.
-   With no boost active, the card instead shows "No boost running" (plus "· pick a tier ↓" when the
-   merge chain is unlocked and nothing is selected).
+   With no boost active, the card instead shows "No boost running" (no prompt: one tier is ALWAYS selected).
 2. The Boost presets (`boostPresets`: `ArmedStatusText` + `BoostRow`) render INSIDE the one selected
-   tier block (3), BELOW that tier's merge / auto-merge row — only one tier shows them at a time;
-   re-clicking the selected tier, or clicking anywhere outside every tier block (`data-boost-tier`;
-   a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
+   tier block (3), BELOW that tier's merge / charge row — only one tier shows them at a time. The selection can be
+   switched by clicking another tier but never cleared (no re-click collapse, no outside-click deselect); on arrival
+   it is the highest tier whose charge is automated, else the active boost's own tier, else Cells. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cells:
    The timer bar / idle status line live above the (pre-merge-chain) `BoostCard`. Auto Boost has no purchase: it is automatic per tier (`autoBoostFromTier`) once any tier's charge is automated, and Power pre-selects the highest automated tier on arrival; its on/off Switch (`intro.computeAutoBoostEnabled`, `setComputeAutoBoostEnabled`) and its full-width preset picker (`aria-label="auto boost preference"`) live on Firmware → Automation → Power Automation. Firmware reveals (`isPerksPageRevealed`) on the first Prestige OR as soon as any Auto-charge boundary is bought, so these controls are never unreachable; Power carries none of them.
@@ -499,7 +498,7 @@ live inside the selected tier):
        - **Before that boundary's auto-charge is unlocked:** an instant Charge up button (`TierActionButton`,
          `flex: 1 1 0; width: 100%` — fills exactly half the row, the same "two equal-width buttons"
          look `MainPage`'s own tier-row Buy/Upgrade pair uses, rather than a small icon-only square —
-         `variant="prestige"`, visible content "⬆ 8→1 <Output>", `aria-label` spelling out the full action
+         `variant="prestige"`, visible content "<input symbol> 8→1 <output symbol>" (e.g. ⬡ 8→1 🔗), `aria-label` spelling out the full action
          e.g. "charge up 8 batteries into 1 pack") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
          tier is held and the produced tier is under its effective cap (`getComputeFieldEffectiveCap` — 18
          once that tier's own auto-charge is unlocked), calling the matching
@@ -517,16 +516,14 @@ live inside the selected tier):
          keeps growing past its primary 10 (via continued Booster purchases or a lower-tier charge),
          up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a charge is actually in flight
          the reserve instead reads as fully committed regardless of the live count (which has by then
-         dropped back toward 10 and may be accumulating the next batch) — a `MergeCue` on its left always
-         names it ("🤖 Auto-charge", muted), switching to an accent "🤖 ⬆ 8→1 <output>" (plus accent
-         border/raised background) while clicking would INSTANTLY charge 8 → 1 ("slots are the
-         button"), calling the matching `game.actions.startCompute*Merge` action, enabled once
-         `isCompute*MergeStartAvailable` allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the
-         normal + reserve slots and room under the output's effective cap, counting the 1 an in-flight
-         automatic charge still owes — `isComputeMergeStartAvailableAtBoundary`).
-         `aria-label`: "instantly charge up 8 <input> into 1 <output>, N/8 auto-charge slots filled" (or
-         ", auto-charge in progress, <time> left") when available, "<Tier> auto-charge in progress, <time> left" while an automatic charge runs, else
-         "<Tier> auto-charge slots, N/8 filled". While an automatic charge is in
+         dropped back toward 10 and may be accumulating the next batch) —
+The row is display-only: an explicit **⚡ Charge** button beside it
+         (`aria-label` "charge <tier>: move units down one per second, then merge 8 into 1 <output>",
+         label `⚡ Charge`, `⏳ Charging` while running) calls `actions.startComputeCharge(boundaryIndex)`;
+         enabled per `isComputeChargeAvailable` (Auto-charge bought, ≥ `COMPUTE_MERGE_RATIO` (8) held, no
+         timed merge or charge running, output has room). While charging the top row dims one slot per
+         transferred unit and the bottom row fills. `aria-label`: "<Tier> charger, auto-charge in progress, <time> left"
+         while an automatic charge runs, else "<Tier> charger, N/8 filled" (the bottom row is called the **Charger**). While an automatic charge is in
          flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
          inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
          live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` filled count. There is

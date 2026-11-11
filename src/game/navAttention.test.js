@@ -228,10 +228,27 @@ describe('navAttention', () => {
     expect(maxAttention(false, false)).toBe(false)
   })
 
-  it('lights Compute when a Compute Boost turn is available', () => {
+  it('does NOT light Compute for Boost availability alone', () => {
     const state = withIntro(computeBoostReadyIntro)
+    expect(hasComputeAttention(state)).toBe(false)
+    expect(getNavAttention(state).boosters).toBe(false)
+  })
+
+  it('lights Compute (normal) when an automated tier can be charged (8+ held, no charge running)', () => {
+    const base = {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: 0,
+      byteCreated: true,
+      productionMilestoneTierClaims: 2,
+      computeCores: COMPUTE_MERGE_RATIO,
+      computeNodes: 0,
+      autoMergeCoresIntoNode: true,
+    }
+    const state = withIntro(base)
     expect(hasComputeAttention(state)).toBe(true)
-    expect(getNavAttention(state).boosters).toBe(ATTENTION_HIGH)
+    expect(getNavAttention(state).boosters).toBe(ATTENTION_NORMAL)
+    expect(hasComputeAttention(withIntro({ ...base, computeCores: COMPUTE_MERGE_RATIO - 1 }))).toBe(false)
+    expect(hasComputeAttention(withIntro({ ...base, computeChargeSeconds: { 0: 2 } }))).toBe(false)
   })
 
   it('does not light Compute before Compute unlocks', () => {

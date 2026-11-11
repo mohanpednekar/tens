@@ -420,6 +420,8 @@ export const COMPUTE_MERGE_RESERVE_CAP = 8
 // gradually filled by continued Booster purchases/lower-tier merges) = 18 "slots" total. Before
 // auto-merge is unlocked for that boundary, COMPUTE_ENTITY_CAP alone is still the cap — see
 // getComputeEntityFieldRoom in engine.js.
+// Manual Charge (Power): seconds per unit moved from a tier's top row into its bottom (auto-charge) row before the instant 8→1 merge (#1033).
+export const COMPUTE_CHARGE_TRANSFER_SECONDS = 1
 export const COMPUTE_ENTITY_AUTO_MERGE_CAP = COMPUTE_ENTITY_CAP + COMPUTE_MERGE_RESERVE_CAP
 // Timed reserve-merge durations are NOT a fixed table — each is COMPUTE_MERGE_RATIO (8) fills of the
 // input tier's own pool's smallest disk at that pool's live Bandwidth (see

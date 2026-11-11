@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -597,6 +597,9 @@ export const createInitialGameState = () => ({
     computeCloudsMergeRemainingSeconds: 0,
     computeDatacentersMergeRemainingSeconds: 0,
     computeSupercomputersMergeRemainingSeconds: 0,
+    // Manual Charge in progress per merge boundary (#1033): { [boundaryIndex]: seconds elapsed }; absent = idle.
+    // Unlike the merge timers above this is RUN-scoped: a Purge/Reboot/Reformat drops it (nothing is spent until the merge).
+    computeChargeSeconds: {},
     // PERMANENT — preferred Compute Boost preset for auto-activation (issue #380): each time a tier's automated
     // merge starts, autoBoostFromTier spends one of that tier's tokens using this preset (or stacks the active
     // boost if its funding tier matches). One of COMPUTE_BOOST_PRESETS' keys; defaults to 'standard'. Player-selectable on
@@ -1713,7 +1716,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // bought via tickDataLakeAutoConvert below (after this tick's own tickPoolBufferFill fills the
   // lakes) only cascades through this chain starting NEXT tick — a one-tick lag, imperceptible at
   // TICK_RATE_MS.
-  const stateAfterAutoMerges = AUTO_MERGE_TICKERS.reduce((tickState, tick) => tick(elapsedSeconds)(tickState), stateAfterFoundryConvenience)
+  const stateAfterAutoMergeTimers = AUTO_MERGE_TICKERS.reduce((tickState, tick) => tick(elapsedSeconds)(tickState), stateAfterFoundryConvenience)
+  // Manual Charge: one unit per second from the top row to the bottom row, then an instant 8→1 merge (#1033).
+  const stateAfterAutoMerges = tickComputeCharges(elapsedSeconds)(stateAfterAutoMergeTimers)
   // Counts an active Compute Boost's remaining duration down (auto Boost itself fires at each automated merge start, see
   // autoBoostFromTier).
   const stateAfterComputeBoost = tickComputeBoost(elapsedSeconds)(stateAfterAutoMerges)
@@ -3555,6 +3560,10 @@ export const eraseAllComputeTokens = state => {
       changed = true
     }
   }
+  if (Object.keys(next.computeChargeSeconds ?? {}).length > 0) {
+    next.computeChargeSeconds = {}
+    changed = true
+  }
   if ((next.computeBoostType ?? null) !== null) {
     next.computeBoostType = null
     next.computeBoostTierIndex = null
@@ -5365,7 +5374,66 @@ export const getComputeReserveHeld = (state, tierIndex) => {
   if ((state.intro?.[boundary.timerField] ?? 0) > 0) return COMPUTE_MERGE_RESERVE_CAP
   const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
   const held = state.intro?.[field] ?? 0
-  return Math.max(0, Math.min(COMPUTE_MERGE_RESERVE_CAP, held - COMPUTE_ENTITY_CAP))
+  // The bottom row = units held past the primary 10, plus any moved down so far by a manual Charge.
+  return Math.min(COMPUTE_MERGE_RESERVE_CAP, Math.max(0, held - COMPUTE_ENTITY_CAP) + getComputeChargeTransfers(state, tierIndex - 1))
+}
+
+// --- Manual Charge (#1033) ---------------------------------------------------------------
+// seconds elapsed on a boundary's Charge, or null when idle.
+export const getComputeChargeSeconds = (state, boundaryIndex) => {
+  const seconds = state.intro?.computeChargeSeconds?.[boundaryIndex]
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : null
+}
+export const isComputeCharging = (state, boundaryIndex) => getComputeChargeSeconds(state, boundaryIndex) !== null
+// Units already moved from the top row to the bottom row by this boundary's Charge (one per COMPUTE_CHARGE_TRANSFER_SECONDS).
+export const getComputeChargeTransfers = (state, boundaryIndex) => {
+  const seconds = getComputeChargeSeconds(state, boundaryIndex)
+  return seconds === null ? 0 : Math.floor(seconds / COMPUTE_CHARGE_TRANSFER_SECONDS + TICK_ACCUMULATION_EPSILON)
+}
+// UI mirror of startComputeCharge's own gate.
+export const isComputeChargeAvailable = (state, boundaryIndex) => {
+  const boundary = COMPUTE_MERGE_BOUNDARIES[boundaryIndex]
+  if (!boundary) return false
+  const intro = state.intro ?? {}
+  return Boolean(intro[boundary.autoFlagField]) &&
+    !((intro[boundary.timerField] ?? 0) > 0) &&
+    !isComputeCharging(state, boundaryIndex) &&
+    (intro[boundary.inputField] ?? 0) >= COMPUTE_MERGE_RATIO &&
+    (intro[boundary.outputField] ?? 0) < getComputeFieldEffectiveCap(state, boundary.outputField)
+}
+// Starts a Charge: from here, tickComputeCharges moves one unit per second into the bottom row, then merges 8→1 instantly.
+export const startComputeCharge = boundaryIndex => state => {
+  if (!isComputeChargeAvailable(state, boundaryIndex)) return state
+  return { ...state, intro: { ...state.intro, computeChargeSeconds: { ...(state.intro?.computeChargeSeconds ?? {}), [boundaryIndex]: 0 } } }
+}
+// Advances every in-flight Charge. A Charge cancels (state cleared, units untouched) if the input drops below 8 or the output is full.
+export const tickComputeCharges = elapsedSeconds => state => {
+  const charges = state.intro?.computeChargeSeconds
+  const keys = charges ? Object.keys(charges) : []
+  if (keys.length === 0) return state
+  const nextCharges = { ...charges }
+  let intro = { ...state.intro }
+  for (const key of keys) {
+    const boundaryIndex = Number(key)
+    const boundary = COMPUTE_MERGE_BOUNDARIES[boundaryIndex]
+    const seconds = getComputeChargeSeconds(state, boundaryIndex)
+    const input = boundary ? (intro[boundary.inputField] ?? 0) : 0
+    if (!boundary || seconds === null || input < COMPUTE_MERGE_RATIO) { delete nextCharges[key]; continue }
+    // An output that filled up mid-charge cancels it right away (units untouched).
+    if ((intro[boundary.outputField] ?? 0) >= getComputeFieldEffectiveCap({ ...state, intro }, boundary.outputField)) { delete nextCharges[key]; continue }
+    const nextSeconds = seconds + elapsedSeconds
+    const natural = Math.max(0, input - COMPUTE_ENTITY_CAP)
+    if (natural + Math.floor(nextSeconds / COMPUTE_CHARGE_TRANSFER_SECONDS + TICK_ACCUMULATION_EPSILON) < COMPUTE_MERGE_RESERVE_CAP) {
+      nextCharges[key] = nextSeconds
+      continue
+    }
+    delete nextCharges[key]
+    const output = intro[boundary.outputField] ?? 0
+    const cap = getComputeFieldEffectiveCap({ ...state, intro }, boundary.outputField)
+    if (output >= cap) continue
+    intro = { ...intro, [boundary.inputField]: input - COMPUTE_MERGE_RATIO, [boundary.outputField]: Math.max(output, Math.min(output + 1, cap)) }
+  }
+  return { ...state, intro: { ...intro, computeChargeSeconds: nextCharges } }
 }
 
 export const isBoosterPurchaseAvailable = (state, tierIndex) =>
@@ -6180,6 +6248,7 @@ const tickComputeMergeBoundary = (elapsedSeconds, inputField, outputField, autoF
   // an auto-start to evaluate — so idle boundaries stay cheap in long offline replays.
   const mayAutoStart = Boolean(state.intro?.[autoFlagField]) &&
     (state.computeAutoChargeEnabled ?? true) &&
+    !isComputeCharging(state, boundaryIndex) &&
     (state.intro?.[inputField] ?? 0) >= COMPUTE_ENTITY_AUTO_MERGE_CAP
   if (!(remaining > 0) && !mayAutoStart) return state
   const durationSeconds = getComputeMergeDurationSeconds(state, boundaryIndex)
