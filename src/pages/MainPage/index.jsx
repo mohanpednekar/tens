@@ -1620,7 +1620,7 @@ const MainPage = ({ game }) => {
                     event.stopPropagation()
                   }}
                 >
-                  🏭 +100%{scaleUpUnlocksTB ? ' · 🔓 TB' : ''}
+                  🏭 ×2{scaleUpUnlocksTB ? ' · 🔓 TB' : ''}
                 </CardEffect>
               </CardTitleGroup>
             </summary>
