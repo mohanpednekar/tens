@@ -1197,6 +1197,21 @@ test('the Scale Up card shows its ×2 effect beside the name, and its button onl
   expect(screen.getByRole('button', { name: /^scale up \(requires/i })).toHaveTextContent('⏩ KB 1/3')
 })
 
+test('the Scale Up card\'s details line is collapsed until the heading is clicked', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    resources: { base: 10 },
+    purchaseLevels: { tier01: 2 },
+  })
+  render(<App />)
+
+  const line = screen.getByText(/resets tiers and doubles production of every tier unlocked so far/i)
+  expect(line).not.toBeVisible()
+
+  await user.click(screen.getByRole('heading', { level: 2, name: 'Scale Up' }))
+  expect(line).toBeVisible()
+})
+
 test('the scale up and overclock panels render below the tier list, not above it', () => {
   seedMainGameState({
     resources: { base: 10 },
