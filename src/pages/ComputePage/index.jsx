@@ -719,7 +719,7 @@ const ComputePage = ({ game }) => {
                             $progress={autoUnlockProgress}
                             $spacious
                           >
-                            <ButtonContent>{`🔓 Charger ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
+                            <ButtonContent>{`🔓 Charger ${ENTITY_ROWS[rowIndex + 1]?.symbol ?? ''} ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
                           </TierActionButton>
                         </>
                       )
