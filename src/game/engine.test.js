@@ -281,6 +281,11 @@ import {
   unpinMuseumEntry,
   tickAutoMergeCloudsIntoDatacenter,
   tickAutoMergeCoresIntoNode,
+  startComputeCharge,
+  tickComputeCharges,
+  isComputeChargeAvailable,
+  isComputeCharging,
+  getComputeChargeTransfers,
   tickAutoMergeDatacentersIntoSupercomputer,
   tickAutoMergeFabricsIntoCloud,
   tickAutoMergeGridsIntoFabric,
@@ -4582,6 +4587,52 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(after.intro.computeBoostRemainingSeconds).toBe(stackDuration * 2)
     expect(after.intro.computeBoostStacks).toBe(2)
     expect(after.intro.computeBoostType).toBe('burst') // still active
+  })
+})
+
+describe('manual Charge (#1033)', () => {
+  const base = () => withIntro(createInitialGameState(), { autoMergeCoresIntoNode: true, computeCores: 10, computeNodes: 0 })
+
+  it('is available only with Auto-charge unlocked, 8+ held, no timed merge or charge running, and room in the output', () => {
+    expect(isComputeChargeAvailable(base(), 0)).toBe(true)
+    expect(isComputeChargeAvailable(withIntro(base(), { autoMergeCoresIntoNode: false }), 0)).toBe(false)
+    expect(isComputeChargeAvailable(withIntro(base(), { computeCores: 7 }), 0)).toBe(false)
+    expect(isComputeChargeAvailable(withIntro(base(), { computeCoresMergeRemainingSeconds: 5 }), 0)).toBe(false)
+    expect(isComputeChargeAvailable(withIntro(base(), { computeNodes: COMPUTE_ENTITY_CAP }), 0)).toBe(false)
+    expect(isComputeChargeAvailable(startComputeCharge(0)(base()), 0)).toBe(false)
+  })
+
+  it('moves one unit per second into the bottom row, then merges 8 → 1 instantly when it is full', () => {
+    let state = startComputeCharge(0)(base())
+    expect(isComputeCharging(state, 0)).toBe(true)
+    state = tickComputeCharges(3)(state)
+    expect(getComputeChargeTransfers(state, 0)).toBe(3)
+    expect(getComputeReserveHeld(state, 1)).toBe(3)
+    expect(state.intro.computeCores).toBe(10) // nothing spent until the merge
+    state = tickComputeCharges(4.5)(state)
+    expect(getComputeReserveHeld(state, 1)).toBe(7)
+    state = tickComputeCharges(1)(state)
+    expect(state.intro.computeCores).toBe(2)
+    expect(state.intro.computeNodes).toBe(1)
+    expect(isComputeCharging(state, 0)).toBe(false)
+  })
+
+  it('only transfers what the bottom row still lacks (units already held past 10 count)', () => {
+    let state = startComputeCharge(0)(withIntro(base(), { computeCores: 15 })) // 5 already in the bottom row
+    state = tickComputeCharges(2)(state)
+    expect(getComputeReserveHeld(state, 1)).toBe(7)
+    state = tickComputeCharges(1)(state)
+    expect(state.intro.computeCores).toBe(7)
+    expect(state.intro.computeNodes).toBe(1)
+  })
+
+  it('cancels (units untouched) if the input falls below 8 mid-charge, and the automatic start waits while charging', () => {
+    const started = startComputeCharge(0)(base())
+    const spent = tickComputeCharges(1)(withIntro(started, { computeCores: 5 }))
+    expect(isComputeCharging(spent, 0)).toBe(false)
+    expect(spent.intro.computeCores).toBe(5)
+    const full = withIntro(started, { computeCores: COMPUTE_ENTITY_AUTO_MERGE_CAP })
+    expect(tickAutoMergeCoresIntoNode(1)(full).intro.computeCoresMergeRemainingSeconds ?? 0).toBe(0)
   })
 })
 

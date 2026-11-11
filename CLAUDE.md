@@ -532,7 +532,7 @@ Strict three-layer separation:
    pure renderer ("engine re-validates, UI just mirrors it", like every page here).
 4b. **`ComputePage/index.jsx`** — Foundry **Power** screen (page id `'boosters'`; player label only), `{ game }`; reached
    via AppNav once `isComputeCoreConversionUnlocked`. Hosts the nine-boundary merge chain (Cell → Battery → … → Fusion,
-   "Charge up"/"Auto-charge") behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute" names the
+   "Charge up"/"Auto-charge"; ⚡ Charge button = 1 unit/s top→bottom row then instant 8→1, `startComputeCharge`/`tickComputeCharges`) behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute" names the
    page/feature only — entities drop the word in every player-visible label. Deliberately terse (icon-only controls,
    full sentence in `title`/`aria-label`; mechanic prose lives in the Manual). Top card = active Boost timer bar
    (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right, enforced in the engine too) (Auto Boost is automatic: one token per automated charge start, `autoBoostFromTier`; its Switch + preset, like Auto-charge's pause Switch `computeAutoChargeEnabled`, live on Firmware → Automation → Power Automation);

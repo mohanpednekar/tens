@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Power: explicit Charge button (#1033).** On a tier with Auto-charge unlocked, a ⚡ Charge button moves units from the top row into the bottom row one per second, then merges 8→1 instantly (the automatic timed charge at 18 held still happens and waits while a Charge runs).
+
 - Factory header shows the exact Bits balance in small text under the Bytes headline once it switches to Bytes.
 
 - **Playtime bonus** (Firmware → Prestige, one-time 100 PP): +1% production speed per hour of active play. Offline, background catch-up, and hidden-tab ticks don't count; it persists across Purge and Reboot.

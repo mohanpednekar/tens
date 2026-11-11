@@ -1,6 +1,6 @@
 import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration } from 'components/BoostTimerBar'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
-import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress, isStackComputeBoostTurnAvailable } from 'game/engine'
+import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeChargeAvailable, isComputeCharging, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress, isStackComputeBoostTurnAvailable } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -625,8 +625,11 @@ const ComputePage = ({ game }) => {
               // boundary's own gradually-filling reserve (see getComputeReserveHeld) — the primary
               // slot row always reads at most COMPUTE_ENTITY_CAP/COMPUTE_ENTITY_CAP; the "extra"
               // shows up as reserve fill in row 2 instead, never as an overflowing "14/10".
-              const primaryHeld = Math.min(count, COMPUTE_ENTITY_CAP)
               const reserveHeld = hasMergeRow ? getComputeReserveHeld(state, tierIndex) : 0
+              // A manual Charge moves units from the top row down into the bottom row one per second.
+              const charging = hasMergeRow && isComputeCharging(state, rowIndex)
+              const chargeAvailable = hasMergeRow && isComputeChargeAvailable(state, rowIndex)
+              const primaryHeld = charging ? Math.min(COMPUTE_ENTITY_CAP, Math.max(0, count - reserveHeld)) : Math.min(count, COMPUTE_ENTITY_CAP)
 
               // Progressive disclosure: the merge/auto row only shows for the selected tier or when
               // there is something to act on or watch, so idle tiers stay a single line.
@@ -635,7 +638,7 @@ const ComputePage = ({ game }) => {
               // the tight layout is for already-automated tiers.
               const spacious = !autoEnabled
               const showDetail = hasMergeRow && (
-                spacious || armedTierIndex === tierIndex || merging || canMergeNow || reserveHeld > 0
+                spacious || armedTierIndex === tierIndex || merging || charging || canMergeNow || reserveHeld > 0
               )
 
               // Only unlocked tiers render: the first, anything held/automated/merging, one whose
@@ -677,36 +680,45 @@ const ComputePage = ({ game }) => {
                   <TierMergeRow $spacious={spacious}>
                     {hasMergeRow && (
                       autoEnabled ? (
+                        <>
                         <ReserveSlotsRow
                           aria-label={
-                            startAvailable
-                              ? `instantly charge up ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}, ${merging ? `auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left` : `${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} auto-charge slots filled`}`
-                              : merging
-                                ? `${row.label} auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left`
-                                : `${row.label} auto-charge slots, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
+                            merging
+                              ? `${row.label} auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left`
+                              : `${row.label} auto-charge slots, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
                           }
-                          disabled={!startAvailable}
-                          onClick={startAvailable ? () => actions[row.startAction]() : undefined}
-                          $clickable={startAvailable}
+                          disabled
+                          $clickable={false}
                           title={
-                            startAvailable
-                              ? `Charge up now: instantly turn ${COMPUTE_MERGE_RATIO} ${row.label} into 1 ${row.mergeOutputLabel}. Auto-charge slots fill past ${COMPUTE_ENTITY_CAP} and charge on their own when all ${COMPUTE_MERGE_RESERVE_CAP} are full${merging ? ` (auto-charging: ${formatOfflineDuration(remainingSeconds)} left)` : ''}`
-                              : merging
-                                ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
-                                : (intro[row.mergeOutputField] ?? 0) >= outputCap
-                                  ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
-                                  : `Auto-charge slots: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — they charge on their own when full; tap to charge up instantly once you hold ${COMPUTE_MERGE_RATIO} ${row.label}`
+                            merging
+                              ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
+                              : `Bottom row: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — fills past ${COMPUTE_ENTITY_CAP} held and charges on its own when full, or press Charge to move units down one per second`
                           }
                           type="button"
                         >
-                          <MergeCue aria-hidden="true" $active={startAvailable}>
-                            {startAvailable ? `🤖 ⬆ ${COMPUTE_MERGE_RATIO}→1 ${row.mergeOutputLabel}` : '🤖 Auto-charge'}
-                          </MergeCue>
+                          <MergeCue aria-hidden="true" $active={false}>🤖 Auto-charge</MergeCue>
                           {merging && <MergeCountdown>{formatOfflineDuration(remainingSeconds)}</MergeCountdown>}
                           {Array.from({ length: COMPUTE_MERGE_RESERVE_CAP }, (_, index) => (
                             <ReserveSlot key={index} $filled={index < reserveHeld} $merging={merging} aria-hidden="true" />
                           ))}
                         </ReserveSlotsRow>
+                        <TierActionButton
+                          aria-label={`charge ${row.label.toLowerCase()}: move units down one per second, then merge ${COMPUTE_MERGE_RATIO} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
+                          disabled={!chargeAvailable}
+                          onClick={() => actions.startComputeCharge(rowIndex)}
+                          title={
+                            charging
+                              ? 'Charging — one unit moves to the bottom row each second, then it merges'
+                              : (intro[row.mergeOutputField] ?? 0) >= outputCap
+                                ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
+                                : `Charge: move units from the top row to the bottom row one per second, then merge ${COMPUTE_MERGE_RATIO} into 1 ${row.mergeOutputLabel} (needs ${COMPUTE_MERGE_RATIO} ${row.label} held)`
+                          }
+                          type="button"
+                          variant="prestige"
+                        >
+                          <ButtonContent>{charging ? '⏳ Charging' : '⚡ Charge'}</ButtonContent>
+                        </TierActionButton>
+                        </>
                       ) : (
                         <>
                           <TierActionButton

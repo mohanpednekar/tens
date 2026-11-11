@@ -5178,7 +5178,7 @@ describe('ComputePage merge chain', () => {
     expect(screen.queryByRole('button', { name: /^charge up 8 cells into 1 battery$/i })).not.toBeInTheDocument()
   })
 
-  test('once auto-charge is unlocked for Cells into Batteries, clicking the auto-charge slot row merges 8 → 1 instantly', () => {
+  test('once auto-charge is unlocked, pressing Charge starts a charge (units move down over time; nothing merges yet)', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 8, autoMergeCoresIntoNode: true,
@@ -5186,12 +5186,13 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /instantly charge up 8 cells into 1 battery/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^charge cells: move units down/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeCores).toBe(0)
-    expect(saved.intro.computeNodes).toBe(1)
-    expect(saved.intro.computeCoresMergeRemainingSeconds ?? 0).toBe(0)
+    expect(saved.intro.computeChargeSeconds?.[0]).toBeGreaterThanOrEqual(0)
+    expect(saved.intro.computeCores).toBe(8)
+    expect(saved.intro.computeNodes ?? 0).toBe(0)
+    expect(screen.getByRole('button', { name: /^charge cells: move units down/i })).toBeDisabled()
   })
 
   test('a merge button stays disabled once the output entity is already at COMPUTE_ENTITY_CAP', () => {
@@ -5341,7 +5342,7 @@ describe('Compute auto-charge automation', () => {
     expect(autoRow.compareDocumentPosition(presets) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  test('once auto-charge is enabled for a tier, the old instant Merge button is replaced by the clickable reserve-slot row itself (issue #321 — "slots are the button")', () => {
+  test('once auto-charge is enabled for a tier, the instant Merge button is replaced by an explicit Charge button', () => {
     seedIntroState({
       bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: 8, autoMergeNodesIntoCluster: true,
@@ -5350,9 +5351,9 @@ describe('Compute auto-charge automation', () => {
     openBoosters()
 
     expect(screen.queryByRole('button', { name: /^charge up 8 batteries into 1 pack/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /instantly charge up 8 batteries into 1 pack/i })).toBeEnabled()
-    // A visible merge cue marks the row as clickable while 8 are available.
-    expect(screen.getByRole('button', { name: /instantly charge up 8 batteries into 1 pack/i })).toHaveTextContent('🤖 ⬆ 8→1 Pack')
+    const charge = screen.getByRole('button', { name: /^charge batteries: move units down/i })
+    expect(charge).toBeEnabled()
+    expect(charge).toHaveTextContent('⚡ Charge')
   })
 
   test('the reserve-slot row shows no merge cue below 8 of the input entity', () => {
@@ -5390,7 +5391,7 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /3\/8 auto-charge slots filled/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /batteries auto-charge slots, 3\/8 filled/i })).toBeInTheDocument()
   })
 
 })
