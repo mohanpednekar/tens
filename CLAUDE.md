@@ -459,8 +459,8 @@ scripts/                  ← bump-version.mjs ("Changelog convention"); generat
                             android-boot-smoke.sh, lint-workflow-shell.mjs, lint-conflict-markers.mjs, check-graphify-freshness.mjs
                             (committed graph vs. working tree, #761), classify-claude-failure.sh (transient vs. real
                             Claude-step failure), orphan-branch-scan.sh (#59), verify-maintainer-checklist.mjs —
-                            roles in docs/AUTOMATION.md (except resolve-pr-threads/generate-pwa-icons/configure-ios-plist, above and
-                            in their own headers); most have a sibling `*.test.js`
+                            roles in docs/AUTOMATION.md (except resolve-pr-threads/generate-pwa-icons/configure-ios-plist/
+                            check-graphify-freshness/classify-claude-failure, above and in their own headers); most have a sibling `*.test.js`
 public/                   ← generated PWA icons, favicon.ico, robots.txt (old CRA `index.html`/`manifest.json`/`logo*.png`
                             removed — DESIGN_HISTORY.md)
 ```

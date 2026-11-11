@@ -467,7 +467,7 @@ copied per-workflow:
 Since no human (or live Claude Code session) is watching between scheduled runs, this workflow closes
 the loop on PRs the maintenance workflow opens. It fires on new PR reviews, new PR comments, and
 failing check suites, filters to PRs on `claude/auto-*` branches only, and re-invokes Claude
-(`--max-turns 30`) to read the actual feedback/CI failure and push a genuine fix to the *existing*
+(`--max-turns 40`) to read the actual feedback/CI failure and push a genuine fix to the *existing*
 branch — it never opens a new PR and never merges or approves. Same hard constraints as the main
 workflow (no `--no-verify`, no faking a check green, no touching other workflow files). It resolves
 the target branch via `gh pr view --json headRefName,isCrossRepository` (refusing fork PRs), passes
