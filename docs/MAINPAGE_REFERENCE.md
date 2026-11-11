@@ -786,7 +786,7 @@ itself — `ScaleUpCard` is likewise always shown (unlike `OverclockCard`, still
 tier having ever been unlocked — see below), but stays down in its own row below `TierList` rather
 than joining this card, since its own target walks through the tier ladder one tier at a time (see
 "Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
-through. Below `TierList`: `RestageCard` (left, once revealed) + `ScaleUpCard` (right) share one `SpeedCardsRow` (a lone card fills the row), and `OverclockCard` gets its own full-width row. Clock Speed shows the base `🏭 ×1.01/lvl` (the Overclock-scaled live step stays in Overclock's disclosure) and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock). `CardTitleGroup` wraps the name/effect onto a second line when a half-width card is too narrow (phone widths around 320px).
+through. Below `TierList`: `RestageCard` (once revealed), `ScaleUpCard` and `OverclockCard` each get their own full-width `SpeedCardsRow` (no side-by-side pairs). Clock Speed shows the base `🏭 ×1.01/lvl` (the Overclock-scaled live step stays in Overclock's disclosure) and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock). `CardTitleGroup` wraps the name/effect onto a second line when a half-width card is too narrow (phone widths around 320px).
 (Earlier iterations tried grouping all three speed-related cards together at the top; this
 was reverted to the current split — Clock Speed alone at top, Restage + Scale Up then Overclock below the tier list —
 per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying
@@ -917,11 +917,11 @@ docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock butto
 to be a deliberate, occasional decision reached via this card, not a frequent one-tap action.
 
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
-whose summary is a `CardTitleGroup` of the heading plus `CardEffect` (`🌐 ×1.1/lvl`; its click is
+whose summary is a `CardTitleGroup` of the heading plus `CardEffect` (`🌐 +10%/lvl`; its click is
 stopped so only the "Overclock" name toggles), so expanding never squeezes the body into a
 title-row column. The body is always present (collapsed by default): clicking "Overclock" reveals a `MutedText` line, `Clock Speed's per-level rate is now {currentStep}% (was 1%)` once claimed, or `Not claimed yet — reach {required} completed {lastTier.name} levels…` before the first claim.
 `{currentStep}` is `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate
-(`OverclockButton` shows only `{symbol} {completed}/{required}`; the ×1.1/lvl effect sits beside the card name — see above); this is the one Overclock-specific number not otherwise visible
+(`OverclockButton` shows only `{symbol} {completed}/{required}`; the +10%/lvl effect sits beside the card name — see above); this is the one Overclock-specific number not otherwise visible
 anywhere on the Factory view. Beyond that one figure, Overclock has no visible effect of its own to
 display separately from the Tickspeed card above it — raising the global tickspeed multiplier's own
 per-level step, rather than stacking a second multiplier alongside it, means the Tickspeed card's own

@@ -9179,6 +9179,10 @@ Follow-up (same month): Restage moved from beside Clock Speed to the left of Sca
 the tier ladder below the list), leaving Clock Speed alone above it; Clock Speed and Restage also
 show a `CardEffect` (`🏭 ×1.01/lvl`, `QB ×1.01/XP`).
 
+Second follow-up: all four feature cards moved to their own full-width rows (half-width pairs made the title +
+effect chips wrap unevenly on 360–390px phones) and every chip is a percentage (`+1%/lvl`, `+1%/XP`, `+100%`,
+`+10%/lvl`).
+
 ## Reboot → Purge (player-facing only); Auto Restage joins the automation chain (2026-11)
 
 The Factory reset was renamed **Purge** in the UI (PP now reads **Purge Points**). Unlike the earlier
