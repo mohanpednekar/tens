@@ -535,7 +535,7 @@ Strict three-layer separation:
    "Charge up"/"Auto-charge") behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute" names the
    page/feature only — entities drop the word in every player-visible label. Deliberately terse (icon-only controls,
    full sentence in `title`/`aria-label`; mechanic prose lives in the Manual). Top card = active Boost timer bar
-   (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right, enforced in the engine too) + Auto Boost pref (Auto Boost is automatic: one token per automated charge start, `autoBoostFromTier`);
+   (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right, enforced in the engine too) (Auto Boost is automatic: one token per automated charge start, `autoBoostFromTier`; its Switch + preset, like Auto-charge's pause Switch `computeAutoChargeEnabled`, live on Firmware → Automation → Power Automation);
    then per-tier rows — the ONE selected tier shows the 3 Boost presets inline. Constants: `COMPUTE_ENTITY_CAP` 10,
    `COMPUTE_MERGE_RATIO` 8, `COMPUTE_MERGE_RESERVE_CAP` 8. Cells (`computeCores`) are bought from the matching Data Lake,
    not minted from Capacity. Detail: `docs/FOUNDRY_MECHANICS_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`, `docs/DESIGN_HISTORY.md`.
