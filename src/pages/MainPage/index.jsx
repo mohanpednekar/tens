@@ -5,7 +5,7 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -968,12 +968,12 @@ const MainPage = ({ game }) => {
   // Unlike Scale Up, claiming it also
   // wipes Scale Up's per-tier bonuses back to ×1 (scaleUpTierCounts resets) in exchange for
   // permanently multiplying BOTH the (Money-funded) global Tickspeed
-  // upgrade's single per-level step by getOverclockMultiplier(overclockCount)
-  // (×1.1 per banked completed level) — folded into that existing track's own compounding rate,
+  // upgrade's single per-level step by getOverclockMultiplier(overclockLevel)
+  // (×1.1 per Overclock level) — folded into that existing track's own compounding rate,
   // not a separate
   // multiplier stacked alongside it, so it has no effect until at least one Tickspeed level is
-  // bought. A claim banks the last tier's current completed-level count on top of the running
-  // total (overclockCount), so how often the player claims never changes the eventual benefit.
+  // bought. A claim sets the Overclock level to the last tier's current completed-level count
+  // (it replaces the previous level — nothing is banked).
   // Gated on the last tier having ever
   // been unlocked (unlike Scale Up above, which is always shown), so it doesn't clutter the page
   // before tier10 first exists — but once shown, stays shown (in a disabled state once not
@@ -983,18 +983,17 @@ const MainPage = ({ game }) => {
   useEffect(() => {
     if (lastTierUnlocked) setOverclockEverRevealed(true)
   }, [lastTierUnlocked])
-  const overclockCount = state.overclockCount ?? 0
+  const overclockLevel = getOverclockLevel(state) ?? 0
   const overclockRequirement = getOverclockRequirement(state)
   const overclockRequirementDisplay = overclockRequirement
   // The current/next per-level step the global Tickspeed upgrade's own REGULAR levels compound at,
   // expressed as a "multiplier" (1 + step) purely so formatGlobalTickspeedBonusPercent's existing
   // (multiplier - 1) * 100 formatting can be reused directly — these are never applied as
   // standalone multipliers anywhere, only fed into getGlobalTickspeedProductionMultiplier below.
-  // The "next" value previews what claiming right now would bank on top — the last tier's own
-  // current COMPLETED levels, since overclockGame banks them additively (claiming 3 then 3 levels
-  // compounds exactly like claiming 6 at once), not just the minimum requirement.
-  const currentGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)
-  const nextGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount + lastTierLevelDisplay)
+  // The "next" value previews what claiming right now would set the Overclock level to — the last
+  // tier's own current COMPLETED levels (never below the requirement, which is the earliest claim).
+  const currentGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockLevel)
+  const nextGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(Math.max(lastTierLevelDisplay, overclockRequirement))
   const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)
   const canOverclock = !isFrozen && lastTierLevelDisplay >= overclockRequirement
 
@@ -1022,12 +1021,12 @@ const MainPage = ({ game }) => {
   // purchasable once at least 1 of the second tier is owned, so a player can't spend their Bytes
   // on it before Kilobytes are producing any. The level itself resets to not-yet-bought on both
   // Up (see purgeGame/scaleUpGame in engine.js), same as tier02's owned count, so re-unlocking
-  // always requires owning tier02 again after either reset. overclockCount, by contrast, is NOT
+  // always requires owning tier02 again after either reset. The Overclock level, by contrast, is NOT
   // reset by Scale Up — its boost to the per-level step survives across a re-unlock within the
   // same Prestige cycle.
   const globalTickspeedLevel = state.globalTickspeedMultiplier ?? null
   const isGlobalTickspeedActive = globalTickspeedLevel !== null
-  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel, overclockCount)
+  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel, overclockLevel)
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
   const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && isGlobalTickspeedAffordable(state)
@@ -1278,8 +1277,8 @@ const MainPage = ({ game }) => {
               )}
               {overclockEverRevealed && (
                 <li>
-                  Overclock: {overclockCount > 0
-                    ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from ${formatAmount(overclockCount)} banked completed levels`
+                  Overclock: {overclockLevel > 0
+                    ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%)`
                     : `not yet claimed (reach ${formatAmount(overclockRequirementDisplay)} completed levels on ${lastTier.name})`}
                 </li>
               )}
@@ -1613,9 +1612,9 @@ const MainPage = ({ game }) => {
         <OverclockCard aria-label="overclock panel">
           <Disclosure>
             <summary><h2>Overclock</h2></summary>
-            {overclockCount > 0 && (
+            {overclockLevel > 0 && (
               <MutedText>
-                Clock Speed's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from {formatAmount(overclockCount)} banked completed levels.
+                Clock Speed's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%).
               </MutedText>
             )}
           </Disclosure>

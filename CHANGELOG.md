@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Overclock no longer banks levels.** Clock Speed's per-level boost (×1.1 per level) now depends only on the final-tier completed level reached at your latest Overclock claim, instead of a running total across every claim; the Overclock card no longer mentions "banked completed levels". Existing saves keep their last claim's level, so the per-level rate may drop.
+
 - Compute (Flops) screen: removed the explanatory paragraph and shortened per-tier stats to "N owned · Tier ×multiplier".
 
 - Foundry running-upgrade tile: the percent now matches the Data Lake balance font size, and the four corner labels are spaced apart (top pair to the top, bottom pair to the bottom, wider column gap) without changing the tile size.

@@ -257,30 +257,15 @@ export const createInitialGameState = () => ({
   // a real Prestige/Overclock, same as scaleUpCount and everUnlockedTierIds below — all three
   // relock/re-earn from scratch once every tier needs re-reaching.
   scaleUpTargetTierIndex: 0,
-  // RUN-SCOPED banked total of final-tier COMPLETED levels ever claimed by Overclock (see
-  // overclockGame) — a second, steeper Scale-Up-style soft reset, claimable once the last tier's
-  // own completed-level count reaches getOverclockRequirement(state) (5 initially, then three more
-  // than the completed-level count the previous claim was taken at — see
-  // overclockLastClaimCompletedLevels below). Each claim ADDS that claim's completed-level count
-  // here rather than replacing it — compounding is per level and Overclock only banks accumulated
-  // compounding, so claiming 3 levels and then 3 more equals claiming 6 at once.
-  // Permanently multiplies the
-  // (Money-funded) global tickspeed multiplier's single uniform per-level step by
-  // getOverclockMultiplier(overclockCount) — see getGlobalTickspeedProductionMultiplier — compounding
-  // OVERCLOCK_MULTIPLIER_STEP (10%, i.e. ×1.1) per banked level, not a separate multiplier stacked
-  // alongside it. Unlike scaleUpCount just above, this is NOT reset by an ordinary Scale Up
-  // (scaleUpGame explicitly carries it through unchanged) — only by a real Prestige (same reasoning
-  // as scaleUpCount: an unbounded permanent compounding bonus across every future Prestige forever
-  // would trivialize the Prestige cost curve) or by Overclock's own claim resetting *scaleUpCount*
-  // (never itself — see overclockGame).
-  overclockCount: 0,
-  // The final tier's COMPLETED-level count at the moment the previous Overclock was taken (within
-  // that Overclock's own cycle), or null before the first Overclock. Drives the next claim's
-  // dynamic requirement — getOverclockRequirement returns 5 while this is null, otherwise this
-  // value + OVERCLOCK_REQUIREMENT_STEP — so the requirement always follows where the player
-  // actually claimed, never a predetermined 5, 8, 11, 14 sequence. Carried through Scale Up
-  // untouched (like overclockCount above); reset by a real Prestige alongside it. Legacy saves
-  // written before this field existed fall back to overclockCount (see getOverclockRequirement).
+  // The OVERCLOCK LEVEL: the final tier's COMPLETED-level count at the moment the most recent
+  // Overclock (overclockGame — a second, steeper Scale-Up-style soft reset) was claimed, or null
+  // before the first claim. Nothing accumulates: each claim REPLACES it. It does two things —
+  // (1) drives the next claim's requirement (getOverclockRequirement: 5 while null, otherwise this
+  // + OVERCLOCK_REQUIREMENT_STEP), so the requirement follows where the player actually claimed;
+  // (2) multiplies the (Money-funded) global tickspeed multiplier's per-level step by
+  // getOverclockMultiplier(level) = ×1.1 per level (see getGlobalTickspeedProductionMultiplier).
+  // Carried through an ordinary Scale Up untouched; reset by a real Prestige. Legacy saves
+  // written with the old banked `overclockCount` fall back to it (see getOverclockLevel).
   overclockLastClaimCompletedLevels: null,
   // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
   // make eligible Scale Ups trigger automatically (see buyAutoScaleUp/tickGame), including the
@@ -937,9 +922,9 @@ export const isGlobalTickspeedMultiplierUnlocked = state =>
 
 // The speed multiplier every tier gets from Speed Up. Every level compounds the same base
 // production step, scaled by the permanent Overclock multiplier.
-export const getGlobalTickspeedProductionMultiplier = (level, overclockCount = 0) => {
+export const getGlobalTickspeedProductionMultiplier = (level, overclockLevel = 0) => {
   const lvl = clampNonNegative(level ?? 0)
-  const step = GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)
+  const step = GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockLevel)
   return (1 + step) ** lvl
 }
 
@@ -1428,20 +1413,29 @@ export const getScaleUpRequirement = state =>
 // 14 sequence. Legacy saves written before overclockLastClaimCompletedLevels existed fall back to
 // overclockCount itself (the level recorded by the previous claim under the old semantics).
 export const getOverclockRequirement = state => {
-  const lastClaim = state.overclockLastClaimCompletedLevels
-    ?? (clampNonNegative(state.overclockCount ?? 0) > 0 ? state.overclockCount : null)
-  return lastClaim === null || lastClaim === undefined
+  const lastClaim = getOverclockLevel(state)
+  return lastClaim === null
     ? 5
-    : clampNonNegative(lastClaim) + OVERCLOCK_REQUIREMENT_STEP
+    : lastClaim + OVERCLOCK_REQUIREMENT_STEP
 }
 
-// Overclock's own growth factor: compounds OVERCLOCK_MULTIPLIER_STEP (10%, i.e. ×1.1) per claimed
-// level. Folded directly into getGlobalTickspeedProductionMultiplier above — it scales the
+// The Overclock level: the last tier's completed-level count at the most recent claim (this run),
+// or null before the first claim. It is the ONLY Overclock state — nothing accumulates across
+// claims. Legacy saves lacking it fall back to the old banked `overclockCount` field when > 0.
+export const getOverclockLevel = state => {
+  const level = state.overclockLastClaimCompletedLevels
+    ?? (clampNonNegative(state.overclockCount ?? 0) > 0 ? state.overclockCount : null)
+  return level === null || level === undefined ? null : clampNonNegative(level)
+}
+
+// Overclock's growth factor: compounds OVERCLOCK_MULTIPLIER_STEP (10%, i.e. ×1.1) per Overclock
+// level (the completed final-tier level reached at the last claim). Folded directly into
+// getGlobalTickspeedProductionMultiplier above — it scales the
 // (Money-funded) global tickspeed multiplier's single per-level step, so Overclock
 // still has zero effect while that track itself is at level 0/not yet bought (there's no level for
 // the boosted step to compound over yet), same as before Overclock existed.
-export const getOverclockMultiplier = overclockCount =>
-  (1 + OVERCLOCK_MULTIPLIER_STEP) ** clampNonNegative(overclockCount)
+export const getOverclockMultiplier = overclockLevel =>
+  (1 + OVERCLOCK_MULTIPLIER_STEP) ** clampNonNegative(overclockLevel)
 
 // One-time PP unlock cost of a global automation (speedUp / scaleUp / overclock / purge) — the
 // same amount as its first interval-upgrade level (AUTOMATION_INTERVAL_CONFIG[key].baseCost).
@@ -1525,7 +1519,7 @@ export const getNextBytePowerProgressFraction = moneyBits => {
 // "Tickspeed multiplier"/"The global tickspeed multiplier" below), so both divide the tier's own
 // getTierBaseTickSpeedSeconds instead of multiplying its production. Overclock has no separate
 // third factor here — its effect is already folded into globalTickspeedMultiplier itself, via
-// getGlobalTickspeedProductionMultiplier's own overclockCount parameter (see "Overclock" below).
+// getGlobalTickspeedProductionMultiplier's own overclockLevel parameter (see "Overclock" below).
 // Always >= 1 in practice (both multipliers here are always >= 1), so this only ever shrinks
 // (never grows) the base period.
 export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
@@ -1533,7 +1527,7 @@ export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
   // its own resource-funded tickspeed level rather than replacing it.
   const tickspeedMultiplier = getTickspeedProductionMultiplier(state.tickspeedLevels?.[tierId] ?? 1)
     * (tierId === getLastTierId() ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0) : 1)
-  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, state.overclockCount ?? 0)
+  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, getOverclockLevel(state) ?? 0)
   const period = getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier * globalTickspeedMultiplier)
   // See MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS above — guards against a multiplier large enough to
   // overflow this division to a non-finite/zero period.
@@ -7388,11 +7382,9 @@ export const purgeGame = state => {
     // Scale Up's aggregate count and per-tier production multipliers don't survive a real Prestige. autoScaleUp (the automation toggle) is unaffected by this — it
     // still carries over permanently above, so a player who already bought Auto Scale Up doesn't
     // need to re-buy it; it simply starts re-accumulating scaleUpCount from 0 on the next cycle.
-    // overclockCount is likewise NOT carried over — same reasoning as scaleUpCount above, just one
-    // reset tier higher: unlike an ordinary Scale Up (which scaleUpGame explicitly carries
-    // overclockCount through unchanged — see there), a real Prestige is bigger than Overclock too,
-    // so its own permanent bonus also has to be rebuilt from scratch each Prestige cycle rather
-    // than compounding forever across every future Prestige.
+    // overclockLastClaimCompletedLevels (the Overclock level) is likewise NOT carried over — same
+    // reasoning as scaleUpCount above, one reset tier higher: a real Prestige is bigger than
+    // Overclock too, so it is rebuilt from scratch each Prestige cycle.
     // lastTierXpConsumed is NOT carried over — it resets to 0 (initial.lastTierXpConsumed) along
     // with purge.xp below, since it's funded by spending XP, a run-scoped currency now.
     // everUnlockedTierIds is deliberately NOT carried over here either — unlike every permanent
@@ -7569,32 +7561,26 @@ export const scaleUpGame = state => {
     // Unconditional +1 — see this function's own comment above and scaleUpTargetTierIndex's own
     // comment in createInitialGameState for why no separate phase check is needed here.
     scaleUpTargetTierIndex: clampNonNegative(state.scaleUpTargetTierIndex ?? 0) + 1,
-    // overclockCount is carried over unchanged (NOT incremented, NOT reset) — an ordinary Scale Up
-    // is a smaller reset than Overclock and must not touch its permanent bonus either way; only
-    // overclockGame itself increments it, and only purgeGame/overclockGame's own reset of
-    // scaleUpCount ever wipe anything Overclock-related. overclockLastClaimCompletedLevels (the
-    // completed-level count the previous Overclock was taken at) rides along with it — a Scale Up
-    // resets the final tier's level progress but must NOT reset where the next Overclock gate
-    // stands.
-    overclockCount: state.overclockCount ?? initial.overclockCount,
+    // overclockLastClaimCompletedLevels (the Overclock level: the completed-level count the previous
+    // Overclock was taken at) is carried over unchanged — an ordinary Scale Up is a smaller reset
+    // than Overclock and must not touch its bonus or where the next Overclock gate stands; only
+    // overclockGame sets it and only a real Prestige resets it.
     overclockLastClaimCompletedLevels: state.overclockLastClaimCompletedLevels ?? initial.overclockLastClaimCompletedLevels,
   }
 }
 
 // A second, steeper soft-reset than Scale Up (see scaleUpGame above), gated behind the last tier's
-// LEVEL reaching getOverclockRequirement(overclockCount) — level 5 initially, then three more
+// LEVEL reaching getOverclockRequirement(state) — level 5 initially, then three more
 // than the last claimed level.
 // Resets everything scaleUpGame does (every per-run field back to a fresh game, permanent
 // automation toggles/flags carried over unchanged) — but where scaleUpGame increments scaleUpCount
 // and eligible scaleUpTierCounts entries, overclockGame resets both through the fresh initial state,
-// wiping Scale Up's per-tier production multipliers. Unlike scaleUpGame's own
-// +1 self-increment, overclockCount jumps directly to the last tier's *current* level rather than
-// just the minimum requirement — since that level is only ever checked against, never consumed, a
-// player who claims late (last claimed at level 5, last tier now at level 8) catches up to level 8
-// in one claim instead of needing intermediate claims. This is always at least a +3 gain, since the
-// eligibility check above guarantees lastTierLevel >= overclockCount + 3. Overclock's reward
-// (getOverclockMultiplier — folded into getGlobalTickspeedProductionMultiplier's single uniform
-// per-level step, see getEffectiveTierTickSpeedSeconds) is keyed off this same overclockCount.
+// wiping Scale Up's per-tier production multipliers. The Overclock level is set directly to the
+// last tier's *current* completed-level count (not accumulated — nothing is banked), so a
+// player who claims late (last claimed at 5, last tier now at 8) simply gets level 8. This is
+// always at least +3 over the previous level, since the eligibility check above guarantees it.
+// Overclock's reward (getOverclockMultiplier — folded into getGlobalTickspeedProductionMultiplier's
+// single uniform per-level step, see getEffectiveTierTickSpeedSeconds) is keyed off getOverclockLevel.
 // `autoScaleUp` (the automation toggle deciding whether Scale Up
 // fires automatically) is unaffected by wiping scaleUpCount — it's still carried over permanently
 // below, so it simply starts re-accumulating scaleUpCount from 0 on the next cycle, same as after a
@@ -7661,12 +7647,9 @@ export const overclockGame = state => {
     // defining trade: a steeper reset, in exchange for a permanent, much smaller, but
     // never-touched-by-an-ordinary-Scale-Up global tickspeed bonus instead.
     scaleUpCount: initial.scaleUpCount,
-    // Bank THIS claim's completed-level count on top of whatever earlier Overclocks already
-    // banked this cycle — compounding is per level and Overclock only banks accumulated
-    // compounding, so claiming 3 then 3 equals claiming 6 at once. The claim's own count also
-    // becomes the base the next requirement grows from (+ OVERCLOCK_REQUIREMENT_STEP completed
-    // levels — see getOverclockRequirement).
-    overclockCount: (state.overclockCount ?? 0) + lastTierCompletedLevels,
+    // The Overclock level is simply the last tier's completed-level count at this claim — it
+    // REPLACES any earlier value (nothing accumulates). It is also the base the next requirement
+    // grows from (+ OVERCLOCK_REQUIREMENT_STEP — see getOverclockRequirement).
     overclockLastClaimCompletedLevels: lastTierCompletedLevels,
   }
 }

@@ -731,7 +731,7 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
   // Regression test for a real bug: an earlier version applied Overclock as its own third
   // multiplier inside getEffectiveTierTickSpeedSeconds, but this breakdown line's "global ×N"
   // parenthetical only ever showed two factors — silently disagreeing with the actual computed
-  // effective tickspeed once overclockCount > 0. Overclock's effect is folded directly into
+  // effective tickspeed once the Overclock level > 0. Overclock's effect is folded directly into
   // the global tickspeed multiplier itself, so both figures below must agree by construction.
   const user = userEvent.setup()
 
@@ -739,7 +739,7 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
     resources: { base: 10 },
     owned: { tier01: 10, tier02: 4 }, // unlocks Kilobytes (base tickspeed 1s)
     globalTickspeedMultiplier: 9, // 9 regular levels, no milestone yet (first is level 10)
-    overclockCount: 1, // boosts the regular step from 1% to 1.1% per level
+    overclockLastClaimCompletedLevels: 1, // boosts the regular step from 1% to 1.1% per level
   })
 
   render(<App />)
@@ -1344,7 +1344,6 @@ test('the Overclock panel appears once the last tier unlocks, with the button di
     everUnlockedTierIds: { tier01: true, tier10: true },
     // Last claim was taken at 3 completed levels -> this one's requirement is 6 (3 + 3).
     purchaseLevels: { tier09: 3, tier10: 3 }, // 2 completed — short
-    overclockCount: 3,
     overclockLastClaimCompletedLevels: 3,
   })
   render(<App />)
@@ -1360,7 +1359,6 @@ test('the Overclock button is enabled once the last tier reaches the required co
     owned: { tier09: 10 },
     everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3, tier10: 7 }, // 6 completed — meets lastClaim(3) + 3
-    overclockCount: 3,
     overclockLastClaimCompletedLevels: 3,
   })
   render(<App />)
@@ -1387,7 +1385,6 @@ test('the next Overclock requires three more completed levels than the count the
     everUnlockedTierIds: { tier01: true, tier10: true },
     // Claimed at 7 completed before -> next requirement is 10: at 9 completed it's still off.
     purchaseLevels: { tier09: 3, tier10: 10 },
-    overclockCount: 7,
     overclockLastClaimCompletedLevels: 7,
   })
   render(<App />)
@@ -1403,18 +1400,17 @@ test('the Overclock button shows the next per-level Clock Speed rate and complet
     everUnlockedTierIds: { tier01: true, tier10: true },
     // Previous claim at 4 completed -> requirement 7; the last tier is already at exactly 7.
     purchaseLevels: { tier09: 3, tier10: 8 },
-    overclockCount: 1,
     overclockLastClaimCompletedLevels: 4,
   })
   render(<App />)
 
-  // A claim right now banks its own 7 completed levels onto the 1 already banked — raising
-  // Clock Speed's per-level rate to 2.14% (1% × 1.1^8) — both shown on the button itself, no
+  // A claim right now sets the Overclock level to its own 7 completed levels — raising
+  // Clock Speed's per-level rate to 1.95% (1% × 1.1^7) — both shown on the button itself, no
   // separate status text line.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus and raises clock speed's per-level rate to 2\.14%/i,
+    name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus and raises clock speed's per-level rate to 1\.95%/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 2.14%/lvl · QB 7/7')
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 1.95%/lvl · QB 7/7')
 })
 
 test('the Overclock card\'s disclosure states the current per-level Tickspeed rate once claimed', () => {
@@ -1426,13 +1422,13 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
     owned: { tier09: 10 },
     everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3, tier10: 12 },
-    overclockCount: 10,
+    overclockLastClaimCompletedLevels: 10,
   })
 
   render(<App />)
 
   const panel = screen.getByLabelText(/^overclock panel$/i)
-  expect(panel).toHaveTextContent(/clock speed's per-level rate is now 2\.59% \(was 1%\) from 10 banked completed levels\./i)
+  expect(panel).toHaveTextContent(/clock speed's per-level rate is now 2\.59% \(was 1%\)\./i)
 })
 
 test('the Overclock card\'s disclosure shows no per-level rate line before the first claim', () => {
@@ -1471,13 +1467,13 @@ test('clicking Overclock once eligible banks the last tier\'s whole completed-le
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
   // Overclock resets owned counts too, so the last tier is no longer unlocked — but since both
   // panels were already revealed once, they stay visible (in a disabled state) rather than
-  // disappearing again. The claim banked all 7 completed levels (not just the 5 minimum), so the
+  // disappearing again. The claim recorded all 7 completed levels (not just the 5 minimum), so the
   // next cycle requires 10 (the actual claim count + 3) — and Scale Up's own stacking bonus is
   // wiped back to ×2 (scaleUpCount reset to 0, so the *next* activation would only reach ×2
   // again).
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /overclock \(requires 10 completed quettabytes levels/i })).toBeDisabled()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent(/from 7 banked completed levels\./i)
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent(/rate is now 1\.95% \(was 1%\)\./i)
   expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2')
 })
 
@@ -2595,7 +2591,7 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier02: 1, tier10: 10 },
-    overclockCount: 2,
+    overclockLastClaimCompletedLevels: 2,
   })
 
   render(<App />)
@@ -2603,7 +2599,7 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(
-    /overclock: clock speed's per-level rate is now 1\.21% \(was 1%\) from 2 banked completed levels/i
+    /overclock: clock speed's per-level rate is now 1\.21% \(was 1%\)/i
   )
 })
 

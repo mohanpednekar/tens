@@ -916,10 +916,10 @@ levels) — …`. `ScaleUpButton` similarly reads `×2 · {targetTier.symbol} {c
 plus a `· Unlock TB` suffix when the current target's successor is the Terabytes tier, with
 `aria-label` `Scale Up (requires {required} completed {targetTier.name} levels) — doubles production
 for tiers unlocked so far[ and unlocks TB]`
-— e.g. `⚡ 2.14%/lvl · Lv.7/7` — `actions.overclock` on click, where `{nextStep}` is the regular-step
+— e.g. `⚡ 1.95%/lvl · Lv.7/7` — `actions.overclock` on click, where `{nextStep}` is the regular-step
 percentage a claim right now would raise the Tickspeed upgrade to: `1 + GLOBAL_TICKSPEED_PRODUCTION_STEP *
 getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` (accounting for a catch-up
-claim past the bare minimum requirement, not just `overclockCount + 3`), formatted as a percentage by
+claim past the bare minimum requirement, not just `the Overclock level + 3`), formatted as a percentage by
 reusing `formatGlobalTickspeedBonusPercent`'s trimmed-decimal formatting (passing it `1 + step` as if
 it were a multiplier, since that function already computes `(multiplier - 1) * 100`). Overclock's
 reward is folded into the Tickspeed upgrade's own per-level rate, not a separate multiplier — see
@@ -931,8 +931,8 @@ docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock butto
 to be a deliberate, occasional decision reached via this card, not a frequent one-tap action.
 
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
-whose body renders once `overclockCount > 0`: collapsed by default, clicking "Overclock" reveals a
-`MutedText` line, `Tickspeed upgrade's per-level rate is now {currentStep}% (was 1%) from level {N}.`.
+whose body renders once the Overclock level is > 0: collapsed by default, clicking "Overclock" reveals a
+`MutedText` line, `Tickspeed upgrade's per-level rate is now {currentStep}% (was 1%)`.
 `{currentStep}` is `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate
 *before* the next Overclock claim (as opposed to `OverclockButton`'s own label, which always shows
 the *next* rate — see above); this is the one Overclock-specific number not otherwise visible

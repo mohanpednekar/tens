@@ -717,7 +717,8 @@ levels on the last unlocked tier; repeated final-tier claims then require 6, 9, 
 from the re-reveal mechanic: after a reset, a tier already unlocked by a previous Scale Up within the
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
 Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
-completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`,
+completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`
+(the single Overclock level; each claim replaces it, nothing is banked; Clock Speed's step is ×1.1 per level),
 not a fixed 5/8/11/14 ladder (Clock Speed's Overclock-scaled 1% step is under "Tiers, Prestige, Reboot" above).
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points

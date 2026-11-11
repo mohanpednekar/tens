@@ -706,7 +706,7 @@ export const SCALE_UP_FINAL_TIER_REQUIREMENT_STEP = 3
 // own step rather than a separate multiplier stacked alongside it (see docs/DESIGN_HISTORY.md for
 // the history of this mechanic moving between a standalone factor and a folded-in step). A direct
 // consequence: Overclock has no effect at all while the global tickspeed multiplier is still at
-// level 0/not yet bought, same as before Overclock existed. state.overclockCount is never reset by
+// level 0/not yet bought, same as before Overclock existed. state.overclockLastClaimCompletedLevels (the Overclock level) is never reset by
 // an ordinary Scale Up, unlike globalTickspeedMultiplier itself — see scaleUpGame.
 export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // Minimum last-tier completed-level growth required between Overclock uses: the first Overclock

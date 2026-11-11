@@ -1899,8 +1899,8 @@ were removed outright rather than replaced. Overclock scales this one shared ste
   100 for the next level, 1000 after that, and so on — charged as `getGlobalTickspeedMultiplierCostBits`
   (`cost × BITS_PER_BYTE`) from `resources[MONEY_ID]`, the single shared balance (`isGlobalTickspeedAffordable`
   is used by the button, the buy action and the nav dot).
-- `getGlobalTickspeedProductionMultiplier(level, overclockCount = 0)` returns
-  `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)) ** level`.
+- `getGlobalTickspeedProductionMultiplier(level, overclockLevel = 0)` returns
+  `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockLevel)) ** level`.
   `null` is level 0 (×1); every level uses exactly the same step (no milestone bonuses).
 - `buyGlobalTickspeedMultiplier(state)` spends Bytes (plus the mirrored Bits) to raise the level by 1 — a no-op if
   `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if there aren't enough
@@ -2103,12 +2103,12 @@ for the first claim; after each claim, the next requirement is the actual comple
 previous claim was taken at plus `OVERCLOCK_REQUIREMENT_STEP` (3) — persisted as
 `overclockLastClaimCompletedLevels`, so the threshold is dynamic, not a fixed 5/8/11/14 ladder
 (e.g. claiming at 7 makes the next available at 10; claiming that at 11 → 14). The 5 is only a
-minimum — the player may keep leveling before claiming. A claim banks the **whole** completed-level
-count into `overclockCount` (`overclockCount += completedLevels`), and records it into
-`overclockLastClaimCompletedLevels`. Because `getOverclockMultiplier` compounds per banked level,
-claiming 3 levels then 3 levels yields exactly the same eventual benefit as claiming 6 at once —
-Overclock frequency never changes the eventual benefit, it only banks accumulated compounding.
-For saves predating `overclockLastClaimCompletedLevels`, it falls back to the prior `overclockCount`.
+minimum — the player may keep leveling before claiming. A claim sets the **Overclock level**
+(`getOverclockLevel(state)` = `overclockLastClaimCompletedLevels`) to the whole completed-level count
+reached; it **replaces** the previous value — nothing is banked or accumulated, so the multiplier
+depends only on the final-tier level reached at the latest claim. For saves predating that field,
+`getOverclockLevel` falls back to the old banked `overclockCount` (the field itself no longer exists
+in new state).
 `overclockGame` (`engine.js`) does everything `scaleUpGame` does EXCEPT keeping tiers permanently
 unlocked — full resources/owned/purchased/tickspeedLevels/purchaseLevels/purchaseLevelProgress
 reset, `globalTickspeedMultiplier` reset to `null`, `lastTierXpConsumed`/`purge.xp`/
@@ -2118,21 +2118,19 @@ reset, `globalTickspeedMultiplier` reset to `null`, `lastTierXpConsumed`/`purge.
 Overclock is the steeper reset and fully relocks every tier beyond the first, same as `purgeGame`
 (so `scaleUpTargetTierIndex` also resets to 0 here, same as `purgeGame`, rather than being
 incremented); it resets `scaleUpCount` and every `scaleUpTierCounts` entry back to 0 (wiping Scale
-Up's per-tier multipliers back to their 1x baseline) instead of incrementing them; and it *adds* the
-last tier's whole completed-level count to `overclockCount` (and records it into
-`overclockLastClaimCompletedLevels` for the next requirement) — so a player who claims late banks
-everything accumulated, and claiming 3 completed levels then 3 more equals claiming 6 at once
-(`getOverclockMultiplier` compounds over the banked total). Refuses
+Up's per-tier multipliers back to their 1x baseline) instead of incrementing them; and it *sets*
+`overclockLastClaimCompletedLevels` to the last tier's whole completed-level count (also the base of
+the next requirement) — a late claim simply gets the higher level. Refuses
 while `isProductionFrozen`, same as `scaleUpGame`.
 
 The reward is **not** a separate multiplier stacked alongside the (Money-funded) global tickspeed
 multiplier — it permanently raises that multiplier's own per-level growth rate instead, and it does so
 *multiplicatively*, compounding with every level claimed.
-`getOverclockMultiplier(overclockCount) = (1 + OVERCLOCK_MULTIPLIER_STEP) ** overclockCount`
-(`OVERCLOCK_MULTIPLIER_STEP = 0.1`) is the growth factor: ×1 with no claims, ×1.1 after the first,
-×1.21 after the second, and so on. `getGlobalTickspeedProductionMultiplier(level, overclockCount = 0)` applies that factor to the
+`getOverclockMultiplier(overclockLevel) = (1 + OVERCLOCK_MULTIPLIER_STEP) ** overclockLevel`
+(`OVERCLOCK_MULTIPLIER_STEP = 0.1`) is the growth factor: ×1 before any claim, ×1.1^L after a claim
+taken at L completed final-tier levels. `getGlobalTickspeedProductionMultiplier(level, overclockLevel = 0)` applies that factor to the
 single shared step and returns `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP *
-getOverclockMultiplier(overclockCount)) ** level`. Milestone levels use the same step. Because the
+getOverclockMultiplier(overclockLevel)) ** level`. Milestone levels use the same step. Because the
 boosted rate is folded directly into the *existing* global tickspeed multiplier,
 `getEffectiveTierTickSpeedSeconds` needs no separate third factor for Overclock — it still divides by
 just the per-tier/XP-funded multiplier and the global tickspeed multiplier, and the latter's own value
@@ -2149,7 +2147,7 @@ now grows **multiplicatively** (×1.1 per level, compounding: 1% → 1.1% → 1.
 additively (a flat percentage point added per activation), and the boost now applies to the
 **same single per-level step at every level**; milestones remain UI/progression markers only.
 
-`overclockCount` itself sits one rung above `scaleUpCount` in the reset hierarchy (Prestige > Overclock >
+`overclockLastClaimCompletedLevels` (the Overclock level) sits one rung above `scaleUpCount` in the reset hierarchy (Prestige > Overclock >
 Scale Up): it's run-scoped like `scaleUpCount`, but **survives an ordinary Scale Up** (`scaleUpGame`
 explicitly carries it over unchanged — see `scaleUpGame`'s own return object) rather than resetting on
 every soft-reset the way `scaleUpCount` does. It resets to 0 only on a real Prestige (`purgeGame`
@@ -2166,10 +2164,10 @@ above) — not grouped with `GlobalTickspeedCard`, which renders separately at t
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as `scaleUpEverRevealed`. The button (`OverclockButton`, sized to match
 `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
-— e.g. `⚡ 2.14%/lvl · Lv.7/7` — where `{nextStep}` is the regular-step percentage that would result
+— e.g. `⚡ 1.95%/lvl · Lv.7/7` — where `{nextStep}` is the regular-step percentage that would result
 from claiming right now (`1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(Math.max(lastTierLevel,
 overclockRequirement))`, accounting for a catch-up jump past the bare minimum requirement, not just
-`overclockCount + 1`), formatted as a percentage by reusing `formatGlobalTickspeedBonusPercent`'s
+`overclockLevel + 1`), formatted as a percentage by reusing `formatGlobalTickspeedBonusPercent`'s
 trimmed-decimal formatting (passing it `1 + step` as if it were a multiplier, since that function
 already computes `(multiplier - 1) * 100`). Like Scale Up, Overclock displays the raw one-based
 engine level and requirement with a `-1` offset so both numbers indicate completed purchase levels;
@@ -2355,20 +2353,15 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // final-tier requirements progress 3, 6, 9, and so on. Reset to 0 by a real Prestige/Overclock,
                                                           // same as scaleUpCount and everUnlockedTierIds — see
                                                           // "Scale Up" below
-  overclockCount: 0,                                     // RUN-SCOPED (but Scale-Up-surviving) level reached
-                                                          // by Overclock (see overclockGame/
-                                                          // getGlobalTickspeedProductionMultiplier below) —
-                                                          // scales the global tickspeed multiplier's single per-level step
-                                                          // by (1 + OVERCLOCK_MULTIPLIER_STEP) ** overclockCount
-                                                          // (getOverclockMultiplier), folded into that existing
-                                                          // multiplier rather than a separate factor. A claim
-                                                          // jumps this straight to the last tier's current level
-                                                          // (not just +1) once that level passes
-                                                          // getOverclockRequirement(overclockCount). Never reset
-                                                          // by Scale Up (scaleUpGame explicitly carries it over
-                                                          // unchanged, unlike scaleUpCount) — only by a real
-                                                          // Prestige or by Overclock itself resetting scaleUpCount
-                                                          // (not overclockCount) — see "Overclock" below
+  overclockLastClaimCompletedLevels: null,               // RUN-SCOPED (but Scale-Up-surviving) Overclock level: the
+                                                          // last tier's completed levels at the latest claim
+                                                          // (null before the first). Replaced — never accumulated — by
+                                                          // each claim (overclockGame). Scales the global tickspeed
+                                                          // multiplier's per-level step by
+                                                          // (1 + OVERCLOCK_MULTIPLIER_STEP) ** level
+                                                          // (getOverclockMultiplier), and the next requirement is
+                                                          // level + 3 (getOverclockRequirement). Never reset by Scale
+                                                          // Up — only by a real Prestige — see "Overclock" below
   autoXpTickspeed: false,                                // permanent GLOBAL flag: Auto Restage bought (16 PP); survives Prestige/Scale Up/Overclock/Era
   autoXpTickspeedEnabled: true,                          // permanent pause/resume preference for Auto Restage
   autoScaleUp: false,                                    // permanent GLOBAL flag: PP spent to make eligible Scale Up
@@ -2838,7 +2831,7 @@ purchases were manual or automatic.
 | `getScaleUpTargetTier` | `state → tier` | `TIER_DEFINITIONS[min(max(scaleUpTargetTierIndex, 0), TIER_DEFINITIONS.length - 1)]` — the tier Scale Up's own requirement is currently measured against; clamped to the last tier once `scaleUpTargetTierIndex` reaches or passes it |
 | `getScaleUpRequirement` | `state → number` | 3 completed levels of the current target tier for each of the first ten claims; then 6, 9, 12, … completed final-tier levels for repeated claims. |
 | `getOverclockRequirement` | `state → number` | 5 completed final-tier levels for the first claim; afterward, `overclockLastClaimCompletedLevels + OVERCLOCK_REQUIREMENT_STEP` (3). |
-| `getOverclockMultiplier` | `overclockCount → number` | `(1 + OVERCLOCK_MULTIPLIER_STEP) ** overclockCount` (`OVERCLOCK_MULTIPLIER_STEP = 0.1`) — Overclock's own growth factor: ×1 with no claims, ×1.1 after the first claimed level, ×1.21 after the second, and so on. Folded into `getGlobalTickspeedProductionMultiplier` below (scales its single per-level step) — not a standalone factor |
+| `getOverclockMultiplier` | `overclockLevel → number` | `(1 + OVERCLOCK_MULTIPLIER_STEP) ** overclockLevel` (`OVERCLOCK_MULTIPLIER_STEP = 0.1`) — Overclock's own growth factor: ×1 before any claim, ×1.1^L after a claim taken at L completed final-tier levels (nothing accumulates across claims). Folded into `getGlobalTickspeedProductionMultiplier` below (scales its single per-level step) — not a standalone factor |
 | `getTickspeedMultiplierBaseCost` | `tierIndex → number` | `10 ** (TICKSPEED_MULTIPLIER_BASE_EXPONENT - tierIndex)` — 10^10 for the first tier (index 0), decreasing by a power of ten per subsequent tier, down to 10^1 for the 10th/last tier (index 9); an out-of-range index is clamped into range rather than throwing |
 | `getTickspeedMultiplierCost` | `(tierId, targetLevel) → number` | `getTickspeedMultiplierBaseCost(tierIndex) ** (targetLevel - 1)` — the resource cost, in that tier's own resource, to reach `targetLevel`: level 1 costs `base^0 = 1` (the free baseline, never actually charged), level 2 costs exactly the tier's base cost (`base^1`), level 3 costs `base^2`, and so on. Money-funded only — unrelated to `getAutobuyerUnlockCost` (below). For the last tier this is the owned *requirement*; it spends `getTickspeedMultiplierSpend` |
 | `getTickspeedMultiplierSpend` | `(tierId, targetLevel) → number` | Amount `buyTickspeedMultiplier` deducts: `getTickspeedMultiplierCost` for every tier except the last, which spends `ceil(cost × LAST_TIER_TICKSPEED_SPEND_FRACTION)` (10%) |
@@ -2850,7 +2843,7 @@ purchases were manual or automatic.
 | `getAutomationUnlockCost` | `key → number` | `AUTOMATION_INTERVAL_CONFIG[key].baseCost` — one-time unlock cost of `speedUp`/`scaleUp`/`restage`/`overclock`/`purge`, equal to that chain's first upgrade level |
 | `getAutoPurgeAttemptRate` | `state → number` | `1 / getAutomationIntervalSeconds(state, 'purge')` — attempts per second (base interval 1024 s, ×0.9 per speed level) |
 | `getGlobalTickspeedMultiplierCost` | `currentLevel → number` | `10 ** (currentLevel + 1)` — the Money cost to activate (level 0→1, costing 10 Money) or upgrade (level N→N+1) the global tickspeed multiplier; doubles the exponent each level (100, 1000, …) |
-| `getGlobalTickspeedProductionMultiplier` | `(level, overclockCount = 0) → number` | `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)) ** level`; every level uses the same step and milestones add no bonus |
+| `getGlobalTickspeedProductionMultiplier` | `(level, overclockLevel = 0) → number` | `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockLevel)) ** level`; every level uses the same step and milestones add no bonus |
 | `getPrestigePointsAwarded` | `(money, doublePpLevel = 0) → number` | 0 below `PURGE_THRESHOLD`; otherwise `(1 + floor(excessPowers / getPrestigePowersPerPp(doublePpLevel))) * getPrestigePpPerPower(doublePpLevel)` where `excessPowers = max(0, getMoneyExponent(money) - floor(log10(GOOGOL)))` — 1 base PP at 1 Googol Bytes, +1 PP unit per 64 excess powers (halved by each Compression upgrade through level 6, then PP-per-power doubles) |
 | `getPrestigePowersPerPp` | `doublePpLevel → number` | `PRESTIGE_POWERS_PER_PP_BASE / 2^min(level, log2(64))` — 64 down to 1 |
 | `getPrestigePpPerPower` | `doublePpLevel → number` | `2^max(0, level - log2(64))` — 1 until level 7, then 2, 4, … |
@@ -2867,7 +2860,7 @@ purchases were manual or automatic.
 | `getPrestigeProductionMultiplier` | `purgeCount → number` | `log10(purgeCount)` from `PRESTIGE_SPEED_BONUS_UNLOCK_PURGES` (10) Purges, else `1`. Companion `isPrestigeSpeedBonusUnlocked(state)`. |
 | `purgeGame` | `state → state` | Requires Money ≥ `PURGE_THRESHOLD`; resets resources/owned/purchased, every tier's `tickspeedLevels`/`purchaseLevels`/`purchaseLevelProgress` entries back to their baseline (1/1/0 — no speed bonus, level 1, no progress; resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`), `globalTickspeedMultiplier` back to `null` (not-yet-bought — same reset `scaleUpGame` does), `scaleUpCount`/every `scaleUpTierCounts` entry/`scaleUpTargetTierIndex` back to 0 (run-scoped — Scale Up's aggregate count, per-tier multipliers, and tier-ladder progress do NOT survive a real Prestige and must be rebuilt from scratch each cycle), `purge.xp`/`lastTierXpConsumed` back to 0 (run-scoped, like resources/owned/purchased), and `everUnlockedTierIds` back to the fresh default (only the first tier true — so every tier beyond the first relocks exactly as it always has, same as owned/purchased), resets `intro.bits` ("Memory") back to `createInitialGameState()`'s fresh defaults, purely as a side effect of `purchaseLevels`/`purchaseLevelProgress` resetting for every tier above, tier01 included, while keeping `intro.mainGameUnlocked` (the gate — now PERMANENT, see `latchMainGameUnlocked`), `intro.capacity`/`intro.byteCreated`/`intro.byteCreated`/`intro.capacity` (the permanent Byte generator) and `intro.computeCores`/`intro.computeCoresEverEarned`/`intro.computeNodes`/`intro.computeClusters`/`intro.computeNetworks`/`intro.computeGrids`/`intro.computeFabrics`/`intro.computeClouds`/`intro.computeDatacenters`/`intro.computeSupercomputers`/`intro.computeMegacomputers`/`intro.computeMergePageUnlocked`/`intro.autoMergeCoresIntoNode`/`intro.autoMergeNodesIntoCluster`/`intro.autoMergeClustersIntoNetwork`/`intro.autoMergeNetworksIntoGrid`/`intro.autoMergeGridsIntoFabric`/`intro.autoMergeFabricsIntoCloud`/`intro.autoMergeCloudsIntoDatacenter`/`intro.autoMergeDatacentersIntoSupercomputer`/`intro.autoMergeSupercomputersIntoMegacomputer`/`intro.computeCoresMergeRemainingSeconds`/`intro.computeNodesMergeRemainingSeconds`/`intro.computeClustersMergeRemainingSeconds`/`intro.computeNetworksMergeRemainingSeconds`/`intro.computeGridsMergeRemainingSeconds`/`intro.computeFabricsMergeRemainingSeconds`/`intro.computeCloudsMergeRemainingSeconds`/`intro.computeDatacentersMergeRemainingSeconds`/`intro.computeSupercomputersMergeRemainingSeconds` (issue #321 — an in-flight reserve merge's timer is PERMANENT too, carried through unchanged rather than cancelled, since it represents already-committed tokens) PERMANENT, carried over from `state` unchanged (see "Byte Foundry" below) — a real Prestige resets Memory but never the main-game-unlock gate itself once it's ever latched, and never the generator from scratch either; keeps autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPurge`/`autoScaleUp`/`autoGlobalTickspeed`/`autoScaleUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPurgeEnabled` unchanged (permanent, including the Auto Purge *level*, the Auto Purge Autobuyer, and each automation's pause/resume preference, both global and per-tier; `autoScaleUp` is the automation *toggle* only — it carries over even though the aggregate `scaleUpCount` and per-tier multipliers reset), resets `autoPurgeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), adds `getPrestigePointsAwarded(money)` on top of any already-unspent `purge.points`, increments `purge.count` by 1 (both permanent, unlike `xp`). Since `owned` resets, this also disengages the last tier's XP-funded tickspeed mechanic (`isLastTierTickspeedXpUnlocked` is a live check — see "The last tier's XP-funded tickspeed" in CLAUDE.md) — with nothing banked to re-engage with either, since `lastTierXpConsumed` was just wiped along with it. Called either by the player's manual click or automatically by `tickGame` when Auto Purge's attempt budget fires |
 | `scaleUpGame` | `state → state` | Requires the target tier's completed levels (`purchaseLevels − 1`) to reach `getScaleUpRequirement(state)` and not `isProductionFrozen`; resets resources/owned/purchased/tierProductionAccumulators/autobuyerAttemptBudgets/autoPurgeAttemptBudget/tickspeedLevels/purchaseLevels/purchaseLevelProgress (every tier back to baseline)/`globalTickspeedMultiplier` (back to `null`)/`purge.xp`/`lastTierXpConsumed` (both back to 0, same as `purgeGame`) exactly like a fresh `createInitialGameState` — resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`, undoing any in-run growth — unlike `purgeGame`/`overclockGame`, keeps `intro` completely untouched (an intra-cycle soft reset, not a new cycle — see "Byte Foundry" below), autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPurge`/`autoScaleUp`/`autoGlobalTickspeed`/`autoScaleUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPurgeEnabled` unchanged (mirrors `purgeGame`'s reset pattern, including now resetting `globalTickspeedMultiplier`/`purge.xp`/`lastTierXpConsumed` the same way; see "The global tickspeed multiplier" above), **and now also `overclockCount`** (carried over unchanged — see "Overclock" below) — and **`everUnlockedTierIds`, preserving earlier records and adding the claimed target and successor** (unlike `purgeGame`/`overclockGame`, which reset the record to tier01 — see "Scale Up" above) — and — same as `purgeGame` — disengages the last tier's live-checked XP-funded tickspeed mechanic with nothing banked to re-engage with — leaves `purge.points`/`count`/`highestMilestone` untouched — unlike `purgeGame`, it doesn't award or spend Prestige Points — increments aggregate `scaleUpCount` and `scaleUpTargetTierIndex` by 1 unconditionally, and increments the target tier and every earlier tier's `scaleUpTierCounts` entry. Called either by the player's manual click or automatically by `tickGame` when Auto Scale Up is bought |
-| `overclockGame` | `state → state` | Requires the last tier's completed levels (`purchaseLevels − 1`) to reach `getOverclockRequirement(state)` and not `isProductionFrozen`; resets everything `scaleUpGame` resets, the same way, keeps the same permanent flags/levels `scaleUpGame` keeps — **plus three differences**: unlike `scaleUpGame`, does NOT carry `everUnlockedTierIds` through (fully relocks every tier beyond the first, same as `purgeGame` — so `scaleUpTargetTierIndex` also resets to 0 here rather than being incremented); resets `scaleUpCount` and every `scaleUpTierCounts` entry back to 0 (wiping Scale Up's per-tier multipliers); and adds the last tier's whole completed-level count at claim time to `overclockCount` (recording it in `overclockLastClaimCompletedLevels` — completed level 5 initially and at least 3 above the previous claim thereafter, with a catch-up jump when the player is ahead of the bare minimum) instead of leaving it untouched. Leaves `purge.points`/`count`/`highestMilestone` untouched, same as `scaleUpGame` — doesn't award or spend Prestige Points. See "Overclock" below |
+| `overclockGame` | `state → state` | Requires the last tier's completed levels (`purchaseLevels − 1`) to reach `getOverclockRequirement(state)` and not `isProductionFrozen`; resets everything `scaleUpGame` resets, the same way, keeps the same permanent flags/levels `scaleUpGame` keeps — **plus three differences**: unlike `scaleUpGame`, does NOT carry `everUnlockedTierIds` through (fully relocks every tier beyond the first, same as `purgeGame` — so `scaleUpTargetTierIndex` also resets to 0 here rather than being incremented); resets `scaleUpCount` and every `scaleUpTierCounts` entry back to 0 (wiping Scale Up's per-tier multipliers); and sets `overclockLastClaimCompletedLevels` (the Overclock level — replaced, never accumulated) to the last tier's whole completed-level count at claim time ( — completed level 5 initially and at least 3 above the previous claim thereafter, with a catch-up jump when the player is ahead of the bare minimum) instead of leaving it untouched. Leaves `purge.points`/`count`/`highestMilestone` untouched, same as `scaleUpGame` — doesn't award or spend Prestige Points. See "Overclock" below |
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers require a Scale-Up record plus predecessor raw level 2. Owned quantity above zero or the tier's own purchase level above 1 are old-save compatibility fallbacks; predecessor level 3 alone never records or reveals a tier |
 | `getMoneyExponent` | `money → number` | `floor(log10(money))`, floored to 0 below 1 — money's order of magnitude in Bits. Used by `getPurgePercent` / `getPrestigePointsAwarded`, not by XP |
 | `getXpMilestoneExponent` | `moneyBits → number` | `getMoneyExponent(moneyBits / BITS_PER_BYTE)` — XP milestones count powers of ten of Bytes (the headline unit), not Bits. What `checkMilestones` tracks |
