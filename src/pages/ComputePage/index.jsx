@@ -2,7 +2,7 @@ import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPrese
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeChargeAvailable, isComputeCharging, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress, isStackComputeBoostTurnAvailable } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -467,30 +467,15 @@ const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
   // Issue #326: which compute-ladder tier is armed to fund the next Boost activation — purely
-  // local UI state (free to change, no cost). Navigating here pre-selects the active boost's own
-  // tier, so its presets open on arrival; clicking the selected tier again collapses it. Before the
-  // merge chain unlocks, Cores (tier 1) is the only tier that can ever hold a balance at all, so
+  // local UI state (free to change, no cost). One tier is ALWAYS selected (it can be switched, never cleared):
+  // on arrival, the highest tier whose charge is automated, else the active boost's own tier, else Cells.
+  // Before the merge chain unlocks, Cores (tier 1) is the only tier that can ever hold a balance at all, so
   // it's armed implicitly without needing a clickable row.
-  // The highest tier whose charge is automated is always pre-selected on arrival (else the active boost's own tier).
   const [selectedBoostTierIndex, setSelectedBoostTierIndex] = useState(() => {
     const highestAutomated = ENTITY_ROWS.reduce((best, row, index) => (row.autoFlagField && intro[row.autoFlagField] ? index + 1 : best), 0)
     if (highestAutomated > 0) return highestAutomated
-    return intro.computeBoostType ? (intro.computeBoostTierIndex ?? 1) : null
+    return intro.computeBoostType ? (intro.computeBoostTierIndex ?? 1) : 1
   })
-
-  // A click anywhere outside every tier block deselects, collapsing the presets. Clicks inside a
-  // tier block (its select button, presets, merge row) are left to that block's own handlers.
-  // Capture phase + composedPath: decided before React re-renders, so a click that removes its own
-  // target (e.g. Unlock Auto-charge swapping in the auto-charge row) still counts as inside.
-  useEffect(() => {
-    if (selectedBoostTierIndex === null) return undefined
-    const deselectOnOutsideClick = event => {
-      const insideTier = event.composedPath().some(node => node.dataset?.boostTier !== undefined)
-      if (!insideTier) setSelectedBoostTierIndex(null)
-    }
-    document.addEventListener('click', deselectOnOutsideClick, true)
-    return () => document.removeEventListener('click', deselectOnOutsideClick, true)
-  }, [selectedBoostTierIndex])
 
   const blockedByPriority = isDiskFillAvailable(state) || isProvisionDiskInProgress(state)
   const boostActive = Boolean(intro.computeBoostType)
@@ -584,7 +569,7 @@ const ComputePage = ({ game }) => {
       {boostActive && <BoostTimerBar actions={actions} state={state} />}
       {!boostActive && (
         <ArmedStatusText>
-          {intro.computeMergePageUnlocked && !armedRow ? 'No boost running · pick a tier ↓' : 'No boost running'}
+          No boost running
         </ArmedStatusText>
       )}
 
@@ -645,7 +630,7 @@ const ComputePage = ({ game }) => {
                   <TierHeaderRow $spacious={spacious}>
                     <TierSelectButton
                       type="button"
-                      onClick={() => setSelectedBoostTierIndex(armedTierIndex === tierIndex ? null : tierIndex)}
+                      onClick={() => setSelectedBoostTierIndex(tierIndex)}
                       aria-pressed={armedTierIndex === tierIndex}
                       aria-label={`select ${row.label} to fund a compute boost`}
                       title={`Select ${row.label} to show its Boost presets — they'll boost ${describeCoveredTiers(tierIndex, 'name')}`}

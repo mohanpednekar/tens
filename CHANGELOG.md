@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Power: one tier is always selected (switch it, never clear it) — the "pick a tier" prompt is gone. On arrival it is the highest tier whose charge is automated, else the active boost's tier, else Cells.
+
 - Power: a tier's bottom row of 8 slots is now called the **Charger** (labels, Manual and docs).
 
 - Power: the Charge button sits on the left with no "Auto-charge" label on the slot row; the pre-unlock Merge button shows tier symbols on both sides (`⬡ 8→1 🔗`) and the unlock button reads `🤖 Auto n/10`. The Power nav dot now lights only for merge/Charge availability and the Auto-charge unlock — not for Boost availability.

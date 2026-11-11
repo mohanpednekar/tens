@@ -430,12 +430,11 @@ live inside the selected tier):
    - Right: **Stack** (`aria-label="stack the active compute boost"`, `+`,
      `disabled={!isStackComputeBoostTurnAvailable(state)}`, `actions.stackComputeBoost`).
    `MainPage` shows a matching read-only status line while a boost is active.
-   With no boost active, the card instead shows "No boost running" (plus "· pick a tier ↓" when the
-   merge chain is unlocked and nothing is selected).
+   With no boost active, the card instead shows "No boost running" (no prompt: one tier is ALWAYS selected).
 2. The Boost presets (`boostPresets`: `ArmedStatusText` + `BoostRow`) render INSIDE the one selected
-   tier block (3), BELOW that tier's merge / auto-merge row — only one tier shows them at a time;
-   re-clicking the selected tier, or clicking anywhere outside every tier block (`data-boost-tier`;
-   a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
+   tier block (3), BELOW that tier's merge / charge row — only one tier shows them at a time. The selection can be
+   switched by clicking another tier but never cleared (no re-click collapse, no outside-click deselect); on arrival
+   it is the highest tier whose charge is automated, else the active boost's own tier, else Cells. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cells:
    The timer bar / idle status line live above the (pre-merge-chain) `BoostCard`. Auto Boost has no purchase: it is automatic per tier (`autoBoostFromTier`) once any tier's charge is automated, and Power pre-selects the highest automated tier on arrival; its on/off Switch (`intro.computeAutoBoostEnabled`, `setComputeAutoBoostEnabled`) and its full-width preset picker (`aria-label="auto boost preference"`) live on Firmware → Automation → Power Automation. Firmware reveals (`isPerksPageRevealed`) on the first Prestige OR as soon as any Auto-charge boundary is bought, so these controls are never unreachable; Power carries none of them.

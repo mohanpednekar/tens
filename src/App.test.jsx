@@ -4919,19 +4919,16 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.queryByText(/held/)).not.toBeInTheDocument()
   })
 
-  test('clicking outside every tier block deselects the boost tier; clicks inside keep it', () => {
+  test('one tier is always selected: Cells on arrival, and clicking outside never clears it', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true, computeCores: 1, computeNodes: 2 })
     render(<App />)
     openBoosters()
 
     const cells = screen.getByRole('button', { name: /select cells to fund a compute boost/i })
-    fireEvent.click(cells)
-    fireEvent.click(within(screen.getByLabelText(/^cells tier$/i)).getByText('Boosts KB'))
     expect(cells).toHaveAttribute('aria-pressed', 'true')
-
     fireEvent.click(screen.getByRole('heading', { level: 1, name: /^⚡ power$/i }))
-    expect(cells).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
+    expect(cells).toHaveAttribute('aria-pressed', 'true')
+    expect(within(screen.getByLabelText(/^cells tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
   })
 
   test('preset buttons drop zero-valued trailing duration units', () => {
@@ -4981,16 +4978,14 @@ describe('Byte Foundry Compute Boost', () => {
     expect(within(screen.getByLabelText(/^batteries tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
   })
 
-  test('only the selected tier shows the presets; selecting another moves them, re-clicking collapses them', () => {
+  test('only the selected tier shows the presets; selecting another moves them, re-clicking keeps them', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true, computeCores: 1, computeNodes: 2 })
     render(<App />)
     openBoosters()
 
-    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
-    expect(screen.getByText(/no boost running · pick a tier/i)).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /select cells to fund a compute boost/i }))
+    // Cells (the default) hosts the presets on arrival; no "pick a tier" prompt.
     expect(within(screen.getByLabelText(/^cells tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+    expect(screen.queryByText(/pick a tier/i)).not.toBeInTheDocument()
 
     const batteries = screen.getByRole('button', { name: /select batteries to fund a compute boost/i })
     fireEvent.click(batteries)
@@ -4998,7 +4993,7 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.getAllByLabelText(/^compute boost$/i)).toHaveLength(1)
 
     fireEvent.click(batteries)
-    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
+    expect(within(screen.getByLabelText(/^batteries tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
   })
 
   test('no Pop control appears while no boost is active', () => {
