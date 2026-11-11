@@ -2085,7 +2085,7 @@ card" in docs/MAINPAGE_REFERENCE.md). Unlike `OverclockCard` (still gated on `ov
 the last tier having ever been unlocked — see docs/MAINPAGE_REFERENCE.md), `ScaleUpCard` is always
 shown — relevant from the very first cycle, well before the last tier even exists. The button
 (`ScaleUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
-larger default `Button` size) shows `×2 🏭 · {targetTier.symbol} {completed}/{required}` (🏭 = tier production) plus a
+larger default `Button` size) shows `⏩ {targetTier.symbol} {completed}/{required}` (the ×2 🏭 effect sits beside the card name) plus a
 `· Unlock TB` suffix when the current target's successor is the Terabytes tier (`scaleUpUnlocksTB`)
 — naming the target tier's symbol inline so it's always clear *which* tier's completed levels the
 requirement is measured against (via `getScaleUpTargetTier`), not always the last tier's. The
@@ -2163,8 +2163,8 @@ everything else).
 above) — not grouped with `GlobalTickspeedCard`, which renders separately at the top of the Factory view.
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as `scaleUpEverRevealed`. The button (`OverclockButton`, sized to match
-`ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ ×{1 + OVERCLOCK_MULTIPLIER_STEP}/lvl · {symbol} {completed}/{required}` — e.g. `⚡ ×1.1/lvl · QB 7/12`: the fixed
-per-level effect and the final tier's completed levels vs. the requirement (no computed total rate). Like Scale Up, Overclock displays the raw one-based
+`ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {symbol} {completed}/{required}` — e.g. `⚡ QB 7/12` (the final tier's completed levels vs. the requirement); the fixed
+per-level effect `×1.1/lvl 🌐` sits beside the card name (no computed total rate). Like Scale Up, Overclock displays the raw one-based
 engine level and requirement with a `-1` offset so both numbers indicate completed purchase levels;
 the fill bar uses those same displayed values. Enabled once the raw engine requirement
 is met and disabled while frozen — no `window.confirm` guard, same rationale as Scale Up (beneficial,

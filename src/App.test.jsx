@@ -1165,7 +1165,7 @@ test('after the tenth Scale Up claims the final tier, the next requirement advan
   expect(button).toBeEnabled()
 })
 
-test('a Scale Up that will reveal TB says so explicitly — "Unlock TB" on the button itself', () => {
+test('a Scale Up that will reveal TB says so explicitly — "🔓 TB" beside the card name', () => {
   // Target = Gigabytes (index 2) → its successor is Terabytes (TB).
   seedMainGameState({
     resources: { base: 10 },
@@ -1175,11 +1175,11 @@ test('a Scale Up that will reveal TB says so explicitly — "Unlock TB" on the b
   })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /scale up \(requires 3 completed gigabytes levels\) — doubles production for tiers unlocked so far and unlocks tb/i })
-  expect(button).toHaveTextContent(/unlock tb/i)
+  expect(screen.getByRole('button', { name: /scale up \(requires 3 completed gigabytes levels\) — doubles production for tiers unlocked so far and unlocks tb/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('×2 🏭 · 🔓 TB')
 })
 
-test('the Scale Up button shows its per-claim ×2 effect, which tier it needs, and completed-level requirement progress on itself', () => {
+test('the Scale Up card shows its ×2 effect beside the name, and its button only the tier and completed-level progress', () => {
   seedMainGameState({
     resources: { base: 10 },
     purchaseLevels: { tier01: 2 }, // 1 completed of the 3 the third Scale Up requires
@@ -1193,7 +1193,8 @@ test('the Scale Up button shows its per-claim ×2 effect, which tier it needs, a
   expect(screen.getByRole('button', {
     name: /scale up \(requires 3 completed kilobytes levels\) — doubles production for tiers unlocked so far/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2 🏭 · KB 1/3')
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('Scale Up×2 🏭')
+  expect(screen.getByRole('button', { name: /^scale up \(requires/i })).toHaveTextContent('⏩ KB 1/3')
 })
 
 test('the scale up and overclock panels render below the tier list, not above it', () => {
@@ -1409,7 +1410,8 @@ test('the Overclock button shows the per-level Overclock effect and completed-le
   expect(screen.getByRole('button', {
     name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus; each completed quettabytes level \(7 now\) multiplies clock speed's per-level rate by ×1\.1/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ ×1.1/lvl 🌐 · QB 7/7')
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('×1.1/lvl 🌐')
+  expect(screen.getByRole('button', { name: /^overclock \(requires/i })).toHaveTextContent('⚡ QB 7/7')
 })
 
 test('the Overclock card\'s disclosure states the current per-level Tickspeed rate once claimed', () => {
@@ -1456,7 +1458,7 @@ test('clicking Overclock once eligible banks the last tier\'s whole completed-le
   render(<App />)
 
   // Each Scale Up action advertises the ×2 applied to eligible tiers.
-  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2')
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('×2 🏭')
 
   const overclockButton = screen.getByRole('button', { name: /overclock \(requires 5 completed quettabytes levels\b/i })
   expect(overclockButton).toBeEnabled()
@@ -1473,7 +1475,7 @@ test('clicking Overclock once eligible banks the last tier\'s whole completed-le
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /overclock \(requires 10 completed quettabytes levels/i })).toBeDisabled()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent(/rate is now 1\.95% \(was 1%\)\./i)
-  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2')
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('×2 🏭')
 })
 
 test('the Overclock button is disabled once production freezes at a googol', () => {
@@ -2918,14 +2920,14 @@ test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () =
   render(<App />)
 
   const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
-  expect(upgradeButton).toHaveTextContent(`${COST_ICON} 64 B · 📦 ×2`)
+  expect(upgradeButton).toHaveTextContent(`Upgrade Capacity📦 ×2${COST_ICON} 64 B`)
   expect(upgradeButton).toHaveAccessibleDescription('Costs 64 B; capacity 128 B after upgrading')
   // Speed trails Capacity (basis 32 B -> 5.66 B/s, cost 32 B): 5.66 B/s -> 64^0.5 = 8 B/s on its own button.
   cleanup()
   seedIntroState({ capacity: 512, speedCapacity: 256, bits: 0, byteCreated: true })
   render(<App />)
   const speedButton = screen.getByRole('button', { name: /upgrade data stream bitrate/i })
-  expect(speedButton).toHaveTextContent(`${COST_ICON} 32 B · ⚡ ×1.41`)
+  expect(speedButton).toHaveTextContent(`Upgrade Bitrate⚡ ×1.41${COST_ICON} 32 B`)
   expect(speedButton).toHaveAccessibleDescription('Costs 32 B; bitrate 8 B/s after upgrading')
 })
 

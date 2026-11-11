@@ -147,6 +147,22 @@ const CardHeader = styled.div`
   justify-content: space-between;
 `
 
+// What a feature card's action multiplies, shown beside the card's name (the button itself carries
+// only the cost/progress).
+const CardEffect = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  font-size: 0.8rem;
+  font-weight: 400;
+  white-space: nowrap;
+`
+
+const CardTitleGroup = styled.div`
+  align-items: baseline;
+  display: flex;
+  gap: 0.4rem;
+  min-width: 0;
+`
+
 const AutoChip = styled.span`
   border: 1px solid ${props => props.theme.color.border};
   border-radius: 999px;
@@ -1577,7 +1593,10 @@ const MainPage = ({ game }) => {
       <SpeedCardsRow>
         <ScaleUpCard aria-label="scale up panel">
           <CardHeader>
-            <h2>Scale Up</h2>
+            <CardTitleGroup>
+              <h2>Scale Up</h2>
+              <CardEffect title="Doubles production for tiers unlocked so far">×2 🏭{scaleUpUnlocksTB ? ' · 🔓 TB' : ''}</CardEffect>
+            </CardTitleGroup>
             {!isFirstRun && isAutoScaleUpActive && (
               <AutoChip $dimmed={!autoScaleUpEffectivelyActive} aria-label={autoScaleUpStatusLabel} title={autoScaleUpStatusTitle}>
                 ⏩ {autoScaleUpEffectivelyActive ? 'Auto' : 'Paused'}
@@ -1596,7 +1615,7 @@ const MainPage = ({ game }) => {
             $pulse={canScaleUp}
           >
             <ButtonIcon>⏩ </ButtonIcon>
-            <ButtonLabel>×2 🏭{' · '}{scaleUpTargetTier.symbol}{' '}{formatAmount(scaleUpTargetTierLevelDisplay)}/{formatAmount(scaleUpRequirementDisplay)}{scaleUpUnlocksTB ? ' · Unlock TB' : ''}</ButtonLabel>
+            <ButtonLabel>{scaleUpTargetTier.symbol}{' '}{formatAmount(scaleUpTargetTierLevelDisplay)}/{formatAmount(scaleUpRequirementDisplay)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Scale Up progress"
@@ -1609,14 +1628,17 @@ const MainPage = ({ game }) => {
 
       {overclockEverRevealed && (
         <OverclockCard aria-label="overclock panel">
-          <Disclosure>
-            <summary><h2>Overclock</h2></summary>
-            {overclockLevel > 0 && (
-              <MutedText>
-                Clock Speed's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%).
-              </MutedText>
-            )}
-          </Disclosure>
+          <CardTitleGroup>
+            <Disclosure>
+              <summary><h2>Overclock</h2></summary>
+              {overclockLevel > 0 && (
+                <MutedText>
+                  Clock Speed's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%).
+                </MutedText>
+              )}
+            </Disclosure>
+            <CardEffect title="Each completed level multiplies Clock Speed's per-level rate">×{overclockLevelEffectDisplay}/lvl 🌐</CardEffect>
+          </CardTitleGroup>
           <OverclockButton
             aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus; each completed ${lastTier.name} level (${formatAmount(lastTierLevelDisplay)} now) multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay}`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
@@ -1629,7 +1651,7 @@ const MainPage = ({ game }) => {
             $pulse={canOverclock}
           >
             <ButtonIcon>⚡ </ButtonIcon>
-            <ButtonLabel>×{overclockLevelEffectDisplay}/lvl 🌐{' · '}{lastTier.symbol}{' '}{formatAmount(lastTierLevelDisplay)}/{formatAmount(overclockRequirementDisplay)}</ButtonLabel>
+            <ButtonLabel>{lastTier.symbol}{' '}{formatAmount(lastTierLevelDisplay)}/{formatAmount(overclockRequirementDisplay)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Overclock progress"

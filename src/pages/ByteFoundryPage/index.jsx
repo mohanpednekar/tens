@@ -301,6 +301,20 @@ const UpgradeBar = styled(ThinProgressBar)`
   margin-top: 0;
 `
 
+// The upgrade's effect, set small beside the button's label so the label line stays one line.
+const MilestoneEffect = styled.span`
+  font-size: 0.7em;
+  font-weight: 500;
+  margin-left: 0.3em;
+  opacity: 0.85;
+  white-space: nowrap;
+`
+
+const MilestoneLabel = styled.span`
+  max-width: 100%;
+  white-space: nowrap;
+`
+
 const MilestoneCostLine = styled.span`
   font-size: 0.75em;
   font-weight: 500;
@@ -1222,10 +1236,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     variant={capacityUpgradeArmable ? 'prestige' : 'neutral'}
                   >
                     <MilestoneButtonContent>
-                      <span>Upgrade Capacity</span>
+                      <MilestoneLabel>Upgrade Capacity{capacityUpgradeArmable && <MilestoneEffect>📦 ×{INTRO_CAPACITY_DOUBLING_STEP}</MilestoneEffect>}</MilestoneLabel>
                       <MilestoneCostLine>
                         {capacityUpgradeArmable
-                          ? `${COST_ICON} ${formatBitsInNearestUnit(capacityUpgradeCost)} · 📦 ×${INTRO_CAPACITY_DOUBLING_STEP}`
+                          ? `${COST_ICON} ${formatBitsInNearestUnit(capacityUpgradeCost)}`
                           : '📦 Max capacity'}
                       </MilestoneCostLine>
                     </MilestoneButtonContent>
@@ -1242,10 +1256,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     variant={speedUpgradeArmable ? 'prestige' : 'neutral'}
                   >
                     <MilestoneButtonContent>
-                      <span>Upgrade Bitrate</span>
+                      <MilestoneLabel>Upgrade Bitrate{speedUpgradeArmable && <MilestoneEffect>⚡ {speedGainText}</MilestoneEffect>}</MilestoneLabel>
                       <MilestoneCostLine>
                         {speedUpgradeArmable
-                          ? `${COST_ICON} ${formatBitsInNearestUnit(speedUpgradeCost)} · ⚡ ${speedGainText}`
+                          ? `${COST_ICON} ${formatBitsInNearestUnit(speedUpgradeCost)}`
                           : '⚡ Needs Capacity'}
                       </MilestoneCostLine>
                     </MilestoneButtonContent>
