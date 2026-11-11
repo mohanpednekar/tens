@@ -1243,7 +1243,7 @@ test('once the last tier has been a Scale Up target, a separate Restage panel ap
   expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('scale up panel'))
 
   const xpPanel = screen.getByLabelText(/^restage panel$/i)
-  expect(xpPanel).toHaveTextContent('QB ×1.01/XP')
+  expect(xpPanel).toHaveTextContent('QB +1%/XP')
   const xpButton = within(xpPanel).getByRole('button', { name: /consume 37 xp for .* quettabytes tickspeed/i })
   expect(xpButton).toHaveTextContent('🧬')
   expect(xpButton).toBeEnabled()

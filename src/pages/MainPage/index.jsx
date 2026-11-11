@@ -144,7 +144,7 @@ const featureCard = accent => css`
 // only the cost/progress).
 const CardEffect = styled.span`
   color: ${props => props.theme.color.textMuted};
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 400;
   margin-left: auto;
   white-space: nowrap;
@@ -156,7 +156,7 @@ const CardTitleGroup = styled.div`
   display: flex;
   flex: 1 1 auto;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.25rem;
   justify-content: space-between;
   max-width: 100%;
   min-width: 0;
@@ -1573,7 +1573,7 @@ const MainPage = ({ game }) => {
                     event.stopPropagation()
                   }}
                 >
-                  {lastTier.symbol} ×{formatRate(getLastTierXpTickspeedMultiplier(1))}/XP
+                  {lastTier.symbol} +{formatBonusPercent(getLastTierXpTickspeedMultiplier(1))}%/XP
                 </CardEffect>
               </CardTitleGroup>
             </summary>
