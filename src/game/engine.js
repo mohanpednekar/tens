@@ -1729,7 +1729,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // throughput, never competing with the main-game-unlock gate or a Capacity doubling in flight.
   // One tick's lag before a topped-up buffer is visible to that same tick's own cache fill
   // (tickDiskAutoFill, which already ran earlier this tick) is imperceptible at TICK_RATE_MS.
-  const stateAfterPoolBufferFill = tickDataLakePoolDrain(elapsedSeconds)(tickPoolBufferFill(elapsedSeconds)(stateAfterIntro))
+  const stateAfterPoolBufferFill =
+    tickDataLakePoolDrain(elapsedSeconds, stateAfterIntro)(tickPoolBufferFill(elapsedSeconds)(stateAfterIntro))
   // Advances every lake's own one-shot autoConvertActive automation, now that this tick's own
   // overflow fill above has had its chance to fund it — see tickDataLakeAutoConvert/buyBooster.
   const stateAfterDataLakeAutoConvert = tickDataLakeAutoConvert(stateAfterPoolBufferFill)
@@ -5289,6 +5290,20 @@ export const getDataLakeCurrentDiskFillFraction = (state, tierIndex) => {
   return Math.min(1, Math.max(0, getDataLakeFillBits(state, tierIndex) / slotSizeBits))
 }
 
+// A lake disk is "under way" once any bits have gone into its open slot.
+export const isDataLakeDiskFillInProgress = (state, tierIndex) => getDataLakeFillBits(state, tierIndex) > 0
+
+// The pool's own buffer (Staging) is completely full.
+export const isStoragePoolBufferFull = (state, poolIndex) => {
+  const capacity = getPoolBufferCapacity(state, poolIndex)
+  return capacity > 0 && getPoolBufferBits(state, poolIndex) >= capacity
+}
+
+// A lake disk fill may only START while its pool is full — checked once, at the start: a disk
+// already under way is never interrupted and keeps filling whatever the pool's state.
+export const isDataLakeDiskFillStartAllowed = (state, tierIndex) =>
+  isDataLakeDiskFillInProgress(state, tierIndex) || isStoragePoolBufferFull(state, tierIndex)
+
 // A plain binary "receiving / not receiving" reading for ByteFoundryPage's own `mode="lake"` bar —
 // DATA_LAKE_OVERFLOW_MAX_PERCENT while this lake has anything left to fill at its current capacity
 // level (a real disk slot or, at the max level, the final unit — see getDataLakeCurrentFillSubSize
@@ -5484,20 +5499,36 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
 
   const boosterUpdates = latchComputeMergePageIfNeeded(state.intro, tierIndex, field, buyQuantity)
 
+  // A lake disk under way is never interrupted: its fillBits progress carries over the purchase.
+  // The spend can open a SMALLER slot than the one that was filling, so the carried bits are
+  // re-seated through fillDataLakeDisks (completing whatever whole slots they now cover); anything
+  // that somehow fits nowhere goes back to the pool buffer rather than being lost.
+  const spentLake = {
+    ...lake,
+    depositedUnits: (lake.depositedUnits ?? 0) - actualCost,
+    purchased: currentPurchased + buyQuantity,
+  }
+  const reseated = (lake.fillBits ?? 0) > 0
+    ? fillDataLakeDisks(state, { [tierIndex]: spentLake }, tierIndex, 0)
+    : null
+  const { unconsumedBits = 0, ...nextLake } = reseated ?? { ...spentLake, fillBits: 0 }
+  const poolBuffers = unconsumedBits > 0
+    ? {
+      ...state.intro.poolBuffers,
+      [tierIndex]: Math.min(
+        Math.max(getPoolBufferCapacity(state, tierIndex), getPoolBufferBits(state, tierIndex)),
+        getPoolBufferBits(state, tierIndex) + unconsumedBits,
+      ),
+    }
+    : state.intro.poolBuffers
+
   return {
     ...state,
     intro: {
       ...state.intro,
       ...boosterUpdates,
-      dataLakes: {
-        ...state.intro.dataLakes,
-        [tierIndex]: {
-          ...lake,
-          depositedUnits: (lake.depositedUnits ?? 0) - actualCost,
-          fillBits: 0,
-          purchased: currentPurchased + buyQuantity,
-        },
-      },
+      poolBuffers,
+      dataLakes: { ...state.intro.dataLakes, [tierIndex]: nextLake },
     },
   }
 }
@@ -5579,17 +5610,13 @@ export const isDataLakeManualFillAvailable = (state, tierIndex) => {
   // tickDataLakeAutoConvert not to spin on it rather than silently doing nothing every tick.
   const bitsNeeded = getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)
   if (bitsNeeded === null) return false
-  // Require at least a full unit's worth banked before offering Fill — same minimum threshold as
-  // before, avoiding a click that only makes imperceptible progress on a mostly-empty open slot —
-  // UNLESS the slot's own remaining requirement (bitsNeeded) is already smaller than a full unit
-  // (a slot with partial fillBits progress sitting just short of completion): in that case the
-  // smaller, exact remaining amount is the real threshold, since a click completing the slot with
-  // however few bits are actually left is genuine progress, not something to hide behind a full
-  // unit's worth that the open slot no longer even needs. See docs/DESIGN_HISTORY.md.
-  return getPoolBufferBits(state, tierIndex) >= Math.min(bitsNeeded, getDataLakeUnitBits(tierIndex))
+  // A lake disk only STARTS from a full pool; one already under way keeps drawing whatever the
+  // buffer holds (isDataLakeDiskFillStartAllowed).
+  return getPoolBufferBits(state, tierIndex) > 0 && isDataLakeDiskFillStartAllowed(state, tierIndex)
 }
 
-// Spends exactly getDataLakeManualFillBitsNeeded's own precise amount — never more than the next
+// Spends at most what completes the lake's CURRENT disk (the next one needs a full pool again —
+// isDataLakeDiskFillStartAllowed), and within that getDataLakeManualFillBitsNeeded's own precise amount — never more than the next
 // Booster actually needs (accounting for any partial fillBits progress already banked, not a naive
 // per-unit estimate — see that function's own doc comment) — capped at whatever the buffer actually
 // holds, in which case the spend still only ever makes real, permanent progress toward completing
@@ -5604,7 +5631,10 @@ export const fillDataLakeManually = tierIndex => state => {
   const bitsNeeded = getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)
   if (bitsNeeded === null || bitsNeeded <= 0) return state
   const bufferBits = getPoolBufferBits(state, tierIndex)
-  const spendBits = Math.min(bitsNeeded, bufferBits)
+  const openSubSize = getDataLakeCurrentFillSubSize(state, tierIndex)
+  if (openSubSize === null) return state
+  const diskRemainingBits = getDataLakeUnitBits(tierIndex) * openSubSize - getDataLakeFillBits(state, tierIndex)
+  const spendBits = Math.min(bitsNeeded, bufferBits, diskRemainingBits)
   if (spendBits <= 0) return state
   const filled = fillDataLakeDisks(state, state.intro.dataLakes, tierIndex, spendBits)
   if (!filled) return state
@@ -5888,6 +5918,9 @@ const fillDataLakeDisks = (state, dataLakes, tierIndex, overflowBits) => {
   // unconsumedBits instead of silently discarding it (see this function's own doc comment above).
   const unconsumedBits = openSubSize === null ? fillBits : 0
   if (openSubSize === null) fillBits = 0
+  // Float residue from completing a disk must not read as a started next disk
+  // (isDataLakeDiskFillInProgress).
+  if (depositedUnits !== (lake.depositedUnits ?? 0) && fillBits < unitBits * 1e-9) fillBits = 0
 
   return { ...lake, depositedUnits, fillBits, boostersUnlocked, unconsumedBits }
 }
@@ -5912,7 +5945,9 @@ const DATA_LAKE_OVERFLOW_SEGMENT_LIMIT = DATA_LAKE_SUB_SIZE_DISK_CAPS.reduce((su
 // `{ lake, remainingBits, changed }` — the caller's own `bits` should be SET to `remainingBits`
 // (already accounts for fillDataLakeDisks' own unconsumedBits at every segment), not decremented
 // separately.
-const applyDataLakeOverflow = (state, tierIndex, fillRate, availableSeconds, availableBits) => {
+// `stopAtDiskCompletion` (the pool-buffer drain): return as soon as a disk completes, since
+// starting the next one needs the pool full again (isDataLakeDiskFillStartAllowed).
+const applyDataLakeOverflow = (state, tierIndex, fillRate, availableSeconds, availableBits, stopAtDiskCompletion = false) => {
   let lake = getDataLakeTier(state, tierIndex)
   let remainingBits = availableBits
   let spendableBits = Math.max(0, fillRate * availableSeconds)
@@ -5939,6 +5974,7 @@ const applyDataLakeOverflow = (state, tierIndex, fillRate, availableSeconds, ava
     spendableBits -= actuallySpent
     changed = true
     if (unconsumedBits > 0) break // maxed out mid-segment — nothing more this call can do
+    if (stopAtDiskCompletion && !((lake.fillBits ?? 0) > 0)) break
   }
 
   return { lake, remainingBits, changed }
@@ -5970,36 +6006,48 @@ export const isStoragePoolProvisioningInProgress = (state, poolIndex) => {
   return Boolean(intro.diskBuildQueued) && sizes.includes(getDiskSize(state))
 }
 
-// Pool buffer priority: disk filling > provisioning in progress > Data Lake filling. The lake may
-// draw from its own pool only once every built disk is full and no build is in progress there —
-// and only while the lake itself still has an open slot to fill and the buffer holds more than the
-// read cache's own reservation (otherwise the drain has nothing to move).
-export const isDataLakePoolDrainAvailable = (state, poolIndex) =>
-  isDataLakePoolReady(state, poolIndex) &&
-  getDataLakeCurrentFillSubSize(state, poolIndex) !== null &&
-  areStoragePoolDisksFull(state, poolIndex) &&
-  !isStoragePoolProvisioningInProgress(state, poolIndex) &&
-  getPoolBufferBits(state, poolIndex) > getPoolCacheReservationBits(state, poolIndex)
+// Pool buffer priority: disk filling > provisioning in progress > Data Lake filling — checked only
+// when a lake disk STARTS: every built disk full, no build in progress there, the pool buffer
+// completely full (isDataLakeDiskFillStartAllowed) and holding more than the read cache's own
+// reservation. A lake disk already under way is never interrupted: it keeps draining whatever the
+// buffer holds until it completes.
+export const isDataLakePoolDrainAvailable = (state, poolIndex) => {
+  if (!isDataLakePoolReady(state, poolIndex)) return false
+  if (getDataLakeCurrentFillSubSize(state, poolIndex) === null) return false
+  if (isDataLakeDiskFillInProgress(state, poolIndex)) return getPoolBufferBits(state, poolIndex) > 0
+  return isStoragePoolBufferFull(state, poolIndex) &&
+    areStoragePoolDisksFull(state, poolIndex) &&
+    !isStoragePoolProvisioningInProgress(state, poolIndex) &&
+    getPoolBufferBits(state, poolIndex) > getPoolCacheReservationBits(state, poolIndex)
+}
 
-// A Data Lake draws directly from its pool's OWN buffer (isDataLakePoolDrainAvailable), at the pool's raw
+// A Data Lake draws directly from its pool's OWN buffer (isDataLakePoolDrainAvailable), one lake disk per
+// call at most (the next disk needs the pool full again), at the pool's raw
 // Bandwidth × its tap bonus (getPoolTapMultiplier), every tick — independent of the Data Stream. This keeps lakes filling while a running
 // Upgrade Data Stream diverts the Data Stream's output, and generally lets a finished pool keep converting its
 // throughput into lake units rather than only via tickPoolBufferFill's full-buffer overflow. The
-// read cache's own refill claim (getPoolCacheReservationBits) is left untouched, and the whole pass
-// waits while any built disk is empty or a build is in progress in that pool (buffer priority).
-export const tickDataLakePoolDrain = elapsedSeconds => state => {
+// read cache's own refill claim (getPoolCacheReservationBits) is left untouched when a disk starts, and a
+// start waits while the buffer isn't full, any built disk is empty or a build is in progress in that pool.
+// `preFillState` (optional): the state this tick's tickPoolBufferFill ran on — a lake its overflow
+// branch already fed this tick is skipped, so the tick a disk starts isn't credited twice.
+export const tickDataLakePoolDrain = (elapsedSeconds, preFillState = null) => state => {
   if (!(elapsedSeconds > 0)) return state
   const visible = getVisibleStoragePoolCount(state)
   let poolBuffers = null
   let dataLakes = null
   for (let poolIndex = 1; poolIndex <= visible; poolIndex += 1) {
+    if (preFillState && preFillState.intro?.dataLakes?.[poolIndex] !== state.intro?.dataLakes?.[poolIndex]) continue
     if (!isDataLakePoolDrainAvailable(state, poolIndex)) continue
     const buffer = getPoolBufferBits(state, poolIndex)
-    const spendable = Math.max(0, buffer - getPoolCacheReservationBits(state, poolIndex))
+    // A disk already under way may use the whole buffer (never interrupted); a fresh start leaves
+    // the read cache's reservation alone.
+    const spendable = isDataLakeDiskFillInProgress(state, poolIndex)
+      ? buffer
+      : Math.max(0, buffer - getPoolCacheReservationBits(state, poolIndex))
     if (spendable <= 0) continue
     const rate = getStoragePoolBandwidth(state, poolIndex) * getPoolTapMultiplier(state, poolIndex) *
       getDataLakeSpeedMultiplier(state, poolIndex)
-    const { lake, remainingBits, changed } = applyDataLakeOverflow(state, poolIndex, rate, elapsedSeconds, spendable)
+    const { lake, remainingBits, changed } = applyDataLakeOverflow(state, poolIndex, rate, elapsedSeconds, spendable, true)
     if (!changed) continue
     poolBuffers = poolBuffers ?? { ...(state.intro.poolBuffers ?? {}) }
     dataLakes = dataLakes ?? { ...state.intro.dataLakes }

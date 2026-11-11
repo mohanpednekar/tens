@@ -3605,6 +3605,27 @@ test('the Data Lake header shows target price, filled amount and fill speed', ()
   expect(within(lake).getByTitle('Current fill speed')).not.toHaveTextContent('⚡ 0 B/s')
 })
 
+test('a collapsed pool card\'s Data Lake header shows the bar text "X/N KB" instead of the lake balance', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
+    dataLakes: { 1: { depositedUnits: 1, fillBits: 2000, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
+  })
+  render(<App />)
+
+  const collapse = screen.queryByRole('button', { name: 'collapse pool 1' })
+  if (collapse) fireEvent.click(collapse)
+  const lake = screen.getByLabelText('KB lake')
+  // 2,000 of the 8,000 bits (1 KB) lake disk under way — not the 1.25 KB lake balance.
+  expect(within(lake).getByTitle('Lake disk fill progress')).toHaveTextContent('0.25/1 KB')
+  expect(within(lake).queryByTitle('Currently filled')).toBeNull()
+})
+
 test('the Data Lake header shows time until the next Booster is banked, only while it is still short of the cost', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
