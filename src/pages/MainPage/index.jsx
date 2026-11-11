@@ -143,6 +143,7 @@ const featureCard = accent => css`
 const CardHeader = styled.div`
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   justify-content: space-between;
 `
@@ -160,7 +161,11 @@ const CardTitleGroup = styled.div`
   align-items: baseline;
   display: flex;
   gap: 0.4rem;
-  min-width: 0;
+  min-width: min-content;
+
+  h2 {
+    white-space: nowrap;
+  }
 `
 
 const AutoChip = styled.span`
