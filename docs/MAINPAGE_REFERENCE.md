@@ -523,8 +523,8 @@ The row is display-only: an explicit **⚡ Charge** button beside it
          label `⚡ Charge`, `⏳ Charging` while running) calls `actions.startComputeCharge(boundaryIndex)`;
          enabled per `isComputeChargeAvailable` (Auto-charge bought, ≥ `COMPUTE_MERGE_RATIO` (8) held, no
          timed merge or charge running, output has room). While charging the top row dims one slot per
-         transferred unit and the bottom row fills. `aria-label`: "<Tier> auto-charge in progress, <time> left"
-         while an automatic charge runs, else "<Tier> auto-charge slots, N/8 filled". While an automatic charge is in
+         transferred unit and the bottom row fills. `aria-label`: "<Tier> charger, auto-charge in progress, <time> left"
+         while an automatic charge runs, else "<Tier> charger, N/8 filled" (the bottom row is called the **Charger**). While an automatic charge is in
          flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
          inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
          live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` filled count. There is

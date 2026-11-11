@@ -5115,7 +5115,7 @@ describe('ComputePage merge chain', () => {
       render(<App />)
       openBoosters()
 
-      expect(screen.getByRole('button', { name: /batteries auto-charge in progress/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /batteries charger, auto-charge in progress/i })).toBeInTheDocument()
     })
 
     test('the selected tier is marked via aria-pressed and a single tier is armed at a time', () => {
@@ -5328,7 +5328,7 @@ describe('Compute auto-charge automation', () => {
     vi.useRealTimers()
   })
 
-  test('on a selected automated tier, the auto-charge slot row renders above the Boost presets', () => {
+  test('on a selected automated tier, the Charger row renders above the Boost presets', () => {
     seedIntroState({
       bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 6, autoMergeCoresIntoNode: true,
@@ -5337,7 +5337,7 @@ describe('Compute auto-charge automation', () => {
     openBoosters()
 
     // Cells is the highest automated tier, so it is pre-selected on arrival.
-    const autoRow = screen.getByRole('button', { name: /^cells auto-charge slots/i })
+    const autoRow = screen.getByRole('button', { name: /^cells charger/i })
     const presets = within(screen.getByLabelText(/^cells tier$/i)).getByLabelText(/^compute boost$/i)
     expect(autoRow.compareDocumentPosition(presets) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
@@ -5356,7 +5356,7 @@ describe('Compute auto-charge automation', () => {
     expect(charge).toHaveTextContent('⚡ Charge')
   })
 
-  test('the reserve-slot row carries no label or merge cue (the Charge button sits to its left)', () => {
+  test('the Charger row carries no label or merge cue (the Charge button sits to its left)', () => {
     seedIntroState({
       bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: 7, autoMergeNodesIntoCluster: true,
@@ -5364,7 +5364,7 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    const row = screen.getByRole('button', { name: /^batteries auto-charge slots/i })
+    const row = screen.getByRole('button', { name: /^batteries charger/i })
     expect(row).toBeDisabled()
     expect(row).not.toHaveTextContent(/auto-charge/i) // no label on the slot row
     expect(row).not.toHaveTextContent('⬆')
@@ -5391,7 +5391,7 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /batteries auto-charge slots, 3\/8 filled/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /batteries charger, 3\/8 filled/i })).toBeInTheDocument()
   })
 
 })

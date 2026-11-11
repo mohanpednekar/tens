@@ -162,7 +162,7 @@ const NormalSlot = styled.span`
 `
 
 // Row 2: pre-unlock, an instant Merge button + an Unlock Auto-charge button; post-unlock, an explicit
-// ⚡ Charge button (left) plus the 8 auto-charge slots (display only) — Charge moves units down one per
+// ⚡ Charge button (left) plus the Charger (the 8 auto-charge slots, display only) — Charge moves units down one per
 // second, then merges 8→1 instantly (issue #1033; the slots were a clickable instant merge in #321).
 // The post-unlock ReserveSlotsRow branch stretches itself via flex: 1 1 auto and right-aligns its
 // own slots internally, filling the row exactly like MainPage's own tier-row Buy/Upgrade pair;
@@ -676,10 +676,10 @@ const ComputePage = ({ game }) => {
                           onClick={() => actions.startComputeCharge(rowIndex)}
                           title={
                             charging
-                              ? 'Charging — one unit moves to the bottom row each second, then it merges'
+                              ? 'Charging — one unit moves into the Charger each second, then it merges'
                               : (intro[row.mergeOutputField] ?? 0) >= outputCap
                                 ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
-                                : `Charge: move units from the top row to the bottom row one per second, then merge ${COMPUTE_MERGE_RATIO} into 1 ${row.mergeOutputLabel} (needs ${COMPUTE_MERGE_RATIO} ${row.label} held)`
+                                : `Charge: move units from the top row into the Charger one per second, then merge ${COMPUTE_MERGE_RATIO} into 1 ${row.mergeOutputLabel} (needs ${COMPUTE_MERGE_RATIO} ${row.label} held)`
                           }
                           type="button"
                           variant="prestige"
@@ -689,15 +689,15 @@ const ComputePage = ({ game }) => {
                         <ReserveSlotsRow
                           aria-label={
                             merging
-                              ? `${row.label} auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left`
-                              : `${row.label} auto-charge slots, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
+                              ? `${row.label} charger, auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left`
+                              : `${row.label} charger, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
                           }
                           disabled
                           $clickable={false}
                           title={
                             merging
                               ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
-                              : `Bottom row: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — fills past ${COMPUTE_ENTITY_CAP} held and charges on its own when full, or press Charge to move units down one per second`
+                              : `Charger: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — fills past ${COMPUTE_ENTITY_CAP} held and charges on its own when full, or press Charge to move units into it one per second`
                           }
                           type="button"
                         >
