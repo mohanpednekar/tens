@@ -207,7 +207,7 @@ Automation row.
 
 **Segmented choices (UI convention).** A pick-one control (e.g. Firmware's Auto Boost preset: Turbo / Balanced /
 Eco) is full width, one equal-width button per option with a text label beside its icon (`🔋 Eco`) — never a row of
-small icon-only squares — and the selected option takes the `prestige` variant plus a ✓.
+small icon-only squares — and the selected option is identified by styling alone (no tick): `prestige` variant plus a tinted fill, 2px border and bold label.
 
 ## `BuyMaxToggle/index.jsx`
 

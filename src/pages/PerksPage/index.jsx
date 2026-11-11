@@ -41,7 +41,7 @@ import {
 } from 'game/layers'
 import { hasAffordableAutomationPerk, hasAffordablePrestigePerk } from 'game/navAttention'
 import { useEffect, useState } from 'react'
-import styled, { useTheme } from 'styled-components'
+import styled, { css, useTheme } from 'styled-components'
 
 // Firmware (formerly Perks) — its own AppNav destination (page id 'perks', revealed by isPerksPageRevealed), grouped by
 // feature rather than by purchase kind, in two icon tabs:
@@ -415,10 +415,17 @@ const PresetRow = styled.div`
   width: 100%;
 `
 
+// The selected option is identified by styling alone (tinted fill + bold + full-strength border), no tick.
 const PresetButton = styled(Button)`
   min-width: 0;
   white-space: nowrap;
   width: 100%;
+
+  ${props => props.$selected && css`
+    background: color-mix(in srgb, ${props.theme.color.warn} 22%, transparent);
+    border-width: 2px;
+    font-weight: 700;
+  `}
 `
 
 // One automation's whole lifecycle in a single compact cell (see CellGrid).
@@ -755,8 +762,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                       title={`Auto Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
                       type="button"
                       variant={selected ? 'prestige' : 'neutral'}
+                      $selected={selected}
                     >
-                      {`${COMPUTE_BOOST_DISPLAY[boostType].icon} ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' ✓' : ''}`}
+                      {`${COMPUTE_BOOST_DISPLAY[boostType].icon} ${COMPUTE_BOOST_DISPLAY[boostType].label}`}
                     </PresetButton>
                   )
                 })}
