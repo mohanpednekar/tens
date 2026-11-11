@@ -140,14 +140,6 @@ const featureCard = accent => css`
   }
 `
 
-const CardHeader = styled.div`
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: space-between;
-`
-
 // What a feature card's action multiplies, shown beside the card's name (the button itself carries
 // only the cost/progress).
 const CardEffect = styled.span`
@@ -1342,11 +1334,11 @@ const MainPage = ({ game }) => {
                 </CardEffect>
               </CardTitleGroup>
             </summary>
-            {isGlobalTickspeedActive && (
-              <MutedText>
-                {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
-              </MutedText>
-            )}
+            <MutedText>
+              {isGlobalTickspeedActive
+                ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.`
+                : 'Not active yet — spend Bytes to make every tier\'s production ticks faster, one level at a time.'}
+            </MutedText>
           </Disclosure>
           <Button
             aria-label={
@@ -1615,12 +1607,27 @@ const MainPage = ({ game }) => {
         </GlobalTickspeedCard>
       )}
         <ScaleUpCard aria-label="scale up panel">
-          <CardHeader>
-            <CardTitleGroup>
-              <h2>Scale Up</h2>
-              <CardEffect title="Doubles production for tiers unlocked so far">🏭 ×2{scaleUpUnlocksTB ? ' · 🔓 TB' : ''}</CardEffect>
-            </CardTitleGroup>
-          </CardHeader>
+          <Disclosure>
+            <summary>
+              <CardTitleGroup>
+                <h2>Scale Up</h2>
+                <CardEffect
+                  title="Doubles production for tiers unlocked so far"
+                  onClick={event => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }}
+                >
+                  🏭 ×2{scaleUpUnlocksTB ? ' · 🔓 TB' : ''}
+                </CardEffect>
+              </CardTitleGroup>
+            </summary>
+            <MutedText>
+              Resets tiers and doubles production of every tier unlocked so far
+              {scaleUpSuccessorTier ? `, and unlocks ${scaleUpSuccessorTier.name}` : ''}. Needs {formatAmount(scaleUpRequirementDisplay)} completed {scaleUpTargetTier.name} levels
+              {scaleUpCount > 0 ? ` (${formatAmount(scaleUpCount)} claimed so far)` : ''}.
+            </MutedText>
+          </Disclosure>
           <ScaleUpButton
             aria-label={`Scale Up (requires ${scaleUpRequirementDisplay} completed ${scaleUpTargetTier.name} levels) — doubles production for tiers unlocked so far${scaleUpUnlocksTB ? ' and unlocks TB' : ''}`}
             color={canScaleUp ? '#22d3ee' : 'darkgrey'}
@@ -1664,11 +1671,11 @@ const MainPage = ({ game }) => {
                 </CardEffect>
               </CardTitleGroup>
             </summary>
-            {overclockLevel > 0 && (
-              <MutedText>
-                Clock Speed's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%).
-              </MutedText>
-            )}
+            <MutedText>
+              {overclockLevel > 0
+                ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%).`
+                : `Not claimed yet — reach ${formatAmount(overclockRequirementDisplay)} completed ${lastTier.name} levels. Each completed level then multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay}.`}
+            </MutedText>
           </Disclosure>
           <OverclockButton
             aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus; each completed ${lastTier.name} level (${formatAmount(lastTierLevelDisplay)} now) multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay}`}

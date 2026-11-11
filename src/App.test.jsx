@@ -1454,7 +1454,7 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
   expect(panel).toHaveTextContent(/clock speed's per-level rate is now 2\.59% \(was 1%\)\./i)
 })
 
-test('the Overclock card\'s disclosure shows no per-level rate line before the first claim', () => {
+test('the Overclock card\'s disclosure explains it is unclaimed (no current-rate line) before the first claim', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
@@ -1465,7 +1465,8 @@ test('the Overclock card\'s disclosure shows no per-level rate line before the f
   render(<App />)
 
   const panel = screen.getByLabelText(/^overclock panel$/i)
-  expect(panel).not.toHaveTextContent(/per-level rate/i)
+  expect(panel).not.toHaveTextContent(/rate is now/i)
+  expect(panel).toHaveTextContent(/not claimed yet — reach 5 completed quettabytes levels/i)
 })
 
 test('clicking Overclock once eligible records the last tier\'s whole completed-level count, wipes the Scale Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {
