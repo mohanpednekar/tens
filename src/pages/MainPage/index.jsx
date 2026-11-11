@@ -157,10 +157,13 @@ const CardEffect = styled.span`
   white-space: nowrap;
 `
 
+// Card name on the left, its effect (CardEffect) right-justified.
 const CardTitleGroup = styled.div`
   align-items: baseline;
   display: flex;
+  flex: 1 1 auto;
   gap: 0.4rem;
+  justify-content: space-between;
   min-width: min-content;
 
   h2 {
@@ -695,6 +698,17 @@ const Disclosure = styled.details`
   summary h2 {
     display: inline;
     margin: 0;
+  }
+
+  /* A summary holding a CardTitleGroup spans the card so its effect can sit at the right edge; only
+     the name itself stays clickable (the empty gap must not toggle the disclosure). */
+  summary:has(${CardTitleGroup}) {
+    pointer-events: none;
+    width: 100%;
+  }
+
+  summary:has(${CardTitleGroup}) h2 {
+    pointer-events: auto;
   }
 
   p {
