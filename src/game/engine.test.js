@@ -11379,6 +11379,7 @@ describe('Data Lakes', () => {
       state = withIntro(updateLake(state, 1, { capacityLevel: 3, depositedUnits: 1000, purchased: 1000 }), {
         disks: { [kb1]: 9, [kb10]: 9, [kb100]: 9 },
         poolBuffers: { 1: 123, 2: 456 },
+        capacity: 8 * 1024 ** 2, // pool 1 live with room for every KB disk size (rebuilds wait on pool Capacity)
       })
       const reset = flushStoragePool(1)(state)
       expect(getDataLakeCapacity(reset, 1)).toBe(2000)
@@ -11782,6 +11783,14 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
   // A funded pool buffer: the cache reservation plus `disks` disks' worth of spendable bits.
   const funded = (state, disks) => withIntro(state, {
     poolBuffers: { 1: getPoolCacheReservationBits(state, 1) + disks * FIRST_DISK_SIZE },
+  })
+
+  it('waits until the disk\'s own pool Capacity can hold one disk of that size', () => {
+    const base = funded(afterReset(), 2)
+    const tooSmall = withIntro(base, { capacity: FIRST_DISK_SIZE / 2 })
+    expect(getPoolBufferCapacity(tooSmall, 1)).toBeLessThan(FIRST_DISK_SIZE)
+    expect(tickAutoProvisionLowerDiskSizes(1000)(tooSmall)).toBe(tooSmall)
+    expect(tickAutoProvisionLowerDiskSizes(1000)(base)).not.toBe(base)
   })
 
   it('the pool tap bonus speeds the rebuild ×(1 + bonus%)', () => {

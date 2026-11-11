@@ -3341,6 +3341,7 @@ export const tickPoolResetReprovision = state => {
       })
       continue
     }
+    if (getPoolBufferCapacity(nextState, poolIndex) < size) continue
     const built = nextState.intro.disksBuiltTotal?.[size] ?? 0
     const full = nextState.intro.disks?.[size] ?? 0
     if (built > 0 && full < built) continue
@@ -4201,6 +4202,8 @@ export const tickAutoProvisionLowerDiskSizes = (elapsedSeconds = 0) => state => 
     const size = getDiskSize(current)
     const poolIndex = getPoolIndexForDiskSize(size)
     if (isStoragePoolRebuilding(current, poolIndex) || isLaterPoolProvisioningLocked(current, poolIndex)) break
+    // A rebuild waits until its own pool's Capacity can hold one disk of this size (same gate as Provision Disk).
+    if (getPoolBufferCapacity(current, poolIndex) < size) break
     if (intro.diskBuild) break
     const built = intro.disksBuiltTotal?.[size] ?? 0
     const full = intro.disks?.[size] ?? 0
