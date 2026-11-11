@@ -1610,7 +1610,7 @@ production batch in `tickGame`.
 **Display:** `getComputeFlopsTotal(state)` computes the weighted hero total
 **E = k + 10M + 100G + 1000T + … + 10⁹Q** — each Flops tier's `cumulativeBoost` on its matching
 Factory tier multiplied by `10^tierIndex` (KFlops = 10⁰ … QFlops = 10⁹). `formatComputeFlopsTotal`
-renders the hero line; per-tier rows show `N owned · <Factory tier> ×<live multiplier, 4 decimals>`.
+renders the hero line; per-tier rows still use `formatComputeFlopsBoost` on the unweighted boost.
 Production multipliers remain `(1 + cumulativeBoost[tierId])` with no tier weighting.
 
 **Prestige:** `purgeGame` keeps `computeFlops.owned` and `pageUnlocked`; resets
