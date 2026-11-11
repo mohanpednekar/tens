@@ -910,8 +910,7 @@ expressed in completed levels — Scale Up requires 3 levels for each tier's fir
 which carries no such gate at all (see above); Overclock's own gate is unaffected by Scale Up's
 redesign, still sitting purely on the last tier reaching a level. `OverclockButton` (sized to
 match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {lastTier.symbol} {completed}/{required}` only; the effect `🌐 ×1.1/lvl` (🌐 = Clock Speed, the thing multiplied) sits beside the card's name (`CardEffect`) — the fixed per-level effect (`1 + OVERCLOCK_MULTIPLIER_STEP`) and the final tier's completed levels vs. this cycle's requirement — with an `aria-label` of `Overclock (requires {required} completed {lastTier.name}
-levels) — …`. `ScaleUpButton` similarly reads `⏩ {targetTier.symbol} {completed}/{required}`; its effect `🏭 ×2` (🏭 = tier production), plus `· 🔓 TB` when the successor is Terabytes, sits beside the card's name
-plus a `· Unlock TB` suffix when the current target's successor is the Terabytes tier, with
+levels) — …`. `ScaleUpButton` similarly reads `⏩ {targetTier.symbol} {completed}/{required}`; its effect `🏭 ×2` (🏭 = tier production), plus `· 🔓 TB` when the successor is Terabytes, sits beside the card's name, with
 `aria-label` `Scale Up (requires {required} completed {targetTier.name} levels) — doubles production
 for tiers unlocked so far[ and unlocks TB]`
 — `actions.overclock` on click. Overclock's reward is folded into the Tickspeed upgrade's own per-level rate, not a separate multiplier — see
@@ -923,8 +922,10 @@ docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock butto
 to be a deliberate, occasional decision reached via this card, not a frequent one-tap action.
 
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
-whose body renders once the Overclock level is > 0: collapsed by default, clicking "Overclock" reveals a
-`MutedText` line, `Clock Speed's per-level rate is now {currentStep}% (was 1%)`.
+whose summary is a `CardTitleGroup` of the heading plus `CardEffect` (`🌐 ×1.1/lvl`; its click is
+stopped so only the "Overclock" name toggles), so expanding never squeezes the body into a
+title-row column. The body renders once the Overclock level is > 0:
+collapsed by default, clicking "Overclock" reveals a `MutedText` line, `Clock Speed's per-level rate is now {currentStep}% (was 1%)`.
 `{currentStep}` is `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate
 (`OverclockButton` shows only `{symbol} {completed}/{required}`; the ×1.1/lvl effect sits beside the card name — see above); this is the one Overclock-specific number not otherwise visible
 anywhere on the Factory view. Beyond that one figure, Overclock has no visible effect of its own to
