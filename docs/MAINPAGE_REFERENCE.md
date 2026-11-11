@@ -517,9 +517,8 @@ live inside the selected tier):
          keeps growing past its primary 10 (via continued Booster purchases or a lower-tier charge),
          up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a charge is actually in flight
          the reserve instead reads as fully committed regardless of the live count (which has by then
-         dropped back toward 10 and may be accumulating the next batch) — a `MergeCue` on its left always
-         names it ("🤖 Auto-charge", muted), switching to an accent "🤖 ⬆ 8→1 <output>" (plus accent
-         border/raised background). The row is display-only: an explicit **⚡ Charge** button beside it
+         dropped back toward 10 and may be accumulating the next batch) —
+The row is display-only: an explicit **⚡ Charge** button beside it
          (`aria-label` "charge <tier>: move units down one per second, then merge 8 into 1 <output>",
          label `⚡ Charge`, `⏳ Charging` while running) calls `actions.startComputeCharge(boundaryIndex)`;
          enabled per `isComputeChargeAvailable` (Auto-charge bought, ≥ `COMPUTE_MERGE_RATIO` (8) held, no

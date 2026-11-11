@@ -161,9 +161,9 @@ const NormalSlot = styled.span`
   background: ${props => (props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
 `
 
-// Row 2: pre-unlock, an instant Merge button + an Unlock Auto-charge button; post-unlock, the 8
-// auto-charge slots themselves, clickable as an instant manual merge — "2nd row has merge button and
-// unlock automerge button (in place of the reserved slots before unlocking them)" (issue #321).
+// Row 2: pre-unlock, an instant Merge button + an Unlock Auto-charge button; post-unlock, an explicit
+// ⚡ Charge button (left) plus the 8 auto-charge slots (display only) — Charge moves units down one per
+// second, then merges 8→1 instantly (issue #1033; the slots were a clickable instant merge in #321).
 // The post-unlock ReserveSlotsRow branch stretches itself via flex: 1 1 auto and right-aligns its
 // own slots internally, filling the row exactly like MainPage's own tier-row Buy/Upgrade pair;
 // justify-content: flex-end keeps that branch's slots pinned right regardless.
@@ -234,17 +234,6 @@ const ReserveSlot = styled.span`
   border-radius: ${props => props.theme.radius.sm};
   border: 1.2px solid ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.accent : props.theme.color.surfaceSunken)};
   background: ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
-`
-
-// Left-edge label naming the row as auto-charge slots ("🤖 Auto-charge"), switching to an accent
-// "🤖 ⬆ 8→1 <output>" while an instant manual merge is available, so the row reads as a button.
-const MergeCue = styled.span`
-  flex: 0 0 auto;
-  margin-right: auto;
-  font-size: 0.78em;
-  font-weight: 600;
-  white-space: nowrap;
-  color: ${props => (props.$active ? props.theme.color.accent : props.theme.color.textMuted)};
 `
 
 const MergeCountdown = styled.span`
@@ -681,27 +670,6 @@ const ComputePage = ({ game }) => {
                     {hasMergeRow && (
                       autoEnabled ? (
                         <>
-                        <ReserveSlotsRow
-                          aria-label={
-                            merging
-                              ? `${row.label} auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left`
-                              : `${row.label} auto-charge slots, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
-                          }
-                          disabled
-                          $clickable={false}
-                          title={
-                            merging
-                              ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
-                              : `Bottom row: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — fills past ${COMPUTE_ENTITY_CAP} held and charges on its own when full, or press Charge to move units down one per second`
-                          }
-                          type="button"
-                        >
-                          <MergeCue aria-hidden="true" $active={false}>🤖 Auto-charge</MergeCue>
-                          {merging && <MergeCountdown>{formatOfflineDuration(remainingSeconds)}</MergeCountdown>}
-                          {Array.from({ length: COMPUTE_MERGE_RESERVE_CAP }, (_, index) => (
-                            <ReserveSlot key={index} $filled={index < reserveHeld} $merging={merging} aria-hidden="true" />
-                          ))}
-                        </ReserveSlotsRow>
                         <TierActionButton
                           aria-label={`charge ${row.label.toLowerCase()}: move units down one per second, then merge ${COMPUTE_MERGE_RATIO} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
                           disabled={!chargeAvailable}
@@ -718,6 +686,26 @@ const ComputePage = ({ game }) => {
                         >
                           <ButtonContent>{charging ? '⏳ Charging' : '⚡ Charge'}</ButtonContent>
                         </TierActionButton>
+                        <ReserveSlotsRow
+                          aria-label={
+                            merging
+                              ? `${row.label} auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left`
+                              : `${row.label} auto-charge slots, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
+                          }
+                          disabled
+                          $clickable={false}
+                          title={
+                            merging
+                              ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
+                              : `Bottom row: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — fills past ${COMPUTE_ENTITY_CAP} held and charges on its own when full, or press Charge to move units down one per second`
+                          }
+                          type="button"
+                        >
+                          {merging && <MergeCountdown>{formatOfflineDuration(remainingSeconds)}</MergeCountdown>}
+                          {Array.from({ length: COMPUTE_MERGE_RESERVE_CAP }, (_, index) => (
+                            <ReserveSlot key={index} $filled={index < reserveHeld} $merging={merging} aria-hidden="true" />
+                          ))}
+                        </ReserveSlotsRow>
                         </>
                       ) : (
                         <>

@@ -588,8 +588,6 @@ export const createInitialGameState = () => ({
     // action until then. Carried through a real Prestige unchanged, same permanence class as the
     // entity counts these merges spend/produce — an in-progress merge simply keeps counting down
     // seamlessly across the cycle boundary rather than losing its already-committed tokens.
-    // Manual Charge in progress per merge boundary (#1033): { [boundaryIndex]: seconds elapsed }; absent = idle. Run-scoped.
-    computeChargeSeconds: {},
     computeCoresMergeRemainingSeconds: 0,
     computeNodesMergeRemainingSeconds: 0,
     computeClustersMergeRemainingSeconds: 0,
@@ -599,6 +597,9 @@ export const createInitialGameState = () => ({
     computeCloudsMergeRemainingSeconds: 0,
     computeDatacentersMergeRemainingSeconds: 0,
     computeSupercomputersMergeRemainingSeconds: 0,
+    // Manual Charge in progress per merge boundary (#1033): { [boundaryIndex]: seconds elapsed }; absent = idle.
+    // Unlike the merge timers above this is RUN-scoped: a Purge/Reboot/Reformat drops it (nothing is spent until the merge).
+    computeChargeSeconds: {},
     // PERMANENT — preferred Compute Boost preset for auto-activation (issue #380): each time a tier's automated
     // merge starts, autoBoostFromTier spends one of that tier's tokens using this preset (or stacks the active
     // boost if its funding tier matches). One of COMPUTE_BOOST_PRESETS' keys; defaults to 'standard'. Player-selectable on
@@ -5374,7 +5375,7 @@ export const getComputeReserveHeld = (state, tierIndex) => {
   const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
   const held = state.intro?.[field] ?? 0
   // The bottom row = units held past the primary 10, plus any moved down so far by a manual Charge.
-  return Math.max(0, Math.min(COMPUTE_MERGE_RESERVE_CAP, held - COMPUTE_ENTITY_CAP + getComputeChargeTransfers(state, tierIndex - 1)))
+  return Math.min(COMPUTE_MERGE_RESERVE_CAP, Math.max(0, held - COMPUTE_ENTITY_CAP) + getComputeChargeTransfers(state, tierIndex - 1))
 }
 
 // --- Manual Charge (#1033) ---------------------------------------------------------------
@@ -5387,7 +5388,7 @@ export const isComputeCharging = (state, boundaryIndex) => getComputeChargeSecon
 // Units already moved from the top row to the bottom row by this boundary's Charge (one per COMPUTE_CHARGE_TRANSFER_SECONDS).
 export const getComputeChargeTransfers = (state, boundaryIndex) => {
   const seconds = getComputeChargeSeconds(state, boundaryIndex)
-  return seconds === null ? 0 : Math.floor(seconds / COMPUTE_CHARGE_TRANSFER_SECONDS)
+  return seconds === null ? 0 : Math.floor(seconds / COMPUTE_CHARGE_TRANSFER_SECONDS + TICK_ACCUMULATION_EPSILON)
 }
 // UI mirror of startComputeCharge's own gate.
 export const isComputeChargeAvailable = (state, boundaryIndex) => {
@@ -5418,9 +5419,11 @@ export const tickComputeCharges = elapsedSeconds => state => {
     const seconds = getComputeChargeSeconds(state, boundaryIndex)
     const input = boundary ? (intro[boundary.inputField] ?? 0) : 0
     if (!boundary || seconds === null || input < COMPUTE_MERGE_RATIO) { delete nextCharges[key]; continue }
+    // An output that filled up mid-charge cancels it right away (units untouched).
+    if ((intro[boundary.outputField] ?? 0) >= getComputeFieldEffectiveCap({ ...state, intro }, boundary.outputField)) { delete nextCharges[key]; continue }
     const nextSeconds = seconds + elapsedSeconds
-    const natural = Math.max(0, Math.min(COMPUTE_MERGE_RESERVE_CAP, input - COMPUTE_ENTITY_CAP))
-    if (natural + Math.floor(nextSeconds / COMPUTE_CHARGE_TRANSFER_SECONDS) < COMPUTE_MERGE_RESERVE_CAP) {
+    const natural = Math.max(0, input - COMPUTE_ENTITY_CAP)
+    if (natural + Math.floor(nextSeconds / COMPUTE_CHARGE_TRANSFER_SECONDS + TICK_ACCUMULATION_EPSILON) < COMPUTE_MERGE_RESERVE_CAP) {
       nextCharges[key] = nextSeconds
       continue
     }

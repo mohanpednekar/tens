@@ -419,8 +419,9 @@ const InfoPage = () => {
           <li>
             Sacrifice {COMPUTE_ENTITY_CAP} of the next entity to unlock auto-charge for that step. This
             adds an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve ({COMPUTE_ENTITY_AUTO_MERGE_CAP} held in
-            total) that fills as the entity keeps growing past {COMPUTE_ENTITY_CAP}. Tapping the
-            reserve slots charges {COMPUTE_MERGE_RATIO} → 1 instantly.
+            total) that fills as the entity keeps growing past {COMPUTE_ENTITY_CAP}. Press ⚡ Charge
+            to move units from the top row into those slots one per second, then {COMPUTE_MERGE_RATIO} → 1 merges
+            instantly.
           </li>
           <li>
             An automatic charge starts only when all {COMPUTE_ENTITY_AUTO_MERGE_CAP} slots are full and

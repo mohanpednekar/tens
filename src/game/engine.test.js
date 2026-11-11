@@ -4626,6 +4626,30 @@ describe('manual Charge (#1033)', () => {
     expect(state.intro.computeNodes).toBe(1)
   })
 
+  it('shows one unit moving down per second even when only 8 or 9 are held (display matches the engine)', () => {
+    let state = startComputeCharge(0)(withIntro(base(), { computeCores: 8 }))
+    state = tickComputeCharges(2)(state)
+    expect(getComputeReserveHeld(state, 1)).toBe(2)
+    state = tickComputeCharges(5)(state)
+    expect(getComputeReserveHeld(state, 1)).toBe(7)
+    expect(tickComputeCharges(1)(state).intro.computeNodes).toBe(1)
+  })
+
+  it('takes 8 seconds of 0.1 s live ticks, not 8.1 (no float drift)', () => {
+    let state = startComputeCharge(0)(base())
+    let ticks = 0
+    while (isComputeCharging(state, 0) && ticks < 200) { state = tickComputeCharges(0.1)(state); ticks += 1 }
+    expect(ticks).toBe(80)
+    expect(state.intro.computeNodes).toBe(1)
+  })
+
+  it('cancels as soon as the output fills mid-charge (units untouched)', () => {
+    const started = tickComputeCharges(2)(startComputeCharge(0)(base()))
+    const full = tickComputeCharges(1)(withIntro(started, { computeNodes: COMPUTE_ENTITY_CAP }))
+    expect(isComputeCharging(full, 0)).toBe(false)
+    expect(full.intro.computeCores).toBe(10)
+  })
+
   it('cancels (units untouched) if the input falls below 8 mid-charge, and the automatic start waits while charging', () => {
     const started = startComputeCharge(0)(base())
     const spent = tickComputeCharges(1)(withIntro(started, { computeCores: 5 }))

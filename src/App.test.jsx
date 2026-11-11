@@ -5356,7 +5356,7 @@ describe('Compute auto-charge automation', () => {
     expect(charge).toHaveTextContent('⚡ Charge')
   })
 
-  test('the reserve-slot row shows no merge cue below 8 of the input entity', () => {
+  test('the reserve-slot row carries no label or merge cue (the Charge button sits to its left)', () => {
     seedIntroState({
       bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: 7, autoMergeNodesIntoCluster: true,
@@ -5366,7 +5366,7 @@ describe('Compute auto-charge automation', () => {
 
     const row = screen.getByRole('button', { name: /^batteries auto-charge slots/i })
     expect(row).toBeDisabled()
-    expect(row).toHaveTextContent('🤖 Auto-charge')
+    expect(row).not.toHaveTextContent(/auto-charge/i) // no label on the slot row
     expect(row).not.toHaveTextContent('⬆')
   })
 
