@@ -1633,17 +1633,27 @@ const MainPage = ({ game }) => {
 
       {overclockEverRevealed && (
         <OverclockCard aria-label="overclock panel">
-          <CardTitleGroup>
-            <Disclosure>
-              <summary><h2>Overclock</h2></summary>
-              {overclockLevel > 0 && (
-                <MutedText>
-                  Clock Speed's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%).
-                </MutedText>
-              )}
-            </Disclosure>
-            <CardEffect title="Each completed level multiplies Clock Speed's per-level rate">×{overclockLevelEffectDisplay}/lvl 🌐</CardEffect>
-          </CardTitleGroup>
+          <Disclosure>
+            <summary>
+              <CardTitleGroup>
+                <h2>Overclock</h2>
+                <CardEffect
+                  title="Each completed level multiplies Clock Speed's per-level rate"
+                  onClick={event => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }}
+                >
+                  ×{overclockLevelEffectDisplay}/lvl 🌐
+                </CardEffect>
+              </CardTitleGroup>
+            </summary>
+            {overclockLevel > 0 && (
+              <MutedText>
+                Clock Speed's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%).
+              </MutedText>
+            )}
+          </Disclosure>
           <OverclockButton
             aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus; each completed ${lastTier.name} level (${formatAmount(lastTierLevelDisplay)} now) multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay}`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
