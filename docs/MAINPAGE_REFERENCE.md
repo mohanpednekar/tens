@@ -519,14 +519,13 @@ live inside the selected tier):
          the reserve instead reads as fully committed regardless of the live count (which has by then
          dropped back toward 10 and may be accumulating the next batch) — a `MergeCue` on its left always
          names it ("🤖 Auto-charge", muted), switching to an accent "🤖 ⬆ 8→1 <output>" (plus accent
-         border/raised background) while clicking would INSTANTLY charge 8 → 1 ("slots are the
-         button"), calling the matching `game.actions.startCompute*Merge` action, enabled once
-         `isCompute*MergeStartAvailable` allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the
-         normal + reserve slots and room under the output's effective cap, counting the 1 an in-flight
-         automatic charge still owes — `isComputeMergeStartAvailableAtBoundary`).
-         `aria-label`: "instantly charge up 8 <input> into 1 <output>, N/8 auto-charge slots filled" (or
-         ", auto-charge in progress, <time> left") when available, "<Tier> auto-charge in progress, <time> left" while an automatic charge runs, else
-         "<Tier> auto-charge slots, N/8 filled". While an automatic charge is in
+         border/raised background). The row is display-only: an explicit **⚡ Charge** button beside it
+         (`aria-label` "charge <tier>: move units down one per second, then merge 8 into 1 <output>",
+         label `⚡ Charge`, `⏳ Charging` while running) calls `actions.startComputeCharge(boundaryIndex)`;
+         enabled per `isComputeChargeAvailable` (Auto-charge bought, ≥ `COMPUTE_MERGE_RATIO` (8) held, no
+         timed merge or charge running, output has room). While charging the top row dims one slot per
+         transferred unit and the bottom row fills. `aria-label`: "<Tier> auto-charge in progress, <time> left"
+         while an automatic charge runs, else "<Tier> auto-charge slots, N/8 filled". While an automatic charge is in
          flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
          inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
          live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` filled count. There is
