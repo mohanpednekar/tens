@@ -172,6 +172,10 @@ export const createInitialGameState = () => ({
   // Permanent: Auto Overclock unlocked (PP, getAutomationUnlockCost('overclock'); needs Auto Scale Up AND Auto Restage) and its pause preference.
   autoOverclock: false,
   autoOverclockEnabled: true,
+  // Permanent pause preference for ALL Power Auto-charge boundaries (each boundary's own unlock lives on Power —
+  // intro.autoMerge*; this switch lives on Firmware → Automation). Paused: no NEW timed reserve merge starts; an
+  // in-flight one finishes and the manual instant merge is unaffected.
+  computeAutoChargeEnabled: true,
   // Permanent per-tier flag: whether this tier's own (Money-funded) tickspeed multiplier upgrades
   // itself automatically — see applyAutobuyerMilestones/tickGame; unlocked automatically at a
   // prestige-count milestone, no PP cost. Needs no other prerequisite (the manual purchase itself
@@ -1309,6 +1313,7 @@ export const eraGame = state => {
     autoXpTickspeedEnabled: state.autoXpTickspeedEnabled ?? initial.autoXpTickspeedEnabled,
     autoOverclock: state.autoOverclock ?? initial.autoOverclock,
     autoOverclockEnabled: state.autoOverclockEnabled ?? initial.autoOverclockEnabled,
+    computeAutoChargeEnabled: state.computeAutoChargeEnabled ?? initial.computeAutoChargeEnabled,
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     playtimeBonusUnlocked: state.playtimeBonusUnlocked ?? initial.playtimeBonusUnlocked,
     activePlaySeconds: state.activePlaySeconds ?? initial.activePlaySeconds,
@@ -6165,13 +6170,16 @@ const tickComputeMergeBoundary = (elapsedSeconds, inputField, outputField, autoF
   // Only compute the (Bandwidth-derived) duration when this boundary needs it — a timer to clamp or
   // an auto-start to evaluate — so idle boundaries stay cheap in long offline replays.
   const mayAutoStart = Boolean(state.intro?.[autoFlagField]) &&
+    (state.computeAutoChargeEnabled ?? true) &&
     (state.intro?.[inputField] ?? 0) >= COMPUTE_ENTITY_AUTO_MERGE_CAP
   if (!(remaining > 0) && !mayAutoStart) return state
   const durationSeconds = getComputeMergeDurationSeconds(state, boundaryIndex)
   const clamped = durationSeconds > 0 && remaining > durationSeconds
     ? { ...state, intro: { ...state.intro, [timerField]: durationSeconds } }
     : state
-  const afterAutoStart = startComputeMergeReserve(inputField, outputField, autoFlagField, timerField, durationSeconds, COMPUTE_ENTITY_AUTO_MERGE_CAP)(clamped)
+  const afterAutoStart = mayAutoStart
+    ? startComputeMergeReserve(inputField, outputField, autoFlagField, timerField, durationSeconds, COMPUTE_ENTITY_AUTO_MERGE_CAP)(clamped)
+    : clamped
   return tickComputeMergeReserveTimer(elapsedSeconds, timerField, outputField)(afterAutoStart)
 }
 
@@ -6863,6 +6871,9 @@ export const buyAutoOverclock = state => {
   }
 }
 
+// Auto-charge pause preference (permanent, one switch for every Power boundary) — see computeAutoChargeEnabled.
+export const setComputeAutoChargeEnabled = enabled => state => ({ ...state, computeAutoChargeEnabled: !!enabled })
+
 // Auto Overclock pause preference (permanent), meaningless until it is unlocked.
 export const setAutoOverclockEnabled = enabled => state => {
   if (!state.autoOverclock) return state
@@ -7373,6 +7384,7 @@ export const purgeGame = state => {
     autoXpTickspeedEnabled: state.autoXpTickspeedEnabled ?? initial.autoXpTickspeedEnabled,
     autoOverclock: state.autoOverclock ?? initial.autoOverclock,
     autoOverclockEnabled: state.autoOverclockEnabled ?? initial.autoOverclockEnabled,
+    computeAutoChargeEnabled: state.computeAutoChargeEnabled ?? initial.computeAutoChargeEnabled,
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     playtimeBonusUnlocked: state.playtimeBonusUnlocked ?? initial.playtimeBonusUnlocked,
     activePlaySeconds: state.activePlaySeconds ?? initial.activePlaySeconds,
@@ -7525,6 +7537,7 @@ export const scaleUpGame = state => {
     autoXpTickspeedEnabled: state.autoXpTickspeedEnabled ?? initial.autoXpTickspeedEnabled,
     autoOverclock: state.autoOverclock ?? initial.autoOverclock,
     autoOverclockEnabled: state.autoOverclockEnabled ?? initial.autoOverclockEnabled,
+    computeAutoChargeEnabled: state.computeAutoChargeEnabled ?? initial.computeAutoChargeEnabled,
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     playtimeBonusUnlocked: state.playtimeBonusUnlocked ?? initial.playtimeBonusUnlocked,
     activePlaySeconds: state.activePlaySeconds ?? initial.activePlaySeconds,
@@ -7619,6 +7632,7 @@ export const overclockGame = state => {
     autoXpTickspeedEnabled: state.autoXpTickspeedEnabled ?? initial.autoXpTickspeedEnabled,
     autoOverclock: state.autoOverclock ?? initial.autoOverclock,
     autoOverclockEnabled: state.autoOverclockEnabled ?? initial.autoOverclockEnabled,
+    computeAutoChargeEnabled: state.computeAutoChargeEnabled ?? initial.computeAutoChargeEnabled,
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     playtimeBonusUnlocked: state.playtimeBonusUnlocked ?? initial.playtimeBonusUnlocked,
     activePlaySeconds: state.activePlaySeconds ?? initial.activePlaySeconds,

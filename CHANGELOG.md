@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- The Auto Boost preset picker moved from Power to Firmware → Automation (next to its unlock). Auto-charge unlocks stay on Power for now: they are paid in-run (sacrificing entities) and Firmware only appears after the first Purge.
+- The Auto Boost preset picker moved from Power to Firmware → Automation (next to its unlock). Auto-charge gets one pause/resume switch on Firmware → Automation → Power Automation (shown once any tier's Auto-charge is unlocked); buying Auto-charge per tier stays on Power. Pausing stops new automatic timed charges; instant charge-ups still work.
 
 - Every Factory feature card (Clock Speed, Restage, Scale Up, Overclock) now has an expandable details section, including before it's active/claimed; Scale Up previously had none.
 

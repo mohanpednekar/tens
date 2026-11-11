@@ -4628,6 +4628,15 @@ describe.each([
     expect(after.intro[timerField]).toBe(durationOf() - 1) // the same tick's elapsedSeconds also counts down
   })
 
+  it('tick starts no NEW reserve merge while Auto-charge is paused (computeAutoChargeEnabled false), but still counts an in-flight one down', () => {
+    const full = { ...withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true }), computeAutoChargeEnabled: false }
+    const after = tick(1)(full)
+    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP)
+    expect(after.intro[timerField] ?? 0).toBe(0)
+    const inFlight = { ...withIntro(allPoolsVisibleState(), { [autoFlagField]: true, [timerField]: durationOf() }), computeAutoChargeEnabled: false }
+    expect(tick(1)(inFlight).intro[timerField]).toBe(durationOf() - 1)
+  })
+
   it('tick does not start a second reserve merge while one is already in flight, even if the input has refilled all the way back to the extended cap', () => {
     const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true, [timerField]: durationOf() })
     const after = tick(1)(state)

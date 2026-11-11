@@ -1628,6 +1628,34 @@ test('Auto Boost is unlocked from Firmware → Automation (30 PP), not on Booste
   expect(screen.queryByRole('group', { name: /auto boost preference/i })).not.toBeInTheDocument()
 })
 
+test('Auto-charge is bought per tier on Power, but its single pause switch lives on Firmware → Automation', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true },
+    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+
+  await openPerksTab(user, /open automation/i)
+  const toggle = screen.getByRole('button', { name: /^auto-charge$/i })
+  expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  await user.click(toggle)
+  expect(screen.getByRole('button', { name: /^auto-charge$/i })).toHaveAttribute('aria-pressed', 'false')
+  expect(JSON.parse(localStorage.getItem('tens_game_state')).computeAutoChargeEnabled).toBe(false)
+})
+
+test('the Firmware Auto-charge switch is absent until a Power boundary has Auto-charge unlocked', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true },
+    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+
+  await openPerksTab(user, /open automation/i)
+  expect(screen.queryByRole('button', { name: /^auto-charge$/i })).not.toBeInTheDocument()
+})
+
 test('Upgrade Capacity and the selected Auto Boost preset render with the prestige (warn) variant', () => {
   const warn = themes.dark.color.warn
   seedIntroState({ bits: 5, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })

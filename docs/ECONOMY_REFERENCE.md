@@ -2355,6 +2355,8 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // (getOverclockMultiplier), and the next requirement is
                                                           // level + 3 (getOverclockRequirement). Never reset by Scale
                                                           // Up — only by a real Prestige — see "Overclock" below
+  computeAutoChargeEnabled: true,                        // permanent pause switch for ALL Power Auto-charge boundaries (Firmware → Automation);
+                                                          // paused = no NEW timed reserve merge starts (in-flight finishes; instant merge unaffected)
   autoXpTickspeed: false,                                // permanent GLOBAL flag: Auto Restage bought (16 PP); survives Prestige/Scale Up/Overclock/Era
   autoXpTickspeedEnabled: true,                          // permanent pause/resume preference for Auto Restage
   autoScaleUp: false,                                    // permanent GLOBAL flag: PP spent to make eligible Scale Up

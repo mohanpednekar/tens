@@ -588,6 +588,7 @@ const mergeState = rawSaved => {
     tierTickspeedAttemptBudgets: mergeTierMap(fresh.tierTickspeedAttemptBudgets, saved.tierTickspeedAttemptBudgets),
     autoOverclock: saved.autoOverclock ?? fresh.autoOverclock,
     autoOverclockEnabled: saved.autoOverclockEnabled ?? fresh.autoOverclockEnabled,
+    computeAutoChargeEnabled: saved.computeAutoChargeEnabled ?? fresh.computeAutoChargeEnabled,
     tierTickspeedAutobuyer: mergeTierMap(fresh.tierTickspeedAutobuyer, saved.tierTickspeedAutobuyer),
     tierTickspeedAutobuyerEnabled: mergeTierMap(fresh.tierTickspeedAutobuyerEnabled, saved.tierTickspeedAutobuyerEnabled),
     everUnlockedTierIds: mergeTierMap(fresh.everUnlockedTierIds, saved.everUnlockedTierIds),

@@ -764,7 +764,7 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   `"<name> row"`, Auto Clock Speed → Auto Restage → Auto Scale Up → Auto Overclock → Auto Purge; Restage
   and Scale Up both need Clock Speed, Overclock needs both, Purge needs Overclock — engine-enforced),
   *Tier Autobuyers* (all ten tiers always listed; halves
-  `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Power Automation* (Auto Boost once Foundry
+  `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Power Automation* (an `auto-charge row` pause Switch — `computeAutoChargeEnabled` — once any tier's Auto-charge is bought on Power; Auto Boost once Foundry
   Compute unlocks; no Switch — its preset picker (`aria-label="auto boost preference"`) beside the row is the control, owned shows `"Auto Boost
   unlocked"`), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.

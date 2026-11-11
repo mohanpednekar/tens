@@ -32,6 +32,7 @@ import {
 import {
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_BOOST_PRESETS,
+  COMPUTE_MERGE_BOUNDARIES,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
@@ -507,6 +508,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const isComputeAutoBoostActive = state.computeAutoBoostUnlocked ?? false
   // Stays listed once bought, even after Reboot / Reformat Byte Foundry drops Capacity back below the Boosters threshold.
   const showComputeAutoBoost = isComputeAutoBoostActive || isComputeCoreConversionUnlocked(state)
+  // Auto-charge itself is bought per boundary on Power; Firmware only holds its one pause switch.
+  const isAnyAutoChargeUnlocked = COMPUTE_MERGE_BOUNDARIES.some(boundary => Boolean(state.intro?.[boundary.autoFlagField]))
+  const autoChargeEnabled = state.computeAutoChargeEnabled ?? true
   const canBuyComputeAutoBoost = !isFrozen && !isComputeAutoBoostActive && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST
 
   const tabDots = {
@@ -695,11 +699,26 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </TierPairList>
       </Category>
 
-      {showComputeAutoBoost && (
+      {(showComputeAutoBoost || isAnyAutoChargeUnlocked) && (
         <Category aria-label="power automation category">
           <CategoryHeading>Power Automation</CategoryHeading>
           <CellGrid>
-          {/* No pause Switch: the preset picker below is Auto Boost's only control. */}
+          {isAnyAutoChargeUnlocked && (
+            <AutomationRow
+              ariaLabel="auto-charge row"
+              enabled={autoChargeEnabled}
+              icon="🔌"
+              inlineAction
+              label="Charge"
+              name="Auto-charge"
+              onToggle={() => actions.setComputeAutoChargeEnabled(!autoChargeEnabled)}
+              owned
+              statusTitle={autoChargeEnabled ? 'Auto-charge starts timed reserve charges on its own' : 'Auto-charge is paused — no new automatic charge starts until resumed (instant charge-ups still work)'}
+              title="Bought per tier on Power; pause or resume all of them here"
+              toggleLabel="Auto-charge"
+            />
+          )}
+          {/* No pause Switch for Boost: the preset picker below is Auto Boost's only control. */}
           <AutomationRow
             ariaLabel="auto boost row"
             icon="🤖"
