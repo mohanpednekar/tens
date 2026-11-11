@@ -1211,25 +1211,27 @@ test('the scale up and overclock panels render below the tier list, not above it
   expect(regions.indexOf('overclock panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('once the last tier has been a Scale Up target, a separate Restage panel appears beside Scale Up while the last tier keeps its own tickspeed button', () => {
+test('once the last tier has been a Scale Up target, a separate Restage panel appears left of Scale Up below the tier list, and the last tier keeps its own tickspeed button', () => {
   seedMainGameState({
     resources: { base: 12345, tier10: 25 },
     owned: { tier09: 10, tier10: 25 },
-    purchaseLevels: { tier09: 3, tier10: 2 },
+    purchaseLevels: { tier01: 2, tier09: 3, tier10: 2 },
     scaleUpTierCounts: { tier10: 1 },
     scaleUpTargetTierIndex: 9,
     purge: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
   })
   render(<App />)
 
+  const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
+  expect(regions).toContain('global clock speed panel')
+  expect(regions.indexOf('global clock speed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('scale up panel'))
+
   const xpPanel = screen.getByLabelText(/^restage panel$/i)
   const xpButton = within(xpPanel).getByRole('button', { name: /consume 37 xp for .* quettabytes tickspeed/i })
   expect(xpButton).toHaveTextContent('🧬')
   expect(xpButton).toBeEnabled()
-
-  const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
-  expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
-  expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('scale up panel'))
 
   const quettabytesLayer = screen.getByLabelText(/^quettabytes layer$/i)
   expect(within(quettabytesLayer).queryByRole('button', { name: /consume .* xp/i })).toBeNull()

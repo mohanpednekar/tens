@@ -875,11 +875,10 @@ directly toggleable) on Firmware → 🤖 Automation's Tier Autobuyers category,
 unchanged by the move to Firmware — see `docs/ECONOMY_REFERENCE.md` for costs/effects and
 `docs/DESIGN_HISTORY.md` ("PP Upgrades tab split…") for why the page is split three ways.
 
-**Scale Up, Restage, and Overclock cards, below the tier list.** Restage (left, once revealed) and
-`ScaleUpCard` (right) share one `SpeedCardsRow` directly below `TierList`; `OverclockCard` gets the
-next full-width row when revealed — not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed
-card" above for why Clock Speed stays on top while these sit below the tier list). Restage + Scale Up
-stay side by side at every width (`flex: 1 1 0`, `min-width: 0`, no wrap). The earlier
+**Scale Up and Overclock cards, below the tier list.** Restage (once revealed) + `ScaleUpCard` share
+one `SpeedCardsRow` placed directly below `TierList`; `OverclockCard` gets the next full-width row
+when revealed — not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why Clock Speed
+stays on top while these sit below the tier list). Restage + Scale Up stay side by side at every width (`flex: 1 1 0`, `min-width: 0`, no wrap); `CardTitleGroup` wraps the effect under the heading (`min-width: 0`, `flex-wrap`) so a paired card at ~320px doesn't overflow into its neighbor. The earlier
 below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below);
 `OverclockCard` is gated and, when revealed, sits in the next row rather than beside Scale Up.
 Both soft-reset cards (and Clock Speed) share `featureCard(accent)`: compact `0.6rem 0.75rem`
