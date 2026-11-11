@@ -2186,8 +2186,10 @@ export const buyTierQuantity = (tierId, quantity) => state => {
 export const isBuyMaxUnlocked = state =>
   clampNonNegative(state.purge?.count ?? 0) >= 1 || clampNonNegative(state.era?.count ?? 0) >= 1
 
-// The Perks page (Automation / Prestige) appears on the same first-Prestige-ever condition.
-export const isPerksPageRevealed = isBuyMaxUnlocked
+// Firmware (Automation / Prestige) appears on the first Prestige ever — or earlier, as soon as any Power
+// Auto-charge boundary is bought, since that automation's switches (and Auto Boost's) live only on Firmware.
+export const isPerksPageRevealed = state =>
+  isBuyMaxUnlocked(state) || COMPUTE_MERGE_BOUNDARIES.some(boundary => Boolean(state.intro?.[boundary.autoFlagField]))
 
 // Chains a single-level purchase action (state => state, same-reference no-op when it can't buy)
 // until it stops buying, capped at BUY_MAX_ITERATION_CAP. Used for every leveled purchase whose

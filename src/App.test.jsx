@@ -1669,18 +1669,28 @@ test('Auto Boost has its on/off Switch on Firmware → Automation (not on Power)
   expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.computeAutoBoostEnabled).toBe(false)
 })
 
-test('before the first Prestige (Firmware locked), Power shows the Auto-charge/Auto Boost switches and preset as a fallback', () => {
+test('buying Auto-charge before the first Prestige reveals Firmware, where the switches and preset live (Power has none)', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true },
+  })
+  const { unmount } = render(<App />)
+  expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
+  unmount()
+  cleanup()
+  localStorage.clear()
+
   seedMainGameState({
     intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true },
   })
   render(<App />)
-  expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+  expect(screen.queryByRole('button', { name: /^auto-charge$/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('group', { name: /auto boost preference/i })).not.toBeInTheDocument()
 
+  await openPerksTab(user, /open automation/i)
   expect(screen.getByRole('button', { name: /^auto-charge$/i })).toHaveAttribute('aria-pressed', 'true')
-  fireEvent.click(screen.getByRole('button', { name: /^auto boost$/i }))
-  expect(screen.getByRole('button', { name: /^auto boost$/i })).toHaveAttribute('aria-pressed', 'false')
-  fireEvent.click(screen.getByRole('button', { name: /set auto boost preference to eco/i }))
+  await user.click(screen.getByRole('button', { name: /set auto boost preference to eco/i }))
   expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.computeAutoBoostType).toBe('sustain')
 })
 
