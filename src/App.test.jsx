@@ -1566,6 +1566,16 @@ test('an Enable Auto Restage button on Firmware → Automation spends 16 PP to e
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
 })
 
+test('Power pre-selects the highest automated tier on arrival', () => {
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true, autoMergeNodesIntoCluster: true },
+  })
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+  expect(within(screen.getByLabelText(/^batteries tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+  expect(within(screen.getByLabelText(/^cells tier$/i)).queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
+})
+
 test('Auto Boost needs no purchase: Power shows its preset preference once any charge is automated', () => {
   seedMainGameState({
     intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY },
@@ -5213,7 +5223,7 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /select cells to fund a compute boost/i }))
+    // Cells is the highest automated tier, so it is pre-selected on arrival.
     const autoRow = screen.getByRole('button', { name: /^cells auto-charge slots/i })
     const presets = within(screen.getByLabelText(/^cells tier$/i)).getByLabelText(/^compute boost$/i)
     expect(autoRow.compareDocumentPosition(presets) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -5241,7 +5251,6 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /select batteries to fund a compute boost/i }))
     const row = screen.getByRole('button', { name: /^batteries auto-charge slots/i })
     expect(row).toBeDisabled()
     expect(row).toHaveTextContent('🤖 Auto-charge')

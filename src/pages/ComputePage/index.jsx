@@ -507,9 +507,12 @@ const ComputePage = ({ game }) => {
   // tier, so its presets open on arrival; clicking the selected tier again collapses it. Before the
   // merge chain unlocks, Cores (tier 1) is the only tier that can ever hold a balance at all, so
   // it's armed implicitly without needing a clickable row.
-  const [selectedBoostTierIndex, setSelectedBoostTierIndex] = useState(
-    () => (intro.computeBoostType ? (intro.computeBoostTierIndex ?? 1) : null),
-  )
+  // The highest tier whose charge is automated is always pre-selected on arrival (else the active boost's own tier).
+  const [selectedBoostTierIndex, setSelectedBoostTierIndex] = useState(() => {
+    const highestAutomated = ENTITY_ROWS.reduce((best, row, index) => (row.autoFlagField && intro[row.autoFlagField] ? index + 1 : best), 0)
+    if (highestAutomated > 0) return highestAutomated
+    return intro.computeBoostType ? (intro.computeBoostTierIndex ?? 1) : null
+  })
 
   // A click anywhere outside every tier block deselects, collapsing the presets. Clicks inside a
   // tier block (its select button, presets, merge row) are left to that block's own handlers.

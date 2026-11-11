@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Disk rebuilds (after Reformat or a pool flush) now wait until the disk's own pool Capacity can hold one disk of that size, matching Provision Disk. While waiting, the pool's Data Lake keeps filling and the Reformat replay keeps scaling lakes out and buying Boosters for the disk sizes already completed, up to prior highs.
-- Auto Boost is now automatic and free: once a tier's charge is automated, each automatic charge start spends one remaining token of that tier on your preferred Boost preset (once per charge). The 30 PP Firmware unlock is removed; a Switch on Power pauses/resumes it.
+- Auto Boost is now automatic and free: once a tier's charge is automated, each automatic charge start spends one remaining token of that tier on your preferred Boost preset (once per charge). The 30 PP Firmware unlock is removed; a Switch on Power pauses/resumes it, and Power opens with the highest automated tier pre-selected.
 - Compute (Flops) screen: removed the explanatory paragraph and shortened per-tier stats to "N owned · Tier ×multiplier".
 
 - Foundry running-upgrade tile: the percent now matches the Data Lake balance font size, and the four corner labels are spaced apart (top pair to the top, bottom pair to the bottom, wider column gap) without changing the tile size.
