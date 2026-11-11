@@ -1,3 +1,4 @@
+import Switch from 'components/Switch'
 import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration } from 'components/BoostTimerBar'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress, isStackComputeBoostTurnAvailable } from 'game/engine'
@@ -287,6 +288,13 @@ const AutoBoostRow = styled.div`
   width: 100%;
 `
 
+const AutoBoostToggleRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${props => props.theme.space.sm};
+`
+
 const AutoBoostLabel = styled.p`
   margin: 0;
   color: ${props => props.theme.color.textMuted};
@@ -492,14 +500,19 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
+  const autoBoostEnabled = intro.computeAutoBoostEnabled ?? true
+  const anyAutoBoost = ENTITY_ROWS.some(row => row.autoFlagField && intro[row.autoFlagField])
   // Issue #326: which compute-ladder tier is armed to fund the next Boost activation — purely
   // local UI state (free to change, no cost). Navigating here pre-selects the active boost's own
   // tier, so its presets open on arrival; clicking the selected tier again collapses it. Before the
   // merge chain unlocks, Cores (tier 1) is the only tier that can ever hold a balance at all, so
   // it's armed implicitly without needing a clickable row.
-  const [selectedBoostTierIndex, setSelectedBoostTierIndex] = useState(
-    () => (intro.computeBoostType ? (intro.computeBoostTierIndex ?? 1) : null),
-  )
+  // The highest tier whose charge is automated is always pre-selected on arrival (else the active boost's own tier).
+  const [selectedBoostTierIndex, setSelectedBoostTierIndex] = useState(() => {
+    const highestAutomated = ENTITY_ROWS.reduce((best, row, index) => (row.autoFlagField && intro[row.autoFlagField] ? index + 1 : best), 0)
+    if (highestAutomated > 0) return highestAutomated
+    return intro.computeBoostType ? (intro.computeBoostTierIndex ?? 1) : null
+  })
 
   // A click anywhere outside every tier block deselects, collapsing the presets. Clicks inside a
   // tier block (its select button, presets, merge row) are left to that block's own handlers.
@@ -611,15 +624,24 @@ const ComputePage = ({ game }) => {
         </ArmedStatusText>
       )}
 
-      {(!intro.computeMergePageUnlocked || state.computeAutoBoostUnlocked) && (
+      {(!intro.computeMergePageUnlocked || anyAutoBoost) && (
       <BoostCard aria-label="boost">
       {!intro.computeMergePageUnlocked && boostPresets}
 
-      {state.computeAutoBoostUnlocked && (
+      {anyAutoBoost && (
       <AutoBoostRow aria-label="compute auto boost">
-        <AutoBoostLabel>
-          Auto from biggest tier waiting to charge — preference:
-        </AutoBoostLabel>
+        <AutoBoostToggleRow>
+          <AutoBoostLabel>
+            Auto Boost on each automatic charge — preference:
+          </AutoBoostLabel>
+          <Switch
+            $on={autoBoostEnabled}
+            aria-label="auto boost"
+            aria-pressed={autoBoostEnabled}
+            onClick={() => actions.setComputeAutoBoostEnabled(!autoBoostEnabled)}
+            title={`${autoBoostEnabled ? 'Pause' : 'Resume'} auto boost`}
+          />
+        </AutoBoostToggleRow>
         <BoostRow role="group" aria-label="auto boost preference">
           {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
             const selected = (intro.computeAutoBoostType ?? 'standard') === boostType

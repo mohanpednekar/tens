@@ -24,12 +24,10 @@ import {
   getPrestigePpPerPower,
   getTierTickspeedAutobuyerMilestone,
   isBuyMaxUnlocked,
-  isComputeCoreConversionUnlocked,
   isProductionFrozen,
   isOverflowModeUnlocked,
 } from 'game/engine'
 import {
-  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
@@ -491,11 +489,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
 
   const canBuyPlaytimeBonus = !state.playtimeBonusUnlocked && points >= PLAYTIME_BONUS_UNLOCK_COST
 
-  const isComputeAutoBoostActive = state.computeAutoBoostUnlocked ?? false
-  // Stays listed once bought, even after Reboot / Reformat Byte Foundry drops Capacity back below the Boosters threshold.
-  const showComputeAutoBoost = isComputeAutoBoostActive || isComputeCoreConversionUnlocked(state)
-  const canBuyComputeAutoBoost = !isFrozen && !isComputeAutoBoostActive && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST
-
   const tabDots = {
     automation: hasAffordableAutomationPerk(state) && 'automation perk available',
     prestige: hasAffordablePrestigePerk(state) && 'prestige perk available',
@@ -681,31 +674,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         })}
         </TierPairList>
       </Category>
-
-      {showComputeAutoBoost && (
-        <Category aria-label="power automation category">
-          <CategoryHeading>Power Automation</CategoryHeading>
-          <CellGrid>
-          {/* No pause Switch: the Auto Boost preset picker on Power (incl. its off choice) is its control. */}
-          <AutomationRow
-            ariaLabel="auto boost row"
-            icon="🤖"
-            lockedAction={unlockButton({
-              name: 'Auto Boost',
-              cost: COMPUTE_AUTO_BOOST_UNLOCK_COST,
-              canBuy: canBuyComputeAutoBoost,
-              onClick: actions.buyComputeAutoBoost,
-              title: 'Spend Purge Points so a full tier waiting on its own in-flight charge automatically activates your preferred Boost preset (choose it on Power)',
-            })}
-            name="Auto Boost"
-            label="Boost"
-            inlineAction
-            owned={isComputeAutoBoostActive}
-            ownedBadge={<UnlockedBadge icon="🤖" name="Auto Boost" title="Auto Boost unlocked — choose its preset on Power" />}
-          />
-          </CellGrid>
-        </Category>
-      )}
 
       {state.computeFlops?.pageUnlocked && (
         <Category aria-label="compute autobuyers category">
