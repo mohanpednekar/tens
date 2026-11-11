@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Power: a tier's bottom row of 8 slots is now called the **Charger** (labels, Manual and docs).
 
-- Power: the Charge button sits on the left with no "Auto-charge" label on the slot row; the pre-unlock Merge button shows tier symbols on both sides (`⬡ 8→1 🔗`) and the unlock button reads `🤖 Auto n/10`. The Power nav dot now lights only for merge/Charge availability and the Auto-charge unlock — not for Boost availability.
+- Power: the Charge button sits on the left with no "Auto-charge" label on the slot row; the pre-unlock Merge button shows tier symbols on both sides (`⬡ 8→1 🔗`) and the unlock button reads `🔓 Charger n/10`. The Power nav dot now lights only for merge/Charge availability and the Auto-charge unlock — not for Boost availability.
 
 - **Power: explicit Charge button (#1033).** On a tier with Auto-charge unlocked, a ⚡ Charge button moves units from the top row into the bottom row one per second, then merges 8→1 instantly (the automatic timed charge at 18 held still happens and waits while a Charge runs).
 

@@ -713,13 +713,13 @@ const ComputePage = ({ game }) => {
                             aria-label={row.autoAriaLabel}
                             disabled={!canEnableAuto}
                             onClick={() => actions[row.enableAutoAction]()}
-                            title={`Auto: sacrifice ${COMPUTE_ENTITY_CAP} of your ${formatAmount(autoCostHeld)} ${row.autoCostLabel} to permanently automate this step whenever ${row.label} is full, via a timed reserve charge`}
+                            title={`Unlock this tier's Charger: sacrifice ${COMPUTE_ENTITY_CAP} of your ${formatAmount(autoCostHeld)} ${row.autoCostLabel} — it then charges on its own whenever ${row.label} is completely full, via a timed reserve charge`}
                             type="button"
                             variant="info"
                             $progress={autoUnlockProgress}
                             $spacious
                           >
-                            <ButtonContent>{`🤖 Auto ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
+                            <ButtonContent>{`🔓 Charger ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
                           </TierActionButton>
                         </>
                       )
