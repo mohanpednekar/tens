@@ -53,7 +53,8 @@ yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
 yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--recursive flags; it
                   # already covers dependencies/devDependencies/optionalDependencies by default)
-yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml + .github/actions/** (#738)
+yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml + .github/actions/** (#738),
+                  # then fail on any git conflict marker in a tracked text file (#945)
 yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump package.json
                   # (minor if Added/Removed entries, else patch; no-op if Unreleased empty)
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png + favicon.ico from scripts/generate-pwa-icons.mjs
@@ -80,7 +81,8 @@ this hook could only be added from an interactive session.
 > stay `.js` (see `src/components/*/index.js`).
 
 There is no general code lint (`yarn lint` does not exist). CI's required `test` job runs `yarn
-lint:workflows` (`scripts/lint-workflow-shell.mjs` — `bash -n` over every workflow/action `run:` block,
+lint:workflows` (`scripts/lint-workflow-shell.mjs` — `bash -n` over every workflow/action `run:` block —
+then `scripts/lint-conflict-markers.mjs`, #945,
 #738) and then `yarn test`. `.github/workflows/deploy.yml` runs `yarn build` and publishes `dist/` to GitHub Pages on
 push to `main`. Automated Copilot review on PRs is configured through GitHub's repository settings, not
 an explicit workflow file.
@@ -256,12 +258,12 @@ code/secret-scanning alerts not already tracked get the same (Dependabot alerts 
 0(c)/B). Phase A may weigh Impact to reorder *within* a priority tier (`priority:high` still jumps
 outright), saying so when it deviates from lowest-number order.
 
-- `devin-autonomous-maintenance.yml` — Devin-CLI counterpart, every 4h (UTC :17), opens `devin/auto-*` PRs
+- `devin-autonomous-maintenance.yml` — Devin-CLI counterpart, `workflow_dispatch` only (its 4-hourly schedule was removed 2026-10-20: the Devin plan lacks the `swe` model), opens `devin/auto-*` PRs
   (auth `DEVIN_CLI_CREDENTIALS`; git/`gh` via `GH_AUTOMATION_PAT`). The 5-open-PR ceiling counts `devin/auto-*` +
   `claude/auto-*` together. May edit workflows incl. its own, but workflow-file changes stay human-gated
   (`pr-auto-merge.yml` excludes `.github/workflows/**` from green-checks auto-merge). Every change still lands via PR. Follows the Pull-requests
   convention; post-run feedback is `autonomous-pr-followup.yml`'s job.
-- `devin-workflow-health.yml` — daily 00:00 UTC; files an `automation-failure` issue if the Devin workflow doesn't
+- `devin-workflow-health.yml` — `workflow_dispatch` only (daily schedule removed with the above); files an `automation-failure` issue if the Devin workflow doesn't
   parse, hasn't started in 26h, or its latest completed run wasn't `success`.
 - `pr-conflict-sweep.yml` — on every push to `main`, flags newly conflicted open PRs (on `claude/auto-*`/`devin/auto-*`
   the comment triggers the follow-up agent to merge-and-resolve).
@@ -398,6 +400,8 @@ src/
                             checkout), clearSaveSlot / clearAllSaveProgress (never revokes unlock), separately keyed
                             last-save timestamp for offline progress (slot 0 keeps legacy `tens_game_state` keys).
                             Owns Dev Mode's isolated `'dev'` slot ("Dev Mode").
+    storagePrefix.js      ← `createPrefixedStorage`: `dev:` key namespace so the dev build's saves never mix with
+                            production's on the shared origin (no-op prefix elsewhere)
     save-migration/       ← `adaptSaveForCurrentSchema(raw)` → current-compatible state or failure; runs on every
                             load (DESIGN_HISTORY.md "Save persistence")
   components/             ← prop contracts/styling: docs/COMPONENTS_REFERENCE.md (Button, Money, StatCard, ...)
@@ -410,6 +414,7 @@ src/
                             disk → `actions.expediteDiskFill(size)`; shared by ByteFoundryPage and StoragePage (why standalone:
                             DESIGN_HISTORY.md)
     DataLakePanel         ← one Data Lake block `{ actions, state, bare, tierIndex }`, embedded per pool card
+    AutoBoostPresetPicker ← full-width segmented Turbo / Balanced / Eco choice (Firmware → Power Automation)
     icons.js              ← shared glyphs (`COST_ICON` 🏷️ marks every cost)
     BoostBadge, BoostTimerBar, SpeedDetailsPopover, LeadIcon, Switch, Money, BuyMaxToggle (renders nothing until
     `isBuyMaxUnlocked`), ConfirmDialog, OfflineProgressNotice, StatCard — see COMPONENTS_REFERENCE
@@ -451,7 +456,9 @@ scripts/                  ← bump-version.mjs ("Changelog convention"); generat
                             bot-authored `claude/*`/`devin/*` PRs; used by `autonomous-maintenance.yml` and
                             `autonomous-pr-followup.yml`), backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh,
                             sweep-stalled-auto-prs.sh (#60), sync-release-milestones.sh, configure-ios-plist.mjs,
-                            android-boot-smoke.sh, lint-workflow-shell.mjs, verify-maintainer-checklist.mjs —
+                            android-boot-smoke.sh, lint-workflow-shell.mjs, lint-conflict-markers.mjs, check-graphify-freshness.mjs
+                            (committed graph vs. working tree, #761), classify-claude-failure.sh (transient vs. real
+                            Claude-step failure), orphan-branch-scan.sh (#59), verify-maintainer-checklist.mjs —
                             roles in docs/AUTOMATION.md (except resolve-pr-threads/generate-pwa-icons/configure-ios-plist, above and
                             in their own headers); most have a sibling `*.test.js`
 public/                   ← generated PWA icons, favicon.ico, robots.txt (old CRA `index.html`/`manifest.json`/`logo*.png`

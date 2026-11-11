@@ -50,7 +50,7 @@ unlimited. The real constraint is agent usage quota:
   visibility into concurrent usage from `autonomous-pr-followup.yml` or interactive sessions, so a
   modest overshoot is expected and not treated as a failure. See `docs/DESIGN_HISTORY.md` for why
   the earlier fixed-cap approach — and its `25→40→50` retuning history, now historical — was
-  replaced. `autonomous-pr-followup.yml` keeps its own fixed `--max-turns 30` cap, unaffected by
+  replaced. `autonomous-pr-followup.yml` keeps its own fixed `--max-turns 40` cap, unaffected by
   this change.
 
 The engine is naturally self-limited further by the PR-dedup guard (below), which caps
@@ -400,7 +400,9 @@ from the default `GITHUB_TOKEN` can't trigger other workflows.
 
 ### Devin autonomous maintenance (`devin-autonomous-maintenance.yml`)
 
-The Devin-CLI counterpart to `autonomous-maintenance.yml`, running every 4 hours at :17 UTC.
+The Devin-CLI counterpart to `autonomous-maintenance.yml`. It ran every 4 hours at :17 UTC until
+2026-10-20, when the schedule was removed by owner decision (the Devin plan does not include the
+`swe` model); it now runs only via `workflow_dispatch`.
 Each run installs the Devin CLI (credentials from the `DEVIN_CLI_CREDENTIALS` repo secret — a
 `credentials.toml` copied from a machine where `devin auth login` was run), then invokes
 `devin -p --prompt-file <file> --model swe --permission-mode dangerous
@@ -423,7 +425,8 @@ deploy/release config — when a task calls for it. The hard rails that remain a
 (`pr-auto-merge.yml` still excludes `.github/workflows/**` PRs from green-checks auto-merge, so
 workflow edits stay human-gated).
 
-**Health check (`devin-workflow-health.yml`).** A daily midnight-UTC watchdog with no agent:
+**Health check (`devin-workflow-health.yml`).** A watchdog with no agent (`workflow_dispatch` only
+since its daily midnight-UTC schedule was removed alongside the Devin schedule on 2026-10-20):
 parses the workflow file as YAML, confirms a run started within the last 26h (catches a
 disabled/dormant schedule — a breakage producing no run at all is invisible to
 `automation-self-heal.yml`'s `workflow_run` trigger), and checks the latest completed run's
