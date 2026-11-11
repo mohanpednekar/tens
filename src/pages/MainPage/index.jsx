@@ -174,15 +174,6 @@ const CardTitleGroup = styled.div`
   }
 `
 
-  border: 1px solid ${props => props.theme.color.border};
-  border-radius: 999px;
-  color: ${props => props.theme.color.textMuted};
-  font-size: 0.75rem;
-  opacity: ${props => (props.$dimmed ? 0.55 : 1)};
-  padding: 0.1rem 0.5rem;
-  white-space: nowrap;
-`
-
 const ScaleUpCard = styled(StatCard)`
   ${featureCard('#0e7490')}
 `
