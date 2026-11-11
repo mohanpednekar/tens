@@ -790,7 +790,7 @@ itself — `ScaleUpCard` is likewise always shown (unlike `OverclockCard`, still
 tier having ever been unlocked — see below), but stays down in its own row below `TierList` rather
 than joining this card, since its own target walks through the tier ladder one tier at a time (see
 "Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
-through. Below `TierList`: `RestageCard` (left, once revealed) + `ScaleUpCard` (right) share one `SpeedCardsRow` (a lone card fills the row), and `OverclockCard` gets its own full-width row. Clock Speed shows `🏭 ×<1 + step>/lvl` and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock).
+through. Below `TierList`: `RestageCard` (left, once revealed) + `ScaleUpCard` (right) share one `SpeedCardsRow` (a lone card fills the row), and `OverclockCard` gets its own full-width row. Clock Speed shows the base `🏭 ×1.01/lvl` (the Overclock-scaled live step stays in Overclock's disclosure) and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock). `CardTitleGroup` wraps the name/effect onto a second line when a half-width card is too narrow (phone widths around 320px).
 (Earlier iterations tried grouping all three speed-related cards together at the top; this
 was reverted to the current split — Clock Speed alone at top, Restage + Scale Up then Overclock below the tier list —
 per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying

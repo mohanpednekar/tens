@@ -2158,7 +2158,7 @@ occasional player decision given how much it costs the run (wiping Scale Up's bo
 everything else).
 
 `MainPage` surfaces this as an `OverclockCard` (orange accent; Factory view only), rendered directly below
-`ScaleUpCard` in its own full-width `SpeedCardsRow` (see "Scale Up"
+the Restage + Scale Up row in its own full-width `SpeedCardsRow` (see "Scale Up"
 above) — not grouped with `GlobalTickspeedCard`, which renders separately at the top of the Factory view.
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as `scaleUpEverRevealed`. The button (`OverclockButton`, sized to match
