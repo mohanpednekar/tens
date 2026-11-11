@@ -485,6 +485,19 @@ trigger this secrets-bearing workflow) — and checks out the exact commit SHA r
 branch name before running `git checkout -B <branch>` to un-detach HEAD. See
 `docs/DESIGN_HISTORY.md` for the security reasoning behind each of these.
 
+**CI-failure retry cap.** A fix the follow-up pushes re-runs CI, and a red result re-triggers the
+follow-up. Both follow-up workflows therefore skip the CI-failure path once the branch's last 3
+completed `CI` runs all failed (`gh run list --workflow ci.yml --branch <head>`, needs
+`actions: read`; fail-open if the list can't be read). Review comments still trigger a follow-up, and
+Phase 0 of the scheduled run still sees the red PR.
+
+**Config source on CI-failure runs.** On `pull_request_review`/`issue_comment` runs the action restores
+`.claude/`, `CLAUDE.md` and `.mcp.json` from the base branch; on `workflow_run` it does not (the action
+treats it as an automation event), so a CI-failure run reads them from the PR's pinned head SHA. That
+is accepted because `scripts/pr-head-guard.sh` limits these runs to same-repo `claude/auto-*`/
+`devin/auto-*`/`dependabot/*` branches, which only accounts with write access can push to, and
+`Bash(yarn:*)` already runs that branch's own scripts.
+
 ### Dependabot PR follow-up (`dependabot-pr-followup.yml`)
 
 Companion to `autonomous-pr-followup.yml` for Dependabot dependency-bump PRs. Phase 0 of
