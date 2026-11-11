@@ -522,7 +522,7 @@ const InfoPage = () => {
           </li>
           <li>
             After {TIER_DEFINITIONS.length} Scale Ups in a run (the first onto {lastTierName}), the
-            Restage upgrade appears beside Clock Speed: spend XP for +1% faster {lastTierName} ticks per XP
+            Restage upgrade appears left of Scale Up (below the tier list): spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
             It resets every other tier’s owned quantity and your Bits. A 16 PP Auto Restage
             (Firmware → Automation, after Auto Clock Speed) spends it for you, every 64 s at first —
@@ -566,8 +566,8 @@ const InfoPage = () => {
             and Purge Points are kept.
           </li>
           <li>
-            In exchange, permanently multiplies Clock Speed’s per-level rate by ×1.1 for each completed
-            level banked (1% → 1.1% → 1.21% → …).
+            In exchange, multiplies Clock Speed’s per-level rate by ×1.1 for each completed level you
+            had when you claimed (1% → 1.1% → 1.21% → …).
           </li>
           <li>
             The first claim needs {overclockFirstRequirement} completed levels — a minimum; you can
@@ -575,8 +575,9 @@ const InfoPage = () => {
             claim was taken at.
           </li>
           <li>
-            Every completed level counts — claiming at 3 and then 3 more gives the same benefit as
-            claiming 6 at once, so claim whenever you like.
+            Nothing is banked — each claim replaces the previous one, so only the completed level
+            reached at your latest claim sets the boost. Waiting to claim at a higher level gives a
+            bigger boost.
           </li>
         </ul>
       </Section>

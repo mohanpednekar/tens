@@ -5,8 +5,8 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
 
@@ -140,21 +140,30 @@ const featureCard = accent => css`
   }
 `
 
-const CardHeader = styled.div`
-  align-items: center;
-  display: flex;
-  gap: 0.5rem;
-  justify-content: space-between;
+// What a feature card's action multiplies, shown beside the card's name (the button itself carries
+// only the cost/progress).
+const CardEffect = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  font-size: 0.8rem;
+  font-weight: 400;
+  margin-left: auto;
+  white-space: nowrap;
 `
 
-const AutoChip = styled.span`
-  border: 1px solid ${props => props.theme.color.border};
-  border-radius: 999px;
-  color: ${props => props.theme.color.textMuted};
-  font-size: 0.75rem;
-  opacity: ${props => (props.$dimmed ? 0.55 : 1)};
-  padding: 0.1rem 0.5rem;
-  white-space: nowrap;
+// Card name on the left, its effect (CardEffect) right-justified.
+const CardTitleGroup = styled.div`
+  align-items: baseline;
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: space-between;
+  max-width: 100%;
+  min-width: 0;
+
+  h2 {
+    white-space: nowrap;
+  }
 `
 
 const ScaleUpCard = styled(StatCard)`
@@ -192,11 +201,10 @@ const OverclockButton = styled(Button)`
   }
 `
 
-// Lays a pair of compact feature cards side by side at every width (maintainer request): Clock Speed +
-// Restage above the tier list, Scale Up + Overclock below it. Each card shares the row equally
-// (flex: 1 1 0) and never wraps, so the pair stays side by side even at phone width; a lone card
-// (Restage / Overclock not yet revealed) fills the row. Supersedes the earlier below-40rem
-// single-column stack — see docs/DESIGN_HISTORY.md.
+// Clock Speed sits alone above the tier list. Below it, Restage (left) + Scale Up (right) share one
+// row (side by side at every width; a lone card fills the row), and Overclock gets its own
+// full-width SpeedCardsRow. Supersedes the earlier below-40rem single-column stack — see
+// docs/DESIGN_HISTORY.md.
 const SpeedCardsRow = styled.div`
   display: flex;
   gap: 0.4rem;
@@ -660,6 +668,7 @@ const Disclosure = styled.details`
     list-style: none;
     user-select: none;
     width: fit-content;
+    max-width: 100%;
     border-radius: ${props => props.theme.radius.sm};
   }
 
@@ -675,6 +684,17 @@ const Disclosure = styled.details`
   summary h2 {
     display: inline;
     margin: 0;
+  }
+
+  /* A summary holding a CardTitleGroup spans the card so its effect can sit at the right edge; only
+     the name itself stays clickable (the empty gap must not toggle the disclosure). */
+  summary:has(${CardTitleGroup}) {
+    pointer-events: none;
+    width: 100%;
+  }
+
+  summary:has(${CardTitleGroup}) h2 {
+    pointer-events: auto;
   }
 
   p {
@@ -968,12 +988,12 @@ const MainPage = ({ game }) => {
   // Unlike Scale Up, claiming it also
   // wipes Scale Up's per-tier bonuses back to ×1 (scaleUpTierCounts resets) in exchange for
   // permanently multiplying BOTH the (Money-funded) global Tickspeed
-  // upgrade's single per-level step by getOverclockMultiplier(overclockCount)
-  // (×1.1 per banked completed level) — folded into that existing track's own compounding rate,
+  // upgrade's single per-level step by getOverclockMultiplier(overclockLevel)
+  // (×1.1 per Overclock level) — folded into that existing track's own compounding rate,
   // not a separate
   // multiplier stacked alongside it, so it has no effect until at least one Tickspeed level is
-  // bought. A claim banks the last tier's current completed-level count on top of the running
-  // total (overclockCount), so how often the player claims never changes the eventual benefit.
+  // bought. A claim sets the Overclock level to the last tier's current completed-level count
+  // (it replaces the previous level — nothing is banked).
   // Gated on the last tier having ever
   // been unlocked (unlike Scale Up above, which is always shown), so it doesn't clutter the page
   // before tier10 first exists — but once shown, stays shown (in a disabled state once not
@@ -983,32 +1003,18 @@ const MainPage = ({ game }) => {
   useEffect(() => {
     if (lastTierUnlocked) setOverclockEverRevealed(true)
   }, [lastTierUnlocked])
-  const overclockCount = state.overclockCount ?? 0
+  const overclockLevel = getOverclockLevel(state) ?? 0
   const overclockRequirement = getOverclockRequirement(state)
   const overclockRequirementDisplay = overclockRequirement
   // The current/next per-level step the global Tickspeed upgrade's own REGULAR levels compound at,
   // expressed as a "multiplier" (1 + step) purely so formatGlobalTickspeedBonusPercent's existing
   // (multiplier - 1) * 100 formatting can be reused directly — these are never applied as
   // standalone multipliers anywhere, only fed into getGlobalTickspeedProductionMultiplier below.
-  // The "next" value previews what claiming right now would bank on top — the last tier's own
-  // current COMPLETED levels, since overclockGame banks them additively (claiming 3 then 3 levels
-  // compounds exactly like claiming 6 at once), not just the minimum requirement.
-  const currentGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)
-  const nextGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount + lastTierLevelDisplay)
+  const currentGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockLevel)
+  // Each completed final-tier level multiplies Clock Speed's per-level rate by this (a constant).
+  const overclockLevelEffectDisplay = 1 + OVERCLOCK_MULTIPLIER_STEP
   const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)
   const canOverclock = !isFrozen && lastTierLevelDisplay >= overclockRequirement
-
-  // Auto Scale Up (bought on Firmware → Automation; see buyAutoScaleUp in engine.js) — Factory only shows
-  // its status note.
-  const isAutoScaleUpActive = state.autoScaleUp ?? false
-  // Whether Auto Scale Up currently acts, independent of whether it's been bought (see
-  // setAutoScaleUpEnabled/tickGame in engine.js) — a pause/resume preference, not a purchase.
-  const autoScaleUpEnabled = state.autoScaleUpEnabled ?? true
-  const autoScaleUpEffectivelyActive = autoScaleUpEnabled
-  const autoScaleUpStatusLabel = autoScaleUpEnabled ? 'Auto Scale Up active' : 'Auto Scale Up paused'
-  const autoScaleUpStatusTitle = autoScaleUpEnabled
-    ? "Scale Up now triggers automatically the instant it's eligible"
-    : 'Auto Scale Up is currently paused — it will not trigger until resumed'
 
   // PP-funded unlocks/upgrades/toggles live on the Firmware page (pages/PerksPage).
 
@@ -1022,16 +1028,16 @@ const MainPage = ({ game }) => {
   // purchasable once at least 1 of the second tier is owned, so a player can't spend their Bytes
   // on it before Kilobytes are producing any. The level itself resets to not-yet-bought on both
   // Up (see purgeGame/scaleUpGame in engine.js), same as tier02's owned count, so re-unlocking
-  // always requires owning tier02 again after either reset. overclockCount, by contrast, is NOT
+  // always requires owning tier02 again after either reset. The Overclock level, by contrast, is NOT
   // reset by Scale Up — its boost to the per-level step survives across a re-unlock within the
   // same Prestige cycle.
   const globalTickspeedLevel = state.globalTickspeedMultiplier ?? null
   const isGlobalTickspeedActive = globalTickspeedLevel !== null
-  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel, overclockCount)
+  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel, overclockLevel)
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
   const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && isGlobalTickspeedAffordable(state)
-  // The last tier's XP-funded tickspeed — a separate upgrade shown beside Clock Speed once the last tier
+  // The last tier's XP-funded tickspeed — a separate upgrade shown left of Scale Up once the last tier
   // has been a Scale Up target this cycle (isLastTierTickspeedXpUnlocked). Always spends the entire
   // XP balance in one action, since every consumption resets every other tier's owned quantity and
   // Bits; disabled while the last tier owns nothing (nothing to speed up — see
@@ -1278,8 +1284,8 @@ const MainPage = ({ game }) => {
               )}
               {overclockEverRevealed && (
                 <li>
-                  Overclock: {overclockCount > 0
-                    ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from ${formatAmount(overclockCount)} banked completed levels`
+                  Overclock: {overclockLevel > 0
+                    ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%)`
                     : `not yet claimed (reach ${formatAmount(overclockRequirementDisplay)} completed levels on ${lastTier.name})`}
                 </li>
               )}
@@ -1310,17 +1316,29 @@ const MainPage = ({ game }) => {
       </StickyBalances>
 
 
-      {(globalTickspeedCardEverRevealed || isLastTierXpUnlocked) && (
-      <SpeedCardsRow>
       {globalTickspeedCardEverRevealed && (
+      <SpeedCardsRow>
         <GlobalTickspeedCard aria-label="global clock speed panel">
           <Disclosure>
-            <summary><h2>Clock Speed</h2></summary>
-            {isGlobalTickspeedActive && (
-              <MutedText>
-                {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
-              </MutedText>
-            )}
+            <summary>
+              <CardTitleGroup>
+                <h2>Clock Speed</h2>
+                <CardEffect
+                  title="Each Clock Speed level makes every tier's production ticks faster by this factor (Overclock raises that step; the live rate is on Overclock's disclosure)"
+                  onClick={event => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }}
+                >
+                  🏭 ×{formatRate(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP)}/lvl
+                </CardEffect>
+              </CardTitleGroup>
+            </summary>
+            <MutedText>
+              {isGlobalTickspeedActive
+                ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.`
+                : 'Not active yet — spend Bytes to make every tier\'s production ticks faster, one level at a time.'}
+            </MutedText>
           </Disclosure>
           <Button
             aria-label={
@@ -1348,41 +1366,6 @@ const MainPage = ({ game }) => {
             />
           </Button>
         </GlobalTickspeedCard>
-      )}
-
-      {isLastTierXpUnlocked && (
-        <GlobalTickspeedCard aria-label="restage panel">
-          <Disclosure>
-            <summary><h2>Restage</h2></summary>
-            <MutedText>
-              {formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpConsumed), { precise: true })} faster {lastTier.name} ticks
-              {' '}from {formatAmount(lastTierXpConsumed)} XP consumed. Next consumption needs at least {formatAmount(lastTierXpMinConsumption)} XP.
-            </MutedText>
-          </Disclosure>
-          <Button
-            aria-label={`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`}
-            variant="smart"
-            disabled={!canConsumeLastTierXp}
-            onClick={handleConsumeLastTierXp}
-            title={lastTierOwned > 0
-              ? `Consume XP for a compounding +1% ${lastTier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`
-              : `No ${lastTier.name} owned right now — nothing to speed up, so this stays disabled until you own at least one again`}
-            type="button"
-            $progress={lastTierXpProgressPercent}
-            $pulse={canConsumeLastTierXp}
-          >
-            <ButtonIcon>🧬 </ButtonIcon>
-            <ButtonLabel>{formatAmount(lastTierXpBalance)} XP</ButtonLabel>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label={`${lastTier.name} Restage progress`}
-              aria-valuenow={lastTierXpProgressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
-          </Button>
-        </GlobalTickspeedCard>
-      )}
       </SpeedCardsRow>
       )}
 
@@ -1417,7 +1400,7 @@ const MainPage = ({ game }) => {
           // level 1 is the baseline ×1, no bonus yet, each further level speeds up this tier's own
           // delivery frequency by another 10% (see getEffectiveTierTickSpeedSeconds in engine.js) —
           // it does NOT change how much lands per delivery, only how often one arrives. The last
-          // tier's separate XP-funded upgrade (beside Clock Speed) multiplies on top of this.
+          // tier's separate XP-funded upgrade (left of Scale Up) multiplies on top of this.
           const tickspeedLevel = state.tickspeedLevels?.[tier.id] ?? 1
           const tickspeedMultiplier = getTickspeedProductionMultiplier(tickspeedLevel)
             * (tier.id === lastTier.id ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0) : 1)
@@ -1577,15 +1560,73 @@ const MainPage = ({ game }) => {
       </TierList>
 
       <SpeedCardsRow>
+      {isLastTierXpUnlocked && (
+        <GlobalTickspeedCard aria-label="restage panel">
+          <Disclosure>
+            <summary>
+              <CardTitleGroup>
+                <h2>Restage</h2>
+                <CardEffect
+                  title={`Each XP consumed makes ${lastTier.name} ticks faster by this factor (compounding)`}
+                  onClick={event => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }}
+                >
+                  {lastTier.symbol} ×{formatRate(getLastTierXpTickspeedMultiplier(1))}/XP
+                </CardEffect>
+              </CardTitleGroup>
+            </summary>
+            <MutedText>
+              {formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpConsumed), { precise: true })} faster {lastTier.name} ticks
+              {' '}from {formatAmount(lastTierXpConsumed)} XP consumed. Next consumption needs at least {formatAmount(lastTierXpMinConsumption)} XP.
+            </MutedText>
+          </Disclosure>
+          <Button
+            aria-label={`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`}
+            variant="smart"
+            disabled={!canConsumeLastTierXp}
+            onClick={handleConsumeLastTierXp}
+            title={lastTierOwned > 0
+              ? `Consume XP for a compounding +1% ${lastTier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`
+              : `No ${lastTier.name} owned right now — nothing to speed up, so this stays disabled until you own at least one again`}
+            type="button"
+            $progress={lastTierXpProgressPercent}
+            $pulse={canConsumeLastTierXp}
+          >
+            <ButtonIcon>🧬 </ButtonIcon>
+            <ButtonLabel>{formatAmount(lastTierXpBalance)} XP</ButtonLabel>
+            <VisuallyHidden
+              role="progressbar"
+              aria-label={`${lastTier.name} Restage progress`}
+              aria-valuenow={lastTierXpProgressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </Button>
+        </GlobalTickspeedCard>
+      )}
         <ScaleUpCard aria-label="scale up panel">
-          <CardHeader>
-            <h2>Scale Up</h2>
-            {!isFirstRun && isAutoScaleUpActive && (
-              <AutoChip $dimmed={!autoScaleUpEffectivelyActive} aria-label={autoScaleUpStatusLabel} title={autoScaleUpStatusTitle}>
-                ⏩ {autoScaleUpEffectivelyActive ? 'Auto' : 'Paused'}
-              </AutoChip>
-            )}
-          </CardHeader>
+          <Disclosure>
+            <summary>
+              <CardTitleGroup>
+                <h2>Scale Up</h2>
+                <CardEffect
+                  title="Doubles production for tiers unlocked so far"
+                  onClick={event => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }}
+                >
+                  🏭 ×2{scaleUpUnlocksTB ? ' · 🔓 TB' : ''}
+                </CardEffect>
+              </CardTitleGroup>
+            </summary>
+            <MutedText>
+              Resets tiers and doubles production of every tier unlocked so far
+              {scaleUpSuccessorTier ? `, and unlocks ${scaleUpSuccessorTier.name}` : ''}. Needs {formatAmount(scaleUpRequirementDisplay)} completed {scaleUpTargetTier.name} levels.
+            </MutedText>
+          </Disclosure>
           <ScaleUpButton
             aria-label={`Scale Up (requires ${scaleUpRequirementDisplay} completed ${scaleUpTargetTier.name} levels) — doubles production for tiers unlocked so far${scaleUpUnlocksTB ? ' and unlocks TB' : ''}`}
             color={canScaleUp ? '#22d3ee' : 'darkgrey'}
@@ -1598,7 +1639,7 @@ const MainPage = ({ game }) => {
             $pulse={canScaleUp}
           >
             <ButtonIcon>⏩ </ButtonIcon>
-            <ButtonLabel>×2{' · '}{scaleUpTargetTier.symbol}{' '}{formatAmount(scaleUpTargetTierLevelDisplay)}/{formatAmount(scaleUpRequirementDisplay)}{scaleUpUnlocksTB ? ' · Unlock TB' : ''}</ButtonLabel>
+            <ButtonLabel>{scaleUpTargetTier.symbol}{' '}{formatAmount(scaleUpTargetTierLevelDisplay)}/{formatAmount(scaleUpRequirementDisplay)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Scale Up progress"
@@ -1609,29 +1650,45 @@ const MainPage = ({ game }) => {
           </ScaleUpButton>
         </ScaleUpCard>
 
+      </SpeedCardsRow>
+
       {overclockEverRevealed && (
+      <SpeedCardsRow>
         <OverclockCard aria-label="overclock panel">
           <Disclosure>
-            <summary><h2>Overclock</h2></summary>
-            {overclockCount > 0 && (
-              <MutedText>
-                Clock Speed's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from {formatAmount(overclockCount)} banked completed levels.
-              </MutedText>
-            )}
+            <summary>
+              <CardTitleGroup>
+                <h2>Overclock</h2>
+                <CardEffect
+                  title="Each completed level multiplies Clock Speed's per-level rate"
+                  onClick={event => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }}
+                >
+                  🌐 ×{overclockLevelEffectDisplay}/lvl
+                </CardEffect>
+              </CardTitleGroup>
+            </summary>
+            <MutedText>
+              {overclockLevel > 0
+                ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%).`
+                : `Not claimed yet — reach ${formatAmount(overclockRequirementDisplay)} completed ${lastTier.name} levels. Each completed level then multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay}.`}
+            </MutedText>
           </Disclosure>
           <OverclockButton
-            aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
+            aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus; each completed ${lastTier.name} level (${formatAmount(lastTierLevelDisplay)} now) multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay}`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
             onClick={actions.overclock}
-            title={`Resets tiers (and Scale Up's bonus) and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}% — requires ${overclockRequirementDisplay} completed ${lastTier.name} levels`}
+            title={`Resets tiers (and Scale Up's bonus); each completed ${lastTier.name} level multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay} — requires ${overclockRequirementDisplay} completed levels`}
             type="button"
             $progress={overclockProgressPercent}
             $progressColor="#fb923c"
             $pulse={canOverclock}
           >
             <ButtonIcon>⚡ </ButtonIcon>
-            <ButtonLabel>{formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%/lvl{' · '}{lastTier.symbol}{' '}{formatAmount(lastTierLevelDisplay)}/{formatAmount(overclockRequirementDisplay)}</ButtonLabel>
+            <ButtonLabel>{lastTier.symbol}{' '}{formatAmount(lastTierLevelDisplay)}/{formatAmount(overclockRequirementDisplay)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Overclock progress"
@@ -1641,8 +1698,8 @@ const MainPage = ({ game }) => {
             />
           </OverclockButton>
         </OverclockCard>
-      )}
       </SpeedCardsRow>
+      )}
 
     </RootDiv>
   )

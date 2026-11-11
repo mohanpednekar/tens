@@ -32,6 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Disk rebuilds (after Reformat or a pool flush) now wait until the disk's own pool Capacity can hold one disk of that size, matching Provision Disk. While waiting, the pool's Data Lake keeps filling and the Reformat replay keeps scaling lakes out and buying Boosters for the disk sizes already completed, up to prior highs.
 - Auto Boost is now automatic and free: once a tier's charge is automated, each automatic charge start spends one remaining token of that tier on your preferred Boost preset (once per charge). The 30 PP Firmware unlock is removed; a Switch on Power pauses/resumes it, and Power opens with the highest automated tier pre-selected.
+
+- Auto Boost's on/off Switch and its preset picker moved from Power to Firmware → Automation → Power Automation, and Auto-charge gets one pause/resume Switch there too (shown once any tier's Auto-charge is bought; buying Auto-charge per tier stays on Power). Pausing Auto-charge stops new automatic timed charges; instant charge-ups still work. Firmware now appears as soon as you buy any Auto-charge (not only after the first Prestige) so these controls are always reachable.
+
+- Every Factory feature card (Clock Speed, Restage, Scale Up, Overclock) now has an expandable details section, including before it's active/claimed; Scale Up previously had none.
+
+- Removed the "Auto"/"Paused" chip from the Scale Up card; Auto Scale Up is managed only on Firmware.
+
+- **Overclock no longer banks levels.** Clock Speed's per-level boost (×1.1 per level) now depends only on the final-tier completed level reached at your latest Overclock claim, instead of a running total across every claim; the Overclock card no longer mentions "banked completed levels", and the button now shows the per-level effect and completed/required levels (`⚡ QB 7/12`; the effect sits beside the card name as `🌐 ×1.1/lvl`, and Scale Up's as `🏭 ×2` — 🌐 Clock Speed / 🏭 tier production mark what each multiplies; Overclock now has its own row; Restage moved beside Scale Up below the tier list, and Clock Speed (`🏭 ×1.01/lvl`) and Restage (`QB ×1.01/XP`) now show their core effect beside their names too) instead of a computed rate. Existing saves keep their last claim's level, so the per-level rate may drop.
+
 - Compute (Flops) screen: removed the explanatory paragraph and shortened per-tier stats to "N owned · Tier ×multiplier".
 
 - Foundry running-upgrade tile: the percent now matches the Data Lake balance font size, and the four corner labels are spaced apart (top pair to the top, bottom pair to the bottom, wider column gap) without changing the tile size.

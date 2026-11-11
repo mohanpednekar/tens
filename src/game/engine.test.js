@@ -178,6 +178,7 @@ import {
   getOfflineRewardBonusSeconds,
   applyOfflineRewardBonus,
   getOverclockMultiplier,
+  getOverclockLevel,
   getOverclockRequirement,
   getPrestigeDoublePpUpgradeCost,
   getPrestigePointsAwarded,
@@ -476,9 +477,9 @@ const withScaleUpCount = (state, count) => ({
   scaleUpTierCounts: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, count])),
 })
 
-const withOverclockCount = (state, count) => ({
+const withOverclockLevel = (state, level) => ({
   ...state,
-  overclockCount: count,
+  overclockLastClaimCompletedLevels: level,
 })
 
 const withAutoScaleUp = (state, active = true) => ({
@@ -4625,6 +4626,15 @@ describe.each([
     expect(after.intro[timerField]).toBe(durationOf() - 1) // the same tick's elapsedSeconds also counts down
   })
 
+  it('tick starts no NEW reserve merge while Auto-charge is paused (computeAutoChargeEnabled false), but still counts an in-flight one down', () => {
+    const full = { ...withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true }), computeAutoChargeEnabled: false }
+    const after = tick(1)(full)
+    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP)
+    expect(after.intro[timerField] ?? 0).toBe(0)
+    const inFlight = { ...withIntro(allPoolsVisibleState(), { [autoFlagField]: true, [timerField]: durationOf() }), computeAutoChargeEnabled: false }
+    expect(tick(1)(inFlight).intro[timerField]).toBe(durationOf() - 1)
+  })
+
   it('tick does not start a second reserve merge while one is already in flight, even if the input has refilled all the way back to the extended cap', () => {
     const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true, [timerField]: durationOf() })
     const after = tick(1)(state)
@@ -6199,7 +6209,7 @@ describe('getGlobalTickspeedProductionMultiplier', () => {
     expect(getGlobalTickspeedProductionMultiplier(10, 5)).toBeCloseTo((1 + boostedStep) ** 10)
   })
 
-  it('is still 1 at level 0 regardless of overclockCount', () => {
+  it('is still 1 at level 0 regardless of the Overclock level', () => {
     expect(getGlobalTickspeedProductionMultiplier(0, 5)).toBe(1)
     expect(getGlobalTickspeedProductionMultiplier(null, 5)).toBe(1)
   })
@@ -6456,7 +6466,7 @@ describe('getOverclockRequirement', () => {
     expect(getOverclockRequirement({ overclockLastClaimCompletedLevels: 11 })).toBe(14)
   })
 
-  it('falls back to the legacy overclockCount for saves written before overclockLastClaimCompletedLevels existed', () => {
+  it('falls back to the legacy banked overclockCount for saves written before overclockLastClaimCompletedLevels existed', () => {
     expect(getOverclockRequirement({ overclockCount: 8 })).toBe(11)
   })
 
@@ -6707,7 +6717,7 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
   it('boosts the global tickspeed multiplier\'s own regular step once claimed, when a level is already bought', () => {
     // 5 claimed Overclock levels multiply the regular 1% step by getOverclockMultiplier(5) = 1.1^5,
     // folded directly into the global tickspeed multiplier itself — not a separate factor.
-    const state = withOverclockCount(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 5)
+    const state = withOverclockLevel(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 5)
     const boostedRegularStep = 0.01 * 1.1 ** 5
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1 + boostedRegularStep) ** 9)
   })
@@ -6715,13 +6725,13 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
   it('has no effect at all while the global tickspeed multiplier is still at level 0/not yet bought', () => {
     // Overclock only boosts the per-level step of an existing global tickspeed level — with 0
     // levels bought, there's nothing for that boosted step to compound over, so the effective
-    // tickspeed is unaffected regardless of overclockCount.
-    const state = withOverclockCount(createInitialGameState(), 5)
+    // tickspeed is unaffected regardless of the Overclock level.
+    const state = withOverclockLevel(createInitialGameState(), 5)
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBe(1)
   })
 
   it('stacks the boosted global tickspeed step multiplicatively with the per-tier tickspeed multiplier', () => {
-    const state = withOverclockCount(
+    const state = withOverclockLevel(
       withGlobalTickspeedMultiplier(
         withTickspeedLevel(createInitialGameState(), tensTier.id, 2),
         9
@@ -6733,8 +6743,8 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
       .toBeCloseTo(1 / (1.1 * (1 + boostedRegularStep) ** 9))
   })
 
-  it('falls back to 0 Overclock levels (no bonus) when overclockCount is missing from state entirely', () => {
-    const state = omit(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 'overclockCount')
+  it('falls back to 0 Overclock levels (no bonus) when overclockLastClaimCompletedLevels is missing from state entirely', () => {
+    const state = omit(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 'overclockLastClaimCompletedLevels')
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.01 ** 9))
   })
 })
@@ -8619,12 +8629,12 @@ describe('purgeGame', () => {
     expect(after.scaleUpTargetTierIndex).toBe(0)
   })
 
-  it('resets the Overclock count to 0 across prestige, same as Scale Up', () => {
-    const state = withOverclockCount(
+  it('resets the Overclock level across prestige, same as Scale Up', () => {
+    const state = withOverclockLevel(
       withMoney(createInitialGameState(), PURGE_THRESHOLD), 3
     )
     const after = purgeGame(state)
-    expect(after.overclockCount).toBe(0)
+    expect(after.overclockLastClaimCompletedLevels).toBeNull()
   })
 
   it('keeps the Auto Scale Up flag permanently across prestige', () => {
@@ -9184,10 +9194,17 @@ describe('scaleUpGame', () => {
     expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[2].id)).toBe(1)
   })
 
-  it('keeps overclockCount permanently across an ordinary Scale Up', () => {
-    const state = withOverclockCount(eligibleState(), 4)
+  it('keeps a legacy save\'s banked overclockCount (resolved as its Overclock level) across Scale Up', () => {
+    const state = { ...eligibleState(), overclockCount: 8 }
     const after = scaleUpGame(state)
-    expect(after.overclockCount).toBe(4)
+    expect(getOverclockLevel(after)).toBe(8)
+    expect(getOverclockRequirement(after)).toBe(11)
+  })
+
+  it('keeps the Overclock level across an ordinary Scale Up', () => {
+    const state = withOverclockLevel(eligibleState(), 4)
+    const after = scaleUpGame(state)
+    expect(after.overclockLastClaimCompletedLevels).toBe(4)
   })
 
   it('keeps the Byte Foundry intro state permanently untouched across speed up, unlike prestige', () => {
@@ -9231,9 +9248,8 @@ describe('overclockGame', () => {
     expect(overclockGame(state)).toBe(state)
   })
 
-  it('banks the claim\'s completed-level count onto overclockCount on a claim', () => {
+  it('sets the Overclock level to the claim\'s completed-level count on a claim', () => {
     const after = overclockGame(eligibleState())
-    expect(after.overclockCount).toBe(5)
     expect(after.overclockLastClaimCompletedLevels).toBe(5)
   })
 
@@ -9251,39 +9267,32 @@ describe('overclockGame', () => {
       overclockLastClaimCompletedLevels: 7,
     }
     const after = overclockGame(eligible)
-    // This claim banks its own 10 completed levels on top of whatever earlier claims banked.
-    expect(after.overclockCount).toBe(10)
     expect(after.overclockLastClaimCompletedLevels).toBe(10)
   })
 
-  it('banks the whole current completed-level count in one claim — Overclocking at a count ABOVE the minimum is allowed and next-requirement grows from the actual claim', () => {
+  it('sets the Overclock level to the whole current completed-level count in one claim — Overclocking at a count ABOVE the minimum is allowed and next-requirement grows from the actual claim', () => {
     // Last claimed at 5 completed (requirement 8); the player keeps climbing to 11 completed —
-    // a single claim banks all 11 and pushes the next requirement to 14, not to a
+    // a single claim replaces the level with 11 and pushes the next requirement to 14, not to a
     // predetermined 8-then-11 slot.
     const state = {
       ...withPurchaseLevel(createInitialGameState(), lastTier.id, 12),
       overclockLastClaimCompletedLevels: 5,
     }
     const after = overclockGame(state)
-    expect(after.overclockCount).toBe(11)
     expect(after.overclockLastClaimCompletedLevels).toBe(11)
     expect(getOverclockRequirement(after)).toBe(14)
   })
 
-  it('claiming 3 completed levels then 3 more equals claiming 6 at once — Overclock only banks accumulated compounding, frequency never changes the eventual benefit', () => {
-    // overclockCount accumulates each claim's completed-level count additively, and the
-    // multiplier compounds over the total (getOverclockMultiplier(n) = 1.1^n) — so two claims
-    // banking 3 and 3 produce the same banked total as one claim banking 6.
-    const bank33 = {
+  it('does not accumulate across claims — the multiplier follows only the level reached at the latest claim', () => {
+    const prior = {
       ...withPurchaseLevel(createInitialGameState(), lastTier.id, 7), // 6 completed
-      overclockLastClaimCompletedLevels: 3, overclockCount: 3,
+      overclockLastClaimCompletedLevels: 3,
     }
-    const after33 = overclockGame(bank33)
-    // Previous claim at 3 completed -> requirement 6; this claim banks its 6 -> total 9.
-    expect(after33.overclockCount).toBe(3 + 6)
-    expect(after33.overclockLastClaimCompletedLevels).toBe(6)
-    // And the multiplier over a 3+6 total equals the multiplier over a single claim of 9.
-    expect(getOverclockMultiplier(after33.overclockCount)).toBeCloseTo(getOverclockMultiplier(9))
+    const after = overclockGame(prior)
+    expect(after.overclockLastClaimCompletedLevels).toBe(6)
+    expect(after.overclockCount).toBeUndefined()
+    expect(getGlobalTickspeedProductionMultiplier(9, getOverclockLevel(after)))
+      .toBeCloseTo(getGlobalTickspeedProductionMultiplier(9, 6))
   })
 
   it('resets the aggregate Scale Up count and per-tier production bonuses to 0', () => {
@@ -9483,10 +9492,10 @@ describe('overclockGame', () => {
     expect(overclockGame(state)).toBe(state)
   })
 
-  it('falls back to 0 when overclockCount is missing from state entirely', () => {
-    const state = omit(eligibleState(), 'overclockCount')
+  it('falls back to the 5-level first requirement when the Overclock level is missing from state entirely', () => {
+    const state = omit(eligibleState(), 'overclockLastClaimCompletedLevels')
     const after = overclockGame(state)
-    expect(after.overclockCount).toBe(5)
+    expect(after.overclockLastClaimCompletedLevels).toBe(5)
   })
 
   it('keeps the Byte Foundry intro state permanently untouched across overclock, unlike prestige', () => {

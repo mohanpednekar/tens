@@ -1,4 +1,3 @@
-import Switch from 'components/Switch'
 import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration } from 'components/BoostTimerBar'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress, isStackComputeBoostTurnAvailable } from 'game/engine'
@@ -280,28 +279,6 @@ const BoostRow = styled.div`
   }
 `
 
-const AutoBoostRow = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: ${props => props.theme.space.sm};
-  width: 100%;
-`
-
-const AutoBoostToggleRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: ${props => props.theme.space.sm};
-`
-
-const AutoBoostLabel = styled.p`
-  margin: 0;
-  color: ${props => props.theme.color.textMuted};
-  font-size: ${props => props.theme.type.scale.sm.size};
-  text-align: center;
-`
-
 // The full ten-tier progression this page walks top to bottom. Every row past Cores through
 // Supercomputers shares the exact same shape: a merge boundary into the tier above it, which —
 // once that boundary's auto-charge is unlocked (see intro.autoMergeCoresIntoNode/
@@ -500,8 +477,6 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
-  const autoBoostEnabled = intro.computeAutoBoostEnabled ?? true
-  const anyAutoBoost = ENTITY_ROWS.some(row => row.autoFlagField && intro[row.autoFlagField])
   // Issue #326: which compute-ladder tier is armed to fund the next Boost activation — purely
   // local UI state (free to change, no cost). Navigating here pre-selects the active boost's own
   // tier, so its presets open on arrival; clicking the selected tier again collapses it. Before the
@@ -624,44 +599,10 @@ const ComputePage = ({ game }) => {
         </ArmedStatusText>
       )}
 
-      {(!intro.computeMergePageUnlocked || anyAutoBoost) && (
+      {!intro.computeMergePageUnlocked && (
       <BoostCard aria-label="boost">
-      {!intro.computeMergePageUnlocked && boostPresets}
+      {boostPresets}
 
-      {anyAutoBoost && (
-      <AutoBoostRow aria-label="compute auto boost">
-        <AutoBoostToggleRow>
-          <AutoBoostLabel>
-            Auto Boost on each automatic charge — preference:
-          </AutoBoostLabel>
-          <Switch
-            $on={autoBoostEnabled}
-            aria-label="auto boost"
-            aria-pressed={autoBoostEnabled}
-            onClick={() => actions.setComputeAutoBoostEnabled(!autoBoostEnabled)}
-            title={`${autoBoostEnabled ? 'Pause' : 'Resume'} auto boost`}
-          />
-        </AutoBoostToggleRow>
-        <BoostRow role="group" aria-label="auto boost preference">
-          {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
-            const selected = (intro.computeAutoBoostType ?? 'standard') === boostType
-            return (
-              <CompactButton
-                key={`auto-${boostType}`}
-                aria-label={`set auto boost preference to ${COMPUTE_BOOST_DISPLAY[boostType].label.toLowerCase()}`}
-                aria-pressed={selected}
-                onClick={() => actions.setComputeAutoBoostType(boostType)}
-                title={`Auto Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
-                type="button"
-                variant={selected ? 'prestige' : 'neutral'}
-              >
-                <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon}${selected ? ' ✓' : ''}`}</ButtonContent>
-              </CompactButton>
-            )
-          })}
-        </BoostRow>
-      </AutoBoostRow>
-      )}
       </BoostCard>
       )}
 

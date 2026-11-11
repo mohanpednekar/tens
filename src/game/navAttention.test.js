@@ -321,7 +321,6 @@ describe('navAttention', () => {
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
       purchaseLevels: { [lastTierId]: 6 }, // 5 completed levels
       everUnlockedTierIds: { [lastTierId]: true },
-      overclockCount: 0,
       scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
       // Once every tier is unlocked, Scale Up's own requirement on the last tier is a flat 3 (see
       // getScaleUpRequirement).
