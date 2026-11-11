@@ -209,7 +209,7 @@ const OverclockButton = styled(Button)`
 `
 
 // Lays a pair of compact feature cards side by side at every width (maintainer request): Clock Speed +
-// Restage above the tier list, Scale Up + Overclock below it. Each card shares the row equally
+// Restage above the tier list; Scale Up and Overclock each get their own full-width row below it. Each card shares the row equally
 // (flex: 1 1 0) and never wraps, so the pair stays side by side even at phone width; a lone card
 // (Restage / Overclock not yet revealed) fills the row. Supersedes the earlier below-40rem
 // single-column stack — see docs/DESIGN_HISTORY.md.
@@ -1595,7 +1595,7 @@ const MainPage = ({ game }) => {
           <CardHeader>
             <CardTitleGroup>
               <h2>Scale Up</h2>
-              <CardEffect title="Doubles production for tiers unlocked so far">×2 🏭{scaleUpUnlocksTB ? ' · 🔓 TB' : ''}</CardEffect>
+              <CardEffect title="Doubles production for tiers unlocked so far">🏭 ×2{scaleUpUnlocksTB ? ' · 🔓 TB' : ''}</CardEffect>
             </CardTitleGroup>
             {!isFirstRun && isAutoScaleUpActive && (
               <AutoChip $dimmed={!autoScaleUpEffectivelyActive} aria-label={autoScaleUpStatusLabel} title={autoScaleUpStatusTitle}>
@@ -1626,7 +1626,10 @@ const MainPage = ({ game }) => {
           </ScaleUpButton>
         </ScaleUpCard>
 
+      </SpeedCardsRow>
+
       {overclockEverRevealed && (
+      <SpeedCardsRow>
         <OverclockCard aria-label="overclock panel">
           <CardTitleGroup>
             <Disclosure>
@@ -1637,7 +1640,7 @@ const MainPage = ({ game }) => {
                 </MutedText>
               )}
             </Disclosure>
-            <CardEffect title="Each completed level multiplies Clock Speed's per-level rate">×{overclockLevelEffectDisplay}/lvl 🌐</CardEffect>
+            <CardEffect title="Each completed level multiplies Clock Speed's per-level rate">🌐 ×{overclockLevelEffectDisplay}/lvl</CardEffect>
           </CardTitleGroup>
           <OverclockButton
             aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus; each completed ${lastTier.name} level (${formatAmount(lastTierLevelDisplay)} now) multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay}`}
@@ -1661,8 +1664,8 @@ const MainPage = ({ game }) => {
             />
           </OverclockButton>
         </OverclockCard>
-      )}
       </SpeedCardsRow>
+      )}
 
     </RootDiv>
   )

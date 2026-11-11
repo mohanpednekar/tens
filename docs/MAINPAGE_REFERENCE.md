@@ -151,8 +151,8 @@ pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-
 Presents only the newest unlocked size (`getPresentedDiskSize`); smaller incomplete sizes (after a Reformat) rebuild by themselves (`tickAutoProvisionLowerDiskSizes`) while the button is disabled — Storage-revealed rebuilds with a pool fill rate use the same speed/time tile as a queued build (`Rebuilding`, `{current} → {largest}`, percent of smaller-size disks done (`getLowerRebuildSummary`), ⚡ the pool's BASE Bandwidth, ⏳ the total rebuild time at that speed — for a pool not live yet the Bandwidth the pool will have once live stands in (`getProjectedPoolBandwidth`), so the time is never unknown); otherwise (Storage not revealed, or Data Stream Speed 0) the `Rebuilding {size} first · <state>` status line, where `<state>` mirrors `tickAutoProvisionLowerDiskSizes`' stall conditions — `waiting for build` (legacy `intro.diskBuild`), `waiting for earlier pool` (`isLaterPoolProvisioningLocked`), `waiting for pool` (Bandwidth 0), `waiting for buffer` (buffer ≤ `getPoolCacheReservationBits`), else `automatic` — this status (with its suffix) is always the Provision Disk button's `aria-description`, even while the speed/time tile is shown; the ⏳ is toned down (italic, prefixed `~`) whenever any remaining size's pool isn't live yet (`getLowerRebuildSummary().projected`), and so is the ⚡ (title "Projected speed" when the current size's pool isn't live). Renders as soon as the Byte exists (`intro.byteCreated`, no Storage-reveal gate — a click before pool 1 can fund a pass simply queues the build) in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
 location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
 only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows only
-relative gains (current values are on the tile): `Upgrade Capacity 📦 ×2` / `Upgrade Bitrate ⚡ ×<speed
-ratio>` (effect beside the label) over a cost line `🏷️ <cost>` (🏷️ is the game's cost icon — `COST_ICON` in `components/icons.js`, shared with Data Lake Boosters and Provision Disk) (Capacity button: label `Upgrade Capacity 📦 ×2`, cost `🏷️ <Capacity (= cost)>`; Speed button: label `Upgrade Bitrate ⚡ ×<ratio>`, cost `🏷️ <Speed basis (= cost)>`; ratio = `getIntroProductionRate` at the doubled basis ÷ now ≈ ×1.68),
+relative gains (current values are on the tile): `🏷️ <current Capacity (= cost)> · 📦 ×2 · ⚡ ×<speed
+ratio>` (🏷️ is the game's cost icon — `COST_ICON` in `components/icons.js`, shared with Data Lake Boosters and Provision Disk) (Capacity button: `🏷️ <Capacity (= cost)> · 📦 ×2`; Speed button: `🏷️ <Speed basis (= cost)> · ⚡ ×<ratio>`, ratio = `getIntroProductionRate` at the doubled basis ÷ now ≈ ×1.68),
 `📦 Max capacity` at the cap; its `aria-description` carries the cost and absolute next Capacity and Speed, and
 the armed status line shows them too. Its
 visible label always tracks
@@ -791,7 +791,7 @@ itself — `ScaleUpCard` is likewise always shown (unlike `OverclockCard`, still
 tier having ever been unlocked — see below), but stays down in its own row below `TierList` rather
 than joining this card, since its own target walks through the tier ladder one tier at a time (see
 "Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
-through. `ScaleUpCard` and `OverclockCard` (see below) render together in that shared row instead.
+through. `ScaleUpCard` and `OverclockCard` (see below) each render in their own full-width row instead.
 (Earlier iterations tried grouping all three speed-related cards together at the top; this
 was reverted to the current split — Tickspeed (Latency, with Restage beside it) at top, Scale Up/Overclock below the tier list —
 per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying
@@ -909,8 +909,8 @@ expressed in completed levels — Scale Up requires 3 levels for each tier's fir
 `everRevealed`-flag, latched permanently true and reset only on a full Reset — unlike `ScaleUpCard`,
 which carries no such gate at all (see above); Overclock's own gate is unaffected by Scale Up's
 redesign, still sitting purely on the last tier reaching a level. `OverclockButton` (sized to
-match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {lastTier.symbol} {completed}/{required}` only; the effect `×1.1/lvl 🌐` (🌐 = Clock Speed, the thing multiplied) sits beside the card's name (`CardEffect`) — the fixed per-level effect (`1 + OVERCLOCK_MULTIPLIER_STEP`) and the final tier's completed levels vs. this cycle's requirement — with an `aria-label` of `Overclock (requires {required} completed {lastTier.name}
-levels) — …`. `ScaleUpButton` similarly reads `⏩ {targetTier.symbol} {completed}/{required}`; its effect `×2 🏭` (🏭 = tier production), plus `· 🔓 TB` when the successor is Terabytes, sits beside the card's name
+match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {lastTier.symbol} {completed}/{required}` only; the effect `🌐 ×1.1/lvl` (🌐 = Clock Speed, the thing multiplied) sits beside the card's name (`CardEffect`) — the fixed per-level effect (`1 + OVERCLOCK_MULTIPLIER_STEP`) and the final tier's completed levels vs. this cycle's requirement — with an `aria-label` of `Overclock (requires {required} completed {lastTier.name}
+levels) — …`. `ScaleUpButton` similarly reads `⏩ {targetTier.symbol} {completed}/{required}`; its effect `🏭 ×2` (🏭 = tier production), plus `· 🔓 TB` when the successor is Terabytes, sits beside the card's name
 plus a `· Unlock TB` suffix when the current target's successor is the Terabytes tier, with
 `aria-label` `Scale Up (requires {required} completed {targetTier.name} levels) — doubles production
 for tiers unlocked so far[ and unlocks TB]`
