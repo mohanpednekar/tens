@@ -30,7 +30,6 @@ import {
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_CAP_BITS,
-  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_STARTING_CAPACITY,
@@ -731,7 +730,7 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
   // Regression test for a real bug: an earlier version applied Overclock as its own third
   // multiplier inside getEffectiveTierTickSpeedSeconds, but this breakdown line's "global ×N"
   // parenthetical only ever showed two factors — silently disagreeing with the actual computed
-  // effective tickspeed once overclockCount > 0. Overclock's effect is folded directly into
+  // effective tickspeed once the Overclock level > 0. Overclock's effect is folded directly into
   // the global tickspeed multiplier itself, so both figures below must agree by construction.
   const user = userEvent.setup()
 
@@ -739,7 +738,7 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
     resources: { base: 10 },
     owned: { tier01: 10, tier02: 4 }, // unlocks Kilobytes (base tickspeed 1s)
     globalTickspeedMultiplier: 9, // 9 regular levels, no milestone yet (first is level 10)
-    overclockCount: 1, // boosts the regular step from 1% to 1.1% per level
+    overclockLastClaimCompletedLevels: 1, // boosts the regular step from 1% to 1.1% per level
   })
 
   render(<App />)
@@ -1165,7 +1164,7 @@ test('after the tenth Scale Up claims the final tier, the next requirement advan
   expect(button).toBeEnabled()
 })
 
-test('a Scale Up that will reveal TB says so explicitly — "Unlock TB" on the button itself', () => {
+test('a Scale Up that will reveal TB says so explicitly — "🔓 TB" beside the card name', () => {
   // Target = Gigabytes (index 2) → its successor is Terabytes (TB).
   seedMainGameState({
     resources: { base: 10 },
@@ -1175,11 +1174,11 @@ test('a Scale Up that will reveal TB says so explicitly — "Unlock TB" on the b
   })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /scale up \(requires 3 completed gigabytes levels\) — doubles production for tiers unlocked so far and unlocks tb/i })
-  expect(button).toHaveTextContent(/unlock tb/i)
+  expect(screen.getByRole('button', { name: /scale up \(requires 3 completed gigabytes levels\) — doubles production for tiers unlocked so far and unlocks tb/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('🏭 ×2 · 🔓 TB')
 })
 
-test('the Scale Up button shows its per-claim ×2 effect, which tier it needs, and completed-level requirement progress on itself', () => {
+test('the Scale Up card shows its ×2 effect beside the name, and its button only the tier and completed-level progress', () => {
   seedMainGameState({
     resources: { base: 10 },
     purchaseLevels: { tier01: 2 }, // 1 completed of the 3 the third Scale Up requires
@@ -1193,7 +1192,23 @@ test('the Scale Up button shows its per-claim ×2 effect, which tier it needs, a
   expect(screen.getByRole('button', {
     name: /scale up \(requires 3 completed kilobytes levels\) — doubles production for tiers unlocked so far/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2 · KB 1/3')
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('Scale Up🏭 ×2')
+  expect(screen.getByRole('button', { name: /^scale up \(requires/i })).toHaveTextContent('⏩ KB 1/3')
+})
+
+test('the Scale Up card\'s details line is collapsed until the heading is clicked', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    resources: { base: 10 },
+    purchaseLevels: { tier01: 2 },
+  })
+  render(<App />)
+
+  const line = screen.getByText(/resets tiers and doubles production of every tier unlocked so far/i)
+  expect(line).not.toBeVisible()
+
+  await user.click(screen.getByRole('heading', { level: 2, name: 'Scale Up' }))
+  expect(line).toBeVisible()
 })
 
 test('the scale up and overclock panels render below the tier list, not above it', () => {
@@ -1210,18 +1225,25 @@ test('the scale up and overclock panels render below the tier list, not above it
   expect(regions.indexOf('overclock panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('once the last tier has been a Scale Up target, a separate Restage panel appears beside Clock Speed while the row keeps its own tickspeed button', () => {
+test('once the last tier has been a Scale Up target, a separate Restage panel appears left of Scale Up below the tier list, and the last tier keeps its own tickspeed button', () => {
   seedMainGameState({
     resources: { base: 12345, tier10: 25 },
     owned: { tier09: 10, tier10: 25 },
-    purchaseLevels: { tier09: 3, tier10: 2 },
+    purchaseLevels: { tier01: 2, tier09: 3, tier10: 2 },
     scaleUpTierCounts: { tier10: 1 },
     scaleUpTargetTierIndex: 9,
     purge: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
   })
   render(<App />)
 
+  const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
+  expect(regions).toContain('global clock speed panel')
+  expect(regions.indexOf('global clock speed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('scale up panel'))
+
   const xpPanel = screen.getByLabelText(/^restage panel$/i)
+  expect(xpPanel).toHaveTextContent('QB +1%/XP')
   const xpButton = within(xpPanel).getByRole('button', { name: /consume 37 xp for .* quettabytes tickspeed/i })
   expect(xpButton).toHaveTextContent('🧬')
   expect(xpButton).toBeEnabled()
@@ -1344,7 +1366,6 @@ test('the Overclock panel appears once the last tier unlocks, with the button di
     everUnlockedTierIds: { tier01: true, tier10: true },
     // Last claim was taken at 3 completed levels -> this one's requirement is 6 (3 + 3).
     purchaseLevels: { tier09: 3, tier10: 3 }, // 2 completed — short
-    overclockCount: 3,
     overclockLastClaimCompletedLevels: 3,
   })
   render(<App />)
@@ -1360,7 +1381,6 @@ test('the Overclock button is enabled once the last tier reaches the required co
     owned: { tier09: 10 },
     everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3, tier10: 7 }, // 6 completed — meets lastClaim(3) + 3
-    overclockCount: 3,
     overclockLastClaimCompletedLevels: 3,
   })
   render(<App />)
@@ -1387,7 +1407,6 @@ test('the next Overclock requires three more completed levels than the count the
     everUnlockedTierIds: { tier01: true, tier10: true },
     // Claimed at 7 completed before -> next requirement is 10: at 9 completed it's still off.
     purchaseLevels: { tier09: 3, tier10: 10 },
-    overclockCount: 7,
     overclockLastClaimCompletedLevels: 7,
   })
   render(<App />)
@@ -1396,25 +1415,39 @@ test('the next Overclock requires three more completed levels than the count the
   expect(button).toBeDisabled()
 })
 
-test('the Overclock button shows the next per-level Clock Speed rate and completed-level requirement progress on itself', () => {
+test('the Overclock button shows the per-level Overclock effect and completed-level progress on itself', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
     everUnlockedTierIds: { tier01: true, tier10: true },
     // Previous claim at 4 completed -> requirement 7; the last tier is already at exactly 7.
     purchaseLevels: { tier09: 3, tier10: 8 },
-    overclockCount: 1,
     overclockLastClaimCompletedLevels: 4,
   })
   render(<App />)
 
-  // A claim right now banks its own 7 completed levels onto the 1 already banked — raising
-  // Clock Speed's per-level rate to 2.14% (1% × 1.1^8) — both shown on the button itself, no
-  // separate status text line.
+  // The button shows the fixed per-level effect (×1.1) and completed/required last-tier levels — no
+  // computed total rate.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus and raises clock speed's per-level rate to 2\.14%/i,
+    name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus; each completed quettabytes level \(7 now\) multiplies clock speed's per-level rate by ×1\.1/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 2.14%/lvl · QB 7/7')
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('🌐 +10%/lvl')
+  expect(screen.getByRole('button', { name: /^overclock \(requires/i })).toHaveTextContent('⚡ QB 7/7')
+})
+
+test('Clock Speed shows the base per-level effect beside the name, not the Overclock-scaled live step', () => {
+  seedMainGameState({
+    resources: { base: 999 },
+    globalTickspeedMultiplier: 1,
+    everUnlockedTierIds: { tier01: true, tier10: true },
+    purchaseLevels: { tier09: 3, tier10: 8 },
+    overclockLastClaimCompletedLevels: 4,
+  })
+  render(<App />)
+
+  const panel = screen.getByLabelText(/^global clock speed panel$/i)
+  expect(panel).toHaveTextContent('🏭 +1%/lvl')
+  expect(panel).not.toHaveTextContent('1.0146')
 })
 
 test('the Overclock card\'s disclosure states the current per-level Tickspeed rate once claimed', () => {
@@ -1426,16 +1459,16 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
     owned: { tier09: 10 },
     everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3, tier10: 12 },
-    overclockCount: 10,
+    overclockLastClaimCompletedLevels: 10,
   })
 
   render(<App />)
 
   const panel = screen.getByLabelText(/^overclock panel$/i)
-  expect(panel).toHaveTextContent(/clock speed's per-level rate is now 2\.59% \(was 1%\) from 10 banked completed levels\./i)
+  expect(panel).toHaveTextContent(/clock speed's per-level rate is now 2\.59% \(was 1%\)\./i)
 })
 
-test('the Overclock card\'s disclosure shows no per-level rate line before the first claim', () => {
+test('the Overclock card\'s disclosure explains it is unclaimed (no current-rate line) before the first claim', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
@@ -1446,10 +1479,11 @@ test('the Overclock card\'s disclosure shows no per-level rate line before the f
   render(<App />)
 
   const panel = screen.getByLabelText(/^overclock panel$/i)
-  expect(panel).not.toHaveTextContent(/per-level rate/i)
+  expect(panel).not.toHaveTextContent(/rate is now/i)
+  expect(panel).toHaveTextContent(/not claimed yet — reach 5 completed quettabytes levels/i)
 })
 
-test('clicking Overclock once eligible banks the last tier\'s whole completed-level count, wipes the Scale Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {
+test('clicking Overclock once eligible records the last tier\'s whole completed-level count, wipes the Scale Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1461,7 +1495,7 @@ test('clicking Overclock once eligible banks the last tier\'s whole completed-le
   render(<App />)
 
   // Each Scale Up action advertises the ×2 applied to eligible tiers.
-  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2')
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('🏭 ×2')
 
   const overclockButton = screen.getByRole('button', { name: /overclock \(requires 5 completed quettabytes levels\b/i })
   expect(overclockButton).toBeEnabled()
@@ -1471,14 +1505,14 @@ test('clicking Overclock once eligible banks the last tier\'s whole completed-le
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
   // Overclock resets owned counts too, so the last tier is no longer unlocked — but since both
   // panels were already revealed once, they stay visible (in a disabled state) rather than
-  // disappearing again. The claim banked all 7 completed levels (not just the 5 minimum), so the
+  // disappearing again. The claim recorded all 7 completed levels (not just the 5 minimum), so the
   // next cycle requires 10 (the actual claim count + 3) — and Scale Up's own stacking bonus is
   // wiped back to ×2 (scaleUpCount reset to 0, so the *next* activation would only reach ×2
   // again).
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /overclock \(requires 10 completed quettabytes levels/i })).toBeDisabled()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent(/from 7 banked completed levels\./i)
-  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2')
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent(/rate is now 1\.95% \(was 1%\)\./i)
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('🏭 ×2')
 })
 
 test('the Overclock button is disabled once production freezes at a googol', () => {
@@ -1567,28 +1601,109 @@ test('an Enable Auto Restage button on Firmware → Automation spends 16 PP to e
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('Auto Boost is unlocked from Firmware → Automation (30 PP), not on Boosters, which then shows its preset preference', async () => {
-  const user = userEvent.setup()
+test('Power pre-selects the highest automated tier on arrival', () => {
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true, autoMergeNodesIntoCluster: true },
+  })
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+  expect(within(screen.getByLabelText(/^batteries tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+  expect(within(screen.getByLabelText(/^cells tier$/i)).queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
+})
 
+test('Auto Boost needs no purchase: its preset preference appears on Firmware (not Power) once any charge is automated', () => {
   seedMainGameState({
     intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY },
-    purge: { xp: 0, points: COMPUTE_AUTO_BOOST_UNLOCK_COST, count: 1, highestMilestone: 1 },
+  })
+  const { unmount } = render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+  expect(screen.queryByRole('group', { name: /auto boost preference/i })).not.toBeInTheDocument()
+  unmount()
+  cleanup()
+  localStorage.clear()
+
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true },
+    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+  // The Auto Boost switch and preset live on Firmware, never on Power.
+  openPerksTabSync(/open automation/i)
+  expect(screen.getByRole('group', { name: /auto boost preference/i })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+  expect(screen.queryByRole('group', { name: /auto boost preference/i })).not.toBeInTheDocument()
+})
+
+test('Auto-charge is bought per tier on Power, but its single pause switch lives on Firmware → Automation', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true },
+    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+
+  await openPerksTab(user, /open automation/i)
+  const toggle = screen.getByRole('button', { name: /^auto-charge$/i })
+  expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  await user.click(toggle)
+  expect(screen.getByRole('button', { name: /^auto-charge$/i })).toHaveAttribute('aria-pressed', 'false')
+  expect(JSON.parse(localStorage.getItem('tens_game_state')).computeAutoChargeEnabled).toBe(false)
+})
+
+test('Auto Boost has its on/off Switch on Firmware → Automation (not on Power)', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true },
+    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
 
   fireEvent.click(screen.getByRole('button', { name: /open power/i }))
-  expect(screen.queryByRole('button', { name: /enable auto boost/i })).not.toBeInTheDocument()
-  expect(screen.queryByLabelText(/^auto boost$/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^auto boost$/i })).not.toBeInTheDocument()
 
   await openPerksTab(user, /open automation/i)
-  const unlock = screen.getByRole('button', { name: new RegExp(`enable auto boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} purge points`, 'i') })
-  expect(unlock).toHaveAttribute('title', expect.stringMatching(/in-flight charge/i))
-  expect(unlock).toBeEnabled()
-  await user.click(unlock)
-  expect(screen.getByLabelText('Auto Boost unlocked')).toBeInTheDocument()
+  const toggle = screen.getByRole('button', { name: /^auto boost$/i })
+  expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  await user.click(toggle)
+  expect(screen.getByRole('button', { name: /^auto boost$/i })).toHaveAttribute('aria-pressed', 'false')
+  expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.computeAutoBoostEnabled).toBe(false)
+})
 
+test('buying Auto-charge before the first Prestige reveals Firmware, where the switches and preset live (Power has none)', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true },
+  })
+  const { unmount } = render(<App />)
+  expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
+  unmount()
+  cleanup()
+  localStorage.clear()
+
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true },
+  })
+  render(<App />)
   fireEvent.click(screen.getByRole('button', { name: /open power/i }))
-  expect(screen.getByRole('group', { name: /auto boost preference/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^auto-charge$/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('group', { name: /auto boost preference/i })).not.toBeInTheDocument()
+
+  await openPerksTab(user, /open automation/i)
+  expect(screen.getByRole('button', { name: /^auto-charge$/i })).toHaveAttribute('aria-pressed', 'true')
+  await user.click(screen.getByRole('button', { name: /set auto boost preference to eco/i }))
+  expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.computeAutoBoostType).toBe('sustain')
+})
+
+test('the Firmware Auto-charge switch is absent until a Power boundary has Auto-charge unlocked', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true },
+    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+
+  await openPerksTab(user, /open automation/i)
+  expect(screen.queryByRole('button', { name: /^auto-charge$/i })).not.toBeInTheDocument()
 })
 
 test('Upgrade Capacity and the selected Auto Boost preset render with the prestige (warn) variant', () => {
@@ -1606,12 +1721,11 @@ test('Upgrade Capacity and the selected Auto Boost preset render with the presti
   localStorage.clear()
 
   seedMainGameState({
-    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY },
-    purge: { xp: 0, points: COMPUTE_AUTO_BOOST_UNLOCK_COST, count: 1, highestMilestone: 1 },
-    computeAutoBoostUnlocked: true,
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true },
+    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
-  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+  openPerksTabSync(/open automation/i)
   const selected = within(screen.getByRole('group', { name: /auto boost preference/i }))
     .getAllByRole('button').find(b => b.getAttribute('aria-pressed') === 'true')
   expect(selected).toHaveStyle({ color: warn })
@@ -1678,11 +1792,11 @@ test('Auto Scale Up remains active at the final tier', async () => {
   })
   render(<App />)
 
-  expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
-  expect(screen.queryByLabelText('Auto Scale Up suspended at final tier')).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^scale up panel$/i)).not.toHaveTextContent(/auto|paused/i)
 
   await openPerksTab(userEvent.setup(), /open automation/i)
   expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Auto Scale Up suspended at final tier')).not.toBeInTheDocument()
 })
 
 test('pausing Auto Scale Up via its toggle stops it from firing automatically, even once eligible; resuming fires it again', () => {
@@ -2595,7 +2709,7 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier02: 1, tier10: 10 },
-    overclockCount: 2,
+    overclockLastClaimCompletedLevels: 2,
   })
 
   render(<App />)
@@ -2603,7 +2717,7 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(
-    /overclock: clock speed's per-level rate is now 1\.21% \(was 1%\) from 2 banked completed levels/i
+    /overclock: clock speed's per-level rate is now 1\.21% \(was 1%\)/i
   )
 })
 
@@ -4805,19 +4919,16 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.queryByText(/held/)).not.toBeInTheDocument()
   })
 
-  test('clicking outside every tier block deselects the boost tier; clicks inside keep it', () => {
+  test('one tier is always selected: Cells on arrival, and clicking outside never clears it', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true, computeCores: 1, computeNodes: 2 })
     render(<App />)
     openBoosters()
 
     const cells = screen.getByRole('button', { name: /select cells to fund a compute boost/i })
-    fireEvent.click(cells)
-    fireEvent.click(within(screen.getByLabelText(/^cells tier$/i)).getByText('Boosts KB'))
     expect(cells).toHaveAttribute('aria-pressed', 'true')
-
     fireEvent.click(screen.getByRole('heading', { level: 1, name: /^⚡ power$/i }))
-    expect(cells).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
+    expect(cells).toHaveAttribute('aria-pressed', 'true')
+    expect(within(screen.getByLabelText(/^cells tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
   })
 
   test('preset buttons drop zero-valued trailing duration units', () => {
@@ -4867,16 +4978,14 @@ describe('Byte Foundry Compute Boost', () => {
     expect(within(screen.getByLabelText(/^batteries tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
   })
 
-  test('only the selected tier shows the presets; selecting another moves them, re-clicking collapses them', () => {
+  test('only the selected tier shows the presets; selecting another moves them, re-clicking keeps them', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true, computeCores: 1, computeNodes: 2 })
     render(<App />)
     openBoosters()
 
-    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
-    expect(screen.getByText(/no boost running · pick a tier/i)).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /select cells to fund a compute boost/i }))
+    // Cells (the default) hosts the presets on arrival; no "pick a tier" prompt.
     expect(within(screen.getByLabelText(/^cells tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
+    expect(screen.queryByText(/pick a tier/i)).not.toBeInTheDocument()
 
     const batteries = screen.getByRole('button', { name: /select batteries to fund a compute boost/i })
     fireEvent.click(batteries)
@@ -4884,7 +4993,7 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.getAllByLabelText(/^compute boost$/i)).toHaveLength(1)
 
     fireEvent.click(batteries)
-    expect(screen.queryByLabelText(/^compute boost$/i)).not.toBeInTheDocument()
+    expect(within(screen.getByLabelText(/^batteries tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
   })
 
   test('no Pop control appears while no boost is active', () => {
@@ -4961,7 +5070,7 @@ describe('ComputePage merge chain', () => {
   describe('tier detail row is progressively disclosed', () => {
     const base = { bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true }
     const nodesMerge = () => screen.queryByRole('button', { name: /charge up 8 batteries into 1 pack/i })
-    const nodesAuto = () => screen.queryByRole('button', { name: /enable auto-charge for batteries into packs/i })
+    const nodesAuto = () => screen.queryByRole('button', { name: /unlock the charger for batteries into packs/i })
 
     test('a non-automated unlocked tier always shows its merge/auto buttons (spacious layout)', () => {
       seedIntroState({ ...base, computeCores: 1, computeNodes: 2 })
@@ -5001,7 +5110,7 @@ describe('ComputePage merge chain', () => {
       render(<App />)
       openBoosters()
 
-      expect(screen.getByRole('button', { name: /batteries auto-charge in progress/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /batteries charger, auto-charge in progress/i })).toBeInTheDocument()
     })
 
     test('the selected tier is marked via aria-pressed and a single tier is armed at a time', () => {
@@ -5048,7 +5157,7 @@ describe('ComputePage merge chain', () => {
     expect(saved.intro.computeNodes).toBe(2)
   })
 
-  test('enabling auto-charge for Cells into Batteries sacrifices 10 Batteries and removes the manual merge button', () => {
+  test('unlocking the Charger for Cells into Batteries sacrifices 10 Batteries and removes the manual merge button', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: COMPUTE_ENTITY_CAP,
@@ -5056,7 +5165,7 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /enable auto-charge for cells into batteries/i }))
+    fireEvent.click(screen.getByRole('button', { name: /unlock the charger for cells into batteries/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeNodes).toBe(0)
@@ -5064,7 +5173,7 @@ describe('ComputePage merge chain', () => {
     expect(screen.queryByRole('button', { name: /^charge up 8 cells into 1 battery$/i })).not.toBeInTheDocument()
   })
 
-  test('once auto-charge is unlocked for Cells into Batteries, clicking the auto-charge slot row merges 8 → 1 instantly', () => {
+  test('once auto-charge is unlocked, pressing Charge starts a charge (units move down over time; nothing merges yet)', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 8, autoMergeCoresIntoNode: true,
@@ -5072,12 +5181,13 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /instantly charge up 8 cells into 1 battery/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^charge cells: move units down/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeCores).toBe(0)
-    expect(saved.intro.computeNodes).toBe(1)
-    expect(saved.intro.computeCoresMergeRemainingSeconds ?? 0).toBe(0)
+    expect(saved.intro.computeChargeSeconds?.[0]).toBeGreaterThanOrEqual(0)
+    expect(saved.intro.computeCores).toBe(8)
+    expect(saved.intro.computeNodes ?? 0).toBe(0)
+    expect(screen.getByRole('button', { name: /^charge cells: move units down/i })).toBeDisabled()
   })
 
   test('a merge button stays disabled once the output entity is already at COMPUTE_ENTITY_CAP', () => {
@@ -5161,7 +5271,7 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /enable auto-charge for batteries into packs/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /unlock the charger for batteries into packs/i })).toBeDisabled()
   })
 
   test('enabling auto-charge sacrifices exactly 10 held Packs and replaces the button with an Auto badge', () => {
@@ -5172,12 +5282,12 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /enable auto-charge for batteries into packs/i }))
+    fireEvent.click(screen.getByRole('button', { name: /unlock the charger for batteries into packs/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeClusters).toBe(0)
     expect(saved.intro.autoMergeNodesIntoCluster).toBe(true)
-    expect(screen.queryByRole('button', { name: /enable auto-charge for batteries into packs/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /unlock the charger for batteries into packs/i })).not.toBeInTheDocument()
   })
 
   test('enabling auto-charge preserves any Packs held above 10 — regression: this used to zero the whole field, destroying reserve progress the Packs into Bank boundary was already gradually accumulating', () => {
@@ -5188,7 +5298,7 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /enable auto-charge for batteries into packs/i }))
+    fireEvent.click(screen.getByRole('button', { name: /unlock the charger for batteries into packs/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeClusters).toBe(5) // NOT 0 — the reserve's own 5 units survive
@@ -5206,14 +5316,14 @@ describe('Compute auto-charge automation', () => {
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeClusters).toBe(0)
-    expect(saved.intro.computeNodes).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO)
+    expect(saved.intro.computeNodes).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO - 1) // one more token spent on the automatic Boost
     expect(saved.intro.computeNodesMergeRemainingSeconds).toBeGreaterThan(0)
 
     unmount()
     vi.useRealTimers()
   })
 
-  test('on a selected automated tier, the auto-charge slot row renders above the Boost presets', () => {
+  test('on a selected automated tier, the Charger row renders above the Boost presets', () => {
     seedIntroState({
       bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 6, autoMergeCoresIntoNode: true,
@@ -5221,13 +5331,13 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /select cells to fund a compute boost/i }))
-    const autoRow = screen.getByRole('button', { name: /^cells auto-charge slots/i })
+    // Cells is the highest automated tier, so it is pre-selected on arrival.
+    const autoRow = screen.getByRole('button', { name: /^cells charger/i })
     const presets = within(screen.getByLabelText(/^cells tier$/i)).getByLabelText(/^compute boost$/i)
     expect(autoRow.compareDocumentPosition(presets) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  test('once auto-charge is enabled for a tier, the old instant Merge button is replaced by the clickable reserve-slot row itself (issue #321 — "slots are the button")', () => {
+  test('once auto-charge is enabled for a tier, the instant Merge button is replaced by an explicit Charge button', () => {
     seedIntroState({
       bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: 8, autoMergeNodesIntoCluster: true,
@@ -5236,12 +5346,23 @@ describe('Compute auto-charge automation', () => {
     openBoosters()
 
     expect(screen.queryByRole('button', { name: /^charge up 8 batteries into 1 pack/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /instantly charge up 8 batteries into 1 pack/i })).toBeEnabled()
-    // A visible merge cue marks the row as clickable while 8 are available.
-    expect(screen.getByRole('button', { name: /instantly charge up 8 batteries into 1 pack/i })).toHaveTextContent('🤖 ⬆ 8→1 Pack')
+    const charge = screen.getByRole('button', { name: /^charge batteries: move units down/i })
+    expect(charge).toBeEnabled()
+    expect(charge).toHaveTextContent('⚡ Charge')
   })
 
-  test('the reserve-slot row shows no merge cue below 8 of the input entity', () => {
+  test('while a Charge runs, the Charge button shows ⏳ n/8 progress instead of ⚡ Charge', () => {
+    seedIntroState({
+      bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeNodes: 13, autoMergeNodesIntoCluster: true, computeChargeSeconds: { 1: 0.5 },
+    })
+    render(<App />)
+    openBoosters()
+
+    expect(screen.getByRole('button', { name: /^charge batteries: move units down/i })).toHaveTextContent(/⏳ \d\/8/)
+  })
+
+  test('the Charger row carries no label or merge cue (the Charge button sits to its left)', () => {
     seedIntroState({
       bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: 7, autoMergeNodesIntoCluster: true,
@@ -5249,10 +5370,9 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /select batteries to fund a compute boost/i }))
-    const row = screen.getByRole('button', { name: /^batteries auto-charge slots/i })
+    const row = screen.getByRole('button', { name: /^batteries charger/i })
     expect(row).toBeDisabled()
-    expect(row).toHaveTextContent('🤖 Auto-charge')
+    expect(row).not.toHaveTextContent(/auto-charge/i) // no label on the slot row
     expect(row).not.toHaveTextContent('⬆')
   })
 
@@ -5264,8 +5384,8 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    const autoButton = screen.getByRole('button', { name: /enable auto-charge for cells into batteries/i })
-    expect(autoButton).toHaveTextContent('🤖 6/10')
+    const autoButton = screen.getByRole('button', { name: /unlock the charger for cells into batteries/i })
+    expect(autoButton).toHaveTextContent('🔓 Charger 🔗 6/10')
     expect(autoButton).toBeDisabled() // below the 10-unit unlock cost
   })
 
@@ -5277,7 +5397,7 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /3\/8 auto-charge slots filled/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /batteries charger, 3\/8 filled/i })).toBeInTheDocument()
   })
 
 })

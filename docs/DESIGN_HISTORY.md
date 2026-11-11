@@ -1,5 +1,15 @@
 # Design history & rationale
 
+### Overclock no longer banks completed levels — 2026-11-11
+
+`overclockCount` was a running total of completed final-tier levels across every Overclock claim
+this cycle (`overclockCount += lastTierCompletedLevels`), so Clock Speed's per-level step compounded
+as ×1.1^(sum of every claim). Two claims of 3 therefore equalled one claim of 6, and successive
+claims grew the bonus without bound within a run. Replaced with a single Overclock level:
+`overclockLastClaimCompletedLevels` is set (not added) on each claim, and `getOverclockMultiplier`
+reads that via `getOverclockLevel`. Legacy saves still fall back to `overclockCount` until a Scale Up
+or new claim writes the new field. This is a nerf for anyone who had claimed more than once.
+
 ### Bits subline under MoneyHero; `+n/8` dropped from tier Buy buttons — 2026-11-09
 
 Once `formatMoneyBalance` switches the Factory headline to whole Bytes (8000 Bits / 1000 B), the
@@ -9173,6 +9183,21 @@ The player-facing name became **Restage** (autobuyer: **Auto Restage**) at the m
 At the maintainer's request, Latency + Restage (above the tier list) and Scale Up + Overclock (below
 it) each share one `SpeedCardsRow` that stays side by side at every width (`flex: 1 1 0`, no wrap),
 superseding the earlier below-40rem single-column stack of Scale Up / Overclock.
+
+## Scale Up and Overclock each get a full-width row (2026-11)
+
+Putting `CardEffect` (`🏭 ×2` / `🌐 ×1.1/lvl`) beside the card name made the shared Scale Up +
+Overclock `SpeedCardsRow` too tight at phone width (heading wrap, disclosure body squeezed into the
+title column). They now each render in their own full-width row; Clock Speed + Restage stay paired.
+See the superseded "Feature-card pairs stay side by side on phones" entry above.
+
+Follow-up (same month): Restage moved from beside Clock Speed to the left of Scale Up (both act on
+the tier ladder below the list), leaving Clock Speed alone above it; Clock Speed and Restage also
+show a `CardEffect` (`🏭 ×1.01/lvl`, `QB ×1.01/XP`).
+
+Second follow-up: all four feature cards moved to their own full-width rows (half-width pairs made the title +
+effect chips wrap unevenly on 360–390px phones) and every chip is a percentage (`+1%/lvl`, `+1%/XP`, `+100%`,
+`+10%/lvl`).
 
 ## Reboot → Purge (player-facing only); Auto Restage joins the automation chain (2026-11)
 

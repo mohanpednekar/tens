@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Power: one tier is always selected (switch it, never clear it) — the "pick a tier" prompt is gone. On arrival it is the highest tier whose charge is automated, else the active boost's tier, else Cells.
+
+- Power: a tier's bottom row of 8 slots is now called the **Charger** (labels, Manual and docs).
+
+- Power: the Charge button sits on the left with no "Auto-charge" label on the slot row; the pre-unlock Merge button shows tier symbols on both sides (`⬡ 8→1 🔗`) and the unlock button reads `🔓 Charger 🔗 n/10` (the symbol is the next tier up, the 10 units it costs). The Power nav dot now lights only for merge/Charge availability and the Auto-charge unlock — not for Boost availability.
+
+- **Power: explicit Charge button (#1033).** On a tier with Auto-charge unlocked, a ⚡ Charge button moves units from the top row into the bottom row one per second, then merges 8→1 instantly (the automatic timed charge at 18 held still happens and waits while a Charge runs).
+
 - Factory header shows the exact Bits balance in small text under the Bytes headline once it switches to Bytes.
 
 - **Playtime bonus** (Firmware → Prestige, one-time 100 PP): +1% production speed per hour of active play. Offline, background catch-up, and hidden-tab ticks don't count; it persists across Purge and Reboot.
@@ -29,6 +37,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Perks → Unlocks → Global Automation now always lists Auto Overclock (32 PP; needs Auto Scale Up first) and Auto-Prestige (64 PP); they were hidden until their prerequisites were met.
 
 ### Changed
+- Charger polish: the ⚡ Charge button shows `⏳ n/8` while charging; the unlock button's accessible name now reads "unlock the Charger for …"; Manual wording matches.
+- Factory feature cards (Clock Speed, Restage, Scale Up, Overclock) are each full width, and effect chips are percentages: `🏭 +1%/lvl`, `QB +1%/XP`, `🌐 +10%/lvl` (Scale Up keeps `🏭 ×2`).
+
+- Disk rebuilds (after Reformat or a pool flush) now wait until the disk's own pool Capacity can hold one disk of that size, matching Provision Disk. While waiting, the pool's Data Lake keeps filling and the Reformat replay keeps scaling lakes out and buying Boosters for the disk sizes already completed, up to prior highs.
+- Auto Boost is now automatic and free: once a tier's charge is automated, each automatic charge start spends one remaining token of that tier on your preferred Boost preset (once per charge). The 30 PP Firmware unlock is removed; a Switch on Power pauses/resumes it, and Power opens with the highest automated tier pre-selected.
+
+- Auto Boost's on/off Switch and its preset picker moved from Power to Firmware → Automation → Power Automation, and Auto-charge gets one pause/resume Switch there too (shown once any tier's Auto-charge is bought; buying Auto-charge per tier stays on Power). Pausing Auto-charge stops new automatic timed charges; instant charge-ups still work. Firmware now appears as soon as you buy any Auto-charge (not only after the first Prestige) so these controls are always reachable.
+
+- Every Factory feature card (Clock Speed, Restage, Scale Up, Overclock) now has an expandable details section, including before it's active/claimed; Scale Up previously had none.
+
+- Removed the "Auto"/"Paused" chip from the Scale Up card; Auto Scale Up is managed only on Firmware.
+
+- **Overclock no longer banks levels.** Clock Speed's per-level boost (×1.1 per level) now depends only on the final-tier completed level reached at your latest Overclock claim, instead of a running total across every claim; the Overclock card no longer mentions "banked completed levels", and the button now shows the per-level effect and completed/required levels (`⚡ QB 7/12`; the effect sits beside the card name as `🌐 ×1.1/lvl`, and Scale Up's as `🏭 ×2` — 🌐 Clock Speed / 🏭 tier production mark what each multiplies; Overclock now has its own row; Restage moved beside Scale Up below the tier list, and Clock Speed (`🏭 ×1.01/lvl`) and Restage (`QB ×1.01/XP`) now show their core effect beside their names too) instead of a computed rate. Existing saves keep their last claim's level, so the per-level rate may drop.
 
 - Compute (Flops) screen: removed the explanatory paragraph and shortened per-tier stats to "N owned · Tier ×multiplier".
 

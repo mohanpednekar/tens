@@ -534,10 +534,10 @@ Strict three-layer separation:
    pure renderer ("engine re-validates, UI just mirrors it", like every page here).
 4b. **`ComputePage/index.jsx`** — Foundry **Power** screen (page id `'boosters'`; player label only), `{ game }`; reached
    via AppNav once `isComputeCoreConversionUnlocked`. Hosts the nine-boundary merge chain (Cell → Battery → … → Fusion,
-   "Charge up"/"Auto-charge") behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute" names the
+   "Charge up"/"Auto-charge"; ⚡ Charge button = 1 unit/s top→bottom row then instant 8→1, `startComputeCharge`/`tickComputeCharges`) behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute" names the
    page/feature only — entities drop the word in every player-visible label. Deliberately terse (icon-only controls,
    full sentence in `title`/`aria-label`; mechanic prose lives in the Manual). Top card = active Boost timer bar
-   (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right, enforced in the engine too) + Auto Boost pref;
+   (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right, enforced in the engine too) (Auto Boost is automatic: one token per automated charge start, `autoBoostFromTier`; its Switch + preset, like Auto-charge's pause Switch `computeAutoChargeEnabled`, live on Firmware → Automation → Power Automation);
    then per-tier rows — the ONE selected tier shows the 3 Boost presets inline. Constants: `COMPUTE_ENTITY_CAP` 10,
    `COMPUTE_MERGE_RATIO` 8, `COMPUTE_MERGE_RESERVE_CAP` 8. Cells (`computeCores`) are bought from the matching Data Lake,
    not minted from Capacity. Detail: `docs/FOUNDRY_MECHANICS_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`, `docs/DESIGN_HISTORY.md`.
@@ -601,7 +601,7 @@ this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop" (n
 
 ### Tiers, Prestige, Reboot (Era ascension)
 
-**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Flush Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
+**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Charger = a tier's 8-slot reserve row (bottom row, `getComputeReserveHeld`); Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Flush Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
 
 **Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Purge, Reboot,
 Reformat Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Purge** (formerly the name Reboot, now the Era-ascension layer) and
@@ -719,7 +719,8 @@ levels on the last unlocked tier; repeated final-tier claims then require 6, 9, 
 from the re-reveal mechanic: after a reset, a tier already unlocked by a previous Scale Up within the
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
 Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
-completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`,
+completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`
+(the single Overclock level; each claim replaces it, nothing is banked; Clock Speed's step is ×1.1 per level),
 not a fixed 5/8/11/14 ladder (Clock Speed's Overclock-scaled 1% step is under "Tiers, Prestige, Reboot" above).
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
@@ -737,6 +738,7 @@ into `main`, and do not rename it with an agent/session suffix.
 heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
 **No link styling:** it's a game — never underline (solid, dotted or on hover) just because something is
 clickable; use `cursor: pointer` and a `:focus-visible` outline instead.
+**Segmented choices** (pick-one controls like the Boost preset): full width, equal-width buttons with a text label beside the icon — never tiny icon-only squares (`docs/COMPONENTS_REFERENCE.md`).
 
 ## Path aliases
 

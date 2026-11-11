@@ -28654,6 +28654,28 @@
       "file_type": "document",
       "source_file": "docs/NATIVE_APPS_REFERENCE.md",
       "source_location": "L1"
+    },
+    {
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "BoostBadge/index.jsx",
+      "file_type": "code",
+      "source_file": "src/components/AutoBoostPresetPicker/index.jsx",
+      "id": "src_components_autoboostpresetpicker_index",
+      "label": "AutoBoostPresetPicker/index.jsx",
+      "norm_label": "autoboostpresetpicker/index.jsx",
+      "source_location": "L1"
+    },
+    {
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "BoostBadge/index.jsx",
+      "file_type": "code",
+      "source_file": "src/components/AutoBoostPresetPicker/index.jsx",
+      "id": "src_components_autoboostpresetpicker_index_autoboostpresetpicker",
+      "label": "AutoBoostPresetPicker",
+      "norm_label": "autoboostpresetpicker",
+      "source_location": "L35"
     }
   ],
   "links": [
@@ -121286,6 +121308,17 @@
       "confidence_score": 1,
       "source_file": "docs/NATIVE_APPS_REFERENCE.md",
       "source_location": "L1",
+      "weight": 1
+    },
+    {
+      "source": "src_components_autoboostpresetpicker_index",
+      "target": "src_components_autoboostpresetpicker_index_autoboostpresetpicker",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "src/components/AutoBoostPresetPicker/index.jsx",
+      "source_location": "L35",
       "weight": 1
     }
   ],

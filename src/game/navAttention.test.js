@@ -12,7 +12,6 @@ import {
   COMPUTE_MERGE_RATIO,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   INTRO_BYTE_COMBINE_COST,
-  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
@@ -229,10 +228,27 @@ describe('navAttention', () => {
     expect(maxAttention(false, false)).toBe(false)
   })
 
-  it('lights Compute when a Compute Boost turn is available', () => {
+  it('does NOT light Compute for Boost availability alone', () => {
     const state = withIntro(computeBoostReadyIntro)
+    expect(hasComputeAttention(state)).toBe(false)
+    expect(getNavAttention(state).boosters).toBe(false)
+  })
+
+  it('lights Compute (normal) when an automated tier can be charged (8+ held, no charge running)', () => {
+    const base = {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: 0,
+      byteCreated: true,
+      productionMilestoneTierClaims: 2,
+      computeCores: COMPUTE_MERGE_RATIO,
+      computeNodes: 0,
+      autoMergeCoresIntoNode: true,
+    }
+    const state = withIntro(base)
     expect(hasComputeAttention(state)).toBe(true)
-    expect(getNavAttention(state).boosters).toBe(ATTENTION_HIGH)
+    expect(getNavAttention(state).boosters).toBe(ATTENTION_NORMAL)
+    expect(hasComputeAttention(withIntro({ ...base, computeCores: COMPUTE_MERGE_RATIO - 1 }))).toBe(false)
+    expect(hasComputeAttention(withIntro({ ...base, computeChargeSeconds: { 0: 2 } }))).toBe(false)
   })
 
   it('does not light Compute before Compute unlocks', () => {
@@ -322,7 +338,6 @@ describe('navAttention', () => {
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
       purchaseLevels: { [lastTierId]: 6 }, // 5 completed levels
       everUnlockedTierIds: { [lastTierId]: true },
-      overclockCount: 0,
       scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
       // Once every tier is unlocked, Scale Up's own requirement on the last tier is a flat 3 (see
       // getScaleUpRequirement).
@@ -393,30 +408,6 @@ describe('navAttention', () => {
     }
     expect(hasAffordableAutomationPerk(autoPurgeUnlockOnly)).toBe(true)
     expect(hasAffordableAutomationPerk({ ...autoPurgeUnlockOnly, purge: { count: 1, points: getAutomationUnlockCost('purge') - 1 } })).toBe(false)
-  })
-
-  it('lights the Perks automation dot for an affordable Auto Boost only once Boosters is available and it is not owned', () => {
-    const init = createInitialGameState()
-    const ownedEverythingElse = {
-      ...init,
-      resources: { ...init.resources, [MONEY_ID]: 0 },
-      purge: { count: 1, points: COMPUTE_AUTO_BOOST_UNLOCK_COST },
-      autoScaleUp: true,
-      autoGlobalTickspeed: true,
-      autoXpTickspeed: true,
-    }
-    const withBoosters = capacity => ({
-      ...ownedEverythingElse,
-      intro: { ...init.intro, mainGameUnlocked: true, byteCreated: true, capacity },
-    })
-
-    expect(hasAffordableAutomationPerk(withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY))).toBe(true)
-    expect(hasAffordableAutomationPerk(withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY / 2))).toBe(false)
-    expect(hasAffordableAutomationPerk({ ...withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY), computeAutoBoostUnlocked: true })).toBe(false)
-    expect(hasAffordableAutomationPerk({
-      ...withBoosters(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY),
-      purge: { count: 1, points: COMPUTE_AUTO_BOOST_UNLOCK_COST - 1 },
-    })).toBe(false)
   })
 
   it('does not light PP upgrades before the first Prestige', () => {

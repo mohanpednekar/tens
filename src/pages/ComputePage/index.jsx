@@ -1,8 +1,8 @@
 import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration } from 'components/BoostTimerBar'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
-import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress, isStackComputeBoostTurnAvailable } from 'game/engine'
+import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeChargeAvailable, isComputeCharging, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress, isStackComputeBoostTurnAvailable } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -161,9 +161,9 @@ const NormalSlot = styled.span`
   background: ${props => (props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
 `
 
-// Row 2: pre-unlock, an instant Merge button + an Unlock Auto-charge button; post-unlock, the 8
-// auto-charge slots themselves, clickable as an instant manual merge — "2nd row has merge button and
-// unlock automerge button (in place of the reserved slots before unlocking them)" (issue #321).
+// Row 2: pre-unlock, an instant Merge button + an Unlock Auto-charge button; post-unlock, an explicit
+// ⚡ Charge button (left) plus the Charger (the 8 auto-charge slots, display only) — Charge moves units down one per
+// second, then merges 8→1 instantly (issue #1033; the slots were a clickable instant merge in #321).
 // The post-unlock ReserveSlotsRow branch stretches itself via flex: 1 1 auto and right-aligns its
 // own slots internally, filling the row exactly like MainPage's own tier-row Buy/Upgrade pair;
 // justify-content: flex-end keeps that branch's slots pinned right regardless.
@@ -236,17 +236,6 @@ const ReserveSlot = styled.span`
   background: ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
 `
 
-// Left-edge label naming the row as auto-charge slots ("🤖 Auto-charge"), switching to an accent
-// "🤖 ⬆ 8→1 <output>" while an instant manual merge is available, so the row reads as a button.
-const MergeCue = styled.span`
-  flex: 0 0 auto;
-  margin-right: auto;
-  font-size: 0.78em;
-  font-weight: 600;
-  white-space: nowrap;
-  color: ${props => (props.$active ? props.theme.color.accent : props.theme.color.textMuted)};
-`
-
 const MergeCountdown = styled.span`
   flex: 0 0 auto;
   font-size: 0.78em;
@@ -279,21 +268,6 @@ const BoostRow = styled.div`
   }
 `
 
-const AutoBoostRow = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: ${props => props.theme.space.sm};
-  width: 100%;
-`
-
-const AutoBoostLabel = styled.p`
-  margin: 0;
-  color: ${props => props.theme.color.textMuted};
-  font-size: ${props => props.theme.type.scale.sm.size};
-  text-align: center;
-`
-
 // The full ten-tier progression this page walks top to bottom. Every row past Cores through
 // Supercomputers shares the exact same shape: a merge boundary into the tier above it, which —
 // once that boundary's auto-charge is unlocked (see intro.autoMergeCoresIntoNode/
@@ -318,7 +292,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Batteries',
     autoCostField: 'computeNodes',
     enableAutoAction: 'enableAutoMergeCoresIntoNode',
-    autoAriaLabel: 'enable auto-charge for Cells into Batteries',
+    autoAriaLabel: 'unlock the Charger for Cells into Batteries',
     startAction: 'startComputeCoresMerge',
     timerField: 'computeCoresMergeRemainingSeconds',
   },
@@ -334,7 +308,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Packs',
     autoCostField: 'computeClusters',
     enableAutoAction: 'enableAutoMergeNodesIntoCluster',
-    autoAriaLabel: 'enable auto-charge for Batteries into Packs',
+    autoAriaLabel: 'unlock the Charger for Batteries into Packs',
     startAction: 'startComputeNodesMerge',
     timerField: 'computeNodesMergeRemainingSeconds',
   },
@@ -350,7 +324,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Banks',
     autoCostField: 'computeNetworks',
     enableAutoAction: 'enableAutoMergeClustersIntoNetwork',
-    autoAriaLabel: 'enable auto-charge for Packs into Banks',
+    autoAriaLabel: 'unlock the Charger for Packs into Banks',
     startAction: 'startComputeClustersMerge',
     timerField: 'computeClustersMergeRemainingSeconds',
   },
@@ -366,7 +340,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Generators',
     autoCostField: 'computeGrids',
     enableAutoAction: 'enableAutoMergeNetworksIntoGrid',
-    autoAriaLabel: 'enable auto-charge for Banks into Generators',
+    autoAriaLabel: 'unlock the Charger for Banks into Generators',
     startAction: 'startComputeNetworksMerge',
     timerField: 'computeNetworksMergeRemainingSeconds',
   },
@@ -382,7 +356,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Turbines',
     autoCostField: 'computeFabrics',
     enableAutoAction: 'enableAutoMergeGridsIntoFabric',
-    autoAriaLabel: 'enable auto-charge for Generators into Turbines',
+    autoAriaLabel: 'unlock the Charger for Generators into Turbines',
     startAction: 'startComputeGridsMerge',
     timerField: 'computeGridsMergeRemainingSeconds',
   },
@@ -398,7 +372,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Plants',
     autoCostField: 'computeClouds',
     enableAutoAction: 'enableAutoMergeFabricsIntoCloud',
-    autoAriaLabel: 'enable auto-charge for Turbines into Plants',
+    autoAriaLabel: 'unlock the Charger for Turbines into Plants',
     startAction: 'startComputeFabricsMerge',
     timerField: 'computeFabricsMergeRemainingSeconds',
   },
@@ -414,7 +388,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Grids',
     autoCostField: 'computeDatacenters',
     enableAutoAction: 'enableAutoMergeCloudsIntoDatacenter',
-    autoAriaLabel: 'enable auto-charge for Plants into Grids',
+    autoAriaLabel: 'unlock the Charger for Plants into Grids',
     startAction: 'startComputeCloudsMerge',
     timerField: 'computeCloudsMergeRemainingSeconds',
   },
@@ -430,7 +404,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Reactors',
     autoCostField: 'computeSupercomputers',
     enableAutoAction: 'enableAutoMergeDatacentersIntoSupercomputer',
-    autoAriaLabel: 'enable auto-charge for Grids into Reactors',
+    autoAriaLabel: 'unlock the Charger for Grids into Reactors',
     startAction: 'startComputeDatacentersMerge',
     timerField: 'computeDatacentersMergeRemainingSeconds',
   },
@@ -446,7 +420,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Fusions',
     autoCostField: 'computeMegacomputers',
     enableAutoAction: 'enableAutoMergeSupercomputersIntoMegacomputer',
-    autoAriaLabel: 'enable auto-charge for Reactors into Fusions',
+    autoAriaLabel: 'unlock the Charger for Reactors into Fusions',
     startAction: 'startComputeSupercomputersMerge',
     timerField: 'computeSupercomputersMergeRemainingSeconds',
   },
@@ -493,27 +467,15 @@ const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
   // Issue #326: which compute-ladder tier is armed to fund the next Boost activation — purely
-  // local UI state (free to change, no cost). Navigating here pre-selects the active boost's own
-  // tier, so its presets open on arrival; clicking the selected tier again collapses it. Before the
-  // merge chain unlocks, Cores (tier 1) is the only tier that can ever hold a balance at all, so
+  // local UI state (free to change, no cost). One tier is ALWAYS selected (it can be switched, never cleared):
+  // on arrival, the highest tier whose charge is automated, else the active boost's own tier, else Cells.
+  // Before the merge chain unlocks, Cores (tier 1) is the only tier that can ever hold a balance at all, so
   // it's armed implicitly without needing a clickable row.
-  const [selectedBoostTierIndex, setSelectedBoostTierIndex] = useState(
-    () => (intro.computeBoostType ? (intro.computeBoostTierIndex ?? 1) : null),
-  )
-
-  // A click anywhere outside every tier block deselects, collapsing the presets. Clicks inside a
-  // tier block (its select button, presets, merge row) are left to that block's own handlers.
-  // Capture phase + composedPath: decided before React re-renders, so a click that removes its own
-  // target (e.g. Unlock Auto-charge swapping in the auto-charge row) still counts as inside.
-  useEffect(() => {
-    if (selectedBoostTierIndex === null) return undefined
-    const deselectOnOutsideClick = event => {
-      const insideTier = event.composedPath().some(node => node.dataset?.boostTier !== undefined)
-      if (!insideTier) setSelectedBoostTierIndex(null)
-    }
-    document.addEventListener('click', deselectOnOutsideClick, true)
-    return () => document.removeEventListener('click', deselectOnOutsideClick, true)
-  }, [selectedBoostTierIndex])
+  const [selectedBoostTierIndex, setSelectedBoostTierIndex] = useState(() => {
+    const highestAutomated = ENTITY_ROWS.reduce((best, row, index) => (row.autoFlagField && intro[row.autoFlagField] ? index + 1 : best), 0)
+    if (highestAutomated > 0) return highestAutomated
+    return intro.computeBoostType ? (intro.computeBoostTierIndex ?? 1) : 1
+  })
 
   const blockedByPriority = isDiskFillAvailable(state) || isProvisionDiskInProgress(state)
   const boostActive = Boolean(intro.computeBoostType)
@@ -607,39 +569,14 @@ const ComputePage = ({ game }) => {
       {boostActive && <BoostTimerBar actions={actions} state={state} />}
       {!boostActive && (
         <ArmedStatusText>
-          {intro.computeMergePageUnlocked && !armedRow ? 'No boost running · pick a tier ↓' : 'No boost running'}
+          No boost running
         </ArmedStatusText>
       )}
 
-      {(!intro.computeMergePageUnlocked || state.computeAutoBoostUnlocked) && (
+      {!intro.computeMergePageUnlocked && (
       <BoostCard aria-label="boost">
-      {!intro.computeMergePageUnlocked && boostPresets}
+      {boostPresets}
 
-      {state.computeAutoBoostUnlocked && (
-      <AutoBoostRow aria-label="compute auto boost">
-        <AutoBoostLabel>
-          Auto from biggest tier waiting to charge — preference:
-        </AutoBoostLabel>
-        <BoostRow role="group" aria-label="auto boost preference">
-          {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
-            const selected = (intro.computeAutoBoostType ?? 'standard') === boostType
-            return (
-              <CompactButton
-                key={`auto-${boostType}`}
-                aria-label={`set auto boost preference to ${COMPUTE_BOOST_DISPLAY[boostType].label.toLowerCase()}`}
-                aria-pressed={selected}
-                onClick={() => actions.setComputeAutoBoostType(boostType)}
-                title={`Auto Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
-                type="button"
-                variant={selected ? 'prestige' : 'neutral'}
-              >
-                <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon}${selected ? ' ✓' : ''}`}</ButtonContent>
-              </CompactButton>
-            )
-          })}
-        </BoostRow>
-      </AutoBoostRow>
-      )}
       </BoostCard>
       )}
 
@@ -662,8 +599,11 @@ const ComputePage = ({ game }) => {
               // boundary's own gradually-filling reserve (see getComputeReserveHeld) — the primary
               // slot row always reads at most COMPUTE_ENTITY_CAP/COMPUTE_ENTITY_CAP; the "extra"
               // shows up as reserve fill in row 2 instead, never as an overflowing "14/10".
-              const primaryHeld = Math.min(count, COMPUTE_ENTITY_CAP)
               const reserveHeld = hasMergeRow ? getComputeReserveHeld(state, tierIndex) : 0
+              // A manual Charge moves units from the top row down into the bottom row one per second.
+              const charging = hasMergeRow && isComputeCharging(state, rowIndex)
+              const chargeAvailable = hasMergeRow && isComputeChargeAvailable(state, rowIndex)
+              const primaryHeld = charging ? Math.min(COMPUTE_ENTITY_CAP, Math.max(0, count - reserveHeld)) : Math.min(count, COMPUTE_ENTITY_CAP)
 
               // Progressive disclosure: the merge/auto row only shows for the selected tier or when
               // there is something to act on or watch, so idle tiers stay a single line.
@@ -672,7 +612,7 @@ const ComputePage = ({ game }) => {
               // the tight layout is for already-automated tiers.
               const spacious = !autoEnabled
               const showDetail = hasMergeRow && (
-                spacious || armedTierIndex === tierIndex || merging || canMergeNow || reserveHeld > 0
+                spacious || armedTierIndex === tierIndex || merging || charging || canMergeNow || reserveHeld > 0
               )
 
               // Only unlocked tiers render: the first, anything held/automated/merging, one whose
@@ -690,7 +630,7 @@ const ComputePage = ({ game }) => {
                   <TierHeaderRow $spacious={spacious}>
                     <TierSelectButton
                       type="button"
-                      onClick={() => setSelectedBoostTierIndex(armedTierIndex === tierIndex ? null : tierIndex)}
+                      onClick={() => setSelectedBoostTierIndex(tierIndex)}
                       aria-pressed={armedTierIndex === tierIndex}
                       aria-label={`select ${row.label} to fund a compute boost`}
                       title={`Select ${row.label} to show its Boost presets — they'll boost ${describeCoveredTiers(tierIndex, 'name')}`}
@@ -714,36 +654,44 @@ const ComputePage = ({ game }) => {
                   <TierMergeRow $spacious={spacious}>
                     {hasMergeRow && (
                       autoEnabled ? (
+                        <>
+                        <TierActionButton
+                          aria-label={`charge ${row.label.toLowerCase()}: move units down one per second, then merge ${COMPUTE_MERGE_RATIO} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
+                          disabled={!chargeAvailable}
+                          onClick={() => actions.startComputeCharge(rowIndex)}
+                          title={
+                            charging
+                              ? 'Charging — one unit moves into the Charger each second, then it merges'
+                              : (intro[row.mergeOutputField] ?? 0) >= outputCap
+                                ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
+                                : `Charge: move units from the top row into the Charger one per second, then merge ${COMPUTE_MERGE_RATIO} into 1 ${row.mergeOutputLabel} (needs ${COMPUTE_MERGE_RATIO} ${row.label} held)`
+                          }
+                          type="button"
+                          variant="prestige"
+                        >
+                          <ButtonContent>{charging ? `⏳ ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP}` : '⚡ Charge'}</ButtonContent>
+                        </TierActionButton>
                         <ReserveSlotsRow
                           aria-label={
-                            startAvailable
-                              ? `instantly charge up ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}, ${merging ? `auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left` : `${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} auto-charge slots filled`}`
-                              : merging
-                                ? `${row.label} auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left`
-                                : `${row.label} auto-charge slots, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
+                            merging
+                              ? `${row.label} charger, auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left`
+                              : `${row.label} charger, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
                           }
-                          disabled={!startAvailable}
-                          onClick={startAvailable ? () => actions[row.startAction]() : undefined}
-                          $clickable={startAvailable}
+                          disabled
+                          $clickable={false}
                           title={
-                            startAvailable
-                              ? `Charge up now: instantly turn ${COMPUTE_MERGE_RATIO} ${row.label} into 1 ${row.mergeOutputLabel}. Auto-charge slots fill past ${COMPUTE_ENTITY_CAP} and charge on their own when all ${COMPUTE_MERGE_RESERVE_CAP} are full${merging ? ` (auto-charging: ${formatOfflineDuration(remainingSeconds)} left)` : ''}`
-                              : merging
-                                ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
-                                : (intro[row.mergeOutputField] ?? 0) >= outputCap
-                                  ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
-                                  : `Auto-charge slots: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — they charge on their own when full; tap to charge up instantly once you hold ${COMPUTE_MERGE_RATIO} ${row.label}`
+                            merging
+                              ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
+                              : `Charger: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — fills past ${COMPUTE_ENTITY_CAP} held and charges on its own when full, or press Charge to move units into it one per second`
                           }
                           type="button"
                         >
-                          <MergeCue aria-hidden="true" $active={startAvailable}>
-                            {startAvailable ? `🤖 ⬆ ${COMPUTE_MERGE_RATIO}→1 ${row.mergeOutputLabel}` : '🤖 Auto-charge'}
-                          </MergeCue>
                           {merging && <MergeCountdown>{formatOfflineDuration(remainingSeconds)}</MergeCountdown>}
                           {Array.from({ length: COMPUTE_MERGE_RESERVE_CAP }, (_, index) => (
                             <ReserveSlot key={index} $filled={index < reserveHeld} $merging={merging} aria-hidden="true" />
                           ))}
                         </ReserveSlotsRow>
+                        </>
                       ) : (
                         <>
                           <TierActionButton
@@ -759,19 +707,19 @@ const ComputePage = ({ game }) => {
                             variant="prestige"
                             $spacious
                           >
-                            <ButtonContent>{`⬆ ${COMPUTE_MERGE_RATIO}→1 ${row.mergeOutputLabel}`}</ButtonContent>
+                            <ButtonContent>{`${row.symbol} ${COMPUTE_MERGE_RATIO}→1 ${ENTITY_ROWS[rowIndex + 1]?.symbol ?? '⬆'}`}</ButtonContent>
                           </TierActionButton>
                           <TierActionButton
                             aria-label={row.autoAriaLabel}
                             disabled={!canEnableAuto}
                             onClick={() => actions[row.enableAutoAction]()}
-                            title={`Auto: sacrifice ${COMPUTE_ENTITY_CAP} of your ${formatAmount(autoCostHeld)} ${row.autoCostLabel} to permanently automate this step whenever ${row.label} is full, via a timed reserve charge`}
+                            title={`Unlock this tier's Charger: sacrifice ${COMPUTE_ENTITY_CAP} of your ${formatAmount(autoCostHeld)} ${row.autoCostLabel} — it then charges on its own whenever ${row.label} is completely full, via a timed reserve charge`}
                             type="button"
                             variant="info"
                             $progress={autoUnlockProgress}
                             $spacious
                           >
-                            <ButtonContent>{`🤖 ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
+                            <ButtonContent>{`🔓 Charger ${ENTITY_ROWS[rowIndex + 1]?.symbol ?? ''} ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
                           </TierActionButton>
                         </>
                       )
