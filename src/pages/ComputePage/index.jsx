@@ -292,7 +292,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Batteries',
     autoCostField: 'computeNodes',
     enableAutoAction: 'enableAutoMergeCoresIntoNode',
-    autoAriaLabel: 'enable auto-charge for Cells into Batteries',
+    autoAriaLabel: 'unlock the Charger for Cells into Batteries',
     startAction: 'startComputeCoresMerge',
     timerField: 'computeCoresMergeRemainingSeconds',
   },
@@ -308,7 +308,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Packs',
     autoCostField: 'computeClusters',
     enableAutoAction: 'enableAutoMergeNodesIntoCluster',
-    autoAriaLabel: 'enable auto-charge for Batteries into Packs',
+    autoAriaLabel: 'unlock the Charger for Batteries into Packs',
     startAction: 'startComputeNodesMerge',
     timerField: 'computeNodesMergeRemainingSeconds',
   },
@@ -324,7 +324,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Banks',
     autoCostField: 'computeNetworks',
     enableAutoAction: 'enableAutoMergeClustersIntoNetwork',
-    autoAriaLabel: 'enable auto-charge for Packs into Banks',
+    autoAriaLabel: 'unlock the Charger for Packs into Banks',
     startAction: 'startComputeClustersMerge',
     timerField: 'computeClustersMergeRemainingSeconds',
   },
@@ -340,7 +340,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Generators',
     autoCostField: 'computeGrids',
     enableAutoAction: 'enableAutoMergeNetworksIntoGrid',
-    autoAriaLabel: 'enable auto-charge for Banks into Generators',
+    autoAriaLabel: 'unlock the Charger for Banks into Generators',
     startAction: 'startComputeNetworksMerge',
     timerField: 'computeNetworksMergeRemainingSeconds',
   },
@@ -356,7 +356,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Turbines',
     autoCostField: 'computeFabrics',
     enableAutoAction: 'enableAutoMergeGridsIntoFabric',
-    autoAriaLabel: 'enable auto-charge for Generators into Turbines',
+    autoAriaLabel: 'unlock the Charger for Generators into Turbines',
     startAction: 'startComputeGridsMerge',
     timerField: 'computeGridsMergeRemainingSeconds',
   },
@@ -372,7 +372,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Plants',
     autoCostField: 'computeClouds',
     enableAutoAction: 'enableAutoMergeFabricsIntoCloud',
-    autoAriaLabel: 'enable auto-charge for Turbines into Plants',
+    autoAriaLabel: 'unlock the Charger for Turbines into Plants',
     startAction: 'startComputeFabricsMerge',
     timerField: 'computeFabricsMergeRemainingSeconds',
   },
@@ -388,7 +388,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Grids',
     autoCostField: 'computeDatacenters',
     enableAutoAction: 'enableAutoMergeCloudsIntoDatacenter',
-    autoAriaLabel: 'enable auto-charge for Plants into Grids',
+    autoAriaLabel: 'unlock the Charger for Plants into Grids',
     startAction: 'startComputeCloudsMerge',
     timerField: 'computeCloudsMergeRemainingSeconds',
   },
@@ -404,7 +404,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Reactors',
     autoCostField: 'computeSupercomputers',
     enableAutoAction: 'enableAutoMergeDatacentersIntoSupercomputer',
-    autoAriaLabel: 'enable auto-charge for Grids into Reactors',
+    autoAriaLabel: 'unlock the Charger for Grids into Reactors',
     startAction: 'startComputeDatacentersMerge',
     timerField: 'computeDatacentersMergeRemainingSeconds',
   },
@@ -420,7 +420,7 @@ const ENTITY_ROWS = [
     autoCostLabel: 'Fusions',
     autoCostField: 'computeMegacomputers',
     enableAutoAction: 'enableAutoMergeSupercomputersIntoMegacomputer',
-    autoAriaLabel: 'enable auto-charge for Reactors into Fusions',
+    autoAriaLabel: 'unlock the Charger for Reactors into Fusions',
     startAction: 'startComputeSupercomputersMerge',
     timerField: 'computeSupercomputersMergeRemainingSeconds',
   },
@@ -669,7 +669,7 @@ const ComputePage = ({ game }) => {
                           type="button"
                           variant="prestige"
                         >
-                          <ButtonContent>{charging ? '⏳ Charging' : '⚡ Charge'}</ButtonContent>
+                          <ButtonContent>{charging ? `⏳ ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP}` : '⚡ Charge'}</ButtonContent>
                         </TierActionButton>
                         <ReserveSlotsRow
                           aria-label={
