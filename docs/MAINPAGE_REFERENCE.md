@@ -784,14 +784,13 @@ progress fill + hidden `role="progressbar"` (`PpPurchaseButton`); see "Accessibi
 
 **Global Tickspeed card (Factory view).** Unlike every other automation upgrade, this one is
 Money-funded (not PP-funded) and lives on the Factory view as its own `GlobalTickspeedCard`, rendered
-at the very top of the Factory view (side by side with the Restage card once that's revealed, in a
-`SpeedCardsRow`) — above `TierList`/tier 1, before anything else — since it's
+at the very top of the Factory view (alone in its own `SpeedCardsRow`; Restage now sits left of Scale Up below the tier list) — above `TierList`/tier 1, before anything else — since it's
 relevant from the very start of a run, well before Overclock or Prestige are, or even the tier list
 itself — `ScaleUpCard` is likewise always shown (unlike `OverclockCard`, still gated on the last
 tier having ever been unlocked — see below), but stays down in its own row below `TierList` rather
 than joining this card, since its own target walks through the tier ladder one tier at a time (see
 "Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
-through. `ScaleUpCard` and `OverclockCard` (see below) each render in their own full-width row instead.
+through. Below `TierList`: `RestageCard` (left, once revealed) + `ScaleUpCard` (right) share one `SpeedCardsRow` (a lone card fills the row), and `OverclockCard` gets its own full-width row. Clock Speed shows `🏭 ×<1 + step>/lvl` and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock).
 (Earlier iterations tried grouping all three speed-related cards together at the top; this
 was reverted to the current split — Tickspeed (Latency, with Restage beside it) at top, Scale Up/Overclock below the tier list —
 per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying
@@ -814,7 +813,7 @@ tickspeed multiplier" below) lands on fractional values, so it shows up to 2 dec
 (trimming a trailing `.00`/trailing zero, same style as `formatRate`) while the cumulative bonus is
 still under 100%, then rounds to a whole percent once it reaches/crosses 100% (×2.00), matching
 every other multiplier badge in the app once the numbers get large. The button carries `$progress`
-(Money ÷ cost) the same way Buy does, reading just `🌐 {cost}` (compact, since it shares a row with Restage; the
+(Money ÷ cost) the same way Buy does, reading just `🌐 {cost}` (the
 Enable/Upgrade wording lives in `aria-label`) — its `aria-label` alone still spells out the current cumulative bonus
 (same `formatGlobalTickspeedBonusPercent` formatting) for assistive tech, independent of the
 collapsed/expanded visual state. A `globalTickspeedCardEverRevealed` flag (seeded from/latched to
@@ -853,7 +852,7 @@ The **last tier's** button stays the ordinary resource-funded tickspeed button f
 but its requirement and spend differ: it needs `getTickspeedMultiplierRequirement` owned (e.g. 100 for
 the 2nd upgrade) and spends only `getTickspeedMultiplierSpend` (10% — e.g. 10); the visible label shows
 the spend, the aria-label/progress bar the requirement. Its XP-funded tickspeed is a **separate**
-**Restage** card beside the Clock Speed card (same `SpeedCardsRow`) (`aria-label="restage panel"`, shown once
+**Restage** card left of the Scale Up card (same `SpeedCardsRow`, below the tier list) (`aria-label="restage panel"`, shown once
 `isLastTierTickspeedXpUnlocked`) with a `🧬 {XP} XP` button — see docs/ECONOMY_REFERENCE.md's
 "The last tier's XP-funded tickspeed". The row's Details "tier ×N" multiplier includes the XP bonus.
 

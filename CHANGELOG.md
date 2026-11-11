@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- **Overclock no longer banks levels.** Clock Speed's per-level boost (×1.1 per level) now depends only on the final-tier completed level reached at your latest Overclock claim, instead of a running total across every claim; the Overclock card no longer mentions "banked completed levels", and the button now shows the per-level effect and completed/required levels (`⚡ QB 7/12`; the effect sits beside the card name as `🌐 ×1.1/lvl`, and Scale Up's as `🏭 ×2` — 🌐 Clock Speed / 🏭 tier production mark what each multiplies; Overclock now has its own row) instead of a computed rate. Existing saves keep their last claim's level, so the per-level rate may drop.
+- **Overclock no longer banks levels.** Clock Speed's per-level boost (×1.1 per level) now depends only on the final-tier completed level reached at your latest Overclock claim, instead of a running total across every claim; the Overclock card no longer mentions "banked completed levels", and the button now shows the per-level effect and completed/required levels (`⚡ QB 7/12`; the effect sits beside the card name as `🌐 ×1.1/lvl`, and Scale Up's as `🏭 ×2` — 🌐 Clock Speed / 🏭 tier production mark what each multiplies; Overclock now has its own row; Restage moved beside Scale Up below the tier list, and Clock Speed (`🏭 ×1.01/lvl`) and Restage (`QB ×1.01/XP`) now show their core effect beside their names too) instead of a computed rate. Existing saves keep their last claim's level, so the per-level rate may drop.
 
 - Compute (Flops) screen: removed the explanatory paragraph and shortened per-tier stats to "N owned · Tier ×multiplier".
 
