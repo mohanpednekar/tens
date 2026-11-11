@@ -9168,6 +9168,17 @@ At the maintainer's request, Latency + Restage (above the tier list) and Scale U
 it) each share one `SpeedCardsRow` that stays side by side at every width (`flex: 1 1 0`, no wrap),
 superseding the earlier below-40rem single-column stack of Scale Up / Overclock.
 
+## Scale Up and Overclock each get a full-width row (2026-11)
+
+Putting `CardEffect` (`🏭 ×2` / `🌐 ×1.1/lvl`) beside the card name made the shared Scale Up +
+Overclock `SpeedCardsRow` too tight at phone width (heading wrap, disclosure body squeezed into the
+title column). They now each render in their own full-width row; Clock Speed + Restage stay paired.
+See the superseded "Feature-card pairs stay side by side on phones" entry above.
+
+Follow-up (same month): Restage moved from beside Clock Speed to the left of Scale Up (both act on
+the tier ladder below the list), leaving Clock Speed alone above it; Clock Speed and Restage also
+show a `CardEffect` (`🏭 ×1.01/lvl`, `QB ×1.01/XP`).
+
 ## Reboot → Purge (player-facing only); Auto Restage joins the automation chain (2026-11)
 
 The Factory reset was renamed **Purge** in the UI (PP now reads **Purge Points**). Unlike the earlier

@@ -792,7 +792,7 @@ than joining this card, since its own target walks through the tier ladder one t
 "Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
 through. Below `TierList`: `RestageCard` (left, once revealed) + `ScaleUpCard` (right) share one `SpeedCardsRow` (a lone card fills the row), and `OverclockCard` gets its own full-width row. Clock Speed shows `🏭 ×<1 + step>/lvl` and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock).
 (Earlier iterations tried grouping all three speed-related cards together at the top; this
-was reverted to the current split — Tickspeed (Latency, with Restage beside it) at top, Scale Up/Overclock below the tier list —
+was reverted to the current split — Clock Speed alone at top, Restage + Scale Up then Overclock below the tier list —
 per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying
 `engine.js` mechanics. The heading text itself never changes
 (`Tickspeed`, no level/percent readout — shortened first from `Global Tickspeed Multiplier` to
@@ -875,14 +875,13 @@ directly toggleable) on Firmware → 🤖 Automation's Tier Autobuyers category,
 unchanged by the move to Firmware — see `docs/ECONOMY_REFERENCE.md` for costs/effects and
 `docs/DESIGN_HISTORY.md` ("PP Upgrades tab split…") for why the page is split three ways.
 
-**Scale Up and Overclock cards, below the tier list.** `ScaleUpCard` and `OverclockCard` render
-together, in that order, inside a shared `SpeedCardsRow` flex row placed directly below `TierList` —
+**Scale Up and Overclock cards, below the tier list.** `ScaleUpCard` and `OverclockCard` each render
+in their own full-width `SpeedCardsRow` placed directly below `TierList`, Scale Up first —
 not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why Clock Speed
-(paired with Restage) stays on top while this pair sits below the tier list). `SpeedCardsRow` keeps the pair side by side at every width, phone included (`flex: 1 1 0`,
-`min-width: 0`, no wrap) — the same row also holds Clock Speed + Restage above the tier list. The earlier
-below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below),
-so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
-alongside it. Both soft-reset cards (and Clock Speed) share `featureCard(accent)`: compact `0.6rem 0.75rem`
+stays on top while these sit below the tier list). Restage + Scale Up share one `SpeedCardsRow` (side by side at every width, `flex: 1 1 0`, `min-width: 0`, no wrap). The earlier
+below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below);
+`OverclockCard` is gated and, when revealed, sits in the next row rather than beside Scale Up.
+Both soft-reset cards (and Clock Speed) share `featureCard(accent)`: compact `0.6rem 0.75rem`
 padding, a `0.4rem` internal gap and a 3px left accent stripe; their headings have no default margin, their
 buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`.
 
