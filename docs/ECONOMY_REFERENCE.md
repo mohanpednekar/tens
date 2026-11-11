@@ -2090,9 +2090,8 @@ larger default `Button` size) shows `⏩ {targetTier.symbol} {completed}/{requir
 requirement is measured against (via `getScaleUpTargetTier`), not always the last tier's. The
 requirement is already in completed levels; the displayed current count is
 `state.purchaseLevels[targetTier.id] − 1`. Enabled once the raw engine requirement is met and disabled
-while frozen — no `window.confirm` guard, since this is beneficial not destructive. Once `!isFirstRun`
-and `autoScaleUp` bought, an `AutoChip` in the Scale Up card header reads "⏩ Auto" (or "⏩ Paused";
-`aria-label` "Auto Scale Up active|paused"; the purchase button itself lives on Firmware → Automation).
+while frozen — no `window.confirm` guard, since this is beneficial not destructive. Auto Scale Up shows
+no status on Factory (no "Auto"/"Paused" chip); buying and pausing it live only on Firmware → Automation.
 
 ### Overclock
 

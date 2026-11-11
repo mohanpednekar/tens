@@ -174,7 +174,6 @@ const CardTitleGroup = styled.div`
   }
 `
 
-const AutoChip = styled.span`
   border: 1px solid ${props => props.theme.color.border};
   border-radius: 999px;
   color: ${props => props.theme.color.textMuted};
@@ -1034,18 +1033,6 @@ const MainPage = ({ game }) => {
   const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)
   const canOverclock = !isFrozen && lastTierLevelDisplay >= overclockRequirement
 
-  // Auto Scale Up (bought on Firmware → Automation; see buyAutoScaleUp in engine.js) — Factory only shows
-  // its status note.
-  const isAutoScaleUpActive = state.autoScaleUp ?? false
-  // Whether Auto Scale Up currently acts, independent of whether it's been bought (see
-  // setAutoScaleUpEnabled/tickGame in engine.js) — a pause/resume preference, not a purchase.
-  const autoScaleUpEnabled = state.autoScaleUpEnabled ?? true
-  const autoScaleUpEffectivelyActive = autoScaleUpEnabled
-  const autoScaleUpStatusLabel = autoScaleUpEnabled ? 'Auto Scale Up active' : 'Auto Scale Up paused'
-  const autoScaleUpStatusTitle = autoScaleUpEnabled
-    ? "Scale Up now triggers automatically the instant it's eligible"
-    : 'Auto Scale Up is currently paused — it will not trigger until resumed'
-
   // PP-funded unlocks/upgrades/toggles live on the Firmware page (pages/PerksPage).
 
   // The global tickspeed multiplier is a single global (not per-tier) leveled upgrade, mirroring
@@ -1642,11 +1629,6 @@ const MainPage = ({ game }) => {
               <h2>Scale Up</h2>
               <CardEffect title="Doubles production for tiers unlocked so far">🏭 ×2{scaleUpUnlocksTB ? ' · 🔓 TB' : ''}</CardEffect>
             </CardTitleGroup>
-            {!isFirstRun && isAutoScaleUpActive && (
-              <AutoChip $dimmed={!autoScaleUpEffectivelyActive} aria-label={autoScaleUpStatusLabel} title={autoScaleUpStatusTitle}>
-                ⏩ {autoScaleUpEffectivelyActive ? 'Auto' : 'Paused'}
-              </AutoChip>
-            )}
           </CardHeader>
           <ScaleUpButton
             aria-label={`Scale Up (requires ${scaleUpRequirementDisplay} completed ${scaleUpTargetTier.name} levels) — doubles production for tiers unlocked so far${scaleUpUnlocksTB ? ' and unlocks TB' : ''}`}

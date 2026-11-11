@@ -775,8 +775,8 @@ labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card show
 once, its halves a ⚙/🤖 icon; Flops cells show the tier symbol (their category heading names the kind). Every automation is named
 `Auto <feature>` (no hyphen) in every accessible name; on Firmware the *visible* global/Booster label drops
 the redundant `Auto` (`Speed Up`, `Restage`, …, `Boost`) since the category heading already says it. Factory's Clock Speed / Scale Up / Overclock cards share
-`featureCard(accent)` (neutral border + 3px left accent stripe, 1rem heading); Auto Scale Up's status
-is an `AutoChip` in the Scale Up card header.
+`featureCard(accent)` (neutral border + 3px left accent stripe, 1rem heading); Factory carries no
+"Auto" labels — automation status and toggles live only on Firmware.
 Tab dots: Automation `automation perk available` (`hasAffordableAutomationPerk`: an automation unlock
 or Auto Purge speed level), Prestige `prestige perk available` (`hasAffordablePrestigePerk`:
 Compression). Every PP button keeps the shared live
