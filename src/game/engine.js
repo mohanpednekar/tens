@@ -928,7 +928,7 @@ export const getGlobalTickspeedProductionMultiplier = (level, overclockLevel = 0
   return (1 + step) ** lvl
 }
 
-// Whether the separate Restage upgrade for the last tier (shown beside Speed Up — see
+// Whether the separate Restage upgrade for the last tier (shown beside Scale Up — see
 // getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) is available — a live
 // check for the first Scale Up OF THE FINAL TIER (scaleUpTierCounts[last] >= 1). Simply revealing
 // the final tier is not enough. With TIER_DEFINITIONS.length tiers this is exactly the run's
@@ -7754,7 +7754,7 @@ export const setAutoGlobalTickspeedEnabled = enabled => state => {
 // along with purge.xp itself, same as every other run-scoped field. Only available while
 // isLastTierTickspeedXpUnlocked (a scaleUpTierCounts-based latch — the last tier has EVER been
 // the target of a successful Scale Up this cycle, NOT a live owned check), which is when it's
-// a separate upgrade shown beside Speed Up, composing with that tier's own tickspeed level —
+// a separate upgrade shown beside Scale Up, composing with that tier's own tickspeed level —
 // AND while the last tier's own current `owned` is > 0 (see the guard below; with nothing owned
 // there, there's nothing left to speed up). Every successful consumption, no
 // matter how small, resets tier 1 through the second-to-last tier's `owned` (and, to keep them in
