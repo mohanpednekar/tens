@@ -46,16 +46,16 @@ specifically for:
 
 ## 4. Migration coverage for renamed/removed ids
 
-If any tier `id` is renamed or removed, check `src/game/storage.js`'s `LEGACY_TIER_ID_MAP` (old id
-→ new id) and `LEGACY_REMOVED_TIER_IDS` (dropped entirely) cover **every** old→new mapping the
-issue specifies — an old id missing from either one silently orphans that tier's saved
+If any tier `id` is renamed or removed, check `src/save-migration/` covers **every** old→new mapping
+the issue specifies: a migration step run by `adaptSaveForCurrentSchema` (the pattern is
+`migrateToV3.js`, with `SAVE_SCHEMA_VERSION` in `constants.js` bumped) must carry the old id's saved
 `resources`/`owned`/`purchased`/`purchaseLevels`/`purchaseLevelProgress`/`autobuyers`/
 `autobuyersEnabled`/`tickspeedLevels`/`autobuyerAttemptBudgets`/`tierProductionAccumulators`/
 `tierTickspeedAutobuyer`/`tierTickspeedAutobuyerEnabled`/`everUnlockedTierIds`
-data on existing players' next load, rather than carrying it forward or making a deliberate,
-spec'd decision to discard it (see every `migrateTierKeys(saved.<field>)` call site in
-`migrateState`, `storage.js`, and the `LEGACY_REMOVED_TIER_IDS` comment for an example of a
-deliberate, documented drop).
+data forward under the new id. An old id with no migration step is either silently orphaned on
+existing players' next load, or — if listed in `detectLegacy.js`'s `LEGACY_TIER_IDS` — makes the whole
+save read as incompatible and get discarded (`IncompatibleSaveNotice`). Either outcome must be a
+deliberate, spec'd decision in the issue, never a side effect of the rename.
 
 ## 5. Authorization boundary
 
