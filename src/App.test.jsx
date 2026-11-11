@@ -5070,7 +5070,7 @@ describe('ComputePage merge chain', () => {
   describe('tier detail row is progressively disclosed', () => {
     const base = { bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true }
     const nodesMerge = () => screen.queryByRole('button', { name: /charge up 8 batteries into 1 pack/i })
-    const nodesAuto = () => screen.queryByRole('button', { name: /enable auto-charge for batteries into packs/i })
+    const nodesAuto = () => screen.queryByRole('button', { name: /unlock the charger for batteries into packs/i })
 
     test('a non-automated unlocked tier always shows its merge/auto buttons (spacious layout)', () => {
       seedIntroState({ ...base, computeCores: 1, computeNodes: 2 })
@@ -5157,7 +5157,7 @@ describe('ComputePage merge chain', () => {
     expect(saved.intro.computeNodes).toBe(2)
   })
 
-  test('enabling auto-charge for Cells into Batteries sacrifices 10 Batteries and removes the manual merge button', () => {
+  test('unlocking the Charger for Cells into Batteries sacrifices 10 Batteries and removes the manual merge button', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: COMPUTE_ENTITY_CAP,
@@ -5165,7 +5165,7 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /enable auto-charge for cells into batteries/i }))
+    fireEvent.click(screen.getByRole('button', { name: /unlock the charger for cells into batteries/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeNodes).toBe(0)
@@ -5271,7 +5271,7 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /enable auto-charge for batteries into packs/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /unlock the charger for batteries into packs/i })).toBeDisabled()
   })
 
   test('enabling auto-charge sacrifices exactly 10 held Packs and replaces the button with an Auto badge', () => {
@@ -5282,12 +5282,12 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /enable auto-charge for batteries into packs/i }))
+    fireEvent.click(screen.getByRole('button', { name: /unlock the charger for batteries into packs/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeClusters).toBe(0)
     expect(saved.intro.autoMergeNodesIntoCluster).toBe(true)
-    expect(screen.queryByRole('button', { name: /enable auto-charge for batteries into packs/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /unlock the charger for batteries into packs/i })).not.toBeInTheDocument()
   })
 
   test('enabling auto-charge preserves any Packs held above 10 — regression: this used to zero the whole field, destroying reserve progress the Packs into Bank boundary was already gradually accumulating', () => {
@@ -5298,7 +5298,7 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /enable auto-charge for batteries into packs/i }))
+    fireEvent.click(screen.getByRole('button', { name: /unlock the charger for batteries into packs/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeClusters).toBe(5) // NOT 0 — the reserve's own 5 units survive
@@ -5351,6 +5351,17 @@ describe('Compute auto-charge automation', () => {
     expect(charge).toHaveTextContent('⚡ Charge')
   })
 
+  test('while a Charge runs, the Charge button shows ⏳ n/8 progress instead of ⚡ Charge', () => {
+    seedIntroState({
+      bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeNodes: 13, autoMergeNodesIntoCluster: true, computeChargeSeconds: { 1: 0.5 },
+    })
+    render(<App />)
+    openBoosters()
+
+    expect(screen.getByRole('button', { name: /^charge batteries: move units down/i })).toHaveTextContent(/⏳ \d\/8/)
+  })
+
   test('the Charger row carries no label or merge cue (the Charge button sits to its left)', () => {
     seedIntroState({
       bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
@@ -5373,7 +5384,7 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    const autoButton = screen.getByRole('button', { name: /enable auto-charge for cells into batteries/i })
+    const autoButton = screen.getByRole('button', { name: /unlock the charger for cells into batteries/i })
     expect(autoButton).toHaveTextContent('🔓 Charger 🔗 6/10')
     expect(autoButton).toBeDisabled() // below the 10-unit unlock cost
   })
