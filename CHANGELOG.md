@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Restage's effect chip now reads `QB +1%/XP` (1% faster per XP) and fits beside the title on narrow phones.
+- Factory feature cards (Clock Speed, Restage, Scale Up, Overclock) are each full width, and every effect chip is a percentage: `🏭 +1%/lvl`, `QB +1%/XP`, `🏭 +100%`, `🌐 +10%/lvl`.
 
 - Disk rebuilds (after Reformat or a pool flush) now wait until the disk's own pool Capacity can hold one disk of that size, matching Provision Disk. While waiting, the pool's Data Lake keeps filling and the Reformat replay keeps scaling lakes out and buying Boosters for the disk sizes already completed, up to prior highs.
 - Auto Boost is now automatic and free: once a tier's charge is automated, each automatic charge start spends one remaining token of that tier on your preferred Boost preset (once per charge). The 30 PP Firmware unlock is removed; a Switch on Power pauses/resumes it, and Power opens with the highest automated tier pre-selected.

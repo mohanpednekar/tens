@@ -2085,7 +2085,7 @@ card" in docs/MAINPAGE_REFERENCE.md). Unlike `OverclockCard` (still gated on `ov
 the last tier having ever been unlocked — see docs/MAINPAGE_REFERENCE.md), `ScaleUpCard` is always
 shown — relevant from the very first cycle, well before the last tier even exists. The button
 (`ScaleUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
-larger default `Button` size) shows `⏩ {targetTier.symbol} {completed}/{required}` (the 🏭 ×2 effect sits beside the card name, plus `· 🔓 TB` when the current target's successor is the Terabytes tier (`scaleUpUnlocksTB`))
+larger default `Button` size) shows `⏩ {targetTier.symbol} {completed}/{required}` (the 🏭 +100% effect sits beside the card name, plus `· 🔓 TB` when the current target's successor is the Terabytes tier (`scaleUpUnlocksTB`))
 — naming the target tier's symbol inline so it's always clear *which* tier's completed levels the
 requirement is measured against (via `getScaleUpTargetTier`), not always the last tier's. The
 requirement is already in completed levels; the displayed current count is
@@ -2162,7 +2162,7 @@ above) — not grouped with `GlobalTickspeedCard`, which renders separately at t
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as `scaleUpEverRevealed`. The button (`OverclockButton`, sized to match
 `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {symbol} {completed}/{required}` — e.g. `⚡ QB 7/12` (the final tier's completed levels vs. the requirement); the fixed
-per-level effect `🌐 ×1.1/lvl` sits beside the card name (no computed total rate). Like Scale Up, Overclock displays the raw one-based
+per-level effect `🌐 +10%/lvl` sits beside the card name (no computed total rate). Like Scale Up, Overclock displays the raw one-based
 engine level and requirement with a `-1` offset so both numbers indicate completed purchase levels;
 the fill bar uses those same displayed values. Enabled once the raw engine requirement
 is met and disabled while frozen — no `window.confirm` guard, same rationale as Scale Up (beneficial,

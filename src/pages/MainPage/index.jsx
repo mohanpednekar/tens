@@ -144,7 +144,7 @@ const featureCard = accent => css`
 // only the cost/progress).
 const CardEffect = styled.span`
   color: ${props => props.theme.color.textMuted};
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 400;
   margin-left: auto;
   white-space: nowrap;
@@ -156,7 +156,7 @@ const CardTitleGroup = styled.div`
   display: flex;
   flex: 1 1 auto;
   flex-wrap: wrap;
-  gap: 0.25rem;
+  gap: 0.4rem;
   justify-content: space-between;
   max-width: 100%;
   min-width: 0;
@@ -201,10 +201,9 @@ const OverclockButton = styled(Button)`
   }
 `
 
-// Clock Speed sits alone above the tier list. Below it, Restage (left) + Scale Up (right) share one
-// row (side by side at every width; a lone card fills the row), and Overclock gets its own
-// full-width SpeedCardsRow. Supersedes the earlier below-40rem single-column stack — see
-// docs/DESIGN_HISTORY.md.
+// Every feature card (Clock Speed above the tier list; Restage, Scale Up, Overclock below it) gets its
+// own full-width SpeedCardsRow, so their title + effect chips line up consistently. Supersedes the
+// earlier side-by-side pairs — see docs/DESIGN_HISTORY.md.
 const SpeedCardsRow = styled.div`
   display: flex;
   gap: 0.4rem;
@@ -1330,7 +1329,7 @@ const MainPage = ({ game }) => {
                     event.stopPropagation()
                   }}
                 >
-                  🏭 ×{formatRate(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP)}/lvl
+                  🏭 +{formatRate(GLOBAL_TICKSPEED_PRODUCTION_STEP * 100)}%/lvl
                 </CardEffect>
               </CardTitleGroup>
             </summary>
@@ -1559,8 +1558,8 @@ const MainPage = ({ game }) => {
         })}
       </TierList>
 
-      <SpeedCardsRow>
       {isLastTierXpUnlocked && (
+      <SpeedCardsRow>
         <GlobalTickspeedCard aria-label="restage panel">
           <Disclosure>
             <summary>
@@ -1605,7 +1604,10 @@ const MainPage = ({ game }) => {
             />
           </Button>
         </GlobalTickspeedCard>
+      </SpeedCardsRow>
       )}
+
+      <SpeedCardsRow>
         <ScaleUpCard aria-label="scale up panel">
           <Disclosure>
             <summary>
@@ -1618,7 +1620,7 @@ const MainPage = ({ game }) => {
                     event.stopPropagation()
                   }}
                 >
-                  🏭 ×2{scaleUpUnlocksTB ? ' · 🔓 TB' : ''}
+                  🏭 +100%{scaleUpUnlocksTB ? ' · 🔓 TB' : ''}
                 </CardEffect>
               </CardTitleGroup>
             </summary>
@@ -1666,7 +1668,7 @@ const MainPage = ({ game }) => {
                     event.stopPropagation()
                   }}
                 >
-                  🌐 ×{overclockLevelEffectDisplay}/lvl
+                  🌐 +{formatRate(OVERCLOCK_MULTIPLIER_STEP * 100)}%/lvl
                 </CardEffect>
               </CardTitleGroup>
             </summary>
