@@ -349,7 +349,6 @@ function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = 
   let ticks = 0
   let foundryTicks = null
   let scaleUpsAtStart = state.scaleUpCount ?? 0
-  let overclocksAtStart = state.overclockCount ?? 0
   const options = { capacityCapBits }
 
   const startedUnlocked = Boolean(state.intro?.mainGameUnlocked)
@@ -363,7 +362,7 @@ function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = 
         reached: false,
         finalMoney: state.resources[MONEY_ID],
         scaleUps: (state.scaleUpCount ?? 0) - scaleUpsAtStart,
-        overclock: (state.overclockCount ?? 0) - overclocksAtStart,
+        overclock: state.overclockLastClaimCompletedLevels ?? 0, // Overclock level reached (not banked)
         speedBonusUnlocked: Boolean((state.purge?.count ?? 0) >= 10),
         autobuyers: countUnlockedAutobuyers(state),
         capacity: state.intro?.capacity ?? 0,
@@ -394,7 +393,7 @@ function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = 
     reached: true,
     finalMoney: state.resources[MONEY_ID],
     scaleUps: (state.scaleUpCount ?? 0) - scaleUpsAtStart,
-    overclock: (state.overclockCount ?? 0) - overclocksAtStart,
+    overclock: state.overclockLastClaimCompletedLevels ?? 0, // Overclock level reached (not banked)
     speedBonusUnlocked: Boolean((state.purge?.count ?? 0) >= 10),
     autobuyers: countUnlockedAutobuyers(state),
     capacity: state.intro?.capacity ?? 0,

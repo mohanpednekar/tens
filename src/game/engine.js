@@ -7565,7 +7565,8 @@ export const scaleUpGame = state => {
     // Overclock was taken at) is carried over unchanged — an ordinary Scale Up is a smaller reset
     // than Overclock and must not touch its bonus or where the next Overclock gate stands; only
     // overclockGame sets it and only a real Prestige resets it.
-    overclockLastClaimCompletedLevels: state.overclockLastClaimCompletedLevels ?? initial.overclockLastClaimCompletedLevels,
+    // getOverclockLevel also resolves a legacy save's old `overclockCount` so a Scale Up never drops it.
+    overclockLastClaimCompletedLevels: getOverclockLevel(state) ?? initial.overclockLastClaimCompletedLevels,
   }
 }
 

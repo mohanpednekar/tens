@@ -567,8 +567,8 @@ const InfoPage = () => {
             and Purge Points are kept.
           </li>
           <li>
-            In exchange, permanently multiplies Clock Speed’s per-level rate by ×1.1 for each completed
-            level banked (1% → 1.1% → 1.21% → …).
+            In exchange, multiplies Clock Speed’s per-level rate by ×1.1 for each completed level you
+            had when you claimed (1% → 1.1% → 1.21% → …).
           </li>
           <li>
             The first claim needs {overclockFirstRequirement} completed levels — a minimum; you can
@@ -576,8 +576,9 @@ const InfoPage = () => {
             claim was taken at.
           </li>
           <li>
-            Every completed level counts — claiming at 3 and then 3 more gives the same benefit as
-            claiming 6 at once, so claim whenever you like.
+            Nothing is banked — each claim replaces the previous one, so only the completed level
+            reached at your latest claim sets the boost. Waiting to claim at a higher level gives a
+            bigger boost.
           </li>
         </ul>
       </Section>

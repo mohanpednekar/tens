@@ -9249,6 +9249,13 @@ describe('scaleUpGame', () => {
     expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[2].id)).toBe(1)
   })
 
+  it('keeps a legacy save\'s banked overclockCount (resolved as its Overclock level) across Scale Up', () => {
+    const state = { ...eligibleState(), overclockCount: 8 }
+    const after = scaleUpGame(state)
+    expect(getOverclockLevel(after)).toBe(8)
+    expect(getOverclockRequirement(after)).toBe(11)
+  })
+
   it('keeps the Overclock level across an ordinary Scale Up', () => {
     const state = withOverclockLevel(eligibleState(), 4)
     const after = scaleUpGame(state)
