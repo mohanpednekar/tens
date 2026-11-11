@@ -909,20 +909,12 @@ expressed in completed levels — Scale Up requires 3 levels for each tier's fir
 `everRevealed`-flag, latched permanently true and reset only on a full Reset — unlike `ScaleUpCard`,
 which carries no such gate at all (see above); Overclock's own gate is unaffected by Scale Up's
 redesign, still sitting purely on the last tier reaching a level. `OverclockButton` (sized to
-match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextStep}%/lvl ·
-{lastTier.symbol} {completed}/{required}` — completed levels of the final tier vs. this cycle's
-requirement — with an `aria-label` of `Overclock (requires {required} completed {lastTier.name}
+match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ ×1.1/lvl · {completed} lvls` — the fixed per-level effect (`1 + OVERCLOCK_MULTIPLIER_STEP`) and the final tier's completed levels (the fill bar still tracks completed/required) — with an `aria-label` of `Overclock (requires {required} completed {lastTier.name}
 levels) — …`. `ScaleUpButton` similarly reads `×2 · {targetTier.symbol} {completed}/{required}`
 plus a `· Unlock TB` suffix when the current target's successor is the Terabytes tier, with
 `aria-label` `Scale Up (requires {required} completed {targetTier.name} levels) — doubles production
 for tiers unlocked so far[ and unlocks TB]`
-— e.g. `⚡ 1.95%/lvl · Lv.7/7` — `actions.overclock` on click, where `{nextStep}` is the regular-step
-percentage a claim right now would raise the Tickspeed upgrade to: `1 + GLOBAL_TICKSPEED_PRODUCTION_STEP *
-getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` (accounting for a catch-up
-claim past the bare minimum requirement, not just `the Overclock level + 3`), formatted as a percentage by
-reusing `formatGlobalTickspeedBonusPercent`'s trimmed-decimal formatting (passing it `1 + step` as if
-it were a multiplier, since that function already computes `(multiplier - 1) * 100`). Overclock's
-reward is folded into the Tickspeed upgrade's own per-level rate, not a separate multiplier — see
+— `actions.overclock` on click. Overclock's reward is folded into the Tickspeed upgrade's own per-level rate, not a separate multiplier — see
 `getOverclockMultiplier`/`getGlobalTickspeedProductionMultiplier` in engine.js.
 Like `ScaleUpButton`'s `Lv.{scaleUpTargetTierLevelDisplay}/{scaleUpRequirementDisplay}`, this pair
 uses the completed-level display offset while eligibility continues to use the raw engine values;
@@ -934,8 +926,7 @@ to be a deliberate, occasional decision reached via this card, not a frequent on
 whose body renders once the Overclock level is > 0: collapsed by default, clicking "Overclock" reveals a
 `MutedText` line, `Tickspeed upgrade's per-level rate is now {currentStep}% (was 1%)`.
 `{currentStep}` is `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate
-*before* the next Overclock claim (as opposed to `OverclockButton`'s own label, which always shows
-the *next* rate — see above); this is the one Overclock-specific number not otherwise visible
+(`OverclockButton`'s own label shows only the fixed ×1.1/lvl effect and levels available — see above); this is the one Overclock-specific number not otherwise visible
 anywhere on the Factory view. Beyond that one figure, Overclock has no visible effect of its own to
 display separately from the Tickspeed card above it — raising the global tickspeed multiplier's own
 per-level step, rather than stacking a second multiplier alongside it, means the Tickspeed card's own

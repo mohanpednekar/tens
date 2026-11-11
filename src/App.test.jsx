@@ -1393,7 +1393,7 @@ test('the next Overclock requires three more completed levels than the count the
   expect(button).toBeDisabled()
 })
 
-test('the Overclock button shows the next per-level Clock Speed rate and completed-level requirement progress on itself', () => {
+test('the Overclock button shows the per-level Overclock effect and the completed levels available on itself', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
@@ -1404,13 +1404,12 @@ test('the Overclock button shows the next per-level Clock Speed rate and complet
   })
   render(<App />)
 
-  // A claim right now sets the Overclock level to its own 7 completed levels — raising
-  // Clock Speed's per-level rate to 1.95% (1% × 1.1^7) — both shown on the button itself, no
-  // separate status text line.
+  // The button shows the fixed per-level effect (×1.1) and the completed last-tier levels a claim
+  // would count — no computed total rate.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus and raises clock speed's per-level rate to 1\.95%/i,
+    name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus; each completed quettabytes level \(7 now\) multiplies clock speed's per-level rate by ×1\.1/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 1.95%/lvl · QB 7/7')
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ ×1.1/lvl · 7 lvls')
 })
 
 test('the Overclock card\'s disclosure states the current per-level Tickspeed rate once claimed', () => {

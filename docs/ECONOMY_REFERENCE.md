@@ -2163,13 +2163,8 @@ everything else).
 above) — not grouped with `GlobalTickspeedCard`, which renders separately at the top of the Factory view.
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as `scaleUpEverRevealed`. The button (`OverclockButton`, sized to match
-`ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
-— e.g. `⚡ 1.95%/lvl · Lv.7/7` — where `{nextStep}` is the regular-step percentage that would result
-from claiming right now (`1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(Math.max(lastTierLevel,
-overclockRequirement))`, accounting for a catch-up jump past the bare minimum requirement, not just
-`overclockLevel + 1`), formatted as a percentage by reusing `formatGlobalTickspeedBonusPercent`'s
-trimmed-decimal formatting (passing it `1 + step` as if it were a multiplier, since that function
-already computes `(multiplier - 1) * 100`). Like Scale Up, Overclock displays the raw one-based
+`ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ ×{1 + OVERCLOCK_MULTIPLIER_STEP}/lvl · {completed} lvls` — e.g. `⚡ ×1.1/lvl · 7 lvls`: the fixed
+per-level effect and the final tier's completed levels a claim would count (no computed total rate). Like Scale Up, Overclock displays the raw one-based
 engine level and requirement with a `-1` offset so both numbers indicate completed purchase levels;
 the fill bar uses those same displayed values. Enabled once the raw engine requirement
 is met and disabled while frozen — no `window.confirm` guard, same rationale as Scale Up (beneficial,
