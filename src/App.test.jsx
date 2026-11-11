@@ -1211,7 +1211,7 @@ test('the scale up and overclock panels render below the tier list, not above it
   expect(regions.indexOf('overclock panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('once the last tier has been a Scale Up target, a separate Restage panel appears beside Clock Speed while the row keeps its own tickspeed button', () => {
+test('once the last tier has been a Scale Up target, a separate Restage panel appears left of Scale Up below the tier list, and the last tier keeps its own tickspeed button', () => {
   seedMainGameState({
     resources: { base: 12345, tier10: 25 },
     owned: { tier09: 10, tier10: 25 },
@@ -1221,6 +1221,11 @@ test('once the last tier has been a Scale Up target, a separate Restage panel ap
     purge: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
   })
   render(<App />)
+
+  const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
+  expect(regions.indexOf('global clock speed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('scale up panel'))
 
   const xpPanel = screen.getByLabelText(/^restage panel$/i)
   const xpButton = within(xpPanel).getByRole('button', { name: /consume 37 xp for .* quettabytes tickspeed/i })
