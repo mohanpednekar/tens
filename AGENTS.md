@@ -70,6 +70,7 @@ docs/
   COMPONENTS_REFERENCE.md ← full Button/Money/StatCard prop/styling reference
   THEMING_REFERENCE.md    ← full design-token/font/ThemeProvider reference
   PWA_REFERENCE.md        ← full installable-PWA (manifest/icons/service-worker) reference
+  TESTING_REFERENCE.md    ← full Vitest + Playwright e2e conventions (query contracts, timers, spec list)
   NATIVE_APPS_REFERENCE.md ← Capacitor Android/iOS wrap: SDK targets, release signing, feature flags, mobile-build.yml
 src/
   game/
@@ -216,6 +217,8 @@ resolve to that dir's `index.jsx`/`index.js`.
   `App.test.jsx`. Environment: jsdom, globals enabled. Setup file: `src/setupTests.js`.
 - `yarn test` is green — run it for the current test count (counts are intentionally not recorded in
   docs: they went stale and made the docs a merge-conflict hot-spot).
+- Full conventions (role/label queries, fake-timer ordering, `fast-check`, current id scheme, the
+  separate `yarn test:e2e` Playwright suite): `docs/TESTING_REFERENCE.md`.
 
 ## Changelog convention
 
