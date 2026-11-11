@@ -1215,7 +1215,7 @@ test('once the last tier has been a Scale Up target, a separate Restage panel ap
   seedMainGameState({
     resources: { base: 12345, tier10: 25 },
     owned: { tier09: 10, tier10: 25 },
-    purchaseLevels: { tier09: 3, tier10: 2 },
+    purchaseLevels: { tier01: 2, tier09: 3, tier10: 2 },
     scaleUpTierCounts: { tier10: 1 },
     scaleUpTargetTierIndex: 9,
     purge: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
@@ -1223,6 +1223,7 @@ test('once the last tier has been a Scale Up target, a separate Restage panel ap
   render(<App />)
 
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
+  expect(regions).toContain('global clock speed panel')
   expect(regions.indexOf('global clock speed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
   expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
   expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('scale up panel'))
