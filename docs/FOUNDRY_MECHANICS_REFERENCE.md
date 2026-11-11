@@ -197,13 +197,18 @@ ladder sizes fully built); only then does full-buffer OVERFLOW also fill it AUTO
 pool's buffer (`tickPoolBufferFill`'s overflow branch, same gate). Separately, the lake draws directly
 from its pool's buffer at the pool's Bandwidth × its tap bonus (`tickDataLakePoolDrain`, right after
 `tickPoolBufferFill`) under a fixed pool-buffer priority: disk filling > provisioning in progress > lake
-filling — only while every BUILT disk is full and no build is in progress in that pool, the lake has
+filling. **A lake disk only STARTS while its pool buffer is completely full
+(`isStoragePoolBufferFull`/`isDataLakeDiskFillStartAllowed`) — checked once, at the start; a disk under way
+(`isDataLakeDiskFillInProgress`, `fillBits > 0`) is never interrupted**: it keeps draining whatever the buffer
+holds (read-cache reservation included) through empty disks, builds and a non-full buffer, and the drain
+stops at each disk's completion. The drain additionally starts a disk only while every BUILT disk is full,
+no build is in progress in that pool, the lake has
 room, and the buffer holds more than the read cache's reservation (`isDataLakePoolDrainAvailable`; while
 it applies, full-buffer overflow yields to it so a tick isn't credited twice; unprovisioned slots don't
 block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while a running Upgrade Data Stream
 pulls from the Data Stream. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
-directly from that pool's buffer up to what the next Booster still needs, outside the forced priority
-order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🏷️ `<cost>`" control that
+directly from that pool's buffer up to what the next Booster still needs — one lake disk per step, under the
+same full-pool start rule — outside the forced priority order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🏷️ `<cost>`" control that
 buys immediately (already affordable) or arms `intro.dataLakes[tier].autoConvertActive`;
 `tickDataLakeAutoConvert` then drives `fillDataLakeManually` one step per tick until affordable, buys
 exactly 1, and clears the flag — "one click, one full fill-then-buy conversion, then stop," never a

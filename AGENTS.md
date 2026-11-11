@@ -160,7 +160,7 @@ forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a sepa
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer
 fullness; taps never speed a fill — a Data Stream ping speeds Upgrade Capacity/Bitrate, a pool ping speeds that pool's consumers (disks, merges, provisioning, lake). Disks (`StoragePage`) fill from their pool buffer (larger sizes via a write cache; clicking an empty disk
 also feeds it from smaller disks at the same time) and pull into Factory automatically, with no manual
-redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too — but Cells,
+redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too (a lake disk only starts while its pool's Staging is full, then is never interrupted) — but Cells,
 which spend banked Data Lake units for Cells/Batteries/Boost (`ComputePage`, nav **Power**), only
 buy via a single per-lake "🏷️ `<cost>`" control: it buys immediately if affordable, or arms a one-shot
 `autoConvertActive` flag that fills-then-buys exactly 1 over subsequent ticks and stops (never a

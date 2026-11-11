@@ -1672,6 +1672,53 @@ describe('tickDataLakePoolDrain (buffer priority: disk filling > provisioning in
     expect(gained).toBeLessThanOrEqual(rate * dt + 1e-6)
   })
 
+  it('does not start a lake disk unless the pool buffer is full', () => {
+    const state = pool({ poolBuffers: { 1: 79_999 } })
+    expect(isDataLakePoolDrainAvailable(state, 1)).toBe(false)
+    expect(tickDataLakePoolDrain(1e6)(state)).toBe(state)
+  })
+
+  it('never interrupts a lake disk already under way — not for a non-full buffer, an empty disk, a build in progress or the read cache\'s claim', () => {
+    const lake = { ...getDataLakeTier(createInitialGameState(), 1), fillBits: 1 }
+    const state = pool({
+      dataLakes: { ...createInitialGameState().intro.dataLakes, 1: lake },
+      disks: { ...full, [sizes[1]]: 0 },
+      diskBuildQueued: true,
+      diskCache: {},
+      poolBuffers: { 1: DISK_LADDER_BASE_SIZE_BITS },
+    })
+    expect(areStoragePoolDisksFull(state, 1)).toBe(false)
+    expect(isDataLakePoolDrainAvailable(state, 1)).toBe(true)
+    const after = tickDataLakePoolDrain(1e6)(state)
+    expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+    expect(after.intro.poolBuffers[1]).toBe(1)
+  })
+
+  it('finishes at most the current lake disk per call — the next one needs a full pool again', () => {
+    const lake = { ...getDataLakeTier(createInitialGameState(), 1), capacityLevel: 1 }
+    const state = pool({ dataLakes: { ...createInitialGameState().intro.dataLakes, 1: lake } })
+    const after = tickDataLakePoolDrain(1e6)(state)
+    expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+    expect(getDataLakeFillBits(after, 1)).toBe(0)
+    expect(isDataLakePoolDrainAvailable(after, 1)).toBe(false)
+    expect(tickDataLakePoolDrain(1e6)(after)).toBe(after)
+  })
+
+  it('skips a lake the overflow branch already fed this tick (no double credit on the tick a disk starts)', () => {
+    const lake = { ...getDataLakeTier(createInitialGameState(), 1), capacityLevel: 1 }
+    const seed = pool({
+      bits: 1e9,
+      capacity: 32_000_000,
+      disks: { ...full, [sizes[1]]: 0 },
+      dataLakes: { ...createInitialGameState().intro.dataLakes, 1: lake },
+    })
+    const state = { ...seed, intro: { ...seed.intro, poolBuffers: { 1: getPoolBufferCapacity(seed, 1) } } }
+    const afterFill = tickPoolBufferFill(0.001)(state)
+    expect(getDataLakeFillBits(afterFill, 1)).toBeGreaterThan(0)
+    expect(tickDataLakePoolDrain(0.001, state)(afterFill)).toBe(afterFill)
+    expect(tickDataLakePoolDrain(0.001)(afterFill)).not.toBe(afterFill)
+  })
+
   it('is paced by the pool\'s Bandwidth', () => {
     const state = pool()
     const rate = getStoragePoolBandwidth(state, 1)
@@ -10587,7 +10634,8 @@ describe('Data Lakes', () => {
       })
       let state = level1
       for (let i = 0; i < 200; i += 1) {
-        state = tickPoolBufferFill(1)(state) // 200 bits/sec each tick (10% lake speed)
+        // 200 bits/sec each tick (10% lake speed): overflow starts each disk, the drain finishes it
+        state = tickDataLakePoolDrain(1, state)(tickPoolBufferFill(1)(state))
       }
       expect(getDataLakeDepositedUnits(1)(state)).toBe(10) // capped exactly at capacity, never beyond
       expect(getDataLakeCurrentFillSubSize(state, 1)).toBe(null) // correctly reads as fully maxed
@@ -10664,11 +10712,12 @@ describe('Data Lakes', () => {
 
     it('is associative — splitting the same total elapsedSeconds into many small ticks produces the SAME lake fill as one big tick (a flat, un-tapered rate is trivially associative, but this guards against a future regression reintroducing a per-segment rate that isn\'t)', () => {
       const wholeState = fullBufferState()
-      const wholeAfter = tickPoolBufferFill(2)(wholeState)
+      const tick = seconds => state => tickDataLakePoolDrain(seconds, state)(tickPoolBufferFill(seconds)(state))
+      const wholeAfter = tick(2)(wholeState)
 
       let splitState = fullBufferState()
       for (let i = 0; i < 20; i += 1) {
-        splitState = tickPoolBufferFill(0.1)(splitState)
+        splitState = tick(0.1)(splitState)
       }
 
       expect(getDataLakeFillBits(wholeAfter, 1)).toBeCloseTo(getDataLakeFillBits(splitState, 1), 6)
@@ -11234,12 +11283,26 @@ describe('Data Lakes', () => {
       expect(isDataLakeManualFillAvailable(state, 1)).toBe(false)
     })
 
-    it('is unavailable with less than one whole unit banked in the pool\'s own buffer', () => {
-      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 - 1), {
-        disksBuiltTotal: { [kb1]: 1 },
-      })
+    it('does not START a lake disk unless the pool buffer is full', () => {
+      const seed = withIntro(createInitialGameState(), { capacity: 8 * 2 ** 16, disksBuiltTotal: { [kb1]: 1 } })
+      const capacity = getPoolBufferCapacity(seed, 1)
+      const state = withPoolBuffer(seed, capacity - 1)
       expect(isDataLakeManualFillAvailable(state, 1)).toBe(false)
       expect(fillDataLakeManually(1)(state)).toBe(state)
+      expect(isDataLakeManualFillAvailable(withPoolBuffer(seed, capacity), 1)).toBe(true)
+    })
+
+    it('keeps filling a lake disk already under way from a pool that is no longer full', () => {
+      const seed = withIntro(createInitialGameState(), {
+        capacity: 8 * 2 ** 16,
+        disksBuiltTotal: { [kb1]: 1 },
+        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), fillBits: kb1 / 2 } },
+      })
+      const state = withPoolBuffer(seed, 100)
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(true)
+      const after = fillDataLakeManually(1)(state)
+      expect(getDataLakeFillBits(after, 1)).toBe(kb1 / 2 + 100)
+      expect(after.intro.poolBuffers[1]).toBe(0)
     })
 
     it('converts exactly enough units for the next Booster, spending only that much from the pool\'s own buffer', () => {
@@ -11262,7 +11325,8 @@ describe('Data Lakes', () => {
         dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), purchased: 2, capacityLevel: 1, boostersUnlocked: true } },
       })
       expect(getBoosterPurchaseCost(1)(state)).toBe(3)
-      const after = fillDataLakeManually(1)(state)
+      // One lake disk per step; the (tiny, still-full) pool then starts the next.
+      const after = fillDataLakeManually(1)(fillDataLakeManually(1)(state))
       expect(getDataLakeDepositedUnits(1)(after)).toBe(2) // only what the buffer could afford
       expect(after.intro.poolBuffers[1]).toBe(0)
       expect(isBoosterPurchaseAvailable(after, 1)).toBe(false) // still short of the 3 needed

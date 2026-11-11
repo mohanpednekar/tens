@@ -9317,3 +9317,15 @@ pool/Data Stream curves keep their symmetric 10×↔0.1×). The only 10× on the
 continuous timed transfer at `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` = 5 × pool Bandwidth × pool tap bonus, replacing the
 whole-block instant top-up (and its sub-block dump edge case). Rule from the maintainer: any speed curve starting at x ends at 1/x —
 not applicable to this constant-rate transfer, and the existing Data Stream/pool curves already satisfy it.
+
+## Lake disk fills: full-pool start, uninterruptible (2026-11)
+
+Maintainer rule: a lake disk fill shall not start unless its pool (Staging buffer) is full, checked only at
+the beginning; once a disk starts filling it is not interrupted. Before this the pool drain re-checked its
+priority gates (disks full, no build in progress, read-cache reservation) every tick, so a lake disk stalled
+mid-fill whenever a disk emptied or a build started, and started from any buffer level. Now
+`isDataLakeDiskFillStartAllowed` gates the start on `isStoragePoolBufferFull`; with `fillBits > 0` the drain
+ignores every gate and may use the whole buffer, stopping at the disk's completion. Manual fill follows the
+same rule (one disk per step). Full-buffer overflow already implies a full pool; since a disk it starts now
+makes the drain available in the same tick, `tickDataLakePoolDrain` takes the pre-fill state and skips a lake
+overflow already fed (no double credit).
