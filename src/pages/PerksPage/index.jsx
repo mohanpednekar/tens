@@ -1,6 +1,6 @@
 import BuyMaxToggle from 'components/BuyMaxToggle'
 import Button, { ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
-import { COMPUTE_BOOST_DISPLAY } from 'components/BoostTimerBar'
+import AutoBoostPresetPicker from 'components/AutoBoostPresetPicker'
 import StatCard from 'components/StatCard'
 import Switch from 'components/Switch'
 import {
@@ -29,7 +29,6 @@ import {
   isOverflowModeUnlocked,
 } from 'game/engine'
 import {
-  COMPUTE_BOOST_PRESETS,
   COMPUTE_MERGE_BOUNDARIES,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
@@ -39,7 +38,7 @@ import {
 } from 'game/layers'
 import { hasAffordableAutomationPerk, hasAffordablePrestigePerk } from 'game/navAttention'
 import { useEffect, useState } from 'react'
-import styled, { css, useTheme } from 'styled-components'
+import styled, { useTheme } from 'styled-components'
 
 // Firmware (formerly Perks) — its own AppNav destination (page id 'perks', revealed by isPerksPageRevealed), grouped by
 // feature rather than by purchase kind, in two icon tabs:
@@ -405,27 +404,6 @@ const PpPurchaseButton = ({ ariaLabel, color, cost, points, disabled, onClick, t
   </PpButton>
 )
 
-// A segmented choice (e.g. Boost preset): full width, one equal-width labeled button per option.
-const PresetRow = styled.div`
-  display: grid;
-  gap: 0.4rem;
-  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
-  width: 100%;
-`
-
-// The selected option is identified by styling alone (tinted fill + bold + full-strength border), no tick.
-const PresetButton = styled(Button)`
-  min-width: 0;
-  white-space: nowrap;
-  width: 100%;
-
-  ${props => props.$selected && css`
-    background: color-mix(in srgb, ${props.theme.color.warn} 22%, transparent);
-    border-width: 2px;
-    font-weight: 700;
-  `}
-`
-
 // One automation's whole lifecycle in a single compact cell (see CellGrid).
 // Head: label + (Switch once owned and pausable | `ownedBadge` | 🔒 `lockedBadge` milestone).
 // `subText` (compact interval, e.g. `2.9s` / `×8`) sits inline in the head. Below the head, only while
@@ -741,25 +719,10 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               <CellHead>
                 <RowLabel>Boost preset</RowLabel>
               </CellHead>
-              <PresetRow role="group" aria-label="auto boost preference">
-                {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
-                  const selected = (state.intro.computeAutoBoostType ?? 'standard') === boostType
-                  return (
-                    <PresetButton
-                      key={`auto-${boostType}`}
-                      aria-label={`set auto boost preference to ${COMPUTE_BOOST_DISPLAY[boostType].label.toLowerCase()}`}
-                      aria-pressed={selected}
-                      onClick={() => actions.setComputeAutoBoostType(boostType)}
-                      title={`Auto Boost preference: ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' (selected)' : ''}`}
-                      type="button"
-                      variant={selected ? 'prestige' : 'neutral'}
-                      $selected={selected}
-                    >
-                      {`${COMPUTE_BOOST_DISPLAY[boostType].icon} ${COMPUTE_BOOST_DISPLAY[boostType].label}`}
-                    </PresetButton>
-                  )
-                })}
-              </PresetRow>
+              <AutoBoostPresetPicker
+                onChange={actions.setComputeAutoBoostType}
+                value={state.intro.computeAutoBoostType ?? 'standard'}
+              />
             </Cell>
           </CellGrid>
         </Category>

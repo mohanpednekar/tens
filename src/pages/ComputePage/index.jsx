@@ -1,7 +1,10 @@
+import AutoBoostPresetPicker from 'components/AutoBoostPresetPicker'
+import Switch from 'components/Switch'
 import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration } from 'components/BoostTimerBar'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress, isStackComputeBoostTurnAvailable } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
+import { isPerksPageRevealed } from 'game/engine'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -279,6 +282,25 @@ const BoostRow = styled.div`
   }
 `
 
+// Fallback automation controls, shown only while Firmware (their real home) is still locked before the first Prestige.
+const AutoFallbackRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.space.sm};
+  width: 100%;
+`
+
+const AutoFallbackToggle = styled.div`
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+`
+
+const AutoFallbackLabel = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  font-size: ${props => props.theme.type.scale.sm.size};
+`
+
 // The full ten-tier progression this page walks top to bottom. Every row past Cores through
 // Supercomputers shares the exact same shape: a merge boundary into the tier above it, which —
 // once that boundary's auto-charge is unlocked (see intro.autoMergeCoresIntoNode/
@@ -477,6 +499,11 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
+  // Auto-charge / Auto Boost switches live on Firmware; until it appears (first Prestige) they show here instead.
+  const anyAutoCharge = ENTITY_ROWS.some(row => row.autoFlagField && intro[row.autoFlagField])
+  const showAutoFallback = anyAutoCharge && !isPerksPageRevealed(state)
+  const autoChargeEnabled = state.computeAutoChargeEnabled ?? true
+  const autoBoostEnabled = intro.computeAutoBoostEnabled ?? true
   // Issue #326: which compute-ladder tier is armed to fund the next Boost activation — purely
   // local UI state (free to change, no cost). Navigating here pre-selects the active boost's own
   // tier, so its presets open on arrival; clicking the selected tier again collapses it. Before the
@@ -599,9 +626,38 @@ const ComputePage = ({ game }) => {
         </ArmedStatusText>
       )}
 
-      {!intro.computeMergePageUnlocked && (
+      {(!intro.computeMergePageUnlocked || showAutoFallback) && (
       <BoostCard aria-label="boost">
-      {boostPresets}
+      {!intro.computeMergePageUnlocked && boostPresets}
+
+      {showAutoFallback && (
+      <AutoFallbackRow aria-label="compute auto controls">
+        <AutoFallbackToggle>
+          <AutoFallbackLabel>Auto-charge</AutoFallbackLabel>
+          <Switch
+            $on={autoChargeEnabled}
+            aria-label="auto-charge"
+            aria-pressed={autoChargeEnabled}
+            onClick={() => actions.setComputeAutoChargeEnabled(!autoChargeEnabled)}
+            title={`${autoChargeEnabled ? 'Pause' : 'Resume'} auto-charge`}
+          />
+        </AutoFallbackToggle>
+        <AutoFallbackToggle>
+          <AutoFallbackLabel>Auto Boost</AutoFallbackLabel>
+          <Switch
+            $on={autoBoostEnabled}
+            aria-label="auto boost"
+            aria-pressed={autoBoostEnabled}
+            onClick={() => actions.setComputeAutoBoostEnabled(!autoBoostEnabled)}
+            title={`${autoBoostEnabled ? 'Pause' : 'Resume'} auto boost`}
+          />
+        </AutoFallbackToggle>
+        <AutoBoostPresetPicker
+          onChange={actions.setComputeAutoBoostType}
+          value={intro.computeAutoBoostType ?? 'standard'}
+        />
+      </AutoFallbackRow>
+      )}
 
       </BoostCard>
       )}

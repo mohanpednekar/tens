@@ -1669,6 +1669,21 @@ test('Auto Boost has its on/off Switch on Firmware → Automation (not on Power)
   expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.computeAutoBoostEnabled).toBe(false)
 })
 
+test('before the first Prestige (Firmware locked), Power shows the Auto-charge/Auto Boost switches and preset as a fallback', () => {
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true },
+  })
+  render(<App />)
+  expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+
+  expect(screen.getByRole('button', { name: /^auto-charge$/i })).toHaveAttribute('aria-pressed', 'true')
+  fireEvent.click(screen.getByRole('button', { name: /^auto boost$/i }))
+  expect(screen.getByRole('button', { name: /^auto boost$/i })).toHaveAttribute('aria-pressed', 'false')
+  fireEvent.click(screen.getByRole('button', { name: /set auto boost preference to eco/i }))
+  expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.computeAutoBoostType).toBe('sustain')
+})
+
 test('the Firmware Auto-charge switch is absent until a Power boundary has Auto-charge unlocked', async () => {
   const user = userEvent.setup()
   seedMainGameState({
