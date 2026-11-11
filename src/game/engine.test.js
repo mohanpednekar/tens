@@ -11032,12 +11032,27 @@ describe('Data Lakes', () => {
       expect(isBoosterPurchaseAvailable(notEnough, 1)).toBe(false)
     })
 
-    it('buyBooster spends the cost off depositedUnits, resets fillBits, increments purchased, and grants the compute-ladder entity', () => {
+    it('buyBooster never interrupts the lake disk under way — its fillBits carry over, re-seated when a smaller slot opens', () => {
+      const unit = getDataLakeUnitBits(1)
+      // Level 1 (9 ×1 slots + the final unit): 5 banked, half a disk under way, next Cell costs 1.
+      const midDisk = withLake(createInitialGameState(), 1, { depositedUnits: 5, fillBits: unit / 2, boostersUnlocked: true, capacityLevel: 1 })
+      const bought = buyBooster(1, 1)(midDisk)
+      expect(getDataLakeDepositedUnits(1)(bought)).toBe(4)
+      expect(getDataLakeFillBits(bought, 1)).toBe(unit / 2)
+      // Level 2: all nine ×1 disks + 1 ×10 banked (19), a ×10 disk 30% under way. Spending 1 unit
+      // reopens a ×1 slot, so the carried 3 units' worth completes whole ×1 disks instead.
+      const bigSlot = withLake(createInitialGameState(), 1, { depositedUnits: 19, fillBits: unit * 3, boostersUnlocked: true, capacityLevel: 2 })
+      const after = buyBooster(1, 1)(bigSlot)
+      const banked = s => getDataLakeDepositedUnits(1)(s) * unit + getDataLakeFillBits(s, 1)
+      expect(banked(after)).toBe(banked(bigSlot) - unit) // nothing lost beyond the Cell's cost
+    })
+
+    it('buyBooster spends the cost off depositedUnits, keeps fillBits, increments purchased, and grants the compute-ladder entity', () => {
       const state = withLake(createInitialGameState(), 1, { depositedUnits: 5, fillBits: 123, boostersUnlocked: true, capacityLevel: 1 })
       expect(getBoosterPurchaseCost(1)(state)).toBe(1)
       const after = buyBooster(1)(state)
       expect(getDataLakeDepositedUnits(1)(after)).toBe(4)
-      expect(getDataLakeFillBits(after, 1)).toBe(0)
+      expect(getDataLakeFillBits(after, 1)).toBe(123)
       expect(after.intro.dataLakes[1].purchased).toBe(1)
       expect(after.intro.computeCores).toBe(1)
       // Next cost has escalated to 2.

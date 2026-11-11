@@ -354,7 +354,7 @@ const InfoPage = () => {
             A lake fills from its own pool’s Staging, one lake disk at a time. A lake disk only starts
             while Staging is full (and, when filling on its own, every built disk in that pool is full
             and nothing is being provisioned there); once started it is never interrupted and keeps
-            filling until done. Clicking its 🏷️ cost control fills the same way until the next Cell is
+            filling until done — buying a Cell keeps its progress. Clicking its 🏷️ cost control fills the same way until the next Cell is
             affordable, buys one, then stops. Once all of the pool’s disks are built, its overflow
             also pours into the lake.
           </li>

@@ -905,11 +905,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    completed, still wouldn't reach the Booster's cost — filling toward an unreachable target would
    only be erased the moment Scale Out fires, since `doubleDataLakeCapacity` resets both
    `depositedUnits` and `fillBits` to 0 rather than carrying banked units into the new level), and
-   the pool's own buffer holding at least `Math.min(bitsNeeded, getDataLakeUnitBits(tierIndex))` —
-   normally a full unit's worth as the minimum before offering a click, EXCEPT when the currently-open
-   slot already has enough partial `fillBits` progress banked that completing it needs less than a
-   full unit (in which case that smaller exact remainder is the real threshold, not an unfulfillable
-   full-unit demand the slot no longer needs — see `docs/DESIGN_HISTORY.md`). `fillDataLakeManually`
+   a non-empty pool buffer that satisfies the start rule above (`isDataLakeDiskFillStartAllowed`:
+   completely full to start a lake disk, anything at all once one is under way — this replaced an
+   earlier "at least one unit banked" threshold). `fillDataLakeManually`
    spends directly from that pool's buffer — the SAME source `tickPoolBufferFill`'s overflow branch
    would otherwise use — via
    `getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)`: a private helper that walks
@@ -921,7 +919,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    slot's own full cost whenever its sub-size exceeds `neededUnits` (e.g. an open ×100 slot with
    only 1 more unit needed), and the naive per-unit estimate both overspent when partial progress
    already covered most of a smaller slot and could underpay (funding nothing at all) against a
-   larger one — see `docs/DESIGN_HISTORY.md`. The actual spend is `min(bitsNeeded, bufferBits)`,
+   larger one — see `docs/DESIGN_HISTORY.md`. The actual spend is `min(bitsNeeded, bufferBits, what completes the current lake disk)`,
    passed through the same `fillDataLakeDisks` deposit helper the automatic path uses, so the
    disk-square breakdown stays exact either way and an underfunded spend still banks real, permanent
    `fillBits` progress rather than losing anything. `tickPoolBufferFill`'s automatic overflow branch now requires

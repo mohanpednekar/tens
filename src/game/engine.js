@@ -5499,20 +5499,36 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
 
   const boosterUpdates = latchComputeMergePageIfNeeded(state.intro, tierIndex, field, buyQuantity)
 
+  // A lake disk under way is never interrupted: its fillBits progress carries over the purchase.
+  // The spend can open a SMALLER slot than the one that was filling, so the carried bits are
+  // re-seated through fillDataLakeDisks (completing whatever whole slots they now cover); anything
+  // that somehow fits nowhere goes back to the pool buffer rather than being lost.
+  const spentLake = {
+    ...lake,
+    depositedUnits: (lake.depositedUnits ?? 0) - actualCost,
+    purchased: currentPurchased + buyQuantity,
+  }
+  const reseated = (lake.fillBits ?? 0) > 0
+    ? fillDataLakeDisks(state, { [tierIndex]: spentLake }, tierIndex, 0)
+    : null
+  const { unconsumedBits = 0, ...nextLake } = reseated ?? { ...spentLake, fillBits: 0 }
+  const poolBuffers = unconsumedBits > 0
+    ? {
+      ...state.intro.poolBuffers,
+      [tierIndex]: Math.min(
+        Math.max(getPoolBufferCapacity(state, tierIndex), getPoolBufferBits(state, tierIndex)),
+        getPoolBufferBits(state, tierIndex) + unconsumedBits,
+      ),
+    }
+    : state.intro.poolBuffers
+
   return {
     ...state,
     intro: {
       ...state.intro,
       ...boosterUpdates,
-      dataLakes: {
-        ...state.intro.dataLakes,
-        [tierIndex]: {
-          ...lake,
-          depositedUnits: (lake.depositedUnits ?? 0) - actualCost,
-          fillBits: 0,
-          purchased: currentPurchased + buyQuantity,
-        },
-      },
+      poolBuffers,
+      dataLakes: { ...state.intro.dataLakes, [tierIndex]: nextLake },
     },
   }
 }
@@ -5594,13 +5610,6 @@ export const isDataLakeManualFillAvailable = (state, tierIndex) => {
   // tickDataLakeAutoConvert not to spin on it rather than silently doing nothing every tick.
   const bitsNeeded = getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)
   if (bitsNeeded === null) return false
-  // Require at least a full unit's worth banked before offering Fill — same minimum threshold as
-  // before, avoiding a click that only makes imperceptible progress on a mostly-empty open slot —
-  // UNLESS the slot's own remaining requirement (bitsNeeded) is already smaller than a full unit
-  // (a slot with partial fillBits progress sitting just short of completion): in that case the
-  // smaller, exact remaining amount is the real threshold, since a click completing the slot with
-  // however few bits are actually left is genuine progress, not something to hide behind a full
-  // unit's worth that the open slot no longer even needs. See docs/DESIGN_HISTORY.md.
   // A lake disk only STARTS from a full pool; one already under way keeps drawing whatever the
   // buffer holds (isDataLakeDiskFillStartAllowed).
   return getPoolBufferBits(state, tierIndex) > 0 && isDataLakeDiskFillStartAllowed(state, tierIndex)

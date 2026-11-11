@@ -9328,4 +9328,6 @@ mid-fill whenever a disk emptied or a build started, and started from any buffer
 ignores every gate and may use the whole buffer, stopping at the disk's completion. Manual fill follows the
 same rule (one disk per step). Full-buffer overflow already implies a full pool; since a disk it starts now
 makes the drain available in the same tick, `tickDataLakePoolDrain` takes the pre-fill state and skips a lake
-overflow already fed (no double credit).
+overflow already fed (no double credit). `buyBooster` used to zero `fillBits` on every purchase — itself an
+interruption (and a loss of the bits) — so it now carries the progress over, re-seating it through
+`fillDataLakeDisks` since the spend can open a smaller slot than the one that was filling.
