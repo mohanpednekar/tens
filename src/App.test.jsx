@@ -1215,7 +1215,7 @@ test('once the last tier has been a Scale Up target, a separate Restage panel ap
   seedMainGameState({
     resources: { base: 12345, tier10: 25 },
     owned: { tier09: 10, tier10: 25 },
-    purchaseLevels: { tier09: 3, tier10: 2 },
+    purchaseLevels: { tier01: 2, tier09: 3, tier10: 2 },
     scaleUpTierCounts: { tier10: 1 },
     scaleUpTargetTierIndex: 9,
     purge: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
@@ -1223,11 +1223,13 @@ test('once the last tier has been a Scale Up target, a separate Restage panel ap
   render(<App />)
 
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
+  expect(regions).toContain('global clock speed panel')
   expect(regions.indexOf('global clock speed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
   expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
   expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('scale up panel'))
 
   const xpPanel = screen.getByLabelText(/^restage panel$/i)
+  expect(xpPanel).toHaveTextContent('QB ×1.01/XP')
   const xpButton = within(xpPanel).getByRole('button', { name: /consume 37 xp for .* quettabytes tickspeed/i })
   expect(xpButton).toHaveTextContent('🧬')
   expect(xpButton).toBeEnabled()
@@ -1417,6 +1419,21 @@ test('the Overclock button shows the per-level Overclock effect and completed-le
   })).toBeInTheDocument()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('🌐 ×1.1/lvl')
   expect(screen.getByRole('button', { name: /^overclock \(requires/i })).toHaveTextContent('⚡ QB 7/7')
+})
+
+test('Clock Speed shows the base per-level effect beside the name, not the Overclock-scaled live step', () => {
+  seedMainGameState({
+    resources: { base: 999 },
+    globalTickspeedMultiplier: 1,
+    everUnlockedTierIds: { tier01: true, tier10: true },
+    purchaseLevels: { tier09: 3, tier10: 8 },
+    overclockLastClaimCompletedLevels: 4,
+  })
+  render(<App />)
+
+  const panel = screen.getByLabelText(/^global clock speed panel$/i)
+  expect(panel).toHaveTextContent('🏭 ×1.01/lvl')
+  expect(panel).not.toHaveTextContent('1.0146')
 })
 
 test('the Overclock card\'s disclosure states the current per-level Tickspeed rate once claimed', () => {

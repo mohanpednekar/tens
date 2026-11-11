@@ -726,7 +726,7 @@ export const COMPUTE_AUTO_BOOST_UNLOCK_COST = 30
 export const LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1
 // Once the last tier has ever been the target of a successful Scale Up this cycle (see engine.js's
 // isLastTierTickspeedXpUnlocked — a scaleUpTierCounts-based latch, NOT a live owned check), a
-// separate XP-funded upgrade (shown beside Speed Up) becomes available — see engine.js's
+// separate XP-funded upgrade (shown beside Scale Up) becomes available — see engine.js's
 // getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed. Each XP consumed compounds another
 // LAST_TIER_XP_TICKSPEED_STEP (1%) into the last tier's delivery frequency, on top of (not instead
 // of) its own resource-funded tickspeed level. "Last tier" (not a hardcoded tier id) so this stays

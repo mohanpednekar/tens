@@ -1354,13 +1354,13 @@ const MainPage = ({ game }) => {
               <CardTitleGroup>
                 <h2>Clock Speed</h2>
                 <CardEffect
-                  title="Each level makes every tier's production ticks faster by this factor"
+                  title="Each Clock Speed level makes every tier's production ticks faster by this factor (Overclock raises that step; the live rate is on Overclock's disclosure)"
                   onClick={event => {
                     event.preventDefault()
                     event.stopPropagation()
                   }}
                 >
-                  🏭 ×{Number(currentGlobalTickspeedStepDisplay.toFixed(4))}/lvl
+                  🏭 ×{formatRate(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP)}/lvl
                 </CardEffect>
               </CardTitleGroup>
             </summary>
