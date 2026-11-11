@@ -205,6 +205,10 @@ Styled `<button type="button">` on/off switch (pill track + sliding knob; `$on` 
 `aria-pressed` and an `aria-label` for the accessible name. Used by `BuyMaxToggle` and every owned Firmware →
 Automation row.
 
+**Segmented choices (UI convention).** A pick-one control (e.g. Firmware's Auto Boost preset: Turbo / Balanced /
+Eco) is full width, one equal-width button per option with a text label beside its icon (`🔋 Eco`) — never a row of
+small icon-only squares — and the selected option takes the `prestige` variant plus a ✓.
+
 ## `BuyMaxToggle/index.jsx`
 
 `{ game }` — the Buy max mode toggle. Renders nothing until `isBuyMaxUnlocked(game.state)` (first

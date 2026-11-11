@@ -407,15 +407,18 @@ const PpPurchaseButton = ({ ariaLabel, color, cost, points, disabled, onClick, t
   </PpButton>
 )
 
+// A segmented choice (e.g. Boost preset): full width, one equal-width labeled button per option.
 const PresetRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 0.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+  width: 100%;
 `
 
 const PresetButton = styled(Button)`
-  font-size: 0.78em;
-  padding: 0.35em 0.6em;
+  min-width: 0;
+  white-space: nowrap;
+  width: 100%;
 `
 
 // One automation's whole lifecycle in a single compact cell (see CellGrid).
@@ -736,7 +739,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             ownedBadge={<UnlockedBadge icon="🤖" name="Auto Boost" title="Auto Boost unlocked — choose its preset below" />}
           />
           {isComputeAutoBoostActive && (
-            <Cell aria-label="compute auto boost">
+            <Cell aria-label="compute auto boost" style={{ gridColumn: '1 / -1' }}>
               <CellHead>
                 <RowLabel>Boost preset</RowLabel>
               </CellHead>
@@ -753,7 +756,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                       type="button"
                       variant={selected ? 'prestige' : 'neutral'}
                     >
-                      {`${COMPUTE_BOOST_DISPLAY[boostType].icon}${selected ? ' ✓' : ''}`}
+                      {`${COMPUTE_BOOST_DISPLAY[boostType].icon} ${COMPUTE_BOOST_DISPLAY[boostType].label}${selected ? ' ✓' : ''}`}
                     </PresetButton>
                   )
                 })}
