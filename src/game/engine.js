@@ -613,6 +613,8 @@ export const createInitialGameState = () => ({
     // boost if its funding tier matches). One of COMPUTE_BOOST_PRESETS' keys; defaults to 'standard'. Player-selectable on
     // ComputePage; carried through Prestige like other Compute QoL prefs.
     computeAutoBoostType: 'standard',
+    // Pause/resume preference for the automatic per-merge Boost (autoBoostFromTier); default on. Permanent.
+    computeAutoBoostEnabled: true,
     // NOT permanent — resets to null/null/0/0 on every real Prestige (unlike computeCores/
     // computeNodes themselves), but carried through untouched by Scale Up/Overclock, same as the
     // rest of intro. Which COMPUTE_BOOST_PRESETS key is currently active, or null if none is. See
@@ -1291,6 +1293,7 @@ const buildEraIntroReset = (state, initial) => {
     autoMergeSupercomputersIntoMegacomputer: state.intro?.autoMergeSupercomputersIntoMegacomputer ?? initial.intro.autoMergeSupercomputersIntoMegacomputer,
     computeMergePageUnlocked: state.intro?.computeMergePageUnlocked ?? initial.intro.computeMergePageUnlocked,
     computeAutoBoostType: state.intro?.computeAutoBoostType ?? initial.intro.computeAutoBoostType,
+    computeAutoBoostEnabled: state.intro?.computeAutoBoostEnabled ?? initial.intro.computeAutoBoostEnabled,
   }
 }
 
@@ -6589,6 +6592,12 @@ export const isAnyComputeMergeInFlight = state =>
 
 // Player-facing preference for the automatic per-merge Boost (autoBoostFromTier) — one of COMPUTE_BOOST_PRESETS' keys.
 // Same-reference no-op for an unknown key. Permanent across Prestige (see purgeGame).
+// Toggles the automatic per-merge Boost on/off (a plain preference, always allowed). Same-reference no-op if unchanged.
+export const setComputeAutoBoostEnabled = enabled => state => {
+  if ((state.intro?.computeAutoBoostEnabled ?? true) === !!enabled) return state
+  return { ...state, intro: { ...state.intro, computeAutoBoostEnabled: !!enabled } }
+}
+
 export const setComputeAutoBoostType = boostType => state => {
   if (!COMPUTE_BOOST_PRESETS[boostType]) return state
   if ((state.intro?.computeAutoBoostType ?? 'standard') === boostType) return state
@@ -6602,6 +6611,7 @@ export const setComputeAutoBoostType = boostType => state => {
 // forfeits a different active boost; respects the same forced-priority turn gates as manual activate/stack.
 // Same-reference no-op when nothing can be spent.
 const autoBoostFromTier = (state, tierIndex) => {
+  if (!(state.intro?.computeAutoBoostEnabled ?? true)) return state
   const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
   if (!field || (state.intro?.[field] ?? 0) < 1) return state
   if ((state.intro.computeBoostType ?? null) !== null) {
@@ -7323,6 +7333,7 @@ export const purgeGame = state => {
       // Auto-boost preset preference is permanent Compute QoL (see autoBoostFromTier) — carried
       // through Prestige unchanged. Active boost fields below still reset every cycle.
       computeAutoBoostType: state.intro?.computeAutoBoostType ?? initial.intro.computeAutoBoostType,
+      computeAutoBoostEnabled: state.intro?.computeAutoBoostEnabled ?? initial.intro.computeAutoBoostEnabled,
       // Any reserve merge already in flight when Prestige fires (see issue #321) represents tokens
       // already committed/spent out of the normal slots — carried through PERMANENT, same as the
       // compute-ladder entities/auto-merge flags above, so it just keeps counting down seamlessly

@@ -438,7 +438,7 @@ live inside the selected tier):
    a capture-phase document click listener checking `composedPath()` while a tier is selected), collapses them. The 3 preset buttons share the row equally
    (`flex: 1 1 0`).
    Before `intro.computeMergePageUnlocked` (no tier rows yet) they render in the top card for Cells:
-   The timer bar / idle status line and (once any tier's charge is automated) the Auto Boost preference picker all live in one `BoostCard`. Auto Boost has no purchase: it is automatic per tier (`autoBoostFromTier`); Power shows the picker only once some `autoMerge*` flag is set
+   The timer bar / idle status line and (once any tier's charge is automated) the Auto Boost preference picker all live in one `BoostCard`. Auto Boost has no purchase: it is automatic per tier (`autoBoostFromTier`), with a Switch (`intro.computeAutoBoostEnabled`, `setComputeAutoBoostEnabled`) beside the preset picker; Power shows the picker only once some `autoMerge*` flag is set
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
    a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),

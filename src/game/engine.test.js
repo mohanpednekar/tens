@@ -21,6 +21,7 @@ import {
   getAutobuyerIntervalUpgradeCost,
   isAnyComputeMergeInFlight,
   setComputeAutoBoostType,
+  setComputeAutoBoostEnabled,
   canBuyComputeFlopsTier,
   canForfeitComputeBoost,
   forfeitComputeBoost,
@@ -4905,6 +4906,16 @@ describe('automatic per-merge Auto Boost', () => {
     const cores = first.intro.computeCores
     const second = tickGame(1)(first)
     expect(second.intro.computeCores).toBe(cores)
+  })
+
+  it('the toggle pauses it: no token is spent while Auto Boost is off', () => {
+    const off = setComputeAutoBoostEnabled(false)(readyToMerge())
+    expect(off.intro.computeAutoBoostEnabled).toBe(false)
+    expect(setComputeAutoBoostEnabled(false)(off)).toBe(off)
+    const after = tickGame(1)(off)
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBeGreaterThan(0)
+    expect(after.intro.computeBoostType ?? null).toBe(null)
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO)
   })
 
   it('does nothing for a tier whose merge is not automated', () => {
