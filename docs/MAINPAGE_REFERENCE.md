@@ -884,8 +884,8 @@ below-40rem single-column stack was dropped at the maintainer's request (see `do
 Both soft-reset cards (and Clock Speed) share `featureCard(accent)`: compact `0.6rem 0.75rem`
 padding, a `0.4rem` internal gap and a 3px left accent stripe; their headings have no default margin, their
 buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`. `ScaleUpCard`'s heading
-is a `Disclosure` like the others (collapsed by default): the body states the reset + doubling, the
-completed-level requirement, and how many Scale Ups have been claimed.
+is a `Disclosure` like the others (collapsed by default): the body states the reset + doubling and
+the completed-level requirement.
 
 Unlike every other soft/hard reset control on this page, `ScaleUpCard` carries no `everRevealed`
 progressive-disclosure gate at all — it's unconditionally rendered, since Scale Up is relevant from
