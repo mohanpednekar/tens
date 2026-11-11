@@ -1697,7 +1697,9 @@ test('Auto Scale Up remains active at the final tier', async () => {
   })
   render(<App />)
 
-  expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
+  // Factory no longer shows an Auto/Paused chip — status lives on Firmware.
+  expect(screen.getByLabelText(/^scale up panel$/i)).toBeInTheDocument()
+  expect(screen.queryByLabelText('Auto Scale Up active')).not.toBeInTheDocument()
   expect(screen.queryByLabelText('Auto Scale Up suspended at final tier')).not.toBeInTheDocument()
 
   await openPerksTab(userEvent.setup(), /open automation/i)
