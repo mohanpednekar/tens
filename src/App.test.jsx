@@ -1243,7 +1243,7 @@ test('once the last tier has been a Scale Up target, a separate Restage panel ap
   expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('scale up panel'))
 
   const xpPanel = screen.getByLabelText(/^restage panel$/i)
-  expect(xpPanel).toHaveTextContent('QB ×1.01/XP')
+  expect(xpPanel).toHaveTextContent('QB +1%/XP')
   const xpButton = within(xpPanel).getByRole('button', { name: /consume 37 xp for .* quettabytes tickspeed/i })
   expect(xpButton).toHaveTextContent('🧬')
   expect(xpButton).toBeEnabled()
@@ -1431,7 +1431,7 @@ test('the Overclock button shows the per-level Overclock effect and completed-le
   expect(screen.getByRole('button', {
     name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus; each completed quettabytes level \(7 now\) multiplies clock speed's per-level rate by ×1\.1/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('🌐 ×1.1/lvl')
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('🌐 +10%/lvl')
   expect(screen.getByRole('button', { name: /^overclock \(requires/i })).toHaveTextContent('⚡ QB 7/7')
 })
 
@@ -1446,7 +1446,7 @@ test('Clock Speed shows the base per-level effect beside the name, not the Overc
   render(<App />)
 
   const panel = screen.getByLabelText(/^global clock speed panel$/i)
-  expect(panel).toHaveTextContent('🏭 ×1.01/lvl')
+  expect(panel).toHaveTextContent('🏭 +1%/lvl')
   expect(panel).not.toHaveTextContent('1.0146')
 })
 
