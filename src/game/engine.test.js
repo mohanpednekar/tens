@@ -20,14 +20,11 @@ import {
   getAutobuyerIntervalSecondsAtLevel,
   getAutobuyerIntervalUpgradeCost,
   isAnyComputeMergeInFlight,
-  tickAutoComputeBoost,
   setComputeAutoBoostType,
-  buyComputeAutoBoost,
   canBuyComputeFlopsTier,
   canForfeitComputeBoost,
   forfeitComputeBoost,
   getComputeMergeDurationSeconds,
-  getBiggestComputeTierWaitingOnMerge,
   applyAutobuyerMilestones,
   applyOfflineProgress,
   buyAutoPurge,
@@ -356,7 +353,7 @@ import {
   getPoolTapMultiplier,
   getDataStreamTapMultiplier,
 } from './engine'
-import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
+import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -4622,7 +4619,7 @@ describe.each([
   it('tick auto-starts a reserve merge once enabled and the input entity reaches the extended cap (COMPUTE_ENTITY_AUTO_MERGE_CAP, 18 — primary 10 plus the gradually-filled reserve) — moving COMPUTE_MERGE_RATIO out of the input and starting the timer, without granting the output yet', () => {
     const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true })
     const after = tick(1)(state)
-    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO) // back to the primary 10
+    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO - 1) // back to the primary 10, minus the one token the automatic Boost spends
     expect(after.intro[outputField]).toBe(0)
     expect(after.intro[timerField]).toBe(durationOf() - 1) // the same tick's elapsedSeconds also counts down
   })
@@ -4710,7 +4707,7 @@ describe.each([
   it('is wired into tickGame — a real tick auto-starts a reserve merge once enabled and the input reaches the extended cap', () => {
     const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true, byteCreated: true })
     const after = tickGame(1)(state)
-    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO)
+    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO - 1) // + one token spent on the automatic Boost
     expect(after.intro[timerField]).toBeGreaterThan(0)
   })
 
@@ -4886,110 +4883,38 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
 
 })
 
-describe('buyComputeAutoBoost / tickAutoComputeBoost (30 PP unlock)', () => {
-  it(`spends ${30} PP to unlock auto-Boost permanently`, () => {
-    const state = withPrestigePoints(createInitialGameState(), COMPUTE_AUTO_BOOST_UNLOCK_COST)
-    const after = buyComputeAutoBoost(state)
-    expect(after.computeAutoBoostUnlocked).toBe(true)
-    expect(after.purge.points).toBe(0)
+describe('automatic per-merge Auto Boost', () => {
+  // Cores full at the extended cap with Cores→Node automated: the next tick starts a merge (8 tokens leave).
+  const readyToMerge = extra => withIntro(createInitialGameState(), {
+    capacity: 8 * 1024 ** 2,
+    computeCores: COMPUTE_ENTITY_AUTO_MERGE_CAP,
+    autoMergeCoresIntoNode: true,
+    ...extra,
   })
 
-  it('is a same-reference no-op below cost or when already unlocked', () => {
-    const tooFew = withPrestigePoints(createInitialGameState(), COMPUTE_AUTO_BOOST_UNLOCK_COST - 1)
-    expect(buyComputeAutoBoost(tooFew)).toBe(tooFew)
-    const unlocked = { ...createInitialGameState(), computeAutoBoostUnlocked: true, purge: { ...createInitialGameState().purge, points: 100 } }
-    expect(buyComputeAutoBoost(unlocked)).toBe(unlocked)
-  })
-
-  it('survives Prestige once unlocked; preference defaults to standard', () => {
-    const state = withMoney({
-      ...withIntro(createInitialGameState(), { computeAutoBoostType: 'burst' }),
-      computeAutoBoostUnlocked: true,
-    }, PURGE_THRESHOLD)
-    const after = purgeGame(state)
-    expect(after.computeAutoBoostUnlocked).toBe(true)
-    expect(after.intro.computeAutoBoostType).toBe('burst')
-  })
-
-  it('tickAutoComputeBoost is a no-op until unlocked', () => {
-    const state = withIntro(createInitialGameState(), {
-      computeCores: COMPUTE_ENTITY_CAP,
-      computeCoresMergeRemainingSeconds: 10,
-      autoMergeCoresIntoNode: true,
-    })
-    expect(isAnyComputeMergeInFlight(state)).toBe(true)
-    expect(tickAutoComputeBoost(state)).toBe(state)
-  })
-
-  it('once unlocked, activates the preferred preset from the biggest tier waiting on its own merge', () => {
-    const state = {
-      ...withIntro(createInitialGameState(), {
-        computeCores: COMPUTE_ENTITY_CAP,
-        computeNodes: COMPUTE_ENTITY_CAP,
-        computeCoresMergeRemainingSeconds: 10,
-        computeNodesMergeRemainingSeconds: 10,
-        autoMergeCoresIntoNode: true,
-        autoMergeNodesIntoCluster: true,
-        computeAutoBoostType: 'standard',
-      }),
-      computeAutoBoostUnlocked: true,
-    }
-    expect(getBiggestComputeTierWaitingOnMerge(state)).toBe(2) // Nodes > Cores
-    const after = tickAutoComputeBoost(state)
-    expect(after.intro.computeBoostType).toBe('standard')
-    expect(after.intro.computeBoostTierIndex).toBe(2)
-    expect(after.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP - 1)
-    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP) // untouched — not the biggest waiting
-  })
-
-  it('stacks the active boost when its funding tier is the biggest waiting on merge', () => {
-    const state = {
-      ...withIntro(createInitialGameState(), {
-        computeCores: COMPUTE_ENTITY_CAP,
-        computeCoresMergeRemainingSeconds: 10,
-        computeBoostType: 'standard',
-        computeBoostTierIndex: 1,
-        computeBoostStacks: 1,
-        computeBoostRemainingSeconds: 100,
-      }),
-      computeAutoBoostUnlocked: true,
-    }
-    const after = tickAutoComputeBoost(state)
-    expect(after.intro.computeBoostStacks).toBe(2)
-    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP - 1)
-  })
-
-  it('does not stack a boost funded by a smaller tier when a bigger tier is waiting on merge', () => {
-    const state = {
-      ...withIntro(createInitialGameState(), {
-        computeCores: COMPUTE_ENTITY_CAP,
-        computeNodes: COMPUTE_ENTITY_CAP,
-        computeCoresMergeRemainingSeconds: 10,
-        computeNodesMergeRemainingSeconds: 10,
-        computeBoostType: 'standard',
-        computeBoostTierIndex: 1, // funded by Cores, but Nodes are the biggest waiting
-        computeBoostStacks: 1,
-        computeBoostRemainingSeconds: 100,
-      }),
-      computeAutoBoostUnlocked: true,
-    }
-    expect(tickAutoComputeBoost(state)).toBe(state)
-  })
-
-  it('ignores a full tier whose own merge is not in flight', () => {
-    const state = {
-      ...withIntro(createInitialGameState(), {
-        computeCores: COMPUTE_ENTITY_CAP,
-        computeNodes: COMPUTE_ENTITY_CAP,
-        computeCoresMergeRemainingSeconds: 10, // only Cores are waiting
-        computeAutoBoostType: 'burst',
-      }),
-      computeAutoBoostUnlocked: true,
-    }
-    expect(getBiggestComputeTierWaitingOnMerge(state)).toBe(1)
-    const after = tickAutoComputeBoost(state)
+  it('spends one token on the preferred preset when an automated merge starts (no purchase needed)', () => {
+    const after = tickGame(1)(readyToMerge({ computeAutoBoostType: 'burst' }))
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBeGreaterThan(0)
+    expect(after.intro.computeBoostType).toBe('burst')
     expect(after.intro.computeBoostTierIndex).toBe(1)
-    expect(after.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP)
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO - 1)
+  })
+
+  it('triggers once per merge, not every tick', () => {
+    const first = tickGame(1)(readyToMerge())
+    const cores = first.intro.computeCores
+    const second = tickGame(1)(first)
+    expect(second.intro.computeCores).toBe(cores)
+  })
+
+  it('does nothing for a tier whose merge is not automated', () => {
+    const state = withIntro(createInitialGameState(), { capacity: 8 * 1024 ** 2, computeCores: COMPUTE_ENTITY_CAP })
+    expect(tickGame(1)(state).intro.computeBoostType ?? null).toBe(null)
+  })
+
+  it('survives Prestige; preference defaults to standard', () => {
+    const state = withMoney(withIntro(createInitialGameState(), { computeAutoBoostType: 'burst' }), PURGE_THRESHOLD)
+    expect(purgeGame(state).intro.computeAutoBoostType).toBe('burst')
   })
 
   it('setComputeAutoBoostType updates the preference; unknown keys are a no-op', () => {
@@ -11791,6 +11716,13 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
     expect(getPoolBufferCapacity(tooSmall, 1)).toBeLessThan(FIRST_DISK_SIZE)
     expect(tickAutoProvisionLowerDiskSizes(1000)(tooSmall)).toBe(tooSmall)
     expect(tickAutoProvisionLowerDiskSizes(1000)(base)).not.toBe(base)
+  })
+
+  it('a capacity-blocked rebuild does not claim the pool buffer, so the lake keeps filling from completed sizes', () => {
+    const base = funded(afterReset(), 2)
+    expect(isStoragePoolProvisioningInProgress(base, 1)).toBe(true)
+    const blocked = withIntro(base, { capacity: FIRST_DISK_SIZE / 2 })
+    expect(isStoragePoolProvisioningInProgress(blocked, 1)).toBe(false)
   })
 
   it('the pool tap bonus speeds the rebuild ×(1 + bonus%)', () => {

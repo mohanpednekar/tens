@@ -30,7 +30,6 @@ import {
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_CAP_BITS,
-  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_STARTING_CAPACITY,
@@ -1567,26 +1566,21 @@ test('an Enable Auto Restage button on Firmware → Automation spends 16 PP to e
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('Auto Boost is unlocked from Firmware → Automation (30 PP), not on Boosters, which then shows its preset preference', async () => {
-  const user = userEvent.setup()
-
+test('Auto Boost needs no purchase: Power shows its preset preference once any charge is automated', () => {
   seedMainGameState({
     intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY },
-    purge: { xp: 0, points: COMPUTE_AUTO_BOOST_UNLOCK_COST, count: 1, highestMilestone: 1 },
+  })
+  const { unmount } = render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
+  expect(screen.queryByRole('group', { name: /auto boost preference/i })).not.toBeInTheDocument()
+  unmount()
+  cleanup()
+  localStorage.clear()
+
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true },
   })
   render(<App />)
-
-  fireEvent.click(screen.getByRole('button', { name: /open power/i }))
-  expect(screen.queryByRole('button', { name: /enable auto boost/i })).not.toBeInTheDocument()
-  expect(screen.queryByLabelText(/^auto boost$/i)).not.toBeInTheDocument()
-
-  await openPerksTab(user, /open automation/i)
-  const unlock = screen.getByRole('button', { name: new RegExp(`enable auto boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} purge points`, 'i') })
-  expect(unlock).toHaveAttribute('title', expect.stringMatching(/in-flight charge/i))
-  expect(unlock).toBeEnabled()
-  await user.click(unlock)
-  expect(screen.getByLabelText('Auto Boost unlocked')).toBeInTheDocument()
-
   fireEvent.click(screen.getByRole('button', { name: /open power/i }))
   expect(screen.getByRole('group', { name: /auto boost preference/i })).toBeInTheDocument()
 })
@@ -1606,9 +1600,7 @@ test('Upgrade Capacity and the selected Auto Boost preset render with the presti
   localStorage.clear()
 
   seedMainGameState({
-    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY },
-    purge: { xp: 0, points: COMPUTE_AUTO_BOOST_UNLOCK_COST, count: 1, highestMilestone: 1 },
-    computeAutoBoostUnlocked: true,
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeMergePageUnlocked: true, autoMergeCoresIntoNode: true },
   })
   render(<App />)
   fireEvent.click(screen.getByRole('button', { name: /open power/i }))
@@ -5206,7 +5198,7 @@ describe('Compute auto-charge automation', () => {
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeClusters).toBe(0)
-    expect(saved.intro.computeNodes).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO)
+    expect(saved.intro.computeNodes).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO - 1) // one more token spent on the automatic Boost
     expect(saved.intro.computeNodesMergeRemainingSeconds).toBeGreaterThan(0)
 
     unmount()

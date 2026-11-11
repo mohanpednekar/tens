@@ -293,10 +293,8 @@ export const createInitialGameState = () => ({
   autoXpTickspeed: false,
   // Pause/resume preference for autoXpTickspeed (see setAutoXpTickspeedEnabled), default true.
   autoXpTickspeedEnabled: true,
-  // Permanent GLOBAL flag, false = not yet bought: whether the 30 PP Compute auto-Boost unlock
-  // has been purchased (see COMPUTE_AUTO_BOOST_UNLOCK_COST / buyComputeAutoBoost /
-  // tickAutoComputeBoost). Never reset by Prestige or Scale Up — same permanence class as
-  // autoScaleUp above. Preferred preset lives on intro.computeAutoBoostType (default 'standard').
+  // LEGACY (the 30 PP Auto Boost purchase was removed — Auto Boost is now automatic per automated merge, see
+  // autoBoostFromTier). Kept only so old saves keep loading. Preferred preset lives on intro.computeAutoBoostType.
   computeAutoBoostUnlocked: false,
   // Permanent GLOBAL flag, default true: whether Auto Scale Up (once bought — see autoScaleUp
   // above) currently acts — split from "unlocked" the same way autoPurgeEnabled splits from
@@ -610,10 +608,9 @@ export const createInitialGameState = () => ({
     computeCloudsMergeRemainingSeconds: 0,
     computeDatacentersMergeRemainingSeconds: 0,
     computeSupercomputersMergeRemainingSeconds: 0,
-    // PERMANENT — preferred Compute Boost preset for auto-activation (issue #380): when a reserve
-    // merge is in flight and any compute-ladder tier is at COMPUTE_ENTITY_CAP, tickAutoComputeBoost
-    // spends from that full tier using this preset (or stacks the active boost if its funding tier
-    // is full). One of COMPUTE_BOOST_PRESETS' keys; defaults to 'standard'. Player-selectable on
+    // PERMANENT — preferred Compute Boost preset for auto-activation (issue #380): each time a tier's automated
+    // merge starts, autoBoostFromTier spends one of that tier's tokens using this preset (or stacks the active
+    // boost if its funding tier matches). One of COMPUTE_BOOST_PRESETS' keys; defaults to 'standard'. Player-selectable on
     // ComputePage; carried through Prestige like other Compute QoL prefs.
     computeAutoBoostType: 'standard',
     // NOT permanent — resets to null/null/0/0 on every real Prestige (unlike computeCores/
@@ -1715,10 +1712,9 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // lakes) only cascades through this chain starting NEXT tick — a one-tick lag, imperceptible at
   // TICK_RATE_MS.
   const stateAfterAutoMerges = AUTO_MERGE_TICKERS.reduce((tickState, tick) => tick(elapsedSeconds)(tickState), stateAfterFoundryConvenience)
-  // Counts an active Compute Boost's remaining duration down, then optionally auto-activates or
-  // stacks from a full compute-ladder tier while a reserve merge is in flight (see
-  // tickAutoComputeBoost) — countdown first so an expired boost can be replaced the same tick.
-  const stateAfterComputeBoost = tickAutoComputeBoost(tickComputeBoost(elapsedSeconds)(stateAfterAutoMerges))
+  // Counts an active Compute Boost's remaining duration down (auto Boost itself fires at each automated merge start, see
+  // autoBoostFromTier).
+  const stateAfterComputeBoost = tickComputeBoost(elapsedSeconds)(stateAfterAutoMerges)
   const stateAfterIntro = tickIntroAutoInvest(stateAfterComputeBoost)
   // Each unlocked pool's own local buffer (see tickPoolBufferFill) tops up from whatever's left of
   // the shared Data Stream AFTER tier01's own bootstrap conversion (tickIntroAutoInvest) and Queued
@@ -5890,7 +5886,12 @@ export const areStoragePoolDisksFull = (state, poolIndex) =>
 export const isStoragePoolProvisioningInProgress = (state, poolIndex) => {
   const intro = state.intro ?? {}
   if (isStoragePoolRebuilding(state, poolIndex)) return true
-  if (isLowerDiskSizePending(state) && getPoolIndexForDiskSize(getDiskSize(state)) === poolIndex) return true
+  // A lower-size rebuild only claims the pool buffer once its own pool's Capacity can hold one disk of that size; until then
+  // the lake keeps filling (and scaling out) from the disk sizes already completed.
+  if (isLowerDiskSizePending(state)) {
+    const pendingSize = getDiskSize(state)
+    if (getPoolIndexForDiskSize(pendingSize) === poolIndex && getPoolBufferCapacity(state, poolIndex) >= pendingSize) return true
+  }
   if (intro.diskBuild && getPoolIndexForDiskSize(intro.diskBuild.size) === poolIndex) return true
   const sizes = getStoragePoolSizes(poolIndex)
   if (sizes.some(size => getDiskProvisionPassesCollected(state, size) > 0)) return true
@@ -6181,7 +6182,10 @@ const tickComputeMergeBoundary = (elapsedSeconds, inputField, outputField, autoF
     ? { ...state, intro: { ...state.intro, [timerField]: durationSeconds } }
     : state
   const afterAutoStart = startComputeMergeReserve(inputField, outputField, autoFlagField, timerField, durationSeconds, COMPUTE_ENTITY_AUTO_MERGE_CAP)(clamped)
-  return tickComputeMergeReserveTimer(elapsedSeconds, timerField, outputField)(afterAutoStart)
+  // An automated merge just started (timer 0 → running): spend one token of this tier on Boost, once per merge.
+  const justStarted = !(remaining > 0) && (afterAutoStart.intro?.[timerField] ?? 0) > 0
+  const afterBoost = justStarted ? autoBoostFromTier(afterAutoStart, boundaryIndex + 1) : afterAutoStart
+  return tickComputeMergeReserveTimer(elapsedSeconds, timerField, outputField)(afterBoost)
 }
 
 // Effective timed-merge duration for boundaryIndex (0 = Core→Node, …): the time COMPUTE_MERGE_RATIO
@@ -6583,22 +6587,7 @@ export const tickComputeBoost = elapsedSeconds => state => {
 export const isAnyComputeMergeInFlight = state =>
   COMPUTE_MERGE_BOUNDARIES.some(boundary => (state.intro?.[boundary.timerField] ?? 0) > 0)
 
-// Highest compute-ladder tier (1 = Core … 9 = Supercomputer) that is at COMPUTE_ENTITY_CAP while
-// THAT tier's own outbound reserve merge is in flight — i.e. tokens sitting full, waiting for the
-// merge timer to finish before another merge can start. Megacomputer has no outbound merge, so it
-// never qualifies. Returns null when nothing is waiting.
-export const getBiggestComputeTierWaitingOnMerge = state => {
-  let biggest = null
-  for (let i = 0; i < COMPUTE_MERGE_BOUNDARIES.length; i += 1) {
-    const boundary = COMPUTE_MERGE_BOUNDARIES[i]
-    if ((state.intro?.[boundary.timerField] ?? 0) <= 0) continue
-    if ((state.intro?.[boundary.inputField] ?? 0) < COMPUTE_ENTITY_CAP) continue
-    biggest = i + 1 // COMPUTE_BOOST_TIER_FIELDS index; boundary i's input is tier i+1
-  }
-  return biggest
-}
-
-// Player-facing preference for tickAutoComputeBoost — one of COMPUTE_BOOST_PRESETS' keys.
+// Player-facing preference for the automatic per-merge Boost (autoBoostFromTier) — one of COMPUTE_BOOST_PRESETS' keys.
 // Same-reference no-op for an unknown key. Permanent across Prestige (see purgeGame).
 export const setComputeAutoBoostType = boostType => state => {
   if (!COMPUTE_BOOST_PRESETS[boostType]) return state
@@ -6606,30 +6595,25 @@ export const setComputeAutoBoostType = boostType => state => {
   return { ...state, intro: { ...state.intro, computeAutoBoostType: boostType } }
 }
 
-// While the biggest compute-ladder tier that is full AND waiting on its own in-flight reserve
-// merge sits at CAP, automatically spend those tokens via Boost: stack the active boost when it
-// is already funded by that same tier, otherwise start the preferred preset
-// (intro.computeAutoBoostType, default 'standard') from that tier. Never forfeits a different
-// active boost. Inert until computeAutoBoostUnlocked (see buyComputeAutoBoost,
-// COMPUTE_AUTO_BOOST_UNLOCK_COST = 30 PP). Respects the same forced-priority turn gates as manual
-// activate/stack. At most one activate-or-stack per call (one per tick from tickGame).
-export const tickAutoComputeBoost = state => {
-  if (!(state.computeAutoBoostUnlocked ?? false)) return state
-  const waitingTierIndex = getBiggestComputeTierWaitingOnMerge(state)
-  if (waitingTierIndex === null) return state
-
+// Auto Boost is automatic per tier: the moment a tier's automated merge STARTS (8 tokens leave the input and the
+// merge timer begins — the merge is a prerequisite for the automation, so it can never starve it), one of that
+// tier's remaining tokens is spent via Boost, once per merge. Stacks the active boost when it is already funded by
+// that same tier, otherwise starts the preferred preset (intro.computeAutoBoostType, default 'standard'). Never
+// forfeits a different active boost; respects the same forced-priority turn gates as manual activate/stack.
+// Same-reference no-op when nothing can be spent.
+const autoBoostFromTier = (state, tierIndex) => {
+  const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
+  if (!field || (state.intro?.[field] ?? 0) < 1) return state
   if ((state.intro.computeBoostType ?? null) !== null) {
-    if ((state.intro.computeBoostTierIndex ?? 1) !== waitingTierIndex) return state
+    if ((state.intro.computeBoostTierIndex ?? 1) !== tierIndex) return state
     if (!isStackComputeBoostTurnAvailable(state)) return state
     return stackComputeBoost(state)
   }
-
   const preference = COMPUTE_BOOST_PRESETS[state.intro?.computeAutoBoostType]
     ? state.intro.computeAutoBoostType
     : 'standard'
-
-  if (!isComputeBoostTurnAvailable(state, preference, waitingTierIndex)) return state
-  return activateComputeBoost(preference, waitingTierIndex)(state)
+  if (!isComputeBoostTurnAvailable(state, preference, tierIndex)) return state
+  return activateComputeBoost(preference, tierIndex)(state)
 }
 
 // Whether reclaimComputeBoost below would do anything right now. Only reclaimable while MORE than
@@ -7336,7 +7320,7 @@ export const purgeGame = state => {
       autoMergeCloudsIntoDatacenter: state.intro?.autoMergeCloudsIntoDatacenter ?? initial.intro.autoMergeCloudsIntoDatacenter,
       autoMergeDatacentersIntoSupercomputer: state.intro?.autoMergeDatacentersIntoSupercomputer ?? initial.intro.autoMergeDatacentersIntoSupercomputer,
       autoMergeSupercomputersIntoMegacomputer: state.intro?.autoMergeSupercomputersIntoMegacomputer ?? initial.intro.autoMergeSupercomputersIntoMegacomputer,
-      // Auto-boost preset preference is permanent Compute QoL (see tickAutoComputeBoost) — carried
+      // Auto-boost preset preference is permanent Compute QoL (see autoBoostFromTier) — carried
       // through Prestige unchanged. Active boost fields below still reset every cycle.
       computeAutoBoostType: state.intro?.computeAutoBoostType ?? initial.intro.computeAutoBoostType,
       // Any reserve merge already in flight when Prestige fires (see issue #321) represents tokens
@@ -7689,23 +7673,6 @@ export const buyAutoScaleUp = state => {
     ...latched,
     purge: { ...latched.purge, points: latched.purge.points - getAutomationUnlockCost('scaleUp') },
     autoScaleUp: true,
-  }
-}
-
-// One-time PP cost to permanently unlock Compute auto-Boost (see COMPUTE_AUTO_BOOST_UNLOCK_COST =
-// 30). Once bought, tickAutoComputeBoost may activate/stack the preferred preset while a reserve
-// merge is in flight and a compute-ladder tier is at CAP. A no-op if already unlocked, if there
-// aren't enough unspent points, or while production is frozen — same convention as buyAutoScaleUp.
-export const buyComputeAutoBoost = state => {
-  if (isProductionFrozen(state)) return state
-  if (state.computeAutoBoostUnlocked) return state
-  if (clampNonNegative(state.purge.points) < COMPUTE_AUTO_BOOST_UNLOCK_COST) return state
-
-  const latched = latchComputeFlopsPageUnlocked(state)
-  return {
-    ...latched,
-    purge: { ...latched.purge, points: latched.purge.points - COMPUTE_AUTO_BOOST_UNLOCK_COST },
-    computeAutoBoostUnlocked: true,
   }
 }
 

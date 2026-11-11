@@ -492,6 +492,7 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
+  const anyAutoBoost = ENTITY_ROWS.some(row => row.autoFlagField && intro[row.autoFlagField])
   // Issue #326: which compute-ladder tier is armed to fund the next Boost activation — purely
   // local UI state (free to change, no cost). Navigating here pre-selects the active boost's own
   // tier, so its presets open on arrival; clicking the selected tier again collapses it. Before the
@@ -611,14 +612,14 @@ const ComputePage = ({ game }) => {
         </ArmedStatusText>
       )}
 
-      {(!intro.computeMergePageUnlocked || state.computeAutoBoostUnlocked) && (
+      {(!intro.computeMergePageUnlocked || anyAutoBoost) && (
       <BoostCard aria-label="boost">
       {!intro.computeMergePageUnlocked && boostPresets}
 
-      {state.computeAutoBoostUnlocked && (
+      {anyAutoBoost && (
       <AutoBoostRow aria-label="compute auto boost">
         <AutoBoostLabel>
-          Auto from biggest tier waiting to charge — preference:
+          Auto Boost on each automatic charge — preference:
         </AutoBoostLabel>
         <BoostRow role="group" aria-label="auto boost preference">
           {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {

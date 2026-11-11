@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   BITS_PER_BYTE,
   BYTES_ID,
-  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_BOOST_PRESETS,
   COMPUTE_BOOST_TIER_FIELDS,
   COMPUTE_CORES_PER_NODE,
@@ -339,10 +338,6 @@ describe('constants', () => {
 
   it('COMPUTE_MERGE_BOUNDARIES has 9 boundaries (Core→Node … Supercomputer→Megacomputer)', () => {
     expect(COMPUTE_MERGE_BOUNDARIES).toHaveLength(9)
-  })
-
-  it('COMPUTE_AUTO_BOOST_UNLOCK_COST is 30 PP', () => {
-    expect(COMPUTE_AUTO_BOOST_UNLOCK_COST).toBe(30)
   })
 
   it('INTRO_DISK_UNLOCK_CAPACITY is 8,192 bits ("1 KiB" in Memory\'s own binary display scale) — deliberately equal to pool 1\'s own capacity-unlock threshold (BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP), see engine.js\'s getPoolCapacityUnlockThresholdBits(1)', () => {
