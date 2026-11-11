@@ -1629,7 +1629,7 @@ const MainPage = ({ game }) => {
             $pulse={canOverclock}
           >
             <ButtonIcon>⚡ </ButtonIcon>
-            <ButtonLabel>×{overclockLevelEffectDisplay}/lvl{' · '}{formatAmount(lastTierLevelDisplay)} lvls</ButtonLabel>
+            <ButtonLabel>×{overclockLevelEffectDisplay}/lvl{' · '}{lastTier.symbol}{' '}{formatAmount(lastTierLevelDisplay)}/{formatAmount(overclockRequirementDisplay)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Overclock progress"
