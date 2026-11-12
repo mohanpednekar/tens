@@ -420,6 +420,8 @@ export const COMPUTE_MERGE_RESERVE_CAP = 8
 // gradually filled by continued Booster purchases/lower-tier merges) = 18 "slots" total. Before
 // auto-merge is unlocked for that boundary, COMPUTE_ENTITY_CAP alone is still the cap — see
 // getComputeEntityFieldRoom in engine.js.
+// Manual Charge (Power): seconds per unit moved from a tier's top row into its bottom (auto-charge) row before the instant 8→1 merge (#1033).
+export const COMPUTE_CHARGE_TRANSFER_SECONDS = 1
 export const COMPUTE_ENTITY_AUTO_MERGE_CAP = COMPUTE_ENTITY_CAP + COMPUTE_MERGE_RESERVE_CAP
 // Timed reserve-merge durations are NOT a fixed table — each is COMPUTE_MERGE_RATIO (8) fills of the
 // input tier's own pool's smallest disk at that pool's live Bandwidth (see
@@ -706,7 +708,7 @@ export const SCALE_UP_FINAL_TIER_REQUIREMENT_STEP = 3
 // own step rather than a separate multiplier stacked alongside it (see docs/DESIGN_HISTORY.md for
 // the history of this mechanic moving between a standalone factor and a folded-in step). A direct
 // consequence: Overclock has no effect at all while the global tickspeed multiplier is still at
-// level 0/not yet bought, same as before Overclock existed. state.overclockCount is never reset by
+// level 0/not yet bought, same as before Overclock existed. state.overclockLastClaimCompletedLevels (the Overclock level) is never reset by
 // an ordinary Scale Up, unlike globalTickspeedMultiplier itself — see scaleUpGame.
 export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // Minimum last-tier completed-level growth required between Overclock uses: the first Overclock
@@ -714,19 +716,13 @@ export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // count the previous claim was taken at, plus this step (see getOverclockRequirement/
 // overclockGame in engine.js).
 export const OVERCLOCK_REQUIREMENT_STEP = 3
-// One-time PP cost to permanently unlock Compute auto-Boost (see engine.js's
-// buyComputeAutoBoost / tickAutoComputeBoost): while a reserve merge is in flight and any
-// compute-ladder tier is at COMPUTE_ENTITY_CAP, automatically activate (or stack) the player's
-// preferred Boost preset (default Standard). A mid-early automation that only
-// matters once Compute merges are timed.
-export const COMPUTE_AUTO_BOOST_UNLOCK_COST = 30
 // The last tier's own tickspeed multiplier (buyTickspeedMultiplier) keeps its normal requirement
 // (getTickspeedMultiplierCost — owned must reach it) but only actually spends this fraction of it:
 // e.g. tier10's 2nd upgrade unlocks at 100 owned and consumes 10.
 export const LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1
 // Once the last tier has ever been the target of a successful Scale Up this cycle (see engine.js's
 // isLastTierTickspeedXpUnlocked — a scaleUpTierCounts-based latch, NOT a live owned check), a
-// separate XP-funded upgrade (shown beside Speed Up) becomes available — see engine.js's
+// separate XP-funded upgrade (shown beside Scale Up) becomes available — see engine.js's
 // getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed. Each XP consumed compounds another
 // LAST_TIER_XP_TICKSPEED_STEP (1%) into the last tier's delivery frequency, on top of (not instead
 // of) its own resource-funded tickspeed level. "Last tier" (not a hardcoded tier id) so this stays

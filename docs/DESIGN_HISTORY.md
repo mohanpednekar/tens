@@ -1,5 +1,15 @@
 # Design history & rationale
 
+### Overclock no longer banks completed levels — 2026-11-11
+
+`overclockCount` was a running total of completed final-tier levels across every Overclock claim
+this cycle (`overclockCount += lastTierCompletedLevels`), so Clock Speed's per-level step compounded
+as ×1.1^(sum of every claim). Two claims of 3 therefore equalled one claim of 6, and successive
+claims grew the bonus without bound within a run. Replaced with a single Overclock level:
+`overclockLastClaimCompletedLevels` is set (not added) on each claim, and `getOverclockMultiplier`
+reads that via `getOverclockLevel`. Legacy saves still fall back to `overclockCount` until a Scale Up
+or new claim writes the new field. This is a nerf for anyone who had claimed more than once.
+
 ### Bits subline under MoneyHero; `+n/8` dropped from tier Buy buttons — 2026-11-09
 
 Once `formatMoneyBalance` switches the Factory headline to whole Bytes (8000 Bits / 1000 B), the
@@ -9158,6 +9168,21 @@ At the maintainer's request, Latency + Restage (above the tier list) and Scale U
 it) each share one `SpeedCardsRow` that stays side by side at every width (`flex: 1 1 0`, no wrap),
 superseding the earlier below-40rem single-column stack of Scale Up / Overclock.
 
+## Scale Up and Overclock each get a full-width row (2026-11)
+
+Putting `CardEffect` (`🏭 ×2` / `🌐 ×1.1/lvl`) beside the card name made the shared Scale Up +
+Overclock `SpeedCardsRow` too tight at phone width (heading wrap, disclosure body squeezed into the
+title column). They now each render in their own full-width row; Clock Speed + Restage stay paired.
+See the superseded "Feature-card pairs stay side by side on phones" entry above.
+
+Follow-up (same month): Restage moved from beside Clock Speed to the left of Scale Up (both act on
+the tier ladder below the list), leaving Clock Speed alone above it; Clock Speed and Restage also
+show a `CardEffect` (`🏭 ×1.01/lvl`, `QB ×1.01/XP`).
+
+Second follow-up: all four feature cards moved to their own full-width rows (half-width pairs made the title +
+effect chips wrap unevenly on 360–390px phones) and every chip is a percentage (`+1%/lvl`, `+1%/XP`, `+100%`,
+`+10%/lvl`).
+
 ## Reboot → Purge (player-facing only); Auto Restage joins the automation chain (2026-11)
 
 The Factory reset was renamed **Purge** in the UI (PP now reads **Purge Points**). Unlike the earlier
@@ -9292,3 +9317,17 @@ pool/Data Stream curves keep their symmetric 10×↔0.1×). The only 10× on the
 continuous timed transfer at `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` = 5 × pool Bandwidth × pool tap bonus, replacing the
 whole-block instant top-up (and its sub-block dump edge case). Rule from the maintainer: any speed curve starting at x ends at 1/x —
 not applicable to this constant-rate transfer, and the existing Data Stream/pool curves already satisfy it.
+
+## Lake disk fills: full-pool start, uninterruptible (2026-11)
+
+Maintainer rule: a lake disk fill shall not start unless its pool (Staging buffer) is full, checked only at
+the beginning; once a disk starts filling it is not interrupted. Before this the pool drain re-checked its
+priority gates (disks full, no build in progress, read-cache reservation) every tick, so a lake disk stalled
+mid-fill whenever a disk emptied or a build started, and started from any buffer level. Now
+`isDataLakeDiskFillStartAllowed` gates the start on `isStoragePoolBufferFull`; with `fillBits > 0` the drain
+ignores every gate and may use the whole buffer, stopping at the disk's completion. Manual fill follows the
+same rule (one disk per step). Full-buffer overflow already implies a full pool; since a disk it starts now
+makes the drain available in the same tick, `tickDataLakePoolDrain` takes the pre-fill state and skips a lake
+overflow already fed (no double credit). `buyBooster` used to zero `fillBits` on every purchase — itself an
+interruption (and a loss of the bits) — so it now carries the progress over, re-seating it through
+`fillDataLakeDisks` since the spend can open a smaller slot than the one that was filling.

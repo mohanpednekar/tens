@@ -53,7 +53,8 @@ yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
 yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--recursive flags; it
                   # already covers dependencies/devDependencies/optionalDependencies by default)
-yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml + .github/actions/** (#738)
+yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml + .github/actions/** (#738),
+                  # then fail on any git conflict marker in a tracked text file (#945)
 yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump package.json
                   # (minor if Added/Removed entries, else patch; no-op if Unreleased empty)
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png + favicon.ico from scripts/generate-pwa-icons.mjs
@@ -80,7 +81,8 @@ this hook could only be added from an interactive session.
 > stay `.js` (see `src/components/*/index.js`).
 
 There is no general code lint (`yarn lint` does not exist). CI's required `test` job runs `yarn
-lint:workflows` (`scripts/lint-workflow-shell.mjs` — `bash -n` over every workflow/action `run:` block,
+lint:workflows` (`scripts/lint-workflow-shell.mjs` — `bash -n` over every workflow/action `run:` block —
+then `scripts/lint-conflict-markers.mjs`, #945,
 #738) and then `yarn test`. `.github/workflows/deploy.yml` runs `yarn build` and publishes `dist/` to GitHub Pages on
 push to `main`. Automated Copilot review on PRs is configured through GitHub's repository settings, not
 an explicit workflow file.
@@ -170,7 +172,7 @@ wrong `baseCost` exponent, a mis-chained `producesResourceId`, a migration missi
 unauthorized economy change) that general review doesn't look for. It supplements, not replaces, the
 ordinary review flow.
 
-**Aesthetic review on every UI change.** Any change to what a player sees (layout, spacing, font size, alignment, colors, new/removed elements) needs a visual check before the PR is marked ready: render the real screen (Playwright at ~430px wide, both themes; seed `localStorage` as in "End-to-end testing"; throwaway scripts, not committed), look at the screenshot, and fix anything misaligned, cramped, off-center, inconsistent with neighbouring components (same font sizes/bar styles for the same kind of value), or that changes a component's size unintentionally. Share the screenshots with the user. Passing tests don't cover this.
+**Aesthetic review on every UI change.** Any change to what a player sees (layout, spacing, font size, alignment, colors, new/removed elements) needs a visual check before the PR is marked ready: render the real screen (Playwright at ~430px wide, both themes; seed `localStorage` as in `docs/TESTING_REFERENCE.md`'s "End-to-end testing"; throwaway scripts, not committed), look at the screenshot, and fix anything misaligned, cramped, off-center, inconsistent with neighbouring components (same font sizes/bar styles for the same kind of value), or that changes a component's size unintentionally. Share the screenshots with the user. Passing tests don't cover this.
 
 The `code-reviewer` subagent (`.claude/agents/code-reviewer.md`) does an adversarial, evidence-based,
 read-only review (every finding verified against the checked-out code, file:line-cited, CONFIRMED/PLAUSIBLE findings, explicit verdict, checked-clean list,
@@ -208,22 +210,10 @@ visibility into real work, not process overhead.
 For work roughly the `file-task-issue` skill's `size:M`/`size:L` threshold (a `size:S`-shaped change
 stays one tracking issue), split the epic's sub-issues along **coding / testing / documentation** phase
 lines rather than only by feature-slice, so the coding sub-issue can land without waiting on the other
-two, while the deferred ones stay tracked with the epic's context:
-
-- **Coding** — the core implementation. Its PR keeps the hard requirements: `yarn test` green, tests for
-  the core logic, a `CHANGELOG.md` entry for behavior changes, and — if it touches anything `CLAUDE.md`
-  documents (signatures, constants, state shape, conventions) — `CLAUDE.md` updated in the *same commit*
-  ("Documentation" below). That same-commit rule is a hard invariant, not relaxed by this split; only work
-  never required to land with the code gets deferred.
-- **Testing** — coverage beyond what the coding sub-issue needed for green CI: additional scenarios,
-  edge cases, regression tests, e2e specs. Can lag behind the coding sub-issue's merge.
-- **Documentation** — narrative/rationale writing not required to keep `CLAUDE.md` accurate:
-  `docs/DESIGN_HISTORY.md` write-ups, README updates, deep-dive `docs/*_REFERENCE.md` sections.
-  Deferrable.
-
-Link each phase sub-issue back to the parent epic (and each other where relevant) so a later session
-has the coding sub-issue's context — what shipped, what was deferred and why — without re-deriving it
-from the diff.
+two — exact split and what each phase owns: the `file-task-issue` skill's "Epics and sub-issues". The
+coding PR keeps every hard requirement (`yarn test` green, core-logic tests, `CHANGELOG.md` entry, and the
+same-commit `CLAUDE.md` update — a hard invariant this split never relaxes); only work never required to
+land with the code is deferred.
 
 ### GitHub Milestones (release grouping)
 
@@ -268,12 +258,12 @@ code/secret-scanning alerts not already tracked get the same (Dependabot alerts 
 0(c)/B). Phase A may weigh Impact to reorder *within* a priority tier (`priority:high` still jumps
 outright), saying so when it deviates from lowest-number order.
 
-- `devin-autonomous-maintenance.yml` — Devin-CLI counterpart, every 4h (UTC :17), opens `devin/auto-*` PRs
+- `devin-autonomous-maintenance.yml` — Devin-CLI counterpart, `workflow_dispatch` only (its 4-hourly schedule was removed 2026-10-20: the Devin plan lacks the `swe` model), opens `devin/auto-*` PRs
   (auth `DEVIN_CLI_CREDENTIALS`; git/`gh` via `GH_AUTOMATION_PAT`). The 5-open-PR ceiling counts `devin/auto-*` +
   `claude/auto-*` together. May edit workflows incl. its own, but workflow-file changes stay human-gated
   (`pr-auto-merge.yml` excludes `.github/workflows/**` from green-checks auto-merge). Every change still lands via PR. Follows the Pull-requests
   convention; post-run feedback is `autonomous-pr-followup.yml`'s job.
-- `devin-workflow-health.yml` — daily 00:00 UTC; files an `automation-failure` issue if the Devin workflow doesn't
+- `devin-workflow-health.yml` — `workflow_dispatch` only (daily schedule removed with the above); files an `automation-failure` issue if the Devin workflow doesn't
   parse, hasn't started in 26h, or its latest completed run wasn't `success`.
 - `pr-conflict-sweep.yml` — on every push to `main`, flags newly conflicted open PRs (on `claude/auto-*`/`devin/auto-*`
   the comment triggers the follow-up agent to merge-and-resolve).
@@ -329,8 +319,8 @@ cost, and duplicated facts drift when only one copy is updated. It needed a dedi
 because feature PRs kept adding formula-/UI-rendering-level prose here instead of to the reference doc
 for that area (`docs/ECONOMY_REFERENCE.md` for economy/engine mechanics, `docs/MAINPAGE_REFERENCE.md`
 for MainPage/ByteFoundryPage/ComputePage field layout, `docs/COMPONENTS_REFERENCE.md` for component prop
-contracts, `docs/THEMING_REFERENCE.md`/`docs/PWA_REFERENCE.md`/`docs/NATIVE_APPS_REFERENCE.md`/`docs/AUTOMATION.md` for their own
-areas). Default to one or two orientation sentences (what changed, the function/constant name to grep
+contracts, `docs/TESTING_REFERENCE.md`/`docs/THEMING_REFERENCE.md`/`docs/PWA_REFERENCE.md`/`docs/NATIVE_APPS_REFERENCE.md`/
+`docs/AUTOMATION.md` for their own areas). Default to one or two orientation sentences (what changed, the function/constant name to grep
 for) plus a pointer to the reference doc — write the full detail there, not here. Only put something in
 full here if no reference doc exists yet for that area (then consider whether the change warrants
 creating one).
@@ -400,7 +390,7 @@ docs/                        ← DESIGN_HISTORY.md (the "why": superseded formul
                                AUTOMATION.md, ECONOMY_REFERENCE.md, FOUNDRY_MECHANICS_REFERENCE.md (Byte Foundry/
                                Storage/Disks/Data Lakes/Power; read before touching ByteFoundryPage/ComputePage/disk+
                                lake engine code), MAINPAGE_REFERENCE.md (incl. ComputePage), COMPONENTS_REFERENCE.md
-                               (component props/styling), THEMING_REFERENCE.md, PWA_REFERENCE.md,
+                               (component props/styling), TESTING_REFERENCE.md, THEMING_REFERENCE.md, PWA_REFERENCE.md,
                                NATIVE_APPS_REFERENCE.md, DEVMODE_REFERENCE.md, RELEASE_ANDROID/IOS.md, STORE_LISTING.md
 src/
   game/
@@ -414,6 +404,8 @@ src/
                             checkout), clearSaveSlot / clearAllSaveProgress (never revokes unlock), separately keyed
                             last-save timestamp for offline progress (slot 0 keeps legacy `tens_game_state` keys).
                             Owns Dev Mode's isolated `'dev'` slot ("Dev Mode").
+    storagePrefix.js      ← `createPrefixedStorage`: `dev:` key namespace so the dev build's saves never mix with
+                            production's on the shared origin (no-op prefix elsewhere)
     save-migration/       ← `adaptSaveForCurrentSchema(raw)` → current-compatible state or failure; runs on every
                             load (DESIGN_HISTORY.md "Save persistence")
   components/             ← prop contracts/styling: docs/COMPONENTS_REFERENCE.md (Button, Money, StatCard, ...)
@@ -426,6 +418,7 @@ src/
                             disk → `actions.expediteDiskFill(size)`; shared by ByteFoundryPage and StoragePage (why standalone:
                             DESIGN_HISTORY.md)
     DataLakePanel         ← one Data Lake block `{ actions, state, bare, tierIndex }`, embedded per pool card
+    AutoBoostPresetPicker ← full-width segmented Turbo / Balanced / Eco choice (Firmware → Power Automation)
     icons.js              ← shared glyphs (`COST_ICON` 🏷️ marks every cost)
     BoostBadge, BoostTimerBar, SpeedDetailsPopover, LeadIcon, Switch, Money, BuyMaxToggle (renders nothing until
     `isBuyMaxUnlocked`), ConfirmDialog, OfflineProgressNotice, StatCard — see COMPONENTS_REFERENCE
@@ -459,7 +452,7 @@ vite.config.js            ← thin wrapper over `viteConfigFactory.js` (aliases,
                             `import.meta.url` isn't a `file:` URL under Vitest)
 firestore.rules           ← owner-only `saves/{uid}` rules; stryker.config.json ← Stryker mutation testing of `engine.js`
                             (weekly non-blocking `mutation-testing.yml`; `yarn stryker run`)
-playwright.config.js, e2e/ ← real-browser suite, specs in "End-to-end testing"
+playwright.config.js, e2e/ ← real-browser suite, specs in docs/TESTING_REFERENCE.md
 scripts/                  ← bump-version.mjs ("Changelog convention"); generate-pwa-icons.mjs (`yarn gen-pwa-icons`, not
                             in the build; re-run only if the icon design changes); adversarialReviewMarker.js
                             ("Pull requests"); pr-low-risk-eligible.sh, enable-auto-merge-if-eligible.sh,
@@ -467,9 +460,11 @@ scripts/                  ← bump-version.mjs ("Changelog convention"); generat
                             bot-authored `claude/*`/`devin/*` PRs; used by `autonomous-maintenance.yml` and
                             `autonomous-pr-followup.yml`), backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh,
                             sweep-stalled-auto-prs.sh (#60), sync-release-milestones.sh, configure-ios-plist.mjs,
-                            android-boot-smoke.sh, lint-workflow-shell.mjs, verify-maintainer-checklist.mjs —
-                            roles in docs/AUTOMATION.md (except resolve-pr-threads/generate-pwa-icons/configure-ios-plist, above and
-                            in their own headers); most have a sibling `*.test.js`
+                            android-boot-smoke.sh, lint-workflow-shell.mjs, lint-conflict-markers.mjs, check-graphify-freshness.mjs
+                            (committed graph vs. working tree, #761), classify-claude-failure.sh (transient vs. real
+                            Claude-step failure), orphan-branch-scan.sh (#59), verify-maintainer-checklist.mjs —
+                            roles in docs/AUTOMATION.md (except resolve-pr-threads/generate-pwa-icons/configure-ios-plist/
+                            check-graphify-freshness/classify-claude-failure, above and in their own headers); most have a sibling `*.test.js`
 public/                   ← generated PWA icons, favicon.ico, robots.txt (old CRA `index.html`/`manifest.json`/`logo*.png`
                             removed — DESIGN_HISTORY.md)
 ```
@@ -536,10 +531,10 @@ Strict three-layer separation:
    pure renderer ("engine re-validates, UI just mirrors it", like every page here).
 4b. **`ComputePage/index.jsx`** — Foundry **Power** screen (page id `'boosters'`; player label only), `{ game }`; reached
    via AppNav once `isComputeCoreConversionUnlocked`. Hosts the nine-boundary merge chain (Cell → Battery → … → Fusion,
-   "Charge up"/"Auto-charge") behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute" names the
+   "Charge up"/"Auto-charge"; ⚡ Charge button = 1 unit/s top→bottom row then instant 8→1, `startComputeCharge`/`tickComputeCharges`) behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute" names the
    page/feature only — entities drop the word in every player-visible label. Deliberately terse (icon-only controls,
    full sentence in `title`/`aria-label`; mechanic prose lives in the Manual). Top card = active Boost timer bar
-   (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right, enforced in the engine too) + Auto Boost pref;
+   (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right, enforced in the engine too) (Auto Boost is automatic: one token per automated charge start, `autoBoostFromTier`; its Switch + preset, like Auto-charge's pause Switch `computeAutoChargeEnabled`, live on Firmware → Automation → Power Automation);
    then per-tier rows — the ONE selected tier shows the 3 Boost presets inline. Constants: `COMPUTE_ENTITY_CAP` 10,
    `COMPUTE_MERGE_RATIO` 8, `COMPUTE_MERGE_RESERVE_CAP` 8. Cells (`computeCores`) are bought from the matching Data Lake,
    not minted from Capacity. Detail: `docs/FOUNDRY_MECHANICS_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`, `docs/DESIGN_HISTORY.md`.
@@ -603,7 +598,7 @@ this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop" (n
 
 ### Tiers, Prestige, Reboot (Era ascension)
 
-**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Flush Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
+**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Charger = a tier's 8-slot reserve row (bottom row, `getComputeReserveHeld`); Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Flush Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
 
 **Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Purge, Reboot,
 Reformat Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Purge** (formerly the name Reboot, now the Era-ascension layer) and
@@ -690,7 +685,8 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
   (`expediteDiskFill`) — it jumps ahead of the other write caches for the pool buffer, consumes the smaller full
   disks of its pool it needs in parallel alongside that buffer, and flushes at 5× (`docs/ECONOMY_REFERENCE.md`).
   Stranded disks are never destroyed or swept into Bits; merges never cross a pool boundary.
-- **Data Lakes** (`intro.dataLakes`): Booster control is "one click, one full fill-then-buy conversion,
+- **Data Lakes** (`intro.dataLakes`): a lake disk only STARTS while its pool buffer is full and is never
+  interrupted once under way (`isDataLakeDiskFillStartAllowed`). Booster control is "one click, one full fill-then-buy conversion,
   then stop" until the pool's era-long `boosterAuto` latch is set (then it auto-buys); `buyBooster` spends only banked lake units, outside the
   forced priority order; sub-sizes capped 9/9/9 (`DATA_LAKE_SUB_SIZE_DISK_CAPS`).
 - **Display**: Disk labels bare numbers; pool/lake CAPACITY in its fixed unit
@@ -721,7 +717,8 @@ levels on the last unlocked tier; repeated final-tier claims then require 6, 9, 
 from the re-reveal mechanic: after a reset, a tier already unlocked by a previous Scale Up within the
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
 Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
-completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`,
+completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`
+(the single Overclock level; each claim replaces it, nothing is banked; Clock Speed's step is ×1.1 per level),
 not a fixed 5/8/11/14 ladder (Clock Speed's Overclock-scaled 1% step is under "Tiers, Prestige, Reboot" above).
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
@@ -739,6 +736,7 @@ into `main`, and do not rename it with an agent/session suffix.
 heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
 **No link styling:** it's a game — never underline (solid, dotted or on hover) just because something is
 clickable; use `cursor: pointer` and a `:focus-visible` outline instead.
+**Segmented choices** (pick-one controls like the Boost preset): full width, equal-width buttons with a text label beside the icon — never tiny icon-only squares (`docs/COMPONENTS_REFERENCE.md`).
 
 ## Path aliases
 
@@ -800,83 +798,32 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
 
 ## Testing
 
-- Test files live next to source: `engine.test.js`, `layers.test.js`, `storage.test.js`,
-  `save-migration/index.test.js`, `navAttention.test.js`, `App.test.jsx`.
-- Environment: jsdom, globals enabled (`describe`/`it`/`expect` without imports), setup file
-  `src/setupTests.js` (imports `@testing-library/jest-dom/vitest`).
-- Component tests use Testing Library (`render`, `screen`, `userEvent`) and query by role/label text
-  rather than test IDs; `StatCard` panels carry `aria-label="<tier name> layer"` for this purpose, and
-  each tier row's Buy button nests a visually-hidden `role="progressbar"` (via `VisuallyHidden`) with
-  `aria-label="<tier name> cost-block progress"` plus `aria-valuenow`/`aria-valuemin`/`aria-valuemax` —
-  the Buy/tickspeed-multiplier/Unlock/Prestige buttons also carry an explicit `aria-label` with the
-  full descriptive sentence (independent of their compact icon-based visible text), so
-  `getByRole('button', { name: … })` still matches despite the nested labeled node.
-- Tests that seed `localStorage` directly must clear it in `beforeEach` (see `App.test.jsx`). Tests for
-  the Reset (Settings → Danger zone) `window.confirm` guard mock it via `vi.spyOn(window, 'confirm')` and
-  restore it in `afterEach`. If a test ever needs to observe behavior across real tick boundaries (none
-  currently does), use `vi.useFakeTimers()` + `act(() => vi.advanceTimersByTime(TICK_RATE_MS))` **once
-  per tick** (not one large jump per assertion — more than one tick fires the live `setInterval` several
-  times synchronously, which React 18 batches into a single render), and **unmount the rendered
-  component before calling `vi.useRealTimers()`**, not after — see `docs/DESIGN_HISTORY.md` for the real
-  regression this ordering avoids.
-- Where several near-identical automations/buttons exercise the same generic UI behavior (a
-  pause/resume toggle beside a status badge; a purchase button disabled below its own PP cost), prefer a
-  single `test.each` table over hand-copied tests — same coverage (each row reports as its own test),
-  far less duplicated setup. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables.
-- A starter set of `engine.js`'s core economy formulas (`getTierCost`, `getPrestigePointsAwarded`,
-  `buyTierQuantity`'s cost-resource spend) also carry property-based tests via `fast-check`
-  (devDependency), alongside — not replacing — their example-based tests: `describe('<fn>
-  (property-based)', …)` blocks right after that function's example-based `describe` in
-  `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
-  negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
-  cases so this stays fast in CI.
-- `yarn test` is green (run it for the current count — counts are deliberately not recorded here: every PR bumped them, so they went stale and made CLAUDE.md the top merge-conflict hot-spot). The four core test files (`engine.test.js`, `layers.test.js`,
-  `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
-  'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
-  `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
-  (`'Ones'`, `'money'`, `'hundreds'`, or a purchasable Bytes tier) left behind by prior renames/removals
-  (see `docs/DESIGN_HISTORY.md`). Saves must use the current schema (`resources.base`,
-  `resources.bytes`, `intro.mainGameUnlocked`, tier ids `tier01`–`tier10`);
-  `save-migration/adaptSaveForCurrentSchema` runs on every load; `storage.js`'s `mergeState` only fills
-  in missing fields from `createInitialGameState()`. Legacy payloads with no migration step yet are
-  discarded and surfaced via `IncompatibleSaveNotice`. Current saves stamp `saveSchemaVersion: 3` on
-  every write (v1/v2 saves run `migrateToV3` then forward-fill via `mergeState`). `src/theme/contrast.js` (standalone WCAG utility) has `contrast.test.js`, and `tokens.contrast.test.js` audits the
-  design tokens' plain text/UI color pairs for AA in both themes (`docs/THEMING_REFERENCE.md`). All other tests sit beside
-  their source (`engine.computeFlops.test.js` = PP Compute screen; `capacitorConfig.test.js` = Capacitor Vite path;
-  `pages/DevModePage/stateFields.test.js` = Dev Mode helpers; components, services, `save-migration/`, `scripts/*.test.js`)
-  and are all picked up by Vitest's default glob (`vite.config.js`'s `test` block sets no custom `include`).
+Rules every session needs; full detail (aria-label query contracts, per-file coverage map, e2e setup and
+spec list): **`docs/TESTING_REFERENCE.md`** — read it before writing or restructuring tests.
 
-### End-to-end testing
-
-`yarn test:e2e` (Playwright, config at `playwright.config.js`) is a separate, real-browser suite —
-distinct from, and not a replacement for, `yarn test`'s Vitest/jsdom suite. It drives the actual app in
-headless Chromium against a real `yarn dev` server (Playwright's `webServer` starts and waits on it;
-`reuseExistingServer` is enabled outside CI so a session's already-running `yarn dev` is reused). Bound
-to `127.0.0.1` (never `0.0.0.0`), matching the dev/test server convention, and targets the real `/tens/`
-base path.
-
-- **One-time setup**: `npx playwright install --with-deps chromium` (or `yarn playwright install
-  chromium` if the sandbox can't install system package dependencies) — the browser binary isn't bundled
-  with `@playwright/test` and isn't pre-installed on the GitHub Actions `ubuntu-latest` runner.
-  Chromium-only; no cross-browser coverage needed.
-- Specs live under `e2e/` (a sibling of `src/`), named `*.e2e.js` — deliberately not
-  `*.test.js`/`*.spec.js`, so Vitest's default glob never picks them up; `yarn test`'s test count is
-  unaffected by anything under `e2e/`.
-- Specs seed `localStorage`'s `tens_game_state` key directly (via `page.evaluate`, after an initial
-  `page.goto` to establish the origin, then `page.reload()`) rather than playing through the early game
-  — the same convention `App.test.jsx` uses. A seeded object only needs the fields a test cares about;
-  `storage.js`'s `mergeState` fills in the rest from `createInitialGameState()` — including
-  `intro: { mainGameUnlocked: true }`, needed by every spec that seeds state to land directly on MainPage
-  rather than the Byte Foundry intro screen.
-- Current specs: `golden-path` (buy Kilobytes via the real Buy button; Owned/balance update), `autobuyer-reload`
-  (an unlocked autobuyer survives a real reload), `purge` (seeding Money ≥ `PURGE_THRESHOLD`; first-time `FullScreenOverlay`), `reboot`
-  (seed at 1 Googol PP → Settings Reboot → assert `era.count`, Kernels award, and the permanent
-  `intro.mainGameUnlocked` latch carrying forward), `data-lake` (seeded KB Data Lake renders its disk-square breakdown; manual Buy Cell grants a Cell, verified on Power), and `visual-regression` (Linux-only
-  full-page screenshot baselines of Byte Foundry/Byte Factory in both themes; see `e2e/README.md`).
-- **Not wired into `ci.yml`** — deliberately. Wiring it in (installing Playwright's browser on the
-  runner, adding a job/step) means editing `ci.yml`, which is off-limits to `autonomous-maintenance.yml`
-  (see docs/AUTOMATION.md) — a human needs to do that directly. `yarn test:e2e` is a local/manual suite
-  for now.
+- Tests sit beside their source (`*.test.js`/`*.test.jsx`), Vitest's default glob, jsdom, globals enabled, setup
+  file `src/setupTests.js`. Component tests use Testing Library and query by role/label text, never test IDs
+  (buttons/panels carry explicit `aria-label`s for this).
+- Tests that seed `localStorage` must clear it in `beforeEach`; a mocked `window.confirm`
+  (`vi.spyOn`) is restored in `afterEach`.
+- Fake timers: advance `TICK_RATE_MS` **once per tick** inside `act`, and **unmount before
+  `vi.useRealTimers()`** — the regression this avoids is in `docs/DESIGN_HISTORY.md`.
+- Several near-identical automations/buttons → one `test.each` table, not hand-copied tests.
+- Core economy formulas also carry `fast-check` property tests (`describe('<fn> (property-based)', …)`,
+  `{ numRuns: 200 }`) alongside — not replacing — their example-based tests.
+- Test counts are deliberately not recorded here (they went stale every PR) — run `yarn test`.
+- Assert against the current id scheme only: `MONEY_ID = 'base'` ("Bits", `b`), `BYTES_ID = 'bytes'` (unit
+  marker, no stored pool, `B`), tier ids `tier01`–`tier10` (`Kilobytes`…). Never reintroduce an older scheme
+  (`'Ones'`, `'money'`, `'hundreds'`, a purchasable Bytes tier — `docs/DESIGN_HISTORY.md`). Saves use the current
+  schema (`resources.base`, `resources.bytes`, `intro.mainGameUnlocked`) and stamp `saveSchemaVersion: 3`;
+  every load runs `save-migration/adaptSaveForCurrentSchema` (v1/v2 → `migrateToV3`), then `mergeState`
+  fills missing fields; a legacy payload with no migration step is discarded and surfaced via
+  `IncompatibleSaveNotice`.
+- **End-to-end** (`yarn test:e2e`, Playwright, chromium only, `e2e/*.e2e.js` — named so Vitest never picks
+  them up): a separate real-browser suite against `yarn dev` on `127.0.0.1` and the `/tens/` base. Specs seed
+  `localStorage`'s `tens_game_state` (after a first `page.goto`, then `page.reload()`), including
+  `intro: { mainGameUnlocked: true }` to land on MainPage. **Not wired into `ci.yml`** — deliberately; that
+  edit is off-limits to `autonomous-maintenance.yml` and needs a human.
 
 ## Security notes
 

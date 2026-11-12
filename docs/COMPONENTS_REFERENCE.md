@@ -109,7 +109,7 @@ directly below its disks, not in a separate panel after all the pool cards.
 
 **`SpeedDetailsPopover`** (`components/SpeedDetailsPopover/index.jsx`) — `{ anchorRef, id, onClose, title, rows: [{ label, value }], note? }`. Rendered by the caller only while open; portals a `role="dialog"` panel to `<body>`, fixed just below the anchor and right-aligned to it (right edge clamped 8px from the viewport; flips above the anchor when it would overflow the bottom, else clamps to the viewport; re-measured every render). Opening moves focus to the panel (`preventScroll`); closing returns focus to the anchor if focus was inside. It calls `onClose` on a pointer press outside both the panel and the anchor (the anchor's own click toggles), any wheel, touch-move or scroll whose target is outside the panel (including over the anchor), Escape, or a window resize. Clicks inside stop propagation so they never reach the anchor's React ancestors.
 
-`DataLakePanel` (`bare tierIndex={poolIndex}`; optional `section="header"`/`"body"` splits the title+stats rows from the fill tile/squares, a collapsed pool card renders `header` — including a thin `ThinProgressBar` toward the next disk, reused by ByteFoundryPage's running-upgrade tile) renders one lake as a single self-contained block —
+`DataLakePanel` (`bare tierIndex={poolIndex}`; optional `section="header"`/`"body"` splits the title+stats rows from the fill tile/squares, a collapsed pool card renders `header` — its big centered text is the bar text "X/N KB" (progress on the lake disk under way, X in N's unit; the lake balance shows only in the expanded header) above a thin `ThinProgressBar` toward the next disk, reused by ByteFoundryPage's running-upgrade tile) renders one lake as a single self-contained block —
 not a labelled table row: a header row pairing the lake's title ("`<symbol>` Lake", e.g. "KB Lake" —
 the size unit is always part of the visible name) with a single next-Booster-cost control in place of
 a lifetime-purchased-count readout (the cost figure alone is self-explanatory — see below for what
@@ -204,6 +204,12 @@ Styled `<button type="button">` on/off switch (pill track + sliding knob; `$on` 
 `theme.color.good` when on / `textMuted` when off; reduced-motion aware). Callers pass
 `aria-pressed` and an `aria-label` for the accessible name. Used by `BuyMaxToggle` and every owned Firmware →
 Automation row.
+
+**`AutoBoostPresetPicker`** (`{ value, onChange }`): Auto Boost's Turbo / Balanced / Eco segmented choice (`aria-label="auto boost preference"`), used on Firmware → Automation.
+
+**Segmented choices (UI convention).** A pick-one control (e.g. Firmware's Auto Boost preset: Turbo / Balanced /
+Eco) is full width, one equal-width button per option with a text label beside its icon (`🔋 Eco`) — never a row of
+small icon-only squares — and the selected option is identified by styling alone (no tick): `prestige` variant plus a tinted fill, 2px border and bold label.
 
 ## `BuyMaxToggle/index.jsx`
 

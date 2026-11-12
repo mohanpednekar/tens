@@ -28654,6 +28654,52 @@
       "file_type": "document",
       "source_file": "docs/NATIVE_APPS_REFERENCE.md",
       "source_location": "L1"
+    },
+    {
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "BoostBadge/index.jsx",
+      "file_type": "code",
+      "source_file": "src/components/AutoBoostPresetPicker/index.jsx",
+      "id": "src_components_autoboostpresetpicker_index",
+      "label": "AutoBoostPresetPicker/index.jsx",
+      "norm_label": "autoboostpresetpicker/index.jsx",
+      "source_location": "L1"
+    },
+    {
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "BoostBadge/index.jsx",
+      "file_type": "code",
+      "source_file": "src/components/AutoBoostPresetPicker/index.jsx",
+      "id": "src_components_autoboostpresetpicker_index_autoboostpresetpicker",
+      "label": "AutoBoostPresetPicker",
+      "norm_label": "autoboostpresetpicker",
+      "source_location": "L35"
+    },
+    {
+      "id": "docs_testing_reference",
+      "label": "TESTING_REFERENCE.md",
+      "node_kind": "page",
+      "norm_label": "testing_reference.md",
+      "_origin": "ast",
+      "community": 99,
+      "community_name": "PWA_REFERENCE.md",
+      "file_type": "document",
+      "source_file": "docs/TESTING_REFERENCE.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "docs_testing_reference_testing_reference",
+      "label": "Testing reference",
+      "node_kind": "heading",
+      "norm_label": "testing reference",
+      "_origin": "ast",
+      "community": 99,
+      "community_name": "PWA_REFERENCE.md",
+      "file_type": "document",
+      "source_file": "docs/TESTING_REFERENCE.md",
+      "source_location": "L1"
     }
   ],
   "links": [
@@ -121285,6 +121331,28 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1,
       "source_file": "docs/NATIVE_APPS_REFERENCE.md",
+      "source_location": "L1",
+      "weight": 1
+    },
+    {
+      "source": "src_components_autoboostpresetpicker_index",
+      "target": "src_components_autoboostpresetpicker_index_autoboostpresetpicker",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "src/components/AutoBoostPresetPicker/index.jsx",
+      "source_location": "L35",
+      "weight": 1
+    },
+    {
+      "source": "docs_testing_reference",
+      "target": "docs_testing_reference_testing_reference",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/TESTING_REFERENCE.md",
       "source_location": "L1",
       "weight": 1
     }

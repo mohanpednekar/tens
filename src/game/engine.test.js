@@ -20,14 +20,12 @@ import {
   getAutobuyerIntervalSecondsAtLevel,
   getAutobuyerIntervalUpgradeCost,
   isAnyComputeMergeInFlight,
-  tickAutoComputeBoost,
   setComputeAutoBoostType,
-  buyComputeAutoBoost,
+  setComputeAutoBoostEnabled,
   canBuyComputeFlopsTier,
   canForfeitComputeBoost,
   forfeitComputeBoost,
   getComputeMergeDurationSeconds,
-  getBiggestComputeTierWaitingOnMerge,
   applyAutobuyerMilestones,
   applyOfflineProgress,
   buyAutoPurge,
@@ -180,6 +178,7 @@ import {
   getOfflineRewardBonusSeconds,
   applyOfflineRewardBonus,
   getOverclockMultiplier,
+  getOverclockLevel,
   getOverclockRequirement,
   getPrestigeDoublePpUpgradeCost,
   getPrestigePointsAwarded,
@@ -282,6 +281,11 @@ import {
   unpinMuseumEntry,
   tickAutoMergeCloudsIntoDatacenter,
   tickAutoMergeCoresIntoNode,
+  startComputeCharge,
+  tickComputeCharges,
+  isComputeChargeAvailable,
+  isComputeCharging,
+  getComputeChargeTransfers,
   tickAutoMergeDatacentersIntoSupercomputer,
   tickAutoMergeFabricsIntoCloud,
   tickAutoMergeGridsIntoFabric,
@@ -356,7 +360,7 @@ import {
   getPoolTapMultiplier,
   getDataStreamTapMultiplier,
 } from './engine'
-import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
+import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -478,9 +482,9 @@ const withScaleUpCount = (state, count) => ({
   scaleUpTierCounts: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, count])),
 })
 
-const withOverclockCount = (state, count) => ({
+const withOverclockLevel = (state, level) => ({
   ...state,
-  overclockCount: count,
+  overclockLastClaimCompletedLevels: level,
 })
 
 const withAutoScaleUp = (state, active = true) => ({
@@ -1666,6 +1670,53 @@ describe('tickDataLakePoolDrain (buffer priority: disk filling > provisioning in
     const gained = getDataLakeDepositedUnits(1)(after) * DISK_LADDER_BASE_SIZE_BITS + (lake?.fillBits ?? 0) - before
     expect(gained).toBeGreaterThan(0)
     expect(gained).toBeLessThanOrEqual(rate * dt + 1e-6)
+  })
+
+  it('does not start a lake disk unless the pool buffer is full', () => {
+    const state = pool({ poolBuffers: { 1: 79_999 } })
+    expect(isDataLakePoolDrainAvailable(state, 1)).toBe(false)
+    expect(tickDataLakePoolDrain(1e6)(state)).toBe(state)
+  })
+
+  it('never interrupts a lake disk already under way — not for a non-full buffer, an empty disk, a build in progress or the read cache\'s claim', () => {
+    const lake = { ...getDataLakeTier(createInitialGameState(), 1), fillBits: 1 }
+    const state = pool({
+      dataLakes: { ...createInitialGameState().intro.dataLakes, 1: lake },
+      disks: { ...full, [sizes[1]]: 0 },
+      diskBuildQueued: true,
+      diskCache: {},
+      poolBuffers: { 1: DISK_LADDER_BASE_SIZE_BITS },
+    })
+    expect(areStoragePoolDisksFull(state, 1)).toBe(false)
+    expect(isDataLakePoolDrainAvailable(state, 1)).toBe(true)
+    const after = tickDataLakePoolDrain(1e6)(state)
+    expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+    expect(after.intro.poolBuffers[1]).toBe(1)
+  })
+
+  it('finishes at most the current lake disk per call — the next one needs a full pool again', () => {
+    const lake = { ...getDataLakeTier(createInitialGameState(), 1), capacityLevel: 1 }
+    const state = pool({ dataLakes: { ...createInitialGameState().intro.dataLakes, 1: lake } })
+    const after = tickDataLakePoolDrain(1e6)(state)
+    expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+    expect(getDataLakeFillBits(after, 1)).toBe(0)
+    expect(isDataLakePoolDrainAvailable(after, 1)).toBe(false)
+    expect(tickDataLakePoolDrain(1e6)(after)).toBe(after)
+  })
+
+  it('skips a lake the overflow branch already fed this tick (no double credit on the tick a disk starts)', () => {
+    const lake = { ...getDataLakeTier(createInitialGameState(), 1), capacityLevel: 1 }
+    const seed = pool({
+      bits: 1e9,
+      capacity: 32_000_000,
+      disks: { ...full, [sizes[1]]: 0 },
+      dataLakes: { ...createInitialGameState().intro.dataLakes, 1: lake },
+    })
+    const state = { ...seed, intro: { ...seed.intro, poolBuffers: { 1: getPoolBufferCapacity(seed, 1) } } }
+    const afterFill = tickPoolBufferFill(0.001)(state)
+    expect(getDataLakeFillBits(afterFill, 1)).toBeGreaterThan(0)
+    expect(tickDataLakePoolDrain(0.001, state)(afterFill)).toBe(afterFill)
+    expect(tickDataLakePoolDrain(0.001)(afterFill)).not.toBe(afterFill)
   })
 
   it('is paced by the pool\'s Bandwidth', () => {
@@ -4586,6 +4637,76 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
   })
 })
 
+describe('manual Charge (#1033)', () => {
+  const base = () => withIntro(createInitialGameState(), { autoMergeCoresIntoNode: true, computeCores: 10, computeNodes: 0 })
+
+  it('is available only with Auto-charge unlocked, 8+ held, no timed merge or charge running, and room in the output', () => {
+    expect(isComputeChargeAvailable(base(), 0)).toBe(true)
+    expect(isComputeChargeAvailable(withIntro(base(), { autoMergeCoresIntoNode: false }), 0)).toBe(false)
+    expect(isComputeChargeAvailable(withIntro(base(), { computeCores: 7 }), 0)).toBe(false)
+    expect(isComputeChargeAvailable(withIntro(base(), { computeCoresMergeRemainingSeconds: 5 }), 0)).toBe(false)
+    expect(isComputeChargeAvailable(withIntro(base(), { computeNodes: COMPUTE_ENTITY_CAP }), 0)).toBe(false)
+    expect(isComputeChargeAvailable(startComputeCharge(0)(base()), 0)).toBe(false)
+  })
+
+  it('moves one unit per second into the bottom row, then merges 8 → 1 instantly when it is full', () => {
+    let state = startComputeCharge(0)(base())
+    expect(isComputeCharging(state, 0)).toBe(true)
+    state = tickComputeCharges(3)(state)
+    expect(getComputeChargeTransfers(state, 0)).toBe(3)
+    expect(getComputeReserveHeld(state, 1)).toBe(3)
+    expect(state.intro.computeCores).toBe(10) // nothing spent until the merge
+    state = tickComputeCharges(4.5)(state)
+    expect(getComputeReserveHeld(state, 1)).toBe(7)
+    state = tickComputeCharges(1)(state)
+    expect(state.intro.computeCores).toBe(2)
+    expect(state.intro.computeNodes).toBe(1)
+    expect(isComputeCharging(state, 0)).toBe(false)
+  })
+
+  it('only transfers what the bottom row still lacks (units already held past 10 count)', () => {
+    let state = startComputeCharge(0)(withIntro(base(), { computeCores: 15 })) // 5 already in the bottom row
+    state = tickComputeCharges(2)(state)
+    expect(getComputeReserveHeld(state, 1)).toBe(7)
+    state = tickComputeCharges(1)(state)
+    expect(state.intro.computeCores).toBe(7)
+    expect(state.intro.computeNodes).toBe(1)
+  })
+
+  it('shows one unit moving down per second even when only 8 or 9 are held (display matches the engine)', () => {
+    let state = startComputeCharge(0)(withIntro(base(), { computeCores: 8 }))
+    state = tickComputeCharges(2)(state)
+    expect(getComputeReserveHeld(state, 1)).toBe(2)
+    state = tickComputeCharges(5)(state)
+    expect(getComputeReserveHeld(state, 1)).toBe(7)
+    expect(tickComputeCharges(1)(state).intro.computeNodes).toBe(1)
+  })
+
+  it('takes 8 seconds of 0.1 s live ticks, not 8.1 (no float drift)', () => {
+    let state = startComputeCharge(0)(base())
+    let ticks = 0
+    while (isComputeCharging(state, 0) && ticks < 200) { state = tickComputeCharges(0.1)(state); ticks += 1 }
+    expect(ticks).toBe(80)
+    expect(state.intro.computeNodes).toBe(1)
+  })
+
+  it('cancels as soon as the output fills mid-charge (units untouched)', () => {
+    const started = tickComputeCharges(2)(startComputeCharge(0)(base()))
+    const full = tickComputeCharges(1)(withIntro(started, { computeNodes: COMPUTE_ENTITY_CAP }))
+    expect(isComputeCharging(full, 0)).toBe(false)
+    expect(full.intro.computeCores).toBe(10)
+  })
+
+  it('cancels (units untouched) if the input falls below 8 mid-charge, and the automatic start waits while charging', () => {
+    const started = startComputeCharge(0)(base())
+    const spent = tickComputeCharges(1)(withIntro(started, { computeCores: 5 }))
+    expect(isComputeCharging(spent, 0)).toBe(false)
+    expect(spent.intro.computeCores).toBe(5)
+    const full = withIntro(started, { computeCores: COMPUTE_ENTITY_AUTO_MERGE_CAP })
+    expect(tickAutoMergeCoresIntoNode(1)(full).intro.computeCoresMergeRemainingSeconds ?? 0).toBe(0)
+  })
+})
+
 describe.each([
   { tick: tickAutoMergeCoresIntoNode, enable: enableAutoMergeCoresIntoNode, isUnlockAvailable: isAutoMergeCoresIntoNodeUnlockAvailable, start: startComputeCoresMerge, isStartAvailable: isComputeCoresMergeStartAvailable, inputField: 'computeCores', outputField: 'computeNodes', autoFlagField: 'autoMergeCoresIntoNode', timerField: 'computeCoresMergeRemainingSeconds', boundaryIndex: 0, label: 'coresIntoNode' },
   { tick: tickAutoMergeNodesIntoCluster, enable: enableAutoMergeNodesIntoCluster, isUnlockAvailable: isAutoMergeNodesIntoClusterUnlockAvailable, start: startComputeNodesMerge, isStartAvailable: isComputeNodesMergeStartAvailable, inputField: 'computeNodes', outputField: 'computeClusters', autoFlagField: 'autoMergeNodesIntoCluster', timerField: 'computeNodesMergeRemainingSeconds', boundaryIndex: 1, label: 'nodesIntoCluster' },
@@ -4622,9 +4743,18 @@ describe.each([
   it('tick auto-starts a reserve merge once enabled and the input entity reaches the extended cap (COMPUTE_ENTITY_AUTO_MERGE_CAP, 18 — primary 10 plus the gradually-filled reserve) — moving COMPUTE_MERGE_RATIO out of the input and starting the timer, without granting the output yet', () => {
     const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true })
     const after = tick(1)(state)
-    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO) // back to the primary 10
+    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO - 1) // back to the primary 10, minus the one token the automatic Boost spends
     expect(after.intro[outputField]).toBe(0)
     expect(after.intro[timerField]).toBe(durationOf() - 1) // the same tick's elapsedSeconds also counts down
+  })
+
+  it('tick starts no NEW reserve merge while Auto-charge is paused (computeAutoChargeEnabled false), but still counts an in-flight one down', () => {
+    const full = { ...withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true }), computeAutoChargeEnabled: false }
+    const after = tick(1)(full)
+    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP)
+    expect(after.intro[timerField] ?? 0).toBe(0)
+    const inFlight = { ...withIntro(allPoolsVisibleState(), { [autoFlagField]: true, [timerField]: durationOf() }), computeAutoChargeEnabled: false }
+    expect(tick(1)(inFlight).intro[timerField]).toBe(durationOf() - 1)
   })
 
   it('tick does not start a second reserve merge while one is already in flight, even if the input has refilled all the way back to the extended cap', () => {
@@ -4710,7 +4840,7 @@ describe.each([
   it('is wired into tickGame — a real tick auto-starts a reserve merge once enabled and the input reaches the extended cap', () => {
     const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true, byteCreated: true })
     const after = tickGame(1)(state)
-    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO)
+    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO - 1) // + one token spent on the automatic Boost
     expect(after.intro[timerField]).toBeGreaterThan(0)
   })
 
@@ -4886,110 +5016,48 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
 
 })
 
-describe('buyComputeAutoBoost / tickAutoComputeBoost (30 PP unlock)', () => {
-  it(`spends ${30} PP to unlock auto-Boost permanently`, () => {
-    const state = withPrestigePoints(createInitialGameState(), COMPUTE_AUTO_BOOST_UNLOCK_COST)
-    const after = buyComputeAutoBoost(state)
-    expect(after.computeAutoBoostUnlocked).toBe(true)
-    expect(after.purge.points).toBe(0)
+describe('automatic per-merge Auto Boost', () => {
+  // Cores full at the extended cap with Cores→Node automated: the next tick starts a merge (8 tokens leave).
+  const readyToMerge = extra => withIntro(createInitialGameState(), {
+    capacity: 8 * 1024 ** 2,
+    computeCores: COMPUTE_ENTITY_AUTO_MERGE_CAP,
+    autoMergeCoresIntoNode: true,
+    ...extra,
   })
 
-  it('is a same-reference no-op below cost or when already unlocked', () => {
-    const tooFew = withPrestigePoints(createInitialGameState(), COMPUTE_AUTO_BOOST_UNLOCK_COST - 1)
-    expect(buyComputeAutoBoost(tooFew)).toBe(tooFew)
-    const unlocked = { ...createInitialGameState(), computeAutoBoostUnlocked: true, purge: { ...createInitialGameState().purge, points: 100 } }
-    expect(buyComputeAutoBoost(unlocked)).toBe(unlocked)
-  })
-
-  it('survives Prestige once unlocked; preference defaults to standard', () => {
-    const state = withMoney({
-      ...withIntro(createInitialGameState(), { computeAutoBoostType: 'burst' }),
-      computeAutoBoostUnlocked: true,
-    }, PURGE_THRESHOLD)
-    const after = purgeGame(state)
-    expect(after.computeAutoBoostUnlocked).toBe(true)
-    expect(after.intro.computeAutoBoostType).toBe('burst')
-  })
-
-  it('tickAutoComputeBoost is a no-op until unlocked', () => {
-    const state = withIntro(createInitialGameState(), {
-      computeCores: COMPUTE_ENTITY_CAP,
-      computeCoresMergeRemainingSeconds: 10,
-      autoMergeCoresIntoNode: true,
-    })
-    expect(isAnyComputeMergeInFlight(state)).toBe(true)
-    expect(tickAutoComputeBoost(state)).toBe(state)
-  })
-
-  it('once unlocked, activates the preferred preset from the biggest tier waiting on its own merge', () => {
-    const state = {
-      ...withIntro(createInitialGameState(), {
-        computeCores: COMPUTE_ENTITY_CAP,
-        computeNodes: COMPUTE_ENTITY_CAP,
-        computeCoresMergeRemainingSeconds: 10,
-        computeNodesMergeRemainingSeconds: 10,
-        autoMergeCoresIntoNode: true,
-        autoMergeNodesIntoCluster: true,
-        computeAutoBoostType: 'standard',
-      }),
-      computeAutoBoostUnlocked: true,
-    }
-    expect(getBiggestComputeTierWaitingOnMerge(state)).toBe(2) // Nodes > Cores
-    const after = tickAutoComputeBoost(state)
-    expect(after.intro.computeBoostType).toBe('standard')
-    expect(after.intro.computeBoostTierIndex).toBe(2)
-    expect(after.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP - 1)
-    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP) // untouched — not the biggest waiting
-  })
-
-  it('stacks the active boost when its funding tier is the biggest waiting on merge', () => {
-    const state = {
-      ...withIntro(createInitialGameState(), {
-        computeCores: COMPUTE_ENTITY_CAP,
-        computeCoresMergeRemainingSeconds: 10,
-        computeBoostType: 'standard',
-        computeBoostTierIndex: 1,
-        computeBoostStacks: 1,
-        computeBoostRemainingSeconds: 100,
-      }),
-      computeAutoBoostUnlocked: true,
-    }
-    const after = tickAutoComputeBoost(state)
-    expect(after.intro.computeBoostStacks).toBe(2)
-    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP - 1)
-  })
-
-  it('does not stack a boost funded by a smaller tier when a bigger tier is waiting on merge', () => {
-    const state = {
-      ...withIntro(createInitialGameState(), {
-        computeCores: COMPUTE_ENTITY_CAP,
-        computeNodes: COMPUTE_ENTITY_CAP,
-        computeCoresMergeRemainingSeconds: 10,
-        computeNodesMergeRemainingSeconds: 10,
-        computeBoostType: 'standard',
-        computeBoostTierIndex: 1, // funded by Cores, but Nodes are the biggest waiting
-        computeBoostStacks: 1,
-        computeBoostRemainingSeconds: 100,
-      }),
-      computeAutoBoostUnlocked: true,
-    }
-    expect(tickAutoComputeBoost(state)).toBe(state)
-  })
-
-  it('ignores a full tier whose own merge is not in flight', () => {
-    const state = {
-      ...withIntro(createInitialGameState(), {
-        computeCores: COMPUTE_ENTITY_CAP,
-        computeNodes: COMPUTE_ENTITY_CAP,
-        computeCoresMergeRemainingSeconds: 10, // only Cores are waiting
-        computeAutoBoostType: 'burst',
-      }),
-      computeAutoBoostUnlocked: true,
-    }
-    expect(getBiggestComputeTierWaitingOnMerge(state)).toBe(1)
-    const after = tickAutoComputeBoost(state)
+  it('spends one token on the preferred preset when an automated merge starts (no purchase needed)', () => {
+    const after = tickGame(1)(readyToMerge({ computeAutoBoostType: 'burst' }))
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBeGreaterThan(0)
+    expect(after.intro.computeBoostType).toBe('burst')
     expect(after.intro.computeBoostTierIndex).toBe(1)
-    expect(after.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP)
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO - 1)
+  })
+
+  it('triggers once per merge, not every tick', () => {
+    const first = tickGame(1)(readyToMerge())
+    const cores = first.intro.computeCores
+    const second = tickGame(1)(first)
+    expect(second.intro.computeCores).toBe(cores)
+  })
+
+  it('the toggle pauses it: no token is spent while Auto Boost is off', () => {
+    const off = setComputeAutoBoostEnabled(false)(readyToMerge())
+    expect(off.intro.computeAutoBoostEnabled).toBe(false)
+    expect(setComputeAutoBoostEnabled(false)(off)).toBe(off)
+    const after = tickGame(1)(off)
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBeGreaterThan(0)
+    expect(after.intro.computeBoostType ?? null).toBe(null)
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO)
+  })
+
+  it('does nothing for a tier whose merge is not automated', () => {
+    const state = withIntro(createInitialGameState(), { capacity: 8 * 1024 ** 2, computeCores: COMPUTE_ENTITY_CAP })
+    expect(tickGame(1)(state).intro.computeBoostType ?? null).toBe(null)
+  })
+
+  it('survives Prestige; preference defaults to standard', () => {
+    const state = withMoney(withIntro(createInitialGameState(), { computeAutoBoostType: 'burst' }), PURGE_THRESHOLD)
+    expect(purgeGame(state).intro.computeAutoBoostType).toBe('burst')
   })
 
   it('setComputeAutoBoostType updates the preference; unknown keys are a no-op', () => {
@@ -6263,7 +6331,7 @@ describe('getGlobalTickspeedProductionMultiplier', () => {
     expect(getGlobalTickspeedProductionMultiplier(10, 5)).toBeCloseTo((1 + boostedStep) ** 10)
   })
 
-  it('is still 1 at level 0 regardless of overclockCount', () => {
+  it('is still 1 at level 0 regardless of the Overclock level', () => {
     expect(getGlobalTickspeedProductionMultiplier(0, 5)).toBe(1)
     expect(getGlobalTickspeedProductionMultiplier(null, 5)).toBe(1)
   })
@@ -6520,7 +6588,7 @@ describe('getOverclockRequirement', () => {
     expect(getOverclockRequirement({ overclockLastClaimCompletedLevels: 11 })).toBe(14)
   })
 
-  it('falls back to the legacy overclockCount for saves written before overclockLastClaimCompletedLevels existed', () => {
+  it('falls back to the legacy banked overclockCount for saves written before overclockLastClaimCompletedLevels existed', () => {
     expect(getOverclockRequirement({ overclockCount: 8 })).toBe(11)
   })
 
@@ -6771,7 +6839,7 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
   it('boosts the global tickspeed multiplier\'s own regular step once claimed, when a level is already bought', () => {
     // 5 claimed Overclock levels multiply the regular 1% step by getOverclockMultiplier(5) = 1.1^5,
     // folded directly into the global tickspeed multiplier itself — not a separate factor.
-    const state = withOverclockCount(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 5)
+    const state = withOverclockLevel(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 5)
     const boostedRegularStep = 0.01 * 1.1 ** 5
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1 + boostedRegularStep) ** 9)
   })
@@ -6779,13 +6847,13 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
   it('has no effect at all while the global tickspeed multiplier is still at level 0/not yet bought', () => {
     // Overclock only boosts the per-level step of an existing global tickspeed level — with 0
     // levels bought, there's nothing for that boosted step to compound over, so the effective
-    // tickspeed is unaffected regardless of overclockCount.
-    const state = withOverclockCount(createInitialGameState(), 5)
+    // tickspeed is unaffected regardless of the Overclock level.
+    const state = withOverclockLevel(createInitialGameState(), 5)
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBe(1)
   })
 
   it('stacks the boosted global tickspeed step multiplicatively with the per-tier tickspeed multiplier', () => {
-    const state = withOverclockCount(
+    const state = withOverclockLevel(
       withGlobalTickspeedMultiplier(
         withTickspeedLevel(createInitialGameState(), tensTier.id, 2),
         9
@@ -6797,8 +6865,8 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
       .toBeCloseTo(1 / (1.1 * (1 + boostedRegularStep) ** 9))
   })
 
-  it('falls back to 0 Overclock levels (no bonus) when overclockCount is missing from state entirely', () => {
-    const state = omit(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 'overclockCount')
+  it('falls back to 0 Overclock levels (no bonus) when overclockLastClaimCompletedLevels is missing from state entirely', () => {
+    const state = omit(withGlobalTickspeedMultiplier(createInitialGameState(), 9), 'overclockLastClaimCompletedLevels')
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.01 ** 9))
   })
 })
@@ -8683,12 +8751,12 @@ describe('purgeGame', () => {
     expect(after.scaleUpTargetTierIndex).toBe(0)
   })
 
-  it('resets the Overclock count to 0 across prestige, same as Scale Up', () => {
-    const state = withOverclockCount(
+  it('resets the Overclock level across prestige, same as Scale Up', () => {
+    const state = withOverclockLevel(
       withMoney(createInitialGameState(), PURGE_THRESHOLD), 3
     )
     const after = purgeGame(state)
-    expect(after.overclockCount).toBe(0)
+    expect(after.overclockLastClaimCompletedLevels).toBeNull()
   })
 
   it('keeps the Auto Scale Up flag permanently across prestige', () => {
@@ -9248,10 +9316,17 @@ describe('scaleUpGame', () => {
     expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[2].id)).toBe(1)
   })
 
-  it('keeps overclockCount permanently across an ordinary Scale Up', () => {
-    const state = withOverclockCount(eligibleState(), 4)
+  it('keeps a legacy save\'s banked overclockCount (resolved as its Overclock level) across Scale Up', () => {
+    const state = { ...eligibleState(), overclockCount: 8 }
     const after = scaleUpGame(state)
-    expect(after.overclockCount).toBe(4)
+    expect(getOverclockLevel(after)).toBe(8)
+    expect(getOverclockRequirement(after)).toBe(11)
+  })
+
+  it('keeps the Overclock level across an ordinary Scale Up', () => {
+    const state = withOverclockLevel(eligibleState(), 4)
+    const after = scaleUpGame(state)
+    expect(after.overclockLastClaimCompletedLevels).toBe(4)
   })
 
   it('keeps the Byte Foundry intro state permanently untouched across speed up, unlike prestige', () => {
@@ -9295,9 +9370,8 @@ describe('overclockGame', () => {
     expect(overclockGame(state)).toBe(state)
   })
 
-  it('banks the claim\'s completed-level count onto overclockCount on a claim', () => {
+  it('sets the Overclock level to the claim\'s completed-level count on a claim', () => {
     const after = overclockGame(eligibleState())
-    expect(after.overclockCount).toBe(5)
     expect(after.overclockLastClaimCompletedLevels).toBe(5)
   })
 
@@ -9315,39 +9389,32 @@ describe('overclockGame', () => {
       overclockLastClaimCompletedLevels: 7,
     }
     const after = overclockGame(eligible)
-    // This claim banks its own 10 completed levels on top of whatever earlier claims banked.
-    expect(after.overclockCount).toBe(10)
     expect(after.overclockLastClaimCompletedLevels).toBe(10)
   })
 
-  it('banks the whole current completed-level count in one claim — Overclocking at a count ABOVE the minimum is allowed and next-requirement grows from the actual claim', () => {
+  it('sets the Overclock level to the whole current completed-level count in one claim — Overclocking at a count ABOVE the minimum is allowed and next-requirement grows from the actual claim', () => {
     // Last claimed at 5 completed (requirement 8); the player keeps climbing to 11 completed —
-    // a single claim banks all 11 and pushes the next requirement to 14, not to a
+    // a single claim replaces the level with 11 and pushes the next requirement to 14, not to a
     // predetermined 8-then-11 slot.
     const state = {
       ...withPurchaseLevel(createInitialGameState(), lastTier.id, 12),
       overclockLastClaimCompletedLevels: 5,
     }
     const after = overclockGame(state)
-    expect(after.overclockCount).toBe(11)
     expect(after.overclockLastClaimCompletedLevels).toBe(11)
     expect(getOverclockRequirement(after)).toBe(14)
   })
 
-  it('claiming 3 completed levels then 3 more equals claiming 6 at once — Overclock only banks accumulated compounding, frequency never changes the eventual benefit', () => {
-    // overclockCount accumulates each claim's completed-level count additively, and the
-    // multiplier compounds over the total (getOverclockMultiplier(n) = 1.1^n) — so two claims
-    // banking 3 and 3 produce the same banked total as one claim banking 6.
-    const bank33 = {
+  it('does not accumulate across claims — the multiplier follows only the level reached at the latest claim', () => {
+    const prior = {
       ...withPurchaseLevel(createInitialGameState(), lastTier.id, 7), // 6 completed
-      overclockLastClaimCompletedLevels: 3, overclockCount: 3,
+      overclockLastClaimCompletedLevels: 3,
     }
-    const after33 = overclockGame(bank33)
-    // Previous claim at 3 completed -> requirement 6; this claim banks its 6 -> total 9.
-    expect(after33.overclockCount).toBe(3 + 6)
-    expect(after33.overclockLastClaimCompletedLevels).toBe(6)
-    // And the multiplier over a 3+6 total equals the multiplier over a single claim of 9.
-    expect(getOverclockMultiplier(after33.overclockCount)).toBeCloseTo(getOverclockMultiplier(9))
+    const after = overclockGame(prior)
+    expect(after.overclockLastClaimCompletedLevels).toBe(6)
+    expect(after.overclockCount).toBeUndefined()
+    expect(getGlobalTickspeedProductionMultiplier(9, getOverclockLevel(after)))
+      .toBeCloseTo(getGlobalTickspeedProductionMultiplier(9, 6))
   })
 
   it('resets the aggregate Scale Up count and per-tier production bonuses to 0', () => {
@@ -9547,10 +9614,10 @@ describe('overclockGame', () => {
     expect(overclockGame(state)).toBe(state)
   })
 
-  it('falls back to 0 when overclockCount is missing from state entirely', () => {
-    const state = omit(eligibleState(), 'overclockCount')
+  it('falls back to the 5-level first requirement when the Overclock level is missing from state entirely', () => {
+    const state = omit(eligibleState(), 'overclockLastClaimCompletedLevels')
     const after = overclockGame(state)
-    expect(after.overclockCount).toBe(5)
+    expect(after.overclockLastClaimCompletedLevels).toBe(5)
   })
 
   it('keeps the Byte Foundry intro state permanently untouched across overclock, unlike prestige', () => {
@@ -10567,7 +10634,8 @@ describe('Data Lakes', () => {
       })
       let state = level1
       for (let i = 0; i < 200; i += 1) {
-        state = tickPoolBufferFill(1)(state) // 200 bits/sec each tick (10% lake speed)
+        // 200 bits/sec each tick (10% lake speed): overflow starts each disk, the drain finishes it
+        state = tickDataLakePoolDrain(1, state)(tickPoolBufferFill(1)(state))
       }
       expect(getDataLakeDepositedUnits(1)(state)).toBe(10) // capped exactly at capacity, never beyond
       expect(getDataLakeCurrentFillSubSize(state, 1)).toBe(null) // correctly reads as fully maxed
@@ -10644,11 +10712,12 @@ describe('Data Lakes', () => {
 
     it('is associative — splitting the same total elapsedSeconds into many small ticks produces the SAME lake fill as one big tick (a flat, un-tapered rate is trivially associative, but this guards against a future regression reintroducing a per-segment rate that isn\'t)', () => {
       const wholeState = fullBufferState()
-      const wholeAfter = tickPoolBufferFill(2)(wholeState)
+      const tick = seconds => state => tickDataLakePoolDrain(seconds, state)(tickPoolBufferFill(seconds)(state))
+      const wholeAfter = tick(2)(wholeState)
 
       let splitState = fullBufferState()
       for (let i = 0; i < 20; i += 1) {
-        splitState = tickPoolBufferFill(0.1)(splitState)
+        splitState = tick(0.1)(splitState)
       }
 
       expect(getDataLakeFillBits(wholeAfter, 1)).toBeCloseTo(getDataLakeFillBits(splitState, 1), 6)
@@ -10963,12 +11032,27 @@ describe('Data Lakes', () => {
       expect(isBoosterPurchaseAvailable(notEnough, 1)).toBe(false)
     })
 
-    it('buyBooster spends the cost off depositedUnits, resets fillBits, increments purchased, and grants the compute-ladder entity', () => {
+    it('buyBooster never interrupts the lake disk under way — its fillBits carry over, re-seated when a smaller slot opens', () => {
+      const unit = getDataLakeUnitBits(1)
+      // Level 1 (9 ×1 slots + the final unit): 5 banked, half a disk under way, next Cell costs 1.
+      const midDisk = withLake(createInitialGameState(), 1, { depositedUnits: 5, fillBits: unit / 2, boostersUnlocked: true, capacityLevel: 1 })
+      const bought = buyBooster(1, 1)(midDisk)
+      expect(getDataLakeDepositedUnits(1)(bought)).toBe(4)
+      expect(getDataLakeFillBits(bought, 1)).toBe(unit / 2)
+      // Level 2: all nine ×1 disks + 1 ×10 banked (19), a ×10 disk 30% under way. Spending 1 unit
+      // reopens a ×1 slot, so the carried 3 units' worth completes whole ×1 disks instead.
+      const bigSlot = withLake(createInitialGameState(), 1, { depositedUnits: 19, fillBits: unit * 3, boostersUnlocked: true, capacityLevel: 2 })
+      const after = buyBooster(1, 1)(bigSlot)
+      const banked = s => getDataLakeDepositedUnits(1)(s) * unit + getDataLakeFillBits(s, 1)
+      expect(banked(after)).toBe(banked(bigSlot) - unit) // nothing lost beyond the Cell's cost
+    })
+
+    it('buyBooster spends the cost off depositedUnits, keeps fillBits, increments purchased, and grants the compute-ladder entity', () => {
       const state = withLake(createInitialGameState(), 1, { depositedUnits: 5, fillBits: 123, boostersUnlocked: true, capacityLevel: 1 })
       expect(getBoosterPurchaseCost(1)(state)).toBe(1)
       const after = buyBooster(1)(state)
       expect(getDataLakeDepositedUnits(1)(after)).toBe(4)
-      expect(getDataLakeFillBits(after, 1)).toBe(0)
+      expect(getDataLakeFillBits(after, 1)).toBe(123)
       expect(after.intro.dataLakes[1].purchased).toBe(1)
       expect(after.intro.computeCores).toBe(1)
       // Next cost has escalated to 2.
@@ -11214,12 +11298,26 @@ describe('Data Lakes', () => {
       expect(isDataLakeManualFillAvailable(state, 1)).toBe(false)
     })
 
-    it('is unavailable with less than one whole unit banked in the pool\'s own buffer', () => {
-      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 - 1), {
-        disksBuiltTotal: { [kb1]: 1 },
-      })
+    it('does not START a lake disk unless the pool buffer is full', () => {
+      const seed = withIntro(createInitialGameState(), { capacity: 8 * 2 ** 16, disksBuiltTotal: { [kb1]: 1 } })
+      const capacity = getPoolBufferCapacity(seed, 1)
+      const state = withPoolBuffer(seed, capacity - 1)
       expect(isDataLakeManualFillAvailable(state, 1)).toBe(false)
       expect(fillDataLakeManually(1)(state)).toBe(state)
+      expect(isDataLakeManualFillAvailable(withPoolBuffer(seed, capacity), 1)).toBe(true)
+    })
+
+    it('keeps filling a lake disk already under way from a pool that is no longer full', () => {
+      const seed = withIntro(createInitialGameState(), {
+        capacity: 8 * 2 ** 16,
+        disksBuiltTotal: { [kb1]: 1 },
+        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), fillBits: kb1 / 2 } },
+      })
+      const state = withPoolBuffer(seed, 100)
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(true)
+      const after = fillDataLakeManually(1)(state)
+      expect(getDataLakeFillBits(after, 1)).toBe(kb1 / 2 + 100)
+      expect(after.intro.poolBuffers[1]).toBe(0)
     })
 
     it('converts exactly enough units for the next Booster, spending only that much from the pool\'s own buffer', () => {
@@ -11242,7 +11340,8 @@ describe('Data Lakes', () => {
         dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), purchased: 2, capacityLevel: 1, boostersUnlocked: true } },
       })
       expect(getBoosterPurchaseCost(1)(state)).toBe(3)
-      const after = fillDataLakeManually(1)(state)
+      // One lake disk per step; the (tiny, still-full) pool then starts the next.
+      const after = fillDataLakeManually(1)(fillDataLakeManually(1)(state))
       expect(getDataLakeDepositedUnits(1)(after)).toBe(2) // only what the buffer could afford
       expect(after.intro.poolBuffers[1]).toBe(0)
       expect(isBoosterPurchaseAvailable(after, 1)).toBe(false) // still short of the 3 needed
@@ -11379,6 +11478,7 @@ describe('Data Lakes', () => {
       state = withIntro(updateLake(state, 1, { capacityLevel: 3, depositedUnits: 1000, purchased: 1000 }), {
         disks: { [kb1]: 9, [kb10]: 9, [kb100]: 9 },
         poolBuffers: { 1: 123, 2: 456 },
+        capacity: 8 * 1024 ** 2, // pool 1 live with room for every KB disk size (rebuilds wait on pool Capacity)
       })
       const reset = flushStoragePool(1)(state)
       expect(getDataLakeCapacity(reset, 1)).toBe(2000)
@@ -11782,6 +11882,21 @@ describe('Auto-provisioning of smaller sizes after a Foundry reset', () => {
   // A funded pool buffer: the cache reservation plus `disks` disks' worth of spendable bits.
   const funded = (state, disks) => withIntro(state, {
     poolBuffers: { 1: getPoolCacheReservationBits(state, 1) + disks * FIRST_DISK_SIZE },
+  })
+
+  it('waits until the disk\'s own pool Capacity can hold one disk of that size', () => {
+    const base = funded(afterReset(), 2)
+    const tooSmall = withIntro(base, { capacity: FIRST_DISK_SIZE / 2 })
+    expect(getPoolBufferCapacity(tooSmall, 1)).toBeLessThan(FIRST_DISK_SIZE)
+    expect(tickAutoProvisionLowerDiskSizes(1000)(tooSmall)).toBe(tooSmall)
+    expect(tickAutoProvisionLowerDiskSizes(1000)(base)).not.toBe(base)
+  })
+
+  it('a capacity-blocked rebuild does not claim the pool buffer, so the lake keeps filling from completed sizes', () => {
+    const base = funded(afterReset(), 2)
+    expect(isStoragePoolProvisioningInProgress(base, 1)).toBe(true)
+    const blocked = withIntro(base, { capacity: FIRST_DISK_SIZE / 2 })
+    expect(isStoragePoolProvisioningInProgress(blocked, 1)).toBe(false)
   })
 
   it('the pool tap bonus speeds the rebuild ×(1 + bonus%)', () => {

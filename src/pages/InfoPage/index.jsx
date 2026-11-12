@@ -8,7 +8,6 @@ import {
   TIER_UNLOCK_PREV_LEVEL_REQUIREMENT,
 } from 'game/engine'
 import {
-  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_BOOST_MAX_STACKS,
   COMPUTE_BOOST_PRESETS,
   COMPUTE_ENTITY_CAP,
@@ -352,10 +351,12 @@ const InfoPage = () => {
             pool has built at least one disk, and turns stored data into Cells.
           </li>
           <li>
-            A lake fills from its own pool’s Staging at the pool’s Bandwidth whenever every built disk in
-            that pool is full and nothing is being provisioned there. Clicking its 🏷️ cost control
-            also draws from the pool’s Staging until the next Cell is affordable, buys one, then
-            stops. Once all of the pool’s disks are built, its overflow also pours into the lake.
+            A lake fills from its own pool’s Staging, one lake disk at a time. A lake disk only starts
+            while Staging is full (and, when filling on its own, every built disk in that pool is full
+            and nothing is being provisioned there); once started it is never interrupted and keeps
+            filling until done — buying a Cell keeps its progress. Clicking its 🏷️ cost control fills the same way until the next Cell is
+            affordable, buys one, then stops. Once all of the pool’s disks are built, its overflow
+            also pours into the lake.
           </li>
           <li>
             A lake shows its contents as disk squares, filled smallest first: up to{' '}
@@ -418,10 +419,11 @@ const InfoPage = () => {
             {COMPUTE_MERGE_RATIO} held). It is instant.
           </li>
           <li>
-            Sacrifice {COMPUTE_ENTITY_CAP} of the next entity to unlock auto-charge for that step. This
-            adds an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve ({COMPUTE_ENTITY_AUTO_MERGE_CAP} held in
-            total) that fills as the entity keeps growing past {COMPUTE_ENTITY_CAP}. Tapping the
-            reserve slots charges {COMPUTE_MERGE_RATIO} → 1 instantly.
+            Sacrifice {COMPUTE_ENTITY_CAP} of the next entity to unlock the Charger for that step. This
+            adds the Charger, a row of {COMPUTE_MERGE_RESERVE_CAP} slots ({COMPUTE_ENTITY_AUTO_MERGE_CAP} held in
+            total) that fills as the entity keeps growing past {COMPUTE_ENTITY_CAP}. Press ⚡ Charge
+            to move units from the top row into the Charger one per second, then {COMPUTE_MERGE_RATIO} → 1 merges
+            instantly.
           </li>
           <li>
             An automatic charge starts only when all {COMPUTE_ENTITY_AUTO_MERGE_CAP} slots are full and
@@ -467,10 +469,10 @@ const InfoPage = () => {
             after a confirmation.
           </li>
           <li>
-            <strong>Auto Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time, on Firmware → 🤖
-            Automation): when a tier is full and waiting on its own automatic charge, activates (or
-            stacks) your preferred preset from the <strong>biggest</strong> such tier. Choose the
-            preset on Power (default Balanced). It never forfeits a running boost.
+            <strong>Auto Boost</strong> is automatic for every tier whose charge is automated: each
+            time that automatic charge starts, one of the tier's remaining tokens activates (or stacks)
+            your preferred preset. Choose the preset on Power (default Balanced). It never forfeits a
+            running boost.
           </li>
           <li>Fusions are used only to fund Boosts.</li>
         </ul>
@@ -523,7 +525,7 @@ const InfoPage = () => {
           </li>
           <li>
             After {TIER_DEFINITIONS.length} Scale Ups in a run (the first onto {lastTierName}), the
-            Restage upgrade appears beside Clock Speed: spend XP for +1% faster {lastTierName} ticks per XP
+            Restage upgrade appears left of Scale Up (below the tier list): spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
             It resets every other tier’s owned quantity and your Bits. A 16 PP Auto Restage
             (Firmware → Automation, after Auto Clock Speed) spends it for you, every 64 s at first —
@@ -567,8 +569,8 @@ const InfoPage = () => {
             and Purge Points are kept.
           </li>
           <li>
-            In exchange, permanently multiplies Clock Speed’s per-level rate by ×1.1 for each completed
-            level banked (1% → 1.1% → 1.21% → …).
+            In exchange, multiplies Clock Speed’s per-level rate by ×1.1 for each completed level you
+            had when you claimed (1% → 1.1% → 1.21% → …).
           </li>
           <li>
             The first claim needs {overclockFirstRequirement} completed levels — a minimum; you can
@@ -576,8 +578,9 @@ const InfoPage = () => {
             claim was taken at.
           </li>
           <li>
-            Every completed level counts — claiming at 3 and then 3 more gives the same benefit as
-            claiming 6 at once, so claim whenever you like.
+            Nothing is banked — each claim replaces the previous one, so only the completed level
+            reached at your latest claim sets the boost. Waiting to claim at a higher level gives a
+            bigger boost.
           </li>
         </ul>
       </Section>

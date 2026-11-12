@@ -70,6 +70,7 @@ docs/
   COMPONENTS_REFERENCE.md ← full Button/Money/StatCard prop/styling reference
   THEMING_REFERENCE.md    ← full design-token/font/ThemeProvider reference
   PWA_REFERENCE.md        ← full installable-PWA (manifest/icons/service-worker) reference
+  TESTING_REFERENCE.md    ← full Vitest + Playwright e2e conventions (query contracts, timers, spec list)
   NATIVE_APPS_REFERENCE.md ← Capacitor Android/iOS wrap: SDK targets, release signing, feature flags, mobile-build.yml
 src/
   game/
@@ -160,7 +161,7 @@ forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a sepa
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer
 fullness; taps never speed a fill — a Data Stream ping speeds Upgrade Capacity/Bitrate, a pool ping speeds that pool's consumers (disks, merges, provisioning, lake). Disks (`StoragePage`) fill from their pool buffer (larger sizes via a write cache; clicking an empty disk
 also feeds it from smaller disks at the same time) and pull into Factory automatically, with no manual
-redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too — but Cells,
+redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too (a lake disk only starts while its pool's Staging is full, then is never interrupted) — but Cells,
 which spend banked Data Lake units for Cells/Batteries/Boost (`ComputePage`, nav **Power**), only
 buy via a single per-lake "🏷️ `<cost>`" control: it buys immediately if affordable, or arms a one-shot
 `autoConvertActive` flag that fills-then-buys exactly 1 over subsequent ticks and stops (never a
@@ -216,6 +217,8 @@ resolve to that dir's `index.jsx`/`index.js`.
   `App.test.jsx`. Environment: jsdom, globals enabled. Setup file: `src/setupTests.js`.
 - `yarn test` is green — run it for the current test count (counts are intentionally not recorded in
   docs: they went stale and made the docs a merge-conflict hot-spot).
+- Full conventions (role/label queries, fake-timer ordering, `fast-check`, current id scheme, the
+  separate `yarn test:e2e` Playwright suite): `docs/TESTING_REFERENCE.md`.
 
 ## Changelog convention
 
@@ -268,7 +271,7 @@ The unattended pipeline runs the **Claude** engine (`autonomous-maintenance.yml`
 orchestration-workflow failures (including the Devin engine's) and opens draft `claude/self-heal-*`
 fixes or `automation-failure` issues (see `docs/AUTOMATION.md`). A parallel **Devin CLI** engine
 (`devin-autonomous-maintenance.yml`, `devin -p --prompt-file <file> --model swe --permission-mode
-dangerous --respect-workspace-trust false`, every 4h) consumes the same `claude-task` backlog on
+dangerous --respect-workspace-trust false`, `workflow_dispatch` only since 2026-10-20) consumes the same `claude-task` backlog on
 `devin/auto-*` branches; its git/`gh` auth is `GH_AUTOMATION_PAT` plus a `DEVIN_CLI_CREDENTIALS` secret,
 and both engines share one 5-open-PR ceiling counting `claude/auto-*` and `devin/auto-*` together.
 `devin/auto-*` PRs get the same follow-up and low-risk auto-merge handling as `claude/auto-*`. The
@@ -277,7 +280,7 @@ own file included); changes still land via PR, and workflow-file changes stay hu
 address → resolve → iterate-until-mergeable loop on its own PRs before the run ends (post-run feedback
 is `autonomous-pr-followup.yml`'s job). `pr-conflict-sweep.yml` fires on every push to `main` and
 comments on any open PR that became conflicted (the comment triggers the follow-up agent on automation
-branches). `devin-workflow-health.yml` runs daily at midnight UTC, filing an `automation-failure` issue
+branches). `devin-workflow-health.yml` (also `workflow_dispatch` only now) files an `automation-failure` issue
 when the workflow file stops parsing, no run has started in >26h, or the latest run didn't succeed.
 `release.yml` (deterministic, no agent) fires on pushes to `main` that touch `package.json`: it pushes
 annotated tag `v<x.y.z>` and creates a GitHub Release from that version's `CHANGELOG.md` section when
