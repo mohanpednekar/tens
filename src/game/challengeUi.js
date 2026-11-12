@@ -1,5 +1,5 @@
-import { BITS_PER_BYTE, PURGE_THRESHOLD } from './layers'
-import { getAutobuyerUnlockMilestone, getTierTickspeedAutobuyerMilestone } from './engine'
+import { BITS_PER_BYTE, CLOCK_DRIFT_INTERVAL_SECONDS, DUTY_CYCLE_WINDOW_SECONDS, HARD_REFRESH_INTERVAL_SECONDS, MONEY_ID, PURGE_THRESHOLD } from './layers'
+import { formatCurrency, getActiveChallenge, getAutobuyerUnlockMilestone, getBitRotCorruption, getTierTickspeedAutobuyerMilestone } from './engine'
 
 // Player-facing helpers for challenge mode (epic #1037); pure, shared by Firmware and the Factory banner.
 const GLOBAL_AUTOMATION_NAMES = {
@@ -32,3 +32,29 @@ export const getChallengeUnlockCondition = def => {
 }
 
 export const getChallengeTitle = def => `${def.id} · ${def.target} · ${def.codename}`
+
+const secondsToNext = (elapsed, interval) => interval - (elapsed % interval)
+
+// Rule-specific banner readouts (F2 halt, F5 refresh, F9 corruption, F15 drift, F19 phase): text lines only.
+export const getChallengeReadouts = state => {
+  const challenge = getActiveChallenge(state)
+  if (!challenge) return []
+  const elapsed = state.challenges.activeSeconds ?? 0
+  const run = state.challenges.run ?? {}
+  switch (challenge.effect) {
+    case 'writeLock':
+      return [(run.haltSeconds ?? 0) > 0 ? `Production halted: ${formatChallengeTime(Math.ceil(run.haltSeconds))} left` : 'Production running']
+    case 'hardRefresh':
+      return [`Next refresh in ${formatChallengeTime(secondsToNext(elapsed, HARD_REFRESH_INTERVAL_SECONDS))} · ${run.refreshes ?? 0} survived`]
+    case 'clockDrift':
+      return [`Next tickspeed loss in ${formatChallengeTime(secondsToNext(elapsed, CLOCK_DRIFT_INTERVAL_SECONDS))}`]
+    case 'dutyCycle': {
+      const on = Math.floor(elapsed / DUTY_CYCLE_WINDOW_SECONDS) % 2 === 0
+      return [`Tickspeed bonus ${on ? 'ON' : 'OFF'} for ${formatChallengeTime(Math.ceil(secondsToNext(elapsed, DUTY_CYCLE_WINDOW_SECONDS)))}`]
+    }
+    case 'bitRot':
+      return [`Corruption ${formatCurrency(getBitRotCorruption(state))} vs ${formatCurrency(state.resources[MONEY_ID] ?? 0)} · ${state.challenges.bitRotLosses ?? 0} cycles lost`]
+    default:
+      return []
+  }
+}

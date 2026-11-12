@@ -1,7 +1,7 @@
 import Button from 'components/Button'
 import ConfirmDialog from 'components/ConfirmDialog'
 import { getActiveChallenge } from 'game/engine'
-import { formatChallengeGoal, formatChallengeTime } from 'game/challengeUi'
+import { formatChallengeGoal, formatChallengeTime, getChallengeReadouts } from 'game/challengeUi'
 import { useState } from 'react'
 import styled from 'styled-components'
 
@@ -42,6 +42,7 @@ const ChallengeBanner = ({ state, onExit, children }) => {
         <strong>{challenge.id} · {challenge.codename}</strong>
         <Rule>{challenge.rule}</Rule>
         <Rule aria-label={`challenge elapsed time ${elapsed}`}>⏱ {elapsed} · goal {formatChallengeGoal(challenge.goal)}</Rule>
+        {getChallengeReadouts(state).map(line => <Rule key={line} aria-label={`challenge status: ${line}`}>{line}</Rule>)}
         {children}
       </Text>
       <Button

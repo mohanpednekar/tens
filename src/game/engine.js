@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -7,6 +7,9 @@ import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_M
 const getLastTierId = () => TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
 
 const clampNonNegative = value => Math.max(0, Number.isFinite(value) ? value : 0)
+// Run-scoped state of the active challenge (reset on enter/exit/completion/Reboot): seconds since the cycle
+// started (F9), Hard Refreshes survived (F5), remaining Write Lock halt (F2), fractional Memory Leak remainder (F8).
+export const createChallengeRun = () => ({ cycleSeconds: 0, refreshes: 0, haltSeconds: 0, leakRemainder: 0 })
 
 // Tolerance nudge for tierProductionAccumulators' tickspeed-crossing check (see tickGame) —
 // absorbs floating-point drift from repeatedly summing a fractional elapsedSeconds (e.g. the
@@ -233,7 +236,7 @@ export const createInitialGameState = () => ({
   // Challenge mode (epic #1037). `active` = challenge id or null; `activeSeconds` = elapsed time of the
   // active run (incl. time away). `completed`/`bestSeconds` and the lifetime enteredCount/exitedCount
   // survive Purge/Reboot (cleared only by a full Reset); Reboot clears `active`.
-  challenges: { active: null, activeSeconds: 0, completed: {}, bestSeconds: {}, enteredCount: 0, exitedCount: 0 },
+  challenges: { active: null, activeSeconds: 0, completed: {}, bestSeconds: {}, enteredCount: 0, exitedCount: 0, bitRotLosses: 0, run: createChallengeRun() },
   // Achievements (epic #1046): `earned` id → true and lifetime `counters` (Pings). Survive every reset
   // (Purge, Scale Up, Overclock, Reboot, Reformat, Flush); only a full Reset clears them.
   achievements: { earned: {}, counters: { pings: 0 } },
@@ -907,8 +910,8 @@ export const applyAutobuyerMilestones = state => {
 // multiplier button has no effect on how often the autobuyer attempts a purchase (see the flat
 // rate used in tickGame below). `null` (tier has no autobuyer at all — never unlocked) is treated
 // as level 1 (no bonus), same defensive convention used elsewhere in this file.
-export const getTickspeedProductionMultiplier = level =>
-  (1 + TICKSPEED_PRODUCTION_STEP) ** clampNonNegative((level ?? 1) - 1)
+export const getTickspeedProductionMultiplier = (level, step = TICKSPEED_PRODUCTION_STEP) =>
+  (1 + step) ** clampNonNegative((level ?? 1) - 1)
 
 // Money (Bits) cost to activate (null → 1) or upgrade (level N → N+1) the global tickspeed
 // multiplier — a single global upgrade track, not per-tier (mirroring Auto-Prestige's null/level
@@ -950,7 +953,7 @@ export const getGlobalTickspeedProductionMultiplier = (level, overclockLevel = 0
 // scaleUpTierCounts back to 0 (and also reset lastTierXpConsumed/purge.xp to 0 — see
 // overclockGame/purgeGame), hiding the upgrade again — re-Scaling-Up to the final tier re-engages it, from the fresh (0)
 // lastTierXpConsumed baseline a Prestige/Overclock left behind.
-export const isLastTierTickspeedXpUnlocked = state => (state.scaleUpTierCounts?.[getLastTierId()] ?? 0) >= 1
+export const isLastTierTickspeedXpUnlocked = state => (state.scaleUpTierCounts?.[getEffectiveLastTier(state).id] ?? 0) >= 1
 
 // The last tier's own tickspeed multiplier once XP-funded (see isLastTierTickspeedXpUnlocked) —
 // compounds LAST_TIER_XP_TICKSPEED_STEP (1%) per cumulative XP ever consumed via
@@ -1371,7 +1374,7 @@ export const eraGame = state => {
     computeFlopsAutobuyersEnabled: state.computeFlopsAutobuyersEnabled ?? initial.computeFlopsAutobuyersEnabled,
     computeFlopsAutobuyerAttemptBudgets: initial.computeFlopsAutobuyerAttemptBudgets,
     // Reboot ends an active challenge without completing it; completions/best times/lifetime counts stay.
-    challenges: { ...initial.challenges, ...state.challenges, active: null, activeSeconds: 0 },
+    challenges: { ...initial.challenges, ...state.challenges, active: null, activeSeconds: 0, run: createChallengeRun() },
     achievements: state.achievements ?? initial.achievements,
     era: { count: nextEraCount },
     eons: { balance: clampNonNegative(state.eons?.balance ?? 0) + eonsAwarded },
@@ -1433,7 +1436,7 @@ export const getScaleUpMultiplier = scaleUpCount =>
   SCALE_UP_MULTIPLIER_BASE ** clampNonNegative(scaleUpCount)
 
 export const getTierScaleUpMultiplier = (state, tierId) =>
-  hasChallengeEffect(state, 'scaleUpNoDoubling')
+  hasChallengeEffect(state, 'scaleUpNoDoubling') || getChallengeEffectTier(state, 'singleInstance') === tierId
     ? 1
     : getScaleUpMultiplier(state.scaleUpTierCounts?.[tierId] ?? state.scaleUpCount ?? 0)
 
@@ -1441,7 +1444,7 @@ export const getTierScaleUpMultiplier = (state, tierId) =>
 // scaleUpTargetTierIndex itself is deliberately allowed to climb past the last tier (see its own
 // comment in createInitialGameState), so this is the one place that clamp is applied.
 const getClampedScaleUpTargetTierIndex = state =>
-  Math.min(clampNonNegative(state.scaleUpTargetTierIndex ?? 0), TIER_DEFINITIONS.length - 1)
+  Math.min(clampNonNegative(state.scaleUpTargetTierIndex ?? 0), getEffectiveTierCount(state) - 1)
 
 // The tier Scale Up's own requirement (see getScaleUpRequirement below) is currently measured
 // against: state.scaleUpTargetTierIndex directly, clamped to the last tier once reached (there's no
@@ -1455,7 +1458,7 @@ export const getScaleUpTargetTier = state => TIER_DEFINITIONS[getClampedScaleUpT
 // final-tier claims advance to 6, 9, 12, … completed levels.
 export const getScaleUpRequirement = state =>
   SCALE_UP_FINAL_TIER_REQUIREMENT_STEP * (
-    Math.max(0, clampNonNegative(state.scaleUpCount ?? 0) - (TIER_DEFINITIONS.length - 1)) + 1
+    Math.max(0, clampNonNegative(state.scaleUpCount ?? 0) - (getEffectiveTierCount(state) - 1)) + 1
   )
 
 // The first Overclock requires 5 completed last-tier levels — a minimum only, the player may keep
@@ -1524,6 +1527,47 @@ export const isChallengeCompleted = (state, id) => Boolean(state.challenges?.com
 
 const hasChallengeEffect = (state, effect) => getActiveChallenge(state)?.effect === effect
 
+// The tier (id) a tier-scoped challenge rule applies to, or null when that rule is not the active one.
+const getChallengeEffectTier = (state, effect) => {
+  const def = getActiveChallenge(state)
+  return def?.effect === effect ? def.automation.key : null
+}
+
+// F4 Premium Tier: the tier as priced during the run (a copy; TIER_DEFINITIONS is never edited).
+const getChallengeTier = (state, tierId) => {
+  const tier = TIER_BY_ID[tierId]
+  if (tier && getChallengeEffectTier(state, 'premiumTier') === tierId) return { ...tier, baseCost: tier.baseCost * PREMIUM_TIER_COST_MULTIPLIER }
+  return tier
+}
+
+// F6 Address Space: only the first six tiers exist for the run.
+export const getEffectiveTierCount = state => (hasChallengeEffect(state, 'addressSpace') ? ADDRESS_SPACE_TIER_COUNT : TIER_DEFINITIONS.length)
+export const getEffectiveLastTier = state => TIER_DEFINITIONS[getEffectiveTierCount(state) - 1]
+
+// F19 Duty Cycle: whether the on-window is currently open (30 s on, 30 s off of challenge time).
+const isDutyCycleOn = state => Math.floor(clampNonNegative(state.challenges?.activeSeconds) / DUTY_CYCLE_WINDOW_SECONDS + 1e-9) % 2 === 0
+
+// The tier's tickspeed level as it acts on production (F11 gated, F18 chained, F19 off-window read as baseline 1).
+const getEffectiveTickspeedLevel = (state, tierId) => {
+  const level = state.tickspeedLevels?.[tierId] ?? 1
+  if (!getActiveChallenge(state)) return level
+  if (getChallengeEffectTier(state, 'clockGated') === tierId) return 1
+  if (getChallengeEffectTier(state, 'dutyCycle') === tierId && !isDutyCycleOn(state)) return 1
+  if (getChallengeEffectTier(state, 'daisyChain') === tierId) {
+    const predecessor = TIER_DEFINITIONS[(TIER_INDEX_BY_ID[tierId] ?? 1) - 1]
+    return Math.min(level, state.tickspeedLevels?.[predecessor.id] ?? 1)
+  }
+  return level
+}
+
+// F9 Bit Rot: corruption (Bits) of the current cycle — 0 through the grace period, then exponential, capped.
+export const getBitRotCorruption = state => {
+  if (!hasChallengeEffect(state, 'bitRot')) return 0
+  const t = clampNonNegative(state.challenges?.run?.cycleSeconds) - BIT_ROT_GRACE_SECONDS
+  if (t <= 0) return 0
+  return Math.min(BIT_ROT_CORRUPTION_CAP, BIT_ROT_BASE_CORRUPTION * 2 ** (t / BIT_ROT_DOUBLING_SECONDS))
+}
+
 // The Money level a run must reach to Purge: PURGE_THRESHOLD, or the active challenge's raised goal.
 export const getPurgeGoalBits = state => getActiveChallenge(state)?.goal ?? PURGE_THRESHOLD
 
@@ -1571,10 +1615,107 @@ export const autoCompleteChallenges = state => {
   }
 }
 
-// Elapsed time of the active run (live ticks and offline replay both flow through tickGame).
+// Elapsed time of the active run (live ticks and offline replay both flow through tickGame); also the
+// time since the current cycle started (Bit Rot) and the Write Lock countdown.
 const tickChallengeClock = elapsedSeconds => state => {
   if (!getActiveChallenge(state)) return state
-  return { ...state, challenges: { ...state.challenges, activeSeconds: clampNonNegative(state.challenges.activeSeconds) + elapsedSeconds } }
+  const run = state.challenges.run ?? createChallengeRun()
+  return {
+    ...state,
+    challenges: {
+      ...state.challenges,
+      activeSeconds: clampNonNegative(state.challenges.activeSeconds) + elapsedSeconds,
+      run: { ...run, cycleSeconds: clampNonNegative(run.cycleSeconds) + elapsedSeconds, haltSeconds: Math.max(0, clampNonNegative(run.haltSeconds) - elapsedSeconds) },
+    },
+  }
+}
+
+const withChallengeRun = (state, patch) => ({ ...state, challenges: { ...state.challenges, run: { ...(state.challenges.run ?? createChallengeRun()), ...patch } } })
+
+// F3 Cascade Delete wipes lower tiers' owned counts; F2 Write Lock (re)starts the production halt.
+// Applied after every purchase of the challenged tier, by hand or by autobuyer.
+const applyChallengePurchaseEffects = (tierId, before, after) => {
+  if (after === before) return after
+  let next = after
+  if (getChallengeEffectTier(after, 'cascadeDelete') === tierId) {
+    const index = TIER_INDEX_BY_ID[tierId]
+    const owned = { ...next.owned }
+    const resources = { ...next.resources }
+    TIER_DEFINITIONS.slice(0, index).forEach(tier => {
+      owned[tier.id] = 0
+      resources[tier.id] = 0
+    })
+    next = { ...next, owned, resources }
+  }
+  if (getChallengeEffectTier(after, 'writeLock') === tierId) next = withChallengeRun(next, { haltSeconds: WRITE_LOCK_HALT_SECONDS })
+  return next
+}
+
+// Challenge time boundaries a long tick is split at: Hard Refresh (F5), Clock Drift (F15), Duty Cycle (F19).
+const CHALLENGE_BOUNDARIES = {
+  hardRefresh: {
+    interval: HARD_REFRESH_INTERVAL_SECONDS,
+    apply: (state, tierId) => withChallengeRun({
+      ...state,
+      owned: { ...state.owned, [tierId]: 0 },
+      resources: { ...state.resources, [tierId]: 0 },
+    }, { refreshes: (state.challenges.run?.refreshes ?? 0) + 1 }),
+  },
+  clockDrift: {
+    interval: CLOCK_DRIFT_INTERVAL_SECONDS,
+    apply: (state, tierId) => ({ ...state, tickspeedLevels: { ...state.tickspeedLevels, [tierId]: Math.max(1, (state.tickspeedLevels?.[tierId] ?? 1) - 1) } }),
+  },
+  dutyCycle: { interval: DUTY_CYCLE_WINDOW_SECONDS, apply: state => state },
+}
+
+// Per-step effects after the ordinary tick: F8 Memory Leak (exact exponential decay, fractional loss carried in
+// run.leakRemainder) and F9 Bit Rot (corruption overtaking Bits restarts the cycle; the challenge stays active).
+const applyChallengeStepEffects = (elapsedSeconds, state) => {
+  let next = state
+  const leakTier = getChallengeEffectTier(next, 'memoryLeak')
+  if (leakTier) {
+    const owned = next.owned[leakTier] ?? 0
+    const exact = owned * (1 - (1 - MEMORY_LEAK_RATE_PER_SECOND) ** elapsedSeconds) + (next.challenges.run?.leakRemainder ?? 0)
+    const lost = Math.min(owned, Math.floor(exact))
+    next = withChallengeRun({
+      ...next,
+      owned: { ...next.owned, [leakTier]: owned - lost },
+      resources: { ...next.resources, [leakTier]: Math.max(0, (next.resources[leakTier] ?? 0) - lost) },
+    }, { leakRemainder: exact - Math.floor(exact) })
+  }
+  if (hasChallengeEffect(next, 'bitRot') && getBitRotCorruption(next) > clampNonNegative(next.resources[MONEY_ID])) {
+    const reset = resetFactoryCycle(next, false)
+    next = { ...reset, challenges: { ...reset.challenges, run: { ...createChallengeRun(), refreshes: 0 }, bitRotLosses: (reset.challenges.bitRotLosses ?? 0) + 1 } }
+  }
+  return next
+}
+
+// One tick inside an active challenge: split at challenge-time boundaries (so one long tick matches many short
+// ones), and at 1 s for Bit Rot, advancing the clock and applying the rule effects around each ordinary tick.
+const tickChallengeRun = (elapsedSeconds, autobuyerBatchSize, state) => {
+  let current = state
+  let remaining = elapsedSeconds
+  for (let guard = 0; remaining > 1e-12 && guard < 20000; guard++) {
+    const challenge = getActiveChallenge(current)
+    if (!challenge) return tickGameCore(remaining, autobuyerBatchSize, 0)(current)
+    const boundary = CHALLENGE_BOUNDARIES[challenge.effect]
+    const t = clampNonNegative(current.challenges.activeSeconds)
+    let step = challenge.effect === 'bitRot' ? Math.min(remaining, 1) : remaining
+    let hitsBoundary = false
+    if (boundary) {
+      const toBoundary = (Math.floor(t / boundary.interval + 1e-9) + 1) * boundary.interval - t
+      if (toBoundary <= step + 1e-9) {
+        step = Math.max(toBoundary, 1e-9)
+        hitsBoundary = true
+      }
+    }
+    const halt = clampNonNegative(current.challenges.run?.haltSeconds)
+    const afterCore = tickGameCore(step, autobuyerBatchSize, halt)(tickChallengeClock(step)(current))
+    current = getActiveChallenge(afterCore) ? applyChallengeStepEffects(step, afterCore) : afterCore
+    if (hitsBoundary && getActiveChallenge(current)) current = boundary.apply(current, challenge.automation.key)
+    remaining -= step
+  }
+  return current
 }
 
 export const isProductionFrozen = state =>
@@ -1593,6 +1734,7 @@ export const TIER_UNLOCK_PREV_LEVEL_REQUIREMENT = 3
 // 2; an owned tier remains visible for old-save compatibility.
 export const isTierUnlocked = state => tier => {
   const tierIndex = (TIER_INDEX_BY_ID[tier.id] ?? -1)
+  if (tierIndex >= getEffectiveTierCount(state)) return false
   if (tierIndex === 0) return true
   if ((state.owned[tier.id] ?? 0) > 0 || (state.purchaseLevels?.[tier.id] ?? 1) > 1) return true
   if (!state.everUnlockedTierIds?.[tier.id]) return false
@@ -1646,13 +1788,17 @@ export const getNextBytePowerProgressFraction = moneyBits => {
 export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
   // The last tier's separate XP-funded upgrade (see consumeXpForLastTierTickspeed) composes with
   // its own resource-funded tickspeed level rather than replacing it.
-  const tickspeedMultiplier = getTickspeedProductionMultiplier(state.tickspeedLevels?.[tierId] ?? 1)
-    * (tierId === getLastTierId() ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0) : 1)
+  const tickspeedMultiplier = getTickspeedProductionMultiplier(getEffectiveTickspeedLevel(state, tierId), getChallengeEffectTier(state, 'halfStep') === tierId ? HALF_STEP_PRODUCTION_STEP : TICKSPEED_PRODUCTION_STEP)
+    * (tierId === getEffectiveLastTier(state).id ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0) : 1)
   // F21 Base Clock: Clock Speed is disabled, and Overclock (which scales it) has no effect with it.
   const globalTickspeedMultiplier = hasChallengeEffect(state, 'clockSpeedDisabled')
     ? 1
     : getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, getOverclockLevel(state) ?? 0)
-  const period = getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier * globalTickspeedMultiplier)
+  // F13 Clock Skew doubles the tier's base period; F17 Noisy Neighbour lengthens every other tier's period per Zettabytes level.
+  const noisyTier = getChallengeEffectTier(state, 'noisyNeighbour')
+  const challengePeriodFactor = (getChallengeEffectTier(state, 'clockSkew') === tierId ? CLOCK_SKEW_PERIOD_MULTIPLIER : 1)
+    * (noisyTier && noisyTier !== tierId ? (1 + NOISY_NEIGHBOUR_PERIOD_STEP) ** Math.max(0, (state.tickspeedLevels?.[noisyTier] ?? 1) - 1) : 1)
+  const period = getTierBaseTickSpeedSeconds(tierId) * challengePeriodFactor / (tickspeedMultiplier * globalTickspeedMultiplier)
   // See MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS above — guards against a multiplier large enough to
   // overflow this division to a non-finite/zero period.
   return Number.isFinite(period) && period > 0 ? period : MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS
@@ -1785,7 +1931,9 @@ const runGlobalIntervalAutomation = (state, elapsedSeconds, key, attempt) => {
 // first level (0 owned generators produce $0 income, and the starting balance only ever covers
 // 1 unit) and stalls forever — then reverts to the normal autobuyerBatchSize from its second
 // level onward.
-const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
+const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) => state => {
+  // F2 Write Lock: Factory tier production is halted for the first `haltSeconds` of this tick.
+  const productiveSeconds = Math.max(0, elapsedSeconds - haltSeconds)
   // The Byte Foundry intro runs first, every tick: passive production, then any in-progress disk
   // array build counts down (tickProvisionDisk — unconditional, bypasses nothing), then Storage's own
   // auto-fill (Memory -> each array's cache -> empty disks) gets first claim on the resulting
@@ -2003,7 +2151,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // repeatedly summing a fractional elapsedSeconds (e.g. ten additions of 0.1 land on
     // 0.9999999999999999, not 1) so a delivery isn't delayed by a stray tick.
     const tickSpeed = getEffectiveTierTickSpeedSeconds(stateAfterAutobuyers, tier.id)
-    const accumulated = (newAccumulators[tier.id] ?? 0) + elapsedSeconds
+    const accumulated = (newAccumulators[tier.id] ?? 0) + productiveSeconds
     const ticksElapsed = Math.floor((accumulated + TICK_ACCUMULATION_EPSILON) / tickSpeed)
     newAccumulators[tier.id] = accumulated - ticksElapsed * tickSpeed
     if (ticksElapsed <= 0) return
@@ -2017,14 +2165,16 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // out production for a tier with owned > 0. Neither tickspeed multiplier appears in this
     // formula at all anymore — they've already done their work by shrinking tickSpeed above, which
     // is what grew ticksElapsed.
-    const tierMultiplier = getPurchaseMilestoneMultiplier(stateAfterAutobuyers.purchaseLevels?.[tier.id] ?? 1)
+    // F10 Flat Rate: no per-level multiplier for the challenged tier; F1 Half Duplex halves its production.
+    const tierMultiplier = getChallengeEffectTier(stateAfterAutobuyers, 'flatRate') === tier.id ? 1 : getPurchaseMilestoneMultiplier(stateAfterAutobuyers.purchaseLevels?.[tier.id] ?? 1)
+    const halfDuplexMultiplier = getChallengeEffectTier(stateAfterAutobuyers, 'halfDuplex') === tier.id ? HALF_DUPLEX_PRODUCTION_MULTIPLIER : 1
     // A Compute Boost (see getComputeBoostMultiplier/activateComputeBoost above) applies to the
     // first getComputeBoostCoveredTierCount Factory tiers (its funding tier's index) — Memory gets it
     // too (see tickIntroProduction); every tier past that coverage stays at 1.
     const computeBoostMultiplier = TIER_INDEX_BY_ID[tier.id] < getComputeBoostCoveredTierCount(stateAfterAutobuyers.intro) ? getComputeBoostMultiplier(stateAfterAutobuyers.intro) : 1
     const flopsBoostMultiplier = getComputeFlopsTierProductionMultiplier(stateAfterAutobuyers, tier.id)
     const scaleUpMultiplier = getTierScaleUpMultiplier(stateAfterAutobuyers, tier.id)
-    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * scaleUpMultiplier * tierMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
+    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * scaleUpMultiplier * tierMultiplier * halfDuplexMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
 
     // Bytes and Bits are ONE pool (MONEY_ID): tier01 produces whole Bytes (the tier row's "+N B"),
     // credited as production × BITS_PER_BYTE Bits. There is no separate Bytes balance.
@@ -2137,9 +2287,11 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   return tickStorage(stateBeforeStorage)
 }
 
-// Advances the active challenge's clock, then runs the ordinary tick (same reference when nothing changes).
+// Ordinary tick, or — inside a live challenge — the challenge-aware stepper (clock, boundaries, rule effects).
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state =>
-  detectAchievements(tickGameCore(elapsedSeconds, autobuyerBatchSize)(tickChallengeClock(elapsedSeconds)(state)))
+  detectAchievements(getActiveChallenge(state) && elapsedSeconds > 0
+    ? tickChallengeRun(elapsedSeconds, autobuyerBatchSize, state)
+    : tickGameCore(elapsedSeconds, autobuyerBatchSize, 0)(state))
 
 // Real elapsed seconds away, capped at MAX_OFFLINE_SECONDS. At or below
 // OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, simulated at 100% speed (no reduction); beyond
@@ -2208,9 +2360,9 @@ export const getTierSpendableAmount = (state, tier) =>
 export const getTierPurchasedCount = (state, tierId) =>
   state.purchased?.[tierId] ?? 0
 
-export const buyTier = tierId => state => {
+const buyTierCore = tierId => state => {
   if (isProductionFrozen(state)) return state
-  const tier = TIER_BY_ID[tierId]
+  const tier = getChallengeTier(state, tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
 
   const level = state.purchaseLevels?.[tierId] ?? 1
@@ -2253,11 +2405,13 @@ export const buyTier = tierId => state => {
   return nextState
 }
 
+export const buyTier = (tierId) => state => applyChallengePurchaseEffects(tierId, state, buyTierCore(tierId)(state))
+
 // Buys up to `quantity` units of a tier, capped at the current level's boundary so every unit
 // purchased is at the same price. Stops early if a purchase becomes unaffordable.
-export const buyTierQuantity = (tierId, quantity) => state => {
+const buyTierQuantityCore = (tierId, quantity) => state => {
   if (isProductionFrozen(state)) return state
-  const tier = TIER_BY_ID[tierId]
+  const tier = getChallengeTier(state, tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
 
   const level = state.purchaseLevels?.[tierId] ?? 1
@@ -2305,6 +2459,8 @@ export const buyTierQuantity = (tierId, quantity) => state => {
   return nextState
 }
 
+export const buyTierQuantity = (tierId, quantity) => state => applyChallengePurchaseEffects(tierId, state, buyTierQuantityCore(tierId, quantity)(state))
+
 // --- Buy max mode --- a player-facing toggle (persisted as a UI preference, see storage.js's
 // loadBuyMaxPreference) that makes each manual purchase click buy as many levels as are
 // affordable instead of one. Unlocked once the save has completed its first Prestige (or any Era
@@ -2333,7 +2489,8 @@ export const repeatPurchaseMax = action => state => {
 
 // Whether `state` can afford everything left in the tier's current level (the whole level when
 // progress is 0, else just the unbought remainder).
-const canAffordRestOfTierLevel = (state, tier) => {
+const canAffordRestOfTierLevel = (state, rawTier) => {
+  const tier = getChallengeTier(state, rawTier.id) ?? rawTier
   const level = state.purchaseLevels?.[tier.id] ?? 1
   const blockSize = getPurchaseBlockSize(state)
   const progress = state.purchaseLevelProgress?.[tier.id] ?? 0
@@ -2341,7 +2498,8 @@ const canAffordRestOfTierLevel = (state, tier) => {
 }
 
 // Whether `state` can afford the tier's entire current level from scratch (no partial progress).
-const canAffordFullTierLevel = (state, tier) => {
+const canAffordFullTierLevel = (state, rawTier) => {
+  const tier = getChallengeTier(state, rawTier.id) ?? rawTier
   if ((state.purchaseLevelProgress?.[tier.id] ?? 0) > 0) return false
   const level = state.purchaseLevels?.[tier.id] ?? 1
   const blockSize = getPurchaseBlockSize(state)
@@ -2353,9 +2511,9 @@ const canAffordFullTierLevel = (state, tier) => {
 // never mixes into the same click: if the tier has partial progress, or not even one full level is
 // affordable, this click falls back to the ordinary single-level Buy (buyTierQuantity), so the
 // partial level gets its own independent click.
-export const buyTierMaxLevels = tierId => state => {
+const buyTierMaxLevelsCore = tierId => state => {
   if (isProductionFrozen(state)) return state
-  const tier = TIER_BY_ID[tierId]
+  const tier = getChallengeTier(state, tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
   if (!canAffordFullTierLevel(state, tier)) return buyTierQuantity(tierId, Number.MAX_SAFE_INTEGER)(state)
   let current = state
@@ -2367,12 +2525,14 @@ export const buyTierMaxLevels = tierId => state => {
   return current
 }
 
+export const buyTierMaxLevels = (tierId) => state => applyChallengePurchaseEffects(tierId, state, buyTierMaxLevelsCore(tierId)(state))
+
 // Buys up to `levels` FULL levels from a clean slate (zero progress) — as many as are affordable,
 // fewer than `levels` included — or nothing (same state) if not even one is. Used by autobuyer bulk
 // mode, where the mode's level count is only an upper limit.
-const buyTierUpToLevels = (tierId, levels) => state => {
+const buyTierUpToLevelsCore = (tierId, levels) => state => {
   if (isProductionFrozen(state)) return state
-  const tier = TIER_BY_ID[tierId]
+  const tier = getChallengeTier(state, tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
   let current = state
   for (let i = 0; i < Math.min(levels, BUY_MAX_ITERATION_CAP); i++) {
@@ -2384,11 +2544,13 @@ const buyTierUpToLevels = (tierId, levels) => state => {
   return current
 }
 
+const buyTierUpToLevels = (tierId, levels) => state => applyChallengePurchaseEffects(tierId, state, buyTierUpToLevelsCore(tierId, levels)(state))
+
 // Preview of what one Buy-max click on a Factory tier would buy: the number of FULL levels and
 // their total cost. `levels` is 0 when the click would fall back to an ordinary partial-level Buy
 // (see buyTierMaxLevels), so callers can keep showing the normal single-level preview then.
 export const getTierMaxLevelsPreview = (state, tierId) => {
-  const tier = TIER_BY_ID[tierId]
+  const tier = getChallengeTier(state, tierId)
   if (isProductionFrozen(state) || !tier || !isTierUnlocked(state)(tier) || !canAffordFullTierLevel(state, tier)) return { levels: 0, cost: 0, lastLevelCost: 0, partialQuantity: 0, partialCost: 0 }
   // Replays buyTierMaxLevels' loop to also capture the final level's own cost (display only —
   // the button is still gated on, and a click still spends, the full `cost`).
@@ -6957,10 +7119,22 @@ export const buyTickspeedMultiplier = tierId => state => {
   if (!tier || !isTierUnlocked(state)(tier)) return state
   const currentLevel = state.tickspeedLevels?.[tierId] ?? 1
 
-  // The last tier spends only a fraction of its requirement (see getTickspeedMultiplierSpend).
-  const cost = getTickspeedMultiplierSpend(tierId, currentLevel + 1)
+  // Tier tickspeed challenge rules (F11 gated, F14 capped, F18 chained to the tier below).
+  if (getChallengeEffectTier(state, 'clockGated') === tierId) return state
+  if (getChallengeEffectTier(state, 'rateLimit') === tierId && currentLevel + 1 > 1 + RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE) return state
+  if (getChallengeEffectTier(state, 'daisyChain') === tierId) {
+    const predecessor = TIER_DEFINITIONS[(TIER_INDEX_BY_ID[tierId] ?? 1) - 1]
+    if (currentLevel + 1 > (state.tickspeedLevels?.[predecessor.id] ?? 1)) return state
+  }
+
+  // F16 Egress Fees: level L costs what level L+1 normally costs. The last tier spends only a fraction of its
+  // requirement (see getTickspeedMultiplierSpend) — F20 Burn Rate makes it spend the full requirement.
+  const costLevel = currentLevel + 1 + (getChallengeEffectTier(state, 'egressFees') === tierId ? 1 : 0)
+  const cost = getChallengeEffectTier(state, 'burnRate') === tierId
+    ? getTickspeedMultiplierCost(tierId, costLevel)
+    : getTickspeedMultiplierSpend(tierId, costLevel)
   const available = state.resources[tier.id] ?? 0
-  if (available < getTickspeedMultiplierRequirement(tierId, currentLevel + 1)) return state
+  if (available < Math.max(getTickspeedMultiplierCost(tierId, costLevel), cost + 1)) return state
 
   return {
     ...state,
@@ -7484,6 +7658,7 @@ export const purgeGame = state => {
       ...state.challenges,
       active: null,
       activeSeconds: 0,
+      run: createChallengeRun(),
       completed: { ...state.challenges.completed, [challenge.id]: true },
       bestSeconds: {
         ...state.challenges.bestSeconds,
@@ -7500,7 +7675,7 @@ export const enterChallenge = id => state => {
   const challenges = { ...createInitialGameState().challenges, ...state.challenges }
   return {
     ...resetFactoryCycle(state, false),
-    challenges: { ...challenges, active: id, activeSeconds: 0, enteredCount: challenges.enteredCount + 1 },
+    challenges: { ...challenges, active: id, activeSeconds: 0, enteredCount: challenges.enteredCount + 1, run: createChallengeRun() },
   }
 }
 
@@ -7509,7 +7684,7 @@ export const exitChallenge = state => {
   if (!getActiveChallenge(state)) return state
   return {
     ...resetFactoryCycle(state, false),
-    challenges: { ...state.challenges, active: null, activeSeconds: 0, exitedCount: state.challenges.exitedCount + 1 },
+    challenges: { ...state.challenges, active: null, activeSeconds: 0, exitedCount: state.challenges.exitedCount + 1, run: createChallengeRun() },
   }
 }
 
@@ -7810,7 +7985,7 @@ export const scaleUpGame = state => {
   const everUnlockedTierIds = {
     ...(state.everUnlockedTierIds ?? initial.everUnlockedTierIds),
     [targetTier.id]: true,
-    ...(TIER_DEFINITIONS[targetTierIndex + 1]
+    ...(TIER_DEFINITIONS[targetTierIndex + 1] && targetTierIndex + 1 < getEffectiveTierCount(state)
       ? { [TIER_DEFINITIONS[targetTierIndex + 1].id]: true }
       : {}),
   }
@@ -7907,7 +8082,7 @@ export const scaleUpGame = state => {
 export const overclockGame = state => {
   if (isProductionFrozen(state)) return state
   if (hasChallengeEffect(state, 'overclockDisabled')) return state
-  const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+  const lastTier = getEffectiveLastTier(state)
   const lastTierCompletedLevels = Math.max(0, (state.purchaseLevels?.[lastTier.id] ?? 1) - 1)
   if (lastTierCompletedLevels < getOverclockRequirement(state)) return state
 
@@ -8078,7 +8253,7 @@ export const consumeXpForLastTierTickspeed = amount => state => {
   if (hasChallengeEffect(state, 'restageDisabled')) return state
   if (!isLastTierTickspeedXpUnlocked(state)) return state
 
-  const lastTierId = getLastTierId()
+  const lastTierId = getEffectiveLastTier(state).id
   // isLastTierTickspeedXpUnlocked is a one-time-per-cycle latch (scaleUpTierCounts), not a live
   // read of the last tier's current owned count — it stays true for the rest of the cycle even
   // after the last tier's own owned count later drops to 0 (e.g. a Prestige/Scale Up on an

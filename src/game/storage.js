@@ -602,6 +602,7 @@ const mergeState = rawSaved => {
       ...fresh.challenges,
       ...(saved.challenges ?? {}),
       completed: { ...(saved.challenges?.completed ?? {}) },
+      run: { ...fresh.challenges.run, ...(saved.challenges?.run ?? {}) },
       bestSeconds: { ...(saved.challenges?.bestSeconds ?? {}) },
     },
     achievements: {

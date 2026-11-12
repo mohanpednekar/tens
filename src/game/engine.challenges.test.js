@@ -29,15 +29,15 @@ beforeEach(() => LIVE_CHALLENGE_IDS.clear())
 afterEach(() => LIVE_CHALLENGE_IDS.clear())
 
 describe('challenge registry', () => {
-  it('defines F21–F25 as Factory-layer global challenges with unique ids', () => {
-    expect(CHALLENGE_DEFINITIONS.map(def => def.id)).toEqual(['F21', 'F22', 'F23', 'F24', 'F25'])
+  it('defines F1–F25 as Factory-layer challenges with unique ids', () => {
+    expect(CHALLENGE_DEFINITIONS.map(def => def.id)).toEqual(Array.from({ length: 25 }, (_, i) => `F${i + 1}`))
     expect(new Set(CHALLENGE_DEFINITIONS.map(def => def.layer))).toEqual(new Set(['F']))
     expect(CHALLENGE_BY_ID.F25.goal).toBe(SCOPE_CREEP_PURGE_GOAL)
     expect(SCOPE_CREEP_PURGE_GOAL).toBeGreaterThan(PURGE_THRESHOLD)
   })
 
-  it('ships F21–F25 live', () => {
-    expect(SHIPPED_LIVE).toEqual(['F21', 'F22', 'F23', 'F24', 'F25'])
+  it('ships all 25 live', () => {
+    expect(SHIPPED_LIVE).toEqual(CHALLENGE_DEFINITIONS.map(def => def.id))
   })
 })
 

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Challenge mode: the tier challenges F1–F20 (one per tier autobuyer and tier tickspeed autobuyer — e.g. F2 Write Lock, F5 Hard Refresh, F9 Bit Rot, F15 Clock Drift) are live. Each unlocks at its Purge milestone and gates that automation's speed upgrades; the Factory banner shows rule readouts (halt timer, refresh/drift countdowns, Duty Cycle phase, Bit Rot corruption).
 - Achievements (dev builds only, off in production until tuned; epic #1046): More → 🏆 Achievements lists three groups — First session, Tier ladder, Early Factory — with earned/locked rows and per-group counts. Earned achievements and the lifetime Ping count survive every reset except a full Reset. No bonuses yet.
 
 - Challenge mode: Firmware has a new 🏁 Challenges tab. Beat a nerfed Factory run (F21 Base Clock, F22 Scale Out, F23 Code Freeze, F24 Stock Cooling, F25 Scope Creep) to unlock that automation's speed upgrades; a banner on Factory shows the active challenge with Exit. Saves that already upgraded an automation's speed have its challenge completed.
