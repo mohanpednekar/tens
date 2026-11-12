@@ -2137,10 +2137,14 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
   const newAccumulators = { ...stateAfterAutobuyers.tierProductionAccumulators }
   // F2 Write Lock: Factory tier production is halted while a halt runs — the halt carried into this tick, or one an
   // autobuyer purchase just (re)started this tick.
-  const productiveSeconds = Math.max(0, elapsedSeconds - Math.max(haltSeconds, clampNonNegative(stateAfterAutobuyers.challenges?.run?.haltSeconds)))
+  const haltNow = Math.max(haltSeconds, clampNonNegative(stateAfterAutobuyers.challenges?.run?.haltSeconds))
+  const productiveSeconds = Math.max(0, elapsedSeconds - haltNow)
+  // A fully halted tick delivers nothing at all (banked accumulators wait, even if a tickspeed upgrade shortened the period).
+  const productionHalted = haltNow > 0 && productiveSeconds <= 0
 
   TIER_DEFINITIONS.forEach(tier => {
     if (!isTierUnlocked(stateAfterAutobuyers)(tier)) return
+    if (productionHalted) return
 
     // Each tier only delivers production once every getEffectiveTierTickSpeedSeconds(state,
     // tier.id) seconds, as a single batch — and each completed tick period delivers exactly one

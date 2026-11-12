@@ -188,6 +188,15 @@ describe('review regressions', () => {
     expect(after.owned[T(0)]).toBe(1000)
   })
 
+  it('F2: a tickspeed upgrade during a halt cannot release banked production', () => {
+    const start = runOf('F2', state => ({
+      owned: { ...state.owned, [T(0)]: 1000 },
+      tierProductionAccumulators: { ...state.tierProductionAccumulators, [T(0)]: 0.95 },
+    }))
+    const halted = withRun(setMap(start, 'tickspeedLevels', T(0), 2), { haltSeconds: 10 })
+    expect(tickGame(0.1)(halted).resources[MONEY_ID]).toBe(halted.resources[MONEY_ID])
+  })
+
   it('F6: Storage never funds tiers that do not exist', () => {
     const run = runOf('F6')
     expect(tickDiskPull(run)).toBe(run)
