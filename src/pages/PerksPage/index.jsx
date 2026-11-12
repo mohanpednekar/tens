@@ -540,6 +540,12 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     </Button>
   )
 
+  // The live, not-yet-completed challenge standing in for an automation's speed upgrade, if any.
+  const gateChallengeFor = (kind, key) => {
+    const def = getLiveChallengeForAutomation(kind, key)
+    return def && !isChallengeCompleted(state, def.id) ? def : null
+  }
+
   const unlockButton = ({ name, cost, canBuy, onClick, title }) => (
     <PpPurchaseButton
       ariaLabel={`Enable ${name} for ${cost} Purge Points`}
@@ -628,6 +634,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           const tickLevel = state.tierTickspeedIntervalLevels?.[tier.id] ?? 0
           const tickMaxed = tickLevel >= getTierTickspeedIntervalMaxLevel()
           const tickCost = getTierTickspeedIntervalUpgradeCost(tickLevel)
+          const tickChallenge = gateChallengeFor('tierTickspeed', tier.id)
+          const unitChallenge = gateChallengeFor('tierAutobuyer', tier.id)
           return (
             <TierPair key={tier.id} $accent={theme.tierAccents[tierIndex % theme.tierAccents.length]} aria-label={`${tier.name} automation`}>
                 <TierSymbol tier={tier} />
@@ -650,7 +658,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   name={`${tier.name}'s tickspeed autobuyer`}
                   onToggle={() => actions.setTierTickspeedAutobuyerEnabled(tier.id, !tickEnabled)}
                   owned={tickOwned}
-                  ownedAction={speedUpgradeButton({
+                  ownedAction={tickChallenge ? challengeStartButton(tickChallenge) : speedUpgradeButton({
                     maxed: tickMaxed,
                     cost: tickCost,
                     ariaLabel: `Upgrade ${tier.name}'s tickspeed autobuyer speed to level ${tickLevel + 1} for ${formatAmount(tickCost)} Purge Points — interval ×0.9`,
@@ -681,7 +689,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   name={`${tier.name}'s autobuyer`}
                   onToggle={() => actions.setAutobuyerEnabled(tier.id, !enabled)}
                   owned={owned}
-                  ownedAction={speedUpgradeButton({
+                  ownedAction={unitChallenge ? challengeStartButton(unitChallenge) : speedUpgradeButton({
                     maxed,
                     cost,
                     ariaLabel: atFloor

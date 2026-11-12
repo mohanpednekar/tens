@@ -3,7 +3,7 @@ import { ThemeProvider } from 'theme'
 import { describe, expect, it, vi } from 'vitest'
 import ChallengeBanner from 'components/ChallengeBanner'
 import { createInitialGameState, enterChallenge } from 'game/engine'
-import { CHALLENGE_DEFINITIONS } from 'game/layers'
+import { CHALLENGE_DEFINITIONS, TIER_DEFINITIONS } from 'game/layers'
 import ChallengesPage from './index'
 
 const owned = () => ({
@@ -14,6 +14,8 @@ const owned = () => ({
   autoOverclock: true,
   autoPurge: 1,
   purge: { ...createInitialGameState().purge, points: 1e9, count: 5 },
+  autobuyers: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 1])),
+  tierTickspeedAutobuyer: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])),
 })
 const wrap = ui => render(<ThemeProvider mode="dark">{ui}</ThemeProvider>)
 const makeGame = state => ({ state, actions: new Proxy({}, { get: (target, key) => target[key] ?? (target[key] = vi.fn()) }) })

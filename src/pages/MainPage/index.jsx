@@ -7,7 +7,7 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getChallengeTier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -964,7 +964,7 @@ const MainPage = ({ game }) => {
   const purchaseBlockSize = getPurchaseBlockSize(state)
   const showFullScreenPrompt = isFrozen && isFirstRun
   const showTopPurgeBar = isFrozen && !isFirstRun
-  const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+  const lastTier = getEffectiveLastTier(state)
   const lastTierLevel = state.purchaseLevels?.[lastTier.id] ?? 1
   const lastTierUnlocked = isTierUnlocked(state)(lastTier)
 
@@ -1399,9 +1399,11 @@ const MainPage = ({ game }) => {
           // Manual Buy always grabs as many units as are currently affordable, up to the current
           // level's cost block boundary (the former ×1/×10 "Bulk" toggle's default, now the only
           // behavior — see useIncrementalGame's BUY_QUANTITY).
-          const affordableQuantity = getTierAffordableQuantity(tier, tierLevel, purchaseBlockSize, doneInBlock, costResource, Number.MAX_SAFE_INTEGER)
-          const unitCost = getTierQuantityCost(tier, tierLevel, purchaseBlockSize, doneInBlock, 1)
-          const displayCost = affordableQuantity > 0 ? getTierQuantityCost(tier, tierLevel, purchaseBlockSize, doneInBlock, affordableQuantity) : unitCost
+          // F4 Premium Tier: price the tier as the engine will charge it.
+          const pricedTier = getChallengeTier(state, tier.id) ?? tier
+          const affordableQuantity = getTierAffordableQuantity(pricedTier, tierLevel, purchaseBlockSize, doneInBlock, costResource, Number.MAX_SAFE_INTEGER)
+          const unitCost = getTierQuantityCost(pricedTier, tierLevel, purchaseBlockSize, doneInBlock, 1)
+          const displayCost = affordableQuantity > 0 ? getTierQuantityCost(pricedTier, tierLevel, purchaseBlockSize, doneInBlock, affordableQuantity) : unitCost
           const canAfford = affordableQuantity > 0 && !isFrozen
           const donePercent = (doneInBlock / purchaseBlockSize) * 100
           const availablePercent = (affordableQuantity / purchaseBlockSize) * 100
@@ -1437,9 +1439,9 @@ const MainPage = ({ game }) => {
           const effectiveTickSpeed = getEffectiveTierTickSpeedSeconds(state, tier.id)
           // Spends the tier's own resource (resources[tier.id] === owned[tier.id]); the last tier
           // spends only 10% of its requirement. Mirrors buyTickspeedMultiplier's guard in engine.js.
-          const tickspeedCost = getTickspeedMultiplierSpend(tier.id, tickspeedLevel + 1)
-          const tickspeedRequirement = getTickspeedMultiplierRequirement(tier.id, tickspeedLevel + 1)
-          const canUpgradeTickspeed = resources >= tickspeedRequirement && !isFrozen
+          const tickspeedCost = getTierTickspeedSpend(state, tier.id, tickspeedLevel + 1)
+          const tickspeedRequirement = getTierTickspeedRequirement(state, tier.id, tickspeedLevel + 1)
+          const canUpgradeTickspeed = resources >= tickspeedRequirement && !isFrozen && !isTierTickspeedBlockedByChallenge(state, tier.id)
           // Buy max mode (see BuyMaxToggle/buyTierMaxLevels): when a click would buy one or more
           // FULL levels, preview those instead of the single-level fill below.
           const maxLevelsPreview = buyMaxActive ? getTierMaxLevelsPreview(state, tier.id) : { levels: 0, cost: 0, lastLevelCost: 0, partialQuantity: 0, partialCost: 0 }
