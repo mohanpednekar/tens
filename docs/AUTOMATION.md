@@ -140,6 +140,10 @@ narrower, already-landed slice of what #81 originally scoped (which assumed a la
 context feeds — Project summary, checklist status, Discussions ideas, etc. — that turned out not to
 exist yet; see #81's Dependencies for why that fuller chain is still blocked).
 
+The failing-PR, Dependabot alert, Dependabot PR and gap-analysis feeds are capped at 15 lines each via
+the guard step's `cap_lines` helper (#81 audit, 2026-11); the alert feed is severity-sorted first so the
+cap never hides the most severe entry.
+
 That capping is also a **standing constraint on any future guard-step feed**, not just a description
 of today's set — the part of #81 that can land ahead of its still-blocked audit. Whenever a later
 issue adds a context feed (the bug/security-alert lists #55 — landed; the Project summary #53,

@@ -122,6 +122,19 @@ jobs:
           fi
           echo "main_deploy_run_url=$main_deploy_url" >> "$GITHUB_OUTPUT"
 
+          # Standing feed rule (#81): every list-type feed is number + title only and
+          # capped. cap_lines <cap> <text> keeps the first <cap> lines and appends a
+          # "+N more" note (input order is the display order, so sort before calling).
+          cap_lines() {
+            local cap="$1" text="$2" total
+            if [ -z "$text" ]; then return 0; fi
+            total=$(printf '%s\n' "$text" | wc -l)
+            printf '%s\n' "$text" | head -n "$cap"
+            if [ "$total" -gt "$cap" ]; then
+              echo "- (+$((total - cap)) more not shown - query the tracker directly)"
+            fi
+          }
+
           # Phase 0 check: open PRs with a failing check, excluding claude/auto-* (already
           # owned by autonomous-pr-followup.yml's webhook-driven fixes) and fork PRs (never
           # ours to touch). In practice this mostly surfaces Dependabot PRs that have gone
@@ -134,7 +147,7 @@ jobs:
                   | .[] | "- #\(.number) (\(.headRefName)): \(.title)"')
           {
             echo "failing_prs<<FAIL_EOF"
-            echo "$failing_prs"
+            cap_lines 15 "$failing_prs"
             echo "FAIL_EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -209,7 +222,7 @@ jobs:
           fi
           {
             echo "dependabot_alerts<<DEPALERT_EOF"
-            echo "$dependabot_alerts"
+            cap_lines 15 "$dependabot_alerts"
             echo "DEPALERT_EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -221,7 +234,7 @@ jobs:
                   | .[] | "- #\(.number) (\(.headRefName)): \(.title)"')
           {
             echo "dependabot_prs<<DEPPR_EOF"
-            echo "$dependabot_prs"
+            cap_lines 15 "$dependabot_prs"
             echo "DEPPR_EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -231,7 +244,7 @@ jobs:
             --json number,title --jq '.[] | "- #\(.number): \(.title)"')
           {
             echo "open_gap_issues<<GAP_EOF"
-            echo "$open_gap_issues"
+            cap_lines 15 "$open_gap_issues"
             echo "GAP_EOF"
           } >> "$GITHUB_OUTPUT"
 
