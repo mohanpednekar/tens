@@ -117,6 +117,8 @@ export const LIVE_CHALLENGE_IDS = new Set(['F21', 'F22', 'F23', 'F24', 'F25'])
 // Achievements (epic #1046). One rollout switch: off in production builds, on in dev builds (a mutable
 // object so tests can flip it). With it off nothing is detected and the page/entry are hidden.
 export const ACHIEVEMENTS_FEATURE = { enabled: import.meta.env.VITE_TENS_DEV_BUILD === '1' }
+// Daily challenges (epic #1062, basic slice): off in production, on in dev builds; mutable so tests can flip it.
+export const DAILY_CHALLENGES_FEATURE = { enabled: import.meta.env.VITE_TENS_DEV_BUILD === '1' }
 // Groups in display order; `boostArea` is unused until the bonus slice (#1052).
 export const ACHIEVEMENT_GROUPS = [
   { id: 'firstSession', name: 'First session', boostArea: 'foundry' },

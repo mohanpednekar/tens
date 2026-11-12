@@ -237,6 +237,9 @@ export const createInitialGameState = () => ({
   // Achievements (epic #1046): `earned` id → true and lifetime `counters` (Pings). Survive every reset
   // (Purge, Scale Up, Overclock, Reboot, Reformat, Flush); only a full Reset clears them.
   achievements: { earned: {}, counters: { pings: 0 } },
+  // Daily challenges: isolated Factory-only runs per format + settled results per UTC date (see dailyChallenges.js).
+  // Survives every reset but a full Reset.
+  daily: { runs: {}, results: {} },
   // Permanent count of Double PP upgrades bought (see buyPrestigeDoublePp) — never reset by
   // Prestige or Scale Up. Each level halves powers-per-PP until 1, then doubles PP-per-power.
   prestigeDoublePpLevel: 0,
@@ -1373,6 +1376,7 @@ export const eraGame = state => {
     // Reboot ends an active challenge without completing it; completions/best times/lifetime counts stay.
     challenges: { ...initial.challenges, ...state.challenges, active: null, activeSeconds: 0 },
     achievements: state.achievements ?? initial.achievements,
+    daily: state.daily ?? initial.daily,
     era: { count: nextEraCount },
     eons: { balance: clampNonNegative(state.eons?.balance ?? 0) + eonsAwarded },
     hyperscalerCount: clampNonNegative(state.hyperscalerCount ?? 0),
@@ -7541,6 +7545,7 @@ const resetFactoryCycle = (state, awardPurge) => {
     ...initial,
     challenges: state.challenges ?? initial.challenges,
     achievements: state.achievements ?? initial.achievements,
+    daily: state.daily ?? initial.daily,
     prestigeMuseum: {
       history: nextHistory,
       pinnedIds: nextPinnedIds,
@@ -7872,6 +7877,7 @@ export const scaleUpGame = state => {
     },
     challenges: state.challenges ?? initial.challenges,
     achievements: state.achievements ?? initial.achievements,
+    daily: state.daily ?? initial.daily,
     purge: { ...state.purge, xp: initial.purge.xp, highestMilestone: initial.purge.highestMilestone },
     scaleUpCount: (state.scaleUpCount ?? 0) + 1,
     scaleUpTierCounts,
@@ -7963,6 +7969,7 @@ export const overclockGame = state => {
     },
     challenges: state.challenges ?? initial.challenges,
     achievements: state.achievements ?? initial.achievements,
+    daily: state.daily ?? initial.daily,
     purge: { ...state.purge, xp: initial.purge.xp, highestMilestone: initial.purge.highestMilestone },
     // scaleUpCount/scaleUpTierCounts are deliberately NOT carried over (unlike scaleUpGame's own
     // increments) — both reset through ...initial, wiping Scale Up's per-tier bonuses. This is Overclock's
