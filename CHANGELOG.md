@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Challenge mode: Firmware has a new 🏁 Challenges tab. Beat a nerfed Factory run (F21 Base Clock, F22 Scale Out, F23 Code Freeze, F24 Stock Cooling, F25 Scope Creep) to unlock that automation's speed upgrades; a banner on Factory shows the active challenge with Exit. Saves that already upgraded an automation's speed have its challenge completed.
 - Power: one tier is always selected (switch it, never clear it) — the "pick a tier" prompt is gone. On arrival it is the highest tier whose charge is automated, else the active boost's tier, else Cells.
 
 - Power: a tier's bottom row of 8 slots is now called the **Charger** (labels, Manual and docs).

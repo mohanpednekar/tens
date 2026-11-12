@@ -91,6 +91,28 @@ export const PURGE_THRESHOLD = GOOGOL * BITS_PER_BYTE
 // exceed PURGE_THRESHOLD without freezing production — the player keeps earning and may Prestige
 // voluntarily to claim accumulated PP. Permanent once reached (purge.unboundedUnlocked latch).
 export const OVERFLOW_MODE_MAX_INTERVAL_SECONDS = 1
+
+// ── Challenge mode (epic #1037) ───────────────────────────────────────────────────────────────────
+// F25 "Scope Creep" raises the Purge goal to this many Bytes (placeholder, retuned by #1043), expressed
+// in Bits like PURGE_THRESHOLD.
+export const SCOPE_CREEP_GOAL_BYTES_EXPONENT = 110
+export const SCOPE_CREEP_PURGE_GOAL = 10 ** SCOPE_CREEP_GOAL_BYTES_EXPONENT * BITS_PER_BYTE
+export const CHALLENGE_LAYER_FACTORY = 'F'
+// Automation kinds a challenge can target (which interval-level map gates its speed upgrades):
+// 'tierAutobuyer' → autobuyerIntervalLevels[tierId], 'tierTickspeed' → tierTickspeedIntervalLevels[tierId],
+// 'global' → automationIntervalLevels[key] (key in AUTOMATION_INTERVAL_CONFIG).
+// `effect` names the one run rule the engine applies while the challenge is active.
+export const CHALLENGE_DEFINITIONS = [
+  { id: 'F21', layer: CHALLENGE_LAYER_FACTORY, target: 'Clock Speed', codename: 'Base Clock', automation: { kind: 'global', key: 'speedUp' }, effect: 'clockSpeedDisabled', rule: 'Clock Speed is disabled.', goal: PURGE_THRESHOLD },
+  { id: 'F22', layer: CHALLENGE_LAYER_FACTORY, target: 'Scale Up', codename: 'Scale Out', automation: { kind: 'global', key: 'scaleUp' }, effect: 'scaleUpNoDoubling', rule: 'Scale Up still unlocks the next tier but doubles nothing.', goal: PURGE_THRESHOLD },
+  { id: 'F23', layer: CHALLENGE_LAYER_FACTORY, target: 'Restage', codename: 'Code Freeze', automation: { kind: 'global', key: 'restage' }, effect: 'restageDisabled', rule: 'Restage is disabled; XP has no use.', goal: PURGE_THRESHOLD },
+  { id: 'F24', layer: CHALLENGE_LAYER_FACTORY, target: 'Overclock', codename: 'Stock Cooling', automation: { kind: 'global', key: 'overclock' }, effect: 'overclockDisabled', rule: 'Overclock is disabled.', goal: PURGE_THRESHOLD },
+  { id: 'F25', layer: CHALLENGE_LAYER_FACTORY, target: 'Purge', codename: 'Scope Creep', automation: { kind: 'global', key: 'purge' }, effect: 'raisedGoal', rule: 'The Purge goal is raised; production does not freeze at 1 Googol Bytes.', goal: SCOPE_CREEP_PURGE_GOAL },
+]
+export const CHALLENGE_BY_ID = Object.fromEntries(CHALLENGE_DEFINITIONS.map(def => [def.id, def]))
+// The only rollout switch: a challenge gates upgrades and can be entered only while its id is in this
+// set. Each slice of epic #1037 adds its challenges here when it merges; tests add/remove ids.
+export const LIVE_CHALLENGE_IDS = new Set(['F21', 'F22', 'F23', 'F24', 'F25'])
 // Legacy rule (lifetime prestige count), kept only so storage.js can grandfather saves that reached
 // it before DeGoogol moved to the Auto-Prestige interval above.
 export const PURGE_UNBOUNDED_MIN_COUNT = 100

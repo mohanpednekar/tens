@@ -13,7 +13,7 @@ powers of ten. No routing library, no backend — state lives in React and persi
 (Foundry → Power → Compute → Factory → Firmware → More) — not a router (see "Architecture"):
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
-`MainPage` (tier ladder), `PerksPage` (after first Prestige: 🤖 Automation / ✦ Prestige icon
+`MainPage` (tier ladder), `PerksPage` (after first Prestige: 🤖 Automation / 🏁 Challenges / ✦ Prestige icon
 tabs — one row per automation spanning unlock → pause → speed; Compression, Overflow mode, Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
@@ -646,6 +646,8 @@ Purges: ×`log10(count)` (else ×1) — no PP cost; see `docs/ECONOMY_REFERENCE.
 8000 Bits (`formatMoneyBalance`, `MONEY_BYTES_DISPLAY_THRESHOLD`); a small Bits subline then shows
 the exact `formatCurrency` amount (absolutely positioned in the existing gap — adds no height; hidden while `balancesCompressed`). Every other `formatCurrency` call
 (costs, production, the Prestige-threshold overlay) keeps reading in Bits.
+
+**Challenge mode (epic #1037; engine #1038 + UI #1039: Firmware 🏁 Challenges tab, inline start on Global Automation rows, `ChallengeBanner` atop Factory):** state `challenges` (`active`, `activeSeconds`, `completed`, `bestSeconds`, `enteredCount`, `exitedCount`); registry `CHALLENGE_DEFINITIONS` + the `LIVE_CHALLENGE_IDS` rollout Set (F21–F25 live) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits`/`autoCompleteChallenges` in `engine.js` gate the three speed-upgrade buyers on completion. Detail: `docs/ECONOMY_REFERENCE.md` "Challenge mode".
 
 ### Byte Foundry
 
