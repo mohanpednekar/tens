@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   buyTickspeedMultiplier, buyTierQuantity, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
-  getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierScaleUpMultiplier,
+  getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierTickspeedRequirement, getTierTickspeedSpend, getTierScaleUpMultiplier,
   isTierUnlocked, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
 import { BIT_ROT_GRACE_SECONDS, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS, WRITE_LOCK_HALT_SECONDS } from './layers'
@@ -195,6 +195,22 @@ describe('review regressions', () => {
     }))
     const halted = withRun(setMap(start, 'tickspeedLevels', T(0), 2), { haltSeconds: 10 })
     expect(tickGame(0.1)(halted).resources[MONEY_ID]).toBe(halted.resources[MONEY_ID])
+  })
+
+  it('F20: the displayed spend/requirement selectors match what the purchase charges', () => {
+    const start = runOf('F20', state => ({ resources: { ...state.resources, [T(9)]: 50 }, owned: { ...state.owned, [T(9)]: 50 } }))
+    const spend = getTierTickspeedSpend(start, T(9), 2)
+    expect(spend).toBe(getTickspeedMultiplierCost(T(9), 2))
+    expect(getTierTickspeedRequirement(start, T(9), 2)).toBe(spend + 1)
+    expect(getTierTickspeedSpend(runOf('F2'), T(9), 2)).toBeLessThan(spend)
+  })
+
+  it('an Auto Purge completion records the whole segment in the best time', () => {
+    const base = runOf('F2')
+    const goal = { ...base, resources: { ...base.resources, [MONEY_ID]: 1e300 }, autoPurge: 1, autoPurgeAttemptBudget: 5, purge: { ...base.purge, unboundedUnlocked: true } }
+    const done = tickGame(0.1)(goal)
+    expect(done.challenges.active).toBeNull()
+    expect(done.challenges.bestSeconds.F2).toBeCloseTo(0.1)
   })
 
   it('F6: Storage never funds tiers that do not exist', () => {

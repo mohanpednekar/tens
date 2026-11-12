@@ -1714,7 +1714,11 @@ const tickChallengeRun = (elapsedSeconds, autobuyerBatchSize, state) => {
     const halt = clampNonNegative(current.challenges.run?.haltSeconds)
     const counted = halt > 0 ? withChallengeRun(current, { haltSeconds: Math.max(0, halt - step) }) : current
     const afterCore = (next => (getActiveChallenge(next) ? tickChallengeClock(step)(next) : next))(tickGameCore(step, autobuyerBatchSize, halt)(counted))
-    current = getActiveChallenge(afterCore) ? applyChallengeStepEffects(step, afterCore) : afterCore
+    // A completion inside the tick (Auto Purge) recorded the segment's START time; the segment itself counts too.
+    const completedInStep = !getActiveChallenge(afterCore) && afterCore.challenges.completed?.[challenge.id]
+      ? { ...afterCore, challenges: { ...afterCore.challenges, bestSeconds: { ...afterCore.challenges.bestSeconds, [challenge.id]: Math.min(current.challenges.bestSeconds?.[challenge.id] ?? Infinity, t + step) } } }
+      : afterCore
+    current = getActiveChallenge(completedInStep) ? applyChallengeStepEffects(step, completedInStep) : completedInStep
     if (hitsBoundary && getActiveChallenge(current)) current = boundary.apply(current, challenge.automation.key)
     remaining -= step
   }
@@ -7124,6 +7128,19 @@ export const setAutobuyerEnabled = (tierId, enabled) => state => {
 // owned[tier.id] move together, so requiring only `available >= cost` could drain a tier to
 // exactly 0 generators — production for that tier (and everything cascading from it) would stop
 // even though the purchase "succeeded". Require at least 1 generator left over instead.
+// Challenge-aware tickspeed charge for reaching `targetLevel`: F16 Egress Fees charges the next level's cost; the last
+// tier normally spends only a fraction of its requirement (getTickspeedMultiplierSpend) — F20 Burn Rate spends it all.
+const getTickspeedChargeLevel = (state, tierId, targetLevel) =>
+  targetLevel + (getChallengeEffectTier(state, 'egressFees') === tierId ? 1 : 0)
+export const getTierTickspeedSpend = (state, tierId, targetLevel) => {
+  const level = getTickspeedChargeLevel(state, tierId, targetLevel)
+  return getChallengeEffectTier(state, 'burnRate') === tierId
+    ? getTickspeedMultiplierCost(tierId, level)
+    : getTickspeedMultiplierSpend(tierId, level)
+}
+export const getTierTickspeedRequirement = (state, tierId, targetLevel) =>
+  Math.max(getTickspeedMultiplierCost(tierId, getTickspeedChargeLevel(state, tierId, targetLevel)), getTierTickspeedSpend(state, tierId, targetLevel) + 1)
+
 export const buyTickspeedMultiplier = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = TIER_BY_ID[tierId]
@@ -7138,14 +7155,9 @@ export const buyTickspeedMultiplier = tierId => state => {
     if (currentLevel + 1 > (state.tickspeedLevels?.[predecessor.id] ?? 1)) return state
   }
 
-  // F16 Egress Fees: level L costs what level L+1 normally costs. The last tier spends only a fraction of its
-  // requirement (see getTickspeedMultiplierSpend) — F20 Burn Rate makes it spend the full requirement.
-  const costLevel = currentLevel + 1 + (getChallengeEffectTier(state, 'egressFees') === tierId ? 1 : 0)
-  const cost = getChallengeEffectTier(state, 'burnRate') === tierId
-    ? getTickspeedMultiplierCost(tierId, costLevel)
-    : getTickspeedMultiplierSpend(tierId, costLevel)
+  const cost = getTierTickspeedSpend(state, tierId, currentLevel + 1)
   const available = state.resources[tier.id] ?? 0
-  if (available < Math.max(getTickspeedMultiplierCost(tierId, costLevel), cost + 1)) return state
+  if (available < getTierTickspeedRequirement(state, tierId, currentLevel + 1)) return state
 
   return {
     ...state,
