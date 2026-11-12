@@ -81,9 +81,9 @@ export const generateDailyChallenge = (dateId, formatId) => {
   }
 }
 
-// Reachable once the save has completed its first Purge, and only while the rollout switch is on.
+// Reachable once the save has completed its first Purge (a Reboot resets the Purge count but keeps the unlock), and only while the rollout switch is on.
 export const isDailyChallengesAvailable = state =>
-  DAILY_CHALLENGES_FEATURE.enabled && (state.purge?.count ?? 0) >= 1
+  DAILY_CHALLENGES_FEATURE.enabled && ((state.purge?.count ?? 0) >= 1 || (state.era?.count ?? 0) >= 1)
 
 const getRunEarnedBytes = run => run.earnedBits / BITS_PER_BYTE
 const getStartBits = def => 10 ** def.startExponent * BITS_PER_BYTE
@@ -168,6 +168,7 @@ export const tickDailyRuns = nowMs => state => {
     const dt = Math.min(Math.max(0, (nowMs - run.lastTickAt) / 1000), run.def.limitSeconds - run.simSeconds)
     let game = run.game
     let earnedBits = run.earnedBits
+    let elapsed = dt
     if (dt > 0) {
       const ticks = Math.min(DAILY_MAX_TICKS_PER_CALL, Math.max(1, Math.ceil(dt)))
       const step = dt / ticks
@@ -175,10 +176,15 @@ export const tickDailyRuns = nowMs => state => {
         const before = game.resources[MONEY_ID] ?? 0
         game = tickGame(step, 1)(game)
         earnedBits += Math.max(0, (game.resources[MONEY_ID] ?? 0) - before)
+        // Settle at the tick that crosses the target, so the recorded time doesn't depend on when the player returns.
+        if (earnedBits / BITS_PER_BYTE >= 10 ** run.def.targetExponent) {
+          elapsed = (i + 1) * step
+          break
+        }
       }
     }
     next = settleRun(
-      setRun(next, format.id, { ...run, game, lastTickAt: nowMs, simSeconds: run.simSeconds + dt, earnedBits }),
+      setRun(next, format.id, { ...run, game, lastTickAt: nowMs, simSeconds: run.simSeconds + elapsed, earnedBits }),
       format.id,
       nowMs,
     )
@@ -190,12 +196,15 @@ export const tickDailyRuns = nowMs => state => {
 // `reseed` (Scale Up / Overclock soft resets): a run has no Foundry to refill the wiped balance, so the reset
 // grants the starting balance again — the multipliers it earns are the point.
 const playRun = (formatId, nowMs, action, reseed = false) => state => {
-  const run = state.daily.runs[formatId]
-  if (!run) return state
+  // Catch the run up (and settle it) through the action's timestamp first, so a purchase can't retroactively
+  // speed up a gap that already ended the run.
+  const caught = tickDailyRuns(nowMs)(state)
+  const run = caught.daily.runs[formatId]
+  if (!run) return caught
   let game = action(run.game)
-  if (game === run.game) return state
+  if (game === run.game) return caught
   if (reseed) game = { ...game, resources: { ...game.resources, [MONEY_ID]: getStartBits(run.def) } }
-  return setRun(state, formatId, { ...run, game })
+  return setRun(caught, formatId, { ...run, game })
 }
 
 export const buyDailyTier = (formatId, tierId, nowMs) => playRun(formatId, nowMs, buyTierQuantity(tierId, BUY_ALL))

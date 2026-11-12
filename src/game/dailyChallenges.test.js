@@ -40,6 +40,30 @@ describe('generator', () => {
   })
 })
 
+describe('review regressions', () => {
+  test('a Reboot (Purge count back to 0) keeps Daily available', () => {
+    const state = { ...createInitialGameState(), era: { ...createInitialGameState().era, count: 1 } }
+    expect(isDailyChallengesAvailable(state)).toBe(true)
+  })
+
+  test('a purchase after the deadline cannot rescue a run: it settles first', () => {
+    const started = startDailyRun('10m', T0)(purged())
+    const after = buyDailyTier('10m', 'tier01', T0 + 601 * 1000)(started)
+    expect(after.daily.runs['10m']).toBeFalsy()
+    expect(after.daily.results['2026-11-12']['10m'].lastOutcome).toBe('expired')
+  })
+
+  test('a win is timed at the crossing tick, not at when the player returns', () => {
+    const started = startDailyRun('10m', T0)(purged())
+    const run = started.daily.runs['10m']
+    const rich = { ...started, daily: { ...started.daily, runs: { '10m': { ...run, earnedBits: 10 ** run.def.targetExponent * 8 - 1 } } } }
+    const bought = buyDailyTier('10m', 'tier01', T0)(rich)
+    const after = tickDailyRuns(T0 + 600 * 1000)(bought)
+    expect(after.daily.results['2026-11-12']['10m'].won).toBe(true)
+    expect(after.daily.results['2026-11-12']['10m'].bestSeconds).toBeLessThan(5)
+  })
+})
+
 describe('availability and lifecycle', () => {
   test('needs a first Purge and the rollout switch', () => {
     expect(isDailyChallengesAvailable(purged())).toBe(true)
