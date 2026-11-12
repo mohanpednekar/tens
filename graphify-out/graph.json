@@ -28736,6 +28736,54 @@
       "norm_label": "makelive()",
       "source_file": "src/game/engine.challenges.test.js",
       "source_location": "L35"
+    },
+    {
+      "id": "src_components_challengebanner_index_jsx_challengebanner",
+      "label": "ChallengeBanner()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "challengebanner()",
+      "source_file": "src/components/ChallengeBanner/index.jsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_game_challengeui_js_formatchallengetime",
+      "label": "formatChallengeTime()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "formatchallengetime()",
+      "source_file": "src/game/challengeUi.js",
+      "source_location": "L12"
+    },
+    {
+      "id": "src_pages_perkspage_challengestab_jsx_challengestab",
+      "label": "ChallengesTab()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "challengestab()",
+      "source_file": "src/pages/PerksPage/ChallengesTab.jsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_pages_perkspage_challengestab_test_jsx_makegame",
+      "label": "makeGame()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "makegame()",
+      "source_file": "src/pages/PerksPage/ChallengesTab.test.jsx",
+      "source_location": "L16"
     }
   ],
   "links": [
