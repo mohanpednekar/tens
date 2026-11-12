@@ -28700,6 +28700,42 @@
       "file_type": "document",
       "source_file": "docs/TESTING_REFERENCE.md",
       "source_location": "L1"
+    },
+    {
+      "id": "src_game_engine_challenges_test_withautomations",
+      "label": "withAutomations()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "withautomations()",
+      "source_file": "src/game/engine.challenges.test.js",
+      "source_location": "L23"
+    },
+    {
+      "id": "src_game_engine_challenges_test_atgoal",
+      "label": "atGoal()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "atgoal()",
+      "source_file": "src/game/engine.challenges.test.js",
+      "source_location": "L34"
+    },
+    {
+      "id": "src_game_engine_challenges_test_makelive",
+      "label": "makeLive()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "makelive()",
+      "source_file": "src/game/engine.challenges.test.js",
+      "source_location": "L35"
     }
   ],
   "links": [
