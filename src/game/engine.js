@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -230,6 +230,10 @@ export const createInitialGameState = () => ({
   // autobuyerAttemptBudgets, this is a single global counter; resets to 0 on every prestige
   // (manual or automatic) same as they do.
   autoPurgeAttemptBudget: 0,
+  // Challenge mode (epic #1037). `active` = challenge id or null; `activeSeconds` = elapsed time of the
+  // active run (incl. time away). `completed`/`bestSeconds` and the lifetime enteredCount/exitedCount
+  // survive Purge/Reboot (cleared only by a full Reset); Reboot clears `active`.
+  challenges: { active: null, activeSeconds: 0, completed: {}, bestSeconds: {}, enteredCount: 0, exitedCount: 0 },
   // Permanent count of Double PP upgrades bought (see buyPrestigeDoublePp) — never reset by
   // Prestige or Scale Up. Each level halves powers-per-PP until 1, then doubles PP-per-power.
   prestigeDoublePpLevel: 0,
@@ -1330,6 +1334,8 @@ export const eraGame = state => {
     computeFlopsAutobuyers: state.computeFlopsAutobuyers ?? initial.computeFlopsAutobuyers,
     computeFlopsAutobuyersEnabled: state.computeFlopsAutobuyersEnabled ?? initial.computeFlopsAutobuyersEnabled,
     computeFlopsAutobuyerAttemptBudgets: initial.computeFlopsAutobuyerAttemptBudgets,
+    // Reboot ends an active challenge without completing it; completions/best times/lifetime counts stay.
+    challenges: { ...initial.challenges, ...state.challenges, active: null, activeSeconds: 0 },
     era: { count: nextEraCount },
     eons: { balance: clampNonNegative(state.eons?.balance ?? 0) + eonsAwarded },
     hyperscalerCount: clampNonNegative(state.hyperscalerCount ?? 0),
@@ -1390,7 +1396,9 @@ export const getScaleUpMultiplier = scaleUpCount =>
   SCALE_UP_MULTIPLIER_BASE ** clampNonNegative(scaleUpCount)
 
 export const getTierScaleUpMultiplier = (state, tierId) =>
-  getScaleUpMultiplier(state.scaleUpTierCounts?.[tierId] ?? state.scaleUpCount ?? 0)
+  hasChallengeEffect(state, 'scaleUpNoDoubling')
+    ? 1
+    : getScaleUpMultiplier(state.scaleUpTierCounts?.[tierId] ?? state.scaleUpCount ?? 0)
 
 // The index (see state.scaleUpTargetTierIndex) clamped into TIER_DEFINITIONS' actual bounds —
 // scaleUpTargetTierIndex itself is deliberately allowed to climb past the last tier (see its own
@@ -1465,8 +1473,72 @@ export const isOverflowModeUnlocked = state =>
   || ((state.autoPurge ?? null) !== null
     && getAutomationIntervalSeconds(state, 'purge') <= OVERFLOW_MODE_MAX_INTERVAL_SECONDS)
 
+// ── Challenge mode (epic #1037) ───────────────────────────────────────────────────────────────────
+// A challenge is "live" only while its id is in LIVE_CHALLENGE_IDS (empty in shipped code until #1039);
+// an active challenge that is not live is ignored everywhere, so nothing changes for players.
+const isChallengeLive = id => Boolean(CHALLENGE_BY_ID[id]) && LIVE_CHALLENGE_IDS.has(id)
+
+export const getActiveChallenge = state => {
+  const id = state.challenges?.active
+  return id && isChallengeLive(id) ? CHALLENGE_BY_ID[id] : null
+}
+
+export const isChallengeCompleted = (state, id) => Boolean(state.challenges?.completed?.[id])
+
+const hasChallengeEffect = (state, effect) => getActiveChallenge(state)?.effect === effect
+
+// The Money level a run must reach to Purge: PURGE_THRESHOLD, or the active challenge's raised goal.
+export const getPurgeGoalBits = state => getActiveChallenge(state)?.goal ?? PURGE_THRESHOLD
+
+const getChallengeAutomationLevel = (state, { kind, key }) => {
+  if (kind === 'tierAutobuyer') return state.autobuyerIntervalLevels?.[key] ?? 0
+  if (kind === 'tierTickspeed') return state.tierTickspeedIntervalLevels?.[key] ?? 0
+  return state.automationIntervalLevels?.[key] ?? 0
+}
+
+// The automation a challenge targets is unlocked/bought (the challenge is then available).
+export const isChallengeUnlocked = (state, id) => {
+  const def = CHALLENGE_BY_ID[id]
+  if (!def) return false
+  const { kind, key } = def.automation
+  if (kind === 'tierAutobuyer') return state.autobuyers?.[key] != null
+  if (kind === 'tierTickspeed') return Boolean(state.tierTickspeedAutobuyer?.[key])
+  return isAutomationIntervalChainAvailable(state, key)
+}
+
+// Gate for the three speed-upgrade buyers: refused while the target automation has a LIVE challenge
+// that is not yet completed. Costs are untouched.
+const isSpeedUpgradeChallengeGated = (state, kind, key) =>
+  CHALLENGE_DEFINITIONS.some(def =>
+    def.automation.kind === kind && def.automation.key === key
+    && isChallengeLive(def.id) && !isChallengeCompleted(state, def.id))
+
+// Existing saves: any automation that already holds a speed level has its live challenge marked
+// completed (no best time). Idempotent; same reference when nothing changes.
+export const autoCompleteChallenges = state => {
+  const completed = state.challenges?.completed ?? {}
+  const additions = CHALLENGE_DEFINITIONS
+    .filter(def => isChallengeLive(def.id) && !completed[def.id] && getChallengeAutomationLevel(state, def.automation) > 0)
+    .map(def => def.id)
+  if (additions.length === 0) return state
+  return {
+    ...state,
+    challenges: {
+      ...createInitialGameState().challenges,
+      ...state.challenges,
+      completed: { ...completed, ...Object.fromEntries(additions.map(id => [id, true])) },
+    },
+  }
+}
+
+// Elapsed time of the active run (live ticks and offline replay both flow through tickGame).
+const tickChallengeClock = elapsedSeconds => state => {
+  if (!getActiveChallenge(state)) return state
+  return { ...state, challenges: { ...state.challenges, activeSeconds: clampNonNegative(state.challenges.activeSeconds) + elapsedSeconds } }
+}
+
 export const isProductionFrozen = state =>
-  !isOverflowModeUnlocked(state) && clampNonNegative(state.resources[MONEY_ID]) >= PURGE_THRESHOLD
+  !isOverflowModeUnlocked(state) && clampNonNegative(state.resources[MONEY_ID]) >= getPurgeGoalBits(state)
 
 // The previous tier's LEVEL that "two fully purchased levels" corresponds to: completing level 1
 // advances purchaseLevels from 1 to 2, and completing level 2 advances it from 2 to 3 — so a tier
@@ -1535,7 +1607,10 @@ export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
   // its own resource-funded tickspeed level rather than replacing it.
   const tickspeedMultiplier = getTickspeedProductionMultiplier(state.tickspeedLevels?.[tierId] ?? 1)
     * (tierId === getLastTierId() ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0) : 1)
-  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, getOverclockLevel(state) ?? 0)
+  // F21 Base Clock: Clock Speed is disabled, and Overclock (which scales it) has no effect with it.
+  const globalTickspeedMultiplier = hasChallengeEffect(state, 'clockSpeedDisabled')
+    ? 1
+    : getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, getOverclockLevel(state) ?? 0)
   const period = getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier * globalTickspeedMultiplier)
   // See MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS above — guards against a multiplier large enough to
   // overflow this division to a non-finite/zero period.
@@ -1669,7 +1744,7 @@ const runGlobalIntervalAutomation = (state, elapsedSeconds, key, attempt) => {
 // first level (0 owned generators produce $0 income, and the starting balance only ever covers
 // 1 unit) and stalls forever — then reverts to the normal autobuyerBatchSize from its second
 // level onward.
-export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
+const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // The Byte Foundry intro runs first, every tick: passive production, then any in-progress disk
   // array build counts down (tickProvisionDisk — unconditional, bypasses nothing), then Storage's own
   // auto-fill (Memory -> each array's cache -> empty disks) gets first claim on the resulting
@@ -2010,7 +2085,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   if (
     isOverflowModeUnlocked(stateBeforeStorage)
     && autoPurgeActive
-    && clampNonNegative(stateBeforeStorage.resources[MONEY_ID]) >= PURGE_THRESHOLD
+    && clampNonNegative(stateBeforeStorage.resources[MONEY_ID]) >= getPurgeGoalBits(stateBeforeStorage)
   ) {
     const budget = stateBeforeStorage.autoPurgeAttemptBudget ?? 0
     if (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
@@ -2020,6 +2095,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
 
   return tickStorage(stateBeforeStorage)
 }
+
+// Advances the active challenge's clock, then runs the ordinary tick (same reference when nothing changes).
+export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state =>
+  tickGameCore(elapsedSeconds, autobuyerBatchSize)(tickChallengeClock(elapsedSeconds)(state))
 
 // Real elapsed seconds away, capped at MAX_OFFLINE_SECONDS. At or below
 // OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, simulated at 100% speed (no reduction); beyond
@@ -6888,6 +6967,7 @@ export const getAutobuyerIntervalUpgradeCost = level =>
 
 export const buyAutobuyerIntervalUpgrade = tierId => state => {
   if (isProductionFrozen(state)) return state
+  if (isSpeedUpgradeChallengeGated(state, 'tierAutobuyer', tierId)) return state
   if (!TIER_BY_ID[tierId]) return state
   if (state.autobuyers[tierId] == null) return state
   const level = state.autobuyerIntervalLevels?.[tierId] ?? 0
@@ -6930,6 +7010,7 @@ export const isAutomationIntervalChainUnlocked = isAutomationIntervalChainAvaila
 export const buyAutomationIntervalUpgrade = key => state => {
   if (!AUTOMATION_INTERVAL_CONFIG[key]) return state
   if (isProductionFrozen(state)) return state
+  if (isSpeedUpgradeChallengeGated(state, 'global', key)) return state
   if (!isAutomationIntervalChainAvailable(state, key)) return state
   const level = state.automationIntervalLevels?.[key] ?? 0
   if (level >= getAutomationIntervalMaxLevel(key)) return state
@@ -6956,6 +7037,7 @@ export const getTierTickspeedIntervalUpgradeCost = level =>
 
 export const buyTierTickspeedIntervalUpgrade = tierId => state => {
   if (isProductionFrozen(state)) return state
+  if (isSpeedUpgradeChallengeGated(state, 'tierTickspeed', tierId)) return state
   if (!TIER_BY_ID[tierId]) return state
   if (!state.tierTickspeedAutobuyer?.[tierId]) return state
   const level = state.tierTickspeedIntervalLevels?.[tierId] ?? 0
@@ -7050,6 +7132,7 @@ export const setAutoPurgeEnabled = enabled => state => {
 // production is frozen.
 export const buyGlobalTickspeedMultiplier = state => {
   if (isProductionFrozen(state)) return state
+  if (hasChallengeEffect(state, 'clockSpeedDisabled')) return state
   if (!isGlobalTickspeedMultiplierUnlocked(state)) return state
 
   const currentLevel = state.globalTickspeedMultiplier ?? null
@@ -7330,13 +7413,61 @@ export const resetByteFoundry = state => {
   }
 }
 
+// Purge goal reached: an ordinary Purge, except that a challenge run (epic #1037) records its completion
+// and best time and clears the active challenge — and a REPEAT completion resets the Factory cycle
+// without awarding PP or counting as a Purge.
 export const purgeGame = state => {
-  if (clampNonNegative(state.resources[MONEY_ID]) < PURGE_THRESHOLD) return state
+  if (clampNonNegative(state.resources[MONEY_ID]) < getPurgeGoalBits(state)) return state
 
+  const challenge = getActiveChallenge(state)
+  if (!challenge) return resetFactoryCycle(state, true)
+
+  const alreadyCompleted = isChallengeCompleted(state, challenge.id)
+  const elapsed = clampNonNegative(state.challenges.activeSeconds)
+  const previousBest = state.challenges.bestSeconds?.[challenge.id]
+  const reset = resetFactoryCycle(state, !alreadyCompleted)
+  return {
+    ...reset,
+    challenges: {
+      ...state.challenges,
+      active: null,
+      activeSeconds: 0,
+      completed: { ...state.challenges.completed, [challenge.id]: true },
+      bestSeconds: {
+        ...state.challenges.bestSeconds,
+        [challenge.id]: previousBest === undefined ? elapsed : Math.min(previousBest, elapsed),
+      },
+    },
+  }
+}
+
+// Start a challenge: same Factory-cycle reset as a Purge but no PP and no Purge count. Same state
+// reference when not live, already inside a challenge, or its automation is still locked.
+export const enterChallenge = id => state => {
+  if (!isChallengeLive(id) || getActiveChallenge(state) || !isChallengeUnlocked(state, id)) return state
+  const challenges = { ...createInitialGameState().challenges, ...state.challenges }
+  return {
+    ...resetFactoryCycle(state, false),
+    challenges: { ...challenges, active: id, activeSeconds: 0, enteredCount: challenges.enteredCount + 1 },
+  }
+}
+
+// Leave the active challenge: restarts the Factory cycle with no reward.
+export const exitChallenge = state => {
+  if (!getActiveChallenge(state)) return state
+  return {
+    ...resetFactoryCycle(state, false),
+    challenges: { ...state.challenges, active: null, activeSeconds: 0, exitedCount: state.challenges.exitedCount + 1 },
+  }
+}
+
+// The Factory-cycle reset shared by Purge and challenge enter/exit/repeat completion. `awardPurge`
+// false = no PP, no Purge count, no System-log entry.
+const resetFactoryCycle = (state, awardPurge) => {
   const doublePpLevel = state.prestigeDoublePpLevel ?? 0
-  const pointsAwarded = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel)
+  const pointsAwarded = awardPurge ? getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel) : 0
   const initial = createInitialGameState()
-  const nextPurgeNumber = state.purge.count + 1
+  const nextPurgeNumber = state.purge.count + (awardPurge ? 1 : 0)
   const unboundedUnlocked = isOverflowModeUnlocked(state)
   const museumEntry = {
     id: `p${nextPurgeNumber}-${Date.now()}`,
@@ -7346,7 +7477,7 @@ export const purgeGame = state => {
     moneyBits: clampNonNegative(state.resources[MONEY_ID]),
   }
   const previousMuseum = state.prestigeMuseum ?? initial.prestigeMuseum
-  const nextHistory = [museumEntry, ...(previousMuseum.history ?? [])].slice(0, MUSEUM_HISTORY_CAP)
+  const nextHistory = (awardPurge ? [museumEntry, ...(previousMuseum.history ?? [])] : (previousMuseum.history ?? [])).slice(0, MUSEUM_HISTORY_CAP)
   const nextHistoryIds = new Set(nextHistory.map(entry => entry.id))
   const nextPinnedIds = (previousMuseum.pinnedIds ?? []).filter(id => nextHistoryIds.has(id))
   // applyAutobuyerMilestones runs last, against the freshly-incremented purge.count below —
@@ -7356,6 +7487,7 @@ export const purgeGame = state => {
   // already carried over unchanged below.
   return applyAutobuyerMilestones({
     ...initial,
+    challenges: state.challenges ?? initial.challenges,
     prestigeMuseum: {
       history: nextHistory,
       pinnedIds: nextPinnedIds,
@@ -7685,6 +7817,7 @@ export const scaleUpGame = state => {
       owned: state.computeFlops?.owned ?? initial.computeFlops.owned,
       cumulativeBoost: initial.computeFlops.cumulativeBoost,
     },
+    challenges: state.challenges ?? initial.challenges,
     purge: { ...state.purge, xp: initial.purge.xp, highestMilestone: initial.purge.highestMilestone },
     scaleUpCount: (state.scaleUpCount ?? 0) + 1,
     scaleUpTierCounts,
@@ -7719,6 +7852,7 @@ export const scaleUpGame = state => {
 // that cycle's requirement — same guards as scaleUpGame.
 export const overclockGame = state => {
   if (isProductionFrozen(state)) return state
+  if (hasChallengeEffect(state, 'overclockDisabled')) return state
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
   const lastTierCompletedLevels = Math.max(0, (state.purchaseLevels?.[lastTier.id] ?? 1) - 1)
   if (lastTierCompletedLevels < getOverclockRequirement(state)) return state
@@ -7773,6 +7907,7 @@ export const overclockGame = state => {
       owned: state.computeFlops?.owned ?? initial.computeFlops.owned,
       cumulativeBoost: initial.computeFlops.cumulativeBoost,
     },
+    challenges: state.challenges ?? initial.challenges,
     purge: { ...state.purge, xp: initial.purge.xp, highestMilestone: initial.purge.highestMilestone },
     // scaleUpCount/scaleUpTierCounts are deliberately NOT carried over (unlike scaleUpGame's own
     // increments) — both reset through ...initial, wiping Scale Up's per-tier bonuses. This is Overclock's
@@ -7885,6 +8020,7 @@ export const setAutoGlobalTickspeedEnabled = enabled => state => {
 // frozen.
 export const consumeXpForLastTierTickspeed = amount => state => {
   if (isProductionFrozen(state)) return state
+  if (hasChallengeEffect(state, 'restageDisabled')) return state
   if (!isLastTierTickspeedXpUnlocked(state)) return state
 
   const lastTierId = getLastTierId()

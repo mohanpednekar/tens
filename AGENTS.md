@@ -395,3 +395,5 @@ publicly visible but isn't legally reusable without written permission. No `CODE
 - `.github/workflows/**` changes require the repo owner's review, enforced by `pr-auto-merge.yml`'s
   script-level exclusion and (once branch protection enables "Require review from Code Owners")
   `.github/CODEOWNERS`.
+
+Challenge mode (epic #1037, engine slice only): state `challenges`, registry `CHALLENGE_DEFINITIONS` and rollout Set `LIVE_CHALLENGE_IDS` (empty until the UI slice) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits` in `engine.js`; the three speed-upgrade buyers refuse until a live challenge is completed. See `docs/ECONOMY_REFERENCE.md` "Challenge mode".
