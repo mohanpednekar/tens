@@ -1576,9 +1576,10 @@ export const getMoneyExponent = money => {
 }
 
 // How far the current money exponent is toward GOOGOL's exponent (100), as a whole percent.
-export const getPurgePercent = money => {
-  const googolExponent = Math.floor(Math.log10(GOOGOL))
-  const percent = (getMoneyExponent(money) / googolExponent) * 100
+export const getPurgePercent = (money, goalBits = PURGE_THRESHOLD) => {
+  // Exponent of the goal in Bytes (1 Googol → 100; a raised challenge goal → e.g. 110).
+  const goalExponent = goalBits === PURGE_THRESHOLD ? Math.floor(Math.log10(GOOGOL)) : Math.round(Math.log10(goalBits / BITS_PER_BYTE))
+  const percent = (getMoneyExponent(money) / goalExponent) * 100
   return Math.min(100, Math.max(0, Math.round(percent)))
 }
 

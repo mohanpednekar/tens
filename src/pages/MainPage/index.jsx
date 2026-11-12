@@ -2,11 +2,12 @@ import { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
 import { boostGlow, getComputeBoostDescription, isFactoryTierBoosted } from 'components/BoostBadge'
 import BoostTimerBar from 'components/BoostTimerBar'
 import ChallengeBanner from 'components/ChallengeBanner'
+import { formatChallengeGoal } from 'game/challengeUi'
 import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -850,7 +851,7 @@ const MainPage = ({ game }) => {
   const prestigeBonus = getPrestigeProductionMultiplier(purge.count)
   const prestigeBonusUnlocked = isPrestigeSpeedBonusUnlocked(state)
   const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel)
-  const purgeProgressPercent = getPurgePercent(state.resources[MONEY_ID])
+  const purgeProgressPercent = getPurgePercent(state.resources[MONEY_ID], getPurgeGoalBits(state))
   const bytePowerProgressFraction = getNextBytePowerProgressFraction(state.resources[MONEY_ID])
   const bytePowerProgressPercent = Math.round(bytePowerProgressFraction * 100)
   const moneyBits = state.resources[MONEY_ID]
@@ -859,11 +860,16 @@ const MainPage = ({ game }) => {
   // What a Prestige would award — shown on the Prestige button itself (Buy-button style: the
   // effect lives on the control, not in a separate text line). Below Googol the formula reads 0,
   // but the award on reaching it is always at least 1, so that's the effect worth advertising.
-  const purgeAwardPreview = Math.max(1, prestigePointsPreview)
+  // A repeat challenge completion resets the cycle but awards no PP (engine: purgeGame).
+  const isRepeatChallengeCompletion = Boolean(getActiveChallenge(state)) && isChallengeCompleted(state, getActiveChallenge(state).id)
+  const purgeGoalText = formatChallengeGoal(getPurgeGoalBits(state))
+  const purgeAwardPreview = isRepeatChallengeCompletion ? 0 : Math.max(1, prestigePointsPreview)
   const purgeLabel = isUnbounded && canPurge
     ? 'Purge (optional — claim accumulated PP)'
-    : 'Purge (requires 1 Googol Bytes)'
-  const purgeAriaLabel = `${purgeLabel} — awards +${formatAmount(purgeAwardPreview)} Purge Point${purgeAwardPreview === 1 ? '' : 's'}`
+    : `Purge (requires ${purgeGoalText})`
+  const purgeAriaLabel = isRepeatChallengeCompletion
+    ? `${purgeLabel} — completes the challenge repeat, awards no Purge Points`
+    : `${purgeLabel} — awards +${formatAmount(purgeAwardPreview)} Purge Point${purgeAwardPreview === 1 ? '' : 's'}`
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
   // lazy initializer, from whatever loadGameState() returned) — a tier unlocked before this
   // load never plays the reveal animation, even though every unlocked row technically "mounts"
@@ -1162,7 +1168,7 @@ const MainPage = ({ game }) => {
       {showTopPurgeBar && (
         <>
           <TopPurgeBar ref={topPurgeBarRef} aria-label="purge available banner">
-            <PurgeMutedText>1 Googol Bytes reached — production has stopped.</PurgeMutedText>
+            <PurgeMutedText>{purgeGoalText} reached — production has stopped.</PurgeMutedText>
             <Button
               aria-label={purgeAriaLabel}
               variant="prestige"
@@ -1172,7 +1178,7 @@ const MainPage = ({ game }) => {
               $pulse
             >
               <ButtonIcon>✦ </ButtonIcon>
-              <ButtonLabel>Purge +{formatAmount(purgeAwardPreview)} PP</ButtonLabel>
+              <ButtonLabel>{isRepeatChallengeCompletion ? 'Complete challenge' : `Purge +${formatAmount(purgeAwardPreview)} PP`}</ButtonLabel>
             </Button>
           </TopPurgeBar>
           <TopPurgeBarSpacer $height={topPurgeBarHeight} />
@@ -1183,7 +1189,7 @@ const MainPage = ({ game }) => {
         <PurgeProgressTrack $percent={purgeProgressPercent}>
           <VisuallyHidden
             role="progressbar"
-            aria-label="progress toward 1 Googol Bytes, when Purge becomes available"
+            aria-label={`progress toward ${purgeGoalText}, when Purge becomes available`}
             aria-valuenow={purgeProgressPercent}
             aria-valuemin={0}
             aria-valuemax={100}

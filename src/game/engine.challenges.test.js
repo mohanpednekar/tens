@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   applyOfflineProgress, autoCompleteChallenges, buyAutomationIntervalUpgrade, buyAutobuyerIntervalUpgrade, buyGlobalTickspeedMultiplier,
   buyTierTickspeedIntervalUpgrade, consumeXpForLastTierTickspeed, createInitialGameState, enterChallenge, eraGame, exitChallenge,
-  getActiveChallenge, getEffectiveTierTickSpeedSeconds, getPurgeGoalBits, getTierScaleUpMultiplier, isChallengeUnlocked,
+  getActiveChallenge, getEffectiveTierTickSpeedSeconds, getPurgePercent, getPurgeGoalBits, getTierScaleUpMultiplier, isChallengeUnlocked,
   isProductionFrozen, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tickGame,
 } from './engine'
 import { CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, ERA_ELIGIBILITY_PP, LIVE_CHALLENGE_IDS, MONEY_ID, PURGE_THRESHOLD, SCOPE_CREEP_PURGE_GOAL, TIER_DEFINITIONS } from './layers'
@@ -280,6 +280,14 @@ describe('global challenge rules', () => {
     const done = purgeGame(reached)
     expect(done.challenges.completed.F25).toBe(true)
     expect(done.purge.points).toBeGreaterThan(running.purge.points)
+  })
+})
+
+describe('purge progress under a raised goal', () => {
+  it('measures progress against the F25 goal, not 1 Googol Bytes', () => {
+    expect(getPurgePercent(PURGE_THRESHOLD)).toBe(100)
+    expect(getPurgePercent(PURGE_THRESHOLD, SCOPE_CREEP_PURGE_GOAL)).toBeLessThan(100)
+    expect(getPurgePercent(SCOPE_CREEP_PURGE_GOAL, SCOPE_CREEP_PURGE_GOAL)).toBe(100)
   })
 })
 
