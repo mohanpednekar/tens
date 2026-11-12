@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_STEP, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -234,6 +234,9 @@ export const createInitialGameState = () => ({
   // active run (incl. time away). `completed`/`bestSeconds` and the lifetime enteredCount/exitedCount
   // survive Purge/Reboot (cleared only by a full Reset); Reboot clears `active`.
   challenges: { active: null, activeSeconds: 0, completed: {}, bestSeconds: {}, enteredCount: 0, exitedCount: 0 },
+  // Achievements (epic #1046): `earned` id → true and lifetime `counters` (Pings). Survive every reset
+  // (Purge, Scale Up, Overclock, Reboot, Reformat, Flush); only a full Reset clears them.
+  achievements: { earned: {}, counters: { pings: 0 } },
   // Permanent count of Double PP upgrades bought (see buyPrestigeDoublePp) — never reset by
   // Prestige or Scale Up. Each level halves powers-per-PP until 1, then doubles PP-per-power.
   prestigeDoublePpLevel: 0,
@@ -1293,6 +1296,39 @@ const buildEraIntroReset = (state, initial) => {
   }
 }
 
+// --- Achievements (epic #1046) ---------------------------------------------------------------------
+export const isAchievementConditionMet = (state, condition) => {
+  switch (condition.kind) {
+    case 'counter': return (state.achievements?.counters?.[condition.key] ?? 0) >= condition.min
+    case 'byteCreated': return Boolean(state.intro?.byteCreated)
+    case 'storageUnlocked': return Boolean(state.intro?.mainGameUnlocked) || isStorageUnlocked(state)
+    case 'tierPurchased': return (state.purchased?.[condition.tierId] ?? 0) > 0 || (state.purchaseLevels?.[condition.tierId] ?? 1) > 1
+    case 'clockSpeedLevel': return (state.globalTickspeedMultiplier ?? 0) >= condition.min
+    case 'overclocked': return state.overclockLastClaimCompletedLevels != null
+    default: return false
+  }
+}
+
+export const isAchievementEarned = (state, id) => Boolean(state.achievements?.earned?.[id])
+
+// Earns every unearned achievement whose condition now holds. Returns the SAME state when the feature is
+// off or nothing new is earned.
+export const detectAchievements = state => {
+  if (!ACHIEVEMENTS_FEATURE.enabled) return state
+  const newly = ACHIEVEMENT_DEFINITIONS.filter(def => !isAchievementEarned(state, def.id) && isAchievementConditionMet(state, def.condition))
+  if (newly.length === 0) return state
+  const earned = { ...state.achievements?.earned }
+  for (const def of newly) earned[def.id] = true
+  return { ...state, achievements: { counters: { pings: 0 }, ...state.achievements, earned } }
+}
+
+// A group is complete only when every achievement registered in it is earned.
+export const getCompletedAchievementGroups = state =>
+  ACHIEVEMENT_GROUPS.filter(group => {
+    const members = ACHIEVEMENT_DEFINITIONS.filter(def => def.group === group.id)
+    return members.length > 0 && members.every(def => isAchievementEarned(state, def.id))
+  }).map(group => group.id)
+
 export const eraGame = state => {
   if (!isEraEligible(state)) return state
 
@@ -1336,6 +1372,7 @@ export const eraGame = state => {
     computeFlopsAutobuyerAttemptBudgets: initial.computeFlopsAutobuyerAttemptBudgets,
     // Reboot ends an active challenge without completing it; completions/best times/lifetime counts stay.
     challenges: { ...initial.challenges, ...state.challenges, active: null, activeSeconds: 0 },
+    achievements: state.achievements ?? initial.achievements,
     era: { count: nextEraCount },
     eons: { balance: clampNonNegative(state.eons?.balance ?? 0) + eonsAwarded },
     hyperscalerCount: clampNonNegative(state.hyperscalerCount ?? 0),
@@ -2102,7 +2139,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
 
 // Advances the active challenge's clock, then runs the ordinary tick (same reference when nothing changes).
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state =>
-  tickGameCore(elapsedSeconds, autobuyerBatchSize)(tickChallengeClock(elapsedSeconds)(state))
+  detectAchievements(tickGameCore(elapsedSeconds, autobuyerBatchSize)(tickChallengeClock(elapsedSeconds)(state)))
 
 // Real elapsed seconds away, capped at MAX_OFFLINE_SECONDS. At or below
 // OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, simulated at 100% speed (no reduction); beyond
@@ -2546,7 +2583,7 @@ export const getRunningUpgradeDraw = intro => {
 // completed-style flag — see createInitialGameState). No-op pre-reveal on a full Buffer (no room for
 // the credit); post-reveal only once the stored tap bonus sits at FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT
 // (100) — a full Buffer is fine, the bonus speeds consumers.
-export const tapIntroBit = state => {
+const tapIntroBitCore = state => {
   // Fill-multiplier-bonus mode once Storage itself has been revealed — isStorageUnlocked directly
   // (NOT getVisibleStoragePoolCount(state) >= 1, which pool 1's own special-case always satisfies
   // regardless of actual Capacity — see that function's own doc comment).
@@ -2570,6 +2607,17 @@ export const tapIntroBit = state => {
   if (state.intro.bits >= state.intro.capacity) return state
   const tapAmount = Math.max(1, Math.floor(getIntroProductionRate(state.intro)))
   return { ...state, intro: { ...state.intro, bits: Math.min(state.intro.capacity, state.intro.bits + tapAmount) } }
+}
+
+// A Ping also bumps the lifetime Ping counter (achievements) — a no-op with the feature off.
+export const tapIntroBit = state => {
+  const next = tapIntroBitCore(state)
+  if (!ACHIEVEMENTS_FEATURE.enabled) return next
+  const achievements = next.achievements ?? createInitialGameState().achievements
+  return detectAchievements({
+    ...next,
+    achievements: { ...achievements, counters: { ...achievements.counters, pings: (achievements.counters?.pings ?? 0) + 1 } },
+  })
 }
 
 // One-time "combine into a Byte": consumes INTRO_BYTE_COMBINE_COST (8) bits, creates the single
@@ -7492,6 +7540,7 @@ const resetFactoryCycle = (state, awardPurge) => {
   return applyAutobuyerMilestones({
     ...initial,
     challenges: state.challenges ?? initial.challenges,
+    achievements: state.achievements ?? initial.achievements,
     prestigeMuseum: {
       history: nextHistory,
       pinnedIds: nextPinnedIds,
@@ -7822,6 +7871,7 @@ export const scaleUpGame = state => {
       cumulativeBoost: initial.computeFlops.cumulativeBoost,
     },
     challenges: state.challenges ?? initial.challenges,
+    achievements: state.achievements ?? initial.achievements,
     purge: { ...state.purge, xp: initial.purge.xp, highestMilestone: initial.purge.highestMilestone },
     scaleUpCount: (state.scaleUpCount ?? 0) + 1,
     scaleUpTierCounts,
@@ -7912,6 +7962,7 @@ export const overclockGame = state => {
       cumulativeBoost: initial.computeFlops.cumulativeBoost,
     },
     challenges: state.challenges ?? initial.challenges,
+    achievements: state.achievements ?? initial.achievements,
     purge: { ...state.purge, xp: initial.purge.xp, highestMilestone: initial.purge.highestMilestone },
     // scaleUpCount/scaleUpTierCounts are deliberately NOT carried over (unlike scaleUpGame's own
     // increments) — both reset through ...initial, wiping Scale Up's per-tier bonuses. This is Overclock's

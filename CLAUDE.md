@@ -598,6 +598,10 @@ the lake automatically buys every affordable Booster until slots fill or the nex
 filling the lake at that wall enables the next reset. Pools never transfer or share resources through
 this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop" (now the flush loop).
 
+### Achievements (epic #1046, basic slice)
+
+State `achievements` (`earned`, lifetime `counters.pings`) survives every reset but a full Reset; registry `ACHIEVEMENT_GROUPS`/`ACHIEVEMENT_DEFINITIONS` in `layers.js`; `detectAchievements` runs after each tick/Ping; `AchievementsPage` (page id `'achievements'`, More entry) renders them. Whole feature behind `ACHIEVEMENTS_FEATURE.enabled` (dev builds only). No bonuses yet. Detail: `docs/ECONOMY_REFERENCE.md` "Achievements".
+
 ### Tiers, Prestige, Reboot (Era ascension)
 
 **Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Charger = a tier's 8-slot reserve row (bottom row, `getComputeReserveHeld`); Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Flush Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.

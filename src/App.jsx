@@ -1,4 +1,6 @@
 import AppMenu from 'components/AppMenu'
+import { ACHIEVEMENTS_FEATURE } from 'game/layers'
+import AchievementsPage from 'pages/AchievementsPage'
 import AppNav, { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
 import IncompatibleSaveNotice from 'components/IncompatibleSaveNotice'
 import ByteFoundryPage from 'pages/ByteFoundryPage'
@@ -25,7 +27,7 @@ const resolveInitialThemeMode = () => resolveThemeMode(loadThemePreference())
 // exempt for the same reason Settings/Releases are — Dev Mode has to be reachable precisely
 // when you want to seed past the gate, and it's a dev-build-only destination regardless (see
 // AppMenu's `import.meta.env.DEV` guard).
-const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'settings', 'dev'])
+const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'achievements', 'settings', 'dev'])
 
 const PageShell = styled.div`
   padding-bottom: ${APP_NAV_BOTTOM_PAD};
@@ -135,6 +137,8 @@ function App() {
     content = <PerksPage focusNonce={perksFocusNonce} game={game} />
   } else if (page === 'milestones') {
     content = <MilestonesPage game={game} />
+  } else if (page === 'achievements' && ACHIEVEMENTS_FEATURE.enabled) {
+    content = <AchievementsPage game={game} />
   } else if (page === 'dev') {
     content = import.meta.env.DEV ? <DevModePage game={game} /> : <MainPage game={game} />
   } else if (page === 'settings') {
