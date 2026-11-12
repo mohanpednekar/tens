@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Achievements (dev builds only, off in production until tuned; epic #1046): More → 🏆 Achievements lists three groups — First session, Tier ladder, Early Factory — with earned/locked rows and per-group counts. Earned achievements and the lifetime Ping count survive every reset except a full Reset. No bonuses yet.
+
 - Challenge mode: Firmware has a new 🏁 Challenges tab. Beat a nerfed Factory run (F21 Base Clock, F22 Scale Out, F23 Code Freeze, F24 Stock Cooling, F25 Scope Creep) to unlock that automation's speed upgrades; a banner on Factory shows the active challenge with Exit. Saves that already upgraded an automation's speed have its challenge completed.
 - Power: one tier is always selected (switch it, never clear it) — the "pick a tier" prompt is gone. On arrival it is the highest tier whose charge is automated, else the active boost's tier, else Cells.
 

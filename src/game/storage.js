@@ -604,6 +604,10 @@ const mergeState = rawSaved => {
       completed: { ...(saved.challenges?.completed ?? {}) },
       bestSeconds: { ...(saved.challenges?.bestSeconds ?? {}) },
     },
+    achievements: {
+      earned: { ...(saved.achievements?.earned ?? {}) },
+      counters: { ...fresh.achievements.counters, ...(saved.achievements?.counters ?? {}) },
+    },
     era: { ...fresh.era, ...(saved.era ?? {}) },
     eons: { ...fresh.eons, ...(saved.eons ?? {}) },
     hyperscalerCount: saved.hyperscalerCount ?? fresh.hyperscalerCount,

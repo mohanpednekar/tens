@@ -1,3 +1,4 @@
+import { ACHIEVEMENTS_FEATURE } from 'game/layers'
 import styled from 'styled-components'
 
 // Overflow sheet for always-available utilities (Manual, Releases, Settings) — reachable from every
@@ -106,6 +107,12 @@ const AppMenu = ({ open, onClose, onNavigate }) => {
           <Icon aria-hidden="true">🏁</Icon>
           Releases
         </MenuButton>
+        {ACHIEVEMENTS_FEATURE.enabled && (
+          <MenuButton aria-label="open achievements" onClick={() => go('achievements')} type="button">
+            <Icon aria-hidden="true">🏆</Icon>
+            Achievements
+          </MenuButton>
+        )}
         <MenuButton aria-label="open settings" onClick={() => go('settings')} type="button">
           <Icon aria-hidden="true">⚙️</Icon>
           Settings

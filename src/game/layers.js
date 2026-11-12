@@ -113,6 +113,36 @@ export const CHALLENGE_BY_ID = Object.fromEntries(CHALLENGE_DEFINITIONS.map(def 
 // The only rollout switch: a challenge gates upgrades and can be entered only while its id is in this
 // set. Each slice of epic #1037 adds its challenges here when it merges; tests add/remove ids.
 export const LIVE_CHALLENGE_IDS = new Set(['F21', 'F22', 'F23', 'F24', 'F25'])
+
+// Achievements (epic #1046). One rollout switch: off in production builds, on in dev builds (a mutable
+// object so tests can flip it). With it off nothing is detected and the page/entry are hidden.
+export const ACHIEVEMENTS_FEATURE = { enabled: import.meta.env.VITE_TENS_DEV_BUILD === '1' }
+// Groups in display order; `boostArea` is unused until the bonus slice (#1052).
+export const ACHIEVEMENT_GROUPS = [
+  { id: 'firstSession', name: 'First session', boostArea: 'foundry' },
+  { id: 'tierLadder', name: 'Tier ladder', boostArea: 'factory' },
+  { id: 'earlyFactory', name: 'Early Factory', boostArea: 'factory' },
+]
+// `condition` is evaluated by engine.js `isAchievementConditionMet` against CURRENT state ("at least"
+// thresholds, so a save past a trigger earns it on load). `bonus` is a placeholder (#1052).
+const TIER_ACHIEVEMENT_NAMES = ['Kilo-what?', 'Mega bite', 'Giga-what now', 'Tera-fying', 'Peta-fied', 'Exa-ggerated', 'Zetta slow', 'Yotta be kidding me', 'Ronna-way process', 'Quetta while']
+export const ACHIEVEMENT_DEFINITIONS = [
+  { id: 'helloWorld', name: 'Hello, World', group: 'firstSession', trigger: 'Ping for the first time', condition: { kind: 'counter', key: 'pings', min: 1 } },
+  { id: 'itCompiles', name: 'It compiles, ship it', group: 'firstSession', trigger: 'Compile for the first time', condition: { kind: 'byteCreated' } },
+  { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', condition: { kind: 'counter', key: 'pings', min: 256 } },
+  { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
+  ...TIER_DEFINITIONS.map((tier, index) => ({
+    id: `tier${String(index + 1).padStart(2, '0')}Bought`,
+    name: TIER_ACHIEVEMENT_NAMES[index],
+    group: 'tierLadder',
+    trigger: `Buy your first ${tier.name}`,
+    condition: { kind: 'tierPurchased', tierId: tier.id },
+  })),
+  { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Clock Speed level', condition: { kind: 'clockSpeedLevel', min: 1 } },
+  { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Clock Speed level 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
+  { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', condition: { kind: 'overclocked' } },
+].map(def => ({ secret: false, platformDependent: false, bonus: null, ...def }))
+export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.map(def => [def.id, def]))
 // Legacy rule (lifetime prestige count), kept only so storage.js can grandfather saves that reached
 // it before DeGoogol moved to the Auto-Prestige interval above.
 export const PURGE_UNBOUNDED_MIN_COUNT = 100
