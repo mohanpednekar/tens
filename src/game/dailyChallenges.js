@@ -9,7 +9,6 @@ import {
   buyGlobalTickspeedMultiplier,
   buyTierQuantity,
   createInitialGameState,
-  getMoneyExponent,
   overclockGame,
   scaleUpGame,
   tickGame,
@@ -89,7 +88,7 @@ const getRunEarnedBytes = run => run.earnedBits / BITS_PER_BYTE
 const getStartBits = def => 10 ** def.startExponent * BITS_PER_BYTE
 
 export const getRunProgress = run => {
-  return Math.min(1, Math.max(0, getMoneyExponent(getRunEarnedBytes(run)) / run.def.targetExponent))
+  return Math.min(1, Math.max(0, Math.log10(Math.max(1, getRunEarnedBytes(run))) / run.def.targetExponent))
 }
 
 const setRun = (state, formatId, run) => ({

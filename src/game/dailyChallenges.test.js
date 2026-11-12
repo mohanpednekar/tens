@@ -8,6 +8,7 @@ import {
   generateDailyChallenge,
   getDailyCredits,
   getMsUntilNextUtcDay,
+  getRunProgress,
   getUtcDateId,
   isDailyChallengesAvailable,
   overclockDailyRun,
@@ -61,6 +62,15 @@ describe('review regressions', () => {
     const after = tickDailyRuns(T0 + 600 * 1000)(bought)
     expect(after.daily.results['2026-11-12']['10m'].won).toBe(true)
     expect(after.daily.results['2026-11-12']['10m'].bestSeconds).toBeLessThan(5)
+  })
+})
+
+describe('progress', () => {
+  test('uses the fractional exponent, so 50 B of a 1,000 B target is past the floor', () => {
+    const run = { def: { targetExponent: 3 }, earnedBits: 50 * 8 }
+    expect(getRunProgress(run)).toBeCloseTo(Math.log10(50) / 3, 5)
+    expect(getRunProgress(run)).toBeGreaterThan(0.5)
+    expect(getRunProgress({ def: { targetExponent: 3 }, earnedBits: 0 })).toBe(0)
   })
 })
 
