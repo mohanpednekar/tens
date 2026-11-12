@@ -1033,6 +1033,12 @@ jobs:
           threads you didn't just handle — finish with a final `list` sweep to confirm nothing
           remains unresolved. Feedback
           arriving after the run ends is handled by autonomous-pr-followup.yml.
+
+          Your very last message must end with a section headed exactly `## RUN SUMMARY`
+          (the workflow copies it into the run's job summary): which phase (0/A/B) and task you
+          picked, why you picked it over the alternatives (priority/size/impact reasoning), your
+          self-estimated usage-window budget consumption and why, and the PR/issue links produced
+          (or "none"). Keep it under 15 lines.
           TEMPLATE_EOF
           prompt_text=$(cat "$RUNNER_TEMP/prompt-template.txt")
           prompt_text=${prompt_text//'$REPO'/$REPO}
@@ -1219,4 +1225,29 @@ jobs:
           else
             record_no_pr "This run opened no pull request (nothing runnable, an issue-only exit, or another stop that finished without a PR)."
           fi
+          exit 0
+
+      - name: Write run summary
+        # Canonical place to see a run's own reasoning (task picked, why, budget estimate),
+        # including Phase B runs that open no PR. Never fails the job.
+        if: always() && steps.guard.outcome == 'success' && steps.guard.outputs.skip != 'true'
+        run: |
+          out="${{ steps.claude.outputs.execution_file }}"
+          [ -n "$out" ] && [ -f "$out" ] || out="$RUNNER_TEMP/claude-execution-output.json"
+          [ -f "$out" ] || { echo "No execution output found; no run summary."; exit 0; }
+          text=$(jq -r '
+                (if type == "array" then . else [.] end)
+                | map(select(.type == "result")) | last
+                | .result // empty
+              ' "$out" 2>/dev/null) || text=""
+          section=$(printf '%s\n' "$text" | awk '/^##+ *RUN SUMMARY/{f=1} f')
+          {
+            echo "### Autonomous maintenance run summary"
+            echo
+            if [ -n "$section" ]; then
+              printf '%s\n' "$section"
+            else
+              echo "The run did not emit a RUN SUMMARY section."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
           exit 0
