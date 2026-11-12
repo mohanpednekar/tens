@@ -111,8 +111,8 @@ export const CHALLENGE_DEFINITIONS = [
 ]
 export const CHALLENGE_BY_ID = Object.fromEntries(CHALLENGE_DEFINITIONS.map(def => [def.id, def]))
 // The only rollout switch: a challenge gates upgrades and can be entered only while its id is in this
-// set. Empty in shipped code until the UI slice (#1039) fills it; tests add/remove ids.
-export const LIVE_CHALLENGE_IDS = new Set()
+// set. Each slice of epic #1037 adds its challenges here when it merges; tests add/remove ids.
+export const LIVE_CHALLENGE_IDS = new Set(['F21', 'F22', 'F23', 'F24', 'F25'])
 // Legacy rule (lifetime prestige count), kept only so storage.js can grandfather saves that reached
 // it before DeGoogol moved to the Auto-Prestige interval above.
 export const PURGE_UNBOUNDED_MIN_COUNT = 100

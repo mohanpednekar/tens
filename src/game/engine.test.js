@@ -12170,7 +12170,11 @@ describe('autobuyer interval upgrade', () => {
 })
 
 describe('automation interval chains', () => {
-  const base = () => createInitialGameState()
+  // Challenge gate (epic #1037): these chains are exercised as already-completed (pre-challenge progress).
+  const base = () => {
+    const s = createInitialGameState()
+    return { ...s, challenges: { ...s.challenges, completed: { F21: true, F22: true, F23: true, F24: true, F25: true } } }
+  }
   const withPoints = (state, points) => ({ ...state, purge: { ...state.purge, points } })
 
   it('start at the specified costs and intervals', () => {

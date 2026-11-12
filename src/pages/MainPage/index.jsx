@@ -1,11 +1,12 @@
 import { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
 import { boostGlow, getComputeBoostDescription, isFactoryTierBoosted } from 'components/BoostBadge'
 import BoostTimerBar from 'components/BoostTimerBar'
+import ChallengeBanner from 'components/ChallengeBanner'
 import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -945,6 +946,9 @@ const MainPage = ({ game }) => {
   // takeover; every time after that, it's a compact banner pinned to the top of the page instead,
   // since the player already knows what Prestige does.
   const isFrozen = isProductionFrozen(state)
+  const activeChallenge = getActiveChallenge(state)
+  const challengeDisabled = effect => activeChallenge?.effect === effect
+  const challengeNote = activeChallenge ? ` — disabled by challenge ${activeChallenge.id} ${activeChallenge.codename}` : ''
   const isFirstRun = purge.count === 0
   const buyMaxActive = Boolean(game.buyMaxMode) && isBuyMaxUnlocked(state)
   // The purchase block size every tier's current level currently requires to complete — a single
@@ -1013,7 +1017,7 @@ const MainPage = ({ game }) => {
   // Each completed final-tier level multiplies Clock Speed's per-level rate by this (a constant).
   const overclockLevelEffectDisplay = 1 + OVERCLOCK_MULTIPLIER_STEP
   const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)
-  const canOverclock = !isFrozen && lastTierLevelDisplay >= overclockRequirement
+  const canOverclock = !isFrozen && !challengeDisabled('overclockDisabled') && lastTierLevelDisplay >= overclockRequirement
 
   // PP-funded unlocks/upgrades/toggles live on the Firmware page (pages/PerksPage).
 
@@ -1035,7 +1039,7 @@ const MainPage = ({ game }) => {
   const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel, overclockLevel)
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
-  const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && isGlobalTickspeedAffordable(state)
+  const canBuyGlobalTickspeed = !isFrozen && !challengeDisabled('clockSpeedDisabled') && globalTickspeedUnlocked && isGlobalTickspeedAffordable(state)
   // The last tier's XP-funded tickspeed — a separate upgrade shown left of Scale Up once the last tier
   // has been a Scale Up target this cycle (isLastTierTickspeedXpUnlocked). Always spends the entire
   // XP balance in one action, since every consumption resets every other tier's owned quantity and
@@ -1048,7 +1052,7 @@ const MainPage = ({ game }) => {
   const lastTierXpBalance = Math.floor(state.purge.xp ?? 0)
   const lastTierXpMinConsumption = getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)
   const lastTierXpProgressPercent = progressPercent(lastTierXpBalance, lastTierXpMinConsumption)
-  const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && lastTierOwned > 0 && lastTierXpBalance >= lastTierXpMinConsumption
+  const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && !challengeDisabled('restageDisabled') && lastTierOwned > 0 && lastTierXpBalance >= lastTierXpMinConsumption
   const lastTierXpConsumeBonusLabel = formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpBalance))
   const handleConsumeLastTierXp = () => {
     if (!canConsumeLastTierXp) return
@@ -1154,6 +1158,7 @@ const MainPage = ({ game }) => {
 
   return (
     <RootDiv>
+      <ChallengeBanner onExit={actions.exitChallenge} state={state} />
       {showTopPurgeBar && (
         <>
           <TopPurgeBar ref={topPurgeBarRef} aria-label="purge available banner">
@@ -1348,7 +1353,7 @@ const MainPage = ({ game }) => {
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
             disabled={!canBuyGlobalTickspeed}
             onClick={actions.buyGlobalTickspeedMultiplier}
-            title="Spend Bytes to make every tier's production ticks faster (more frequent deliveries, not bigger ones) — each level costs the next power of ten"
+            title={`Spend Bytes to make every tier's production ticks faster (more frequent deliveries, not bigger ones) — each level costs the next power of ten${challengeDisabled('clockSpeedDisabled') ? challengeNote : ''}`}
             type="button"
             $progress={globalTickspeedProgressPercent}
             $progressColor="#3b82f6"
@@ -1582,7 +1587,7 @@ const MainPage = ({ game }) => {
             </MutedText>
           </Disclosure>
           <Button
-            aria-label={`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`}
+            aria-label={`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)${challengeDisabled('restageDisabled') ? challengeNote : ''}`}
             variant="smart"
             disabled={!canConsumeLastTierXp}
             onClick={handleConsumeLastTierXp}
@@ -1683,7 +1688,7 @@ const MainPage = ({ game }) => {
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
             onClick={actions.overclock}
-            title={`Resets tiers (and Scale Up's bonus); each completed ${lastTier.name} level multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay} — requires ${overclockRequirementDisplay} completed levels`}
+            title={`Resets tiers (and Scale Up's bonus); each completed ${lastTier.name} level multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay} — requires ${overclockRequirementDisplay} completed levels${challengeDisabled('overclockDisabled') ? challengeNote : ''}`}
             type="button"
             $progress={overclockProgressPercent}
             $progressColor="#fb923c"

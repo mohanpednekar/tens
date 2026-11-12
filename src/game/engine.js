@@ -1508,10 +1508,13 @@ export const isChallengeUnlocked = (state, id) => {
 
 // Gate for the three speed-upgrade buyers: refused while the target automation has a LIVE challenge
 // that is not yet completed. Costs are untouched.
-const isSpeedUpgradeChallengeGated = (state, kind, key) =>
-  CHALLENGE_DEFINITIONS.some(def =>
-    def.automation.kind === kind && def.automation.key === key
-    && isChallengeLive(def.id) && !isChallengeCompleted(state, def.id))
+export const getLiveChallengeForAutomation = (kind, key) =>
+  CHALLENGE_DEFINITIONS.find(def => def.automation.kind === kind && def.automation.key === key && isChallengeLive(def.id)) ?? null
+
+const isSpeedUpgradeChallengeGated = (state, kind, key) => {
+  const def = getLiveChallengeForAutomation(kind, key)
+  return Boolean(def) && !isChallengeCompleted(state, def.id)
+}
 
 // Existing saves: any automation that already holds a speed level has its live challenge marked
 // completed (no best time). Idempotent; same reference when nothing changes.

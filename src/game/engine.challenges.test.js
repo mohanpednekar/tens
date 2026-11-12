@@ -22,6 +22,7 @@ const withAutomations = overrides => ({
   ...overrides,
 })
 const atGoal = (state, money = PURGE_THRESHOLD) => ({ ...state, resources: { ...state.resources, [MONEY_ID]: money } })
+const SHIPPED_LIVE = [...LIVE_CHALLENGE_IDS]
 const makeLive = (...ids) => ids.forEach(id => LIVE_CHALLENGE_IDS.add(id))
 
 beforeEach(() => LIVE_CHALLENGE_IDS.clear())
@@ -35,8 +36,8 @@ describe('challenge registry', () => {
     expect(SCOPE_CREEP_PURGE_GOAL).toBeGreaterThan(PURGE_THRESHOLD)
   })
 
-  it('ships with nothing live', () => {
-    expect(LIVE_CHALLENGE_IDS.size).toBe(0)
+  it('ships F21–F25 live', () => {
+    expect(SHIPPED_LIVE).toEqual(['F21', 'F22', 'F23', 'F24', 'F25'])
   })
 })
 
