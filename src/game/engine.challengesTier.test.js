@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  buyTickspeedMultiplier, buyTierQuantity, getChallengeTier, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
+  buyTickspeedMultiplier, buyTierQuantity, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
   getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierTickspeedRequirement, getTierTickspeedSpend, getTierScaleUpMultiplier,
   isTierUnlocked, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
@@ -201,6 +201,14 @@ describe('review regressions', () => {
     const run = runOf('F4')
     expect(getChallengeTier(run, T(3)).baseCost).toBe(TIER_DEFINITIONS[3].baseCost * 1000)
     expect(getChallengeTier(runOf('F2'), T(3)).baseCost).toBe(TIER_DEFINITIONS[3].baseCost)
+  })
+
+  it('prohibited tickspeed upgrades are reported as blocked for the UI (F11, F14 cap, F18 catch-up)', () => {
+    expect(isTierTickspeedBlockedByChallenge(runOf('F11'), T(0))).toBe(true)
+    expect(isTierTickspeedBlockedByChallenge(runOf('F14', state => ({ tickspeedLevels: { ...state.tickspeedLevels, [T(3)]: 4 } })), T(3))).toBe(true)
+    expect(isTierTickspeedBlockedByChallenge(runOf('F14'), T(3))).toBe(false)
+    expect(isTierTickspeedBlockedByChallenge(runOf('F18', state => ({ tickspeedLevels: { ...state.tickspeedLevels, [T(6)]: 2, [T(7)]: 2 } })), T(7))).toBe(true)
+    expect(isTierTickspeedBlockedByChallenge(runOf('F2'), T(0))).toBe(false)
   })
 
   it('F20: the displayed spend/requirement selectors match what the purchase charges', () => {

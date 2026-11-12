@@ -7145,19 +7145,25 @@ export const getTierTickspeedSpend = (state, tierId, targetLevel) => {
 export const getTierTickspeedRequirement = (state, tierId, targetLevel) =>
   Math.max(getTickspeedMultiplierCost(tierId, getTickspeedChargeLevel(state, tierId, targetLevel)), getTierTickspeedSpend(state, tierId, targetLevel) + 1)
 
+// Tier tickspeed challenge rules that forbid the next upgrade outright: F11 gated, F14 capped, F18 chained to the tier below.
+export const isTierTickspeedBlockedByChallenge = (state, tierId) => {
+  const currentLevel = state.tickspeedLevels?.[tierId] ?? 1
+  if (getChallengeEffectTier(state, 'clockGated') === tierId) return true
+  if (getChallengeEffectTier(state, 'rateLimit') === tierId && currentLevel + 1 > 1 + RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE) return true
+  if (getChallengeEffectTier(state, 'daisyChain') === tierId) {
+    const predecessor = TIER_DEFINITIONS[(TIER_INDEX_BY_ID[tierId] ?? 1) - 1]
+    if (currentLevel + 1 > (state.tickspeedLevels?.[predecessor.id] ?? 1)) return true
+  }
+  return false
+}
+
 export const buyTickspeedMultiplier = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = TIER_BY_ID[tierId]
   if (!tier || !isTierUnlocked(state)(tier)) return state
   const currentLevel = state.tickspeedLevels?.[tierId] ?? 1
 
-  // Tier tickspeed challenge rules (F11 gated, F14 capped, F18 chained to the tier below).
-  if (getChallengeEffectTier(state, 'clockGated') === tierId) return state
-  if (getChallengeEffectTier(state, 'rateLimit') === tierId && currentLevel + 1 > 1 + RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE) return state
-  if (getChallengeEffectTier(state, 'daisyChain') === tierId) {
-    const predecessor = TIER_DEFINITIONS[(TIER_INDEX_BY_ID[tierId] ?? 1) - 1]
-    if (currentLevel + 1 > (state.tickspeedLevels?.[predecessor.id] ?? 1)) return state
-  }
+  if (isTierTickspeedBlockedByChallenge(state, tierId)) return state
 
   const cost = getTierTickspeedSpend(state, tierId, currentLevel + 1)
   const available = state.resources[tier.id] ?? 0
