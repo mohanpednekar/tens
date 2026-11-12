@@ -387,6 +387,12 @@ denied before it runs — #799). `ci.yml`, `deploy.yml`, `release.yml`,
 `autonomous-pr-followup.yml`, and `pr-auto-merge.yml` are all explicitly denied to Claude's Edit/Write
 tools, even during the self-improvement task — only `autonomous-maintenance.yml` may edit itself.
 
+**Run summary (#74).** The prompt requires the agent's last message to end with a `## RUN SUMMARY`
+section (phase and task, why picked, self-estimated budget use, PR/issue links). The final
+`Write run summary` step extracts it from the Claude execution file's last `result` entry and appends it
+to `$GITHUB_STEP_SUMMARY` (a fallback line if absent; never fails the job). Complements the "no pull
+request" summary written by `Surface a run that opens no pull request`.
+
 ### PR conflict sweep (`pr-conflict-sweep.yml`)
 
 Deterministic (no agent). On every push to `main` — i.e. every merge — it lists all open PRs and
