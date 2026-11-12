@@ -58,7 +58,7 @@ export const ChallengeStartDialog = ({ def, state, onCancel, onConfirm }) => {
   )
 }
 
-// Firmware → Challenges tab: every live challenge, in registry order.
+// Challenges → Factory tab: every live challenge, in registry order.
 const ChallengesTab = ({ state, onStart }) => {
   const active = getActiveChallenge(state)
   const live = CHALLENGE_DEFINITIONS.filter(def => LIVE_CHALLENGE_IDS.has(def.id))

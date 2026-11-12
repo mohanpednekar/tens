@@ -2,8 +2,7 @@ import BuyMaxToggle from 'components/BuyMaxToggle'
 import Button, { ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
 import AutoBoostPresetPicker from 'components/AutoBoostPresetPicker'
 import StatCard from 'components/StatCard'
-import DailyTab from './DailyTab'
-import ChallengesTab, { ChallengeStartDialog } from './ChallengesTab'
+import { ChallengeStartDialog } from 'pages/ChallengesPage/FactoryTab'
 import { getChallengeTitle } from 'game/challengeUi'
 import Switch from 'components/Switch'
 import {
@@ -43,7 +42,6 @@ import {
   XP_TICKSPEED_AUTOBUYER_UNLOCK_COST,
   PLAYTIME_BONUS_UNLOCK_COST,
 } from 'game/layers'
-import { isDailyChallengesAvailable } from 'game/dailyChallenges'
 import { hasAffordableAutomationPerk, hasAffordablePrestigePerk } from 'game/navAttention'
 import { useEffect, useState } from 'react'
 import styled, { useTheme } from 'styled-components'
@@ -458,9 +456,7 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction =
 
 export const PERKS_TABS = [
   { id: 'automation', icon: '🤖', ariaLabel: 'open automation', title: 'Automation — unlock, pause/resume and speed up every automation' },
-  { id: 'challenges', icon: '🏁', ariaLabel: 'open challenges', title: 'Challenges — beat a nerfed run to unlock each automation\'s speed upgrades' },
   { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Compression, playtime bonus, Overflow mode and Buy max' },
-  { id: 'daily', icon: '📅', ariaLabel: 'open daily challenges', title: 'Daily — three timed Factory challenges every UTC day' },
 ]
 
 const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Math.round(ms * 10) / 10} ms`)
@@ -874,7 +870,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <PpBalance aria-label="purge points display">✦ {formatAmount(points)} PP</PpBalance>
       </Header>
       <TabBar role="tablist" aria-label="firmware view">
-        {PERKS_TABS.filter(item => item.id !== 'daily' || isDailyChallengesAvailable(state)).map(item => (
+        {PERKS_TABS.map(item => (
           <TabButton
             key={item.id}
             aria-label={item.ariaLabel}
@@ -891,9 +887,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         ))}
       </TabBar>
       {tab === 'automation' && renderAutomation()}
-      {tab === 'challenges' && <ChallengesTab onStart={setPendingChallengeId} state={state} />}
       {tab === 'prestige' && renderPrestige()}
-      {tab === 'daily' && isDailyChallengesAvailable(state) && <DailyTab actions={actions} state={state} />}
       <ChallengeStartDialog
         def={pendingChallengeId ? CHALLENGE_DEFINITIONS.find(def => def.id === pendingChallengeId) : null}
         onCancel={() => setPendingChallengeId(null)}

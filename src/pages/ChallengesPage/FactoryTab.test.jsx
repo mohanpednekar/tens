@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import ChallengeBanner from 'components/ChallengeBanner'
 import { createInitialGameState, enterChallenge } from 'game/engine'
 import { CHALLENGE_DEFINITIONS } from 'game/layers'
-import PerksPage from './index'
+import ChallengesPage from './index'
 
 const owned = () => ({
   ...createInitialGameState(),
@@ -20,16 +20,14 @@ const makeGame = state => ({ state, actions: new Proxy({}, { get: (target, key) 
 
 describe('Firmware Challenges tab', () => {
   it.each(CHALLENGE_DEFINITIONS.map(def => [def.id, def]))('%s lists code, target and codename once unlocked', (id, def) => {
-    wrap(<PerksPage game={makeGame(owned())} />)
-    fireEvent.click(screen.getByRole('tab', { name: 'open challenges' }))
+    wrap(<ChallengesPage game={makeGame(owned())} />)
     const row = screen.getByLabelText(`challenge ${id}`)
     expect(row.textContent).toContain(`${id} · ${def.target} · ${def.codename}`)
     expect(row.textContent).toContain(def.rule)
   })
 
   it('hides codename and rule while locked and shows the unlock condition', () => {
-    wrap(<PerksPage game={makeGame(createInitialGameState())} />)
-    fireEvent.click(screen.getByRole('tab', { name: 'open challenges' }))
+    wrap(<ChallengesPage game={makeGame(createInitialGameState())} />)
     const row = screen.getByLabelText('challenge F21')
     expect(row.textContent).toContain('Unlocks when you buy Auto Clock Speed')
     expect(row.textContent).not.toContain('Base Clock')
@@ -37,8 +35,7 @@ describe('Firmware Challenges tab', () => {
 
   it('starts a challenge only after confirming', () => {
     const game = makeGame(owned())
-    wrap(<PerksPage game={game} />)
-    fireEvent.click(screen.getByRole('tab', { name: 'open challenges' }))
+    wrap(<ChallengesPage game={game} />)
     fireEvent.click(screen.getByRole('button', { name: /^Start challenge F21/ }))
     expect(game.actions.enterChallenge).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Start challenge' }))
@@ -46,8 +43,7 @@ describe('Firmware Challenges tab', () => {
   })
 
   it('disables other start controls while a challenge is active', () => {
-    wrap(<PerksPage game={makeGame(enterChallenge('F21')(owned()))} />)
-    fireEvent.click(screen.getByRole('tab', { name: 'open challenges' }))
+    wrap(<ChallengesPage game={makeGame(enterChallenge('F21')(owned()))} />)
     expect(screen.getByRole('button', { name: /^Start challenge F22/ })).toBeDisabled()
   })
 })

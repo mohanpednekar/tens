@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { startDailyRun } from 'game/dailyChallenges'
 import { createInitialGameState } from 'game/engine'
 import { DAILY_CHALLENGES_FEATURE } from 'game/layers'
-import PerksPage from './index'
+import ChallengesPage from './index'
 
 const base = () => ({
   ...createInitialGameState(),
@@ -18,16 +18,16 @@ afterEach(() => { DAILY_CHALLENGES_FEATURE.enabled = false })
 
 describe('Firmware Daily tab', () => {
   it('is hidden before the first Purge and when the switch is off', () => {
-    wrap(<PerksPage game={makeGame({ ...base(), purge: { ...base().purge, count: 0 } })} />)
+    wrap(<ChallengesPage game={makeGame({ ...base(), purge: { ...base().purge, count: 0 } })} />)
     expect(screen.queryByRole('tab', { name: 'open daily challenges' })).toBeNull()
     DAILY_CHALLENGES_FEATURE.enabled = false
-    wrap(<PerksPage game={makeGame(base())} />)
+    wrap(<ChallengesPage game={makeGame(base())} />)
     expect(screen.queryByRole('tab', { name: 'open daily challenges' })).toBeNull()
   })
 
   it('lists three cards and starts a run through the action', () => {
     const game = makeGame(base())
-    wrap(<PerksPage game={game} />)
+    wrap(<ChallengesPage game={game} />)
     fireEvent.click(screen.getByRole('tab', { name: 'open daily challenges' }))
     for (const id of ['10m', '1h', '10h']) expect(screen.getByLabelText(`daily ${id}`)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'start daily 1h' }))
@@ -37,7 +37,7 @@ describe('Firmware Daily tab', () => {
   it('shows a running card with Open / Restart / Forfeit and confirm-guards Forfeit', () => {
     const state = startDailyRun('10m', Date.now())(base())
     const game = makeGame(state)
-    wrap(<PerksPage game={game} />)
+    wrap(<ChallengesPage game={game} />)
     fireEvent.click(screen.getByRole('tab', { name: 'open daily challenges' }))
     fireEvent.click(screen.getByRole('button', { name: 'forfeit daily 10m' }))
     expect(game.actions.dailyForfeit).not.toHaveBeenCalled()
