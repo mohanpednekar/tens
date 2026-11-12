@@ -28762,7 +28762,7 @@
       "source_location": "L12"
     },
     {
-      "id": "src_pages_perkspage_challengestab_jsx_challengestab",
+      "id": "src_pages_challengespage_factorytab_jsx_challengestab",
       "label": "ChallengesTab()",
       "_callable": true,
       "_origin": "ast",
@@ -28770,11 +28770,11 @@
       "community_name": "createInitialGameState",
       "file_type": "code",
       "norm_label": "challengestab()",
-      "source_file": "src/pages/PerksPage/ChallengesTab.jsx",
+      "source_file": "src/pages/ChallengesPage/FactoryTab.jsx",
       "source_location": "L1"
     },
     {
-      "id": "src_pages_perkspage_challengestab_test_jsx_makegame",
+      "id": "src_pages_challengespage_factorytab_test_jsx_makegame",
       "label": "makeGame()",
       "_callable": true,
       "_origin": "ast",
@@ -28782,7 +28782,7 @@
       "community_name": "createInitialGameState",
       "file_type": "code",
       "norm_label": "makegame()",
-      "source_file": "src/pages/PerksPage/ChallengesTab.test.jsx",
+      "source_file": "src/pages/ChallengesPage/FactoryTab.test.jsx",
       "source_location": "L16"
     },
     {
@@ -28817,6 +28817,66 @@
       "norm_label": "engine.achievements.test.js",
       "source_file": "src/game/engine.achievements.test.js",
       "source_location": "L1"
+    },
+    {
+      "id": "src_game_dailychallenges_js_generatedailychallenge",
+      "label": "generateDailyChallenge()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "generatedailychallenge()",
+      "source_file": "src/game/dailyChallenges.js",
+      "source_location": "L62"
+    },
+    {
+      "id": "src_game_dailychallenges_test_js_purged",
+      "label": "purged()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "purged()",
+      "source_file": "src/game/dailyChallenges.test.js",
+      "source_location": "L22"
+    },
+    {
+      "id": "src_pages_challengespage_dailytab_jsx_dailytab",
+      "label": "DailyTab()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "dailytab()",
+      "source_file": "src/pages/ChallengesPage/DailyTab.jsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_pages_challengespage_dailytab_test_jsx_makegame",
+      "label": "makeGame()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "makegame()",
+      "source_file": "src/pages/ChallengesPage/DailyTab.test.jsx",
+      "source_location": "L15"
+    },
+    {
+      "id": "src_pages_challengespage_index_jsx_challengespage",
+      "label": "ChallengesPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "challengespage()",
+      "source_file": "src/pages/ChallengesPage/index.jsx",
+      "source_location": "L47"
     }
   ],
   "links": [

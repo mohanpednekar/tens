@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { buyDailyClockSpeed, buyDailyTier, forfeitDailyRun, overclockDailyRun, restartDailyRun, scaleUpDailyRun, startDailyRun, tickDailyRuns } from './dailyChallenges'
 import { addActivePlaySeconds, buyPlaytimeBonus, activateComputeBoost, applyOfflineProgress, applyOfflineRewardBonus, buyAutoPurge, buyAutoScaleUp, buyAutobuyerIntervalUpgrade, buyAutomationIntervalUpgrade, buyAutoOverclock, buyTierTickspeedIntervalUpgrade, setAutoOverclockEnabled, setComputeAutoChargeEnabled, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierMaxLevels, buyTierQuantity, buyXpTickspeedAutobuyer, setAutoXpTickspeedEnabled, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, expediteDiskFill, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, startComputeCharge, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, enterChallenge, eraGame, exitChallenge, getOfflineEffectiveSeconds, getOfflineRewardBonusSeconds, isBuyMaxUnlocked, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, queueIntroSpeedUpgrade, unlockNextDiskSizeByFoundryReset, pinMuseumEntry, purgeGame, provisionDisk, queueDiskBuild, repeatPurchaseMax, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, flushStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPurgeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeAutoBoostEnabled, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry } from './engine'
 import { MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OPS_SAMPLE_CAP, OPS_SAMPLE_INTERVAL_MS, TICK_RATE_MS } from './layers'
 import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, loadBuyMaxPreference, saveBuyMaxPreference, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
@@ -169,6 +170,13 @@ const computeInitialGame = () => {
       }
     }, [])
 
+    // Daily challenge runs advance by wall-clock time (their own lastTickAt), so one slow interval also
+    // covers backgrounded gaps. A no-op (same state reference) while no run is active.
+    useEffect(() => {
+      const id = window.setInterval(() => setState(prev => tickDailyRuns(Date.now())(prev)), 1000)
+      return () => window.clearInterval(id)
+    }, [])
+
     // Persist to localStorage whenever state changes
     useEffect(() => {
       saveGameState(state)
@@ -234,6 +242,13 @@ const computeInitialGame = () => {
       enterChallenge: id => setState(enterChallenge(id)),
       exitChallenge: () => setState(exitChallenge),
       purge: () => setState(purgeGame),
+      dailyStart: formatId => setState(startDailyRun(formatId, Date.now())),
+      dailyForfeit: formatId => setState(forfeitDailyRun(formatId)),
+      dailyRestart: formatId => setState(restartDailyRun(formatId, Date.now())),
+      dailyBuyTier: (formatId, tierId) => setState(buyDailyTier(formatId, tierId, Date.now())),
+      dailyClockSpeed: formatId => setState(buyDailyClockSpeed(formatId, Date.now())),
+      dailyScaleUp: formatId => setState(scaleUpDailyRun(formatId, Date.now())),
+      dailyOverclock: formatId => setState(overclockDailyRun(formatId, Date.now())),
       scaleUp: () => setState(scaleUpGame),
       overclock: () => setState(overclockGame),
       buyAutoScaleUp: () => setState(buyAutoScaleUp),

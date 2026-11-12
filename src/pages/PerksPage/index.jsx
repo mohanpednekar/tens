@@ -2,7 +2,7 @@ import BuyMaxToggle from 'components/BuyMaxToggle'
 import Button, { ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
 import AutoBoostPresetPicker from 'components/AutoBoostPresetPicker'
 import StatCard from 'components/StatCard'
-import ChallengesTab, { ChallengeStartDialog } from './ChallengesTab'
+import { ChallengeStartDialog } from 'pages/ChallengesPage/FactoryTab'
 import { getChallengeTitle } from 'game/challengeUi'
 import Switch from 'components/Switch'
 import {
@@ -456,7 +456,6 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction =
 
 export const PERKS_TABS = [
   { id: 'automation', icon: '🤖', ariaLabel: 'open automation', title: 'Automation — unlock, pause/resume and speed up every automation' },
-  { id: 'challenges', icon: '🏁', ariaLabel: 'open challenges', title: 'Challenges — beat a nerfed run to unlock each automation\'s speed upgrades' },
   { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Compression, playtime bonus, Overflow mode and Buy max' },
 ]
 
@@ -888,7 +887,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         ))}
       </TabBar>
       {tab === 'automation' && renderAutomation()}
-      {tab === 'challenges' && <ChallengesTab onStart={setPendingChallengeId} state={state} />}
       {tab === 'prestige' && renderPrestige()}
       <ChallengeStartDialog
         def={pendingChallengeId ? CHALLENGE_DEFINITIONS.find(def => def.id === pendingChallengeId) : null}

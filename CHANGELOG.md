@@ -8,10 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- New **Challenges** destination in the bottom nav (after Firmware) with a top tab per challenge type — 🏁 Factory and 📅 Daily; the Factory challenges moved off Firmware.
+- Daily challenges (after your first Purge; epic #1062 basic slice): Challenges → 📅 Daily offers three UTC-dated, seeded Factory challenges (10 min / 1 h / 10 h). Each is an isolated run that ticks alongside the main game (including while backgrounded); start, open, restart (until UTC midnight), forfeit, replay for a local personal best, and earn up to 4 credits per day. Not yet: server time, reward Boosters, weekly/monthly milestones, streak, Checkpoints, Antimatter.
 
 - Achievements (dev builds only, off in production until tuned; epic #1046): More → 🏆 Achievements lists three groups — First session, Tier ladder, Early Factory — with earned/locked rows and per-group counts. Earned achievements and the lifetime Ping count survive every reset except a full Reset. No bonuses yet.
 
-- Challenge mode: Firmware has a new 🏁 Challenges tab. Beat a nerfed Factory run (F21 Base Clock, F22 Scale Out, F23 Code Freeze, F24 Stock Cooling, F25 Scope Creep) to unlock that automation's speed upgrades; a banner on Factory shows the active challenge with Exit. Saves that already upgraded an automation's speed have its challenge completed.
+- Challenge mode: the new Challenges page has a 🏁 Factory tab. Beat a nerfed Factory run (F21 Base Clock, F22 Scale Out, F23 Code Freeze, F24 Stock Cooling, F25 Scope Creep) to unlock that automation's speed upgrades; a banner on Factory shows the active challenge with Exit. Saves that already upgraded an automation's speed have its challenge completed.
 - Power: one tier is always selected (switch it, never clear it) — the "pick a tier" prompt is gone. On arrival it is the highest tier whose charge is automated, else the active boost's tier, else Cells.
 
 - Power: a tier's bottom row of 8 slots is now called the **Charger** (labels, Manual and docs).

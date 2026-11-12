@@ -1,7 +1,7 @@
 import styled, { css, keyframes } from 'styled-components'
 import { ATTENTION_HIGH } from 'game/navAttention'
 
-// Bottom bar order follows play progression: Foundry → Power → Compute → Factory → Firmware, then More (Manual / Releases / Settings).
+// Bottom bar order follows play progression: Foundry → Power → Compute → Factory → Firmware → Challenges, then More (Manual / Releases / Settings).
 // Storage is folded into Foundry as continuous Memory + Disk sections (same Memory pool +
 // DiskArrayRow). Factory stays progress-gated; More stays available during the Foundry gate.
 // Accessible names: open byte foundry / open power / open compute / open byte factory / open firmware / open more menu.
@@ -107,6 +107,7 @@ const AppNav = ({
   showBoosters = false,
   showComputeFlops = false,
   showPerks = false,
+  showChallenges = false,
   moreOpen = false,
   attention = {},
 }) => {
@@ -117,6 +118,7 @@ const AppNav = ({
     showComputeFlops && { id: 'compute', ariaLabel: 'open compute', icon: '🖥', label: 'Compute', title: 'Compute — PP Flops tiers boost Factory production' },
     showTiers && { id: 'game', ariaLabel: 'open byte factory', icon: '🏭', label: 'Factory', title: 'Byte Factory — buy and produce' },
     showPerks && { id: 'perks', ariaLabel: 'open firmware', icon: '🔧', label: 'Firmware', title: 'Firmware — automation and prestige upgrades' },
+    showChallenges && { id: 'challenges', ariaLabel: 'open challenges', icon: '🏁', label: 'Challenges', title: 'Challenges — Factory and Daily challenges' },
   ].filter(Boolean)
 
   const utilityActive = currentPage === 'info' || currentPage === 'milestones' || currentPage === 'settings' || currentPage === 'dev' || moreOpen

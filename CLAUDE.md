@@ -10,7 +10,7 @@ changing a formula, workflow, or mechanic a past iteration may already have trie
 **Tens** — a React incremental game; every mechanic (costs, production, prestige) is themed around
 powers of ten. No routing library, no backend — state lives in React and persists to `localStorage`.
 `App.jsx` switches top-level screens via a plain `useState` toggle plus a shared bottom `AppNav`
-(Foundry → Power → Compute → Factory → Firmware → More) — not a router (see "Architecture"):
+(Foundry → Power → Compute → Factory → Firmware → Challenges → More) — not a router (see "Architecture"):
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
 `MainPage` (tier ladder), `PerksPage` (after first Prestige: 🤖 Automation / 🏁 Challenges / ✦ Prestige icon
@@ -411,7 +411,7 @@ src/
     save-migration/       ← `adaptSaveForCurrentSchema(raw)` → current-compatible state or failure; runs on every
                             load (DESIGN_HISTORY.md "Save persistence")
   components/             ← prop contracts/styling: docs/COMPONENTS_REFERENCE.md (Button, Money, StatCard, ...)
-    AppNav                ← fixed bottom bar Foundry → Power → Compute → Factory → Firmware → More; Factory omitted
+    AppNav                ← fixed bottom bar Foundry → Power → Compute → Factory → Firmware → Challenges → More; Factory omitted
                             during the Foundry gate; attention dots via navAttention.js
     AppMenu               ← More sheet — Manual / Releases / Settings (always reachable; Reset / Reformat Byte
                             Foundry only in Settings → Danger zone)
@@ -426,7 +426,7 @@ src/
     `isBuyMaxUnlocked`), ConfirmDialog, OfflineProgressNotice, StatCard — see COMPONENTS_REFERENCE
     IncompatibleSaveNotice ← blocking overlay when a load cleared a pre-schema save; single **Start fresh** action;
                             rendered by `App.jsx` when `incompatibleSaveReason` is set
-  pages/                  ← ByteFoundryPage, StoragePage, ComputePage, ComputeFlopsPage, MainPage, PerksPage,
+  pages/                  ← ChallengesPage (page id `'challenges'`; top tabs 🏁 Factory / 📅 Daily; shown with Firmware), ByteFoundryPage, StoragePage, ComputePage, ComputeFlopsPage, MainPage, PerksPage,
                             InfoPage, MilestonesPage, SettingsPage, DevModePage (+ `stateFields.js`: pure
                             Variables-tree helpers) — roles in "Architecture"; layout in MAINPAGE_REFERENCE.
                             Page ids: `'foundry'` (also holds Storage), `'boosters'` (Power), `'compute'` (Flops),
@@ -602,6 +602,10 @@ this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop" (n
 
 State `achievements` (`earned`, lifetime `counters.pings`) survives every reset but a full Reset; registry `ACHIEVEMENT_GROUPS`/`ACHIEVEMENT_DEFINITIONS` in `layers.js`; `detectAchievements` runs after each tick/Ping; `AchievementsPage` (page id `'achievements'`, More entry) renders them. Whole feature behind `ACHIEVEMENTS_FEATURE.enabled` (dev builds only). No bonuses yet. Detail: `docs/ECONOMY_REFERENCE.md` "Achievements".
 
+### Daily challenges (epic #1062, basic slice)
+
+State `daily` (`runs[formatId]`, `results[dateId][formatId]`) survives every reset but a full Reset; logic in `src/game/dailyChallenges.js` (`generateDailyChallenge`, `startDailyRun`/`tickDailyRuns`/`restartDailyRun`/`forfeitDailyRun`, `buyDailyTier`/`buyDailyClockSpeed`/`scaleUpDailyRun`/`overclockDailyRun`, `getDailyCredits`); every function takes `nowMs`. Each run is an isolated Factory-only game won by Bytes *earned* (production, not balance); Scale Up/Overclock re-grant the start balance. Live in all builds behind `DAILY_CHALLENGES_FEATURE` (rollout switch) + first Purge; UI = Challenges page 📅 Daily tab (`pages/ChallengesPage/DailyTab.jsx`). Deferred: server time, fetched/validated definitions, rewards, weekly/monthly milestones, streak, Checkpoints, Antimatter (#1063–#1072).
+
 ### Tiers, Prestige, Reboot (Era ascension)
 
 **Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Charger = a tier's 8-slot reserve row (bottom row, `getComputeReserveHeld`); Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Flush Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
@@ -651,7 +655,7 @@ Purges: ×`log10(count)` (else ×1) — no PP cost; see `docs/ECONOMY_REFERENCE.
 the exact `formatCurrency` amount (absolutely positioned in the existing gap — adds no height; hidden while `balancesCompressed`). Every other `formatCurrency` call
 (costs, production, the Prestige-threshold overlay) keeps reading in Bits.
 
-**Challenge mode (epic #1037; engine #1038 + UI #1039: Firmware 🏁 Challenges tab, inline start on Global Automation rows, `ChallengeBanner` atop Factory):** state `challenges` (`active`, `activeSeconds`, `completed`, `bestSeconds`, `enteredCount`, `exitedCount`); registry `CHALLENGE_DEFINITIONS` + the `LIVE_CHALLENGE_IDS` rollout Set (F21–F25 live) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits`/`autoCompleteChallenges` in `engine.js` gate the three speed-upgrade buyers on completion. Detail: `docs/ECONOMY_REFERENCE.md` "Challenge mode".
+**Challenge mode (epic #1037; engine #1038 + UI #1039: Challenges page 🏁 Factory tab, inline start on Global Automation rows, `ChallengeBanner` atop Factory):** state `challenges` (`active`, `activeSeconds`, `completed`, `bestSeconds`, `enteredCount`, `exitedCount`); registry `CHALLENGE_DEFINITIONS` + the `LIVE_CHALLENGE_IDS` rollout Set (F21–F25 live) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits`/`autoCompleteChallenges` in `engine.js` gate the three speed-upgrade buyers on completion. Detail: `docs/ECONOMY_REFERENCE.md` "Challenge mode".
 
 ### Byte Foundry
 
