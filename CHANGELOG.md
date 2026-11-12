@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Daily challenges (dev build only, after your first Purge; epic #1062 basic slice): Firmware → 📅 Daily offers three UTC-dated, seeded Factory challenges (10 min / 1 h / 10 h). Each is an isolated run that ticks alongside the main game (including while backgrounded); start, open, restart (until UTC midnight), forfeit, replay for a local personal best, and earn up to 4 credits per day. Not yet: server time, reward Boosters, weekly/monthly milestones, streak, Checkpoints, Antimatter.
+- Daily challenges (after your first Purge; epic #1062 basic slice): Firmware → 📅 Daily offers three UTC-dated, seeded Factory challenges (10 min / 1 h / 10 h). Each is an isolated run that ticks alongside the main game (including while backgrounded); start, open, restart (until UTC midnight), forfeit, replay for a local personal best, and earn up to 4 credits per day. Not yet: server time, reward Boosters, weekly/monthly milestones, streak, Checkpoints, Antimatter.
 
 - Achievements (dev builds only, off in production until tuned; epic #1046): More → 🏆 Achievements lists three groups — First session, Tier ladder, Early Factory — with earned/locked rows and per-group counts. Earned achievements and the lifetime Ping count survive every reset except a full Reset. No bonuses yet.
 

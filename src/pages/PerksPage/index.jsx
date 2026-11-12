@@ -460,7 +460,7 @@ export const PERKS_TABS = [
   { id: 'automation', icon: '🤖', ariaLabel: 'open automation', title: 'Automation — unlock, pause/resume and speed up every automation' },
   { id: 'challenges', icon: '🏁', ariaLabel: 'open challenges', title: 'Challenges — beat a nerfed run to unlock each automation\'s speed upgrades' },
   { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Compression, playtime bonus, Overflow mode and Buy max' },
-  { id: 'daily', icon: '📅', ariaLabel: 'open daily challenges', title: 'Daily — three timed Factory challenges every UTC day (dev build)' },
+  { id: 'daily', icon: '📅', ariaLabel: 'open daily challenges', title: 'Daily — three timed Factory challenges every UTC day' },
 ]
 
 const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Math.round(ms * 10) / 10} ms`)

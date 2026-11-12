@@ -604,7 +604,7 @@ State `achievements` (`earned`, lifetime `counters.pings`) survives every reset 
 
 ### Daily challenges (epic #1062, basic slice)
 
-State `daily` (`runs[formatId]`, `results[dateId][formatId]`) survives every reset but a full Reset; logic in `src/game/dailyChallenges.js` (`generateDailyChallenge`, `startDailyRun`/`tickDailyRuns`/`restartDailyRun`/`forfeitDailyRun`, `buyDailyTier`/`buyDailyClockSpeed`/`scaleUpDailyRun`/`overclockDailyRun`, `getDailyCredits`); every function takes `nowMs`. Each run is an isolated Factory-only game won by Bytes *earned* (production, not balance); Scale Up/Overclock re-grant the start balance. Behind `DAILY_CHALLENGES_FEATURE` (dev builds) + first Purge; UI = Firmware 📅 Daily tab (`pages/PerksPage/DailyTab.jsx`). Deferred: server time, fetched/validated definitions, rewards, weekly/monthly milestones, streak, Checkpoints, Antimatter (#1063–#1072).
+State `daily` (`runs[formatId]`, `results[dateId][formatId]`) survives every reset but a full Reset; logic in `src/game/dailyChallenges.js` (`generateDailyChallenge`, `startDailyRun`/`tickDailyRuns`/`restartDailyRun`/`forfeitDailyRun`, `buyDailyTier`/`buyDailyClockSpeed`/`scaleUpDailyRun`/`overclockDailyRun`, `getDailyCredits`); every function takes `nowMs`. Each run is an isolated Factory-only game won by Bytes *earned* (production, not balance); Scale Up/Overclock re-grant the start balance. Live in all builds behind `DAILY_CHALLENGES_FEATURE` (rollout switch) + first Purge; UI = Firmware 📅 Daily tab (`pages/PerksPage/DailyTab.jsx`). Deferred: server time, fetched/validated definitions, rewards, weekly/monthly milestones, streak, Checkpoints, Antimatter (#1063–#1072).
 
 ### Tiers, Prestige, Reboot (Era ascension)
 
