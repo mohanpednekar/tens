@@ -65,6 +65,17 @@ describe('review regressions', () => {
   })
 })
 
+describe('catch-up', () => {
+  test('a long gap is replayed in live-sized ticks and carried over across calls', () => {
+    const started = startDailyRun('10h', T0)(purged())
+    const once = tickDailyRuns(T0 + 10000 * 1000)(started)
+    expect(once.daily.runs['10h'].simSeconds).toBe(3600)
+    expect(once.daily.runs['10h'].lastTickAt).toBe(T0 + 3600 * 1000)
+    const done = tickDailyRuns(T0 + 10000 * 1000)(tickDailyRuns(T0 + 10000 * 1000)(once))
+    expect(done.daily.runs['10h'].simSeconds).toBe(10000)
+  })
+})
+
 describe('progress', () => {
   test('uses the fractional exponent, so 50 B of a 1,000 B target is past the floor', () => {
     const run = { def: { targetExponent: 3 }, earnedBits: 50 * 8 }

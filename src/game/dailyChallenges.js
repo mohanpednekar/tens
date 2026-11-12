@@ -20,8 +20,9 @@ export const DAILY_MAX_CREDITS = 4
 // A run that hits its time limit short of the target still counts as completed past this share of the way
 // (in powers of ten) from its starting balance to the target.
 export const DAILY_COMPLETION_FLOOR = 0.5
-// Catch-up is chunked into at most this many ticks per run per call so long gaps cannot freeze the UI.
-export const DAILY_MAX_TICKS_PER_CALL = 300
+// Catch-up replays at most this many ~1 s ticks per run per call (tickGame floors production per call, so steps stay
+// at live size); the rest of a long gap is carried over to the following calls so the UI never freezes.
+export const DAILY_MAX_TICKS_PER_CALL = 3600
 const BUY_ALL = Number.MAX_SAFE_INTEGER
 
 // Exponents are powers of ten in Bytes. A run is won when the Bytes it has EARNED (production only — not the
@@ -164,12 +165,14 @@ export const tickDailyRuns = nowMs => state => {
   for (const format of DAILY_FORMATS) {
     const run = next.daily?.runs?.[format.id]
     if (!run) continue
-    const dt = Math.min(Math.max(0, (nowMs - run.lastTickAt) / 1000), run.def.limitSeconds - run.simSeconds)
+    const total = Math.min(Math.max(0, (nowMs - run.lastTickAt) / 1000), run.def.limitSeconds - run.simSeconds)
+    const dt = Math.min(total, DAILY_MAX_TICKS_PER_CALL)
+    const lastTickAt = dt < total ? run.lastTickAt + dt * 1000 : nowMs
     let game = run.game
     let earnedBits = run.earnedBits
     let elapsed = dt
     if (dt > 0) {
-      const ticks = Math.min(DAILY_MAX_TICKS_PER_CALL, Math.max(1, Math.ceil(dt)))
+      const ticks = Math.max(1, Math.ceil(dt))
       const step = dt / ticks
       for (let i = 0; i < ticks; i++) {
         const before = game.resources[MONEY_ID] ?? 0
@@ -183,7 +186,7 @@ export const tickDailyRuns = nowMs => state => {
       }
     }
     next = settleRun(
-      setRun(next, format.id, { ...run, game, lastTickAt: nowMs, simSeconds: run.simSeconds + elapsed, earnedBits }),
+      setRun(next, format.id, { ...run, game, lastTickAt, simSeconds: run.simSeconds + elapsed, earnedBits }),
       format.id,
       nowMs,
     )
@@ -197,7 +200,10 @@ export const tickDailyRuns = nowMs => state => {
 const playRun = (formatId, nowMs, action, reseed = false) => state => {
   // Catch the run up (and settle it) through the action's timestamp first, so a purchase can't retroactively
   // speed up a gap that already ended the run.
-  const caught = tickDailyRuns(nowMs)(state)
+  let caught = tickDailyRuns(nowMs)(state)
+  for (let i = 0; i < 50 && caught.daily.runs[formatId] && nowMs - caught.daily.runs[formatId].lastTickAt > 1000; i++) {
+    caught = tickDailyRuns(nowMs)(caught)
+  }
   const run = caught.daily.runs[formatId]
   if (!run) return caught
   let game = action(run.game)
