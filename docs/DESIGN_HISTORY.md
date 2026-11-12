@@ -1742,6 +1742,22 @@ an interactive session edited the file — this class of failure needed exactly 
 detection this session used (checking the Actions run history and the run's own annotation directly)
 rather than anything the workflow's own internal reconciliation logic could self-heal.
 
+### Main CI heal checkout is default-branch tip, not `workflow_run.head_sha` — 2026-11-11
+
+`main-ci-heal.yml`'s diagnose-fix job originally passed `ref: ${{ github.event.workflow_run.head_sha }}`
+to `actions/checkout` so the agent would start from the broken commit. CodeQL
+`actions/untrusted-checkout/critical` flags that in a privileged `workflow_run` workflow (secrets +
+write permissions, later execution of `./.github/actions/setup-node-yarn` and local scripts). A
+follow-up that dropped the `ref:` and `git checkout`ed the same SHA still matched the finding — the
+untrusted object is the SHA, not the checkout action. The real mitigation is the one
+`automation-self-heal.yml` already uses: checkout the default-branch tip and never pin
+`workflow_run.head_sha`. The heal guard already skips when `main` has moved past that SHA, so the
+default-branch tree *is* the broken commit when diagnose-fix runs.
+
+`GITHUB_TOKEN` cannot replace the PAT on `gh run rerun`: a GITHUB_TOKEN-authored rerun does not
+fire a new `workflow_run` event, so diagnose-fix would never start. The PAT therefore needs
+Actions: write (workflow-level `permissions: actions: write` only covers `GITHUB_TOKEN`).
+
 ### PR follow-up (`autonomous-pr-followup.yml`) — security reasoning
 
 Because it's triggered by events that can fire on any PR (including one opened from a fork), it

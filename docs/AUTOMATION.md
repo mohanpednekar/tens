@@ -535,6 +535,27 @@ upstream); (3) not confidently fixable → `automation-failure` issue (deduped).
 never-self-merge / always-open-a-PR / PAT+OIDC auth / `ci.yml`/`deploy.yml` deny entries /
 duplicate-PR or budget guards; never `gh run rerun`s the failed run.
 
+### Main CI heal (`main-ci-heal.yml`, #37)
+
+Immediate (non-cron) reaction to a red `main`, complementing `autonomous-maintenance.yml` Phase 0(a).
+Trigger: `workflow_run: [completed]` on `CI`, filtered in-job to `head_branch == 'main'` and
+`conclusion == 'failure'`. Two deliberately distinct jobs:
+
+1. `rerun-check` (`run_attempt == 1`): `gh run rerun --failed` once, then `gh run watch --exit-status`
+   (needs Actions: write on `GH_AUTOMATION_PAT` — `GITHUB_TOKEN` would rerun without firing this
+   workflow's next `workflow_run` event). A green rerun means flakiness — nothing else happens.
+2. `diagnose-fix` (`run_attempt >= 2`, i.e. the rerun's own failure event): guard skips when any
+   `claude/heal-main-*` PR is open (cap 2) or `main` has moved past the broken SHA; otherwise
+   checks out the default-branch tip (not `workflow_run.head_sha` — CodeQL untrusted-checkout;
+   the guard already pinned the SHA), runs `setup-node-yarn` with `install: "false"` so a
+   lockfile failure on main cannot block the agent, then `anthropics/claude-code-action@v1`
+   (`--max-turns 30`, PAT + OIDC) fixes the application code on a `claude/heal-main-<desc>`
+   branch and opens a PR. Never pushes to `main`, never self-merges.
+
+Deny list (via `scripts/claude-deny-settings.sh`): base files plus `main-ci-heal.yml`,
+`autonomous-pr-followup.yml`, `pr-auto-merge.yml`, `autonomous-maintenance.yml`. The same
+TIER_DEFINITIONS/economy-change ban applies. `deploy.yml` is still not gated on CI (out of scope).
+
 ### Auto-merge (`pr-auto-merge.yml`)
 
 Three independent paths, any of which calls `gh pr merge --auto --merge` to enable GitHub's native
@@ -583,7 +604,9 @@ review is not yet enforced by the ruleset — #62).
 **Three one-time manual prerequisites** (not settable through tools available to a Claude Code
 session):
 - The `GH_AUTOMATION_PAT` repo secret (fine-grained PAT scoped to this repo, Contents: read/write,
-  Pull requests: read/write, Issues: read/write, Workflows: write), alongside
+  Pull requests: read/write, Issues: read/write, Workflows: write, Actions: write — required by
+  `main-ci-heal.yml`'s `gh run rerun` / `gh run watch`; workflow-level `permissions: actions: write`
+  only covers `GITHUB_TOKEN`), alongside
   `CLAUDE_CODE_OAUTH_TOKEN`.
 - "Allow auto-merge" enabled in repo Settings → General, and branch protection on `main` requiring
   the `test` check from `ci.yml`.
