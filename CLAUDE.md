@@ -269,6 +269,8 @@ outright), saying so when it deviates from lowest-number order.
   the comment triggers the follow-up agent to merge-and-resolve).
 - `release.yml` — deterministic: on a `package.json` push to `main`, tags `v<x.y.z>` if absent and creates the GitHub
   Release from that version's `CHANGELOG.md` section ("Changelog convention").
+- `main-ci-heal.yml` — on a failed `CI` run on `main`: reruns failed jobs once (flakiness check), and only if that
+  also fails opens a `claude/heal-main-*` fix PR (#37; `docs/AUTOMATION.md` "Main CI heal").
 - `revert-deploy.yml` — manual only (#594): given a known-good `target_sha`, opens a PR restoring `main`'s tree to it
   (never pushes to `main`).
 - `autonomous-pr-followup.yml` (review comments/CI failures on `claude/auto-*`/`devin/auto-*`),
