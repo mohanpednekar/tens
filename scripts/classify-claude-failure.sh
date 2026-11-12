@@ -19,7 +19,7 @@
 # zero-work evidence (num_turns <= 1, total_cost_usd == 0, empty modelUsage):
 # a run that did real work before dying keeps its red check — its partial
 # commits/comments may need a retry pass, which the next trigger (or the
-# check_suite failure itself, for the followup workflow) provides.
+# failed CI workflow_run itself, for the followup workflow) provides.
 #
 #   1. api_error_status ∈ {429, 500, 502, 503, 529} — usage-quota exhaustion
 #      ("session limit") or an Anthropic-side 5xx overload (e.g. 529

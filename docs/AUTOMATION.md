@@ -472,8 +472,10 @@ copied per-workflow:
 
 Since no human (or live Claude Code session) is watching between scheduled runs, this workflow closes
 the loop on PRs the maintenance workflow opens. It fires on new PR reviews, new PR comments, and
-failing check suites, filters to PRs on `claude/auto-*` branches only, and re-invokes Claude
-(`--max-turns 40`) to read the actual feedback/CI failure and push a genuine fix to the *existing*
+failed `CI` runs (`workflow_run: [CI]`, conclusion `failure` — not `check_suite`, which
+`claude-code-action@v1` rejects as "Unsupported event type", so the CI-failure path never reached
+Claude until #1030's fix), filters to PRs on `claude/auto-*`/`devin/auto-*` branches only, and
+re-invokes Claude (`--max-turns 40`) to read the actual feedback/CI failure and push a genuine fix to the *existing*
 branch — it never opens a new PR and never merges or approves. Same hard constraints as the main
 workflow (no `--no-verify`, no faking a check green, no touching other workflow files). It resolves
 the target branch via `gh pr view --json headRefName,isCrossRepository` (refusing fork PRs), passes
@@ -489,6 +491,20 @@ trigger this secrets-bearing workflow) — and checks out the exact commit SHA r
 branch name before running `git checkout -B <branch>` to un-detach HEAD. See
 `docs/DESIGN_HISTORY.md` for the security reasoning behind each of these.
 
+**CI-failure retry cap.** A fix the follow-up pushes re-runs CI, and a red result re-triggers the
+follow-up. Both follow-up workflows therefore skip the CI-failure path once the branch's last 3
+completed `CI` runs all failed (`gh run list --workflow ci.yml --branch <head>`, needs
+`actions: read`; fail-open if the list can't be read). On `claude/auto-*`/`devin/auto-*` PRs review comments still
+trigger a follow-up; a capped Dependabot PR (whose follow-up has no other trigger) is left to Phase 0
+of the scheduled run or the maintainer.
+
+**Config source on CI-failure runs.** On `pull_request_review`/`issue_comment` runs the action restores
+`.claude/`, `CLAUDE.md` and `.mcp.json` from the base branch; on `workflow_run` it does not (the action
+treats it as an automation event), so a CI-failure run reads them from the PR's pinned head SHA. That
+is accepted because `scripts/pr-head-guard.sh` limits these runs to same-repo `claude/auto-*`/
+`devin/auto-*`/`dependabot/*` branches, which only accounts with write access can push to, and
+`Bash(yarn:*)` already runs that branch's own scripts.
+
 ### Dependabot PR follow-up (`dependabot-pr-followup.yml`)
 
 Companion to `autonomous-pr-followup.yml` for Dependabot dependency-bump PRs. Phase 0 of
@@ -497,7 +513,9 @@ Companion to `autonomous-pr-followup.yml` for Dependabot dependency-bump PRs. Ph
 workflow covers is the residual gap: a *real* breaking-change CI failure caused by the bumped
 dependency itself.
 
-It triggers only on `check_suite: [completed]`, skips unless conclusion is `failure`, an open
+It triggers only on `workflow_run: [CI]` `completed` (not `check_suite` — see the PR follow-up
+section above; `allowed_bots: "dependabot"` because the action sees the CI run's actor,
+`dependabot[bot]`), skips unless conclusion is `failure`, an open
 same-repo PR exists for the branch, and the branch starts with `dependabot/`. Untrusted event
 fields go through `env:` (never shell-spliced). Checkout is pinned to the `headRefOid` resolved at
 guard time (same TOCTOU rationale as the autonomous follow-up). It re-invokes Claude
