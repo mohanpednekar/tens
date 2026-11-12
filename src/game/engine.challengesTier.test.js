@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  buyTickspeedMultiplier, buyTierQuantity, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
+  buyTickspeedMultiplier, buyTierQuantity, getChallengeTier, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
   getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierTickspeedRequirement, getTierTickspeedSpend, getTierScaleUpMultiplier,
   isTierUnlocked, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
@@ -195,6 +195,12 @@ describe('review regressions', () => {
     }))
     const halted = withRun(setMap(start, 'tickspeedLevels', T(0), 2), { haltSeconds: 10 })
     expect(tickGame(0.1)(halted).resources[MONEY_ID]).toBe(halted.resources[MONEY_ID])
+  })
+
+  it('F4: the priced tier used for the purchase preview carries the ×1000 cost', () => {
+    const run = runOf('F4')
+    expect(getChallengeTier(run, T(3)).baseCost).toBe(TIER_DEFINITIONS[3].baseCost * 1000)
+    expect(getChallengeTier(runOf('F2'), T(3)).baseCost).toBe(TIER_DEFINITIONS[3].baseCost)
   })
 
   it('F20: the displayed spend/requirement selectors match what the purchase charges', () => {

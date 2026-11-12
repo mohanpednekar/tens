@@ -1538,7 +1538,7 @@ const getChallengeEffectTier = (state, effect) => {
 }
 
 // F4 Premium Tier: the tier as priced during the run (a copy; TIER_DEFINITIONS is never edited).
-const getChallengeTier = (state, tierId) => {
+export const getChallengeTier = (state, tierId) => {
   const tier = TIER_BY_ID[tierId]
   if (tier && getChallengeEffectTier(state, 'premiumTier') === tierId) return { ...tier, baseCost: tier.baseCost * PREMIUM_TIER_COST_MULTIPLIER }
   return tier
