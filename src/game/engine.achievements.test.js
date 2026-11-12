@@ -55,8 +55,10 @@ describe('detectAchievements', () => {
     expect(state.achievements.counters.pings).toBe(1)
     expect(isAchievementEarned(state, 'helloWorld')).toBe(true)
     expect(isAchievementEarned(state, 'pingOfDeath')).toBe(false)
-    state = { ...state, achievements: { ...state.achievements, counters: { pings: 255 } } }
-    expect(isAchievementEarned(tapIntroBit(state), 'pingOfDeath')).toBe(true)
+    const fresh = createInitialGameState()
+    const nearly = { ...fresh, achievements: { ...fresh.achievements, counters: { pings: 255 } } }
+    expect(isAchievementEarned(tapIntroBit(nearly), 'pingOfDeath')).toBe(true)
+    expect(tapIntroBit(state)).toBe(state) // already full: not counted
   })
 
   it('a group is complete only when every member is earned', () => {
