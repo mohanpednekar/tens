@@ -113,13 +113,25 @@ convention — see #93). This is what makes a large in-flight initiative collaps
 default Issues view instead of a dozen.
 
 For an interactive-session tracking epic (CLAUDE.md's "Issue tracking for interactive sessions")
-that's `size:M`/`size:L`-shaped, prefer splitting sub-issues along **coding / testing /
-documentation** phase lines over pure feature-slices — see that CLAUDE.md section for the exact
-split and which requirements stay mandatory in the coding sub-issue (green `yarn test`, core-logic
-tests, `CHANGELOG.md`, same-commit `CLAUDE.md` updates) versus which are genuinely deferrable to the
-testing/documentation sub-issues. This lets the coding sub-issue merge without waiting on the other
-two, while keeping them visible instead of dropped. A `size:S` task doesn't need this — one tracking
-issue is enough.
+that's `size:M`/`size:L`-shaped, split sub-issues along **coding / testing / documentation** phase
+lines rather than only by feature-slice, so the coding sub-issue can land without waiting on the
+other two while the deferred ones stay tracked with the epic's context. A `size:S` task doesn't need
+this — one tracking issue is enough.
+
+- **Coding** — the core implementation. Its PR keeps the hard requirements: `yarn test` green, tests for
+  the core logic, a `CHANGELOG.md` entry for behavior changes, and — if it touches anything `CLAUDE.md`
+  documents (signatures, constants, state shape, conventions) — `CLAUDE.md` updated in the *same commit*
+  (CLAUDE.md's "Documentation"). That same-commit rule is a hard invariant, not relaxed by this split; only work
+  never required to land with the code gets deferred.
+- **Testing** — coverage beyond what the coding sub-issue needed for green CI: additional scenarios,
+  edge cases, regression tests, e2e specs. Can lag behind the coding sub-issue's merge.
+- **Documentation** — narrative/rationale writing not required to keep `CLAUDE.md` accurate:
+  `docs/DESIGN_HISTORY.md` write-ups, README updates, deep-dive `docs/*_REFERENCE.md` sections.
+  Deferrable.
+
+Link each phase sub-issue back to the parent epic (and each other where relevant) so a later session
+has the coding sub-issue's context — what shipped, what was deferred and why — without re-deriving it
+from the diff.
 
 ## 5. Specs go stale — write defensively, and re-verify before filing a rewrite
 

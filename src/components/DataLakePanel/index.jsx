@@ -434,6 +434,16 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
         // on a completed lake. Locked lakes stay at 0 so leftover fillBits never look live.
         const headerFillFraction = poolReady ? getDataLakeCurrentDiskFillFraction(state, tierIndex) : 0
         const costLabel = <><LeadIcon>{COST_ICON}</LeadIcon>{nextCostSize}</>
+        // Collapsed header: the bar's own "X/N KB" (progress on the lake disk under way, X in N's
+        // unit) instead of the lake balance; a lake with nothing left to fill reads full capacity.
+        const barTotalBits = currentFillSubSize !== null ? unitBits * currentFillSubSize : capacity * unitBits
+        const barTotalLabel = currentFillSubSize !== null ? formatDiskSize(barTotalBits) : capacitySize
+        const barUnitIndex = barTotalLabel.lastIndexOf(' ')
+        const barTotalNumber = Number(barTotalLabel.slice(0, barUnitIndex).replace(/,/g, ''))
+        const barFilledNumber = Math.floor(headerFillFraction * barTotalNumber * 100) / 100
+        const barText = barUnitIndex > 0 && Number.isFinite(barTotalNumber)
+          ? `${barFilledNumber.toLocaleString(undefined, { maximumFractionDigits: 2 })}/${barTotalLabel}`
+          : `${formatDiskSize(headerFillFraction * barTotalBits)}/${barTotalLabel}`
         return (
           <LakeBlock aria-label={showHeader ? `${label} lake` : undefined} key={tierIndex}>
             {showHeader && (
@@ -513,7 +523,9 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               ) : null}
 
                 </LakeSubRow>
-                <LakeFilledText $withBar={headerOnly} title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>
+                {headerOnly
+                  ? <LakeFilledText $withBar title="Lake disk fill progress">{barText}</LakeFilledText>
+                  : <LakeFilledText title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>}
                 {headerOnly && (
                   <ThinProgressBar
                     role="progressbar"

@@ -3,7 +3,7 @@
 `yarn test:e2e` runs these specs in headless Chromium against a real `yarn dev` server (started
 automatically via `playwright.config.js`'s `webServer`). One-time setup:
 `npx playwright install --with-deps chromium` (`--with-deps` installs the Linux system libraries
-Chromium needs; see `CLAUDE.md`'s "End-to-end testing" section).
+Chromium needs; see `docs/TESTING_REFERENCE.md`'s "End-to-end testing" section).
 
 If the installed Chromium build doesn't match Playwright's expected one, set `PW_CHROMIUM_PATH` to its binary, e.g. `/opt/pw-browsers/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell`.
 
