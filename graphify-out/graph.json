@@ -28784,6 +28784,39 @@
       "norm_label": "makegame()",
       "source_file": "src/pages/PerksPage/ChallengesTab.test.jsx",
       "source_location": "L16"
+    },
+    {
+      "id": "src_pages_achievementspage_index_jsx",
+      "label": "AchievementsPage/index.jsx",
+      "_origin": "ast",
+      "community": 22,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "achievementspage/index.jsx",
+      "source_file": "src/pages/AchievementsPage/index.jsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_pages_achievementspage_index_test_jsx",
+      "label": "AchievementsPage/index.test.jsx",
+      "_origin": "ast",
+      "community": 22,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "achievementspage/index.test.jsx",
+      "source_file": "src/pages/AchievementsPage/index.test.jsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_game_engine_achievements_test_js",
+      "label": "engine.achievements.test.js",
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "engine.achievements.test.js",
+      "source_file": "src/game/engine.achievements.test.js",
+      "source_location": "L1"
     }
   ],
   "links": [
