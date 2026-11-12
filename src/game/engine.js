@@ -1616,7 +1616,7 @@ export const autoCompleteChallenges = state => {
 }
 
 // Elapsed time of the active run (live ticks and offline replay both flow through tickGame); also the
-// time since the current cycle started (Bit Rot) and the Write Lock countdown.
+// time since the current cycle started (Bit Rot).
 const tickChallengeClock = elapsedSeconds => state => {
   if (!getActiveChallenge(state)) return state
   const run = state.challenges.run ?? createChallengeRun()
@@ -1625,7 +1625,7 @@ const tickChallengeClock = elapsedSeconds => state => {
     challenges: {
       ...state.challenges,
       activeSeconds: clampNonNegative(state.challenges.activeSeconds) + elapsedSeconds,
-      run: { ...run, cycleSeconds: clampNonNegative(run.cycleSeconds) + elapsedSeconds, haltSeconds: Math.max(0, clampNonNegative(run.haltSeconds) - elapsedSeconds) },
+      run: { ...run, cycleSeconds: clampNonNegative(run.cycleSeconds) + elapsedSeconds },
     },
   }
 }
@@ -1709,8 +1709,11 @@ const tickChallengeRun = (elapsedSeconds, autobuyerBatchSize, state) => {
         hitsBoundary = true
       }
     }
+    // The ordinary tick runs against the segment's STARTING challenge time (so Duty Cycle phase and boundaries
+    // are not applied early); the clock advances afterwards. The Write Lock halt counts down first.
     const halt = clampNonNegative(current.challenges.run?.haltSeconds)
-    const afterCore = tickGameCore(step, autobuyerBatchSize, halt)(tickChallengeClock(step)(current))
+    const counted = halt > 0 ? withChallengeRun(current, { haltSeconds: Math.max(0, halt - step) }) : current
+    const afterCore = (next => (getActiveChallenge(next) ? tickChallengeClock(step)(next) : next))(tickGameCore(step, autobuyerBatchSize, halt)(counted))
     current = getActiveChallenge(afterCore) ? applyChallengeStepEffects(step, afterCore) : afterCore
     if (hitsBoundary && getActiveChallenge(current)) current = boundary.apply(current, challenge.automation.key)
     remaining -= step
@@ -1932,8 +1935,6 @@ const runGlobalIntervalAutomation = (state, elapsedSeconds, key, attempt) => {
 // 1 unit) and stalls forever — then reverts to the normal autobuyerBatchSize from its second
 // level onward.
 const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) => state => {
-  // F2 Write Lock: Factory tier production is halted for the first `haltSeconds` of this tick.
-  const productiveSeconds = Math.max(0, elapsedSeconds - haltSeconds)
   // The Byte Foundry intro runs first, every tick: passive production, then any in-progress disk
   // array build counts down (tickProvisionDisk — unconditional, bypasses nothing), then Storage's own
   // auto-fill (Memory -> each array's cache -> empty disks) gets first claim on the resulting
@@ -2134,6 +2135,9 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
   const newResources = { ...stateAfterAutobuyers.resources }
   const newOwned = { ...stateAfterAutobuyers.owned }
   const newAccumulators = { ...stateAfterAutobuyers.tierProductionAccumulators }
+  // F2 Write Lock: Factory tier production is halted while a halt runs — the halt carried into this tick, or one an
+  // autobuyer purchase just (re)started this tick.
+  const productiveSeconds = Math.max(0, elapsedSeconds - Math.max(haltSeconds, clampNonNegative(stateAfterAutobuyers.challenges?.run?.haltSeconds)))
 
   TIER_DEFINITIONS.forEach(tier => {
     if (!isTierUnlocked(stateAfterAutobuyers)(tier)) return
@@ -3562,6 +3566,8 @@ export const isDiskPullEligible = (state, capacityBits) => {
   if (state.intro?.diskBuild?.size === capacityBits) return false
   const tier = getMatchingTierForDiskSize(state, capacityBits)
   if (!tier) return false
+  // F6 Address Space: tiers that do not exist cannot be funded from Storage.
+  if (TIER_INDEX_BY_ID[tier.id] >= getEffectiveTierCount(state)) return false
   return (state.purchaseLevelProgress?.[tier.id] ?? 0) === 0
 }
 
@@ -5344,6 +5350,7 @@ export const tickDiskLevelOneCachePull = state => {
   let result = state
   let changed = false
   for (const tier of TIER_DEFINITIONS) {
+    if (TIER_INDEX_BY_ID[tier.id] >= getEffectiveTierCount(result)) continue
     const level = result.purchaseLevels?.[tier.id] ?? 1
     if (level !== 1) continue
     const size = getDiskSizeForTierLevel(TIER_INDEX_BY_ID[tier.id] + 1, 1)

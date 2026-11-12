@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   buyTickspeedMultiplier, buyTierQuantity, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
   getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierScaleUpMultiplier,
-  isTierUnlocked, tickGame,
+  isTierUnlocked, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
 import { BIT_ROT_GRACE_SECONDS, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS, WRITE_LOCK_HALT_SECONDS } from './layers'
 
@@ -164,6 +164,34 @@ describe('tier autobuyer challenges', () => {
     }
     expect(production('F10', 12)).toBe(production('F10', 1))
     expect(production('F1', 12)).toBeGreaterThan(production('F1', 1))
+  })
+})
+
+describe('review regressions', () => {
+  it('F19: a segment is produced at its starting phase, so tick size does not change the result', () => {
+    const seed = state => ({ owned: { ...state.owned, [T(8)]: 100 }, tickspeedLevels: { ...state.tickspeedLevels, [T(8)]: 20 } })
+    const one = tickGame(30)(runOf('F19', seed))
+    let stepped = runOf('F19', seed)
+    for (let i = 0; i < 300; i++) stepped = tickGame(0.1)(stepped)
+    expect(Math.abs(one.owned[T(7)] - stepped.owned[T(7)]) / stepped.owned[T(7)]).toBeLessThan(0.1)
+  })
+
+  it('F2: a purchase by the autobuyer during a tick halts that tick\'s production', () => {
+    const start = runOf('F2', state => ({
+      resources: { ...state.resources, [MONEY_ID]: 1e12 },
+      owned: { ...state.owned, [T(0)]: 1000, [T(1)]: 1 },
+      autobuyers: { ...state.autobuyers, [T(1)]: 1 },
+      autobuyerAttemptBudgets: { ...state.autobuyerAttemptBudgets, [T(1)]: 1 },
+    }))
+    const after = tickGame(2)(start)
+    expect(after.challenges.run.haltSeconds).toBeGreaterThan(0)
+    expect(after.owned[T(0)]).toBe(1000)
+  })
+
+  it('F6: Storage never funds tiers that do not exist', () => {
+    const run = runOf('F6')
+    expect(tickDiskPull(run)).toBe(run)
+    expect(tickDiskLevelOneCachePull(run)).toBe(run)
   })
 })
 
