@@ -9097,6 +9097,14 @@ block moves into the read cache and is subtracted from the buffer in the same ca
 Bandwidth is the only throttle. `DiskArrayRow` mirrors the buffer's progress toward the next block in the
 first empty cache block so the fill still looks gradual. Not re-run through `simulate-run-times`.
 
+### Bitrate exponent moves 10% toward 1.0 per new Disk size (2026-11)
+
+Supersedes the October linear +0.01 per size formula above. The maintainer approved a diminishing-gap
+curve: `e(steps) = 1 - (1 - 0.5) * 0.9 ** (steps - 1)`. Each Reformat that unlocks the next disk size
+reduces the remaining gap to 1.0 by 10%, reaching approximately 0.97645 at the final (30th) size.
+Both Data Stream Bitrate and the pool Bandwidth caps continue using the same exponent. Reformat
+eligibility, save persistence, and Capacity/Bitrate/disk costs remain unchanged. See issue #1083.
+
 ## Store release prep: flags-off monetization and config-time feature loaders (2026-10)
 
 - **Why a `virtual:tens-features` module instead of `if (FLAG) import()`.** The first cut gated each
