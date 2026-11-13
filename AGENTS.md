@@ -398,4 +398,4 @@ publicly visible but isn't legally reusable without written permission. No `CODE
 
 Challenge mode (epic #1037): state `challenges`, registry `CHALLENGE_DEFINITIONS` and rollout Set `LIVE_CHALLENGE_IDS` (F1–F25 live; UI: Firmware Challenges tab + Factory `ChallengeBanner`) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits` in `engine.js`; the three speed-upgrade buyers refuse until a live challenge is completed. See `docs/ECONOMY_REFERENCE.md` "Challenge mode".
 
-Achievements (epic #1046, dev-build only via `ACHIEVEMENTS_FEATURE`): `achievements` state, `ACHIEVEMENT_*` registry in `layers.js`, `detectAchievements`/`getCompletedAchievementGroups` in `engine.js`, `AchievementsPage` under More. See `docs/ECONOMY_REFERENCE.md` "Achievements".
+Achievements (epic #1046, switch `ACHIEVEMENTS_FEATURE`, on): `achievements` state, `ACHIEVEMENT_*` registry in `layers.js`, `detectAchievements`/`getCompletedAchievementGroups` in `engine.js`, `AchievementsPage` under More. See `docs/ECONOMY_REFERENCE.md` "Achievements".

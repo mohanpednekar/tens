@@ -2790,7 +2790,8 @@ const tapIntroBitCore = state => {
 // A Ping also bumps the lifetime Ping counter (achievements) — a no-op with the feature off.
 export const tapIntroBit = state => {
   const next = tapIntroBitCore(state)
-  if (!ACHIEVEMENTS_FEATURE.enabled) return next
+  // A no-op tap (already full / bonus at cap) is not counted and keeps the engine's same-reference signal.
+  if (!ACHIEVEMENTS_FEATURE.enabled || next === state) return next
   const achievements = next.achievements ?? createInitialGameState().achievements
   return detectAchievements({
     ...next,

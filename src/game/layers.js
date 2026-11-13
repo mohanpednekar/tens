@@ -157,9 +157,9 @@ export const CHALLENGE_BY_ID = Object.fromEntries(CHALLENGE_DEFINITIONS.map(def 
 // set. Each slice of epic #1037 adds its challenges here when it merges; tests add/remove ids.
 export const LIVE_CHALLENGE_IDS = new Set(CHALLENGE_DEFINITIONS.map(def => def.id))
 
-// Achievements (epic #1046). One rollout switch: off in production builds, on in dev builds (a mutable
-// object so tests can flip it). With it off nothing is detected and the page/entry are hidden.
-export const ACHIEVEMENTS_FEATURE = { enabled: import.meta.env.VITE_TENS_DEV_BUILD === '1' }
+// Achievements (epic #1046). One rollout switch, on everywhere (a mutable object so tests can flip it).
+// With it off nothing is detected and the page/entry are hidden.
+export const ACHIEVEMENTS_FEATURE = { enabled: true }
 // Daily challenges (epic #1062, basic slice): live in every build (maintainer request); mutable so tests can flip it.
 export const DAILY_CHALLENGES_FEATURE = { enabled: true }
 // Groups in display order; `boostArea` is unused until the bonus slice (#1052).
