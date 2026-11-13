@@ -666,8 +666,9 @@ capacity threshold is reached. Pinging fills the **Data Stream** (Buffer-capped)
 a permanent Byte generator; **Upgrade Capacity** / **Upgrade Bitrate** grow it one at a time
 (`queueIntroSpeedUpgrade`, `tickCapacityUpgradeDrain`; sit OUTSIDE the forced priority order). Displayed
 Speed is derived (`getDataStreamSpeedBytesPerSecond`, exponent `getDataStreamSpeedExponent`);
-the exponent starts at 0.5 and closes 10% of the remaining gap to 1.0 per disk size unlocked
-through Reformat (`unlockNextDiskSizeByFoundryReset`; full formula in `docs/ECONOMY_REFERENCE.md`). Reboot keeps the generator and
+the exponent starts at 0.5, climbs by 10% toward 1.0 at each pool boundary and by 10% toward
+its next pool within an array; the first two Compact Pool achievements upgrade that pool's two
+array steps to 10% toward 1.0 (`getDataStreamSpeedExponent`; details in `docs/ECONOMY_REFERENCE.md`). Reboot keeps the generator and
 gate latch but resets Capacity (`buildEraIntroReset`). Recurring actions follow a **forced priority
 order** Disk Fill > Provision Disk > Compute Boost (a lower one is disabled, in UI and engine, while a
 higher one is available; Provision Disk outranks Compute only while ARMED — `isProvisionDiskInProgress`). An always-on auto-convert (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`)
