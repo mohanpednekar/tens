@@ -11016,10 +11016,16 @@ describe('Data Lakes', () => {
       expect(isAchievementEarned(first, 'pool01ResetII')).toBe(false)
       expect(getDataStreamSpeedExponent(first.intro)).toBeGreaterThan(baseline)
       expect(getDataStreamSpeedExponent(first.intro)).toBeCloseTo(0.5545, 12)
-      const readyAgain = withIntro(completePool(first), {
-        dataLakes: { ...first.intro.dataLakes, 1: { ...first.intro.dataLakes[1], rebuilding: false, depositedUnits: 2000, purchased: 2000 } },
+      // Reformat wipes the lake's local resetCount but must not make the next eligible
+      // Compact Pool repeat reward I instead of unlocking reward II.
+      const reformatted = resetByteFoundry(first)
+      expect(reformatted.intro.dataLakes[1].resetCount).toBe(0)
+      expect(reformatted.intro.poolExponentBonuses[1]).toBe(1)
+      const readyAgain = withIntro(completePool(reformatted), {
+        dataLakes: { ...reformatted.intro.dataLakes, 1: { ...reformatted.intro.dataLakes[1], capacityLevel: 3, rebuilding: false, depositedUnits: 1000, purchased: 1000 } },
       })
       const second = flushStoragePool(1)(readyAgain)
+      expect(second.intro.dataLakes[1].resetCount).toBe(1)
       expect(second.intro.poolExponentBonuses[1]).toBe(2)
       expect(isAchievementEarned(second, 'pool01ResetII')).toBe(true)
       expect(getDataStreamSpeedExponent(second.intro)).toBeCloseTo(0.595, 12)
