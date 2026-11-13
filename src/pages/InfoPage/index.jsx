@@ -386,8 +386,11 @@ const InfoPage = () => {
           </li>
           <li>
             A flush empties that pool’s disks, Staging and lake (Cells bought and earlier flush
-            rewards stay) and permanently adds 1,000 units of lake capacity. Lakes fill at 10% of
-            their pool’s Bandwidth, plus 10% (additive) per flush.
+            rewards stay) and permanently adds 1,000 units of lake capacity. The first two
+            flushes also earn Reclamation I and II achievements: each upgrades one of that pool’s
+            two disk-size exponent steps to close 10% of the gap to 1.0. These rewards survive
+            Reformat, Purge, and Reboot. Lakes fill at 10% of their pool’s Bandwidth, plus 10%
+            (additive) per flush.
           </li>
           <li>
             Afterwards the pool rebuilds its disks for free, one at a time, smallest first. Until it
