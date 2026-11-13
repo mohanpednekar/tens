@@ -63,9 +63,11 @@ commit as any change to the mechanics it describes.
    `intro.computeMergePageUnlocked` reveal. "Compute" names the page/feature only — entities drop the word
    (`Cell`/`Battery`/…) in every player-visible label. Deliberately terse — icon-only controls, full sentence
    in `title`/`aria-label`; mechanic prose lives in the Manual (`InfoPage`). Render order: a top card with the
-   one Boost timer bar per running multiplier lane (Turbo ×20 / Balanced ×5 / Eco ×2) — Pop (refund the last queued
-   boost, no confirm) or, once nothing is queued, Forfeit (confirmed) on the left, Stack (queue another of the head's
-   tier) on the right (`canReclaimComputeBoost`/`canForfeitComputeBoost`, per `boostType`) — or "No boost running".
+   Boost timer bars per running multiplier lane (Turbo ×20 / Balanced ×5 / Eco ×2), one row per group of
+   same-funding-tier boosts (the running group first, waiting groups dimmed below): Pop (refund the last queued
+   boost, no confirm) or, once nothing is queued, Forfeit (confirmed) on the lane's LAST row, Stack (queue another
+   of the head's tier) on its FIRST row (`canReclaimComputeBoost`/`canForfeitComputeBoost`, per `boostType`) — or
+   "No boost running".
    **Lanes** (`intro.computeBoosts = { [boostType]: { queue: [tierIndex…], remainingSeconds } }`): different
    multipliers run in parallel and their multipliers add up (`getComputeBoostMultiplier`,
    `getFactoryTierBoostMultiplier`, `getComputeBoostPoolMultiplier`); the same multiplier queues behind the running

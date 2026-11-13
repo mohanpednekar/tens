@@ -522,7 +522,7 @@ const ComputePage = ({ game }) => {
               type="button"
               variant="prestige"
             >
-              <ButtonContent>{`${queues ? '+ ' : ''}${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatPresetDuration(durationSeconds)}`}</ButtonContent>
+              <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatPresetDuration(durationSeconds)}`}</ButtonContent>
             </CompactButton>
           )
         })}

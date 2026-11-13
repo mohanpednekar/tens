@@ -4864,7 +4864,7 @@ describe('Byte Foundry Compute Boost', () => {
     let saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeBoosts.burst.queue).toEqual([1, 1])
     expect(saved.intro.computeCores).toBe(2)
-    expect(screen.getByLabelText(/^active turbo compute boost$/i)).toHaveTextContent('· 2x')
+    expect(screen.getByLabelText(/^active turbo compute boost$/i)).toHaveTextContent(/^2x\s*KB.*×20/)
 
     // Pop refunds the queued one (no confirm); the Balanced lane is untouched and offers Forfeit.
     fireEvent.click(screen.getByRole('button', { name: /pop one queued turbo compute boost/i }))
@@ -4879,6 +4879,25 @@ describe('Byte Foundry Compute Boost', () => {
     expect(saved.intro.computeBoosts.standard.queue).toEqual([1])
     expect(screen.queryByLabelText(/^active turbo compute boost$/i)).toBeNull()
     confirm.mockRestore()
+  })
+
+  test('queued boosts funded by a different tier get their own row; Pop sits on the last row, Stack on the first', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true,
+      computeBoosts: { burst: { queue: [3, 3, 1], remainingSeconds: 100 } },
+    })
+    render(<App />)
+    openBoosters()
+
+    expect(screen.getByLabelText(/^active turbo compute boost$/i)).toHaveTextContent(/^2x\s*KB–GB.*×20/)
+    expect(screen.getByLabelText(/^queued turbo compute boost KB$/i)).toHaveTextContent(/^1x\s*KB\s.*×20/)
+    // One Pop (last row), one Stack (first row) for the lane.
+    const activeRow = screen.getByLabelText(/^active turbo compute boost$/i).parentElement
+    const queuedRow = screen.getByLabelText(/^queued turbo compute boost KB$/i).parentElement
+    expect(within(activeRow).getByRole('button', { name: /^stack the turbo compute boost$/i })).toBeInTheDocument()
+    expect(within(activeRow).queryByRole('button', { name: /pop one queued/i })).toBeNull()
+    expect(within(queuedRow).getByRole('button', { name: /pop one queued turbo compute boost/i })).toBeInTheDocument()
+    expect(within(queuedRow).queryByRole('button', { name: /^stack the/i })).toBeNull()
   })
 
   test('a lane at COMPUTE_BOOST_MAX_STACKS disables its Stack button', () => {
@@ -4902,7 +4921,7 @@ describe('Byte Foundry Compute Boost', () => {
 
     openFactorySync()
     expect(screen.queryByRole('img', { name: /Boosted/ })).toBeNull()
-    expect(screen.getByLabelText(/^active balanced compute boost$/i)).toHaveTextContent('Boosting KB')
+    expect(screen.getByLabelText(/^active balanced compute boost$/i)).toHaveTextContent(/^1x\s*KB\s.*×5/)
   })
 
 })
