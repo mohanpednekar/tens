@@ -90,16 +90,16 @@ jobs:
           if [ -n "$INPUT_SLOT" ] && [ "$INPUT_SLOT" != "auto" ]; then kind="$INPUT_SLOT"; fi
 
           # Model per kind (aliases only - they resolve to the latest release). Conservative
-          # default: the cheaper model for daily slots; once-a-week analysis/judgment slots may use
-          # opus. sonnet = implementation + daily QA; haiku = mechanical
+          # default: the cheaper model for daily slots; opus only where it has a real benefit
+          # (planning/prioritisation, architecture advice, security review, self-modification research). sonnet = implementation + daily QA; haiku = mechanical
           # housekeeping/triage/docs-sync. pr_free kinds produce issues/
           # comments only, so the open-PR ceiling must not skip them.
           pr_free=false
           case "$kind" in
-            implement|qa-review|perf|release|tech-debt) model=sonnet ;;
+            implement|qa-review|qa-deep|retro|economy|perf|release|tech-debt) model=sonnet ;;
             housekeeping|docs-sync)           model=haiku ;;
             triage)                           model=haiku ;;
-            planning|architecture|qa-deep|security|retro|economy|research) model=opus ;;
+            planning|architecture|security|research) model=opus ;;
             *) echo "::error::unknown slot kind '$kind'"; exit 1 ;;
           esac
           case "$kind" in triage|planning|architecture|retro|economy) pr_free=true ;; esac
