@@ -9105,6 +9105,20 @@ reduces the remaining gap to 1.0 by 10%, reaching approximately 0.97645 at the f
 Both Data Stream Bitrate and the pool Bandwidth caps continue using the same exponent. Reformat
 eligibility, save persistence, and Capacity/Bitrate/disk costs remain unchanged. See issue #1083.
 
+### Pool-reset achievements tune Bitrate's within-pool exponent steps (2026-11)
+
+Supersedes the unconditional per-disk 0.9 gap reduction from issue #1083. Issue #1085
+introduces one 0.9 gap reduction at each of the nine boundaries between Storage pools; the
+20 within-pool array steps start at factor 0.99 (10% toward the next pool's potential exponent).
+The first and second successful Compact Pool actions for a pool earn separate Reclamation I/II
+achievements, replacing that pool's first or second within-pool factor 0.99 with 0.9. The
+exponent is derived from the count of *unlocked* steps and the permanent per-pool award map,
+so past steps are upgraded retroactively rather than permanently spending bonuses. With all
+30 disk sizes unlocked, the exponent is ~0.8416 without awards and ~0.97645 with all twenty.
+The reward map is kept across Reformat, Purge, and Reboot, unlike the pool-local lake resetCount.
+Existing save counters are backfilled on load where still present; counters previously erased
+by larger resets cannot be reconstructed. Only a full save Reset clears the earned rewards.
+
 ## Store release prep: flags-off monetization and config-time feature loaders (2026-10)
 
 - **Why a `virtual:tens-features` module instead of `if (FLAG) import()`.** The first cut gated each
