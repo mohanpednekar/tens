@@ -4223,7 +4223,7 @@ export const isDiskSizeUnlockAvailable = state => {
 // The Foundry reset that unlocks the next disk size: a Reset Byte Foundry (Capacity, Disks, Lakes, Compute
 // wipe; Combine / Upgrade Capacity / Upgrade Speed convenience-replay up to prior highs; every smaller Disk size
 // re-provisions itself via tickAutoProvisionLowerDiskSizes — one buffer fill per disk, no provisioning cost)
-// plus one more unlocked disk step, which raises the speed exponent by DATA_STREAM_SPEED_EXPONENT_STEP.
+// plus one more unlocked disk step, which closes 10% of the exponent's remaining gap to 1.0.
 export const unlockNextDiskSizeByFoundryReset = state => {
   if (!isDiskSizeUnlockAvailable(state)) return state
   const next = getUnlockedDiskSteps(state.intro) + 1
