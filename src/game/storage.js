@@ -1,4 +1,4 @@
-import { applyFlopsAutobuyerMilestones, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
+import { applyFlopsAutobuyerMilestones, autoCompleteChallenges, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
 import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES, PURGE_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, migrateToV3, SAVE_SCHEMA_VERSION } from 'save-migration'
 
@@ -558,7 +558,7 @@ const mergeState = rawSaved => {
     ...savedIntroClean
   } = saved.intro ?? {}
 
-  return normalizePoolMemoryCapacity(applyFlopsAutobuyerMilestones({
+  return autoCompleteChallenges(normalizePoolMemoryCapacity(applyFlopsAutobuyerMilestones({
     ...fresh,
     ...savedClean,
     scaleUpCount: saved.scaleUpCount ?? legacySpeedUpCount ?? fresh.scaleUpCount,
@@ -598,6 +598,21 @@ const mergeState = rawSaved => {
       unboundedUnlocked: Boolean(saved.purge?.unboundedUnlocked)
         || Math.max(0, Number(saved.purge?.count) || 0) >= PURGE_UNBOUNDED_MIN_COUNT,
     },
+    challenges: {
+      ...fresh.challenges,
+      ...(saved.challenges ?? {}),
+      completed: { ...(saved.challenges?.completed ?? {}) },
+      run: { ...fresh.challenges.run, ...(saved.challenges?.run ?? {}) },
+      bestSeconds: { ...(saved.challenges?.bestSeconds ?? {}) },
+    },
+    achievements: {
+      earned: { ...(saved.achievements?.earned ?? {}) },
+      counters: { ...fresh.achievements.counters, ...(saved.achievements?.counters ?? {}) },
+    },
+    daily: {
+      runs: { ...(saved.daily?.runs ?? {}) },
+      results: { ...(saved.daily?.results ?? {}) },
+    },
     era: { ...fresh.era, ...(saved.era ?? {}) },
     eons: { ...fresh.eons, ...(saved.eons ?? {}) },
     hyperscalerCount: saved.hyperscalerCount ?? fresh.hyperscalerCount,
@@ -623,7 +638,7 @@ const mergeState = rawSaved => {
       owned: { ...fresh.computeFlops.owned, ...(saved.computeFlops?.owned ?? {}) },
       cumulativeBoost: { ...fresh.computeFlops.cumulativeBoost, ...(saved.computeFlops?.cumulativeBoost ?? {}) },
     },
-  }))
+  })))
 }
 
 // Stamps a separate "last save" timestamp on every save (its own key, like the timestamp isn't

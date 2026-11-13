@@ -1,6 +1,9 @@
 import AppMenu from 'components/AppMenu'
+import { ACHIEVEMENTS_FEATURE } from 'game/layers'
+import AchievementsPage from 'pages/AchievementsPage'
 import AppNav, { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
 import IncompatibleSaveNotice from 'components/IncompatibleSaveNotice'
+import ChallengesPage from 'pages/ChallengesPage'
 import ByteFoundryPage from 'pages/ByteFoundryPage'
 import ComputeFlopsPage from 'pages/ComputeFlopsPage'
 import ComputePage from 'pages/ComputePage'
@@ -25,7 +28,7 @@ const resolveInitialThemeMode = () => resolveThemeMode(loadThemePreference())
 // exempt for the same reason Settings/Releases are — Dev Mode has to be reachable precisely
 // when you want to seed past the gate, and it's a dev-build-only destination regardless (see
 // AppMenu's `import.meta.env.DEV` guard).
-const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'settings', 'dev'])
+const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'achievements', 'settings', 'dev'])
 
 const PageShell = styled.div`
   padding-bottom: ${APP_NAV_BOTTOM_PAD};
@@ -46,6 +49,7 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   // Bumped when AppNav selects Firmware so it resets to its Automation tab.
   const [perksFocusNonce, setPerksFocusNonce] = useState(0)
+  const [challengesFocusNonce, setChallengesFocusNonce] = useState(0)
   // Bumped on legacy `storage` navigations (and available for future Foundry focus resets).
   // ByteFoundryPage no longer has Memory | Storage tabs; focusNonce is accepted for API parity.
   const [foundryFocusNonce, setFoundryFocusNonce] = useState(0)
@@ -62,12 +66,14 @@ function App() {
   // from the first launch, including during the mandatory gate.
   const showTiers = mainGameUnlocked
   const showPerks = mainGameUnlocked && isPerksPageRevealed(game.state)
+  const showChallenges = showPerks
 
   const navigate = nextPage => {
     if (nextPage === 'boosters' && !showBoosters) return
     if (nextPage === 'compute' && !showComputeFlops) return
     if (nextPage === 'game' && !mainGameUnlocked) return
     if (nextPage === 'perks' && !showPerks) return
+    if (nextPage === 'challenges' && !showChallenges) return
     // Legacy 'storage' deep-links → Foundry (Disks are continuous Foundry sections now).
     if (nextPage === 'storage') {
       setMenuOpen(false)
@@ -77,6 +83,7 @@ function App() {
     }
     setMenuOpen(false)
     if (nextPage === 'perks') setPerksFocusNonce(n => n + 1)
+    if (nextPage === 'challenges') setChallengesFocusNonce(n => n + 1)
     if (nextPage === 'foundry') setFoundryFocusNonce(n => n + 1)
     setPage(nextPage)
   }
@@ -133,8 +140,12 @@ function App() {
     content = <ComputeFlopsPage game={game} />
   } else if (page === 'perks' && showPerks) {
     content = <PerksPage focusNonce={perksFocusNonce} game={game} />
+  } else if (page === 'challenges' && showChallenges) {
+    content = <ChallengesPage focusNonce={challengesFocusNonce} game={game} />
   } else if (page === 'milestones') {
     content = <MilestonesPage game={game} />
+  } else if (page === 'achievements' && ACHIEVEMENTS_FEATURE.enabled) {
+    content = <AchievementsPage game={game} />
   } else if (page === 'dev') {
     content = import.meta.env.DEV ? <DevModePage game={game} /> : <MainPage game={game} />
   } else if (page === 'settings') {
@@ -160,6 +171,7 @@ function App() {
         showBoosters={showBoosters}
         showComputeFlops={showComputeFlops}
         showPerks={showPerks}
+        showChallenges={showChallenges}
         showTiers={showTiers}
       />
       <AppMenu

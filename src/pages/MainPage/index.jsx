@@ -1,11 +1,13 @@
 import { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
 import { boostGlow, getComputeBoostDescription, isFactoryTierBoosted } from 'components/BoostBadge'
 import BoostTimerBar from 'components/BoostTimerBar'
+import ChallengeBanner from 'components/ChallengeBanner'
+import { formatChallengeGoal } from 'game/challengeUi'
 import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierRequirement, getTickspeedMultiplierSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getChallengeTier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -842,14 +844,14 @@ const MainPage = ({ game }) => {
   const { actions, claimOfflineAdReward, dismissOfflineProgress, offlineProgress, state } = game
   const theme = useTheme()
   const { purge } = state
-  const canPurge = state.resources[MONEY_ID] >= PURGE_THRESHOLD
+  const canPurge = state.resources[MONEY_ID] >= getPurgeGoalBits(state)
   const isUnbounded = isOverflowModeUnlocked(state)
   const doublePpLevel = state.prestigeDoublePpLevel ?? 0
   // Passive Purge-count production-speed bonus: flat ×1 until 10 Purges (see engine.js).
   const prestigeBonus = getPrestigeProductionMultiplier(purge.count)
   const prestigeBonusUnlocked = isPrestigeSpeedBonusUnlocked(state)
   const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel)
-  const purgeProgressPercent = getPurgePercent(state.resources[MONEY_ID])
+  const purgeProgressPercent = getPurgePercent(state.resources[MONEY_ID], getPurgeGoalBits(state))
   const bytePowerProgressFraction = getNextBytePowerProgressFraction(state.resources[MONEY_ID])
   const bytePowerProgressPercent = Math.round(bytePowerProgressFraction * 100)
   const moneyBits = state.resources[MONEY_ID]
@@ -858,11 +860,16 @@ const MainPage = ({ game }) => {
   // What a Prestige would award — shown on the Prestige button itself (Buy-button style: the
   // effect lives on the control, not in a separate text line). Below Googol the formula reads 0,
   // but the award on reaching it is always at least 1, so that's the effect worth advertising.
-  const purgeAwardPreview = Math.max(1, prestigePointsPreview)
+  // A repeat challenge completion resets the cycle but awards no PP (engine: purgeGame).
+  const isRepeatChallengeCompletion = Boolean(getActiveChallenge(state)) && isChallengeCompleted(state, getActiveChallenge(state).id)
+  const purgeGoalText = formatChallengeGoal(getPurgeGoalBits(state))
+  const purgeAwardPreview = isRepeatChallengeCompletion ? 0 : Math.max(1, prestigePointsPreview)
   const purgeLabel = isUnbounded && canPurge
     ? 'Purge (optional — claim accumulated PP)'
-    : 'Purge (requires 1 Googol Bytes)'
-  const purgeAriaLabel = `${purgeLabel} — awards +${formatAmount(purgeAwardPreview)} Purge Point${purgeAwardPreview === 1 ? '' : 's'}`
+    : `Purge (requires ${purgeGoalText})`
+  const purgeAriaLabel = isRepeatChallengeCompletion
+    ? `${purgeLabel} — completes the challenge repeat, awards no Purge Points`
+    : `${purgeLabel} — awards +${formatAmount(purgeAwardPreview)} Purge Point${purgeAwardPreview === 1 ? '' : 's'}`
   // Snapshot of which tiers were already unlocked as of this page load (captured once, via a
   // lazy initializer, from whatever loadGameState() returned) — a tier unlocked before this
   // load never plays the reveal animation, even though every unlocked row technically "mounts"
@@ -945,6 +952,9 @@ const MainPage = ({ game }) => {
   // takeover; every time after that, it's a compact banner pinned to the top of the page instead,
   // since the player already knows what Prestige does.
   const isFrozen = isProductionFrozen(state)
+  const activeChallenge = getActiveChallenge(state)
+  const challengeDisabled = effect => activeChallenge?.effect === effect
+  const challengeNote = activeChallenge ? ` — disabled by challenge ${activeChallenge.id} ${activeChallenge.codename}` : ''
   const isFirstRun = purge.count === 0
   const buyMaxActive = Boolean(game.buyMaxMode) && isBuyMaxUnlocked(state)
   // The purchase block size every tier's current level currently requires to complete — a single
@@ -954,7 +964,7 @@ const MainPage = ({ game }) => {
   const purchaseBlockSize = getPurchaseBlockSize(state)
   const showFullScreenPrompt = isFrozen && isFirstRun
   const showTopPurgeBar = isFrozen && !isFirstRun
-  const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+  const lastTier = getEffectiveLastTier(state)
   const lastTierLevel = state.purchaseLevels?.[lastTier.id] ?? 1
   const lastTierUnlocked = isTierUnlocked(state)(lastTier)
 
@@ -1013,7 +1023,7 @@ const MainPage = ({ game }) => {
   // Each completed final-tier level multiplies Clock Speed's per-level rate by this (a constant).
   const overclockLevelEffectDisplay = 1 + OVERCLOCK_MULTIPLIER_STEP
   const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)
-  const canOverclock = !isFrozen && lastTierLevelDisplay >= overclockRequirement
+  const canOverclock = !isFrozen && !challengeDisabled('overclockDisabled') && lastTierLevelDisplay >= overclockRequirement
 
   // PP-funded unlocks/upgrades/toggles live on the Firmware page (pages/PerksPage).
 
@@ -1035,7 +1045,7 @@ const MainPage = ({ game }) => {
   const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel, overclockLevel)
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
-  const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && isGlobalTickspeedAffordable(state)
+  const canBuyGlobalTickspeed = !isFrozen && !challengeDisabled('clockSpeedDisabled') && globalTickspeedUnlocked && isGlobalTickspeedAffordable(state)
   // The last tier's XP-funded tickspeed — a separate upgrade shown left of Scale Up once the last tier
   // has been a Scale Up target this cycle (isLastTierTickspeedXpUnlocked). Always spends the entire
   // XP balance in one action, since every consumption resets every other tier's owned quantity and
@@ -1048,7 +1058,7 @@ const MainPage = ({ game }) => {
   const lastTierXpBalance = Math.floor(state.purge.xp ?? 0)
   const lastTierXpMinConsumption = getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)
   const lastTierXpProgressPercent = progressPercent(lastTierXpBalance, lastTierXpMinConsumption)
-  const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && lastTierOwned > 0 && lastTierXpBalance >= lastTierXpMinConsumption
+  const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && !challengeDisabled('restageDisabled') && lastTierOwned > 0 && lastTierXpBalance >= lastTierXpMinConsumption
   const lastTierXpConsumeBonusLabel = formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpBalance))
   const handleConsumeLastTierXp = () => {
     if (!canConsumeLastTierXp) return
@@ -1154,10 +1164,11 @@ const MainPage = ({ game }) => {
 
   return (
     <RootDiv>
+      <ChallengeBanner onExit={actions.exitChallenge} state={state} />
       {showTopPurgeBar && (
         <>
           <TopPurgeBar ref={topPurgeBarRef} aria-label="purge available banner">
-            <PurgeMutedText>1 Googol Bytes reached — production has stopped.</PurgeMutedText>
+            <PurgeMutedText>{purgeGoalText} reached — production has stopped.</PurgeMutedText>
             <Button
               aria-label={purgeAriaLabel}
               variant="prestige"
@@ -1167,7 +1178,7 @@ const MainPage = ({ game }) => {
               $pulse
             >
               <ButtonIcon>✦ </ButtonIcon>
-              <ButtonLabel>Purge +{formatAmount(purgeAwardPreview)} PP</ButtonLabel>
+              <ButtonLabel>{isRepeatChallengeCompletion ? 'Complete challenge' : `Purge +${formatAmount(purgeAwardPreview)} PP`}</ButtonLabel>
             </Button>
           </TopPurgeBar>
           <TopPurgeBarSpacer $height={topPurgeBarHeight} />
@@ -1178,7 +1189,7 @@ const MainPage = ({ game }) => {
         <PurgeProgressTrack $percent={purgeProgressPercent}>
           <VisuallyHidden
             role="progressbar"
-            aria-label="progress toward 1 Googol Bytes, when Purge becomes available"
+            aria-label={`progress toward ${purgeGoalText}, when Purge becomes available`}
             aria-valuenow={purgeProgressPercent}
             aria-valuemin={0}
             aria-valuemax={100}
@@ -1348,7 +1359,7 @@ const MainPage = ({ game }) => {
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
             disabled={!canBuyGlobalTickspeed}
             onClick={actions.buyGlobalTickspeedMultiplier}
-            title="Spend Bytes to make every tier's production ticks faster (more frequent deliveries, not bigger ones) — each level costs the next power of ten"
+            title={`Spend Bytes to make every tier's production ticks faster (more frequent deliveries, not bigger ones) — each level costs the next power of ten${challengeDisabled('clockSpeedDisabled') ? challengeNote : ''}`}
             type="button"
             $progress={globalTickspeedProgressPercent}
             $progressColor="#3b82f6"
@@ -1388,9 +1399,11 @@ const MainPage = ({ game }) => {
           // Manual Buy always grabs as many units as are currently affordable, up to the current
           // level's cost block boundary (the former ×1/×10 "Bulk" toggle's default, now the only
           // behavior — see useIncrementalGame's BUY_QUANTITY).
-          const affordableQuantity = getTierAffordableQuantity(tier, tierLevel, purchaseBlockSize, doneInBlock, costResource, Number.MAX_SAFE_INTEGER)
-          const unitCost = getTierQuantityCost(tier, tierLevel, purchaseBlockSize, doneInBlock, 1)
-          const displayCost = affordableQuantity > 0 ? getTierQuantityCost(tier, tierLevel, purchaseBlockSize, doneInBlock, affordableQuantity) : unitCost
+          // F4 Premium Tier: price the tier as the engine will charge it.
+          const pricedTier = getChallengeTier(state, tier.id) ?? tier
+          const affordableQuantity = getTierAffordableQuantity(pricedTier, tierLevel, purchaseBlockSize, doneInBlock, costResource, Number.MAX_SAFE_INTEGER)
+          const unitCost = getTierQuantityCost(pricedTier, tierLevel, purchaseBlockSize, doneInBlock, 1)
+          const displayCost = affordableQuantity > 0 ? getTierQuantityCost(pricedTier, tierLevel, purchaseBlockSize, doneInBlock, affordableQuantity) : unitCost
           const canAfford = affordableQuantity > 0 && !isFrozen
           const donePercent = (doneInBlock / purchaseBlockSize) * 100
           const availablePercent = (affordableQuantity / purchaseBlockSize) * 100
@@ -1426,9 +1439,9 @@ const MainPage = ({ game }) => {
           const effectiveTickSpeed = getEffectiveTierTickSpeedSeconds(state, tier.id)
           // Spends the tier's own resource (resources[tier.id] === owned[tier.id]); the last tier
           // spends only 10% of its requirement. Mirrors buyTickspeedMultiplier's guard in engine.js.
-          const tickspeedCost = getTickspeedMultiplierSpend(tier.id, tickspeedLevel + 1)
-          const tickspeedRequirement = getTickspeedMultiplierRequirement(tier.id, tickspeedLevel + 1)
-          const canUpgradeTickspeed = resources >= tickspeedRequirement && !isFrozen
+          const tickspeedCost = getTierTickspeedSpend(state, tier.id, tickspeedLevel + 1)
+          const tickspeedRequirement = getTierTickspeedRequirement(state, tier.id, tickspeedLevel + 1)
+          const canUpgradeTickspeed = resources >= tickspeedRequirement && !isFrozen && !isTierTickspeedBlockedByChallenge(state, tier.id)
           // Buy max mode (see BuyMaxToggle/buyTierMaxLevels): when a click would buy one or more
           // FULL levels, preview those instead of the single-level fill below.
           const maxLevelsPreview = buyMaxActive ? getTierMaxLevelsPreview(state, tier.id) : { levels: 0, cost: 0, lastLevelCost: 0, partialQuantity: 0, partialCost: 0 }
@@ -1582,7 +1595,7 @@ const MainPage = ({ game }) => {
             </MutedText>
           </Disclosure>
           <Button
-            aria-label={`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`}
+            aria-label={`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)${challengeDisabled('restageDisabled') ? challengeNote : ''}`}
             variant="smart"
             disabled={!canConsumeLastTierXp}
             onClick={handleConsumeLastTierXp}
@@ -1683,7 +1696,7 @@ const MainPage = ({ game }) => {
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
             onClick={actions.overclock}
-            title={`Resets tiers (and Scale Up's bonus); each completed ${lastTier.name} level multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay} — requires ${overclockRequirementDisplay} completed levels`}
+            title={`Resets tiers (and Scale Up's bonus); each completed ${lastTier.name} level multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay} — requires ${overclockRequirementDisplay} completed levels${challengeDisabled('overclockDisabled') ? challengeNote : ''}`}
             type="button"
             $progress={overclockProgressPercent}
             $progressColor="#fb923c"

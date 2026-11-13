@@ -2138,6 +2138,7 @@ test('an Auto-Prestige button appears in Firmware → Automation (Global Automat
   seedMainGameState({
     resources: { base: 10 },
     ...allTiersSmartSeed(),
+    challenges: { completed: { F25: true } },
     autoOverclock: true,
     purge: { xp: 0, points: 64, count: 1, highestMilestone: 1 },
   })
@@ -2175,6 +2176,7 @@ test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled withou
   seedMainGameState({
     resources: { base: 10 },
     ...allTiersSmartSeed(),
+    challenges: { completed: { F25: true } },
     autoPurge: 1,
     purge: { xp: 0, points: 63, count: 1, highestMilestone: 1 },
   })

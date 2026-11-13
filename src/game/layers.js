@@ -91,6 +91,103 @@ export const PURGE_THRESHOLD = GOOGOL * BITS_PER_BYTE
 // exceed PURGE_THRESHOLD without freezing production — the player keeps earning and may Prestige
 // voluntarily to claim accumulated PP. Permanent once reached (purge.unboundedUnlocked latch).
 export const OVERFLOW_MODE_MAX_INTERVAL_SECONDS = 1
+
+// ── Challenge mode (epic #1037) ───────────────────────────────────────────────────────────────────
+// F25 "Scope Creep" raises the Purge goal to this many Bytes (placeholder, retuned by #1043), expressed
+// in Bits like PURGE_THRESHOLD.
+export const SCOPE_CREEP_GOAL_BYTES_EXPONENT = 110
+export const SCOPE_CREEP_PURGE_GOAL = 10 ** SCOPE_CREEP_GOAL_BYTES_EXPONENT * BITS_PER_BYTE
+export const CHALLENGE_LAYER_FACTORY = 'F'
+// Automation kinds a challenge can target (which interval-level map gates its speed upgrades):
+// 'tierAutobuyer' → autobuyerIntervalLevels[tierId], 'tierTickspeed' → tierTickspeedIntervalLevels[tierId],
+// 'global' → automationIntervalLevels[key] (key in AUTOMATION_INTERVAL_CONFIG).
+// `effect` names the one run rule the engine applies while the challenge is active.
+const tierChallenge = (index, code, kind, codename, effect, rule) => ({
+  id: code, layer: CHALLENGE_LAYER_FACTORY,
+  target: `${kind === 'tierTickspeed' ? '⚙ ' : ''}${TIER_DEFINITIONS[index].name}`,
+  codename, automation: { kind, key: TIER_DEFINITIONS[index].id }, effect, rule, goal: PURGE_THRESHOLD,
+})
+export const CHALLENGE_DEFINITIONS = [
+  tierChallenge(0, 'F1', 'tierAutobuyer', 'Half Duplex', 'halfDuplex', 'Kilobytes produce at half speed.'),
+  tierChallenge(1, 'F2', 'tierAutobuyer', 'Write Lock', 'writeLock', 'Buying Megabytes halts all production for a few seconds.'),
+  tierChallenge(2, 'F3', 'tierAutobuyer', 'Cascade Delete', 'cascadeDelete', 'Buying Gigabytes wipes the owned count of every lower tier (levels kept).'),
+  tierChallenge(3, 'F4', 'tierAutobuyer', 'Premium Tier', 'premiumTier', 'Terabytes cost ×1000.'),
+  tierChallenge(4, 'F5', 'tierAutobuyer', 'Hard Refresh', 'hardRefresh', 'Every 5 minutes the owned Petabytes count resets to 0 (levels kept).'),
+  tierChallenge(5, 'F6', 'tierAutobuyer', 'Address Space', 'addressSpace', 'Only six tiers exist; Exabytes is the top of the ladder.'),
+  tierChallenge(6, 'F7', 'tierAutobuyer', 'Single Instance', 'singleInstance', 'Scale Up never doubles Zettabytes.'),
+  tierChallenge(7, 'F8', 'tierAutobuyer', 'Memory Leak', 'memoryLeak', 'Yottabytes leak: 1% of the owned count is lost per second.'),
+  tierChallenge(8, 'F9', 'tierAutobuyer', 'Bit Rot', 'bitRot', 'A corruption counter grows exponentially; if it overtakes your Bits the cycle restarts.'),
+  tierChallenge(9, 'F10', 'tierAutobuyer', 'Flat Rate', 'flatRate', 'Quettabytes get no per-level multiplier.'),
+  tierChallenge(0, 'F11', 'tierTickspeed', 'Clock Gated', 'clockGated', "Kilobytes' tickspeed is disabled."),
+  tierChallenge(1, 'F12', 'tierTickspeed', 'Half Step', 'halfStep', 'Each Megabytes tickspeed level gives 5% instead of 10%.'),
+  tierChallenge(2, 'F13', 'tierTickspeed', 'Clock Skew', 'clockSkew', "Gigabytes' base delivery period is doubled."),
+  tierChallenge(3, 'F14', 'tierTickspeed', 'Rate Limit', 'rateLimit', "Terabytes' tickspeed is capped at three levels above baseline."),
+  tierChallenge(4, 'F15', 'tierTickspeed', 'Clock Drift', 'clockDrift', 'Petabytes tickspeed loses one level every 10 minutes.'),
+  tierChallenge(5, 'F16', 'tierTickspeed', 'Egress Fees', 'egressFees', 'Each Exabytes tickspeed level costs what the next level normally costs.'),
+  tierChallenge(6, 'F17', 'tierTickspeed', 'Noisy Neighbour', 'noisyNeighbour', "Each Zettabytes tickspeed level slows every other tier's delivery by 2%."),
+  tierChallenge(7, 'F18', 'tierTickspeed', 'Daisy Chain', 'daisyChain', "Yottabytes' tickspeed cannot exceed Zettabytes' level."),
+  tierChallenge(8, 'F19', 'tierTickspeed', 'Duty Cycle', 'dutyCycle', "Ronnabytes' tickspeed bonus applies only half the time (30 s on, 30 s off)."),
+  tierChallenge(9, 'F20', 'tierTickspeed', 'Burn Rate', 'burnRate', 'A Quettabytes tickspeed level spends its full requirement.'),
+
+  { id: 'F21', layer: CHALLENGE_LAYER_FACTORY, target: 'Clock Speed', codename: 'Base Clock', automation: { kind: 'global', key: 'speedUp' }, effect: 'clockSpeedDisabled', rule: 'Clock Speed is disabled.', goal: PURGE_THRESHOLD },
+  { id: 'F22', layer: CHALLENGE_LAYER_FACTORY, target: 'Scale Up', codename: 'Scale Out', automation: { kind: 'global', key: 'scaleUp' }, effect: 'scaleUpNoDoubling', rule: 'Scale Up still unlocks the next tier but doubles nothing.', goal: PURGE_THRESHOLD },
+  { id: 'F23', layer: CHALLENGE_LAYER_FACTORY, target: 'Restage', codename: 'Code Freeze', automation: { kind: 'global', key: 'restage' }, effect: 'restageDisabled', rule: 'Restage is disabled; XP has no use.', goal: PURGE_THRESHOLD },
+  { id: 'F24', layer: CHALLENGE_LAYER_FACTORY, target: 'Overclock', codename: 'Stock Cooling', automation: { kind: 'global', key: 'overclock' }, effect: 'overclockDisabled', rule: 'Overclock is disabled.', goal: PURGE_THRESHOLD },
+  { id: 'F25', layer: CHALLENGE_LAYER_FACTORY, target: 'Purge', codename: 'Scope Creep', automation: { kind: 'global', key: 'purge' }, effect: 'raisedGoal', rule: 'The Purge goal is raised; production does not freeze at 1 Googol Bytes.', goal: SCOPE_CREEP_PURGE_GOAL },
+]
+// Placeholder challenge numbers (retuned by #1043). All rules apply only while their challenge is active.
+export const HALF_DUPLEX_PRODUCTION_MULTIPLIER = 0.5 // F1
+export const WRITE_LOCK_HALT_SECONDS = 10 // F2
+export const PREMIUM_TIER_COST_MULTIPLIER = 1000 // F4
+export const HARD_REFRESH_INTERVAL_SECONDS = 300 // F5
+export const ADDRESS_SPACE_TIER_COUNT = 6 // F6
+export const MEMORY_LEAK_RATE_PER_SECOND = 0.01 // F8
+export const BIT_ROT_GRACE_SECONDS = 120 // F9: no corruption for this long after a cycle starts
+export const BIT_ROT_BASE_CORRUPTION = 1000 // F9: corruption (Bits) when the grace period ends
+export const BIT_ROT_DOUBLING_SECONDS = 30 // F9: corruption doubles this often
+export const BIT_ROT_CORRUPTION_CAP = 1e6 // F9: cap, so the threat belongs to the early part of a run
+export const HALF_STEP_PRODUCTION_STEP = 0.05 // F12 (normally TICKSPEED_PRODUCTION_STEP = 0.1)
+export const CLOCK_SKEW_PERIOD_MULTIPLIER = 2 // F13
+export const RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE = 3 // F14
+export const CLOCK_DRIFT_INTERVAL_SECONDS = 600 // F15
+export const NOISY_NEIGHBOUR_PERIOD_STEP = 0.02 // F17
+export const DUTY_CYCLE_WINDOW_SECONDS = 30 // F19
+export const CHALLENGE_BY_ID = Object.fromEntries(CHALLENGE_DEFINITIONS.map(def => [def.id, def]))
+// The only rollout switch: a challenge gates upgrades and can be entered only while its id is in this
+// set. Each slice of epic #1037 adds its challenges here when it merges; tests add/remove ids.
+export const LIVE_CHALLENGE_IDS = new Set(CHALLENGE_DEFINITIONS.map(def => def.id))
+
+// Achievements (epic #1046). One rollout switch, on everywhere (a mutable object so tests can flip it).
+// With it off nothing is detected and the page/entry are hidden.
+export const ACHIEVEMENTS_FEATURE = { enabled: true }
+// Daily challenges (epic #1062, basic slice): live in every build (maintainer request); mutable so tests can flip it.
+export const DAILY_CHALLENGES_FEATURE = { enabled: true }
+// Groups in display order; `boostArea` is unused until the bonus slice (#1052).
+export const ACHIEVEMENT_GROUPS = [
+  { id: 'firstSession', name: 'First session', boostArea: 'foundry' },
+  { id: 'tierLadder', name: 'Tier ladder', boostArea: 'factory' },
+  { id: 'earlyFactory', name: 'Early Factory', boostArea: 'factory' },
+]
+// `condition` is evaluated by engine.js `isAchievementConditionMet` against CURRENT state ("at least"
+// thresholds, so a save past a trigger earns it on load). `bonus` is a placeholder (#1052).
+const TIER_ACHIEVEMENT_NAMES = ['Kilo-what?', 'Mega bite', 'Giga-what now', 'Tera-fying', 'Peta-fied', 'Exa-ggerated', 'Zetta slow', 'Yotta be kidding me', 'Ronna-way process', 'Quetta while']
+export const ACHIEVEMENT_DEFINITIONS = [
+  { id: 'helloWorld', name: 'Hello, World', group: 'firstSession', trigger: 'Ping for the first time', condition: { kind: 'counter', key: 'pings', min: 1 } },
+  { id: 'itCompiles', name: 'It compiles, ship it', group: 'firstSession', trigger: 'Compile for the first time', condition: { kind: 'byteCreated' } },
+  { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', condition: { kind: 'counter', key: 'pings', min: 256 } },
+  { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
+  ...TIER_DEFINITIONS.map((tier, index) => ({
+    id: `tier${String(index + 1).padStart(2, '0')}Bought`,
+    name: TIER_ACHIEVEMENT_NAMES[index],
+    group: 'tierLadder',
+    trigger: `Buy your first ${tier.name}`,
+    condition: { kind: 'tierPurchased', tierId: tier.id },
+  })),
+  { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Clock Speed level', condition: { kind: 'clockSpeedLevel', min: 1 } },
+  { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Clock Speed level 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
+  { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', condition: { kind: 'overclocked' } },
+].map(def => ({ secret: false, platformDependent: false, bonus: null, ...def }))
+export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.map(def => [def.id, def]))
 // Legacy rule (lifetime prestige count), kept only so storage.js can grandfather saves that reached
 // it before DeGoogol moved to the Auto-Prestige interval above.
 export const PURGE_UNBOUNDED_MIN_COUNT = 100

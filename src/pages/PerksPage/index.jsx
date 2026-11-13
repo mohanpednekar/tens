@@ -2,6 +2,8 @@ import BuyMaxToggle from 'components/BuyMaxToggle'
 import Button, { ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
 import AutoBoostPresetPicker from 'components/AutoBoostPresetPicker'
 import StatCard from 'components/StatCard'
+import { ChallengeStartDialog } from 'pages/ChallengesPage/FactoryTab'
+import { getChallengeTitle } from 'game/challengeUi'
 import Switch from 'components/Switch'
 import {
   formatAmount,
@@ -24,11 +26,15 @@ import {
   getPrestigePowersPerPp,
   getPrestigePpPerPower,
   getTierTickspeedAutobuyerMilestone,
+  getLiveChallengeForAutomation,
+  isChallengeCompleted,
+  getActiveChallenge,
   isBuyMaxUnlocked,
   isProductionFrozen,
   isOverflowModeUnlocked,
 } from 'game/engine'
 import {
+  CHALLENGE_DEFINITIONS,
   COMPUTE_MERGE_BOUNDARIES,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
@@ -476,6 +482,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const isFrozen = isProductionFrozen(state)
 
   const [tab, setTab] = useState('automation')
+  const [pendingChallengeId, setPendingChallengeId] = useState(null)
+  const activeChallenge = getActiveChallenge(state)
   useEffect(() => {
     setTab('automation')
   }, [focusNonce])
@@ -518,6 +526,26 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     />
   ))
 
+  // Inline start control standing where the speed upgrade will go, until the challenge is completed.
+  const challengeStartButton = def => (
+    <Button
+      aria-label={`Start challenge ${getChallengeTitle(def)} to unlock ${def.target} speed upgrades${activeChallenge ? ' (disabled: another challenge is active)' : ''}`}
+      disabled={Boolean(activeChallenge)}
+      onClick={() => setPendingChallengeId(def.id)}
+      title={`Complete challenge ${def.id} to unlock this automation's speed upgrades`}
+      type="button"
+      variant="prestige"
+    >
+      🏁 {def.id}
+    </Button>
+  )
+
+  // The live, not-yet-completed challenge standing in for an automation's speed upgrade, if any.
+  const gateChallengeFor = (kind, key) => {
+    const def = getLiveChallengeForAutomation(kind, key)
+    return def && !isChallengeCompleted(state, def.id) ? def : null
+  }
+
   const unlockButton = ({ name, cost, canBuy, onClick, title }) => (
     <PpPurchaseButton
       ariaLabel={`Enable ${name} for ${cost} Purge Points`}
@@ -547,6 +575,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           const level = state.automationIntervalLevels?.[auto.key] ?? 0
           const maxed = level >= getAutomationIntervalMaxLevel(auto.key)
           const cost = getAutomationIntervalUpgradeCost(auto.key, level)
+          const liveChallenge = getLiveChallengeForAutomation('global', auto.key)
+          const gateChallenge = liveChallenge && !isChallengeCompleted(state, liveChallenge.id) ? liveChallenge : null
           return (
             <AutomationRow
               key={auto.key}
@@ -567,14 +597,14 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               name={auto.name}
               onToggle={() => actions[auto.setEnabled](!enabled)}
               owned={owned}
-              ownedAction={chainUnlocked ? speedUpgradeButton({
+              ownedAction={chainUnlocked ? (gateChallenge ? challengeStartButton(gateChallenge) : speedUpgradeButton({
                 maxed,
                 cost,
                 ariaLabel: `Upgrade ${auto.name} speed to level ${level + 1} for ${formatAmount(cost)} Purge Points — interval ×0.9`,
                 onClick: () => actions.buyAutomationIntervalUpgrade(auto.key),
                 progressLabel: `${auto.name} speed PP progress`,
                 title: "Spend Purge Points to shorten this automation's interval by 10% (floor 10 ms); cost doubles each level",
-              }) : null}
+              })) : null}
               statusTitle={auto.statusTitle?.(enabled)}
               subText={chainUnlocked && !maxed ? formatIntervalShort(getAutomationIntervalSeconds(state, auto.key) * 1000) : null}
               title={chainUnlocked && maxed ? `${auto.name}: every ${formatInterval(getAutomationIntervalSeconds(state, auto.key) * 1000)} (max)` : undefined}
@@ -604,6 +634,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           const tickLevel = state.tierTickspeedIntervalLevels?.[tier.id] ?? 0
           const tickMaxed = tickLevel >= getTierTickspeedIntervalMaxLevel()
           const tickCost = getTierTickspeedIntervalUpgradeCost(tickLevel)
+          const tickChallenge = gateChallengeFor('tierTickspeed', tier.id)
+          const unitChallenge = gateChallengeFor('tierAutobuyer', tier.id)
           return (
             <TierPair key={tier.id} $accent={theme.tierAccents[tierIndex % theme.tierAccents.length]} aria-label={`${tier.name} automation`}>
                 <TierSymbol tier={tier} />
@@ -626,7 +658,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   name={`${tier.name}'s tickspeed autobuyer`}
                   onToggle={() => actions.setTierTickspeedAutobuyerEnabled(tier.id, !tickEnabled)}
                   owned={tickOwned}
-                  ownedAction={speedUpgradeButton({
+                  ownedAction={tickChallenge ? challengeStartButton(tickChallenge) : speedUpgradeButton({
                     maxed: tickMaxed,
                     cost: tickCost,
                     ariaLabel: `Upgrade ${tier.name}'s tickspeed autobuyer speed to level ${tickLevel + 1} for ${formatAmount(tickCost)} Purge Points — interval ×0.9`,
@@ -657,7 +689,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   name={`${tier.name}'s autobuyer`}
                   onToggle={() => actions.setAutobuyerEnabled(tier.id, !enabled)}
                   owned={owned}
-                  ownedAction={speedUpgradeButton({
+                  ownedAction={unitChallenge ? challengeStartButton(unitChallenge) : speedUpgradeButton({
                     maxed,
                     cost,
                     ariaLabel: atFloor
@@ -864,6 +896,15 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
       </TabBar>
       {tab === 'automation' && renderAutomation()}
       {tab === 'prestige' && renderPrestige()}
+      <ChallengeStartDialog
+        def={pendingChallengeId ? CHALLENGE_DEFINITIONS.find(def => def.id === pendingChallengeId) : null}
+        onCancel={() => setPendingChallengeId(null)}
+        onConfirm={() => {
+          actions.enterChallenge(pendingChallengeId)
+          setPendingChallengeId(null)
+        }}
+        state={state}
+      />
     </RootDiv>
   )
 }
