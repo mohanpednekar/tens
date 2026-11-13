@@ -1,5 +1,5 @@
 import styled, { css, keyframes } from 'styled-components'
-import { formatOfflineDuration, getComputeBoostCoveredTierCount, getComputeBoostLanes, getComputeBoostMultiplier } from 'game/engine'
+import { formatOfflineDuration, getComputeBoostCoveredTierCount, getComputeBoostLanes, getFactoryTierBoostMultiplier } from 'game/engine'
 import { COMPUTE_BOOST_PRESETS } from 'game/layers'
 
 // Shared "this element is boosted" treatment for everything an active Compute Boost multiplies —
@@ -19,15 +19,18 @@ export const isFactoryTierBoosted = (intro, tierIndex) => tierIndex < getCompute
 // 1-based Storage pool index (pool N ↔ Factory tier N).
 export const isPoolBoosted = (intro, poolIndex) => poolIndex <= getComputeBoostCoveredTierCount(intro)
 
-// Full sentence describing the running boosts, or null while none is active.
-export const getComputeBoostDescription = intro => {
-  const lanes = getComputeBoostLanes(intro)
+// Full sentence describing the boosts covering Factory tier `tierIndex` (0-based ladder index), or null when
+// none does. Multiplier = that tier's own summed multiplier; each lane shows its whole remaining time and
+// how many boosts wait behind the running one.
+export const getComputeBoostDescription = (intro, tierIndex = 0) => {
+  const lanes = getComputeBoostLanes(intro).filter(lane => lane.queue[0] > tierIndex)
   if (lanes.length === 0) return null
   const parts = lanes.map(lane => {
-    const queued = lane.queue.length > 1 ? `, ${lane.queue.length} queued` : ''
-    return `${COMPUTE_BOOST_LABELS[lane.type] ?? lane.type} ×${COMPUTE_BOOST_PRESETS[lane.type].multiplier} (${formatOfflineDuration(lane.remainingSeconds)} left${queued})`
+    const waiting = lane.queue.length - 1
+    const total = lane.remainingSeconds + waiting * COMPUTE_BOOST_PRESETS[lane.type].durationSeconds
+    return `${COMPUTE_BOOST_LABELS[lane.type] ?? lane.type} ×${COMPUTE_BOOST_PRESETS[lane.type].multiplier} (${formatOfflineDuration(total)} left${waiting > 0 ? `, ${waiting} queued` : ''})`
   })
-  return `Boosted ×${getComputeBoostMultiplier(intro)} production by Compute Boosts — ${parts.join(' + ')}`
+  return `Boosted ×${getFactoryTierBoostMultiplier(intro, tierIndex + 1)} production by Compute Boosts — ${parts.join(' + ')}`
 }
 
 const boostPulse = keyframes`

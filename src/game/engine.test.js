@@ -12132,4 +12132,41 @@ describe('Compute Boost lanes', () => {
     expect(next.intro.computeBoostType).toBeUndefined()
     expect(Object.keys(next.intro.computeBoosts).sort()).toEqual(['burst', 'standard'])
   })
+
+  it('rejects an unknown preset or an out-of-range funding tier (same-reference no-op, no token spent)', () => {
+    const state = withIntro({ computeCores: 5 })
+    expect(activateComputeBoost('nope', 1)(state)).toBe(state)
+    expect(activateComputeBoost('burst', 0)(state)).toBe(state)
+    expect(activateComputeBoost('burst', 11)(state)).toBe(state)
+    expect(activateComputeBoost('burst', 1.5)(state)).toBe(state)
+  })
+
+  it('Auto Boost queues the preferred preset into an already-running lane and runs beside other lanes', () => {
+    const ready = withIntro({
+      capacity: 8 * 1024 ** 2,
+      computeCores: COMPUTE_ENTITY_AUTO_MERGE_CAP,
+      autoMergeCoresIntoNode: true,
+      computeAutoBoostType: 'burst',
+      computeBoosts: {
+        burst: { queue: [1], remainingSeconds: 100 },
+        sustain: { queue: [1], remainingSeconds: 100 },
+      },
+    })
+    const after = tickGame(1)(ready)
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBeGreaterThan(0)
+    expect(after.intro.computeBoosts.burst.queue).toEqual([1, 1])
+    expect(after.intro.computeBoosts.sustain.queue).toEqual([1])
+    expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO - 1)
+  })
+
+  it('reads degenerate legacy saves safely: missing stacks/tier default to one Core boost, no timer or unknown type is no lane', () => {
+    const d = P.sustain.durationSeconds
+    expect(getComputeBoostLanes({ computeBoostType: 'sustain', computeBoostRemainingSeconds: 5 })).toEqual([
+      { type: 'sustain', queue: [1], remainingSeconds: 5 },
+    ])
+    expect(getComputeBoostLanes({ computeBoostType: 'sustain', computeBoostStacks: 0, computeBoostTierIndex: 99, computeBoostRemainingSeconds: d / 2 })[0].queue).toEqual([1])
+    expect(getComputeBoostLanes({ computeBoostType: 'nope', computeBoostRemainingSeconds: 5 })).toEqual([])
+    expect(getComputeBoostLanes({ computeBoostType: null })).toEqual([])
+    expect(getComputeBoostLanes({ computeBoosts: { burst: { queue: [], remainingSeconds: 3 }, bogus: { queue: [1], remainingSeconds: 3 } } })).toEqual([])
+  })
 })

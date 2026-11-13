@@ -81,7 +81,6 @@ import {
   queueIntroCapacityUpgrade,
   upgradePoolCapacity,
   scaleUpGame,
-  stackComputeBoost,
   provisionDisk,
   tapIntroBit,
   tapPoolBuffer,
@@ -238,26 +237,12 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
     if (!bought) break
   }
 
-  // Compute Boosts spend held tokens, not Memory.
-  if ((s.intro.computeBoostType ?? null) !== null) {
-    s = stackComputeBoost(s)
-  } else {
-    for (let tierIndex = COMPUTE_BOOST_TIER_FIELDS.length; tierIndex >= 1; tierIndex -= 1) {
-      if (canActivateComputeBoost(s, 'burst', tierIndex)) {
-        s = activateComputeBoost('burst', tierIndex)(s)
-        break
-      }
-    }
-    if ((s.intro.computeBoostType ?? null) === null) {
-      for (const boostType of Object.keys(COMPUTE_BOOST_PRESETS)) {
-        for (let tierIndex = COMPUTE_BOOST_TIER_FIELDS.length; tierIndex >= 1; tierIndex -= 1) {
-          if (canActivateComputeBoost(s, boostType, tierIndex)) {
-            s = activateComputeBoost(boostType, tierIndex)(s)
-            break
-          }
-        }
-        if ((s.intro.computeBoostType ?? null) !== null) break
-      }
+  // Compute Boosts spend held tokens, not Memory. One Turbo lane (the strongest multiplier), queued from the
+  // broadest funded tier first; only starts/queues one boost per step.
+  for (let tierIndex = COMPUTE_BOOST_TIER_FIELDS.length; tierIndex >= 1; tierIndex -= 1) {
+    if (canActivateComputeBoost(s, 'burst', tierIndex)) {
+      s = activateComputeBoost('burst', tierIndex)(s)
+      break
     }
   }
 

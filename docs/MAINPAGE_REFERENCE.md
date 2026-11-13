@@ -417,19 +417,21 @@ or single word labels" ask). The full prose explanation of every mechanic here l
 Render order top to bottom (a top `BoostCard` with the current effect, then tier rows; the presets
 live inside the selected tier):
 
-1. Right after the header — deliberately at the TOP of the page — a `BoostTimerRow`
-   (`role="group"`, `aria-label="active boost controls"`) renders whenever a Compute Boost is active:
-   - Left: **Pop** (`aria-label="pop one stack of the active compute boost"`, `↩`, no confirmation,
-     `actions.reclaimComputeBoost`) while `canReclaimComputeBoost` (an unused stack remains —
-     `getUnusedComputeBoostStacks > 0`); otherwise **Forfeit** (`aria-label="forfeit the active compute
-     boost with no refund"`, `✕`, `window.confirm` first, `actions.forfeitComputeBoost`).
-   - Middle: a `TimerBar` (`aria-label="active compute boost"`) whose fill is remaining time over the
-     total stacked duration (`stacks × getComputeBoostTierDurationSeconds`), with one line on top,
-     `"<icon> <label> ×<multiplier> on <KB–covered tier> · <funding tier symbol> · <countdown> left[ · <N> stacked]"`
-     (e.g. `"💥 Turbo ×20 on KB–MB · 🔗 · 2m59s left"`); the full sentence lives in that span's `title`.
-   - Right: **Stack** (`aria-label="stack the active compute boost"`, `+`,
-     `disabled={!isStackComputeBoostTurnAvailable(state)}`, `actions.stackComputeBoost`).
-   `MainPage` shows a matching read-only status line while a boost is active.
+1. Right after the header, deliberately at the TOP of the page, a `BoostTimerStack`
+   (`role="group"`, `aria-label="active boost controls"`) holds one `BoostTimerRow` per running multiplier lane
+   (`getComputeBoostLanes`; Turbo / Balanced / Eco order, `aria-label="<Label> boost controls"`):
+   - Left: **Pop** (`aria-label="pop one queued <Label> compute boost"`, `↩`, no confirmation,
+     `actions.reclaimComputeBoost(type)`) while `canReclaimComputeBoost(state, type)` (a boost waits behind the
+     running one); otherwise **Forfeit** (`aria-label="forfeit the <Label> compute boost with no refund"`, `✕`,
+     `window.confirm` first, `actions.forfeitComputeBoost(type)`).
+   - Middle: a `TimerBar` (`aria-label="active <Label> compute boost"`) whose fill is the lane's whole remaining
+     time (head countdown + waiting × duration) over `queue.length × duration`, showing `"<icon> ×<multiplier>"`,
+     `"Boosting <covered Factory tiers>"` (the head's tier) and the countdown (`· <N>x` when more than one
+     boost is queued); the full sentence lives in its `title`.
+   - Right: **Stack** (`aria-label="stack the <Label> compute boost"`, `+`,
+     `disabled={!isStackComputeBoostTurnAvailable(state, type)}`, `actions.stackComputeBoost(type)`).
+   `MainPage`'s tier details show a read-only line (`getComputeBoostDescription(intro, tierIndex)`) with that
+   tier's own summed multiplier and only the lanes covering it.
    With no boost active, the card instead shows "No boost running" (no prompt: one tier is ALWAYS selected).
 2. The Boost presets (`boostPresets`: `ArmedStatusText` + `BoostRow`) render INSIDE the one selected
    tier block (3), BELOW that tier's merge / charge row — only one tier shows them at a time. The selection can be
@@ -441,25 +443,21 @@ live inside the selected tier):
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
    a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
-      initialized on arrival to the active boost's own tier (`intro.computeBoostTierIndex`), else none; always Cells (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
+      initialized on arrival to the first running lane's head tier, else none; always Cells (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
       tier that can hold a balance that early. Clicking a different tier mid-boost arms a
-      confirmed switch (per `canActivateComputeBoost`); the timer bar, Stack and Pop always describe
-      the ACTIVE tier, not the armed one. The row
+      new boost (it queues or runs in parallel); each timer bar's Stack and Pop describe its own lane, not the armed tier. The row
       highlight (`aria-pressed`) tracks `armedTierIndex`.
    b. A `BoostRow` (`role="group"`, `aria-label="compute boost"`) of the 3 Compute Boost preset
       buttons, each a small `CompactButton` (`variant="prestige"`,
       `aria-label="activate <type> compute boost"`, visible label `"<icon> ×<multiplier> · <duration>"` computed
       for the CURRENTLY ARMED tier via `getComputeBoostTierMultiplier(boostType, armedTierIndex)` —
       e.g. `"💥 ×20 · 10m"` for Turbo (`formatPresetDuration` drops a zero trailing unit) — the preset
-      name itself lives only in `title`). While a boost is active each preset becomes one of:
-      - the SAME preset + tier as the running boost → **Stack** (`aria-label="stack <type> compute
-        boost"`, label prefixed `"+ "`, `actions.stackComputeBoost`, gated by
-        `isStackComputeBoostTurnAvailable`);
-      - any other → a confirmed **switch** (`aria-label="forfeit active boost and activate <type>
-        compute boost"`; the `window.confirm` names how many unused stacks get refunded), calling
-        `actions.activateComputeBoost(boostType, armedTierIndex, true)` — refunds every unused stack
-        (`getUnusedComputeBoostStacks`), forfeits the running one, then spends 1 armed-tier token.
-      With no boost active, `actions.activateComputeBoost(boostType, armedTierIndex)`. Every preset
+      name itself lives only in `title`). A preset whose multiplier already runs becomes a **queue** button
+      (`aria-label="queue <type> compute boost"`, label prefixed `"+ "`); otherwise it is
+      `aria-label="activate <type> compute boost"`. Either way it calls
+      `actions.activateComputeBoost(boostType, armedTierIndex)` with no confirmation (a different multiplier runs
+      in parallel and adds up; the same one queues behind the running boost, strongest tier first).
+      Every preset
       also folds in the forced priority order (disabled while Disk Fill / Provision Disk outranks
       Compute, `title` naming which to take first).
 3. THEN, below the `BoostCard`, the page branches on `intro.computeMergePageUnlocked` (a

@@ -18,16 +18,20 @@ describe('BoostBadge helpers', () => {
     expect(isFactoryTierBoosted(activeIntro, 2)).toBe(false)
   })
 
-  it('describes every running lane: multiplier, preset, time left and queue', () => {
+  it('describes the lanes covering that tier: its own multiplier, whole-lane time left and waiting boosts', () => {
     const intro = { computeBoosts: {
       standard: { queue: [2, 1, 1], remainingSeconds: 90 },
       sustain: { queue: [1], remainingSeconds: 30 },
     } }
-    const description = getComputeBoostDescription(intro)
-    expect(description).toContain(`×${multiplier + COMPUTE_BOOST_PRESETS.sustain.multiplier}`)
-    expect(description).toContain('Balanced')
-    expect(description).toContain('Eco')
-    expect(description).toContain('left')
-    expect(description).toContain('3 queued')
+    const both = getComputeBoostDescription(intro, 0)
+    expect(both).toContain(`Boosted ×${multiplier + COMPUTE_BOOST_PRESETS.sustain.multiplier}`)
+    expect(both).toContain('Balanced')
+    expect(both).toContain('Eco')
+    expect(both).toContain('2 queued')
+    // Tier 2 (index 1) is covered only by the tier-2 Balanced head.
+    const only = getComputeBoostDescription(intro, 1)
+    expect(only).toContain(`Boosted ×${multiplier}`)
+    expect(only).not.toContain('Eco')
+    expect(getComputeBoostDescription(intro, 2)).toBeNull()
   })
 })

@@ -71,7 +71,7 @@ commit as any change to the mechanics it describes.
    `getFactoryTierBoostMultiplier`, `getComputeBoostPoolMultiplier`); the same multiplier queues behind the running
    head (never preempted), the rest in descending funding-tier strength, max `COMPUTE_BOOST_MAX_STACKS` per lane
    (`activateComputeBoost(type, tier)` starts or queues; a finished head hands over, carrying overshoot). Pre-lane
-   saves (`computeBoostType`/…) are read as one lane by `getComputeBoostLanes`), THEN THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
+   saves (`computeBoostType`/…) are read as one lane by `getComputeBoostLanes`), THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
    `COMPUTE_ENTITY_CAP` (10) normal-slot squares (never above 10/10, even once auto-charge is unlocked and
    the entity has grown into its reserve) plus a `TierSelectButton` selecting that tier — only the ONE selected tier block shows
    `ArmedStatusText` + the 3 Turbo/Balanced/Eco presets inline, at that tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-charge unlocks, Charge up (`COMPUTE_MERGE_RATIO`, 8) + Unlock
