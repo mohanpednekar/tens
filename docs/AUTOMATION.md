@@ -103,13 +103,13 @@ overrides.
 
 | Slot (IST) | Default kind → model | Weekly overrides (ISO weekday) |
 |---|---|---|
-| 04:00 | implement → sonnet | Wed security (opus) · Sat tech-debt (sonnet) · Sun economy watch (sonnet, issues only) |
-| 10:00 | qa-review → sonnet | Mon planning (opus, issues only) · Tue deep QA (sonnet) · Wed architecture advisor (opus, issues only) · Fri release readiness (sonnet) · Sun research & self-enhance (opus) |
+| 04:00 | implement → sonnet | Wed security (opus) · Sat tech-debt (sonnet) · Sun economy watch (opus, issues only) |
+| 10:00 | qa-review → sonnet | Mon planning (opus, issues only) · Tue deep QA (opus) · Wed architecture advisor (opus, issues only) · Fri release readiness (sonnet) · Sun research & self-enhance (opus) |
 | 16:00 | implement → sonnet | Thu performance (sonnet) · Sat docs-sync (haiku) |
-| 22:00 | housekeeping → haiku | Wed triage (haiku, issues only) · Fri retrospective (sonnet, issues only) |
+| 22:00 | housekeeping → haiku | Wed triage (haiku, issues only) · Fri retrospective (opus, issues only) |
 
-Model rule: conservative default — the cheaper model wherever it suits: sonnet = implementation, QA, analysis; opus only for
-planning, architecture advice, security, research; haiku = mechanical housekeeping/triage/docs-sync. Every run's prompt also routes subagents (haiku mechanical, sonnet edits, opus judgment). Kind briefs live in the `slot` step; edit them there.
+Model rule: conservative — daily slots use the cheaper model (sonnet implementation/QA); once-a-week analysis/judgment slots (planning,
+deep QA, architecture, security, retro, economy, research) use opus; haiku = mechanical housekeeping/triage/docs-sync. Every run's prompt also routes subagents (haiku mechanical, sonnet edits, opus judgment). Kind briefs live in the `slot` step; edit them there.
 
 **Prompt assembly is a dedicated step, not inline in the action step.** A `Compose prompt` step (id
 `compose-prompt`) runs before `claude-code-action` and builds the full instructional prompt — the same
