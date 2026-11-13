@@ -247,7 +247,7 @@ const InfoPage = () => {
           <li>
             <strong>Reformat</strong> — when every unlocked disk size is complete, this button
             replaces Provision Disk. It unlocks the next disk size and closes{' '}
-            {(1 - DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED) * 100}% of the remaining gap between the exponent and 1.0. The Foundry restarts from scratch, then Compile,
+            {Math.round((1 - DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED) * 100)}% of the remaining gap between the exponent and 1.0. The Foundry restarts from scratch, then Compile,
             Capacity, Bitrate, Disks and Data Lake upgrades/Cells are replayed automatically up to
             your previous highs.
           </li>
