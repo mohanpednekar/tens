@@ -614,30 +614,16 @@ export const createInitialGameState = () => ({
     // Unlike the merge timers above this is RUN-scoped: a Purge/Reboot/Reformat drops it (nothing is spent until the merge).
     computeChargeSeconds: {},
     // PERMANENT — preferred Compute Boost preset for auto-activation (issue #380): each time a tier's automated
-    // merge starts, autoBoostFromTier spends one of that tier's tokens using this preset (or stacks the active
-    // boost if its funding tier matches). One of COMPUTE_BOOST_PRESETS' keys; defaults to 'standard'. Player-selectable on
+    // merge starts, autoBoostFromTier spends one of that tier's tokens using this preset (queued behind that
+    // preset's running boost if any). One of COMPUTE_BOOST_PRESETS' keys; defaults to 'standard'. Player-selectable on
     // ComputePage; carried through Prestige like other Compute QoL prefs.
     computeAutoBoostType: 'standard',
     // Pause/resume preference for the automatic per-merge Boost (autoBoostFromTier); default on. Permanent.
     computeAutoBoostEnabled: true,
-    // NOT permanent — resets to null/null/0/0 on every real Prestige (unlike computeCores/
-    // computeNodes themselves), but carried through untouched by Scale Up/Overclock, same as the
-    // rest of intro. Which COMPUTE_BOOST_PRESETS key is currently active, or null if none is. See
-    // activateComputeBoost/tickComputeBoost/getComputeBoostMultiplier below.
-    computeBoostType: null,
-    // NOT permanent, same reset posture as computeBoostType. Which compute-ladder tier (1 =
-    // Core, … 10 = Megacomputer — see COMPUTE_BOOST_TIER_FIELDS in layers.js) funded the currently
-    // active boost, null while inactive — issue #326. Determines both the refund field
-    // (reclaimComputeBoost) and the multiplier/duration scale (getComputeBoostTierMultiplier/
-    // getComputeBoostTierDurationSeconds) for as long as this boost stays active.
-    computeBoostTierIndex: null,
-    // How many times the active boost has been stacked (see stackComputeBoost) — 0 while
-    // computeBoostType is null. Purely informational; only computeBoostRemainingSeconds drives
-    // the actual multiplier's expiry.
-    computeBoostStacks: 0,
-    // Counts down every tick (see tickComputeBoost), frozen or not, clearing computeBoostType back
-    // to null once it reaches 0.
-    computeBoostRemainingSeconds: 0,
+    // NOT permanent — resets to {} on every real Prestige (unlike computeCores/computeNodes themselves), but
+    // carried through untouched by Scale Up/Overclock. Active Compute Boost lanes, one per COMPUTE_BOOST_PRESETS
+    // key: { [boostType]: { queue: [tierIndex, …], remainingSeconds } } — see "Compute Boosts" below.
+    computeBoosts: {},
     // NOT permanent — resets to 0 on every real Prestige/Era ascension/Reset Byte Foundry (falls
     // out of the intro object entirely, same posture as computeBoostType), but carried through
     // untouched by Scale Up/Overclock like the rest of intro. The Data Stream's own decaying tap
@@ -2184,10 +2170,9 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     // F10 Flat Rate: no per-level multiplier for the challenged tier; F1 Half Duplex halves its production.
     const tierMultiplier = getChallengeEffectTier(stateAfterAutobuyers, 'flatRate') === tier.id ? 1 : getPurchaseMilestoneMultiplier(stateAfterAutobuyers.purchaseLevels?.[tier.id] ?? 1)
     const halfDuplexMultiplier = getChallengeEffectTier(stateAfterAutobuyers, 'halfDuplex') === tier.id ? HALF_DUPLEX_PRODUCTION_MULTIPLIER : 1
-    // A Compute Boost (see getComputeBoostMultiplier/activateComputeBoost above) applies to the
-    // first getComputeBoostCoveredTierCount Factory tiers (its funding tier's index) — Memory gets it
-    // too (see tickIntroProduction); every tier past that coverage stays at 1.
-    const computeBoostMultiplier = TIER_INDEX_BY_ID[tier.id] < getComputeBoostCoveredTierCount(stateAfterAutobuyers.intro) ? getComputeBoostMultiplier(stateAfterAutobuyers.intro) : 1
+    // Compute Boost lanes (see getFactoryTierBoostMultiplier) add up on the Factory tiers they cover —
+    // Memory gets them too (see tickIntroProduction); a tier no lane covers stays at 1.
+    const computeBoostMultiplier = getFactoryTierBoostMultiplier(stateAfterAutobuyers.intro, TIER_INDEX_BY_ID[tier.id] + 1)
     const flopsBoostMultiplier = getComputeFlopsTierProductionMultiplier(stateAfterAutobuyers, tier.id)
     const scaleUpMultiplier = getTierScaleUpMultiplier(stateAfterAutobuyers, tier.id)
     const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * scaleUpMultiplier * tierMultiplier * halfDuplexMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
@@ -3674,9 +3659,9 @@ export const tickPoolResetReprovision = state => {
   return nextState
 }
 
-// "Compute" — true once Compute Core conversion is unlocked and at least one brand-new boost
-// preset is mechanically activatable from some compute-ladder tier (see canActivateComputeBoost,
-// defined further down this file). Stacking an already-active boost is intentionally NOT counted
+// "Compute" — true once Compute Core conversion is unlocked and at least one preset whose lane is not
+// yet running is mechanically activatable from some compute-ladder tier (see canActivateComputeBoost,
+// defined further down this file). Queuing behind an already-running lane is intentionally NOT counted
 // here. Currently unused by any production caller — Data Lake capacity doubling no longer composes
 // against it (removed; array completion is its only gate now, see DESIGN_HISTORY.md), and Memory
 // ×2 never did — kept as a named export/tested unit for API stability and potential future reuse,
@@ -3684,7 +3669,8 @@ export const tickPoolResetReprovision = state => {
 export const isComputeUpgradeAvailable = state =>
   isComputeCoreConversionUnlocked(state) &&
   COMPUTE_BOOST_TIER_FIELDS.some((field, index) =>
-    Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => canActivateComputeBoost(state, boostType, index + 1))
+    Object.keys(COMPUTE_BOOST_PRESETS).some(boostType =>
+      !getComputeBoostLane(state.intro, boostType) && canActivateComputeBoost(state, boostType, index + 1))
   )
 
 export const isPoolCapacityUpgradeAvailable = state => {
@@ -3877,16 +3863,14 @@ export const eraseAllComputeTokens = state => {
     next.computeChargeSeconds = {}
     changed = true
   }
-  if ((next.computeBoostType ?? null) !== null) {
-    next.computeBoostType = null
-    next.computeBoostTierIndex = null
-    next.computeBoostStacks = 0
-    next.computeBoostRemainingSeconds = 0
-    changed = true
-  } else if ((next.computeBoostStacks ?? 0) !== 0 || (next.computeBoostRemainingSeconds ?? 0) !== 0) {
-    next.computeBoostTierIndex = null
-    next.computeBoostStacks = 0
-    next.computeBoostRemainingSeconds = 0
+  const hadLegacyBoost = (next.computeBoostType ?? null) !== null || (next.computeBoostStacks ?? 0) !== 0 ||
+    (next.computeBoostRemainingSeconds ?? 0) !== 0 || next.computeBoostTierIndex != null
+  if (Object.keys(next.computeBoosts ?? {}).length > 0 || hadLegacyBoost) {
+    next.computeBoosts = {}
+    delete next.computeBoostType
+    delete next.computeBoostTierIndex
+    delete next.computeBoostStacks
+    delete next.computeBoostRemainingSeconds
     changed = true
   }
   if (!changed) return state
@@ -6780,12 +6764,17 @@ const AUTO_MERGE_TICKERS = [
   tickAutoMergeSupercomputersIntoMegacomputer,
 ]
 
-// --- Compute Boost tiers --- a boost activated from compute-ladder tier `tierIndex` (1 = Core, …
-// COMPUTE_BOOST_TIER_FIELDS.length = Megacomputer) always has the preset's own BASE (Core)
-// multiplier and duration — a higher funding tier does not make it stronger or longer; it makes it
-// BROADER: it applies to the first `tierIndex` Factory tiers (see getComputeBoostCoveredTierCount).
-// Both getters return 0 for an invalid boostType/tierIndex, which every caller below treats the
-// same as "not activatable."
+// --- Compute Boosts --- each preset (Turbo ×20 / Balanced ×5 / Eco ×2) is its own multiplier LANE.
+// Lanes of DIFFERENT multipliers run in PARALLEL and their multipliers ADD UP on whatever they cover.
+// Boosts of the SAME multiplier QUEUE inside their lane: the running head (queue[0]) finishes first and
+// is never preempted; the waiting ones run afterwards in descending strength (funding tier = how many
+// Factory tiers it covers), each for its full duration. A boost's multiplier and duration are the
+// preset's own whichever compute-ladder tier (1 = Core … 10 = Megacomputer) funds it; the funding
+// tier only sets BREADTH (the first `tierIndex` Factory tiers / Storage pools).
+// State: intro.computeBoosts = { [boostType]: { queue: [tierIndex, …], remainingSeconds } } —
+// remainingSeconds is the running head's countdown; an absent lane is inactive. Saves from before
+// lanes carried computeBoostType/TierIndex/Stacks/RemainingSeconds; getComputeBoostLanes reads those
+// as one lane and the next write replaces them.
 const isValidComputeBoostTier = tierIndex => Number.isInteger(tierIndex) && tierIndex >= 1 && tierIndex <= COMPUTE_BOOST_TIER_FIELDS.length
 
 export const getComputeBoostTierField = tierIndex =>
@@ -6803,221 +6792,178 @@ export const getComputeBoostTierDurationSeconds = (boostType, tierIndex) => {
   return preset.durationSeconds
 }
 
-// The current production-speed multiplier a Compute Boost is contributing — 1 (no effect) while
-// no boost is active. Applied to Memory's own passive production (tickIntroProduction) and to the
-// first getComputeBoostCoveredTierCount Factory tiers (see tickGame)."
-// Stacking (see stackComputeBoost) only ever extends computeBoostRemainingSeconds, never
-// compounds the multiplier itself. `intro.computeBoostTierIndex ?? 1` defensively falls back to
-// tier 1 (Core) for a save from before issue #326 existed (computeBoostType already set, no
-// tierIndex field yet) — Cores was the only funding source before this feature, so that's the
-// correct reading of such a save, not an error case.
+const getLegacyComputeBoostLane = intro => {
+  const type = intro?.computeBoostType ?? null
+  if (!type || !COMPUTE_BOOST_PRESETS[type]) return null
+  const rawTier = intro.computeBoostTierIndex ?? 1
+  const tierIndex = isValidComputeBoostTier(rawTier) ? rawTier : 1
+  const duration = COMPUTE_BOOST_PRESETS[type].durationSeconds
+  const remaining = intro.computeBoostRemainingSeconds ?? 0
+  // The old pooled timer held every stack's duration at once.
+  const stacks = Math.max(1, Math.min(intro.computeBoostStacks ?? 1, Math.ceil(remaining / duration)))
+  return { type, queue: Array(stacks).fill(tierIndex), remainingSeconds: remaining - (stacks - 1) * duration }
+}
+
+// Active lanes in COMPUTE_BOOST_PRESETS order: [{ type, queue, remainingSeconds }].
+export const getComputeBoostLanes = intro => {
+  const stored = intro?.computeBoosts ?? {}
+  const legacy = getLegacyComputeBoostLane(intro)
+  const lanes = []
+  for (const type of Object.keys(COMPUTE_BOOST_PRESETS)) {
+    const lane = stored[type]
+    if (Array.isArray(lane?.queue) && lane.queue.length > 0) {
+      lanes.push({ type, queue: lane.queue, remainingSeconds: lane.remainingSeconds ?? 0 })
+    } else if (legacy?.type === type) {
+      lanes.push(legacy)
+    }
+  }
+  return lanes
+}
+
+export const getComputeBoostLane = (intro, boostType) =>
+  getComputeBoostLanes(intro).find(lane => lane.type === boostType) ?? null
+
+const writeComputeBoostLanes = (state, lanes) => {
+  const computeBoosts = {}
+  for (const lane of lanes) {
+    if (lane.queue.length > 0) computeBoosts[lane.type] = { queue: lane.queue, remainingSeconds: lane.remainingSeconds }
+  }
+  // eslint-disable-next-line no-unused-vars
+  const { computeBoostType, computeBoostTierIndex, computeBoostStacks, computeBoostRemainingSeconds, ...introRest } = state.intro
+  return { ...state, intro: { ...introRest, computeBoosts } }
+}
+
+// Production multiplier for Memory / the Data Stream: every running lane's multiplier summed, 1 while none runs.
 export const getComputeBoostMultiplier = intro =>
-  intro?.computeBoostType ? (getComputeBoostTierMultiplier(intro.computeBoostType, intro.computeBoostTierIndex ?? 1) || 1) : 1
+  getComputeBoostLanes(intro).reduce((sum, lane) => sum + COMPUTE_BOOST_PRESETS[lane.type].multiplier, 0) || 1
 
-// How many Factory tiers (tier01 first, in ladder order) the active boost applies to: the funding
-// compute-ladder tier's own 1-based index (Core → tier01 only, Node → tier01–tier02, …), 0 while no
-// boost is active. Same `?? 1` fallback as getComputeBoostMultiplier.
-export const getComputeBoostCoveredTierCount = intro => {
-  if (!intro?.computeBoostType) return 0
-  const tierIndex = intro.computeBoostTierIndex ?? 1
-  return isValidComputeBoostTier(tierIndex) ? tierIndex : 0
-}
+// Production multiplier for Factory tier `tierNumber` (1-based): the multipliers of every running lane
+// whose head covers it, summed; 1 when none does.
+export const getFactoryTierBoostMultiplier = (intro, tierNumber) =>
+  getComputeBoostLanes(intro).reduce(
+    (sum, lane) => sum + (lane.queue[0] >= tierNumber ? COMPUTE_BOOST_PRESETS[lane.type].multiplier : 0),
+    0,
+  ) || 1
 
-// Fill-speed multiplier an active boost gives one Storage pool's buffer (1-based `poolIndex`; pool N
-// ↔ Factory tier N, so the same getComputeBoostCoveredTierCount pools are covered): 1 + the preset's
-// `poolBonusPercent` (+200% / +50% / +10%) instead of its production multiplier; 1 for an
-// uncovered pool or while no boost is active.
-export const getComputeBoostPoolMultiplier = (intro, poolIndex) => {
-  if (!intro?.computeBoostType || poolIndex > getComputeBoostCoveredTierCount(intro)) return 1
-  const bonus = COMPUTE_BOOST_PRESETS[intro.computeBoostType]?.poolBonusPercent ?? 0
-  return 1 + bonus / 100
-}
+// Broadest running boost's coverage (Factory tiers / pools 1..N), 0 while none runs.
+export const getComputeBoostCoveredTierCount = intro =>
+  getComputeBoostLanes(intro).reduce((max, lane) => Math.max(max, lane.queue[0]), 0)
 
-// Whether boostType can be activated right now FROM tierIndex: a valid preset, a valid tier with
-// at least 1 of that tier's own token held. Starting a brand-new boost while none is active needs
-// no extra flag. Replacing an already-running boost forfeits the RUNNING stack with no refund but
-// refunds every still-unused stacked one (getUnusedComputeBoostStacks) — only allowed when
-// `forfeitConfirmed` is true (UI must get an explicit confirm first) and the new type/tier differs
-// from the active one (same type+tier while active is Stack's job). The token check runs after
-// that refund, so a switch to the same tier is funded by refunded tokens. The actual gate
-// activateComputeBoost itself enforces, not just a UI-only disabled state — see "Security notes".
-export const canActivateComputeBoost = (state, boostType, tierIndex, forfeitConfirmed = false) => {
+// Fill-speed multiplier for one Storage pool's buffer (pool N ↔ Factory tier N): 1 + the summed
+// `poolBonusPercent` (+200% / +50% / +10%) of every running lane covering it.
+export const getComputeBoostPoolMultiplier = (intro, poolIndex) =>
+  1 + getComputeBoostLanes(intro).reduce(
+    (sum, lane) => sum + (lane.queue[0] >= poolIndex ? (COMPUTE_BOOST_PRESETS[lane.type].poolBonusPercent ?? 0) : 0),
+    0,
+  ) / 100
+
+// Spend 1 token of tier `tierIndex` to start/queue a `boostType` boost: a valid preset+tier, a token
+// held, and room in the lane (COMPUTE_BOOST_MAX_STACKS). Enforced by activateComputeBoost itself.
+export const canActivateComputeBoost = (state, boostType, tierIndex) => {
   if (!COMPUTE_BOOST_PRESETS[boostType]) return false
   const field = getComputeBoostTierField(tierIndex)
   if (!field) return false
-
-  const activeType = state.intro.computeBoostType ?? null
-  if (activeType === null) return (state.intro[field] ?? 0) >= 1
-
-  // Same type + same funding tier while active → use stackComputeBoost, not forfeit-restart.
-  if (activeType === boostType && (state.intro.computeBoostTierIndex ?? 1) === tierIndex) return false
-  // Different boost while one is running only with an explicit forfeit confirmation from the UI.
-  if (forfeitConfirmed !== true) return false
-  return (refundUnusedComputeBoostStacks(state).intro[field] ?? 0) >= 1
-}
-
-// A specific (boostType, tierIndex) activation's own forced-priority turn: mechanically
-// activatable (see canActivateComputeBoost above) AND nothing ranked above Compute (Disk Fill,
-// Provision Disk) currently is. Pass forfeitConfirmed=true only after the player has
-// explicitly confirmed forfeiting an active boost (no refund).
-export const isComputeBoostTurnAvailable = (state, boostType, tierIndex, forfeitConfirmed = false) =>
-  canActivateComputeBoost(state, boostType, tierIndex, forfeitConfirmed) &&
-  !isDiskFillAvailable(state) && !isProvisionDiskInProgress(state)
-
-// Whether stackComputeBoost below would do anything right now: a boost IS currently active, it
-// hasn't already hit COMPUTE_BOOST_MAX_STACKS, and at least 1 more token of the ACTIVE boost's OWN
-// funding tier (intro.computeBoostTierIndex) is held — Stack always extends whichever boost is
-// currently running, regardless of any tier a player might have since selected in the UI (issue
-// #326).
-export const canStackComputeBoost = state => {
-  const boostType = state.intro.computeBoostType ?? null
-  if (boostType === null) return false
-  if ((state.intro.computeBoostStacks ?? 0) >= COMPUTE_BOOST_MAX_STACKS) return false
-  // Same `?? 1` fallback as getComputeBoostMultiplier/canReclaimComputeBoost — a save from before
-  // computeBoostTierIndex existed can have this field missing on an active boost; without the
-  // fallback, getComputeBoostTierField(null) is invalid and this would always return false,
-  // silently disabling Stack for such a save even with tokens held.
-  const field = getComputeBoostTierField(state.intro.computeBoostTierIndex ?? 1)
-  if (!field) return false
+  if ((getComputeBoostLane(state.intro, boostType)?.queue.length ?? 0) >= COMPUTE_BOOST_MAX_STACKS) return false
   return (state.intro[field] ?? 0) >= 1
 }
 
-// Stack's own forced-priority turn — same shape as isComputeBoostTurnAvailable above.
-export const isStackComputeBoostTurnAvailable = state =>
-  canStackComputeBoost(state) &&
+// Forced-priority turn (Disk Fill > Provision Disk > Compute Boost).
+export const isComputeBoostTurnAvailable = (state, boostType, tierIndex) =>
+  canActivateComputeBoost(state, boostType, tierIndex) &&
   !isDiskFillAvailable(state) && !isProvisionDiskInProgress(state)
 
-// Whether ANY Compute Boost action currently has its turn — either starting a brand new boost from
-// some tier (canActivateComputeBoost, only possible while none is active — forfeit-replace is a
-// deliberate confirm path, not an automatic "turn"), or stacking the one already running
-// (canStackComputeBoost) — the Compute-level analogue of the other four forced-priority "turn"
-// predicates above. NOT used to gate ComputePage's own nav button on ByteFoundryPage, which stays
-// enabled once revealed regardless of turn (see "Byte Foundry" in CLAUDE.md for why) — only the
-// individual preset/Stack buttons inside ComputePage gate on
-// isComputeBoostTurnAvailable/isStackComputeBoostTurnAvailable directly.
+// Stack = queue one more boost of the lane's running head tier.
+export const canStackComputeBoost = (state, boostType) => {
+  const lane = getComputeBoostLane(state.intro, boostType)
+  return Boolean(lane) && canActivateComputeBoost(state, boostType, lane.queue[0])
+}
+
+export const isStackComputeBoostTurnAvailable = (state, boostType) =>
+  canStackComputeBoost(state, boostType) &&
+  !isDiskFillAvailable(state) && !isProvisionDiskInProgress(state)
+
+// Whether any Compute Boost action currently has its turn.
 export const isComputeUpgradeTurnAvailable = state =>
-  isStackComputeBoostTurnAvailable(state) ||
   COMPUTE_BOOST_TIER_FIELDS.some((field, index) =>
-    Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => isComputeBoostTurnAvailable(state, boostType, index + 1, false))
+    Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => isComputeBoostTurnAvailable(state, boostType, index + 1))
   )
 
-// How many stacks of the active boost are still fully unused — every stack beyond the one
-// currently running whose whole duration is still ahead in the pooled timer:
-// min(stacks − 1, ceil(remaining / stackDuration) − 1), never negative. 0 while no boost is
-// active. canReclaimComputeBoost (Pop) is exactly "this is > 0".
-export const getUnusedComputeBoostStacks = state => {
-  const boostType = state.intro.computeBoostType ?? null
-  if (boostType === null) return 0
-  const stackDuration = getComputeBoostTierDurationSeconds(boostType, state.intro.computeBoostTierIndex ?? 1)
-  if (!(stackDuration > 0)) return 0
-  const remaining = state.intro.computeBoostRemainingSeconds ?? 0
-  return Math.max(0, Math.min((state.intro.computeBoostStacks ?? 0) - 1, Math.ceil(remaining / stackDuration) - 1))
+// Queued (not yet started) boosts in a lane — Pop refunds them; 0 for an inactive lane.
+export const getUnusedComputeBoostStacks = (state, boostType) =>
+  Math.max(0, (getComputeBoostLane(state.intro, boostType)?.queue.length ?? 0) - 1)
+
+export const canReclaimComputeBoost = (state, boostType) => getUnusedComputeBoostStacks(state, boostType) > 0
+
+// Pop: refunds the weakest queued boost of the lane (uncapped — the token was the player's before it
+// was spent). Same-reference no-op when nothing is queued.
+export const reclaimComputeBoost = boostType => state => {
+  if (!canReclaimComputeBoost(state, boostType)) return state
+  const lanes = getComputeBoostLanes(state.intro)
+  const lane = lanes.find(l => l.type === boostType)
+  const tierIndex = lane.queue[lane.queue.length - 1]
+  const field = getComputeBoostTierField(tierIndex)
+  const next = writeComputeBoostLanes(state, lanes.map(l => (l === lane ? { ...l, queue: l.queue.slice(0, -1) } : l)))
+  return { ...next, intro: { ...next.intro, [field]: (state.intro[field] ?? 0) + 1 } }
 }
 
-// Pops every unused stack (reclaimComputeBoost, one at a time) — the refund half of a preset
-// switch. Same reference when there is nothing to refund.
-const refundUnusedComputeBoostStacks = state => {
-  let next = state
-  for (let i = getUnusedComputeBoostStacks(state); i > 0; i -= 1) next = reclaimComputeBoost(next)
-  return next
+// Forfeit cancels a lane's RUNNING boost with no refund; only once nothing is queued behind it
+// (Pop first), so it can never discard tokens outright. UI must confirm.
+export const canForfeitComputeBoost = (state, boostType) => {
+  const lane = getComputeBoostLane(state.intro, boostType)
+  return Boolean(lane) && lane.queue.length === 1
 }
 
-// Cancels the active Compute Boost with NO token refund and NO duration credit — pure forfeit.
-// Same-reference no-op while no boost is active. Only reachable once no unused stack remains
-// (getUnusedComputeBoostStacks === 0 — Pop is offered instead until then), so it can never discard
-// stacked tokens outright. UI must confirm before calling.
-export const canForfeitComputeBoost = state =>
-  (state.intro.computeBoostType ?? null) !== null && getUnusedComputeBoostStacks(state) === 0
-
-export const forfeitComputeBoost = state => {
-  if (!canForfeitComputeBoost(state)) return state
-  return {
-    ...state,
-    intro: {
-      ...state.intro,
-      computeBoostType: null,
-      computeBoostTierIndex: null,
-      computeBoostStacks: 0,
-      computeBoostRemainingSeconds: 0,
-    },
-  }
+export const forfeitComputeBoost = boostType => state => {
+  if (!canForfeitComputeBoost(state, boostType)) return state
+  return writeComputeBoostLanes(state, getComputeBoostLanes(state.intro).filter(l => l.type !== boostType))
 }
 
-// Starts a boost of boostType, funded by tierIndex — spends exactly 1 token of that tier's own
-// field (getComputeBoostTierField), sets computeBoostStacks to 1, and
-// computeBoostRemainingSeconds to that tier's own getComputeBoostTierDurationSeconds.
-// When a boost is already active, pass forfeitConfirmed=true (after an explicit UI confirm) to
-// refund its unused stacks, forfeit its running stack, and replace it; without that flag, a same-reference
-// no-op while any boost is running (see stackComputeBoost to extend, or forfeitComputeBoost alone
-// to cancel). Same-type+same-tier while active is always a no-op here — use Stack.
-export const activateComputeBoost = (boostType, tierIndex, forfeitConfirmed = false) => state => {
-  if (!isComputeBoostTurnAvailable(state, boostType, tierIndex, forfeitConfirmed)) return state
+// Starts a `boostType` boost funded by `tierIndex` — or queues it behind that lane's running one, in
+// descending strength order after the head. A running head is never preempted. Same-reference no-op
+// without its turn.
+export const activateComputeBoost = (boostType, tierIndex) => state => {
+  if (!isComputeBoostTurnAvailable(state, boostType, tierIndex)) return state
 
   const field = getComputeBoostTierField(tierIndex)
-  const base = (state.intro.computeBoostType ?? null) === null ? state : refundUnusedComputeBoostStacks(state)
-
-  return {
-    ...base,
-    intro: {
-      ...base.intro,
-      [field]: (base.intro[field] ?? 0) - 1,
-      computeBoostType: boostType,
-      computeBoostTierIndex: tierIndex,
-      computeBoostStacks: 1,
-      computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds(boostType, tierIndex),
-    },
+  const lanes = getComputeBoostLanes(state.intro)
+  const lane = lanes.find(l => l.type === boostType)
+  let nextLane
+  if (lane) {
+    const queue = lane.queue.slice()
+    let at = queue.length
+    while (at > 1 && queue[at - 1] < tierIndex) at -= 1
+    queue.splice(at, 0, tierIndex)
+    nextLane = { ...lane, queue }
+  } else {
+    nextLane = { type: boostType, queue: [tierIndex], remainingSeconds: getComputeBoostTierDurationSeconds(boostType, tierIndex) }
   }
+  const next = writeComputeBoostLanes(state, [...lanes.filter(l => l !== lane), nextLane])
+  return { ...next, intro: { ...next.intro, [field]: (state.intro[field] ?? 0) - 1 } }
 }
 
-// Extends the CURRENTLY ACTIVE boost by one more stack — spends 1 more token of that boost's own
-// funding tier (intro.computeBoostTierIndex, NOT whatever tier a player might have selected in the
-// UI since activating), increments computeBoostStacks, and adds that same tier's own
-// getComputeBoostTierDurationSeconds onto computeBoostRemainingSeconds (extending the remaining
-// time, not resetting it). No-op (same-reference) below isStackComputeBoostTurnAvailable's guard
-// above.
-export const stackComputeBoost = state => {
-  if (!isStackComputeBoostTurnAvailable(state)) return state
-
-  const boostType = state.intro.computeBoostType
-  // Same `?? 1` fallback as getComputeBoostMultiplier/canReclaimComputeBoost/reclaimComputeBoost —
-  // a save from before computeBoostTierIndex existed can have this field missing on an active
-  // boost; without the fallback getComputeBoostTierField/getComputeBoostTierDurationSeconds would
-  // both treat it as invalid (same pre-existing bug Devin Review surfaced via the reclaim path).
-  const tierIndex = state.intro.computeBoostTierIndex ?? 1
-  const field = getComputeBoostTierField(tierIndex)
-
-  return {
-    ...state,
-    intro: {
-      ...state.intro,
-      [field]: (state.intro[field] ?? 0) - 1,
-      computeBoostStacks: (state.intro.computeBoostStacks ?? 0) + 1,
-      computeBoostRemainingSeconds: (state.intro.computeBoostRemainingSeconds ?? 0) + getComputeBoostTierDurationSeconds(boostType, tierIndex),
-    },
-  }
+export const stackComputeBoost = boostType => state => {
+  if (!isStackComputeBoostTurnAvailable(state, boostType)) return state
+  return activateComputeBoost(boostType, getComputeBoostLane(state.intro, boostType).queue[0])(state)
 }
 
-// Counts the active boost's remaining duration down every tick, frozen or not (same posture as
-// every other Byte Foundry mechanic) — clears back to inactive (type/tierIndex null,
-// stacks/remaining 0) once it reaches 0. A same-reference no-op while no boost is active.
+// Counts every lane's running head down each tick (frozen or not); a finished head hands over to the
+// next queued boost (carrying any overshoot), and an empty lane clears. Same-reference no-op while idle.
 export const tickComputeBoost = elapsedSeconds => state => {
-  if ((state.intro.computeBoostType ?? null) === null) return state
+  const lanes = getComputeBoostLanes(state.intro)
+  if (lanes.length === 0) return state
 
-  const remaining = (state.intro.computeBoostRemainingSeconds ?? 0) - elapsedSeconds
-  if (remaining > 0) {
-    return { ...state, intro: { ...state.intro, computeBoostRemainingSeconds: remaining } }
+  const nextLanes = []
+  for (const lane of lanes) {
+    let queue = lane.queue
+    let remaining = lane.remainingSeconds - elapsedSeconds
+    while (remaining <= 0 && queue.length > 0) {
+      queue = queue.slice(1)
+      if (queue.length === 0) break
+      remaining += getComputeBoostTierDurationSeconds(lane.type, queue[0])
+    }
+    if (queue.length > 0) nextLanes.push({ type: lane.type, queue, remainingSeconds: remaining })
   }
-
-  return {
-    ...state,
-    intro: {
-      ...state.intro,
-      computeBoostType: null,
-      computeBoostTierIndex: null,
-      computeBoostStacks: 0,
-      computeBoostRemainingSeconds: 0,
-    },
-  }
+  return writeComputeBoostLanes(state, nextLanes)
 }
 
 // True while any reserve-merge countdown is still running (Core→Node … Supercomputer→Megacomputer).
@@ -7040,75 +6986,16 @@ export const setComputeAutoBoostType = boostType => state => {
 
 // Auto Boost is automatic per tier: the moment a tier's automated merge STARTS (8 tokens leave the input and the
 // merge timer begins — the merge is a prerequisite for the automation, so it can never starve it), one of that
-// tier's remaining tokens is spent via Boost, once per merge. Stacks the active boost when it is already funded by
-// that same tier, otherwise starts the preferred preset (intro.computeAutoBoostType, default 'standard'). Never
-// forfeits a different active boost; respects the same forced-priority turn gates as manual activate/stack.
-// Same-reference no-op when nothing can be spent.
+// tier's remaining tokens is spent on the preferred preset (intro.computeAutoBoostType, default 'standard') —
+// started, or queued behind that preset's running boost. Respects the same forced-priority turn gates as
+// manual activation. Same-reference no-op when nothing can be spent.
 const autoBoostFromTier = (state, tierIndex) => {
   if (!(state.intro?.computeAutoBoostEnabled ?? true)) return state
-  const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
-  if (!field || (state.intro?.[field] ?? 0) < 1) return state
-  if ((state.intro.computeBoostType ?? null) !== null) {
-    if ((state.intro.computeBoostTierIndex ?? 1) !== tierIndex) return state
-    if (!isStackComputeBoostTurnAvailable(state)) return state
-    return stackComputeBoost(state)
-  }
   const preference = COMPUTE_BOOST_PRESETS[state.intro?.computeAutoBoostType]
     ? state.intro.computeAutoBoostType
     : 'standard'
   if (!isComputeBoostTurnAvailable(state, preference, tierIndex)) return state
   return activateComputeBoost(preference, tierIndex)(state)
-}
-
-// Whether reclaimComputeBoost below would do anything right now. Only reclaimable while MORE than
-// 1 stack is currently held (`computeBoostStacks > 1`) AND enough pooled time remains that
-// reclaiming one stack's own duration wouldn't zero it out. Both checks are needed:
-// `computeBoostRemainingSeconds` is a single POOLED timer, not N independent per-stack timers
-// (`stackComputeBoost` just adds a flat duration chunk onto it), so a multi-stack boost can still
-// have LESS time left than even one stack's own base duration once it's ticked down far enough —
-// `stacks > 1` alone would wrongly permit a reclaim there, subtracting a full stack's duration and
-// flooring the pool straight to 0, ending the effect exactly as if the last stack itself had been
-// reclaimed (found by Devin Review on this same PR). An active boost always holds at least 1 stack
-// while running (tickComputeBoost clears type/tierIndex/stacks/remaining back to inactive the
-// instant remaining hits 0, rather than leaving a live boost at 0 stacks). A boost's effect can no
-// longer be canceled outright via reclaim once it's started — letting it run out is the only way
-// to end it early (see docs/DESIGN_HISTORY.md for the earlier, un-gated behavior this replaced).
-// Equivalent to getUnusedComputeBoostStacks(state) > 0 (it applies the `?? 1` tierIndex fallback
-// and a zero-duration guard, so a legacy save can't refund a bogus field).
-export const canReclaimComputeBoost = state => getUnusedComputeBoostStacks(state) > 0
-
-// Reclaims the most recently added, still-unused stack of the active Compute Boost — one at a
-// time — the exact inverse of one activateComputeBoost/stackComputeBoost call: refunds 1 token of
-// the active boost's own funding tier (uncapped — see below) and subtracts that tier's own getComputeBoostTierDurationSeconds
-// back out of computeBoostRemainingSeconds, decrementing computeBoostStacks by 1.
-// canReclaimComputeBoost's own gate (>1 stack AND enough pooled time that this subtraction can't
-// zero it out) means nextStacks is always >= 1 and the resulting remaining time is always > 0 here
-// — the boost stays genuinely active/running, never clearing to inactive or silently expiring via
-// reclaim (compare stackComputeBoost/activateComputeBoost, which are the only ways a boost starts
-// or grows). The `Math.max(0, …)` below is defensive only, given that guarantee. A same-reference
-// no-op while canReclaimComputeBoost's own gate isn't met.
-export const reclaimComputeBoost = state => {
-  if (!canReclaimComputeBoost(state)) return state
-
-  const boostType = state.intro.computeBoostType
-  // Same `?? 1` fallback canReclaimComputeBoost's own gate above uses — see its comment.
-  const tierIndex = state.intro.computeBoostTierIndex ?? 1
-  const field = getComputeBoostTierField(tierIndex)
-  const nextStacks = (state.intro.computeBoostStacks ?? 0) - 1
-  // NOT capped at the tier's effective cap: the token was the player's before it was stacked, so
-  // a refund into a full tier still returns it (counts above the cap are already tolerated — slot
-  // and reserve displays clamp, Booster purchases simply stop).
-  const refunded = (state.intro[field] ?? 0) + 1
-
-  return {
-    ...state,
-    intro: {
-      ...state.intro,
-      [field]: refunded,
-      computeBoostStacks: nextStacks,
-      computeBoostRemainingSeconds: Math.max(0, (state.intro.computeBoostRemainingSeconds ?? 0) - getComputeBoostTierDurationSeconds(boostType, tierIndex)),
-    },
-  }
 }
 
 // Toggles whether a tier's unit-buying autobuyer currently acts (see autobuyersEnabled/tickGame) —
@@ -7867,11 +7754,9 @@ const resetFactoryCycle = (state, awardPurge) => {
       computeCloudsMergeRemainingSeconds: state.intro?.computeCloudsMergeRemainingSeconds ?? initial.intro.computeCloudsMergeRemainingSeconds,
       computeDatacentersMergeRemainingSeconds: state.intro?.computeDatacentersMergeRemainingSeconds ?? initial.intro.computeDatacentersMergeRemainingSeconds,
       computeSupercomputersMergeRemainingSeconds: state.intro?.computeSupercomputersMergeRemainingSeconds ?? initial.intro.computeSupercomputersMergeRemainingSeconds,
-      // computeBoostType/computeBoostTierIndex/computeBoostStacks/computeBoostRemainingSeconds are
-      // deliberately NOT listed here — they fall through to initial.intro's fresh
-      // null/null/0/0 defaults above, since an active boost is run-scoped and resets every real
-      // Prestige, unlike the Cores/Nodes/etc. it's
-      // spent from.
+      // computeBoosts is deliberately NOT listed here — it falls through to initial.intro's fresh
+      // {} default above, since active boosts are run-scoped and reset every real Prestige, unlike
+      // the Cores/Nodes/etc. they're spent from.
     },
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as the four global automations' own "enabled" flags below — a paused

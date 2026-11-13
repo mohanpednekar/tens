@@ -63,10 +63,15 @@ commit as any change to the mechanics it describes.
    `intro.computeMergePageUnlocked` reveal. "Compute" names the page/feature only — entities drop the word
    (`Cell`/`Battery`/…) in every player-visible label. Deliberately terse — icon-only controls, full sentence
    in `title`/`aria-label`; mechanic prose lives in the Manual (`InfoPage`). Render order: a top card with the
-   active Boost's timer bar — Pop (refund newest unused stack, no confirm) or, once none is unused,
-   Forfeit (confirmed) on the left, Stack on the right (`canReclaimComputeBoost`/`canForfeitComputeBoost`
-   enforce the same split in the engine) — or "No boost running"; while a boost runs, the matching
-   preset stacks and any other preset is a confirmed switch that refunds unused stacks), THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
+   one Boost timer bar per running multiplier lane (Turbo ×20 / Balanced ×5 / Eco ×2) — Pop (refund the last queued
+   boost, no confirm) or, once nothing is queued, Forfeit (confirmed) on the left, Stack (queue another of the head's
+   tier) on the right (`canReclaimComputeBoost`/`canForfeitComputeBoost`, per `boostType`) — or "No boost running".
+   **Lanes** (`intro.computeBoosts = { [boostType]: { queue: [tierIndex…], remainingSeconds } }`): different
+   multipliers run in parallel and their multipliers add up (`getComputeBoostMultiplier`,
+   `getFactoryTierBoostMultiplier`, `getComputeBoostPoolMultiplier`); the same multiplier queues behind the running
+   head (never preempted), the rest in descending funding-tier strength, max `COMPUTE_BOOST_MAX_STACKS` per lane
+   (`activateComputeBoost(type, tier)` starts or queues; a finished head hands over, carrying overshoot). Pre-lane
+   saves (`computeBoostType`/…) are read as one lane by `getComputeBoostLanes`), THEN THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
    `COMPUTE_ENTITY_CAP` (10) normal-slot squares (never above 10/10, even once auto-charge is unlocked and
    the entity has grown into its reserve) plus a `TierSelectButton` selecting that tier — only the ONE selected tier block shows
    `ArmedStatusText` + the 3 Turbo/Balanced/Eco presets inline, at that tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-charge unlocks, Charge up (`COMPUTE_MERGE_RATIO`, 8) + Unlock

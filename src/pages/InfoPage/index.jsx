@@ -457,22 +457,21 @@ const InfoPage = () => {
             {COMPUTE_BOOST_PRESETS.sustain.poolBonusPercent}% for Turbo / Balanced / Eco.
           </li>
           <li>
-            Only one boost runs at a time. Picking the same preset and tier again{' '}
-            <strong>stacks</strong> it (up to {COMPUTE_BOOST_MAX_STACKS} stacks; each adds time, the
-            multiplier doesn’t compound). Picking a different one asks first, then refunds unused
-            stacks and forfeits the running one.
+            Boosts of different multipliers (Turbo, Balanced, Eco) run <strong>in parallel</strong> and
+            their multipliers add up. Boosts of the same multiplier <strong>queue</strong> (up to{' '}
+            {COMPUTE_BOOST_MAX_STACKS}): the running one is never interrupted, and the waiting ones
+            run afterwards, strongest (broadest tier) first.
           </li>
           <li>
-            While a boost runs, a timer bar shows the time left. <strong>+</strong> on its right adds
-            a stack. <strong>Pop</strong> (↩) on its left refunds the most recent unused stack; once
-            none are left it becomes <strong>Forfeit</strong> (✕), which ends the boost with no refund
+            Each running multiplier has its own timer bar showing the time left. <strong>+</strong> on its right
+            queues another. <strong>Pop</strong> (↩) on its left refunds the last queued boost; once
+            none are queued it becomes <strong>Forfeit</strong> (✕), which ends that boost with no refund
             after a confirmation.
           </li>
           <li>
             <strong>Auto Boost</strong> is automatic for every tier whose charge is automated: each
-            time that automatic charge starts, one of the tier's remaining tokens activates (or stacks)
-            your preferred preset. Choose the preset on Power (default Balanced). It never forfeits a
-            running boost.
+            time that automatic charge starts, one of the tier's remaining tokens starts (or queues)
+            your preferred preset. Choose the preset on Power (default Balanced).
           </li>
           <li>Fusions are used only to fund Boosts.</li>
         </ul>

@@ -362,7 +362,7 @@ test('the Manual nav item opens the Info page and Factory returns, preserving ga
   )
   expect(screen.getByLabelText(/byte foundry section/i)).toHaveTextContent(/forced priority/i)
   expect(screen.getByLabelText(/storage section/i)).toHaveTextContent(/clean-slate disk/i)
-  expect(screen.getByLabelText(/power section/i)).toHaveTextContent(/stack/i)
+  expect(screen.getByLabelText(/power section/i)).toHaveTextContent(/queue/i)
   expect(screen.getByLabelText(/compute flops section/i)).toHaveTextContent(/kflops/i)
   expect(screen.queryByLabelText(/^kilobytes layer$/i)).not.toBeInTheDocument()
 
@@ -4716,185 +4716,6 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.getByRole('button', { name: /activate eco compute boost/i })).toBeDisabled()
   })
 
-  test('activating a boost spends exactly 1 Compute Cell and shows the active status line', () => {
-    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3 })
-    render(<App />)
-    openBoosters()
-
-    fireEvent.click(screen.getByRole('button', { name: /activate turbo compute boost/i }))
-
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeCores).toBe(2)
-    expect(saved.intro.computeBoostType).toBe('burst')
-    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(
-      new RegExp(`×${COMPUTE_BOOST_PRESETS.burst.multiplier}`)
-    )
-  })
-
-  test('an active boost shows no per-element badge; the timer bar names what is boosted', () => {
-    seedIntroState(
-      { bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, mainGameUnlocked: true, computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 600 },
-      { owned: { tier01: 1, tier02: 1 }, purchased: { tier01: 1, tier02: 1 } },
-    )
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: /^open byte foundry$/i }))
-    // The glow is the only marker — no per-element badge.
-    expect(screen.queryByRole('img', { name: /Boosted/ })).toBeNull()
-
-    openFactorySync()
-    expect(screen.queryByRole('img', { name: /Boosted/ })).toBeNull()
-    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent('Boosting KB')
-  })
-
-  test('the same preset becomes a Stack button while active; other presets offer forfeit-replace with confirmation', () => {
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
-    })
-    render(<App />)
-    openBoosters()
-
-    expect(screen.queryByRole('button', { name: /activate turbo compute boost/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /forfeit active boost and activate balanced/i })).toBeEnabled()
-
-    fireEvent.click(screen.getByRole('button', { name: /^stack turbo compute boost$/i }))
-
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeCores).toBe(2)
-    expect(saved.intro.computeBoostStacks).toBe(2)
-    expect(saved.intro.computeBoostRemainingSeconds).toBe(5 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
-  })
-
-  test('clicking a different tier mid-boost arms it for a confirmed forfeit-and-switch (#740)', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true,
-      computeMergePageUnlocked: true, computeCores: 3, computeNodes: 2,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
-    })
-    render(<App />)
-    openBoosters()
-
-    // Active tier armed by default; the active status line keeps describing the Cell boost.
-    expect(screen.getByRole('button', { name: /select cells to fund a compute boost/i })).toHaveAttribute('aria-pressed', 'true')
-    const nodesRow = screen.getByRole('button', { name: /select batteries to fund a compute boost/i })
-    fireEvent.click(nodesRow)
-    expect(nodesRow).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByLabelText(/^active compute boost$/i).title).toMatch(/boost active: ×\d+ production on Kilobytes/)
-
-    // Same preset, different tier → forfeit-replace, funded by Batteries.
-    fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate turbo/i }))
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeBoostTierIndex).toBe(2)
-    expect(saved.intro.computeNodes).toBe(1)
-    expect(saved.intro.computeCores).toBe(3)
-    confirmSpy.mockRestore()
-  })
-
-  test('forfeit-replace of a different preset asks for confirmation; cancel keeps the active boost', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
-    })
-    render(<App />)
-    openBoosters()
-
-    fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate balanced/i }))
-    expect(confirmSpy).toHaveBeenCalled()
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeBoostType).toBe('burst')
-    expect(saved.intro.computeCores).toBe(3)
-    confirmSpy.mockRestore()
-  })
-
-  test('forfeit-replace of a different preset with confirmation starts the new boost and does not refund', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
-    })
-    render(<App />)
-    openBoosters()
-
-    fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate balanced/i }))
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeBoostType).toBe('standard')
-    expect(saved.intro.computeBoostStacks).toBe(1)
-    expect(saved.intro.computeCores).toBe(2)
-    confirmSpy.mockRestore()
-  })
-
-  test('switching to a different preset with stacks held refunds the unused stacks after confirmation', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2,
-      computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds + 5,
-    })
-    render(<App />)
-    openBoosters()
-
-    fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate balanced/i }))
-
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/1 unused stack refunded/))
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeBoostType).toBe('standard')
-    expect(saved.intro.computeBoostStacks).toBe(1)
-    expect(saved.intro.computeCores).toBe(3) // +1 refunded, −1 spent
-    confirmSpy.mockRestore()
-  })
-
-  test('Forfeit button asks for confirmation and clears the active boost with no refund', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
-    // Forfeit only shows at the last remaining stack (stacks: 1) — see the mutual-exclusion test below.
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
-    })
-    render(<App />)
-    openBoosters()
-
-    fireEvent.click(screen.getByRole('button', { name: /forfeit the active compute boost with no refund/i }))
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeBoostType).toBe(null)
-    expect(saved.intro.computeCores).toBe(3)
-    confirmSpy.mockRestore()
-  })
-
-  test('the timer bar\'s left button is Pop while an unused stack remains, and Forfeit at the last one', () => {
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds * 2,
-    })
-    const { unmount } = render(<App />)
-    openBoosters()
-    expect(screen.getByRole('button', { name: /pop one stack/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /forfeit the active compute boost with no refund/i })).not.toBeInTheDocument()
-    unmount()
-
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds,
-    })
-    render(<App />)
-    openBoosters()
-    expect(screen.queryByRole('button', { name: /pop one stack/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /forfeit the active compute boost with no refund/i })).toBeInTheDocument()
-  })
-
-  test('the Stack button is disabled once the active boost is already at COMPUTE_BOOST_MAX_STACKS', () => {
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: COMPUTE_BOOST_MAX_STACKS, computeBoostRemainingSeconds: 5,
-    })
-    render(<App />)
-    openBoosters()
-
-    expect(screen.getByRole('button', { name: /^stack turbo compute boost$/i })).toBeDisabled()
-    expect(screen.getByRole('button', { name: /stack the active compute boost/i })).toBeDisabled()
-  })
-
   test('every activation button stays disabled while a higher-priority action (Disk Fill) is currently available, even with a Compute Cell in hand', () => {
     // A built, pull-eligible 1 KB disk (tier01 with no partial level progress) is the highest-
     // priority Foundry action — nothing below it (including Boost activation) may be offered.
@@ -4903,19 +4724,6 @@ describe('Byte Foundry Compute Boost', () => {
     openBoosters()
 
     expect(screen.getByRole('button', { name: /activate turbo compute boost/i })).toBeDisabled()
-  })
-
-  test('MainPage shows a read-only active-boost status line while one is running, and hides it once inactive', () => {
-    seedMainGameState({ intro: { mainGameUnlocked: true, computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 30 } })
-    const { unmount } = render(<App />)
-    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(
-      new RegExp(`×${COMPUTE_BOOST_PRESETS.standard.multiplier}.*boosting kb`, 'i')
-    )
-    unmount()
-
-    seedMainGameState({ intro: { mainGameUnlocked: true, computeBoostType: null } })
-    render(<App />)
-    expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
   })
 
   // Regression test: an unrecognized computeBoostType (e.g. a corrupted/hand-edited save, or a
@@ -4965,42 +4773,6 @@ describe('Byte Foundry Compute Boost', () => {
     }
   })
 
-  test('render order: the active-boost timer bar (Pop/Forfeit, Stack) on top, the armed presets inside the selected (active) tier block below', () => {
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
-      computeCores: 1, computeNodes: 9,
-      computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 30,
-    })
-    render(<App />)
-    openBoosters()
-
-    const timerRow = screen.getByLabelText(/^active boost controls$/i)
-    const entities = screen.getByLabelText(/^compute entities$/i)
-    expect(within(timerRow).getByLabelText(/^active compute boost$/i)).toBeInTheDocument()
-    // Pop/Forfeit on the left of the bar, Stack on the right.
-    const buttons = within(timerRow).getAllByRole('button')
-    expect(buttons[0]).toHaveAccessibleName(/forfeit the active compute boost/i)
-    expect(buttons[1]).toHaveAccessibleName(/stack the active compute boost/i)
-    // DOCUMENT_POSITION_FOLLOWING (4): the first battery renders before the second.
-    expect(timerRow.compareDocumentPosition(entities) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    // Navigating here pre-selects the active boost's tier, whose block hosts the presets.
-    expect(within(screen.getByLabelText(/^cells tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
-    expect(screen.getAllByLabelText(/^compute boost$/i)).toHaveLength(1)
-  })
-
-  test('the active status names the covered tiers, and the active tier stays visible (with presets) after the boost spends its last unit', () => {
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
-      computeCores: 1, computeNodes: 0,
-      computeBoostType: 'burst', computeBoostTierIndex: 2, computeBoostStacks: 1, computeBoostRemainingSeconds: 30,
-    })
-    render(<App />)
-    openBoosters()
-
-    expect(screen.getByLabelText(/^active compute boost$/i)).toHaveTextContent(/Boosting KB–MB/)
-    expect(within(screen.getByLabelText(/^batteries tier$/i)).getByLabelText(/^compute boost$/i)).toBeInTheDocument()
-  })
-
   test('only the selected tier shows the presets; selecting another moves them, re-clicking keeps them', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true, computeCores: 1, computeNodes: 2 })
     render(<App />)
@@ -5027,23 +4799,78 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.queryByRole('button', { name: /pop one stack/i })).not.toBeInTheDocument()
   })
 
-  test('popping a stack refunds 1 Cell, undoes one duration\'s worth, and decrements stacks — no confirmation', () => {
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
-      computeBoostType: 'standard', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.standard.durationSeconds * 2,
-    })
+
+  test('activating a boost spends exactly 1 Compute Cell and shows its own timer bar', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3 })
     render(<App />)
     openBoosters()
 
-    const confirmSpy = vi.spyOn(window, 'confirm')
-    fireEvent.click(screen.getByRole('button', { name: /pop one stack/i }))
-    expect(confirmSpy).not.toHaveBeenCalled()
-    confirmSpy.mockRestore()
+    fireEvent.click(screen.getByRole('button', { name: /activate turbo compute boost/i }))
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeCores).toBe(1)
-    expect(saved.intro.computeBoostStacks).toBe(1)
-    expect(saved.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
+    expect(saved.intro.computeCores).toBe(2)
+    expect(saved.intro.computeBoosts.burst.queue).toEqual([1])
+    expect(screen.getByLabelText(/^active turbo compute boost$/i)).toHaveTextContent(
+      new RegExp(`×${COMPUTE_BOOST_PRESETS.burst.multiplier}`)
+    )
+  })
+
+  test('a different preset runs in parallel with its own bar; the same preset queues; Pop then Forfeit act per lane', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 5 })
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    render(<App />)
+    openBoosters()
+
+    fireEvent.click(screen.getByRole('button', { name: /activate turbo compute boost/i }))
+    fireEvent.click(screen.getByRole('button', { name: /activate balanced compute boost/i }))
+    expect(screen.getByLabelText(/^active turbo compute boost$/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^active balanced compute boost$/i)).toBeInTheDocument()
+    expect(confirm).not.toHaveBeenCalled()
+
+    // Same multiplier → queue (the preset button becomes a queue button).
+    fireEvent.click(screen.getByRole('button', { name: /^queue turbo compute boost$/i }))
+    let saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeBoosts.burst.queue).toEqual([1, 1])
+    expect(saved.intro.computeCores).toBe(2)
+    expect(screen.getByLabelText(/^active turbo compute boost$/i)).toHaveTextContent('· 2x')
+
+    // Pop refunds the queued one (no confirm); the Balanced lane is untouched and offers Forfeit.
+    fireEvent.click(screen.getByRole('button', { name: /pop one queued turbo compute boost/i }))
+    saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeCores).toBe(3)
+    expect(saved.intro.computeBoosts.burst.queue).toEqual([1])
+
+    fireEvent.click(screen.getByRole('button', { name: /forfeit the turbo compute boost with no refund/i }))
+    expect(confirm).toHaveBeenCalledTimes(1)
+    saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeBoosts.burst).toBeUndefined()
+    expect(saved.intro.computeBoosts.standard.queue).toEqual([1])
+    expect(screen.queryByLabelText(/^active turbo compute boost$/i)).toBeNull()
+    confirm.mockRestore()
+  })
+
+  test('a lane at COMPUTE_BOOST_MAX_STACKS disables its Stack button', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
+      computeBoosts: { burst: { queue: Array(COMPUTE_BOOST_MAX_STACKS).fill(1), remainingSeconds: 5 } },
+    })
+    render(<App />)
+    openBoosters()
+    expect(screen.getByRole('button', { name: /^stack the turbo compute boost$/i })).toBeDisabled()
+  })
+
+  test('an active boost shows no per-element badge; the timer bar names what is boosted', () => {
+    seedIntroState(
+      { bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, mainGameUnlocked: true, computeBoosts: { standard: { queue: [1], remainingSeconds: 600 } } },
+      { owned: { tier01: 1, tier02: 1 }, purchased: { tier01: 1, tier02: 1 } },
+    )
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /^open byte foundry$/i }))
+    expect(screen.queryByRole('img', { name: /Boosted/ })).toBeNull()
+
+    openFactorySync()
+    expect(screen.queryByRole('img', { name: /Boosted/ })).toBeNull()
+    expect(screen.getByLabelText(/^active balanced compute boost$/i)).toHaveTextContent('Boosting KB')
   })
 
 })

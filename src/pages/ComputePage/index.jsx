@@ -1,6 +1,6 @@
 import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration } from 'components/BoostTimerBar'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
-import { canActivateComputeBoost, canStackComputeBoost, getUnusedComputeBoostStacks, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeChargeAvailable, isComputeCharging, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress, isStackComputeBoostTurnAvailable } from 'game/engine'
+import { canActivateComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostLane, getComputeBoostLanes, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeChargeAvailable, isComputeCharging, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
@@ -474,19 +474,14 @@ const ComputePage = ({ game }) => {
   const [selectedBoostTierIndex, setSelectedBoostTierIndex] = useState(() => {
     const highestAutomated = ENTITY_ROWS.reduce((best, row, index) => (row.autoFlagField && intro[row.autoFlagField] ? index + 1 : best), 0)
     if (highestAutomated > 0) return highestAutomated
-    return intro.computeBoostType ? (intro.computeBoostTierIndex ?? 1) : 1
+    return getComputeBoostLanes(intro)[0]?.queue[0] ?? 1
   })
 
   const blockedByPriority = isDiskFillAvailable(state) || isProvisionDiskInProgress(state)
-  const boostActive = Boolean(intro.computeBoostType)
-  // Once a boost is active, its own funding tier is what Stack/Pop act on, regardless of which
-  // row a player clicks next (issue #326 — Stack always extends the currently active boost).
-  // `?? 1` defensively falls back to Core for a save from before issue #326 existed.
-  const activeTierIndex = boostActive ? (intro.computeBoostTierIndex ?? 1) : null
-  const activeRow = activeTierIndex ? ENTITY_ROWS[activeTierIndex - 1] : null
-  // A tier row the player clicks always arms the presets — even mid-boost, where picking a
-  // different tier arms a confirmed forfeit-and-switch (canActivateComputeBoost allows it at 1
-  // stack).
+  const boostLanes = getComputeBoostLanes(intro)
+  const boostActive = boostLanes.length > 0
+  const activeBoostTierIndexes = boostLanes.map(lane => lane.queue[0])
+  // A tier row the player clicks always arms the presets — even mid-boost (the new boost queues or runs in parallel).
   const armedTierIndex = intro.computeMergePageUnlocked ? selectedBoostTierIndex : 1
   const armedRow = armedTierIndex ? ENTITY_ROWS[armedTierIndex - 1] : null
 
@@ -501,58 +496,33 @@ const ComputePage = ({ game }) => {
         {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
           const multiplier = getComputeBoostTierMultiplier(boostType, armedTierIndex)
           const durationSeconds = getComputeBoostTierDurationSeconds(boostType, armedTierIndex)
-          const needsForfeit = boostActive
-          const sameAsActive = needsForfeit
-            && intro.computeBoostType === boostType
-            && activeTierIndex === armedTierIndex
-          const activeLabel = COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType
           const nextLabel = COMPUTE_BOOST_DISPLAY[boostType].label
-          const unusedStacks = getUnusedComputeBoostStacks(state)
-          // Same preset + tier as the running boost → this button stacks it. A different one →
-          // confirmed switch: unused stacks are refunded, the running stack is forfeited.
-          const turnAvailable = sameAsActive
-            ? isStackComputeBoostTurnAvailable(state)
-            : isComputeBoostTurnAvailable(state, boostType, armedTierIndex, needsForfeit)
+          // A preset whose multiplier is already running queues behind it (strongest first); a different
+          // multiplier runs in parallel and adds up.
+          const lane = getComputeBoostLane(intro, boostType)
+          const queues = Boolean(lane)
           const blockedTitle = 'Take a higher-priority upgrade first (Disk Fill or Provision Disk)'
           const spendText = `×${multiplier} production, ${formatPresetDuration(durationSeconds)}`
 
           return (
             <CompactButton
               key={boostType}
-              aria-label={sameAsActive
-                ? `stack ${nextLabel.toLowerCase()} compute boost`
-                : needsForfeit
-                  ? `forfeit active boost and activate ${nextLabel.toLowerCase()} compute boost`
-                  : `activate ${nextLabel.toLowerCase()} compute boost`}
-              disabled={!turnAvailable}
-              onClick={() => {
-                if (sameAsActive) {
-                  actions.stackComputeBoost()
-                  return
-                }
-                if (needsForfeit) {
-                  const refundNote = unusedStacks > 0 ? ` (${unusedStacks} unused stack${unusedStacks === 1 ? '' : 's'} refunded)` : ''
-                  if (!window.confirm(
-                    `Forfeit the active ${activeLabel} boost${refundNote}, and start ${nextLabel}?`,
-                  )) return
-                  actions.activateComputeBoost(boostType, armedTierIndex, true)
-                  return
-                }
-                actions.activateComputeBoost(boostType, armedTierIndex, false)
-              }}
+              aria-label={queues
+                ? `queue ${nextLabel.toLowerCase()} compute boost`
+                : `activate ${nextLabel.toLowerCase()} compute boost`}
+              disabled={!isComputeBoostTurnAvailable(state, boostType, armedTierIndex)}
+              onClick={() => actions.activateComputeBoost(boostType, armedTierIndex)}
               title={
-                sameAsActive
-                  ? (canStackComputeBoost(state) && blockedByPriority ? blockedTitle : `Stack ${nextLabel}: add ${spendText} — up to ${COMPUTE_BOOST_MAX_STACKS}x`)
-                  : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
-                    ? blockedTitle
-                    : needsForfeit
-                      ? `Switch to ${nextLabel}: forfeit the running ${activeLabel} stack, refund unused stacks, then ${spendText} — asks for confirmation`
-                      : `${nextLabel}: ${spendText}`
+                canActivateComputeBoost(state, boostType, armedTierIndex) && blockedByPriority
+                  ? blockedTitle
+                  : queues
+                    ? `Queue ${nextLabel}: runs after the current one, ${spendText} — up to ${COMPUTE_BOOST_MAX_STACKS}x`
+                    : `${nextLabel}: ${spendText} — runs alongside other boosts and adds up`
               }
               type="button"
               variant="prestige"
             >
-              <ButtonContent>{`${sameAsActive ? '+ ' : ''}${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatPresetDuration(durationSeconds)}`}</ButtonContent>
+              <ButtonContent>{`${queues ? '+ ' : ''}${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatPresetDuration(durationSeconds)}`}</ButtonContent>
             </CompactButton>
           )
         })}
@@ -621,7 +591,7 @@ const ComputePage = ({ game }) => {
               const prevRow = rowIndex > 0 ? ENTITY_ROWS[rowIndex - 1] : null
               const heldAtOrAbove = ENTITY_ROWS.some((r, i) => i >= rowIndex && (intro[r.countField] ?? 0) > 0)
               const unlocked = rowIndex === 0 || heldAtOrAbove || autoEnabled || merging
-                || armedTierIndex === tierIndex || activeTierIndex === tierIndex
+                || armedTierIndex === tierIndex || activeBoostTierIndexes.includes(tierIndex)
                 || (prevRow && ((intro[prevRow.countField] ?? 0) >= COMPUTE_MERGE_RATIO || intro[prevRow.autoFlagField]))
               if (!unlocked) return null
 
