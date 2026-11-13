@@ -1,12 +1,12 @@
 import Button, { ButtonContent } from 'components/Button'
-import { canForfeitComputeBoost, canReclaimComputeBoost, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, isStackComputeBoostTurnAvailable } from 'game/engine'
-import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, TIER_DEFINITIONS } from 'game/layers'
+import { canForfeitComputeBoost, canReclaimComputeBoost, formatOfflineDuration, getComputeBoostLanes, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, isStackComputeBoostTurnAvailable } from 'game/engine'
+import { COMPUTE_BOOST_MAX_STACKS, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
-// The active Compute Boost's timer bar, shared by the Power screen and the Byte Factory header:
-// Pop (refund the newest unused stack, no confirm) — or Forfeit (confirmed) once no unused stack
-// remains — on the left, the bar itself (fill = remaining time over the total stacked duration,
-// effect text on top) in the middle, Stack on the right. Renders nothing while no boost is active.
+// The active Compute Boost timer bars, one per running multiplier, shared by the Power screen and the Byte
+// Factory header: Pop (refund the last queued boost, no confirm) — or Forfeit (confirmed) once nothing is
+// queued — on the left, the bar (fill = remaining time over the lane's total queued duration, effect text
+// on top) in the middle, Stack (queue another) on the right. Renders nothing while no boost is active.
 
 // A small leading icon + display label per COMPUTE_BOOST_PRESETS key.
 export const COMPUTE_BOOST_DISPLAY = {
@@ -82,24 +82,32 @@ const TimerRemaining = styled.span`
   white-space: nowrap;
 `
 
-const BoostTimerBar = ({ state, actions }) => {
-  const intro = state.intro ?? {}
-  const activeType = intro.computeBoostType
-  if (!activeType || !COMPUTE_BOOST_PRESETS[activeType]) return null
-  const activeTierIndex = intro.computeBoostTierIndex ?? 1
-  const activeDisplay = COMPUTE_BOOST_DISPLAY[activeType] ?? { icon: '⚡', label: activeType }
-  const activeMultiplier = getComputeBoostTierMultiplier(activeType, activeTierIndex)
-  const remaining = intro.computeBoostRemainingSeconds ?? 0
-  const totalSeconds = (intro.computeBoostStacks ?? 1) * getComputeBoostTierDurationSeconds(activeType, activeTierIndex)
+const BoostTimerStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.space.xs};
+  width: 100%;
+`
+
+// One row per running multiplier lane — see engine.js "Compute Boosts".
+const BoostLaneRow = ({ lane, state, actions }) => {
+  const { type, queue, remainingSeconds } = lane
+  const tierIndex = queue[0]
+  const display = COMPUTE_BOOST_DISPLAY[type] ?? { icon: '⚡', label: type }
+  const multiplier = getComputeBoostTierMultiplier(type, tierIndex)
+  const duration = getComputeBoostTierDurationSeconds(type, tierIndex)
+  const totalSeconds = queue.length * duration
+  const remaining = remainingSeconds + (queue.length - 1) * duration
   const fillPercent = totalSeconds > 0 ? Math.min(100, (remaining / totalSeconds) * 100) : 0
+  const queued = queue.length > 1
   return (
-    <BoostTimerRow role="group" aria-label="active boost controls">
-      {canReclaimComputeBoost(state)
+    <BoostTimerRow role="group" aria-label={`${display.label} boost controls`}>
+      {canReclaimComputeBoost(state, type)
         ? (
           <TimerSideButton
-            aria-label="pop one stack of the active compute boost"
-            onClick={actions.reclaimComputeBoost}
-            title={`Pop: refund the most recent unused stack`}
+            aria-label={`pop one queued ${display.label} compute boost`}
+            onClick={() => actions.reclaimComputeBoost(type)}
+            title="Pop: refund the last queued boost"
             type="button"
             variant="neutral"
           >
@@ -108,11 +116,11 @@ const BoostTimerBar = ({ state, actions }) => {
           )
         : (
           <TimerSideButton
-            aria-label="forfeit the active compute boost with no refund"
-            disabled={!canForfeitComputeBoost(state)}
+            aria-label={`forfeit the ${display.label} compute boost with no refund`}
+            disabled={!canForfeitComputeBoost(state, type)}
             onClick={() => {
-              if (!window.confirm('Forfeit the active boost with no refund?')) return
-              actions.forfeitComputeBoost()
+              if (!window.confirm(`Forfeit the ${display.label} boost with no refund?`)) return
+              actions.forfeitComputeBoost(type)
             }}
             title="Forfeit: end the boost now with no refund — asks for confirmation"
             type="button"
@@ -122,28 +130,38 @@ const BoostTimerBar = ({ state, actions }) => {
           </TimerSideButton>
           )}
       <TimerBar
-        aria-label="active compute boost"
+        aria-label={`active ${display.label} compute boost`}
         $fill={fillPercent}
-        title={`${activeDisplay.label} boost active: ×${activeMultiplier} production on ${describeCoveredTiers(activeTierIndex, 'name')}, ${formatOfflineDuration(remaining)} left, ${intro.computeBoostStacks ?? 1}x stacked`}
+        title={`${display.label} boost active: ×${multiplier} production on ${describeCoveredTiers(tierIndex, 'name')}, ${formatOfflineDuration(remaining)} left${queued ? `, ${queue.length - 1} queued (strongest first)` : ''}`}
       >
-        <TimerEffect>{`${activeDisplay.icon} ×${activeMultiplier}`}</TimerEffect>
-        <TimerTargets>{`Boosting ${describeCoveredTiers(activeTierIndex)}`}</TimerTargets>
+        <TimerEffect>{`${display.icon} ×${multiplier}`}</TimerEffect>
+        <TimerTargets>{`Boosting ${describeCoveredTiers(tierIndex)}`}</TimerTargets>
         <TimerRemaining>
           {formatOfflineDuration(remaining)}
-          {intro.computeBoostStacks > 1 ? ` · ${intro.computeBoostStacks}x` : ''}
+          {queued ? ` · ${queue.length}x` : ''}
         </TimerRemaining>
       </TimerBar>
       <TimerSideButton
-        aria-label="stack the active compute boost"
-        disabled={!isStackComputeBoostTurnAvailable(state)}
-        onClick={actions.stackComputeBoost}
-        title={`Stack: add another ${formatPresetDuration(getComputeBoostTierDurationSeconds(activeType, activeTierIndex))} — up to ${COMPUTE_BOOST_MAX_STACKS}x`}
+        aria-label={`stack the ${display.label} compute boost`}
+        disabled={!isStackComputeBoostTurnAvailable(state, type)}
+        onClick={() => actions.stackComputeBoost(type)}
+        title={`Queue another ${formatPresetDuration(duration)} ${display.label} boost — up to ${COMPUTE_BOOST_MAX_STACKS}x`}
         type="button"
         variant="prestige"
       >
         <ButtonContent>+</ButtonContent>
       </TimerSideButton>
     </BoostTimerRow>
+  )
+}
+
+const BoostTimerBar = ({ state, actions }) => {
+  const lanes = getComputeBoostLanes(state.intro ?? {})
+  if (lanes.length === 0) return null
+  return (
+    <BoostTimerStack role="group" aria-label="active boost controls">
+      {lanes.map(lane => <BoostLaneRow key={lane.type} lane={lane} state={state} actions={actions} />)}
+    </BoostTimerStack>
   )
 }
 

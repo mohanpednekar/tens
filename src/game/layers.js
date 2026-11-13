@@ -537,8 +537,7 @@ export const COMPUTE_MERGE_BOUNDARIES = [
 ]
 
 // --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/
-// tickComputeBoost in engine.js and intro.computeBoostType/computeBoostTierIndex/computeBoostStacks/
-// computeBoostRemainingSeconds in createInitialGameState. Activating a boost now spends exactly 1
+// tickComputeBoost in engine.js and intro.computeBoosts in createInitialGameState. Activating a boost now spends exactly 1
 // token of whichever compute-ladder tier the player selects (see issue #326) — Core through
 // Megacomputer — rather than always a Compute Core: the values below are the BASE (tier 1 = Core)
 // preset strength/duration, identical whichever tier funds it (a higher tier broadens which Factory
@@ -581,11 +580,7 @@ export const COMPUTE_BOOST_TIER_FIELDS = [
   'computeCores', 'computeNodes', 'computeClusters', 'computeNetworks', 'computeGrids',
   'computeFabrics', 'computeClouds', 'computeDatacenters', 'computeSupercomputers', 'computeMegacomputers',
 ]
-// Only one PRESET TYPE (and tier) can be active at a time — activating a NEW boost is blocked
-// entirely while one is already running (see activateComputeBoost); a separate stackComputeBoost
-// action extends the CURRENTLY ACTIVE boost's own tier/type instead, up to this many times, adding
-// that tier's own duration each time rather than resetting it — the multiplier itself never
-// compounds from stacking.
+// Max boosts per multiplier lane (running + queued); see "Compute Boosts" in engine.js.
 export const COMPUTE_BOOST_MAX_STACKS = 10
 
 // --- Data Lakes (Foundry pool overflow ↔ Booster funding) --- see tickDataLakeOverflowFill/

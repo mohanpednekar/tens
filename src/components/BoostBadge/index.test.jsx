@@ -2,19 +2,13 @@ import { getComputeBoostDescription, isDataStreamBoosted, isFactoryTierBoosted }
 import { COMPUTE_BOOST_PRESETS } from 'game/layers'
 
 const multiplier = COMPUTE_BOOST_PRESETS.standard.multiplier
-const activeIntro = { computeBoostType: 'standard', computeBoostTierIndex: 2, computeBoostRemainingSeconds: 90, computeBoostStacks: 1 }
+const activeIntro = { computeBoosts: { standard: { queue: [2], remainingSeconds: 90 } } }
 
 describe('BoostBadge helpers', () => {
   it('reports nothing boosted while no boost is active', () => {
-    expect(isDataStreamBoosted({ computeBoostType: null })).toBe(false)
-    expect(isFactoryTierBoosted({ computeBoostType: null }, 0)).toBe(false)
-    expect(getComputeBoostDescription({ computeBoostType: null })).toBeNull()
-  })
-
-  it('treats an invalid funding tier as inactive, like the engine (×1 on nothing)', () => {
-    const invalid = { ...activeIntro, computeBoostTierIndex: 0 }
-    expect(isDataStreamBoosted(invalid)).toBe(false)
-    expect(getComputeBoostDescription(invalid)).toBeNull()
+    expect(isDataStreamBoosted({})).toBe(false)
+    expect(isFactoryTierBoosted({}, 0)).toBe(false)
+    expect(getComputeBoostDescription({})).toBeNull()
   })
 
   it('boosts the Data Stream and only the covered Factory tiers', () => {
@@ -24,11 +18,20 @@ describe('BoostBadge helpers', () => {
     expect(isFactoryTierBoosted(activeIntro, 2)).toBe(false)
   })
 
-  it('describes the multiplier, preset, time left and stacks', () => {
-    const description = getComputeBoostDescription({ ...activeIntro, computeBoostStacks: 3 })
-    expect(description).toContain(`×${multiplier}`)
-    expect(description).toContain('Balanced Compute Boost')
-    expect(description).toContain('left')
-    expect(description).toContain('3 stacked')
+  it('describes the lanes covering that tier: its own multiplier, whole-lane time left and waiting boosts', () => {
+    const intro = { computeBoosts: {
+      standard: { queue: [2, 1, 1], remainingSeconds: 90 },
+      sustain: { queue: [1], remainingSeconds: 30 },
+    } }
+    const both = getComputeBoostDescription(intro, 0)
+    expect(both).toContain(`Boosted ×${multiplier + COMPUTE_BOOST_PRESETS.sustain.multiplier}`)
+    expect(both).toContain('Balanced')
+    expect(both).toContain('Eco')
+    expect(both).toContain('2 queued')
+    // Tier 2 (index 1) is covered only by the tier-2 Balanced head.
+    const only = getComputeBoostDescription(intro, 1)
+    expect(only).toContain(`Boosted ×${multiplier}`)
+    expect(only).not.toContain('Eco')
+    expect(getComputeBoostDescription(intro, 2)).toBeNull()
   })
 })

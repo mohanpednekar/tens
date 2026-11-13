@@ -334,7 +334,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    - The stored tap bonus is its OWN value, clamped to 0..`FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT`
      (100): `tapIntroBit`'s post-reveal branch and `tapPoolBuffer` no-op once the stored bonus is
      already at that cap, and each tap adds `min(BONUS_CAP, prior + FILL_MULTIPLIER_TAP_BONUS_PERCENT)` (5).
-   - Both bonus fields, like `computeBoostType`, are NOT permanent — they reset to 0/`{}` on every
+   - Both bonus fields, like `computeBoosts`, are NOT permanent — they reset to 0/`{}` on every
      real Prestige, Reboot, and Reformat Byte Foundry, but are carried through Scale Up/Overclock
      untouched (the whole `intro` object passes through those unchanged either way).
    - `intro.bits` is no longer always an integer as a result — `tickIntroProduction`'s own per-tick
@@ -1222,85 +1222,32 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    convert into can never re-hide or prevent the merge section once it's genuinely been earned.
    Saves must already include `intro.computeCoresEverEarned` in the current schema — `mergeState`
    does not backfill it from live balances on load.
-10. **Compute Boost** (`intro.computeBoostType`/`computeBoostTierIndex`/`computeBoostStacks`/
-   `computeBoostRemainingSeconds`, all run-scoped — reset to inactive on every real Prestige, unlike
-   `computeCores`/`computeNodes`/etc. themselves, but carried through untouched by Scale Up/Overclock
-   same as the rest of `intro`) — the first mechanic that actually spends compute-ladder tokens.
-   **Tier-funded** (issue #326): activating a boost spends 1 token of whichever compute-ladder tier
-   the player selects on `ComputePage` — Cell through Fusion (`COMPUTE_BOOST_TIER_FIELDS` in
-   `layers.js`), the only place a Megacomputer has any use at all — rather than always a Compute
-   Core. `COMPUTE_BOOST_PRESETS` in `layers.js` (`burst` ×20/10 minutes, `standard` ×5/1 hour,
-   `sustain` ×2/10 hours — chosen so each preset's own total extra production, `(multiplier - 1) *
-   durationSeconds`, strictly increases Burst → Standard → Sustain: 190/240/600 minutes-worth; see
-   docs/DESIGN_HISTORY.md for the earlier ×32/1 min, ×8/10 min, ×2/1 hour values this replaced,
-   which broke that ordering) are each preset's BASE values, at tier 1 (Core); the SAME values apply whichever
-   compute-ladder tier funds the boost (`getComputeBoostTierMultiplier`/`getComputeBoostTierDurationSeconds`
-   return the preset's own `multiplier`/`durationSeconds` for any valid `tierIndex`). A higher funding
-   tier instead makes the boost BROADER: it applies to the first `tierIndex` Factory tiers
-   (`getComputeBoostCoveredTierCount(intro)` — Core: tier01 only, Node: tier01–tier02, …, 0 with no
-   boost active) — e.g. a Cluster boost covers the first three. Selecting a
-   tier is free (no cost) — `ComputePage`'s own local UI state, not persisted game state — clicking
-   any compute-ladder row's own `TierSelectButton` (row 1) arms the 3 preset buttons funded by that
-   tier (the armed-status line names the Factory tiers it will boost); before `intro.computeMergePageUnlocked`, Core is armed implicitly (the only
-   tier that can ever hold a balance that early). `getComputeBoostMultiplier(intro)` is the
-   ACTIVE boost's multiplier (falling back to tier 1/Core for
-   `intro.computeBoostTierIndex ?? 1`, a defensive migration path for a save from before this field
-   existed) — applied to Memory's own passive
-   production (`tickIntroProduction`, folded into `bitsToAdd`) and to the first
-   `getComputeBoostCoveredTierCount` Factory tiers (`tickGame`'s per-tier loop, where every tier past that coverage keeps `computeBoostMultiplier` 1).
-
-   `activateComputeBoost(boostType, tierIndex)`, gated by `canActivateComputeBoost(state, boostType,
-   tierIndex)` (a valid preset, a valid tier with ≥1 token held, AND — issue #326's key change from
-   before — **no boost of ANY kind currently active**, even the same type/tier), spends 1 token of
-   that tier's own field and starts a fresh boost at `computeBoostStacks: 1`. **Same-type restacking
-   no longer happens through the preset buttons** — a separate `stackComputeBoost()` action, gated by
-   `canStackComputeBoost(state)`/`isStackComputeBoostTurnAvailable(state)`, extends the CURRENTLY
-   ACTIVE boost instead: it always spends another token of the active boost's OWN funding tier
-   (`intro.computeBoostTierIndex`), regardless of which tier a player might have since selected in
-   the UI, incrementing `computeBoostStacks` (capped at `COMPUTE_BOOST_MAX_STACKS`, 10) and adding
-   that same tier's own `getComputeBoostTierDurationSeconds` onto `computeBoostRemainingSeconds` — the
-   multiplier itself never compounds from stacking. `tickComputeBoost(elapsedSeconds)` counts the
-   remaining duration down every tick, frozen or not, clearing the boost back to inactive (`type:
-   null, tierIndex: null, stacks: 0, remaining: 0`) once it reaches 0. Only the quantity ABOVE 1
-   stack is ever reclaimable, one at a time: `reclaimComputeBoost` (gated by `canReclaimComputeBoost`
-   — a boost active AND `computeBoostStacks > 1` AND enough pooled time remains that reclaiming one
-   stack's own duration wouldn't zero it out) is the exact inverse of one `stackComputeBoost`
-   call (no longer of `activateComputeBoost` itself, since a freshly-activated 1-stack boost can no
-   longer be reclaimed at all) — refunds 1 token of the active boost's own funding tier (uncapped, so it
-   is never lost into a full tier) and subtracts that tier's own base
-   preset `durationSeconds` back out of `computeBoostRemainingSeconds`, decrementing
-   `computeBoostStacks` by 1. `computeBoostRemainingSeconds` is a single POOLED timer shared across
-   every stack, not N independent per-stack timers — `stackComputeBoost` just adds a flat duration
-   chunk onto it — so a multi-stack boost late in its own countdown can hold LESS pooled time than
-   even one stack's own base duration; `computeBoostStacks > 1` alone is not sufficient to gate a
-   reclaim, since it would let one floor the pool straight to 0 (via the now-purely-defensive
-   `Math.max(0, …)` inside `reclaimComputeBoost`'s own body), ending the running effect exactly as if
-   the last stack itself had been reclaimed. `canReclaimComputeBoost` therefore also requires
-   `computeBoostRemainingSeconds - stackDuration > 0` before allowing a reclaim (a real bug caught by
-   Devin Review on the PR that introduced this gate — see `docs/DESIGN_HISTORY.md`). Together, the
-   `> 1` stacks gate and the pooled-time floor mean `computeBoostStacks` after a reclaim is always
-   `>= 1` and `computeBoostRemainingSeconds` after one is always `> 0` — the boost stays active; it
-   can no longer be reclaimed all the way back to inactive (an earlier version allowed reclaiming the
-   very last stack too, clearing the boost outright the same as `activateComputeBoost`'s own inverse
-   — canceling a running effect entirely via Reclaim was the behavior this replaced; letting it run
-   out is now the only way to end one early — see `docs/DESIGN_HISTORY.md`).
-
-   On `ComputePage`, render order top to bottom: the active boost's timer bar at the very TOP of the
-   page (fill = remaining over total stacked time, with the effect/countdown text on it), Pop on its
-   left while an unused stack remains (`canReclaimComputeBoost` — instant, no confirmation) or
-   Forfeit once none does (`canForfeitComputeBoost`, confirmation-gated, no refund), Stack on its
-   right; `MainPage` shows a matching read-only status line while a boost is active. The armed-tier
-   status line and the 3 preset buttons render inside the ONE selected tier's block (in the top card
-   before the merge chain unlocks). While a boost runs, the preset matching the running type + tier
-   is a Stack button, and any other is a confirmed switch (`activateComputeBoost(…, true)`: refunds
-   every unused stack, forfeits the running one, then starts the new boost). THEN come the tier rows themselves — clicking one selects it and shows the presets inside
-   it; arriving on the page pre-selects the active boost's tier. Ranked lowest in the forced priority order
-   (below Disk Fill/Provision Disk — see "Forced priority order" below; Upgrade Data Stream sits
-   outside the order entirely and never blocks or is blocked by Compute):
-   `isComputeBoostTurnAvailable(state, boostType, tierIndex)`/`isStackComputeBoostTurnAvailable(state)`
-   are `activateComputeBoost`/`stackComputeBoost`'s own actual gates, a no-op whenever something
-   ranked above Compute is currently available even if the mechanical (`canActivateComputeBoost`/
-   `canStackComputeBoost`) check alone would allow the click.
+10. **Compute Boost** (`intro.computeBoosts = { [boostType]: { queue: [tierIndex, …], remainingSeconds } }`,
+   run-scoped — reset to `{}` on every real Prestige, unlike the Cells/Batteries/… spent from; Scale Up/Overclock
+   carry it). Each preset (`COMPUTE_BOOST_PRESETS`) is its own multiplier **lane**. Lanes of different
+   multipliers run **in parallel and their multipliers add up** on whatever they cover; boosts of the same
+   multiplier **queue** inside their lane — `queue[0]` is the running head (countdown `remainingSeconds`), the rest
+   wait their full duration and are kept in descending funding-tier strength; a running head is never preempted.
+   A boost's multiplier and duration are the preset's own whichever compute-ladder tier funds it; the funding tier
+   (1 = Cell … 10 = Fusion, `getComputeBoostTierField`) only sets breadth: the first N Factory tiers / pools.
+   Coverage helpers (all read only each lane's running head): `getComputeBoostMultiplier(intro)` (Memory/Data
+   Stream: every running lane summed, 1 idle), `getFactoryTierBoostMultiplier(intro, tierNumber)` (1-based; summed
+   multipliers of lanes covering that tier, else 1 — used by `tickGame`), `getComputeBoostPoolMultiplier(intro,
+   poolIndex)` (1 + summed `poolBonusPercent`/100 of covering lanes), `getComputeBoostCoveredTierCount(intro)`
+   (broadest head). `getComputeBoostLanes(intro)` is the reader (`[{ type, queue, remainingSeconds }]` in preset
+   order); it also reads a pre-lane save (`computeBoostType`/`TierIndex`/`Stacks`/`RemainingSeconds`, pooled
+   timer) as one lane, and every write drops those legacy keys.
+   Actions (all curried reducers, same-reference no-op when invalid; each enforces its own gate):
+   `activateComputeBoost(boostType, tierIndex)` starts the lane or queues behind its head (needs a valid
+   preset/tier, 1 token of that tier, lane length < `COMPUTE_BOOST_MAX_STACKS` (10), and its forced-priority
+   turn `isComputeBoostTurnAvailable` — Disk Fill > Provision Disk > Compute Boost); `stackComputeBoost(boostType)`
+   = activate at the lane head's tier; `reclaimComputeBoost(boostType)` (Pop; `canReclaimComputeBoost` = a boost
+   waits) refunds the weakest queued boost, uncapped; `forfeitComputeBoost(boostType)` (`canForfeitComputeBoost` =
+   nothing queued) cancels the running one with no refund (UI confirms); `tickComputeBoost(elapsedSeconds)` counts
+   every lane's head down each tick (frozen or not), handing over to the next queued boost with any overshoot
+   carried, clearing an emptied lane. Auto Boost (`autoBoostFromTier`) starts or queues the preferred preset
+   when a tier's automated merge starts, alongside other lanes. UI (`BoostTimerBar` per lane, `ComputePage`
+   presets): `docs/MAINPAGE_REFERENCE.md`; rationale: `docs/DESIGN_HISTORY.md` "Compute Boost lanes".
 11. `ByteFoundryPage` doesn't disappear once `intro.mainGameUnlocked` is true — it becomes a
    permanent, voluntarily-revisitable screen instead, reachable at any time via MainPage's own
    "⚙️ Byte Foundry" link (`onOpenFoundry`). Since `mainGameUnlocked` is now a one-time-ever
@@ -2641,7 +2588,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // boundary once its flag flips true
     computeChargeSeconds: {},                             // RUN-SCOPED manual Charge progress per boundary ({ [boundaryIndex]: seconds }); dropped by Purge/Reboot/Reformat, nothing is spent until its merge
     computeCoresMergeRemainingSeconds: 0,                 // PERMANENT — carried through a real Prestige unchanged
-    computeNodesMergeRemainingSeconds: 0,                 // (not run-scoped like computeBoostRemainingSeconds
+    computeNodesMergeRemainingSeconds: 0,                 // (not run-scoped like computeBoosts
     computeClustersMergeRemainingSeconds: 0,              // below), since an in-flight merge represents already-
     computeNetworksMergeRemainingSeconds: 0,              // committed tokens that shouldn't be lost to a Prestige
     computeGridsMergeRemainingSeconds: 0,                 // transition — it just keeps counting down seamlessly.
@@ -2649,16 +2596,11 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
     computeCloudsMergeRemainingSeconds: 0,                // boundary — see startComputeMergeReserve/
     computeDatacentersMergeRemainingSeconds: 0,           // tickComputeMergeReserveTimer and issue #321
     computeSupercomputersMergeRemainingSeconds: 0,
-    computeBoostType: null,                               // NOT permanent — resets to null on every real Prestige,
+    computeBoosts: {},                                    // NOT permanent — resets to {} on every real Prestige,
                                                           // carried through untouched by Scale Up/Overclock.
-                                                          // Which COMPUTE_BOOST_PRESETS key is active, if any —
-                                                          // see activateComputeBoost/tickComputeBoost
-    computeBoostStacks: 0,                                // NOT permanent, same reset posture as computeBoostType.
-                                                          // How many times the active preset has been stacked
-    computeBoostRemainingSeconds: 0,                      // NOT permanent, same reset posture as computeBoostType.
-                                                          // Counts down every tick (frozen or not) — see
-                                                          // tickComputeBoost
-    dataStreamTapBonusPercent: 0,                         // NOT permanent, same reset posture as computeBoostType.
+                                                          // { [boostType]: { queue: [tierIndex, …], remainingSeconds } }
+                                                          // — see activateComputeBoost/tickComputeBoost
+    dataStreamTapBonusPercent: 0,                         // NOT permanent, same reset posture as computeBoosts.
                                                           // Data Stream's own decaying consumer tap bonus —
                                                           // see point 4a above / tapIntroBit / tickFillMultiplierDecay
     poolTapBonusPercents: {},                             // NOT permanent, same reset posture. { [poolIndex]:
@@ -2726,10 +2668,10 @@ purchases were manual or automatic.
 | `isProvisionDiskInProgress` | `state → bool` | True while a Provision Disk build is ARMED (`diskBuildQueued`) and Provision Disk is available — the only state in which it outranks Compute Boost (a merely startable, or disarmed part-way, build does not). |
 | `getPoolCacheReservationBits` | `(state, poolIndex) → bits` | Byte Foundry Disks: however many more bits that pool's own smallest-size read cache still needs to reach full (8 blocks) — subtracted from `getPoolBufferBits` before checking/spending against it in `tickQueuedDiskBuild`, so the cache keeps actively filling (via `tickDiskAutoFill`) even while a Provision Disk build is queued, rather than Provision Disk claiming the whole buffer first. `0` for a locked/invalid pool or once the cache is already full |
 | `isProvisionDiskTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `isProvisionDiskAvailable(state) && !isDiskFillAvailable(state)` — `provisionDisk`'s own gate |
-| `isComputeUpgradeAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer): `isComputeCoreConversionUnlocked(state)` AND (`canStackComputeBoost(state)` OR — while no boost is active — some `(boostType, tierIndex)` combo across all `COMPUTE_BOOST_TIER_FIELDS` is currently activatable via `canActivateComputeBoost`) — issue #326 |
-| `isComputeBoostTurnAvailable` | `(state, boostType, tierIndex) → bool` | Byte Foundry forced-priority composite (not a reducer): `canActivateComputeBoost(state, boostType, tierIndex) && !isDiskFillAvailable(state) && !isProvisionDiskInProgress(state)` — `activateComputeBoost`'s own actual gate |
-| `isStackComputeBoostTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `canStackComputeBoost(state) && !isDiskFillAvailable(state) && !isProvisionDiskInProgress(state)` — `stackComputeBoost`'s own actual gate |
-| `isComputeUpgradeTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): true if `isStackComputeBoostTurnAvailable(state)`, or `isComputeBoostTurnAvailable(state, boostType, tierIndex)` for any preset/tier combo — used to gate ComputePage's own nav entry point |
+| `isComputeUpgradeAvailable` | `state → bool` | Forced-priority base predicate (not a reducer): `isComputeCoreConversionUnlocked(state)` AND some preset whose lane is NOT running is `canActivateComputeBoost` from some tier. No production caller. |
+| `isComputeBoostTurnAvailable` | `(state, boostType, tierIndex) → bool` | Forced-priority composite: `canActivateComputeBoost(state, boostType, tierIndex)` AND Disk Fill and Provision Disk are not available/in progress. `activateComputeBoost`'s actual gate. |
+| `isStackComputeBoostTurnAvailable` | `(state, boostType) → bool` | Forced-priority composite: `canStackComputeBoost(state, boostType)` AND nothing ranked above Compute is available. |
+| `isComputeUpgradeTurnAvailable` | `state → bool` | Forced-priority composite: some (preset, tier) is `isComputeBoostTurnAvailable`. |
 | `isMemoryCapacityUpgradeAvailable` | `state → bool` | **Upgrade Data Stream** predicate: simply `isPoolCapacityUpgradeAvailable(state)` — a full Buffer, the Combine prerequisite met, and not already at cap. Sits OUTSIDE the forced priority order entirely (no dependency on `isDiskFillAvailable`/`isProvisionDiskAvailable` — a deliberate reversal of an earlier version that did depend on them, see `docs/DESIGN_HISTORY.md`); drains the Buffer (cost = current capacity) and doubles `intro.capacity` |
 | `isMemoryCapacityAtCap` | `state → bool` | `getStoragePoolCapacity(state, finalPoolIndex) >= getStoragePoolMemoryBounds(finalPoolIndex).endBits` (`finalPoolIndex = getStoragePoolCount()` — the LAST pool, unconditionally, never the highest disk-build-unlocked or capacity-visible pool) — compares the final pool's own decade-power DERIVED Capacity, not raw `intro.capacity`. Deliberately final-pool-only: gating on any earlier pool's own end bound would re-couple Capacity growth to that pool's own unlock state, capping it well before it could ever reach a LATER pool's own visibility threshold — see `docs/DESIGN_HISTORY.md` |
 | `getVisibleStoragePoolCount` | `state → number` | Pure Capacity-based pool LIVENESS count — pool 1 always counts; pool N (N ≥ 2) counts once `intro.capacity >= getPoolCapacityUnlockThresholdBits(N)`, regardless of disk-build progress. Drives pool-card visibility, `getStoragePoolBandwidth`/`getStoragePoolCapacity`, `tapPoolBuffer`, `tickPoolBufferFill`'s loop bound, `normalizePoolMemoryCapacity`'s buffer clamp, `tickDiskAutoFill`'s read-cache eligibility, and `getPoolCacheReservationBits`. Deliberately INDEPENDENT of `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` (disk-build-only, unchanged) — see "Pool liveness is Capacity-only" in CLAUDE.md and `docs/DESIGN_HISTORY.md` for why a shared primitive was tried once and reverted |
@@ -2810,15 +2752,18 @@ purchases were manual or automatic.
 | `isAutoMergeCoresIntoNodeUnlockAvailable` / `isAutoMergeNodesIntoClusterUnlockAvailable` / `isAutoMergeClustersIntoNetworkUnlockAvailable` / `isAutoMergeNetworksIntoGridUnlockAvailable` / `isAutoMergeGridsIntoFabricUnlockAvailable` / `isAutoMergeFabricsIntoCloudUnlockAvailable` / `isAutoMergeCloudsIntoDatacenterUnlockAvailable` / `isAutoMergeDatacentersIntoSupercomputerUnlockAvailable` / `isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable` | `state → bool` | Whether the matching `enableAutoMerge*` action would do anything: `COMPUTE_ENTITY_CAP` (10) of the OUTPUT entity held AND the matching `autoMerge*` flag isn't already true |
 | `getComputeBoostTierMultiplier` | `(boostType, tierIndex) → number` | Byte Foundry Compute Boost (issue #326): `preset.multiplier` (identical for every tier; the tier index only sets how many Factory tiers it covers) — 0 for an invalid `boostType` or an out-of-range `tierIndex` (not 1-`COMPUTE_BOOST_TIER_FIELDS.length`) |
 | `getComputeBoostTierDurationSeconds` | `(boostType, tierIndex) → number` | Byte Foundry Compute Boost: `preset.durationSeconds` (identical for every tier). 0 for invalid inputs |
-| `getComputeBoostCoveredTierCount` | `intro → number` | How many Factory tiers (tier01 first) the active boost applies to: the funding tier's 1-based index (`intro.computeBoostTierIndex ?? 1`); 0 with no boost active or an invalid index. `tickGame` applies `getComputeBoostMultiplier` to Factory tiers whose index is below it |
-| `getComputeBoostMultiplier` | `intro → number` | Byte Foundry Compute Boost: `getComputeBoostTierMultiplier(intro.computeBoostType, intro.computeBoostTierIndex ?? 1) \|\| 1` — 1 (no effect) while no boost is active; `?? 1` defensively falls back to tier 1 (Core) for a save from before `computeBoostTierIndex` existed. Applied to Memory's own passive production (`tickIntroProduction`) and `tier01`'s production specifically (`tickGame`) |
-| `canActivateComputeBoost` | `(state, boostType, tierIndex) → bool` | Byte Foundry Compute Boost predicate (not a reducer): `boostType` must be a real `COMPUTE_BOOST_PRESETS` key and `tierIndex` valid. With no boost active, ≥1 token of that tier's field must be held. With one active: same type + tier is Stack's job (false); a different one needs `forfeitConfirmed` and ≥1 token of the new tier AFTER refunding the active boost's unused stacks. The actual gate `activateComputeBoost` itself enforces |
-| `canStackComputeBoost` | `state → bool` | Byte Foundry Compute Boost predicate (issue #326): a boost IS currently active, `computeBoostStacks < COMPUTE_BOOST_MAX_STACKS`, and ≥1 more token of the ACTIVE boost's OWN funding tier (`intro.computeBoostTierIndex`) is held — NOT whatever tier a player might have since selected in the UI |
-| `activateComputeBoost` | `(boostType, tierIndex) → state → state` | Byte Foundry Compute Boost: requires `isComputeBoostTurnAvailable(state, boostType, tierIndex, forfeitConfirmed)`; when replacing an active boost, first refunds every unused stack (`getUnusedComputeBoostStacks`, via `reclaimComputeBoost`) and forfeits the running one; then spends exactly 1 token of `tierIndex`'s own field and starts a fresh boost: `computeBoostType: boostType`, `computeBoostTierIndex: tierIndex`, `computeBoostStacks: 1`, `computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds(boostType, tierIndex)` |
-| `stackComputeBoost` | `state → state` | Byte Foundry Compute Boost (issue #326): requires `isStackComputeBoostTurnAvailable(state)`; otherwise spends 1 more token of the ACTIVE boost's own funding tier, increments `computeBoostStacks`, and adds that same tier's own `getComputeBoostTierDurationSeconds` onto `computeBoostRemainingSeconds` (extending, not resetting, the remaining time) — the multiplier itself never compounds. The replacement for same-type restacking through the preset buttons, which `activateComputeBoost` no longer permits |
-| `tickComputeBoost` | `elapsedSeconds → state → state` | Byte Foundry Compute Boost: same-reference no-op while no boost is active; otherwise decrements `computeBoostRemainingSeconds` by `elapsedSeconds`, clearing back to inactive (`type: null`, `tierIndex: null`, `stacks: 0`, `remaining: 0`) once it reaches 0. Runs every tick, frozen or not — called from `tickGame` alongside the other Byte Foundry intro ticks |
-| `canReclaimComputeBoost` | `state → bool` | Whether `reclaimComputeBoost` (Pop) would do anything: `getUnusedComputeBoostStacks(state) > 0` — at least one stack beyond the running one whose whole duration is still ahead in the pooled timer (`min(stacks − 1, ceil(remaining / stackDuration) − 1)`); the running stack can never be popped away |
-| `reclaimComputeBoost` | `state → state` | Byte Foundry Compute Boost (issues #316/#326/#363): no-op below `canReclaimComputeBoost`'s own `> 1` gate; otherwise the exact inverse of one `stackComputeBoost` call — refunds 1 token into the ACTIVE boost's own funding tier field — uncapped, so a refund into a full tier is never lost (a preset switch's refund of unused stacks relies on this) and subtracts that tier's own base preset `durationSeconds` back out of `computeBoostRemainingSeconds` (floored at 0), decrementing `computeBoostStacks` by 1. `computeBoostStacks` after a reclaim is always `>= 1` — the boost stays active; it can no longer be reclaimed all the way back to inactive (an earlier version allowed reclaiming the last stack too, canceling a running effect outright — see `docs/DESIGN_HISTORY.md`) |
+| `getComputeBoostCoveredTierCount` | `intro → number` | Broadest running lane head's funding tier (1-based): Factory tiers/pools 1..N it covers; 0 with no boost. |
+| `getComputeBoostMultiplier` | `intro → number` | Memory/Data Stream multiplier: every running lane's preset multiplier summed; 1 with no boost. |
+| `canActivateComputeBoost` | `(state, boostType, tierIndex) → bool` | Predicate: real preset, valid tier, ≥1 token of that tier's field, lane length < `COMPUTE_BOOST_MAX_STACKS`. |
+| `canStackComputeBoost` | `(state, boostType) → bool` | The lane is running and `canActivateComputeBoost` holds at its head's tier. |
+| `activateComputeBoost` | `(boostType, tierIndex) → state → state` | Needs `isComputeBoostTurnAvailable`; spends 1 token of that tier and starts the lane, or queues behind its head in descending-tier order (never preempting). |
+| `stackComputeBoost` | `boostType → state → state` | Needs `isStackComputeBoostTurnAvailable`; `activateComputeBoost(boostType, head tier)`. |
+| `tickComputeBoost` | `elapsedSeconds → state → state` | Same-reference no-op while idle; counts every lane's head down, handing over to the next queued boost (overshoot carried) and clearing emptied lanes. |
+| `canReclaimComputeBoost` | `(state, boostType) → bool` | Pop is possible: `getUnusedComputeBoostStacks(state, boostType) > 0` (boosts queued behind the running one). |
+| `reclaimComputeBoost` | `boostType → state → state` | Pop: no-op without a queued boost; else refunds 1 token of the weakest queued boost's tier (uncapped) and removes it. |
+| `canForfeitComputeBoost` / `forfeitComputeBoost` | `(state, boostType) → bool` / `boostType → state → state` | Forfeit the running boost with no refund; only while nothing is queued in that lane. |
+| `getComputeBoostLanes` / `getComputeBoostLane` | `intro → lanes[]` / `(intro, boostType) → lane \| null` | Active lanes `{ type, queue, remainingSeconds }` in preset order; reads pre-lane saves as one lane. |
+| `getFactoryTierBoostMultiplier` | `(intro, tierNumber) → number` | 1-based Factory tier: summed multipliers of running lanes whose head covers it, else 1. |
 | `buyTier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`; otherwise validates unlock + affordability, deducts cost, increments `owned`/`purchased` by 1; single-unit purchase, not called by the UI or `buyTierQuantity` |
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Returns the same state if `isProductionFrozen`; otherwise buys up to `quantity` units (capped at the cost-block boundary via `getTierBulkQuantity`), stopping early if a unit becomes unaffordable; used both by the manual "Buy" button (always `quantity` `Number.MAX_SAFE_INTEGER`, see `useIncrementalGame`'s `BUY_QUANTITY`) and by `tickGame`'s autobuyer loop — the two purchase paths are identical, a tier's tickspeed multiplier level has no effect on how much a purchase costs or how many units it grants |
 | `applyAutobuyerMilestones` | `state → state` | For every tier whose `getAutobuyerUnlockMilestone(tierId)`/`getTierTickspeedAutobuyerMilestone(tierId)` is met by `state.purge.count` and isn't already unlocked, sets `autobuyers[tierId] = 1` and/or `tierTickspeedAutobuyer[tierId] = true` — no PP spent, no cost check at all. Never revokes anything already unlocked; returns the same state reference if nothing newly qualifies. Called from `purgeGame` (right after incrementing `count`) |
@@ -2970,7 +2915,7 @@ purchases were manual or automatic.
 - `COMPUTE_MERGE_RESERVE_CAP = 8` — issue #321: size of the 8-slot reserve pool a boundary gains once its auto-merge is unlocked, alongside the entity's own `COMPUTE_ENTITY_CAP` (10) normal slots — "18 slots" total per boundary (`COMPUTE_ENTITY_AUTO_MERGE_CAP`). Same value as `COMPUTE_MERGE_RATIO` (a merge always consumes exactly one full group) but a separate constant since it denotes the reserve pool's own capacity, not a conversion ratio. Modeled with no persisted count field of its own — `getComputeReserveHeld` derives how much is filled straight from the live entity count instead (see "Once a boundary's auto-merge is unlocked..." above)
 - `COMPUTE_MERGE_BOUNDARIES` — per-boundary metadata (`inputField` / `outputField` / `autoFlagField` / `timerField` / `label`); boundary `i`'s merge duration is keyed off Storage pool `i + 1` (see `getComputeMergeDurationSeconds`)
 - `COMPUTE_BOOST_PRESETS = { burst: { multiplier: 32, durationSeconds: 60 }, standard: { multiplier: 8, durationSeconds: 600 }, sustain: { multiplier: 2, durationSeconds: 3600 } }` — Byte Foundry Compute Boost: base (tier 1 / Core) strength/duration tradeoffs; activating spends 1 token of whichever compute-ladder tier the player arms (Cell through Fusion — see `COMPUTE_BOOST_TIER_FIELDS` / issue #326), not always a Core — higher tiers scale multiplier by `COMPUTE_BOOST_TIER_POWER_STEP` (4) per step; duration stays at the base preset (issue #363) — see `activateComputeBoost`/`getComputeBoostTierMultiplier`/`getComputeBoostMultiplier`
-- `COMPUTE_BOOST_MAX_STACKS = 10` — Byte Foundry Compute Boost: how many times `stackComputeBoost` can extend the currently active boost's remaining duration by spending another token of that boost's own funding tier (the multiplier itself never compounds; replacing an active boost with a different preset/tier requires an explicit forfeit confirmation and refunds its unused stacks first — see `forfeitComputeBoost` / `activateComputeBoost(..., forfeitConfirmed)` / `docs/DESIGN_HISTORY.md`) — see `stackComputeBoost`/`canStackComputeBoost`/`activateComputeBoost`
+- `COMPUTE_BOOST_MAX_STACKS = 10` — Compute Boost: max boosts per multiplier lane (the running one plus those queued behind it).
 - `FILL_MULTIPLIER_*` (`layers.js`) — `FILL_MULTIPLIER_MAX_PERCENT` (1000, empty buffer), `FILL_MULTIPLIER_MIN_PERCENT` (10, multiplier at a full buffer), `FILL_MULTIPLIER_TAP_BONUS_PERCENT` (5pp stored per tap, applied as ×(1 + bonus%) to consumers, never to the fill), `FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND` (1), `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` (100, independent cap on the tap bonus alone, enforced by `tapIntroBit`/`tapPoolBuffer`)
 - `canDiskSizeFeedWriteCache(size)` (`engine.js`) — false for each pool's largest disk size (no larger size in its pool can consume it when expedited); gates `DiskArrayRow`'s stranded-disk tooltip
 
