@@ -11033,7 +11033,7 @@ describe('Data Lakes', () => {
         dataLakes: { ...second.intro.dataLakes, 1: { ...second.intro.dataLakes[1], rebuilding: false, depositedUnits: 3000, purchased: 3000 } },
       })
       const third = flushStoragePool(1)(thirdReady)
-      expect(third.intro.dataLakes[1].resetCount).toBe(3)
+      expect(third.intro.dataLakes[1].resetCount).toBe(2) // resetCount restarted at 0 on Reformat
       expect(third.intro.poolExponentBonuses[1]).toBe(2)
       expect(getDataStreamSpeedExponent(third.intro)).toBeCloseTo(getDataStreamSpeedExponent(second.intro), 12)
     })
