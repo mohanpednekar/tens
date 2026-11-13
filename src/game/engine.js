@@ -1142,15 +1142,6 @@ export const getHyperscalerFlopsBoostRate = state => {
 export const getComputeFlopsTierProductionMultiplier = (state, tierId) =>
   1 + clampNonNegative(state.computeFlops?.cumulativeBoost?.[tierId] ?? 0) + getHyperscalerFlopsBoostRate(state)
 
-export const formatComputeFlopsBoost = value => {
-  const safe = clampNonNegative(value)
-  if (safe === 0) return '0 Flops'
-  const pct = safe * 100
-  if (pct >= 100) return `${formatAmount(safe)} Flops (+${formatAmount(pct)}%)`
-  if (pct >= 0.01) return `${formatAmount(safe)} Flops (+${pct.toFixed(2)}%)`
-  return `${formatAmount(safe)} Flops (+${pct.toExponential(2)}%)`
-}
-
 export const formatComputeFlopsTotal = value => {
   const safe = clampNonNegative(value)
   if (safe === 0) return '0 Flops'
@@ -1864,20 +1855,6 @@ export const getPrestigePointsAwarded = (money, doublePpLevel = 0) => {
   const ppPerPower = getPrestigePpPerPower(doublePpLevel)
   const units = 1 + Math.floor(excessPowers / powersPerPp)
   return units * ppPerPower
-}
-
-// Progress (0–100) toward the next PP-earning step once Googol-scale money is reached — within
-// the current powers-per-PP block. Below Googol, falls back to getPurgePercent.
-export const getPrestigePpEarnProgressPercent = (money, doublePpLevel = 0) => {
-  const safeMoney = clampNonNegative(money)
-  const googolExponent = Math.floor(Math.log10(GOOGOL))
-  const moneyExponent = getMoneyExponent(safeMoney)
-  if (moneyExponent < googolExponent) return getPurgePercent(safeMoney)
-
-  const excessPowers = moneyExponent - googolExponent
-  const powersPerPp = getPrestigePowersPerPp(doublePpLevel)
-  const remainder = excessPowers % powersPerPp
-  return Math.round((remainder / powersPerPp) * 100)
 }
 
 const checkMilestones = (resources, purge) => {
