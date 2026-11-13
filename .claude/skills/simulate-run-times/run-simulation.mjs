@@ -87,7 +87,6 @@ import {
   tickGame,
 } from '../../../src/game/engine.js'
 import {
-  COMPUTE_BOOST_PRESETS,
   COMPUTE_BOOST_TIER_FIELDS,
   DATA_LAKE_TIER_COUNT,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,

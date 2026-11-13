@@ -2588,7 +2588,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // boundary once its flag flips true
     computeChargeSeconds: {},                             // RUN-SCOPED manual Charge progress per boundary ({ [boundaryIndex]: seconds }); dropped by Purge/Reboot/Reformat, nothing is spent until its merge
     computeCoresMergeRemainingSeconds: 0,                 // PERMANENT — carried through a real Prestige unchanged
-    computeNodesMergeRemainingSeconds: 0,                 // (not run-scoped like computeBoostRemainingSeconds
+    computeNodesMergeRemainingSeconds: 0,                 // (not run-scoped like computeBoosts
     computeClustersMergeRemainingSeconds: 0,              // below), since an in-flight merge represents already-
     computeNetworksMergeRemainingSeconds: 0,              // committed tokens that shouldn't be lost to a Prestige
     computeGridsMergeRemainingSeconds: 0,                 // transition — it just keeps counting down seamlessly.

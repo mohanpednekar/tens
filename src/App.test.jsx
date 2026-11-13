@@ -752,6 +752,38 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
   expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 0\.91s \(tier ×1, global ×1\.1\)/i)
 })
 
+test('tier details show that tier\'s own boost total (only covering lanes), and no boost line without a boost', async () => {
+  const user = userEvent.setup()
+  const lanes = { burst: { queue: [1], remainingSeconds: 100 }, sustain: { queue: [2, 1], remainingSeconds: 100 } }
+  seedMainGameState({
+    resources: { base: 10 },
+    owned: { tier01: 10, tier02: 4 },
+    intro: { mainGameUnlocked: true, computeBoosts: lanes },
+  })
+  render(<App />)
+
+  const open = async name => {
+    const layer = screen.getByLabelText(name)
+    await user.click(within(layer).getByRole('button', { name: /(kilo|mega)bytes/i }))
+    return layer
+  }
+  const kb = await open(/^kilobytes layer$/i)
+  expect(kb).toHaveTextContent(`Boosted ×${COMPUTE_BOOST_PRESETS.burst.multiplier + COMPUTE_BOOST_PRESETS.sustain.multiplier}`)
+  expect(kb).toHaveTextContent('1 queued')
+  const mb = await open(/^megabytes layer$/i)
+  expect(mb).toHaveTextContent(`Boosted ×${COMPUTE_BOOST_PRESETS.sustain.multiplier} production`)
+  expect(mb).not.toHaveTextContent('Turbo')
+})
+
+test('tier details carry no boost line while no boost runs', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({ resources: { base: 10 }, owned: { tier01: 10 } })
+  render(<App />)
+  const layer = screen.getByLabelText(/^kilobytes layer$/i)
+  await user.click(within(layer).getByRole('button', { name: /kilobytes/i }))
+  expect(layer).not.toHaveTextContent(/Boosted ×/)
+})
+
 test('clicking elsewhere on a tier row\'s tile (not the name) does not toggle its details', async () => {
   const user = userEvent.setup()
 

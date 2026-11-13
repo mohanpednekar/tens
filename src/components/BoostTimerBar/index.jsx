@@ -132,7 +132,7 @@ const BoostLaneRow = ({ lane, state, actions }) => {
       <TimerBar
         aria-label={`active ${display.label} compute boost`}
         $fill={fillPercent}
-        title={`${display.label} boost active: ×${multiplier} production on ${describeCoveredTiers(tierIndex, 'name')}, ${formatOfflineDuration(remaining)} left${queued ? `, ${queue.length}x queued (strongest first)` : ''}`}
+        title={`${display.label} boost active: ×${multiplier} production on ${describeCoveredTiers(tierIndex, 'name')}, ${formatOfflineDuration(remaining)} left${queued ? `, ${queue.length - 1} queued (strongest first)` : ''}`}
       >
         <TimerEffect>{`${display.icon} ×${multiplier}`}</TimerEffect>
         <TimerTargets>{`Boosting ${describeCoveredTiers(tierIndex)}`}</TimerTargets>

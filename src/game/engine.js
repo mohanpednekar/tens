@@ -625,7 +625,7 @@ export const createInitialGameState = () => ({
     // key: { [boostType]: { queue: [tierIndex, …], remainingSeconds } } — see "Compute Boosts" below.
     computeBoosts: {},
     // NOT permanent — resets to 0 on every real Prestige/Era ascension/Reset Byte Foundry (falls
-    // out of the intro object entirely, same posture as computeBoostType), but carried through
+    // out of the intro object entirely, same posture as computeBoosts), but carried through
     // untouched by Scale Up/Overclock like the rest of intro. The Data Stream's own decaying tap
     // bonus (see FILL_MULTIPLIER_TAP_BONUS_PERCENT/tickFillMultiplierDecay/getDataStreamTapMultiplier
     // in engine.js) — speeds the stream's upgrade drains; added to by tapIntroBit once Storage pools are revealed at 1 KiB, decays back
@@ -7744,7 +7744,7 @@ const resetFactoryCycle = (state, awardPurge) => {
       // already committed/spent out of the normal slots — carried through PERMANENT, same as the
       // compute-ladder entities/auto-merge flags above, so it just keeps counting down seamlessly
       // across the cycle boundary instead of losing the committed tokens. Deliberately NOT
-      // run-scoped like computeBoostRemainingSeconds below.
+      // run-scoped like computeBoosts below.
       computeCoresMergeRemainingSeconds: state.intro?.computeCoresMergeRemainingSeconds ?? initial.intro.computeCoresMergeRemainingSeconds,
       computeNodesMergeRemainingSeconds: state.intro?.computeNodesMergeRemainingSeconds ?? initial.intro.computeNodesMergeRemainingSeconds,
       computeClustersMergeRemainingSeconds: state.intro?.computeClustersMergeRemainingSeconds ?? initial.intro.computeClustersMergeRemainingSeconds,
