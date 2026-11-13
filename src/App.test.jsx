@@ -4864,7 +4864,7 @@ describe('Byte Foundry Compute Boost', () => {
     let saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeBoosts.burst.queue).toEqual([1, 1])
     expect(saved.intro.computeCores).toBe(2)
-    expect(screen.getByLabelText(/^active turbo compute boost$/i)).toHaveTextContent('· 2x')
+    expect(screen.getByLabelText(/^active turbo compute boost$/i)).toHaveTextContent(/^2x\s*KB.*×20/)
 
     // Pop refunds the queued one (no confirm); the Balanced lane is untouched and offers Forfeit.
     fireEvent.click(screen.getByRole('button', { name: /pop one queued turbo compute boost/i }))
@@ -4902,7 +4902,7 @@ describe('Byte Foundry Compute Boost', () => {
 
     openFactorySync()
     expect(screen.queryByRole('img', { name: /Boosted/ })).toBeNull()
-    expect(screen.getByLabelText(/^active balanced compute boost$/i)).toHaveTextContent('Boosting KB')
+    expect(screen.getByLabelText(/^active balanced compute boost$/i)).toHaveTextContent(/^1x\s*KB\s.*×5/)
   })
 
 })

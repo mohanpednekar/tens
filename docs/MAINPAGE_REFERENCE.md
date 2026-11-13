@@ -424,10 +424,11 @@ live inside the selected tier):
      `actions.reclaimComputeBoost(type)`) while `canReclaimComputeBoost(state, type)` (a boost waits behind the
      running one); otherwise **Forfeit** (`aria-label="forfeit the <Label> compute boost with no refund"`, `✕`,
      `window.confirm` first, `actions.forfeitComputeBoost(type)`).
-   - Middle: a `TimerBar` (`aria-label="active <Label> compute boost"`) whose fill is the lane's whole remaining
-     time (head countdown + waiting × duration) over `queue.length × duration`, showing `"<icon> ×<multiplier>"`,
-     `"Boosting <covered Factory tiers>"` (the head's tier) and the countdown (`· <N>x` when more than one
-     boost is queued); the full sentence lives in its `title`.
+   - Middle: a `TimerBar` (`aria-label="active <Label> compute boost"`, a 3-column grid so the centre stays
+     centred) whose fill is the lane's whole remaining time (head countdown + waiting × duration) over
+     `queue.length × duration`: left the boost count (`<N>x`, always shown), centre
+     `"<covered Factory tiers> <icon> ×<multiplier>"` (e.g. `KB–GB 💥 ×20`), right the countdown; the full
+     sentence lives in its `title`.
    - Right: **Stack** (`aria-label="stack the <Label> compute boost"`, `+`,
      `disabled={!isStackComputeBoostTurnAvailable(state, type)}`, `actions.stackComputeBoost(type)`).
    `MainPage`'s tier details show a read-only line (`getComputeBoostDescription(intro, tierIndex)`) with that
@@ -453,7 +454,7 @@ live inside the selected tier):
       for the CURRENTLY ARMED tier via `getComputeBoostTierMultiplier(boostType, armedTierIndex)` —
       e.g. `"💥 ×20 · 10m"` for Turbo (`formatPresetDuration` drops a zero trailing unit) — the preset
       name itself lives only in `title`). A preset whose multiplier already runs becomes a **queue** button
-      (`aria-label="queue <type> compute boost"`, label prefixed `"+ "`); otherwise it is
+      (`aria-label="queue <type> compute boost"`, label unchanged); otherwise it is
       `aria-label="activate <type> compute boost"`. Either way it calls
       `actions.activateComputeBoost(boostType, armedTierIndex)` with no confirmation (a different multiplier runs
       in parallel and adds up; the same one queues behind the running boost, strongest tier first).

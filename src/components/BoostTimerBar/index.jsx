@@ -46,9 +46,9 @@ const TimerSideButton = styled(CompactButton)`
 const TimerBar = styled.div`
   flex: 1 1 auto;
   min-width: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: ${props => props.theme.space.sm};
   padding: 0.45em 0.75em;
   border-radius: ${props => props.theme.radius.sm};
@@ -63,22 +63,21 @@ const TimerBar = styled.div`
   font-variant-numeric: tabular-nums;
 `
 
-const TimerEffect = styled.span`
-  font-weight: 700;
+const TimerCount = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  text-align: left;
   white-space: nowrap;
 `
 
-const TimerTargets = styled.span`
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
+const TimerEffect = styled.span`
+  font-weight: 700;
   text-align: center;
-  text-overflow: ellipsis;
   white-space: nowrap;
 `
 
 const TimerRemaining = styled.span`
   color: ${props => props.theme.color.textMuted};
+  text-align: right;
   white-space: nowrap;
 `
 
@@ -134,12 +133,9 @@ const BoostLaneRow = ({ lane, state, actions }) => {
         $fill={fillPercent}
         title={`${display.label} boost active: ×${multiplier} production on ${describeCoveredTiers(tierIndex, 'name')}, ${formatOfflineDuration(remaining)} left${queued ? `, ${queue.length - 1} queued (strongest first)` : ''}`}
       >
-        <TimerEffect>{`${display.icon} ×${multiplier}`}</TimerEffect>
-        <TimerTargets>{`Boosting ${describeCoveredTiers(tierIndex)}`}</TimerTargets>
-        <TimerRemaining>
-          {formatOfflineDuration(remaining)}
-          {queued ? ` · ${queue.length}x` : ''}
-        </TimerRemaining>
+        <TimerCount>{`${queue.length}x`}</TimerCount>
+        <TimerEffect>{`${describeCoveredTiers(tierIndex)} ${display.icon} ×${multiplier}`}</TimerEffect>
+        <TimerRemaining>{formatOfflineDuration(remaining)}</TimerRemaining>
       </TimerBar>
       <TimerSideButton
         aria-label={`stack the ${display.label} compute boost`}
