@@ -1516,7 +1516,7 @@ const MainPage = ({ game }) => {
                       milestone bonus: ×{formatRate(milestoneMultiplier)} from {formatAmount(purchased)} lifetime purchases
                     </li>
                     {tierScaleUpMultiplier > 1 && <li>Scale Up bonus: ×{formatRate(tierScaleUpMultiplier)}</li>}
-                    {isBoosted && <li>{getComputeBoostDescription(state.intro)}</li>}
+                    {isBoosted && <li>{getComputeBoostDescription(state.intro, tierIndex)}</li>}
                     <li>Costs {RESOURCE_SYMBOL(tier.costResourceId)}, produces {RESOURCE_SYMBOL(tier.producesResourceId)}</li>
                   </ul>
                 </TierDetailsContent>

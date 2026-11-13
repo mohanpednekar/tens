@@ -9352,3 +9352,12 @@ makes the drain available in the same tick, `tickDataLakePoolDrain` takes the pr
 overflow already fed (no double credit). `buyBooster` used to zero `fillBits` on every purchase — itself an
 interruption (and a loss of the bits) — so it now carries the progress over, re-seating it through
 `fillDataLakeDisks` since the spend can open a smaller slot than the one that was filling.
+
+## Compute Boost lanes (parallel multipliers + same-multiplier queue)
+
+Replaced the single-boost model (`computeBoostType`/`TierIndex`/`Stacks`/`RemainingSeconds`; one active preset, Stack extended
+a pooled timer, a different preset needed a confirmed forfeit-and-switch). Maintainer rule: different multipliers run in
+parallel and add up; the same multiplier queues in descending strength (funding tier), existing boosts stay forfeitable.
+State is now `intro.computeBoosts` lanes; a running head is never preempted by a stronger queued boost. Old saves load via
+`getComputeBoostLanes`' legacy read (pooled timer split into per-stack entries).
+

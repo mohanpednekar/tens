@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Perks → Unlocks → Global Automation now always lists Auto Overclock (32 PP; needs Auto Scale Up first) and Auto-Prestige (64 PP); they were hidden until their prerequisites were met.
 
 ### Changed
+- Compute Boosts: boosts of different multipliers (Turbo / Balanced / Eco) now run in parallel and their multipliers add up; boosts of the same multiplier queue behind the running one (strongest tier first, running one never interrupted). Each multiplier has its own timer bar with Pop / Forfeit / Stack; the confirmed forfeit-and-switch is gone. Auto Boost queues or starts its preset alongside other running boosts.
 - A collapsed pool card's Data Lake row shows the bar text (`X/N KB` — progress on the lake disk being filled) instead of the lake balance.
 - **Data Lakes: a lake disk only starts filling while its pool's Staging is full, and is never interrupted once started.** The check happens only at the start; a lake disk under way keeps filling through empty disks, provisioning and a non-full Staging until it completes.
 - Charger polish: the ⚡ Charge button shows `⏳ n/8` while charging; the unlock button's accessible name now reads "unlock the Charger for …"; Manual wording matches.
