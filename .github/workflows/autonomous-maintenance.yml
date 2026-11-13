@@ -89,19 +89,21 @@ jobs:
           esac
           if [ -n "$INPUT_SLOT" ] && [ "$INPUT_SLOT" != "auto" ]; then kind="$INPUT_SLOT"; fi
 
-          # Model per kind (aliases only - they resolve to the latest release):
-          # sonnet = implementation, opus = judgment (QA, planning, advisory, security,
-          # research), haiku = mechanical housekeeping. pr_free kinds produce issues/
+          # Model per kind (aliases only - they resolve to the latest release). Conservative
+          # default: the cheaper model wherever it suits - sonnet = implementation, QA, analysis;
+          # opus only for planning, architecture advice, security, research; haiku = mechanical
+          # housekeeping/triage/docs-sync. pr_free kinds produce issues/
           # comments only, so the open-PR ceiling must not skip them.
           pr_free=false
           case "$kind" in
-            implement|perf|release|tech-debt) model=sonnet ;;
+            implement|perf|release|tech-debt|qa-review|qa-deep|retro|economy) model=sonnet ;;
             housekeeping|docs-sync)           model=haiku ;;
-            triage)                           model=haiku; pr_free=true ;;
-            planning|architecture|retro|economy) model=opus; pr_free=true ;;
-            qa-review|qa-deep|security|research) model=opus ;;
+            triage)                           model=haiku ;;
+            planning|architecture)            model=opus ;;
+            security|research) model=opus ;;
             *) echo "::error::unknown slot kind '$kind'"; exit 1 ;;
           esac
+          case "$kind" in triage|planning|architecture|retro|economy) pr_free=true ;; esac
           if [ -n "$INPUT_MODEL" ] && [ "$INPUT_MODEL" != "auto" ]; then model="$INPUT_MODEL"; fi
 
           brief="$RUNNER_TEMP/slot-brief.txt"
