@@ -6055,7 +6055,9 @@ export const flushStoragePool = tierIndex => state => {
   // First and second Compact Pool award permanent exponent boosts. They apply immediately
   // to all unlocked disk sizes and survive future pool/lake wipes, including Reboot.
   const priorBonus = Math.min(2, Math.max(0, Number(state.intro.poolExponentBonuses?.[tierIndex]) || 0))
-  const bonusLevel = Math.max(priorBonus, Math.min(2, resetCount))
+  // Count achievements cumulatively even when Reformat/Reboot has wiped the local resetCount.
+  // The live lake count also catches older saves that already had resets before this feature.
+  const bonusLevel = Math.min(2, Math.max(priorBonus + 1, resetCount))
   const diskBuildBelongsToPool = getPoolIndexForDiskSize(state.intro.diskBuild?.size) === tierIndex
   const diskWriteCache = Object.fromEntries(Object.entries(state.intro.diskWriteCache ?? {}).filter(
     ([targetSize, merge]) => !sizes.includes(Number(targetSize)) && !sizes.includes(Number(merge?.sourceSize)),
