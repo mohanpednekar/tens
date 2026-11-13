@@ -98,7 +98,7 @@ read as a real break to the next run's Phase 0 CI check.
 shifted 3h back so late cron firings and the 22:00 weekday resolve correctly) to a task *kind*, a
 `--model` alias and a `pr_free` flag; non-`implement` kinds prepend a "slot brief" to the prompt that
 replaces Phase A/B (Phase 0 CI/security repair always outranks it). `pr_free` kinds (issues/comments
-only) bypass the 5-PR ceiling and the empty-run warning. `workflow_dispatch` takes `slot` and `model`
+only; `qa-review` included, as it mainly posts review markers) bypass the 5-PR ceiling and the empty-run warning. `workflow_dispatch` takes `slot` and `model`
 overrides.
 
 | Slot (IST) | Default kind → model | Weekly overrides (ISO weekday) |
@@ -312,7 +312,7 @@ expected. See `docs/DESIGN_HISTORY.md` for detail.
 **Phase 0 — CI/CD failures and unaddressed critical/high Dependabot alerts (top priority).** The
 guard step checks whether the latest completed `ci.yml` run on `main` failed, and separately lists
 any open PR (excluding `claude/auto-*` and fork PRs) with a failing check. Either condition outranks
-Phase A/B and is the one case allowed to bypass the 5-PR ceiling below. If `main` is broken, Claude
+Phase A/B and is the one case allowed to bypass the 5-PR ceiling below (an issue-only slot that runs at a full ceiling is told to open no PR at all, Phase 0(c) included; only a red-main heal PR is exempt). If `main` is broken, Claude
 reads the failing run's logs, fixes the regression on a branch named `claude/heal-main-<short-slug>`,
 confirms `yarn test`/`yarn build` are green, and opens a PR (this branch prefix is already recognized
 by `pr-auto-merge.yml`'s low-risk path). Otherwise, for a stale Dependabot PR confirmed behind `main`

@@ -1547,6 +1547,11 @@ The retune (issue #339):
 - **Claude** — cut from every 5 hours to **twice daily** at 9:00am / 9:00pm IST (`30 3,15 * * *`
   UTC). Exact clock times were a judgment call (the request specified count only); 9am/9pm IST sit
   clear of every Cursor slot so the engines still never wake together.
+  - **Superseded 2026-11-13:** four slots daily (4am/10am/4pm/10pm IST, cron `30 22,4,10,16 * * *`),
+    each mapped to a task kind + model alias (sonnet implementation/QA, haiku mechanical, opus only for
+    weekly planning/architecture/security/research). Slot resolved by shifting the IST clock 3h back
+    (robust to late cron firings) rather than splitting on `github.event.schedule`. Issue-only kinds
+    bypass the 5-PR ceiling but are told to open no PR when it is full; job timeout raised 30→45 min.
 
 IST = UTC+5:30, so IST `:30` maps to UTC `:00` for Cursor and IST `:00` maps to UTC `:30` for
 Claude — do not "simplify" the minute fields without re-checking that mapping.

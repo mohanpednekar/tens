@@ -59,7 +59,7 @@ describe('autonomous-maintenance.yml slot schedule', () => {
     expect(slot.run).toContain('implement|qa-review|qa-deep|retro|economy|perf|release|tech-debt) model=sonnet');
     expect(slot.run).toContain('housekeeping|docs-sync)           model=haiku');
     expect(slot.run).toContain('triage)                           model=haiku');
-    expect(slot.run).toContain('triage|planning|architecture|retro|economy) pr_free=true');
+    expect(slot.run).toContain('triage|planning|architecture|retro|economy|qa-review) pr_free=true');
     expect(slot.run).toContain('planning|architecture|security|research) model=opus');
     expect(claude.with.claude_args).toContain('--model ${{ steps.slot.outputs.model }}');
   });
