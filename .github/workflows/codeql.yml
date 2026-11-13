@@ -22,6 +22,9 @@ on:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
+    # Swift (macOS runner + Xcode build) is slow, so it runs post-merge (push/schedule) only, never on
+    # PRs; failures are handled via follow-up PRs / autonomous maintenance.
+    if: github.event_name != 'pull_request' || matrix.language != 'swift'
     # Runner size impacts CodeQL analysis time. To learn more, please see:
     #   - https://gh.io/recommended-hardware-resources-for-running-codeql
     #   - https://gh.io/supported-runners-and-hardware-resources

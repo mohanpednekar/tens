@@ -677,7 +677,9 @@ security for these uploads to be accepted). Push/PR to `main` plus a weekly sche
 `actions`, `java-kotlin`, `javascript-typescript` (all `build-mode: none`) and `swift`. Swift is
 `manual` on `macos-latest`: `setup-node-yarn` → `yarn build:capacitor` → `cap sync ios` (untraced, so
 `CapApp-SPM`'s `node_modules/` plugin paths resolve), then a traced simulator `xcodebuild` with
-`CODE_SIGNING_ALLOWED=NO`. Default setup's Swift autobuild ran a bare `swift build` with no
+`CODE_SIGNING_ALLOWED=NO`. The Swift leg is **post-merge only** (skipped on `pull_request` via a
+job-level `if`, because the macOS build slowed every PR); a failure on `main` is handled via a
+follow-up PR or autonomous maintenance (Phase 0 CI/CD failures), not a PR gate. Default setup's Swift autobuild ran a bare `swift build` with no
 `node_modules` and failed once Capacitor plugins were synced in (#915).
 
 ### Mutation testing (`mutation-testing.yml`, #592)
