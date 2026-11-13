@@ -3,10 +3,11 @@ import { canForfeitComputeBoost, canReclaimComputeBoost, formatOfflineDuration, 
 import { COMPUTE_BOOST_MAX_STACKS, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
-// The active Compute Boost timer bars, one per running multiplier, shared by the Power screen and the Byte
-// Factory header: Pop (refund the last queued boost, no confirm) — or Forfeit (confirmed) once nothing is
-// queued — on the left, the bar (fill = remaining time over the lane's total queued duration, effect text
-// on top) in the middle, Stack (queue another) on the right. Renders nothing while no boost is active.
+// The active Compute Boost timer bars, shared by the Power screen and the Byte Factory header: one lane per
+// running multiplier, one row per group of same-tier boosts (see BoostLaneRow). Each bar shows the boost
+// count, covered tiers + preset, and time left, its fill being the group's remaining time over `count ×
+// duration`. Pop (refund the last queued boost, no confirm) — or Forfeit (confirmed) once nothing is queued —
+// sits on the lane's last row, Stack (queue another) on its first. Renders nothing while no boost is active.
 
 // A small leading icon + display label per COMPUTE_BOOST_PRESETS key.
 export const COMPUTE_BOOST_DISPLAY = {

@@ -418,10 +418,11 @@ Render order top to bottom (a top `BoostCard` with the current effect, then tier
 live inside the selected tier):
 
 1. Right after the header, deliberately at the TOP of the page, a `BoostTimerStack`
-   (`role="group"`, `aria-label="active boost controls"`) holds one `BoostTimerRow` per running multiplier lane
-   (`getComputeBoostLanes`; Turbo / Balanced / Eco order, `aria-label="<Label> boost controls"`):
-   - A lane renders one row per **group** of consecutive queue entries funded by the same tier (the queue is
-     strongest-tier-first), so boosts covering a different set of Factory tiers than the running one are shown
+   (`role="group"`, `aria-label="active boost controls"`) holds one `BoostLane` per running multiplier lane
+   (`getComputeBoostLanes`; Turbo / Balanced / Eco order, `aria-label="<Label> boost controls"`), each holding one
+   `BoostTimerRow` per same-tier group:
+   - A lane renders one row per **group** of consecutive queue entries funded by the same tier (the waiting
+     entries are strongest-tier-first; the running head can be weaker), so boosts covering a different set of Factory tiers than the running one are shown
      separately: the first row is the running group, further rows are waiting groups (dimmed, time = their full
      duration). All three side controls share one fixed width and rows without a button carry a same-width spacer,
      so every bar lines up.
