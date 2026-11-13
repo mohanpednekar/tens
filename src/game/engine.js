@@ -7715,6 +7715,9 @@ const resetFactoryCycle = (state, awardPurge) => {
       // Convenience caps from resetByteFoundry — permanent across Prestige so auto-replay keeps
       // working after a real Prestige cycle; cleared only by a full save Reset.
       foundryResetCaps: state.intro?.foundryResetCaps ?? initial.intro.foundryResetCaps,
+      // The two earned Compact Pool exponent upgrades per pool persist through Purge and
+      // every Factory-cycle reset, just like the earned achievement badges.
+      poolExponentBonuses: { ...(state.intro?.poolExponentBonuses ?? {}) },
       // Disks (full or empty), each array's own cache, any in-progress build, and the cumulative
       // build ladder are just as permanent as the Byte generator itself above — "never lost," not
       // part of this cycle's Memory reset. A disk already FULL when Prestige fires stays full, its
