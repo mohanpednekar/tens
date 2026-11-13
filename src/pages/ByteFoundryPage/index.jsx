@@ -796,8 +796,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // Provisioning draws from this pool's buffer (minus the read cache's own claim) at the pool's fixed base Bandwidth.
   const diskPoolSpendableBufferBits = Math.max(0, getPoolBufferBits(state, diskPoolIndex) - getPoolCacheReservationBits(state, diskPoolIndex))
   const diskLadderExhausted = isDiskLadderExhaustedForActivePools(state)
-  // A full array whose next size is reachable but locked: only a Foundry reset unlocks it (and raises
-  // the speed exponent by one step).
+  // A full array whose next size is reachable but locked: only Reformat unlocks it (and raises
+  // the speed exponent via that pool/disk-size step's current achievement-adjusted rule).
   const diskUnlockAvailable = isDiskSizeUnlockAvailable(state)
   const speedExponent = getDataStreamSpeedExponent(intro)
   const speedExponentText = speedExponent.toFixed(2)

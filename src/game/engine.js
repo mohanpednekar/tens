@@ -439,6 +439,10 @@ export const createInitialGameState = () => ({
     // the player may provision. Step 1 is free; each later step needs a Foundry reset
     // (unlockNextDiskSizeByFoundryReset), which also raises the speed exponent by 0.01.
     unlockedDiskSteps: 1,
+    // PERMANENT across Reformat/Purge/Reboot: { poolIndex: 1 or 2 } tracks the first two
+    // Compact Pool achievements. It is separate from dataLakes[*].resetCount, which Reformat
+    // and Reboot clear. Only full save Reset removes these earned Bitrate upgrades.
+    poolExponentBonuses: {},
     // PERMANENT — { [capacityBits]: count } of currently-FULL Disks of that size (see
     // tickDiskAutoFill/pullDiskForCurrentLevel below) — "never lost," survives Prestige/Scale
     // Up/Overclock exactly like the Byte generator itself (a full disk's contents ride through a
@@ -1272,6 +1276,8 @@ const buildEraIntroReset = (state, initial) => {
     // Era ascension (a much bigger reset than an ordinary Prestige) still never re-gates it. See
     // latchMainGameUnlocked.
     mainGameUnlocked: state.intro?.mainGameUnlocked ?? initial.intro.mainGameUnlocked,
+    // Achieved pool exponent boosts survive the much larger Reboot, like achievements themselves.
+    poolExponentBonuses: { ...(state.intro?.poolExponentBonuses ?? {}) },
     foundryResetCaps: {},
     autoMergeCoresIntoNode: state.intro?.autoMergeCoresIntoNode ?? initial.intro.autoMergeCoresIntoNode,
     autoMergeNodesIntoCluster: state.intro?.autoMergeNodesIntoCluster ?? initial.intro.autoMergeNodesIntoCluster,
@@ -1297,6 +1303,7 @@ export const isAchievementConditionMet = (state, condition) => {
     case 'tierPurchased': return (state.purchased?.[condition.tierId] ?? 0) > 0 || (state.purchaseLevels?.[condition.tierId] ?? 1) > 1
     case 'clockSpeedLevel': return (state.globalTickspeedMultiplier ?? 0) >= condition.min
     case 'overclocked': return state.overclockLastClaimCompletedLevels != null
+    case 'poolExponentBonus': return (state.intro?.poolExponentBonuses?.[condition.poolIndex] ?? 0) >= condition.min
     default: return false
   }
 }
@@ -2623,10 +2630,28 @@ export const getUnlockedDiskSteps = intro => {
   return Math.min(DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length, Number.isFinite(raw) && raw >= 1 ? raw : 1)
 }
 
-// The exponent behind Data Stream Speed and the pool Bandwidth cap: each further unlocked
-// disk size closes 10% of the remaining distance from the current exponent to 1.0.
-export const getDataStreamSpeedExponent = intro =>
-  1 - (1 - DATA_STREAM_SPEED_EXPONENT_BASE) * DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED ** (getUnlockedDiskSteps(intro) - 1)
+// Both Data Stream Bitrate and pool Bandwidth use this exponent. Each new pool closes 10%
+// of the gap to 1.0 (factor 0.9). Within a pool, a disk-size unlock initially moves 10%
+// toward the next pool's exponent, equivalent to gap factor 0.99. The first and second
+// successful Compact Pool earn upgrades for that pool's first and second array transition,
+// respectively: their gap factor becomes 0.9. Only unlocked transitions contribute.
+export const getDataStreamSpeedExponent = intro => {
+  const steps = getUnlockedDiskSteps(intro)
+  const poolTransitions = Math.floor((steps - 1) / DATA_LAKE_SUB_SIZES.length)
+  const arrayTransitions = steps - 1 - poolTransitions
+  let earnedArrayTransitions = 0
+  for (let pool = 1; pool <= DATA_LAKE_TIER_COUNT; pool += 1) {
+    const unlockedInPool = Math.min(DATA_LAKE_SUB_SIZES.length - 1, Math.max(0, steps - 1 - (pool - 1) * DATA_LAKE_SUB_SIZES.length))
+    const recorded = Number(intro?.poolExponentBonuses?.[pool])
+    const bonuses = Number.isFinite(recorded) ? Math.min(2, Math.max(0, Math.floor(recorded))) : 0
+    earnedArrayTransitions += Math.min(unlockedInPool, bonuses)
+  }
+  const poolGap = DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED
+  const arrayGap = 1 - (1 - poolGap) ** 2
+  return 1 - (1 - DATA_STREAM_SPEED_EXPONENT_BASE) *
+    poolGap ** (poolTransitions + earnedArrayTransitions) *
+    arrayGap ** (arrayTransitions - earnedArrayTransitions)
+}
 
 // The Data Stream's Speed in BYTES per second for a Speed basis (in bits): (basis in Bytes) ^ exponent
 // (default: the base exponent). Never purchased directly — see layers.js's "Data Stream Speed" note.
@@ -3381,6 +3406,25 @@ export const normalizePoolMemoryCapacity = state => {
     changed = true
     nextIntro.unlockedDiskSteps = highestBuiltStep
   }
+  // Grandfather Compact Pool resets from older saves. Reformat/Reboot historically wiped
+  // the lakes' counters, so only surviving per-pool counts can be recovered. Earned upgrades
+  // and achievement flags otherwise persist separately across every non-full reset.
+  const poolExponentBonuses = { ...(nextIntro.poolExponentBonuses ?? {}) }
+  for (let pool = 1; pool <= DATA_LAKE_TIER_COUNT; pool += 1) {
+    const savedCount = Number(nextIntro.dataLakes?.[pool]?.resetCount)
+    const earned = state.achievements?.earned ?? {}
+    const prefix = `pool${String(pool).padStart(2, '0')}Reset`
+    const badgeCount = earned[`${prefix}II`] ? 2 : earned[`${prefix}I`] ? 1 : 0
+    const prior = Number(poolExponentBonuses[pool])
+    const current = Number.isFinite(prior) ? Math.min(2, Math.max(0, Math.floor(prior))) : 0
+    const recorded = Number.isFinite(savedCount) ? Math.min(2, Math.max(0, Math.floor(savedCount))) : 0
+    const awarded = Math.max(current, recorded, badgeCount)
+    if (awarded > current) {
+      poolExponentBonuses[pool] = awarded
+      changed = true
+    }
+  }
+  if (changed) nextIntro.poolExponentBonuses = poolExponentBonuses
   // Clamp EVERY pool's own buffer (not just currently Capacity-visible ones — see
   // getPoolBufferClampCeilingBits) down to its own ceiling. A save written before the pool Capacity
   // formula moved from the finer SI-clean sequence to the coarser decade-power one (see
@@ -6008,14 +6052,21 @@ export const flushStoragePool = tierIndex => state => {
     Object.entries(source ?? {}).filter(([key]) => !sizes.includes(Number(key))),
   )
   const resetCount = (lake.resetCount ?? 0) + 1
+  // First and second Compact Pool award permanent exponent boosts. They apply immediately
+  // to all unlocked disk sizes and survive future pool/lake wipes, including Reboot.
+  const priorBonus = Math.min(2, Math.max(0, Number(state.intro.poolExponentBonuses?.[tierIndex]) || 0))
+  // Count achievements cumulatively even when Reformat/Reboot has wiped the local resetCount.
+  // The live lake count also catches older saves that already had resets before this feature.
+  const bonusLevel = Math.min(2, Math.max(priorBonus + 1, resetCount))
   const diskBuildBelongsToPool = getPoolIndexForDiskSize(state.intro.diskBuild?.size) === tierIndex
   const diskWriteCache = Object.fromEntries(Object.entries(state.intro.diskWriteCache ?? {}).filter(
     ([targetSize, merge]) => !sizes.includes(Number(targetSize)) && !sizes.includes(Number(merge?.sourceSize)),
   ))
-  return {
+  return detectAchievements({
     ...state,
     intro: {
       ...state.intro,
+      poolExponentBonuses: { ...state.intro.poolExponentBonuses, [tierIndex]: bonusLevel },
       disks: withoutSizes(state.intro.disks),
       disksBuiltTotal: withoutSizes(state.intro.disksBuiltTotal),
       diskCache: withoutSizes(state.intro.diskCache),
@@ -6040,7 +6091,7 @@ export const flushStoragePool = tierIndex => state => {
       poolResetRebuildingCount: (state.intro.poolResetRebuildingCount ?? 0) + 1,
       poolResetCount: (state.intro.poolResetCount ?? 0) + 1,
     },
-  }
+  })
 }
 
 // A single click "fully automates the sequence to fill up and then convert it into a Booster, then
@@ -7556,6 +7607,7 @@ export const resetByteFoundry = state => {
       foundryResetCaps,
       // Unlocked disk sizes (and so the speed exponent) survive a Foundry reset.
       unlockedDiskSteps: getUnlockedDiskSteps(prev),
+      poolExponentBonuses: { ...(prev.poolExponentBonuses ?? {}) },
     },
   }
 }
@@ -7663,6 +7715,9 @@ const resetFactoryCycle = (state, awardPurge) => {
       // Convenience caps from resetByteFoundry — permanent across Prestige so auto-replay keeps
       // working after a real Prestige cycle; cleared only by a full save Reset.
       foundryResetCaps: state.intro?.foundryResetCaps ?? initial.intro.foundryResetCaps,
+      // The two earned Compact Pool exponent upgrades per pool persist through Purge and
+      // every Factory-cycle reset, just like the earned achievement badges.
+      poolExponentBonuses: { ...(state.intro?.poolExponentBonuses ?? {}) },
       // Disks (full or empty), each array's own cache, any in-progress build, and the cumulative
       // build ladder are just as permanent as the Byte generator itself above — "never lost," not
       // part of this cycle's Memory reset. A disk already FULL when Prestige fires stays full, its

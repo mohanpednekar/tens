@@ -55,6 +55,7 @@ import {
   getLowerRebuildSummary,
   getProjectedPoolBandwidth,
   getDataStreamSpeedExponent,
+  isAchievementEarned,
   isDiskSizeUnlockAvailable,
   unlockNextDiskSizeByFoundryReset,
   normalizePoolMemoryCapacity,
@@ -361,7 +362,7 @@ import {
   getPoolTapMultiplier,
   getDataStreamTapMultiplier,
 } from './engine'
-import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, CHALLENGE_DEFINITIONS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
+import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, ACHIEVEMENT_DEFINITIONS, CHALLENGE_DEFINITIONS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -10987,6 +10988,56 @@ describe('Data Lakes', () => {
       },
     })
 
+    it('grants neither reward nor exponent change when Compact Pool is ineligible', () => {
+      const state = withIntro(createInitialGameState(), { unlockedDiskSteps: 3 })
+      expect(flushStoragePool(1)(state)).toBe(state)
+      expect(state.intro.poolExponentBonuses).toEqual({})
+      expect(isAchievementEarned(state, 'pool01ResetI')).toBe(false)
+    })
+
+    it('awards 20 Foundry achievements at two per pool and only rewards each pool twice', () => {
+      const group = ACHIEVEMENT_DEFINITIONS.filter(def => def.group === 'foundry')
+      expect(group).toHaveLength(2 * DATA_LAKE_TIER_COUNT)
+      for (let pool = 1; pool <= DATA_LAKE_TIER_COUNT; pool += 1) {
+        const resetId = String(pool).padStart(2, '0')
+        expect(group.map(def => def.id)).toContain(`pool${resetId}ResetI`)
+        expect(group.map(def => def.id)).toContain(`pool${resetId}ResetII`)
+      }
+
+      let state = completePool(createInitialGameState(), 1)
+      state = withIntro(updateLake(state, 1, { capacityLevel: 3, depositedUnits: 1000, purchased: 1000 }), {
+        unlockedDiskSteps: 3,
+        capacity: 8 * 1024 ** 2,
+      })
+      const baseline = getDataStreamSpeedExponent(state.intro)
+      const first = flushStoragePool(1)(state)
+      expect(first.intro.poolExponentBonuses[1]).toBe(1)
+      expect(isAchievementEarned(first, 'pool01ResetI')).toBe(true)
+      expect(isAchievementEarned(first, 'pool01ResetII')).toBe(false)
+      expect(getDataStreamSpeedExponent(first.intro)).toBeGreaterThan(baseline)
+      expect(getDataStreamSpeedExponent(first.intro)).toBeCloseTo(0.5545, 12)
+      // Reformat wipes the lake's local resetCount but must not make the next eligible
+      // Compact Pool repeat reward I instead of unlocking reward II.
+      const reformatted = resetByteFoundry(first)
+      expect(reformatted.intro.dataLakes[1].resetCount).toBe(0)
+      expect(reformatted.intro.poolExponentBonuses[1]).toBe(1)
+      const readyAgain = withIntro(completePool(reformatted), {
+        dataLakes: { ...reformatted.intro.dataLakes, 1: { ...reformatted.intro.dataLakes[1], capacityLevel: 3, rebuilding: false, depositedUnits: 1000, purchased: 1000 } },
+      })
+      const second = flushStoragePool(1)(readyAgain)
+      expect(second.intro.dataLakes[1].resetCount).toBe(1)
+      expect(second.intro.poolExponentBonuses[1]).toBe(2)
+      expect(isAchievementEarned(second, 'pool01ResetII')).toBe(true)
+      expect(getDataStreamSpeedExponent(second.intro)).toBeCloseTo(0.595, 12)
+      const thirdReady = withIntro(completePool(second), {
+        dataLakes: { ...second.intro.dataLakes, 1: { ...second.intro.dataLakes[1], rebuilding: false, depositedUnits: 3000, purchased: 3000 } },
+      })
+      const third = flushStoragePool(1)(thirdReady)
+      expect(third.intro.dataLakes[1].resetCount).toBe(2) // resetCount restarted at 0 on Reformat
+      expect(third.intro.poolExponentBonuses[1]).toBe(2)
+      expect(getDataStreamSpeedExponent(third.intro)).toBeCloseTo(getDataStreamSpeedExponent(second.intro), 12)
+    })
+
     it('requires 9/9/9, a full lake, and an unreachable next Booster', () => {
       let state = completePool(createInitialGameState())
       state = updateLake(state, 1, { capacityLevel: 3, depositedUnits: 1000, purchased: 999 })
@@ -11004,6 +11055,9 @@ describe('Data Lakes', () => {
         capacity: 8 * 1024 ** 2, // pool 1 live with room for every KB disk size (rebuilds wait on pool Capacity)
       })
       const reset = flushStoragePool(1)(state)
+      expect(reset.intro.poolExponentBonuses[1]).toBe(1)
+      expect(isAchievementEarned(reset, 'pool01ResetI')).toBe(true)
+      expect(isAchievementEarned(reset, 'pool01ResetII')).toBe(false)
       expect(getDataLakeCapacity(reset, 1)).toBe(2000)
       expect(reset.intro.dataLakes[1].resetCount).toBe(1)
       expect(reset.intro.dataLakes[1].purchased).toBe(1000)
@@ -11026,6 +11080,46 @@ describe('Data Lakes', () => {
       expect(tickPoolResetReprovision(purged).intro.disksBuiltTotal[kb1]).toBe(1)
     })
 
+    it('keeps achievements and their exponent rewards through Purge, Reformat and Reboot', () => {
+      const initial = createInitialGameState()
+      const awarded = {
+        ...initial,
+        achievements: { ...initial.achievements, earned: { pool01ResetI: true, pool01ResetII: true, pool04ResetI: true } },
+        intro: { ...initial.intro, unlockedDiskSteps: 14, poolExponentBonuses: { 1: 2, 4: 1 } },
+      }
+      const expected = awarded.intro.poolExponentBonuses
+      const purged = purgeGame(withMoney(awarded, PURGE_THRESHOLD))
+      expect(purged.intro.poolExponentBonuses).toEqual(expected)
+      const reformatted = resetByteFoundry(awarded)
+      expect(reformatted.intro.poolExponentBonuses).toEqual(expected)
+      const rebooted = eraGame({ ...awarded, purge: { ...awarded.purge, points: ERA_ELIGIBILITY_PP } })
+      expect(rebooted.intro.poolExponentBonuses).toEqual(expected)
+      expect(rebooted.intro.unlockedDiskSteps).toBe(1)
+      expect(rebooted.achievements.earned).toEqual(awarded.achievements.earned)
+      expect(getDataStreamSpeedExponent({ ...rebooted.intro, unlockedDiskSteps: 14 })).toBeCloseTo(
+        getDataStreamSpeedExponent(awarded.intro), 12
+      )
+    })
+
+    it('grandfathers recorded earlier pool resets and achievement flags on old save load', () => {
+      const initial = createInitialGameState()
+      const old = withIntro(initial, {
+        unlockedDiskSteps: 9,
+        poolExponentBonuses: undefined,
+        dataLakes: {
+          ...initial.intro.dataLakes,
+          1: { ...initial.intro.dataLakes[1], resetCount: 2 },
+          3: { ...initial.intro.dataLakes[3], resetCount: 1 },
+        },
+      })
+      const migrated = normalizePoolMemoryCapacity(old)
+      expect(migrated.intro.poolExponentBonuses).toMatchObject({ 1: 2, 3: 1 })
+      const withBadges = tickGame(0)(migrated)
+      expect(isAchievementEarned(withBadges, 'pool01ResetI')).toBe(true)
+      expect(isAchievementEarned(withBadges, 'pool01ResetII')).toBe(true)
+      expect(isAchievementEarned(withBadges, 'pool03ResetI')).toBe(true)
+    })
+
     it('auto-buys reachable Boosters only after rebuild and grants bandwidth from reset two onward', () => {
       let rebuilt = completePool(createInitialGameState())
       rebuilt = updateLake(rebuilt, 1, { resetCount: 1, capacityLevel: 3, depositedUnits: 1, purchased: 0 })
@@ -11038,6 +11132,8 @@ describe('Data Lakes', () => {
       let wall = updateLake(rebuilt, 1, { depositedUnits: 2000, purchased: 2000 })
       const second = flushStoragePool(1)(wall)
       expect(second.intro.dataLakes[1].resetCount).toBe(2)
+      expect(second.intro.poolExponentBonuses[1]).toBe(2)
+      expect(isAchievementEarned(second, 'pool01ResetII')).toBe(true)
       expect(getDataLakeOverflowRatePercent(second, 1)).toBe(30)
       expect(second.intro.dataLakes[1].bandwidthSteps).toBe(0)
 
@@ -11278,28 +11374,52 @@ describe('Foundry-reset disk-size unlocks (rising Data Stream Speed exponent)', 
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
     })
 
-  it('starts at 0.5 and closes 10% of the remaining gap to 1 per unlocked disk size', () => {
+  it('starts at 0.5, uses 10% at pool boundaries and 10%-toward-next-pool within each array', () => {
     const intro = createInitialGameState().intro
     expect(getUnlockedDiskSteps(intro)).toBe(1)
     expect(DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED).toBe(0.9)
     for (const [steps, exponent] of [
-      [1, 0.5], [2, 0.55], [3, 0.595], [4, 0.6355],
-      [11, 1 - 0.5 * 0.9 ** 10], [30, 1 - 0.5 * 0.9 ** 29],
+      [1, 0.5],
+      [2, 1 - 0.5 * 0.99],
+      [3, 1 - 0.5 * 0.99 ** 2],
+      [4, 1 - 0.5 * 0.9 * 0.99 ** 2],
+      [6, 1 - 0.5 * 0.9 * 0.99 ** 4],
+      [30, 1 - 0.5 * 0.9 ** 9 * 0.99 ** 20],
     ]) {
       expect(getDataStreamSpeedExponent({ ...intro, unlockedDiskSteps: steps })).toBeCloseTo(exponent, 12)
     }
   })
 
-  it('increases monotonically toward 1 without crossing it across all 30 disk sizes', () => {
+  it('the first and second pool achievements each upgrade a different within-pool step retroactively', () => {
+    const base = { ...createInitialGameState().intro, unlockedDiskSteps: 4 }
+    const first = { ...base, poolExponentBonuses: { 1: 1 } }
+    const both = { ...base, poolExponentBonuses: { 1: 2 } }
+    expect(getDataStreamSpeedExponent({ ...first, unlockedDiskSteps: 2 })).toBeCloseTo(0.55, 12)
+    expect(getDataStreamSpeedExponent({ ...first, unlockedDiskSteps: 3 })).toBeCloseTo(0.5545, 12)
+    expect(getDataStreamSpeedExponent({ ...both, unlockedDiskSteps: 3 })).toBeCloseTo(0.595, 12)
+    expect(getDataStreamSpeedExponent(first)).toBeCloseTo(0.59905, 12)
+    expect(getDataStreamSpeedExponent(both)).toBeCloseTo(0.6355, 12)
+    expect(getIntroProductionRate({ ...base, speedCapacity: 8 * 1_000_000 })).toBeLessThan(
+      getIntroProductionRate({ ...both, speedCapacity: 8 * 1_000_000 })
+    )
+    expect(getDataStreamSpeedExponent({ ...base, poolExponentBonuses: { 2: 2 } })).toBeCloseTo(getDataStreamSpeedExponent(base), 12)
+  })
+
+  it('is monotone and stays below 1 across every disk size and achievement state', () => {
     const intro = createInitialGameState().intro
-    let previous = 0
-    for (let steps = 1; steps <= ALL_DISK_STEPS_UNLOCKED; steps += 1) {
-      const exponent = getDataStreamSpeedExponent({ ...intro, unlockedDiskSteps: steps })
-      expect(exponent).toBeGreaterThan(previous)
-      expect(exponent).toBeLessThan(1)
-      previous = exponent
+    for (const rewards of [0, 1, 2]) {
+      const poolExponentBonuses = Object.fromEntries(Array.from({ length: DATA_LAKE_TIER_COUNT }, (_, i) => [i + 1, rewards]))
+      let previous = 0
+      for (let steps = 1; steps <= ALL_DISK_STEPS_UNLOCKED; steps += 1) {
+        const exponent = getDataStreamSpeedExponent({ ...intro, unlockedDiskSteps: steps, poolExponentBonuses })
+        expect(exponent).toBeGreaterThan(previous)
+        expect(exponent).toBeLessThan(1)
+        previous = exponent
+      }
+      if (rewards === 2) expect(previous).toBeCloseTo(1 - 0.5 * 0.9 ** 29, 12)
+      if (rewards === 0) expect(previous).toBeCloseTo(1 - 0.5 * 0.9 ** 9 * 0.99 ** 20, 12)
+      expect(getDataStreamSpeedExponent({ ...intro, unlockedDiskSteps: 9999, poolExponentBonuses })).toBeCloseTo(previous, 12)
     }
-    expect(getDataStreamSpeedExponent({ ...intro, unlockedDiskSteps: 9999 })).toBeCloseTo(previous, 12)
   })
 
   it('clamps unlocked steps to the ladder length and ignores garbage', () => {
@@ -11337,7 +11457,7 @@ describe('Foundry-reset disk-size unlocks (rising Data Stream Speed exponent)', 
     const state = withIntro(fullFirstPool(), { capacity: 1024 * BITS_PER_BYTE })
     const after = unlockNextDiskSizeByFoundryReset(state)
     expect(getUnlockedDiskSteps(after.intro)).toBe(2)
-    expect(getDataStreamSpeedExponent(after.intro)).toBeCloseTo(1 - (1 - DATA_STREAM_SPEED_EXPONENT_BASE) * DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, 12)
+    expect(getDataStreamSpeedExponent(after.intro)).toBeCloseTo(1 - 0.5 * 0.99, 12)
     expect(after.intro.capacity).toBeLessThan(state.intro.capacity)
     expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE] ?? 0).toBe(0)
     expect(isDiskSizeUnlockAvailable(after)).toBe(false)

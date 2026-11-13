@@ -165,6 +165,7 @@ export const DAILY_CHALLENGES_FEATURE = { enabled: true }
 // Groups in display order; `boostArea` is unused until the bonus slice (#1052).
 export const ACHIEVEMENT_GROUPS = [
   { id: 'firstSession', name: 'First session', boostArea: 'foundry' },
+  { id: 'foundry', name: 'Foundry', boostArea: 'foundry' },
   { id: 'tierLadder', name: 'Tier ladder', boostArea: 'factory' },
   { id: 'earlyFactory', name: 'Early Factory', boostArea: 'factory' },
 ]
@@ -176,6 +177,14 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'itCompiles', name: 'It compiles, ship it', group: 'firstSession', trigger: 'Compile for the first time', condition: { kind: 'byteCreated' } },
   { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', condition: { kind: 'counter', key: 'pings', min: 256 } },
   { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
+  ...TIER_DEFINITIONS.flatMap((tier, index) => [1, 2].map(reset => ({
+    id: `pool${String(index + 1).padStart(2, '0')}Reset${reset === 1 ? 'I' : 'II'}`,
+    name: `${tier.symbol} Reclamation ${reset === 1 ? 'I' : 'II'}`,
+    group: 'foundry',
+    trigger: `Compact the ${tier.symbol} pool ${reset === 1 ? 'once' : 'twice'}`,
+    bonus: `The ${reset === 1 ? 'first' : 'second'} disk-size exponent step now closes 10% of the gap to 1.0`,
+    condition: { kind: 'poolExponentBonus', poolIndex: index + 1, min: reset },
+  }))),
   ...TIER_DEFINITIONS.map((tier, index) => ({
     id: `tier${String(index + 1).padStart(2, '0')}Bought`,
     name: TIER_ACHIEVEMENT_NAMES[index],
@@ -274,9 +283,12 @@ export const getStoragePoolMemoryBounds = (poolIndex = 1) => {
 // Data Stream Speed is DERIVED from the Speed basis (see getIntroProductionRate in engine.js), not
 // independently priced: Speed = (basis in Bytes) ^ exponent B/s, and the basis can never exceed
 // Capacity, so base Speed <= Capacity ^ exponent. The exponent (getDataStreamSpeedExponent in engine.js)
-// starts at DATA_STREAM_SPEED_EXPONENT_BASE and closes the remaining gap to 1.0 by 10% for every
-// additional disk size that a Reformat unlocks (intro.unlockedDiskSteps). Pool Bandwidth is
-// capped by Capacity ^ the same exponent. At the starting Capacity (1 Byte) Speed is exactly 1 Byte/sec
+// starts at DATA_STREAM_SPEED_EXPONENT_BASE. Every new Storage pool closes 10% of the remaining
+// gap to 1.0. Within each pool, disk sizes initially close 10% of the gap to the *next pool's*
+// exponent (equivalent to retaining 99% of the gap to 1.0 per array step). The first two
+// successful Compact Pool resets permanently upgrade that pool's respective array steps to
+// close 10% of the gap to 1.0 instead. See getDataStreamSpeedExponent in engine.js.
+// Pool Bandwidth is capped by Capacity ^ the same exponent. At the starting Capacity (1 Byte) Speed is exactly 1 Byte/sec
 // (8 bits/sec), matching a manual tap's own base amount (see tapIntroBit/getIntroProductionRate).
 export const DATA_STREAM_SPEED_EXPONENT_BASE = 0.5
 export const DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED = 0.9
