@@ -67,7 +67,7 @@ const TimerBar = styled.div`
   flex: 1 1 auto;
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
   align-items: center;
   gap: ${props => props.theme.space.sm};
   padding: 0.45em 0.75em;
@@ -92,7 +92,10 @@ const TimerCount = styled.span`
 
 const TimerEffect = styled.span`
   font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
   text-align: center;
+  text-overflow: ellipsis;
   white-space: nowrap;
 `
 
