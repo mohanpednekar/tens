@@ -418,17 +418,23 @@ Render order top to bottom (a top `BoostCard` with the current effect, then tier
 live inside the selected tier):
 
 1. Right after the header, deliberately at the TOP of the page, a `BoostTimerStack`
-   (`role="group"`, `aria-label="active boost controls"`) holds one `BoostTimerRow` per running multiplier lane
-   (`getComputeBoostLanes`; Turbo / Balanced / Eco order, `aria-label="<Label> boost controls"`):
-   - Left: **Pop** (`aria-label="pop one queued <Label> compute boost"`, `↩`, no confirmation,
-     `actions.reclaimComputeBoost(type)`) while `canReclaimComputeBoost(state, type)` (a boost waits behind the
-     running one); otherwise **Forfeit** (`aria-label="forfeit the <Label> compute boost with no refund"`, `✕`,
-     `window.confirm` first, `actions.forfeitComputeBoost(type)`).
-   - Middle: a `TimerBar` (`aria-label="active <Label> compute boost"`) whose fill is the lane's whole remaining
-     time (head countdown + waiting × duration) over `queue.length × duration`, showing `"<icon> ×<multiplier>"`,
-     `"Boosting <covered Factory tiers>"` (the head's tier) and the countdown (`· <N>x` when more than one
-     boost is queued); the full sentence lives in its `title`.
-   - Right: **Stack** (`aria-label="stack the <Label> compute boost"`, `+`,
+   (`role="group"`, `aria-label="active boost controls"`) holds one `BoostLane` per running multiplier lane
+   (`getComputeBoostLanes`; Turbo / Balanced / Eco order, `aria-label="<Label> boost controls"`), each holding one
+   `BoostTimerRow` per same-tier group:
+   - A lane renders one row per **group** of consecutive queue entries funded by the same tier (the waiting
+     entries are strongest-tier-first; the running head can be weaker), so boosts covering a different set of Factory tiers than the running one are shown
+     separately: the first row is the running group, further rows are waiting groups (dimmed, time = their full
+     duration). All three side controls share one fixed width and rows without a button carry a same-width spacer,
+     so every bar lines up.
+   - Left (LAST row of the lane): **Pop** (`aria-label="pop one queued <Label> compute boost"`, `↩`, no
+     confirmation, `actions.reclaimComputeBoost(type)`) while `canReclaimComputeBoost(state, type)` (a boost waits
+     behind the running one); otherwise **Forfeit** (`aria-label="forfeit the <Label> compute boost with no refund"`,
+     `✕`, `window.confirm` first, `actions.forfeitComputeBoost(type)`).
+   - Middle: a `TimerBar` (`aria-label="active <Label> compute boost"` — `queued <Label> compute boost <tiers>` on waiting rows —, a 3-column grid so the centre stays
+     centred) whose fill is the group's remaining time over `count × duration` (a waiting group is full): left the boost count (`<N>x`, always shown), centre
+     `"<covered Factory tiers> <icon> ×<multiplier>"` (e.g. `KB–GB 💥 ×20`), right the countdown; the full
+     sentence lives in its `title`.
+   - Right (FIRST row only): **Stack** (`aria-label="stack the <Label> compute boost"`, `+`,
      `disabled={!isStackComputeBoostTurnAvailable(state, type)}`, `actions.stackComputeBoost(type)`).
    `MainPage`'s tier details show a read-only line (`getComputeBoostDescription(intro, tierIndex)`) with that
    tier's own summed multiplier and only the lanes covering it.
@@ -453,7 +459,7 @@ live inside the selected tier):
       for the CURRENTLY ARMED tier via `getComputeBoostTierMultiplier(boostType, armedTierIndex)` —
       e.g. `"💥 ×20 · 10m"` for Turbo (`formatPresetDuration` drops a zero trailing unit) — the preset
       name itself lives only in `title`). A preset whose multiplier already runs becomes a **queue** button
-      (`aria-label="queue <type> compute boost"`, label prefixed `"+ "`); otherwise it is
+      (`aria-label="queue <type> compute boost"`, label unchanged); otherwise it is
       `aria-label="activate <type> compute boost"`. Either way it calls
       `actions.activateComputeBoost(boostType, armedTierIndex)` with no confirmation (a different multiplier runs
       in parallel and adds up; the same one queues behind the running boost, strongest tier first).

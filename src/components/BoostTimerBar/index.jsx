@@ -3,10 +3,11 @@ import { canForfeitComputeBoost, canReclaimComputeBoost, formatOfflineDuration, 
 import { COMPUTE_BOOST_MAX_STACKS, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
-// The active Compute Boost timer bars, one per running multiplier, shared by the Power screen and the Byte
-// Factory header: Pop (refund the last queued boost, no confirm) — or Forfeit (confirmed) once nothing is
-// queued — on the left, the bar (fill = remaining time over the lane's total queued duration, effect text
-// on top) in the middle, Stack (queue another) on the right. Renders nothing while no boost is active.
+// The active Compute Boost timer bars, shared by the Power screen and the Byte Factory header: one lane per
+// running multiplier, one row per group of same-tier boosts (see BoostLaneRow). Each bar shows the boost
+// count, covered tiers + preset, and time left, its fill being the group's remaining time over `count ×
+// duration`. Pop (refund the last queued boost, no confirm) — or Forfeit (confirmed) once nothing is queued —
+// sits on the lane's last row, Stack (queue another) on its first. Renders nothing while no boost is active.
 
 // A small leading icon + display label per COMPUTE_BOOST_PRESETS key.
 export const COMPUTE_BOOST_DISPLAY = {
@@ -38,17 +39,37 @@ const BoostTimerRow = styled.div`
   width: 100%;
 `
 
+// Pop, Forfeit and Stack share one fixed width (and the spacer reserves it on rows that carry no button),
+// so every bar lines up whichever control a row shows.
+const SIDE_WIDTH = '2.8em'
+
 const TimerSideButton = styled(CompactButton)`
-  flex: 0 0 auto;
-  min-width: 2.4em;
+  flex: 0 0 ${SIDE_WIDTH};
+  width: ${SIDE_WIDTH};
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+`
+
+const SideSpacer = styled.span`
+  font-size: 0.78em; /* same em as CompactButton, so the widths match */
+  flex: 0 0 ${SIDE_WIDTH};
+  width: ${SIDE_WIDTH};
+`
+
+const BoostLane = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.space.xs};
+  width: 100%;
 `
 
 const TimerBar = styled.div`
   flex: 1 1 auto;
   min-width: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: ${props => props.theme.space.sm};
   padding: 0.45em 0.75em;
   border-radius: ${props => props.theme.radius.sm};
@@ -61,15 +82,17 @@ const TimerBar = styled.div`
   color: ${props => props.theme.color.text};
   font-size: 0.85em;
   font-variant-numeric: tabular-nums;
+  opacity: ${props => (props.$waiting ? 0.7 : 1)};
+`
+
+const TimerCount = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  text-align: left;
+  white-space: nowrap;
 `
 
 const TimerEffect = styled.span`
   font-weight: 700;
-  white-space: nowrap;
-`
-
-const TimerTargets = styled.span`
-  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-align: center;
@@ -79,6 +102,7 @@ const TimerTargets = styled.span`
 
 const TimerRemaining = styled.span`
   color: ${props => props.theme.color.textMuted};
+  text-align: right;
   white-space: nowrap;
 `
 
@@ -89,69 +113,97 @@ const BoostTimerStack = styled.div`
   width: 100%;
 `
 
-// One row per running multiplier lane — see engine.js "Compute Boosts".
+// Consecutive queue entries funded by the same tier form one group (the waiting entries are sorted
+// strongest-tier first; the running head can be weaker), so boosts covering a different set of Factory tiers
+// get their own row.
+const groupQueue = queue => {
+  const groups = []
+  for (const tierIndex of queue) {
+    const last = groups[groups.length - 1]
+    if (last && last.tierIndex === tierIndex) last.count += 1
+    else groups.push({ tierIndex, count: 1 })
+  }
+  return groups
+}
+
+// One lane (one multiplier) — see engine.js "Compute Boosts". The first row is the running group (Stack on its
+// right — a stacked boost may land on a later row, since it queues in strength order); each further row is a
+// waiting group of another tier span. Pop / Forfeit sit on the LAST row, since Pop
+// refunds the weakest waiting boost.
 const BoostLaneRow = ({ lane, state, actions }) => {
   const { type, queue, remainingSeconds } = lane
-  const tierIndex = queue[0]
   const display = COMPUTE_BOOST_DISPLAY[type] ?? { icon: '⚡', label: type }
-  const multiplier = getComputeBoostTierMultiplier(type, tierIndex)
-  const duration = getComputeBoostTierDurationSeconds(type, tierIndex)
-  const totalSeconds = queue.length * duration
-  const remaining = remainingSeconds + (queue.length - 1) * duration
-  const fillPercent = totalSeconds > 0 ? Math.min(100, (remaining / totalSeconds) * 100) : 0
-  const queued = queue.length > 1
+  const duration = getComputeBoostTierDurationSeconds(type, queue[0])
+  const multiplier = getComputeBoostTierMultiplier(type, queue[0])
+  const groups = groupQueue(queue)
+  const lastIndex = groups.length - 1
   return (
-    <BoostTimerRow role="group" aria-label={`${display.label} boost controls`}>
-      {canReclaimComputeBoost(state, type)
-        ? (
-          <TimerSideButton
-            aria-label={`pop one queued ${display.label} compute boost`}
-            onClick={() => actions.reclaimComputeBoost(type)}
-            title="Pop: refund the last queued boost"
-            type="button"
-            variant="neutral"
-          >
-            <ButtonContent>↩</ButtonContent>
-          </TimerSideButton>
-          )
-        : (
-          <TimerSideButton
-            aria-label={`forfeit the ${display.label} compute boost with no refund`}
-            disabled={!canForfeitComputeBoost(state, type)}
-            onClick={() => {
-              if (!window.confirm(`Forfeit the ${display.label} boost with no refund?`)) return
-              actions.forfeitComputeBoost(type)
-            }}
-            title="Forfeit: end the boost now with no refund — asks for confirmation"
-            type="button"
-            variant="danger"
-          >
-            <ButtonContent>✕</ButtonContent>
-          </TimerSideButton>
-          )}
-      <TimerBar
-        aria-label={`active ${display.label} compute boost`}
-        $fill={fillPercent}
-        title={`${display.label} boost active: ×${multiplier} production on ${describeCoveredTiers(tierIndex, 'name')}, ${formatOfflineDuration(remaining)} left${queued ? `, ${queue.length - 1} queued (strongest first)` : ''}`}
-      >
-        <TimerEffect>{`${display.icon} ×${multiplier}`}</TimerEffect>
-        <TimerTargets>{`Boosting ${describeCoveredTiers(tierIndex)}`}</TimerTargets>
-        <TimerRemaining>
-          {formatOfflineDuration(remaining)}
-          {queued ? ` · ${queue.length}x` : ''}
-        </TimerRemaining>
-      </TimerBar>
-      <TimerSideButton
-        aria-label={`stack the ${display.label} compute boost`}
-        disabled={!isStackComputeBoostTurnAvailable(state, type)}
-        onClick={() => actions.stackComputeBoost(type)}
-        title={`Queue another ${formatPresetDuration(duration)} ${display.label} boost — up to ${COMPUTE_BOOST_MAX_STACKS}x`}
-        type="button"
-        variant="prestige"
-      >
-        <ButtonContent>+</ButtonContent>
-      </TimerSideButton>
-    </BoostTimerRow>
+    <BoostLane role="group" aria-label={`${display.label} boost controls`}>
+      {groups.map((group, index) => {
+        const waiting = index > 0
+        const total = group.count * duration
+        const remaining = waiting ? total : remainingSeconds + (group.count - 1) * duration
+        const fillPercent = total > 0 ? Math.min(100, (remaining / total) * 100) : 0
+        const covered = describeCoveredTiers(group.tierIndex)
+        return (
+          <BoostTimerRow key={`${group.tierIndex}-${index}`}>
+            {index === lastIndex
+              ? (canReclaimComputeBoost(state, type)
+                  ? (
+                    <TimerSideButton
+                      aria-label={`pop one queued ${display.label} compute boost`}
+                      onClick={() => actions.reclaimComputeBoost(type)}
+                      title="Pop: refund the last queued boost"
+                      type="button"
+                      variant="neutral"
+                    >
+                      <ButtonContent>↩</ButtonContent>
+                    </TimerSideButton>
+                    )
+                  : (
+                    <TimerSideButton
+                      aria-label={`forfeit the ${display.label} compute boost with no refund`}
+                      disabled={!canForfeitComputeBoost(state, type)}
+                      onClick={() => {
+                        if (!window.confirm(`Forfeit the ${display.label} boost with no refund?`)) return
+                        actions.forfeitComputeBoost(type)
+                      }}
+                      title="Forfeit: end the boost now with no refund — asks for confirmation"
+                      type="button"
+                      variant="danger"
+                    >
+                      <ButtonContent>✕</ButtonContent>
+                    </TimerSideButton>
+                    ))
+              : <SideSpacer aria-hidden="true" />}
+            <TimerBar
+              aria-label={waiting ? `queued ${display.label} compute boost ${covered}` : `active ${display.label} compute boost`}
+              $fill={fillPercent}
+              $waiting={waiting}
+              title={`${display.label} boost ${waiting ? 'queued' : 'active'}: ×${multiplier} production on ${describeCoveredTiers(group.tierIndex, 'name')}, ${formatOfflineDuration(remaining)}${waiting ? ' once it starts' : ' left'}`}
+            >
+              <TimerCount>{`${group.count}x`}</TimerCount>
+              <TimerEffect>{`${covered} ${display.icon} ×${multiplier}`}</TimerEffect>
+              <TimerRemaining>{formatOfflineDuration(remaining)}</TimerRemaining>
+            </TimerBar>
+            {index === 0
+              ? (
+                <TimerSideButton
+                  aria-label={`stack the ${display.label} compute boost`}
+                  disabled={!isStackComputeBoostTurnAvailable(state, type)}
+                  onClick={() => actions.stackComputeBoost(type)}
+                  title={`Queue another ${formatPresetDuration(duration)} ${display.label} boost — up to ${COMPUTE_BOOST_MAX_STACKS}x`}
+                  type="button"
+                  variant="prestige"
+                >
+                  <ButtonContent>+</ButtonContent>
+                </TimerSideButton>
+                )
+              : <SideSpacer aria-hidden="true" />}
+          </BoostTimerRow>
+        )
+      })}
+    </BoostLane>
   )
 }
 
