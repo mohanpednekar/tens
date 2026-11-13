@@ -4892,8 +4892,12 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.getByLabelText(/^active turbo compute boost$/i)).toHaveTextContent(/^2x\s*KB–GB.*×20/)
     expect(screen.getByLabelText(/^queued turbo compute boost KB$/i)).toHaveTextContent(/^1x\s*KB\s.*×20/)
     // One Pop (last row), one Stack (first row) for the lane.
-    expect(screen.getAllByRole('button', { name: /pop one queued turbo compute boost/i })).toHaveLength(1)
-    expect(screen.getAllByRole('button', { name: /^stack the turbo compute boost$/i })).toHaveLength(1)
+    const activeRow = screen.getByLabelText(/^active turbo compute boost$/i).parentElement
+    const queuedRow = screen.getByLabelText(/^queued turbo compute boost KB$/i).parentElement
+    expect(within(activeRow).getByRole('button', { name: /^stack the turbo compute boost$/i })).toBeInTheDocument()
+    expect(within(activeRow).queryByRole('button', { name: /pop one queued/i })).toBeNull()
+    expect(within(queuedRow).getByRole('button', { name: /pop one queued turbo compute boost/i })).toBeInTheDocument()
+    expect(within(queuedRow).queryByRole('button', { name: /^stack the/i })).toBeNull()
   })
 
   test('a lane at COMPUTE_BOOST_MAX_STACKS disables its Stack button', () => {

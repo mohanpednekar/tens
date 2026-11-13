@@ -109,8 +109,9 @@ const BoostTimerStack = styled.div`
   width: 100%;
 `
 
-// Consecutive queue entries funded by the same tier form one group (the queue is already strongest-tier
-// first), so boosts covering a different set of Factory tiers get their own row.
+// Consecutive queue entries funded by the same tier form one group (the waiting entries are sorted
+// strongest-tier first; the running head can be weaker), so boosts covering a different set of Factory tiers
+// get their own row.
 const groupQueue = queue => {
   const groups = []
   for (const tierIndex of queue) {
@@ -122,7 +123,8 @@ const groupQueue = queue => {
 }
 
 // One lane (one multiplier) — see engine.js "Compute Boosts". The first row is the running group (Stack on its
-// right); each further row is a waiting group of another tier span. Pop / Forfeit sit on the LAST row, since Pop
+// right — a stacked boost may land on a later row, since it queues in strength order); each further row is a
+// waiting group of another tier span. Pop / Forfeit sit on the LAST row, since Pop
 // refunds the weakest waiting boost.
 const BoostLaneRow = ({ lane, state, actions }) => {
   const { type, queue, remainingSeconds } = lane
