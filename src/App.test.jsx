@@ -4881,6 +4881,21 @@ describe('Byte Foundry Compute Boost', () => {
     confirm.mockRestore()
   })
 
+  test('queued boosts funded by a different tier get their own row; Pop sits on the last row, Stack on the first', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true,
+      computeBoosts: { burst: { queue: [3, 3, 1], remainingSeconds: 100 } },
+    })
+    render(<App />)
+    openBoosters()
+
+    expect(screen.getByLabelText(/^active turbo compute boost$/i)).toHaveTextContent(/^2x\s*KB–GB.*×20/)
+    expect(screen.getByLabelText(/^queued turbo compute boost KB$/i)).toHaveTextContent(/^1x\s*KB\s.*×20/)
+    // One Pop (last row), one Stack (first row) for the lane.
+    expect(screen.getAllByRole('button', { name: /pop one queued turbo compute boost/i })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: /^stack the turbo compute boost$/i })).toHaveLength(1)
+  })
+
   test('a lane at COMPUTE_BOOST_MAX_STACKS disables its Stack button', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
