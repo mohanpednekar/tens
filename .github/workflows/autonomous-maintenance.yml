@@ -13,7 +13,7 @@ on:
         description: "Task kind to run (auto = pick from the current IST slot)"
         type: choice
         default: auto
-        options: [auto, implement, qa-review, housekeeping, planning, qa-deep, security, architecture, perf, release, retro, tech-debt, economy, research]
+        options: [auto, implement, qa-review, housekeeping, triage, docs-sync, planning, qa-deep, security, architecture, perf, release, retro, tech-debt, economy, research]
       model:
         description: "Model override (auto = the slot's default)"
         type: choice
@@ -75,6 +75,8 @@ jobs:
           esac
           case "$dow-$clock" in
             1-10) kind=planning ;;
+            3-22) kind=triage ;;
+            6-16) kind=docs-sync ;;
             2-10) kind=qa-deep ;;
             3-04) kind=security ;;
             3-10) kind=architecture ;;
@@ -94,7 +96,8 @@ jobs:
           pr_free=false
           case "$kind" in
             implement|perf|release|tech-debt) model=sonnet ;;
-            housekeeping)                     model=haiku ;;
+            housekeeping|docs-sync)           model=haiku ;;
+            triage)                           model=haiku; pr_free=true ;;
             planning|architecture|retro|economy) model=opus; pr_free=true ;;
             qa-review|qa-deep|security|research) model=opus ;;
             *) echo "::error::unknown slot kind '$kind'"; exit 1 ;;
@@ -121,6 +124,20 @@ jobs:
           AGENTS.md / docs drift fix against recent merges, stale claude/auto-* PR and branch
           cleanup, issue/label/milestone hygiene, CHANGELOG [Unreleased] gaps for merged
           user-facing PRs. One unit of work; ignore Phase A and the rest of Phase B.
+          BRIEF_EOF
+            ;;
+            triage) cat > "$brief" <<'BRIEF_EOF'
+          SLOT TASK: issue/PR triage (simple; issues and labels only - open no code PR). After
+          Phase 0: label unlabeled issues (type, size, priority), close exact duplicates linking the
+          original, flag `blocked` issues whose blocker closed, nudge stale PRs/issues with a short
+          comment, and refresh milestone assignments. Do not rewrite specs or change
+          maintainer-set priorities.
+          BRIEF_EOF
+            ;;
+            docs-sync) cat > "$brief" <<'BRIEF_EOF'
+          SLOT TASK: documentation sync (mechanical). After Phase 0: compare CLAUDE.md, AGENTS.md
+          and docs/*_REFERENCE.md claims (function names, constants, file layout, page ids) with the
+          code merged in the last 7 days; fix drift in one docs-only PR, keeping additions terse.
           BRIEF_EOF
             ;;
             planning) cat > "$brief" <<'BRIEF_EOF'
@@ -1247,6 +1264,7 @@ jobs:
           prompt_text=${prompt_text//'$MAIN_CI_STATUS_LINE'/$MAIN_CI_STATUS_LINE}
           # Slot brief (see "Resolve slot" step): empty for the standard implement slot,
           # otherwise it replaces Phase A/B with the slot's task (Phase 0 still outranks it).
+          prompt_text="Subagent model routing (all slots): delegate mechanical work (file searches, test/build runs, formatting, log reading) to haiku subagents, code edits to sonnet, and judgment (review, design, ambiguous debugging) to opus - always via the haiku/sonnet/opus aliases."$'\n\n'"$prompt_text"
           if [ -s "$RUNNER_TEMP/slot-brief.txt" ]; then
             prompt_text="THIS RUN'S SLOT (overrides Phase A and Phase B; Phase 0 still outranks it; every other rule below - budget, PR conventions, deny list, bug filing, RUN SUMMARY - still applies; slot kind: $SLOT_KIND, model: $SLOT_MODEL):"$'\n'"$(cat "$RUNNER_TEMP/slot-brief.txt")"$'\n\n'"$prompt_text"
           fi
@@ -1296,7 +1314,7 @@ jobs:
           show_full_output: true
           claude_args: |
             --model ${{ steps.slot.outputs.model }}
-            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh pr ready:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh issue close:*),Bash(gh label create:*),Bash(gh api repos/*/milestones:*),Bash(gh api repos/*/dependabot/alerts*:*),Bash(gh api repos/*/code-scanning/alerts*:*),Bash(gh api repos/*/secret-scanning/alerts/*/locations:*),Bash(gh api repos/*/pulls/*/comments:*),Bash(scripts/enable-auto-merge-if-eligible.sh:*),Bash(scripts/pr-low-risk-eligible.sh:*),Bash(scripts/resolve-pr-threads.sh:*),Bash(./scripts/enable-auto-merge-if-eligible.sh:*),Bash(./scripts/pr-low-risk-eligible.sh:*),Bash(./scripts/resolve-pr-threads.sh:*)"
+            --allowedTools "Task,Agent,Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh pr ready:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh issue close:*),Bash(gh label create:*),Bash(gh api repos/*/milestones:*),Bash(gh api repos/*/dependabot/alerts*:*),Bash(gh api repos/*/code-scanning/alerts*:*),Bash(gh api repos/*/secret-scanning/alerts/*/locations:*),Bash(gh api repos/*/pulls/*/comments:*),Bash(scripts/enable-auto-merge-if-eligible.sh:*),Bash(scripts/pr-low-risk-eligible.sh:*),Bash(scripts/resolve-pr-threads.sh:*),Bash(./scripts/enable-auto-merge-if-eligible.sh:*),Bash(./scripts/pr-low-risk-eligible.sh:*),Bash(./scripts/resolve-pr-threads.sh:*)"
           # Deny list is generated by scripts/claude-deny-settings.sh (shared base:
           # ci.yml, deploy.yml, automation-self-heal.yml) — single source of truth.
           settings: ${{ steps.deny.outputs.settings }}

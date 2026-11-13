@@ -105,11 +105,11 @@ overrides.
 |---|---|---|
 | 04:00 | implement → sonnet | Wed security (opus) · Sat tech-debt (sonnet) · Sun economy watch (opus, issues only) |
 | 10:00 | qa-review → opus | Mon planning (opus, issues only) · Tue deep QA (opus) · Wed architecture advisor (opus, issues only) · Fri release readiness (sonnet) · Sun research & self-enhance (opus) |
-| 16:00 | implement → sonnet | Thu performance (sonnet) |
-| 22:00 | housekeeping → haiku | Fri retrospective (opus, issues only) |
+| 16:00 | implement → sonnet | Thu performance (sonnet) · Sat docs-sync (haiku) |
+| 22:00 | housekeeping → haiku | Wed triage (haiku, issues only) · Fri retrospective (opus, issues only) |
 
 Model rule: sonnet = implementation, opus = judgment (QA, planning, advisory, security, research,
-retro), haiku = mechanical housekeeping. Kind briefs live in the `slot` step; edit them there.
+retro), haiku = mechanical housekeeping/triage/docs-sync. Every run's prompt also routes subagents (haiku mechanical, sonnet edits, opus judgment). Kind briefs live in the `slot` step; edit them there.
 
 **Prompt assembly is a dedicated step, not inline in the action step.** A `Compose prompt` step (id
 `compose-prompt`) runs before `claude-code-action` and builds the full instructional prompt — the same
