@@ -46,3 +46,25 @@ describe('autonomous-maintenance.yml prompt gh rule', () => {
     expect(compose.run).toContain('No shell loops over variables');
   });
 });
+
+describe('autonomous-maintenance.yml slot schedule', () => {
+  const slot = steps.find((step) => step.id === 'slot');
+  const claude = steps.find((step) => step.id === 'claude');
+
+  it('fires at 4am/10am/4pm/10pm IST (UTC 22:30, 04:30, 10:30, 16:30)', () => {
+    expect(workflow.on.schedule).toEqual([{ cron: '30 22,4,10,16 * * *' }]);
+  });
+
+  it('resolves a model per kind and passes it to the Claude step', () => {
+    expect(slot.run).toContain('implement|perf|release|tech-debt) model=sonnet');
+    expect(slot.run).toContain('housekeeping)                     model=haiku');
+    expect(slot.run).toContain('qa-review|qa-deep|security|research) model=opus');
+    expect(claude.with.claude_args).toContain('--model ${{ steps.slot.outputs.model }}');
+  });
+
+  it('lets issue-only slots bypass the open-PR ceiling', () => {
+    const guard = steps.find((step) => step.id === 'guard');
+    expect(guard.env.SLOT_PR_FREE).toBe('${{ steps.slot.outputs.pr_free }}');
+    expect(guard.run).toContain('"$SLOT_PR_FREE" != "true"');
+  });
+});
