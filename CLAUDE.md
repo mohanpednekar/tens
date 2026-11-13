@@ -249,7 +249,7 @@ list always protects `ci.yml`/`deploy.yml`/`release.yml`/`automation-self-heal.y
 
 **Orchestration model.** The maintainer orchestrates; the scheduled workflow develops. `claude-task`
 issues (`.github/ISSUE_TEMPLATE/claude-task.yml`) are the backlog for `autonomous-maintenance.yml`
-(twice daily, 9:00am/9:00pm IST), one unit of work per run: Phase 0 (CI/CD failures + unaddressed
+(four slots daily, 4am/10am/4pm/10pm IST, each mapped to a task kind + model by the `Resolve slot` step — `docs/AUTOMATION.md` "Slot schedule"), one unit of work per run: Phase 0 (CI/CD failures + unaddressed
 critical/high Dependabot alerts) > Phase A (backlog: `priority:high` → normal/FIFO → `priority:low`) >
 Phase B (maintenance menu: tests, dependency/security incl. medium/low alerts, code quality, doc sync,
 workflow self-improvement, gap analysis). A run that notices a genuine out-of-scope bug files a

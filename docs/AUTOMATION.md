@@ -81,7 +81,7 @@ transparency, conflict-avoidance sequencing) that have guided this model.
 
 ### Scheduled maintenance (`autonomous-maintenance.yml`)
 
-Runs twice daily at **9:00am and 9:00pm IST** (cron `30 3,15 * * *` UTC — IST is UTC+5:30;
+Runs four times daily at **4:00am, 10:00am, 4:00pm and 10:00pm IST** (cron `30 22,4,10,16 * * *` UTC; see "Slot schedule" below for what each slot does and which model it uses — IST is UTC+5:30;
 plus manual `workflow_dispatch`) via `anthropics/claude-code-action@v1`. Each run does exactly
 one unit of work, chosen in three phases —
 Phase 0 always outranks Phase A, which always outranks Phase B. Two follow-up steps reconcile the
@@ -93,6 +93,23 @@ next scheduled run retries automatically. Confirmed live on 2026-07-29: a run ex
 10-attempt retry budget against a 529 and hard-failed under the classifier's original 429-only check
 — broadened to the current 5xx-inclusive check so a purely transient Anthropic-side overload doesn't
 read as a real break to the next run's Phase 0 CI check.
+
+**Slot schedule.** The `Resolve slot, task kind and model` step (id `slot`) maps the firing time (IST,
+shifted 3h back so late cron firings and the 22:00 weekday resolve correctly) to a task *kind*, a
+`--model` alias and a `pr_free` flag; non-`implement` kinds prepend a "slot brief" to the prompt that
+replaces Phase A/B (Phase 0 CI/security repair always outranks it). `pr_free` kinds (issues/comments
+only; `qa-review` included, as it mainly posts review markers) bypass the 5-PR ceiling and the empty-run warning. `workflow_dispatch` takes `slot` and `model`
+overrides.
+
+| Slot (IST) | Default kind → model | Weekly overrides (ISO weekday) |
+|---|---|---|
+| 04:00 | implement → sonnet | Wed security (opus) · Sat tech-debt (sonnet) · Sun economy watch (sonnet, issues only) |
+| 10:00 | qa-review → sonnet | Mon planning (opus, issues only) · Tue deep QA (sonnet) · Wed architecture advisor (opus, issues only) · Fri release readiness (sonnet) · Sun research & self-enhance (opus) |
+| 16:00 | implement → sonnet | Thu performance (sonnet) · Sat docs-sync (haiku) |
+| 22:00 | housekeeping → haiku | Wed triage (haiku, issues only) · Fri retrospective (sonnet, issues only) |
+
+Model rule: conservative — the cheapest model that suits; opus only where it has a real benefit (weekly planning, architecture advice,
+security, research); sonnet for implementation/QA/analysis; haiku = mechanical housekeeping/triage/docs-sync. Every run's prompt also routes subagents (haiku mechanical, sonnet edits, opus judgment). Kind briefs live in the `slot` step; edit them there.
 
 **Prompt assembly is a dedicated step, not inline in the action step.** A `Compose prompt` step (id
 `compose-prompt`) runs before `claude-code-action` and builds the full instructional prompt — the same
@@ -295,7 +312,7 @@ expected. See `docs/DESIGN_HISTORY.md` for detail.
 **Phase 0 — CI/CD failures and unaddressed critical/high Dependabot alerts (top priority).** The
 guard step checks whether the latest completed `ci.yml` run on `main` failed, and separately lists
 any open PR (excluding `claude/auto-*` and fork PRs) with a failing check. Either condition outranks
-Phase A/B and is the one case allowed to bypass the 5-PR ceiling below. If `main` is broken, Claude
+Phase A/B and is the one case allowed to bypass the 5-PR ceiling below (an issue-only slot that runs at a full ceiling is told to open no PR at all, Phase 0(c) included; only a red-main heal PR is exempt). If `main` is broken, Claude
 reads the failing run's logs, fixes the regression on a branch named `claude/heal-main-<short-slug>`,
 confirms `yarn test`/`yarn build` are green, and opens a PR (this branch prefix is already recognized
 by `pr-auto-merge.yml`'s low-risk path). Otherwise, for a stale Dependabot PR confirmed behind `main`

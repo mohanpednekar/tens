@@ -267,7 +267,7 @@ copies.
 The unattended pipeline runs the **Claude** engine (`autonomous-maintenance.yml` +
 `autonomous-pr-followup.yml` + `dependabot-pr-followup.yml` + `pr-auto-merge.yml` +
 `automation-self-heal.yml`, via `anthropics/claude-code-action` where an agent is involved), on
-`claude/*` branches, twice daily at 9:00am/9:00pm IST. `automation-self-heal.yml` watches
+`claude/*` branches, four times daily at 4am/10am/4pm/10pm IST (slot → task kind → model). `automation-self-heal.yml` watches
 orchestration-workflow failures (including the Devin engine's) and opens draft `claude/self-heal-*`
 fixes or `automation-failure` issues (see `docs/AUTOMATION.md`). A parallel **Devin CLI** engine
 (`devin-autonomous-maintenance.yml`, `devin -p --prompt-file <file> --model swe --permission-mode
