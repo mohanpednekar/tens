@@ -765,6 +765,45 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `buyBooster(tierIndex)` spends a lake's own banked units instantly — no transfer, no
    waiting.
 
+   **Hierarchical lake disks (#1087) — current mechanic; where the paragraphs below describe slot-by-slot
+   lake-disk filling (`fillDataLakeDisks`, `getDataLakeCurrentFillSubSize`, `DATA_LAKE_OVERFLOW_SEGMENT_LIMIT`,
+   a "virtual last unit"), this block wins.** A lake is one PERMANENT **1-unit buffer** (`dataLakes[n].fillBits`,
+   0..`getDataLakeUnitBits` — the pool's smallest disk size, e.g. 1 KB) plus whole completed disks of
+   ×1/×10/×100/×1000. Pool input (`applyDataLakeOverflow`, via `tickDataLakePoolDrain` and the overflow
+   branch of `tickPoolBufferFill`, the #1047 start rule unchanged: a buffer fill only STARTS from a full pool
+   buffer and is never interrupted) feeds only the buffer, at most one unit per call. Moving data onward is
+   always a TIMED transfer (`dataLakes[n].lakeTransfer = { target, movedBits }`, `tickDataLakeTransfers`,
+   run each tick right after the Booster buy step): with a full buffer and nothing in flight,
+   `getDataLakeNextTransferTarget` picks the LARGEST size whose slot is free and whose lower ladder is exactly
+   full (`depositedUnits ≡ size−1 (mod size)`), else ×1: buffer → ×1 disk; 9×1 + buffer → ×10; 9×10 + 9×1 +
+   buffer → ×100; 9×100 + 9×10 + 9×1 + buffer → ×1000 (only with a free ×1000 slot — one per permanent Flush,
+   at capacity level 3). Starting consumes the sources at once (buffer → 0, lower disks removed from
+   `depositedUnits`) into the transfer, which carries exactly `target` units until the destination lands — data
+   is conserved at every instant (`getDataLakeBalanceUnits` = disks + buffer fraction + in-flight `target`).
+   Rates are the established Storage ones, ×pool Bandwidth ×`getPoolTapMultiplier`: buffer → ×1 at
+   `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2), consolidations at `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`
+   (5); pool → buffer stays at `getDataLakeSpeedMultiplier` (10% + 10%/Flush). Because every size caps at 9
+   disks the breakdown is unique: ×1 = units mod 10, ×10 = tens digit, ×100 = hundreds digit, ×1000 =
+   ⌊units/1000⌋ (`decomposeDataLakeUnits`), so `depositedUnits` (completed-disk units, excluding buffer and
+   in-flight data) remains the one source of truth; slots/capacity: `getDataLakeDiskSlotCounts` (×1/×10/×100
+   open per capacity level; ×1000 = `resetCount` at level 3), disks + buffer = capacity exactly at level 3
+   (`getDataLakeRepresentableUnits() + 1`). **Booster spending** (`buyBooster`) pays from
+   `getDataLakeSpendableUnits` = disks + a FULL buffer (in-flight data is never spendable): disks first, a full
+   buffer only for the last unit; a larger disk broken to make exact change keeps its remainder as data (it
+   re-seats as smaller disks — the one deliberate re-denomination), and the buffer's partial fill and any
+   in-flight transfer are untouched. The buy step runs BEFORE transfers each tick so a full buffer can pay a
+   Booster before being committed to a move. Manual conversion (`fillDataLakeManually`) feeds only the buffer,
+   up to the bits still needed (in-flight data counts as banked), and is unavailable for a cost above
+   `getDataLakeReachableUnits`. Capacity upgrade and Flush empty the lake, buffer and transfer; Flush also
+   needs a full buffer and no transfer in flight. Collapsed lake readout:
+   `getDataLakeBoosterProgressPercent` = `min(100, balance ÷ next cost × 100)` (floored; 100 only once covered;
+   0/invalid cost → 100; `isDataLakeBoosterCostReachable` false → stays under 100). Saves: `normalizePoolMemoryCapacity`
+   re-seats old lakes idempotently (units above the disk slots → full buffer; legacy partial-slot `fillBits` →
+   whole units into disks, sub-unit remainder → buffer); a missing `lakeTransfer` reads as null.
+   **Pool disks:** an ordinary disk fill draws straight from its pool buffer into the disk and lands the
+   instant its last bit arrives (`tickDiskWriteCache`; no write-cache flush stage, `flushTotalSeconds` 0); only
+   an EXPEDITED disk keeps the timed 5× flush after its parallel smaller-disk transfers.
+
    **Overflow fill** (`tickPoolBufferFill`'s own overflow branch, `fillDataLakeDisks`/
    `applyDataLakeOverflow` internally) — once a pool's own local Memory buffer is completely full
    (`room <= 0` inside `tickPoolBufferFill`'s per-pool loop), that pool's reserved share of the

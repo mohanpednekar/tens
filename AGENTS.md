@@ -396,6 +396,8 @@ publicly visible but isn't legally reusable without written permission. No `CODE
   script-level exclusion and (once branch protection enables "Require review from Code Owners")
   `.github/CODEOWNERS`.
 
+Data Lakes (#1087): permanent 1-unit buffer (`fillBits`) + ×1/×10/×100/×1000 disks (`depositedUnits`); timed `lakeTransfer`s (`tickDataLakeTransfers`) move the buffer into ×1 disks and consolidate 9 smaller disks of every size + a full buffer into the next; ordinary pool disks fill directly (no write-cache flush). See `docs/ECONOMY_REFERENCE.md` "Hierarchical lake disks".
+
 Challenge mode (epic #1037): state `challenges`, registry `CHALLENGE_DEFINITIONS` and rollout Set `LIVE_CHALLENGE_IDS` (F1–F25 live; UI: Firmware Challenges tab + Factory `ChallengeBanner`) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits` in `engine.js`; the three speed-upgrade buyers refuse until a live challenge is completed. See `docs/ECONOMY_REFERENCE.md` "Challenge mode".
 
 Achievements (epic #1046, switch `ACHIEVEMENTS_FEATURE`, on): `achievements` state, `ACHIEVEMENT_*` registry in `layers.js`, `detectAchievements`/`getCompletedAchievementGroups` in `engine.js`, `AchievementsPage` under More. Foundry Reclamation I/II achievements permanently upgrade the two per-pool Bitrate steps across Reformat and Reboot. See `docs/ECONOMY_REFERENCE.md` "Achievements".

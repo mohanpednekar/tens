@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Data Lakes rebuilt as a real disk hierarchy (#1087):** every lake now has one permanent 1-unit buffer (1 KB for the KB lake) that the pool feeds first; a full buffer is moved into a ×1 disk, and 9 disks of every smaller size + a full buffer are consolidated into the next size (10 KB, 100 KB and — after a Flush opens the slot — 1000 KB) as timed transfers at Storage's disk-transfer speeds, with every bit conserved mid-transfer. Booster purchases spend only banked disks plus a full buffer (a larger disk is broken for exact change; partial buffer fill and in-flight transfers are never disturbed). A collapsed pool's lake now reads the next Booster's affordability as a percentage (capped at 100%) instead of the raw balance; the expanded lake shows the buffer, the transfer in progress and the ×1000 disk squares. Older saves migrate without losing or duplicating any stored data.
+- **Ordinary disk fills draw straight from their pool (#1087):** a disk above a pool's smallest size no longer goes through a write-cache flush stage — it lands the moment its pool buffer has funded it. Expediting a disk keeps its faster timed transfer.
+
 ### Added
 - **Foundry Reclamation achievements (#1085):** Earn two per Storage pool (20 total) on its first and second successful Compact Pool. Each permanently upgrades that pool's respective within-pool disk-size Bitrate exponent step to close 10% of the remaining gap to 1.0. The badges and rewards survive Reformat, Purge, and Reboot; older saves with recorded pool resets are grandfathered.
 - New **Challenges** destination in the bottom nav (after Firmware) with a top tab per challenge type — 🏁 Factory and 📅 Daily; the Factory challenges moved off Firmware.

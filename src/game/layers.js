@@ -635,6 +635,9 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 export const DATA_LAKE_TIER_COUNT = 10
 export const DATA_LAKE_SUB_SIZES = [1, 10, 100]
 export const DATA_LAKE_SUB_SIZE_DISK_CAPS = [9, 9, 9]
+// #1087: the ×1000 disk rung (one slot per permanent pool Flush) above ×1/×10/×100; consolidation order.
+export const DATA_LAKE_THOUSAND_SIZE = 1000
+export const DATA_LAKE_CONSOLIDATION_SIZES = [1, 10, 100, DATA_LAKE_THOUSAND_SIZE]
 export const DATA_LAKE_TIER_LABELS = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB']
 export const DATA_LAKE_MAX_DISK_LADDER_STEP = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
 export const DATA_LAKE_CAPACITY_MAX_LEVEL = 3

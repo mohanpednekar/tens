@@ -587,6 +587,8 @@ state to the active slot, then redirects every save read/write to an isolated `'
 
 ### Pool-local flushes
 
+**Lake hierarchy (#1087):** each Data Lake is one permanent 1-unit buffer (`fillBits`) + ×1/×10/×100/×1000 disks (`depositedUnits`, counts derived); pool input feeds the buffer, then timed `lakeTransfer`s move it into ×1 disks and consolidate 9 smaller disks of every denomination + a full buffer into the next size (×1000 slots come only from Flush). Boosters spend banked disks + a full buffer only; the collapsed lake shows `getDataLakeBoosterProgressPercent`. Detail: `docs/ECONOMY_REFERENCE.md` "Hierarchical lake disks".
+
 Each Storage pool has an independent end-of-progression **flush** (`flushStoragePool`; formerly "reset"), offered only at 9/9/9 disks, with a
 completely full Data Lake, when the next Booster costs more than the lake can hold. It empties only that
 pool's disks, buffer, and lake (Booster state and prior reset rewards remain) and permanently adds 1,000
@@ -694,7 +696,7 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
 - **Disks** (`provisionDisk`, `tickDiskAutoFill`, `tickDiskPull`, `tickDiskLevelOneCachePull`): ladder
   advances every `DISK_ARRAY_LADDER_CAP` (9) disks; Factory is funded **pull-based** from full disks,
   fully automatic (no click, no autobuyer gate). Disks/caches/builds are PERMANENT across Prestige.
-  The pool's smallest size's read cache fills from its pool buffer as a timed 5× transfer (`CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER`). Every size above its pool's smallest fills via its write cache FROM THE POOL BUFFER by default (pool fill
+  The pool's smallest size's read cache fills from its pool buffer as a timed 5× transfer (`CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER`). Every size above its pool's smallest fills DIRECTLY from the pool buffer by default — landing the instant it is funded, no write-cache flush stage (#1087) (pool fill
   order: read cache, then write caches smallest size first); clicking an empty disk expedites it
   (`expediteDiskFill`) — it jumps ahead of the other write caches for the pool buffer, consumes the smaller full
   disks of its pool it needs in parallel alongside that buffer, and flushes at 5× (`docs/ECONOMY_REFERENCE.md`).
