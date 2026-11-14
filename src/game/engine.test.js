@@ -10865,6 +10865,7 @@ describe('Data Lakes', () => {
       // stays genuine, reachable progress — never a spend a same-level Scale Out could erase.
       const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 2), {
         disksBuiltTotal: { [kb1]: 1 },
+        disks: { [kb1]: 1 }, diskCache: { [kb1]: kb1 }, // disk and read cache full: nothing else claims the pool buffer
         dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), purchased: 2, capacityLevel: 1, boostersUnlocked: true } },
       })
       expect(getBoosterPurchaseCost(1)(state)).toBe(3)
@@ -11296,9 +11297,24 @@ describe('Data Lakes', () => {
       const disks = { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: 0, [kb100]: DISK_ARRAY_LADDER_CAP }
       const notFull = { poolBuffers: { 1: 400_000 }, diskCache: { [kb1]: kb1 }, disks }
       expect(isDataLakePoolDrainAvailable(lakeState({ capacityLevel: 3, acquiring: true }, notFull), 1)).toBe(false) // an empty disk comes first
-      const reserved = lakeState({ capacityLevel: 3, acquiring: true }, { poolBuffers: { 1: 400_000 }, diskCache: {} })
-      const after = tickDataLakePoolDrain(1e6)(reserved)
-      expect(after.intro.poolBuffers[1]).toBeGreaterThanOrEqual(getPoolCacheReservationBits(reserved, 1))
+      const reserved = lakeState({ capacityLevel: 3, acquiring: true }, { poolBuffers: { 1: 10_000 }, diskCache: {} })
+      const reservation = getPoolCacheReservationBits(reserved, 1)
+      expect(reservation).toBeGreaterThan(0)
+      expect(tickDataLakePoolDrain(1e6)(reserved).intro.poolBuffers[1]).toBeGreaterThanOrEqual(reservation)
+    })
+
+    it('the manual / auto-convert path applies the same acquiring gates: it yields to an empty disk and never eats the read cache\'s reservation', () => {
+      const base = { boostersUnlocked: true, capacityLevel: 3, acquiring: true, purchased: 5 }
+      const emptyDisk = lakeState(base, { disksBuiltTotal: { [kb1]: 9, [kb10]: 3 }, disks: { [kb1]: 9, [kb10]: 2 }, poolBuffers: { 1: 400_000 }, diskCache: { [kb1]: kb1 } })
+      expect(isDataLakeManualFillAvailable(emptyDisk, 1)).toBe(false)
+      const partial = { [kb1]: 9, [kb10]: 3 }
+      const reservedOnly = lakeState(base, { disksBuiltTotal: partial, disks: partial, poolBuffers: { 1: 4000 }, diskCache: {} })
+      const reservation = getPoolCacheReservationBits(reservedOnly, 1)
+      expect(reservation).toBeGreaterThan(4000 - 1)
+      expect(isDataLakeManualFillAvailable(reservedOnly, 1)).toBe(false)
+      const rich = lakeState(base, { disksBuiltTotal: partial, disks: partial, poolBuffers: { 1: 4000 + 8000 }, diskCache: {} })
+      const after = fillDataLakeManually(1)(rich)
+      expect(after.intro.poolBuffers[1]).toBeGreaterThanOrEqual(getPoolCacheReservationBits(rich, 1))
     })
 
     it('a transfer survives a save/reload round trip (JSON) unchanged', () => {

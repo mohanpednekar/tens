@@ -248,7 +248,7 @@ const LakeSquareLabel = styled.span`
 // sliver on one small square. Purely additive: shows the exact SAME data
 // (getDataLakeCurrentDiskFillFraction/getDataLakeFillBits) the square overlay already reads, no
 // change to how filling actually works. Represents progress toward the smallest currently-unfilled
-// disk in the lake — the instant it reaches full, that disk completes (see fillDataLakeDisks).
+// disk in the lake — the instant it reaches full, that disk completes (see fillDataLakeBuffer).
 const LakePoolTile = styled.div`
   position: relative;
   width: 100%;

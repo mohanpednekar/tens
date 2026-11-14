@@ -531,7 +531,7 @@ export const createInitialGameState = () => ({
     poolBuffers: {},
     // PERMANENT — one Data Lake per storage denomination (KB … QB), each holding up to
     // getDataLakeCapacity() units, filled continuously from that denomination's own Storage pool
-    // overflow (see tickPoolBufferFill/fillDataLakeDisks below) rather than from deposited Disks.
+    // overflow (see tickPoolBufferFill/fillDataLakeBuffer below) rather than from deposited Disks.
     dataLakes: createEmptyDataLakes(),
     poolResetRebuildingCount: 0,
     poolResetCount: 0,
@@ -3278,7 +3278,7 @@ export const tickFillMultiplierDecay = elapsedSeconds => state => {
 // ("primary fill only" per FILL_MULTIPLIER_* in layers.js). getPoolEffectMultiplier remains the
 // instantaneous UI reading. Once a pool's own buffer is completely
 // full, its reserved share feeds that pool's own matching Data Lake instead, at a fill-based rate
-// (see getDataLakeOverflowRatePercent/fillDataLakeDisks in the "Data Lakes" section below) rather
+// (see getDataLakeOverflowRatePercent/fillDataLakeBuffer in the "Data Lakes" section below) rather
 // than going to waste.
 export const tickPoolBufferFill = elapsedSeconds => state => {
   // Storage itself (and so any pool) isn't a thing yet below this threshold — pool 1 is otherwise
@@ -3356,7 +3356,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     // The buffer is completely full — this pool's own reserved share of the rate (for whatever
     // portion of this tick's interval remains) has nowhere left to go. Rather than wasting it, a
     // fill-based percentage of it feeds this pool's own matching Data Lake instead (poolIndex ===
-    // tierIndex, one lake per pool — see getDataLakeOverflowRatePercent/fillDataLakeDisks/
+    // tierIndex, one lake per pool — see getDataLakeOverflowRatePercent/fillDataLakeBuffer/
     // applyDataLakeOverflow in the "Data Lakes" section below). applyDataLakeOverflow re-evaluates
     // the rate per disk rather than once for the whole interval, so a large overflow spanning
     // multiple disk completions this same tick isn't stuck using whichever rate applied to the
@@ -4789,8 +4789,7 @@ const createDiskWriteCacheMerge = (state, targetSize, expedite = false) => {
 //   1. it takes every full smaller disk of the same pool it still needs IN PARALLEL (largest first,
 //      each a timed transfer at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER), alongside the pool buffer;
 //   2. it draws the pool buffer AHEAD of every non-expedited write cache (the read cache keeps first claim);
-//   3. (no flush stage exists any more: every fill lands the instant it is funded, #1087) instead of
-//      DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER.
+//   3. (no flush stage exists any more: every fill lands the instant it is funded, #1087).
 // Outside the forced priority order (it is a preference flag, not a spend).
 export const isDiskFillExpediteAvailable = (state, size) => {
   if (!getDiskWriteCacheSourceSize(size)) return false
@@ -5464,7 +5463,7 @@ export const tickDiskLevelOneCachePull = state => {
 }
 
 // --- Data Lakes --- see DATA_LAKE_* constants in layers.js. Each pool's overflow feeds its own
-// matching lake (see tickPoolBufferFill/fillDataLakeDisks below); Booster purchases at the
+// matching lake (see tickPoolBufferFill/fillDataLakeBuffer below); Booster purchases at the
 // matching compute tier spend that lake's own banked units.
 
 export const getDiskLadderStep = sizeBits => {
@@ -5552,7 +5551,6 @@ const decomposeDataLakeUnits = total => {
       100: Math.floor(units / 100) % 10,
       1000: Math.floor(units / 1000),
     },
-    remainderUnits: 0,
   }
 }
 
@@ -5678,10 +5676,16 @@ export const isStoragePoolBufferFull = (state, poolIndex) => {
 // already under way is never interrupted and keeps filling whatever the pool's state (#1047).
 export const isDataLakeAcquiring = (state, tierIndex) => Boolean(getDataLakeTier(state, tierIndex)?.acquiring)
 
-// Only the START of filling toward a Booster waits for a full pool; once started (until the Booster is
-// bought) it never waits for pool fullness again, only for pool balance.
-export const isDataLakeDiskFillStartAllowed = (state, tierIndex) =>
-  isDataLakeAcquiring(state, tierIndex) || isDataLakeDiskFillInProgress(state, tierIndex) || isStoragePoolBufferFull(state, tierIndex)
+// Only the FIRST start of an acquisition waits for a full pool buffer. Once acquiring (until the Booster
+// is bought) a start no longer waits for pool fullness but still yields to disk filling and provisioning
+// and leaves the read cache's reservation alone — the same gates for every fill path (drain and manual).
+export const isDataLakeDiskFillStartAllowed = (state, tierIndex) => {
+  if (isDataLakeDiskFillInProgress(state, tierIndex)) return true
+  if (!isDataLakeAcquiring(state, tierIndex)) return isStoragePoolBufferFull(state, tierIndex)
+  return areStoragePoolDisksFull(state, tierIndex) &&
+    !isStoragePoolProvisioningInProgress(state, tierIndex) &&
+    getPoolBufferBits(state, tierIndex) > getPoolCacheReservationBits(state, tierIndex)
+}
 
 // A plain binary "receiving / not receiving" reading for ByteFoundryPage's own `mode="lake"` bar —
 // DATA_LAKE_OVERFLOW_MAX_PERCENT while this lake has anything left to fill at its current capacity
@@ -5707,7 +5711,7 @@ export const isDataLakePoolReady = (state, tierIndex) =>
 
 // Boosters become purchasable once this lake is unlocked (isDataLakePoolReady — a real disk built
 // for the matching Storage pool), OR once the legacy per-lake `boostersUnlocked` latch is already
-// true (an older save, or fillDataLakeDisks' own redundant latch on that lake's first completed
+// true (an older save, or fillDataLakeBuffer's own redundant latch on that lake's first completed
 // disk — harmless to keep: under the new pool-readiness gate above, overflow can never even reach
 // the lake before a disk exists, so that latch can only ever fire after this predicate is already
 // true anyway). getDataLakeDepositedUnits, in contrast, can drop back down once a Booster is bought.
@@ -5967,7 +5971,11 @@ export const fillDataLakeManually = tierIndex => state => {
   const bitsNeeded = getDataLakeManualFillBitsNeeded(state, tierIndex)
   const bufferBits = getPoolBufferBits(state, tierIndex)
   const room = getDataLakeUnitBits(tierIndex) - getDataLakeFillBits(state, tierIndex)
-  const spendBits = Math.min(bitsNeeded, bufferBits, room)
+  // A fresh start while acquiring leaves the read cache's reservation alone; a fill under way may use it all.
+  const usable = isDataLakeAcquiring(state, tierIndex) && !isDataLakeDiskFillInProgress(state, tierIndex)
+    ? Math.max(0, bufferBits - getPoolCacheReservationBits(state, tierIndex))
+    : bufferBits
+  const spendBits = Math.min(bitsNeeded, usable, room)
   if (!(spendBits > 0)) return state
   const filled = fillDataLakeBuffer(state, state.intro.dataLakes, tierIndex, spendBits)
   const { unconsumedBits, ...lakeUpdate } = filled
@@ -6240,7 +6248,6 @@ const advanceDataLakeTransfers = (state, tierIndex, elapsedSeconds) => {
   const original = getDataLakeTier(state, tierIndex)
   if (!original || !isDataLakePoolReady(state, tierIndex)) return original
   const unitBits = getDataLakeUnitBits(tierIndex)
-  const representable = getDataLakeRepresentableUnits(state, tierIndex)
   let lake = original
   let timeLeft = Math.max(0, elapsedSeconds)
   for (let step = 0; step < 8; step += 1) {
@@ -6335,7 +6342,7 @@ export const isDataLakePoolDrainAvailable = (state, poolIndex) => {
 }
 
 // A Data Lake draws directly from its pool's OWN buffer (isDataLakePoolDrainAvailable), one lake disk per
-// call at most (the next disk needs the pool full again), at the pool's raw
+// call at most (one buffer unit), at the pool's raw
 // Bandwidth × its tap bonus (getPoolTapMultiplier), every tick — independent of the Data Stream. This keeps lakes filling while a running
 // Upgrade Data Stream diverts the Data Stream's output, and generally lets a finished pool keep converting its
 // throughput into lake units rather than only via tickPoolBufferFill's full-buffer overflow. The

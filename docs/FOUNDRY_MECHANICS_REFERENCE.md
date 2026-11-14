@@ -215,9 +215,9 @@ ladder sizes fully built); only then does full-buffer OVERFLOW also fill it AUTO
 pool's buffer (`tickPoolBufferFill`'s overflow branch, same gate). Separately, the lake draws directly
 from its pool's buffer at the pool's Bandwidth × its tap bonus (`tickDataLakePoolDrain`, right after
 `tickPoolBufferFill`) under a fixed pool-buffer priority: disk filling > provisioning in progress > lake
-filling. **A lake disk only STARTS while its pool buffer is completely full
-(`isStoragePoolBufferFull`/`isDataLakeDiskFillStartAllowed`) — checked once, at the start; a disk under way
-(`isDataLakeDiskFillInProgress`, `fillBits > 0`) is never interrupted**: it keeps draining whatever the buffer
+filling. **Only the first start of a Booster acquisition needs a completely full pool buffer
+(`isDataLakeDiskFillStartAllowed`, `acquiring`); later starts still need every built disk full, no provisioning and
+buffer above the read-cache reservation; a buffer fill under way is never interrupted**: it keeps draining whatever the buffer
 holds (read-cache reservation included) through empty disks, builds and a non-full buffer, and the drain
 stops at each disk's completion. The drain additionally starts a disk only while every BUILT disk is full,
 no build is in progress in that pool, the lake has

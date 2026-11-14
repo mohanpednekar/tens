@@ -627,7 +627,7 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // own DISK_ARRAY_LADDER_CAP (9, not 10) above: the lake's own fill buffer supplies that last unit
 // directly once every representable disk slot is full, the same way a Storage array's cache
 // supplies its own 10th unit, rather than needing a 10th disk square of its own — see
-// DATA_LAKE_MAX_REPRESENTABLE_UNITS/getDataLakeCurrentFillSubSize in engine.js and
+// getDataLakeRepresentableUnits in engine.js and
 // docs/DESIGN_HISTORY.md. A lake's disks always fill smallest denomination first — every ×1 slot
 // before any ×10 slot, every ×10 slot before any ×100 slot — so "how many of each size are
 // currently full" is a pure function of the lake's own deposited total (see getDataLakeDiskCounts
