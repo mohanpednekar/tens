@@ -4789,7 +4789,7 @@ const createDiskWriteCacheMerge = (state, targetSize, expedite = false) => {
 //   1. it takes every full smaller disk of the same pool it still needs IN PARALLEL (largest first,
 //      each a timed transfer at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER), alongside the pool buffer;
 //   2. it draws the pool buffer AHEAD of every non-expedited write cache (the read cache keeps first claim);
-//   3. its flush writes at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER instead of
+//   3. (no flush stage exists any more: every fill lands the instant it is funded, #1087) instead of
 //      DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER.
 // Outside the forced priority order (it is a preference flag, not a spend).
 export const isDiskFillExpediteAvailable = (state, size) => {
@@ -4873,7 +4873,7 @@ const sameTransfers = (a, b) =>
 // cache's reservation — expedited targets first, then the rest, each group smallest size first; an
 // EXPEDITED merge additionally consumes smaller full disks of the same pool, all needed transfers in
 // parallel. Collect and flush only advance while the target array has a built-but-empty disk, so nothing
-// banked is ever lost; flush is timed at the disk-from-cache rate (faster when expedited).
+// banked is ever lost; only a legacy merge already flushing still runs its timed flush.
 export const tickDiskWriteCache = elapsedSeconds => state => {
   let intro = state.intro
   let disks = intro.disks ?? {}
@@ -5013,24 +5013,14 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
       // (#1087): the disk lands the instant its last bit arrives — no write-cache flush stage, so
       // expediting is never slower than the default fill. Only a LEGACY merge already flushing (above)
       // finishes its timed flush.
-      {
-        disks = { ...disks, [targetSize]: (disks[targetSize] ?? 0) + 1 }
-        const { [targetSize]: _landed, ...remainingFills } = diskWriteCache
-        diskWriteCache = remainingFills
-        changed = true
-        continue
-      }
-      next = {
-        ...next,
-        collectedBits: targetSize,
-        segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER,
-        transfers: [],
-        flushRemainingSeconds: next.flushTotalSeconds,
-      }
-    } else {
-      next.collectedBits = collected
-      next.segmentsCollected = Math.min(DISK_LADDER_SIZE_MULTIPLIER - 1, Math.floor(collected / sourceSize + 1e-9))
+      disks = { ...disks, [targetSize]: (disks[targetSize] ?? 0) + 1 }
+      const { [targetSize]: _landed, ...remainingFills } = diskWriteCache
+      diskWriteCache = remainingFills
+      changed = true
+      continue
     }
+    next.collectedBits = collected
+    next.segmentsCollected = Math.min(DISK_LADDER_SIZE_MULTIPLIER - 1, Math.floor(collected / sourceSize + 1e-9))
     if (
       next.collectedBits !== merge.collectedBits ||
       next.segmentsCollected !== merge.segmentsCollected ||
@@ -5584,7 +5574,7 @@ export const getDataLakeReachableUnits = (state, tierIndex) =>
 // Full completed disks per size (1/10/100/1000), derived from depositedUnits.
 export const getDataLakeDiskCounts = (state, tierIndex) => {
   const deposited = getDataLakeTier(state, tierIndex)?.depositedUnits ?? 0
-  return decomposeDataLakeUnits(Math.min(deposited, getDataLakeRepresentableUnits(state, tierIndex))).disks
+  return decomposeDataLakeUnits(deposited).disks
 }
 
 // The lake's permanent 1-unit buffer, in bits (0..getDataLakeUnitBits).
@@ -5877,23 +5867,15 @@ export const isBoosterPurchaseAvailable = (state, tierIndex) =>
 // "entity full, spend it down first" apart from "not enough banked yet" (DataLakePanel).
 export const isBoosterEntityAtCap = (state, tierIndex) => getComputeEntityFieldRoom(state, tierIndex) <= 0
 
-// Optimized O(1) mathematical calculation for bulk Booster purchases
-const getBoosterBulkPurchase = (deposited, capacity, currentPurchased, isMaxed) => {
-  const mathQ = Math.floor((-(2 * currentPurchased + 1) + Math.sqrt(Math.pow(2 * currentPurchased + 1, 2) + 8 * deposited)) / 2);
-  const mathCost = mathQ * currentPurchased + (mathQ * (mathQ + 1)) / 2;
-  return { quantity: mathQ, cost: mathCost };
-}
-
 // Buys up to `quantity` Boosters instantly, funded ONLY from this lake's own spendable units
 // (completed disks + a full buffer, getDataLakeSpendableUnits) — no other resource involved, so
 // (unlike Disk Fill/Speed/Provision Disk/Compute Boost) this isn't part of the forced priority order
 // at all; it's always available the instant it's affordable.
 //
 // Spending rule (#1087): disks pay first, smallest denominations first, and only a full buffer pays
-// the last unit. A larger disk that has to be broken to make exact change keeps its unspent
-// remainder as data (the lake's counts are a unique function of its unit total, so the remainder
-// re-seats as smaller disks); no data is created, destroyed or moved between pools. The buffer's
-// partial fill and any in-flight transfer (their data is not spendable) are never touched.
+// the last unit. Disks are never broken: no exact change means no purchase yet (the lake keeps
+// filling). The buffer's partial fill and any in-flight transfer (their data is not spendable) are
+// never touched.
 export const buyBooster = (tierIndex, quantity = 1) => state => {
   const lake = getDataLakeTier(state, tierIndex)
   if (!lake || !isDataLakeBoosterUnlocked(state, tierIndex)) return state
@@ -5975,7 +5957,7 @@ export const isDataLakeManualFillAvailable = (state, tierIndex) => {
   return getPoolBufferBits(state, tierIndex) > 0 && isDataLakeDiskFillStartAllowed(state, tierIndex)
 }
 
-// Moves at most what completes the lake's 1-unit buffer (the next unit needs a full pool again —
+// Moves at most what completes the lake's 1-unit buffer (the next unit needs the buffer emptied again —
 // isDataLakeDiskFillStartAllowed), and within that never more than the next Booster needs, capped at
 // whatever the pool buffer holds (a partial spend stays banked in the buffer; nothing is ever lost).
 // Outside the forced priority order entirely, same as buyBooster. tickDataLakeAutoConvert is its
@@ -6283,7 +6265,7 @@ const advanceDataLakeTransfers = (state, tierIndex, elapsedSeconds) => {
       timeLeft = Math.max(0, timeLeft - secondsNeeded)
       lake = {
         ...lake,
-        depositedUnits: Math.min(representable, (lake.depositedUnits ?? 0) + target),
+        depositedUnits: (lake.depositedUnits ?? 0) + target, // never clamped: a lake never loses banked units
         lakeTransfer: null,
         boostersUnlocked: true,
       }
@@ -6335,15 +6317,18 @@ export const isStoragePoolProvisioningInProgress = (state, poolIndex) => {
 }
 
 // Pool buffer priority: disk filling > provisioning in progress > Data Lake filling — checked only
-// when a lake disk STARTS: every built disk full, no build in progress there, the pool buffer
+// when a lake buffer fill STARTS (the full-pool gate applies only to the first start of an acquisition): every built disk full, no build in progress there, the pool buffer
 // completely full (isDataLakeDiskFillStartAllowed) and holding more than the read cache's own
 // reservation. A lake disk already under way is never interrupted: it keeps draining whatever the
 // buffer holds until it completes.
 export const isDataLakePoolDrainAvailable = (state, poolIndex) => {
   if (!isDataLakePoolReady(state, poolIndex)) return false
   if (!isDataLakeBufferAccepting(state, poolIndex)) return false
-  if (isDataLakeAcquiring(state, poolIndex) || isDataLakeDiskFillInProgress(state, poolIndex)) return getPoolBufferBits(state, poolIndex) > 0
-  return isStoragePoolBufferFull(state, poolIndex) &&
+  if (isDataLakeDiskFillInProgress(state, poolIndex)) return getPoolBufferBits(state, poolIndex) > 0
+  // Only the START of an acquisition needs a FULL pool buffer; once acquiring, the lake still yields to
+  // disk filling and provisioning and leaves the read cache's reservation alone — it just stops waiting
+  // for the pool to refill to full between buffer units.
+  return (isDataLakeAcquiring(state, poolIndex) || isStoragePoolBufferFull(state, poolIndex)) &&
     areStoragePoolDisksFull(state, poolIndex) &&
     !isStoragePoolProvisioningInProgress(state, poolIndex) &&
     getPoolBufferBits(state, poolIndex) > getPoolCacheReservationBits(state, poolIndex)
@@ -6369,7 +6354,7 @@ export const tickDataLakePoolDrain = (elapsedSeconds, preFillState = null) => st
     const buffer = getPoolBufferBits(state, poolIndex)
     // A disk already under way may use the whole buffer (never interrupted); a fresh start leaves
     // the read cache's reservation alone.
-    const spendable = isDataLakeAcquiring(state, poolIndex) || isDataLakeDiskFillInProgress(state, poolIndex)
+    const spendable = isDataLakeDiskFillInProgress(state, poolIndex)
       ? buffer
       : Math.max(0, buffer - getPoolCacheReservationBits(state, poolIndex))
     if (spendable <= 0) continue

@@ -11286,6 +11286,19 @@ describe('Data Lakes', () => {
     it('migration keeps every banked unit for a Flush-expanded lake below capacity level 3 (edited/corrupt save)', () => {
       const lake = normalizePoolMemoryCapacity(lakeState({ capacityLevel: 0, resetCount: 1, depositedUnits: 700, fillBits: 0 })).intro.dataLakes[1]
       expect(lake.depositedUnits + lake.fillBits / kb1).toBeCloseTo(700, 9)
+      // ...and the engine keeps them through the next transfers instead of clamping them away.
+      let state = normalizePoolMemoryCapacity(lakeState({ capacityLevel: 1, resetCount: 1, depositedUnits: 500, fillBits: kb1 }))
+      state = tickDataLakeTransfers(1e6)(state)
+      expect(getDataLakeBalanceUnits(state, 1)).toBe(501)
+    })
+
+    it('an acquiring lake skips only the full-pool wait: it still yields to an empty disk and keeps the read cache\'s reservation', () => {
+      const disks = { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: 0, [kb100]: DISK_ARRAY_LADDER_CAP }
+      const notFull = { poolBuffers: { 1: 400_000 }, diskCache: { [kb1]: kb1 }, disks }
+      expect(isDataLakePoolDrainAvailable(lakeState({ capacityLevel: 3, acquiring: true }, notFull), 1)).toBe(false) // an empty disk comes first
+      const reserved = lakeState({ capacityLevel: 3, acquiring: true }, { poolBuffers: { 1: 400_000 }, diskCache: {} })
+      const after = tickDataLakePoolDrain(1e6)(reserved)
+      expect(after.intro.poolBuffers[1]).toBeGreaterThanOrEqual(getPoolCacheReservationBits(reserved, 1))
     })
 
     it('a transfer survives a save/reload round trip (JSON) unchanged', () => {

@@ -183,7 +183,7 @@ it keeps filling while a build runs; every larger size fills via its own **write
 the pool buffer by default (after the read cache, smallest size first) — lower disks are consumed only when
 the player clicks an empty disk to expedite it (`expediteDiskFill`: it draws the pool buffer ahead of the other write caches (the read cache keeps
 first claim), takes every smaller full disk of the same pool it still needs in parallel alongside the buffer — so not every
-smaller disk is needed — and flushes at 5× instead of 2×). Byte Foundry funds Byte Factory **pull-based**, with no proactive knowledge
+smaller disk is needed — and lands as soon as funded). Byte Foundry funds Byte Factory **pull-based**, with no proactive knowledge
 of tier state: every tick `tickDiskPull` pulls one FULL, clean-slate (zero purchase-level progress) disk
 into its fixed (tier, level) correspondence (`getDataLakeTierIndex` grouping) whenever that tier sits at
 exactly the disk's required level, completing the tier's whole current purchase block in one shot;

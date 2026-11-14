@@ -802,9 +802,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    0/invalid cost → 100; `isDataLakeBoosterCostReachable` false → stays under 100). Saves: `normalizePoolMemoryCapacity`
    re-seats old lakes idempotently (units above the disk slots → full buffer; legacy partial-slot `fillBits` →
    whole units into disks, sub-unit remainder → buffer); a missing `lakeTransfer` reads as null.
-   **Pool disks:** an ordinary disk fill draws straight from its pool buffer into the disk and lands the
-   instant its last bit arrives (`tickDiskWriteCache`; no write-cache flush stage, `flushTotalSeconds` 0); only
-   an EXPEDITED disk keeps the timed 5× flush after its parallel smaller-disk transfers.
+   **Pool disks:** every disk fill draws straight from its pool buffer (expedited: plus smaller disks in parallel) and lands
+   the instant it is funded (`tickDiskWriteCache`; no write-cache flush stage, `flushTotalSeconds` 0).
 
    **Pool feed.** `tickPoolBufferFill`'s overflow branch and `tickDataLakePoolDrain` hand pool bits to
    `applyDataLakeOverflow`, which fills the lake's 1-unit buffer (`fillDataLakeBuffer`; at most one unit per call,

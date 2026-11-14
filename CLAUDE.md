@@ -699,9 +699,9 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
   The pool's smallest size's read cache fills from its pool buffer as a timed 5× transfer (`CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER`). Every size above its pool's smallest fills DIRECTLY from the pool buffer by default — landing the instant it is funded, no write-cache flush stage (#1087) (pool fill
   order: read cache, then write caches smallest size first); clicking an empty disk expedites it
   (`expediteDiskFill`) — it jumps ahead of the other write caches for the pool buffer, consumes the smaller full
-  disks of its pool it needs in parallel alongside that buffer, and flushes at 5× (`docs/ECONOMY_REFERENCE.md`).
+  disks of its pool it needs in parallel alongside that buffer, and lands the instant it is funded (`docs/ECONOMY_REFERENCE.md`).
   Stranded disks are never destroyed or swept into Bits; merges never cross a pool boundary.
-- **Data Lakes** (`intro.dataLakes`): a lake disk only STARTS while its pool buffer is full and is never
+- **Data Lakes** (`intro.dataLakes`): a lake fill waits for a full pool buffer only to START a Booster acquisition (`acquiring`, cleared on purchase; Boosters are paid with whole disks, exact change, never broken) and is never
   interrupted once under way (`isDataLakeDiskFillStartAllowed`). Booster control is "one click, one full fill-then-buy conversion,
   then stop" until the pool's era-long `boosterAuto` latch is set (then it auto-buys); `buyBooster` spends only banked lake units, outside the
   forced priority order; sub-sizes capped 9/9/9 (`DATA_LAKE_SUB_SIZE_DISK_CAPS`).
