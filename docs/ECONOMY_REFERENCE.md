@@ -359,7 +359,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      the bonus cap is simply a no-op). Expand/collapse is the "<symbol> Pool" title alone
      (`PoolTitleToggle`, a real `<button>` with `aria-expanded`; the tap target is a separate stretched
      `PoolTapButton` behind the readouts, so the two never nest and the tap can't block the title).
-5. **Upgrade Data Stream** (`upgradeIntroCapacity`, the single consolidated upgrade button —
+5. **Upgrade Data Stream** (`queueIntroSpeedUpgrade`, the single consolidated upgrade button —
    replacing the former paired "Speed ×2"/Invest ladder and "Capacity ×2" actions, now removed).
    **Capacity is the only purchased progression variable**: the upgrade costs exactly the current
    capacity (a full Buffer, drained on purchase) and doubles `intro.capacity`
@@ -1249,8 +1249,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    when a tier's automated merge starts, alongside other lanes. UI (`BoostTimerBar` per lane, `ComputePage`
    presets): `docs/MAINPAGE_REFERENCE.md`; rationale: `docs/DESIGN_HISTORY.md` "Compute Boost lanes".
 11. `ByteFoundryPage` doesn't disappear once `intro.mainGameUnlocked` is true — it becomes a
-   permanent, voluntarily-revisitable screen instead, reachable at any time via MainPage's own
-   "⚙️ Byte Foundry" link (`onOpenFoundry`). Since `mainGameUnlocked` is now a one-time-ever
+   permanent, voluntarily-revisitable screen instead, reachable at any time via AppNav's Foundry
+   tab. Since `mainGameUnlocked` is now a one-time-ever
    permanent latch (`latchMainGameUnlocked` above), this transition from mandatory gate to
    voluntary screen happens (at most) exactly once per save, on its very first cycle — never again
    on any later Prestige or Reboot. Nothing about it goes read-only when reached this way —
@@ -2118,7 +2118,7 @@ everything else).
 the Restage + Scale Up row in its own full-width `SpeedCardsRow` (see "Scale Up"
 above) — not grouped with `GlobalTickspeedCard`, which renders separately at the top of the Factory view.
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
-progressive-disclosure pattern as `scaleUpEverRevealed`. The button (`OverclockButton`, sized to match
+progressive-disclosure pattern as the Scale Up card. The button (`OverclockButton`, sized to match
 `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {symbol} {completed}/{required}` — e.g. `⚡ QB 7/12` (the final tier's completed levels vs. the requirement); the fixed
 per-level effect `🌐 +10%/lvl` sits beside the card name (no computed total rate). Like Scale Up, Overclock displays the raw one-based
 engine level and requirement with a `-1` offset so both numbers indicate completed purchase levels;
@@ -2663,7 +2663,6 @@ purchases were manual or automatic.
 | `combineIntroByte` | `state → state` | Byte Foundry: one-time — consumes `INTRO_BYTE_COMBINE_COST` (8) bits, sets `intro.byteCreated = true`. No-op once already created or below cost |
 | `isDiskFillAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer), ranked HIGHEST: true whenever any built Disk, of any size, is currently pull-eligible right now (`isDiskPullEligible` — full, matching its tier's current level, AND that level at zero progress; deliberately does NOT fire for a disk that's merely `isDiskRedeemable` but blocked by partial level progress, since that disk isn't going anywhere this tick regardless). Never itself blocked by anything below it in the order |
 | `isDiskPullEligible` | `(state, capacityBits) → bool` | Byte Foundry Disks: the base "is there something to pull right now" check both `isDiskFillAvailable` and `pullDiskForCurrentLevel` share — true only when a disk of that size is currently FULL, that size's array isn't mid-build, its fixed corresponding tier is currently at exactly the required level (`isDiskRedeemable`), **and** that level's own `purchaseLevelProgress` is exactly `0` — a disk only ever funds a level from a clean, zero-progress start |
-| `isBitFundedBandwidthAvailable` | `state → bool` | Bit-cost Invest affordable and claims remain |
 | `isProvisionDiskAvailable` | `state → bool` | (Buffer-funded fixed-speed build, 2026-11: needs a live pool whose buffer capacity can hold one pass — NOT buffer bits in hand; see the Updated note under Provision Disk.) Earlier definition: Byte Foundry forced-priority base predicate for the common Provision Disk operation: no in-flight `intro.diskBuild`, active ladder remains, and that size's own pool buffer — MINUS `getPoolCacheReservationBits` (see its own row below), so the read cache always keeps first claim — covers at least ONE funding pass (`size` bits) — not the current ordinal's own whole `getDiskCost` |
 | `isProvisionDiskInProgress` | `state → bool` | True while a Provision Disk build is ARMED (`diskBuildQueued`) and Provision Disk is available — the only state in which it outranks Compute Boost (a merely startable, or disarmed part-way, build does not). |
 | `getPoolCacheReservationBits` | `(state, poolIndex) → bits` | Byte Foundry Disks: however many more bits that pool's own smallest-size read cache still needs to reach full (8 blocks) — subtracted from `getPoolBufferBits` before checking/spending against it in `tickQueuedDiskBuild`, so the cache keeps actively filling (via `tickDiskAutoFill`) even while a Provision Disk build is queued, rather than Provision Disk claiming the whole buffer first. `0` for a locked/invalid pool or once the cache is already full |
