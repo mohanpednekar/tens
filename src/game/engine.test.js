@@ -308,7 +308,6 @@ import {
   getDataLakeCapacity,
   getDataLakeCapacityDoublingCost,
   getDataLakeCapacityLevel,
-  getDataLakeCurrentFillSubSize,
   getDataLakeDiskCounts,
   getDataLakeDiskSlotCounts,
   getDataLakeFillBits,
@@ -10120,7 +10119,7 @@ describe('Data Lakes', () => {
     })
   })
 
-  describe('overflow fill (see tickPoolBufferFill\'s own overflow branch / fillDataLakeDisks in engine.js)', () => {
+  describe('overflow fill (see tickPoolBufferFill\'s own overflow branch / fillDataLakeBuffer in engine.js)', () => {
     // Pool 1's own Capacity clamps to INTRO_CAPACITY_CAP_BITS (800,000 bits) regardless of this
     // seeded value, giving a Capacity^0.8 Bandwidth ceiling of 10,000 Bytes/sec (snapped to 8,000);
     // the fixture's `speedCapacity` pin keeps the raw rate (and so Bandwidth) at 250 Bytes/sec =
@@ -11301,6 +11300,19 @@ describe('Data Lakes', () => {
       const reservation = getPoolCacheReservationBits(reserved, 1)
       expect(reservation).toBeGreaterThan(0)
       expect(tickDataLakePoolDrain(1e6)(reserved).intro.poolBuffers[1]).toBeGreaterThanOrEqual(reservation)
+    })
+
+    it('a disarmed, part-funded Provision Disk does not freeze an acquiring lake (regression: auto-convert stuck "converting")', () => {
+      const built = { [kb1]: 9, [kb10]: 3 }
+      const state = lakeState({ boostersUnlocked: true, capacityLevel: 3, acquiring: true, autoConvertActive: true, purchased: 5 }, {
+        disksBuiltTotal: built, disks: built, diskCache: { [kb1]: kb1 }, poolBuffers: { 1: 400_000 },
+        diskProvisionPasses: { [kb10]: 0.5 }, diskBuildQueued: false,
+      })
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(true)
+      expect(isDataLakePoolDrainAvailable(state, 1)).toBe(true)
+      // An ARMED build still takes priority.
+      const armed = { ...state, intro: { ...state.intro, diskBuildQueued: true } }
+      expect(isDataLakeManualFillAvailable(armed, 1)).toBe(false)
     })
 
     it('the manual / auto-convert path applies the same acquiring gates: it yields to an empty disk and never eats the read cache\'s reservation', () => {

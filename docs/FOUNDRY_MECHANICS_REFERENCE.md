@@ -206,7 +206,7 @@ Disks above a pool's smallest fill directly from the pool buffer with no write-c
 take smaller disks in parallel and land as soon as funded). Boosters are paid with whole disks only, summing to the
 exact cost; the lake keeps filling until exact change exists.
 
-**Data Lakes** (`intro.dataLakes`, `DATA_LAKE_*` in `layers.js`, `fillDataLakeDisks`/`buyBooster`/
+**Data Lakes** (`intro.dataLakes`, `DATA_LAKE_*` in `layers.js`, `fillDataLakeBuffer`/`buyBooster`/
 `tickDataLakeAutoConvert` in `engine.js`) — ten permanent lakes (KB…QB), decoupled from Disk builds, gated
 on the pool having built at least one real disk (`isDataLakePoolReady`; before that `DataLakePanel`'s fill
 tile reads a static "Locked"). Its **Booster-conversion control fills MANUALLY, capped at just enough for

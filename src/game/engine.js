@@ -59,7 +59,7 @@ const createEmptyDataLakeTier = () => ({
   lakeTransfer: null,
   // True from the moment filling toward the NEXT Booster has started (the one full-pool start gate has
   // been passed) until that Booster is bought: while set, filling never waits for a full pool buffer,
-  // only for the pool to have any balance — so acquiring a Booster takes a predictable time.
+  // only for the pool to have a usable balance and its disks/provisioning to be settled — so acquiring a Booster takes a predictable time.
   acquiring: false,
   purchased: 0,
   // Whether this lake has ever completed its first (smallest, ×1) disk — a permanent latch (see
@@ -5672,7 +5672,7 @@ export const isStoragePoolBufferFull = (state, poolIndex) => {
   return capacity > 0 && getPoolBufferBits(state, poolIndex) >= capacity
 }
 
-// A lake buffer fill may only START while its pool is full — checked once, at the start: a fill
+// A lake buffer fill's FIRST start of an acquisition needs its pool full (later starts: see isDataLakeDiskFillStartAllowed): a fill
 // already under way is never interrupted and keeps filling whatever the pool's state (#1047).
 export const isDataLakeAcquiring = (state, tierIndex) => Boolean(getDataLakeTier(state, tierIndex)?.acquiring)
 
@@ -5683,13 +5683,13 @@ export const isDataLakeDiskFillStartAllowed = (state, tierIndex) => {
   if (isDataLakeDiskFillInProgress(state, tierIndex)) return true
   if (!isDataLakeAcquiring(state, tierIndex)) return isStoragePoolBufferFull(state, tierIndex)
   return areStoragePoolDisksFull(state, tierIndex) &&
-    !isStoragePoolProvisioningInProgress(state, tierIndex) &&
+    !isStoragePoolProvisioningInProgress(state, tierIndex, true) &&
     getPoolBufferBits(state, tierIndex) > getPoolCacheReservationBits(state, tierIndex)
 }
 
 // A plain binary "receiving / not receiving" reading for ByteFoundryPage's own `mode="lake"` bar —
 // DATA_LAKE_OVERFLOW_MAX_PERCENT while this lake has anything left to fill at its current capacity
-// level (a real disk slot or, at the max level, the final unit — see getDataLakeCurrentFillSubSize
+// level (a real disk slot or, at the max level, the final unit — see getDataLakeNextTransferTarget
 // above), DATA_LAKE_OVERFLOW_MIN_PERCENT once fully maxed. An earlier version tapered this down as
 // the currently-filling disk approached completion; removed along with the rate taper itself (see
 // docs/DESIGN_HISTORY.md) now that overflow fills at the plain available rate, same as Storage's
@@ -5956,7 +5956,7 @@ export const isDataLakeManualFillAvailable = (state, tierIndex) => {
   // matching Storage array unlocks the next level — tell tickDataLakeAutoConvert not to spin on it.
   if (getBoosterPurchaseCost(tierIndex)(state) > getDataLakeReachableUnits(state, tierIndex)) return false
   if (!isDataLakeBufferAccepting(state, tierIndex)) return false
-  // A lake buffer fill only STARTS from a full pool; one already under way keeps drawing whatever
+  // A lake buffer fill's first start needs a full pool, later ones the acquiring gates; one already under way keeps drawing whatever
   // the pool buffer holds (isDataLakeDiskFillStartAllowed).
   return getPoolBufferBits(state, tierIndex) > 0 && isDataLakeDiskFillStartAllowed(state, tierIndex)
 }
@@ -6308,7 +6308,9 @@ export const areStoragePoolDisksFull = (state, poolIndex) =>
 // funded Provision Disk on one of its sizes, a legacy timed build, a pool-local reset rebuild, or the
 // automatic post-Foundry-reset lower-size rebuild (buffer-funded — the lake drain must not starve it).
 // Merely being able to provision another disk doesn't count.
-export const isStoragePoolProvisioningInProgress = (state, poolIndex) => {
+// `armedOnly`: ignore part-funded passes of a DISARMED build (a Reformat replay that hit its pass cap) — such a build is
+// not actually running, so it must not block a lake mid-acquisition forever (#1087).
+export const isStoragePoolProvisioningInProgress = (state, poolIndex, armedOnly = false) => {
   const intro = state.intro ?? {}
   if (isStoragePoolRebuilding(state, poolIndex)) return true
   // A lower-size rebuild only claims the pool buffer once its own pool's Capacity can hold one disk of that size; until then
@@ -6319,7 +6321,7 @@ export const isStoragePoolProvisioningInProgress = (state, poolIndex) => {
   }
   if (intro.diskBuild && getPoolIndexForDiskSize(intro.diskBuild.size) === poolIndex) return true
   const sizes = getStoragePoolSizes(poolIndex)
-  if (sizes.some(size => getDiskProvisionPassesCollected(state, size) > 0)) return true
+  if (!armedOnly && sizes.some(size => getDiskProvisionPassesCollected(state, size) > 0)) return true
   return Boolean(intro.diskBuildQueued) && sizes.includes(getDiskSize(state))
 }
 
@@ -6337,7 +6339,7 @@ export const isDataLakePoolDrainAvailable = (state, poolIndex) => {
   // for the pool to refill to full between buffer units.
   return (isDataLakeAcquiring(state, poolIndex) || isStoragePoolBufferFull(state, poolIndex)) &&
     areStoragePoolDisksFull(state, poolIndex) &&
-    !isStoragePoolProvisioningInProgress(state, poolIndex) &&
+    !isStoragePoolProvisioningInProgress(state, poolIndex, isDataLakeAcquiring(state, poolIndex)) &&
     getPoolBufferBits(state, poolIndex) > getPoolCacheReservationBits(state, poolIndex)
 }
 

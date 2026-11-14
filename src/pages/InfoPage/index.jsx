@@ -353,9 +353,9 @@ const InfoPage = () => {
           <li>
             A lake fills from its own pool’s Staging into a permanent 1-unit buffer, which moves into
             lake disks and consolidates into bigger ones. Filling toward a Cell only waits for Staging to be
-            full to <em>start</em> (and, when filling on its own, every built disk in that pool must be full
-            and nothing provisioning there); after that it no longer waits for Staging to refill, only for
-            Staging to have something — until the Cell is bought. A Cell is paid with whole disks that add up
+            full to <em>start</em>; after that it no longer waits for Staging to refill — it only needs every built
+            disk in that pool full, nothing being provisioned there, and Staging holding more than the read
+            cache’s share — until the Cell is bought. A Cell is paid with whole disks that add up
             to exactly its cost; disks are never broken, so the lake keeps filling until exact change exists. Clicking its 🏷️ cost control fills the same way until the next Cell is
             affordable, buys one, then stops. Once all of the pool’s disks are built, its overflow
             also pours into the lake.

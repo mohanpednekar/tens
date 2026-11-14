@@ -115,7 +115,7 @@ the size unit is always part of the visible name) with a single next-Booster-cos
 a lifetime-purchased-count readout (the cost figure alone is self-explanatory — see below for what
 this control does); laid out like a pool/Data Stream tile (`LakeHeader`): name top-left with the Booster target price + buy control (🏷️) under it, ⚡ current fill speed top-right (the pool's Bandwidth while the lake drains/overflows automatically, else 0), the filled amount (full disks plus the open slot, `formatPoolBalance`) big and centered, and 🗜 Flush Pool / Scale Out under the speed when offered (otherwise `⏳ time left` there — `(next Booster cost − filled) / fill speed`, shown only while still short of the cost, the lake can hold it, the Booster entity isn't at cap, and the lake is filling); then a dedicated `LakePoolTile` (own
 `FillableStatCard`-style element, purely additive over the per-square fill overlay below — same
-`fillBits`/`getDataLakeCurrentFillSubSize` data, no separate mechanic) showing "`<fillBits>` /
+`fillBits`/`getDataLakeNextTransferTarget` data, no separate mechanic) showing "`<fillBits>` /
 `<open slot size>`" — ALWAYS rendered whenever an open slot exists (`currentFillSubSize !== null`),
 reading a static "Locked · 0 / `<size>`" before `isDataLakePoolReady` rather than being absent, so
 the section never jumps from showing nothing to already mid-fill with no visible history in between
