@@ -105,7 +105,7 @@ base Speed from the Buffer into `intro.capacityUpgradeProgress`. While running, 
 docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
-once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
+once revealed (`isComputeCoreConversionUnlocked(state)` — `capacity >=
 INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cells (`computeCores`) themselves are obtained via `buyBooster`, bought
 instantly from the matching Data Lake's own banked units on that pool's own `PoolCard`
 (a click either buys immediately if already affordable or arms a one-shot auto-convert that finishes
@@ -716,7 +716,7 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   treatment (spendable ÷ cost, or `purgeProgressPercent`), and both pulse (`$pulse`) when
   actionable. Every PP-spending button (per-tier speed upgrades, Auto Scale Up, Unlock Speed Bonus,
   Auto Purge — all on the Firmware page) carries the same single-tone fill (unspent PP ÷ that
-  button's cost, `ppProgressPercent`), each nesting a `VisuallyHidden` `role="progressbar"`
+  button's cost), each nesting a `VisuallyHidden` `role="progressbar"`
   (`aria-valuenow` = PP balance capped at cost, `aria-valuemax` = cost).
 - **Compact labels.** Buy/Prestige/Reset render compact visible text — an icon in place of the action
   word (🛒 Buy, ✦ Prestige, ↺ Reset) plus the cost, and (via `formatCost`) the paying tier's short
@@ -1060,7 +1060,7 @@ for environments without `IntersectionObserver` (e.g. jsdom in tests), where a d
 stays open once expanded. The native `<details>`-based `Disclosure` instances elsewhere on this page
 (`GlobalTickspeedCard`/`OverclockCard`/Firmware → Automation's tier milestone badges — see
 "No description prose on this page" above) do **not** auto-collapse on scroll — there's no
-`useAutoCollapseDetails()`-style hook wired to them; each stays open until the player clicks its
+auto-collapse hook wired to them; each stays open until the player clicks its
 heading again, which is enough for a short one-line body that isn't competing with the rest of the
 page for scroll-driven attention the way the taller tier-row disclosure is.
 

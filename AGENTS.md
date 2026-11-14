@@ -12,7 +12,7 @@ Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rew
 ## Project
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
-shared bottom `AppNav` in progression order: **Foundry → Power → Compute → Factory → Firmware → More**. Storage
+shared bottom `AppNav` in progression order: **Foundry → Power → Compute → Factory → Firmware → Challenges → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
 item, and no second-level Data Stream | Storage tabs). **Firmware** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
 unlock/milestone → pause Switch → speed upgrade / Compression, Overflow mode, Buy max). More (Manual, Releases, Settings) is always available — even
@@ -81,7 +81,7 @@ src/
     storage.js             ← localStorage persistence; calls save-migration on every load, then mergeState.
                               Also Dev Mode's own isolated `'dev'` slot (separate from numbered player slots)
   components/
-    AppNav/, AppMenu/      ← bottom nav (Foundry → Power → Compute → Factory → Firmware → More) + More sheet (Manual / Releases / Settings)
+    AppNav/, AppMenu/      ← bottom nav (Foundry → Power → Compute → Factory → Firmware → Challenges → More) + More sheet (Manual / Releases / Settings)
     Button/, BuyMaxToggle/, Switch/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/, BoostBadge/, SpeedDetailsPopover/, LeadIcon/
                             ← shared styled components; see docs/COMPONENTS_REFERENCE.md
     DataLakePanel/          ← one Data Lake's own self-contained block (title + disk-square rows
@@ -128,7 +128,7 @@ persistence), called once in `App.jsx` and shared by every page via a `game` pro
 `InfoPage/index.jsx` is a static page (evergreen mechanic explanations only, reads no game state);
 `StoragePage`/`ComputePage`/`ComputeFlopsPage`/`MilestonesPage`/`SettingsPage`/`DevModePage` are pure
 renderers. `App.jsx` switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry →
-Power → Compute → Factory → Firmware → More), with `ByteFoundryPage` additionally forced onto screen —
+Power → Compute → Factory → Firmware → Challenges → More), with `ByteFoundryPage` additionally forced onto screen —
 overriding whatever `page` says, except on gate-exempt utility pages
 (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`) — whenever
 `intro.mainGameUnlocked` is still false (see "Byte Foundry"). Storage is continuous Foundry sections
@@ -396,6 +396,6 @@ publicly visible but isn't legally reusable without written permission. No `CODE
   script-level exclusion and (once branch protection enables "Require review from Code Owners")
   `.github/CODEOWNERS`.
 
-Challenge mode (epic #1037): state `challenges`, registry `CHALLENGE_DEFINITIONS` and rollout Set `LIVE_CHALLENGE_IDS` (F1–F25 live; UI: Firmware Challenges tab + Factory `ChallengeBanner`) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits` in `engine.js`; the three speed-upgrade buyers refuse until a live challenge is completed. See `docs/ECONOMY_REFERENCE.md` "Challenge mode".
+Challenge mode (epic #1037): state `challenges`, registry `CHALLENGE_DEFINITIONS` and rollout Set `LIVE_CHALLENGE_IDS` (F1–F25 live; UI: Challenges page 🏁 Factory tab + Factory `ChallengeBanner`) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits` in `engine.js`; the three speed-upgrade buyers refuse until a live challenge is completed. See `docs/ECONOMY_REFERENCE.md` "Challenge mode".
 
 Achievements (epic #1046, switch `ACHIEVEMENTS_FEATURE`, on): `achievements` state, `ACHIEVEMENT_*` registry in `layers.js`, `detectAchievements`/`getCompletedAchievementGroups` in `engine.js`, `AchievementsPage` under More. Foundry Reclamation I/II achievements permanently upgrade the two per-pool Bitrate steps across Reformat and Reboot. See `docs/ECONOMY_REFERENCE.md` "Achievements".
