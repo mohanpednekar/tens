@@ -9375,6 +9375,26 @@ overflow already fed (no double credit). `buyBooster` used to zero `fillBits` on
 interruption (and a loss of the bits) — so it now carries the progress over, re-seating it through
 `fillDataLakeDisks` since the spend can open a smaller slot than the one that was filling.
 
+## Hierarchical Data Lake disks + direct pool disk fills (2026-11, #1087)
+
+**Was:** a lake tracked `depositedUnits` + `fillBits` and derived its ×1/×10/×100 squares by arithmetic (mixed-radix
+re-decomposition); the last unit of each capacity level was a virtual fill slot; a Booster spend re-derived the
+squares instantly; ordinary disks above a pool's smallest size filled a write cache from the pool buffer and then
+flushed (timed 2× stage) into the disk. **Now:** a permanent 1-unit buffer + real timed transfers
+(`lakeTransfer`) — buffer → ×1, and 9 smaller disks of every denomination + a full buffer → the next size, with a
+×1000 rung opened by Flush capacity — and ordinary disks land directly when the pool buffer has funded them.
+**Decisions / tried-and-rejected:** (1) Keep `depositedUnits`/`fillBits` (fillBits = the buffer) instead of storing
+per-denomination counts: with 9-disk caps the breakdown is unique, so counts stay derived and old saves/tests map
+cleanly; per-size ledgers were rejected as redundant state to migrate. (2) One transfer at a time per lake, the
+buffer refilling concurrently (sources are consumed at transfer start and carried as `target` units, so
+`balance = disks + buffer + in-flight` is conserved). (3) Disks are never broken (maintainer): a Booster is paid with whole disks (+ a full buffer as one ×1) summing to exactly its cost; with no exact change the lake keeps filling. An earlier draft re-seated a broken disk's remainder as smaller disks instantly — rejected as untimed teleporting between denominations. Consolidation always creates more large disks, so exact change is reachable up to capacity. (4) Consolidation uses the established Storage rates (2× buffer→disk, 5× disk→disk) rather than the lake's
+10% pool-feed speed, so the extra passes cost ~10% of lake throughput, not 4×. (5) The collapsed percentage
+counts in-flight data so it never dips while data moves; it reads 100% only once exact change exists. (5b) The #1047 full-pool gate now applies once per Booster acquisition (`acquiring` flag, cleared on purchase) instead of once per buffer unit, which stalled mid-acquisition while the pool refilled; maintainer request. (6) Direct fill reinterprets, rather than deletes, `diskWriteCache`: the record remains
+the in-progress fill of a disk (and the expedite machinery), but an ordinary fill has no flush stage
+(`flushTotalSeconds` 0), so ordinary above-minimum disks complete slightly sooner than before; legacy saves with a
+merge already flushing still finish that flush. A post-Flush lake below capacity level 3 has no reachable ×1000
+slot (`getDataLakeReachableUnits`), unchanged in practice since Flush needs the full ladder.
+
 ## Compute Boost lanes (parallel multipliers + same-multiplier queue)
 
 Replaced the single-boost model (`computeBoostType`/`TierIndex`/`Stacks`/`RemainingSeconds`; one active preset, Stack extended

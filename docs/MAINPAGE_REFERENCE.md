@@ -215,7 +215,7 @@ visible name, per the fuller `"{label} Data Lake — funds {boosterLabel}"` phra
 lifetime-purchased-count text — see below for what it shows. Below that, one `LakeSizeRow` of round
 `LakeSquare`s per non-empty sub-size (×1/×10/×100, smallest first) — the same disk-array visual
 language `DiskArrayRow` uses for Storage's own Disks — showing every completed disk filled, plus a
-live left-to-right fill (`LakeSquareFill`, driven by `getDataLakeCurrentFillSubSize`/
+live left-to-right fill (`LakeSquareFill`, driven by `getDataLakeNextTransferTarget`/
 `getDataLakeFillBits`) on whichever ONE slot is actively filling right now; a hidden
 `role="progressbar"` (`aria-label="… lake deposits"`) still exposes the lake's overall
 deposited-units/capacity fraction for a11y. A dedicated `LakePoolTile` sits right below the header
