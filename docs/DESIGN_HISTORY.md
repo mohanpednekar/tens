@@ -9387,11 +9387,7 @@ flushed (timed 2× stage) into the disk. **Now:** a permanent 1-unit buffer + re
 per-denomination counts: with 9-disk caps the breakdown is unique, so counts stay derived and old saves/tests map
 cleanly; per-size ledgers were rejected as redundant state to migrate. (2) One transfer at a time per lake, the
 buffer refilling concurrently (sources are consumed at transfer start and carried as `target` units, so
-`balance = disks + buffer + in-flight` is conserved). (3) Spending must not deadlock on arbitrary costs, so disks
-pay smallest-first and a broken larger disk's remainder re-seats as smaller disks — this "exact change" is the one
-place data changes denomination without a timed transfer; the buffer pays only a final unit and in-flight data is
-never spendable. Making change by timed transfers was rejected (a Booster at cost 1 would wait on a 1000 KB disk
-split). (4) Consolidation uses the established Storage rates (2× buffer→disk, 5× disk→disk) rather than the lake's
+`balance = disks + buffer + in-flight` is conserved). (3) Disks are never broken (maintainer): a Booster is paid with whole disks (+ a full buffer as one ×1) summing to exactly its cost; with no exact change the lake keeps filling. An earlier draft re-seated a broken disk's remainder as smaller disks instantly — rejected as untimed teleporting between denominations. Consolidation always creates more large disks, so exact change is reachable up to capacity. (4) Consolidation uses the established Storage rates (2× buffer→disk, 5× disk→disk) rather than the lake's
 10% pool-feed speed, so the extra passes cost ~10% of lake throughput, not 4×. (5) The collapsed percentage
 counts in-flight data so it never dips while data moves; the 100% reading may precede the first spendable moment by
 one transfer (seconds). (5b) The #1047 full-pool gate now applies once per Booster acquisition (`acquiring` flag, cleared on purchase) instead of once per buffer unit, which stalled mid-acquisition while the pool refilled; maintainer request. (6) Direct fill reinterprets, rather than deletes, `diskWriteCache`: the record remains

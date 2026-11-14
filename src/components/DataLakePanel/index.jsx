@@ -221,7 +221,7 @@ const LakeSquare = styled.div`
   background: ${props => (props.$full ? props.theme.color.surfaceRaised : 'transparent')};
 `
 
-// The one slot currently filling (see getDataLakeCurrentFillSubSize/getDataLakeFillBits in
+// The one slot currently filling (a transfer under way, getDataLakeTransferFraction in
 // engine.js) shows its own live progress as a left-to-right fill, same visual language
 // DiskArrayRow's own cache-flush fills use.
 const LakeSquareFill = styled.div`

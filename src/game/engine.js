@@ -3533,7 +3533,12 @@ export const normalizePoolMemoryCapacity = state => {
       // slots hold (an older save counted its "virtual last unit" in the total) moves into the 1-unit
       // buffer; legacy partial-slot fill progress (could span up to 100 units) banks whole units into
       // the disks as far as slots allow, and its sub-unit remainder becomes buffer fill.
-      const representable = getDataLakeSlotRepresentableUnits(getDataLakeSlotCountsFor(level, lake.resetCount ?? 0))
+      // Units beyond the slots (a Flush-expanded capacity on a lake below level 3 — only a corrupt/edited save)
+      // are kept as disks rather than dropped: capacity is never below what was banked.
+      const representable = Math.max(
+        getDataLakeSlotRepresentableUnits(getDataLakeSlotCountsFor(level, lake.resetCount ?? 0)),
+        Math.min(Math.max(Math.trunc(Number(lake.depositedUnits)) || 0, 0), DATA_LAKE_CAPACITY_BY_LEVEL[level] + 1000 * Math.max(0, Math.trunc(Number(lake.resetCount)) || 0) - 1),
+      )
       let depositedUnits = Math.max(Math.trunc(Number(lake.depositedUnits)) || 0, 0)
       let fillBits = Math.max(Number(lake.fillBits) || 0, 0)
       if (depositedUnits > representable) {
@@ -4767,8 +4772,8 @@ const canStartDiskWriteCacheMerge = (state, targetSize) => {
 }
 
 const createDiskWriteCacheMerge = (state, targetSize, expedite = false) => {
-  // Only an expedited disk has a flush stage; an ordinary fill lands directly (see tickDiskWriteCache).
-  const flushTotalSeconds = expedite ? getDiskWriteCacheFlushSeconds(state, targetSize, true) : 0
+  // New fills have no flush stage: the disk lands directly when funded (see tickDiskWriteCache).
+  const flushTotalSeconds = 0
   return {
     sourceSize: getDiskWriteCacheSourceSize(targetSize),
     segmentsCollected: 0,
@@ -4800,7 +4805,6 @@ export const isDiskFillExpedited = (state, size) => Boolean(getDiskWriteCacheMer
 export const expediteDiskFill = size => state => {
   if (!isDiskFillExpediteAvailable(state, size)) return state
   const merge = getDiskWriteCacheMerge(state, size)
-  const flushTotalSeconds = getDiskWriteCacheFlushSeconds(state, size, true)
   return {
     ...state,
     intro: {
@@ -4808,7 +4812,7 @@ export const expediteDiskFill = size => state => {
       diskWriteCache: {
         ...(state.intro.diskWriteCache ?? {}),
         [size]: merge
-          ? { ...merge, expedite: true, flushTotalSeconds, flushRemainingSeconds: flushTotalSeconds }
+          ? { ...merge, expedite: true }
           : createDiskWriteCacheMerge(state, size, true),
       },
     },
@@ -4822,16 +4826,6 @@ const decrementFullDiskCount = (disks, size) => {
     return rest
   }
   return { ...disks, [size]: full - 1 }
-}
-
-// The write-cache flush into the target's own empty container is a DISK filling FROM a cache — the
-// same DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER rate a read-cache flush uses — sized to the target's
-// own full capacity. An expedited disk's flush runs at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER instead.
-const getDiskWriteCacheFlushSeconds = (state, targetSize, expedite = false) => {
-  const poolIndex = getPoolIndexForDiskSize(targetSize)
-  const rate = getStoragePoolBandwidth(state, poolIndex)
-    * (expedite ? CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER : DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)
-  return targetSize / Math.max(rate, Number.MIN_VALUE)
 }
 
 // An expedited merge's transfer of one smaller full disk into the write cache — a CACHE filling FROM
@@ -5015,10 +5009,11 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     const { transferSize: _legacyTransfer, segmentRemainingSeconds: _legacyRemaining, segmentTotalSeconds: _legacyTotal, ...rest } = merge
     let next = { ...rest, sourceSize, transfers }
     if (collected >= targetSize * WRITE_CACHE_COMPLETE_RATIO) {
-      // An ORDINARY fill draws straight from the pool buffer into the disk (#1087): the disk lands the
-      // instant its last bit arrives — no intermediate write-cache flush stage. Only an expedited
-      // disk keeps the timed (5×) flush after its parallel smaller-disk transfers.
-      if (!merge.expedite) {
+      // Every fill draws straight from the pool buffer (and, expedited, smaller disks) into the disk
+      // (#1087): the disk lands the instant its last bit arrives — no write-cache flush stage, so
+      // expediting is never slower than the default fill. Only a LEGACY merge already flushing (above)
+      // finishes its timed flush.
+      {
         disks = { ...disks, [targetSize]: (disks[targetSize] ?? 0) + 1 }
         const { [targetSize]: _landed, ...remainingFills } = diskWriteCache
         diskWriteCache = remainingFills
@@ -5642,7 +5637,7 @@ export const getDataLakeBoosterProgressPercent = (state, tierIndex) => {
   const cost = getBoosterPurchaseCost(tierIndex)(state)
   if (!(cost > 0) || !Number.isFinite(cost)) return 100
   const balance = getDataLakeBalanceUnits(state, tierIndex)
-  if (balance >= cost * (1 - 1e-9)) return 100
+  if (balance >= cost * (1 - 1e-9) && findDataLakeExactPayment(state, tierIndex, cost) !== null) return 100
   return Math.max(0, Math.min(99, Math.floor((balance / cost) * 100)))
 }
 
@@ -5845,10 +5840,38 @@ export const tickComputeCharges = elapsedSeconds => state => {
   return { ...state, intro: { ...intro, computeChargeSeconds: nextCharges } }
 }
 
+// Disks are NEVER broken (#1087): a Booster is paid with whole disks (a full buffer counts as one more
+// ×1 unit) summing to EXACTLY its cost. Returns how many ×1 units (disks + buffer) the payment uses, or
+// null when no exact combination exists yet — the lake then simply keeps filling until one does.
+const findDataLakeExactPayment = (state, tierIndex, cost) => {
+  const lake = getDataLakeTier(state, tierIndex)
+  if (!lake || !(cost > 0)) return null
+  const disks = getDataLakeDiskCounts(state, tierIndex)
+  const available = [
+    (disks[1] ?? 0) + (isDataLakeBufferFull(state, tierIndex) ? 1 : 0),
+    disks[10] ?? 0,
+    disks[100] ?? 0,
+    disks[1000] ?? 0,
+  ]
+  // remaining is expressed in units of size 10^index.
+  const payable = (index, remaining) => {
+    if (remaining === 0) return true
+    if (index === available.length - 1) return remaining <= available[index]
+    for (let used = remaining % 10; used <= Math.min(available[index], remaining); used += 10) {
+      if (payable(index + 1, (remaining - used) / 10)) return true
+    }
+    return false
+  }
+  for (let ones = cost % 10; ones <= Math.min(available[0], cost); ones += 10) {
+    if (payable(1, (cost - ones) / 10)) return ones
+  }
+  return null
+}
+
 export const isBoosterPurchaseAvailable = (state, tierIndex) =>
   isDataLakeBoosterUnlocked(state, tierIndex) &&
   getComputeEntityFieldRoom(state, tierIndex) > 0 &&
-  getDataLakeSpendableUnits(state, tierIndex) >= getBoosterPurchaseCost(tierIndex)(state)
+  findDataLakeExactPayment(state, tierIndex, getBoosterPurchaseCost(tierIndex)(state)) !== null
 
 // UI-facing mirror of getComputeEntityFieldRoom's own gate, so a disabled Buy button can tell
 // "entity full, spend it down first" apart from "not enough banked yet" (DataLakePanel).
@@ -5882,32 +5905,33 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
   const roomUnderEntityCap = getComputeEntityFieldRoom(state, tierIndex)
   if (roomUnderEntityCap <= 0) return state
 
-  const currentPurchased = lake.purchased ?? 0
-  const capacity = getDataLakeCapacity(state, tierIndex)
-  const isMaxed = isDataLakeCapacityMaxed(state, tierIndex)
-
-  const affordableMath = getBoosterBulkPurchase(
-    getDataLakeSpendableUnits(state, tierIndex), capacity, currentPurchased, isMaxed,
-  )
-
-  const buyQuantity = Math.min(quantity, affordableMath.quantity, roomUnderEntityCap)
-  if (buyQuantity <= 0) return state
-
-  // Re-calculate cost for exact quantity
-  const actualCost = buyQuantity * currentPurchased + (buyQuantity * (buyQuantity + 1)) / 2
-
-  const boosterUpdates = latchComputeMergePageIfNeeded(state.intro, tierIndex, field, buyQuantity)
-
-  const deposited = lake.depositedUnits ?? 0
-  const fromDisks = Math.min(deposited, actualCost)
-  const fromBuffer = actualCost - fromDisks
-  const nextLake = {
-    ...lake,
-    depositedUnits: deposited - fromDisks,
-    fillBits: fromBuffer > 0 ? 0 : (lake.fillBits ?? 0),
-    acquiring: false,
-    purchased: currentPurchased + buyQuantity,
+  // One Booster at a time, each paid with whole disks summing exactly to its own cost (see
+  // findDataLakeExactPayment); stops at the first that has no exact payment yet.
+  let working = lake
+  let bought = 0
+  let workingState = state
+  const target = Math.min(quantity, roomUnderEntityCap)
+  while (bought < target) {
+    const cost = (working.purchased ?? 0) + 1
+    const onesUsed = findDataLakeExactPayment(workingState, tierIndex, cost)
+    if (onesUsed === null) break
+    const deposited = working.depositedUnits ?? 0
+    const ones = getDataLakeDiskCounts(workingState, tierIndex)[1] ?? 0
+    const fromBuffer = Math.max(0, onesUsed - ones)
+    working = {
+      ...working,
+      depositedUnits: deposited - (cost - fromBuffer),
+      fillBits: fromBuffer > 0 ? 0 : (working.fillBits ?? 0),
+      acquiring: false,
+      purchased: (working.purchased ?? 0) + 1,
+    }
+    workingState = { ...workingState, intro: { ...workingState.intro, dataLakes: { ...workingState.intro.dataLakes, [tierIndex]: working } } }
+    bought += 1
   }
+  if (bought <= 0) return state
+
+  const boosterUpdates = latchComputeMergePageIfNeeded(state.intro, tierIndex, field, bought)
+  const nextLake = working
 
   return {
     ...state,
@@ -5923,7 +5947,10 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
 // next Booster's cost — in-flight transfer data and a partly filled buffer count as already banked.
 const getDataLakeManualFillBitsNeeded = (state, tierIndex) => {
   const cost = getBoosterPurchaseCost(tierIndex)(state)
-  return Math.max(0, (cost - getDataLakeBalanceUnits(state, tierIndex)) * getDataLakeUnitBits(tierIndex))
+  if (findDataLakeExactPayment(state, tierIndex, cost) !== null) return 0
+  // Enough in total but no exact change yet: keep filling (at least one more unit).
+  const unitBits = getDataLakeUnitBits(tierIndex)
+  return Math.max(unitBits, (cost - getDataLakeBalanceUnits(state, tierIndex)) * unitBits)
 }
 
 // A lake fills MANUALLY, capped at just enough for its own next Booster, until its matching

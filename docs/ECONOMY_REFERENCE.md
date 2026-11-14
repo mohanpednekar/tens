@@ -788,16 +788,17 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    ⌊units/1000⌋ (`decomposeDataLakeUnits`), so `depositedUnits` (completed-disk units, excluding buffer and
    in-flight data) remains the one source of truth; slots/capacity: `getDataLakeDiskSlotCounts` (×1/×10/×100
    open per capacity level; ×1000 = `resetCount` at level 3), disks + buffer = capacity exactly at level 3
-   (`getDataLakeRepresentableUnits() + 1`). **Booster spending** (`buyBooster`) pays from
-   `getDataLakeSpendableUnits` = disks + a FULL buffer (in-flight data is never spendable): disks first, a full
-   buffer only for the last unit; a larger disk broken to make exact change keeps its remainder as data (it
-   re-seats as smaller disks — the one deliberate re-denomination), and the buffer's partial fill and any
-   in-flight transfer are untouched. The buy step runs BEFORE transfers each tick so a full buffer can pay a
+   (`getDataLakeRepresentableUnits() + 1`). **Booster spending** (`buyBooster`) pays with WHOLE
+   disks only — a full buffer counts as one more ×1 unit, in-flight data is never spendable — summing to EXACTLY the
+   cost (`findDataLakeExactPayment`). Disks are never broken: with no exact combination yet the lake simply keeps
+   filling until one exists (a lone ×10 disk cannot pay 3; three ×1 disks can, and the ×10 is untouched). Ones are
+   spent before the buffer. Purchases are made one at a time; the buffer's partial fill and any in-flight
+   transfer are untouched. The buy step runs BEFORE transfers each tick so a full buffer can pay a
    Booster before being committed to a move. Manual conversion (`fillDataLakeManually`) feeds only the buffer,
    up to the bits still needed (in-flight data counts as banked), and is unavailable for a cost above
    `getDataLakeReachableUnits`. Capacity upgrade and Flush empty the lake, buffer and transfer; Flush also
    needs a full buffer and no transfer in flight. Collapsed lake readout:
-   `getDataLakeBoosterProgressPercent` = `min(100, balance ÷ next cost × 100)` (floored; 100 only once covered;
+   `getDataLakeBoosterProgressPercent` = `min(100, balance ÷ next cost × 100)` (floored; 100 only once exactly payable;
    0/invalid cost → 100; `isDataLakeBoosterCostReachable` false → stays under 100). Saves: `normalizePoolMemoryCapacity`
    re-seats old lakes idempotently (units above the disk slots → full buffer; legacy partial-slot `fillBits` →
    whole units into disks, sub-unit remainder → buffer); a missing `lakeTransfer` reads as null.
@@ -805,124 +806,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    instant its last bit arrives (`tickDiskWriteCache`; no write-cache flush stage, `flushTotalSeconds` 0); only
    an EXPEDITED disk keeps the timed 5× flush after its parallel smaller-disk transfers.
 
-   **Overflow fill** (`tickPoolBufferFill`'s own overflow branch, `fillDataLakeDisks`/
-   `applyDataLakeOverflow` internally) — once a pool's own local Memory buffer is completely full
-   (`room <= 0` inside `tickPoolBufferFill`'s per-pool loop), that pool's reserved share of the
-   tick's rate (`fillRate * elapsedSeconds`, the exact same reservation `tickPoolBufferFill` already
-   computes for buffer-filling) has nowhere left to go. Rather than wasting it, ALL of it feeds that
-   pool's own matching lake instead — `poolIndex === tierIndex`, one lake per pool, the same 1:1
-   mapping the lake's own KB/MB/GB/… naming already implies — at the plain, un-tapered rate, no
-   artificial slowdown as the currently-filling disk nears completion. An earlier version tapered
-   this rate down (`DATA_LAKE_OVERFLOW_MAX_PERCENT` at an empty disk, down toward
-   `DATA_LAKE_OVERFLOW_MIN_PERCENT` near completion, via a closed-form exponential-decay ODE) —
-   removed in favor of the same "no taper" posture Storage's own disk provisioning already uses; see
-   `docs/DESIGN_HISTORY.md`. `getDataLakeOverflowRatePercent` now returns a plain binary
-   "receiving/not-receiving" reading (`DATA_LAKE_OVERFLOW_MAX_PERCENT` while this lake has anything
-   left to fill at its current capacity level, `DATA_LAKE_OVERFLOW_MIN_PERCENT` once fully maxed) —
-   these two constants are retained though no UI bar displays this reading any more.
-
-   `tickPoolBufferFill`'s overflow branch hands its own reserved time/Bits budget (the same
-   `fillRate`/`elapsedSeconds` reservation it already computes for buffer-filling) to
-   `applyDataLakeOverflow`, which walks that budget in bounded segments — at most
-   `DATA_LAKE_OVERFLOW_SEGMENT_LIMIT` (`DATA_LAKE_SUB_SIZE_DISK_CAPS` summed plus 1 for the level's
-   own final buffer-sourced unit, so the loop is provably bounded) — re-fetching which slot is
-   currently open (`getDataLakeCurrentFillSubSize`, smallest sub-size first) every time one
-   completes, since a single large `availableBits` can complete several in one call. It tracks TWO
-   separate budgets: `remainingBits` is the caller's own currency balance (`intro.bits`), only ever
-   decremented by what's actually spent; `spendableBits` is the `fillRate * availableSeconds`
-   ceiling on how much this ONE call may deliver, independent of how large the caller's own balance
-   happens to be — conflating the two would silently discard whatever the rate couldn't reach this
-   call as if it had already been spent. `fillDataLakeDisks` also returns `unconsumedBits` per
-   segment (nonzero only when the lake becomes fully maxed partway through it), which
-   `applyDataLakeOverflow` folds into its own `remainingBits` return; `tickPoolBufferFill` credits
-   that back to `intro.bits` rather than assuming every offered bit was consumed, so an unconsumed
-   excess (e.g. a huge single-tick overflow against a small/fresh lake) survives as ordinary
-   spendable Bits instead of being destroyed. Deliberately independent of the pool's own fill-based
-   Speed/Bandwidth multiplier (`getPoolEffectMultiplier`) as a FORMULA — neither reads the other's
-   value — and `ByteFoundryPage` no longer displays this overflow rate (the bar that did was removed); the old lake mode used to apply whenever `isDataLakePoolDrainAvailable` (the lake
-   drains the buffer via `tickDataLakePoolDrain`, holding it below full; the pool tile's tap is then
-   disabled), or once that pool's own Memory buffer is completely
-   full AND `isDataLakePoolReady` AND `isStoragePoolFullyBuilt` (that pool's own three ladder sizes
-   ALL fully built) — not the buffer alone, since `tickPoolBufferFill`'s overflow branch itself
-   won't credit a lake until both those conditions hold (see "manual vs. automatic fill" below), and
-   switching modes purely on buffer fullness would show a nonzero "incoming" reading for a pool
-   whose lake can never actually receive it (an adversarial-review finding on the PR that introduced
-   `isDataLakePoolReady` — see `docs/DESIGN_HISTORY.md`) — rather than compounding the two into one.
-   The lake's own accumulated fill LEVEL (as opposed to this overflow indicator) has its own
-   separate always-visible bar below the Memory buffer tile
-   (`getDataLakeCurrentDiskFillFraction`), likewise reading 0 until `isDataLakePoolReady` rather
-   than any residual fill a legacy save's lake might already hold.
-
-   **Disk breakdown / fill order** (`decomposeDataLakeUnits`, `getDataLakeDiskCounts`/
-   `getDataLakeDiskSlotCounts`/`getDataLakeCurrentFillSubSize`) — a lake's own banked total
-   (`depositedUnits`, a whole-unit integer) decomposes into `DATA_LAKE_SUB_SIZES` (`[1, 10, 100]`)
-   disk counts the same SMALLEST-denomination-FIRST way pool Capacity/Data Lake capacity ladders
-   already decompose (see below), each capped per `DATA_LAKE_SUB_SIZE_DISK_CAPS` (`[9, 9, 9]` —
-   mirroring `DISK_ARRAY_LADDER_CAP`'s own 9, not a flat `[10, 10, 10]`: `9×1 + 9×10 + 9×100 = 999`,
-   one unit SHORT of the maxed level's own 1,000 capacity). `getDataLakeDiskSlotCounts` (how many
-   slots of each sub-size EXIST at the current capacity level) is derived directly, not by
-   decomposing the level's own raw capacity value: every sub-size SMALLER than the current level is
-   fully maxed (`DATA_LAKE_SUB_SIZE_DISK_CAPS[index]`), the current level's own sub-size (and
-   anything larger) has none yet — level 0 has no disk slots at all, level 1 has only ×1 (9), level
-   2 has ×1 and ×10 (9 each), level 3 (max) has all three (9 each). Decomposing the raw capacity
-   value through the general mixed-radix algorithm instead would, at an exact power-of-10 boundary,
-   prefer redistributing the WHOLE boundary onto a single higher-denomination disk (e.g. capacity 10
-   → "1 ×10 disk, 0 ×1 disks") rather than "9 ×1 disks maxed, 1 more from the buffer" — the opposite
-   of "always fills the smallest disks first." Every level's own capacity therefore sits exactly 1
-   unit above what its own disk slots sum to (0→1, 9→10, 99→100, 999→1,000) — that last unit fills
-   through the SAME `fillBits` mechanism as any disk (`getDataLakeNextFillSubSize`'s fallback: once
-   every real disk slot is full but `depositedUnits < capacity`, the open "slot" is a virtual ×1 unit
-   with no disk square of its own), mirroring how a Storage array's own always-full cache supplies
-   its array's own last unit rather than a 10th disk (`getDataLakeSlotRepresentableUnits(slotCounts)`
-   — the current LEVEL's own slots summed, e.g. 9 at level 1, 999 at level 3 — caps what
-   `getDataLakeDiskCounts`/`getDataLakeOpenSubSize`/`decomposeDataLakeUnits` are ever asked to
-   decompose for that level, so a lake at its own current-level capacity renders as fully-maxed real
-   disks, the level's own last unit living only in the buffer). This clamp must be LEVEL-aware, not
-   a flat global one: decomposing a `depositedUnits` total exactly at (or above) a NON-max level's
-   own capacity — reachable via ordinary fill, since the level's own final unit is buffer-sourced —
-   through the general algorithm without the clamp would redistribute it onto a sub-size that
-   level hasn't unlocked yet (e.g. capacity 10 at level 1 decomposing to "1 ×10 disk, 0 ×1 disks",
-   when level 1 has zero ×10 slots), reading as still having an OPEN ×1 slot instead of correctly
-   maxed — letting `depositedUnits` grow unboundedly past a non-max level's own capacity; caught in
-   adversarial review before merge, see `docs/DESIGN_HISTORY.md`. `decomposeDataLakeUnits` itself is
-   a mixed-radix decomposition, not a purely greedy one — smallest-first for every total the lake's
-   own natural growth reaches, but once a smaller denomination's own cap is genuinely binding it
-   picks the largest count in that denomination's residue class (mod the ×10 ratio to the next
-   size) that still leaves an exact multiple behind, guaranteeing zero leftover for ANY total up to
-   what the current level's own slots represent — `buyBooster`
-   spends an arbitrary (non-whole-disk) cost, so `depositedUnits` isn't limited to naturally-reached
-   values; a naive purely-greedy version stranded real, spendable units with no square to show for
-   them once a spend landed off that natural lattice (see `docs/DESIGN_HISTORY.md`). Every ×1 slot
-   fills before any ×10 slot, every ×10 before any ×100 — `getDataLakeCurrentFillSubSize`
-   (`getDataLakeNextFillSubSize` internally) is the smallest sub-size not yet at its own
-   current-level slot cap, the level's own final virtual unit once every real slot is full, or
-   `null` once the level's own capacity is genuinely reached. `fillDataLakeDisks` accumulates
-   `overflowBits` into `lake.fillBits` (raw bits, progress toward completing the CURRENT open
-   slot's own full size — `unitBits × subSize`) and, whenever that threshold is crossed, completes
-   the disk (`depositedUnits += subSize`, `fillBits -=` that slot's size, carrying any overshoot
-   forward), advancing to the next open sub-size — a bounded loop (at most
-   `DATA_LAKE_SUB_SIZES.length` transitions per call). `DataLakePanel` renders one row of disk
-   squares per sub-size present at the current level (the same "one unbroken row per size" shape
-   `DiskArrayRow` uses for Storage, just without cache/redeem interactivity), the one currently-open
-   slot showing a live left-to-right fill. A dedicated `LakePoolTile` (own `FillableStatCard`-style
-   element, purely additive UI — same `fillBits`/`getDataLakeCurrentFillSubSize` data the per-square
-   overlay already reads, no new engine mechanic) sits right below the header row, ALWAYS visible
-   whenever an open slot exists (`currentFillSubSize !== null`) regardless of unlock state, showing
-   "`<fillBits>` / `<open slot size>`" once `isDataLakePoolReady` (below) or a static
-   "Locked · 0 / `<size>`" before that. Deliberately keyed off `isDataLakePoolReady` here, NOT
-   `isDataLakeBoosterUnlocked` — the two diverge for an old save whose legacy `boostersUnlocked` flag
-   is already true but whose matching Storage pool has never built a real disk: Boosters correctly
-   stay purchasable there (per `isDataLakeBoosterUnlocked`'s own OR fallback below), but the tile
-   would never actually progress (`tickPoolBufferFill`'s overflow branch is gated on
-   `isDataLakePoolReady` alone), so showing real fill data there would misrepresent a permanently
-   stalled tile as actively filling — a bug Devin Review caught on the PR that introduced this tile;
-   see `docs/DESIGN_HISTORY.md`.
-
-   A lake is gated on its own matching Storage pool having built at least one real disk
-   (`isDataLakePoolReady` — `disksBuiltTotal[that pool's own ×1 size] > 0`), not on the lake's own
-   fill progress — `tickPoolBufferFill`'s overflow branch itself won't feed a lake until this is
-   true, so a pool with a completely full Memory buffer but zero built disks banks nothing into its
-   lake (the reserved production stays as ordinary Bits that tick instead).
+   **Pool feed.** `tickPoolBufferFill`'s overflow branch and `tickDataLakePoolDrain` hand pool bits to
+   `applyDataLakeOverflow`, which fills the lake's 1-unit buffer (`fillDataLakeBuffer`; at most one unit per call,
+   unconsumed bits return to the caller's balance) at the pool Bandwidth × `getDataLakeSpeedMultiplier` (10% +
+   10% per Flush); `getDataLakeOverflowRatePercent` reports that percentage. The disk breakdown is
+   `decomposeDataLakeUnits`/`getDataLakeDiskCounts` (see the block above) — the earlier slot-by-slot fill,
+   mixed-radix residue rules and "virtual last unit" were removed (`docs/DESIGN_HISTORY.md`).
 
    **Manual vs. automatic fill.** A lake fills MANUALLY, capped at just enough for its own next
    Booster, until its matching Storage pool is entirely COMPLETE (`isStoragePoolFullyBuilt(state,

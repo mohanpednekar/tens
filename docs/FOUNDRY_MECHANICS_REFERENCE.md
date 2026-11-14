@@ -202,8 +202,9 @@ disks. A full buffer moves into a ×1 disk, and 9 disks of every smaller size + 
 size (10 KB = 9×1 + buffer; 100 KB = 9×10 + 9×1 + buffer; 1000 KB = 9×100 + 9×10 + 9×1 + buffer, once a Flush has
 opened a ×1000 slot) as timed transfers at the Storage rates — never an arithmetic rebalance. Booster spending uses only
 banked disks plus a full buffer (in-flight data is untouched); the collapsed lake shows min(100, banked ÷ next cost)%.
-Ordinary disks (above a pool's smallest) fill directly from the pool buffer with no write-cache flush stage; only an
-expedited disk keeps the timed flush.
+Disks above a pool's smallest fill directly from the pool buffer with no write-cache flush stage (expedited disks also
+take smaller disks in parallel and land as soon as funded). Boosters are paid with whole disks only, summing to the
+exact cost; the lake keeps filling until exact change exists.
 
 **Data Lakes** (`intro.dataLakes`, `DATA_LAKE_*` in `layers.js`, `fillDataLakeDisks`/`buyBooster`/
 `tickDataLakeAutoConvert` in `engine.js`) — ten permanent lakes (KB…QB), decoupled from Disk builds, gated
