@@ -161,7 +161,7 @@ forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a sepa
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer
 fullness; taps never speed a fill — a Data Stream ping speeds Upgrade Capacity/Bitrate, a pool ping speeds that pool's consumers (disks, merges, provisioning, lake). Disks (`StoragePage`) fill from their pool buffer (larger sizes via a write cache; clicking an empty disk
 also feeds it from smaller disks at the same time) and pull into Factory automatically, with no manual
-redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too (a lake disk only starts while its pool's Staging is full, then is never interrupted) — but Cells,
+redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too (a Booster acquisition's first lake fill needs a full pool Staging, then it only needs the pool's disks full, no provisioning and Staging above the read-cache reservation) — but Cells,
 which spend banked Data Lake units for Cells/Batteries/Boost (`ComputePage`, nav **Power**), only
 buy via a single per-lake "🏷️ `<cost>`" control: it buys immediately if affordable, or arms a one-shot
 `autoConvertActive` flag that fills-then-buys exactly 1 over subsequent ticks and stops (never a
@@ -395,6 +395,8 @@ publicly visible but isn't legally reusable without written permission. No `CODE
 - `.github/workflows/**` changes require the repo owner's review, enforced by `pr-auto-merge.yml`'s
   script-level exclusion and (once branch protection enables "Require review from Code Owners")
   `.github/CODEOWNERS`.
+
+Data Lakes (#1087): permanent 1-unit buffer (`fillBits`) + ×1/×10/×100/×1000 disks (`depositedUnits`); timed `lakeTransfer`s (`tickDataLakeTransfers`) move the buffer into ×1 disks and consolidate 9 smaller disks of every size + a full buffer into the next; ordinary pool disks fill directly (no write-cache flush). See `docs/ECONOMY_REFERENCE.md` "Hierarchical lake disks".
 
 Challenge mode (epic #1037): state `challenges`, registry `CHALLENGE_DEFINITIONS` and rollout Set `LIVE_CHALLENGE_IDS` (F1–F25 live; UI: Firmware Challenges tab + Factory `ChallengeBanner`) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits` in `engine.js`; the three speed-upgrade buyers refuse until a live challenge is completed. See `docs/ECONOMY_REFERENCE.md` "Challenge mode".
 

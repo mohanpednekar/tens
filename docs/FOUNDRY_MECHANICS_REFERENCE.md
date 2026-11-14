@@ -183,7 +183,7 @@ it keeps filling while a build runs; every larger size fills via its own **write
 the pool buffer by default (after the read cache, smallest size first) — lower disks are consumed only when
 the player clicks an empty disk to expedite it (`expediteDiskFill`: it draws the pool buffer ahead of the other write caches (the read cache keeps
 first claim), takes every smaller full disk of the same pool it still needs in parallel alongside the buffer — so not every
-smaller disk is needed — and flushes at 5× instead of 2×). Byte Foundry funds Byte Factory **pull-based**, with no proactive knowledge
+smaller disk is needed — and lands as soon as funded). Byte Foundry funds Byte Factory **pull-based**, with no proactive knowledge
 of tier state: every tick `tickDiskPull` pulls one FULL, clean-slate (zero purchase-level progress) disk
 into its fixed (tier, level) correspondence (`getDataLakeTierIndex` grouping) whenever that tier sits at
 exactly the disk's required level, completing the tier's whole current purchase block in one shot;
@@ -195,7 +195,18 @@ cache-release-to-Bits control are gone (see `docs/DESIGN_HISTORY.md`). Disks, ca
 all PERMANENT across every real Prestige. Full cost/timing formulas and pull-eligibility rule:
 `docs/ECONOMY_REFERENCE.md`.
 
-**Data Lakes** (`intro.dataLakes`, `DATA_LAKE_*` in `layers.js`, `fillDataLakeDisks`/`buyBooster`/
+**Data Lakes — current model (#1087; full spec in `docs/ECONOMY_REFERENCE.md`'s "Hierarchical lake disks"; where the
+paragraph below describes slot-by-slot lake-disk fill or a "virtual last unit", the hierarchical model wins).** Every
+lake has one permanent 1-unit buffer (its pool's smallest disk size; pool input feeds it first) and ×1/×10/×100/×1000
+disks. A full buffer moves into a ×1 disk, and 9 disks of every smaller size + a full buffer consolidate into the next
+size (10 KB = 9×1 + buffer; 100 KB = 9×10 + 9×1 + buffer; 1000 KB = 9×100 + 9×10 + 9×1 + buffer, once a Flush has
+opened a ×1000 slot) as timed transfers at the Storage rates — never an arithmetic rebalance. Booster spending uses only
+banked disks plus a full buffer (in-flight data is untouched); the collapsed lake shows min(100, banked ÷ next cost)%.
+Disks above a pool's smallest fill directly from the pool buffer with no write-cache flush stage (expedited disks also
+take smaller disks in parallel and land as soon as funded). Boosters are paid with whole disks only, summing to the
+exact cost; the lake keeps filling until exact change exists.
+
+**Data Lakes** (`intro.dataLakes`, `DATA_LAKE_*` in `layers.js`, `fillDataLakeBuffer`/`buyBooster`/
 `tickDataLakeAutoConvert` in `engine.js`) — ten permanent lakes (KB…QB), decoupled from Disk builds, gated
 on the pool having built at least one real disk (`isDataLakePoolReady`; before that `DataLakePanel`'s fill
 tile reads a static "Locked"). Its **Booster-conversion control fills MANUALLY, capped at just enough for
@@ -204,9 +215,9 @@ ladder sizes fully built); only then does full-buffer OVERFLOW also fill it AUTO
 pool's buffer (`tickPoolBufferFill`'s overflow branch, same gate). Separately, the lake draws directly
 from its pool's buffer at the pool's Bandwidth × its tap bonus (`tickDataLakePoolDrain`, right after
 `tickPoolBufferFill`) under a fixed pool-buffer priority: disk filling > provisioning in progress > lake
-filling. **A lake disk only STARTS while its pool buffer is completely full
-(`isStoragePoolBufferFull`/`isDataLakeDiskFillStartAllowed`) — checked once, at the start; a disk under way
-(`isDataLakeDiskFillInProgress`, `fillBits > 0`) is never interrupted**: it keeps draining whatever the buffer
+filling. **Only the first start of a Booster acquisition needs a completely full pool buffer
+(`isDataLakeDiskFillStartAllowed`, `acquiring`); later starts still need every built disk full, no provisioning and
+buffer above the read-cache reservation; a buffer fill under way is never interrupted**: it keeps draining whatever the buffer
 holds (read-cache reservation included) through empty disks, builds and a non-full buffer, and the drain
 stops at each disk's completion. The drain additionally starts a disk only while every BUILT disk is full,
 no build is in progress in that pool, the lake has
@@ -221,7 +232,7 @@ buys immediately (already affordable) or arms `intro.dataLakes[tier].autoConvert
 exactly 1, and clears the flag — "one click, one full fill-then-buy conversion, then stop," never a
 persistent auto-buy loop (see `docs/DESIGN_HISTORY.md` for the reversal this replaces). While converting
 the control is an inert label; starting is refused (`isDataLakeAutoConvertStartAvailable`) once the
-matching compute-ladder entity is at its cap. Overflow fills the lake's ×1/×10/×100 disks smallest-first,
+matching compute-ladder entity is at its cap. (Superseded by the hierarchical model above:) overflow fills the lake's ×1/×10/×100 disks smallest-first,
 one at a time, at the plain available rate — no artificial slowdown (an earlier tapered version was
 removed, see `docs/DESIGN_HISTORY.md`). Each sub-size is capped at `DATA_LAKE_SUB_SIZE_DISK_CAPS` (9/9/9,
 not 10/10/10 — mirroring `DISK_ARRAY_LADDER_CAP`'s 9), one unit short of each level's capacity

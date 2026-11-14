@@ -627,7 +627,7 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // own DISK_ARRAY_LADDER_CAP (9, not 10) above: the lake's own fill buffer supplies that last unit
 // directly once every representable disk slot is full, the same way a Storage array's cache
 // supplies its own 10th unit, rather than needing a 10th disk square of its own — see
-// DATA_LAKE_MAX_REPRESENTABLE_UNITS/getDataLakeCurrentFillSubSize in engine.js and
+// getDataLakeRepresentableUnits in engine.js and
 // docs/DESIGN_HISTORY.md. A lake's disks always fill smallest denomination first — every ×1 slot
 // before any ×10 slot, every ×10 slot before any ×100 slot — so "how many of each size are
 // currently full" is a pure function of the lake's own deposited total (see getDataLakeDiskCounts
@@ -635,6 +635,9 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 export const DATA_LAKE_TIER_COUNT = 10
 export const DATA_LAKE_SUB_SIZES = [1, 10, 100]
 export const DATA_LAKE_SUB_SIZE_DISK_CAPS = [9, 9, 9]
+// #1087: the ×1000 disk rung (one slot per permanent pool Flush) above ×1/×10/×100; consolidation order.
+export const DATA_LAKE_THOUSAND_SIZE = 1000
+export const DATA_LAKE_CONSOLIDATION_SIZES = [1, 10, 100, DATA_LAKE_THOUSAND_SIZE]
 export const DATA_LAKE_TIER_LABELS = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB']
 export const DATA_LAKE_MAX_DISK_LADDER_STEP = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
 export const DATA_LAKE_CAPACITY_MAX_LEVEL = 3

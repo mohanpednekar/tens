@@ -4,7 +4,6 @@ import LeadIcon from 'components/LeadIcon'
 import StatCard from 'components/StatCard'
 import {
   formatDiskSize,
-  formatDiskSizeBare,
   formatDiskSizeInPoolUnit,
   formatPoolBalance,
   formatSpeedText,
@@ -13,9 +12,13 @@ import {
   getDataLakeCapacity,
   getDataLakeCapacityDoublingCost,
   getDataLakeCapacityLevel,
-  getDataLakeCurrentDiskFillFraction,
-  getDataLakeCurrentFillSubSize,
-  getDataLakeDepositedUnits,
+  getDataLakeBalanceUnits,
+  getDataLakeBoosterProgressPercent,
+  getDataLakeBufferFillFraction,
+  getDataLakeTransfer,
+  getDataLakeTransferFraction,
+  isDataLakeBoosterCostReachable,
+  isDataLakeBufferAccepting,
   getDataLakeDiskCounts,
   getDataLakeDiskSlotCounts,
   getDataLakeFillBits,
@@ -38,7 +41,7 @@ import {
   isStoragePoolFullyBuilt,
   isStoragePoolFlushAvailable,
 } from 'game/engine'
-import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
+import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
 import styled from 'styled-components'
 
 // Stacks multiple lake blocks (list mode — see getVisibleLakeTierIndexes below) with breathing
@@ -218,7 +221,7 @@ const LakeSquare = styled.div`
   background: ${props => (props.$full ? props.theme.color.surfaceRaised : 'transparent')};
 `
 
-// The one slot currently filling (see getDataLakeCurrentFillSubSize/getDataLakeFillBits in
+// The one slot currently filling (a transfer under way, getDataLakeTransferFraction in
 // engine.js) shows its own live progress as a left-to-right fill, same visual language
 // DiskArrayRow's own cache-flush fills use.
 const LakeSquareFill = styled.div`
@@ -245,7 +248,7 @@ const LakeSquareLabel = styled.span`
 // sliver on one small square. Purely additive: shows the exact SAME data
 // (getDataLakeCurrentDiskFillFraction/getDataLakeFillBits) the square overlay already reads, no
 // change to how filling actually works. Represents progress toward the smallest currently-unfilled
-// disk in the lake — the instant it reaches full, that disk completes (see fillDataLakeDisks).
+// disk in the lake — the instant it reaches full, that disk completes (see fillDataLakeBuffer).
 const LakePoolTile = styled.div`
   position: relative;
   width: 100%;
@@ -324,7 +327,6 @@ const getVisibleLakeTierIndexes = state => {
   return tiers
 }
 
-const clampFraction = value => Math.min(1, Math.max(0, value))
 
 // `bare` skips the own StatCard wrapper (background/border/shadow/padding) — used when a caller
 // (e.g. ByteFoundryPage's own pool cards, via `tierIndex` below) already provides that chrome and
@@ -372,8 +374,10 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
 
         const slotCounts = getDataLakeDiskSlotCounts(state, tierIndex)
         const diskCounts = getDataLakeDiskCounts(state, tierIndex)
-        const currentFillSubSize = getDataLakeCurrentFillSubSize(state, tierIndex)
         const fillBits = getDataLakeFillBits(state, tierIndex)
+        const transfer = getDataLakeTransfer(state, tierIndex)
+        const boosterPercent = getDataLakeBoosterProgressPercent(state, tierIndex)
+        const costReachable = isDataLakeBoosterCostReachable(state, tierIndex)
 
         // No longer mutually exclusive by construction (see isDataLakeCapacityDoublingAvailable in
         // engine.js, tied to real Storage array completion now, not the lake's own escalating
@@ -408,14 +412,15 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
         const resetAvailable = isStoragePoolFlushAvailable(state, tierIndex)
         // Everything banked in this lake (full disks + the open slot's progress), self-sized below the
         // lake's own unit like a pool's buffer balance.
-        const filledBits = getDataLakeDepositedUnits(tierIndex)(state) * unitBits + getDataLakeFillBits(state, tierIndex)
+        const filledBits = getDataLakeBalanceUnits(state, tierIndex) * unitBits
         // The lake fills from its pool at the pool's Bandwidth, by draining the buffer directly or by
         // full-buffer overflow once the pool is entirely built (see tickDataLakePoolDrain /
         // tickPoolBufferFill); otherwise it is idle (or only filling via a manual conversion).
         // The direct drain is a pool consumer, so the pool tap bonus speeds it (getPoolTapMultiplier);
         // full-buffer overflow comes from the Data Stream and stays at base Bandwidth.
-        const draining = currentFillSubSize !== null && isDataLakePoolDrainAvailable(state, tierIndex)
-        const fillingAutomatically = draining || (currentFillSubSize !== null &&
+        const bufferAccepting = isDataLakeBufferAccepting(state, tierIndex)
+        const draining = bufferAccepting && isDataLakePoolDrainAvailable(state, tierIndex)
+        const fillingAutomatically = draining || (bufferAccepting &&
           poolComplete && getPoolBufferBits(state, tierIndex) >= getPoolBufferCapacity(state, tierIndex))
         const fillSpeed = !fillingAutomatically ? 0
           : getStoragePoolBandwidth(state, tierIndex) * (draining ? getPoolTapMultiplier(state, tierIndex) : 1) *
@@ -429,21 +434,11 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
           ? formatLakeTimeLeft((nextCostBits - filledBits) / fillSpeed)
           : null
 
-        // Same fraction as the expanded LakePoolTile (open-slot fill, or 1 once this level has
-        // nothing left to fill). A 0 here when currentFillSubSize is null would paint an empty bar
-        // on a completed lake. Locked lakes stay at 0 so leftover fillBits never look live.
-        const headerFillFraction = poolReady ? getDataLakeCurrentDiskFillFraction(state, tierIndex) : 0
+        // Collapsed header (#1087): the next Booster's affordability — min(100, everything banked ÷ its
+        // cost) — as a percentage and bar, instead of the raw balance. Locked lakes stay at 0.
+        const headerFillFraction = poolReady ? boosterPercent / 100 : 0
         const costLabel = <><LeadIcon>{COST_ICON}</LeadIcon>{nextCostSize}</>
-        // Collapsed header: the bar's own "X/N KB" (progress on the lake disk under way, X in N's
-        // unit) instead of the lake balance; a lake with nothing left to fill reads full capacity.
-        const barTotalBits = currentFillSubSize !== null ? unitBits * currentFillSubSize : capacity * unitBits
-        const barTotalLabel = currentFillSubSize !== null ? formatDiskSize(barTotalBits) : capacitySize
-        const barUnitIndex = barTotalLabel.lastIndexOf(' ')
-        const barTotalNumber = Number(barTotalLabel.slice(0, barUnitIndex).replace(/,/g, ''))
-        const barFilledNumber = Math.floor(headerFillFraction * barTotalNumber * 100) / 100
-        const barText = barUnitIndex > 0 && Number.isFinite(barTotalNumber)
-          ? `${barFilledNumber.toLocaleString(undefined, { maximumFractionDigits: 2 })}/${barTotalLabel}`
-          : `${formatDiskSize(headerFillFraction * barTotalBits)}/${barTotalLabel}`
+        const barText = `${poolReady ? boosterPercent : 0}%`
         return (
           <LakeBlock aria-label={showHeader ? `${label} lake` : undefined} key={tierIndex}>
             {showHeader && (
@@ -524,13 +519,13 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
 
                 </LakeSubRow>
                 {headerOnly
-                  ? <LakeFilledText $withBar title="Lake disk fill progress">{barText}</LakeFilledText>
+                  ? <LakeFilledText $withBar title={costReachable ? `Banked toward the next ${boosterLabel} (${nextCostSize})` : `The next ${boosterLabel} costs more than this lake can hold (${nextCostSize}) — Scale Out or Flush Pool`}>{barText}</LakeFilledText>
                   : <LakeFilledText title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>}
                 {headerOnly && (
                   <ThinProgressBar
                     role="progressbar"
                     aria-label={`${label} lake fill progress`}
-                    aria-valuenow={Math.round(headerFillFraction * 100)}
+                    aria-valuenow={poolReady ? boosterPercent : 0}
                     aria-valuemin={0}
                     aria-valuemax={100}
                     $fill={headerFillFraction}
@@ -539,73 +534,63 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               </LakeHeader>
             )}
 
-            {showBody && currentFillSubSize !== null && (() => {
-              // Always visible, even before this lake is unlocked (isDataLakePoolReady) — showing a
-              // static "0 / size" the whole time it's waiting, rather than the tile only appearing
-              // out of nowhere once real progress starts. Silently absent feedback before that point
-              // read as "no idea what it did in between" once the tile DID eventually show up already
-              // mid-fill.
-              //
-              // Deliberately keyed off `poolReady` (isDataLakePoolReady), NOT
-              // isDataLakeBoosterUnlocked — the two diverge for an old save whose legacy
-              // `boostersUnlocked` flag is already true but whose matching Storage pool has never
-              // built a real disk: isDataLakeBoosterUnlocked reads true there (Boosters correctly
-              // stay purchasable, for save compatibility), but tickPoolBufferFill's overflow branch
-              // is gated on `isDataLakePoolReady` alone, so this tile would NEVER actually fill —
-              // showing real (frozen) fillBits/size progress under the unlocked latch would
-              // misrepresent a permanently stalled tile as actively filling (found by Devin Review
-              // on this same PR; isDataLakeAutoConvertStartAvailable now gates on poolReady too,
-              // for the same reason — see docs/DESIGN_HISTORY.md).
-              const openSlotSizeBits = unitBits * currentFillSubSize
-              const openSlotFraction = poolReady && openSlotSizeBits > 0 ? clampFraction(fillBits / openSlotSizeBits) : 0
-              const openSlotSizeLabel = formatDiskSize(openSlotSizeBits)
-              // Once every real disk slot for this level is already full, `currentFillSubSize`
-              // still reads 1 — the "virtual final unit" fallback (getDataLakeNextFillSubSize in
-              // engine.js) that lets the lake's own retained buffer supply the level's last unit,
-              // the same way a Storage array's cache substitutes for its own 10th disk. That fill
-              // creates no new disk square, so it's labeled distinctly from a real disk fill rather
-              // than claiming "fills the next disk" when there is no such disk left to fill.
-              const hasOpenDiskSlot = DATA_LAKE_SUB_SIZES.some(subSize => (diskCounts[subSize] ?? 0) < (slotCounts[subSize] ?? 0))
-              const isBufferOnlyFill = currentFillSubSize !== null && !hasOpenDiskSlot
+            {showBody && (() => {
+              // The permanent 1-unit buffer (#1087). Always visible, even before the lake is unlocked
+              // (poolReady): a static "Locked" tile rather than one that appears out of nowhere.
+              const bufferFraction = poolReady ? getDataLakeBufferFillFraction(state, tierIndex) : 0
+              const unitLabel = formatDiskSize(unitBits)
               return (
                 <LakePoolTile
                   role="progressbar"
-                  aria-label={`${label} lake pool — ${isBufferOnlyFill ? 'tops up its own retained buffer toward capacity' : `fills the next ${openSlotSizeLabel} disk`}`}
-                  aria-valuenow={Math.round(openSlotFraction * 100)}
+                  aria-label={`${label} lake pool — fills its ${unitLabel} buffer`}
+                  aria-valuenow={Math.round(bufferFraction * 100)}
                   aria-valuemin={0}
                   aria-valuemax={100}
                   title={
                     poolReady
-                      ? isBufferOnlyFill
-                        ? `${label} Lake pool — tops up its own retained buffer toward capacity (every disk slot is already full; no new disk square is created)`
-                        : `${label} Lake pool — fills toward the next ${openSlotSizeLabel} disk; completing it deposits instantly`
-                      : `${label} Lake pool — waiting on a ${formatDiskSize(unitBits)} disk to be built in Storage before this can start filling`
+                      ? `${label} Lake buffer — pool input fills this permanent ${unitLabel} buffer first; each full buffer is then moved into a ${unitLabel} disk (or consolidated with 9 disks of every smaller size into a larger one)`
+                      : `${label} Lake pool — waiting on a ${unitLabel} disk to be built in Storage before this can start filling`
                   }
                 >
-                  <LakePoolFill $fill={openSlotFraction} />
+                  <LakePoolFill $fill={bufferFraction} />
                   <LakePoolLabel>
                     {poolReady
-                      ? `${formatDiskSize(fillBits)}${isBufferOnlyFill ? ' buffer' : ''} / ${openSlotSizeLabel}`
-                      : `Locked · 0 / ${openSlotSizeLabel}`}
+                      ? `${formatDiskSize(fillBits)} / ${unitLabel} buffer`
+                      : `Locked · 0 / ${unitLabel}`}
                   </LakePoolLabel>
                 </LakePoolTile>
               )
             })()}
 
-            {showBody && DATA_LAKE_SUB_SIZES.filter(subSize => (slotCounts[subSize] ?? 0) > 0).map(subSize => {
+            {showBody && transfer && (() => {
+              const transferFraction = getDataLakeTransferFraction(state, tierIndex)
+              const targetLabel = formatDiskSizeInPoolUnit(unitBits * transfer.target, tierIndex)
+              return (
+                <LakePoolTile
+                  role="progressbar"
+                  aria-label={`${label} lake transfer — building a ${targetLabel} disk`}
+                  aria-valuenow={Math.round(transferFraction * 100)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  title={`Moving the full buffer${transfer.target > 1 ? ' and every smaller disk' : ''} into one ${targetLabel} disk`}
+                >
+                  <LakePoolFill $fill={transferFraction} />
+                  <LakePoolLabel>{`→ ${targetLabel} disk · ${Math.round(transferFraction * 100)}%`}</LakePoolLabel>
+                </LakePoolTile>
+              )
+            })()}
+
+            {showBody && DATA_LAKE_CONSOLIDATION_SIZES.filter(subSize => (slotCounts[subSize] ?? 0) > 0).map(subSize => {
               const full = diskCounts[subSize] ?? 0
               const totalSlots = slotCounts[subSize]
-              // Gated on poolReady for the same reason LakePoolTile above is (see its own
-              // comment): a legacy save's residual fillBits banked before this pool's
-              // isDataLakePoolReady gate existed would otherwise render this square as actively
-              // "filling" — a live-looking overlay and aria-label on a slot the engine can no
-              // longer advance (found by the adversarial reviewer as a follow-up to Devin's
-              // original LakePoolTile finding on the same PR).
-              const isFillingThisSize = poolReady && currentFillSubSize === subSize
+              // A disk square fills only while a transfer is building exactly this size (and only the
+              // next open square of that size shows the progress).
+              const isFillingThisSize = poolReady && transfer?.target === subSize
               const slotSizeBits = unitBits * subSize
-              const fillFraction = isFillingThisSize && slotSizeBits > 0 ? clampFraction(fillBits / slotSizeBits) : 0
-              const sizeLabel = formatDiskSize(slotSizeBits)
-              const bareSizeLabel = formatDiskSizeBare(slotSizeBits)
+              const fillFraction = isFillingThisSize ? getDataLakeTransferFraction(state, tierIndex) : 0
+              // Fixed pool unit ("1000 KB", never an auto-converted "1 MB"), like the lake's capacity.
+              const sizeLabel = formatDiskSizeInPoolUnit(slotSizeBits, tierIndex)
+              const bareSizeLabel = String(subSize)
               return (
                 <LakeSizeRow key={subSize} role="group" aria-label={`${label} lake ${sizeLabel} disks`}>
                   {Array.from({ length: totalSlots }, (_, index) => {
@@ -635,7 +620,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               <VisuallyHidden
                 role="progressbar"
                 aria-label={`${label} lake deposits`}
-                aria-valuenow={Math.round((capacity > 0 ? getDataLakeDepositedUnits(tierIndex)(state) / capacity : 0) * 100)}
+                aria-valuenow={Math.round((capacity > 0 ? Math.min(1, getDataLakeBalanceUnits(state, tierIndex) / capacity) : 0) * 100)}
                 aria-valuemin={0}
                 aria-valuemax={100}
               />
