@@ -57,6 +57,10 @@ const createEmptyDataLakeTier = () => ({
   // tickDataLakeTransfers) or null. Its sources are already removed from depositedUnits/fillBits;
   // the transfer carries exactly `target` units of data until the destination disk lands.
   lakeTransfer: null,
+  // True from the moment filling toward the NEXT Booster has started (the one full-pool start gate has
+  // been passed) until that Booster is bought: while set, filling never waits for a full pool buffer,
+  // only for the pool to have any balance — so acquiring a Booster takes a predictable time.
+  acquiring: false,
   purchased: 0,
   // Whether this lake has ever completed its first (smallest, ×1) disk — a permanent latch (see
   // isDataLakeBoosterUnlocked): unlike depositedUnits, which can drop back down once a Booster is
@@ -5687,8 +5691,12 @@ export const isStoragePoolBufferFull = (state, poolIndex) => {
 
 // A lake buffer fill may only START while its pool is full — checked once, at the start: a fill
 // already under way is never interrupted and keeps filling whatever the pool's state (#1047).
+export const isDataLakeAcquiring = (state, tierIndex) => Boolean(getDataLakeTier(state, tierIndex)?.acquiring)
+
+// Only the START of filling toward a Booster waits for a full pool; once started (until the Booster is
+// bought) it never waits for pool fullness again, only for pool balance.
 export const isDataLakeDiskFillStartAllowed = (state, tierIndex) =>
-  isDataLakeDiskFillInProgress(state, tierIndex) || isStoragePoolBufferFull(state, tierIndex)
+  isDataLakeAcquiring(state, tierIndex) || isDataLakeDiskFillInProgress(state, tierIndex) || isStoragePoolBufferFull(state, tierIndex)
 
 // A plain binary "receiving / not receiving" reading for ByteFoundryPage's own `mode="lake"` bar —
 // DATA_LAKE_OVERFLOW_MAX_PERCENT while this lake has anything left to fill at its current capacity
@@ -5897,6 +5905,7 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
     ...lake,
     depositedUnits: deposited - fromDisks,
     fillBits: fromBuffer > 0 ? 0 : (lake.fillBits ?? 0),
+    acquiring: false,
     purchased: currentPurchased + buyQuantity,
   }
 
@@ -6060,6 +6069,7 @@ export const flushStoragePool = tierIndex => state => {
           depositedUnits: 0,
           fillBits: 0,
           lakeTransfer: null,
+          acquiring: false,
           autoConvertActive: false,
           resetCount,
           rebuilding: true,
@@ -6196,6 +6206,7 @@ const fillDataLakeBuffer = (state, dataLakes, tierIndex, bits) => {
     ...lake,
     fillBits,
     boostersUnlocked: (lake.boostersUnlocked ?? false) || fillBits >= unitBits,
+    acquiring: (lake.acquiring ?? false) || consumed > 0,
     unconsumedBits: Math.max(0, bits - consumed),
   }
 }
@@ -6304,7 +6315,7 @@ export const isStoragePoolProvisioningInProgress = (state, poolIndex) => {
 export const isDataLakePoolDrainAvailable = (state, poolIndex) => {
   if (!isDataLakePoolReady(state, poolIndex)) return false
   if (!isDataLakeBufferAccepting(state, poolIndex)) return false
-  if (isDataLakeDiskFillInProgress(state, poolIndex)) return getPoolBufferBits(state, poolIndex) > 0
+  if (isDataLakeAcquiring(state, poolIndex) || isDataLakeDiskFillInProgress(state, poolIndex)) return getPoolBufferBits(state, poolIndex) > 0
   return isStoragePoolBufferFull(state, poolIndex) &&
     areStoragePoolDisksFull(state, poolIndex) &&
     !isStoragePoolProvisioningInProgress(state, poolIndex) &&
@@ -6331,7 +6342,7 @@ export const tickDataLakePoolDrain = (elapsedSeconds, preFillState = null) => st
     const buffer = getPoolBufferBits(state, poolIndex)
     // A disk already under way may use the whole buffer (never interrupted); a fresh start leaves
     // the read cache's reservation alone.
-    const spendable = isDataLakeDiskFillInProgress(state, poolIndex)
+    const spendable = isDataLakeAcquiring(state, poolIndex) || isDataLakeDiskFillInProgress(state, poolIndex)
       ? buffer
       : Math.max(0, buffer - getPoolCacheReservationBits(state, poolIndex))
     if (spendable <= 0) continue
@@ -6414,6 +6425,7 @@ export const doubleDataLakeCapacity = tierIndex => state => {
           depositedUnits: 0,
           fillBits: 0,
           lakeTransfer: null,
+          acquiring: false,
           capacityLevel: getDataLakeCapacityLevel(state, tierIndex) + 1,
         },
       },

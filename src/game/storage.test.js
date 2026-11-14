@@ -593,6 +593,7 @@ describe('schema merge on load', () => {
       depositedUnits: 2 * 1 + 3 * 10, // 32 — deposits translated to the same abstract-unit total
       fillBits: 0,
       lakeTransfer: null,
+      acquiring: false,
       purchased: 4 + 2, // the 2 in-flight transfers count toward the next Booster's own cost too
       boostersUnlocked: true,
       autoConvertActive: false,
@@ -606,6 +607,7 @@ describe('schema merge on load', () => {
       depositedUnits: 0,
       fillBits: 0,
       lakeTransfer: null,
+      acquiring: false,
       purchased: 0,
       boostersUnlocked: false,
       autoConvertActive: false,
@@ -1138,7 +1140,7 @@ describe('Dev Mode', () => {
     // ...and every sibling at every depth survives untouched: tier 1's own depositedUnits (a
     // sibling of the edited `purchased` key), and tier 2 entirely (a sibling of tier 1 itself).
     expect(result.state.intro.dataLakes['1'].depositedUnits).toBe(53)
-    expect(result.state.intro.dataLakes['2']).toEqual({ depositedUnits: 91, fillBits: 0, lakeTransfer: null, purchased: 12, boostersUnlocked: true, autoConvertActive: true, capacityLevel: 2, resetCount: 0, rebuilding: false, bandwidthSteps: 0, boosterAuto: false })
+    expect(result.state.intro.dataLakes['2']).toEqual({ depositedUnits: 91, fillBits: 0, lakeTransfer: null, acquiring: false, purchased: 12, boostersUnlocked: true, autoConvertActive: true, capacityLevel: 2, resetCount: 0, rebuilding: false, bandwidthSteps: 0, boosterAuto: false })
   })
 
   it('applyDevGameStateJson stamps the current save schema version on write', () => {

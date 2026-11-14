@@ -10940,6 +10940,7 @@ describe('Data Lakes', () => {
       depositedUnits: 0,
       fillBits: 0,
       lakeTransfer: null,
+      acquiring: false,
       purchased: 0,
       boostersUnlocked: false,
       autoConvertActive: false,
@@ -11139,6 +11140,23 @@ describe('Data Lakes', () => {
     it('a lake whose pool has built no disk yet moves nothing (same-reference no-op)', () => {
       const state = lakeState({ depositedUnits: 9, fillBits: kb1 }, { disksBuiltTotal: {}, disks: {} })
       expect(tickDataLakeTransfers(10)(state)).toBe(state)
+    })
+
+    it('only the START of filling toward a Booster waits for a full pool; afterwards it never waits for pool fullness, only for pool balance, until the Booster is bought', () => {
+      const notFull = { poolBuffers: { 1: 400_000 }, diskCache: { [kb1]: kb1 } }
+      const fresh = lakeState({ capacityLevel: 3 }, notFull)
+      expect(isDataLakePoolDrainAvailable(fresh, 1)).toBe(false) // not started: needs a full pool
+      const started = lakeState({ capacityLevel: 3, acquiring: true }, notFull)
+      expect(isDataLakePoolDrainAvailable(started, 1)).toBe(true)
+      expect(getDataLakeFillBits(tickDataLakePoolDrain(1e6)(started), 1)).toBe(kb1)
+      // ...but with an empty pool there is simply nothing to take.
+      expect(isDataLakePoolDrainAvailable(lakeState({ acquiring: true }, { poolBuffers: { 1: 0 }, diskCache: { [kb1]: kb1 } }), 1)).toBe(false)
+      // A full-pool start marks the acquisition; buying the Booster clears it for the next one.
+      const full = lakeState({ capacityLevel: 3, boosterAuto: true }, { poolBuffers: { 1: 800_000 }, diskCache: { [kb1]: kb1 } })
+      const filling = tickDataLakePoolDrain(1)(full)
+      expect(filling.intro.dataLakes[1].acquiring).toBe(true)
+      const bought = buyBooster(1)({ ...filling, intro: { ...filling.intro, dataLakes: { ...filling.intro.dataLakes, 1: { ...filling.intro.dataLakes[1], depositedUnits: 1 } } } })
+      expect(bought.intro.dataLakes[1].acquiring).toBe(false)
     })
 
     it('the pool tap bonus speeds a transfer ×(1 + bonus%) like every other pool consumer', () => {

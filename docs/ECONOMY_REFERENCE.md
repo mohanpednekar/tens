@@ -770,8 +770,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    a "virtual last unit"), this block wins.** A lake is one PERMANENT **1-unit buffer** (`dataLakes[n].fillBits`,
    0..`getDataLakeUnitBits` — the pool's smallest disk size, e.g. 1 KB) plus whole completed disks of
    ×1/×10/×100/×1000. Pool input (`applyDataLakeOverflow`, via `tickDataLakePoolDrain` and the overflow
-   branch of `tickPoolBufferFill`, the #1047 start rule unchanged: a buffer fill only STARTS from a full pool
-   buffer and is never interrupted) feeds only the buffer, at most one unit per call. Moving data onward is
+   branch of `tickPoolBufferFill`, start rule: only the START of filling toward the next Booster needs a full pool buffer — `dataLakes[n].acquiring`
+   is then set and cleared by `buyBooster`; while set, filling never waits for pool fullness, only for pool balance,
+   so a Booster's acquisition time is predictable; an in-progress buffer fill is never interrupted) feeds only the buffer, at most one unit per call. Moving data onward is
    always a TIMED transfer (`dataLakes[n].lakeTransfer = { target, movedBits }`, `tickDataLakeTransfers`,
    run each tick right after the Booster buy step): with a full buffer and nothing in flight,
    `getDataLakeNextTransferTarget` picks the LARGEST size whose slot is free and whose lower ladder is exactly

@@ -9394,7 +9394,7 @@ never spendable. Making change by timed transfers was rejected (a Booster at cos
 split). (4) Consolidation uses the established Storage rates (2× buffer→disk, 5× disk→disk) rather than the lake's
 10% pool-feed speed, so the extra passes cost ~10% of lake throughput, not 4×. (5) The collapsed percentage
 counts in-flight data so it never dips while data moves; the 100% reading may precede the first spendable moment by
-one transfer (seconds). (6) Direct fill reinterprets, rather than deletes, `diskWriteCache`: the record remains
+one transfer (seconds). (5b) The #1047 full-pool gate now applies once per Booster acquisition (`acquiring` flag, cleared on purchase) instead of once per buffer unit, which stalled mid-acquisition while the pool refilled; maintainer request. (6) Direct fill reinterprets, rather than deletes, `diskWriteCache`: the record remains
 the in-progress fill of a disk (and the expedite machinery), but an ordinary fill has no flush stage
 (`flushTotalSeconds` 0), so ordinary above-minimum disks complete slightly sooner than before; legacy saves with a
 merge already flushing still finish that flush. A post-Flush lake below capacity level 3 has no reachable ×1000
