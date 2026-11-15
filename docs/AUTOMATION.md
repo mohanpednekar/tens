@@ -421,6 +421,11 @@ as its trigger, and the follow-up performs the actual merge-and-resolve;
 human-authored PRs just get an author notification. Runs on `GH_AUTOMATION_PAT` because comments
 from the default `GITHUB_TOKEN` can't trigger other workflows.
 
+A `MERGEABLE` `claude/auto-*`/`devin/auto-*` PR is also refreshed via `PUT /pulls/{n}/update-branch`
+(a merge commit pinned to `expected_head_sha`): a PR that is merely *behind* `main` can't auto-merge
+when the ruleset requires up-to-date branches, and nothing else refreshed it. The API's 422 "nothing
+behind" is the normal case and is ignored. Dependabot PRs are excluded (`@dependabot rebase` path).
+
 ### Devin autonomous maintenance (`devin-autonomous-maintenance.yml`)
 
 The Devin-CLI counterpart to `autonomous-maintenance.yml`. It ran every 4 hours at :17 UTC until
