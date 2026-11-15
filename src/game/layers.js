@@ -727,8 +727,11 @@ export const PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10
 
 // Passive production-speed bonus, uniformly across every tier (see engine.js's
 // getPrestigeProductionMultiplier): a one-time PP purchase on Firmware → Prestige (the player's first
-// lesson in spending Purge Points), then a piecewise-linear multiplier of the Purge count (+10% per Purge to ×2 at 10, ×3 at 100, ×4 at 1,000 …).
+// lesson in spending Purge Points), then ×(1 + log10(Purge count)) from the 2nd Purge (×2 at 10, ×3 at 100, ×4 at 1,000 …).
 export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 1
+// 1 + log10(1) would be ×1, so the very first Purge gets a hardcoded ×1.3 (= 1 + log10(2), rounded down so the
+// curve stays non-decreasing into the 2nd Purge's ×1.301).
+export const PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER = 1.3
 // One-time PP unlock for the playtime bonus: +1% production per hour of ACTIVE play (visible live
 // ticks only — simulated offline/background catch-up and hidden-tab ticks never count). See
 // engine.js's getPlaytimeProductionMultiplier/buyPlaytimeBonus.
