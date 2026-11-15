@@ -2131,12 +2131,30 @@ test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled withou
 test('purge points and the production speed bonus are shown once the first Purge is done', () => {
   seedMainGameState({
     resources: { base: 10 },
+    prestigeSpeedBonusUnlocked: true,
     purge: { xp: 0, points: 50, count: 100, highestMilestone: 1 },
   })
   render(<App />)
 
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('50 PP')
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('4x production speed')
+})
+
+test('Firmware → Prestige teaches PP with a tutorial: the first 1 PP buys the permanent speed bonus', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    resources: { base: 10 },
+    purge: { xp: 0, points: 1, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+  await openPerksTab(user, /open prestige/i)
+
+  expect(screen.getByLabelText(/^purge points tutorial$/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /unlock speed bonus for 1 purge points/i }))
+
+  expect(screen.queryByLabelText(/^purge points tutorial$/i)).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
+  expect(screen.getByLabelText(/^speed bonus upgrade$/i)).toHaveTextContent('×2 now')
 })
 
 test('the playtime bonus is unlocked for 100 PP on Firmware → Prestige', async () => {
@@ -2573,6 +2591,7 @@ test('clicking the money balance expands a breakdown of every global production 
     owned: { tier02: 1, tier10: 10 },
     scaleUpCount: 2,
     globalTickspeedMultiplier: 1,
+    prestigeSpeedBonusUnlocked: true,
     purge: { xp: 0, points: 50, count: 100, highestMilestone: 1 },
   })
   render(<App />)
@@ -2608,7 +2627,7 @@ test('the money balance breakdown reports a not-yet-activated status for each gl
   await user.click(screen.getByRole('button', { name: /^money display$/i }))
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
-  expect(breakdown).toHaveTextContent(/prestige speed bonus: 2x production speed from 1 purge/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(1 PP on firmware → prestige\)/i)
   expect(breakdown).toHaveTextContent(/scale up: not yet activated \(reach 3 completed levels on kilobytes\)/i)
   expect(breakdown).toHaveTextContent(/clock speed: not yet active/i)
 })

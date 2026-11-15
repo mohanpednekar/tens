@@ -32,6 +32,7 @@ import {
   isBuyMaxUnlocked,
   isProductionFrozen,
   isOverflowModeUnlocked,
+  getPrestigeProductionMultiplier,
 } from 'game/engine'
 import {
   CHALLENGE_DEFINITIONS,
@@ -40,6 +41,7 @@ import {
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   PLAYTIME_BONUS_UNLOCK_COST,
+  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
 } from 'game/layers'
 import { hasAffordableAutomationPerk, hasAffordablePrestigePerk } from 'game/navAttention'
 import { useEffect, useState } from 'react'
@@ -321,6 +323,15 @@ const RowControls = styled.div`
 
 // Indented past the label's RowIcon cell (1.5em of the label's font + its margin) so it lines up
 // with the name above it.
+const Tutorial = styled.p`
+  margin: 0;
+  padding: ${({ theme }) => theme.space?.[2] ?? 8}px ${({ theme }) => theme.space?.[3] ?? 12}px;
+  border-radius: ${({ theme }) => theme.radius?.md ?? 8}px;
+  border: 1px solid #38bdf8;
+  font-size: 0.85rem;
+  line-height: 1.35;
+`
+
 const SubText = styled.span`
   color: ${props => props.theme.color.textMuted};
   font-size: 0.82em;
@@ -496,6 +507,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     ? `${formatAmount(ppPerPower)} PP per power`
     : `1 PP per ${formatAmount(powersPerPp)} power${powersPerPp === 1 ? '' : 's'}`
 
+  const canBuySpeedBonus = !state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
+  const speedBonusMultiplier = getPrestigeProductionMultiplier(purgeCount)
   const canBuyPlaytimeBonus = !state.playtimeBonusUnlocked && points >= PLAYTIME_BONUS_UNLOCK_COST
 
   // Auto-charge itself is bought per boundary on Power; Firmware holds its pause switch. Auto Boost is automatic once any
@@ -785,6 +798,34 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     <List aria-label="prestige firmware page">
       <Category aria-label="purge points category">
         <CategoryHeading>Purge Points</CategoryHeading>
+        {!state.prestigeSpeedBonusUnlocked && (
+          <Tutorial aria-label="purge points tutorial">
+            Purge Points (PP) are earned by Purging and spent here, on permanent upgrades. Try it: spend your
+            first {PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP on the Speed bonus below.
+          </Tutorial>
+        )}
+        <Row aria-label="speed bonus upgrade">
+          <RowLabelStack>
+            <RowLabel title="Permanent production speed bonus that grows with your Purge count"><RowIcon>🚀</RowIcon>Speed bonus</RowLabel>
+            <SubText>×(2 + log₁₀ Purges){state.prestigeSpeedBonusUnlocked ? ` = ×${Number(speedBonusMultiplier.toFixed(2))} now` : ''}</SubText>
+          </RowLabelStack>
+          {state.prestigeSpeedBonusUnlocked ? (
+            <UnlockedBadge icon="🚀" name="Speed bonus" />
+          ) : (
+            <PpPurchaseButton
+              ariaLabel={`Unlock speed bonus for ${PRESTIGE_SPEED_BONUS_UNLOCK_COST} Purge Points`}
+              color="#38bdf8"
+              cost={PRESTIGE_SPEED_BONUS_UNLOCK_COST}
+              disabled={!canBuySpeedBonus}
+              icon="🔓"
+              label={`${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP`}
+              onClick={actions.buyPrestigeSpeedBonus}
+              points={points}
+              progressLabel="Speed bonus unlock PP progress"
+              title="Spend Purge Points once to multiply all production by 2 + log10 of your Purge count, permanently"
+            />
+          )}
+        </Row>
         <Row aria-label="compression upgrade">
           <RowLabelStack>
             <RowLabel>

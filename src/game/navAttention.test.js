@@ -368,6 +368,7 @@ describe('navAttention', () => {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
+      prestigeSpeedBonusUnlocked: true,
     }
     const automationOnly = { ...base, purge: { count: 1, points: getAutomationIntervalUpgradeCost('speedUp', 0) }, autoGlobalTickspeed: true }
     expect(hasAffordableAutomationPerk(automationOnly)).toBe(true)
@@ -401,6 +402,17 @@ describe('navAttention', () => {
     // A locked automation's speed chain never counts, however many PP are held.
     const lockedChain = { ...prestigeOnly, prestigeDoublePpLevel: 5, autoPurge: null, purge: { count: 1, points: 1e6 } }
     expect(hasAffordableAutomationPerk(lockedChain)).toBe(false)
+  })
+
+  it('lights the Prestige tab for the 1 PP speed bonus until it is bought', () => {
+    const state = {
+      ...createInitialGameState(),
+      intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
+      purge: { count: 1, points: 1 },
+    }
+    expect(hasAffordablePrestigePerk(state)).toBe(true)
+    expect(hasAffordablePrestigePerk({ ...state, prestigeSpeedBonusUnlocked: true })).toBe(false)
   })
 
   it('does not light PP upgrades before the first Prestige', () => {

@@ -182,6 +182,7 @@ import {
   getPrestigePowersPerPp,
   getPrestigePpPerPower,
   getPrestigeProductionMultiplier,
+  buyPrestigeSpeedBonus,
   getPlaytimeProductionMultiplier,
   buyPlaytimeBonus,
   addActivePlaySeconds,
@@ -479,6 +480,7 @@ const withGlobalTickspeedMultiplier = (state, level = 1) => ({
 // 10 Purges is the unlock threshold: ×log10(10) = ×1; 100 Purges → ×2.
 const withPrestigeSpeedBonusUnlocked = (state, count = 100) => ({
   ...state,
+  prestigeSpeedBonusUnlocked: true,
   purge: { ...state.purge, count },
 })
 
@@ -5899,6 +5901,29 @@ describe('getOverclockMultiplier', () => {
   })
 })
 
+// ─── buyPrestigeSpeedBonus ───────────────────────────────────────────────────
+
+describe('buyPrestigeSpeedBonus', () => {
+  it('spends 1 PP once to unlock the Purge speed bonus', () => {
+    const state = withPrestigePoints(createInitialGameState(), 3)
+    const after = buyPrestigeSpeedBonus(state)
+    expect(after.prestigeSpeedBonusUnlocked).toBe(true)
+    expect(after.purge.points).toBe(2)
+    expect(buyPrestigeSpeedBonus(after)).toBe(after)
+  })
+
+  it('is a no-op without 1 PP', () => {
+    const state = withPrestigePoints(createInitialGameState(), 0)
+    expect(buyPrestigeSpeedBonus(state)).toBe(state)
+  })
+
+  it('does not boost production until bought', () => {
+    const base = withOwned(createInitialGameState(), tensTier.id, 1)
+    const counted = { ...base, purge: { ...base.purge, count: 100 } }
+    expect(bytesOf(tickGame(1)(counted))).toBe(bytesOf(base) + 1)
+  })
+})
+
 // ─── getPrestigeProductionMultiplier ─────────────────────────────────────────
 
 describe('getPrestigeProductionMultiplier', () => {
@@ -5915,6 +5940,10 @@ describe('getPrestigeProductionMultiplier', () => {
 
   it('treats negative counts as 0', () => {
     expect(getPrestigeProductionMultiplier(-10)).toBe(1)
+  })
+
+  it('is 1 until the speed bonus has been bought', () => {
+    expect(getPrestigeProductionMultiplier(100, false)).toBe(1)
   })
 })
 

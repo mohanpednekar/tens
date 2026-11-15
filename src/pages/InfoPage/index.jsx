@@ -41,7 +41,7 @@ import {
   PRESTIGE_POWERS_PER_PP_BASE,
   PLAYTIME_BONUS_PER_HOUR,
   PLAYTIME_BONUS_UNLOCK_COST,
-  PRESTIGE_SPEED_BONUS_UNLOCK_PURGES,
+  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
@@ -652,8 +652,8 @@ const InfoPage = () => {
             Spend PP on Firmware for automation and upgrades.
           </li>
           <li>
-            From your first Purge on, production speed gets a bonus of
-            ×(2 + log₁₀ of your Purge count).
+            Your first Purge Point buys the Purge speed bonus ({PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP on Firmware → Prestige):
+            production speed ×(2 + log₁₀ of your Purge count), forever.
           </li>
           <li>
             The one-time Playtime bonus ({PLAYTIME_BONUS_UNLOCK_COST} PP on Firmware → Prestige) adds
