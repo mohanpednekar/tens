@@ -1461,7 +1461,7 @@ export const getPurchaseMilestoneMultiplier = level => {
 
 // The unconditional production-speed multiplier from Scale Up activations (see scaleUpGame):
 // SCALE_UP_MULTIPLIER_BASE raised to scaleUpCount, so each activation doubles it (1x, 2x, 4x,
-// 8x, …). getPrestigeProductionMultiplier is a Purge-count formula (inert below 10); this
+// 8x, …). getPrestigeProductionMultiplier is a Purge-count formula (×1 until the 1 PP bonus is bought, ×1.3 at the 1st Purge, then 1 + log10(n)); this
 // applies automatically as soon as scaleUpCount > 0.
 export const getScaleUpMultiplier = scaleUpCount =>
   SCALE_UP_MULTIPLIER_BASE ** clampNonNegative(scaleUpCount)
@@ -2206,8 +2206,8 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     // (always a power of 2), tierMultiplier (always a product of powers of 2 and 10 — see
     // getPurchaseMilestoneMultiplier), and computeBoostMultiplier (always one of
     // COMPUTE_BOOST_PRESETS' own integer multipliers, or 1) are already integers, so only the
-    // fractional Purge-count production multiplier (getPrestigeProductionMultiplier, e.g. 100
-    // Purges → ×2) can introduce a fraction here — always >= 1, so flooring never zeroes
+    // fractional Purge-count production multiplier (getPrestigeProductionMultiplier, e.g. 316
+    // Purges → ×3.5) can introduce a fraction here — always >= 1, so flooring never zeroes
     // out production for a tier with owned > 0. Neither tickspeed multiplier appears in this
     // formula at all anymore — they've already done their work by shrinking tickSpeed above, which
     // is what grew ticksElapsed.
