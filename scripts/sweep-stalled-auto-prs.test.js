@@ -99,9 +99,14 @@ describe('sweep-stalled-auto-prs.sh', () => {
 
   it('refreshes a behind PR via update-branch immediately, without commenting', () => {
     const r = sweep([
-      pr({ updatedAt: new Date().toISOString(), mergeStateStatus: 'BEHIND', statusCheckRollup: [{ conclusion: 'SUCCESS' }] }),
+      pr({
+        updatedAt: new Date().toISOString(),
+        headRefOid: 'abc123def456',
+        mergeStateStatus: 'BEHIND',
+        statusCheckRollup: [{ conclusion: 'SUCCESS' }],
+      }),
     ]);
-    expect(r.calls).toMatch(/api -X PUT .*pulls\/1\/update-branch/);
+    expect(r.calls).toMatch(/api -X PUT .*pulls\/1\/update-branch .*expected_head_sha=abc123def456/);
     expect(r.calls).not.toMatch(/pr comment/);
   });
 
