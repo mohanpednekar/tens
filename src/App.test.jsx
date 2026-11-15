@@ -5359,7 +5359,7 @@ describe('Compute auto-charge automation', () => {
 // productionAccumulator) resets each cycle. Scale Up/Overclock remain unaffected (covered at the
 // engine.test.js level, not here).
 
-test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', () => {
+test('a real Prestige from MainPage keeps Data Stream balance and keeps Factory reachable — mainGameUnlocked no longer resets', () => {
   // purge.count: 1 skips the mandatory first-time full-screen prompt (see the test above) in
   // favor of the ordinary top banner, so MainPage's own heading is actually on-screen to assert on.
   seedMainGameState({
@@ -5381,9 +5381,9 @@ test('a real Prestige from MainPage resets Data Stream balance but keeps Factory
   expect(screen.queryByRole('heading', { level: 1, name: /byte foundry/i })).not.toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  // Data Stream balance resets to fresh; the gate itself stays permanently unlocked.
+  // Data Stream balance survives Prestige; the gate itself stays permanently unlocked.
   expect(saved.intro.mainGameUnlocked).toBe(true)
-  expect(saved.intro.bits).toBe(0)
+  expect(saved.intro.bits).toBeGreaterThanOrEqual(500)
   // The generator and its upgrades are permanent — carried over from before the Prestige.
   expect(saved.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
   expect(saved.intro.byteCreated).toBe(true)

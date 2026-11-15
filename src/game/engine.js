@@ -7688,6 +7688,8 @@ const resetFactoryCycle = (state, awardPurge) => {
       mainGameUnlocked: state.intro?.mainGameUnlocked ?? initial.intro.mainGameUnlocked,
       capacity: state.intro?.capacity ?? initial.intro.capacity,
       byteCreated: state.intro?.byteCreated ?? initial.intro.byteCreated,
+      // The Data Stream balance survives a Factory-cycle reset (Purge / challenge enter/exit) — Prestige never empties it.
+      bits: state.intro?.bits ?? initial.intro.bits,
       // Convenience caps from resetByteFoundry — permanent across Prestige so auto-replay keeps
       // working after a real Prestige cycle; cleared only by a full save Reset.
       foundryResetCaps: state.intro?.foundryResetCaps ?? initial.intro.foundryResetCaps,

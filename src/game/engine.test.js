@@ -8483,8 +8483,8 @@ describe('purgeGame', () => {
       mainGameUnlocked: true,
     })
     const after = purgeGame(state)
-    // Memory resets to fresh.
-    expect(after.intro.bits).toBe(0)
+    // The Data Stream balance survives Prestige.
+    expect(after.intro.bits).toBe(500)
     // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked) — a real Prestige never
     // re-gates it once it's ever been true.
     expect(after.intro.mainGameUnlocked).toBe(true)
@@ -8501,7 +8501,7 @@ describe('purgeGame', () => {
     )
     const after = purgeGame(state)
     expect(after.owned[tensTier.id]).toBe(0)
-    expect(after.intro.bits).toBe(0)
+    expect(after.intro.bits).toBe(4000)
     // mainGameUnlocked is permanent now — see latchMainGameUnlocked.
     expect(after.intro.mainGameUnlocked).toBe(true)
     // capacity/byteCreated (the generator) are untouched by this same reset — no stale bits, but
