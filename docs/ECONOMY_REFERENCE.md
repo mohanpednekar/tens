@@ -1324,7 +1324,7 @@ design that scaled the delivered amount instead).
 The mechanism lives entirely in `tickGame` (`engine.js`): `state.tierProductionAccumulators` banks
 fractional seconds per tier, incremented by `elapsedSeconds` every tick. Once a tier's accumulator
 reaches its own effective tickspeed (`getEffectiveTierTickSpeedSeconds`), `tickGame` delivers `floor(owned
-× (whole effective periods elapsed) × getPrestigeProductionMultiplier(purge.count) ×
+× (whole effective periods elapsed) × getPrestigeProductionMultiplier(purge.count, unlocked) ×
 getPurchaseMilestoneMultiplier(purchased))` — multiplying by the *count* of completed periods, not
 elapsed seconds, and with **neither tickspeed multiplier appearing in this credit formula at all** (they
 already did their work by shrinking the period, which is what grows the completed-period count) — and
@@ -1342,7 +1342,7 @@ the autobuyer and Auto Purge attempt-budget threshold checks.
 `owned` and `resources` are integer-valued by construction, so a production credit must itself always
 be an integer. Of the factors in a tier's production credit (`owned × ticksElapsed × multiplier ×
 scaleUpMultiplier × getPurchaseMilestoneMultiplier(purchased)`, where `multiplier` is
-`getPrestigeProductionMultiplier(purge.count)` — flat `1` until the speed bonus is bought, else the decade-linear curve below),
+`getPrestigeProductionMultiplier(purge.count, unlocked)` — flat `1` until the speed bonus is bought, else the decade-linear curve below),
 `owned`/`ticksElapsed` are already integers, `getTierScaleUpMultiplier` is always a power of 2, and
 `getPurchaseMilestoneMultiplier` is always a product of powers of 2 and 10 (see its own row above) —
 the only fractional factor is `getPrestigeProductionMultiplier` (decade-linear in `purge.count` once
