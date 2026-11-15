@@ -452,7 +452,7 @@ export const createInitialGameState = () => ({
     // PERMANENT — { [capacityBits]: count } of currently-FULL Disks of that size (see
     // tickDiskAutoFill/pullDiskForCurrentLevel below) — "never lost," survives Prestige/Scale
     // Up/Overclock exactly like the Byte generator itself (a full disk's contents ride through a
-    // real Prestige untouched even though Memory itself resets, since a disk is a separate store,
+    // real Prestige untouched (Memory is kept too), since a disk is a separate store,
     // not part of Memory). Empty object, not per-denomination zeros, since the set of
     // denominations ever built is open-ended. The number of currently EMPTY disks of a size is
     // always disksBuiltTotal[size] - disks[size].

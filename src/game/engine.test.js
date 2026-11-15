@@ -4994,7 +4994,7 @@ describe('tickGame Compute Core/Node integration', () => {
   it('carries computeCores/computeCoresEverEarned/computeNodes through a real Prestige unchanged, same permanence as the Byte generator/Storage', () => {
     const state = withMoney(
       withIntro(createInitialGameState(), {
-        computeCores: 5, computeCoresEverEarned: 13, computeNodes: 2, byteCreated: true, capacity: 800,
+        computeCores: 5, computeCoresEverEarned: 13, computeNodes: 2, byteCreated: true, capacity: 800, bits: 300,
       }),
       PURGE_THRESHOLD
     )
@@ -5002,8 +5002,8 @@ describe('tickGame Compute Core/Node integration', () => {
     expect(after.intro.computeCores).toBe(5)
     expect(after.intro.computeCoresEverEarned).toBe(13)
     expect(after.intro.computeNodes).toBe(2)
-    // Memory itself still resets fresh, unlike the permanent Compute counters above.
-    expect(after.intro.bits).toBe(0)
+    // The Data Stream balance is kept as well.
+    expect(after.intro.bits).toBe(300)
   })
 
   it('carries every merge-chain entity (Clusters through Megacomputers) through a real Prestige unchanged', () => {
@@ -8475,7 +8475,7 @@ describe('purgeGame', () => {
     expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
   })
 
-  it('resets the Byte Foundry\'s Memory across prestige, but keeps the generator/its upgrades AND mainGameUnlocked permanent', () => {
+  it('keeps the Byte Foundry\'s Data Stream balance across prestige, and keeps the generator/its upgrades AND mainGameUnlocked permanent', () => {
     const state = withIntro(withMoney(createInitialGameState(), PURGE_THRESHOLD), {
       bits: 500,
       capacity: 8000,

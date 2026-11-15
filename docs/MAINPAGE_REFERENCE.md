@@ -320,8 +320,7 @@ was a direct alias of `formatBitsInNearestUnit`). A disk's *size* AND its own bu
 through `formatDiskSize` (SI, since the cost is itself a fixed multiple of that same SI size); any
 bit amount actually spent out of Memory's own binary-scaled balance renders through
 `formatBitsInNearestUnit` (binary) instead.
-A real Prestige resets Memory (`bits`/`productionAccumulator`) back to fresh — along with tier01's
-own `purchaseLevels`/`purchaseLevelProgress` (see `purgeGame` in docs/ECONOMY_REFERENCE.md) — but
+A real Prestige KEEPS Memory (`bits`) — it resets only tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `purgeGame` in docs/ECONOMY_REFERENCE.md) — but
 NOT the main-game-unlock gate (`mainGameUnlocked`) any more: that's now a PERMANENT, one-time-ever
 latch (`latchMainGameUnlocked`), never reset by a real Prestige or a Reboot. So this page's
 gate only ever reappears once, on a save's very first cycle — every cycle after that starts with

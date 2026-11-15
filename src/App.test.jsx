@@ -5355,8 +5355,8 @@ describe('Compute auto-charge automation', () => {
 // is crossed (see engine.js's latchMainGameUnlocked) — a real Prestige no longer sends the player
 // back through the intro; App.jsx's own routing derives off mainGameUnlocked, which simply stays
 // true from then on. The Byte generator itself (capacity/byteCreated/tickSpeedSeconds/
-// productionMultiplier) is likewise PERMANENT — only the Data Stream balance (bits/
-// productionAccumulator) resets each cycle. Scale Up/Overclock remain unaffected (covered at the
+// productionMultiplier) is likewise PERMANENT — the Data Stream balance (bits) is
+// kept too. Scale Up/Overclock remain unaffected (covered at the
 // engine.test.js level, not here).
 
 test('a real Prestige from MainPage keeps Data Stream balance and keeps Factory reachable — mainGameUnlocked no longer resets', () => {

@@ -33,7 +33,7 @@ Full formulas, Prestige Points, Storage, Compute, tickspeed, Scale Up, Overclock
 
 ### Byte Foundry
 
-Tap to fill the Data Stream, combine bits into a permanent Byte generator, and grow it with Upgrade Capacity / Upgrade Speed; Data Stream bits auto-convert into free Kilobytes. Later: Storage pools of Disks that automatically complete Factory tier levels, Data Lakes that buy Boosters (Core → Megacomputer merge chain plus Compute Boost), and a PP-funded Compute (Flops) screen. The generator, Disks, Data Lakes and Compute entities are permanent across Prestige, as is the main-game unlock once earned — only the Data Stream balance resets each cycle.
+Tap to fill the Data Stream, combine bits into a permanent Byte generator, and grow it with Upgrade Capacity / Upgrade Speed; Data Stream bits auto-convert into free Kilobytes. Later: Storage pools of Disks that automatically complete Factory tier levels, Data Lakes that buy Boosters (Core → Megacomputer merge chain plus Compute Boost), and a PP-funded Compute (Flops) screen. The generator, Disks, Data Lakes and Compute entities are permanent across Prestige, as is the main-game unlock once earned — the Data Stream balance is kept across cycles.
 
 ### Manual
 
