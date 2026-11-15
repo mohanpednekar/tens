@@ -7,6 +7,7 @@ import {
   analyzeGraphifyFreshness,
   collectGraphifySourceFiles,
   externalSourceNames,
+  findMalformedGraphEntries,
   findUncoveredGraphifyFiles,
   isExternalModuleRef,
 } from './check-graphify-freshness.mjs';
@@ -40,11 +41,27 @@ afterEach(() => {
 
 describe('check-graphify-freshness', () => {
   it('committed graphify-out/graph.json is fresh in both directions', () => {
-    const { stale, uncovered } = analyzeGraphifyFreshness(REPO_ROOT);
+    const { stale, uncovered, malformed } = analyzeGraphifyFreshness(REPO_ROOT);
     expect(
-      { stale, uncovered },
+      { stale, uncovered, malformed },
       'stale/uncovered graphify refs — run `graphify update .` and commit the regenerated graphify-out/',
-    ).toEqual({ stale: [], uncovered: [] });
+    ).toEqual({ stale: [], uncovered: [], malformed: [] });
+  });
+
+  it('findMalformedGraphEntries flags id-less nodes and stray top-level keys (#1060)', () => {
+    expect(
+      findMalformedGraphEntries({ nodes: [{ id: 'a' }], links: [], built_at_commit: 'x' }),
+    ).toEqual([]);
+    expect(
+      findMalformedGraphEntries({
+        nodes: [{ id: 'a' }, { source_file: 'scripts/x.mjs' }],
+        links: [],
+        'scripts/x.mjs': {},
+      }),
+    ).toEqual([
+      'node #1 has no id (source_file: scripts/x.mjs)',
+      'unexpected top-level key: scripts/x.mjs',
+    ]);
   });
 
   it('collectGraphifySourceFiles counts node, link, and hyperedge source_file refs', () => {
