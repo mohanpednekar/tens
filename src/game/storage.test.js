@@ -211,6 +211,36 @@ describe('discardIncompatibleActiveSaveIfNeeded', () => {
 })
 
 describe('schema merge on load', () => {
+  it.each([
+    // [purge count, stored flag, stored grandfather stamp, expected]
+    [9, undefined, undefined, false],
+    [10, undefined, undefined, true],
+    [50, false, undefined, true], // pre-11-09 saves stored the old flag as false
+    [3, true, undefined, true],
+    [50, false, true, false], // new-build save that has not bought it
+    [50, undefined, true, false],
+  ])('grandfathers the speed bonus once: %i Purges, flag %s, stamp %s → %s', (count, flag, stamp, expected) => {
+    const { prestigeSpeedBonusUnlocked: _a, speedBonusGrandfathered: _b, ...save } = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify({
+      ...save,
+      ...(flag === undefined ? {} : { prestigeSpeedBonusUnlocked: flag }),
+      ...(stamp === undefined ? {} : { speedBonusGrandfathered: stamp }),
+      purge: { ...save.purge, count },
+    }))
+    const loaded = loadGameState()
+    expect(loaded.prestigeSpeedBonusUnlocked).toBe(expected)
+    expect(loaded.speedBonusGrandfathered).toBe(true)
+  })
+
+  it('applies Purge-count automation milestones to a loaded save (no PP, no next Purge needed)', () => {
+    const save = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify({ ...save, purge: { ...save.purge, count: 150 } }))
+    const loaded = loadGameState()
+    expect(loaded.autoPurge).toBe(1)
+    expect(loaded.autoOverclock).toBe(true)
+    expect(loaded.autoGlobalTickspeed).toBe(true)
+  })
+
   it('adds missing autobuyers field from an older save', () => {
     const { autobuyers: _dropped, ...oldSave } = createInitialGameState()
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))

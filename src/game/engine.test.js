@@ -29,13 +29,10 @@ import {
   getComputeMergeDurationSeconds,
   applyAutobuyerMilestones,
   applyOfflineProgress,
-  buyAutoPurge,
-  buyAutoScaleUp,
   buyGlobalTickspeedMultiplier,
   buyComputeFlopsTier,
   buyHyperscaler,
   buyPrestigeDoublePp,
-  buyTickspeedAutobuyer,
   buyTickspeedMultiplier,
   buyTier,
   buyTierQuantity,
@@ -97,7 +94,6 @@ import {
   setAutoGlobalTickspeedEnabled,
   setAutoPurgeEnabled,
   setAutoScaleUpEnabled,
-  buyXpTickspeedAutobuyer,
   setAutoXpTickspeedEnabled,
   setComputeFlopsAutobuyerEnabled,
   setTierTickspeedAutobuyerEnabled,
@@ -117,8 +113,7 @@ import {
   getAutobuyerUnlockCost,
   getAutobuyerUnlockMilestone,
   getAutoPurgeAttemptRate,
-  getAutomationUnlockCost,
-  buyAutoOverclock,
+  getGlobalAutomationUnlockMilestone,
   getComputeBoostCoveredTierCount,
   getComputeBoostPoolMultiplier,
   getComputeBoostMultiplier,
@@ -187,6 +182,7 @@ import {
   getPrestigePowersPerPp,
   getPrestigePpPerPower,
   getPrestigeProductionMultiplier,
+  buyPrestigeSpeedBonus,
   getPlaytimeProductionMultiplier,
   buyPlaytimeBonus,
   addActivePlaySeconds,
@@ -481,9 +477,10 @@ const withGlobalTickspeedMultiplier = (state, level = 1) => ({
   globalTickspeedMultiplier: level,
 })
 
-// 10 Purges is the unlock threshold: ×log10(10) = ×1; 100 Purges → ×2.
+// Bought speed bonus with a Purge count (default 100 → ×3).
 const withPrestigeSpeedBonusUnlocked = (state, count = 100) => ({
   ...state,
+  prestigeSpeedBonusUnlocked: true,
   purge: { ...state.purge, count },
 })
 
@@ -5754,32 +5751,32 @@ describe('getAutobuyerUnlockCost', () => {
 })
 
 describe('getAutobuyerUnlockMilestone', () => {
-  it('requires 1 prestige for the first tier', () => {
-    expect(getAutobuyerUnlockMilestone(tensTier.id)).toBe(1)
+  it('requires 2 purges for the first tier', () => {
+    expect(getAutobuyerUnlockMilestone(tensTier.id)).toBe(2)
   })
 
-  it('increases by 1 prestige per subsequent tier, up to 10 for the 10th/last tier', () => {
-    expect(getAutobuyerUnlockMilestone(thousandsTier.id)).toBe(2)
-    expect(getAutobuyerUnlockMilestone(TIER_DEFINITIONS[9].id)).toBe(10)
+  it('increases by 2 purges per subsequent tier, up to 20 for the 10th/last tier', () => {
+    expect(getAutobuyerUnlockMilestone(thousandsTier.id)).toBe(4)
+    expect(getAutobuyerUnlockMilestone(TIER_DEFINITIONS[9].id)).toBe(20)
   })
 
   it('treats an unrecognized tier id as index 0 (the earliest milestone)', () => {
-    expect(getAutobuyerUnlockMilestone('does_not_exist')).toBe(1)
+    expect(getAutobuyerUnlockMilestone('does_not_exist')).toBe(2)
   })
 })
 
 describe('getTierTickspeedAutobuyerMilestone', () => {
-  it('requires 11 purges for the first tier', () => {
-    expect(getTierTickspeedAutobuyerMilestone(tensTier.id)).toBe(11)
+  it('requires 22 purges for the first tier', () => {
+    expect(getTierTickspeedAutobuyerMilestone(tensTier.id)).toBe(22)
   })
 
-  it('increases by 1 prestige per subsequent tier, up to 20 for the 10th/last tier', () => {
-    expect(getTierTickspeedAutobuyerMilestone(thousandsTier.id)).toBe(12)
-    expect(getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[9].id)).toBe(20)
+  it('increases by 2 purges per subsequent tier, up to 40 for the 10th/last tier', () => {
+    expect(getTierTickspeedAutobuyerMilestone(thousandsTier.id)).toBe(24)
+    expect(getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[9].id)).toBe(40)
   })
 
   it('treats an unrecognized tier id as index 0 (the earliest milestone)', () => {
-    expect(getTierTickspeedAutobuyerMilestone('does_not_exist')).toBe(11)
+    expect(getTierTickspeedAutobuyerMilestone('does_not_exist')).toBe(22)
   })
 })
 
@@ -5790,7 +5787,7 @@ describe('applyAutobuyerMilestones', () => {
   })
 
   it('unlocks exactly the tiers whose milestone is met, and nothing else', () => {
-    const state = withPurgeCount(createInitialGameState(), 3)
+    const state = withPurgeCount(createInitialGameState(), 6)
     const after = applyAutobuyerMilestones(state)
     expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(1)
     expect(after.autobuyers[TIER_DEFINITIONS[1].id]).toBe(1)
@@ -5798,14 +5795,14 @@ describe('applyAutobuyerMilestones', () => {
     expect(after.autobuyers[TIER_DEFINITIONS[3].id]).toBeNull()
   })
 
-  it('never unlocks a tier tickspeed autobuyer before prestige 11', () => {
-    const state = withPurgeCount(createInitialGameState(), 10)
+  it('never unlocks a tier tickspeed autobuyer before Purge 22', () => {
+    const state = withPurgeCount(createInitialGameState(), 21)
     const after = applyAutobuyerMilestones(state)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[0].id]).toBe(false)
   })
 
-  it('unlocks the first tier tickspeed autobuyer at prestige 11, the second at 12', () => {
-    const state = withPurgeCount(createInitialGameState(), 12)
+  it('unlocks the first tier tickspeed autobuyer at Purge 22, the second at 24', () => {
+    const state = withPurgeCount(createInitialGameState(), 24)
     const after = applyAutobuyerMilestones(state)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[0].id]).toBe(true)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[1].id]).toBe(true)
@@ -5904,22 +5901,59 @@ describe('getOverclockMultiplier', () => {
   })
 })
 
+// ─── buyPrestigeSpeedBonus ───────────────────────────────────────────────────
+
+describe('buyPrestigeSpeedBonus', () => {
+  it('spends 1 PP once to unlock the Purge speed bonus', () => {
+    const state = withPrestigePoints(createInitialGameState(), 3)
+    const after = buyPrestigeSpeedBonus(state)
+    expect(after.prestigeSpeedBonusUnlocked).toBe(true)
+    expect(after.purge.points).toBe(2)
+    expect(buyPrestigeSpeedBonus(after)).toBe(after)
+  })
+
+  it('is a no-op without 1 PP', () => {
+    const state = withPrestigePoints(createInitialGameState(), 0)
+    expect(buyPrestigeSpeedBonus(state)).toBe(state)
+  })
+
+  it('does not boost production until bought', () => {
+    const base = withOwned(createInitialGameState(), tensTier.id, 1)
+    const counted = { ...base, purge: { ...base.purge, count: 100 } }
+    expect(bytesOf(tickGame(1)(counted))).toBe(bytesOf(base) + 1)
+  })
+})
+
 // ─── getPrestigeProductionMultiplier ─────────────────────────────────────────
 
 describe('getPrestigeProductionMultiplier', () => {
-  it('is 1 below 10 Purges', () => {
+  it('is 1 before the first Purge', () => {
     expect(getPrestigeProductionMultiplier(0)).toBe(1)
-    expect(getPrestigeProductionMultiplier(9)).toBe(1)
   })
 
-  it('is log10(purge count) from 10 Purges on', () => {
-    expect(getPrestigeProductionMultiplier(10)).toBeCloseTo(1)
-    expect(getPrestigeProductionMultiplier(100)).toBeCloseTo(2)
-    expect(getPrestigeProductionMultiplier(1000)).toBeCloseTo(3)
+  it('adds 10% per Purge up to ×2 at 10, then is linear within each decade (×3 at 100, ×4 at 1,000)', () => {
+    expect(getPrestigeProductionMultiplier(1)).toBeCloseTo(1.1)
+    expect(getPrestigeProductionMultiplier(5)).toBeCloseTo(1.5)
+    expect(getPrestigeProductionMultiplier(10)).toBeCloseTo(2)
+    expect(getPrestigeProductionMultiplier(55)).toBeCloseTo(2.5)
+    expect(getPrestigeProductionMultiplier(100)).toBeCloseTo(3)
+    expect(getPrestigeProductionMultiplier(550)).toBeCloseTo(3.5)
+    expect(getPrestigeProductionMultiplier(1000)).toBeCloseTo(4)
+    expect(getPrestigeProductionMultiplier(1e6)).toBeCloseTo(7)
+  })
+
+  it('is continuous and non-decreasing across decade boundaries', () => {
+    for (const n of [9, 99, 999]) {
+      expect(getPrestigeProductionMultiplier(n + 1) - getPrestigeProductionMultiplier(n)).toBeGreaterThan(0)
+    }
   })
 
   it('treats negative counts as 0', () => {
     expect(getPrestigeProductionMultiplier(-10)).toBe(1)
+  })
+
+  it('is 1 until the speed bonus has been bought', () => {
+    expect(getPrestigeProductionMultiplier(100, false)).toBe(1)
   })
 })
 
@@ -5994,20 +6028,30 @@ describe('getPrestigePointsAwarded (property-based)', () => {
   })
 })
 
-// ─── getAutomationUnlockCost ────────────────────────────────────
+// ─── getGlobalAutomationUnlockMilestone / applyAutobuyerMilestones (global automations) ──────
 
-describe('getAutomationUnlockCost', () => {
-  it('is the same amount as each automation\'s first interval-upgrade level', () => {
-    expect(['speedUp', 'scaleUp', 'overclock', 'purge'].map(getAutomationUnlockCost)).toEqual([8, 16, 32, 64])
-    for (const key of ['speedUp', 'scaleUp', 'overclock', 'purge']) {
-      expect(getAutomationIntervalUpgradeCost(key, 0)).toBe(getAutomationUnlockCost(key))
-    }
+describe('global automation unlock milestones', () => {
+  it('unlock by Purge count (Clock Speed 8, Restage 16, Scale Up 32, Overclock 64, Purge 128)', () => {
+    expect(['speedUp', 'restage', 'scaleUp', 'overclock', 'purge'].map(getGlobalAutomationUnlockMilestone)).toEqual([8, 16, 32, 64, 128])
+  })
+
+  it('leave each interval-upgrade ladder starting at its own PP baseCost', () => {
+    expect(['speedUp', 'scaleUp', 'restage', 'overclock', 'purge'].map(key => getAutomationIntervalUpgradeCost(key, 0))).toEqual([8, 16, 16, 32, 64])
+  })
+
+  it('applyAutobuyerMilestones unlocks each global automation exactly at its milestone, spending no PP', () => {
+    const at = count => applyAutobuyerMilestones({ ...createInitialGameState(), purge: { ...createInitialGameState().purge, count, points: 5 } })
+    const flags = s => [s.autoGlobalTickspeed, s.autoXpTickspeed, s.autoScaleUp, s.autoOverclock, s.autoPurge ?? null]
+    expect(flags(at(7))).toEqual([false, false, false, false, null])
+    expect(flags(at(8))).toEqual([true, false, false, false, null])
+    expect(flags(at(16))).toEqual([true, true, false, false, null])
+    expect(flags(at(32))).toEqual([true, true, true, false, null])
+    expect(flags(at(64))).toEqual([true, true, true, true, null])
+    expect(flags(at(128))).toEqual([true, true, true, true, 1])
+    expect(at(128).purge.points).toBe(5)
   })
 })
 // ─── getAutoPurgeAttemptRate ───────────────────────────────────────────────
-
-const AUTO_SCALE_UP_COST = getAutomationUnlockCost('scaleUp')
-const TICKSPEED_AUTOBUYER_COST = getAutomationUnlockCost('speedUp')
 
 const withReadyIntervalBudgets = state => ({
   ...state,
@@ -7059,18 +7103,18 @@ describe('tickGame', () => {
 
   it('applies the Purge-count production-speed bonus once unlocked', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 1)
-    const boosted = withPrestigeSpeedBonusUnlocked(base) // 100 Purges → ×2
+    const boosted = withPrestigeSpeedBonusUnlocked(base) // 100 Purges → ×3
     expect(bytesOf(tickGame(1)(boosted))).toBe(
-      bytesOf(base) + 2
+      bytesOf(base) + 3
     )
   })
 
   it('floors a fractional Prestige Points production multiplier instead of crediting a fraction', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 1)
-    // 316 Purges → ×log10(316) ≈ ×2.5, raw production 1 × 2.5 floors to 2
+    // 316 Purges → ×(3 + 216/900) ≈ ×3.24, raw production 1 × 3.24 floors to 3
     const boosted = withPrestigeSpeedBonusUnlocked(base, 316)
     const after = tickGame(1)(boosted)
-    expect(bytesOf(after)).toBe(bytesOf(base) + 2) // floor(2.5) = 2
+    expect(bytesOf(after)).toBe(bytesOf(base) + 3) // floor(3.24) = 3
   })
 
   it('multiplies production by the Scale Up multiplier', () => {
@@ -7082,12 +7126,12 @@ describe('tickGame', () => {
 
   it('stacks the Scale Up multiplier with the Purge-count speed bonus', () => {
     const base = withOwned(createInitialGameState(), tensTier.id, 10)
-    // ×2 (Scale Up) × ×2 (100 Purges) = ×4
+    // ×2 (Scale Up) × ×3 (100 Purges) = ×6
     const state = withScaleUpCount(
       withPrestigeSpeedBonusUnlocked(base), 1
     )
     const after = tickGame(1)(state)
-    expect(bytesOf(after)).toBe(bytesOf(base) + 40) // 10 × 4
+    expect(bytesOf(after)).toBe(bytesOf(base) + 60) // 10 × 6
   })
 
   it('Megabytes generators produce Kilobytes resource and owned generators once its 2s base tickspeed accumulates, banking fractional sub-second ticks along the way', () => {
@@ -7914,37 +7958,6 @@ describe('getTickspeedMultiplierSpend / getTickspeedMultiplierRequirement', () =
   })
 })
 
-// ─── buyAutoPurge ──────────────────────────────────────────────────────────
-
-describe('buyAutoPurge', () => {
-  it('spends 64 PP to activate Auto-Prestige at level 1', () => {
-    const state = withPrestigePoints({ ...createInitialGameState(), autoOverclock: true }, 64)
-    const after = buyAutoPurge(state)
-    expect(after.autoPurge).toBe(1)
-    expect(after.purge.points).toBe(0)
-  })
-
-  it('requires Auto Overclock first (sequential global automation)', () => {
-    const state = withPrestigePoints(createInitialGameState(), 64)
-    expect(buyAutoPurge(state)).toBe(state)
-  })
-
-  it('is activation-only: an already-active Auto-Prestige is a no-op (cadence upgrades are a separate chain)', () => {
-    const state = withPrestigePoints(withAutoPurge(createInitialGameState(), 1), 5000)
-    expect(buyAutoPurge(state)).toBe(state)
-  })
-
-  it('returns the same state when there are not enough points to activate', () => {
-    const state = withPrestigePoints({ ...createInitialGameState(), autoOverclock: true }, 63)
-    expect(buyAutoPurge(state)).toBe(state)
-  })
-
-  it('refuses to spend once production is frozen at PURGE_THRESHOLD', () => {
-    const state = withMoney(withPrestigePoints({ ...createInitialGameState(), autoOverclock: true }, 64), PURGE_THRESHOLD)
-    expect(buyAutoPurge(state)).toBe(state)
-  })
-})
-
 // ─── buyGlobalTickspeedMultiplier ───────────────────────────────────────────────
 
 describe('isGlobalTickspeedMultiplierUnlocked', () => {
@@ -8408,9 +8421,11 @@ describe('purgeGame', () => {
     expect(after.tickspeedLevels[tensTier.id]).toBe(1)
   })
 
-  it('auto-unlocks the first tier\'s autobuyer on the very first prestige (milestone 1)', () => {
+  it('auto-unlocks the first tier\'s autobuyer on the second prestige (milestone 2), not the first', () => {
     const state = withMoney(createInitialGameState(), PURGE_THRESHOLD)
-    const after = purgeGame(state)
+    const first = purgeGame(state)
+    expect(first.autobuyers[tensTier.id]).toBeNull()
+    const after = purgeGame(withMoney(first, PURGE_THRESHOLD))
     expect(after.autobuyers[tensTier.id]).toBe(1)
   })
 
@@ -8459,10 +8474,10 @@ describe('purgeGame', () => {
       'autoScaleUp', 'autoScaleUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
     )
     const after = purgeGame(state)
-    // The first tier's autobuyer auto-unlocks at milestone 1 (this prestige's count reaches 1) —
-    // confirms the autobuyers fallback produced a real object (not undefined) applyAutobuyerMilestones
-    // could safely build on, with every other tier still correctly null (not undefined).
-    expect(after.autobuyers[tensTier.id]).toBe(1)
+    // The first tier's autobuyer unlocks at milestone 2 (not yet at count 1) — confirms the autobuyers
+    // fallback produced a real object (not undefined) applyAutobuyerMilestones could safely build on,
+    // with every tier correctly null (not undefined).
+    expect(after.autobuyers[tensTier.id]).toBeNull()
     expect(after.autobuyers[thousandsTier.id]).toBeNull()
     expect(after.autobuyersEnabled).toEqual(fresh.autobuyersEnabled)
     expect(after.tierTickspeedAutobuyer).toEqual(fresh.tierTickspeedAutobuyer)
@@ -9186,92 +9201,9 @@ describe('overclockGame', () => {
   })
 })
 
-// ─── buyAutoScaleUp ──────────────────────────────────────────────────────────
-
-describe('buyAutoScaleUp', () => {
-  it(`spends ${AUTO_SCALE_UP_COST} PP to permanently enable Auto Scale Up`, () => {
-    const state = withPrestigePoints({ ...createInitialGameState(), autoGlobalTickspeed: true }, AUTO_SCALE_UP_COST)
-    const after = buyAutoScaleUp(state)
-    expect(after.autoScaleUp).toBe(true)
-    expect(after.purge.points).toBe(0)
-  })
-
-  it('requires the Tickspeed Autobuyer first (sequential global automation)', () => {
-    const state = withPrestigePoints(createInitialGameState(), AUTO_SCALE_UP_COST)
-    expect(buyAutoScaleUp(state)).toBe(state)
-  })
-
-  it('returns the same state when there are not enough points', () => {
-    const state = withPrestigePoints({ ...createInitialGameState(), autoGlobalTickspeed: true }, AUTO_SCALE_UP_COST - 1)
-    expect(buyAutoScaleUp(state)).toBe(state)
-  })
-
-  it('returns the same state when already enabled (one-time purchase)', () => {
-    const state = withAutoScaleUp(
-      withPrestigePoints({ ...createInitialGameState(), autoGlobalTickspeed: true }, AUTO_SCALE_UP_COST)
-    )
-    expect(buyAutoScaleUp(state)).toBe(state)
-  })
-
-  it('refuses to spend once production is frozen at PURGE_THRESHOLD', () => {
-    const state = withMoney(
-      withPrestigePoints({ ...createInitialGameState(), autoGlobalTickspeed: true }, AUTO_SCALE_UP_COST),
-      PURGE_THRESHOLD
-    )
-    expect(buyAutoScaleUp(state)).toBe(state)
-  })
-})
-
-describe('buyTickspeedAutobuyer', () => {
-  it(`spends ${TICKSPEED_AUTOBUYER_COST} PP to permanently automate the global tickspeed multiplier`, () => {
-    const state = withPrestigePoints(createInitialGameState(), TICKSPEED_AUTOBUYER_COST)
-    const after = buyTickspeedAutobuyer(state)
-    expect(after.autoGlobalTickspeed).toBe(true)
-    expect(after.purge.points).toBe(0)
-  })
-
-  it('returns the same state when there are not enough points', () => {
-    const state = withPrestigePoints(createInitialGameState(), TICKSPEED_AUTOBUYER_COST - 1)
-    expect(buyTickspeedAutobuyer(state)).toBe(state)
-  })
-
-  it('returns the same state when already enabled (one-time purchase)', () => {
-    const state = withAutoGlobalTickspeed(
-      withPrestigePoints(createInitialGameState(), TICKSPEED_AUTOBUYER_COST)
-    )
-    expect(buyTickspeedAutobuyer(state)).toBe(state)
-  })
-
-  it('refuses to spend once production is frozen at PURGE_THRESHOLD', () => {
-    const state = withMoney(
-      withPrestigePoints(createInitialGameState(), TICKSPEED_AUTOBUYER_COST),
-      PURGE_THRESHOLD
-    )
-    expect(buyTickspeedAutobuyer(state)).toBe(state)
-  })
-})
-
 // ─── setAutoScaleUpEnabled / setAutoGlobalTickspeedEnabled / setAutoPurgeEnabled ─────────────
 
-describe('buyXpTickspeedAutobuyer / setAutoXpTickspeedEnabled', () => {
-  it('spends 16 PP to unlock, needing only Auto Clock Speed (not Auto Scale Up)', () => {
-    const noSpeedUp = withPrestigePoints(createInitialGameState(), 20)
-    expect(buyXpTickspeedAutobuyer(noSpeedUp)).toBe(noSpeedUp)
-    const after = buyXpTickspeedAutobuyer({ ...noSpeedUp, autoGlobalTickspeed: true })
-    expect(after.autoXpTickspeed).toBe(true)
-    expect(after.autoScaleUp).toBe(false)
-    expect(after.purge.points).toBe(4)
-  })
-
-  it('is a no-op below 16 PP, when already bought, or while frozen', () => {
-    const poor = withPrestigePoints(createInitialGameState(), 15)
-    expect(buyXpTickspeedAutobuyer(poor)).toBe(poor)
-    const owned = { ...withPrestigePoints(createInitialGameState(), 100), autoXpTickspeed: true, autoGlobalTickspeed: true }
-    expect(buyXpTickspeedAutobuyer(owned)).toBe(owned)
-    const frozen = withMoney({ ...withPrestigePoints(createInitialGameState(), 100), autoGlobalTickspeed: true }, PURGE_THRESHOLD)
-    expect(buyXpTickspeedAutobuyer(frozen)).toBe(frozen)
-  })
-
+describe('setAutoXpTickspeedEnabled', () => {
   it('toggle is a no-op until bought, then flips the preference', () => {
     const state = createInitialGameState()
     expect(setAutoXpTickspeedEnabled(false)(state)).toBe(state)
@@ -12262,20 +12194,15 @@ describe('automation interval chains', () => {
     expect(after.tierTickspeedIntervalLevels.tier01).toBe(1)
   })
 
-  it('Auto Overclock costs 32 PP to unlock (needs Auto Scale Up AND Auto Restage), then its speed chain also starts at 32 PP', () => {
+  it('Auto Overclock speed chain starts at 32 PP once Auto Overclock is unlocked, and the pause toggle works', () => {
     const s = base()
     expect(setAutoOverclockEnabled(false)(s)).toBe(s)
-    const noScaleUp = withPoints({ ...base(), autoXpTickspeed: true }, 100)
-    expect(buyAutoOverclock(noScaleUp)).toBe(noScaleUp)
-    const noRestage = withPoints({ ...base(), autoScaleUp: true }, 100)
-    expect(buyAutoOverclock(noRestage)).toBe(noRestage)
-    expect(buyAutomationIntervalUpgrade('overclock')(withPoints({ ...base(), autoScaleUp: true, autoXpTickspeed: true }, 100)).automationIntervalLevels.overclock).toBe(0)
-    const unlocked = buyAutoOverclock(withPoints({ ...base(), autoScaleUp: true, autoXpTickspeed: true }, 64))
-    expect(unlocked.autoOverclock).toBe(true)
-    expect(unlocked.purge.points).toBe(32)
+    const locked = withPoints(base(), 100)
+    expect(buyAutomationIntervalUpgrade('overclock')(locked)).toBe(locked)
+    const unlocked = withPoints({ ...base(), autoOverclock: true }, 64)
     const upgraded = buyAutomationIntervalUpgrade('overclock')(unlocked)
     expect(upgraded.automationIntervalLevels.overclock).toBe(1)
-    expect(upgraded.purge.points).toBe(0)
+    expect(upgraded.purge.points).toBe(32)
     expect(setAutoOverclockEnabled(false)(upgraded).autoOverclockEnabled).toBe(false)
   })
 
@@ -12522,6 +12449,19 @@ describe('playtime bonus', () => {
     const after = purgeGame(state)
     expect(after.playtimeBonusUnlocked).toBe(true)
     expect(after.activePlaySeconds).toBe(5 * 3600)
+  })
+})
+
+describe('prestigeSpeedBonusUnlocked persistence', () => {
+  it.each([
+    ['purgeGame', () => purgeGame(withMoney({ ...createInitialGameState(), prestigeSpeedBonusUnlocked: true }, PURGE_THRESHOLD))],
+    ['eraGame', () => eraGame({ ...eraEligibleState(), prestigeSpeedBonusUnlocked: true })],
+    ['scaleUpGame', () => scaleUpGame(withPurchaseLevel({ ...createInitialGameState(), prestigeSpeedBonusUnlocked: true, scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1 }, TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id, 4))],
+    ['overclockGame', () => overclockGame(withPurchaseLevel({ ...createInitialGameState(), prestigeSpeedBonusUnlocked: true }, TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id, 6))],
+  ])('survives %s', (_name, run) => {
+    const after = run()
+    expect(after.prestigeSpeedBonusUnlocked).toBe(true)
+    expect(after.speedBonusGrandfathered).toBe(true)
   })
 })
 

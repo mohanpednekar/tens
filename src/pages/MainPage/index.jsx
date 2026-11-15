@@ -8,7 +8,7 @@ import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getChallengeTier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_PURGES, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
+import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
 
@@ -847,9 +847,9 @@ const MainPage = ({ game }) => {
   const canPurge = state.resources[MONEY_ID] >= getPurgeGoalBits(state)
   const isUnbounded = isOverflowModeUnlocked(state)
   const doublePpLevel = state.prestigeDoublePpLevel ?? 0
-  // Passive Purge-count production-speed bonus: flat ×1 until 10 Purges (see engine.js).
-  const prestigeBonus = getPrestigeProductionMultiplier(purge.count)
+  // Passive Purge-count production-speed bonus: flat ×1 until bought with 1 PP (see engine.js).
   const prestigeBonusUnlocked = isPrestigeSpeedBonusUnlocked(state)
+  const prestigeBonus = getPrestigeProductionMultiplier(purge.count, prestigeBonusUnlocked)
   const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel)
   const purgeProgressPercent = getPurgePercent(state.resources[MONEY_ID], getPurgeGoalBits(state))
   const bytePowerProgressFraction = getNextBytePowerProgressFraction(state.resources[MONEY_ID])
@@ -1276,8 +1276,8 @@ const MainPage = ({ game }) => {
               {!isFirstRun && (
                 <li>
                   Prestige speed bonus: {prestigeBonusUnlocked
-                    ? `${formatBonusOrMultiplier(prestigeBonus)} production speed from ${formatAmount(purge.count)} Purges`
-                    : `unlocks at ${PRESTIGE_SPEED_BONUS_UNLOCK_PURGES} Purges (${formatAmount(purge.count)} so far)`}
+                    ? `${formatBonusOrMultiplier(prestigeBonus)} production speed from ${formatAmount(purge.count)} Purge${purge.count === 1 ? '' : 's'}`
+                    : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on Firmware → Prestige)`}
                 </li>
               )}
               <li>

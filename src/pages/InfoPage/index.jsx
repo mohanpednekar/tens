@@ -41,10 +41,12 @@ import {
   PRESTIGE_POWERS_PER_PP_BASE,
   PLAYTIME_BONUS_PER_HOUR,
   PLAYTIME_BONUS_UNLOCK_COST,
-  PRESTIGE_SPEED_BONUS_UNLOCK_PURGES,
+  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
+  AUTOBUYER_UNLOCK_MILESTONE_STEP,
+  GLOBAL_AUTOMATION_UNLOCK_PURGES,
   getStoragePoolMemoryBounds,
   DATA_STREAM_SPEED_EXPONENT_BASE,
   DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED,
@@ -531,8 +533,8 @@ const InfoPage = () => {
             After {TIER_DEFINITIONS.length} Scale Ups in a run (the first onto {lastTierName}), the
             Restage upgrade appears left of Scale Up (below the tier list): spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
-            It resets every other tier’s owned quantity and your Bits. A 16 PP Auto Restage
-            (Firmware → Automation, after Auto Clock Speed) spends it for you, every 64 s at first —
+            It resets every other tier’s owned quantity and your Bits. Auto Restage
+            (Firmware → Automation, unlocked at Purge {GLOBAL_AUTOMATION_UNLOCK_PURGES.restage}) spends it for you, every 64 s at first —
             faster with its speed upgrades.
           </li>
         </ul>
@@ -613,7 +615,8 @@ const InfoPage = () => {
         <h2>Releases</h2>
         <ul>
           <li>
-            <strong>Tier autobuyers:</strong> one tier per Purge, from Purge{' '}
+            <strong>Tier autobuyers:</strong> one tier every{' '}
+            {AUTOBUYER_UNLOCK_MILESTONE_STEP === 1 ? 'Purge' : `${AUTOBUYER_UNLOCK_MILESTONE_STEP} Purges`}, from Purge{' '}
             {firstTierAutobuyerMilestone} ({firstTierName}) through Purge{' '}
             {lastTierAutobuyerMilestone} ({lastTierName}).
           </li>
@@ -652,8 +655,8 @@ const InfoPage = () => {
             Spend PP on Firmware for automation and upgrades.
           </li>
           <li>
-            From {PRESTIGE_SPEED_BONUS_UNLOCK_PURGES} Purges on, production speed gets a bonus of
-            ×log₁₀ of your Purge count.
+            Your first Purge Point buys the Purge speed bonus ({PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP on Firmware → Prestige):
+            production speed grows with every Purge, forever: +10% per Purge up to ×2 at 10 Purges, then ×3 at 100, ×4 at 1,000, and so on.
           </li>
           <li>
             The one-time Playtime bonus ({PLAYTIME_BONUS_UNLOCK_COST} PP on Firmware → Prestige) adds
