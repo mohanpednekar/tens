@@ -417,15 +417,20 @@ jobs:
           # is needed here (unlike the GH_AUTOMATION_PAT prerequisites in docs/AUTOMATION.md).
           # Falls back to empty on any API error (e.g. alerts disabled) rather than failing
           # the run — Phase 0(c) below treats an empty list the same as "no open alerts".
-          if ! dependabot_alerts=$(gh api "repos/${{ github.repository }}/dependabot/alerts?state=open" \
+          # The gh call is tested on its own (this step runs under plain `bash -e`, no pipefail,
+          # so a failure inside a pipeline would be masked); sort/trim only after it succeeded.
+          if dependabot_raw=$(gh api "repos/${{ github.repository }}/dependabot/alerts?state=open" \
             --paginate --jq '
               def sevrank: if .security_advisory.severity == "critical" then 0
                            elif .security_advisory.severity == "high" then 1
                            elif .security_advisory.severity == "medium" then 2
                            else 3 end;
               .[]
-              | "\(sevrank) - #\(.number) [\(.security_advisory.severity)] \(.dependency.package.name): \(.security_advisory.summary) (\(.html_url))"
-            ' 2>/dev/null | sort -s -k1,1n | cut -d' ' -f2-); then
+              | "\(sevrank) - #\(.number) [\(.security_advisory.severity)] \(.dependency.package.name): \(.security_advisory.summary | gsub("[\n\r\t]"; " ")) (\(.html_url))"
+            ' 2>/dev/null); then
+            # Global severity order across all pages (stable: ties keep API order).
+            dependabot_alerts=$(printf '%s\n' "$dependabot_raw" | sort -s -k1,1n | cut -d' ' -f2-)
+          else
             dependabot_alerts=""
           fi
           {
