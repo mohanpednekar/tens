@@ -325,8 +325,9 @@ const RowControls = styled.div`
 // with the name above it.
 const Tutorial = styled.p`
   margin: 0;
-  padding: ${({ theme }) => theme.space?.[2] ?? 8}px ${({ theme }) => theme.space?.[3] ?? 12}px;
-  border-radius: ${({ theme }) => theme.radius?.md ?? 8}px;
+  padding: ${({ theme }) => theme.space.md} ${({ theme }) => theme.space.lg};
+  margin-bottom: ${({ theme }) => theme.space.sm};
+  border-radius: ${({ theme }) => theme.radius.md};
   border: 1px solid #38bdf8;
   font-size: 0.85rem;
   line-height: 1.35;
