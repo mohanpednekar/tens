@@ -181,8 +181,8 @@ const InfoPage = () => {
         <ul>
           <li>
             <strong>Purge</strong> — at 1 Googol Bytes. <em>Resets:</em> Bits and resources, owned
-            Factory tiers, Scale Ups, Overclocks, Clock Speed, Restage XP, the per-cycle Compute (Flops) boost and the Data Stream balance.{' '}
-            <em>Keeps:</em> Purge Points, Compression levels, automation unlocks, Overflow mode, the
+            Factory tiers, Scale Ups, Overclocks, Clock Speed, Restage XP, the per-cycle Compute (Flops) boost.{' '}
+            <em>Keeps:</em> the Data Stream balance, Purge Points, Compression levels, automation unlocks, Overflow mode, the
             Byte generator, Capacity, Disks, Data Lakes, Compute entities, owned Compute (Flops)
             units and the System log.
           </li>
@@ -262,7 +262,7 @@ const InfoPage = () => {
         <h3>What resets vs. what stays</h3>
         <ul>
           <li>
-            <strong>Resets each Purge:</strong> the Data Stream balance and any partly bought{' '}
+            <strong>Resets each Purge:</strong> any partly bought{' '}
             {firstTierName} level.
           </li>
           <li>

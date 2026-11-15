@@ -176,7 +176,7 @@ conversion resumes; rebuilding blocks only new provisioning starts in later pool
 its pool's base Bandwidth, +10% additive per flush; the first two flushes also raise the shared Bitrate/pool Bandwidth exponent via permanent achievements. The generator, Disks, Data Lakes, and Compute entities are
 permanent across every real Prestige; Reboot (`buildEraIntroReset`) wipes Disks/Data
 Lakes/Compute entity balances to scratch while keeping `byteCreated`, the `mainGameUnlocked` latch, and
-select automation-unlock flags. Only the Data Stream balance resets each ordinary cycle.
+select automation-unlock flags. The Data Stream balance is kept across ordinary cycles.
 
 **Same caveat, extended to Data Stream Capacity, pool Bandwidth, Provision Disk, Data Lakes
 (fill/Boosters/capacity ladder), stranded-disk handling, the Buy/Upgrade button precedence, and

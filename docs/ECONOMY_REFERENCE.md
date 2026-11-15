@@ -139,7 +139,7 @@ until the manual/auto conversions into `owned` Kilobytes described below — not
 main game's economy directly.
 
 **Two halves, permanence-wise (see step 7 and `purgeGame`'s table row below):** "Memory"
-(`bits`) resets to fresh every real Prestige — along with tier01's own
+(`bits`) is KEPT across a real Prestige (Reboot still zeroes it); tier01's own
 `purchaseLevels`/`purchaseLevelProgress`, reset like every other tier's own purchase progress (see
 `purgeGame`'s table row below), purely as a side effect of that general reset. The main-game-
 unlock gate (`mainGameUnlocked`) does NOT reset with it any more — see `latchMainGameUnlocked`
@@ -2317,8 +2317,8 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // Foundry" below. A currency pool entirely separate
                                                           // from resources.base until the manual/auto
                                                           // conversions into owned Kilobytes. TWO GROUPS:
-                                                          // "Memory" (bits) resets to
-                                                          // fresh EVERY REAL PRESTIGE (in the same object as
+                                                          // "Memory" (bits) is KEPT through
+                                                          // a real Prestige (in the same object as
                                                           // resources/owned — see purgeGame); the Byte
                                                           // generator itself and every upgrade to it
                                                           // (byteCreated/capacity) are PERMANENT,
@@ -2372,7 +2372,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // currently-FULL Disks of that size — see
                                                           // tickDiskAutoFill/pullDiskForCurrentLevel. A full
                                                           // disk's contents ride through a real Prestige
-                                                          // untouched even though Memory itself resets
+                                                          // untouched, and Memory (bits) is kept too
     disksBuiltTotal: {},                                  // PERMANENT. { [capacityBits]: cumulative count }
                                                           // of every disk ever built (constructed) at that
                                                           // size, full or empty — pulling never decrements

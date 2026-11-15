@@ -675,8 +675,8 @@ gate latch but resets Capacity (`buildEraIntroReset`). Recurring actions follow 
 order** Disk Fill > Provision Disk > Compute Boost (a lower one is disabled, in UI and engine, while a
 higher one is available; Provision Disk outranks Compute only while ARMED — `isProvisionDiskInProgress`). An always-on auto-convert (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`)
 turns Data Stream bits into free `tier01` units. Generator, Disks, Data Lakes, and every compute-ladder
-entity (Cell → … → Fusion) are PERMANENT across real Prestige; only Data Stream balance and
-tier01's purchase-block progress reset per cycle. Nothing here ever fully freezes.
+entity (Cell → … → Fusion) are PERMANENT across real Prestige; only tier01's purchase-block
+progress resets per cycle (the Data Stream balance is kept). Nothing here ever fully freezes.
 
 **Hard rules (full text and the rest of the Foundry mechanics: `docs/FOUNDRY_MECHANICS_REFERENCE.md`):**
 - **Fill multiplier** (`FILL_MULTIPLIER_*`, `getFillMultiplierPercent`): displayed Speed/Bandwidth never
