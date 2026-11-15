@@ -20,7 +20,7 @@ import {
   getAutobuyerIntervalSeconds,
   getAutobuyerIntervalUpgradeCost,
   getAutobuyerUnlockMilestone,
-  getAutomationUnlockCost,
+  getGlobalAutomationUnlockMilestone,
   getFlopsAutobuyerUnlockEra,
   getPrestigeDoublePpUpgradeCost,
   getPrestigePowersPerPp,
@@ -39,7 +39,6 @@ import {
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
-  XP_TICKSPEED_AUTOBUYER_UNLOCK_COST,
   PLAYTIME_BONUS_UNLOCK_COST,
 } from 'game/layers'
 import { hasAffordableAutomationPerk, hasAffordablePrestigePerk } from 'game/navAttention'
@@ -464,11 +463,11 @@ const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Mat
 const formatIntervalShort = ms => (ms >= 1000 ? `${Number((ms / 1000).toFixed(ms >= 10000 ? 0 : 1))}s` : `${Math.round(ms)}ms`)
 
 const GLOBAL_AUTOMATIONS = [
-  { key: 'speedUp', name: 'Auto Clock Speed', icon: '🌐', owned: s => s.autoGlobalTickspeed ?? false, enabled: s => s.autoGlobalTickspeedEnabled ?? true, setEnabled: 'setAutoGlobalTickspeedEnabled', buy: 'buyTickspeedAutobuyer', canBuy: () => true, unlockTitle: 'Spend Purge Points so the global tickspeed multiplier upgrades itself automatically, forever, whenever affordable' },
-  { key: 'restage', name: 'Auto Restage', icon: '🧬', owned: s => s.autoXpTickspeed ?? false, enabled: s => s.autoXpTickspeedEnabled ?? true, setEnabled: 'setAutoXpTickspeedEnabled', buy: 'buyXpTickspeedAutobuyer', canBuy: s => Boolean(s.autoGlobalTickspeed), cost: XP_TICKSPEED_AUTOBUYER_UNLOCK_COST, unlockTitle: 'Spend Purge Points so XP is automatically consumed for Restage whenever possible (each consumption resets every other tier\'s owned quantity and Bits)' },
-  { key: 'scaleUp', name: 'Auto Scale Up', icon: '⏩', owned: s => s.autoScaleUp ?? false, enabled: s => s.autoScaleUpEnabled ?? true, setEnabled: 'setAutoScaleUpEnabled', buy: 'buyAutoScaleUp', canBuy: s => Boolean(s.autoGlobalTickspeed), unlockTitle: 'Spend Purge Points so eligible Scale Ups happen automatically until the final tier, where they stay manual for Overclock', statusTitle: enabled => (enabled ? "Scale Up triggers automatically the instant it's eligible" : 'Auto Scale Up is paused — it will not trigger until resumed') },
-  { key: 'overclock', name: 'Auto Overclock', icon: '🚀', owned: s => s.autoOverclock ?? false, enabled: s => s.autoOverclockEnabled ?? true, setEnabled: 'setAutoOverclockEnabled', buy: 'buyAutoOverclock', canBuy: s => Boolean(s.autoScaleUp) && Boolean(s.autoXpTickspeed), unlockTitle: 'Spend Purge Points so Overclock is claimed automatically whenever it is eligible' },
-  { key: 'purge', name: 'Auto Purge', icon: '✦', owned: s => (s.autoPurge ?? null) !== null, enabled: s => s.autoPurgeEnabled ?? true, setEnabled: 'setAutoPurgeEnabled', buy: 'buyAutoPurge', canBuy: s => Boolean(s.autoOverclock), allowFirstRun: true, unlockTitle: 'Spend Purge Points so Purge happens automatically once your balance reaches 1 Googol Bytes' },
+  { key: 'speedUp', name: 'Auto Clock Speed', icon: '🌐', owned: s => s.autoGlobalTickspeed ?? false, enabled: s => s.autoGlobalTickspeedEnabled ?? true, setEnabled: 'setAutoGlobalTickspeedEnabled' },
+  { key: 'restage', name: 'Auto Restage', icon: '🧬', owned: s => s.autoXpTickspeed ?? false, enabled: s => s.autoXpTickspeedEnabled ?? true, setEnabled: 'setAutoXpTickspeedEnabled' },
+  { key: 'scaleUp', name: 'Auto Scale Up', icon: '⏩', owned: s => s.autoScaleUp ?? false, enabled: s => s.autoScaleUpEnabled ?? true, setEnabled: 'setAutoScaleUpEnabled', statusTitle: enabled => (enabled ? "Scale Up triggers automatically the instant it's eligible" : 'Auto Scale Up is paused — it will not trigger until resumed') },
+  { key: 'overclock', name: 'Auto Overclock', icon: '🚀', owned: s => s.autoOverclock ?? false, enabled: s => s.autoOverclockEnabled ?? true, setEnabled: 'setAutoOverclockEnabled' },
+  { key: 'purge', name: 'Auto Purge', icon: '✦', owned: s => (s.autoPurge ?? null) !== null, enabled: s => s.autoPurgeEnabled ?? true, setEnabled: 'setAutoPurgeEnabled' },
 ]
 
 const PerksPage = ({ game, focusNonce = 0 }) => {
@@ -546,21 +545,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     return def && !isChallengeCompleted(state, def.id) ? def : null
   }
 
-  const unlockButton = ({ name, cost, canBuy, onClick, title }) => (
-    <PpPurchaseButton
-      ariaLabel={`Enable ${name} for ${cost} Purge Points`}
-      color="#38bdf8"
-      cost={cost}
-      disabled={!canBuy}
-      icon="🔓"
-      label={`${formatAmount(cost)} PP`}
-      onClick={onClick}
-      points={points}
-      progressLabel={`${name} PP progress`}
-      title={title}
-    />
-  )
-
   const renderAutomation = () => (
     <List aria-label="automation firmware page">
       <Category aria-label="global automation category">
@@ -570,7 +554,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         {GLOBAL_AUTOMATIONS.map(auto => {
           const owned = auto.owned(state)
           const enabled = auto.enabled(state)
-          const unlockCost = auto.cost ?? getAutomationUnlockCost(auto.key)
           const chainUnlocked = isAutomationIntervalChainUnlocked(state, auto.key)
           const level = state.automationIntervalLevels?.[auto.key] ?? 0
           const maxed = level >= getAutomationIntervalMaxLevel(auto.key)
@@ -587,13 +570,15 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               // The category heading already says "Automation", so the visible name drops "Auto";
               // every accessible name (status, Switch, buttons) keeps the full "Auto <feature>".
               label={auto.name.replace(/^Auto /, '')}
-              lockedAction={unlockButton({
-                name: auto.name,
-                cost: unlockCost,
-                canBuy: !isFrozen && (auto.allowFirstRun || !isFirstRun) && auto.canBuy(state) && points >= unlockCost,
-                onClick: actions[auto.buy],
-                title: auto.unlockTitle,
-              })}
+              lockedBadge={(
+                <MilestoneBadge
+                  current={purgeCount}
+                  milestone={getGlobalAutomationUnlockMilestone(auto.key)}
+                  progressLabel={`${auto.name} unlock milestone progress`}
+                  subject={auto.name}
+                  unit="Purge"
+                />
+              )}
               name={auto.name}
               onToggle={() => actions[auto.setEnabled](!enabled)}
               owned={owned}

@@ -749,7 +749,7 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   never its own line — and (tier / Flops cells) the cell grows one line downward for a full-width ⏫ speed upgrade (visible text is the cost only — the
   doubling to `M/buy` is in its `aria-label`/`title`; every tier autobuyer / tier tickspeed autobuyer
   chain starts at 100 PP). Locked: a 🔒
-  `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) or a 🔓 PP unlock button (full-width below the head in narrow cells, inline for global ones) (`"Enable <name> for N Purge Points"`). The Switch (`aria-pressed`, `aria-label`
+  `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) — every automation (global, tier, tier tickspeed) unlocks by Purge count; there is no PP unlock button. The Switch (`aria-pressed`, `aria-label`
   e.g. `"Auto Scale Up automation"`, `"<tier>'s autobuyer"`) sits at the head's right; the status is
   `"<name> active|paused"` (`role="img"`). Tier autobuyers: one `TierPair` card per tier (`aria-label="<tier> automation"`, the tier's Factory
   accent stripe, grid `1.9rem | 1fr | 1fr`) = tier symbol, then the ⚙ tickspeed autobuyer half (left — where the
@@ -821,8 +821,7 @@ the card stays visible rather than disappearing if tier02's owned count is later
 Prestige/Scale Up; Reset clears the flag alongside `overclockEverRevealed`. It
 needs no `!isFirstRun` gate — unlike the Firmware page, it has nothing to do with Prestige Points, so
 it's available (once tier02 is owned) even during a player's very first run. Clicking is optional: once
-`buyTickspeedAutobuyer` is bought (PP-funded, see "Prestige Points, autobuyer unlock, and the tickspeed
-multiplier" below), `tickGame` calls `buyGlobalTickspeedMultiplier` automatically every tick, so the
+Auto Clock Speed is unlocked (Purge 8; see ECONOMY_REFERENCE "Global automations unlock by Purge count"), `tickGame` calls `buyGlobalTickspeedMultiplier` automatically every tick, so the
 level climbs on its own whenever Money allows — the manual button works identically either way.
 
 **Tickspeed multiplier (Factory view, per tier).** Every unlocked tier's row carries a Money-funded

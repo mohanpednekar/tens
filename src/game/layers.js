@@ -769,9 +769,11 @@ export const AUTOBUYER_MIN_INTERVAL_SECONDS = 0.01
 // Interval upgrade chains for the global/per-tier automations (engine.js's
 // buyAutomationIntervalUpgrade / buyTierTickspeedIntervalUpgrade): cost = baseCost × the same
 // 1,2,4,…,64,125,… ladder as the tier autobuyer chain; interval = baseSeconds × 0.9^level, 10 ms floor.
-// baseCost is BOTH the one-time unlock cost of the automation (Speed Up / Scale Up / Restage /
-// Overclock / Purge autobuyers) AND the first interval-upgrade level's cost. Automations unlocked by a
-// milestone (tier autobuyers, tier tickspeed autobuyers) have no unlock cost — only the upgrades.
+// baseCost is the first interval-upgrade level's cost; every automation itself unlocks by Purge
+// count (GLOBAL_AUTOMATION_UNLOCK_PURGES, tier milestones) with no unlock cost — only the upgrades.
+// Purge count at which each global automation unlocks automatically (no PP cost; see engine.js's
+// applyAutobuyerMilestones). The interval-upgrade ladders below are PP-funded and unchanged.
+export const GLOBAL_AUTOMATION_UNLOCK_PURGES = { speedUp: 8, restage: 16, scaleUp: 32, overclock: 64, purge: 128 }
 export const AUTOMATION_INTERVAL_CONFIG = {
   speedUp: { baseCost: 8, baseSeconds: 1 },
   scaleUp: { baseCost: 16, baseSeconds: 64 },
@@ -784,17 +786,17 @@ export const TIER_TICKSPEED_INTERVAL_CONFIG = { baseCost: 100, baseSeconds: 16 }
 // How many times the player must have purged before a tier's unit-buying autobuyer unlocks
 // automatically (see engine.js's getAutobuyerUnlockMilestone/applyAutobuyerMilestones) — replaces
 // the old PP-cost-funded unlock entirely: no purchase, no PP spent, just a milestone reached by
-// prestige count. tier01 unlocks after the very first prestige, tier02 after the second, … tier10
-// after the tenth (AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP).
-export const AUTOBUYER_UNLOCK_MILESTONE_START = 1
-export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 1
+// prestige count. tier01 unlocks after the 2nd Purge, tier02 after the 4th, … tier10
+// after the 20th (AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP).
+export const AUTOBUYER_UNLOCK_MILESTONE_START = 2
+export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 2
 // Same milestone-based automatic-unlock mechanism as the autobuyer unlock above, but for a tier's
 // own tickspeed-multiplier autobuyer (see engine.js's getTierTickspeedAutobuyerMilestone) — starts
 // later (prestige 11 for tier01) and spaces out one prestige per tier (11, 12, 13, … 20 for tier10),
 // reflecting that it's a later-game convenience layered on top of the (now free)
 // unit-buying autobuyer above. Also no longer PP-funded.
-export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 11
-export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 1
+export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 22
+export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 2
 // Speed Up (the global tickspeed multiplier — see engine.js's
 // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) speeds up *every* tier's
 // production at once. Every level compounds by the same rate.
@@ -835,10 +837,6 @@ export const LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1
 // of) its own resource-funded tickspeed level. "Last tier" (not a hardcoded tier id) so this stays
 // correct if TIER_DEFINITIONS ever grows a new final entry.
 export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
-// One-time PP cost (Firmware → Automation) for Auto Restage (= its interval chain's baseCost) — once bought,
-// tickGame spends the whole XP balance on the last tier's XP-funded tickspeed whenever
-// consumeXpForLastTierTickspeed allows, at most once per AUTOMATION_INTERVAL_CONFIG.restage interval.
-export const XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = AUTOMATION_INTERVAL_CONFIG.restage.baseCost
 // Each single XP-consumption action must be at least this fraction of the cumulative XP already
 // consumed this way (see engine.js's getLastTierXpTickspeedMinConsumption) — so repeat
 // consumptions can't trickle in one XP at a time forever; the required minimum grows alongside
