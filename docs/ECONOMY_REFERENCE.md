@@ -359,7 +359,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      the bonus cap is simply a no-op). Expand/collapse is the "<symbol> Pool" title alone
      (`PoolTitleToggle`, a real `<button>` with `aria-expanded`; the tap target is a separate stretched
      `PoolTapButton` behind the readouts, so the two never nest and the tap can't block the title).
-5. **Upgrade Data Stream** (`queueIntroSpeedUpgrade`, the single consolidated upgrade button —
+5. **Upgrade Data Stream** (`queueIntroSpeedUpgrade` for Bitrate, `queueIntroCapacityUpgrade` for Capacity; the single consolidated upgrade button —
    replacing the former paired "Speed ×2"/Invest ladder and "Capacity ×2" actions, now removed).
    **Capacity is the only purchased progression variable**: the upgrade costs exactly the current
    capacity (a full Buffer, drained on purchase) and doubles `intro.capacity`
