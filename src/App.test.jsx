@@ -1079,9 +1079,9 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
 
   expect(screen.queryByRole('dialog', { name: /purge required/i })).not.toBeInTheDocument()
   // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked in engine.js) — a real Prestige
-  // resets the Byte Foundry's Data Stream balance but never re-gates it, so the app stays on
+  // keeps the Byte Foundry's Data Stream balance and never re-gates it, so the app stays on
   // Factory rather than navigating back to the Byte Foundry — see the dedicated Byte-Foundry/
-  // Prestige interaction tests further down for the full reset assertions.
+  // Prestige interaction tests further down for the full assertions.
   expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
 })
 
@@ -1590,47 +1590,40 @@ test('Firmware groups by feature: Automation holds every automation, Prestige th
   )
 })
 
-test('an Enable Auto Scale Up button appears on Firmware → Automation after the first prestige, and spends 16 PP to enable it', async () => {
+test.each([
+  { name: 'Auto Clock Speed', milestone: 8 },
+  { name: 'Auto Restage', milestone: 16 },
+  { name: 'Auto Scale Up', milestone: 32 },
+  { name: 'Auto Overclock', milestone: 64 },
+  { name: 'Auto Purge', milestone: 128 },
+])('$name unlocks at Purge $milestone with no PP cost: locked badge before, active row after', async ({ name, milestone }) => {
   const user = userEvent.setup()
+  const rowName = new RegExp(`^${name} unlocks at purge ${milestone}$`, 'i')
 
   seedMainGameState({
     resources: { base: 10 },
-    owned: { tier09: 10 },
-    everUnlockedTierIds: { tier01: true, tier10: true },
-    autoGlobalTickspeed: true, // global automations unlock sequentially: Auto Clock Speed first
-    purge: { xp: 0, points: 16, count: 1, highestMilestone: 1 },
+    purge: { xp: 0, points: 1000, count: milestone - 1, highestMilestone: 1 },
   })
-  render(<App />)
+  const { unmount } = render(<App />)
   await openPerksTab(user, /open automation/i)
+  expect(screen.getByLabelText(rowName)).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: new RegExp(`enable ${name}`, 'i') })).not.toBeInTheDocument()
+  unmount()
+  cleanup()
+  localStorage.clear()
 
-  const autoScaleUpButton = screen.getByRole('button', { name: /enable auto scale up for 16 purge points/i })
-  expect(autoScaleUpButton).toBeEnabled()
-
-  await user.click(autoScaleUpButton)
-
-  expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /enable auto scale up/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
-})
-
-test('an Enable Auto Restage button on Firmware → Automation spends 16 PP to enable it', async () => {
-  const user = userEvent.setup()
-
+  const flag = { 'Auto Clock Speed': 'autoGlobalTickspeed', 'Auto Restage': 'autoXpTickspeed', 'Auto Scale Up': 'autoScaleUp', 'Auto Overclock': 'autoOverclock', 'Auto Purge': 'autoPurge' }[name]
   seedMainGameState({
     resources: { base: 10 },
-    owned: { tier09: 10 },
-    purge: { xp: 0, points: 16, count: 1, highestMilestone: 1 },
-    autoGlobalTickspeed: true, // Auto Restage needs Auto Clock Speed first (parallel to Auto Scale Up)
+    [flag]: true,
+    ...(name === 'Auto Purge' ? { autoPurge: 1 } : {}),
+    purge: { xp: 0, points: 1000, count: milestone, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
-
-  const button = screen.getByRole('button', { name: /enable auto restage for 16 purge points/i })
-  expect(button).toBeEnabled()
-  await user.click(button)
-
-  expect(screen.getByLabelText('Auto Restage active')).toBeInTheDocument()
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
+  expect(screen.getByLabelText(`${name} active`)).toBeInTheDocument()
+  expect(screen.queryByLabelText(rowName)).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('1,000 PP')
 })
 
 test('Power pre-selects the highest automated tier on arrival', () => {
@@ -1772,28 +1765,6 @@ test('the global latency panel renders above the tier list, not below it', () =>
 
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
   expect(regions.indexOf('global clock speed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
-})
-
-test('an Enable Auto Clock Speed button appears on Firmware → Automation after the first prestige, and spends 8 PP to enable it', async () => {
-  const user = userEvent.setup()
-
-  seedMainGameState({
-    resources: { base: 10 },
-    owned: { tier09: 10 },
-    everUnlockedTierIds: { tier01: true, tier10: true },
-    purge: { xp: 0, points: 8, count: 1, highestMilestone: 1 },
-  })
-  render(<App />)
-  await openPerksTab(user, /open automation/i)
-
-  const tickspeedAutobuyerButton = screen.getByRole('button', { name: /enable auto clock speed for 8 purge points/i })
-  expect(tickspeedAutobuyerButton).toBeEnabled()
-
-  await user.click(tickspeedAutobuyerButton)
-
-  expect(screen.getByLabelText('Auto Clock Speed active')).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /enable auto clock speed/i })).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
 })
 
 test('a static "unlocked" badge shows on Firmware → Automation once Auto Scale Up has been bought', async () => {
@@ -1995,43 +1966,6 @@ const allTiersSmartSeed = () => ({
   tierTickspeedAutobuyer: Object.fromEntries(ALL_TIER_IDS.map(id => [id, true])),
 })
 
-// Every PP-spending button independently gates on its own cost vs. purge.points — one seed
-// short of each button's own cost below, table-driven since the shape (seed state, find button by
-// name, assert disabled) is identical across all of them and only the seed/cost/button name differ.
-test.each([
-  {
-    name: 'Enable Auto Clock Speed',
-    seed: { owned: { tier09: 10 }, purge: { xp: 0, points: 7, count: 1, highestMilestone: 1 } },
-    buttonName: /enable auto clock speed for 8 purge points/i,
-  },
-  {
-    name: 'Enable Auto Scale Up',
-    seed: { owned: { tier09: 10 }, purge: { xp: 0, points: 15, count: 1, highestMilestone: 1 } },
-    buttonName: /enable auto scale up for 16 purge points/i,
-  },
-  {
-    name: 'Enable Auto Restage',
-    seed: { owned: { tier09: 10 }, purge: { xp: 0, points: 15, count: 1, highestMilestone: 1 } },
-    buttonName: /enable auto restage for 16 purge points/i,
-  },
-  {
-    name: 'Auto Purge',
-    seed: { ...allTiersSmartSeed(), purge: { xp: 0, points: 63, count: 1, highestMilestone: 1 } },
-    buttonName: /enable auto purge for 64 purge points/i,
-  },
-])('the $name button stays disabled without enough Purge Points', async ({ seed, buttonName, tab = /open automation/i }) => {
-  const user = userEvent.setup()
-
-  seedMainGameState({
-    resources: { base: 10 },
-    ...seed,
-  })
-  render(<App />)
-  await openPerksTab(user, tab)
-
-  expect(screen.getByRole('button', { name: buttonName })).toBeDisabled()
-})
-
 // Every automation's pause/resume toggle follows the same shape (bought → badge + pause button →
 // pause flips the badge/aria-pressed → resume flips them back) — table-driven since only the seed
 // state and aria-label/name strings differ per automation.
@@ -2094,7 +2028,7 @@ test.each([
   expect(screen.getByRole('button', { name: pauseName })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('Global Automation lists every step (Auto Clock Speed → Auto Scale Up → Auto Overclock → Auto Purge) and gates each on the previous', async () => {
+test('Global Automation lists every step with its Purge milestone while locked', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2104,28 +2038,9 @@ test('Global Automation lists every step (Auto Clock Speed → Auto Scale Up →
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  // Global automations are sequential: each is listed but only purchasable once the previous is bought.
-  expect(screen.getByRole('button', { name: /enable auto clock speed for 8 purge points/i })).toBeEnabled()
-  expect(screen.getByRole('button', { name: /enable auto scale up for 16 purge points/i })).toBeDisabled()
-  expect(screen.getByRole('button', { name: /enable auto overclock for 32 purge points/i })).toBeDisabled()
-  expect(screen.getByRole('button', { name: /enable auto purge for 64 purge points/i })).toBeDisabled()
-})
-
-test('after Auto Clock Speed, Auto Restage and Auto Scale Up are both buyable (either order); Auto Overclock needs both', async () => {
-  const user = userEvent.setup()
-  seedMainGameState({
-    resources: { base: 10 },
-    purge: { xp: 0, points: 1000, count: 1, highestMilestone: 1 },
-    autoGlobalTickspeed: true,
-    autoScaleUp: true,
-  })
-  render(<App />)
-  await openPerksTab(user, /open automation/i)
-  expect(screen.getByRole('button', { name: /enable auto restage for 16 purge points/i })).toBeEnabled()
-  // Scale Up alone isn't enough for Overclock.
-  expect(screen.getByRole('button', { name: /enable auto overclock for 32 purge points/i })).toBeDisabled()
-  await user.click(screen.getByRole('button', { name: /enable auto restage for 16 purge points/i }))
-  expect(screen.getByRole('button', { name: /enable auto overclock for 32 purge points/i })).toBeEnabled()
+  for (const [name, milestone] of [['Auto Clock Speed', 8], ['Auto Restage', 16], ['Auto Scale Up', 32], ['Auto Overclock', 64], ['Auto Purge', 128]]) {
+    expect(screen.getByLabelText(`${name} unlocks at Purge ${milestone}`)).toBeInTheDocument()
+  }
 })
 
 test('Firmware lists global automations in one order: Auto Clock Speed → Restage → Scale Up → Overclock → Purge', async () => {
@@ -2164,7 +2079,7 @@ test('Auto Purge offers no speed upgrade or interval until it is bought', async 
   expect(screen.getByLabelText(/^auto purge row$/i)).not.toHaveTextContent(/1024s/)
 })
 
-test('an Auto-Prestige button appears in Firmware → Automation (Global Automation) once every tier is Smart, and spends 64 PP to activate it', async () => {
+test('Auto-Prestige is active from Purge 128 and its row carries the interval and the speed upgrade', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2172,20 +2087,14 @@ test('an Auto-Prestige button appears in Firmware → Automation (Global Automat
     ...allTiersSmartSeed(),
     challenges: { completed: { F25: true } },
     autoOverclock: true,
-    purge: { xp: 0, points: 64, count: 1, highestMilestone: 1 },
+    autoPurge: 1,
+    purge: { xp: 0, points: 64, count: 128, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  const autoPurgeButton = screen.getByRole('button', { name: /enable auto purge for 64 purge points/i })
-  expect(autoPurgeButton).toBeEnabled()
-
-  await user.click(autoPurgeButton)
-
-  // Same row now carries the interval and the speed upgrade.
   expect(screen.getByLabelText(/^auto purge row$/i)).toHaveTextContent('1024s')
   expect(screen.getByRole('button', { name: /upgrade auto purge speed to level 1 for 64 purge points/i })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
 })
 
 test('no pause toggle appears for Auto-Prestige before it has ever been activated', async () => {
@@ -2219,26 +2128,33 @@ test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled withou
   expect(screen.getByRole('button', { name: /upgrade auto purge speed to level 1 for 64 purge points/i })).toBeDisabled()
 })
 
-test('purge points and the production speed bonus are shown once 10 Purges are reached', () => {
+test('purge points and the production speed bonus are shown once the first Purge is done', () => {
   seedMainGameState({
     resources: { base: 10 },
+    prestigeSpeedBonusUnlocked: true,
     purge: { xp: 0, points: 50, count: 100, highestMilestone: 1 },
   })
   render(<App />)
 
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('50 PP')
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('2x production speed')
+  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('3x production speed')
 })
 
-test('the production speed bonus is hidden from the Purge Points bar below 10 Purges', () => {
+test('Firmware → Prestige teaches PP with a tutorial: the first 1 PP buys the permanent speed bonus', async () => {
+  const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
-    purge: { xp: 0, points: 10500, count: 9, highestMilestone: 1 },
+    purge: { xp: 0, points: 1, count: 1, highestMilestone: 1 },
   })
   render(<App />)
+  await openPerksTab(user, /open prestige/i)
 
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('10,500 PP')
-  expect(screen.getByLabelText(/^purge points display$/i)).not.toHaveTextContent(/production speed/i)
+  expect(screen.getByLabelText(/^purge points tutorial$/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /unlock speed bonus for 1 purge points/i }))
+
+  expect(screen.queryByLabelText(/^purge points tutorial$/i)).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
+  expect(screen.getByLabelText(/^speed bonus upgrade$/i)).toHaveTextContent('×1.1 now')
 })
 
 test('the playtime bonus is unlocked for 100 PP on Firmware → Prestige', async () => {
@@ -2256,20 +2172,19 @@ test('the playtime bonus is unlocked for 100 PP on Firmware → Prestige', async
   expect(screen.queryByRole('button', { name: /unlock playtime bonus/i })).not.toBeInTheDocument()
 })
 
-test('PP-spending buttons report how much of their cost the current balance covers, like the tier buttons', async () => {
+test('locked global automations report Purge progress toward their milestone', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 10 },
-    purge: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
+    purge: { xp: 0, points: 10, count: 10, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  // Auto Scale Up costs 16 PP — 10 PP covers most of it.
-  const autoScaleUpProgress = screen.getByRole('progressbar', { name: /auto scale up pp progress/i })
-  expect(autoScaleUpProgress).toHaveAttribute('aria-valuenow', '10')
-  expect(autoScaleUpProgress).toHaveAttribute('aria-valuemax', '16')
+  const progress = screen.getByRole('progressbar', { name: /auto scale up unlock milestone progress/i })
+  expect(progress).toHaveAttribute('aria-valuenow', '10')
+  expect(progress).toHaveAttribute('aria-valuemax', '32')
 })
 
 test('a locked badge appears on Firmware → Automation for a tier whose autobuyer milestone has not been reached yet', async () => {
@@ -2277,18 +2192,15 @@ test('a locked badge appears on Firmware → Automation for a tier whose autobuy
 
   seedMainGameState({
     resources: { base: 10 },
-    // tier01's autobuyer unlocks automatically at Prestige 1, so it's already unlocked the moment
-    // the Firmware page itself is reachable (!isFirstRun) — there's no PP cost, no button, and
-    // no locked state to observe for it. tier02's own milestone (Prestige 2) isn't met yet at
-    // count 1, so it's the one that stays locked here.
+    // tier01's autobuyer unlocks at Purge 2; tier02's milestone (Purge 4) isn't met yet at count 3.
     owned: { tier01: 16 }, // fully purchases two levels, unlocking Megabytes
     everUnlockedTierIds: { tier01: true, tier02: true },
-    purge: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
+    purge: { xp: 0, points: 100, count: 3, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  expect(screen.getByLabelText(/^megabytes's autobuyer unlocks at purge 2$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^megabytes's autobuyer unlocks at purge 4$/i)).toBeInTheDocument()
 })
 
 test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone is reached', async () => {
@@ -2298,7 +2210,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
     resources: { base: 10 },
     owned: { tier01: 16 },
     everUnlockedTierIds: { tier01: true, tier02: true },
-    purge: { xp: 0, points: 2000, count: 2, highestMilestone: 1 }, // meets megabytes' milestone (2)
+    purge: { xp: 0, points: 2000, count: 4, highestMilestone: 1 }, // meets megabytes' milestone (4)
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
@@ -2332,19 +2244,19 @@ test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) p
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 }, // the unit-buying autobuyer is already unlocked
-    purge: { xp: 0, points: 1000, count: 10, highestMilestone: 1 }, // one short of Kilobytes's tickspeed milestone (11)
+    purge: { xp: 0, points: 1000, count: 21, highestMilestone: 1 }, // one short of Kilobytes's tickspeed milestone (22)
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 11$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 22$/i)).toBeInTheDocument()
 })
 
 test('a tier\'s tickspeed autobuyer auto-unlocks (no PP spent) once its own prestige milestone is reached', async () => {
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 },
-    purge: { xp: 0, points: 10, count: 11, highestMilestone: 1 }, // meets Kilobytes's tickspeed milestone (11)
+    purge: { xp: 0, points: 10, count: 22, highestMilestone: 1 }, // meets Kilobytes's tickspeed milestone (22)
   })
   render(<App />)
   await openPerksTab(userEvent.setup(), /open automation/i)
@@ -2512,23 +2424,23 @@ test('Firmware → Automation lists every tier\'s autobuyer/tier-tickspeed-autob
 
   seedMainGameState({
     resources: { base: 10 },
-    purge: { xp: 0, points: 0, count: 3, highestMilestone: 1 },
+    purge: { xp: 0, points: 0, count: 7, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  // Prestige count 3 meets Kilobytes/Megabytes/Gigabytes' autobuyer-unlock milestones (1/2/3) but not
-  // Terabytes' (4) — each already-met tier shows as unlocked, the next one as still locked.
+  // Purge count 7 meets Kilobytes/Megabytes/Gigabytes' autobuyer-unlock milestones (2/4/6) but not
+  // Terabytes' (8) — each already-met tier shows as unlocked, the next one as still locked.
   expect(screen.getByLabelText(/^kilobytes's autobuyer active$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^megabytes's autobuyer active$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^gigabytes's autobuyer active$/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^terabytes's autobuyer unlocks at purge 4$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^terabytes's autobuyer unlocks at purge 8$/i)).toBeInTheDocument()
 
-  // None of the tier tickspeed autobuyer milestones (11+) are anywhere close yet.
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 11$/i)).toBeInTheDocument()
+  // None of the tier tickspeed autobuyer milestones (22+) are anywhere close yet.
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 22$/i)).toBeInTheDocument()
   const tickspeedProgress = screen.getByRole('progressbar', { name: /^kilobytes tickspeed autobuyer milestone progress$/i })
-  expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '3')
-  expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '11')
+  expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '7')
+  expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '22')
 
   // Releases no longer repeats these — it keeps only Chapters / Reboot.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
@@ -2564,18 +2476,17 @@ test('an autobuyer active/paused badge appears on Firmware → Automation once i
 test('no autobuyer pause button appears on Firmware → Automation before its autobuyer is unlocked', async () => {
   const user = userEvent.setup()
 
-  // Megabytes' autobuyer unlocks at Prestige 2 (getAutobuyerUnlockMilestone) — Prestige 1 is
-  // enough to leave isFirstRun and reach Firmware, but not enough to unlock it, unlike
-  // Kilobytes (milestone 1) which would already be unlocked at this same count.
+  // Megabytes' autobuyer unlocks at Purge 4 (getAutobuyerUnlockMilestone) — Purge 3 is enough to
+  // have unlocked Kilobytes (milestone 2) but not Megabytes.
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier02: 1 },
-    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+    purge: { xp: 0, points: 0, count: 3, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  expect(screen.getByLabelText("Megabytes's autobuyer unlocks at Purge 2")).toBeInTheDocument()
+  expect(screen.getByLabelText("Megabytes's autobuyer unlocks at Purge 4")).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /^Megabytes's autobuyer$/i })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^Kilobytes's autobuyer$/i })).toBeInTheDocument()
 })
@@ -2669,7 +2580,7 @@ test('a tier whose autobuyer is unlocked but not yet tickspeed-automated still o
   render(<App />)
   await openPerksTab(userEvent.setup(), /open automation/i)
 
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 11$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 22$/i)).toBeInTheDocument()
 })
 
 test('clicking the money balance expands a breakdown of every global production multiplier currently in effect, and collapses again on a second click', async () => {
@@ -2680,6 +2591,7 @@ test('clicking the money balance expands a breakdown of every global production 
     owned: { tier02: 1, tier10: 10 },
     scaleUpCount: 2,
     globalTickspeedMultiplier: 1,
+    prestigeSpeedBonusUnlocked: true,
     purge: { xp: 0, points: 50, count: 100, highestMilestone: 1 },
   })
   render(<App />)
@@ -2692,7 +2604,7 @@ test('clicking the money balance expands a breakdown of every global production 
 
   expect(moneyDisplay).toHaveAttribute('aria-expanded', 'true')
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
-  expect(breakdown).toHaveTextContent(/prestige speed bonus: 2x production speed from 100 purges/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: 3x production speed from 100 purges/i)
   expect(breakdown).toHaveTextContent(/scale up: 2 activations; multiplier varies by tier/i)
   expect(breakdown).toHaveTextContent(/clock speed: \+[\d.]+% faster ticks on every tier(?! \(lv)/i)
 
@@ -2702,7 +2614,7 @@ test('clicking the money balance expands a breakdown of every global production 
   expect(screen.queryByLabelText(/^global production multipliers$/i)).not.toBeInTheDocument()
 })
 
-test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated status for each global multiplier before it becomes active', async () => {
+test('the money balance breakdown reports a not-yet-activated status for each global multiplier before it becomes active', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2715,7 +2627,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
   await user.click(screen.getByRole('button', { name: /^money display$/i }))
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
-  expect(breakdown).toHaveTextContent(/prestige speed bonus: unlocks at 10 purges \(1 so far\)/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(1 PP on firmware → prestige\)/i)
   expect(breakdown).toHaveTextContent(/scale up: not yet activated \(reach 3 completed levels on kilobytes\)/i)
   expect(breakdown).toHaveTextContent(/clock speed: not yet active/i)
 })
@@ -3639,7 +3551,33 @@ test('the Data Lake header shows target price, filled amount and fill speed', ()
   expect(within(lake).getByTitle('Current fill speed')).not.toHaveTextContent('⚡ 0 B/s')
 })
 
-test('a collapsed pool card\'s Data Lake header shows the bar text "X/N KB" instead of the lake balance', () => {
+test('a collapsed pool card\'s Data Lake header shows the next Booster\'s affordability percentage instead of the lake balance (#1087)', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  // 3 banked disk units + a half-full buffer toward a cost-4 Booster (purchased 3): 3.5 / 4 = 87%.
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
+    dataLakes: { 1: { depositedUnits: 3, fillBits: 4000, purchased: 3, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
+  })
+  render(<App />)
+
+  const collapse = screen.queryByRole('button', { name: 'collapse pool 1' })
+  if (collapse) fireEvent.click(collapse)
+  const lake = screen.getByLabelText('KB lake')
+  expect(within(lake).getByTitle(/Banked toward the next Cell/)).toHaveTextContent('87%')
+  expect(within(lake).getByRole('progressbar', { name: 'KB lake fill progress' })).toHaveAttribute('aria-valuenow', '87')
+  expect(within(lake).queryByTitle('Currently filled')).toBeNull()
+})
+
+test.each([
+  ['reads 100% once the next Booster is covered', { depositedUnits: 5, fillBits: 0, purchased: 2 }, '100%', 100],
+  ['stays below 100% for a cost the lake can never hold', { depositedUnits: 9, fillBits: 8000, purchased: 10 }, '90%', 90],
+  ['reads 0% for an empty lake', { depositedUnits: 0, fillBits: 0, purchased: 5 }, '0%', 0],
+])('a collapsed Data Lake header %s (#1087)', (_name, lake, text, valueNow) => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
@@ -3648,16 +3586,37 @@ test('a collapsed pool card\'s Data Lake header shows the bar text "X/N KB" inst
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
     poolBuffers: { 1: poolCapacity },
     disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
-    dataLakes: { 1: { depositedUnits: 1, fillBits: 2000, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
+    dataLakes: { 1: { boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1, ...lake } },
   })
   render(<App />)
-
   const collapse = screen.queryByRole('button', { name: 'collapse pool 1' })
   if (collapse) fireEvent.click(collapse)
+  const lakeBlock = screen.getByLabelText('KB lake')
+  const progress = within(lakeBlock).getByRole('progressbar', { name: 'KB lake fill progress' })
+  expect(progress).toHaveAttribute('aria-valuenow', String(valueNow))
+  expect(within(lakeBlock).getByTitle(/Banked toward the next Cell|costs more than this lake can hold/)).toHaveTextContent(text)
+})
+
+test('an expanded Data Lake shows its real balance, the 1-unit buffer, the in-flight transfer and the ×1000 disk squares (#1087)', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
+    dataLakes: { 1: { depositedUnits: 1000, fillBits: 4000, lakeTransfer: { target: 10, movedBits: 40_000 }, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 3, resetCount: 2 } },
+  })
+  render(<App />)
   const lake = screen.getByLabelText('KB lake')
-  // 2,000 of the 8,000 bits (1 KB) lake disk under way — not the 1.25 KB lake balance.
-  expect(within(lake).getByTitle('Lake disk fill progress')).toHaveTextContent('0.25/1 KB')
-  expect(within(lake).queryByTitle('Currently filled')).toBeNull()
+  expect(within(lake).getByRole('progressbar', { name: 'KB lake pool — fills its 1 KB buffer' })).toHaveAttribute('aria-valuenow', '50')
+  expect(within(lake).getByRole('progressbar', { name: 'KB lake transfer — building a 10 KB disk' })).toHaveAttribute('aria-valuenow', '50')
+  // 1000 banked + 10 in flight + half a unit in the buffer.
+  expect(within(lake).getByTitle('Currently filled')).toHaveTextContent(/^1,010(\.5)? KB/)
+  expect(within(lake).getByRole('group', { name: 'KB lake 1,000 KB disks' })).toBeTruthy()
+  expect(within(lake).getAllByLabelText('full 1,000 KB lake disk')).toHaveLength(1)
+  expect(within(lake).getAllByLabelText('empty 1,000 KB lake disk')).toHaveLength(1)
 })
 
 test('the Data Lake header shows time until the next Booster is banked, only while it is still short of the cost', () => {
@@ -5308,11 +5267,11 @@ describe('Compute auto-charge automation', () => {
 // is crossed (see engine.js's latchMainGameUnlocked) — a real Prestige no longer sends the player
 // back through the intro; App.jsx's own routing derives off mainGameUnlocked, which simply stays
 // true from then on. The Byte generator itself (capacity/byteCreated/tickSpeedSeconds/
-// productionMultiplier) is likewise PERMANENT — only the Data Stream balance (bits/
-// productionAccumulator) resets each cycle. Scale Up/Overclock remain unaffected (covered at the
+// productionMultiplier) is likewise PERMANENT — the Data Stream balance (bits) is
+// kept too. Scale Up/Overclock remain unaffected (covered at the
 // engine.test.js level, not here).
 
-test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', () => {
+test('a real Prestige from MainPage keeps Data Stream balance and keeps Factory reachable — mainGameUnlocked no longer resets', () => {
   // purge.count: 1 skips the mandatory first-time full-screen prompt (see the test above) in
   // favor of the ordinary top banner, so MainPage's own heading is actually on-screen to assert on.
   seedMainGameState({
@@ -5334,9 +5293,9 @@ test('a real Prestige from MainPage resets Data Stream balance but keeps Factory
   expect(screen.queryByRole('heading', { level: 1, name: /byte foundry/i })).not.toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  // Data Stream balance resets to fresh; the gate itself stays permanently unlocked.
+  // Data Stream balance survives Prestige; the gate itself stays permanently unlocked.
   expect(saved.intro.mainGameUnlocked).toBe(true)
-  expect(saved.intro.bits).toBe(0)
+  expect(saved.intro.bits).toBeGreaterThanOrEqual(500)
   // The generator and its upgrades are permanent — carried over from before the Prestige.
   expect(saved.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
   expect(saved.intro.byteCreated).toBe(true)
@@ -5914,7 +5873,6 @@ describe('Dev Mode', { timeout: 20000 }, () => {
     [/^🔧 Unlock Power \(Cells\)$/, state => expect(state.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)],
     [/^🏆 \+1 Purge count$/, state => {
       expect(state.purge.count).toBe(1)
-      expect(state.autobuyers.tier01).not.toBeNull()
     }],
   ])('quick-seed preset %s applies its documented effect to the dev save', async (buttonName, assertState) => {
     const user = userEvent.setup()

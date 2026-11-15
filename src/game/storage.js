@@ -1,4 +1,4 @@
-import { applyFlopsAutobuyerMilestones, autoCompleteChallenges, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
+import { applyAutobuyerMilestones, applyFlopsAutobuyerMilestones, autoCompleteChallenges, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
 import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES, PURGE_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, migrateToV3, SAVE_SCHEMA_VERSION } from 'save-migration'
 
@@ -22,6 +22,9 @@ const safeJsonParse = jsonString =>
 // Dev Mode (the toggle's isolated 'dev' slot, in any build) and the dev build (`yarn build:dev`):
 // saves are edited live and never need backward compatibility, so any plain-object payload is accepted as-is apart from the migrateToV3 key renames (mergeState fills in whatever is missing) instead of going
 // through the rest of save-migration, and an unreadable one is dropped silently — no IncompatibleSaveNotice.
+// Purge count at which the old free speed bonus applied (see mergeState's grandfathering).
+const GRANDFATHER_SPEED_BONUS_MIN_PURGES = 10
+
 export const IS_DEV_BUILD = import.meta.env.VITE_TENS_DEV_BUILD === '1'
 
 export const isBackwardCompatExempt = () => IS_DEV_BUILD || isDevModeActive()
@@ -558,7 +561,7 @@ const mergeState = rawSaved => {
     ...savedIntroClean
   } = saved.intro ?? {}
 
-  return autoCompleteChallenges(normalizePoolMemoryCapacity(applyFlopsAutobuyerMilestones({
+  return autoCompleteChallenges(applyAutobuyerMilestones(normalizePoolMemoryCapacity(applyFlopsAutobuyerMilestones({
     ...fresh,
     ...savedClean,
     scaleUpCount: saved.scaleUpCount ?? legacySpeedUpCount ?? fresh.scaleUpCount,
@@ -568,6 +571,11 @@ const mergeState = rawSaved => {
         Object.keys(fresh.scaleUpTierCounts).map(tierId => [tierId, saved.scaleUpCount ?? legacySpeedUpCount ?? 0])
       ),
     ),
+    // Grandfathered once: saves written before the speed bonus became a 1 PP purchase (no
+    // `speedBonusGrandfathered` stamp — including old saves that stored the flag as `false`) that already
+    // had it for free (>= 10 Purges) keep it.
+    prestigeSpeedBonusUnlocked: saved.prestigeSpeedBonusUnlocked === true
+      || (saved.speedBonusGrandfathered !== true && (saved.purge?.count ?? 0) >= GRANDFATHER_SPEED_BONUS_MIN_PURGES),
     autoScaleUp: saved.autoScaleUp ?? legacyAutoSpeedUp ?? fresh.autoScaleUp,
     autoScaleUpEnabled: saved.autoScaleUpEnabled ?? legacyAutoSpeedUpEnabled ?? fresh.autoScaleUpEnabled,
     // A legacy separate `bytes` pool is dropped: its Bytes were already mirrored into Bits (one pool now).
@@ -638,7 +646,7 @@ const mergeState = rawSaved => {
       owned: { ...fresh.computeFlops.owned, ...(saved.computeFlops?.owned ?? {}) },
       cumulativeBoost: { ...fresh.computeFlops.cumulativeBoost, ...(saved.computeFlops?.cumulativeBoost ?? {}) },
     },
-  })))
+  }))))
 }
 
 // Stamps a separate "last save" timestamp on every save (its own key, like the timestamp isn't

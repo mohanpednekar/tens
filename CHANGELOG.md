@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Every automation now unlocks by Purge count instead of PP**: Auto Clock Speed at 8 Purges, Auto Restage 16, Auto Scale Up 32, Auto Overclock 64, Auto Purge 128 (no unlock cost; the PP speed-upgrade ladders are unchanged). Tier autobuyers and tier tickspeed autobuyers (and the challenges they unlock) now need twice as many Purges: autobuyers at 2, 4, … 20; tickspeed autobuyers at 22, 24, … 40.
+- **Purge speed bonus is now a 1 PP purchase, taught as the PP tutorial** — Firmware → Prestige opens with a short tutorial and a "Speed bonus" row (replacing the 10,000 PP unlock / +1%-per-unspent-PP bonus): your first 1 PP permanently multiplies production by a bonus that grows with your Purge count: ×1.1 after your first Purge, then ×(1 + log₁₀ Purges) — ×2 at 10, ×3 at 100, ×4 at 1,000 and so on. Nothing is applied until you buy it. Saves with 10+ Purges (which had the old bonus for free) keep it, applied once on first load.
+- **Prestige no longer empties the Data Stream** — the Data Stream balance is kept through Purge, challenge enter/exit/completion and the Bit Rot restart (Reboot still resets it); the Manual now says so.
+- **Data Lakes rebuilt as a real disk hierarchy (#1087):** every lake now has one permanent 1-unit buffer (1 KB for the KB lake) that the pool feeds first; a full buffer is moved into a ×1 disk, and 9 disks of every smaller size + a full buffer are consolidated into the next size (10 KB, 100 KB and — after a Flush opens the slot — 1000 KB) as timed transfers at Storage's disk-transfer speeds, with every bit conserved mid-transfer. Booster purchases are paid with whole disks (a full buffer counts as one ×1 unit) summing to exactly the cost — disks are never broken; the lake keeps filling until exact change exists, and partial buffer fill and in-flight transfers are never disturbed. A collapsed pool's lake now reads the next Booster's affordability as a percentage (capped at 100%) instead of the raw balance; the expanded lake shows the buffer, the transfer in progress and the ×1000 disk squares. Only the start of filling toward the next Booster waits for a full pool buffer; once started it no longer waits for the pool to refill to full (it still yields to disk filling, provisioning and the read cache) until that Booster is bought. Older saves migrate without losing or duplicating any stored data.
+- **Ordinary disk fills draw straight from their pool (#1087):** a disk above a pool's smallest size no longer goes through a write-cache flush stage — it lands the moment its pool buffer has funded it. Expediting a disk keeps its faster timed transfer.
+
 ### Added
 - **Foundry Reclamation achievements (#1085):** Earn two per Storage pool (20 total) on its first and second successful Compact Pool. Each permanently upgrades that pool's respective within-pool disk-size Bitrate exponent step to close 10% of the remaining gap to 1.0. The badges and rewards survive Reformat, Purge, and Reboot; older saves with recorded pool resets are grandfathered.
 - New **Challenges** destination in the bottom nav (after Firmware) with a top tab per challenge type — 🏁 Factory and 📅 Daily; the Factory challenges moved off Firmware.
@@ -77,8 +85,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - Removed the `+n/8` purchase-progress text from Factory tier Buy buttons; the cost label stands alone.
 - **Autobuyer priority restored to KB → QB.** When tiers compete for the same Bits, lower tiers buy first again, except a tier you own none of goes first.
-
-- **Production speed bonus now unlocks at 10 Purges** and is ×log₁₀ of your Purge count, replacing the 10,000 PP unlock and +1%-per-unspent-PP bonus. It is automatic — nothing to buy on Firmware.
 
 - **Array read caches fill at 5× Bandwidth, not instantly.** A pool's smallest array's read cache now fills from Staging as a timed transfer at 5× the pool's Bandwidth (and pool tap bonus) instead of snapping in whole blocks, and shows partial fill. Disk fill speeds and the Data Stream / pool fill multiplier curves are unchanged.
 
