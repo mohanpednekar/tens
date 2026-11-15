@@ -1,15 +1,7 @@
 import { BITS_PER_BYTE, CLOCK_DRIFT_INTERVAL_SECONDS, DUTY_CYCLE_WINDOW_SECONDS, HARD_REFRESH_INTERVAL_SECONDS, MONEY_ID, PURGE_THRESHOLD } from './layers'
-import { formatCurrency, getActiveChallenge, getAutobuyerUnlockMilestone, getBitRotCorruption, getTierTickspeedAutobuyerMilestone } from './engine'
+import { formatCurrency, getActiveChallenge, getAutobuyerUnlockMilestone, getBitRotCorruption, getGlobalAutomationUnlockMilestone, getTierTickspeedAutobuyerMilestone } from './engine'
 
 // Player-facing helpers for challenge mode (epic #1037); pure, shared by Firmware and the Factory banner.
-const GLOBAL_AUTOMATION_NAMES = {
-  speedUp: 'Auto Clock Speed',
-  scaleUp: 'Auto Scale Up',
-  restage: 'Auto Restage',
-  overclock: 'Auto Overclock',
-  purge: 'Auto Purge',
-}
-
 export const formatChallengeTime = totalSeconds => {
   const seconds = Math.max(0, Math.floor(Number.isFinite(totalSeconds) ? totalSeconds : 0))
   const days = Math.floor(seconds / 86400)
@@ -28,7 +20,7 @@ export const getChallengeUnlockCondition = def => {
   const { kind, key } = def.automation
   if (kind === 'tierAutobuyer') return `Unlocks at Purge ${getAutobuyerUnlockMilestone(key)}`
   if (kind === 'tierTickspeed') return `Unlocks at Purge ${getTierTickspeedAutobuyerMilestone(key)}`
-  return `Unlocks when you buy ${GLOBAL_AUTOMATION_NAMES[key] ?? key}`
+  return `Unlocks at Purge ${getGlobalAutomationUnlockMilestone(key)}`
 }
 
 export const getChallengeTitle = def => `${def.id} · ${def.target} · ${def.codename}`

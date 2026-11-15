@@ -211,6 +211,36 @@ describe('discardIncompatibleActiveSaveIfNeeded', () => {
 })
 
 describe('schema merge on load', () => {
+  it.each([
+    // [purge count, stored flag, stored grandfather stamp, expected]
+    [9, undefined, undefined, false],
+    [10, undefined, undefined, true],
+    [50, false, undefined, true], // pre-11-09 saves stored the old flag as false
+    [3, true, undefined, true],
+    [50, false, true, false], // new-build save that has not bought it
+    [50, undefined, true, false],
+  ])('grandfathers the speed bonus once: %i Purges, flag %s, stamp %s → %s', (count, flag, stamp, expected) => {
+    const { prestigeSpeedBonusUnlocked: _a, speedBonusGrandfathered: _b, ...save } = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify({
+      ...save,
+      ...(flag === undefined ? {} : { prestigeSpeedBonusUnlocked: flag }),
+      ...(stamp === undefined ? {} : { speedBonusGrandfathered: stamp }),
+      purge: { ...save.purge, count },
+    }))
+    const loaded = loadGameState()
+    expect(loaded.prestigeSpeedBonusUnlocked).toBe(expected)
+    expect(loaded.speedBonusGrandfathered).toBe(true)
+  })
+
+  it('applies Purge-count automation milestones to a loaded save (no PP, no next Purge needed)', () => {
+    const save = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify({ ...save, purge: { ...save.purge, count: 150 } }))
+    const loaded = loadGameState()
+    expect(loaded.autoPurge).toBe(1)
+    expect(loaded.autoOverclock).toBe(true)
+    expect(loaded.autoGlobalTickspeed).toBe(true)
+  })
+
   it('adds missing autobuyers field from an older save', () => {
     const { autobuyers: _dropped, ...oldSave } = createInitialGameState()
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
@@ -592,6 +622,8 @@ describe('schema merge on load', () => {
     expect(loaded.intro.dataLakes['1']).toEqual({
       depositedUnits: 2 * 1 + 3 * 10, // 32 — deposits translated to the same abstract-unit total
       fillBits: 0,
+      lakeTransfer: null,
+      acquiring: false,
       purchased: 4 + 2, // the 2 in-flight transfers count toward the next Booster's own cost too
       boostersUnlocked: true,
       autoConvertActive: false,
@@ -604,6 +636,8 @@ describe('schema merge on load', () => {
     expect(loaded.intro.dataLakes['2']).toEqual({
       depositedUnits: 0,
       fillBits: 0,
+      lakeTransfer: null,
+      acquiring: false,
       purchased: 0,
       boostersUnlocked: false,
       autoConvertActive: false,
@@ -1136,7 +1170,7 @@ describe('Dev Mode', () => {
     // ...and every sibling at every depth survives untouched: tier 1's own depositedUnits (a
     // sibling of the edited `purchased` key), and tier 2 entirely (a sibling of tier 1 itself).
     expect(result.state.intro.dataLakes['1'].depositedUnits).toBe(53)
-    expect(result.state.intro.dataLakes['2']).toEqual({ depositedUnits: 91, fillBits: 0, purchased: 12, boostersUnlocked: true, autoConvertActive: true, capacityLevel: 2, resetCount: 0, rebuilding: false, bandwidthSteps: 0, boosterAuto: false })
+    expect(result.state.intro.dataLakes['2']).toEqual({ depositedUnits: 91, fillBits: 0, lakeTransfer: null, acquiring: false, purchased: 12, boostersUnlocked: true, autoConvertActive: true, capacityLevel: 2, resetCount: 0, rebuilding: false, bandwidthSteps: 0, boosterAuto: false })
   })
 
   it('applyDevGameStateJson stamps the current save schema version on write', () => {

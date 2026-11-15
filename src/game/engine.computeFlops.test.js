@@ -1,8 +1,6 @@
 import {
-  buyAutoScaleUp,
   buyComputeFlopsTier,
   createInitialGameState,
-  getAutomationUnlockCost,
   getComputeFlopsAffordableQuantity,
   getComputeFlopsTotal,
   getComputeFlopsTierCost,
@@ -157,20 +155,6 @@ describe('Compute Flops screen', () => {
     expect(after).not.toBe(state)
     expect(after.computeFlops.owned.flop01).toBe(1)
     expect(after.computeFlops.cumulativeBoost.tier01).toBe(0)
-  })
-
-  it('buyAutoScaleUp latches pageUnlocked so reveal survives spending below reveal PP', () => {
-    let state = {
-      ...createInitialGameState(),
-      autoGlobalTickspeed: true, // Auto Scale Up needs the Tickspeed Autobuyer first
-      purge: { xp: 0, points: COMPUTE_FLOPS_REVEAL_PP, count: 1, highestMilestone: 1 },
-    }
-    expect(isComputeFlopsPageRevealed(state)).toBe(true)
-    expect(state.computeFlops.pageUnlocked).toBe(false)
-    state = buyAutoScaleUp(state)
-    expect(state.computeFlops.pageUnlocked).toBe(true)
-    expect(isComputeFlopsPageRevealed(state)).toBe(true)
-    expect(state.purge.points).toBe(COMPUTE_FLOPS_REVEAL_PP - getAutomationUnlockCost('scaleUp'))
   })
 
   describe('getComputeFlopsAffordableQuantity', () => {
