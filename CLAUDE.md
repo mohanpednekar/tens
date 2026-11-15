@@ -463,7 +463,7 @@ scripts/                  ← bump-version.mjs ("Changelog convention"); generat
                             bot-authored `claude/*`/`devin/*` PRs; used by `autonomous-maintenance.yml` and
                             `autonomous-pr-followup.yml`), backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh,
                             sweep-stalled-auto-prs.sh (#60), sync-release-milestones.sh, configure-ios-plist.mjs,
-                            android-boot-smoke.sh, lint-workflow-shell.mjs, lint-conflict-markers.mjs, check-graphify-freshness.mjs
+                            android-boot-smoke.sh, simulate-challenges.mjs (#1043 challenge balance sim), lint-workflow-shell.mjs, lint-conflict-markers.mjs, check-graphify-freshness.mjs
                             (committed graph vs. working tree + malformed nodes/keys, #761, #1060), classify-claude-failure.sh (transient vs. real
                             Claude-step failure), orphan-branch-scan.sh (#59), verify-maintainer-checklist.mjs —
                             roles in docs/AUTOMATION.md (except resolve-pr-threads/generate-pwa-icons/configure-ios-plist/
