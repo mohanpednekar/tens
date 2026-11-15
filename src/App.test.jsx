@@ -2137,7 +2137,7 @@ test('purge points and the production speed bonus are shown once the first Purge
   render(<App />)
 
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('50 PP')
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('4x production speed')
+  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('3x production speed')
 })
 
 test('Firmware → Prestige teaches PP with a tutorial: the first 1 PP buys the permanent speed bonus', async () => {
@@ -2154,7 +2154,7 @@ test('Firmware → Prestige teaches PP with a tutorial: the first 1 PP buys the 
 
   expect(screen.queryByLabelText(/^purge points tutorial$/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
-  expect(screen.getByLabelText(/^speed bonus upgrade$/i)).toHaveTextContent('×2 now')
+  expect(screen.getByLabelText(/^speed bonus upgrade$/i)).toHaveTextContent('×1.1 now')
 })
 
 test('the playtime bonus is unlocked for 100 PP on Firmware → Prestige', async () => {
@@ -2604,7 +2604,7 @@ test('clicking the money balance expands a breakdown of every global production 
 
   expect(moneyDisplay).toHaveAttribute('aria-expanded', 'true')
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
-  expect(breakdown).toHaveTextContent(/prestige speed bonus: 4x production speed from 100 purges/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: 3x production speed from 100 purges/i)
   expect(breakdown).toHaveTextContent(/scale up: 2 activations; multiplier varies by tier/i)
   expect(breakdown).toHaveTextContent(/clock speed: \+[\d.]+% faster ticks on every tier(?! \(lv)/i)
 

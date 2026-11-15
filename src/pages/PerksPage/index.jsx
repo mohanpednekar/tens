@@ -809,7 +809,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <Row aria-label="speed bonus upgrade">
           <RowLabelStack>
             <RowLabel title="Permanent production speed bonus that grows with your Purge count"><RowIcon>🚀</RowIcon>Speed bonus</RowLabel>
-            <SubText>×(2 + log₁₀ Purges){state.prestigeSpeedBonusUnlocked ? ` = ×${Number(speedBonusMultiplier.toFixed(2))} now` : ''}</SubText>
+            <SubText>×2 at 10 Purges, ×3 at 100, ×4 at 1,000…{state.prestigeSpeedBonusUnlocked ? ` = ×${Number(speedBonusMultiplier.toFixed(2))} now` : ''}</SubText>
           </RowLabelStack>
           {state.prestigeSpeedBonusUnlocked ? (
             <UnlockedBadge icon="🚀" name="Speed bonus" />
@@ -824,7 +824,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               onClick={actions.buyPrestigeSpeedBonus}
               points={points}
               progressLabel="Speed bonus unlock PP progress"
-              title="Spend Purge Points once to multiply all production by 2 + log10 of your Purge count, permanently"
+              title="Spend Purge Points once to multiply all production (×2 at 10 Purges, ×3 at 100, ×4 at 1,000, growing every Purge), permanently"
             />
           )}
         </Row>

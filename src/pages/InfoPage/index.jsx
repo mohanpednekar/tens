@@ -656,7 +656,7 @@ const InfoPage = () => {
           </li>
           <li>
             Your first Purge Point buys the Purge speed bonus ({PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP on Firmware → Prestige):
-            production speed ×(2 + log₁₀ of your Purge count), forever.
+            production speed grows with every Purge, forever: +10% per Purge up to ×2 at 10 Purges, then ×3 at 100, ×4 at 1,000, and so on.
           </li>
           <li>
             The one-time Playtime bonus ({PLAYTIME_BONUS_UNLOCK_COST} PP on Firmware → Prestige) adds

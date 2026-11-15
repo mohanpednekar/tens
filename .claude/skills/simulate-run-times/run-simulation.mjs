@@ -316,7 +316,7 @@ function actSoftResets(state) {
   return overclockGame(scaleUpGame(state))
 }
 
-// The Purge speed bonus is a one-time 1 PP purchase (×(2 + log10(count))); buy it as soon as affordable.
+// The Purge speed bonus is a one-time 1 PP purchase (×2 at 10 Purges, ×3 at 100, …); buy it as soon as affordable.
 function actSpeedBonus(state) {
   return buyPrestigeSpeedBonus(state)
 }
@@ -596,7 +596,7 @@ if (runPP) {
     const result = simulateCycle(seedState({ purgeCount: 0, startingPP: pp }))
     const remainingPP = result.state.purge.points
     const bonusCell = result.speedBonusUnlocked
-      ? `×(2 + log10 Purges), ${remainingPP} PP left`
+      ? `decade-linear bonus, ${remainingPP} PP left`
       : 'locked'
     printCycleRow([String(pp), bonusCell], result)
   }
