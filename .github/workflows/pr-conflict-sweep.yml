@@ -5,7 +5,8 @@ name: PR conflict sweep
 # main into the branch. For `claude/*` and `devin/auto-*` branches that comment
 # also triggers autonomous-pr-followup.yml, which resolves the conflict
 # autonomously. A per-head-SHA marker prevents comment spam when a PR stays
-# conflicted across several merges.
+# conflicted across several merges. Mergeable-but-behind `claude/auto-*` /
+# `devin/auto-*` PRs are brought up to date via the update-branch API.
 #
 # Uses GH_AUTOMATION_PAT rather than GITHUB_TOKEN: comments authored by the
 # default token cannot trigger the follow-up workflow (the same reason every
@@ -43,7 +44,7 @@ jobs:
           # --limit 1000: gh paginates past the API's 100-per-page cap, so every
           # open PR is covered (a hard cap beyond that is a deliberate non-goal).
           gh pr list --state open --limit 1000 \
-            --json number,headRefName,headRefOid,mergeable,author,files \
+            --json number,headRefName,headRefOid,isDraft,mergeable,author,files \
             > /tmp/open-prs.json
 
           # GitHub reports UNKNOWN while it computes mergeability after the
@@ -70,6 +71,32 @@ jobs:
             mergeable=$(jq -r .mergeable <<<"$pr")
             author=$(jq -r '.author.login' <<<"$pr")
             echo "PR #$num ($branch, @$author): mergeable=$mergeable"
+
+            if [ "$mergeable" = "MERGEABLE" ]; then
+              # Not conflicted, but possibly just behind main: a behind PR cannot
+              # auto-merge when the ruleset requires up-to-date branches, and no
+              # other job refreshes it. Merge main in via the update-branch API
+              # (a merge commit, never a rebase — review context stays anchored).
+              # Only our own auto branches; Dependabot has its own `@dependabot
+              # rebase` path. Drafts are skipped (an agent may still be pushing and a
+              # merge commit would reject its next push). The API answers 422 when
+              # nothing is behind, which is the normal case, so failures are
+              # tolerated; the error text is logged so a real one (403/404) shows.
+              is_draft=$(jq -r .isDraft <<<"$pr")
+              case "$branch" in
+                claude/auto-*|devin/auto-*)
+                  if [ "$is_draft" != "true" ]; then
+                    if out=$(gh api -X PUT "repos/$GITHUB_REPOSITORY/pulls/$num/update-branch" \
+                      -f expected_head_sha="$head" 2>&1); then
+                      echo "  behind main — update-branch requested for #$num"
+                    else
+                      echo "  update-branch not applied: $(printf '%s' "$out" | head -c 200)"
+                    fi
+                  fi
+                  ;;
+              esac
+              continue
+            fi
 
             [ "$mergeable" = "CONFLICTING" ] || continue
 

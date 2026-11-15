@@ -13,14 +13,16 @@ const OLD = '2020-01-01T00:00:00Z';
 
 // Stub `gh`: `pr list` prints the fixture; every other call is logged and
 // `issue list` returns nothing (no existing escalation issue).
-function sweep(prs) {
+function sweep(prs, files = '') {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sweep-'));
   fs.writeFileSync(path.join(dir, 'prs.json'), JSON.stringify(prs));
+  fs.writeFileSync(path.join(dir, 'files.txt'), files);
   fs.writeFileSync(
     path.join(dir, 'gh'),
     `#!/usr/bin/env bash
 if [ "$1 $2" = "pr list" ]; then cat "${dir}/prs.json"; exit 0; fi
 if [ "$1 $2" = "issue list" ]; then exit 0; fi
+if [ "$1" = "api" ] && [[ "$2" == */files ]]; then cat "${dir}/files.txt"; exit 0; fi
 echo "$*" >> "${dir}/calls.log"
 `,
     { mode: 0o755 },
@@ -78,5 +80,54 @@ describe('sweep-stalled-auto-prs.sh', () => {
     ]);
     expect(r.calls).toMatch(/issue create .*automation-retro/);
     expect(r.calls).not.toMatch(/pr comment/);
+  });
+
+  it('comments on a stale PR whose checks are all green but never merged', () => {
+    const r = sweep([pr({ statusCheckRollup: [{ conclusion: 'SUCCESS' }, { conclusion: 'NEUTRAL' }] })]);
+    expect(r.calls).toMatch(/pr comment 1 .*all checks are green/s);
+  });
+
+  it('does not nudge a green PR while a check is still pending', () => {
+    const r = sweep([pr({ statusCheckRollup: [{ conclusion: 'SUCCESS' }, { state: 'PENDING' }] })]);
+    expect(r.calls).toBe('');
+  });
+
+  it('covers devin/auto-* branches', () => {
+    const r = sweep([pr({ headRefName: 'devin/auto-x', statusCheckRollup: [{ conclusion: 'FAILURE' }] })]);
+    expect(r.calls).toMatch(/pr comment 1 /);
+  });
+
+  it('refreshes a behind PR via update-branch immediately, without commenting', () => {
+    const r = sweep([
+      pr({
+        updatedAt: new Date().toISOString(),
+        headRefOid: 'abc123def456',
+        mergeStateStatus: 'BEHIND',
+        statusCheckRollup: [{ conclusion: 'SUCCESS' }],
+      }),
+    ]);
+    expect(r.calls).toMatch(/api -X PUT .*pulls\/1\/update-branch .*expected_head_sha=abc123def456/);
+    expect(r.calls).not.toMatch(/pr comment/);
+  });
+
+  it('skips draft PRs for update-branch and for the green nudge', () => {
+    const r = sweep([
+      pr({ isDraft: true, mergeStateStatus: 'BEHIND', statusCheckRollup: [{ conclusion: 'SUCCESS' }] }),
+      pr({ number: 2, isDraft: true, statusCheckRollup: [{ conclusion: 'SUCCESS' }] }),
+    ]);
+    expect(r.calls).toBe('');
+  });
+
+  it('does not nudge a green PR that touches .github/workflows/', () => {
+    const r = sweep(
+      [pr({ statusCheckRollup: [{ conclusion: 'SUCCESS' }] })],
+      '.github/workflows/ci.yml\nsrc/a.js\n',
+    );
+    expect(r.calls).not.toMatch(/pr comment/);
+  });
+
+  it('still handles a stale BEHIND PR that also has a failing check', () => {
+    const r = sweep([pr({ mergeStateStatus: 'BEHIND', statusCheckRollup: [{ conclusion: 'FAILURE' }] })]);
+    expect(r.calls).toMatch(/pr comment 1 /);
   });
 });
