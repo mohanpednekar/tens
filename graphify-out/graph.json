@@ -15903,17 +15903,6 @@
       "source_location": "L786"
     },
     {
-      "id": "src_game_layers_intro_byte_base_rate",
-      "label": "INTRO_BYTE_BASE_RATE",
-      "_origin": "ast",
-      "community": 3,
-      "community_name": "layers.js",
-      "file_type": "code",
-      "norm_label": "intro_byte_base_rate",
-      "source_file": "src/game/layers.js",
-      "source_location": "L182"
-    },
-    {
       "id": "src_game_layers_intro_capacity_doubling_step",
       "label": "INTRO_CAPACITY_DOUBLING_STEP",
       "_origin": "ast",
@@ -87710,17 +87699,6 @@
       "confidence_score": 1,
       "source_file": "src/game/layers.js",
       "source_location": "L181",
-      "weight": 1
-    },
-    {
-      "source": "src_game_layers",
-      "target": "src_game_layers_intro_byte_base_rate",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1,
-      "source_file": "src/game/layers.js",
-      "source_location": "L182",
       "weight": 1
     },
     {

@@ -292,7 +292,6 @@ export const getStoragePoolMemoryBounds = (poolIndex = 1) => {
 // (8 bits/sec), matching a manual tap's own base amount (see tapIntroBit/getIntroProductionRate).
 export const DATA_STREAM_SPEED_EXPONENT_BASE = 0.5
 export const DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED = 0.9
-export const INTRO_BYTE_BASE_RATE = 1
 // One-time cost, in bits, to combine your first 8 tapped bits into the Byte generator (see
 // combineIntroByte in engine.js) — equal to the starting capacity, since that's exactly how many
 // bits tapping alone can hold before the Byte exists to start producing more.
