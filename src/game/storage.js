@@ -571,10 +571,11 @@ const mergeState = rawSaved => {
         Object.keys(fresh.scaleUpTierCounts).map(tierId => [tierId, saved.scaleUpCount ?? legacySpeedUpCount ?? 0])
       ),
     ),
-    // Grandfathered: saves from before the speed bonus became a 1 PP purchase (no stored flag) that
-    // already had it for free (>= 10 Purges) keep it.
-    prestigeSpeedBonusUnlocked: saved.prestigeSpeedBonusUnlocked
-      ?? ((saved.purge?.count ?? 0) >= GRANDFATHER_SPEED_BONUS_MIN_PURGES),
+    // Grandfathered once: saves written before the speed bonus became a 1 PP purchase (no
+    // `speedBonusGrandfathered` stamp — including old saves that stored the flag as `false`) that already
+    // had it for free (>= 10 Purges) keep it.
+    prestigeSpeedBonusUnlocked: saved.prestigeSpeedBonusUnlocked === true
+      || (saved.speedBonusGrandfathered !== true && (saved.purge?.count ?? 0) >= GRANDFATHER_SPEED_BONUS_MIN_PURGES),
     autoScaleUp: saved.autoScaleUp ?? legacyAutoSpeedUp ?? fresh.autoScaleUp,
     autoScaleUpEnabled: saved.autoScaleUpEnabled ?? legacyAutoSpeedUpEnabled ?? fresh.autoScaleUpEnabled,
     // A legacy separate `bytes` pool is dropped: its Bytes were already mirrored into Bits (one pool now).

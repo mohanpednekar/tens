@@ -12446,8 +12446,12 @@ describe('prestigeSpeedBonusUnlocked persistence', () => {
   it.each([
     ['purgeGame', () => purgeGame(withMoney({ ...createInitialGameState(), prestigeSpeedBonusUnlocked: true }, PURGE_THRESHOLD))],
     ['eraGame', () => eraGame({ ...eraEligibleState(), prestigeSpeedBonusUnlocked: true })],
+    ['scaleUpGame', () => scaleUpGame(withPurchaseLevel({ ...createInitialGameState(), prestigeSpeedBonusUnlocked: true, scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1 }, TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id, 4))],
+    ['overclockGame', () => overclockGame(withPurchaseLevel({ ...createInitialGameState(), prestigeSpeedBonusUnlocked: true }, TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id, 6))],
   ])('survives %s', (_name, run) => {
-    expect(run().prestigeSpeedBonusUnlocked).toBe(true)
+    const after = run()
+    expect(after.prestigeSpeedBonusUnlocked).toBe(true)
+    expect(after.speedBonusGrandfathered).toBe(true)
   })
 })
 

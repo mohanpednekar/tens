@@ -1342,7 +1342,7 @@ the autobuyer and Auto Purge attempt-budget threshold checks.
 `owned` and `resources` are integer-valued by construction, so a production credit must itself always
 be an integer. Of the factors in a tier's production credit (`owned × ticksElapsed × multiplier ×
 scaleUpMultiplier × getPurchaseMilestoneMultiplier(purchased)`, where `multiplier` is
-`getPrestigeProductionMultiplier(purge.count)` — flat `1` before the first Purge, else `2 + log10(count)`),
+`getPrestigeProductionMultiplier(purge.count)` — flat `1` until the speed bonus is bought and the first Purge is done, else `2 + log10(count)`),
 `owned`/`ticksElapsed` are already integers, `getTierScaleUpMultiplier` is always a power of 2, and
 `getPurchaseMilestoneMultiplier` is always a product of powers of 2 and 10 (see its own row above) —
 the only fractional factor is `getPrestigeProductionMultiplier` (`2 + log10(purge.count)` once
@@ -1576,7 +1576,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
 "Tier autobuyer/tier-tickspeed-autobuyer milestones" below), spending no PP at all.
 
 - **Active — Purge speed bonus (PP tutorial):** `buyPrestigeSpeedBonus(state)` spends `PRESTIGE_SPEED_BONUS_UNLOCK_COST` (1) PP once to
-  set `prestigeSpeedBonusUnlocked` (permanent, survives Reboot; saves with ≥10 Purges and no stored flag are grandfathered on load). `getPrestigeProductionMultiplier(purgeCount, unlocked)` =
+  set `prestigeSpeedBonusUnlocked` (permanent, survives Reboot; saves lacking the `speedBonusGrandfathered` stamp — including old saves storing the flag as `false` — with ≥10 Purges are grandfathered once on load). `getPrestigeProductionMultiplier(purgeCount, unlocked)` =
   `2 + log10(purgeCount)` once bought and `purge.count >= 1`, else flat ×1 — applied uniformly to every tier in `tickGame`.
   Firmware → Prestige shows a tutorial callout and a Speed bonus row first, until bought.
 - **Active — Playtime bonus:** `buyPlaytimeBonus(state)` spends `PLAYTIME_BONUS_UNLOCK_COST` (100) PP once to set

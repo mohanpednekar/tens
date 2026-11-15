@@ -259,6 +259,8 @@ export const createInitialGameState = () => ({
   playtimeBonusUnlocked: false,
   // Permanent flag: the one-time PP unlock of the Purge-count production speed bonus (buyPrestigeSpeedBonus).
   prestigeSpeedBonusUnlocked: false,
+  // Stamped on every save by this build so storage.js's one-time grandfathering of the old free speed bonus never re-runs.
+  speedBonusGrandfathered: true,
   activePlaySeconds: 0,
   // RUN-SCOPED total of how many times Scale Up has been triggered (see scaleUpGame); the per-tier
   // counts below, rather than this display/history total, drive production. Never reset by Scale Up
@@ -1385,6 +1387,7 @@ export const eraGame = state => {
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     playtimeBonusUnlocked: state.playtimeBonusUnlocked ?? initial.playtimeBonusUnlocked,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
+    speedBonusGrandfathered: state.speedBonusGrandfathered ?? initial.speedBonusGrandfathered,
     activePlaySeconds: state.activePlaySeconds ?? initial.activePlaySeconds,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
@@ -7794,6 +7797,7 @@ const resetFactoryCycle = (state, awardPurge) => {
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     playtimeBonusUnlocked: state.playtimeBonusUnlocked ?? initial.playtimeBonusUnlocked,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
+    speedBonusGrandfathered: state.speedBonusGrandfathered ?? initial.speedBonusGrandfathered,
     activePlaySeconds: state.activePlaySeconds ?? initial.activePlaySeconds,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
@@ -7948,6 +7952,7 @@ export const scaleUpGame = state => {
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     playtimeBonusUnlocked: state.playtimeBonusUnlocked ?? initial.playtimeBonusUnlocked,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
+    speedBonusGrandfathered: state.speedBonusGrandfathered ?? initial.speedBonusGrandfathered,
     activePlaySeconds: state.activePlaySeconds ?? initial.activePlaySeconds,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
@@ -8048,6 +8053,7 @@ export const overclockGame = state => {
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     playtimeBonusUnlocked: state.playtimeBonusUnlocked ?? initial.playtimeBonusUnlocked,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
+    speedBonusGrandfathered: state.speedBonusGrandfathered ?? initial.speedBonusGrandfathered,
     activePlaySeconds: state.activePlaySeconds ?? initial.activePlaySeconds,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
