@@ -7741,7 +7741,7 @@ const resetFactoryCycle = (state, awardPurge) => {
       poolResetRebuildingCount: state.intro?.poolResetRebuildingCount ?? initial.intro.poolResetRebuildingCount,
       // Every compute-ladder entity (Core through Megacomputer), and the ComputePage reveal latch,
       // are just as permanent as the Byte generator/Storage above — carried over unchanged, never
-      // wiped by a real Prestige along with Memory itself.
+      // wiped by a real Prestige.
       computeCores: state.intro?.computeCores ?? initial.intro.computeCores,
       computeCoresEverEarned: state.intro?.computeCoresEverEarned ?? initial.intro.computeCoresEverEarned,
       computeNodes: state.intro?.computeNodes ?? initial.intro.computeNodes,
