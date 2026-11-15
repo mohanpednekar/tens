@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   createInitialGameState,
   getAutomationIntervalUpgradeCost,
-  getAutomationUnlockCost,
   getIntroKilobyteConversionCost,
   getPrestigeDoublePpUpgradeCost,
 } from 'game/engine'
@@ -349,12 +348,13 @@ describe('navAttention', () => {
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })
 
-  it('lights Perks (not Factory) when an affordable PP automation unlock is available', () => {
+  it('lights Perks (not Factory) when an affordable PP automation speed upgrade is available', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      purge: { count: 1, points: getAutomationUnlockCost('speedUp') },
-      autoGlobalTickspeed: false,
+      purge: { count: 1, points: getAutomationIntervalUpgradeCost('speedUp', 0) },
+      autoGlobalTickspeed: true,
+      challenges: { ...createInitialGameState().challenges, completed: { F21: true, F22: true, F23: true, F24: true, F25: true } },
       // Keep money low so Factory high-cues (full purchase level) stay off.
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
     }
@@ -369,8 +369,10 @@ describe('navAttention', () => {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
+      prestigeSpeedBonusUnlocked: true,
+      challenges: { ...createInitialGameState().challenges, completed: { F21: true, F22: true, F23: true, F24: true, F25: true } },
     }
-    const automationOnly = { ...base, purge: { count: 1, points: getAutomationUnlockCost('speedUp') }, autoGlobalTickspeed: false }
+    const automationOnly = { ...base, purge: { count: 1, points: getAutomationIntervalUpgradeCost('speedUp', 0) }, autoGlobalTickspeed: true }
     expect(hasAffordableAutomationPerk(automationOnly)).toBe(true)
     expect(hasAffordablePrestigePerk(automationOnly)).toBe(false)
 
@@ -384,7 +386,7 @@ describe('navAttention', () => {
       autoGlobalTickspeed: true,
       autoXpTickspeed: true,
       autoPurge: 1,
-      automationIntervalLevels: { purge: 1e9 },
+      automationIntervalLevels: { speedUp: 1e9, restage: 1e9, scaleUp: 1e9, overclock: 1e9, purge: 1e9 },
     }
     expect(hasAffordableAutomationPerk(prestigeOnly)).toBe(false)
     expect(hasAffordablePrestigePerk(prestigeOnly)).toBe(true)
@@ -399,23 +401,32 @@ describe('navAttention', () => {
     }
     expect(hasAffordableAutomationPerk(purgeSpeedOnly)).toBe(true)
 
-    // Global automations are sequential: each counts only once the previous one is owned.
-    const autoPurgeUnlockOnly = {
-      ...prestigeOnly,
-      purge: { count: 1, points: getAutomationUnlockCost('purge') },
-      prestigeDoublePpLevel: 5,
-      autoPurge: null,
+    // An uncompleted live challenge gates the speed upgrade, so it never lights the dot.
+    const gated = { ...automationOnly, challenges: createInitialGameState().challenges }
+    expect(hasAffordableAutomationPerk(gated)).toBe(false)
+
+    // A locked automation's speed chain never counts, however many PP are held.
+    const lockedChain = { ...prestigeOnly, prestigeDoublePpLevel: 5, autoPurge: null, purge: { count: 1, points: 1e6 } }
+    expect(hasAffordableAutomationPerk(lockedChain)).toBe(false)
+  })
+
+  it('lights the Prestige tab for the 1 PP speed bonus until it is bought', () => {
+    const state = {
+      ...createInitialGameState(),
+      intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
+      purge: { count: 1, points: 1 },
     }
-    expect(hasAffordableAutomationPerk(autoPurgeUnlockOnly)).toBe(true)
-    expect(hasAffordableAutomationPerk({ ...autoPurgeUnlockOnly, purge: { count: 1, points: getAutomationUnlockCost('purge') - 1 } })).toBe(false)
+    expect(hasAffordablePrestigePerk(state)).toBe(true)
+    expect(hasAffordablePrestigePerk({ ...state, prestigeSpeedBonusUnlocked: true })).toBe(false)
   })
 
   it('does not light PP upgrades before the first Prestige', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      purge: { count: 0, points: getAutomationUnlockCost('speedUp') },
-      autoGlobalTickspeed: false,
+      purge: { count: 0, points: getAutomationIntervalUpgradeCost('speedUp', 0) },
+      autoGlobalTickspeed: true,
     }
     expect(hasAffordablePpUpgrade(state)).toBe(false)
   })

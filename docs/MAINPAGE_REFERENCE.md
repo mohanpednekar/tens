@@ -584,10 +584,10 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   `width: 100%` in the compressed styles specifically to pin them to the card's actual width so that
   truncation has something to truncate against (this selector matches `MoneyHero` too, below, since it
   extends `Money` and so still carries `Money`'s own generated class on the same DOM node). This
-  compact PP display shows the production speed bonus once unlocked (10 Purges) (`formatBonusOrMultiplier` — a
+  compact PP display shows the production speed bonus once bought (1 PP) (`formatBonusOrMultiplier` — a
   percentage below +100%, an `"Nx"` multiplier at/above it, see "Percentages vs. multipliers" below),
-  but — being always-visible, sticky chrome rather than an expandable disclosure — omits the "unlocks at
-  10 Purges" caveat before the threshold; that fuller wording used to also show in the bottom
+  but — being always-visible, sticky chrome rather than an expandable disclosure — omits the "not yet unlocked"
+  caveat before it is bought; that fuller wording used to also show in the bottom
   `PrestigeCard`'s expandable description before that whole card was removed (see "Prestige and the
   Googol freeze" below) as purely informational and redundant with this button. Once Prestige is
   actually available (`canPurge`, i.e. Money `>= PURGE_THRESHOLD`), the PP display card itself doubles as a
@@ -675,7 +675,7 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   here before its own card would show it either), reading either its live effect (e.g. "2x production
   speed from 100 Purges", "2 activations; multiplier varies by tier", "+1% faster ticks on every tier", "Tickspeed upgrade's per-level rate is now 1.21% (was 1%) from level 2") or a "not yet
   unlocked/activated/active" status line when revealed but not yet active (Prestige speed bonus:
-  "unlocks at 10 Purges (N so far)"). The
+  "not yet unlocked (1 PP on Firmware → Prestige)"). The
   per-tier purchase milestone multiplier (`getPurchaseMilestoneMultiplier`) is deliberately not listed
   here — it's per-tier, not global, and already shown in each tier row's own Details disclosure. The
   list is suppressed entirely (not merely restyled) while `StickyBalances` is in its compressed
@@ -749,7 +749,7 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   never its own line — and (tier / Flops cells) the cell grows one line downward for a full-width ⏫ speed upgrade (visible text is the cost only — the
   doubling to `M/buy` is in its `aria-label`/`title`; every tier autobuyer / tier tickspeed autobuyer
   chain starts at 100 PP). Locked: a 🔒
-  `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) or a 🔓 PP unlock button (full-width below the head in narrow cells, inline for global ones) (`"Enable <name> for N Purge Points"`). The Switch (`aria-pressed`, `aria-label`
+  `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) — every automation (global, tier, tier tickspeed) unlocks by Purge count; there is no PP unlock button. The Switch (`aria-pressed`, `aria-label`
   e.g. `"Auto Scale Up automation"`, `"<tier>'s autobuyer"`) sits at the head's right; the status is
   `"<name> active|paused"` (`role="img"`). Tier autobuyers: one `TierPair` card per tier (`aria-label="<tier> automation"`, the tier's Factory
   accent stripe, grid `1.9rem | 1fr | 1fr`) = tier symbol, then the ⚙ tickspeed autobuyer half (left — where the
@@ -821,8 +821,7 @@ the card stays visible rather than disappearing if tier02's owned count is later
 Prestige/Scale Up; Reset clears the flag alongside `overclockEverRevealed`. It
 needs no `!isFirstRun` gate — unlike the Firmware page, it has nothing to do with Prestige Points, so
 it's available (once tier02 is owned) even during a player's very first run. Clicking is optional: once
-`buyTickspeedAutobuyer` is bought (PP-funded, see "Prestige Points, autobuyer unlock, and the tickspeed
-multiplier" below), `tickGame` calls `buyGlobalTickspeedMultiplier` automatically every tick, so the
+Auto Clock Speed is unlocked (Purge 8; see ECONOMY_REFERENCE "Global automations unlock by Purge count"), `tickGame` calls `buyGlobalTickspeedMultiplier` automatically every tick, so the
 level climbs on its own whenever Money allows — the manual button works identically either way.
 
 **Tickspeed multiplier (Factory view, per tier).** Every unlocked tier's row carries a Money-funded
