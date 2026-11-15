@@ -14,6 +14,8 @@ import {
   getComputeFieldEffectiveCap,
   getAutomationIntervalMaxLevel,
   isAutomationIntervalChainUnlocked,
+  getLiveChallengeForAutomation,
+  isChallengeCompleted,
   getAutomationIntervalUpgradeCost,
   isGlobalTickspeedAffordable,
   getIntroKilobyteConversionCost,
@@ -151,8 +153,8 @@ export const hasTiersGameAttention = state =>
   hasScaleUpAvailable(state) ||
   hasOverclockAvailable(state)
 
-// The Perks page's tabs (see pages/PerksPage), grouped by feature: Automation = every automation's
-// one-time PP unlock plus its PP speed chain; Prestige = Double PP and the playtime bonus.
+// The Perks page's tabs (see pages/PerksPage), grouped by feature: Automation = every unlocked
+// automation's PP speed chain; Prestige = the speed bonus, Double PP and the playtime bonus.
 // Pause/resume toggles are never "affordable".
 const GLOBAL_AUTOMATION_KEYS = ['speedUp', 'restage', 'scaleUp', 'overclock', 'purge']
 
@@ -162,6 +164,9 @@ export const hasAffordableAutomationPerk = state => {
   const points = state.purge?.points ?? 0
   return GLOBAL_AUTOMATION_KEYS.some(key => {
     if (!isAutomationIntervalChainUnlocked(state, key)) return false
+    // A live, uncompleted challenge gates the speed upgrade (buyAutomationIntervalUpgrade refuses it).
+    const challenge = getLiveChallengeForAutomation('global', key)
+    if (challenge && !isChallengeCompleted(state, challenge.id)) return false
     const level = state.automationIntervalLevels?.[key] ?? 0
     return level < getAutomationIntervalMaxLevel(key) && points >= getAutomationIntervalUpgradeCost(key, level)
   })

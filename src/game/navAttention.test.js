@@ -354,6 +354,7 @@ describe('navAttention', () => {
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
       purge: { count: 1, points: getAutomationIntervalUpgradeCost('speedUp', 0) },
       autoGlobalTickspeed: true,
+      challenges: { ...createInitialGameState().challenges, completed: { F21: true, F22: true, F23: true, F24: true, F25: true } },
       // Keep money low so Factory high-cues (full purchase level) stay off.
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
     }
@@ -369,6 +370,7 @@ describe('navAttention', () => {
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
       prestigeSpeedBonusUnlocked: true,
+      challenges: { ...createInitialGameState().challenges, completed: { F21: true, F22: true, F23: true, F24: true, F25: true } },
     }
     const automationOnly = { ...base, purge: { count: 1, points: getAutomationIntervalUpgradeCost('speedUp', 0) }, autoGlobalTickspeed: true }
     expect(hasAffordableAutomationPerk(automationOnly)).toBe(true)
@@ -398,6 +400,10 @@ describe('navAttention', () => {
       purge: { count: 1, points: getAutomationIntervalUpgradeCost('purge', 0) },
     }
     expect(hasAffordableAutomationPerk(purgeSpeedOnly)).toBe(true)
+
+    // An uncompleted live challenge gates the speed upgrade, so it never lights the dot.
+    const gated = { ...automationOnly, challenges: createInitialGameState().challenges }
+    expect(hasAffordableAutomationPerk(gated)).toBe(false)
 
     // A locked automation's speed chain never counts, however many PP are held.
     const lockedChain = { ...prestigeOnly, prestigeDoublePpLevel: 5, autoPurge: null, purge: { count: 1, points: 1e6 } }

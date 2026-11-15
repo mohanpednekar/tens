@@ -12442,6 +12442,15 @@ describe('playtime bonus', () => {
   })
 })
 
+describe('prestigeSpeedBonusUnlocked persistence', () => {
+  it.each([
+    ['purgeGame', () => purgeGame(withMoney({ ...createInitialGameState(), prestigeSpeedBonusUnlocked: true }, PURGE_THRESHOLD))],
+    ['eraGame', () => eraGame({ ...eraEligibleState(), prestigeSpeedBonusUnlocked: true })],
+  ])('survives %s', (_name, run) => {
+    expect(run().prestigeSpeedBonusUnlocked).toBe(true)
+  })
+})
+
 // Compute Boost lanes — parallel multipliers + same-multiplier queue.
 describe('Compute Boost lanes', () => {
   const {

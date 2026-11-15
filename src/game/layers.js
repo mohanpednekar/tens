@@ -792,7 +792,7 @@ export const AUTOBUYER_UNLOCK_MILESTONE_START = 2
 export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 2
 // Same milestone-based automatic-unlock mechanism as the autobuyer unlock above, but for a tier's
 // own tickspeed-multiplier autobuyer (see engine.js's getTierTickspeedAutobuyerMilestone) — starts
-// later (prestige 11 for tier01) and spaces out one prestige per tier (11, 12, 13, … 20 for tier10),
+// later (Purge 22 for tier01) and spaces out two Purges per tier (22, 24, … 40 for tier10),
 // reflecting that it's a later-game convenience layered on top of the (now free)
 // unit-buying autobuyer above. Also no longer PP-funded.
 export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 22

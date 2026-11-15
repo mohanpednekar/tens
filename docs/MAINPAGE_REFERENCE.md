@@ -584,10 +584,10 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   `width: 100%` in the compressed styles specifically to pin them to the card's actual width so that
   truncation has something to truncate against (this selector matches `MoneyHero` too, below, since it
   extends `Money` and so still carries `Money`'s own generated class on the same DOM node). This
-  compact PP display shows the production speed bonus once unlocked (10 Purges) (`formatBonusOrMultiplier` — a
+  compact PP display shows the production speed bonus once bought (1 PP) (`formatBonusOrMultiplier` — a
   percentage below +100%, an `"Nx"` multiplier at/above it, see "Percentages vs. multipliers" below),
-  but — being always-visible, sticky chrome rather than an expandable disclosure — omits the "unlocks at
-  10 Purges" caveat before the threshold; that fuller wording used to also show in the bottom
+  but — being always-visible, sticky chrome rather than an expandable disclosure — omits the "not yet unlocked"
+  caveat before it is bought; that fuller wording used to also show in the bottom
   `PrestigeCard`'s expandable description before that whole card was removed (see "Prestige and the
   Googol freeze" below) as purely informational and redundant with this button. Once Prestige is
   actually available (`canPurge`, i.e. Money `>= PURGE_THRESHOLD`), the PP display card itself doubles as a
@@ -675,7 +675,7 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   here before its own card would show it either), reading either its live effect (e.g. "2x production
   speed from 100 Purges", "2 activations; multiplier varies by tier", "+1% faster ticks on every tier", "Tickspeed upgrade's per-level rate is now 1.21% (was 1%) from level 2") or a "not yet
   unlocked/activated/active" status line when revealed but not yet active (Prestige speed bonus:
-  "unlocks at 10 Purges (N so far)"). The
+  "not yet unlocked (1 PP on Firmware → Prestige)"). The
   per-tier purchase milestone multiplier (`getPurchaseMilestoneMultiplier`) is deliberately not listed
   here — it's per-tier, not global, and already shown in each tier row's own Details disclosure. The
   list is suppressed entirely (not merely restyled) while `StickyBalances` is in its compressed

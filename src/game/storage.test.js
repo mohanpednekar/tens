@@ -211,6 +211,15 @@ describe('discardIncompatibleActiveSaveIfNeeded', () => {
 })
 
 describe('schema merge on load', () => {
+  it('applies Purge-count automation milestones to a loaded save (no PP, no next Purge needed)', () => {
+    const save = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify({ ...save, purge: { ...save.purge, count: 150 } }))
+    const loaded = loadGameState()
+    expect(loaded.autoPurge).toBe(1)
+    expect(loaded.autoOverclock).toBe(true)
+    expect(loaded.autoGlobalTickspeed).toBe(true)
+  })
+
   it('adds missing autobuyers field from an older save', () => {
     const { autobuyers: _dropped, ...oldSave } = createInitialGameState()
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))

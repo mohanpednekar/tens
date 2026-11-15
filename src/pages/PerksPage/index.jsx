@@ -321,8 +321,7 @@ const RowControls = styled.div`
   gap: 0.5rem;
 `
 
-// Indented past the label's RowIcon cell (1.5em of the label's font + its margin) so it lines up
-// with the name above it.
+// PP tutorial callout shown above the Prestige rows until the Speed bonus is bought.
 const Tutorial = styled.p`
   margin: 0;
   padding: ${({ theme }) => theme.space.md} ${({ theme }) => theme.space.lg};
@@ -333,6 +332,8 @@ const Tutorial = styled.p`
   line-height: 1.35;
 `
 
+// Indented past the label's RowIcon cell (1.5em of the label's font + its margin) so it lines up
+// with the name above it.
 const SubText = styled.span`
   color: ${props => props.theme.color.textMuted};
   font-size: 0.82em;

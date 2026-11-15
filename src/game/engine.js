@@ -2095,7 +2095,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     return tickStorage({ ...stateAfterFlops, autoPurgeAttemptBudget: nextBudget })
   }
 
-  // Passive Purge-count production-speed bonus (1 until 10 Purges — see getPrestigeProductionMultiplier).
+  // Passive Purge-count production-speed bonus (1 until the speed bonus is bought — see getPrestigeProductionMultiplier).
   const multiplier = getPrestigeProductionMultiplier(stateAfterFlops.purge.count, stateAfterFlops.prestigeSpeedBonusUnlocked) * getPlaytimeProductionMultiplier(stateAfterFlops)
   // Scale Up's per-tier multipliers, unlike the Purge-count bonus above, need no unlock
   // threshold — each applies as soon as that tier has a positive scaleUpTierCounts entry
