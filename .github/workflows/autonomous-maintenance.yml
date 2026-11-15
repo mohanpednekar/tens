@@ -333,13 +333,13 @@ jobs:
           # capped. cap_lines <cap> <text> keeps the first <cap> lines and appends a
           # "+N more" note (input order is the display order, so sort before calling).
           cap_lines() {
-            local cap="$1" text="$2" total
+            local cap="$1" text="$2"
             if [ -z "$text" ]; then return 0; fi
-            total=$(printf '%s\n' "$text" | wc -l)
-            printf '%s\n' "$text" | head -n "$cap"
-            if [ "$total" -gt "$cap" ]; then
-              echo "- (+$((total - cap)) more not shown - query the tracker directly)"
-            fi
+            # awk consumes the whole input (no head/SIGPIPE under -e/pipefail) and
+            # emits the overflow note itself.
+            printf '%s\n' "$text" | awk -v cap="$cap" '
+              NR <= cap { print }
+              END { if (NR > cap) printf "- (+%d more not shown - query the tracker directly)\n", NR - cap }'
           }
 
           # Phase 0 check: open PRs with a failing check, excluding claude/auto-* (already
@@ -423,9 +423,9 @@ jobs:
                            elif .security_advisory.severity == "high" then 1
                            elif .security_advisory.severity == "medium" then 2
                            else 3 end;
-              sort_by(sevrank)[]
-              | "- #\(.number) [\(.security_advisory.severity)] \(.dependency.package.name): \(.security_advisory.summary) (\(.html_url))"
-            ' 2>/dev/null); then
+              .[]
+              | "\(sevrank) - #\(.number) [\(.security_advisory.severity)] \(.dependency.package.name): \(.security_advisory.summary) (\(.html_url))"
+            ' 2>/dev/null | sort -s -k1,1n | cut -d' ' -f2-); then
             dependabot_alerts=""
           fi
           {
