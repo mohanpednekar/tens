@@ -1079,9 +1079,9 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
 
   expect(screen.queryByRole('dialog', { name: /purge required/i })).not.toBeInTheDocument()
   // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked in engine.js) — a real Prestige
-  // resets the Byte Foundry's Data Stream balance but never re-gates it, so the app stays on
+  // keeps the Byte Foundry's Data Stream balance and never re-gates it, so the app stays on
   // Factory rather than navigating back to the Byte Foundry — see the dedicated Byte-Foundry/
-  // Prestige interaction tests further down for the full reset assertions.
+  // Prestige interaction tests further down for the full assertions.
   expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
 })
 
