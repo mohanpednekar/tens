@@ -211,6 +211,21 @@ describe('discardIncompatibleActiveSaveIfNeeded', () => {
 })
 
 describe('schema merge on load', () => {
+  it.each([
+    [9, undefined, false],
+    [10, undefined, true],
+    [3, true, true],
+    [50, false, false],
+  ])('grandfathers the speed bonus: %i Purges, stored flag %s → %s', (count, flag, expected) => {
+    const { prestigeSpeedBonusUnlocked: _dropped, ...save } = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify({
+      ...save,
+      ...(flag === undefined ? {} : { prestigeSpeedBonusUnlocked: flag }),
+      purge: { ...save.purge, count },
+    }))
+    expect(loadGameState().prestigeSpeedBonusUnlocked).toBe(expected)
+  })
+
   it('applies Purge-count automation milestones to a loaded save (no PP, no next Purge needed)', () => {
     const save = createInitialGameState()
     localStorage.setItem('tens_game_state', JSON.stringify({ ...save, purge: { ...save.purge, count: 150 } }))

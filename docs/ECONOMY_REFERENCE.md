@@ -1576,7 +1576,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
 "Tier autobuyer/tier-tickspeed-autobuyer milestones" below), spending no PP at all.
 
 - **Active — Purge speed bonus (PP tutorial):** `buyPrestigeSpeedBonus(state)` spends `PRESTIGE_SPEED_BONUS_UNLOCK_COST` (1) PP once to
-  set `prestigeSpeedBonusUnlocked` (permanent, survives Reboot). `getPrestigeProductionMultiplier(purgeCount, unlocked)` =
+  set `prestigeSpeedBonusUnlocked` (permanent, survives Reboot; saves with ≥10 Purges and no stored flag are grandfathered on load). `getPrestigeProductionMultiplier(purgeCount, unlocked)` =
   `2 + log10(purgeCount)` once bought and `purge.count >= 1`, else flat ×1 — applied uniformly to every tier in `tickGame`.
   Firmware → Prestige shows a tutorial callout and a Speed bonus row first, until bought.
 - **Active — Playtime bonus:** `buyPlaytimeBonus(state)` spends `PLAYTIME_BONUS_UNLOCK_COST` (100) PP once to set

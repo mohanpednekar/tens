@@ -74,7 +74,7 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   Default sweep: early-stop floor / true hard cap / `unlimited`. Reports end capacity, cores ever
   earned, and disks built alongside Foundry / Main / total times.
 - **Autobuyers wherever applicable:** tiers whose `autobuyers[tierId]` is non-null (from
-  `applyAutobuyerMilestones` keyed on `purge.count` — 1 prestige for tier01, …, 10 for tier10)
+  `applyAutobuyerMilestones` keyed on `purge.count` — Purge 2 for tier01, …, Purge 20 for tier10)
   are left to `tickGame`'s autobuyer loop with the real `BUY_QUANTITY = Number.MAX_SAFE_INTEGER`
   batch (same sentinel `useIncrementalGame.js` uses — not a literal 10).
 - **Manual clicks where waiting would stall:** `buyTierQuantity` on any tier with no autobuyer yet,
@@ -89,7 +89,7 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   continue climbing until Overclock (`getOverclockRequirement`) fires; otherwise repeatedly taking
   the level-3 Scale Up would prevent the first level-5 Overclock forever. This mirrors Auto Scale
   Up's own final-tier pause.
-- **PP lever:** the production-speed bonus is automatic at 10 Purges (×log10(count)), no PP spent. Other PP automations (Smart, Auto-Scale-Up, Auto-Prestige, tickspeed autobuyer) are
+- **PP lever:** the production-speed bonus is a one-time 1 PP purchase (×(2 + log10(count))), bought first by the bot. Other PP automations (Smart, Auto-Scale-Up, Auto-Prestige, tickspeed autobuyer) are
   **not** bought — those are separate levers; say so rather than silently enabling them if the
   user asks about those specifically.
 - Career mode calls `purgeGame` between cycles so permanent Foundry upgrades and
