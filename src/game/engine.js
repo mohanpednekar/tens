@@ -983,7 +983,7 @@ export const getLastTierXpTickspeedMinConsumption = xpConsumed => Math.max(
 )
 
 // Passive production-speed bonus: inert until bought (one-time PRESTIGE_SPEED_BONUS_UNLOCK_COST PP, see
-// buyPrestigeSpeedBonus). ×1 before the first Purge, a hardcoded ×1.3 for the 1st Purge
+// buyPrestigeSpeedBonus). ×1 before the first Purge, a hardcoded ×1.1 for the 1st Purge
 // (PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER — 1 + log10(1) would give nothing), then 1 + log10(n):
 // ×2 at 10 Purges, ×3 at 100, ×4 at 1,000, and so on. `unlocked` defaults to true so the bare formula
 // stays callable.
@@ -1461,7 +1461,7 @@ export const getPurchaseMilestoneMultiplier = level => {
 
 // The unconditional production-speed multiplier from Scale Up activations (see scaleUpGame):
 // SCALE_UP_MULTIPLIER_BASE raised to scaleUpCount, so each activation doubles it (1x, 2x, 4x,
-// 8x, …). getPrestigeProductionMultiplier is a Purge-count formula (×1 until the 1 PP bonus is bought, ×1.3 at the 1st Purge, then 1 + log10(n)); this
+// 8x, …). getPrestigeProductionMultiplier is a Purge-count formula (×1 until the 1 PP bonus is bought, ×1.1 at the 1st Purge, then 1 + log10(n)); this
 // applies automatically as soon as scaleUpCount > 0.
 export const getScaleUpMultiplier = scaleUpCount =>
   SCALE_UP_MULTIPLIER_BASE ** clampNonNegative(scaleUpCount)

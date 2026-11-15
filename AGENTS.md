@@ -189,7 +189,7 @@ already have tried and rejected.
 
 After **100 lifetime Purges**, production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Compression
-upgrades on Firmware → Prestige. Production speed bonus is a one-time 1 PP Firmware → Prestige purchase (×1.3 at 1 Purge, then ×(1 + log10 Purges): ×2 at 10, ×3 at 100, ×4 at 1,000), the PP tutorial — see `docs/ECONOMY_REFERENCE.md`.
+upgrades on Firmware → Prestige. Production speed bonus is a one-time 1 PP Firmware → Prestige purchase (×1.1 at 1 Purge, then ×(1 + log10 Purges): ×2 at 10, ×3 at 100, ×4 at 1,000), the PP tutorial — see `docs/ECONOMY_REFERENCE.md`.
 
 For run times / pacing questions — and after any change that can significantly affect ideal Foundry
 or prestige timings — use the `simulate-run-times` skill and publish via `publish-strategy.sh`.

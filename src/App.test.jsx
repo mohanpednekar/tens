@@ -2154,7 +2154,7 @@ test('Firmware → Prestige teaches PP with a tutorial: the first 1 PP buys the 
 
   expect(screen.queryByLabelText(/^purge points tutorial$/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
-  expect(screen.getByLabelText(/^speed bonus upgrade$/i)).toHaveTextContent('×1.3 now')
+  expect(screen.getByLabelText(/^speed bonus upgrade$/i)).toHaveTextContent('×1.1 now')
 })
 
 test('the playtime bonus is unlocked for 100 PP on Firmware → Prestige', async () => {

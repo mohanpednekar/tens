@@ -5931,8 +5931,8 @@ describe('getPrestigeProductionMultiplier', () => {
     expect(getPrestigeProductionMultiplier(0)).toBe(1)
   })
 
-  it('is a hardcoded ×1.3 for the 1st Purge, then 1 + log10(n) (×2 at 10, ×3 at 100, ×4 at 1,000)', () => {
-    expect(getPrestigeProductionMultiplier(1)).toBe(1.3)
+  it('is a hardcoded ×1.1 for the 1st Purge, then 1 + log10(n) (×2 at 10, ×3 at 100, ×4 at 1,000)', () => {
+    expect(getPrestigeProductionMultiplier(1)).toBe(1.1)
     expect(getPrestigeProductionMultiplier(2)).toBeCloseTo(1 + Math.log10(2))
     expect(getPrestigeProductionMultiplier(10)).toBeCloseTo(2)
     expect(getPrestigeProductionMultiplier(100)).toBeCloseTo(3)
