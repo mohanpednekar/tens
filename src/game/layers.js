@@ -165,6 +165,7 @@ export const DAILY_CHALLENGES_FEATURE = { enabled: true }
 // Groups in display order; `boostArea` is unused until the bonus slice (#1052).
 export const ACHIEVEMENT_GROUPS = [
   { id: 'firstSession', name: 'First session', boostArea: 'foundry' },
+  { id: 'foundry', name: 'Foundry', boostArea: 'foundry' },
   { id: 'tierLadder', name: 'Tier ladder', boostArea: 'factory' },
   { id: 'earlyFactory', name: 'Early Factory', boostArea: 'factory' },
 ]
@@ -176,6 +177,14 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'itCompiles', name: 'It compiles, ship it', group: 'firstSession', trigger: 'Compile for the first time', condition: { kind: 'byteCreated' } },
   { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', condition: { kind: 'counter', key: 'pings', min: 256 } },
   { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
+  ...TIER_DEFINITIONS.flatMap((tier, index) => [1, 2].map(reset => ({
+    id: `pool${String(index + 1).padStart(2, '0')}Reset${reset === 1 ? 'I' : 'II'}`,
+    name: `${tier.symbol} Reclamation ${reset === 1 ? 'I' : 'II'}`,
+    group: 'foundry',
+    trigger: `Compact the ${tier.symbol} pool ${reset === 1 ? 'once' : 'twice'}`,
+    bonus: `The ${reset === 1 ? 'first' : 'second'} disk-size exponent step now closes 10% of the gap to 1.0`,
+    condition: { kind: 'poolExponentBonus', poolIndex: index + 1, min: reset },
+  }))),
   ...TIER_DEFINITIONS.map((tier, index) => ({
     id: `tier${String(index + 1).padStart(2, '0')}Bought`,
     name: TIER_ACHIEVEMENT_NAMES[index],
@@ -274,12 +283,15 @@ export const getStoragePoolMemoryBounds = (poolIndex = 1) => {
 // Data Stream Speed is DERIVED from the Speed basis (see getIntroProductionRate in engine.js), not
 // independently priced: Speed = (basis in Bytes) ^ exponent B/s, and the basis can never exceed
 // Capacity, so base Speed <= Capacity ^ exponent. The exponent (getDataStreamSpeedExponent in engine.js)
-// starts at DATA_STREAM_SPEED_EXPONENT_BASE and rises by DATA_STREAM_SPEED_EXPONENT_STEP for every disk
-// size beyond the first that a Foundry reset has unlocked (intro.unlockedDiskSteps). Pool Bandwidth is
-// capped by Capacity ^ the same exponent. At the starting Capacity (1 Byte) Speed is exactly 1 Byte/sec
+// starts at DATA_STREAM_SPEED_EXPONENT_BASE. Every new Storage pool closes 10% of the remaining
+// gap to 1.0. Within each pool, disk sizes initially close 10% of the gap to the *next pool's*
+// exponent (equivalent to retaining 99% of the gap to 1.0 per array step). The first two
+// successful Compact Pool resets permanently upgrade that pool's respective array steps to
+// close 10% of the gap to 1.0 instead. See getDataStreamSpeedExponent in engine.js.
+// Pool Bandwidth is capped by Capacity ^ the same exponent. At the starting Capacity (1 Byte) Speed is exactly 1 Byte/sec
 // (8 bits/sec), matching a manual tap's own base amount (see tapIntroBit/getIntroProductionRate).
 export const DATA_STREAM_SPEED_EXPONENT_BASE = 0.5
-export const DATA_STREAM_SPEED_EXPONENT_STEP = 0.01
+export const DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED = 0.9
 export const INTRO_BYTE_BASE_RATE = 1
 // One-time cost, in bits, to combine your first 8 tapped bits into the Byte generator (see
 // combineIntroByte in engine.js) — equal to the starting capacity, since that's exactly how many
@@ -346,7 +358,7 @@ export const FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT = 100
 // Stream via the read-cache flush, not a further transfer out of it at pull time.
 // Disks (and their arrays' cache) are themselves PERMANENT, like the Byte generator itself (see
 // purgeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
-// even though Data Stream itself resets, letting banked-up Storage give a fresh cycle a head start.
+// and the Data Stream balance is kept too, letting banked-up Storage give a fresh cycle a head start.
 // The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
 // until Buffer / pool Memory Capacity reaches this many bits — deliberately set to EQUAL pool 1's
 // own display-capacity-threshold gate (getPoolCapacityUnlockThresholdBits(1) in engine.js — 1024
@@ -537,8 +549,7 @@ export const COMPUTE_MERGE_BOUNDARIES = [
 ]
 
 // --- Byte Foundry Compute Boost --- see getComputeBoostMultiplier/activateComputeBoost/
-// tickComputeBoost in engine.js and intro.computeBoostType/computeBoostTierIndex/computeBoostStacks/
-// computeBoostRemainingSeconds in createInitialGameState. Activating a boost now spends exactly 1
+// tickComputeBoost in engine.js and intro.computeBoosts in createInitialGameState. Activating a boost now spends exactly 1
 // token of whichever compute-ladder tier the player selects (see issue #326) — Core through
 // Megacomputer — rather than always a Compute Core: the values below are the BASE (tier 1 = Core)
 // preset strength/duration, identical whichever tier funds it (a higher tier broadens which Factory
@@ -581,11 +592,7 @@ export const COMPUTE_BOOST_TIER_FIELDS = [
   'computeCores', 'computeNodes', 'computeClusters', 'computeNetworks', 'computeGrids',
   'computeFabrics', 'computeClouds', 'computeDatacenters', 'computeSupercomputers', 'computeMegacomputers',
 ]
-// Only one PRESET TYPE (and tier) can be active at a time — activating a NEW boost is blocked
-// entirely while one is already running (see activateComputeBoost); a separate stackComputeBoost
-// action extends the CURRENTLY ACTIVE boost's own tier/type instead, up to this many times, adding
-// that tier's own duration each time rather than resetting it — the multiplier itself never
-// compounds from stacking.
+// Max boosts per multiplier lane (running + queued); see "Compute Boosts" in engine.js.
 export const COMPUTE_BOOST_MAX_STACKS = 10
 
 // --- Data Lakes (Foundry pool overflow ↔ Booster funding) --- see tickDataLakeOverflowFill/
@@ -620,7 +627,7 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // own DISK_ARRAY_LADDER_CAP (9, not 10) above: the lake's own fill buffer supplies that last unit
 // directly once every representable disk slot is full, the same way a Storage array's cache
 // supplies its own 10th unit, rather than needing a 10th disk square of its own — see
-// DATA_LAKE_MAX_REPRESENTABLE_UNITS/getDataLakeCurrentFillSubSize in engine.js and
+// getDataLakeRepresentableUnits in engine.js and
 // docs/DESIGN_HISTORY.md. A lake's disks always fill smallest denomination first — every ×1 slot
 // before any ×10 slot, every ×10 slot before any ×100 slot — so "how many of each size are
 // currently full" is a pure function of the lake's own deposited total (see getDataLakeDiskCounts
@@ -628,6 +635,9 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 export const DATA_LAKE_TIER_COUNT = 10
 export const DATA_LAKE_SUB_SIZES = [1, 10, 100]
 export const DATA_LAKE_SUB_SIZE_DISK_CAPS = [9, 9, 9]
+// #1087: the ×1000 disk rung (one slot per permanent pool Flush) above ×1/×10/×100; consolidation order.
+export const DATA_LAKE_THOUSAND_SIZE = 1000
+export const DATA_LAKE_CONSOLIDATION_SIZES = [1, 10, 100, DATA_LAKE_THOUSAND_SIZE]
 export const DATA_LAKE_TIER_LABELS = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB']
 export const DATA_LAKE_MAX_DISK_LADDER_STEP = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
 export const DATA_LAKE_CAPACITY_MAX_LEVEL = 3
@@ -716,9 +726,12 @@ export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.25
 export const PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10
 
 // Passive production-speed bonus, uniformly across every tier (see engine.js's
-// getPrestigeProductionMultiplier): unlocked once the save has Purged
-// PRESTIGE_SPEED_BONUS_UNLOCK_PURGES times, then ×log10(purge count). No PP cost.
-export const PRESTIGE_SPEED_BONUS_UNLOCK_PURGES = 10
+// getPrestigeProductionMultiplier): a one-time PP purchase on Firmware → Prestige (the player's first
+// lesson in spending Purge Points), then ×(1 + log10(Purge count)) from the 2nd Purge (×2 at 10, ×3 at 100, ×4 at 1,000 …).
+export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 1
+// 1 + log10(1) would be ×1, so the very first Purge gets a hardcoded ×1.1 — deliberately well below the 2nd
+// Purge's 1 + log10(2) ≈ ×1.301 so each early Purge is a visible step (×1.3 here was nearly identical to the 2nd Purge).
+export const PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER = 1.1
 // One-time PP unlock for the playtime bonus: +1% production per hour of ACTIVE play (visible live
 // ticks only — simulated offline/background catch-up and hidden-tab ticks never count). See
 // engine.js's getPlaytimeProductionMultiplier/buyPlaytimeBonus.
@@ -759,9 +772,11 @@ export const AUTOBUYER_MIN_INTERVAL_SECONDS = 0.01
 // Interval upgrade chains for the global/per-tier automations (engine.js's
 // buyAutomationIntervalUpgrade / buyTierTickspeedIntervalUpgrade): cost = baseCost × the same
 // 1,2,4,…,64,125,… ladder as the tier autobuyer chain; interval = baseSeconds × 0.9^level, 10 ms floor.
-// baseCost is BOTH the one-time unlock cost of the automation (Speed Up / Scale Up / Restage /
-// Overclock / Purge autobuyers) AND the first interval-upgrade level's cost. Automations unlocked by a
-// milestone (tier autobuyers, tier tickspeed autobuyers) have no unlock cost — only the upgrades.
+// baseCost is the first interval-upgrade level's cost; every automation itself unlocks by Purge
+// count (GLOBAL_AUTOMATION_UNLOCK_PURGES, tier milestones) with no unlock cost — only the upgrades.
+// Purge count at which each global automation unlocks automatically (no PP cost; see engine.js's
+// applyAutobuyerMilestones). The interval-upgrade ladders below are PP-funded and unchanged.
+export const GLOBAL_AUTOMATION_UNLOCK_PURGES = { speedUp: 8, restage: 16, scaleUp: 32, overclock: 64, purge: 128 }
 export const AUTOMATION_INTERVAL_CONFIG = {
   speedUp: { baseCost: 8, baseSeconds: 1 },
   scaleUp: { baseCost: 16, baseSeconds: 64 },
@@ -774,17 +789,17 @@ export const TIER_TICKSPEED_INTERVAL_CONFIG = { baseCost: 100, baseSeconds: 16 }
 // How many times the player must have purged before a tier's unit-buying autobuyer unlocks
 // automatically (see engine.js's getAutobuyerUnlockMilestone/applyAutobuyerMilestones) — replaces
 // the old PP-cost-funded unlock entirely: no purchase, no PP spent, just a milestone reached by
-// prestige count. tier01 unlocks after the very first prestige, tier02 after the second, … tier10
-// after the tenth (AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP).
-export const AUTOBUYER_UNLOCK_MILESTONE_START = 1
-export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 1
+// prestige count. tier01 unlocks after the 2nd Purge, tier02 after the 4th, … tier10
+// after the 20th (AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP).
+export const AUTOBUYER_UNLOCK_MILESTONE_START = 2
+export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 2
 // Same milestone-based automatic-unlock mechanism as the autobuyer unlock above, but for a tier's
 // own tickspeed-multiplier autobuyer (see engine.js's getTierTickspeedAutobuyerMilestone) — starts
-// later (prestige 11 for tier01) and spaces out one prestige per tier (11, 12, 13, … 20 for tier10),
+// later (Purge 22 for tier01) and spaces out two Purges per tier (22, 24, … 40 for tier10),
 // reflecting that it's a later-game convenience layered on top of the (now free)
 // unit-buying autobuyer above. Also no longer PP-funded.
-export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 11
-export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 1
+export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 22
+export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 2
 // Speed Up (the global tickspeed multiplier — see engine.js's
 // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) speeds up *every* tier's
 // production at once. Every level compounds by the same rate.
@@ -825,10 +840,6 @@ export const LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1
 // of) its own resource-funded tickspeed level. "Last tier" (not a hardcoded tier id) so this stays
 // correct if TIER_DEFINITIONS ever grows a new final entry.
 export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
-// One-time PP cost (Firmware → Automation) for Auto Restage (= its interval chain's baseCost) — once bought,
-// tickGame spends the whole XP balance on the last tier's XP-funded tickspeed whenever
-// consumeXpForLastTierTickspeed allows, at most once per AUTOMATION_INTERVAL_CONFIG.restage interval.
-export const XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = AUTOMATION_INTERVAL_CONFIG.restage.baseCost
 // Each single XP-consumption action must be at least this fraction of the cumulative XP already
 // consumed this way (see engine.js's getLastTierXpTickspeedMinConsumption) — so repeat
 // consumptions can't trickle in one XP at a time forever; the required minimum grows alongside

@@ -1,5 +1,5 @@
 import styled, { css, keyframes } from 'styled-components'
-import { formatOfflineDuration, getComputeBoostCoveredTierCount, getComputeBoostMultiplier } from 'game/engine'
+import { formatOfflineDuration, getComputeBoostCoveredTierCount, getComputeBoostLanes, getFactoryTierBoostMultiplier } from 'game/engine'
 import { COMPUTE_BOOST_PRESETS } from 'game/layers'
 
 // Shared "this element is boosted" treatment for everything an active Compute Boost multiplies —
@@ -9,25 +9,28 @@ import { COMPUTE_BOOST_PRESETS } from 'game/layers'
 
 export const COMPUTE_BOOST_LABELS = { burst: 'Turbo', standard: 'Balanced', sustain: 'Eco' }
 
-// Mirrors the engine: an unknown preset or invalid funding tier applies ×1 to nothing.
-const isBoostActive = intro => Boolean(intro?.computeBoostType && COMPUTE_BOOST_PRESETS[intro.computeBoostType]) && getComputeBoostCoveredTierCount(intro) > 0
+const isBoostActive = intro => getComputeBoostCoveredTierCount(intro) > 0
 
 export const isDataStreamBoosted = intro => isBoostActive(intro)
 
 // tierIndex is the Factory tier's 0-based ladder index (tier01 = 0).
-export const isFactoryTierBoosted = (intro, tierIndex) =>
-  isBoostActive(intro) && tierIndex < getComputeBoostCoveredTierCount(intro)
+export const isFactoryTierBoosted = (intro, tierIndex) => tierIndex < getComputeBoostCoveredTierCount(intro)
 
 // 1-based Storage pool index (pool N ↔ Factory tier N).
-export const isPoolBoosted = (intro, poolIndex) =>
-  isBoostActive(intro) && poolIndex <= getComputeBoostCoveredTierCount(intro)
+export const isPoolBoosted = (intro, poolIndex) => poolIndex <= getComputeBoostCoveredTierCount(intro)
 
-// Full sentence describing the active boost, or null while none is active.
-export const getComputeBoostDescription = intro => {
-  if (!isBoostActive(intro)) return null
-  const label = COMPUTE_BOOST_LABELS[intro.computeBoostType] ?? intro.computeBoostType
-  const stacks = intro.computeBoostStacks ?? 1
-  return `Boosted ×${getComputeBoostMultiplier(intro)} production by the ${label} Compute Boost — ${formatOfflineDuration(intro.computeBoostRemainingSeconds ?? 0)} left${stacks > 1 ? `, ${stacks} stacked` : ''}`
+// Full sentence describing the boosts covering Factory tier `tierIndex` (0-based ladder index), or null when
+// none does. Multiplier = that tier's own summed multiplier; each lane shows its whole remaining time and
+// how many boosts wait behind the running one.
+export const getComputeBoostDescription = (intro, tierIndex = 0) => {
+  const lanes = getComputeBoostLanes(intro).filter(lane => lane.queue[0] > tierIndex)
+  if (lanes.length === 0) return null
+  const parts = lanes.map(lane => {
+    const waiting = lane.queue.length - 1
+    const total = lane.remainingSeconds + waiting * COMPUTE_BOOST_PRESETS[lane.type].durationSeconds
+    return `${COMPUTE_BOOST_LABELS[lane.type] ?? lane.type} ×${COMPUTE_BOOST_PRESETS[lane.type].multiplier} (${formatOfflineDuration(total)} left${waiting > 0 ? `, ${waiting} queued` : ''})`
+  })
+  return `Boosted ×${getFactoryTierBoostMultiplier(intro, tierIndex + 1)} production by Compute Boosts — ${parts.join(' + ')}`
 }
 
 const boostPulse = keyframes`

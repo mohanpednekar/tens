@@ -215,7 +215,7 @@ visible name, per the fuller `"{label} Data Lake — funds {boosterLabel}"` phra
 lifetime-purchased-count text — see below for what it shows. Below that, one `LakeSizeRow` of round
 `LakeSquare`s per non-empty sub-size (×1/×10/×100, smallest first) — the same disk-array visual
 language `DiskArrayRow` uses for Storage's own Disks — showing every completed disk filled, plus a
-live left-to-right fill (`LakeSquareFill`, driven by `getDataLakeCurrentFillSubSize`/
+live left-to-right fill (`LakeSquareFill`, driven by `getDataLakeNextTransferTarget`/
 `getDataLakeFillBits`) on whichever ONE slot is actively filling right now; a hidden
 `role="progressbar"` (`aria-label="… lake deposits"`) still exposes the lake's overall
 deposited-units/capacity fraction for a11y. A dedicated `LakePoolTile` sits right below the header
@@ -320,8 +320,7 @@ was a direct alias of `formatBitsInNearestUnit`). A disk's *size* AND its own bu
 through `formatDiskSize` (SI, since the cost is itself a fixed multiple of that same SI size); any
 bit amount actually spent out of Memory's own binary-scaled balance renders through
 `formatBitsInNearestUnit` (binary) instead.
-A real Prestige resets Memory (`bits`/`productionAccumulator`) back to fresh — along with tier01's
-own `purchaseLevels`/`purchaseLevelProgress` (see `purgeGame` in docs/ECONOMY_REFERENCE.md) — but
+A real Prestige KEEPS Memory (`bits`) — it resets only tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `purgeGame` in docs/ECONOMY_REFERENCE.md) — but
 NOT the main-game-unlock gate (`mainGameUnlocked`) any more: that's now a PERMANENT, one-time-ever
 latch (`latchMainGameUnlocked`), never reset by a real Prestige or a Reboot. So this page's
 gate only ever reappears once, on a save's very first cycle — every cycle after that starts with
@@ -417,19 +416,27 @@ or single word labels" ask). The full prose explanation of every mechanic here l
 Render order top to bottom (a top `BoostCard` with the current effect, then tier rows; the presets
 live inside the selected tier):
 
-1. Right after the header — deliberately at the TOP of the page — a `BoostTimerRow`
-   (`role="group"`, `aria-label="active boost controls"`) renders whenever a Compute Boost is active:
-   - Left: **Pop** (`aria-label="pop one stack of the active compute boost"`, `↩`, no confirmation,
-     `actions.reclaimComputeBoost`) while `canReclaimComputeBoost` (an unused stack remains —
-     `getUnusedComputeBoostStacks > 0`); otherwise **Forfeit** (`aria-label="forfeit the active compute
-     boost with no refund"`, `✕`, `window.confirm` first, `actions.forfeitComputeBoost`).
-   - Middle: a `TimerBar` (`aria-label="active compute boost"`) whose fill is remaining time over the
-     total stacked duration (`stacks × getComputeBoostTierDurationSeconds`), with one line on top,
-     `"<icon> <label> ×<multiplier> on <KB–covered tier> · <funding tier symbol> · <countdown> left[ · <N> stacked]"`
-     (e.g. `"💥 Turbo ×20 on KB–MB · 🔗 · 2m59s left"`); the full sentence lives in that span's `title`.
-   - Right: **Stack** (`aria-label="stack the active compute boost"`, `+`,
-     `disabled={!isStackComputeBoostTurnAvailable(state)}`, `actions.stackComputeBoost`).
-   `MainPage` shows a matching read-only status line while a boost is active.
+1. Right after the header, deliberately at the TOP of the page, a `BoostTimerStack`
+   (`role="group"`, `aria-label="active boost controls"`) holds one `BoostLane` per running multiplier lane
+   (`getComputeBoostLanes`; Turbo / Balanced / Eco order, `aria-label="<Label> boost controls"`), each holding one
+   `BoostTimerRow` per same-tier group:
+   - A lane renders one row per **group** of consecutive queue entries funded by the same tier (the waiting
+     entries are strongest-tier-first; the running head can be weaker), so boosts covering a different set of Factory tiers than the running one are shown
+     separately: the first row is the running group, further rows are waiting groups (dimmed, time = their full
+     duration). All three side controls share one fixed width and rows without a button carry a same-width spacer,
+     so every bar lines up.
+   - Left (LAST row of the lane): **Pop** (`aria-label="pop one queued <Label> compute boost"`, `↩`, no
+     confirmation, `actions.reclaimComputeBoost(type)`) while `canReclaimComputeBoost(state, type)` (a boost waits
+     behind the running one); otherwise **Forfeit** (`aria-label="forfeit the <Label> compute boost with no refund"`,
+     `✕`, `window.confirm` first, `actions.forfeitComputeBoost(type)`).
+   - Middle: a `TimerBar` (`aria-label="active <Label> compute boost"` — `queued <Label> compute boost <tiers>` on waiting rows —, a 3-column grid so the centre stays
+     centred) whose fill is the group's remaining time over `count × duration` (a waiting group is full): left the boost count (`<N>x`, always shown), centre
+     `"<covered Factory tiers> <icon> ×<multiplier>"` (e.g. `KB–GB 💥 ×20`), right the countdown; the full
+     sentence lives in its `title`.
+   - Right (FIRST row only): **Stack** (`aria-label="stack the <Label> compute boost"`, `+`,
+     `disabled={!isStackComputeBoostTurnAvailable(state, type)}`, `actions.stackComputeBoost(type)`).
+   `MainPage`'s tier details show a read-only line (`getComputeBoostDescription(intro, tierIndex)`) with that
+   tier's own summed multiplier and only the lanes covering it.
    With no boost active, the card instead shows "No boost running" (no prompt: one tier is ALWAYS selected).
 2. The Boost presets (`boostPresets`: `ArmedStatusText` + `BoostRow`) render INSIDE the one selected
    tier block (3), BELOW that tier's merge / charge row — only one tier shows them at a time. The selection can be
@@ -441,25 +448,21 @@ live inside the selected tier):
    (a `<section aria-label="boost">`, no visible heading); the tier list below it has none either.
    a. An `ArmedStatusText` line (`"1 <symbol> → <KB–Last Factory tier symbol>"` — no held count, the tier's slot dots already show it; full sentence in its `title`) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row — see 3),
-      initialized on arrival to the active boost's own tier (`intro.computeBoostTierIndex`), else none; always Cells (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
+      initialized on arrival to the first running lane's head tier, else none; always Cells (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
       tier that can hold a balance that early. Clicking a different tier mid-boost arms a
-      confirmed switch (per `canActivateComputeBoost`); the timer bar, Stack and Pop always describe
-      the ACTIVE tier, not the armed one. The row
+      new boost (it queues or runs in parallel); each timer bar's Stack and Pop describe its own lane, not the armed tier. The row
       highlight (`aria-pressed`) tracks `armedTierIndex`.
    b. A `BoostRow` (`role="group"`, `aria-label="compute boost"`) of the 3 Compute Boost preset
       buttons, each a small `CompactButton` (`variant="prestige"`,
       `aria-label="activate <type> compute boost"`, visible label `"<icon> ×<multiplier> · <duration>"` computed
       for the CURRENTLY ARMED tier via `getComputeBoostTierMultiplier(boostType, armedTierIndex)` —
       e.g. `"💥 ×20 · 10m"` for Turbo (`formatPresetDuration` drops a zero trailing unit) — the preset
-      name itself lives only in `title`). While a boost is active each preset becomes one of:
-      - the SAME preset + tier as the running boost → **Stack** (`aria-label="stack <type> compute
-        boost"`, label prefixed `"+ "`, `actions.stackComputeBoost`, gated by
-        `isStackComputeBoostTurnAvailable`);
-      - any other → a confirmed **switch** (`aria-label="forfeit active boost and activate <type>
-        compute boost"`; the `window.confirm` names how many unused stacks get refunded), calling
-        `actions.activateComputeBoost(boostType, armedTierIndex, true)` — refunds every unused stack
-        (`getUnusedComputeBoostStacks`), forfeits the running one, then spends 1 armed-tier token.
-      With no boost active, `actions.activateComputeBoost(boostType, armedTierIndex)`. Every preset
+      name itself lives only in `title`). A preset whose multiplier already runs becomes a **queue** button
+      (`aria-label="queue <type> compute boost"`, label unchanged); otherwise it is
+      `aria-label="activate <type> compute boost"`. Either way it calls
+      `actions.activateComputeBoost(boostType, armedTierIndex)` with no confirmation (a different multiplier runs
+      in parallel and adds up; the same one queues behind the running boost, strongest tier first).
+      Every preset
       also folds in the forced priority order (disabled while Disk Fill / Provision Disk outranks
       Compute, `title` naming which to take first).
 3. THEN, below the `BoostCard`, the page branches on `intro.computeMergePageUnlocked` (a
@@ -581,10 +584,10 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   `width: 100%` in the compressed styles specifically to pin them to the card's actual width so that
   truncation has something to truncate against (this selector matches `MoneyHero` too, below, since it
   extends `Money` and so still carries `Money`'s own generated class on the same DOM node). This
-  compact PP display shows the production speed bonus once unlocked (10 Purges) (`formatBonusOrMultiplier` — a
+  compact PP display shows the production speed bonus once bought (1 PP) (`formatBonusOrMultiplier` — a
   percentage below +100%, an `"Nx"` multiplier at/above it, see "Percentages vs. multipliers" below),
-  but — being always-visible, sticky chrome rather than an expandable disclosure — omits the "unlocks at
-  10 Purges" caveat before the threshold; that fuller wording used to also show in the bottom
+  but — being always-visible, sticky chrome rather than an expandable disclosure — omits the "not yet unlocked"
+  caveat before it is bought; that fuller wording used to also show in the bottom
   `PrestigeCard`'s expandable description before that whole card was removed (see "Prestige and the
   Googol freeze" below) as purely informational and redundant with this button. Once Prestige is
   actually available (`canPurge`, i.e. Money `>= PURGE_THRESHOLD`), the PP display card itself doubles as a
@@ -672,7 +675,7 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   here before its own card would show it either), reading either its live effect (e.g. "2x production
   speed from 100 Purges", "2 activations; multiplier varies by tier", "+1% faster ticks on every tier", "Tickspeed upgrade's per-level rate is now 1.21% (was 1%) from level 2") or a "not yet
   unlocked/activated/active" status line when revealed but not yet active (Prestige speed bonus:
-  "unlocks at 10 Purges (N so far)"). The
+  "not yet unlocked (1 PP on Firmware → Prestige)"). The
   per-tier purchase milestone multiplier (`getPurchaseMilestoneMultiplier`) is deliberately not listed
   here — it's per-tier, not global, and already shown in each tier row's own Details disclosure. The
   list is suppressed entirely (not merely restyled) while `StickyBalances` is in its compressed
@@ -746,7 +749,7 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   never its own line — and (tier / Flops cells) the cell grows one line downward for a full-width ⏫ speed upgrade (visible text is the cost only — the
   doubling to `M/buy` is in its `aria-label`/`title`; every tier autobuyer / tier tickspeed autobuyer
   chain starts at 100 PP). Locked: a 🔒
-  `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) or a 🔓 PP unlock button (full-width below the head in narrow cells, inline for global ones) (`"Enable <name> for N Purge Points"`). The Switch (`aria-pressed`, `aria-label`
+  `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) — every automation (global, tier, tier tickspeed) unlocks by Purge count; there is no PP unlock button. The Switch (`aria-pressed`, `aria-label`
   e.g. `"Auto Scale Up automation"`, `"<tier>'s autobuyer"`) sits at the head's right; the status is
   `"<name> active|paused"` (`role="img"`). Tier autobuyers: one `TierPair` card per tier (`aria-label="<tier> automation"`, the tier's Factory
   accent stripe, grid `1.9rem | 1fr | 1fr`) = tier symbol, then the ⚙ tickspeed autobuyer half (left — where the
@@ -818,8 +821,7 @@ the card stays visible rather than disappearing if tier02's owned count is later
 Prestige/Scale Up; Reset clears the flag alongside `overclockEverRevealed`. It
 needs no `!isFirstRun` gate — unlike the Firmware page, it has nothing to do with Prestige Points, so
 it's available (once tier02 is owned) even during a player's very first run. Clicking is optional: once
-`buyTickspeedAutobuyer` is bought (PP-funded, see "Prestige Points, autobuyer unlock, and the tickspeed
-multiplier" below), `tickGame` calls `buyGlobalTickspeedMultiplier` automatically every tick, so the
+Auto Clock Speed is unlocked (Purge 8; see ECONOMY_REFERENCE "Global automations unlock by Purge count"), `tickGame` calls `buyGlobalTickspeedMultiplier` automatically every tick, so the
 level climbs on its own whenever Money allows — the manual button works identically either way.
 
 **Tickspeed multiplier (Factory view, per tier).** Every unlocked tier's row carries a Money-funded

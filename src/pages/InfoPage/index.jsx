@@ -41,13 +41,15 @@ import {
   PRESTIGE_POWERS_PER_PP_BASE,
   PLAYTIME_BONUS_PER_HOUR,
   PLAYTIME_BONUS_UNLOCK_COST,
-  PRESTIGE_SPEED_BONUS_UNLOCK_PURGES,
+  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
+  AUTOBUYER_UNLOCK_MILESTONE_STEP,
+  GLOBAL_AUTOMATION_UNLOCK_PURGES,
   getStoragePoolMemoryBounds,
   DATA_STREAM_SPEED_EXPONENT_BASE,
-  DATA_STREAM_SPEED_EXPONENT_STEP,
+  DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED,
 } from 'game/layers'
 import { version } from '../../../package.json'
 import styled from 'styled-components'
@@ -181,8 +183,8 @@ const InfoPage = () => {
         <ul>
           <li>
             <strong>Purge</strong> — at 1 Googol Bytes. <em>Resets:</em> Bits and resources, owned
-            Factory tiers, Scale Ups, Overclocks, Clock Speed, Restage XP, the per-cycle Compute (Flops) boost and the Data Stream balance.{' '}
-            <em>Keeps:</em> Purge Points, Compression levels, automation unlocks, Overflow mode, the
+            Factory tiers, Scale Ups, Overclocks, Clock Speed, Restage XP, the per-cycle Compute (Flops) boost.{' '}
+            <em>Keeps:</em> the Data Stream balance, Purge Points, Compression levels, automation unlocks, Overflow mode, the
             Byte generator, Capacity, Disks, Data Lakes, Compute entities, owned Compute (Flops)
             units and the System log.
           </li>
@@ -246,8 +248,8 @@ const InfoPage = () => {
           </li>
           <li>
             <strong>Reformat</strong> — when every unlocked disk size is complete, this button
-            replaces Provision Disk. It unlocks the next disk size and raises the exponent by{' '}
-            {DATA_STREAM_SPEED_EXPONENT_STEP}. The Foundry restarts from scratch, then Compile,
+            replaces Provision Disk. It unlocks the next disk size. Each new pool closes{' '}
+            {Math.round((1 - DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED) * 100)}% of the exponent’s remaining gap to 1.0; within a pool, new disk sizes initially close 10% of the gap to the next pool’s exponent. The Foundry restarts from scratch, then Compile,
             Capacity, Bitrate, Disks and Data Lake upgrades/Cells are replayed automatically up to
             your previous highs.
           </li>
@@ -262,7 +264,7 @@ const InfoPage = () => {
         <h3>What resets vs. what stays</h3>
         <ul>
           <li>
-            <strong>Resets each Purge:</strong> the Data Stream balance and any partly bought{' '}
+            <strong>Resets each Purge:</strong> any partly bought{' '}
             {firstTierName} level.
           </li>
           <li>
@@ -351,10 +353,12 @@ const InfoPage = () => {
             pool has built at least one disk, and turns stored data into Cells.
           </li>
           <li>
-            A lake fills from its own pool’s Staging, one lake disk at a time. A lake disk only starts
-            while Staging is full (and, when filling on its own, every built disk in that pool is full
-            and nothing is being provisioned there); once started it is never interrupted and keeps
-            filling until done — buying a Cell keeps its progress. Clicking its 🏷️ cost control fills the same way until the next Cell is
+            A lake fills from its own pool’s Staging into a permanent 1-unit buffer, which moves into
+            lake disks and consolidates into bigger ones. Filling toward a Cell only waits for Staging to be
+            full to <em>start</em>; after that it no longer waits for Staging to refill — it only needs every built
+            disk in that pool full, nothing being provisioned there, and Staging holding more than the read
+            cache’s share — until the Cell is bought. A Cell is paid with whole disks that add up
+            to exactly its cost; disks are never broken, so the lake keeps filling until exact change exists. Clicking its 🏷️ cost control fills the same way until the next Cell is
             affordable, buys one, then stops. Once all of the pool’s disks are built, its overflow
             also pours into the lake.
           </li>
@@ -386,8 +390,11 @@ const InfoPage = () => {
           </li>
           <li>
             A flush empties that pool’s disks, Staging and lake (Cells bought and earlier flush
-            rewards stay) and permanently adds 1,000 units of lake capacity. Lakes fill at 10% of
-            their pool’s Bandwidth, plus 10% (additive) per flush.
+            rewards stay) and permanently adds 1,000 units of lake capacity. The first two
+            flushes also earn Reclamation I and II achievements: each upgrades one of that pool’s
+            two disk-size exponent steps to close 10% of the gap to 1.0. These rewards survive
+            Reformat, Purge, and Reboot. Lakes fill at 10% of their pool’s Bandwidth, plus 10%
+            (additive) per flush.
           </li>
           <li>
             Afterwards the pool rebuilds its disks for free, one at a time, smallest first. Until it
@@ -457,22 +464,21 @@ const InfoPage = () => {
             {COMPUTE_BOOST_PRESETS.sustain.poolBonusPercent}% for Turbo / Balanced / Eco.
           </li>
           <li>
-            Only one boost runs at a time. Picking the same preset and tier again{' '}
-            <strong>stacks</strong> it (up to {COMPUTE_BOOST_MAX_STACKS} stacks; each adds time, the
-            multiplier doesn’t compound). Picking a different one asks first, then refunds unused
-            stacks and forfeits the running one.
+            Boosts of different multipliers (Turbo, Balanced, Eco) run <strong>in parallel</strong> and
+            their multipliers add up. Boosts of the same multiplier <strong>queue</strong> (up to{' '}
+            {COMPUTE_BOOST_MAX_STACKS}): the running one is never interrupted, and the waiting ones
+            run afterwards, strongest (broadest tier) first.
           </li>
           <li>
-            While a boost runs, a timer bar shows the time left. <strong>+</strong> on its right adds
-            a stack. <strong>Pop</strong> (↩) on its left refunds the most recent unused stack; once
-            none are left it becomes <strong>Forfeit</strong> (✕), which ends the boost with no refund
+            Each running multiplier has its own timer bar showing the time left. <strong>+</strong> on its right
+            queues another. <strong>Pop</strong> (↩) on its left refunds the last queued boost; once
+            none are queued it becomes <strong>Forfeit</strong> (✕), which ends that boost with no refund
             after a confirmation.
           </li>
           <li>
             <strong>Auto Boost</strong> is automatic for every tier whose charge is automated: each
-            time that automatic charge starts, one of the tier's remaining tokens activates (or stacks)
-            your preferred preset. Choose the preset on Power (default Balanced). It never forfeits a
-            running boost.
+            time that automatic charge starts, one of the tier's remaining tokens starts (or queues)
+            your preferred preset. Choose the preset on Power (default Balanced).
           </li>
           <li>Fusions are used only to fund Boosts.</li>
         </ul>
@@ -527,8 +533,8 @@ const InfoPage = () => {
             After {TIER_DEFINITIONS.length} Scale Ups in a run (the first onto {lastTierName}), the
             Restage upgrade appears left of Scale Up (below the tier list): spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
-            It resets every other tier’s owned quantity and your Bits. A 16 PP Auto Restage
-            (Firmware → Automation, after Auto Clock Speed) spends it for you, every 64 s at first —
+            It resets every other tier’s owned quantity and your Bits. Auto Restage
+            (Firmware → Automation, unlocked at Purge {GLOBAL_AUTOMATION_UNLOCK_PURGES.restage}) spends it for you, every 64 s at first —
             faster with its speed upgrades.
           </li>
         </ul>
@@ -609,7 +615,8 @@ const InfoPage = () => {
         <h2>Releases</h2>
         <ul>
           <li>
-            <strong>Tier autobuyers:</strong> one tier per Purge, from Purge{' '}
+            <strong>Tier autobuyers:</strong> one tier every{' '}
+            {AUTOBUYER_UNLOCK_MILESTONE_STEP === 1 ? 'Purge' : `${AUTOBUYER_UNLOCK_MILESTONE_STEP} Purges`}, from Purge{' '}
             {firstTierAutobuyerMilestone} ({firstTierName}) through Purge{' '}
             {lastTierAutobuyerMilestone} ({lastTierName}).
           </li>
@@ -648,8 +655,8 @@ const InfoPage = () => {
             Spend PP on Firmware for automation and upgrades.
           </li>
           <li>
-            From {PRESTIGE_SPEED_BONUS_UNLOCK_PURGES} Purges on, production speed gets a bonus of
-            ×log₁₀ of your Purge count.
+            Your first Purge Point buys the Purge speed bonus ({PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP on Firmware → Prestige):
+            production speed grows with your Purge count, forever: ×1.1 after your first Purge, ×2 at 10 Purges, ×3 at 100, ×4 at 1,000, and so on (×(1 + log₁₀ Purges)).
           </li>
           <li>
             The one-time Playtime bonus ({PLAYTIME_BONUS_UNLOCK_COST} PP on Firmware → Prestige) adds

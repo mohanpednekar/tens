@@ -39,9 +39,19 @@ describe('detectAchievements', () => {
 
   it('earns every already-satisfied achievement from a far-past state, then returns the same reference', () => {
     const next = detectAchievements(lateGame())
-    expect(earnedIds(next)).toHaveLength(ACHIEVEMENT_DEFINITIONS.length)
-    expect(getCompletedAchievementGroups(next)).toEqual(ACHIEVEMENT_GROUPS.map(g => g.id))
+    // Reclamation achievements require actual Compact Pool history; being far into Factory
+    // progression does not earn rewards for Storage pool resets the player never performed.
+    expect(earnedIds(next)).toHaveLength(ACHIEVEMENT_DEFINITIONS.filter(d => d.group !== 'foundry').length)
+    expect(getCompletedAchievementGroups(next)).toEqual(ACHIEVEMENT_GROUPS.filter(g => g.id !== 'foundry').map(g => g.id))
     expect(detectAchievements(next)).toBe(next)
+  })
+
+  it('earns Foundry Reclamation achievements retroactively from recorded pool bonuses', () => {
+    const previous = lateGame()
+    const poolExponentBonuses = Object.fromEntries(Array.from({ length: 10 }, (_, index) => [index + 1, 2]))
+    const awarded = detectAchievements({ ...previous, intro: { ...previous.intro, poolExponentBonuses } })
+    expect(earnedIds(awarded)).toHaveLength(ACHIEVEMENT_DEFINITIONS.length)
+    expect(getCompletedAchievementGroups(awarded)).toEqual(ACHIEVEMENT_GROUPS.map(g => g.id))
   })
 
   it('earns retroactively on a tick', () => {

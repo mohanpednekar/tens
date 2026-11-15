@@ -32,6 +32,20 @@ header once the hero switched to Bytes. Follow-up: wrap the hero in `MoneyHeroGr
 (`position: relative`) and absolutely position `BitsBalance` in the existing hero→bar gap so header
 height is the same with or without the line.
 
+### Production speed bonus: automatic log10 → 1 PP purchase, 1 + log10(n) with ×1.1 first Purge — 2026-11-15 (#1098, #1097, #1100)
+
+The 2026-11-09 automatic `log10(count)` bonus (inert below 10 Purges, ×1 at 10) gave nothing early, which
+hurt retention right after the first Purge. #1097 made it a one-time **1 PP** Firmware → Prestige purchase
+(`buyPrestigeSpeedBonus`/`prestigeSpeedBonusUnlocked`, introduced as the first lesson in spending PP) that applies
+from the first Purge, grandfathering saves with ≥10 Purges via a one-time `speedBonusGrandfathered` stamp (a
+stored `false` from the pre-11-09 builds cannot be told apart from "not bought yet" by key presence alone). The
+curve was tried as `2 + log10(n)` (×2 after one Purge: too generous), then a decade-linear curve (+10% per Purge to ×2
+at 10, ×3 at 100), and settled on `1 + log10(n)` (×2 at 10, ×3 at 100, ×4 at 1,000). The shape the 11-09 entry
+dropped (`1 + log10(count)`, "a sudden ×2 jump" at a 10-Purge threshold) returned because there is no threshold any
+more: the bonus starts at the first Purge, where `1 + log10(1)` would give nothing, so the 1st Purge is a hardcoded ×1.1
+(`PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER`). It was first ×1.3 (≈ `1 + log10(2)`), but that made the 1st and 2nd Purge nearly identical (×1.3 vs ×1.301), so it was lowered to ×1.1 to keep each early Purge a visible step (×1.1, ×1.30, ×1.48, ×1.60…). Same PR
+family: every global automation unlocks by Purge count (8/16/32/64/128) instead of PP and tier autobuyer milestones doubled.
+
 ### Production speed bonus: 10k PP unlock +1%/PP → automatic log10(Purge count) — 2026-11-09
 
 The previous bonus was a 10,000 PP Firmware unlock (`buyPrestigeSpeedBonus` /
@@ -1547,6 +1561,11 @@ The retune (issue #339):
 - **Claude** — cut from every 5 hours to **twice daily** at 9:00am / 9:00pm IST (`30 3,15 * * *`
   UTC). Exact clock times were a judgment call (the request specified count only); 9am/9pm IST sit
   clear of every Cursor slot so the engines still never wake together.
+  - **Superseded 2026-11-13:** four slots daily (4am/10am/4pm/10pm IST, cron `30 22,4,10,16 * * *`),
+    each mapped to a task kind + model alias (sonnet implementation/QA, haiku mechanical, opus only for
+    weekly planning/architecture/security/research). Slot resolved by shifting the IST clock 3h back
+    (robust to late cron firings) rather than splitting on `github.event.schedule`. Issue-only kinds
+    bypass the 5-PR ceiling but are told to open no PR when it is full; job timeout raised 30→45 min.
 
 IST = UTC+5:30, so IST `:30` maps to UTC `:00` for Cursor and IST `:00` maps to UTC `:30` for
 Claude — do not "simplify" the minute fields without re-checking that mapping.
@@ -9092,6 +9111,28 @@ block moves into the read cache and is subtracted from the buffer in the same ca
 Bandwidth is the only throttle. `DiskArrayRow` mirrors the buffer's progress toward the next block in the
 first empty cache block so the fill still looks gradual. Not re-run through `simulate-run-times`.
 
+### Bitrate exponent moves 10% toward 1.0 per new Disk size (2026-11)
+
+Supersedes the October linear +0.01 per size formula above. The maintainer approved a diminishing-gap
+curve: `e(steps) = 1 - (1 - 0.5) * 0.9 ** (steps - 1)`. Each Reformat that unlocks the next disk size
+reduces the remaining gap to 1.0 by 10%, reaching approximately 0.97645 at the final (30th) size.
+Both Data Stream Bitrate and the pool Bandwidth caps continue using the same exponent. Reformat
+eligibility, save persistence, and Capacity/Bitrate/disk costs remain unchanged. See issue #1083.
+
+### Pool-reset achievements tune Bitrate's within-pool exponent steps (2026-11)
+
+Supersedes the unconditional per-disk 0.9 gap reduction from issue #1083. Issue #1085
+introduces one 0.9 gap reduction at each of the nine boundaries between Storage pools; the
+20 within-pool array steps start at factor 0.99 (10% toward the next pool's potential exponent).
+The first and second successful Compact Pool actions for a pool earn separate Reclamation I/II
+achievements, replacing that pool's first or second within-pool factor 0.99 with 0.9. The
+exponent is derived from the count of *unlocked* steps and the permanent per-pool award map,
+so past steps are upgraded retroactively rather than permanently spending bonuses. With all
+30 disk sizes unlocked, the exponent is ~0.8416 without awards and ~0.97645 with all twenty.
+The reward map is kept across Reformat, Purge, and Reboot, unlike the pool-local lake resetCount.
+Existing save counters are backfilled on load where still present; counters previously erased
+by larger resets cannot be reconstructed. Only a full save Reset clears the earned rewards.
+
 ## Store release prep: flags-off monetization and config-time feature loaders (2026-10)
 
 - **Why a `virtual:tens-features` module instead of `if (FLAG) import()`.** The first cut gated each
@@ -9347,3 +9388,36 @@ makes the drain available in the same tick, `tickDataLakePoolDrain` takes the pr
 overflow already fed (no double credit). `buyBooster` used to zero `fillBits` on every purchase — itself an
 interruption (and a loss of the bits) — so it now carries the progress over, re-seating it through
 `fillDataLakeDisks` since the spend can open a smaller slot than the one that was filling.
+
+## Hierarchical Data Lake disks + direct pool disk fills (2026-11, #1087)
+
+**Was:** a lake tracked `depositedUnits` + `fillBits` and derived its ×1/×10/×100 squares by arithmetic (mixed-radix
+re-decomposition); the last unit of each capacity level was a virtual fill slot; a Booster spend re-derived the
+squares instantly; ordinary disks above a pool's smallest size filled a write cache from the pool buffer and then
+flushed (timed 2× stage) into the disk. **Now:** a permanent 1-unit buffer + real timed transfers
+(`lakeTransfer`) — buffer → ×1, and 9 smaller disks of every denomination + a full buffer → the next size, with a
+×1000 rung opened by Flush capacity — and ordinary disks land directly when the pool buffer has funded them.
+**Decisions / tried-and-rejected:** (1) Keep `depositedUnits`/`fillBits` (fillBits = the buffer) instead of storing
+per-denomination counts: with 9-disk caps the breakdown is unique, so counts stay derived and old saves/tests map
+cleanly; per-size ledgers were rejected as redundant state to migrate. (2) One transfer at a time per lake, the
+buffer refilling concurrently (sources are consumed at transfer start and carried as `target` units, so
+`balance = disks + buffer + in-flight` is conserved). (3) Disks are never broken (maintainer): a Booster is paid with whole disks (+ a full buffer as one ×1) summing to exactly its cost; with no exact change the lake keeps filling. An earlier draft re-seated a broken disk's remainder as smaller disks instantly — rejected as untimed teleporting between denominations. Consolidation always creates more large disks, so exact change is reachable up to capacity. (4) Consolidation uses the established Storage rates (2× buffer→disk, 5× disk→disk) rather than the lake's
+10% pool-feed speed, so the extra passes cost ~10% of lake throughput, not 4×. (5) The collapsed percentage
+counts in-flight data so it never dips while data moves; it reads 100% only once exact change exists. (5b) The #1047 full-pool gate now applies once per Booster acquisition (`acquiring` flag, cleared on purchase) instead of once per buffer unit, which stalled mid-acquisition while the pool refilled; maintainer request. (6) Direct fill reinterprets, rather than deletes, `diskWriteCache`: the record remains
+the in-progress fill of a disk (and the expedite machinery), but an ordinary fill has no flush stage
+(`flushTotalSeconds` 0), so ordinary above-minimum disks complete slightly sooner than before; legacy saves with a
+merge already flushing still finish that flush. A post-Flush lake below capacity level 3 has no reachable ×1000
+slot (`getDataLakeReachableUnits`), unchanged in practice since Flush needs the full ladder.
+
+## Compute Boost lanes (parallel multipliers + same-multiplier queue)
+
+Replaced the single-boost model (`computeBoostType`/`TierIndex`/`Stacks`/`RemainingSeconds`; one active preset, Stack extended
+a pooled timer, a different preset needed a confirmed forfeit-and-switch). Maintainer rule: different multipliers run in
+parallel and add up; the same multiplier queues in descending strength (funding tier), existing boosts stay forfeitable.
+State is now `intro.computeBoosts` lanes; a running head is never preempted by a stronger queued boost. Old saves load via
+`getComputeBoostLanes`' legacy read (pooled timer split into per-stack entries).
+
+
+## Data Stream balance kept through Prestige (#1096)
+
+Purge / challenge enter-exit used to reset `intro.bits` to 0 each cycle ("a new cycle starts the screen's balance from 0"). Dropped by maintainer request: Prestige never empties the Data Stream. Reboot (`buildEraIntroReset`) still zeroes it. Side effect: a challenge run starts with the carried balance (auto-convert may turn it into free tier01 units); accepted. The simulate-run-times skill was not re-run.

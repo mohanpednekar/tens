@@ -61,6 +61,15 @@ describe('with no live challenge (shipped behaviour)', () => {
 })
 
 describe('enter / exit', () => {
+  it('enter and exit keep the Data Stream balance', () => {
+    makeLive('F21')
+    const base = withAutomations()
+    const state = { ...base, intro: { ...base.intro, bits: 700 } }
+    const entered = enterChallenge('F21')(state)
+    expect(entered.intro.bits).toBe(700)
+    expect(exitChallenge(entered).intro.bits).toBe(700)
+  })
+
   it('enter resets the Factory cycle with no PP and no Purge count, and records the entry', () => {
     makeLive('F21')
     const state = atGoal(withAutomations(), 1e50)

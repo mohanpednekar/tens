@@ -34,7 +34,7 @@
 //     - Soft resets: Scale Up first while advancing through the tier ladder. At the final-tier
 //       target, defer Scale Up and wait for Overclock so a level-3 reset cannot starve its level-5
 //       gate (see actSoftResets below).
-//     - (Speed bonus is automatic at 10 Purges — no PP spent.)
+//     - Speed bonus: the 1 PP Purge speed bonus is bought as soon as affordable.
 //       Other PP automations (Smart / Auto-Scale-Up / Auto-Prestige / tickspeed autobuyer) are NOT
 //       bought — those are separate levers; this bot isolates Foundry + ladder + free/Money/XP
 //       tickspeed + prestige-count autobuyer milestones.
@@ -81,14 +81,13 @@ import {
   queueIntroCapacityUpgrade,
   upgradePoolCapacity,
   scaleUpGame,
-  stackComputeBoost,
   provisionDisk,
   tapIntroBit,
   tapPoolBuffer,
   tickGame,
+  buyPrestigeSpeedBonus,
 } from '../../../src/game/engine.js'
 import {
-  COMPUTE_BOOST_PRESETS,
   COMPUTE_BOOST_TIER_FIELDS,
   DATA_LAKE_TIER_COUNT,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -238,26 +237,12 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
     if (!bought) break
   }
 
-  // Compute Boosts spend held tokens, not Memory.
-  if ((s.intro.computeBoostType ?? null) !== null) {
-    s = stackComputeBoost(s)
-  } else {
-    for (let tierIndex = COMPUTE_BOOST_TIER_FIELDS.length; tierIndex >= 1; tierIndex -= 1) {
-      if (canActivateComputeBoost(s, 'burst', tierIndex)) {
-        s = activateComputeBoost('burst', tierIndex)(s)
-        break
-      }
-    }
-    if ((s.intro.computeBoostType ?? null) === null) {
-      for (const boostType of Object.keys(COMPUTE_BOOST_PRESETS)) {
-        for (let tierIndex = COMPUTE_BOOST_TIER_FIELDS.length; tierIndex >= 1; tierIndex -= 1) {
-          if (canActivateComputeBoost(s, boostType, tierIndex)) {
-            s = activateComputeBoost(boostType, tierIndex)(s)
-            break
-          }
-        }
-        if ((s.intro.computeBoostType ?? null) !== null) break
-      }
+  // Compute Boosts spend held tokens, not Memory. One Turbo lane (the strongest multiplier), queued from the
+  // broadest funded tier first; only starts/queues one boost per step.
+  for (let tierIndex = COMPUTE_BOOST_TIER_FIELDS.length; tierIndex >= 1; tierIndex -= 1) {
+    if (canActivateComputeBoost(s, 'burst', tierIndex)) {
+      s = activateComputeBoost('burst', tierIndex)(s)
+      break
     }
   }
 
@@ -331,9 +316,9 @@ function actSoftResets(state) {
   return overclockGame(scaleUpGame(state))
 }
 
-// The speed bonus is now automatic at 10 Purges (×log10(count)); nothing to buy.
+// The Purge speed bonus is a one-time 1 PP purchase (×1.1 at 1 Purge, then 1 + log10(n)); buy it as soon as affordable.
 function actSpeedBonus(state) {
-  return state
+  return buyPrestigeSpeedBonus(state)
 }
 
 function actPlayer(state, options = {}) {
@@ -363,7 +348,7 @@ function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = 
         finalMoney: state.resources[MONEY_ID],
         scaleUps: (state.scaleUpCount ?? 0) - scaleUpsAtStart,
         overclock: state.overclockLastClaimCompletedLevels ?? 0, // Overclock level reached (not banked)
-        speedBonusUnlocked: Boolean((state.purge?.count ?? 0) >= 10),
+        speedBonusUnlocked: Boolean(state.prestigeSpeedBonusUnlocked),
         autobuyers: countUnlockedAutobuyers(state),
         capacity: state.intro?.capacity ?? 0,
         coresEver: state.intro?.computeCoresEverEarned ?? 0,
@@ -394,7 +379,7 @@ function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = 
     finalMoney: state.resources[MONEY_ID],
     scaleUps: (state.scaleUpCount ?? 0) - scaleUpsAtStart,
     overclock: state.overclockLastClaimCompletedLevels ?? 0, // Overclock level reached (not banked)
-    speedBonusUnlocked: Boolean((state.purge?.count ?? 0) >= 10),
+    speedBonusUnlocked: Boolean(state.prestigeSpeedBonusUnlocked),
     autobuyers: countUnlockedAutobuyers(state),
     capacity: state.intro?.capacity ?? 0,
     coresEver: state.intro?.computeCoresEverEarned ?? 0,
@@ -611,7 +596,7 @@ if (runPP) {
     const result = simulateCycle(seedState({ purgeCount: 0, startingPP: pp }))
     const remainingPP = result.state.purge.points
     const bonusCell = result.speedBonusUnlocked
-      ? `+${remainingPP}% (automatic at 10 Purges)`
+      ? `×1.1 then 1+log10(n) bonus, ${remainingPP} PP left`
       : 'locked'
     printCycleRow([String(pp), bonusCell], result)
   }
@@ -652,7 +637,7 @@ Ideal attentive player (authoritative detail: \`.claude/skills/simulate-run-time
 3. **Factory:** Autobuyers when unlocked; manual \`buyTierQuantity\` when an autobuyer would stall on a full cost-block.
 4. **Tickspeed:** Buy global + per-tier tickspeed whenever affordable; dump run XP into last-tier XP tickspeed.
 5. **Soft resets:** Scale Up first while advancing through the tier ladder (flat level 3); at the final-tier target, skip Scale Up and keep climbing until Overclock fires so its level-5 gate is reachable.
-6. **PP:** Speed bonus is automatic at 10 Purges (no PP spent); do not buy Smart / Auto-Scale-Up / Auto-Prestige in this baseline.
+6. **PP:** buy the 1 PP Purge speed bonus first; do not buy Smart / Auto-Scale-Up / Auto-Prestige in this baseline.
 
 ## Simulation results
 

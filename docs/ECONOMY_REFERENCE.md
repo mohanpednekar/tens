@@ -139,7 +139,7 @@ until the manual/auto conversions into `owned` Kilobytes described below — not
 main game's economy directly.
 
 **Two halves, permanence-wise (see step 7 and `purgeGame`'s table row below):** "Memory"
-(`bits`) resets to fresh every real Prestige — along with tier01's own
+(`bits`) is KEPT across a real Prestige (Reboot still zeroes it); tier01's own
 `purchaseLevels`/`purchaseLevelProgress`, reset like every other tier's own purchase progress (see
 `purgeGame`'s table row below), purely as a side effect of that general reset. The main-game-
 unlock gate (`mainGameUnlocked`) does NOT reset with it any more — see `latchMainGameUnlocked`
@@ -270,7 +270,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      decade-power one above, though both share the same `N = round(log2(...))` doubling-step
      calculation) — it matches the raw rate up
      to 64 B/s, then diverges (125 instead of 128, repeating every decade — e.g. a raw
-     256 B/s rate reads as a clean 250 B/s). `(that pool's own Capacity in Bytes) ** getDataStreamSpeedExponent(intro)` (0.5 + 0.01 per unlocked Disk size beyond the first, the same exponent that caps the Data Stream's own Speed against its Capacity) is only a
+     256 B/s rate reads as a clean 250 B/s). `(that pool's own Capacity in Bytes) ** getDataStreamSpeedExponent(intro)` (starts at 0.5, moves 10% toward 1.0 at pool boundaries and 10% toward the next pool exponent inside each pool, with the two within-pool steps upgradeable by Compact Pool achievements; the same exponent caps the Data Stream's own Speed against its Capacity) is only a
      GUIDELINE for the bandwidth's lower/upper bounds, not the formula itself — a small early pool's
      Bandwidth (and every rate derived from it: disk/cache fill and build speeds, Data Lake overflow
      pacing) could otherwise run far ahead of what its own tiny Memory window could plausibly move
@@ -334,7 +334,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    - The stored tap bonus is its OWN value, clamped to 0..`FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT`
      (100): `tapIntroBit`'s post-reveal branch and `tapPoolBuffer` no-op once the stored bonus is
      already at that cap, and each tap adds `min(BONUS_CAP, prior + FILL_MULTIPLIER_TAP_BONUS_PERCENT)` (5).
-   - Both bonus fields, like `computeBoostType`, are NOT permanent — they reset to 0/`{}` on every
+   - Both bonus fields, like `computeBoosts`, are NOT permanent — they reset to 0/`{}` on every
      real Prestige, Reboot, and Reformat Byte Foundry, but are carried through Scale Up/Overclock
      untouched (the whole `intro` object passes through those unchanged either way).
    - `intro.bits` is no longer always an integer as a result — `tickIntroProduction`'s own per-tick
@@ -365,7 +365,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    capacity (a full Buffer, drained on purchase) and doubles `intro.capacity`
    (`INTRO_CAPACITY_DOUBLING_STEP`). Speed is purely *derived* from the Speed basis (`intro.speedCapacity`, falling back to Capacity) — never
    priced directly — via `getDataStreamSpeedBytesPerSecond(basisBits)` = `(basisBytes) ** e` B/s, with `e = getDataStreamSpeedExponent(intro)` =
-   `DATA_STREAM_SPEED_EXPONENT_BASE` (0.5) + `DATA_STREAM_SPEED_EXPONENT_STEP` (0.01) × (`getUnlockedDiskSteps(intro)` − 1), so each Speed upgrade multiplies Speed by 2^e (×1.41 at the base). At e = 0.5: 1 B → 1 B/s, 1 KiB → 32 B/s, 1 MiB → 1 KiB/s. `intro.unlockedDiskSteps` (default 1) gates the Disk ladder: `getMaxActiveDiskLadderStep` = min(pool-reachable step, unlocked steps), so a full unlocked array reads as exhausted and blocks Provision Disk. `isDiskSizeUnlockAvailable` surfaces the **Reformat: unlock <size> Disks** button; `unlockNextDiskSizeByFoundryReset` runs `resetByteFoundry` (the convenience replay rebuilds prior highs from the Data Stream) and adds one step. Steps persist across Prestige and Reformat Byte Foundry, reset to 1 on Reboot, and `normalizePoolMemoryCapacity` grandfathers old saves up to the highest built size. Max e after unlocking all 30 sizes = 0.79.
+   `1 - 0.5 * 0.9 ** (poolBoundaries + earnedArraySteps) * 0.99 ** (unearnedArraySteps)` (base 0.5, pool-boundary gap factor 0.9, within-pool gap factor 0.99, earned step gap factor 0.9; all counts limited to the disk-size steps already unlocked), so each Speed upgrade multiplies Speed by 2^e (×1.41 at the base). At e = 0.5: 1 B → 1 B/s, 1 KiB → 32 B/s, 1 MiB → 1 KiB/s. `intro.unlockedDiskSteps` (default 1) gates the Disk ladder: `getMaxActiveDiskLadderStep` = min(pool-reachable step, unlocked steps), so a full unlocked array reads as exhausted and blocks Provision Disk. `isDiskSizeUnlockAvailable` surfaces the **Reformat: unlock <size> Disks** button; `unlockNextDiskSizeByFoundryReset` runs `resetByteFoundry` (the convenience replay rebuilds prior highs from the Data Stream) and adds one step. Steps persist across Prestige and Reformat Byte Foundry, reset to 1 on Reboot, and `normalizePoolMemoryCapacity` grandfathers old saves up to the highest built size. At all 30 sizes, e ≈ 0.8416 with no Compact Pool achievements and ≈ 0.97645 after all 20 (strictly below 1); achievement rewards immediately boost existing rates and are retained after Reformat/Purge/Reboot while disk-size unlocks still reset on Reboot. Legacy saves with live lake.resetCount earn corresponding rewards on load; resets erased by previous Reformat/Reboot are no longer recoverable.
    `getIntroProductionRate(intro)` returns that derived speed × `BITS_PER_BYTE` bits/sec — the
    displayed base Speed. `getDataStreamDeliveredRate` is the instantaneous ⚡ reading;
    `tickIntroProduction` integrates the fill curve via `getFillCurveDelta` rather than multiplying
@@ -418,7 +418,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    of `tickIntroAutoInvest`, within `tickGame` — see the `tickGame` table row below — so a Disk
    array the player has already built and is waiting to fill gets first claim on fresh Memory, rather
    than being starved by it being auto-converted directly into Kilobytes first. Every real
-   `purgeGame` call resets Memory (`bits`) back to fresh — see the intro
+   `purgeGame` call keeps Memory (`bits`) — see the intro
    above — along with tier01's `purchaseLevels`/`purchaseLevelProgress`, purely as a side effect of
    that general per-tier reset. `mainGameUnlocked` is NOT part of that reset any more — it's
    permanent (see `latchMainGameUnlocked` above), so once a save's very first cycle has ever crossed
@@ -765,124 +765,52 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `buyBooster(tierIndex)` spends a lake's own banked units instantly — no transfer, no
    waiting.
 
-   **Overflow fill** (`tickPoolBufferFill`'s own overflow branch, `fillDataLakeDisks`/
-   `applyDataLakeOverflow` internally) — once a pool's own local Memory buffer is completely full
-   (`room <= 0` inside `tickPoolBufferFill`'s per-pool loop), that pool's reserved share of the
-   tick's rate (`fillRate * elapsedSeconds`, the exact same reservation `tickPoolBufferFill` already
-   computes for buffer-filling) has nowhere left to go. Rather than wasting it, ALL of it feeds that
-   pool's own matching lake instead — `poolIndex === tierIndex`, one lake per pool, the same 1:1
-   mapping the lake's own KB/MB/GB/… naming already implies — at the plain, un-tapered rate, no
-   artificial slowdown as the currently-filling disk nears completion. An earlier version tapered
-   this rate down (`DATA_LAKE_OVERFLOW_MAX_PERCENT` at an empty disk, down toward
-   `DATA_LAKE_OVERFLOW_MIN_PERCENT` near completion, via a closed-form exponential-decay ODE) —
-   removed in favor of the same "no taper" posture Storage's own disk provisioning already uses; see
-   `docs/DESIGN_HISTORY.md`. `getDataLakeOverflowRatePercent` now returns a plain binary
-   "receiving/not-receiving" reading (`DATA_LAKE_OVERFLOW_MAX_PERCENT` while this lake has anything
-   left to fill at its current capacity level, `DATA_LAKE_OVERFLOW_MIN_PERCENT` once fully maxed) —
-   these two constants are retained though no UI bar displays this reading any more.
+   **Hierarchical lake disks (#1087) — current mechanic; where the paragraphs below describe slot-by-slot
+   lake-disk filling (`fillDataLakeDisks`, `getDataLakeCurrentFillSubSize`, `DATA_LAKE_OVERFLOW_SEGMENT_LIMIT`,
+   a "virtual last unit"), this block wins.** A lake is one PERMANENT **1-unit buffer** (`dataLakes[n].fillBits`,
+   0..`getDataLakeUnitBits` — the pool's smallest disk size, e.g. 1 KB) plus whole completed disks of
+   ×1/×10/×100/×1000. Pool input (`applyDataLakeOverflow`, via `tickDataLakePoolDrain` and the overflow
+   branch of `tickPoolBufferFill`, start rule: only the START of filling toward the next Booster needs a full pool buffer — `dataLakes[n].acquiring`
+   is then set and cleared by `buyBooster`; while set, filling never waits for pool fullness, only for pool balance,
+   so a Booster's acquisition time is predictable; an in-progress buffer fill is never interrupted) feeds only the buffer, at most one unit per call. Moving data onward is
+   always a TIMED transfer (`dataLakes[n].lakeTransfer = { target, movedBits }`, `tickDataLakeTransfers`,
+   run each tick right after the Booster buy step): with a full buffer and nothing in flight,
+   `getDataLakeNextTransferTarget` picks the LARGEST size whose slot is free and whose lower ladder is exactly
+   full (`depositedUnits ≡ size−1 (mod size)`), else ×1: buffer → ×1 disk; 9×1 + buffer → ×10; 9×10 + 9×1 +
+   buffer → ×100; 9×100 + 9×10 + 9×1 + buffer → ×1000 (only with a free ×1000 slot — one per permanent Flush,
+   at capacity level 3). Starting consumes the sources at once (buffer → 0, lower disks removed from
+   `depositedUnits`) into the transfer, which carries exactly `target` units until the destination lands — data
+   is conserved at every instant (`getDataLakeBalanceUnits` = disks + buffer fraction + in-flight `target`).
+   Rates are the established Storage ones, ×pool Bandwidth ×`getPoolTapMultiplier`: buffer → ×1 at
+   `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2), consolidations at `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`
+   (5); pool → buffer stays at `getDataLakeSpeedMultiplier` (10% + 10%/Flush). Because every size caps at 9
+   disks the breakdown is unique: ×1 = units mod 10, ×10 = tens digit, ×100 = hundreds digit, ×1000 =
+   ⌊units/1000⌋ (`decomposeDataLakeUnits`), so `depositedUnits` (completed-disk units, excluding buffer and
+   in-flight data) remains the one source of truth; slots/capacity: `getDataLakeDiskSlotCounts` (×1/×10/×100
+   open per capacity level; ×1000 = `resetCount` at level 3), disks + buffer = capacity exactly at level 3
+   (`getDataLakeRepresentableUnits() + 1`). **Booster spending** (`buyBooster`) pays with WHOLE
+   disks only — a full buffer counts as one more ×1 unit, in-flight data is never spendable — summing to EXACTLY the
+   cost (`findDataLakeExactPayment`). Disks are never broken: with no exact combination yet the lake simply keeps
+   filling until one exists (a lone ×10 disk cannot pay 3; three ×1 disks can, and the ×10 is untouched). Ones are
+   spent before the buffer. Purchases are made one at a time; the buffer's partial fill and any in-flight
+   transfer are untouched. The buy step runs BEFORE transfers each tick so a full buffer can pay a
+   Booster before being committed to a move. Manual conversion (`fillDataLakeManually`) feeds only the buffer,
+   up to the bits still needed (in-flight data counts as banked), and is unavailable for a cost above
+   `getDataLakeReachableUnits`. Capacity upgrade and Flush empty the lake, buffer and transfer; Flush also
+   needs a full buffer and no transfer in flight. Collapsed lake readout:
+   `getDataLakeBoosterProgressPercent` = `min(100, balance ÷ next cost × 100)` (floored; 100 only once exactly payable;
+   0/invalid cost → 100; `isDataLakeBoosterCostReachable` false → stays under 100). Saves: `normalizePoolMemoryCapacity`
+   re-seats old lakes idempotently (units above the disk slots → full buffer; legacy partial-slot `fillBits` →
+   whole units into disks, sub-unit remainder → buffer); a missing `lakeTransfer` reads as null.
+   **Pool disks:** every disk fill draws straight from its pool buffer (expedited: plus smaller disks in parallel) and lands
+   the instant it is funded (`tickDiskWriteCache`; no write-cache flush stage, `flushTotalSeconds` 0).
 
-   `tickPoolBufferFill`'s overflow branch hands its own reserved time/Bits budget (the same
-   `fillRate`/`elapsedSeconds` reservation it already computes for buffer-filling) to
-   `applyDataLakeOverflow`, which walks that budget in bounded segments — at most
-   `DATA_LAKE_OVERFLOW_SEGMENT_LIMIT` (`DATA_LAKE_SUB_SIZE_DISK_CAPS` summed plus 1 for the level's
-   own final buffer-sourced unit, so the loop is provably bounded) — re-fetching which slot is
-   currently open (`getDataLakeCurrentFillSubSize`, smallest sub-size first) every time one
-   completes, since a single large `availableBits` can complete several in one call. It tracks TWO
-   separate budgets: `remainingBits` is the caller's own currency balance (`intro.bits`), only ever
-   decremented by what's actually spent; `spendableBits` is the `fillRate * availableSeconds`
-   ceiling on how much this ONE call may deliver, independent of how large the caller's own balance
-   happens to be — conflating the two would silently discard whatever the rate couldn't reach this
-   call as if it had already been spent. `fillDataLakeDisks` also returns `unconsumedBits` per
-   segment (nonzero only when the lake becomes fully maxed partway through it), which
-   `applyDataLakeOverflow` folds into its own `remainingBits` return; `tickPoolBufferFill` credits
-   that back to `intro.bits` rather than assuming every offered bit was consumed, so an unconsumed
-   excess (e.g. a huge single-tick overflow against a small/fresh lake) survives as ordinary
-   spendable Bits instead of being destroyed. Deliberately independent of the pool's own fill-based
-   Speed/Bandwidth multiplier (`getPoolEffectMultiplier`) as a FORMULA — neither reads the other's
-   value — and `ByteFoundryPage` no longer displays this overflow rate (the bar that did was removed); the old lake mode used to apply whenever `isDataLakePoolDrainAvailable` (the lake
-   drains the buffer via `tickDataLakePoolDrain`, holding it below full; the pool tile's tap is then
-   disabled), or once that pool's own Memory buffer is completely
-   full AND `isDataLakePoolReady` AND `isStoragePoolFullyBuilt` (that pool's own three ladder sizes
-   ALL fully built) — not the buffer alone, since `tickPoolBufferFill`'s overflow branch itself
-   won't credit a lake until both those conditions hold (see "manual vs. automatic fill" below), and
-   switching modes purely on buffer fullness would show a nonzero "incoming" reading for a pool
-   whose lake can never actually receive it (an adversarial-review finding on the PR that introduced
-   `isDataLakePoolReady` — see `docs/DESIGN_HISTORY.md`) — rather than compounding the two into one.
-   The lake's own accumulated fill LEVEL (as opposed to this overflow indicator) has its own
-   separate always-visible bar below the Memory buffer tile
-   (`getDataLakeCurrentDiskFillFraction`), likewise reading 0 until `isDataLakePoolReady` rather
-   than any residual fill a legacy save's lake might already hold.
-
-   **Disk breakdown / fill order** (`decomposeDataLakeUnits`, `getDataLakeDiskCounts`/
-   `getDataLakeDiskSlotCounts`/`getDataLakeCurrentFillSubSize`) — a lake's own banked total
-   (`depositedUnits`, a whole-unit integer) decomposes into `DATA_LAKE_SUB_SIZES` (`[1, 10, 100]`)
-   disk counts the same SMALLEST-denomination-FIRST way pool Capacity/Data Lake capacity ladders
-   already decompose (see below), each capped per `DATA_LAKE_SUB_SIZE_DISK_CAPS` (`[9, 9, 9]` —
-   mirroring `DISK_ARRAY_LADDER_CAP`'s own 9, not a flat `[10, 10, 10]`: `9×1 + 9×10 + 9×100 = 999`,
-   one unit SHORT of the maxed level's own 1,000 capacity). `getDataLakeDiskSlotCounts` (how many
-   slots of each sub-size EXIST at the current capacity level) is derived directly, not by
-   decomposing the level's own raw capacity value: every sub-size SMALLER than the current level is
-   fully maxed (`DATA_LAKE_SUB_SIZE_DISK_CAPS[index]`), the current level's own sub-size (and
-   anything larger) has none yet — level 0 has no disk slots at all, level 1 has only ×1 (9), level
-   2 has ×1 and ×10 (9 each), level 3 (max) has all three (9 each). Decomposing the raw capacity
-   value through the general mixed-radix algorithm instead would, at an exact power-of-10 boundary,
-   prefer redistributing the WHOLE boundary onto a single higher-denomination disk (e.g. capacity 10
-   → "1 ×10 disk, 0 ×1 disks") rather than "9 ×1 disks maxed, 1 more from the buffer" — the opposite
-   of "always fills the smallest disks first." Every level's own capacity therefore sits exactly 1
-   unit above what its own disk slots sum to (0→1, 9→10, 99→100, 999→1,000) — that last unit fills
-   through the SAME `fillBits` mechanism as any disk (`getDataLakeNextFillSubSize`'s fallback: once
-   every real disk slot is full but `depositedUnits < capacity`, the open "slot" is a virtual ×1 unit
-   with no disk square of its own), mirroring how a Storage array's own always-full cache supplies
-   its array's own last unit rather than a 10th disk (`getDataLakeSlotRepresentableUnits(slotCounts)`
-   — the current LEVEL's own slots summed, e.g. 9 at level 1, 999 at level 3 — caps what
-   `getDataLakeDiskCounts`/`getDataLakeOpenSubSize`/`decomposeDataLakeUnits` are ever asked to
-   decompose for that level, so a lake at its own current-level capacity renders as fully-maxed real
-   disks, the level's own last unit living only in the buffer). This clamp must be LEVEL-aware, not
-   a flat global one: decomposing a `depositedUnits` total exactly at (or above) a NON-max level's
-   own capacity — reachable via ordinary fill, since the level's own final unit is buffer-sourced —
-   through the general algorithm without the clamp would redistribute it onto a sub-size that
-   level hasn't unlocked yet (e.g. capacity 10 at level 1 decomposing to "1 ×10 disk, 0 ×1 disks",
-   when level 1 has zero ×10 slots), reading as still having an OPEN ×1 slot instead of correctly
-   maxed — letting `depositedUnits` grow unboundedly past a non-max level's own capacity; caught in
-   adversarial review before merge, see `docs/DESIGN_HISTORY.md`. `decomposeDataLakeUnits` itself is
-   a mixed-radix decomposition, not a purely greedy one — smallest-first for every total the lake's
-   own natural growth reaches, but once a smaller denomination's own cap is genuinely binding it
-   picks the largest count in that denomination's residue class (mod the ×10 ratio to the next
-   size) that still leaves an exact multiple behind, guaranteeing zero leftover for ANY total up to
-   what the current level's own slots represent — `buyBooster`
-   spends an arbitrary (non-whole-disk) cost, so `depositedUnits` isn't limited to naturally-reached
-   values; a naive purely-greedy version stranded real, spendable units with no square to show for
-   them once a spend landed off that natural lattice (see `docs/DESIGN_HISTORY.md`). Every ×1 slot
-   fills before any ×10 slot, every ×10 before any ×100 — `getDataLakeCurrentFillSubSize`
-   (`getDataLakeNextFillSubSize` internally) is the smallest sub-size not yet at its own
-   current-level slot cap, the level's own final virtual unit once every real slot is full, or
-   `null` once the level's own capacity is genuinely reached. `fillDataLakeDisks` accumulates
-   `overflowBits` into `lake.fillBits` (raw bits, progress toward completing the CURRENT open
-   slot's own full size — `unitBits × subSize`) and, whenever that threshold is crossed, completes
-   the disk (`depositedUnits += subSize`, `fillBits -=` that slot's size, carrying any overshoot
-   forward), advancing to the next open sub-size — a bounded loop (at most
-   `DATA_LAKE_SUB_SIZES.length` transitions per call). `DataLakePanel` renders one row of disk
-   squares per sub-size present at the current level (the same "one unbroken row per size" shape
-   `DiskArrayRow` uses for Storage, just without cache/redeem interactivity), the one currently-open
-   slot showing a live left-to-right fill. A dedicated `LakePoolTile` (own `FillableStatCard`-style
-   element, purely additive UI — same `fillBits`/`getDataLakeCurrentFillSubSize` data the per-square
-   overlay already reads, no new engine mechanic) sits right below the header row, ALWAYS visible
-   whenever an open slot exists (`currentFillSubSize !== null`) regardless of unlock state, showing
-   "`<fillBits>` / `<open slot size>`" once `isDataLakePoolReady` (below) or a static
-   "Locked · 0 / `<size>`" before that. Deliberately keyed off `isDataLakePoolReady` here, NOT
-   `isDataLakeBoosterUnlocked` — the two diverge for an old save whose legacy `boostersUnlocked` flag
-   is already true but whose matching Storage pool has never built a real disk: Boosters correctly
-   stay purchasable there (per `isDataLakeBoosterUnlocked`'s own OR fallback below), but the tile
-   would never actually progress (`tickPoolBufferFill`'s overflow branch is gated on
-   `isDataLakePoolReady` alone), so showing real fill data there would misrepresent a permanently
-   stalled tile as actively filling — a bug Devin Review caught on the PR that introduced this tile;
-   see `docs/DESIGN_HISTORY.md`.
-
-   A lake is gated on its own matching Storage pool having built at least one real disk
-   (`isDataLakePoolReady` — `disksBuiltTotal[that pool's own ×1 size] > 0`), not on the lake's own
-   fill progress — `tickPoolBufferFill`'s overflow branch itself won't feed a lake until this is
-   true, so a pool with a completely full Memory buffer but zero built disks banks nothing into its
-   lake (the reserved production stays as ordinary Bits that tick instead).
+   **Pool feed.** `tickPoolBufferFill`'s overflow branch and `tickDataLakePoolDrain` hand pool bits to
+   `applyDataLakeOverflow`, which fills the lake's 1-unit buffer (`fillDataLakeBuffer`; at most one unit per call,
+   unconsumed bits return to the caller's balance) at the pool Bandwidth × `getDataLakeSpeedMultiplier` (10% +
+   10% per Flush); `getDataLakeOverflowRatePercent` reports that percentage. The disk breakdown is
+   `decomposeDataLakeUnits`/`getDataLakeDiskCounts` (see the block above) — the earlier slot-by-slot fill,
+   mixed-radix residue rules and "virtual last unit" were removed (`docs/DESIGN_HISTORY.md`).
 
    **Manual vs. automatic fill.** A lake fills MANUALLY, capped at just enough for its own next
    Booster, until its matching Storage pool is entirely COMPLETE (`isStoragePoolFullyBuilt(state,
@@ -891,10 +819,11 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    **Exception — the direct pool drain:** independent of completion, `tickDataLakePoolDrain` also
    fills the lake automatically from its pool's buffer whenever `isDataLakePoolDrainAvailable`
    (every BUILT disk full, no build in progress in that pool, lake has an open slot).
-   **Start rule (all fill paths):** a lake disk only STARTS while the pool buffer is completely full
-   (`isDataLakeDiskFillStartAllowed`), checked once at the start; a disk under way (`fillBits > 0`)
-   is never interrupted — the drain keeps going whatever the pool's state and stops at each disk's
-   completion, and a manual fill step spends at most what completes the current disk.
+   **Start rule (all fill paths, `isDataLakeDiskFillStartAllowed`):** the FIRST start of a Booster acquisition needs
+   the pool buffer completely full; that sets `acquiring` (cleared by `buyBooster`/Flush/upgrade), after which starts
+   no longer wait for fullness but still need every built disk full, no provisioning in the pool, and more than the
+   read cache's reservation in the buffer. A buffer fill under way (`0 < fillBits < unit`) is never interrupted; the
+   drain and a manual step each move at most one buffer unit.
    `isDataLakeManualFillAvailable(state, tierIndex)` requires `isDataLakePoolReady` AND
    `!isStoragePoolFullyBuilt`, at least one more unit needed for the next Booster
    (`getBoosterPurchaseCost - getDataLakeDepositedUnits > 0`), that the next Booster's cost is
@@ -1222,85 +1151,32 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    convert into can never re-hide or prevent the merge section once it's genuinely been earned.
    Saves must already include `intro.computeCoresEverEarned` in the current schema — `mergeState`
    does not backfill it from live balances on load.
-10. **Compute Boost** (`intro.computeBoostType`/`computeBoostTierIndex`/`computeBoostStacks`/
-   `computeBoostRemainingSeconds`, all run-scoped — reset to inactive on every real Prestige, unlike
-   `computeCores`/`computeNodes`/etc. themselves, but carried through untouched by Scale Up/Overclock
-   same as the rest of `intro`) — the first mechanic that actually spends compute-ladder tokens.
-   **Tier-funded** (issue #326): activating a boost spends 1 token of whichever compute-ladder tier
-   the player selects on `ComputePage` — Cell through Fusion (`COMPUTE_BOOST_TIER_FIELDS` in
-   `layers.js`), the only place a Megacomputer has any use at all — rather than always a Compute
-   Core. `COMPUTE_BOOST_PRESETS` in `layers.js` (`burst` ×20/10 minutes, `standard` ×5/1 hour,
-   `sustain` ×2/10 hours — chosen so each preset's own total extra production, `(multiplier - 1) *
-   durationSeconds`, strictly increases Burst → Standard → Sustain: 190/240/600 minutes-worth; see
-   docs/DESIGN_HISTORY.md for the earlier ×32/1 min, ×8/10 min, ×2/1 hour values this replaced,
-   which broke that ordering) are each preset's BASE values, at tier 1 (Core); the SAME values apply whichever
-   compute-ladder tier funds the boost (`getComputeBoostTierMultiplier`/`getComputeBoostTierDurationSeconds`
-   return the preset's own `multiplier`/`durationSeconds` for any valid `tierIndex`). A higher funding
-   tier instead makes the boost BROADER: it applies to the first `tierIndex` Factory tiers
-   (`getComputeBoostCoveredTierCount(intro)` — Core: tier01 only, Node: tier01–tier02, …, 0 with no
-   boost active) — e.g. a Cluster boost covers the first three. Selecting a
-   tier is free (no cost) — `ComputePage`'s own local UI state, not persisted game state — clicking
-   any compute-ladder row's own `TierSelectButton` (row 1) arms the 3 preset buttons funded by that
-   tier (the armed-status line names the Factory tiers it will boost); before `intro.computeMergePageUnlocked`, Core is armed implicitly (the only
-   tier that can ever hold a balance that early). `getComputeBoostMultiplier(intro)` is the
-   ACTIVE boost's multiplier (falling back to tier 1/Core for
-   `intro.computeBoostTierIndex ?? 1`, a defensive migration path for a save from before this field
-   existed) — applied to Memory's own passive
-   production (`tickIntroProduction`, folded into `bitsToAdd`) and to the first
-   `getComputeBoostCoveredTierCount` Factory tiers (`tickGame`'s per-tier loop, where every tier past that coverage keeps `computeBoostMultiplier` 1).
-
-   `activateComputeBoost(boostType, tierIndex)`, gated by `canActivateComputeBoost(state, boostType,
-   tierIndex)` (a valid preset, a valid tier with ≥1 token held, AND — issue #326's key change from
-   before — **no boost of ANY kind currently active**, even the same type/tier), spends 1 token of
-   that tier's own field and starts a fresh boost at `computeBoostStacks: 1`. **Same-type restacking
-   no longer happens through the preset buttons** — a separate `stackComputeBoost()` action, gated by
-   `canStackComputeBoost(state)`/`isStackComputeBoostTurnAvailable(state)`, extends the CURRENTLY
-   ACTIVE boost instead: it always spends another token of the active boost's OWN funding tier
-   (`intro.computeBoostTierIndex`), regardless of which tier a player might have since selected in
-   the UI, incrementing `computeBoostStacks` (capped at `COMPUTE_BOOST_MAX_STACKS`, 10) and adding
-   that same tier's own `getComputeBoostTierDurationSeconds` onto `computeBoostRemainingSeconds` — the
-   multiplier itself never compounds from stacking. `tickComputeBoost(elapsedSeconds)` counts the
-   remaining duration down every tick, frozen or not, clearing the boost back to inactive (`type:
-   null, tierIndex: null, stacks: 0, remaining: 0`) once it reaches 0. Only the quantity ABOVE 1
-   stack is ever reclaimable, one at a time: `reclaimComputeBoost` (gated by `canReclaimComputeBoost`
-   — a boost active AND `computeBoostStacks > 1` AND enough pooled time remains that reclaiming one
-   stack's own duration wouldn't zero it out) is the exact inverse of one `stackComputeBoost`
-   call (no longer of `activateComputeBoost` itself, since a freshly-activated 1-stack boost can no
-   longer be reclaimed at all) — refunds 1 token of the active boost's own funding tier (uncapped, so it
-   is never lost into a full tier) and subtracts that tier's own base
-   preset `durationSeconds` back out of `computeBoostRemainingSeconds`, decrementing
-   `computeBoostStacks` by 1. `computeBoostRemainingSeconds` is a single POOLED timer shared across
-   every stack, not N independent per-stack timers — `stackComputeBoost` just adds a flat duration
-   chunk onto it — so a multi-stack boost late in its own countdown can hold LESS pooled time than
-   even one stack's own base duration; `computeBoostStacks > 1` alone is not sufficient to gate a
-   reclaim, since it would let one floor the pool straight to 0 (via the now-purely-defensive
-   `Math.max(0, …)` inside `reclaimComputeBoost`'s own body), ending the running effect exactly as if
-   the last stack itself had been reclaimed. `canReclaimComputeBoost` therefore also requires
-   `computeBoostRemainingSeconds - stackDuration > 0` before allowing a reclaim (a real bug caught by
-   Devin Review on the PR that introduced this gate — see `docs/DESIGN_HISTORY.md`). Together, the
-   `> 1` stacks gate and the pooled-time floor mean `computeBoostStacks` after a reclaim is always
-   `>= 1` and `computeBoostRemainingSeconds` after one is always `> 0` — the boost stays active; it
-   can no longer be reclaimed all the way back to inactive (an earlier version allowed reclaiming the
-   very last stack too, clearing the boost outright the same as `activateComputeBoost`'s own inverse
-   — canceling a running effect entirely via Reclaim was the behavior this replaced; letting it run
-   out is now the only way to end one early — see `docs/DESIGN_HISTORY.md`).
-
-   On `ComputePage`, render order top to bottom: the active boost's timer bar at the very TOP of the
-   page (fill = remaining over total stacked time, with the effect/countdown text on it), Pop on its
-   left while an unused stack remains (`canReclaimComputeBoost` — instant, no confirmation) or
-   Forfeit once none does (`canForfeitComputeBoost`, confirmation-gated, no refund), Stack on its
-   right; `MainPage` shows a matching read-only status line while a boost is active. The armed-tier
-   status line and the 3 preset buttons render inside the ONE selected tier's block (in the top card
-   before the merge chain unlocks). While a boost runs, the preset matching the running type + tier
-   is a Stack button, and any other is a confirmed switch (`activateComputeBoost(…, true)`: refunds
-   every unused stack, forfeits the running one, then starts the new boost). THEN come the tier rows themselves — clicking one selects it and shows the presets inside
-   it; arriving on the page pre-selects the active boost's tier. Ranked lowest in the forced priority order
-   (below Disk Fill/Provision Disk — see "Forced priority order" below; Upgrade Data Stream sits
-   outside the order entirely and never blocks or is blocked by Compute):
-   `isComputeBoostTurnAvailable(state, boostType, tierIndex)`/`isStackComputeBoostTurnAvailable(state)`
-   are `activateComputeBoost`/`stackComputeBoost`'s own actual gates, a no-op whenever something
-   ranked above Compute is currently available even if the mechanical (`canActivateComputeBoost`/
-   `canStackComputeBoost`) check alone would allow the click.
+10. **Compute Boost** (`intro.computeBoosts = { [boostType]: { queue: [tierIndex, …], remainingSeconds } }`,
+   run-scoped — reset to `{}` on every real Prestige, unlike the Cells/Batteries/… spent from; Scale Up/Overclock
+   carry it). Each preset (`COMPUTE_BOOST_PRESETS`) is its own multiplier **lane**. Lanes of different
+   multipliers run **in parallel and their multipliers add up** on whatever they cover; boosts of the same
+   multiplier **queue** inside their lane — `queue[0]` is the running head (countdown `remainingSeconds`), the rest
+   wait their full duration and are kept in descending funding-tier strength; a running head is never preempted.
+   A boost's multiplier and duration are the preset's own whichever compute-ladder tier funds it; the funding tier
+   (1 = Cell … 10 = Fusion, `getComputeBoostTierField`) only sets breadth: the first N Factory tiers / pools.
+   Coverage helpers (all read only each lane's running head): `getComputeBoostMultiplier(intro)` (Memory/Data
+   Stream: every running lane summed, 1 idle), `getFactoryTierBoostMultiplier(intro, tierNumber)` (1-based; summed
+   multipliers of lanes covering that tier, else 1 — used by `tickGame`), `getComputeBoostPoolMultiplier(intro,
+   poolIndex)` (1 + summed `poolBonusPercent`/100 of covering lanes), `getComputeBoostCoveredTierCount(intro)`
+   (broadest head). `getComputeBoostLanes(intro)` is the reader (`[{ type, queue, remainingSeconds }]` in preset
+   order); it also reads a pre-lane save (`computeBoostType`/`TierIndex`/`Stacks`/`RemainingSeconds`, pooled
+   timer) as one lane, and every write drops those legacy keys.
+   Actions (all curried reducers, same-reference no-op when invalid; each enforces its own gate):
+   `activateComputeBoost(boostType, tierIndex)` starts the lane or queues behind its head (needs a valid
+   preset/tier, 1 token of that tier, lane length < `COMPUTE_BOOST_MAX_STACKS` (10), and its forced-priority
+   turn `isComputeBoostTurnAvailable` — Disk Fill > Provision Disk > Compute Boost); `stackComputeBoost(boostType)`
+   = activate at the lane head's tier; `reclaimComputeBoost(boostType)` (Pop; `canReclaimComputeBoost` = a boost
+   waits) refunds the weakest queued boost, uncapped; `forfeitComputeBoost(boostType)` (`canForfeitComputeBoost` =
+   nothing queued) cancels the running one with no refund (UI confirms); `tickComputeBoost(elapsedSeconds)` counts
+   every lane's head down each tick (frozen or not), handing over to the next queued boost with any overshoot
+   carried, clearing an emptied lane. Auto Boost (`autoBoostFromTier`) starts or queues the preferred preset
+   when a tier's automated merge starts, alongside other lanes. UI (`BoostTimerBar` per lane, `ComputePage`
+   presets): `docs/MAINPAGE_REFERENCE.md`; rationale: `docs/DESIGN_HISTORY.md` "Compute Boost lanes".
 11. `ByteFoundryPage` doesn't disappear once `intro.mainGameUnlocked` is true — it becomes a
    permanent, voluntarily-revisitable screen instead, reachable at any time via MainPage's own
    "⚙️ Byte Foundry" link (`onOpenFoundry`). Since `mainGameUnlocked` is now a one-time-ever
@@ -1448,7 +1324,7 @@ design that scaled the delivered amount instead).
 The mechanism lives entirely in `tickGame` (`engine.js`): `state.tierProductionAccumulators` banks
 fractional seconds per tier, incremented by `elapsedSeconds` every tick. Once a tier's accumulator
 reaches its own effective tickspeed (`getEffectiveTierTickSpeedSeconds`), `tickGame` delivers `floor(owned
-× (whole effective periods elapsed) × getPrestigeProductionMultiplier(purge.count) ×
+× (whole effective periods elapsed) × getPrestigeProductionMultiplier(purge.count, unlocked) ×
 getPurchaseMilestoneMultiplier(purchased))` — multiplying by the *count* of completed periods, not
 elapsed seconds, and with **neither tickspeed multiplier appearing in this credit formula at all** (they
 already did their work by shrinking the period, which is what grows the completed-period count) — and
@@ -1466,11 +1342,11 @@ the autobuyer and Auto Purge attempt-budget threshold checks.
 `owned` and `resources` are integer-valued by construction, so a production credit must itself always
 be an integer. Of the factors in a tier's production credit (`owned × ticksElapsed × multiplier ×
 scaleUpMultiplier × getPurchaseMilestoneMultiplier(purchased)`, where `multiplier` is
-`getPrestigeProductionMultiplier(purge.count)` — flat `1` below 10 Purges),
+`getPrestigeProductionMultiplier(purge.count, unlocked)` — flat `1` until the speed bonus is bought, else the log curve below),
 `owned`/`ticksElapsed` are already integers, `getTierScaleUpMultiplier` is always a power of 2, and
 `getPurchaseMilestoneMultiplier` is always a product of powers of 2 and 10 (see its own row above) —
-the only fractional factor is `getPrestigeProductionMultiplier` (`log10(purge.count)` from 10
-Purges, else `1`). **Neither tickspeed multiplier appears in this formula** — `getTickspeedProductionMultiplier`
+the only fractional factor is `getPrestigeProductionMultiplier` (`1 + log10(purge.count)` once
+bought, else `1`). **Neither tickspeed multiplier appears in this formula** — `getTickspeedProductionMultiplier`
 (`1.1^(level - 1)`) and `getGlobalTickspeedProductionMultiplier` (compounding, with a milestone level
 using a bigger step — see its own row above) are instead divided into
 the *period* `ticksElapsed` counts against (see `getEffectiveTierTickSpeedSeconds`/"Tier production
@@ -1479,7 +1355,7 @@ periods rather than a bigger per-period credit. `tickGame` wraps the whole produ
 before crediting it — never zeroes out production for `owned > 0` since `getPrestigeProductionMultiplier`
 is always ≥ 1. `MainPage`'s displayed `+X` production preview mirrors this same `Math.floor(...)`.
 Rate-accumulator constants (`getAutoPurgeAttemptRate`, and cost-scaling values like
-`getAutobuyerUnlockCost`/`getAutomationUnlockCost`/`getGlobalTickspeedMultiplierCost`/
+`getAutobuyerUnlockCost`/`getGlobalTickspeedMultiplierCost`/
 `getTickspeedMultiplierCost`) are unaffected — cost values are always already integers, and attempt-rate
 multipliers are process bookkeeping (an intentionally-banked fractional budget), not a resource total
 shown to the player.
@@ -1615,7 +1491,7 @@ renders the hero line; per-tier rows show `N owned · <Factory tier> ×<live mul
 Production multipliers remain `(1 + cumulativeBoost[tierId])` with no tier weighting.
 
 **Prestige:** `purgeGame` keeps `computeFlops.owned` and `pageUnlocked`; resets
-`cumulativeBoost` to fresh zeros (same as Memory — per-cycle boost, permanent ownership).
+`cumulativeBoost` to fresh zeros (per-cycle boost, permanent ownership).
 
 Gate-exempt alongside Boosters/Manual/More (`GATE_EXEMPT_PAGES` includes `'compute'`).
 
@@ -1642,7 +1518,7 @@ never cleared by Reboot — full save Reset only). `storage.js` still grandfathe
 
 ### Achievements (epic #1046, basic slice)
 
-Registry in `layers.js`: `ACHIEVEMENT_GROUPS` (id/name/`boostArea`, unused), `ACHIEVEMENT_DEFINITIONS` (id, name, group, trigger text, `secret`, `platformDependent`, placeholder `bonus`, data `condition`), `ACHIEVEMENT_BY_ID`; groups First session / Tier ladder / Early Factory (a subset of the epic's candidates — event-only triggers deferred). **`ACHIEVEMENTS_FEATURE.enabled`** (mutable; on in every build) gates detection, the More entry and the page. State `achievements: { earned{id:true}, counters{pings} }`, carried through Purge/Scale Up/Overclock/Reboot/Reformat/Flush; only a full Reset clears; `mergeState` forward-fills. `engine.js`: `isAchievementConditionMet` (at-least checks against current state), `detectAchievements` (run after every `tickGame` and `tapIntroBit`; returns the same state when nothing new), `getCompletedAchievementGroups`, `isAchievementEarned`. `tapIntroBit` increments the lifetime Ping counter. No bonus is applied yet.
+Registry in `layers.js`: `ACHIEVEMENT_GROUPS` (id/name/`boostArea`, unused), `ACHIEVEMENT_DEFINITIONS` (id, name, group, trigger text, `secret`, `platformDependent`, `bonus` explanation and data `condition`), `ACHIEVEMENT_BY_ID`; groups First session / Foundry (20 Reclamation achievements) / Tier ladder / Early Factory (event-only triggers otherwise deferred). **`ACHIEVEMENTS_FEATURE.enabled`** (mutable; on in every build) gates detection, the More entry and the page. State `achievements: { earned{id:true}, counters{pings} }`, carried through Purge/Scale Up/Overclock/Reboot/Reformat/Flush; only a full Reset clears; `mergeState` forward-fills. `engine.js`: `isAchievementConditionMet` (at-least checks against current state), `detectAchievements` (run after every `tickGame` and `tapIntroBit`; returns the same state when nothing new), `getCompletedAchievementGroups`, `isAchievementEarned`. `tapIntroBit` increments the lifetime Ping counter. Pool-reset achievements are the first functional bonuses: `intro.poolExponentBonuses[poolIndex]` records 0/1/2 permanent upgrades, each awarded by a successful `flushStoragePool` call and recognized by `condition.kind = 'poolExponentBonus'`. These survive Reformat, Purge and Reboot and only clear on full Reset. The first replaces that pool's 1×→10× disk-size step's gap multiplier 0.99 with 0.9; the second replaces its 10×→100× step; other achievement bonuses remain placeholders.
 
 Registry in `layers.js`: `CHALLENGE_DEFINITIONS` (id/short code, `layer`, `target`, `codename`, `automation: {kind: 'global'|'tierAutobuyer'|'tierTickspeed', key}`, `effect`, `rule`, `goal`), `CHALLENGE_BY_ID`; this slice defines F21–F25 (`SCOPE_CREEP_PURGE_GOAL` = 10^110 Bytes in Bits, placeholder). **`LIVE_CHALLENGE_IDS`** (a Set; all 25 live) is the only rollout switch: a challenge gates upgrades and can be entered only while live; an active-but-not-live id is ignored. State `challenges: { active, activeSeconds, completed{id:true}, bestSeconds{id}, enteredCount, exitedCount }` — completions/best times/counts survive Purge and Reboot; `eraGame` clears `active`; Scale Up/Overclock/Reformat keep it; a full Reset clears all.
 
@@ -1699,9 +1575,10 @@ Active uses follow. Tier autobuyer unlock and the tier tickspeed autobuyer are *
 any more — they unlock automatically at a prestige-count milestone instead (see
 "Tier autobuyer/tier-tickspeed-autobuyer milestones" below), spending no PP at all.
 
-- **Passive (Purge count):** `getPrestigeProductionMultiplier(purgeCount)` = `log10(purgeCount)` once
-  `purge.count >= PRESTIGE_SPEED_BONUS_UNLOCK_PURGES` (10), else flat ×1 — applied uniformly to every tier
-  in `tickGame`. No PP cost or stored flag (`isPrestigeSpeedBonusUnlocked(state)` is derived).
+- **Active — Purge speed bonus (PP tutorial):** `buyPrestigeSpeedBonus(state)` spends `PRESTIGE_SPEED_BONUS_UNLOCK_COST` (1) PP once to
+  set `prestigeSpeedBonusUnlocked` (permanent, survives Reboot; saves lacking the `speedBonusGrandfathered` stamp — including old saves storing the flag as `false` — with ≥10 Purges are grandfathered once on load). `getPrestigeProductionMultiplier(purgeCount, unlocked)` =
+  ×1 below 1 Purge, a hardcoded `PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER` (×1.1) at the 1st Purge, then `1 + log10(n)` from the 2nd (×2 at 10, ×3 at 100, ×4 at 1,000 …) once bought, else flat ×1 — applied uniformly to every tier in `tickGame`.
+  Firmware → Prestige shows a tutorial callout and a Speed bonus row first, until bought.
 - **Active — Playtime bonus:** `buyPlaytimeBonus(state)` spends `PLAYTIME_BONUS_UNLOCK_COST` (100) PP once to set
   `playtimeBonusUnlocked`; `getPlaytimeProductionMultiplier(state)` = `1 + PLAYTIME_BONUS_PER_HOUR (0.01) * activePlaySeconds / 3600`,
   multiplied into `tickGame`'s production multiplier. `activePlaySeconds` only grows via `addActivePlaySeconds`, called by the live
@@ -1725,8 +1602,8 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   `tierTickspeedIntervalLevels`, permanent). Each automation accrues a run-scoped budget
   (`automationAttemptBudgets`, `tierTickspeedAttemptBudgets`, `autoPurgeAttemptBudget`) at
   elapsed ÷ interval via `runIntervalAutomation`; a no-op attempt clamps the bank to 1. Auto Purge
-  is activation-only (`buyAutoPurge`); its speed chain is bought separately (same Firmware → Automation row, once active). **Auto Overclock**
-  is a separate 32 PP unlock (needs Auto Scale Up), pausable via `autoOverclockEnabled`.
+  unlocks by Purge count (below); its speed chain is bought separately (same Firmware → Automation row, once active). **Auto Overclock**
+  is pausable via `autoOverclockEnabled`.
 - **Active — Autobuyer bulk (past the speed floor):** a tier's autobuyer buys ONE whole level (all 8
   blocks) per attempt, only when fully affordable; with partial level progress it completes the rest
   of that level, again only when the whole remainder is affordable (`canAffordRestOfTierLevel`) — never
@@ -1737,27 +1614,25 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   `BUY_MAX_ITERATION_CAP`; `getAutobuyerSpeedUpgradeMaxLevel` = floor level + 10). It is only an
   upper limit: `buyTierUpToLevels` buys as many whole clean levels as are affordable up to it (zero level
   progress required), otherwise falls back to a single level. Permanent across Prestige/Scale Up/Overclock/Era.
-- **Unlock costs = first upgrade cost.** Each global automation's one-time unlock costs
-  `getAutomationUnlockCost(key)` = `AUTOMATION_INTERVAL_CONFIG[key].baseCost` — the same amount its
-  interval chain's first level costs: Clock Speed 8, Scale Up 16, Overclock 32, Auto Purge 64 PP. Anything
-  unlocked by a milestone (tier autobuyers, tier tickspeed autobuyers) has no unlock cost at all — only
-  upgrades, every chain starting at 100 PP (`AUTOBUYER_INTERVAL_UPGRADE_BASE_COST` for tier autobuyers,
-  `TIER_TICKSPEED_INTERVAL_CONFIG.baseCost` for tier tickspeed autobuyers — same for every tier). The old `AUTO_SCALE_UP_COST`, `TICKSPEED_AUTOBUYER_COST`,
-  `AUTO_PRESTIGE_COST`/`_MULTIPLIER` constants and `getAutoPrestigeCost` were removed.
-- **Active — Auto Scale Up:** `buyAutoScaleUp(state)` permanently spends the `scaleUp` unlock cost (16 PP)
-  to set `autoScaleUp = true`. Once bought, `tickGame` calls `scaleUpGame` on its interval timer
+- **Global automations unlock by Purge count, not PP.** `GLOBAL_AUTOMATION_UNLOCK_PURGES` (`layers.js`;
+  `getGlobalAutomationUnlockMilestone(key)`): Clock Speed 8, Restage 16, Scale Up 32, Overclock 64, Purge 128.
+  `applyAutobuyerMilestones` (run by `purgeGame`) sets `autoGlobalTickspeed`/`autoXpTickspeed`/`autoScaleUp`/
+  `autoOverclock`/`autoPurge` (→ 1) when `purge.count` reaches each, spending no PP and never revoking. The
+  PP-funded part is only each chain's interval upgrades (`AUTOMATION_INTERVAL_CONFIG[key].baseCost` first level:
+  Clock Speed 8, Scale Up 16, Restage 16, Overclock 32, Purge 64), unchanged; tier autobuyer / tier tickspeed
+  chains start at 100 PP (`AUTOBUYER_INTERVAL_UPGRADE_BASE_COST` / `TIER_TICKSPEED_INTERVAL_CONFIG.baseCost`).
+  The old `buyAutoScaleUp`/`buyAutoOverclock`/`buyAutoPurge`/`buyTickspeedAutobuyer`/`buyXpTickspeedAutobuyer`,
+  `getAutomationUnlockCost` and `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` were removed.
+- **Active — Auto Scale Up:** `autoScaleUp = true` at Purge 32. Once unlocked, `tickGame` calls `scaleUpGame` on its interval timer
   (see "Automation interval chains") whenever `autoScaleUpEnabled` is also true. Final-tier requirements
   progress 3, 6, 9, and so on, so an automatic claim at level 3 leaves Overclock available at level 5
-  before the next Scale Up. No-op if already bought, insufficient points, or frozen. Permanent.
-- **Active — Auto Overclock:** `buyAutoOverclock(state)` spends the `overclock` unlock cost (32 PP; needs
-  Auto Scale Up AND Auto Restage) to set `autoOverclock = true`; `tickGame` then calls `overclockGame` on its timer
+  before the next Scale Up. Permanent.
+- **Active — Auto Overclock:** `autoOverclock = true` at Purge 64; `tickGame` then calls `overclockGame` on its timer
   (pausable via `autoOverclockEnabled`). Permanent.
-- **Active — Auto Clock Speed (Clock Speed):** `buyTickspeedAutobuyer(state)` spends the `speedUp` unlock
-  cost (8 PP) to set `autoGlobalTickspeed = true`; `tickGame` then calls `buyGlobalTickspeedMultiplier` on
+- **Active — Auto Clock Speed (Clock Speed):** `autoGlobalTickspeed = true` at Purge 8; `tickGame` then calls `buyGlobalTickspeedMultiplier` on
   its interval timer (re-validating eligibility internally) whenever `autoGlobalTickspeedEnabled` is also
-  true. Only automates the *clicking*. No-op if already bought, insufficient points, or frozen. Permanent.
-- **Active — Auto Purge:** `buyAutoPurge(state)` is activation-only (`null` → 1) for the `purge`
-  unlock cost (64 PP); cadence comes from the interval chain (base 1024 s). Once active and
+  true. Only automates the *clicking*. Permanent.
+- **Active — Auto Purge:** `autoPurge` goes `null` → 1 at Purge 128; cadence comes from the interval chain (base 1024 s). Once active and
   `autoPurgeEnabled` is also true, `tickGame` accumulates a global `autoPurgeAttemptBudget` every
   tick (frozen or not) by `getAutoPurgeAttemptRate(state) * elapsedSeconds`
   (`1 / getAutomationIntervalSeconds(state, 'purge')`) — but the completed attempt (budget ≥ 1) only
@@ -1770,8 +1645,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
 The global tickspeed multiplier itself (`buyGlobalTickspeedMultiplier`, see below) is *not* one of
 these PP-spent active uses, despite superficially mirroring Auto Purge's null/level pattern — it's
 Money-funded instead, with its own unlock prerequisite (owning the second tier) unrelated to Prestige
-Points at all. Only its *automation toggle*, Auto Clock Speed (`buyTickspeedAutobuyer`, one of the
-five bullets above), is PP-funded.
+Points at all. Only its *automation toggle*, Auto Clock Speed, unlocks by Purge count (above).
 
 #### Tier autobuyer/tier-tickspeed-autobuyer milestones
 
@@ -1780,12 +1654,12 @@ are **not PP purchases at all** — they unlock automatically once `purge.count`
 per-tier milestone, no PP spent, no button to click:
 
 - `getAutobuyerUnlockMilestone(tierId) = AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex *
-  AUTOBUYER_UNLOCK_MILESTONE_STEP` (`1`, `1`) — tier01 unlocks its autobuyer after the very first
-  prestige, tier02 after the second, … tier10 after the tenth. An unrecognized tier id is treated
+  AUTOBUYER_UNLOCK_MILESTONE_STEP` (`2`, `2`) — tier01 unlocks its autobuyer at Purge 2,
+  tier02 at 4, … tier10 at 20. An unrecognized tier id is treated
   as index 0.
 - `getTierTickspeedAutobuyerMilestone(tierId) = TIER_TICKSPEED_AUTOBUYER_MILESTONE_START + tierIndex
-  * TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP` (`11`, `1`) — tier01's own tickspeed autobuyer unlocks
-  at prestige 11, tier02 at 12, … tier10 at 20 — later than the unit-buying
+  * TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP` (`22`, `2`) — tier01's own tickspeed autobuyer unlocks
+  at Purge 22, tier02 at 24, … tier10 at 40 — later than the unit-buying
   autobuyer above, reflecting that it's a further-out convenience layered on top.
 - `applyAutobuyerMilestones(state)` is the pure function that actually does the unlocking: for every
   tier whose milestone is met by `state.purge.count` and isn't already unlocked, it sets
@@ -1922,8 +1796,7 @@ were removed outright rather than replaced. Overclock scales this one shared ste
   untouched; see "Scale Up" below. The `autoGlobalTickspeed` automation toggle itself still carries over
   unchanged, so a Prestige or Scale Up with Auto Clock Speed already bought just starts re-buying
   the level back up from scratch once Money allows.
-- Clicking is optional: once `buyTickspeedAutobuyer` is bought (PP-funded, see "Prestige Points,
-  autobuyer unlock, and the tickspeed multiplier" above), `tickGame` calls
+- Clicking is optional: once Auto Clock Speed is unlocked (Purge 8, see "Global automations unlock by Purge count" above), `tickGame` calls
   `buyGlobalTickspeedMultiplier` automatically every tick, so the level climbs on its own whenever
   Money allows — the manual button still works identically either way, since
   `buyGlobalTickspeedMultiplier` itself doesn't know or care whether it was called by a click or by
@@ -1956,9 +1829,7 @@ its one purpose.
   (`purchased`/levels untouched; the last tier's own counts untouched). No-op if not unlocked, if the
   last tier's own `owned` is 0 (nothing to speed up — see `docs/DESIGN_HISTORY.md`), if `amount` isn't a
   positive integer, is below the minimum, exceeds unspent XP, or production is frozen.
-- **Automation: the Auto Restage** (`autoXpTickspeed`, bought once on Firmware → Automation for
-  `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` = 16 PP = `AUTOMATION_INTERVAL_CONFIG.restage.baseCost` via
-  `buyXpTickspeedAutobuyer`; needs Auto Clock Speed, parallel to Auto Scale Up; permanent across
+- **Automation: the Auto Restage** (`autoXpTickspeed`, unlocked at Purge 16 (no PP); permanent across
   Prestige/Scale Up/Overclock/Era like the other global automations). While bought and
   `autoXpTickspeedEnabled` (pause via `setAutoXpTickspeedEnabled`, same Firmware row), `tickGame` calls
   `consumeXpForLastTierTickspeed(purge.xp)` through `runGlobalIntervalAutomation(…, 'restage', …)` —
@@ -2000,7 +1871,7 @@ uses `PURGE_THRESHOLD`. `isProductionFrozen(state)` (`engine.js`) is the
 single source of truth: once true, `tickGame` returns the same state unchanged *unless* Auto Purge is
 bought, in which case it keeps accumulating `autoPurgeAttemptBudget` and calls `purgeGame` the
 instant that budget crosses 1. Either way,
-`buyTier`/`buyTierQuantity`/`buyTierMaxLevels`/`buyTickspeedMultiplier`/`buyAutoPurge`/`buyGlobalTickspeedMultiplier`/`consumeXpForLastTierTickspeed`
+`buyTier`/`buyTierQuantity`/`buyTierMaxLevels`/`buyTickspeedMultiplier`/`buyGlobalTickspeedMultiplier`/`consumeXpForLastTierTickspeed`
 all no-op while frozen for manual purchases; `purgeGame` is the only action able to change state.
 `MainPage` reads `isProductionFrozen` to disable every other control while frozen.
 
@@ -2055,8 +1926,8 @@ once this cycle) climbs past the requirement, however that happened to occur.
 `scaleUpGame`'s reset pattern otherwise mirrors `purgeGame`'s, with two deliberate asymmetries:
 `state.intro` (the Byte Foundry screen's own state — see "Byte Foundry" below) is carried over
 completely untouched by Scale Up (and Overclock, below), Memory included — an intra-cycle soft
-reset, not a new cycle — while a real Prestige resets Memory (`bits`) and
-the completion gate every time, sending the player back through the gate, while still keeping the
+reset, not a new cycle — while a real Prestige keeps Memory (`bits`) and
+never re-gates the Foundry, while still keeping the
 Byte generator and its upgrades permanent (see "Byte Foundry" below and `purgeGame`'s row in the
 function table). The second asymmetry: **`everUnlockedTierIds` preserves earlier records and adds the claimed target
 and its successor** — unlike `purgeGame`/`overclockGame`, which reset the record to tier01. A
@@ -2309,7 +2180,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
   autoPurge: null,                                    // permanent GLOBAL level (not per-tier — only one to
                                                           // buy/upgrade), null = not yet bought: how many times
                                                           // PP have been spent to make Prestige automatic and
-                                                          // faster (see buyAutoPurge/tickGame) — never reset
+                                                          // faster (see applyAutobuyerMilestones/tickGame) — never reset
   autoPurgeEnabled: true,                             // permanent GLOBAL flag, default true: whether
                                                           // Auto Purge (once bought — see autoPurge above)
                                                           // currently acts — split "unlocked" from "enabled" so
@@ -2368,20 +2239,20 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // Up — only by a real Prestige — see "Overclock" below
   computeAutoChargeEnabled: true,                        // permanent pause switch for ALL Power Auto-charge boundaries (Firmware → Automation);
                                                           // paused = no NEW timed reserve merge starts (in-flight finishes; instant merge unaffected)
-  autoXpTickspeed: false,                                // permanent GLOBAL flag: Auto Restage bought (16 PP); survives Prestige/Scale Up/Overclock/Era
+  autoXpTickspeed: false,                                // permanent GLOBAL flag: Auto Restage unlocked (Purge 16); survives Prestige/Scale Up/Overclock/Era
   autoXpTickspeedEnabled: true,                          // permanent pause/resume preference for Auto Restage
-  autoScaleUp: false,                                    // permanent GLOBAL flag: PP spent to make eligible Scale Up
+  autoScaleUp: false,                                    // permanent GLOBAL flag: Auto Scale Up unlocked (Purge 32) — eligible Scale Up
                                                           // claims automatic at every target, including the final tier
-                                                          // (see buyAutoScaleUp)
+                                                          // (see applyAutobuyerMilestones)
   autoScaleUpEnabled: true,                              // permanent GLOBAL flag, default true: whether Auto
                                                           // Scale Up (once bought) currently acts — split from
                                                           // autoScaleUp the same way autoPurgeEnabled splits
                                                           // from autoPurge above (see setAutoScaleUpEnabled/
                                                           // tickGame). Never reset by Scale Up or prestige
-  autoGlobalTickspeed: false,                            // permanent GLOBAL flag: PP spent to make the
+  autoGlobalTickspeed: false,                            // permanent GLOBAL flag: Auto Clock Speed unlocked (Purge 8) — the
                                                           // (Money-funded) global tickspeed multiplier upgrade
                                                           // itself automatically every tick once affordable (see
-                                                          // buyTickspeedAutobuyer) — never reset by Scale Up or
+                                                          // applyAutobuyerMilestones) — never reset by Scale Up or
                                                           // prestige
   autoGlobalTickspeedEnabled: true,                      // permanent GLOBAL flag, default true: whether the
                                                           // Auto Clock Speed (once bought) currently
@@ -2420,8 +2291,8 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // Scale Up, only added to by purgeGame;
                                                           // count is the number of times ever purged (renamed
                                                           // from the old `level` field), driving first-run UI
-                                                          // and getPrestigeProductionMultiplier (log10(count)
-                                                          // from 10 Purges); prestige itself
+                                                          // and getPrestigeProductionMultiplier (1 + log10(count) once bought
+                                                          // ); prestige itself
                                                           // is gated on Money ≥ PURGE_THRESHOLD, not xp or points.
                                                           // highestMilestone (the Bytes-exponent watermark
                                                           // getXpMilestoneExponent / checkMilestones grants further xp against) resets
@@ -2441,8 +2312,8 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // Foundry" below. A currency pool entirely separate
                                                           // from resources.base until the manual/auto
                                                           // conversions into owned Kilobytes. TWO GROUPS:
-                                                          // "Memory" (bits) resets to
-                                                          // fresh EVERY REAL PRESTIGE (in the same object as
+                                                          // "Memory" (bits) is KEPT through
+                                                          // a real Prestige (in the same object as
                                                           // resources/owned — see purgeGame); the Byte
                                                           // generator itself and every upgrade to it
                                                           // (byteCreated/capacity) are PERMANENT,
@@ -2468,7 +2339,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // capped at Buffer. Was always an integer before the
                                                           // fill-based Speed multiplier (point 4a above) made
                                                           // tickIntroProduction's own per-tick delivery
-                                                          // continuous; can be fractional now. Resets on Prestige.
+                                                          // continuous; can be fractional now. Kept through Prestige (Reboot zeroes it).
                                                           // `tickIntroProduction` delivers continuously now
                                                           // (rate × elapsed), so no accumulator field exists.
     capacity: 8,                                          // PERMANENT. Data Stream Buffer / pool Memory
@@ -2496,7 +2367,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // currently-FULL Disks of that size — see
                                                           // tickDiskAutoFill/pullDiskForCurrentLevel. A full
                                                           // disk's contents ride through a real Prestige
-                                                          // untouched even though Memory itself resets
+                                                          // untouched, and Memory (bits) is kept too
     disksBuiltTotal: {},                                  // PERMANENT. { [capacityBits]: cumulative count }
                                                           // of every disk ever built (constructed) at that
                                                           // size, full or empty — pulling never decrements
@@ -2641,7 +2512,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // boundary once its flag flips true
     computeChargeSeconds: {},                             // RUN-SCOPED manual Charge progress per boundary ({ [boundaryIndex]: seconds }); dropped by Purge/Reboot/Reformat, nothing is spent until its merge
     computeCoresMergeRemainingSeconds: 0,                 // PERMANENT — carried through a real Prestige unchanged
-    computeNodesMergeRemainingSeconds: 0,                 // (not run-scoped like computeBoostRemainingSeconds
+    computeNodesMergeRemainingSeconds: 0,                 // (not run-scoped like computeBoosts
     computeClustersMergeRemainingSeconds: 0,              // below), since an in-flight merge represents already-
     computeNetworksMergeRemainingSeconds: 0,              // committed tokens that shouldn't be lost to a Prestige
     computeGridsMergeRemainingSeconds: 0,                 // transition — it just keeps counting down seamlessly.
@@ -2649,16 +2520,11 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
     computeCloudsMergeRemainingSeconds: 0,                // boundary — see startComputeMergeReserve/
     computeDatacentersMergeRemainingSeconds: 0,           // tickComputeMergeReserveTimer and issue #321
     computeSupercomputersMergeRemainingSeconds: 0,
-    computeBoostType: null,                               // NOT permanent — resets to null on every real Prestige,
+    computeBoosts: {},                                    // NOT permanent — resets to {} on every real Prestige,
                                                           // carried through untouched by Scale Up/Overclock.
-                                                          // Which COMPUTE_BOOST_PRESETS key is active, if any —
-                                                          // see activateComputeBoost/tickComputeBoost
-    computeBoostStacks: 0,                                // NOT permanent, same reset posture as computeBoostType.
-                                                          // How many times the active preset has been stacked
-    computeBoostRemainingSeconds: 0,                      // NOT permanent, same reset posture as computeBoostType.
-                                                          // Counts down every tick (frozen or not) — see
-                                                          // tickComputeBoost
-    dataStreamTapBonusPercent: 0,                         // NOT permanent, same reset posture as computeBoostType.
+                                                          // { [boostType]: { queue: [tierIndex, …], remainingSeconds } }
+                                                          // — see activateComputeBoost/tickComputeBoost
+    dataStreamTapBonusPercent: 0,                         // NOT permanent, same reset posture as computeBoosts.
                                                           // Data Stream's own decaying consumer tap bonus —
                                                           // see point 4a above / tapIntroBit / tickFillMultiplierDecay
     poolTapBonusPercents: {},                             // NOT permanent, same reset posture. { [poolIndex]:
@@ -2698,7 +2564,7 @@ purchases were manual or automatic.
 | `getTierSpendableAmount` | `(state, tier) → number` | Balance of `tier.costResourceId` (always `MONEY_ID`, `'base'`) |
 | `getTierPurchasedCount` | `(state, tierId) → number` | Lifetime purchases — display/back-compat only; no longer used for cost scaling (see `state.purchaseLevels`/`purchaseLevelProgress`) |
 | `isProductionFrozen` | `state → bool` | `Money >= PURGE_THRESHOLD` AND DeGoogol is not unlocked (Auto Purge interval > `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`, 1 s) — once true, `buyTier`/`buyTickspeedMultiplier`/most PP purchases become no-ops; `tickGame` either stays frozen or calls `purgeGame` automatically once Auto Purge's banked attempt budget crosses 1. At/after 100 lifetime purges, `isOverflowModeUnlocked` — production continues and Prestige is optional |
-| `tickGame` | `(elapsedSeconds, autobuyerBatchSize = 1) → state → state` | First, unconditionally, `latchMainGameUnlocked` (see above — a no-op once already latched or before Storage's own capacity threshold). Then runs the Byte Foundry's `tickIntroProduction`, then `tickDiskBuild`, then `tickDiskAutoFill`, then every `tickAutoMerge*(elapsedSeconds)` (issues #316/#321 — lowest tier first including Core → Node, see `AUTO_MERGE_TICKERS` — each both auto-starts a reserve merge and counts down any merge already in flight), then `tickComputeBoost(elapsedSeconds)` (counting an active Compute Boost's remaining duration down, unconditionally, alongside the rest of this pipeline), then `tickIntroAutoInvest`, in that order, unconditionally, before anything below (see "Byte Foundry" above) — `tickDiskBuild` counts down any in-progress disk array build (unconditional, bypasses nothing); `tickDiskAutoFill` then gets first claim on the Memory `tickIntroProduction` just delivered, ahead of `tickIntroAutoInvest`'s own direct bit-to-Kilobyte conversion — a Disk array the player has already built isn't starved of Memory it's waiting to be filled with; `tickDiskAutoFill` has no dependency on tier01's level so running it this early costs nothing (unlike `tickDiskPull`/`tickDiskLevelOneCachePull`, which still run last — see their own table rows below). Compute Cores are no longer minted from Data Stream Capacity at all — they're bought instantly with a Data Lake's own banked units via `buyBooster`; `tickDataLakeAutoConvert` (advancing every lake with `autoConvertActive` — the one-shot flag `startDataLakeAutoConvert` arms, see "One-shot auto-convert" above) runs right after `tickPoolBufferFill` (whose own overflow branch is what feeds the lakes — see "Data Lakes" above), so a Booster that tick's overflow just funded can convert the same tick, though it only cascades through `AUTO_MERGE_TICKERS` (which runs earlier in the pipeline, right after `tickFoundryResetConvenience`) starting the NEXT tick — a one-tick lag, imperceptible at `TICK_RATE_MS`. `tickIntroProduction` short-circuits to a same-reference no-op before `byteCreated`, and `tickIntroAutoInvest` once `bits` can't cover even one more `getIntroKilobyteConversionCost(state)` unit; neither ever fully freezes, and neither is capped (`tickIntroAutoInvest` is capped per-call at one tier01 level's worth, not overall — see its own table row). If `isProductionFrozen`: when `autoPurge` isn't bought OR `autoPurgeEnabled` is false (paused — see "Pause/resume for the global automations" above), short-circuits (returns the same state, unchanged); otherwise accumulates `autoPurgeAttemptBudget` by `getAutoPurgeAttemptRate(autoPurge) * elapsedSeconds` and, once that crosses 1 (with `TICK_ACCUMULATION_EPSILON` tolerance), calls `purgeGame` immediately (purgeGame's own reset zeroes the budget back out) — otherwise returns the state with just the updated budget. Otherwise (not frozen) runs autobuyers lowest-tier-first (KB → QB), except a zero-owned tier is processed first (stable sort keeps ladder order among equal ownership; every tier costs the same resource, Money, so autobuyers compete for one shared pool), then produces resources for every unlocked tier — but only once its `tierProductionAccumulators[tier.id]` (incremented by `elapsedSeconds` this tick) crosses that tier's own `getEffectiveTierTickSpeedSeconds(state, tier.id)` — the tier's base tickspeed shrunk by both tickspeed multipliers (with the same epsilon tolerance); when it does, delivers `floor(owned × (whole effective periods elapsed) × multiplier × scaleUpMultiplier × getPurchaseMilestoneMultiplier(level) × computeBoostMultiplier)` in one batch — `computeBoostMultiplier` is `getComputeBoostMultiplier(intro)` for tier01 specifically and `1` for every other tier (see "Compute Boost" above) — note neither tickspeed multiplier appears in this credit formula, since they already did their work by shrinking the period the "whole effective periods elapsed" count is measured against — where `multiplier` is `getPrestigeProductionMultiplier(purge.count)` (`log10(count)` from 10 Purges, else `1`), and `scaleUpMultiplier` is `getTierScaleUpMultiplier(state, tier.id)` — always ≥ 1 and scoped to that tier’s persisted claim count — and the result is floored so `owned`/`resources` stay integer-valued — and banks any leftover remainder for the next tick — then checks milestones, then — for every tier whose tier tickspeed autobuyer is bought (`tierTickspeedAutobuyer[tier.id]` — no dependency on `autobuyers[tier.id]` at all) and whose `tierTickspeedAutobuyerEnabled[tier.id] ?? true` is true (paused behaves exactly as if `tierTickspeedAutobuyer[tier.id]` were still false, see "Pause/resume for per-tier automations" in CLAUDE.md) — calls `buyTickspeedMultiplier(tier.id)` once more automatically, no-op if unaffordable (edge-triggered on affordability, not scaled by `elapsedSeconds`), (including the last tier; XP consumption has its own Auto Restage), and — if `autoPurge` is bought and `autoPurgeEnabled` is true — accumulates `autoPurgeAttemptBudget` here too, scaled by `elapsedSeconds` (the clock runs continuously regardless of frozen state, but can only ever fire from the frozen branch above). `globalTickspeedMultiplier` needs no per-tick accumulation of its own — unlike Auto Purge's attempt budget, it's just a permanent level read via `getGlobalTickspeedProductionMultiplier` inside `getEffectiveTierTickSpeedSeconds` each tick, changed only by the player's own `buyGlobalTickspeedMultiplier` clicks or — once `autoGlobalTickspeed` is bought (see `buyTickspeedAutobuyer`) and `autoGlobalTickspeedEnabled` is true — by `tickGame` calling `buyGlobalTickspeedMultiplier` automatically every tick right after the per-tier tickspeed self-upgrade step above, the same edge-triggered convention, re-validating its own eligibility internally each time. For each non-`null` (unlocked) autobuyer whose `autobuyersEnabled[tier.id] ?? true` is also true (a paused tier is treated exactly like "never unlocked" here, including skipping this budget accumulation — see "Pause/resume for per-tier automations" in CLAUDE.md), accumulates a fractional purchase-attempt budget (`autobuyerAttemptBudgets[tier.id] + elapsedSeconds` — a flat rate, independent of tickspeed level) and fires one purchase attempt (via `buyTierQuantity`) per whole unit of budget (with the same epsilon tolerance), carrying any fractional remainder into the next tick. If a purchase can't be afforded, the loop stops *without* spending the already-accumulated attempt — it stays banked. The effective per-iteration batch size is `autobuyerBatchSize`, except for a "smart" tier (`smartAutobuyer[tier.id]`) still on its very first level (`purchaseLevels[tier.id] === 1`), which uses 1 instead — above 1 (`Number.MAX_SAFE_INTEGER` in the running app, see `useIncrementalGame`'s `BUY_QUANTITY`) each attempt only buys once the tier can afford the *entire* current cost block up to that size. Finally, if `autoScaleUp` is bought and `autoScaleUpEnabled` is true, calls `scaleUpGame` once more (edge-triggered, re-validating its own eligibility internally), including at the final tier; requirements 3, 6, 9, and so on leave Overclock available at level 5 between the first two automatic claims |
+| `tickGame` | `(elapsedSeconds, autobuyerBatchSize = 1) → state → state` | First, unconditionally, `latchMainGameUnlocked` (see above — a no-op once already latched or before Storage's own capacity threshold). Then runs the Byte Foundry's `tickIntroProduction`, then `tickDiskBuild`, then `tickDiskAutoFill`, then every `tickAutoMerge*(elapsedSeconds)` (issues #316/#321 — lowest tier first including Core → Node, see `AUTO_MERGE_TICKERS` — each both auto-starts a reserve merge and counts down any merge already in flight), then `tickComputeBoost(elapsedSeconds)` (counting an active Compute Boost's remaining duration down, unconditionally, alongside the rest of this pipeline), then `tickIntroAutoInvest`, in that order, unconditionally, before anything below (see "Byte Foundry" above) — `tickDiskBuild` counts down any in-progress disk array build (unconditional, bypasses nothing); `tickDiskAutoFill` then gets first claim on the Memory `tickIntroProduction` just delivered, ahead of `tickIntroAutoInvest`'s own direct bit-to-Kilobyte conversion — a Disk array the player has already built isn't starved of Memory it's waiting to be filled with; `tickDiskAutoFill` has no dependency on tier01's level so running it this early costs nothing (unlike `tickDiskPull`/`tickDiskLevelOneCachePull`, which still run last — see their own table rows below). Compute Cores are no longer minted from Data Stream Capacity at all — they're bought instantly with a Data Lake's own banked units via `buyBooster`; `tickDataLakeAutoConvert` (advancing every lake with `autoConvertActive` — the one-shot flag `startDataLakeAutoConvert` arms, see "One-shot auto-convert" above) runs right after `tickPoolBufferFill` (whose own overflow branch is what feeds the lakes — see "Data Lakes" above), so a Booster that tick's overflow just funded can convert the same tick, though it only cascades through `AUTO_MERGE_TICKERS` (which runs earlier in the pipeline, right after `tickFoundryResetConvenience`) starting the NEXT tick — a one-tick lag, imperceptible at `TICK_RATE_MS`. `tickIntroProduction` short-circuits to a same-reference no-op before `byteCreated`, and `tickIntroAutoInvest` once `bits` can't cover even one more `getIntroKilobyteConversionCost(state)` unit; neither ever fully freezes, and neither is capped (`tickIntroAutoInvest` is capped per-call at one tier01 level's worth, not overall — see its own table row). If `isProductionFrozen`: when `autoPurge` isn't bought OR `autoPurgeEnabled` is false (paused — see "Pause/resume for the global automations" above), short-circuits (returns the same state, unchanged); otherwise accumulates `autoPurgeAttemptBudget` by `getAutoPurgeAttemptRate(autoPurge) * elapsedSeconds` and, once that crosses 1 (with `TICK_ACCUMULATION_EPSILON` tolerance), calls `purgeGame` immediately (purgeGame's own reset zeroes the budget back out) — otherwise returns the state with just the updated budget. Otherwise (not frozen) runs autobuyers lowest-tier-first (KB → QB), except a zero-owned tier is processed first (stable sort keeps ladder order among equal ownership; every tier costs the same resource, Money, so autobuyers compete for one shared pool), then produces resources for every unlocked tier — but only once its `tierProductionAccumulators[tier.id]` (incremented by `elapsedSeconds` this tick) crosses that tier's own `getEffectiveTierTickSpeedSeconds(state, tier.id)` — the tier's base tickspeed shrunk by both tickspeed multipliers (with the same epsilon tolerance); when it does, delivers `floor(owned × (whole effective periods elapsed) × multiplier × scaleUpMultiplier × getPurchaseMilestoneMultiplier(level) × computeBoostMultiplier)` in one batch — `computeBoostMultiplier` is `getComputeBoostMultiplier(intro)` for tier01 specifically and `1` for every other tier (see "Compute Boost" above) — note neither tickspeed multiplier appears in this credit formula, since they already did their work by shrinking the period the "whole effective periods elapsed" count is measured against — where `multiplier` is `getPrestigeProductionMultiplier(purge.count, unlocked)` (`1 + log10(count)` from the 2nd Purge, ×1.1 at the 1st, once the 1 PP speed bonus is bought, else `1`), and `scaleUpMultiplier` is `getTierScaleUpMultiplier(state, tier.id)` — always ≥ 1 and scoped to that tier’s persisted claim count — and the result is floored so `owned`/`resources` stay integer-valued — and banks any leftover remainder for the next tick — then checks milestones, then — for every tier whose tier tickspeed autobuyer is bought (`tierTickspeedAutobuyer[tier.id]` — no dependency on `autobuyers[tier.id]` at all) and whose `tierTickspeedAutobuyerEnabled[tier.id] ?? true` is true (paused behaves exactly as if `tierTickspeedAutobuyer[tier.id]` were still false, see "Pause/resume for per-tier automations" in CLAUDE.md) — calls `buyTickspeedMultiplier(tier.id)` once more automatically, no-op if unaffordable (edge-triggered on affordability, not scaled by `elapsedSeconds`), (including the last tier; XP consumption has its own Auto Restage), and — if `autoPurge` is bought and `autoPurgeEnabled` is true — accumulates `autoPurgeAttemptBudget` here too, scaled by `elapsedSeconds` (the clock runs continuously regardless of frozen state, but can only ever fire from the frozen branch above). `globalTickspeedMultiplier` needs no per-tick accumulation of its own — unlike Auto Purge's attempt budget, it's just a permanent level read via `getGlobalTickspeedProductionMultiplier` inside `getEffectiveTierTickSpeedSeconds` each tick, changed only by the player's own `buyGlobalTickspeedMultiplier` clicks or — once `autoGlobalTickspeed` is bought (unlocked at Purge 8, see `applyAutobuyerMilestones`) and `autoGlobalTickspeedEnabled` is true — by `tickGame` calling `buyGlobalTickspeedMultiplier` automatically every tick right after the per-tier tickspeed self-upgrade step above, the same edge-triggered convention, re-validating its own eligibility internally each time. For each non-`null` (unlocked) autobuyer whose `autobuyersEnabled[tier.id] ?? true` is also true (a paused tier is treated exactly like "never unlocked" here, including skipping this budget accumulation — see "Pause/resume for per-tier automations" in CLAUDE.md), accumulates a fractional purchase-attempt budget (`autobuyerAttemptBudgets[tier.id] + elapsedSeconds` — a flat rate, independent of tickspeed level) and fires one purchase attempt (via `buyTierQuantity`) per whole unit of budget (with the same epsilon tolerance), carrying any fractional remainder into the next tick. If a purchase can't be afforded, the loop stops *without* spending the already-accumulated attempt — it stays banked. The effective per-iteration batch size is `autobuyerBatchSize`, except for a "smart" tier (`smartAutobuyer[tier.id]`) still on its very first level (`purchaseLevels[tier.id] === 1`), which uses 1 instead — above 1 (`Number.MAX_SAFE_INTEGER` in the running app, see `useIncrementalGame`'s `BUY_QUANTITY`) each attempt only buys once the tier can afford the *entire* current cost block up to that size. Finally, if `autoScaleUp` is bought and `autoScaleUpEnabled` is true, calls `scaleUpGame` once more (edge-triggered, re-validating its own eligibility internally), including at the final tier; requirements 3, 6, 9, and so on leave Overclock available at level 5 between the first two automatic claims |
 | `getIntroProductionRate` | `intro → number` | Byte Foundry: current bits/sec, `getDataStreamSpeedBytesPerSecond(intro.speedCapacity ?? intro.capacity) * BITS_PER_BYTE` — derived from Capacity (see point 5 above), never independently upgraded. This is the DISPLAYED base Speed — see point 4a above. `tickIntroProduction` integrates the curve via `getFillCurveDelta` rather than multiplying this by the instantaneous `getDataStreamEffectMultiplier`. Used by `tapIntroBit`'s pre-reveal branch and the passive-production display |
 | `getDataStreamSpeedBytesPerSecond` | `basisBits → number` | Byte Foundry: derived Speed in Bytes/sec — `(basisBits / 8) ** exponent` (`exponent` defaults to `DATA_STREAM_SPEED_EXPONENT_BASE`, 0.5; callers pass `getDataStreamSpeedExponent(intro)`). `0` for non-positive input |
 | `getFillMultiplierPercent` | `fillFraction → percent` | `10 ** (log10(MAX) - clamp(fillFraction, 0, 1) * (log10(MAX) - log10(MIN)))` with MAX/MIN = `FILL_MULTIPLIER_MAX_PERCENT`/`FILL_MULTIPLIER_MIN_PERCENT` (1000/10) — 1000% empty, exactly 100% at 50% full, 10% full (log-linear); see point 4a above |
@@ -2726,10 +2592,10 @@ purchases were manual or automatic.
 | `isProvisionDiskInProgress` | `state → bool` | True while a Provision Disk build is ARMED (`diskBuildQueued`) and Provision Disk is available — the only state in which it outranks Compute Boost (a merely startable, or disarmed part-way, build does not). |
 | `getPoolCacheReservationBits` | `(state, poolIndex) → bits` | Byte Foundry Disks: however many more bits that pool's own smallest-size read cache still needs to reach full (8 blocks) — subtracted from `getPoolBufferBits` before checking/spending against it in `tickQueuedDiskBuild`, so the cache keeps actively filling (via `tickDiskAutoFill`) even while a Provision Disk build is queued, rather than Provision Disk claiming the whole buffer first. `0` for a locked/invalid pool or once the cache is already full |
 | `isProvisionDiskTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `isProvisionDiskAvailable(state) && !isDiskFillAvailable(state)` — `provisionDisk`'s own gate |
-| `isComputeUpgradeAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer): `isComputeCoreConversionUnlocked(state)` AND (`canStackComputeBoost(state)` OR — while no boost is active — some `(boostType, tierIndex)` combo across all `COMPUTE_BOOST_TIER_FIELDS` is currently activatable via `canActivateComputeBoost`) — issue #326 |
-| `isComputeBoostTurnAvailable` | `(state, boostType, tierIndex) → bool` | Byte Foundry forced-priority composite (not a reducer): `canActivateComputeBoost(state, boostType, tierIndex) && !isDiskFillAvailable(state) && !isProvisionDiskInProgress(state)` — `activateComputeBoost`'s own actual gate |
-| `isStackComputeBoostTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `canStackComputeBoost(state) && !isDiskFillAvailable(state) && !isProvisionDiskInProgress(state)` — `stackComputeBoost`'s own actual gate |
-| `isComputeUpgradeTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): true if `isStackComputeBoostTurnAvailable(state)`, or `isComputeBoostTurnAvailable(state, boostType, tierIndex)` for any preset/tier combo — used to gate ComputePage's own nav entry point |
+| `isComputeUpgradeAvailable` | `state → bool` | Forced-priority base predicate (not a reducer): `isComputeCoreConversionUnlocked(state)` AND some preset whose lane is NOT running is `canActivateComputeBoost` from some tier. No production caller. |
+| `isComputeBoostTurnAvailable` | `(state, boostType, tierIndex) → bool` | Forced-priority composite: `canActivateComputeBoost(state, boostType, tierIndex)` AND Disk Fill and Provision Disk are not available/in progress. `activateComputeBoost`'s actual gate. |
+| `isStackComputeBoostTurnAvailable` | `(state, boostType) → bool` | Forced-priority composite: `canStackComputeBoost(state, boostType)` AND nothing ranked above Compute is available. |
+| `isComputeUpgradeTurnAvailable` | `state → bool` | Forced-priority composite: some (preset, tier) is `isComputeBoostTurnAvailable`. |
 | `isMemoryCapacityUpgradeAvailable` | `state → bool` | **Upgrade Data Stream** predicate: simply `isPoolCapacityUpgradeAvailable(state)` — a full Buffer, the Combine prerequisite met, and not already at cap. Sits OUTSIDE the forced priority order entirely (no dependency on `isDiskFillAvailable`/`isProvisionDiskAvailable` — a deliberate reversal of an earlier version that did depend on them, see `docs/DESIGN_HISTORY.md`); drains the Buffer (cost = current capacity) and doubles `intro.capacity` |
 | `isMemoryCapacityAtCap` | `state → bool` | `getStoragePoolCapacity(state, finalPoolIndex) >= getStoragePoolMemoryBounds(finalPoolIndex).endBits` (`finalPoolIndex = getStoragePoolCount()` — the LAST pool, unconditionally, never the highest disk-build-unlocked or capacity-visible pool) — compares the final pool's own decade-power DERIVED Capacity, not raw `intro.capacity`. Deliberately final-pool-only: gating on any earlier pool's own end bound would re-couple Capacity growth to that pool's own unlock state, capping it well before it could ever reach a LATER pool's own visibility threshold — see `docs/DESIGN_HISTORY.md` |
 | `getVisibleStoragePoolCount` | `state → number` | Pure Capacity-based pool LIVENESS count — pool 1 always counts; pool N (N ≥ 2) counts once `intro.capacity >= getPoolCapacityUnlockThresholdBits(N)`, regardless of disk-build progress. Drives pool-card visibility, `getStoragePoolBandwidth`/`getStoragePoolCapacity`, `tapPoolBuffer`, `tickPoolBufferFill`'s loop bound, `normalizePoolMemoryCapacity`'s buffer clamp, `tickDiskAutoFill`'s read-cache eligibility, and `getPoolCacheReservationBits`. Deliberately INDEPENDENT of `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` (disk-build-only, unchanged) — see "Pool liveness is Capacity-only" in CLAUDE.md and `docs/DESIGN_HISTORY.md` for why a shared primitive was tried once and reverted |
@@ -2751,8 +2617,8 @@ purchases were manual or automatic.
 | `isMemoryCapacityUpgradeArmable` | `state → bool` | Upgrade Data Stream can be started: byte combined, not already running, not at cap |
 | `queueIntroCapacityUpgrade` | `state → state` | Sets `intro.capacityUpgradeQueued = true` and zeroes the progress bar (same-reference no-op when not armable) |
 | `areStoragePoolDisksFull` | `(state, poolIndex) → bool` | Every BUILT disk of the pool's three sizes is full (`disks[size] >= disksBuiltTotal[size]`); unprovisioned slots don't count |
-| `isStoragePoolProvisioningInProgress` | `(state, poolIndex) → bool` | A started, unfinished build in the pool: partial `diskProvisionPasses` on one of its sizes, `diskBuildQueued` on its current `getDiskSize`, a legacy `diskBuild`, or a pool-local reset rebuild. Merely being able to provision doesn't count |
-| `isDataLakePoolDrainAvailable` | `(state, poolIndex) → bool` | Pool-buffer priority (disk filling > provisioning in progress > lake): `isDataLakePoolReady` AND the lake has an open slot (`getDataLakeCurrentFillSubSize !== null`) AND — only to START a lake disk — `isStoragePoolBufferFull` AND `areStoragePoolDisksFull` AND NOT `isStoragePoolProvisioningInProgress` AND the buffer exceeds `getPoolCacheReservationBits`; with a lake disk under way (`isDataLakeDiskFillInProgress`) just a non-empty buffer. While true, `tickPoolBufferFill`'s full-buffer overflow skips that pool so the drain and overflow never credit the same interval twice |
+| `isStoragePoolProvisioningInProgress` | `(state, poolIndex, armedOnly = false) → bool` | A started, unfinished build in the pool: partial `diskProvisionPasses` on one of its sizes, `diskBuildQueued` on its current `getDiskSize`, a legacy `diskBuild`, or a pool-local reset rebuild. Merely being able to provision doesn't count With `armedOnly` (passed by the lake drain and manual-fill gates while `acquiring`) part-funded `diskProvisionPasses` of a DISARMED build are ignored, so a dormant build cannot freeze an acquiring lake; an armed/queued build, rebuilds and legacy builds still count. |
+| `isDataLakePoolDrainAvailable` | `(state, poolIndex) → bool` | Pool-buffer priority (disk filling > provisioning in progress > lake): `isDataLakePoolReady` AND the lake buffer has room AND — to START a fill — the pool buffer is full for the first start of a Booster acquisition, or (while `acquiring`) every built disk is full, no ARMED build is in progress and the buffer exceeds the read-cache reservation; a fill under way (`0 < fillBits < unit`) only needs a non-empty pool buffer. |
 | `tickDataLakePoolDrain` | `(elapsedSeconds, preFillState?) → state → state` | For every visible pool where `isDataLakePoolDrainAvailable`: moves bits from that pool's own buffer (minus `getPoolCacheReservationBits` when starting a disk; the whole buffer mid-disk) into its Data Lake via `applyDataLakeOverflow` at `getStoragePoolBandwidth × getPoolTapMultiplier × getDataLakeSpeedMultiplier`, at most to the current lake disk's completion. A lake the overflow branch already fed this tick (differs from `preFillState`) is skipped. Runs in `tickGame` right after `tickPoolBufferFill` so lakes keep filling while an Upgrade Data Stream is running |
 | `clearIntroCapacityUpgradeQueue` | `state → state` | Clears a running upgrade (flag + progress), returning the progress bits to the Buffer; used internally (cap reached). Exposed as `actions.clearIntroCapacityUpgradeQueue` but no UI calls it. Same-reference no-op when not running |
 | `eraseAllComputeTokens` | `state → state` | Zeros every `COMPUTE_BOOST_TIER_FIELDS` balance, clears active Boost fields, and zeros in-flight merge timers. Does **not** touch permanent auto-claim/auto-merge unlocks or `computeCoresEverEarned`/`computeMergePageUnlocked` |
@@ -2795,7 +2661,7 @@ purchases were manual or automatic.
 | `getDiskReadCacheFlushSeconds` | `(state, size) → number` | Duration for a new read-cache → disk flush (a DISK filling FROM a cache): `(size / DISK_CACHE_BLOCK_COUNT) / (getStoragePoolBandwidth(state, getPoolIndexForDiskSize(size)) * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)` |
 | `getDiskReadCacheFlush` / `getDiskReadCacheFlushFill` / `isDiskReadCacheFlushPaused` | helpers | In-flight flush lookup, 0..1 progress fill, and whether tier match is currently pausing the countdown |
 | `tickDiskWriteCache` | `elapsedSeconds → state → state` | Byte Foundry Disks write caches (every size above its pool's smallest): starts a merge whenever the array has an empty disk; collects from the pool buffer after the read cache's reservation, expedited targets first, then the rest, each smallest first; an expedited merge (`expediteDiskFill`) also consumes every smaller full disk of the same pool it still needs, all in parallel (`merge.transfers`, largest first that fits, each timed at `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, pausing only on its size's tier claim; their sizes are reserved from the pool draw); then flushes into one disk at `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (`CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER` when expedited). Collect/flush wait while the target has no empty disk. Called from `tickGame` between the two `tickDiskAutoFill` passes |
-| `expediteDiskFill` / `isDiskFillExpediteAvailable` / `isDiskFillExpedited` | `size → state → state` / `(state, size) → bool` | Expedite an empty write-cache-size disk: Staging queue jump, parallel smaller-disk transfers alongside the pool buffer, 5× flush (click on the empty disk in `DiskArrayRow`); outside the forced priority order |
+| `expediteDiskFill` / `isDiskFillExpediteAvailable` / `isDiskFillExpedited` | `size → state → state` / `(state, size) → bool` | Expedite an empty write-cache-size disk: Staging queue jump, parallel smaller-disk transfers alongside the pool buffer, landing as soon as funded (click on the empty disk in `DiskArrayRow`); outside the forced priority order |
 | `isDiskRedeemable` | `(state, capacityBits) → bool` | Byte Foundry Disks: true whenever `capacityBits`' own FIXED, PERMANENT corresponding tier (via the internal `getMatchingTierForDiskSize`/`getDiskRequiredTierLevel` helpers — the tier sharing that disk-ladder step's Data Lake grouping, `getDataLakeTierIndex`, and that step's 1st/2nd/3rd position within its 3-step group as the required level) is CURRENTLY sitting at exactly that required level (`purchaseLevels[tier.id] ?? 1 === requiredLevel`) — a genuine one-tick-only EXACT match, same as before, but now against a fixed (tier, level) pair rather than a live price comparison (superseded the earlier "whichever tier's current per-unit cost happens to coincidentally match its size" design — see `docs/DESIGN_HISTORY.md`). Does NOT also require zero progress (unlike `isDiskPullEligible` above) — used by write-cache/read-cache-flush pause logic and UI display, where "tier match" alone (regardless of progress) is the relevant fact. A tier already past its required level, or not yet there, makes the disk simply wait, full and untouched, until the tier's level matches again — which only happens after the next real Prestige resets purchase levels (see "Data Lakes" above) |
 
 | `pullDiskForCurrentLevel` | `capacityBits → state → state` (private, invoked only from `tickDiskPull`) | Byte Foundry Disks: no-op unless `isDiskPullEligible`; otherwise decrements `intro.disks[capacityBits]` (removing the key entirely once it reaches 0 — `intro.disksBuiltTotal[capacityBits]` is untouched, so the disk re-enters the fillable pool) and grants `getPurchaseBlockSize(state)` free units of that fixed tier via `grantTierUnits` — always the FULL block, since `isDiskPullEligible` already guarantees zero progress (an earlier `redeemDisk` design granted `getPurchaseBlockSize(state) - progress` instead, back when a partial-progress level was still poolable by a disk — see `docs/DESIGN_HISTORY.md`) — completing the tier's WHOLE current level in one shot, not a single unit — bypasses `isProductionFrozen`/`isTierUnlocked`/cost entirely, and deliberately bypasses `convertIntroBitsToKilobytes`/`tickIntroAutoInvest` too (a disk's contents came from Memory via `tickDiskAutoFill`, not a further bit-to-Kilobyte conversion at pull time) |
@@ -2810,24 +2676,24 @@ purchases were manual or automatic.
 | `isAutoMergeCoresIntoNodeUnlockAvailable` / `isAutoMergeNodesIntoClusterUnlockAvailable` / `isAutoMergeClustersIntoNetworkUnlockAvailable` / `isAutoMergeNetworksIntoGridUnlockAvailable` / `isAutoMergeGridsIntoFabricUnlockAvailable` / `isAutoMergeFabricsIntoCloudUnlockAvailable` / `isAutoMergeCloudsIntoDatacenterUnlockAvailable` / `isAutoMergeDatacentersIntoSupercomputerUnlockAvailable` / `isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable` | `state → bool` | Whether the matching `enableAutoMerge*` action would do anything: `COMPUTE_ENTITY_CAP` (10) of the OUTPUT entity held AND the matching `autoMerge*` flag isn't already true |
 | `getComputeBoostTierMultiplier` | `(boostType, tierIndex) → number` | Byte Foundry Compute Boost (issue #326): `preset.multiplier` (identical for every tier; the tier index only sets how many Factory tiers it covers) — 0 for an invalid `boostType` or an out-of-range `tierIndex` (not 1-`COMPUTE_BOOST_TIER_FIELDS.length`) |
 | `getComputeBoostTierDurationSeconds` | `(boostType, tierIndex) → number` | Byte Foundry Compute Boost: `preset.durationSeconds` (identical for every tier). 0 for invalid inputs |
-| `getComputeBoostCoveredTierCount` | `intro → number` | How many Factory tiers (tier01 first) the active boost applies to: the funding tier's 1-based index (`intro.computeBoostTierIndex ?? 1`); 0 with no boost active or an invalid index. `tickGame` applies `getComputeBoostMultiplier` to Factory tiers whose index is below it |
-| `getComputeBoostMultiplier` | `intro → number` | Byte Foundry Compute Boost: `getComputeBoostTierMultiplier(intro.computeBoostType, intro.computeBoostTierIndex ?? 1) \|\| 1` — 1 (no effect) while no boost is active; `?? 1` defensively falls back to tier 1 (Core) for a save from before `computeBoostTierIndex` existed. Applied to Memory's own passive production (`tickIntroProduction`) and `tier01`'s production specifically (`tickGame`) |
-| `canActivateComputeBoost` | `(state, boostType, tierIndex) → bool` | Byte Foundry Compute Boost predicate (not a reducer): `boostType` must be a real `COMPUTE_BOOST_PRESETS` key and `tierIndex` valid. With no boost active, ≥1 token of that tier's field must be held. With one active: same type + tier is Stack's job (false); a different one needs `forfeitConfirmed` and ≥1 token of the new tier AFTER refunding the active boost's unused stacks. The actual gate `activateComputeBoost` itself enforces |
-| `canStackComputeBoost` | `state → bool` | Byte Foundry Compute Boost predicate (issue #326): a boost IS currently active, `computeBoostStacks < COMPUTE_BOOST_MAX_STACKS`, and ≥1 more token of the ACTIVE boost's OWN funding tier (`intro.computeBoostTierIndex`) is held — NOT whatever tier a player might have since selected in the UI |
-| `activateComputeBoost` | `(boostType, tierIndex) → state → state` | Byte Foundry Compute Boost: requires `isComputeBoostTurnAvailable(state, boostType, tierIndex, forfeitConfirmed)`; when replacing an active boost, first refunds every unused stack (`getUnusedComputeBoostStacks`, via `reclaimComputeBoost`) and forfeits the running one; then spends exactly 1 token of `tierIndex`'s own field and starts a fresh boost: `computeBoostType: boostType`, `computeBoostTierIndex: tierIndex`, `computeBoostStacks: 1`, `computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds(boostType, tierIndex)` |
-| `stackComputeBoost` | `state → state` | Byte Foundry Compute Boost (issue #326): requires `isStackComputeBoostTurnAvailable(state)`; otherwise spends 1 more token of the ACTIVE boost's own funding tier, increments `computeBoostStacks`, and adds that same tier's own `getComputeBoostTierDurationSeconds` onto `computeBoostRemainingSeconds` (extending, not resetting, the remaining time) — the multiplier itself never compounds. The replacement for same-type restacking through the preset buttons, which `activateComputeBoost` no longer permits |
-| `tickComputeBoost` | `elapsedSeconds → state → state` | Byte Foundry Compute Boost: same-reference no-op while no boost is active; otherwise decrements `computeBoostRemainingSeconds` by `elapsedSeconds`, clearing back to inactive (`type: null`, `tierIndex: null`, `stacks: 0`, `remaining: 0`) once it reaches 0. Runs every tick, frozen or not — called from `tickGame` alongside the other Byte Foundry intro ticks |
-| `canReclaimComputeBoost` | `state → bool` | Whether `reclaimComputeBoost` (Pop) would do anything: `getUnusedComputeBoostStacks(state) > 0` — at least one stack beyond the running one whose whole duration is still ahead in the pooled timer (`min(stacks − 1, ceil(remaining / stackDuration) − 1)`); the running stack can never be popped away |
-| `reclaimComputeBoost` | `state → state` | Byte Foundry Compute Boost (issues #316/#326/#363): no-op below `canReclaimComputeBoost`'s own `> 1` gate; otherwise the exact inverse of one `stackComputeBoost` call — refunds 1 token into the ACTIVE boost's own funding tier field — uncapped, so a refund into a full tier is never lost (a preset switch's refund of unused stacks relies on this) and subtracts that tier's own base preset `durationSeconds` back out of `computeBoostRemainingSeconds` (floored at 0), decrementing `computeBoostStacks` by 1. `computeBoostStacks` after a reclaim is always `>= 1` — the boost stays active; it can no longer be reclaimed all the way back to inactive (an earlier version allowed reclaiming the last stack too, canceling a running effect outright — see `docs/DESIGN_HISTORY.md`) |
+| `getComputeBoostCoveredTierCount` | `intro → number` | Broadest running lane head's funding tier (1-based): Factory tiers/pools 1..N it covers; 0 with no boost. |
+| `getComputeBoostMultiplier` | `intro → number` | Memory/Data Stream multiplier: every running lane's preset multiplier summed; 1 with no boost. |
+| `canActivateComputeBoost` | `(state, boostType, tierIndex) → bool` | Predicate: real preset, valid tier, ≥1 token of that tier's field, lane length < `COMPUTE_BOOST_MAX_STACKS`. |
+| `canStackComputeBoost` | `(state, boostType) → bool` | The lane is running and `canActivateComputeBoost` holds at its head's tier. |
+| `activateComputeBoost` | `(boostType, tierIndex) → state → state` | Needs `isComputeBoostTurnAvailable`; spends 1 token of that tier and starts the lane, or queues behind its head in descending-tier order (never preempting). |
+| `stackComputeBoost` | `boostType → state → state` | Needs `isStackComputeBoostTurnAvailable`; `activateComputeBoost(boostType, head tier)`. |
+| `tickComputeBoost` | `elapsedSeconds → state → state` | Same-reference no-op while idle; counts every lane's head down, handing over to the next queued boost (overshoot carried) and clearing emptied lanes. |
+| `canReclaimComputeBoost` | `(state, boostType) → bool` | Pop is possible: `getUnusedComputeBoostStacks(state, boostType) > 0` (boosts queued behind the running one). |
+| `reclaimComputeBoost` | `boostType → state → state` | Pop: no-op without a queued boost; else refunds 1 token of the weakest queued boost's tier (uncapped) and removes it. |
+| `canForfeitComputeBoost` / `forfeitComputeBoost` | `(state, boostType) → bool` / `boostType → state → state` | Forfeit the running boost with no refund; only while nothing is queued in that lane. |
+| `getComputeBoostLanes` / `getComputeBoostLane` | `intro → lanes[]` / `(intro, boostType) → lane \| null` | Active lanes `{ type, queue, remainingSeconds }` in preset order; reads pre-lane saves as one lane. |
+| `getFactoryTierBoostMultiplier` | `(intro, tierNumber) → number` | 1-based Factory tier: summed multipliers of running lanes whose head covers it, else 1. |
 | `buyTier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`; otherwise validates unlock + affordability, deducts cost, increments `owned`/`purchased` by 1; single-unit purchase, not called by the UI or `buyTierQuantity` |
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Returns the same state if `isProductionFrozen`; otherwise buys up to `quantity` units (capped at the cost-block boundary via `getTierBulkQuantity`), stopping early if a unit becomes unaffordable; used both by the manual "Buy" button (always `quantity` `Number.MAX_SAFE_INTEGER`, see `useIncrementalGame`'s `BUY_QUANTITY`) and by `tickGame`'s autobuyer loop — the two purchase paths are identical, a tier's tickspeed multiplier level has no effect on how much a purchase costs or how many units it grants |
-| `applyAutobuyerMilestones` | `state → state` | For every tier whose `getAutobuyerUnlockMilestone(tierId)`/`getTierTickspeedAutobuyerMilestone(tierId)` is met by `state.purge.count` and isn't already unlocked, sets `autobuyers[tierId] = 1` and/or `tierTickspeedAutobuyer[tierId] = true` — no PP spent, no cost check at all. Never revokes anything already unlocked; returns the same state reference if nothing newly qualifies. Called from `purgeGame` (right after incrementing `count`) |
+| `applyAutobuyerMilestones` | `state → state` | Also unlocks the five global automations at `GLOBAL_AUTOMATION_UNLOCK_PURGES` (8/16/32/64/128; run on load too). For every tier whose `getAutobuyerUnlockMilestone(tierId)`/`getTierTickspeedAutobuyerMilestone(tierId)` is met by `state.purge.count` and isn't already unlocked, sets `autobuyers[tierId] = 1` and/or `tierTickspeedAutobuyer[tierId] = true` — no PP spent, no cost check at all. Never revokes anything already unlocked; returns the same state reference if nothing newly qualifies. Called from `purgeGame` (right after incrementing `count`) |
 | `buyTickspeedMultiplier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen` or if the tier itself isn't unlocked yet (`isTierUnlocked`) — no autobuyer-unlock prerequisite at all; otherwise upgrades `tickspeedLevels[tierId]` from N to N+1 — always by spending the tier's own resource via `getTickspeedMultiplierCost(tierId, N + 1)`. Each level speeds up that tier's own delivery frequency by another 10% (via `getTickspeedProductionMultiplier`, divided into `getEffectiveTierTickSpeedSeconds` — see "Tier production tickspeed" in CLAUDE.md), without changing the amount delivered per batch, how often the autobuyer attempts a purchase, how each individual purchase is paid for/batched, or manual Buy. Since `resources[tierId]` and `owned[tierId]` move together, a call (non-last tiers) requires `available >= cost + 1`, not just `available >= cost` — paying the exact cost would zero out the tier's own generator count (and its production), so the last unit is reserved and the call is a no-op until at least 1 would remain afterward; the MainPage tickspeed button's `disabled` state mirrors this same `+ 1` threshold. Also called automatically by `tickGame` for every tier whose tier tickspeed autobuyer is unlocked (`tierTickspeedAutobuyer[tier.id]`, via `applyAutobuyerMilestones`), including the last tier regardless of its XP unlock. **Last tier:** requires `getTickspeedMultiplierRequirement` but spends only `getTickspeedMultiplierSpend` (10% of the cost) |
-| `buyAutoPurge` | `state → state` | Returns the same state if `isProductionFrozen`, if Auto Purge is already active, if Auto Overclock isn't bought yet (sequential global automation), or if there aren't enough unspent Prestige Points; otherwise activates (`null` → 1) for `getAutomationUnlockCost('purge')` — a single global upgrade track, not per-tier |
 | `isGlobalTickspeedMultiplierUnlocked` | `state → bool` | `owned[TIER_DEFINITIONS[1].id] >= 1 \|\| globalTickspeedMultiplier != null` — gates the global tickspeed multiplier's *initial* activation on owning at least 1 of the second tier; once active it stays true regardless of tier02's current owned count |
 | `buyGlobalTickspeedMultiplier` | `state → state` | Returns the same state if `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if `resources[MONEY_ID]` is below `getGlobalTickspeedMultiplierCostBits(currentLevel)`; otherwise activates (`null` → 1) or upgrades (level N → N+1), spending those Bits (no PP involved) — a single global upgrade track, not per-tier, compounding every tier's production by another 1% per level |
-| `buyAutoScaleUp` | `state → state` | Returns the same state if `isProductionFrozen`, if `autoScaleUp` is already true, if the Auto Clock Speed (`autoGlobalTickspeed`) isn't bought yet (sequential global automation), or if there aren't enough unspent Prestige Points; otherwise spends `AUTO_SCALE_UP_COST` PP and permanently sets `autoScaleUp = true`, making `tickGame` call `scaleUpGame` automatically every tick, including final-tier claims whose 3/6/9 cadence leaves Overclock available at level 5 |
-| `buyTickspeedAutobuyer` | `state → state` | Returns the same state if `isProductionFrozen`, if `autoGlobalTickspeed` is already true, or if there aren't enough unspent Prestige Points; otherwise spends `TICKSPEED_AUTOBUYER_COST` PP and permanently sets `autoGlobalTickspeed = true`, making `tickGame` call `buyGlobalTickspeedMultiplier` automatically every tick |
 | `setAutoScaleUpEnabled` | `enabled → state → state` | Unconditional (not gated by `isProductionFrozen`) and a no-op if `autoScaleUp` is still falsy; otherwise sets `autoScaleUpEnabled` to `!!enabled`, pausing/resuming `tickGame`'s automatic `scaleUpGame` call without touching `autoScaleUp` itself — see "Pause/resume for the global automations" above |
 | `setAutoGlobalTickspeedEnabled` | `enabled → state → state` | Same convention as `setAutoScaleUpEnabled`, gating `autoGlobalTickspeed` instead — a no-op if `autoGlobalTickspeed` is still falsy |
 | `setAutoPurgeEnabled` | `enabled → state → state` | Same convention as `setAutoScaleUpEnabled`, gating `autoPurge` instead — a no-op if `autoPurge` is still `null` |
@@ -2845,10 +2711,9 @@ purchases were manual or automatic.
 | `getTickspeedMultiplierSpend` | `(tierId, targetLevel) → number` | Amount `buyTickspeedMultiplier` deducts: `getTickspeedMultiplierCost` for every tier except the last, which spends `ceil(cost × LAST_TIER_TICKSPEED_SPEND_FRACTION)` (10%) |
 | `getTickspeedMultiplierRequirement` | `(tierId, targetLevel) → number` | Owned count needed to buy: `max(getTickspeedMultiplierCost, getTickspeedMultiplierSpend + 1)` — `cost + 1` for most tiers, the full cost for the last |
 | `getAutobuyerUnlockCost` | `tierId → number` | `AUTOBUYER_UNLOCK_BASE_COST * (tierIndex + 1)` — no longer an actual PP cost (a tier's autobuyer unlocks for free at a prestige-count milestone instead, see `getAutobuyerUnlockMilestone`/`applyAutobuyerMilestones` below); kept only as the pricing benchmark `getSmartAutobuyerCost` multiplies: 1 through 10 across the ten tiers; an unrecognized tier id is treated as index 0 |
-| `getAutobuyerUnlockMilestone` | `tierId → number` | `AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP` (`1`, `1`) — the number of purges required before a tier's unit-buying autobuyer unlocks automatically: 1 for the first tier, up through 10 for the 10th/last; an unrecognized tier id is treated as index 0 |
-| `getTierTickspeedAutobuyerMilestone` | `tierId → number` | `TIER_TICKSPEED_AUTOBUYER_MILESTONE_START + tierIndex * TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP` (`11`, `1`) — the number of purges required before a tier's own tickspeed autobuyer unlocks automatically: 11 for the first tier, up through 20 for the 10th/last |
+| `getAutobuyerUnlockMilestone` | `tierId → number` | `AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP` (`2`, `2`) — the number of purges required before a tier's unit-buying autobuyer unlocks automatically: 2 for the first tier, up through 20 for the 10th/last; an unrecognized tier id is treated as index 0 |
+| `getTierTickspeedAutobuyerMilestone` | `tierId → number` | `TIER_TICKSPEED_AUTOBUYER_MILESTONE_START + tierIndex * TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP` (`22`, `2`) — the number of purges required before a tier's own tickspeed autobuyer unlocks automatically: 22 for the first tier, up through 40 for the 10th/last |
 | `getTickspeedProductionMultiplier` | `level → number` | `1.1 ** (level - 1)` (`TICKSPEED_PRODUCTION_STEP = 0.1`; `null`/never-unlocked and level ≤ 1 all treated as the baseline ×1, no bonus); despite the name, this factor is no longer multiplied into a production credit directly — `getEffectiveTierTickSpeedSeconds` divides it into the tier's base tickspeed instead, so it speeds up delivery frequency rather than delivery size |
-| `getAutomationUnlockCost` | `key → number` | `AUTOMATION_INTERVAL_CONFIG[key].baseCost` — one-time unlock cost of `speedUp`/`scaleUp`/`restage`/`overclock`/`purge`, equal to that chain's first upgrade level |
 | `getAutoPurgeAttemptRate` | `state → number` | `1 / getAutomationIntervalSeconds(state, 'purge')` — attempts per second (base interval 1024 s, ×0.9 per speed level) |
 | `getGlobalTickspeedMultiplierCost` | `currentLevel → number` | `10 ** (currentLevel + 1)` — the Money cost to activate (level 0→1, costing 10 Money) or upgrade (level N→N+1) the global tickspeed multiplier; doubles the exponent each level (100, 1000, …) |
 | `getGlobalTickspeedProductionMultiplier` | `(level, overclockLevel = 0) → number` | `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockLevel)) ** level`; every level uses the same step and milestones add no bonus |
@@ -2865,8 +2730,8 @@ purchases were manual or automatic.
 | `buyHyperscaler` | `state → state` | Spends escalating Kernels; increments `hyperscalerCount`; no-op if unaffordable |
 | `applyFlopsAutobuyerMilestones` | `state → state` | Unlocks Flops autobuyers free at Era milestones; called from `eraGame` |
 | `setComputeFlopsAutobuyerEnabled` | `(flopId, enabled) → state → state` | Pause/resume a unlocked Flops autobuyer |
-| `getPrestigeProductionMultiplier` | `purgeCount → number` | `log10(purgeCount)` from `PRESTIGE_SPEED_BONUS_UNLOCK_PURGES` (10) Purges, else `1`. Companion `isPrestigeSpeedBonusUnlocked(state)`. |
-| `purgeGame` | `state → state` | Requires Money ≥ `PURGE_THRESHOLD`; resets resources/owned/purchased, every tier's `tickspeedLevels`/`purchaseLevels`/`purchaseLevelProgress` entries back to their baseline (1/1/0 — no speed bonus, level 1, no progress; resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`), `globalTickspeedMultiplier` back to `null` (not-yet-bought — same reset `scaleUpGame` does), `scaleUpCount`/every `scaleUpTierCounts` entry/`scaleUpTargetTierIndex` back to 0 (run-scoped — Scale Up's aggregate count, per-tier multipliers, and tier-ladder progress do NOT survive a real Prestige and must be rebuilt from scratch each cycle), `purge.xp`/`lastTierXpConsumed` back to 0 (run-scoped, like resources/owned/purchased), and `everUnlockedTierIds` back to the fresh default (only the first tier true — so every tier beyond the first relocks exactly as it always has, same as owned/purchased), resets `intro.bits` ("Memory") back to `createInitialGameState()`'s fresh defaults, purely as a side effect of `purchaseLevels`/`purchaseLevelProgress` resetting for every tier above, tier01 included, while keeping `intro.mainGameUnlocked` (the gate — now PERMANENT, see `latchMainGameUnlocked`), `intro.capacity`/`intro.byteCreated`/`intro.byteCreated`/`intro.capacity` (the permanent Byte generator) and `intro.computeCores`/`intro.computeCoresEverEarned`/`intro.computeNodes`/`intro.computeClusters`/`intro.computeNetworks`/`intro.computeGrids`/`intro.computeFabrics`/`intro.computeClouds`/`intro.computeDatacenters`/`intro.computeSupercomputers`/`intro.computeMegacomputers`/`intro.computeMergePageUnlocked`/`intro.autoMergeCoresIntoNode`/`intro.autoMergeNodesIntoCluster`/`intro.autoMergeClustersIntoNetwork`/`intro.autoMergeNetworksIntoGrid`/`intro.autoMergeGridsIntoFabric`/`intro.autoMergeFabricsIntoCloud`/`intro.autoMergeCloudsIntoDatacenter`/`intro.autoMergeDatacentersIntoSupercomputer`/`intro.autoMergeSupercomputersIntoMegacomputer`/`intro.computeCoresMergeRemainingSeconds`/`intro.computeNodesMergeRemainingSeconds`/`intro.computeClustersMergeRemainingSeconds`/`intro.computeNetworksMergeRemainingSeconds`/`intro.computeGridsMergeRemainingSeconds`/`intro.computeFabricsMergeRemainingSeconds`/`intro.computeCloudsMergeRemainingSeconds`/`intro.computeDatacentersMergeRemainingSeconds`/`intro.computeSupercomputersMergeRemainingSeconds` (issue #321 — an in-flight reserve merge's timer is PERMANENT too, carried through unchanged rather than cancelled, since it represents already-committed tokens) PERMANENT, carried over from `state` unchanged (see "Byte Foundry" below) — a real Prestige resets Memory but never the main-game-unlock gate itself once it's ever latched, and never the generator from scratch either; keeps autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPurge`/`autoScaleUp`/`autoGlobalTickspeed`/`autoScaleUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPurgeEnabled` unchanged (permanent, including the Auto Purge *level*, the Auto Purge Autobuyer, and each automation's pause/resume preference, both global and per-tier; `autoScaleUp` is the automation *toggle* only — it carries over even though the aggregate `scaleUpCount` and per-tier multipliers reset), resets `autoPurgeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), adds `getPrestigePointsAwarded(money)` on top of any already-unspent `purge.points`, increments `purge.count` by 1 (both permanent, unlike `xp`). Since `owned` resets, this also disengages the last tier's XP-funded tickspeed mechanic (`isLastTierTickspeedXpUnlocked` is a live check — see "The last tier's XP-funded tickspeed" in CLAUDE.md) — with nothing banked to re-engage with either, since `lastTierXpConsumed` was just wiped along with it. Called either by the player's manual click or automatically by `tickGame` when Auto Purge's attempt budget fires |
+| `getPrestigeProductionMultiplier` | `(purgeCount, unlocked = true) → number` | `0` Purges → `1`; 1 Purge → `PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER` (1.1); n ≥ 2 → `1 + log10(n)`, when `unlocked`, else `1`. Companion `isPrestigeSpeedBonusUnlocked(state)` (the stored flag); `buyPrestigeSpeedBonus` is the 1 PP purchase. |
+| `purgeGame` | `state → state` | Requires Money ≥ `PURGE_THRESHOLD`; resets resources/owned/purchased, every tier's `tickspeedLevels`/`purchaseLevels`/`purchaseLevelProgress` entries back to their baseline (1/1/0 — no speed bonus, level 1, no progress; resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`), `globalTickspeedMultiplier` back to `null` (not-yet-bought — same reset `scaleUpGame` does), `scaleUpCount`/every `scaleUpTierCounts` entry/`scaleUpTargetTierIndex` back to 0 (run-scoped — Scale Up's aggregate count, per-tier multipliers, and tier-ladder progress do NOT survive a real Prestige and must be rebuilt from scratch each cycle), `purge.xp`/`lastTierXpConsumed` back to 0 (run-scoped, like resources/owned/purchased), and `everUnlockedTierIds` back to the fresh default (only the first tier true — so every tier beyond the first relocks exactly as it always has, same as owned/purchased), KEEPS `intro.bits` ("Memory"; shared with challenge enter/exit/completion and the Bit Rot restart; only Reboot zeroes it); `purchaseLevels`/`purchaseLevelProgress` still reset for every tier above, tier01 included, while keeping `intro.mainGameUnlocked` (the gate — now PERMANENT, see `latchMainGameUnlocked`), `intro.capacity`/`intro.byteCreated`/`intro.byteCreated`/`intro.capacity` (the permanent Byte generator) and `intro.computeCores`/`intro.computeCoresEverEarned`/`intro.computeNodes`/`intro.computeClusters`/`intro.computeNetworks`/`intro.computeGrids`/`intro.computeFabrics`/`intro.computeClouds`/`intro.computeDatacenters`/`intro.computeSupercomputers`/`intro.computeMegacomputers`/`intro.computeMergePageUnlocked`/`intro.autoMergeCoresIntoNode`/`intro.autoMergeNodesIntoCluster`/`intro.autoMergeClustersIntoNetwork`/`intro.autoMergeNetworksIntoGrid`/`intro.autoMergeGridsIntoFabric`/`intro.autoMergeFabricsIntoCloud`/`intro.autoMergeCloudsIntoDatacenter`/`intro.autoMergeDatacentersIntoSupercomputer`/`intro.autoMergeSupercomputersIntoMegacomputer`/`intro.computeCoresMergeRemainingSeconds`/`intro.computeNodesMergeRemainingSeconds`/`intro.computeClustersMergeRemainingSeconds`/`intro.computeNetworksMergeRemainingSeconds`/`intro.computeGridsMergeRemainingSeconds`/`intro.computeFabricsMergeRemainingSeconds`/`intro.computeCloudsMergeRemainingSeconds`/`intro.computeDatacentersMergeRemainingSeconds`/`intro.computeSupercomputersMergeRemainingSeconds` (issue #321 — an in-flight reserve merge's timer is PERMANENT too, carried through unchanged rather than cancelled, since it represents already-committed tokens) PERMANENT, carried over from `state` unchanged (see "Byte Foundry" below) — a real Prestige keeps Memory and never resets the main-game-unlock gate itself once it's ever latched, and never the generator from scratch either; keeps autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPurge`/`autoScaleUp`/`autoGlobalTickspeed`/`autoScaleUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPurgeEnabled` unchanged (permanent, including the Auto Purge *level*, the Auto Purge Autobuyer, and each automation's pause/resume preference, both global and per-tier; `autoScaleUp` is the automation *toggle* only — it carries over even though the aggregate `scaleUpCount` and per-tier multipliers reset), resets `autoPurgeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), adds `getPrestigePointsAwarded(money)` on top of any already-unspent `purge.points`, increments `purge.count` by 1 (both permanent, unlike `xp`). Since `owned` resets, this also disengages the last tier's XP-funded tickspeed mechanic (`isLastTierTickspeedXpUnlocked` is a live check — see "The last tier's XP-funded tickspeed" in CLAUDE.md) — with nothing banked to re-engage with either, since `lastTierXpConsumed` was just wiped along with it. Called either by the player's manual click or automatically by `tickGame` when Auto Purge's attempt budget fires |
 | `scaleUpGame` | `state → state` | Requires the target tier's completed levels (`purchaseLevels − 1`) to reach `getScaleUpRequirement(state)` and not `isProductionFrozen`; resets resources/owned/purchased/tierProductionAccumulators/autobuyerAttemptBudgets/autoPurgeAttemptBudget/tickspeedLevels/purchaseLevels/purchaseLevelProgress (every tier back to baseline)/`globalTickspeedMultiplier` (back to `null`)/`purge.xp`/`lastTierXpConsumed` (both back to 0, same as `purgeGame`) exactly like a fresh `createInitialGameState` — resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`, undoing any in-run growth — unlike `purgeGame`/`overclockGame`, keeps `intro` completely untouched (an intra-cycle soft reset, not a new cycle — see "Byte Foundry" below), autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPurge`/`autoScaleUp`/`autoGlobalTickspeed`/`autoScaleUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPurgeEnabled` unchanged (mirrors `purgeGame`'s reset pattern, including now resetting `globalTickspeedMultiplier`/`purge.xp`/`lastTierXpConsumed` the same way; see "The global tickspeed multiplier" above), **and also `overclockLastClaimCompletedLevels` via `getOverclockLevel(state)`** (carried over unchanged, including a legacy save's `overclockCount` fallback — see "Overclock" below) — and **`everUnlockedTierIds`, preserving earlier records and adding the claimed target and successor** (unlike `purgeGame`/`overclockGame`, which reset the record to tier01 — see "Scale Up" above) — and — same as `purgeGame` — disengages the last tier's live-checked XP-funded tickspeed mechanic with nothing banked to re-engage with — leaves `purge.points`/`count`/`highestMilestone` untouched — unlike `purgeGame`, it doesn't award or spend Prestige Points — increments aggregate `scaleUpCount` and `scaleUpTargetTierIndex` by 1 unconditionally, and increments the target tier and every earlier tier's `scaleUpTierCounts` entry. Called either by the player's manual click or automatically by `tickGame` when Auto Scale Up is bought |
 | `overclockGame` | `state → state` | Requires the last tier's completed levels (`purchaseLevels − 1`) to reach `getOverclockRequirement(state)` and not `isProductionFrozen`; resets everything `scaleUpGame` resets, the same way, keeps the same permanent flags/levels `scaleUpGame` keeps — **plus three differences**: unlike `scaleUpGame`, does NOT carry `everUnlockedTierIds` through (fully relocks every tier beyond the first, same as `purgeGame` — so `scaleUpTargetTierIndex` also resets to 0 here rather than being incremented); resets `scaleUpCount` and every `scaleUpTierCounts` entry back to 0 (wiping Scale Up's per-tier multipliers); and sets `overclockLastClaimCompletedLevels` (the Overclock level — replaced, never accumulated) to the last tier's whole completed-level count at claim time ( — completed level 5 initially and at least 3 above the previous claim thereafter, with a catch-up jump when the player is ahead of the bare minimum) instead of leaving it untouched. Leaves `purge.points`/`count`/`highestMilestone` untouched, same as `scaleUpGame` — doesn't award or spend Prestige Points. See "Overclock" below |
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers require a Scale-Up record plus predecessor raw level 2. Owned quantity above zero or the tier's own purchase level above 1 are old-save compatibility fallbacks; predecessor level 3 alone never records or reveals a tier |
@@ -2878,7 +2743,6 @@ purchases were manual or automatic.
 | `isLastTierTickspeedXpUnlocked` | `state → bool` | `(scaleUpTierCounts[lastTierId] ?? 0) >= 1` — whether the last tier has EVER been the target of a successful Scale Up this cycle (a one-time-per-cycle latch, not a live read of its current owned count); once true it stays true for the rest of the cycle, revealing the separate Restage upgrade left of Scale Up (below the tier list) regardless of how the last tier's own owned count fluctuates afterward. Only turns back off once a Prestige/Overclock resets `scaleUpTierCounts` |
 | `getLastTierXpTickspeedMultiplier` | `xpConsumed → number` | `(1 + LAST_TIER_XP_TICKSPEED_STEP) ** xpConsumed` (`LAST_TIER_XP_TICKSPEED_STEP = 0.01`) — compounds 1% per cumulative XP ever consumed via `consumeXpForLastTierTickspeed`, the same multiplicative form every other tier's own tickspeed multiplier uses (37 XP consumed = `1.01^37` ≈ ×1.446, not a flat +37%) |
 | `getLastTierXpTickspeedMinConsumption` | `xpConsumed → number` | `max(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, ceil(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT * xpConsumed))` (`LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1`, floor `= 1`) — the minimum a single `consumeXpForLastTierTickspeed` call may spend, growing alongside the cumulative XP already consumed this way |
-| `buyXpTickspeedAutobuyer` | `state → state` | One-time 16 PP (`XP_TICKSPEED_AUTOBUYER_UNLOCK_COST`) purchase setting `autoXpTickspeed`; needs Auto Clock Speed (`autoGlobalTickspeed`); same-reference no-op if not, if already bought, short on PP, or frozen |
 | `setAutoXpTickspeedEnabled` | `enabled → state → state` | Pause/resume `autoXpTickspeedEnabled`; no-op until bought |
 | `consumeXpForLastTierTickspeed` | `amount → state → state` | Returns the same state if `isProductionFrozen`, if not currently `isLastTierTickspeedXpUnlocked`, if the last tier's own current `owned` is 0 (nothing left to speed up), if `amount` isn't a positive integer, if it's below `getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)`, or if there isn't enough unspent XP; otherwise spends `amount` from `purge.xp`, adds it to `lastTierXpConsumed`, and resets every tier *except the last one*'s `owned` (and matching `resources`) count to 0 plus the Money balance (`resources[MONEY_ID]`) to 0 — `purchased` and the last tier's own `owned`/`resources` are untouched (see "The last tier's XP-funded tickspeed" in CLAUDE.md). Called manually (the Restage card's "🧬 {XP} XP" button, left of Scale Up) and by `tickGame` once the Auto Restage is bought and enabled — both pass the entire current XP balance |
 | `getTierProductionProgressPercent` | `(state, tierId, previousAccumulator?, elapsedSeconds = 1) → number` | `state.tierProductionAccumulators[tierId] / getEffectiveTierTickSpeedSeconds(state, tierId) * 100`, rounded and clamped to `[0, 100]` — how far that tier's accumulator has filled toward its next delivery. If the optional `previousAccumulator` crosses the tier's effective tickspeed once `elapsedSeconds` is added (with the same `TICK_ACCUMULATION_EPSILON` tolerance `tickGame` uses), returns 100 instead. `elapsedSeconds` defaults to `1`. Currently unused by `MainPage` |
@@ -2917,13 +2781,13 @@ purchases were manual or automatic.
 - `OFFLINE_PROGRESS_SPEED_MULTIPLIER = 0.5` — offline progress past the full-speed threshold below runs at 50% of normal speed, for the entire game (both the main-game tiers and the Byte Foundry — see "Offline progress" above)
 - `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS = 600` (10 minutes) — real elapsed time at or below this runs offline progress at 100% speed with no notice shown; only beyond it does `OFFLINE_PROGRESS_SPEED_MULTIPLIER` apply
 - `MAX_OFFLINE_SECONDS = 86400` (24 hours) — cap on real elapsed time counted toward offline progress
-- `PRESTIGE_SPEED_BONUS_UNLOCK_PURGES = 10` — Purge count at which the passive production speed bonus `log10(count)` unlocks
+- `PRESTIGE_SPEED_BONUS_UNLOCK_COST = 1` — PP cost of the one-time Purge speed bonus (log curve; first Purge hardcoded ×1.1 via `PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER`)
 - `TICKSPEED_MULTIPLIER_BASE_EXPONENT = 10` — exponent driving the (Money-funded) tickspeed multiplier's per-tier base cost (see `getTickspeedMultiplierBaseCost`): 10^10 for the first tier, down to 10^1 for the 10th/last tier
 - `TICKSPEED_PRODUCTION_STEP = 0.1` — each tickspeed multiplier level speeds up a tier's delivery frequency by another 10%, not the amount delivered (see `getTickspeedProductionMultiplier`/`getEffectiveTierTickSpeedSeconds`)
 - `AUTOBUYER_UNLOCK_BASE_COST = 1` — no longer an actual PP cost (see `getAutobuyerUnlockCost`'s doc above) — kept only as the price scale of PP purchases: 1 through 10 across the ten tiers
 - `AUTOBUYER_BULK_MAX_EXTRA_LEVELS = 10` (`floor(log2(BUY_MAX_ITERATION_CAP))`, so bulk tops out at exactly 1024) — how many speed-upgrade levels past the 10 ms interval floor each double an autobuyer attempt's bulk limit (see `getAutobuyerBulkLevels`).
-- `AUTOBUYER_UNLOCK_MILESTONE_START = 1` / `AUTOBUYER_UNLOCK_MILESTONE_STEP = 1` — how many purges a tier's unit-buying autobuyer requires before it unlocks automatically (see `getAutobuyerUnlockMilestone`): 1 for the first tier, up through 10 for the 10th/last, one tier per prestige across the first 10
-- `TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 11` / `TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 1` — how many purges a tier's own tickspeed autobuyer requires before it unlocks automatically (see `getTierTickspeedAutobuyerMilestone`): 11 for the first tier, spacing out by 1 more per tier after that, up through 20 for the 10th/last — later than the unit-buying autobuyer above, since it's a further-out convenience
+- `AUTOBUYER_UNLOCK_MILESTONE_START = 2` / `AUTOBUYER_UNLOCK_MILESTONE_STEP = 2` — how many purges a tier's unit-buying autobuyer requires before it unlocks automatically (see `getAutobuyerUnlockMilestone`): 1 for the first tier, up through 10 for the 10th/last, one tier per prestige across the first 10
+- `TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 22` / `TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 2` — how many purges a tier's own tickspeed autobuyer requires before it unlocks automatically (see `getTierTickspeedAutobuyerMilestone`): 11 for the first tier, spacing out by 1 more per tier after that, up through 20 for the 10th/last — later than the unit-buying autobuyer above, since it's a further-out convenience
 - `GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01` — the uniform per-level compounding rate for the global tickspeed multiplier; milestone levels use the same rate. The global tickspeed multiplier's *cost* (`getGlobalTickspeedMultiplierCost`, see the engine functions table above) is Money-funded, not PP-funded — it has no dedicated cost constant here, using an inline `10 ** (level + 1)` formula against `resources[MONEY_ID]` instead
 - `DEFAULT_PURCHASE_BLOCK_SIZE = 8` — the purchase block size a tier's level 1 (the very start of a run) requires to complete — only the *default/starting* value, not a fixed constant used throughout the game; the effective, current block size is computed at runtime by `getPurchaseBlockSize(state)` and can grow over a run (see the two constants below). Supersedes an old fixed `PURCHASE_BLOCK_SIZE = 8` constant that every level-dependent formula used directly — see `docs/DESIGN_HISTORY.md`
 - `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100` — every this many levels the LAST tier completes, the (global, shared-by-every-tier) purchase block size grows by `PURCHASE_BLOCK_SIZE_GROWTH_STEP` (see `getPurchaseBlockSize`)
@@ -2936,7 +2800,6 @@ purchases were manual or automatic.
 - `OVERCLOCK_MULTIPLIER_STEP = 0.1` — per-level growth factor for Overclock's own reward (see `getOverclockMultiplier`/`getGlobalTickspeedProductionMultiplier`/`overclockGame`, "Overclock" above) — each claimed level multiplies the global tickspeed multiplier's single per-level step by a further ×1.1, folded directly into that existing track's own step rather than a separate multiplier stacked alongside it; unconditional, no PP unlock needed
 - `OVERCLOCK_REQUIREMENT_STEP = 3` — completed-level growth required between Overclock uses; the first use has a fixed 5-completed-level floor (`getOverclockRequirement` reads `overclockLastClaimCompletedLevels`, falling back to `overclockCount` for older saves)
 - `LAST_TIER_XP_TICKSPEED_STEP = 0.01` — each XP consumed via `consumeXpForLastTierTickspeed` within the current run compounds another 1% into the last tier's own delivery frequency (see `getLastTierXpTickspeedMultiplier`) — the separate Restage upgrade (left of Scale Up below the tier list, available once `isLastTierTickspeedXpUnlocked`), which stacks with that tier's own tickspeed level
-- `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST = 16` (= `AUTOMATION_INTERVAL_CONFIG.restage.baseCost`; chain base 64 s) — one-time PP cost of Auto Restage (`buyXpTickspeedAutobuyer`)
 - `LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1` — the last tier's resource-funded tickspeed upgrade spends only this fraction of its requirement (see `getTickspeedMultiplierSpend`)
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1` — a single `consumeXpForLastTierTickspeed` call must spend at least this fraction of the XP already consumed this way (see `getLastTierXpTickspeedMinConsumption`), so repeat consumptions can't trickle in one XP at a time forever
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR = 1` — the practical minimum consumption before any XP has been consumed this way, since `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT` alone computes 0 at that point
@@ -2959,7 +2822,7 @@ purchases were manual or automatic.
 - `DISK_BUILD_COST_MULTIPLIER = 10` — Byte Foundry Disks: a defensive CAP on how many `size`-bit funding passes a single disk can ever require (`getDiskProvisionPassesRequired`) — the array's Nth disk needs N passes, but `DISK_ARRAY_LADDER_CAP` (9) means the ordinal itself never actually reaches this cap any more (the array's last, 9th disk needs only 9 passes); an earlier version paid every disk this many passes flat, regardless of ordinal (see `docs/DESIGN_HISTORY.md`)
 - `DISK_ARRAY_LADDER_CAP = 9` — Byte Foundry Disks: how many disks can ever be built at the buildable ladder's current size before it advances to the next size (see `getDiskSize`) — tracked via the cumulative, never-decremented `intro.disksBuiltTotal`; the array's own always-full cache substitutes for what would have been a 10th disk
 - `DISK_CACHE_BLOCK_COUNT = 8` — Byte Foundry Disks: a disk array's own cache (`intro.diskCache`, see `tickDiskAutoFill`) is split into this many equal blocks, each holding `size / DISK_CACHE_BLOCK_COUNT` bits, purely for display (`formatCacheSize`) — the pool's smallest size's cache also funds its own tier's level 1 automatically in bulk units, not by these display blocks (see `tickDiskLevelOneCachePull`)
-- `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER = 2` — Byte Foundry Disks: every DISK filling FROM a cache runs at this multiple of the owning pool's own Bandwidth (`getStoragePoolBandwidth` — the Byte Foundry production rate, hard-capped per pool at `(getStoragePoolCapacity(state, poolIndex) / BITS_PER_BYTE) ** DATA_STREAM_SPEED_EXPONENT * BITS_PER_BYTE` — the power (0.75) operates on Capacity converted to Bytes, with the result converted back to bits/sec, so a pool with a small Capacity window can lag behind the raw rate once production outgrows it; Storage pools display this figure in SI units). A fresh disk's own funding passes (`provisionDisk`) bank at 1x that same capped rate — no separate multiplier of its own, since 1x is the rate itself
+- `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER = 2` — Byte Foundry Disks: every DISK filling FROM a cache runs at this multiple of the owning pool's own Bandwidth (`getStoragePoolBandwidth` — the Byte Foundry production rate, hard-capped per pool at `(getStoragePoolCapacity(state, poolIndex) / BITS_PER_BYTE) ** getDataStreamSpeedExponent(state.intro) * BITS_PER_BYTE` — the current exponent operates on Capacity converted to Bytes, with the result converted back to bits/sec, so a pool with a small Capacity window can lag behind the raw rate once production outgrows it; Storage pools display this figure in SI units). A fresh disk's own funding passes (`provisionDisk`) bank at 1x that same capped rate — no separate multiplier of its own, since 1x is the rate itself
 - `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER = 5` — a read cache (an array's disk buffer) filling FROM its pool buffer (`tickDiskAutoFill` Pass 1) runs at this multiple of the pool's Bandwidth (was an unused 10; refills used to be instant, PR #879).
 - `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 5` — Byte Foundry Disks: an expedited write cache's transfer of each smaller full disk (`getDiskWriteCacheSegmentSeconds`) and its flush run at this multiple of the pool's Bandwidth — faster than `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2), the default flush rate (see `tickDiskWriteCache`)
 - `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP = 400_000` — Byte Foundry Compute Cores: Buffer / pool Memory Capacity threshold (50 KB SI, half of pool 1's end bound — historically one Capacity doubling short of the cap) at which Boosters/`ComputePage` becomes visible — scales automatically with `INTRO_CAPACITY_CAP_BITS` (10x smaller since the pool-Capacity-ceiling shrink); unrelated to Disks (see `isComputeCoreConversionUnlocked`). Capacity reaches this threshold through the full-Buffer doubling ladder rather than a Combine snap (subject to other gates)
@@ -2970,7 +2833,7 @@ purchases were manual or automatic.
 - `COMPUTE_MERGE_RESERVE_CAP = 8` — issue #321: size of the 8-slot reserve pool a boundary gains once its auto-merge is unlocked, alongside the entity's own `COMPUTE_ENTITY_CAP` (10) normal slots — "18 slots" total per boundary (`COMPUTE_ENTITY_AUTO_MERGE_CAP`). Same value as `COMPUTE_MERGE_RATIO` (a merge always consumes exactly one full group) but a separate constant since it denotes the reserve pool's own capacity, not a conversion ratio. Modeled with no persisted count field of its own — `getComputeReserveHeld` derives how much is filled straight from the live entity count instead (see "Once a boundary's auto-merge is unlocked..." above)
 - `COMPUTE_MERGE_BOUNDARIES` — per-boundary metadata (`inputField` / `outputField` / `autoFlagField` / `timerField` / `label`); boundary `i`'s merge duration is keyed off Storage pool `i + 1` (see `getComputeMergeDurationSeconds`)
 - `COMPUTE_BOOST_PRESETS = { burst: { multiplier: 32, durationSeconds: 60 }, standard: { multiplier: 8, durationSeconds: 600 }, sustain: { multiplier: 2, durationSeconds: 3600 } }` — Byte Foundry Compute Boost: base (tier 1 / Core) strength/duration tradeoffs; activating spends 1 token of whichever compute-ladder tier the player arms (Cell through Fusion — see `COMPUTE_BOOST_TIER_FIELDS` / issue #326), not always a Core — higher tiers scale multiplier by `COMPUTE_BOOST_TIER_POWER_STEP` (4) per step; duration stays at the base preset (issue #363) — see `activateComputeBoost`/`getComputeBoostTierMultiplier`/`getComputeBoostMultiplier`
-- `COMPUTE_BOOST_MAX_STACKS = 10` — Byte Foundry Compute Boost: how many times `stackComputeBoost` can extend the currently active boost's remaining duration by spending another token of that boost's own funding tier (the multiplier itself never compounds; replacing an active boost with a different preset/tier requires an explicit forfeit confirmation and refunds its unused stacks first — see `forfeitComputeBoost` / `activateComputeBoost(..., forfeitConfirmed)` / `docs/DESIGN_HISTORY.md`) — see `stackComputeBoost`/`canStackComputeBoost`/`activateComputeBoost`
+- `COMPUTE_BOOST_MAX_STACKS = 10` — Compute Boost: max boosts per multiplier lane (the running one plus those queued behind it).
 - `FILL_MULTIPLIER_*` (`layers.js`) — `FILL_MULTIPLIER_MAX_PERCENT` (1000, empty buffer), `FILL_MULTIPLIER_MIN_PERCENT` (10, multiplier at a full buffer), `FILL_MULTIPLIER_TAP_BONUS_PERCENT` (5pp stored per tap, applied as ×(1 + bonus%) to consumers, never to the fill), `FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND` (1), `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` (100, independent cap on the tap bonus alone, enforced by `tapIntroBit`/`tapPoolBuffer`)
 - `canDiskSizeFeedWriteCache(size)` (`engine.js`) — false for each pool's largest disk size (no larger size in its pool can consume it when expedited); gates `DiskArrayRow`'s stranded-disk tooltip
 

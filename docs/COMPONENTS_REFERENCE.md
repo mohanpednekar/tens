@@ -109,13 +109,13 @@ directly below its disks, not in a separate panel after all the pool cards.
 
 **`SpeedDetailsPopover`** (`components/SpeedDetailsPopover/index.jsx`) — `{ anchorRef, id, onClose, title, rows: [{ label, value }], note? }`. Rendered by the caller only while open; portals a `role="dialog"` panel to `<body>`, fixed just below the anchor and right-aligned to it (right edge clamped 8px from the viewport; flips above the anchor when it would overflow the bottom, else clamps to the viewport; re-measured every render). Opening moves focus to the panel (`preventScroll`); closing returns focus to the anchor if focus was inside. It calls `onClose` on a pointer press outside both the panel and the anchor (the anchor's own click toggles), any wheel, touch-move or scroll whose target is outside the panel (including over the anchor), Escape, or a window resize. Clicks inside stop propagation so they never reach the anchor's React ancestors.
 
-`DataLakePanel` (`bare tierIndex={poolIndex}`; optional `section="header"`/`"body"` splits the title+stats rows from the fill tile/squares, a collapsed pool card renders `header` — its big centered text is the bar text "X/N KB" (progress on the lake disk under way, X in N's unit; the lake balance shows only in the expanded header) above a thin `ThinProgressBar` toward the next disk, reused by ByteFoundryPage's running-upgrade tile) renders one lake as a single self-contained block —
+`DataLakePanel` (`bare tierIndex={poolIndex}`; optional `section="header"`/`"body"` splits the title+stats rows from the fill tile/squares, a collapsed pool card renders `header` — its big centered text is the next Booster's affordability — `getDataLakeBoosterProgressPercent`, e.g. "87%" — above a thin `ThinProgressBar` of that same percentage, reused by ByteFoundryPage's running-upgrade tile; the real lake balance shows only in the expanded header, whose body renders the 1-unit buffer tile, an in-flight transfer tile and ×1/×10/×100/×1000 disk squares in the pool's fixed unit) renders one lake as a single self-contained block —
 not a labelled table row: a header row pairing the lake's title ("`<symbol>` Lake", e.g. "KB Lake" —
 the size unit is always part of the visible name) with a single next-Booster-cost control in place of
 a lifetime-purchased-count readout (the cost figure alone is self-explanatory — see below for what
 this control does); laid out like a pool/Data Stream tile (`LakeHeader`): name top-left with the Booster target price + buy control (🏷️) under it, ⚡ current fill speed top-right (the pool's Bandwidth while the lake drains/overflows automatically, else 0), the filled amount (full disks plus the open slot, `formatPoolBalance`) big and centered, and 🗜 Flush Pool / Scale Out under the speed when offered (otherwise `⏳ time left` there — `(next Booster cost − filled) / fill speed`, shown only while still short of the cost, the lake can hold it, the Booster entity isn't at cap, and the lake is filling); then a dedicated `LakePoolTile` (own
 `FillableStatCard`-style element, purely additive over the per-square fill overlay below — same
-`fillBits`/`getDataLakeCurrentFillSubSize` data, no separate mechanic) showing "`<fillBits>` /
+`fillBits`/`getDataLakeNextTransferTarget` data, no separate mechanic) showing "`<fillBits>` /
 `<open slot size>`" — ALWAYS rendered whenever an open slot exists (`currentFillSubSize !== null`),
 reading a static "Locked · 0 / `<size>`" before `isDataLakePoolReady` rather than being absent, so
 the section never jumps from showing nothing to already mid-fill with no visible history in between
@@ -193,7 +193,7 @@ first `getComputeBoostCoveredTierCount` Factory tiers (`tickGame`). Exports:
   `warn`-colored box-shadow (static under `prefers-reduced-motion`). Overrides the card's own
   `box-shadow`/`animation` while boosted.
 - `isDataStreamBoosted(intro)`, `isFactoryTierBoosted(intro, tierIndex)` (0-based ladder index),
-  `getComputeBoostDescription(intro)` (null when inactive), `COMPUTE_BOOST_LABELS`.
+  `getComputeBoostDescription(intro, tierIndex = 0)` (0-based Factory tier; that tier's own summed multiplier, only the lanes covering it, whole-lane time left and waiting boosts; null when no lane covers it), `COMPUTE_BOOST_LABELS`.
 
 Used on ByteFoundryPage's `DataStreamCard` (glow + badge after the Speed figure, tap button described by it) and MainPage's
 `TierLine` (glow + badge after the production figure + a line in the tier's details list).

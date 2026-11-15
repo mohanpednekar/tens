@@ -249,7 +249,7 @@ list always protects `ci.yml`/`deploy.yml`/`release.yml`/`automation-self-heal.y
 
 **Orchestration model.** The maintainer orchestrates; the scheduled workflow develops. `claude-task`
 issues (`.github/ISSUE_TEMPLATE/claude-task.yml`) are the backlog for `autonomous-maintenance.yml`
-(twice daily, 9:00am/9:00pm IST), one unit of work per run: Phase 0 (CI/CD failures + unaddressed
+(four slots daily, 4am/10am/4pm/10pm IST, each mapped to a task kind + model by the `Resolve slot` step — `docs/AUTOMATION.md` "Slot schedule"), one unit of work per run: Phase 0 (CI/CD failures + unaddressed
 critical/high Dependabot alerts) > Phase A (backlog: `priority:high` → normal/FIFO → `priority:low`) >
 Phase B (maintenance menu: tests, dependency/security incl. medium/low alerts, code quality, doc sync,
 workflow self-improvement, gap analysis). A run that notices a genuine out-of-scope bug files a
@@ -535,8 +535,8 @@ Strict three-layer separation:
    via AppNav once `isComputeCoreConversionUnlocked`. Hosts the nine-boundary merge chain (Cell → Battery → … → Fusion,
    "Charge up"/"Auto-charge"; ⚡ Charge button = 1 unit/s top→bottom row then instant 8→1, `startComputeCharge`/`tickComputeCharges`) behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute" names the
    page/feature only — entities drop the word in every player-visible label. Deliberately terse (icon-only controls,
-   full sentence in `title`/`aria-label`; mechanic prose lives in the Manual). Top card = active Boost timer bar
-   (Pop-or-Forfeit left by `getUnusedComputeBoostStacks`, Stack right, enforced in the engine too) (Auto Boost is automatic: one token per automated charge start, `autoBoostFromTier`; its Switch + preset, like Auto-charge's pause Switch `computeAutoChargeEnabled`, live on Firmware → Automation → Power Automation);
+   full sentence in `title`/`aria-label`; mechanic prose lives in the Manual). Top card = Boost timer bars per running multiplier lane
+   (`intro.computeBoosts`: different multipliers run in parallel and add up; same multiplier queues behind the running boost, waiting ones strongest-tier-first; one row per same-tier group, Pop-or-Forfeit on the lane's last row, Stack on its first, per `boostType`, enforced in the engine too) (Auto Boost is automatic: one token per automated charge start, `autoBoostFromTier`; its Switch + preset, like Auto-charge's pause Switch `computeAutoChargeEnabled`, live on Firmware → Automation → Power Automation);
    then per-tier rows — the ONE selected tier shows the 3 Boost presets inline. Constants: `COMPUTE_ENTITY_CAP` 10,
    `COMPUTE_MERGE_RATIO` 8, `COMPUTE_MERGE_RESERVE_CAP` 8. Cells (`computeCores`) are bought from the matching Data Lake,
    not minted from Capacity. Detail: `docs/FOUNDRY_MECHANICS_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`, `docs/DESIGN_HISTORY.md`.
@@ -587,6 +587,8 @@ state to the active slot, then redirects every save read/write to an isolated `'
 
 ### Pool-local flushes
 
+**Lake hierarchy (#1087):** each Data Lake is one permanent 1-unit buffer (`fillBits`) + ×1/×10/×100/×1000 disks (`depositedUnits`, counts derived); pool input feeds the buffer, then timed `lakeTransfer`s move it into ×1 disks and consolidate 9 smaller disks of every denomination + a full buffer into the next size (×1000 slots come only from Flush). Boosters spend banked disks + a full buffer only; the collapsed lake shows `getDataLakeBoosterProgressPercent`. Detail: `docs/ECONOMY_REFERENCE.md` "Hierarchical lake disks".
+
 Each Storage pool has an independent end-of-progression **flush** (`flushStoragePool`; formerly "reset"), offered only at 9/9/9 disks, with a
 completely full Data Lake, when the next Booster costs more than the lake can hold. It empties only that
 pool's disks, buffer, and lake (Booster state and prior reset rewards remain) and permanently adds 1,000
@@ -600,7 +602,7 @@ this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop" (n
 
 ### Achievements (epic #1046, basic slice)
 
-State `achievements` (`earned`, lifetime `counters.pings`) survives every reset but a full Reset; registry `ACHIEVEMENT_GROUPS`/`ACHIEVEMENT_DEFINITIONS` in `layers.js`; `detectAchievements` runs after each tick/Ping; `AchievementsPage` (page id `'achievements'`, More entry) renders them. Whole feature behind `ACHIEVEMENTS_FEATURE.enabled` (on in every build). No bonuses yet. Detail: `docs/ECONOMY_REFERENCE.md` "Achievements".
+State `achievements` (`earned`, lifetime `counters.pings`) survives every reset but a full Reset; registry `ACHIEVEMENT_GROUPS`/`ACHIEVEMENT_DEFINITIONS` in `layers.js`; `detectAchievements` runs after each tick/Ping; `AchievementsPage` (page id `'achievements'`, More entry) renders them. Whole feature behind `ACHIEVEMENTS_FEATURE.enabled` (on in every build). The 20 Foundry Reclamation I/II achievements are the first functional bonuses: they permanently upgrade each pool's two within-pool Bitrate exponent steps, retained across Reformat and Reboot. Other achievement bonuses remain deferred. Detail: `docs/ECONOMY_REFERENCE.md` "Achievements".
 
 ### Daily challenges (epic #1062, basic slice)
 
@@ -647,8 +649,9 @@ a purchase control yet (deferred to #414, blocked pending maintainer-approved sp
 `getPrestigePointsAwarded`: 1 base PP at 1 Googol Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64)
 additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Compression
 upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then doubles PP-per-power; cost
-`100^(level+1)` PP). Production speed bonus (`getPrestigeProductionMultiplier`) is automatic at 10
-Purges: ×`log10(count)` (else ×1) — no PP cost; see `docs/ECONOMY_REFERENCE.md`. `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
+`100^(level+1)` PP). Production speed bonus (`getPrestigeProductionMultiplier`) is a one-time 1 PP purchase
+(`buyPrestigeSpeedBonus`/`prestigeSpeedBonusUnlocked`; Firmware → Prestige opens with a PP tutorial callout) giving
+×1.1 for the 1st Purge (hardcoded `PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER`), then ×`1 + log10(count)` (×2 at 10, ×3 at 100, ×4 at 1,000…); see `docs/ECONOMY_REFERENCE.md`. `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
 (`getMoneyExponent`/`getPurgePercent`) — only the live freeze/Prestige trigger moved to
 `PURGE_THRESHOLD`; see `docs/DESIGN_HISTORY.md` for why. MainPage's headline balance (`MoneyHero`) switches from Bits to whole Bytes once the balance reaches
 8000 Bits (`formatMoneyBalance`, `MONEY_BYTES_DISPLAY_THRESHOLD`); a small Bits subline then shows
@@ -665,14 +668,16 @@ save passes through once before the main game — a ONE-TIME-EVER gate (`latchMa
 capacity threshold is reached. Pinging fills the **Data Stream** (Buffer-capped) which Compile turns into
 a permanent Byte generator; **Upgrade Capacity** / **Upgrade Bitrate** grow it one at a time
 (`queueIntroSpeedUpgrade`, `tickCapacityUpgradeDrain`; sit OUTSIDE the forced priority order). Displayed
-Speed is derived (`getDataStreamSpeedBytesPerSecond`, exponent `getDataStreamSpeedExponent`); extra Disk
-sizes need a Reformat (`unlockNextDiskSizeByFoundryReset`). Reboot keeps the generator and
+Speed is derived (`getDataStreamSpeedBytesPerSecond`, exponent `getDataStreamSpeedExponent`);
+the exponent starts at 0.5, climbs by 10% toward 1.0 at each pool boundary and by 10% toward
+its next pool within an array; the first two Compact Pool achievements upgrade that pool's two
+array steps to 10% toward 1.0 (`getDataStreamSpeedExponent`; details in `docs/ECONOMY_REFERENCE.md`). Reboot keeps the generator and
 gate latch but resets Capacity (`buildEraIntroReset`). Recurring actions follow a **forced priority
 order** Disk Fill > Provision Disk > Compute Boost (a lower one is disabled, in UI and engine, while a
 higher one is available; Provision Disk outranks Compute only while ARMED — `isProvisionDiskInProgress`). An always-on auto-convert (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`)
 turns Data Stream bits into free `tier01` units. Generator, Disks, Data Lakes, and every compute-ladder
-entity (Cell → … → Fusion) are PERMANENT across real Prestige; only Data Stream balance and
-tier01's purchase-block progress reset per cycle. Nothing here ever fully freezes.
+entity (Cell → … → Fusion) are PERMANENT across real Prestige; only tier01's purchase-block
+progress resets per cycle (the Data Stream balance is kept). Nothing here ever fully freezes.
 
 **Hard rules (full text and the rest of the Foundry mechanics: `docs/FOUNDRY_MECHANICS_REFERENCE.md`):**
 - **Fill multiplier** (`FILL_MULTIPLIER_*`, `getFillMultiplierPercent`): displayed Speed/Bandwidth never
@@ -692,12 +697,12 @@ tier01's purchase-block progress reset per cycle. Nothing here ever fully freeze
 - **Disks** (`provisionDisk`, `tickDiskAutoFill`, `tickDiskPull`, `tickDiskLevelOneCachePull`): ladder
   advances every `DISK_ARRAY_LADDER_CAP` (9) disks; Factory is funded **pull-based** from full disks,
   fully automatic (no click, no autobuyer gate). Disks/caches/builds are PERMANENT across Prestige.
-  The pool's smallest size's read cache fills from its pool buffer as a timed 5× transfer (`CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER`). Every size above its pool's smallest fills via its write cache FROM THE POOL BUFFER by default (pool fill
+  The pool's smallest size's read cache fills from its pool buffer as a timed 5× transfer (`CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER`). Every size above its pool's smallest fills DIRECTLY from the pool buffer by default — landing the instant it is funded, no write-cache flush stage (#1087) (pool fill
   order: read cache, then write caches smallest size first); clicking an empty disk expedites it
   (`expediteDiskFill`) — it jumps ahead of the other write caches for the pool buffer, consumes the smaller full
-  disks of its pool it needs in parallel alongside that buffer, and flushes at 5× (`docs/ECONOMY_REFERENCE.md`).
+  disks of its pool it needs in parallel alongside that buffer, and lands the instant it is funded (`docs/ECONOMY_REFERENCE.md`).
   Stranded disks are never destroyed or swept into Bits; merges never cross a pool boundary.
-- **Data Lakes** (`intro.dataLakes`): a lake disk only STARTS while its pool buffer is full and is never
+- **Data Lakes** (`intro.dataLakes`): a lake fill waits for a full pool buffer only to START a Booster acquisition (`acquiring`, cleared on purchase; Boosters are paid with whole disks, exact change, never broken) and is never
   interrupted once under way (`isDataLakeDiskFillStartAllowed`). Booster control is "one click, one full fill-then-buy conversion,
   then stop" until the pool's era-long `boosterAuto` latch is set (then it auto-buys); `buyBooster` spends only banked lake units, outside the
   forced priority order; sub-sizes capped 9/9/9 (`DATA_LAKE_SUB_SIZE_DISK_CAPS`).

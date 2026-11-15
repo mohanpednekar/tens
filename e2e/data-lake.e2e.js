@@ -17,7 +17,7 @@ const seedDataLakeSave = () => {
       // The KB lake already holds 1 banked unit — its own level-1 capacity is 10, so this isn't
       // full, just enough to afford the very first Booster (cost 1) — and boostersUnlocked is
       // already latched, as it would be the moment a lake's own first (×1) disk ever completes
-      // (see fillDataLakeDisks in engine.js). Seeded directly rather than played through the real
+      // (see fillDataLakeBuffer in engine.js). Seeded directly rather than played through the real
       // pool-overflow fill (a real-time mechanic) to keep this e2e spec fast and deterministic.
       // The manual Booster buy additionally needs the pool "ready" (a built 1 KB disk, see
       // isDataLakePoolReady) — the engine rejects startDataLakeAutoConvert without it.
