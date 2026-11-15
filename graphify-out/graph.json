@@ -28905,6 +28905,17 @@
       "community": 0,
       "community_name": "lint-workflow-shell.mjs",
       "norm_label": "verify-maintainer-checklist.test.js"
+    },
+    {
+      "id": "scripts_simulate_challenges",
+      "label": "simulate-challenges.mjs",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "bump-version.mjs",
+      "file_type": "code",
+      "norm_label": "simulate-challenges.mjs",
+      "source_file": "scripts/simulate-challenges.mjs",
+      "source_location": "L1"
     }
   ],
   "links": [
