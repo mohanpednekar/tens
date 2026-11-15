@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Stalled claude/auto-* PR sweep (#60): finds open PRs on `claude/auto-*` branches
-# that are stuck — a failing check, or a real merge conflict against main — with no
-# activity (commit, comment, review: GitHub's `updatedAt`) for STALL_HOURS (default
-# 24), and posts a marker comment via GH_AUTOMATION_PAT. The comment re-fires
+# Stalled auto-PR sweep (#60): finds open PRs on `claude/auto-*` / `devin/auto-*`
+# branches that are stuck — a failing check, a real merge conflict against main, or
+# all-green checks that simply never merged (unresolved threads, no review marker) —
+# with no activity (commit, comment, review: GitHub's `updatedAt`) for STALL_HOURS
+# (default 24). A PR merely BEHIND main is refreshed directly via the update-branch
+# API (no staleness wait). Stalled PRs get a marker comment via GH_AUTOMATION_PAT. The comment re-fires
 # autonomous-pr-followup.yml's existing `issue_comment` trigger (no edit to that
 # protected workflow). After MAX_RETRIES (default 3) sweep comments on one PR it
 # files an `automation-retro` issue instead of retrying forever.
@@ -31,22 +33,38 @@ run() {
 }
 
 prs=$(gh pr list --state open --limit 100 \
-  --json number,headRefName,updatedAt,mergeable,statusCheckRollup,comments) || {
+  --json number,headRefName,updatedAt,mergeable,mergeStateStatus,statusCheckRollup,comments) || {
   echo "::warning::stalled-PR sweep: gh pr list failed — skipping."
   exit 0
 }
+
+# Behind main (but not conflicted): merge main in right away. A behind PR can't
+# auto-merge under an up-to-date-branch rule and nothing else refreshes it. 422 =
+# nothing to do; tolerated.
+behind=$(jq -r '.[]
+  | select(.headRefName | startswith("claude/auto-") or startswith("devin/auto-"))
+  | select(.mergeStateStatus == "BEHIND" and .mergeable != "CONFLICTING")
+  | .number' <<<"$prs")
+for n in $behind; do
+  echo "PR #$n is behind main — requesting update-branch."
+  run gh api -X PUT "repos/{owner}/{repo}/pulls/$n/update-branch" || true
+done
 
 cutoff=$(( $(date +%s) - STALL_HOURS * 3600 ))
 
 # One TSV row per stalled PR: number, reason (conflict|failing-check), prior sweep comments.
 rows=$(jq -r --argjson cutoff "$cutoff" --arg marker "$MARKER" '
   .[]
-  | select(.headRefName | startswith("claude/auto-"))
+  | select(.headRefName | startswith("claude/auto-") or startswith("devin/auto-"))
+  | select(.mergeStateStatus != "BEHIND")
   | select((.updatedAt | fromdateiso8601) < $cutoff)
   | (if .mergeable == "CONFLICTING" then "conflict"
      elif ([.statusCheckRollup[]? | (.conclusion // .state // "")]
            | any(. == "FAILURE" or . == "TIMED_OUT" or . == "ERROR" or . == "STARTUP_FAILURE"))
        then "failing-check"
+     elif ([.statusCheckRollup[]? | (.conclusion // .state // "")]
+           | length > 0 and all(. == "SUCCESS" or . == "NEUTRAL" or . == "SKIPPED"))
+       then "green-unmerged"
      else empty end) as $reason
   | [.number, $reason, ([.comments[]?.body | select(contains($marker))] | length)]
   | @tsv' <<<"$prs")
@@ -79,6 +97,8 @@ PR #${number} (${reason}) is still stalled after ${retries} sweep-triggered foll
   fi
   if [ "$reason" = conflict ]; then
     text="automation: this PR has a merge conflict against \`main\` and needs attention — merge \`main\` into the branch, resolve the conflicts for real, rerun \`yarn test\`, and push."
+  elif [ "$reason" = green-unmerged ]; then
+    text="automation: all checks are green but this PR has not merged for ${STALL_HOURS}h+. Get it merge-ready: reply to and resolve every open review thread (fix real findings, answer the rest), run the code-reviewer subagent on the head SHA and post its adversarial-review marker, then — if the diff touches no \`.github/workflows/**\` file and the verdict is APPROVE — mark the PR ready and enable auto-merge. Otherwise say once what blocks it."
   else
     text="automation: retrying after an apparent stall — a check on this PR is failing and nothing has happened for ${STALL_HOURS}h+. Investigate the failing check and push a fix."
   fi

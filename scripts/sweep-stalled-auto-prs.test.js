@@ -79,4 +79,27 @@ describe('sweep-stalled-auto-prs.sh', () => {
     expect(r.calls).toMatch(/issue create .*automation-retro/);
     expect(r.calls).not.toMatch(/pr comment/);
   });
+
+  it('comments on a stale PR whose checks are all green but never merged', () => {
+    const r = sweep([pr({ statusCheckRollup: [{ conclusion: 'SUCCESS' }, { conclusion: 'NEUTRAL' }] })]);
+    expect(r.calls).toMatch(/pr comment 1 .*all checks are green/s);
+  });
+
+  it('does not nudge a green PR while a check is still pending', () => {
+    const r = sweep([pr({ statusCheckRollup: [{ conclusion: 'SUCCESS' }, { state: 'PENDING' }] })]);
+    expect(r.calls).toBe('');
+  });
+
+  it('covers devin/auto-* branches', () => {
+    const r = sweep([pr({ headRefName: 'devin/auto-x', statusCheckRollup: [{ conclusion: 'FAILURE' }] })]);
+    expect(r.calls).toMatch(/pr comment 1 /);
+  });
+
+  it('refreshes a behind PR via update-branch immediately, without commenting', () => {
+    const r = sweep([
+      pr({ updatedAt: new Date().toISOString(), mergeStateStatus: 'BEHIND', statusCheckRollup: [{ conclusion: 'SUCCESS' }] }),
+    ]);
+    expect(r.calls).toMatch(/api -X PUT .*pulls\/1\/update-branch/);
+    expect(r.calls).not.toMatch(/pr comment/);
+  });
 });
