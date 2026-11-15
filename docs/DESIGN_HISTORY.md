@@ -9403,3 +9403,7 @@ parallel and add up; the same multiplier queues in descending strength (funding 
 State is now `intro.computeBoosts` lanes; a running head is never preempted by a stronger queued boost. Old saves load via
 `getComputeBoostLanes`' legacy read (pooled timer split into per-stack entries).
 
+
+## Data Stream balance kept through Prestige (#1096)
+
+Purge / challenge enter-exit used to reset `intro.bits` to 0 each cycle ("a new cycle starts the screen's balance from 0"). Dropped by maintainer request: Prestige never empties the Data Stream. Reboot (`buildEraIntroReset`) still zeroes it. Side effect: a challenge run starts with the carried balance (auto-convert may turn it into free tier01 units); accepted. The simulate-run-times skill was not re-run.

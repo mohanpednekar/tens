@@ -4994,7 +4994,7 @@ describe('tickGame Compute Core/Node integration', () => {
   it('carries computeCores/computeCoresEverEarned/computeNodes through a real Prestige unchanged, same permanence as the Byte generator/Storage', () => {
     const state = withMoney(
       withIntro(createInitialGameState(), {
-        computeCores: 5, computeCoresEverEarned: 13, computeNodes: 2, byteCreated: true, capacity: 800,
+        computeCores: 5, computeCoresEverEarned: 13, computeNodes: 2, byteCreated: true, capacity: 800, bits: 300,
       }),
       PURGE_THRESHOLD
     )
@@ -5002,8 +5002,8 @@ describe('tickGame Compute Core/Node integration', () => {
     expect(after.intro.computeCores).toBe(5)
     expect(after.intro.computeCoresEverEarned).toBe(13)
     expect(after.intro.computeNodes).toBe(2)
-    // Memory itself still resets fresh, unlike the permanent Compute counters above.
-    expect(after.intro.bits).toBe(0)
+    // The Data Stream balance is kept as well.
+    expect(after.intro.bits).toBe(300)
   })
 
   it('carries every merge-chain entity (Clusters through Megacomputers) through a real Prestige unchanged', () => {
@@ -8475,7 +8475,7 @@ describe('purgeGame', () => {
     expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
   })
 
-  it('resets the Byte Foundry\'s Memory across prestige, but keeps the generator/its upgrades AND mainGameUnlocked permanent', () => {
+  it('keeps the Byte Foundry\'s Data Stream balance across prestige, and keeps the generator/its upgrades AND mainGameUnlocked permanent', () => {
     const state = withIntro(withMoney(createInitialGameState(), PURGE_THRESHOLD), {
       bits: 500,
       capacity: 8000,
@@ -8483,8 +8483,8 @@ describe('purgeGame', () => {
       mainGameUnlocked: true,
     })
     const after = purgeGame(state)
-    // Memory resets to fresh.
-    expect(after.intro.bits).toBe(0)
+    // The Data Stream balance survives Prestige.
+    expect(after.intro.bits).toBe(500)
     // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked) — a real Prestige never
     // re-gates it once it's ever been true.
     expect(after.intro.mainGameUnlocked).toBe(true)
@@ -8494,18 +8494,18 @@ describe('purgeGame', () => {
     expect(after.intro.byteCreated).toBe(true)
   })
 
-  it('resets resources/owned together with the intro\'s Memory in the same prestige, with no stale Byte-Foundry-granted units left over', () => {
+  it('resets resources/owned in the same prestige while keeping the intro\'s Data Stream balance, with no stale Byte-Foundry-granted units left over', () => {
     const state = withIntro(
       withOwned(withMoney(createInitialGameState(), PURGE_THRESHOLD), tensTier.id, 8),
       { bits: 4000, capacity: 8000, byteCreated: true, mainGameUnlocked: true }
     )
     const after = purgeGame(state)
     expect(after.owned[tensTier.id]).toBe(0)
-    expect(after.intro.bits).toBe(0)
+    expect(after.intro.bits).toBe(4000)
     // mainGameUnlocked is permanent now — see latchMainGameUnlocked.
     expect(after.intro.mainGameUnlocked).toBe(true)
-    // capacity/byteCreated (the generator) are untouched by this same reset — no stale bits, but
-    // no stale/wiped generator progress either.
+    // capacity/byteCreated (the generator) are untouched by this same reset — no
+    // stale/wiped generator progress either.
     expect(after.intro.capacity).toBe(8000)
     expect(after.intro.byteCreated).toBe(true)
   })

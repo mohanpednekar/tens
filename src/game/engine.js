@@ -391,9 +391,8 @@ export const createInitialGameState = () => ({
   // Field naming ('intro') is deliberately decoupled from the page's own themed name ("Byte
   // Foundry"), same id/name decoupling convention TIER_DEFINITIONS' own `id` vs `name` uses.
   //
-  // Three distinct groups, per purgeGame (see there): Data Stream balance (bits/
-  // productionAccumulator) resets to fresh every real Prestige — a new cycle always starts this
-  // screen's balance from 0. mainGameUnlocked itself, despite living in this same object, is a
+  // Three distinct groups, per purgeGame (see there): Data Stream balance (bits)
+  // is KEPT through every Factory-cycle reset (Prestige never empties it). mainGameUnlocked itself, despite living in this same object, is a
   // PERMANENT one-time-ever latch (see latchMainGameUnlocked below) — once ever set true by
   // reaching Storage-unlock capacity, no real Prestige or Era ascension ever resets it again, so
   // Factory stays permanently reachable from then on. The Byte generator itself and every upgrade
@@ -408,7 +407,7 @@ export const createInitialGameState = () => ({
   // Stream Buffer covers the cost.
   intro: {
     bits: 0,                   // Data Stream balance — can be fractional (see
-                                // tickIntroProduction/getDataStreamEffectMultiplier). Resets on Prestige.
+                                // tickIntroProduction/getDataStreamEffectMultiplier). Kept through Prestige (Reboot zeroes it).
     // PERMANENT — Data Stream Buffer / pool Memory Capacity, the Data Stream's ONLY purchased
     // progression variable: starts at INTRO_STARTING_CAPACITY and doubles per "Upgrade Data
     // Stream" purchase (see upgradePoolCapacity — cost = current capacity). Speed is derived
@@ -453,7 +452,7 @@ export const createInitialGameState = () => ({
     // PERMANENT — { [capacityBits]: count } of currently-FULL Disks of that size (see
     // tickDiskAutoFill/pullDiskForCurrentLevel below) — "never lost," survives Prestige/Scale
     // Up/Overclock exactly like the Byte generator itself (a full disk's contents ride through a
-    // real Prestige untouched even though Memory itself resets, since a disk is a separate store,
+    // real Prestige untouched (Memory is kept too), since a disk is a separate store,
     // not part of Memory). Empty object, not per-denomination zeros, since the set of
     // denominations ever built is open-ended. The number of currently EMPTY disks of a size is
     // always disksBuiltTotal[size] - disks[size].
@@ -7670,9 +7669,7 @@ const resetFactoryCycle = (state, awardPurge) => {
       history: nextHistory,
       pinnedIds: nextPinnedIds,
     },
-    // "Memory" (bits/productionAccumulator) resets to fresh on every real Prestige, in the same
-    // atomic reset as resources/owned above — a new cycle always starts this screen's balance from
-    // 0. mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked) — once the main game has
+    // The Data Stream balance (bits) is KEPT through every real Prestige (see below). mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked) — once the main game has
     // ever been revealed, a real Prestige never re-gates it: Factory stays reachable from the
     // instant this prestige resolves, with no mandatory Byte Foundry replay. The Byte generator
     // itself and every upgrade to it — capacity/byteCreated — are likewise
@@ -7688,6 +7685,8 @@ const resetFactoryCycle = (state, awardPurge) => {
       mainGameUnlocked: state.intro?.mainGameUnlocked ?? initial.intro.mainGameUnlocked,
       capacity: state.intro?.capacity ?? initial.intro.capacity,
       byteCreated: state.intro?.byteCreated ?? initial.intro.byteCreated,
+      // The Data Stream balance survives a Factory-cycle reset (Purge / challenge enter/exit) — Prestige never empties it.
+      bits: state.intro?.bits ?? initial.intro.bits,
       // Convenience caps from resetByteFoundry — permanent across Prestige so auto-replay keeps
       // working after a real Prestige cycle; cleared only by a full save Reset.
       foundryResetCaps: state.intro?.foundryResetCaps ?? initial.intro.foundryResetCaps,
@@ -7696,8 +7695,8 @@ const resetFactoryCycle = (state, awardPurge) => {
       poolExponentBonuses: { ...(state.intro?.poolExponentBonuses ?? {}) },
       // Disks (full or empty), each array's own cache, any in-progress build, and the cumulative
       // build ladder are just as permanent as the Byte generator itself above — "never lost," not
-      // part of this cycle's Memory reset. A disk already FULL when Prestige fires stays full, its
-      // contents intact even though Memory itself resets to 0 — this is what lets banked-up
+      // part of this cycle's reset. A disk already FULL when Prestige fires stays full, its
+      // contents intact and the Data Stream balance is kept too — this is what lets banked-up
       // Storage give a new cycle a head start: the smallest size's own fixed corresponding tier is
       // tier01, whose fresh post-Prestige level 1 is exactly that size's required level, so it's
       // immediately pull-eligible again (see tickDiskPull).
@@ -7724,7 +7723,7 @@ const resetFactoryCycle = (state, awardPurge) => {
       poolBuffers: state.intro?.poolBuffers ?? initial.intro.poolBuffers,
       // In-flight cache transfers are just as permanent as the Disks/build state they operate on
       // above (diskBuild already was) — a real Prestige must never affect the Byte Foundry beyond
-      // resetting Memory/tier01 progress themselves (see docs/DESIGN_HISTORY.md). These two used to
+      // resetting tier01 progress themselves (see docs/DESIGN_HISTORY.md). These two used to
       // reset unconditionally here, which — combined with the write-cache stranding-pause logic
       // freezing a merge whose source becomes stranded — meant any segments already collected into
       // a frozen merge were silently destroyed the next time this fired, with no way back: not
@@ -7742,7 +7741,7 @@ const resetFactoryCycle = (state, awardPurge) => {
       poolResetRebuildingCount: state.intro?.poolResetRebuildingCount ?? initial.intro.poolResetRebuildingCount,
       // Every compute-ladder entity (Core through Megacomputer), and the ComputePage reveal latch,
       // are just as permanent as the Byte generator/Storage above — carried over unchanged, never
-      // wiped by a real Prestige along with Memory itself.
+      // wiped by a real Prestige.
       computeCores: state.intro?.computeCores ?? initial.intro.computeCores,
       computeCoresEverEarned: state.intro?.computeCoresEverEarned ?? initial.intro.computeCoresEverEarned,
       computeNodes: state.intro?.computeNodes ?? initial.intro.computeNodes,
@@ -7942,7 +7941,7 @@ export const scaleUpGame = state => {
   }
   return {
     ...initial,
-    // Unlike purgeGame (which resets the Data Stream balance every cycle but keeps the
+    // Unlike purgeGame (which keeps the Data Stream balance and the
     // generator itself and the mainGameUnlocked latch permanent — see there), this is an
     // intra-cycle soft reset and carries the whole intro object through completely untouched,
     // Memory included.
@@ -8041,7 +8040,7 @@ export const overclockGame = state => {
   const initial = createInitialGameState()
   return {
     ...initial,
-    // Unlike purgeGame (which resets the Data Stream balance every cycle but keeps the
+    // Unlike purgeGame (which keeps the Data Stream balance and the
     // generator itself and the mainGameUnlocked latch permanent — see there), this is an
     // intra-cycle soft reset and carries the whole intro object through completely untouched,
     // same as scaleUpGame.

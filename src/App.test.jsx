@@ -1079,9 +1079,9 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
 
   expect(screen.queryByRole('dialog', { name: /purge required/i })).not.toBeInTheDocument()
   // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked in engine.js) — a real Prestige
-  // resets the Byte Foundry's Data Stream balance but never re-gates it, so the app stays on
+  // keeps the Byte Foundry's Data Stream balance and never re-gates it, so the app stays on
   // Factory rather than navigating back to the Byte Foundry — see the dedicated Byte-Foundry/
-  // Prestige interaction tests further down for the full reset assertions.
+  // Prestige interaction tests further down for the full assertions.
   expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
 })
 
@@ -5355,11 +5355,11 @@ describe('Compute auto-charge automation', () => {
 // is crossed (see engine.js's latchMainGameUnlocked) — a real Prestige no longer sends the player
 // back through the intro; App.jsx's own routing derives off mainGameUnlocked, which simply stays
 // true from then on. The Byte generator itself (capacity/byteCreated/tickSpeedSeconds/
-// productionMultiplier) is likewise PERMANENT — only the Data Stream balance (bits/
-// productionAccumulator) resets each cycle. Scale Up/Overclock remain unaffected (covered at the
+// productionMultiplier) is likewise PERMANENT — the Data Stream balance (bits) is
+// kept too. Scale Up/Overclock remain unaffected (covered at the
 // engine.test.js level, not here).
 
-test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', () => {
+test('a real Prestige from MainPage keeps Data Stream balance and keeps Factory reachable — mainGameUnlocked no longer resets', () => {
   // purge.count: 1 skips the mandatory first-time full-screen prompt (see the test above) in
   // favor of the ordinary top banner, so MainPage's own heading is actually on-screen to assert on.
   seedMainGameState({
@@ -5381,9 +5381,9 @@ test('a real Prestige from MainPage resets Data Stream balance but keeps Factory
   expect(screen.queryByRole('heading', { level: 1, name: /byte foundry/i })).not.toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  // Data Stream balance resets to fresh; the gate itself stays permanently unlocked.
+  // Data Stream balance survives Prestige; the gate itself stays permanently unlocked.
   expect(saved.intro.mainGameUnlocked).toBe(true)
-  expect(saved.intro.bits).toBe(0)
+  expect(saved.intro.bits).toBeGreaterThanOrEqual(500)
   // The generator and its upgrades are permanent — carried over from before the Prestige.
   expect(saved.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
   expect(saved.intro.byteCreated).toBe(true)

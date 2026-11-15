@@ -358,7 +358,7 @@ export const FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT = 100
 // Stream via the read-cache flush, not a further transfer out of it at pull time.
 // Disks (and their arrays' cache) are themselves PERMANENT, like the Byte generator itself (see
 // purgeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
-// even though Data Stream itself resets, letting banked-up Storage give a fresh cycle a head start.
+// and the Data Stream balance is kept too, letting banked-up Storage give a fresh cycle a head start.
 // The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
 // until Buffer / pool Memory Capacity reaches this many bits — deliberately set to EQUAL pool 1's
 // own display-capacity-threshold gate (getPoolCapacityUnlockThresholdBits(1) in engine.js — 1024

@@ -122,7 +122,7 @@ exported/tested — only its one UI caller was removed. The generator, Disks, Da
 compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric, Cloud, Datacenter, Supercomputer,
 Fusion (every tier past Battery mergeable manually, 8:1 per tier, once unlocked — "Compute" names the
 page/feature only, not any entity) — are all permanent across every real Prestige, as is the
-main-game-unlock gate once latched; only Data Stream balance and tier01's purchase-block progress reset
+main-game-unlock gate once latched; only tier01's purchase-block progress resets (Data Stream balance is kept)
 each cycle. Nothing here ever fully freezes — every action stays live indefinitely, every cycle.
 
 **Fill-based Speed/Bandwidth multiplier** (`FILL_MULTIPLIER_*` in `layers.js`; `getFillMultiplierPercent`/
