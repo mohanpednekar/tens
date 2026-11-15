@@ -79,11 +79,17 @@ if [ -z "$rows" ]; then
 fi
 
 while IFS=$'\t' read -r number reason retries; do
-  if [ "$reason" = green-unmerged ] \
-    && gh api "repos/{owner}/{repo}/pulls/$number/files" --paginate --jq '.[].filename' 2>/dev/null \
-       | grep -q '^\.github/workflows/'; then
-    echo "PR #$number touches .github/workflows/ — human-gated by policy; not nudging."
-    continue
+  if [ "$reason" = green-unmerged ]; then
+    # Capture the whole list first (grep -q would SIGPIPE a multi-page fetch) and fail
+    # closed: if the file list can't be read, don't nudge.
+    if ! files=$(gh api "repos/{owner}/{repo}/pulls/$number/files" --paginate --jq '.[].filename' 2>/dev/null); then
+      echo "PR #$number: could not list files — not nudging."
+      continue
+    fi
+    if grep -q '^\.github/workflows/' <<<"$files"; then
+      echo "PR #$number touches .github/workflows/ — human-gated by policy; not nudging."
+      continue
+    fi
   fi
   if [ "$retries" -ge "$MAX_RETRIES" ]; then
     existing=$(gh issue list --label automation-retro --state open \
