@@ -329,6 +329,19 @@ jobs:
           fi
           echo "main_deploy_run_url=$main_deploy_url" >> "$GITHUB_OUTPUT"
 
+          # Standing feed rule (#81): every list-type feed is number + title only and
+          # capped. cap_lines <cap> <text> keeps the first <cap> lines and appends a
+          # "+N more" note (input order is the display order, so sort before calling).
+          cap_lines() {
+            local cap="$1" text="$2"
+            if [ -z "$text" ]; then return 0; fi
+            # awk consumes the whole input (no head/SIGPIPE under -e/pipefail) and
+            # emits the overflow note itself.
+            printf '%s\n' "$text" | awk -v cap="$cap" '
+              NR <= cap { print }
+              END { if (NR > cap) printf "- (+%d more not shown - query the tracker directly)\n", NR - cap }'
+          }
+
           # Phase 0 check: open PRs with a failing check, excluding claude/auto-* (already
           # owned by autonomous-pr-followup.yml's webhook-driven fixes) and fork PRs (never
           # ours to touch). In practice this mostly surfaces Dependabot PRs that have gone
@@ -341,7 +354,7 @@ jobs:
                   | .[] | "- #\(.number) (\(.headRefName)): \(.title)"')
           {
             echo "failing_prs<<FAIL_EOF"
-            echo "$failing_prs"
+            cap_lines 15 "$failing_prs"
             echo "FAIL_EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -404,20 +417,25 @@ jobs:
           # is needed here (unlike the GH_AUTOMATION_PAT prerequisites in docs/AUTOMATION.md).
           # Falls back to empty on any API error (e.g. alerts disabled) rather than failing
           # the run — Phase 0(c) below treats an empty list the same as "no open alerts".
-          if ! dependabot_alerts=$(gh api "repos/${{ github.repository }}/dependabot/alerts?state=open" \
+          # The gh call is tested on its own (this step runs under plain `bash -e`, no pipefail,
+          # so a failure inside a pipeline would be masked); sort/trim only after it succeeded.
+          if dependabot_raw=$(gh api "repos/${{ github.repository }}/dependabot/alerts?state=open" \
             --paginate --jq '
               def sevrank: if .security_advisory.severity == "critical" then 0
                            elif .security_advisory.severity == "high" then 1
                            elif .security_advisory.severity == "medium" then 2
                            else 3 end;
-              sort_by(sevrank)[]
-              | "- #\(.number) [\(.security_advisory.severity)] \(.dependency.package.name): \(.security_advisory.summary) (\(.html_url))"
+              .[]
+              | "\(sevrank) - #\(.number) [\(.security_advisory.severity)] \(.dependency.package.name): \(.security_advisory.summary | gsub("[\n\r\t]"; " ")) (\(.html_url))"
             ' 2>/dev/null); then
+            # Global severity order across all pages (stable: ties keep API order).
+            dependabot_alerts=$(printf '%s\n' "$dependabot_raw" | sort -s -k1,1n | cut -d' ' -f2-)
+          else
             dependabot_alerts=""
           fi
           {
             echo "dependabot_alerts<<DEPALERT_EOF"
-            echo "$dependabot_alerts"
+            cap_lines 15 "$dependabot_alerts"
             echo "DEPALERT_EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -429,7 +447,7 @@ jobs:
                   | .[] | "- #\(.number) (\(.headRefName)): \(.title)"')
           {
             echo "dependabot_prs<<DEPPR_EOF"
-            echo "$dependabot_prs"
+            cap_lines 15 "$dependabot_prs"
             echo "DEPPR_EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -439,7 +457,7 @@ jobs:
             --json number,title --jq '.[] | "- #\(.number): \(.title)"')
           {
             echo "open_gap_issues<<GAP_EOF"
-            echo "$open_gap_issues"
+            cap_lines 15 "$open_gap_issues"
             echo "GAP_EOF"
           } >> "$GITHUB_OUTPUT"
 
