@@ -463,7 +463,7 @@ scripts/                  ← bump-version.mjs ("Changelog convention"); generat
                             `autonomous-pr-followup.yml`), backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh,
                             sweep-stalled-auto-prs.sh (#60), sync-release-milestones.sh, configure-ios-plist.mjs,
                             android-boot-smoke.sh, lint-workflow-shell.mjs, lint-conflict-markers.mjs, check-graphify-freshness.mjs
-                            (committed graph vs. working tree, #761), classify-claude-failure.sh (transient vs. real
+                            (committed graph vs. working tree + malformed nodes/keys, #761, #1060), classify-claude-failure.sh (transient vs. real
                             Claude-step failure), orphan-branch-scan.sh (#59), verify-maintainer-checklist.mjs —
                             roles in docs/AUTOMATION.md (except resolve-pr-threads/generate-pwa-icons/configure-ios-plist/
                             check-graphify-freshness/classify-claude-failure, above and in their own headers); most have a sibling `*.test.js`
@@ -649,8 +649,9 @@ a purchase control yet (deferred to #414, blocked pending maintainer-approved sp
 `getPrestigePointsAwarded`: 1 base PP at 1 Googol Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64)
 additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Compression
 upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then doubles PP-per-power; cost
-`100^(level+1)` PP). Production speed bonus (`getPrestigeProductionMultiplier`) is automatic at 10
-Purges: ×`log10(count)` (else ×1) — no PP cost; see `docs/ECONOMY_REFERENCE.md`. `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
+`100^(level+1)` PP). Production speed bonus (`getPrestigeProductionMultiplier`) is a one-time 1 PP purchase
+(`buyPrestigeSpeedBonus`/`prestigeSpeedBonusUnlocked`; Firmware → Prestige opens with a PP tutorial callout) giving
+×1.1 for the 1st Purge (hardcoded `PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER`), then ×`1 + log10(count)` (×2 at 10, ×3 at 100, ×4 at 1,000…); see `docs/ECONOMY_REFERENCE.md`. `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
 (`getMoneyExponent`/`getPurgePercent`) — only the live freeze/Prestige trigger moved to
 `PURGE_THRESHOLD`; see `docs/DESIGN_HISTORY.md` for why. MainPage's headline balance (`MoneyHero`) switches from Bits to whole Bytes once the balance reaches
 8000 Bits (`formatMoneyBalance`, `MONEY_BYTES_DISPLAY_THRESHOLD`); a small Bits subline then shows
@@ -675,8 +676,8 @@ gate latch but resets Capacity (`buildEraIntroReset`). Recurring actions follow 
 order** Disk Fill > Provision Disk > Compute Boost (a lower one is disabled, in UI and engine, while a
 higher one is available; Provision Disk outranks Compute only while ARMED — `isProvisionDiskInProgress`). An always-on auto-convert (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`)
 turns Data Stream bits into free `tier01` units. Generator, Disks, Data Lakes, and every compute-ladder
-entity (Cell → … → Fusion) are PERMANENT across real Prestige; only Data Stream balance and
-tier01's purchase-block progress reset per cycle. Nothing here ever fully freezes.
+entity (Cell → … → Fusion) are PERMANENT across real Prestige; only tier01's purchase-block
+progress resets per cycle (the Data Stream balance is kept). Nothing here ever fully freezes.
 
 **Hard rules (full text and the rest of the Foundry mechanics: `docs/FOUNDRY_MECHANICS_REFERENCE.md`):**
 - **Fill multiplier** (`FILL_MULTIPLIER_*`, `getFillMultiplierPercent`): displayed Speed/Bandwidth never

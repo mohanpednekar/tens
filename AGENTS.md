@@ -176,7 +176,7 @@ conversion resumes; rebuilding blocks only new provisioning starts in later pool
 its pool's base Bandwidth, +10% additive per flush; the first two flushes also raise the shared Bitrate/pool Bandwidth exponent via permanent achievements. The generator, Disks, Data Lakes, and Compute entities are
 permanent across every real Prestige; Reboot (`buildEraIntroReset`) wipes Disks/Data
 Lakes/Compute entity balances to scratch while keeping `byteCreated`, the `mainGameUnlocked` latch, and
-select automation-unlock flags. Only the Data Stream balance resets each ordinary cycle.
+select automation-unlock flags. The Data Stream balance is kept across ordinary cycles.
 
 **Same caveat, extended to Data Stream Capacity, pool Bandwidth, Provision Disk, Data Lakes
 (fill/Boosters/capacity ladder), stranded-disk handling, the Buy/Upgrade button precedence, and
@@ -189,8 +189,7 @@ already have tried and rejected.
 
 After **100 lifetime Purges**, production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Compression
-upgrades on Firmware → Prestige. Production speed bonus is automatic at 10 Purges (×log10 of the
-Purge count) — see `docs/ECONOMY_REFERENCE.md`, not a Firmware purchase.
+upgrades on Firmware → Prestige. Production speed bonus is a one-time 1 PP Firmware → Prestige purchase (×1.1 at 1 Purge, then ×(1 + log10 Purges): ×2 at 10, ×3 at 100, ×4 at 1,000), the PP tutorial — see `docs/ECONOMY_REFERENCE.md`.
 
 For run times / pacing questions — and after any change that can significantly affect ideal Foundry
 or prestige timings — use the `simulate-run-times` skill and publish via `publish-strategy.sh`.
