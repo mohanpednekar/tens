@@ -28484,12 +28484,6 @@
       "norm_label": "for --cluster-only"
     },
     {
-      "source_file": "scripts/verify-maintainer-checklist.mjs"
-    },
-    {
-      "source_file": "scripts/verify-maintainer-checklist.test.js"
-    },
-    {
       "id": "src_components_speeddetailspopover_index_speeddetailspopover",
       "label": "SpeedDetailsPopover()",
       "_callable": true,
@@ -28889,6 +28883,28 @@
       "norm_label": "runof()",
       "source_file": "src/game/engine.challengesTier.test.js",
       "source_location": "L16"
+    },
+    {
+      "label": "verify-maintainer-checklist.mjs",
+      "file_type": "code",
+      "source_file": "scripts/verify-maintainer-checklist.mjs",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "scripts_verify_maintainer_checklist_mjs",
+      "community": 0,
+      "community_name": "lint-workflow-shell.mjs",
+      "norm_label": "verify-maintainer-checklist.mjs"
+    },
+    {
+      "label": "verify-maintainer-checklist.test.js",
+      "file_type": "code",
+      "source_file": "scripts/verify-maintainer-checklist.test.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "scripts_verify_maintainer_checklist_test_js",
+      "community": 0,
+      "community_name": "lint-workflow-shell.mjs",
+      "norm_label": "verify-maintainer-checklist.test.js"
     }
   ],
   "links": [
@@ -121547,7 +121563,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "4c63904afc4adbd2832f8431b1381c73e22a857d",
-  "scripts/verify-maintainer-checklist.mjs": {},
-  "scripts/verify-maintainer-checklist.test.js": {}
+  "built_at_commit": "4c63904afc4adbd2832f8431b1381c73e22a857d"
 }

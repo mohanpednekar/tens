@@ -81,6 +81,35 @@ export function isExternalModuleRef(sourceFile, externalNames) {
   return false;
 }
 
+const ALLOWED_TOP_LEVEL_KEYS = new Set([
+  'directed',
+  'multigraph',
+  'graph',
+  'nodes',
+  'links',
+  'edges',
+  'hyperedges',
+  'built_at_commit',
+]);
+
+/**
+ * Structural defects that make `graphify update .` refuse to overwrite the
+ * graph (#1060): nodes without a string `id` and unexpected top-level keys.
+ * @returns {string[]} human-readable problem descriptions
+ */
+export function findMalformedGraphEntries(graph) {
+  const problems = [];
+  (graph.nodes ?? []).forEach((node, i) => {
+    if (typeof node?.id !== 'string' || node.id === '') {
+      problems.push(`node #${i} has no id (source_file: ${node?.source_file ?? 'none'})`);
+    }
+  });
+  for (const key of Object.keys(graph)) {
+    if (!ALLOWED_TOP_LEVEL_KEYS.has(key)) problems.push(`unexpected top-level key: ${key}`);
+  }
+  return problems;
+}
+
 /** Tracked repo files, via `git ls-files` (untracked scratch files never count). */
 export function listTrackedFiles(rootDir) {
   return execFileSync('git', ['ls-files', '-z'], { cwd: rootDir, encoding: 'utf8' })
@@ -105,7 +134,7 @@ export function findUncoveredGraphifyFiles(referencedFiles, trackedFiles) {
 }
 
 /**
- * @returns {{ stale: { sourceFile: string, refs: number }[], uncovered: string[] }}
+ * @returns {{ stale: { sourceFile: string, refs: number }[], uncovered: string[], malformed: string[] }}
  */
 export function analyzeGraphifyFreshness(rootDir, { listFiles = listTrackedFiles } = {}) {
   const graphPath = path.join(rootDir, 'graphify-out', 'graph.json');
@@ -120,7 +149,7 @@ export function analyzeGraphifyFreshness(rootDir, { listFiles = listTrackedFiles
   }
   stale.sort((a, b) => a.sourceFile.localeCompare(b.sourceFile));
   const uncovered = findUncoveredGraphifyFiles(new Set(referenced.keys()), listFiles(rootDir));
-  return { stale, uncovered };
+  return { stale, uncovered, malformed: findMalformedGraphEntries(graph) };
 }
 
 function isMainModule() {
@@ -132,8 +161,8 @@ function isMainModule() {
 function main() {
   const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   try {
-    const { stale, uncovered } = analyzeGraphifyFreshness(rootDir);
-    if (stale.length === 0 && uncovered.length === 0) {
+    const { stale, uncovered, malformed } = analyzeGraphifyFreshness(rootDir);
+    if (stale.length === 0 && uncovered.length === 0 && malformed.length === 0) {
       console.log(
         'check-graphify-freshness: every graph.json source_file resolves, and every indexed file is referenced.',
       );
@@ -149,6 +178,10 @@ function main() {
     if (uncovered.length > 0) {
       console.error('check-graphify-freshness: indexed files missing from graph.json entirely:');
       for (const file of uncovered) console.error(`  ${file}`);
+    }
+    if (malformed.length > 0) {
+      console.error('check-graphify-freshness: graph.json is structurally malformed:');
+      for (const problem of malformed) console.error(`  ${problem}`);
     }
     console.error('Fix: run `graphify update .` and commit the regenerated graphify-out/ files.');
     process.exitCode = 1;
