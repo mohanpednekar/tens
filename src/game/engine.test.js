@@ -5931,20 +5931,21 @@ describe('getPrestigeProductionMultiplier', () => {
     expect(getPrestigeProductionMultiplier(0)).toBe(1)
   })
 
-  it('adds 10% per Purge up to ×2 at 10, then is linear within each decade (×3 at 100, ×4 at 1,000)', () => {
-    expect(getPrestigeProductionMultiplier(1)).toBeCloseTo(1.1)
-    expect(getPrestigeProductionMultiplier(5)).toBeCloseTo(1.5)
+  it('is a hardcoded ×1.3 for the 1st Purge, then 1 + log10(n) (×2 at 10, ×3 at 100, ×4 at 1,000)', () => {
+    expect(getPrestigeProductionMultiplier(1)).toBe(1.3)
+    expect(getPrestigeProductionMultiplier(2)).toBeCloseTo(1 + Math.log10(2))
     expect(getPrestigeProductionMultiplier(10)).toBeCloseTo(2)
-    expect(getPrestigeProductionMultiplier(55)).toBeCloseTo(2.5)
     expect(getPrestigeProductionMultiplier(100)).toBeCloseTo(3)
-    expect(getPrestigeProductionMultiplier(550)).toBeCloseTo(3.5)
     expect(getPrestigeProductionMultiplier(1000)).toBeCloseTo(4)
     expect(getPrestigeProductionMultiplier(1e6)).toBeCloseTo(7)
   })
 
-  it('is continuous and non-decreasing across decade boundaries', () => {
-    for (const n of [9, 99, 999]) {
-      expect(getPrestigeProductionMultiplier(n + 1) - getPrestigeProductionMultiplier(n)).toBeGreaterThan(0)
+  it('is non-decreasing from 0 through the hardcoded 1st-Purge value into the log curve', () => {
+    let previous = 0
+    for (const n of [0, 1, 2, 3, 9, 10, 99, 100, 999, 1000]) {
+      const value = getPrestigeProductionMultiplier(n)
+      expect(value).toBeGreaterThanOrEqual(previous)
+      previous = value
     }
   })
 
