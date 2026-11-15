@@ -1,10 +1,10 @@
 import {
   PLAYTIME_BONUS_UNLOCK_COST,
+  PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   COMPUTE_MERGE_RATIO,
   INTRO_BYTE_COMBINE_COST,
   TIER_DEFINITIONS,
-  XP_TICKSPEED_AUTOBUYER_UNLOCK_COST,
 } from 'game/layers'
 import {
   canBuyComputeFlopsTier,
@@ -12,8 +12,10 @@ import {
   isDiskSizeUnlockAvailable,
   isSpeedUpgradeArmable,
   getComputeFieldEffectiveCap,
-  getAutomationUnlockCost,
   getAutomationIntervalMaxLevel,
+  isAutomationIntervalChainUnlocked,
+  getLiveChallengeForAutomation,
+  isChallengeCompleted,
   getAutomationIntervalUpgradeCost,
   isGlobalTickspeedAffordable,
   getIntroKilobyteConversionCost,
@@ -151,29 +153,30 @@ export const hasTiersGameAttention = state =>
   hasScaleUpAvailable(state) ||
   hasOverclockAvailable(state)
 
-// The Perks page's tabs (see pages/PerksPage), grouped by feature: Automation = every automation's
-// one-time PP unlock plus its PP speed chain; Prestige = Double PP and the playtime bonus.
+// The Perks page's tabs (see pages/PerksPage), grouped by feature: Automation = every unlocked
+// automation's PP speed chain; Prestige = the speed bonus, Double PP and the playtime bonus.
 // Pause/resume toggles are never "affordable".
+const GLOBAL_AUTOMATION_KEYS = ['speedUp', 'restage', 'scaleUp', 'overclock', 'purge']
+
 export const hasAffordableAutomationPerk = state => {
   if ((state.purge?.count ?? 0) < 1) return false
   if (isProductionFrozen(state)) return false
   const points = state.purge?.points ?? 0
-  if (
-    (Boolean(state.autoGlobalTickspeed) && !(state.autoScaleUp ?? false) && points >= getAutomationUnlockCost('scaleUp')) ||
-    (Boolean(state.autoScaleUp) && Boolean(state.autoXpTickspeed) && !(state.autoOverclock ?? false) && points >= getAutomationUnlockCost('overclock')) ||
-    (!(state.autoGlobalTickspeed ?? false) && points >= getAutomationUnlockCost('speedUp')) ||
-    (Boolean(state.autoGlobalTickspeed) && !(state.autoXpTickspeed ?? false) && points >= XP_TICKSPEED_AUTOBUYER_UNLOCK_COST) ||
-    (Boolean(state.autoOverclock) && state.autoPurge == null && points >= getAutomationUnlockCost('purge'))
-  ) return true
-  if (state.autoPurge == null) return false
-  const level = state.automationIntervalLevels?.purge ?? 0
-  return level < getAutomationIntervalMaxLevel('purge') && points >= getAutomationIntervalUpgradeCost('purge', level)
+  return GLOBAL_AUTOMATION_KEYS.some(key => {
+    if (!isAutomationIntervalChainUnlocked(state, key)) return false
+    // A live, uncompleted challenge gates the speed upgrade (buyAutomationIntervalUpgrade refuses it).
+    const challenge = getLiveChallengeForAutomation('global', key)
+    if (challenge && !isChallengeCompleted(state, challenge.id)) return false
+    const level = state.automationIntervalLevels?.[key] ?? 0
+    return level < getAutomationIntervalMaxLevel(key) && points >= getAutomationIntervalUpgradeCost(key, level)
+  })
 }
 
 export const hasAffordablePrestigePerk = state => {
   if ((state.purge?.count ?? 0) < 1) return false
   const points = state.purge?.points ?? 0
   if (points >= getPrestigeDoublePpUpgradeCost(state.prestigeDoublePpLevel ?? 0)) return true
+  if (!state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) return true
   return !state.playtimeBonusUnlocked && points >= PLAYTIME_BONUS_UNLOCK_COST
 }
 

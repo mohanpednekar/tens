@@ -31,7 +31,7 @@ describe('Firmware Challenges tab', () => {
   it('hides codename and rule while locked and shows the unlock condition', () => {
     wrap(<ChallengesPage game={makeGame(createInitialGameState())} />)
     const row = screen.getByLabelText('challenge F21')
-    expect(row.textContent).toContain('Unlocks when you buy Auto Clock Speed')
+    expect(row.textContent).toContain('Unlocks at Purge 8')
     expect(row.textContent).not.toContain('Base Clock')
   })
 
