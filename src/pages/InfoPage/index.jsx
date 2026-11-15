@@ -652,8 +652,8 @@ const InfoPage = () => {
             Spend PP on Firmware for automation and upgrades.
           </li>
           <li>
-            From {PRESTIGE_SPEED_BONUS_UNLOCK_PURGES} Purges on, production speed gets a bonus of
-            ×log₁₀ of your Purge count.
+            From your first Purge on, production speed gets a bonus of
+            ×(2 + log₁₀ of your Purge count).
           </li>
           <li>
             The one-time Playtime bonus ({PLAYTIME_BONUS_UNLOCK_COST} PP on Firmware → Prestige) adds

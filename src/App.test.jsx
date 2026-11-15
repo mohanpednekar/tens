@@ -2219,7 +2219,7 @@ test('the Auto-Prestige speed upgrade starts at 64 PP, and stays disabled withou
   expect(screen.getByRole('button', { name: /upgrade auto purge speed to level 1 for 64 purge points/i })).toBeDisabled()
 })
 
-test('purge points and the production speed bonus are shown once 10 Purges are reached', () => {
+test('purge points and the production speed bonus are shown once the first Purge is done', () => {
   seedMainGameState({
     resources: { base: 10 },
     purge: { xp: 0, points: 50, count: 100, highestMilestone: 1 },
@@ -2227,18 +2227,7 @@ test('purge points and the production speed bonus are shown once 10 Purges are r
   render(<App />)
 
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('50 PP')
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('2x production speed')
-})
-
-test('the production speed bonus is hidden from the Purge Points bar below 10 Purges', () => {
-  seedMainGameState({
-    resources: { base: 10 },
-    purge: { xp: 0, points: 10500, count: 9, highestMilestone: 1 },
-  })
-  render(<App />)
-
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('10,500 PP')
-  expect(screen.getByLabelText(/^purge points display$/i)).not.toHaveTextContent(/production speed/i)
+  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('4x production speed')
 })
 
 test('the playtime bonus is unlocked for 100 PP on Firmware → Prestige', async () => {
@@ -2692,7 +2681,7 @@ test('clicking the money balance expands a breakdown of every global production 
 
   expect(moneyDisplay).toHaveAttribute('aria-expanded', 'true')
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
-  expect(breakdown).toHaveTextContent(/prestige speed bonus: 2x production speed from 100 purges/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: 4x production speed from 100 purges/i)
   expect(breakdown).toHaveTextContent(/scale up: 2 activations; multiplier varies by tier/i)
   expect(breakdown).toHaveTextContent(/clock speed: \+[\d.]+% faster ticks on every tier(?! \(lv)/i)
 
@@ -2702,7 +2691,7 @@ test('clicking the money balance expands a breakdown of every global production 
   expect(screen.queryByLabelText(/^global production multipliers$/i)).not.toBeInTheDocument()
 })
 
-test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated status for each global multiplier before it becomes active', async () => {
+test('the money balance breakdown reports a not-yet-activated status for each global multiplier before it becomes active', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2715,7 +2704,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
   await user.click(screen.getByRole('button', { name: /^money display$/i }))
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
-  expect(breakdown).toHaveTextContent(/prestige speed bonus: unlocks at 10 purges \(1 so far\)/i)
+  expect(breakdown).toHaveTextContent(/prestige speed bonus: 2x production speed from 1 purge/i)
   expect(breakdown).toHaveTextContent(/scale up: not yet activated \(reach 3 completed levels on kilobytes\)/i)
   expect(breakdown).toHaveTextContent(/clock speed: not yet active/i)
 })

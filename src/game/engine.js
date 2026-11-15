@@ -972,11 +972,12 @@ export const getLastTierXpTickspeedMinConsumption = xpConsumed => Math.max(
   Math.ceil(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT * clampNonNegative(xpConsumed))
 )
 
-// Passive production-speed bonus: inert below PRESTIGE_SPEED_BONUS_UNLOCK_PURGES (10) Purges, then
-// ×log10(purge count). Pure formula of the Purge count; no PP spent.
+// Passive production-speed bonus: inert below PRESTIGE_SPEED_BONUS_UNLOCK_PURGES (1) Purges, then
+// ×(2 + log10(purge count)) — ×2 after the first Purge, ×3 at 10, ×4 at 100. Pure formula of the
+// Purge count; no PP spent.
 export const getPrestigeProductionMultiplier = purgeCount => {
   const count = clampNonNegative(purgeCount)
-  return count >= PRESTIGE_SPEED_BONUS_UNLOCK_PURGES ? Math.log10(count) : 1
+  return count >= PRESTIGE_SPEED_BONUS_UNLOCK_PURGES ? 2 + Math.log10(count) : 1
 }
 
 export const isPrestigeSpeedBonusUnlocked = state =>

@@ -251,8 +251,8 @@ describe('constants', () => {
     expect(PLAYTIME_BONUS_PER_HOUR).toBe(0.01)
   })
 
-  it('PRESTIGE_SPEED_BONUS_UNLOCK_PURGES is 10', () => {
-    expect(PRESTIGE_SPEED_BONUS_UNLOCK_PURGES).toBe(10)
+  it('PRESTIGE_SPEED_BONUS_UNLOCK_PURGES is 1', () => {
+    expect(PRESTIGE_SPEED_BONUS_UNLOCK_PURGES).toBe(1)
   })
 
   it('SCALE_UP_MULTIPLIER_BASE is 2 (production doubles per activation)', () => {

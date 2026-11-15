@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Early game is faster after your first Purge** — the passive production speed bonus now starts at the first Purge (was 10) and is ×(2 + log₁₀ of your Purge count): ×2 after one Purge, ×3 at 10, ×4 at 100.
 - **Prestige no longer empties the Data Stream** — the Data Stream balance is kept through Purge, challenge enter/exit/completion and the Bit Rot restart (Reboot still resets it); the Manual now says so.
 - **Data Lakes rebuilt as a real disk hierarchy (#1087):** every lake now has one permanent 1-unit buffer (1 KB for the KB lake) that the pool feeds first; a full buffer is moved into a ×1 disk, and 9 disks of every smaller size + a full buffer are consolidated into the next size (10 KB, 100 KB and — after a Flush opens the slot — 1000 KB) as timed transfers at Storage's disk-transfer speeds, with every bit conserved mid-transfer. Booster purchases are paid with whole disks (a full buffer counts as one ×1 unit) summing to exactly the cost — disks are never broken; the lake keeps filling until exact change exists, and partial buffer fill and in-flight transfers are never disturbed. A collapsed pool's lake now reads the next Booster's affordability as a percentage (capped at 100%) instead of the raw balance; the expanded lake shows the buffer, the transfer in progress and the ×1000 disk squares. Only the start of filling toward the next Booster waits for a full pool buffer; once started it no longer waits for the pool to refill to full (it still yields to disk filling, provisioning and the read cache) until that Booster is bought. Older saves migrate without losing or duplicating any stored data.
 - **Ordinary disk fills draw straight from their pool (#1087):** a disk above a pool's smallest size no longer goes through a write-cache flush stage — it lands the moment its pool buffer has funded it. Expediting a disk keeps its faster timed transfer.
@@ -234,6 +235,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Early game is faster after your first Purge** — the passive production speed bonus now starts at the first Purge (was 10) and is ×(2 + log₁₀ of your Purge count): ×2 after one Purge, ×3 at 10, ×4 at 100.
 - **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 
 - **Automation unlock costs now match their first speed upgrade.** Latency autobuyer 8 PP (was 10), Auto Scale Up 16 PP (was 20), Auto-Prestige 64 PP (was 1000, with its levels already replaced by the speed chain), and Auto Overclock is now its own 32 PP unlock (needs Auto Scale Up) instead of unlocking with its first speed level. Milestone-unlocked automations (tier autobuyers, tier tickspeed autobuyers) have no unlock cost, only upgrades.
@@ -818,6 +820,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Early game is faster after your first Purge** — the passive production speed bonus now starts at the first Purge (was 10) and is ×(2 + log₁₀ of your Purge count): ×2 after one Purge, ×3 at 10, ×4 at 100.
 - **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - **Provision Disk no longer imposes a separate build-time countdown after funding completes** —
   gathering a disk's funding passes at the pool's own production rate already takes exactly the
@@ -1240,6 +1243,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Early game is faster after your first Purge** — the passive production speed bonus now starts at the first Purge (was 10) and is ×(2 + log₁₀ of your Purge count): ×2 after one Purge, ×3 at 10, ×4 at 100.
 - **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - **Compute (Flops) cumulative total** — hero displays **E = k + 10M + 100G + 1000T + … + 10⁹Q**
   (each tier's cumulative boost weighted by 10<sup>n</sup>); production multipliers stay unweighted.
@@ -1344,6 +1348,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Early game is faster after your first Purge** — the passive production speed bonus now starts at the first Purge (was 10) and is ×(2 + log₁₀ of your Purge count): ×2 after one Purge, ×3 at 10, ×4 at 100.
 - **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - **Compute reserve-merge durations** are no longer a fixed 1–256 minute doubling table. Core→Node
   takes **10× live Core earn time** (Memory capacity ÷ Byte generator bits/sec, before Boost); each
@@ -1499,6 +1504,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Early game is faster after your first Purge** — the passive production speed bonus now starts at the first Purge (was 10) and is ×(2 + log₁₀ of your Purge count): ×2 after one Purge, ×3 at 10, ×4 at 100.
 - **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - **"Speed Up" renamed to "Scale Up," and redesigned to unlock tiers one at a time instead of gating only on the last tier.** A Scale Up is now available once the tier it's currently working through (starting with Kilobytes) hits level 3 (displayed Lv.2) — firing it doubles production speed (stacking, same as before) and permanently unlocks the next tier, on top of keeping every tier already reached. The Scale Up card is now always shown from the very first cycle, rather than staying hidden until the last tier unlocks. Once every tier has been reached, Scale Up settles into a repeating "every 3 levels of the last tier" endgame phase (level 3, then 6, then 9, …) instead of its old +1-per-activation last-tier-only ladder.
 - **Data Lake's capacity-increase button now reads "⚡ Scale Out"** (was "⚡ Upgrade") — same action, cost, and gating as before.
@@ -1518,6 +1524,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Early game is faster after your first Purge** — the passive production speed bonus now starts at the first Purge (was 10) and is ×(2 + log₁₀ of your Purge count): ×2 after one Purge, ×3 at 10, ×4 at 100.
 - **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - Buttons use short symbols with a more compact tier row layout; autobuyer upgrades are now guarded against zeroing out a tier's own generator count.
 - Full agent output is now shown in maintenance workflow runs for diagnosability.
@@ -1533,6 +1540,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Early game is faster after your first Purge** — the passive production speed bonus now starts at the first Purge (was 10) and is ×(2 + log₁₀ of your Purge count): ×2 after one Purge, ×3 at 10, ×4 at 100.
 - **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - Buy button moved to the rightmost column, ahead of Upgrade/Unlock.
 - Pivoted autonomous maintenance to a GitHub Issues task backlog; raised unattended-run turn budgets.
@@ -1552,6 +1560,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Early game is faster after your first Purge** — the passive production speed bonus now starts at the first Purge (was 10) and is ×(2 + log₁₀ of your Purge count): ×2 after one Purge, ×3 at 10, ×4 at 100.
 - **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - Decoupled manual Buy from the ×1/×10 toggle; autobuyers now batch independently.
 - Autobuyers prioritize higher tiers when competing for shared funds.

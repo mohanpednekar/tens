@@ -1276,8 +1276,8 @@ const MainPage = ({ game }) => {
               {!isFirstRun && (
                 <li>
                   Prestige speed bonus: {prestigeBonusUnlocked
-                    ? `${formatBonusOrMultiplier(prestigeBonus)} production speed from ${formatAmount(purge.count)} Purges`
-                    : `unlocks at ${PRESTIGE_SPEED_BONUS_UNLOCK_PURGES} Purges (${formatAmount(purge.count)} so far)`}
+                    ? `${formatBonusOrMultiplier(prestigeBonus)} production speed from ${formatAmount(purge.count)} Purge${purge.count === 1 ? '' : 's'}`
+                    : `unlocks at ${PRESTIGE_SPEED_BONUS_UNLOCK_PURGES} Purge${PRESTIGE_SPEED_BONUS_UNLOCK_PURGES === 1 ? '' : 's'} (${formatAmount(purge.count)} so far)`}
                 </li>
               )}
               <li>
