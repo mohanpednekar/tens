@@ -279,7 +279,7 @@ own file included); changes still land via PR, and workflow-file changes stay hu
 address → resolve → iterate-until-mergeable loop on its own PRs before the run ends (post-run feedback
 is `autonomous-pr-followup.yml`'s job). `pr-conflict-sweep.yml` fires on every push to `main` and
 comments on any open PR that became conflicted (the comment triggers the follow-up agent on automation
-branches). `devin-workflow-health.yml` (also `workflow_dispatch` only now) files an `automation-failure` issue
+branches) and merges `main` into non-draft behind-but-mergeable automation PRs (update-branch API). `devin-workflow-health.yml` (also `workflow_dispatch` only now) files an `automation-failure` issue
 when the workflow file stops parsing, no run has started in >26h, or the latest run didn't succeed.
 `release.yml` (deterministic, no agent) fires on pushes to `main` that touch `package.json`: it pushes
 annotated tag `v<x.y.z>` and creates a GitHub Release from that version's `CHANGELOG.md` section when

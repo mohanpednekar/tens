@@ -44,7 +44,7 @@ jobs:
           # --limit 1000: gh paginates past the API's 100-per-page cap, so every
           # open PR is covered (a hard cap beyond that is a deliberate non-goal).
           gh pr list --state open --limit 1000 \
-            --json number,headRefName,headRefOid,mergeable,author,files \
+            --json number,headRefName,headRefOid,isDraft,mergeable,author,files \
             > /tmp/open-prs.json
 
           # GitHub reports UNKNOWN while it computes mergeability after the
@@ -78,13 +78,20 @@ jobs:
               # other job refreshes it. Merge main in via the update-branch API
               # (a merge commit, never a rebase — review context stays anchored).
               # Only our own auto branches; Dependabot has its own `@dependabot
-              # rebase` path. The API answers 422 when nothing is behind, which
-              # is the normal case, so failures are tolerated and only logged.
+              # rebase` path. Drafts are skipped (an agent may still be pushing and a
+              # merge commit would reject its next push). The API answers 422 when
+              # nothing is behind, which is the normal case, so failures are
+              # tolerated; the error text is logged so a real one (403/404) shows.
+              is_draft=$(jq -r .isDraft <<<"$pr")
               case "$branch" in
                 claude/auto-*|devin/auto-*)
-                  if gh api -X PUT "repos/$GITHUB_REPOSITORY/pulls/$num/update-branch" \
-                    -f expected_head_sha="$head" >/dev/null 2>&1; then
-                    echo "  behind main — update-branch requested for #$num"
+                  if [ "$is_draft" != "true" ]; then
+                    if out=$(gh api -X PUT "repos/$GITHUB_REPOSITORY/pulls/$num/update-branch" \
+                      -f expected_head_sha="$head" 2>&1); then
+                      echo "  behind main — update-branch requested for #$num"
+                    else
+                      echo "  update-branch not applied: $(printf '%s' "$out" | head -c 200)"
+                    fi
                   fi
                   ;;
               esac

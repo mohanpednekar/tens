@@ -266,7 +266,8 @@ outright), saying so when it deviates from lowest-number order.
 - `devin-workflow-health.yml` — `workflow_dispatch` only (daily schedule removed with the above); files an `automation-failure` issue if the Devin workflow doesn't
   parse, hasn't started in 26h, or its latest completed run wasn't `success`.
 - `pr-conflict-sweep.yml` — on every push to `main`, flags newly conflicted open PRs (on `claude/auto-*`/`devin/auto-*`
-  the comment triggers the follow-up agent to merge-and-resolve).
+  the comment triggers the follow-up agent to merge-and-resolve) and merges `main` into non-draft mergeable-but-behind
+  `claude/auto-*`/`devin/auto-*` PRs via the update-branch API.
 - `release.yml` — deterministic: on a `package.json` push to `main`, tags `v<x.y.z>` if absent and creates the GitHub
   Release from that version's `CHANGELOG.md` section ("Changelog convention").
 - `main-ci-heal.yml` — on a failed `CI` run on `main`: reruns failed jobs once (flakiness check), and only if that

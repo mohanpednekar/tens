@@ -13,14 +13,16 @@ const OLD = '2020-01-01T00:00:00Z';
 
 // Stub `gh`: `pr list` prints the fixture; every other call is logged and
 // `issue list` returns nothing (no existing escalation issue).
-function sweep(prs) {
+function sweep(prs, files = '') {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sweep-'));
   fs.writeFileSync(path.join(dir, 'prs.json'), JSON.stringify(prs));
+  fs.writeFileSync(path.join(dir, 'files.txt'), files);
   fs.writeFileSync(
     path.join(dir, 'gh'),
     `#!/usr/bin/env bash
 if [ "$1 $2" = "pr list" ]; then cat "${dir}/prs.json"; exit 0; fi
 if [ "$1 $2" = "issue list" ]; then exit 0; fi
+if [ "$1" = "api" ] && [[ "$2" == */files ]]; then cat "${dir}/files.txt"; exit 0; fi
 echo "$*" >> "${dir}/calls.log"
 `,
     { mode: 0o755 },
@@ -101,5 +103,26 @@ describe('sweep-stalled-auto-prs.sh', () => {
     ]);
     expect(r.calls).toMatch(/api -X PUT .*pulls\/1\/update-branch/);
     expect(r.calls).not.toMatch(/pr comment/);
+  });
+
+  it('skips draft PRs for update-branch and for the green nudge', () => {
+    const r = sweep([
+      pr({ isDraft: true, mergeStateStatus: 'BEHIND', statusCheckRollup: [{ conclusion: 'SUCCESS' }] }),
+      pr({ number: 2, isDraft: true, statusCheckRollup: [{ conclusion: 'SUCCESS' }] }),
+    ]);
+    expect(r.calls).toBe('');
+  });
+
+  it('does not nudge a green PR that touches .github/workflows/', () => {
+    const r = sweep(
+      [pr({ statusCheckRollup: [{ conclusion: 'SUCCESS' }] })],
+      '.github/workflows/ci.yml\nsrc/a.js\n',
+    );
+    expect(r.calls).not.toMatch(/pr comment/);
+  });
+
+  it('still handles a stale BEHIND PR that also has a failing check', () => {
+    const r = sweep([pr({ mergeStateStatus: 'BEHIND', statusCheckRollup: [{ conclusion: 'FAILURE' }] })]);
+    expect(r.calls).toMatch(/pr comment 1 /);
   });
 });

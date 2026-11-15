@@ -250,11 +250,12 @@ file list below — so surfacing the failure to a human is the full extent of wh
 
 **Stalled-PR sweep (#60).** A third plain-bash step, `Sweep stalled claude/auto-* PRs`
 (`scripts/sweep-stalled-auto-prs.sh`, tested by `scripts/sweep-stalled-auto-prs.test.js`), runs every
-invocation. It covers `claude/auto-*` and `devin/auto-*` PRs. A PR with `mergeStateStatus: BEHIND`
+invocation. It covers `claude/auto-*` and `devin/auto-*` PRs. A non-draft PR with `mergeStateStatus: BEHIND`
 (not conflicted) is refreshed at once via the update-branch API. A PR with no activity (`updatedAt`) for
 24h (`STALL_HOURS`) that has a failing check, `mergeable: CONFLICTING` (can have all-green checks), or
-all checks green but never merged (`green-unmerged`: the comment asks the follow-up agent to resolve
-threads, run the code-reviewer and enable auto-merge when allowed) gets a `<!-- stalled-pr-sweep-v1 -->` comment via `GH_AUTOMATION_PAT`, which re-fires
+all checks green but never merged (`green-unmerged`: the comment asks the follow-up agent only to
+resolve open review threads, since it can't comment, mark ready or merge; skipped for drafts, BEHIND
+PRs and PRs touching `.github/workflows/`, which wait for the maintainer) gets a `<!-- stalled-pr-sweep-v1 -->` comment via `GH_AUTOMATION_PAT`, which re-fires
 `autonomous-pr-followup.yml`'s existing `issue_comment` trigger (no edit to that file). After 3
 (`MAX_RETRIES`) sweep comments on one PR it files an `automation-retro` issue instead of retrying.
 
@@ -423,7 +424,7 @@ as its trigger, and the follow-up performs the actual merge-and-resolve;
 human-authored PRs just get an author notification. Runs on `GH_AUTOMATION_PAT` because comments
 from the default `GITHUB_TOKEN` can't trigger other workflows.
 
-A `MERGEABLE` `claude/auto-*`/`devin/auto-*` PR is also refreshed via `PUT /pulls/{n}/update-branch`
+A non-draft `MERGEABLE` `claude/auto-*`/`devin/auto-*` PR is also refreshed via `PUT /pulls/{n}/update-branch`
 (a merge commit pinned to `expected_head_sha`): a PR that is merely *behind* `main` can't auto-merge
 when the ruleset requires up-to-date branches, and nothing else refreshed it. The API's 422 "nothing
 behind" is the normal case and is ignored. Dependabot PRs are excluded (`@dependabot rebase` path).
