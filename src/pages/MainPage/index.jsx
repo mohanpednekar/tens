@@ -1024,6 +1024,8 @@ const MainPage = ({ game }) => {
   // (multiplier - 1) * 100 formatting can be reused directly — these are never applied as
   // standalone multipliers anywhere, only fed into getGlobalTickspeedProductionMultiplier below.
   const currentGlobalTickspeedStepDisplay = 1 + getChallengeClockSpeedStep(state)
+  // The same step before any Overclock (1% outside a challenge), for the "(was …)" half of the Overclock lines.
+  const baseGlobalTickspeedStepDisplay = 1 + getChallengeClockSpeedStep({ ...state, overclockLastClaimCompletedLevels: null })
   // Each completed final-tier level multiplies Clock Speed's per-level rate by this (a constant).
   const overclockLevelEffectDisplay = 1 + OVERCLOCK_MULTIPLIER_STEP
   const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)
@@ -1299,7 +1301,7 @@ const MainPage = ({ game }) => {
               {overclockEverRevealed && (
                 <li>
                   Overclock: {overclockLevel > 0
-                    ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%)`
+                    ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was ${formatGlobalTickspeedBonusPercent(baseGlobalTickspeedStepDisplay)}%)`
                     : `not yet claimed (reach ${formatAmount(overclockRequirementDisplay)} completed levels on ${lastTier.name})`}
                 </li>
               )}
@@ -1338,7 +1340,7 @@ const MainPage = ({ game }) => {
               <CardTitleGroup>
                 <h2>Clock Speed</h2>
                 <CardEffect
-                  title="Each Clock Speed level makes every tier's production ticks faster by this factor (Overclock raises that step; the live rate is on Overclock's disclosure)"
+                  title="Each Clock Speed level makes every tier's production ticks faster by this factor (this is the live rate: Overclock raises it and some challenges weaken it)"
                   onClick={event => {
                     event.preventDefault()
                     event.stopPropagation()
@@ -1691,7 +1693,7 @@ const MainPage = ({ game }) => {
             </summary>
             <MutedText>
               {overclockLevel > 0
-                ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%).`
+                ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was ${formatGlobalTickspeedBonusPercent(baseGlobalTickspeedStepDisplay)}%).`
                 : `Not claimed yet — reach ${formatAmount(overclockRequirementDisplay)} completed ${lastTier.name} levels. Each completed level then multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay}.`}
             </MutedText>
           </Disclosure>
