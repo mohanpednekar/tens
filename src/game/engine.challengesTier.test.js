@@ -100,11 +100,11 @@ describe('tier autobuyer challenges', () => {
     expect(tickGame(1)(withChallenge(runOf('F1', seed), { activeSeconds: 299.5 })).owned[T(4)]).toBe(50)
   })
 
-  it('F6 Address Space leaves nine tiers, with Ronnabytes as the final tier for Scale Up', () => {
-    const run = runOf('F6', state => ({ everUnlockedTierIds: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])), owned: { ...state.owned, [T(7)]: 1, [T(8)]: 1, [T(9)]: 5 } }))
+  it('F6 Address Space leaves six tiers, with Exabytes as the final tier for Scale Up', () => {
+    const run = runOf('F6', state => ({ everUnlockedTierIds: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])), owned: { ...state.owned, [T(4)]: 1, [T(5)]: 1, [T(6)]: 5 } }))
     expect(getEffectiveTierCount(run)).toBe(ADDRESS_SPACE_TIER_COUNT)
-    expect(isTierUnlocked(run)(TIER_DEFINITIONS[8])).toBe(true)
-    expect(isTierUnlocked(run)(TIER_DEFINITIONS[9])).toBe(false)
+    expect(isTierUnlocked(run)(TIER_DEFINITIONS[5])).toBe(true)
+    expect(isTierUnlocked(run)(TIER_DEFINITIONS[6])).toBe(false)
     expect(TIER_DEFINITIONS).toHaveLength(10)
     expect(getEffectiveTierCount(runOf('F1'))).toBe(10)
   })

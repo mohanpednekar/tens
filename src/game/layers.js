@@ -116,7 +116,7 @@ const RAW_CHALLENGE_DEFINITIONS = [
   tierChallenge(2, 'F3', 'tierAutobuyer', 'Cascade Delete', 'cascadeDelete', 'Buying Gigabytes resets lower tiers\' owned counts.', { costMultiplier: 6 }),
   tierChallenge(3, 'F4', 'tierAutobuyer', 'Premium Tier', 'premiumTier', 'Terabytes cost ×1000.', { clockSpeedPower: 0.85 }),
   tierChallenge(4, 'F5', 'tierAutobuyer', 'Hard Refresh', 'hardRefresh', 'Petabytes owned resets every 5 min.'),
-  tierChallenge(5, 'F6', 'tierAutobuyer', 'Address Space', 'addressSpace', 'Ronnabytes is the top tier.', { production: 7 }),
+  tierChallenge(5, 'F6', 'tierAutobuyer', 'Address Space', 'addressSpace', 'Exabytes is the top tier.', { production: 500 }),
   tierChallenge(6, 'F7', 'tierAutobuyer', 'Single Instance', 'singleInstance', 'Scale Up never doubles Zettabytes.', { costMultiplier: 5 }),
   tierChallenge(7, 'F8', 'tierAutobuyer', 'Memory Leak', 'memoryLeak', 'Yottabytes lose 1% owned per second.'),
   tierChallenge(8, 'F9', 'tierAutobuyer', 'Bit Rot', 'bitRot', 'Corruption grows exponentially; if it passes your Bits, the cycle restarts.', { scaleUpPower: 0.85 }),
@@ -151,7 +151,7 @@ export const HALF_DUPLEX_PRODUCTION_MULTIPLIER = 0.5 // F1
 export const WRITE_LOCK_HALT_SECONDS = 10 // F2
 export const PREMIUM_TIER_COST_MULTIPLIER = 1000 // F4
 export const HARD_REFRESH_INTERVAL_SECONDS = 300 // F5
-export const ADDRESS_SPACE_TIER_COUNT = 9 // F6
+export const ADDRESS_SPACE_TIER_COUNT = 6 // F6
 export const MEMORY_LEAK_RATE_PER_SECOND = 0.01 // F8
 export const BIT_ROT_GRACE_SECONDS = 120 // F9: no corruption for this long after a cycle starts
 export const BIT_ROT_BASE_CORRUPTION = 1000 // F9: corruption (Bits) when the grace period ends
