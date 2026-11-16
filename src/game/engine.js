@@ -1555,7 +1555,6 @@ const getChallengeEffectTier = (state, effect) => {
   return def?.effect === effect ? def.automation.key : null
 }
 
-// F4 Premium Tier: the tier as priced during the run (a copy; TIER_DEFINITIONS is never edited).
 // Run-wide lever of the active challenge (see tierChallenge in layers.js); `fallback` when none applies.
 const getChallengeLever = (state, name, fallback) => getActiveChallenge(state)?.levers?.[name] ?? fallback
 
@@ -1564,6 +1563,7 @@ const getChallengeLever = (state, name, fallback) => getActiveChallenge(state)?.
 export const getChallengeProductionMultiplier = (state, tierId) =>
   (getChallengeEffectTier(state, 'halfDuplex') === tierId ? HALF_DUPLEX_PRODUCTION_MULTIPLIER : 1) * getChallengeLever(state, 'production', 1)
 
+// The tier as priced during the run (F4 Premium Tier and the `costMultiplier` lever; a copy — TIER_DEFINITIONS is never edited).
 export const getChallengeTier = (state, tierId) => {
   const tier = TIER_BY_ID[tierId]
   if (!tier) return tier
@@ -1571,7 +1571,7 @@ export const getChallengeTier = (state, tierId) => {
   return factor === 1 ? tier : { ...tier, baseCost: tier.baseCost * factor }
 }
 
-// F6 Address Space: only the first six tiers exist for the run.
+// F6 Address Space: only the first ADDRESS_SPACE_TIER_COUNT tiers exist for the run.
 export const getEffectiveTierCount = state => (hasChallengeEffect(state, 'addressSpace') ? ADDRESS_SPACE_TIER_COUNT : TIER_DEFINITIONS.length)
 export const getEffectiveLastTier = state => TIER_DEFINITIONS[getEffectiveTierCount(state) - 1]
 
@@ -1597,9 +1597,10 @@ export const getBitRotCorruption = state => {
   const t = clampNonNegative(state.challenges?.run?.cycleSeconds) - BIT_ROT_GRACE_SECONDS
   if (t <= 0) return 0
   const raw = Math.min(BIT_ROT_CORRUPTION_CAP, BIT_ROT_BASE_CORRUPTION * 2 ** (t / BIT_ROT_DOUBLING_SECONDS))
-  // Bigger Foundry disks rot less: each Disk ladder size beyond the first divides corruption by BIT_ROT_DISK_RELIEF.
-  // Never shown to the player; a small Foundry just keeps losing the cycle until its disks have grown.
-  const ladderStep = Math.max(1, Math.round(Math.log(getDiskSize(state) / DISK_LADDER_BASE_SIZE_BITS) / Math.log(DISK_LADDER_SIZE_MULTIPLIER)) + 1)
+  // Bigger Foundry disks rot less: each Disk ladder size unlocked beyond the first divides corruption by
+  // BIT_ROT_DISK_RELIEF (unlockedDiskSteps survives Foundry resets, unlike built-disk counts). Never shown to the
+  // player; a small Foundry just keeps losing the cycle until its disks have grown.
+  const ladderStep = getUnlockedDiskSteps(state.intro)
   return raw / BIT_ROT_DISK_RELIEF ** (ladderStep - 1)
 }
 
@@ -1818,6 +1819,17 @@ export const getNextBytePowerProgressFraction = moneyBits => {
   return Math.min(1, bytes / nextPowerBytes)
 }
 
+// The Clock Speed multiplier as it acts on production right now (F21 Base Clock: 1, Overclock has no effect with it;
+// `clockSpeedPower` lever: raised to that power). Shared by tier periods and MainPage's Clock Speed card.
+export const getChallengeClockSpeedMultiplier = state => hasChallengeEffect(state, 'clockSpeedDisabled')
+  ? 1
+  : getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, getOverclockLevel(state) ?? 0) ** getChallengeLever(state, 'clockSpeedPower', 1)
+
+// What one Scale Up claim multiplies a tier's production by right now (2 normally; `scaleUpPower` lever: 2^power;
+// F22 Scale Out: 1). Shared by getTierScaleUpMultiplier's per-claim step and MainPage's Scale Up button.
+export const getScaleUpStepMultiplier = state =>
+  hasChallengeEffect(state, 'scaleUpNoDoubling') ? 1 : SCALE_UP_MULTIPLIER_BASE ** getChallengeLever(state, 'scaleUpPower', 1)
+
 // A tier's actual production period after both tickspeed multipliers shrink it (see "Tier
 // production tickspeed" in CLAUDE.md) — the per-tier tickspeed level and the global tickspeed
 // multiplier both speed up how *often* a tier delivers a batch, not how much lands each time (see
@@ -1832,10 +1844,7 @@ export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
   // its own resource-funded tickspeed level rather than replacing it.
   const tickspeedMultiplier = getTickspeedProductionMultiplier(getEffectiveTickspeedLevel(state, tierId), getChallengeEffectTier(state, 'halfStep') === tierId ? HALF_STEP_PRODUCTION_STEP : TICKSPEED_PRODUCTION_STEP)
     * (tierId === getEffectiveLastTier(state).id ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0) : 1)
-  // F21 Base Clock: Clock Speed is disabled, and Overclock (which scales it) has no effect with it.
-  const globalTickspeedMultiplier = hasChallengeEffect(state, 'clockSpeedDisabled')
-    ? 1
-    : getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, getOverclockLevel(state) ?? 0) ** getChallengeLever(state, 'clockSpeedPower', 1)
+  const globalTickspeedMultiplier = getChallengeClockSpeedMultiplier(state)
   // F13 Clock Skew doubles the tier's base period; F17 Noisy Neighbour lengthens every other tier's period per Zettabytes level.
   const noisyTier = getChallengeEffectTier(state, 'noisyNeighbour')
   const challengePeriodFactor = (getChallengeEffectTier(state, 'clockSkew') === tierId ? CLOCK_SKEW_PERIOD_MULTIPLIER : 1)

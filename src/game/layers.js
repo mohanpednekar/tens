@@ -93,7 +93,7 @@ export const PURGE_THRESHOLD = GOOGOL * BITS_PER_BYTE
 export const OVERFLOW_MODE_MAX_INTERVAL_SECONDS = 1
 
 // ── Challenge mode (epic #1037) ───────────────────────────────────────────────────────────────────
-// F25 "Scope Creep" raises the Purge goal to this many Bytes (placeholder, retuned by #1043), expressed
+// F25 "Scope Creep" raises the Purge goal to this many Bytes (retuned by #1043), expressed
 // in Bits like PURGE_THRESHOLD.
 export const SCOPE_CREEP_GOAL_BYTES_EXPONENT = 120
 export const SCOPE_CREEP_PURGE_GOAL = 10 ** SCOPE_CREEP_GOAL_BYTES_EXPONENT * BITS_PER_BYTE
@@ -146,7 +146,7 @@ const describeLevers = ({ production, clockSpeedPower, scaleUpPower, costMultipl
   costMultiplier != null && `Every tier costs ×${costMultiplier}.`,
 ].filter(Boolean).join(' ')
 export const CHALLENGE_DEFINITIONS = RAW_CHALLENGE_DEFINITIONS.map(def => ({ ...def, rule: [def.rule, describeLevers(def.levers)].filter(Boolean).join(' ') }))
-// Placeholder challenge numbers (retuned by #1043). All rules apply only while their challenge is active.
+// Challenge numbers (retuned by #1043 against the maintainer's bands: F1–F10 1–2×, F11–F20 2–10×, F21–F25 10–100×). All rules apply only while their challenge is active.
 export const HALF_DUPLEX_PRODUCTION_MULTIPLIER = 0.5 // F1
 export const WRITE_LOCK_HALT_SECONDS = 10 // F2
 export const PREMIUM_TIER_COST_MULTIPLIER = 1000 // F4

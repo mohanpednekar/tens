@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  buyTickspeedMultiplier, buyTierQuantity, getChallengeProductionMultiplier, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
+  buyTickspeedMultiplier, buyTierQuantity, getChallengeClockSpeedMultiplier, getChallengeProductionMultiplier, overclockGame, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
   getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierTickspeedRequirement, getTierTickspeedSpend, getTierScaleUpMultiplier,
   isTierUnlocked, scaleUpGame, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
@@ -359,5 +359,42 @@ describe('run-wide challenge levers', () => {
     const power = CHALLENGE_DEFINITIONS.find(def => def.id === 'F12').levers.scaleUpPower
     expect(getTierScaleUpMultiplier(runOf('F12', () => ({ scaleUpTierCounts: counts })), T(0))).toBeCloseTo(2 ** (4 * power))
     expect(getTierScaleUpMultiplier(runOf('F1', () => ({ scaleUpTierCounts: counts })), T(0))).toBe(16)
+  })
+})
+
+describe('lever behaviour through the engine', () => {
+  const seed = state => ({
+    owned: { ...state.owned, [T(0)]: 100 },
+    resources: { ...state.resources, [T(0)]: 100, [MONEY_ID]: 0 },
+    tierProductionAccumulators: {},
+  })
+
+  it('clockSpeedPower raises the Clock Speed multiplier to that power in tier periods', () => {
+    const power = CHALLENGE_DEFINITIONS.find(def => def.id === 'F11').levers.clockSpeedPower
+    const level = (state, patch) => ({ ...state, globalTickspeedMultiplier: 50, ...patch })
+    const plain = getEffectiveTierTickSpeedSeconds(runOf('F2', level), T(0))
+    const weakened = getEffectiveTierTickSpeedSeconds(runOf('F11', level), T(0))
+    expect(getChallengeClockSpeedMultiplier(runOf('F11', level))).toBeCloseTo(getChallengeClockSpeedMultiplier(runOf('F2', level)) ** power)
+    expect(weakened).toBeGreaterThan(plain)
+  })
+
+  it('the production lever scales what tickGame credits (F6 ×5 vs F2 ×1)', () => {
+    const credited = id => tickGame(1)(runOf(id, seed)).resources[MONEY_ID]
+    expect(credited('F6')).toBe(credited('F2') * 5)
+  })
+
+  it('F9: Overclock also restarts the Bit Rot grace period', () => {
+    const rotting = withRun(runOf('F9', state => ({ purchaseLevels: { ...state.purchaseLevels, [T(9)]: 6 } })), { cycleSeconds: BIT_ROT_GRACE_SECONDS + 200 })
+    const after = overclockGame(rotting)
+    expect(after).not.toBe(rotting)
+    expect(after.challenges.run.cycleSeconds).toBe(0)
+  })
+
+  it('F9: the Foundry relief survives a Foundry reset (it reads unlocked disk steps, not built-disk counts)', () => {
+    const rotting = withRun(runOf('F9'), { cycleSeconds: BIT_ROT_GRACE_SECONDS + 200 })
+    const grown = { ...rotting, intro: { ...rotting.intro, capacity: 1e15, unlockedDiskSteps: 3, disksBuiltTotal: { [DISK_LADDER_BASE_SIZE_BITS]: 9, [DISK_LADDER_BASE_SIZE_BITS * 10]: 9 } } }
+    const reset = { ...grown, intro: { ...grown.intro, disksBuiltTotal: {} } }
+    expect(getBitRotCorruption(grown)).toBeCloseTo(getBitRotCorruption(rotting) / BIT_ROT_DISK_RELIEF ** 2)
+    expect(getBitRotCorruption(reset)).toBeCloseTo(getBitRotCorruption(grown))
   })
 })

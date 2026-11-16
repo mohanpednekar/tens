@@ -7,7 +7,7 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getChallengeTier, getChallengeProductionMultiplier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getChallengeTier, getChallengeProductionMultiplier, getChallengeClockSpeedMultiplier, getScaleUpStepMultiplier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -989,6 +989,10 @@ const MainPage = ({ game }) => {
   // when the claim would reveal the Terabytes tier (see scaleUpGame in engine.js).
   const scaleUpSuccessorTier = TIER_DEFINITIONS[TIER_DEFINITIONS.indexOf(scaleUpTargetTier) + 1] ?? null
   const scaleUpUnlocksTB = scaleUpSuccessorTier?.symbol === 'TB'
+  // Challenge levers can change what a Scale Up claim is worth (×2 normally); keep the plain "doubles" wording otherwise.
+  const scaleUpStep = getScaleUpStepMultiplier(state)
+  const scaleUpStepLabel = Number.isInteger(scaleUpStep) ? String(scaleUpStep) : scaleUpStep.toFixed(2)
+  const scaleUpVerb = scaleUpStep === 2 ? 'doubles' : `multiplies by ${scaleUpStepLabel}`
 
   // Overclock: a second, rarer soft-reset than Scale Up, claimable once the last tier's own
   // COMPLETED-level count reaches the next Overclock requirement — 5 initially (a minimum only;
@@ -1042,7 +1046,7 @@ const MainPage = ({ game }) => {
   // same Prestige cycle.
   const globalTickspeedLevel = state.globalTickspeedMultiplier ?? null
   const isGlobalTickspeedActive = globalTickspeedLevel !== null
-  const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel, overclockLevel)
+  const globalTickspeedMultiplier = getChallengeClockSpeedMultiplier(state)
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
   const canBuyGlobalTickspeed = !isFrozen && !challengeDisabled('clockSpeedDisabled') && globalTickspeedUnlocked && isGlobalTickspeedAffordable(state)
@@ -1425,8 +1429,8 @@ const MainPage = ({ game }) => {
           // CLAUDE.md); neither tickspeed multiplier appears here since both now speed up
           // *delivery frequency* instead of inflating the per-delivery amount. Floored to match
           // tickGame's own floored production credit — prestigeBonus is the only fractional factor
-          // left here (getPurchaseMilestoneMultiplier and getTierScaleUpMultiplier are always powers of
-          // 2), so without flooring this preview could show a fraction that never actually lands.
+          // left here (getPurchaseMilestoneMultiplier is always a power of 2; getTierScaleUpMultiplier is too
+          // outside a Scale Up-weakening challenge), so without flooring this preview could show a fraction that never actually lands.
           const milestoneMultiplier = getPurchaseMilestoneMultiplier(tierLevel)
           const tierScaleUpMultiplier = getTierScaleUpMultiplier(state, tier.id)
           const production = Math.floor(owned * prestigeBonus * tierScaleUpMultiplier * milestoneMultiplier * getChallengeProductionMultiplier(state, tier.id))
@@ -1627,27 +1631,27 @@ const MainPage = ({ game }) => {
               <CardTitleGroup>
                 <h2>Scale Up</h2>
                 <CardEffect
-                  title="Doubles production for tiers unlocked so far"
+                  title={`${scaleUpStep === 2 ? 'Doubles' : 'Multiplies'} production for tiers unlocked so far`}
                   onClick={event => {
                     event.preventDefault()
                     event.stopPropagation()
                   }}
                 >
-                  🏭 ×2{scaleUpUnlocksTB ? ' · 🔓 TB' : ''}
+                  🏭 ×{scaleUpStepLabel}{scaleUpUnlocksTB ? ' · 🔓 TB' : ''}
                 </CardEffect>
               </CardTitleGroup>
             </summary>
             <MutedText>
-              Resets tiers and doubles production of every tier unlocked so far
+              Resets tiers and {scaleUpVerb} production of every tier unlocked so far
               {scaleUpSuccessorTier ? `, and unlocks ${scaleUpSuccessorTier.name}` : ''}. Needs {formatAmount(scaleUpRequirementDisplay)} completed {scaleUpTargetTier.name} levels.
             </MutedText>
           </Disclosure>
           <ScaleUpButton
-            aria-label={`Scale Up (requires ${scaleUpRequirementDisplay} completed ${scaleUpTargetTier.name} levels) — doubles production for tiers unlocked so far${scaleUpUnlocksTB ? ' and unlocks TB' : ''}`}
+            aria-label={`Scale Up (requires ${scaleUpRequirementDisplay} completed ${scaleUpTargetTier.name} levels) — ${scaleUpVerb} production for tiers unlocked so far${scaleUpUnlocksTB ? ' and unlocks TB' : ''}`}
             color={canScaleUp ? '#22d3ee' : 'darkgrey'}
             disabled={!canScaleUp}
             onClick={actions.scaleUp}
-            title={`Resets tiers, doubles production for tiers unlocked so far${scaleUpSuccessorTier ? `, and unlocks ${scaleUpSuccessorTier.name}` : ''} — requires ${scaleUpRequirementDisplay} completed ${scaleUpTargetTier.name} levels`}
+            title={`Resets tiers, ${scaleUpVerb} production for tiers unlocked so far${scaleUpSuccessorTier ? `, and unlocks ${scaleUpSuccessorTier.name}` : ''} — requires ${scaleUpRequirementDisplay} completed ${scaleUpTargetTier.name} levels`}
             type="button"
             $progress={scaleUpProgressPercent}
             $progressColor="#22d3ee"

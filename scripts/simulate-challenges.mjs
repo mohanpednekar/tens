@@ -321,7 +321,7 @@ function seedFor(base, def) {
 }
 
 // --foundry-step K: pretend the Foundry's Disk ladder has reached its Kth size (sizes below it built, K unlocked), as a
-// player who has done pool flushes would have. The career bot never flushes, so its ladder stays at the first size.
+// player who has unlocked further sizes through Foundry resets would have. The career bot never does, so its ladder stays at the first size.
 const FOUNDRY_STEP = Number(argOf('--foundry-step', 0))
 const seedFoundryStep = s => {
   if (FOUNDRY_STEP < 2) return s
@@ -355,7 +355,7 @@ for (const def of defs) {
 const out = [
   '## Challenge runs (#1043)',
   '',
-  `Step ${DT}s; Foundry carried from a ${CAREER_CYCLES}-cycle bot career; no PP automations or achievement bonuses; ratio target ≤ ~1.5×.`,
+  `Step ${DT}s; Foundry carried from a ${CAREER_CYCLES}-cycle bot career; no PP automations or achievement bonuses; bands: F1–F10 1–2×, F11–F20 2–10×, F21–F25 10–100×.`,
   '',
   '| Challenge | Purge | Normal run | Challenge run | Ratio | Notes |',
   '|---|---|---|---|---|---|',
