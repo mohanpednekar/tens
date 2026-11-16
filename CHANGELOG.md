@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Quettabytes level credit** — each completed Quettabytes purchase level now credits 1 Quettabyte every 10 seconds, regardless of the current balance.
+
 ### Changed
+
+- **Quettabytes tickspeed upgrades spend their full power-of-ten cost** again (previously only 10% of it).
 
 - **F6 Address Space now matches its tier** — it targeted Exabytes (the F6 slot) but its rule capped the ladder at Ronnabytes. Exabytes is now the top tier (six tiers; 64-bit address-space theme) and the run's Scale Up is raised to the 3rd power and Clock Speed (which carries Overclock's bonus) to the 2nd to offset the smaller ladder (simulated ≈1.34× a normal run, in the F1–F10 band).
 - **Shorter UI copy** — trimmed descriptive text and challenge rule wording on the Challenges start dialog, Daily tab (removed per-format style lines and footnotes, compact credits line) and the Purge Points tutorial.
