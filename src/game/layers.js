@@ -129,7 +129,7 @@ const RAW_CHALLENGE_DEFINITIONS = [
   tierChallenge(5, 'F16', 'tierTickspeed', 'Egress Fees', 'egressFees', 'Exabytes tickspeed levels cost one level more.', { costMultiplier: 30 }),
   tierChallenge(6, 'F17', 'tierTickspeed', 'Noisy Neighbour', 'noisyNeighbour', 'Each Zettabytes tickspeed level slows other tiers 2%.', { production: 0.5, clockSpeedPower: 0.75 }),
   tierChallenge(7, 'F18', 'tierTickspeed', 'Daisy Chain', 'daisyChain', 'Yottabytes tickspeed capped at Zettabytes\' level.', { scaleUpPower: 0.6 }),
-  tierChallenge(8, 'F19', 'tierTickspeed', 'Duty Cycle', 'dutyCycle', 'Ronnabytes tickspeed active only half the time (30 s cycles).', { clockSpeedPower: 0.25 }),
+  tierChallenge(8, 'F19', 'tierTickspeed', 'Duty Cycle', 'dutyCycle', 'Ronnabytes tickspeed alternates 30 s on, 30 s off.', { clockSpeedPower: 0.25 }),
   tierChallenge(9, 'F20', 'tierTickspeed', 'Burn Rate', 'burnRate', 'Quettabytes tickspeed spends its full requirement.', { production: 0.5, scaleUpPower: 0.75, costMultiplier: 3 }),
 
   { id: 'F21', layer: CHALLENGE_LAYER_FACTORY, target: 'Clock Speed', codename: 'Base Clock', automation: { kind: 'global', key: 'speedUp' }, effect: 'clockSpeedDisabled', rule: 'Clock Speed is disabled.', goal: PURGE_THRESHOLD },
