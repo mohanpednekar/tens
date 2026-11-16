@@ -411,8 +411,9 @@ src/
     engine.js             ← pure state functions (no React, no side effects)
     navAttention.js       ← pure predicates for AppNav attention dots (high/normal; Storage cues fold into Foundry;
                             Compute Flops affordability → `compute`)
-    dailyChallenges.js, challengeUi.js ← Daily-challenge logic ("Daily challenges"); pure player-facing challenge-mode
-                            helpers shared by Firmware and the Factory banner
+    dailyChallenges.js    ← Daily-challenge logic ("Daily challenges")
+    challengeUi.js        ← pure player-facing helpers for Factory challenge mode (goal/readout formatting), shared
+                            by Firmware and the Factory banner
     useIncrementalGame.js ← React hook: engine ↔ useState + localStorage + tick timer
     storage.js            ← localStorage read/write; every load goes through save-migration/, then forward field
                             merge (`mergeState`); multi-slot saves + Supporter entitlement (unlock code / dummy
@@ -614,7 +615,7 @@ State `achievements` (`earned`, lifetime `counters.pings`) survives every reset 
 
 ### Daily challenges (epic #1062, basic slice)
 
-State `daily` (`runs[formatId]`, `results[dateId][formatId]`) survives every reset but a full Reset; logic in `src/game/dailyChallenges.js` (`generateDailyChallenge`, `startDailyRun`/`tickDailyRuns`/`restartDailyRun`/`forfeitDailyRun`, `buyDailyTier`/`buyDailyClockSpeed`/`scaleUpDailyRun`/`overclockDailyRun`, `getDailyCredits`); every function takes `nowMs`. Each run is an isolated Factory-only game won by Bytes *earned* (production, not balance); Scale Up/Overclock re-grant the start balance. Live in all builds behind `DAILY_CHALLENGES_FEATURE` (rollout switch) + first Purge; UI = Challenges page 📅 Daily tab (`pages/ChallengesPage/DailyTab.jsx`). Deferred: server time, fetched/validated definitions, rewards, weekly/monthly milestones, streak, Checkpoints, Antimatter (#1063–#1072).
+State `daily` (`runs[formatId]`, `results[dateId][formatId]`) survives every reset but a full Reset; logic in `src/game/dailyChallenges.js` (`generateDailyChallenge`, `startDailyRun`/`tickDailyRuns`/`restartDailyRun`/`forfeitDailyRun`, `buyDailyTier`/`buyDailyClockSpeed`/`scaleUpDailyRun`/`overclockDailyRun`, `getDailyCredits`); time-dependent functions take `nowMs` (none reads the clock itself; `generateDailyChallenge`/`getDailyCredits` take a `dateId`). Each run is an isolated Factory-only game won by Bytes *earned* (production, not balance); Scale Up/Overclock re-grant the start balance. Live in all builds behind `DAILY_CHALLENGES_FEATURE` (rollout switch) + first Purge; UI = Challenges page 📅 Daily tab (`pages/ChallengesPage/DailyTab.jsx`). Deferred: server time, fetched/validated definitions, rewards, weekly/monthly milestones, streak, Checkpoints, Antimatter (#1063–#1072).
 
 ### Tiers, Prestige, Reboot (Era ascension)
 
