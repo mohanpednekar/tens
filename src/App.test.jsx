@@ -655,16 +655,16 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
   const user = userEvent.setup()
 
   // The last tier (Quettabytes) has the cheapest tickspeed base cost (10^1), so level 1 → 2
-  // requires 10 of its own resource and spends only 1 (10%).
+  // requires 11 of its own resource (keeps 1 generator) and spends the full 10.
   seedMainGameState({
-    resources: { base: 10, tier10: 10 },
-    owned: { tier09: 10, tier10: 10 },
+    resources: { base: 10, tier10: 11 },
+    owned: { tier09: 10, tier10: 11 },
     // autobuyers.tier10 is left at its default (null, locked) — the tickspeed multiplier is
     // enabled by default regardless.
   })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 1 QB \(requires 10 QB owned\)/i })
+  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 10 QB/i })
   expect(upgradeButton).toBeEnabled()
 
   await user.click(upgradeButton)
@@ -1282,7 +1282,7 @@ test('once the last tier has been a Scale Up target, a separate Restage panel ap
 
   const quettabytesLayer = screen.getByLabelText(/^quettabytes layer$/i)
   expect(within(quettabytesLayer).queryByRole('button', { name: /consume .* xp/i })).toBeNull()
-  expect(within(quettabytesLayer).getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 1 QB/i })).toBeEnabled()
+  expect(within(quettabytesLayer).getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 10 QB/i })).toBeEnabled()
 })
 
 test('the Restage panel is hidden before the last tier has been a Scale Up target', () => {

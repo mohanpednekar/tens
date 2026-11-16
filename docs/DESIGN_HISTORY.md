@@ -9434,3 +9434,7 @@ State is now `intro.computeBoosts` lanes; a running head is never preempted by a
 ## Data Stream balance kept through Prestige (#1096)
 
 Purge / challenge enter-exit used to reset `intro.bits` to 0 each cycle ("a new cycle starts the screen's balance from 0"). Dropped by maintainer request: Prestige never empties the Data Stream. Reboot (`buildEraIntroReset`) still zeroes it. Side effect: a challenge run starts with the carried balance (auto-convert may turn it into free tier01 units); accepted. The simulate-run-times skill was not re-run.
+
+## Last-tier tickspeed spend reverted; QB level credit (2026-11)
+
+The last tier's resource-funded tickspeed upgrade spent only 10% of its cost (`LAST_TIER_TICKSPEED_SPEND_FRACTION`); it now spends the full power-of-ten cost like every tier (requirement `cost + 1`). To offset, `tickGame` credits the last tier 1 unit per completed purchase level every 10 s (`lastTierLevelCreditAccumulator`), regardless of balance. Side effect: F20 Burn Rate ("spends its full requirement") is now a no-op rule and needs a redesign.
