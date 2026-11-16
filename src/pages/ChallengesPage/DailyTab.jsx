@@ -11,17 +11,8 @@ import {
   generateDailyChallenge,
   getUtcDateId,
 } from 'game/dailyChallenges'
-import {
-  buyGlobalTickspeedMultiplier,
-  buyTierQuantity,
-  formatAmount,
-  formatCurrency,
-  isGlobalTickspeedMultiplierUnlocked,
-  isTierUnlocked,
-  overclockGame,
-  scaleUpGame,
-} from 'game/engine'
-import { MONEY_ID, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount } from 'game/engine'
+import MainPage from 'pages/MainPage'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -98,48 +89,41 @@ export const describeDailyChallenge = def => [
 ].filter(Boolean).join(' · ')
 
 const OUTCOME_LABELS = { won: '✓ Won', completed: 'Completed (no win)', expired: 'Expired' }
-const BIG = Number.MAX_SAFE_INTEGER
 
+// A run is played on the Factory page itself: the same component the main game uses, fed the run's own game state
+// and actions that route to that run. Only the progress is separate.
 const RunView = ({ format, run, actions, onBack }) => {
-  const game = run.game
-  const can = fn => fn(game) !== game
-  const bytes = run.earnedBits / 8
+  const play = (name, arg) => actions.dailyPlay(format.id, name, arg)
+  const runGame = {
+    state: run.game,
+    offlineProgress: null,
+    buyMaxMode: false,
+    actions: {
+      buyTierQuantity: tierId => play('buyTier', tierId),
+      buyTickspeedMultiplier: tierId => play('tierTickspeed', tierId),
+      buyGlobalTickspeedMultiplier: () => play('clockSpeed'),
+      scaleUp: () => play('scaleUp'),
+      overclock: () => play('overclock'),
+      consumeXpForLastTierTickspeed: amount => play('restage', amount),
+      purge: () => {},
+      exitChallenge: () => {},
+    },
+  }
   return (
-    <StatCard aria-label={`daily run ${format.id}`}>
-      <BackBanner>
-        <Heading>Daily {format.label} — Factory run</Heading>
-        <Button aria-label="back to daily challenges" onClick={onBack} type="button" variant="prestige">Back</Button>
-      </BackBanner>
-      <Meta>
-        Earn {formatAmount(run.def.targetBytes ?? 0)} B · earned {formatAmount(bytes)} B · {formatDuration(run.def.limitSeconds - run.simSeconds)} left
-      </Meta>
-      {describeDailyChallenge(run.def) && <Meta aria-label="daily run conditions">{describeDailyChallenge(run.def)}</Meta>}
-      <Bar $percent={Math.round(getRunProgress(run) * 100)}><span /></Bar>
-      <Meta aria-label="daily run balance">Balance {formatCurrency(game.resources[MONEY_ID] ?? 0)}</Meta>
-      {TIER_DEFINITIONS.filter(tier => isTierUnlocked(game)(tier)).map(tier => (
-        <Row key={tier.id}>
-          <span><strong>{tier.name}</strong><Meta>owned {formatAmount(game.owned[tier.id] ?? 0)}</Meta></span>
-          <Button
-            aria-label={`buy ${tier.name} in daily ${format.id}`}
-            disabled={!can(buyTierQuantity(tier.id, BIG))}
-            onClick={() => actions.dailyBuyTier(format.id, tier.id)}
-            type="button"
-          >
-            Buy
-          </Button>
-        </Row>
-      ))}
-      <Row>
-        <span><strong>Run upgrades</strong><Meta>{game.globalTickspeedMultiplier ? `Clock Speed level ${game.globalTickspeedMultiplier}` : ''}</Meta></span>
-        <Actions>
-          {isGlobalTickspeedMultiplierUnlocked(game) && (
-            <Button aria-label={`buy Clock Speed in daily ${format.id}`} disabled={!can(buyGlobalTickspeedMultiplier)} onClick={() => actions.dailyClockSpeed(format.id)} type="button">Clock</Button>
-          )}
-          <Button aria-label={`Scale Up daily ${format.id}`} disabled={!can(scaleUpGame)} onClick={() => actions.dailyScaleUp(format.id)} type="button" variant="prestige">Scale Up</Button>
-          <Button aria-label={`Overclock daily ${format.id}`} disabled={!can(overclockGame)} onClick={() => actions.dailyOverclock(format.id)} type="button" variant="prestige">Overclock</Button>
-        </Actions>
-      </Row>
-    </StatCard>
+    <>
+      <StatCard aria-label={`daily run ${format.id}`}>
+        <BackBanner>
+          <Heading>Daily {format.label}</Heading>
+          <Button aria-label="back to daily challenges" onClick={onBack} type="button" variant="prestige">Back</Button>
+        </BackBanner>
+        <Meta>
+          Earn {formatAmount(run.def.targetBytes ?? 0)} B · earned {formatAmount(run.earnedBits / 8)} B · {formatDuration(run.def.limitSeconds - run.simSeconds)} left
+        </Meta>
+        {describeDailyChallenge(run.def) && <Meta aria-label="daily run conditions">{describeDailyChallenge(run.def)}</Meta>}
+        <Bar $percent={Math.round(getRunProgress(run) * 100)}><span /></Bar>
+      </StatCard>
+      <MainPage game={runGame} />
+    </>
   )
 }
 

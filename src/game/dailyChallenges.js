@@ -14,7 +14,9 @@
 // function takes `nowMs` as an argument.
 import {
   buyGlobalTickspeedMultiplier,
+  buyTickspeedMultiplier,
   buyTierQuantity,
+  consumeXpForLastTierTickspeed,
   createInitialGameState,
   getOverclockLevel,
   overclockGame,
@@ -108,24 +110,36 @@ const applyRunAction = (game, def, action, reseed = false) => {
   return reseed ? { ...next, resources: { ...next.resources, [MONEY_ID]: getStartBits(def) } } : next
 }
 
+// Every Factory action a run accepts (the same ones the Factory page offers): `make(arg)` builds the engine action.
+// `reseed` marks the soft resets that wipe the balance.
 const RUN_ACTIONS = {
-  clockSpeed: { action: buyGlobalTickspeedMultiplier },
-  scaleUp: { action: scaleUpGame, reseed: true },
-  overclock: { action: overclockGame, reseed: true },
+  buyTier: { make: tierId => buyTierQuantity(tierId, BUY_ALL) },
+  tierTickspeed: { make: tierId => buyTickspeedMultiplier(tierId) },
+  clockSpeed: { make: () => buyGlobalTickspeedMultiplier },
+  scaleUp: { make: () => scaleUpGame, reseed: true },
+  overclock: { make: () => overclockGame, reseed: true },
+  restage: { make: amount => consumeXpForLastTierTickspeed(amount), reseed: true },
 }
-const TIER_BUY_ACTIONS = Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, buyTierQuantity(tier.id, BUY_ALL)]))
 
-// Reference bot: between steps it takes everything on offer — Clock Speed, tiers top-down, Scale Up, Overclock —
-// until nothing changes. Exported so tests can replay it through the public run actions.
-export const DAILY_BOT_ACTION_ORDER = ['clockSpeed', ...TIER_DEFINITIONS.map(tier => tier.id).reverse(), 'scaleUp', 'overclock']
+// Reference bot: between steps it takes everything on offer — Clock Speed, tiers top-down, Scale Up,
+// Overclock — until nothing changes (per-tier tickspeed and Restage are left alone: taking tickspeed greedily made
+// no measurable difference in the sweep). `[actionName, arg]` pairs, exported so tests can replay it through
+// the public run action.
+const TIER_IDS_TOP_DOWN = TIER_DEFINITIONS.map(tier => tier.id).reverse()
+export const DAILY_BOT_ACTION_ORDER = [
+  ['clockSpeed'],
+  ...TIER_IDS_TOP_DOWN.map(tierId => ['buyTier', tierId]),
+  ['scaleUp'],
+  ['overclock'],
+]
+const BOT_ACTIONS = DAILY_BOT_ACTION_ORDER.map(([name, arg]) => ({ action: RUN_ACTIONS[name].make(arg), reseed: Boolean(RUN_ACTIONS[name].reseed) }))
 const botAct = (game, def, onReset) => {
   let current = game
   for (let pass = 0; pass < BOT_MAX_PASSES; pass++) {
     let next = current
-    for (const key of DAILY_BOT_ACTION_ORDER) {
-      const entry = RUN_ACTIONS[key]
-      const acted = entry ? applyRunAction(next, def, entry.action, entry.reseed) : applyRunAction(next, def, TIER_BUY_ACTIONS[key])
-      if (entry?.reseed && acted !== next) onReset?.(acted)
+    for (const { action, reseed } of BOT_ACTIONS) {
+      const acted = applyRunAction(next, def, action, reseed)
+      if (reseed && acted !== next) onReset?.(acted)
       next = acted
     }
     if (next === current) break
@@ -358,21 +372,19 @@ export const tickDailyRuns = nowMs => state => {
   return next
 }
 
-// Applies a Factory engine action to a run's own game (a target is only ever reached by production, in a tick).
-const playRun = (formatId, nowMs, action, reseed = false) => state => {
+// Applies one Factory action (`RUN_ACTIONS` name + argument) to a run's own game. A target is only ever reached by
+// production, in a tick.
+export const playDailyRun = (formatId, actionName, arg, nowMs) => state => {
+  const entry = RUN_ACTIONS[actionName]
+  if (!entry) return state
   // Catch the run up (and settle it) through the action's timestamp first, so a purchase can't retroactively
   // speed up a gap that already ended the run.
   const caught = tickDailyRuns(nowMs)(state)
   const run = caught.daily.runs[formatId]
   if (!run) return caught
-  const game = applyRunAction(run.game, run.def, action, reseed)
+  const game = applyRunAction(run.game, run.def, entry.make(arg), entry.reseed)
   return game === run.game ? caught : setRun(caught, formatId, { ...run, game })
 }
-
-export const buyDailyTier = (formatId, tierId, nowMs) => playRun(formatId, nowMs, buyTierQuantity(tierId, BUY_ALL))
-export const buyDailyClockSpeed = (formatId, nowMs) => playRun(formatId, nowMs, RUN_ACTIONS.clockSpeed.action)
-export const scaleUpDailyRun = (formatId, nowMs) => playRun(formatId, nowMs, RUN_ACTIONS.scaleUp.action, true)
-export const overclockDailyRun = (formatId, nowMs) => playRun(formatId, nowMs, RUN_ACTIONS.overclock.action, true)
 
 // Credits for one UTC date: 1 per distinct format won + 1 once for any won/completed run. Max 4.
 export const getDailyCredits = (state, dateId) => {

@@ -7,8 +7,6 @@ import {
   DAILY_MAX_TARGET_BYTES,
   DAILY_MODIFIER_POOL,
   buildDailyCandidate,
-  buyDailyClockSpeed,
-  buyDailyTier,
   canRestartDailyRun,
   forfeitDailyRun,
   generateDailyChallenge,
@@ -18,9 +16,8 @@ import {
   getRunProgress,
   getUtcDateId,
   isDailyChallengesAvailable,
-  overclockDailyRun,
+  playDailyRun,
   restartDailyRun,
-  scaleUpDailyRun,
   startDailyRun,
   tickDailyRuns,
 } from './dailyChallenges'
@@ -96,18 +93,13 @@ describe('calibration (reference bot)', () => {
     const format = DAILY_FORMAT_BY_ID[formatId]
     const date = '2026-11-14'
     const start = Date.parse(`${date}T00:00:00Z`) + 1000
-    const act = {
-      clockSpeed: now => buyDailyClockSpeed(formatId, now),
-      scaleUp: now => scaleUpDailyRun(formatId, now),
-      overclock: now => overclockDailyRun(formatId, now),
-    }
     let state = startDailyRun(formatId, start)(purged())
     for (let step = 0; step <= format.seconds / format.stepSeconds && state.daily.runs[formatId]; step++) {
       const now = start + step * format.stepSeconds * 1000
       state = tickDailyRuns(now)(state)
       for (let pass = 0; pass < 20 && state.daily.runs[formatId]; pass++) {
         const before = state.daily.runs[formatId].game
-        for (const key of DAILY_BOT_ACTION_ORDER) state = (act[key]?.(now) ?? buyDailyTier(formatId, key, now))(state)
+        for (const [name, arg] of DAILY_BOT_ACTION_ORDER) state = playDailyRun(formatId, name, arg, now)(state)
         if (state.daily.runs[formatId]?.game === before) break
       }
     }
@@ -131,7 +123,7 @@ describe('review regressions', () => {
 
   test('a purchase after the deadline cannot rescue a run: it settles first', () => {
     const started = startDailyRun('10m', T0)(purged())
-    const after = buyDailyTier('10m', 'tier01', T0 + 601 * 1000)(started)
+    const after = playDailyRun('10m', 'buyTier', 'tier01', T0 + 601 * 1000)(started)
     expect(after.daily.runs['10m']).toBeFalsy()
     expect(after.daily.results['2026-11-12']['10m'].lastOutcome).toBe('expired')
   })
@@ -139,7 +131,7 @@ describe('review regressions', () => {
   test('a win is timed at the crossing step, not at when the player returns', () => {
     const started = startDailyRun('10m', T0)(purged())
     const rich = withRun(started, '10m', { earnedBits: started.daily.runs['10m'].def.targetBytes * 8 - 1 })
-    const bought = buyDailyTier('10m', 'tier01', T0)(rich)
+    const bought = playDailyRun('10m', 'buyTier', 'tier01', T0)(rich)
     const after = tickDailyRuns(T0 + 600 * 1000)(bought)
     expect(after.daily.results['2026-11-12']['10m'].won).toBe(true)
     expect(after.daily.results['2026-11-12']['10m'].bestSeconds).toBeLessThan(60)
@@ -165,13 +157,31 @@ describe('stepping', () => {
     expect(tickDailyRuns(T0 + 10020 * 1000)(once).daily.runs['10h'].simSeconds).toBe(10020)
   })
 
+  test('a device clock that went backwards restarts the wait from now, once', () => {
+    const started = startDailyRun('10m', T0)(purged())
+    const back = tickDailyRuns(T0 - 5000)(started)
+    expect(back.daily.runs['10m'].lastTickAt).toBe(T0 - 5000)
+    expect(back.daily.runs['10m'].simSeconds).toBe(0)
+    expect(tickDailyRuns(T0 - 5000)(back)).toBe(back)
+    expect(tickDailyRuns(T0 - 3000)(back).daily.runs['10m'].simSeconds).toBe(2)
+  })
+
   test('the run game carries the challenge levers through purchases and soft resets', () => {
     const started = startDailyRun('1h', T0)(purged())
     const { levers } = started.daily.runs['1h'].def
     expect(started.daily.runs['1h'].game.runLevers).toEqual(levers)
-    const bought = buyDailyTier('1h', 'tier01', T0)(started)
+    const bought = playDailyRun('1h', 'buyTier', 'tier01', T0)(started)
     expect(bought.daily.runs['1h'].game).not.toBe(started.daily.runs['1h'].game)
     expect(tickDailyRuns(T0 + 60 * 1000)(bought).daily.runs['1h'].game.runLevers).toEqual(levers)
+  })
+})
+
+describe('run actions', () => {
+  test('an unknown action is a no-op; the soft resets re-grant the starting balance', () => {
+    const started = startDailyRun('10m', T0)(purged())
+    expect(playDailyRun('10m', 'purge', undefined, T0)(started)).toBe(started)
+    expect(playDailyRun('10m', 'scaleUp', undefined, T0)(started)).toBe(started)
+    expect(playDailyRun('10m', 'tierTickspeed', 'tier01', T0)(started)).toBe(started)
   })
 })
 

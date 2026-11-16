@@ -62,7 +62,8 @@ describe('Firmware Daily tab', () => {
     expect(game.actions.dailyForfeit).toHaveBeenCalledWith('10m')
     fireEvent.click(screen.getByRole('button', { name: 'open daily 10m' }))
     expect(screen.getByLabelText('daily run 10m')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'buy Kilobytes in daily 10m' }))
-    expect(game.actions.dailyBuyTier).toHaveBeenCalledWith('10m', 'tier01')
+    // The run is played on the Factory page itself, with its actions routed to the run.
+    fireEvent.click(screen.getAllByRole('button', { name: /^Buy.* for .*completed levels/ })[0])
+    expect(game.actions.dailyPlay).toHaveBeenCalledWith('10m', 'buyTier', 'tier01')
   })
 })

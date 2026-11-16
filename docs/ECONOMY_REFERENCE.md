@@ -1514,8 +1514,6 @@ permanently on `purge.unboundedUnlocked` (set by `purgeGame`/`eraGame` once the 
 never cleared by Reboot — full save Reset only). `storage.js` still grandfathers saves with
 `purge.count >= PURGE_UNBOUNDED_MIN_COUNT` (100, legacy rule).
 
-### Challenge mode (epic #1037, engine slice #1038)
-
 ### Daily challenges (epic #1062)
 
 `src/game/dailyChallenges.js`. Three definitions per UTC date (10 min / 1 h / 10 h), derived on the device from `(dateId, formatId, DAILY_GENERATOR_VERSION)` with a seeded PRNG and memoised (generation simulates; ~50 ms per definition). A run is an isolated Factory-only game; it is won when the Bytes it has **earned** (production only) reach `def.targetBytes`.
@@ -1534,13 +1532,15 @@ Each definition has three seeded parts:
 
 The ceilings and the bot's time are internal (`getDailyChallengeValidation`, never stored in a definition or shown to players).
 
-**Reference bot** (`DAILY_BOT_ACTION_ORDER`): before every step it takes everything on offer — Clock Speed, tiers top-down, Scale Up, Overclock — until nothing changes. **Stepping:** a run advances only in whole `stepSeconds`, live (`tickDailyRuns`, remainder carried) and in the simulation alike, so live play of the same actions reproduces the simulated time exactly (asserted in `dailyChallenges.test.js`).
+**Reference bot** (`DAILY_BOT_ACTION_ORDER`): before every step it takes everything on offer — Clock Speed, tiers top-down, Scale Up, Overclock — until nothing changes. **Run UI and actions:** a run is played on the Factory page component itself (`MainPage`, fed the run's game and actions that route to `playDailyRun`), so it offers every Factory action — `RUN_ACTIONS`: `buyTier`, `tierTickspeed`, `clockSpeed`, `scaleUp`, `overclock`, `restage`; the three soft resets re-grant the starting balance. The bot leaves per-tier tickspeed and Restage alone (greedy tickspeed made no measurable difference in the sweep). Purge does nothing in a run. **Stepping:** a run advances only in whole `stepSeconds`, live (`tickDailyRuns`, remainder carried) and in the simulation alike, so live play of the same actions reproduces the simulated time exactly (asserted in `dailyChallenges.test.js`).
 
 **Rejection:** a candidate is dropped when the bot earns nothing new inside the band (its earnings stalled after a soft reset) or reaches past `DAILY_MAX_TARGET_BYTES` (1e80 — clear of the Purge freeze); the next attempt index is folded into the seed, up to `DAILY_MAX_GENERATION_ATTEMPTS` (8), then a fixed fallback (no modifiers, no head start, target read at the ceiling) is used.
 
 **Progress / completion floor:** `getRunProgress` = `log10(earned) / log10(target)`; a run that times out at ≥ `DAILY_COMPLETION_FLOOR` (0.5) is *completed* (participation credit), below it *expired*. A stored run whose `generatorVersion` differs from the current one is dropped without a result.
 
-**Sweep:** `node scripts/simulate-daily-challenges.mjs --days 120` (exit 1 if any definition is out of band; `--date YYYY-MM-DD` prints one day's definitions and validation records). 120 dates from 2026-11-16: all in band; bot medians 6.3 min / 38 min / 6.1 h; fallback 0 / 0 / 1.
+**Sweep:** `node scripts/simulate-daily-challenges.mjs --days 120` (exit 1 if any definition is out of band; `--date YYYY-MM-DD` prints one day's definitions and validation records). 120 dates from 2026-11-16: all in band; bot medians 6.3 min / 38 min / 6.1 h; fallback 0 / 0 / 0.
+
+### Challenge mode (epic #1037, engine slice #1038)
 
 ### Achievements (epic #1046, basic slice)
 
