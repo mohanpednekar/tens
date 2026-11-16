@@ -7889,7 +7889,14 @@ export const unpinMuseumEntry = entryId => state => {
 // asymmetry between the two reset paths — see docs/DESIGN_HISTORY.md). A no-op (returns the same
 // state) while frozen (a frozen state is waiting on a real Prestige, not a Scale Up) or before the
 // scale-up target tier has reached that cycle's requirement.
-export const scaleUpGame = state => {
+// F9 Bit Rot: a soft reset starts a new cycle (Bits fall back to the start amount), so it also restarts the grace period —
+// otherwise any Scale Up/Overclock after the grace would hand corruption an instant win.
+const restartBitRotGrace = (before, after) =>
+  after !== before && hasChallengeEffect(after, 'bitRot') ? withChallengeRun(after, { cycleSeconds: 0 }) : after
+export const scaleUpGame = state => restartBitRotGrace(state, scaleUpGameCore(state))
+export const overclockGame = state => restartBitRotGrace(state, overclockGameCore(state))
+
+const scaleUpGameCore = state => {
   if (isProductionFrozen(state)) return state
   const targetTier = getScaleUpTargetTier(state)
   const targetTierCompletedLevels = Math.max(0, (state.purchaseLevels?.[targetTier.id] ?? 1) - 1)
@@ -8001,7 +8008,7 @@ export const scaleUpGame = state => {
 // below, so it simply starts re-accumulating scaleUpCount from 0 on the next cycle, same as after a
 // real Prestige. A no-op (returns the same state) while frozen or before the last tier has reached
 // that cycle's requirement — same guards as scaleUpGame.
-export const overclockGame = state => {
+const overclockGameCore = state => {
   if (isProductionFrozen(state)) return state
   if (hasChallengeEffect(state, 'overclockDisabled')) return state
   const lastTier = getEffectiveLastTier(state)

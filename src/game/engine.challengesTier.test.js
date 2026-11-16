@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   buyTickspeedMultiplier, buyTierQuantity, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
   getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierTickspeedRequirement, getTierTickspeedSpend, getTierScaleUpMultiplier,
-  isTierUnlocked, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
+  isTierUnlocked, scaleUpGame, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
 import { ADDRESS_SPACE_TIER_COUNT, BIT_ROT_GRACE_SECONDS, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS, WRITE_LOCK_HALT_SECONDS } from './layers'
 
@@ -142,6 +142,15 @@ describe('tier autobuyer challenges', () => {
     const safe = tickGame(1)({ ...rotting, resources: { ...rotting.resources, [MONEY_ID]: 1e12 } })
     expect(safe.challenges.bitRotLosses).toBe(0)
     expect(getBitRotCorruption(withRun(runOf('F1'), { cycleSeconds: 1e6 }))).toBe(0)
+  })
+
+  it('F9 Bit Rot: a Scale Up restarts the grace period (Bits fall back to the start amount)', () => {
+    const rotting = withRun(runOf('F9', state => ({ purchaseLevels: { ...state.purchaseLevels, [T(0)]: 4 }, scaleUpTargetTierIndex: 0 })), { cycleSeconds: BIT_ROT_GRACE_SECONDS + 200 })
+    const after = scaleUpGame(rotting)
+    expect(after).not.toBe(rotting)
+    expect(after.challenges.run.cycleSeconds).toBe(0)
+    expect(after.challenges.active).toBe('F9')
+    expect(scaleUpGame(withRun(runOf('F1', state => ({ purchaseLevels: { ...state.purchaseLevels, [T(0)]: 4 }, scaleUpTargetTierIndex: 0 })), { cycleSeconds: 999 })).challenges.run.cycleSeconds).toBe(999)
   })
 
   it('F9 over one long gap equals the same gap in ticks', () => {

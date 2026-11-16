@@ -244,6 +244,26 @@ function actPlayer(state, options = {}) {
 }
 
 // Play until `done(state)` or MAX_SECONDS; returns seconds and the end state.
+// Bit Rot (F9) bot variant: keep a Bits reserve above the corruption the next step can reach (a player who
+// stops spending when corruption nears), buying only with the rest. Autobuyers are paused so they cannot spend it.
+const RESERVE_MARGIN = Number(argOf('--reserve-margin', 3))
+function actPlayerBitRot(state) {
+  let s = state
+  const off = Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, false]))
+  if (TIER_DEFINITIONS.some(t => s.autobuyersEnabled?.[t.id] !== false) || s.autoGlobalTickspeedEnabled !== false) {
+    s = { ...s, autobuyersEnabled: off, tierTickspeedAutobuyerEnabled: off, autoGlobalTickspeedEnabled: false, autoScaleUpEnabled: false, autoOverclockEnabled: false }
+  }
+  const money = s.resources[MONEY_ID] ?? 0
+  const secs = s.challenges?.run?.cycleSeconds ?? 0
+  const peak = E.getBitRotCorruption({ ...s, challenges: { ...s.challenges, run: { ...s.challenges.run, cycleSeconds: secs + 2 * DT } } })
+  const hold = Math.min(money, peak * RESERVE_MARGIN)
+  s = { ...s, resources: { ...s.resources, [MONEY_ID]: money - hold } }
+  s = actTickspeed(actMainBuys(actFoundry(s)))
+  s = { ...s, resources: { ...s.resources, [MONEY_ID]: (s.resources[MONEY_ID] ?? 0) + hold } }
+  // A soft reset restarts the Bit Rot grace period (see restartBitRotGrace in engine.js), so it is safe to take.
+  return actSoftResets(actSpeedBonus(s))
+}
+
 function play(start, done, label = null) {
   let s = start
   let t = 0
@@ -252,7 +272,11 @@ function play(start, done, label = null) {
       process.stderr.write(`${label} day ${t / 86400}: money 1e${Math.log10(Math.max(1, s.resources[MONEY_ID] ?? 0)).toFixed(1)} bits, bitRotLosses ${s.challenges?.bitRotLosses ?? 0}, scaleUps ${s.scaleUpCount ?? 0}\n`)
     }
     if (t >= MAX_SECONDS) return { seconds: t, reached: false, state: s }
-    s = tickGame(DT, BUY_QUANTITY)(actPlayer(s))
+    const before = s
+    s = tickGame(DT, BUY_QUANTITY)(getActiveChallenge(s)?.effect === 'bitRot' ? actPlayerBitRot(s) : actPlayer(s))
+    if (process.env.DEBUG_BITROT && (s.challenges?.bitRotLosses ?? 0) > (before.challenges?.bitRotLosses ?? 0) && (s.challenges.bitRotLosses < 4)) {
+      process.stderr.write(`restart at cycle ${before.challenges.run.cycleSeconds}s: money before ${before.resources[MONEY_ID]}, corruption ${E.getBitRotCorruption(before)}\n`)
+    }
     t += DT
   }
   return { seconds: t, reached: true, state: s }
