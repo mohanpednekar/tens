@@ -802,8 +802,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <CategoryHeading>Purge Points</CategoryHeading>
         {!state.prestigeSpeedBonusUnlocked && (
           <Tutorial aria-label="purge points tutorial">
-            Purge Points (PP) are earned by Purging and spent here, on permanent upgrades. Try it: spend your
-            first {PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP on the Speed bonus below.
+            Purge Points (PP) buy permanent upgrades. Start with the Speed bonus.
           </Tutorial>
         )}
         <Row aria-label="speed bonus upgrade">

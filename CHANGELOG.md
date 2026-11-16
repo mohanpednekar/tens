@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Shorter UI copy** — trimmed descriptive text on the Challenges start dialog, Daily tab (removed per-format style lines and footnotes, compact credits line) and the Purge Points tutorial.
 - **Exiting a challenge is harder to hit by accident** — the Factory banner's Exit button is now hidden until you tap the challenge title; Challenges → Factory also shows a confirm-guarded Exit on the active challenge's row.
 - **Clock Speed shows its real per-level bonus** — the card beside the name now reads the current value (Overclock-scaled, and weakened inside a challenge that raises Clock Speed to a power) instead of a fixed "+1%/lvl".
 - **F9 Bit Rot is now completable** — it was effectively unbeatable: Scale Up and Overclock drop your Bits back to the start amount, so any soft reset after the grace period instantly restarted the cycle. They now restart the grace period instead, and F9 also weakens Scale Up bonuses (power 0.85).

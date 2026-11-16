@@ -51,10 +51,9 @@ export const ChallengeStartDialog = ({ def, state, onCancel, onConfirm }) => {
       open
       title={`Start ${getChallengeTitle(def)}?`}
     >
-      <p><strong>Rule:</strong> {def.rule}</p>
-      <p><strong>Goal:</strong> reach {formatChallengeGoal(def.goal)} and Purge.</p>
-      <p>Starts a fresh Factory cycle now — the current one is lost and awards no PP. The Foundry is untouched.</p>
-      {repeat && <p>You have already completed this challenge: a repeat only improves your best time and awards no PP.</p>}
+      <p>{def.rule}</p>
+      <p>Goal: {formatChallengeGoal(def.goal)}, then Purge.</p>
+      <p>Your current Factory cycle is lost and awards no PP.{repeat ? ' Repeats award no PP.' : ''}</p>
     </ConfirmDialog>
   )
 }
