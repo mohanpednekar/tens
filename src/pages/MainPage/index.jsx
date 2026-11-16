@@ -1191,17 +1191,18 @@ const MainPage = ({ game }) => {
         </>
       )}
 
-      <PurgeProgressBar aria-label="purge progress">
-        <PurgeProgressTrack $percent={purgeProgressPercent}>
+      {/* `game.goal` (a Daily challenge run) replaces the Purge goal on the pinned bar: a run has no Purge. */}
+      <PurgeProgressBar aria-label={game.goal ? 'goal progress' : 'purge progress'}>
+        <PurgeProgressTrack $percent={game.goal ? game.goal.percent : purgeProgressPercent}>
           <VisuallyHidden
             role="progressbar"
-            aria-label={`progress toward ${purgeGoalText}, when Purge becomes available`}
-            aria-valuenow={purgeProgressPercent}
+            aria-label={game.goal ? game.goal.ariaLabel : `progress toward ${purgeGoalText}, when Purge becomes available`}
+            aria-valuenow={game.goal ? game.goal.percent : purgeProgressPercent}
             aria-valuemin={0}
             aria-valuemax={100}
           />
           <PurgeProgressLabel>
-            {`${purgeProgressPercent}% to Purge`}
+            {game.goal ? game.goal.label : `${purgeProgressPercent}% to Purge`}
           </PurgeProgressLabel>
         </PurgeProgressTrack>
       </PurgeProgressBar>

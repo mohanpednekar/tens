@@ -94,8 +94,12 @@ const OUTCOME_LABELS = { won: '✓ Won', completed: 'Completed (no win)', expire
 // and actions that route to that run. Only the progress is separate.
 const RunView = ({ format, run, actions, onBack }) => {
   const play = (name, arg) => actions.dailyPlay(format.id, name, arg)
+  const percent = Math.round(getRunProgress(run) * 100)
+  const targetText = `${formatAmount(run.def.targetBytes ?? 0)} B`
   const runGame = {
     state: run.game,
+    // The Factory page's pinned progress bar tracks the run's target instead of Purge.
+    goal: { percent, label: `${percent}% to ${targetText} earned`, ariaLabel: `progress toward earning ${targetText}` },
     offlineProgress: null,
     buyMaxMode: false,
     actions: {
@@ -117,10 +121,10 @@ const RunView = ({ format, run, actions, onBack }) => {
           <Button aria-label="back to daily challenges" onClick={onBack} type="button" variant="prestige">Back</Button>
         </BackBanner>
         <Meta>
-          Earn {formatAmount(run.def.targetBytes ?? 0)} B · earned {formatAmount(run.earnedBits / 8)} B · {formatDuration(run.def.limitSeconds - run.simSeconds)} left
+          Earn {targetText} · earned {formatAmount(run.earnedBits / 8)} B · {formatDuration(run.def.limitSeconds - run.simSeconds)} left
         </Meta>
         {describeDailyChallenge(run.def) && <Meta aria-label="daily run conditions">{describeDailyChallenge(run.def)}</Meta>}
-        <Bar $percent={Math.round(getRunProgress(run) * 100)}><span /></Bar>
+        <Bar $percent={percent}><span /></Bar>
       </StatCard>
       <MainPage game={runGame} />
     </>
