@@ -28696,6 +28696,18 @@
       "source_location": "L1"
     },
     {
+      "id": "src_game_engine_challengesregistry_test_everythingunlocked",
+      "label": "everythingUnlocked()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "everythingunlocked()",
+      "source_file": "src/game/engine.challengesRegistry.test.js",
+      "source_location": "L9"
+    },
+    {
       "id": "src_game_engine_challenges_test_withautomations",
       "label": "withAutomations()",
       "_callable": true,
