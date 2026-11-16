@@ -41,7 +41,7 @@ const {
 const { COMPUTE_BOOST_TIER_FIELDS, DATA_LAKE_TIER_COUNT, MONEY_ID, TIER_DEFINITIONS, CHALLENGE_DEFINITIONS, PURGE_THRESHOLD } = L
 
 const BUY_QUANTITY = Number.MAX_SAFE_INTEGER
-const CAREER_CYCLES = 3
+const CAREER_CYCLES = Number(process.argv[process.argv.indexOf('--career-cycles') + 1]) || 3
 const args = process.argv.slice(2)
 const argOf = (flag, fallback) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : fallback)
 const DT = Number(argOf('--dt', 10))
@@ -298,7 +298,7 @@ function buildCareerBase() {
     const r = play(s, normalDone)
     if (!r.reached) throw new Error('career cycle did not finish')
     s = purgeGame(r.state)
-    process.stderr.write(`career cycle ${i + 1} done\n`)
+    process.stderr.write(`career cycle ${i + 1} done (capacity ${s.intro?.capacity}, disks built ${Object.values(s.intro?.disksBuiltTotal ?? {}).reduce((a, b) => a + (b ?? 0), 0)})\n`)
   }
   return s
 }
