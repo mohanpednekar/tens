@@ -95,52 +95,63 @@ export const OVERFLOW_MODE_MAX_INTERVAL_SECONDS = 1
 // ── Challenge mode (epic #1037) ───────────────────────────────────────────────────────────────────
 // F25 "Scope Creep" raises the Purge goal to this many Bytes (placeholder, retuned by #1043), expressed
 // in Bits like PURGE_THRESHOLD.
-export const SCOPE_CREEP_GOAL_BYTES_EXPONENT = 110
+export const SCOPE_CREEP_GOAL_BYTES_EXPONENT = 120
 export const SCOPE_CREEP_PURGE_GOAL = 10 ** SCOPE_CREEP_GOAL_BYTES_EXPONENT * BITS_PER_BYTE
 export const CHALLENGE_LAYER_FACTORY = 'F'
 // Automation kinds a challenge can target (which interval-level map gates its speed upgrades):
 // 'tierAutobuyer' → autobuyerIntervalLevels[tierId], 'tierTickspeed' → tierTickspeedIntervalLevels[tierId],
 // 'global' → automationIntervalLevels[key] (key in AUTOMATION_INTERVAL_CONFIG).
 // `effect` names the one run rule the engine applies while the challenge is active.
-const tierChallenge = (index, code, kind, codename, effect, rule) => ({
+// `levers` (optional) are run-wide nerfs on top of the named `effect`, all active only during the challenge:
+// `production` × every tier's output, `clockSpeedPower` / `scaleUpPower` raise the Clock Speed / per-tier Scale Up
+// multiplier to that power (<1 weakens it; 0 removes it), `costMultiplier` × every tier's purchase cost.
+const tierChallenge = (index, code, kind, codename, effect, rule, levers = {}) => ({
   id: code, layer: CHALLENGE_LAYER_FACTORY,
   target: `${kind === 'tierTickspeed' ? '⚙ ' : ''}${TIER_DEFINITIONS[index].name}`,
-  codename, automation: { kind, key: TIER_DEFINITIONS[index].id }, effect, rule, goal: PURGE_THRESHOLD,
+  codename, automation: { kind, key: TIER_DEFINITIONS[index].id }, effect, rule, goal: PURGE_THRESHOLD, levers,
 })
-export const CHALLENGE_DEFINITIONS = [
-  tierChallenge(0, 'F1', 'tierAutobuyer', 'Half Duplex', 'halfDuplex', 'Kilobytes produce at half speed.'),
-  tierChallenge(1, 'F2', 'tierAutobuyer', 'Write Lock', 'writeLock', 'Buying Megabytes halts all production for a few seconds.'),
-  tierChallenge(2, 'F3', 'tierAutobuyer', 'Cascade Delete', 'cascadeDelete', 'Buying Gigabytes wipes the owned count of every lower tier (levels kept).'),
-  tierChallenge(3, 'F4', 'tierAutobuyer', 'Premium Tier', 'premiumTier', 'Terabytes cost ×1000.'),
-  tierChallenge(4, 'F5', 'tierAutobuyer', 'Hard Refresh', 'hardRefresh', 'Every 5 minutes the owned Petabytes count resets to 0 (levels kept).'),
-  tierChallenge(5, 'F6', 'tierAutobuyer', 'Address Space', 'addressSpace', 'Only six tiers exist; Exabytes is the top of the ladder.'),
-  tierChallenge(6, 'F7', 'tierAutobuyer', 'Single Instance', 'singleInstance', 'Scale Up never doubles Zettabytes.'),
-  tierChallenge(7, 'F8', 'tierAutobuyer', 'Memory Leak', 'memoryLeak', 'Yottabytes leak: 1% of the owned count is lost per second.'),
+const RAW_CHALLENGE_DEFINITIONS = [
+  tierChallenge(0, 'F1', 'tierAutobuyer', 'Half Duplex', 'halfDuplex', 'Kilobytes produce at half speed.', { clockSpeedPower: 0.6 }),
+  tierChallenge(1, 'F2', 'tierAutobuyer', 'Write Lock', 'writeLock', 'Buying Megabytes halts all production for a few seconds.', { scaleUpPower: 0.7 }),
+  tierChallenge(2, 'F3', 'tierAutobuyer', 'Cascade Delete', 'cascadeDelete', 'Buying Gigabytes wipes the owned count of every lower tier (levels kept).', { costMultiplier: 12 }),
+  tierChallenge(3, 'F4', 'tierAutobuyer', 'Premium Tier', 'premiumTier', 'Terabytes cost ×1000.', { clockSpeedPower: 0.6 }),
+  tierChallenge(4, 'F5', 'tierAutobuyer', 'Hard Refresh', 'hardRefresh', 'Every 5 minutes the owned Petabytes count resets to 0 (levels kept).', { scaleUpPower: 0.85 }),
+  tierChallenge(5, 'F6', 'tierAutobuyer', 'Address Space', 'addressSpace', 'Only nine tiers exist; Ronnabytes is the top of the ladder.'),
+  tierChallenge(6, 'F7', 'tierAutobuyer', 'Single Instance', 'singleInstance', 'Scale Up never doubles Zettabytes.', { costMultiplier: 15 }),
+  tierChallenge(7, 'F8', 'tierAutobuyer', 'Memory Leak', 'memoryLeak', 'Yottabytes leak: 1% of the owned count is lost per second.', { clockSpeedPower: 0.85 }),
   tierChallenge(8, 'F9', 'tierAutobuyer', 'Bit Rot', 'bitRot', 'A corruption counter grows exponentially; if it overtakes your Bits the cycle restarts.'),
-  tierChallenge(9, 'F10', 'tierAutobuyer', 'Flat Rate', 'flatRate', 'Quettabytes get no per-level multiplier.'),
-  tierChallenge(0, 'F11', 'tierTickspeed', 'Clock Gated', 'clockGated', "Kilobytes' tickspeed is disabled."),
-  tierChallenge(1, 'F12', 'tierTickspeed', 'Half Step', 'halfStep', 'Each Megabytes tickspeed level gives 5% instead of 10%.'),
-  tierChallenge(2, 'F13', 'tierTickspeed', 'Clock Skew', 'clockSkew', "Gigabytes' base delivery period is doubled."),
-  tierChallenge(3, 'F14', 'tierTickspeed', 'Rate Limit', 'rateLimit', "Terabytes' tickspeed is capped at three levels above baseline."),
-  tierChallenge(4, 'F15', 'tierTickspeed', 'Clock Drift', 'clockDrift', 'Petabytes tickspeed loses one level every 10 minutes.'),
-  tierChallenge(5, 'F16', 'tierTickspeed', 'Egress Fees', 'egressFees', 'Each Exabytes tickspeed level costs what the next level normally costs.'),
-  tierChallenge(6, 'F17', 'tierTickspeed', 'Noisy Neighbour', 'noisyNeighbour', "Each Zettabytes tickspeed level slows every other tier's delivery by 2%."),
-  tierChallenge(7, 'F18', 'tierTickspeed', 'Daisy Chain', 'daisyChain', "Yottabytes' tickspeed cannot exceed Zettabytes' level."),
-  tierChallenge(8, 'F19', 'tierTickspeed', 'Duty Cycle', 'dutyCycle', "Ronnabytes' tickspeed bonus applies only half the time (30 s on, 30 s off)."),
-  tierChallenge(9, 'F20', 'tierTickspeed', 'Burn Rate', 'burnRate', 'A Quettabytes tickspeed level spends its full requirement.'),
+  tierChallenge(9, 'F10', 'tierAutobuyer', 'Flat Rate', 'flatRate', 'Quettabytes get no per-level multiplier.', { scaleUpPower: 0.8 }),
+  tierChallenge(0, 'F11', 'tierTickspeed', 'Clock Gated', 'clockGated', "Kilobytes' tickspeed is disabled.", { clockSpeedPower: 0.4 }),
+  tierChallenge(1, 'F12', 'tierTickspeed', 'Half Step', 'halfStep', 'Each Megabytes tickspeed level gives 5% instead of 10%.', { scaleUpPower: 0.75 }),
+  tierChallenge(2, 'F13', 'tierTickspeed', 'Clock Skew', 'clockSkew', "Gigabytes' base delivery period is doubled.", { costMultiplier: 10 }),
+  tierChallenge(3, 'F14', 'tierTickspeed', 'Rate Limit', 'rateLimit', "Terabytes' tickspeed is capped at three levels above baseline.", { scaleUpPower: 0.65, costMultiplier: 3 }),
+  tierChallenge(4, 'F15', 'tierTickspeed', 'Clock Drift', 'clockDrift', 'Petabytes tickspeed loses one level every 10 minutes.', { clockSpeedPower: 0.75, costMultiplier: 10 }),
+  tierChallenge(5, 'F16', 'tierTickspeed', 'Egress Fees', 'egressFees', 'Each Exabytes tickspeed level costs what the next level normally costs.', { costMultiplier: 30 }),
+  tierChallenge(6, 'F17', 'tierTickspeed', 'Noisy Neighbour', 'noisyNeighbour', "Each Zettabytes tickspeed level slows every other tier's delivery by 2%.", { production: 0.5, clockSpeedPower: 0.75 }),
+  tierChallenge(7, 'F18', 'tierTickspeed', 'Daisy Chain', 'daisyChain', "Yottabytes' tickspeed cannot exceed Zettabytes' level.", { scaleUpPower: 0.6 }),
+  tierChallenge(8, 'F19', 'tierTickspeed', 'Duty Cycle', 'dutyCycle', "Ronnabytes' tickspeed bonus applies only half the time (30 s on, 30 s off).", { clockSpeedPower: 0.25 }),
+  tierChallenge(9, 'F20', 'tierTickspeed', 'Burn Rate', 'burnRate', 'A Quettabytes tickspeed level spends its full requirement.', { production: 0.5, scaleUpPower: 0.75, costMultiplier: 3 }),
 
   { id: 'F21', layer: CHALLENGE_LAYER_FACTORY, target: 'Clock Speed', codename: 'Base Clock', automation: { kind: 'global', key: 'speedUp' }, effect: 'clockSpeedDisabled', rule: 'Clock Speed is disabled.', goal: PURGE_THRESHOLD },
   { id: 'F22', layer: CHALLENGE_LAYER_FACTORY, target: 'Scale Up', codename: 'Scale Out', automation: { kind: 'global', key: 'scaleUp' }, effect: 'scaleUpNoDoubling', rule: 'Scale Up still unlocks the next tier but doubles nothing.', goal: PURGE_THRESHOLD },
-  { id: 'F23', layer: CHALLENGE_LAYER_FACTORY, target: 'Restage', codename: 'Code Freeze', automation: { kind: 'global', key: 'restage' }, effect: 'restageDisabled', rule: 'Restage is disabled; XP has no use.', goal: PURGE_THRESHOLD },
-  { id: 'F24', layer: CHALLENGE_LAYER_FACTORY, target: 'Overclock', codename: 'Stock Cooling', automation: { kind: 'global', key: 'overclock' }, effect: 'overclockDisabled', rule: 'Overclock is disabled.', goal: PURGE_THRESHOLD },
-  { id: 'F25', layer: CHALLENGE_LAYER_FACTORY, target: 'Purge', codename: 'Scope Creep', automation: { kind: 'global', key: 'purge' }, effect: 'raisedGoal', rule: 'The Purge goal is raised; production does not freeze at 1 Googol Bytes.', goal: SCOPE_CREEP_PURGE_GOAL },
+  { id: 'F23', layer: CHALLENGE_LAYER_FACTORY, target: 'Restage', codename: 'Code Freeze', automation: { kind: 'global', key: 'restage' }, effect: 'restageDisabled', rule: 'Restage is disabled; XP has no use.', goal: PURGE_THRESHOLD, levers: { costMultiplier: 250 } },
+  { id: 'F24', layer: CHALLENGE_LAYER_FACTORY, target: 'Overclock', codename: 'Stock Cooling', automation: { kind: 'global', key: 'overclock' }, effect: 'overclockDisabled', rule: 'Overclock is disabled.', goal: PURGE_THRESHOLD, levers: { scaleUpPower: 0.5, clockSpeedPower: 0.5 } },
+  { id: 'F25', layer: CHALLENGE_LAYER_FACTORY, target: 'Purge', codename: 'Scope Creep', automation: { kind: 'global', key: 'purge' }, effect: 'raisedGoal', rule: 'The Purge goal is raised; production does not freeze at 1 Googol Bytes.', goal: SCOPE_CREEP_PURGE_GOAL, levers: { clockSpeedPower: 0.5 } },
 ]
+// Player-facing text for a challenge's run-wide levers, appended to its rule.
+const describeLevers = ({ production, clockSpeedPower, scaleUpPower, costMultiplier } = {}) => [
+  production != null && `All production ×${production}.`,
+  clockSpeedPower != null && `Clock Speed is raised to the power ${clockSpeedPower}.`,
+  scaleUpPower != null && `Scale Up bonuses are raised to the power ${scaleUpPower}.`,
+  costMultiplier != null && `Every tier costs ×${costMultiplier}.`,
+].filter(Boolean).join(' ')
+export const CHALLENGE_DEFINITIONS = RAW_CHALLENGE_DEFINITIONS.map(def => ({ ...def, rule: [def.rule, describeLevers(def.levers)].filter(Boolean).join(' ') }))
 // Placeholder challenge numbers (retuned by #1043). All rules apply only while their challenge is active.
 export const HALF_DUPLEX_PRODUCTION_MULTIPLIER = 0.5 // F1
 export const WRITE_LOCK_HALT_SECONDS = 10 // F2
 export const PREMIUM_TIER_COST_MULTIPLIER = 1000 // F4
 export const HARD_REFRESH_INTERVAL_SECONDS = 300 // F5
-export const ADDRESS_SPACE_TIER_COUNT = 6 // F6
+export const ADDRESS_SPACE_TIER_COUNT = 9 // F6
 export const MEMORY_LEAK_RATE_PER_SECOND = 0.01 // F8
 export const BIT_ROT_GRACE_SECONDS = 120 // F9: no corruption for this long after a cycle starts
 export const BIT_ROT_BASE_CORRUPTION = 1000 // F9: corruption (Bits) when the grace period ends

@@ -4,7 +4,7 @@ import {
   getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierTickspeedRequirement, getTierTickspeedSpend, getTierScaleUpMultiplier,
   isTierUnlocked, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
-import { BIT_ROT_GRACE_SECONDS, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS, WRITE_LOCK_HALT_SECONDS } from './layers'
+import { ADDRESS_SPACE_TIER_COUNT, BIT_ROT_GRACE_SECONDS, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS, WRITE_LOCK_HALT_SECONDS } from './layers'
 
 const T = index => TIER_DEFINITIONS[index].id
 
@@ -100,12 +100,11 @@ describe('tier autobuyer challenges', () => {
     expect(tickGame(1)(withChallenge(runOf('F1', seed), { activeSeconds: 299.5 })).owned[T(4)]).toBe(50)
   })
 
-  it('F6 Address Space leaves six tiers, with Exabytes as the final tier for Scale Up', () => {
-    const run = runOf('F6', state => ({ everUnlockedTierIds: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])), owned: { ...state.owned, [T(5)]: 1, [T(6)]: 1, [T(7)]: 5 } }))
-    expect(getEffectiveTierCount(run)).toBe(6)
-    expect(isTierUnlocked(run)(TIER_DEFINITIONS[5])).toBe(true)
-    expect(isTierUnlocked(run)(TIER_DEFINITIONS[6])).toBe(false)
-    expect(isTierUnlocked(run)(TIER_DEFINITIONS[7])).toBe(false)
+  it('F6 Address Space leaves nine tiers, with Ronnabytes as the final tier for Scale Up', () => {
+    const run = runOf('F6', state => ({ everUnlockedTierIds: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])), owned: { ...state.owned, [T(7)]: 1, [T(8)]: 1, [T(9)]: 5 } }))
+    expect(getEffectiveTierCount(run)).toBe(ADDRESS_SPACE_TIER_COUNT)
+    expect(isTierUnlocked(run)(TIER_DEFINITIONS[8])).toBe(true)
+    expect(isTierUnlocked(run)(TIER_DEFINITIONS[9])).toBe(false)
     expect(TIER_DEFINITIONS).toHaveLength(10)
     expect(getEffectiveTierCount(runOf('F1'))).toBe(10)
   })
@@ -315,5 +314,24 @@ describe('tier tickspeed challenges', () => {
     const seed = state => ({ resources: { ...state.resources, [T(9)]: cost + 5 }, owned: { ...state.owned, [T(9)]: cost + 5 } })
     expect(buyTickspeedMultiplier(T(9))(runOf('F20', seed)).owned[T(9)]).toBe(5)
     expect(buyTickspeedMultiplier(T(9))(runOf('F2', seed)).owned[T(9)]).toBeGreaterThan(cost / 2)
+  })
+})
+
+describe('run-wide challenge levers', () => {
+  it('apply only while their challenge is active, and show in the rule text', () => {
+    const lever = CHALLENGE_DEFINITIONS.find(def => def.id === 'F16')
+    expect(lever.levers.costMultiplier).toBeGreaterThan(1)
+    expect(lever.rule).toContain(`×${lever.levers.costMultiplier}`)
+    const inside = runOf('F16')
+    expect(getChallengeTier(inside, T(0)).baseCost).toBe(TIER_DEFINITIONS[0].baseCost * lever.levers.costMultiplier)
+    expect(getChallengeTier(runOf('F12'), T(0)).baseCost).toBe(TIER_DEFINITIONS[0].baseCost)
+    expect(getChallengeTier(createInitialGameState(), T(0))).toBe(TIER_DEFINITIONS[0])
+  })
+
+  it('Scale Up power weakens the Scale Up multiplier (F12: 2^(n·power))', () => {
+    const counts = Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 4]))
+    const power = CHALLENGE_DEFINITIONS.find(def => def.id === 'F12').levers.scaleUpPower
+    expect(getTierScaleUpMultiplier(runOf('F12', () => ({ scaleUpTierCounts: counts })), T(0))).toBeCloseTo(2 ** (4 * power))
+    expect(getTierScaleUpMultiplier(runOf('F1', () => ({ scaleUpTierCounts: counts })), T(0))).toBe(16)
   })
 })

@@ -1460,7 +1460,7 @@ export const getScaleUpMultiplier = scaleUpCount =>
 export const getTierScaleUpMultiplier = (state, tierId) =>
   hasChallengeEffect(state, 'scaleUpNoDoubling') || getChallengeEffectTier(state, 'singleInstance') === tierId
     ? 1
-    : getScaleUpMultiplier(state.scaleUpTierCounts?.[tierId] ?? state.scaleUpCount ?? 0)
+    : getScaleUpMultiplier(state.scaleUpTierCounts?.[tierId] ?? state.scaleUpCount ?? 0) ** getChallengeLever(state, 'scaleUpPower', 1)
 
 // The index (see state.scaleUpTargetTierIndex) clamped into TIER_DEFINITIONS' actual bounds —
 // scaleUpTargetTierIndex itself is deliberately allowed to climb past the last tier (see its own
@@ -1556,10 +1556,14 @@ const getChallengeEffectTier = (state, effect) => {
 }
 
 // F4 Premium Tier: the tier as priced during the run (a copy; TIER_DEFINITIONS is never edited).
+// Run-wide lever of the active challenge (see tierChallenge in layers.js); `fallback` when none applies.
+const getChallengeLever = (state, name, fallback) => getActiveChallenge(state)?.levers?.[name] ?? fallback
+
 export const getChallengeTier = (state, tierId) => {
   const tier = TIER_BY_ID[tierId]
-  if (tier && getChallengeEffectTier(state, 'premiumTier') === tierId) return { ...tier, baseCost: tier.baseCost * PREMIUM_TIER_COST_MULTIPLIER }
-  return tier
+  if (!tier) return tier
+  const factor = (getChallengeEffectTier(state, 'premiumTier') === tierId ? PREMIUM_TIER_COST_MULTIPLIER : 1) * getChallengeLever(state, 'costMultiplier', 1)
+  return factor === 1 ? tier : { ...tier, baseCost: tier.baseCost * factor }
 }
 
 // F6 Address Space: only the first six tiers exist for the run.
@@ -1822,7 +1826,7 @@ export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
   // F21 Base Clock: Clock Speed is disabled, and Overclock (which scales it) has no effect with it.
   const globalTickspeedMultiplier = hasChallengeEffect(state, 'clockSpeedDisabled')
     ? 1
-    : getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, getOverclockLevel(state) ?? 0)
+    : getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, getOverclockLevel(state) ?? 0) ** getChallengeLever(state, 'clockSpeedPower', 1)
   // F13 Clock Skew doubles the tier's base period; F17 Noisy Neighbour lengthens every other tier's period per Zettabytes level.
   const noisyTier = getChallengeEffectTier(state, 'noisyNeighbour')
   const challengePeriodFactor = (getChallengeEffectTier(state, 'clockSkew') === tierId ? CLOCK_SKEW_PERIOD_MULTIPLIER : 1)
@@ -2196,7 +2200,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     const computeBoostMultiplier = getFactoryTierBoostMultiplier(stateAfterAutobuyers.intro, TIER_INDEX_BY_ID[tier.id] + 1)
     const flopsBoostMultiplier = getComputeFlopsTierProductionMultiplier(stateAfterAutobuyers, tier.id)
     const scaleUpMultiplier = getTierScaleUpMultiplier(stateAfterAutobuyers, tier.id)
-    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * scaleUpMultiplier * tierMultiplier * halfDuplexMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
+    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * scaleUpMultiplier * tierMultiplier * halfDuplexMultiplier * computeBoostMultiplier * flopsBoostMultiplier * getChallengeLever(stateAfterAutobuyers, 'production', 1))
 
     // Bytes and Bits are ONE pool (MONEY_ID): tier01 produces whole Bytes (the tier row's "+N B"),
     // credited as production × BITS_PER_BYTE Bits. There is no separate Bytes balance.
