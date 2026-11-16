@@ -302,6 +302,7 @@ const rows = []
 for (const def of defs) {
   const { state, purgeCount } = seedFor(base, def)
   const normal = play(state, normalDone)
+  if (args.includes('--levels')) process.stderr.write(`${def.id} normal-run tickspeedLevels: ${JSON.stringify(normal.state.tickspeedLevels)} (cost base ${L.TICKSPEED_MULTIPLIER_BASE_EXPONENT})\n`)
   const entered = enterChallenge(def.id)(state)
   if (entered === state) {
     rows.push(`| ${def.id} ${def.codename} | ${purgeCount} | not enterable from this save | | | |`)
