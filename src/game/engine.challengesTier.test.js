@@ -233,7 +233,7 @@ describe('review regressions', () => {
     const spend = getTierTickspeedSpend(start, T(9), 2)
     expect(spend).toBe(getTickspeedMultiplierCost(T(9), 2))
     expect(getTierTickspeedRequirement(start, T(9), 2)).toBe(spend + 1)
-    expect(getTierTickspeedSpend(runOf('F2'), T(9), 2)).toBeLessThan(spend)
+    expect(getTierTickspeedSpend(runOf('F2'), T(9), 2)).toBe(spend)
   })
 
   it('an Auto Purge completion records the whole segment in the best time', () => {
@@ -331,7 +331,7 @@ describe('tier tickspeed challenges', () => {
     const cost = getTickspeedMultiplierCost(T(9), 2)
     const seed = state => ({ resources: { ...state.resources, [T(9)]: cost + 5 }, owned: { ...state.owned, [T(9)]: cost + 5 } })
     expect(buyTickspeedMultiplier(T(9))(runOf('F20', seed)).owned[T(9)]).toBe(5)
-    expect(buyTickspeedMultiplier(T(9))(runOf('F2', seed)).owned[T(9)]).toBeGreaterThan(cost / 2)
+    expect(buyTickspeedMultiplier(T(9))(runOf('F2', seed)).owned[T(9)]).toBe(5) // full spend is now the baseline
   })
 })
 

@@ -7441,8 +7441,8 @@ describe('tickGame', () => {
     expect(state.autobuyers[lastTier.id]).toBeNull()
     const after = tickGame(1)(withReadyIntervalBudgets(state))
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
-    // The last tier spends only 10% of its requirement (10 → 1).
-    expect(after.resources[lastTier.id]).toBe(10)
+    // The last tier spends its full cost (11 → 1).
+    expect(after.resources[lastTier.id]).toBe(1)
   })
 
   it('does not auto-upgrade a tier\'s tickspeed multiplier without its tier tickspeed autobuyer bought, even though the autobuyer itself is unlocked', () => {
@@ -7485,7 +7485,7 @@ describe('tickGame', () => {
     let state = createInitialGameState()
     state = withLastTierTickspeedXpUnlocked(state)
     state = withTierTickspeedAutobuyer(state, lastTier.id)
-    state = withResource(withOwned(state, lastTier.id, 10), lastTier.id, 10)
+    state = withResource(withOwned(state, lastTier.id, 11), lastTier.id, 11)
     state = withOwned(state, thousandsTier.id, 30)
     state = withResource(state, thousandsTier.id, 30)
     state = withMoney(state, 5)
@@ -7496,7 +7496,7 @@ describe('tickGame', () => {
     expect(after.purge.xp).toBe(50)
     expect(after.owned[thousandsTier.id]).toBe(30)
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
-    expect(after.resources[lastTier.id]).toBe(9)
+    expect(after.resources[lastTier.id]).toBe(1)
   })
 
   it('regression: before the last tier is XP-unlocked, its tier tickspeed autobuyer still drives the ordinary buyTickspeedMultiplier auto-upgrade, untouched by the XP-consumption branch', () => {
@@ -7923,23 +7923,23 @@ describe('buyTickspeedMultiplier', () => {
   const ninthTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 2]
   const unlockedNinthTierState = () => withOwned(createInitialGameState(), ninthTier.id, 1)
 
-  it('last tier: level 1 → 2 requires 10 owned but spends only 1 (10%), with no autobuyer unlock', () => {
-    const state = withResource(unlockedLastTierState(), lastTier.id, 10)
+  it('last tier: level 1 → 2 requires 11 owned and spends the full 10, with no autobuyer unlock', () => {
+    const state = withResource(unlockedLastTierState(), lastTier.id, 11)
     expect(state.autobuyers[lastTier.id]).toBeNull()
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
-    expect(after.resources[lastTier.id]).toBe(9)
-    expect(after.owned[lastTier.id]).toBe(9)
+    expect(after.resources[lastTier.id]).toBe(1)
+    expect(after.owned[lastTier.id]).toBe(1)
   })
 
-  it('last tier: level 2 → 3 requires 100 owned but spends only 10', () => {
-    const state = withResource(withTickspeedLevel(unlockedLastTierState(), lastTier.id, 2), lastTier.id, 100)
+  it('last tier: level 2 → 3 requires 101 owned and spends the full 100', () => {
+    const state = withResource(withTickspeedLevel(unlockedLastTierState(), lastTier.id, 2), lastTier.id, 101)
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.tickspeedLevels[lastTier.id]).toBe(3)
-    expect(after.resources[lastTier.id]).toBe(90)
+    expect(after.resources[lastTier.id]).toBe(1)
   })
 
-  it('last tier: refuses below the full requirement even though the 10% spend is affordable', () => {
+  it('last tier: refuses below the full requirement', () => {
     const state = withResource(withTickspeedLevel(unlockedLastTierState(), lastTier.id, 2), lastTier.id, 99)
     expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
   })
@@ -7989,7 +7989,7 @@ describe('buyTickspeedMultiplier', () => {
     expect(isLastTierTickspeedXpUnlocked(state)).toBe(true)
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
-    expect(after.resources[lastTier.id]).toBe(999)
+    expect(after.resources[lastTier.id]).toBe(990)
   })
 
   it('falls back to level 1 (baseline) when tickspeedLevels is missing from state entirely, upgrading to level 2', () => {
@@ -8000,9 +8000,9 @@ describe('buyTickspeedMultiplier', () => {
 })
 
 describe('getTickspeedMultiplierSpend / getTickspeedMultiplierRequirement', () => {
-  it('last tier spends 10% of its requirement', () => {
-    expect(getTickspeedMultiplierRequirement(lastTier.id, 3)).toBe(100)
-    expect(getTickspeedMultiplierSpend(lastTier.id, 3)).toBe(10)
+  it('last tier spends its full cost like every tier', () => {
+    expect(getTickspeedMultiplierRequirement(lastTier.id, 3)).toBe(101)
+    expect(getTickspeedMultiplierSpend(lastTier.id, 3)).toBe(100)
   })
 
   it('other tiers spend the full cost and require cost + 1', () => {
@@ -12683,5 +12683,21 @@ describe('Compute Boost lanes', () => {
     expect(getComputeBoostLanes({ computeBoostType: 'nope', computeBoostRemainingSeconds: 5 })).toEqual([])
     expect(getComputeBoostLanes({ computeBoostType: null })).toEqual([])
     expect(getComputeBoostLanes({ computeBoosts: { burst: { queue: [], remainingSeconds: 3 }, bogus: { queue: [1], remainingSeconds: 3 } } })).toEqual([])
+  })
+})
+
+describe('last-tier level credit', () => {
+  const credited = (levels, seconds) => {
+    const tier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    let state = withMoney(withOwned(createInitialGameState(), tier.id, 1), 0)
+    state = { ...state, purchaseLevels: { ...state.purchaseLevels, [tier.id]: levels + 1 } }
+    for (let i = 0; i < seconds; i += 1) state = tickGame(1)(state)
+    return state.resources[tier.id] ?? 0
+  }
+
+  it('credits 1 per completed level per 10 s, independent of the balance', () => {
+    expect(credited(3, 10)).toBe(3)
+    expect(credited(1, 20)).toBe(2)
+    expect(credited(0, 10)).toBe(0)
   })
 })

@@ -1761,11 +1761,7 @@ moment the tier itself unlocks — no autobuyer unlock or PP prerequisite of any
   since paying the exact cost would zero out the tier's own generator count). Called both manually and
   — for every tier whose tier tickspeed autobuyer is bought (`tierTickspeedAutobuyer[tier.id]`) —
   automatically by `tickGame`, once per tick, whenever affordable.
-- **Last tier exception:** `getTickspeedMultiplierRequirement(tierId, targetLevel)` is the owned count
-  needed (`max(cost, spend + 1)`), and `getTickspeedMultiplierSpend(tierId, targetLevel)` is what's
-  actually deducted — the full cost for every tier except the last, which spends only
-  `LAST_TIER_TICKSPEED_SPEND_FRACTION` (10%, ceil'd) of it: tier10's 1st upgrade needs 10 owned and
-  spends 1, its 2nd needs 100 and spends 10. Other tiers keep `cost + 1` / `cost`.
+- Every tier (including the last) spends the full `getTickspeedMultiplierCost`; `getTickspeedMultiplierRequirement` is `cost + 1` (keeps one generator).
 
 #### The global tickspeed multiplier
 
@@ -2708,8 +2704,8 @@ purchases were manual or automatic.
 | `getOverclockMultiplier` | `overclockLevel → number` | `(1 + OVERCLOCK_MULTIPLIER_STEP) ** overclockLevel` (`OVERCLOCK_MULTIPLIER_STEP = 0.1`) — Overclock's own growth factor: ×1 before any claim, ×1.1^L after a claim taken at L completed final-tier levels (nothing accumulates across claims). Folded into `getGlobalTickspeedProductionMultiplier` below (scales its single per-level step) — not a standalone factor |
 | `getTickspeedMultiplierBaseCost` | `tierIndex → number` | `10 ** (TICKSPEED_MULTIPLIER_BASE_EXPONENT - tierIndex)` — 10^10 for the first tier (index 0), decreasing by a power of ten per subsequent tier, down to 10^1 for the 10th/last tier (index 9); an out-of-range index is clamped into range rather than throwing |
 | `getTickspeedMultiplierCost` | `(tierId, targetLevel) → number` | `getTickspeedMultiplierBaseCost(tierIndex) ** (targetLevel - 1)` — the resource cost, in that tier's own resource, to reach `targetLevel`: level 1 costs `base^0 = 1` (the free baseline, never actually charged), level 2 costs exactly the tier's base cost (`base^1`), level 3 costs `base^2`, and so on. Money-funded only — unrelated to `getAutobuyerUnlockCost` (below). For the last tier this is the owned *requirement*; it spends `getTickspeedMultiplierSpend` |
-| `getTickspeedMultiplierSpend` | `(tierId, targetLevel) → number` | Amount `buyTickspeedMultiplier` deducts: `getTickspeedMultiplierCost` for every tier except the last, which spends `ceil(cost × LAST_TIER_TICKSPEED_SPEND_FRACTION)` (10%) |
-| `getTickspeedMultiplierRequirement` | `(tierId, targetLevel) → number` | Owned count needed to buy: `max(getTickspeedMultiplierCost, getTickspeedMultiplierSpend + 1)` — `cost + 1` for most tiers, the full cost for the last |
+| `getTickspeedMultiplierSpend` | `(tierId, targetLevel) → number` | Amount `buyTickspeedMultiplier` deducts: `getTickspeedMultiplierCost` (every tier) |
+| `getTickspeedMultiplierRequirement` | `(tierId, targetLevel) → number` | Owned count needed to buy: `max(getTickspeedMultiplierCost, getTickspeedMultiplierSpend + 1)` — `cost + 1` |
 | `getAutobuyerUnlockCost` | `tierId → number` | `AUTOBUYER_UNLOCK_BASE_COST * (tierIndex + 1)` — no longer an actual PP cost (a tier's autobuyer unlocks for free at a prestige-count milestone instead, see `getAutobuyerUnlockMilestone`/`applyAutobuyerMilestones` below); kept only as the pricing benchmark `getSmartAutobuyerCost` multiplies: 1 through 10 across the ten tiers; an unrecognized tier id is treated as index 0 |
 | `getAutobuyerUnlockMilestone` | `tierId → number` | `AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP` (`2`, `2`) — the number of purges required before a tier's unit-buying autobuyer unlocks automatically: 2 for the first tier, up through 20 for the 10th/last; an unrecognized tier id is treated as index 0 |
 | `getTierTickspeedAutobuyerMilestone` | `tierId → number` | `TIER_TICKSPEED_AUTOBUYER_MILESTONE_START + tierIndex * TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP` (`22`, `2`) — the number of purges required before a tier's own tickspeed autobuyer unlocks automatically: 22 for the first tier, up through 40 for the 10th/last |
@@ -2800,7 +2796,7 @@ purchases were manual or automatic.
 - `OVERCLOCK_MULTIPLIER_STEP = 0.1` — per-level growth factor for Overclock's own reward (see `getOverclockMultiplier`/`getGlobalTickspeedProductionMultiplier`/`overclockGame`, "Overclock" above) — each claimed level multiplies the global tickspeed multiplier's single per-level step by a further ×1.1, folded directly into that existing track's own step rather than a separate multiplier stacked alongside it; unconditional, no PP unlock needed
 - `OVERCLOCK_REQUIREMENT_STEP = 3` — completed-level growth required between Overclock uses; the first use has a fixed 5-completed-level floor (`getOverclockRequirement` reads `overclockLastClaimCompletedLevels`, falling back to `overclockCount` for older saves)
 - `LAST_TIER_XP_TICKSPEED_STEP = 0.01` — each XP consumed via `consumeXpForLastTierTickspeed` within the current run compounds another 1% into the last tier's own delivery frequency (see `getLastTierXpTickspeedMultiplier`) — the separate Restage upgrade (left of Scale Up below the tier list, available once `isLastTierTickspeedXpUnlocked`), which stacks with that tier's own tickspeed level
-- `LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1` — the last tier's resource-funded tickspeed upgrade spends only this fraction of its requirement (see `getTickspeedMultiplierSpend`)
+- `LAST_TIER_LEVEL_CREDIT_PER_LEVEL = 1`, `LAST_TIER_LEVEL_CREDIT_PERIOD_SECONDS = 10` — `tickGame` credits the last tier (QB) 1 unit per completed purchase level (`purchaseLevels − 1`) every 10 s into `resources`/`owned`, regardless of its balance; fractional remainder in `lastTierLevelCreditAccumulator`
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1` — a single `consumeXpForLastTierTickspeed` call must spend at least this fraction of the XP already consumed this way (see `getLastTierXpTickspeedMinConsumption`), so repeat consumptions can't trickle in one XP at a time forever
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR = 1` — the practical minimum consumption before any XP has been consumed this way, since `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT` alone computes 0 at that point
 
