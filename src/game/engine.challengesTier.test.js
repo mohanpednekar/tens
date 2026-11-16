@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  buyTickspeedMultiplier, buyTierQuantity, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
+  buyTickspeedMultiplier, buyTierQuantity, getChallengeProductionMultiplier, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
   getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierTickspeedRequirement, getTierTickspeedSpend, getTierScaleUpMultiplier,
   isTierUnlocked, scaleUpGame, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
-import { ADDRESS_SPACE_TIER_COUNT, BIT_ROT_DISK_RELIEF, BIT_ROT_GRACE_SECONDS, DISK_LADDER_BASE_SIZE_BITS, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS, WRITE_LOCK_HALT_SECONDS } from './layers'
+import { ADDRESS_SPACE_TIER_COUNT, HALF_DUPLEX_PRODUCTION_MULTIPLIER, BIT_ROT_DISK_RELIEF, BIT_ROT_GRACE_SECONDS, DISK_LADDER_BASE_SIZE_BITS, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS, WRITE_LOCK_HALT_SECONDS } from './layers'
 
 const T = index => TIER_DEFINITIONS[index].id
 
@@ -344,6 +344,14 @@ describe('run-wide challenge levers', () => {
     expect(getChallengeTier(inside, T(0)).baseCost).toBe(TIER_DEFINITIONS[0].baseCost * lever.levers.costMultiplier)
     expect(getChallengeTier(runOf('F12'), T(0)).baseCost).toBe(TIER_DEFINITIONS[0].baseCost)
     expect(getChallengeTier(createInitialGameState(), T(0))).toBe(TIER_DEFINITIONS[0])
+  })
+
+  it('getChallengeProductionMultiplier combines Half Duplex and the production lever, and is 1 outside challenges', () => {
+    expect(getChallengeProductionMultiplier(runOf('F6'), T(0))).toBe(5)
+    expect(getChallengeProductionMultiplier(runOf('F17'), T(3))).toBe(0.5)
+    expect(getChallengeProductionMultiplier(runOf('F1'), T(0))).toBe(HALF_DUPLEX_PRODUCTION_MULTIPLIER)
+    expect(getChallengeProductionMultiplier(runOf('F1'), T(1))).toBe(1)
+    expect(getChallengeProductionMultiplier(createInitialGameState(), T(0))).toBe(1)
   })
 
   it('Scale Up power weakens the Scale Up multiplier (F12: 2^(n·power))', () => {

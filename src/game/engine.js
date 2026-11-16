@@ -1559,6 +1559,11 @@ const getChallengeEffectTier = (state, effect) => {
 // Run-wide lever of the active challenge (see tierChallenge in layers.js); `fallback` when none applies.
 const getChallengeLever = (state, name, fallback) => getActiveChallenge(state)?.levers?.[name] ?? fallback
 
+// Challenge-driven output factor of one tier (F1 Half Duplex on Kilobytes, plus the run-wide `production` lever) —
+// shared by tickGame's production and MainPage's per-delivery preview so the two always agree.
+export const getChallengeProductionMultiplier = (state, tierId) =>
+  (getChallengeEffectTier(state, 'halfDuplex') === tierId ? HALF_DUPLEX_PRODUCTION_MULTIPLIER : 1) * getChallengeLever(state, 'production', 1)
+
 export const getChallengeTier = (state, tierId) => {
   const tier = TIER_BY_ID[tierId]
   if (!tier) return tier
@@ -2198,13 +2203,13 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     // is what grew ticksElapsed.
     // F10 Flat Rate: no per-level multiplier for the challenged tier; F1 Half Duplex halves its production.
     const tierMultiplier = getChallengeEffectTier(stateAfterAutobuyers, 'flatRate') === tier.id ? 1 : getPurchaseMilestoneMultiplier(stateAfterAutobuyers.purchaseLevels?.[tier.id] ?? 1)
-    const halfDuplexMultiplier = getChallengeEffectTier(stateAfterAutobuyers, 'halfDuplex') === tier.id ? HALF_DUPLEX_PRODUCTION_MULTIPLIER : 1
+    const challengeProductionMultiplier = getChallengeProductionMultiplier(stateAfterAutobuyers, tier.id)
     // Compute Boost lanes (see getFactoryTierBoostMultiplier) add up on the Factory tiers they cover —
     // Memory gets them too (see tickIntroProduction); a tier no lane covers stays at 1.
     const computeBoostMultiplier = getFactoryTierBoostMultiplier(stateAfterAutobuyers.intro, TIER_INDEX_BY_ID[tier.id] + 1)
     const flopsBoostMultiplier = getComputeFlopsTierProductionMultiplier(stateAfterAutobuyers, tier.id)
     const scaleUpMultiplier = getTierScaleUpMultiplier(stateAfterAutobuyers, tier.id)
-    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * scaleUpMultiplier * tierMultiplier * halfDuplexMultiplier * computeBoostMultiplier * flopsBoostMultiplier * getChallengeLever(stateAfterAutobuyers, 'production', 1))
+    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * scaleUpMultiplier * tierMultiplier * challengeProductionMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
 
     // Bytes and Bits are ONE pool (MONEY_ID): tier01 produces whole Bytes (the tier row's "+N B"),
     // credited as production × BITS_PER_BYTE Bits. There is no separate Bytes balance.
