@@ -81,7 +81,7 @@ const ChallengesPage = ({ game, focusNonce = 0 }) => {
           </TabButton>
         ))}
       </TabBar>
-      {activeTab === 'factory' && <FactoryTab onStart={setPendingChallengeId} state={state} />}
+      {activeTab === 'factory' && <FactoryTab onExit={actions.exitChallenge} onStart={setPendingChallengeId} state={state} />}
       {activeTab === 'daily' && <DailyTab actions={actions} state={state} />}
       <ChallengeStartDialog
         def={pendingChallengeId ? CHALLENGE_DEFINITIONS.find(def => def.id === pendingChallengeId) : null}
