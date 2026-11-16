@@ -1,5 +1,22 @@
 # Design history & rationale
 
+### Maintenance slots resolved from the cron entry, not the clock — 2026-11-16
+
+`autonomous-maintenance.yml` used one combined cron (`30 22,4,10,16 * * *`) and inferred the slot from
+the IST clock shifted 3h back, which tolerates a firing up to ~3h late. GitHub delivered firings
+3.5–5.5h late in practice (about three a day), so a late firing ran as the *next* slot: on 2026-11-13
+the 22:00 IST Friday retro fired at 22:04 UTC and ran as Saturday's 04:00 tech-debt (tech-debt ran
+twice, retro was lost), and no run resolved to the 10:00 IST slot on Nov 14–16, so qa-review and its
+weekly overrides never executed. Fixed with one cron entry per slot, mapped through
+`github.event.schedule`; the weekday comes from the firing's intended time. This cannot recover a
+firing GitHub drops outright — the step now logs each firing's lateness so that can be told apart.
+
+Same pass: PR-opening runs spawned the adversarial `code-reviewer` in the background and then ended
+their turn; a headless run exits at that point, killing the reviewer, so #1088/#1089/#1093/#1099 got
+no review marker and no auto-merge and waited 5–45h for a manual merge. The prompt now requires the
+reviewer in the foreground. And `scripts/sweep-stalled-auto-prs.sh` was committed `100644`, so the
+workflow's `-x` guard skipped the stalled-PR sweep on every run; it is now executable.
+
 ### Overclock no longer banks completed levels — 2026-11-11
 
 `overclockCount` was a running total of completed final-tier levels across every Overclock claim
