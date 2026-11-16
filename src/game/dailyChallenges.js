@@ -375,8 +375,8 @@ export const tickDailyRuns = nowMs => state => {
 // Applies one Factory action (`RUN_ACTIONS` name + argument) to a run's own game. A target is only ever reached by
 // production, in a tick.
 export const playDailyRun = (formatId, actionName, arg, nowMs) => state => {
+  if (!Object.hasOwn(RUN_ACTIONS, actionName)) return state
   const entry = RUN_ACTIONS[actionName]
-  if (!entry) return state
   // Catch the run up (and settle it) through the action's timestamp first, so a purchase can't retroactively
   // speed up a gap that already ended the run.
   const caught = tickDailyRuns(nowMs)(state)

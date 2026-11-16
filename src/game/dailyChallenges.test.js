@@ -177,9 +177,20 @@ describe('stepping', () => {
 })
 
 describe('run actions', () => {
-  test('an unknown action is a no-op; the soft resets re-grant the starting balance', () => {
+  test('a claimed Scale Up re-grants the starting balance', () => {
+    const started = startDailyRun('10m', T0)(purged())
+    const run = started.daily.runs['10m']
+    const ready = withRun(started, '10m', { game: { ...run.game, purchaseLevels: Object.fromEntries(Object.keys(run.game.purchaseLevels).map(id => [id, 20])) } })
+    const after = playDailyRun('10m', 'scaleUp', undefined, T0)(ready)
+    expect(after.daily.runs['10m'].game).not.toBe(ready.daily.runs['10m'].game)
+    expect(after.daily.runs['10m'].game.resources.base).toBe(10 ** run.def.startExponent * 8)
+    expect(after.daily.runs['10m'].game.runLevers).toEqual(run.def.levers)
+  })
+
+  test('an unknown action, or one that is not available, is a no-op', () => {
     const started = startDailyRun('10m', T0)(purged())
     expect(playDailyRun('10m', 'purge', undefined, T0)(started)).toBe(started)
+    expect(playDailyRun('10m', 'constructor', undefined, T0)(started)).toBe(started)
     expect(playDailyRun('10m', 'scaleUp', undefined, T0)(started)).toBe(started)
     expect(playDailyRun('10m', 'tierTickspeed', 'tier01', T0)(started)).toBe(started)
   })
