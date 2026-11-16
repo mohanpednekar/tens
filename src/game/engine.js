@@ -767,6 +767,19 @@ export const getPurchaseBlockSize = state => {
   return DEFAULT_PURCHASE_BLOCK_SIZE + PURCHASE_BLOCK_SIZE_GROWTH_STEP * Math.floor(levelsCompleted / PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS)
 }
 
+// Cost-epoch exponent for a FACTORY tier (TIER_DEFINITIONS): the first two increments are +1, +1 for
+// every tier (epochs 0, 1, 2 → exponent 1, 2, 3); from the third increment on it grows by a constant
+// per tier — tier01 +1, tier02 +2, … tier10 +10 per level (exponent = 3 + tierNumber × (epoch − 2)).
+// Anything that is not a Factory tier (e.g. the Flops tiers' `{ baseCost }` objects, which carry no
+// tier id) keeps the shared linear-increment series of getCostEpochExponent.
+export const getTierCostExponent = (tier, epoch) => {
+  const tierIndex = TIER_INDEX_BY_ID[tier?.id]
+  if (tierIndex === undefined) return getCostEpochExponent(epoch)
+  const e = clampNonNegative(epoch)
+  if (e <= 2) return e + 1
+  return 3 + (tierIndex + 1) * (e - 2)
+}
+
 // The PER-UNIT price of a single purchase — fixed for a given tier+level, independent of the
 // current block size: baseCost * 10^(getCostEpochExponent(epoch) - 1); each level multiplies
 // baseCost by 10 raised to (that level's cost-epoch exponent − 1). epoch = level - 1 — e.g. a
@@ -789,7 +802,7 @@ export const getPurchaseBlockSize = state => {
 // integer — no rounding needed.
 export const getTierCost = (tier, level) => {
   const epoch = Math.max(0, level - 1)
-  return tier.baseCost * (10 ** (getCostEpochExponent(epoch) - 1))
+  return tier.baseCost * (10 ** (getTierCostExponent(tier, epoch) - 1))
 }
 
 // How many units a bulk purchase actually buys: capped by the requested quantity and by the units

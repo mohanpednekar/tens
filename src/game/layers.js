@@ -16,7 +16,7 @@
 // shared formula or any other tier. Each tier's cadence increases by 1s down the list — tier01=1s
 // up through tier10=10s — since a slower cadence divides that tier's real throughput (see
 // getTierBaseTickSpeedSeconds below) by up to 10x for the last tier, on top of the already-steep
-// cost curve (see getTierCost/getCostEpochExponent in engine.js). This ladder was tried once before
+// cost curve (see getTierCost/getTierCostExponent in engine.js). This ladder was tried once before
 // the tickspeed-multiplier system existed and reverted to a uniform 1s because nothing could offset
 // the slowdown; now that both the per-tier (tickspeedLevels) and global (globalTickspeedMultiplier)
 // tickspeed multipliers exist to shrink getEffectiveTierTickSpeedSeconds back down, later tiers are
