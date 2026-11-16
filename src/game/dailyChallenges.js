@@ -1,39 +1,61 @@
-// Daily challenges (epic #1062, basic playable slice). Pure state functions over `state.daily`
+// Daily challenges (epic #1062). Pure state functions over `state.daily`
 // (`{ runs: { [formatId]: run | null }, results: { [dateId]: { [formatId]: result } } }`).
 //
-// Each run is an isolated Factory-only game (`run.game`, from createInitialGameState) with its own tier ladder,
-// Clock Speed, Scale Up and Overclock — nothing leaks to or from the main save. Definitions are derived on the
-// device from (UTC date, format) with a seeded PRNG; server time, the fetched/validated generator, rewards,
-// weekly/monthly milestones and streaks are later slices. Every function takes `nowMs` as an argument.
+// Each run is an isolated Factory-only game (`run.game`) with its own tier ladder, Clock Speed, Scale Up and
+// Overclock — nothing leaks to or from the main save. A definition is derived on the device from (UTC date, format)
+// with a seeded PRNG and has three seeded parts:
+//   1. modified conditions — run-wide levers (`DAILY_MODIFIER_POOL`), carried on the run's game as `runLevers`;
+//   2. seeded progress — the reference bot plays a seeded warm-up and the run starts right after its last
+//      Scale Up / Overclock: the multipliers it built are kept, the ladder is fresh, nothing produces yet;
+//   3. a calculated target — the Bytes the reference bot has earned at a seeded moment inside the calibration
+//      band (after half the time limit, no later than the format's bot ceiling), rounded down to a clean number.
+// So the reference bot always wins in (limit / 2, botCeilingSeconds], and a run that never acts earns nothing.
+// Server time, fetched definitions, rewards, weekly/monthly milestones and streaks are later slices. Every
+// function takes `nowMs` as an argument.
 import {
   buyGlobalTickspeedMultiplier,
   buyTierQuantity,
   createInitialGameState,
+  getOverclockLevel,
   overclockGame,
   scaleUpGame,
   tickGame,
 } from './engine'
-import { BITS_PER_BYTE, DAILY_CHALLENGES_FEATURE, MONEY_ID } from './layers'
+import { BITS_PER_BYTE, DAILY_CHALLENGES_FEATURE, MONEY_ID, TIER_DEFINITIONS } from './layers'
 
-export const DAILY_GENERATOR_VERSION = 1
+// Bump whenever generator data or the reference bot changes; a run on another version is dropped.
+export const DAILY_GENERATOR_VERSION = 2
 export const DAILY_MAX_CREDITS = 4
-// A run that hits its time limit short of the target still counts as completed past this share of the way
-// (in powers of ten) from its starting balance to the target.
+// A run that hits its time limit short of the target still counts as completed past this share of the way (in
+// powers of ten) to the target.
 export const DAILY_COMPLETION_FLOOR = 0.5
-// Catch-up replays at most this many ~1 s ticks per run per call (tickGame floors production per call, so steps stay
-// at live size); the rest of a long gap is carried over to the following calls so the UI never freezes.
-export const DAILY_MAX_TICKS_PER_CALL = 3600
+// Candidates per (date, format) before the fixed known-good fallback (no modifiers, no head start) is used.
+export const DAILY_MAX_GENERATION_ATTEMPTS = 8
+// Candidates whose bot reaches past this are rejected: a run must stay well clear of the 1 Googol Bytes freeze.
+export const DAILY_MAX_TARGET_BYTES = 1e80
+const WARMUP_STEP_SECONDS = 30
+const BOT_MAX_PASSES = 20
 const BUY_ALL = Number.MAX_SAFE_INTEGER
 
-// Exponents are powers of ten in Bytes. A run is won when the Bytes it has EARNED (production only — not the
-// balance, which buying spends) reach 10^targetExponent. Starting balance = 10^startExponent Bytes. Targets were
-// tuned against a naive reference bot (`dailyChallenges.test.js`); balance is a later slice (#1067).
+// `stepSeconds`: a run advances in whole steps of this size, live and in the reference simulation alike, so the
+// calibration is exact. `botCeilingSeconds` (internal, never shown to players): the reference bot must win by
+// then, and no sooner than half the limit. `warmupSeconds`: seeded head-start range. `startExponent`: seeded
+// starting balance, 10^n Bytes (also re-granted by Scale Up / Overclock).
 export const DAILY_FORMATS = [
-  { id: '10m', label: '10 minutes', seconds: 600, style: 'Hands-on: every second counts', startBase: 4, startSpread: 1, targetBase: 3, targetSpread: 1 },
-  { id: '1h', label: '1 hour', seconds: 3600, style: 'Steady: check in now and then', startBase: 4, startSpread: 1, targetBase: 4, targetSpread: 0 },
-  { id: '10h', label: '10 hours', seconds: 36000, style: 'Passive: a few well-timed decisions', startBase: 4, startSpread: 1, targetBase: 12, targetSpread: 2 },
+  { id: '10m', label: '10 minutes', seconds: 600, stepSeconds: 1, botCeilingSeconds: 540, style: 'Hands-on: every second counts', warmupSeconds: [14400, 21600], startExponent: [4, 6], modifierCount: [1, 2] },
+  { id: '1h', label: '1 hour', seconds: 3600, stepSeconds: 5, botCeilingSeconds: 3000, style: 'Steady: check in now and then', warmupSeconds: [7200, 14400], startExponent: [4, 6], modifierCount: [1, 2] },
+  { id: '10h', label: '10 hours', seconds: 36000, stepSeconds: 30, botCeilingSeconds: 28800, style: 'Passive: a few well-timed decisions', warmupSeconds: [0, 3600], startExponent: [4, 6], modifierCount: [1, 2] },
 ]
 export const DAILY_FORMAT_BY_ID = Object.fromEntries(DAILY_FORMATS.map(format => [format.id, format]))
+
+// Modified conditions: each challenge draws `modifierCount` distinct levers and one value for each. The levers are
+// the engine's run-wide challenge levers (`getChallengeLever`).
+export const DAILY_MODIFIER_POOL = [
+  { lever: 'production', values: [0.25, 0.5, 2, 4], describe: value => `Production ×${value}` },
+  { lever: 'clockSpeedPower', values: [0.5, 0.75, 1.5, 2], describe: value => `Clock Speed ^${value}` },
+  { lever: 'scaleUpPower', values: [0.5, 0.75, 1.5, 2], describe: value => `Scale Up ^${value}` },
+  { lever: 'costMultiplier', values: [0.1, 0.5, 5, 25], describe: value => `Costs ×${value}` },
+]
 
 export const getUtcDateId = nowMs => new Date(nowMs).toISOString().slice(0, 10)
 
@@ -62,34 +84,176 @@ const createRng = seed => {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
 }
+const pickInt = (rng, [min, max]) => min + Math.floor(rng() * (max - min + 1))
 
-// Same (dateId, formatId, version) → deeply equal definition. No Math.random, no Date.
-export const generateDailyChallenge = (dateId, formatId) => {
+// --- Run game primitives (shared by live play and the reference simulation) ---
+
+const withLevers = (game, levers) => (game.runLevers === levers ? game : { ...game, runLevers: levers })
+const getStartBits = def => 10 ** def.startExponent * BITS_PER_BYTE
+
+// One step of production. Returns the new game and the Bits it produced.
+const stepRunGame = (game, def, stepSeconds) => {
+  const before = game.resources[MONEY_ID] ?? 0
+  const next = withLevers(tickGame(stepSeconds, 1)(game), def.levers)
+  return [next, Math.max(0, (next.resources[MONEY_ID] ?? 0) - before)]
+}
+
+// A Factory engine action on a run's game; the same reference comes back when it does nothing. `reseed` (Scale Up /
+// Overclock soft resets): a run has no Foundry to refill the wiped balance, so the reset grants the starting
+// balance again — the multipliers it earns are the point.
+const applyRunAction = (game, def, action, reseed = false) => {
+  const acted = action(game)
+  if (acted === game) return game
+  const next = withLevers(acted, def.levers)
+  return reseed ? { ...next, resources: { ...next.resources, [MONEY_ID]: getStartBits(def) } } : next
+}
+
+const RUN_ACTIONS = {
+  clockSpeed: { action: buyGlobalTickspeedMultiplier },
+  scaleUp: { action: scaleUpGame, reseed: true },
+  overclock: { action: overclockGame, reseed: true },
+}
+const TIER_BUY_ACTIONS = Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, buyTierQuantity(tier.id, BUY_ALL)]))
+
+// Reference bot: between steps it takes everything on offer — Clock Speed, tiers top-down, Scale Up, Overclock —
+// until nothing changes. Exported so tests can replay it through the public run actions.
+export const DAILY_BOT_ACTION_ORDER = ['clockSpeed', ...TIER_DEFINITIONS.map(tier => tier.id).reverse(), 'scaleUp', 'overclock']
+const botAct = (game, def, onReset) => {
+  let current = game
+  for (let pass = 0; pass < BOT_MAX_PASSES; pass++) {
+    let next = current
+    for (const key of DAILY_BOT_ACTION_ORDER) {
+      const entry = RUN_ACTIONS[key]
+      const acted = entry ? applyRunAction(next, def, entry.action, entry.reseed) : applyRunAction(next, def, TIER_BUY_ACTIONS[key])
+      if (entry?.reseed && acted !== next) onReset?.(acted)
+      next = acted
+    }
+    if (next === current) break
+    current = next
+  }
+  return current
+}
+
+// Cumulative Bits earned after each step (index 0 = before the first step).
+const simulate = (game, def, stepSeconds, steps, act) => {
+  const earned = [0]
+  let current = game
+  for (let i = 0; i < steps; i++) {
+    if (act) current = act(current, def)
+    const [next, gained] = stepRunGame(current, def, stepSeconds)
+    current = next
+    earned.push(earned[i] + gained)
+  }
+  return { game: current, earned }
+}
+
+// Largest number with `digits` significant digits that is ≤ value.
+const floorToSignificant = (value, digits) => {
+  if (!(value > 0)) return 0
+  const unit = 10 ** (Math.floor(Math.log10(value)) - digits + 1)
+  let rounded = Math.floor(value / unit) * unit
+  while (rounded > value) rounded -= unit
+  return rounded
+}
+
+const describeHeadStart = game => ({
+  scaleUps: Math.max(0, ...Object.values(game.scaleUpTierCounts ?? {})),
+  overclock: getOverclockLevel(game) ?? 0,
+})
+
+// One candidate (`attempt`: retry index, or 'fallback' for the fixed known-good definition). Returns
+// `{ def, startGame, validation }`, or null when the bot earns nothing new inside the band or overshoots the cap.
+// Exported for tests and scripts/simulate-daily-challenges.mjs.
+export const buildDailyCandidate = (dateId, formatId, attempt) => {
   const format = DAILY_FORMAT_BY_ID[formatId]
-  const seed = hashString(`${dateId}|${formatId}|v${DAILY_GENERATOR_VERSION}`)
+  const fallback = attempt === 'fallback'
+  const seed = hashString(`${dateId}|${formatId}|v${DAILY_GENERATOR_VERSION}|${attempt}`)
   const rng = createRng(seed)
-  const startExponent = format.startBase + Math.floor(rng() * (format.startSpread + 1))
-  const targetExponent = format.targetBase + Math.floor(rng() * (format.targetSpread + 1))
-  return {
+
+  const startExponent = fallback ? format.startExponent[0] : pickInt(rng, format.startExponent)
+  const modifiers = []
+  if (!fallback) {
+    const pool = [...DAILY_MODIFIER_POOL]
+    const count = pickInt(rng, format.modifierCount)
+    for (let i = 0; i < count; i++) {
+      const [entry] = pool.splice(Math.floor(rng() * pool.length), 1)
+      modifiers.push({ lever: entry.lever, value: entry.values[Math.floor(rng() * entry.values.length)] })
+    }
+  }
+  const levers = Object.fromEntries(modifiers.map(modifier => [modifier.lever, modifier.value]))
+  const warmupSeconds = fallback ? 0 : pickInt(rng, format.warmupSeconds.map(seconds => seconds / WARMUP_STEP_SECONDS)) * WARMUP_STEP_SECONDS
+  const stepsHalf = format.seconds / 2 / format.stepSeconds
+  const stepsCeiling = format.botCeilingSeconds / format.stepSeconds
+  // The moment the bot's earnings are read for the target: after half the limit, up to the ceiling.
+  const targetStep = fallback ? stepsCeiling : stepsHalf + 1 + Math.floor(rng() * (stepsCeiling - stepsHalf))
+
+  const def = {
     dateId,
     formatId,
     seed,
     generatorVersion: DAILY_GENERATOR_VERSION,
     limitSeconds: format.seconds,
+    stepSeconds: format.stepSeconds,
     startExponent, // starting balance = 10^startExponent Bytes
-    targetExponent, // target = 10^targetExponent Bytes
+    levers,
+    conditions: modifiers.map(modifier => DAILY_MODIFIER_POOL.find(entry => entry.lever === modifier.lever).describe(modifier.value)),
+  }
+  const fresh = createInitialGameState()
+  fresh.resources = { ...fresh.resources, [MONEY_ID]: getStartBits(def) }
+  // Head start: the state right after the warm-up's last soft reset (the fresh state when it never reset).
+  let startGame = withLevers(fresh, levers)
+  const keepReset = game => { startGame = game }
+  simulate(startGame, def, WARMUP_STEP_SECONDS, warmupSeconds / WARMUP_STEP_SECONDS, (game, runDef) => botAct(game, runDef, keepReset))
+
+  const bot = simulate(startGame, def, format.stepSeconds, targetStep, botAct).earned
+  const halfBytes = bot[stepsHalf] / BITS_PER_BYTE
+  const reachedBytes = bot[targetStep] / BITS_PER_BYTE
+  let targetBytes = 0
+  for (let digits = 1; digits <= 4 && !(targetBytes > halfBytes); digits++) targetBytes = floorToSignificant(reachedBytes, digits)
+  // Rejected: the bot earned nothing new inside the band, or the run would brush the Purge freeze.
+  if (!(targetBytes > halfBytes) || reachedBytes > DAILY_MAX_TARGET_BYTES) return null
+
+  return {
+    def: { ...def, targetBytes, headStart: describeHeadStart(startGame) },
+    startGame,
+    validation: {
+      attempt,
+      warmupSeconds,
+      botSeconds: bot.findIndex(bits => bits / BITS_PER_BYTE >= targetBytes) * format.stepSeconds,
+    },
   }
 }
+
+const generated = new Map()
+const generate = (dateId, formatId) => {
+  const key = `${dateId}|${formatId}`
+  let entry = generated.get(key)
+  if (!entry) {
+    for (let attempt = 0; attempt < DAILY_MAX_GENERATION_ATTEMPTS && !entry; attempt++) entry = buildDailyCandidate(dateId, formatId, attempt)
+    entry ??= buildDailyCandidate(dateId, formatId, 'fallback')
+    if (generated.size > 64) generated.clear()
+    generated.set(key, entry)
+  }
+  return entry
+}
+
+// Same (dateId, formatId, version) → deeply equal definition. No Math.random, no Date. Memoised (it simulates).
+export const generateDailyChallenge = (dateId, formatId) => generate(dateId, formatId).def
+// Developer-only record of how a definition was validated (retry index, warm-up, the bot's winning time).
+export const getDailyChallengeValidation = (dateId, formatId) => generate(dateId, formatId).validation
 
 // Reachable once the save has completed its first Purge (a Reboot resets the Purge count but keeps the unlock), and only while the rollout switch is on.
 export const isDailyChallengesAvailable = state =>
   DAILY_CHALLENGES_FEATURE.enabled && ((state.purge?.count ?? 0) >= 1 || (state.era?.count ?? 0) >= 1)
 
 const getRunEarnedBytes = run => run.earnedBits / BITS_PER_BYTE
-const getStartBits = def => 10 ** def.startExponent * BITS_PER_BYTE
+const isRunWon = run => getRunEarnedBytes(run) >= run.def.targetBytes
 
+// Share of the way to the target, in powers of ten.
 export const getRunProgress = run => {
-  return Math.min(1, Math.max(0, Math.log10(Math.max(1, getRunEarnedBytes(run))) / run.def.targetExponent))
+  if (isRunWon(run)) return 1
+  const high = Math.log10(Math.max(1, run.def.targetBytes))
+  return high > 0 ? Math.min(1, Math.max(0, Math.log10(Math.max(1, getRunEarnedBytes(run))) / high)) : 0
 }
 
 const setRun = (state, formatId, run) => ({
@@ -101,7 +265,7 @@ const setRun = (state, formatId, run) => ({
 const settleRun = (state, formatId, finishedMs) => {
   const run = state.daily.runs[formatId]
   if (!run) return state
-  const won = getRunEarnedBytes(run) >= 10 ** run.def.targetExponent
+  const won = isRunWon(run)
   const timedOut = run.simSeconds >= run.def.limitSeconds
   if (!won && !timedOut) return state
 
@@ -131,12 +295,10 @@ const settleRun = (state, formatId, finishedMs) => {
 // A run of this format may only start for the current UTC date and when none of that format is active.
 export const startDailyRun = (formatId, nowMs) => state => {
   if (!isDailyChallengesAvailable(state) || !DAILY_FORMAT_BY_ID[formatId] || state.daily.runs[formatId]) return state
-  const def = generateDailyChallenge(getUtcDateId(nowMs), formatId)
-  const game = createInitialGameState()
-  game.resources = { ...game.resources, [MONEY_ID]: getStartBits(def) }
+  const { def, startGame } = generate(getUtcDateId(nowMs), formatId)
   return setRun(state, formatId, {
     def,
-    game,
+    game: startGame,
     startedAt: nowMs,
     lastTickAt: nowMs,
     simSeconds: 0,
@@ -159,34 +321,36 @@ export const restartDailyRun = (formatId, nowMs) => state => {
   return startDailyRun(formatId, nowMs)(forfeitDailyRun(formatId)(state))
 }
 
-// Advances every active run by the real time since its last tick (clamped to its limit), then settles it.
+// Advances every active run by the whole steps of real time since its last tick (never past its limit), then
+// settles it. Time short of a whole step is carried over to the next call.
 export const tickDailyRuns = nowMs => state => {
   let next = state
   for (const format of DAILY_FORMATS) {
     const run = next.daily?.runs?.[format.id]
     if (!run) continue
-    const total = Math.min(Math.max(0, (nowMs - run.lastTickAt) / 1000), run.def.limitSeconds - run.simSeconds)
-    const dt = Math.min(total, DAILY_MAX_TICKS_PER_CALL)
-    const lastTickAt = dt < total ? run.lastTickAt + dt * 1000 : nowMs
+    if (run.def.generatorVersion !== DAILY_GENERATOR_VERSION) {
+      next = setRun(next, format.id, null) // a run from another generator can't be played by this one
+      continue
+    }
+    const { stepSeconds, limitSeconds } = run.def
+    const stepsLeft = Math.max(0, Math.round((limitSeconds - run.simSeconds) / stepSeconds))
+    const stepsDue = Math.min(stepsLeft, Math.max(0, Math.floor((nowMs - run.lastTickAt) / 1000 / stepSeconds)))
+    // A device clock that went backwards restarts the wait from now.
+    const lastTickAt = nowMs < run.lastTickAt ? nowMs : run.lastTickAt + stepsDue * stepSeconds * 1000
+    if (stepsDue === 0 && lastTickAt === run.lastTickAt && stepsLeft > 0) continue
     let game = run.game
     let earnedBits = run.earnedBits
-    let elapsed = dt
-    if (dt > 0) {
-      const ticks = Math.max(1, Math.ceil(dt))
-      const step = dt / ticks
-      for (let i = 0; i < ticks; i++) {
-        const before = game.resources[MONEY_ID] ?? 0
-        game = tickGame(step, 1)(game)
-        earnedBits += Math.max(0, (game.resources[MONEY_ID] ?? 0) - before)
-        // Settle at the tick that crosses the target, so the recorded time doesn't depend on when the player returns.
-        if (earnedBits / BITS_PER_BYTE >= 10 ** run.def.targetExponent) {
-          elapsed = (i + 1) * step
-          break
-        }
-      }
+    let stepsDone = 0
+    while (stepsDone < stepsDue) {
+      const [stepped, gained] = stepRunGame(game, run.def, stepSeconds)
+      game = stepped
+      earnedBits += gained
+      stepsDone++
+      // Settle at the step that crosses the target, so the recorded time doesn't depend on when the player returns.
+      if (earnedBits / BITS_PER_BYTE >= run.def.targetBytes) break
     }
     next = settleRun(
-      setRun(next, format.id, { ...run, game, lastTickAt, simSeconds: run.simSeconds + elapsed, earnedBits }),
+      setRun(next, format.id, { ...run, game, lastTickAt, simSeconds: run.simSeconds + stepsDone * stepSeconds, earnedBits }),
       format.id,
       nowMs,
     )
@@ -195,27 +359,20 @@ export const tickDailyRuns = nowMs => state => {
 }
 
 // Applies a Factory engine action to a run's own game (a target is only ever reached by production, in a tick).
-// `reseed` (Scale Up / Overclock soft resets): a run has no Foundry to refill the wiped balance, so the reset
-// grants the starting balance again — the multipliers it earns are the point.
 const playRun = (formatId, nowMs, action, reseed = false) => state => {
   // Catch the run up (and settle it) through the action's timestamp first, so a purchase can't retroactively
   // speed up a gap that already ended the run.
-  let caught = tickDailyRuns(nowMs)(state)
-  for (let i = 0; i < 50 && caught.daily.runs[formatId] && nowMs - caught.daily.runs[formatId].lastTickAt > 1000; i++) {
-    caught = tickDailyRuns(nowMs)(caught)
-  }
+  const caught = tickDailyRuns(nowMs)(state)
   const run = caught.daily.runs[formatId]
   if (!run) return caught
-  let game = action(run.game)
-  if (game === run.game) return caught
-  if (reseed) game = { ...game, resources: { ...game.resources, [MONEY_ID]: getStartBits(run.def) } }
-  return setRun(caught, formatId, { ...run, game })
+  const game = applyRunAction(run.game, run.def, action, reseed)
+  return game === run.game ? caught : setRun(caught, formatId, { ...run, game })
 }
 
 export const buyDailyTier = (formatId, tierId, nowMs) => playRun(formatId, nowMs, buyTierQuantity(tierId, BUY_ALL))
-export const buyDailyClockSpeed = (formatId, nowMs) => playRun(formatId, nowMs, buyGlobalTickspeedMultiplier)
-export const scaleUpDailyRun = (formatId, nowMs) => playRun(formatId, nowMs, scaleUpGame, true)
-export const overclockDailyRun = (formatId, nowMs) => playRun(formatId, nowMs, overclockGame, true)
+export const buyDailyClockSpeed = (formatId, nowMs) => playRun(formatId, nowMs, RUN_ACTIONS.clockSpeed.action)
+export const scaleUpDailyRun = (formatId, nowMs) => playRun(formatId, nowMs, RUN_ACTIONS.scaleUp.action, true)
+export const overclockDailyRun = (formatId, nowMs) => playRun(formatId, nowMs, RUN_ACTIONS.overclock.action, true)
 
 // Credits for one UTC date: 1 per distinct format won + 1 once for any won/completed run. Max 4.
 export const getDailyCredits = (state, dateId) => {

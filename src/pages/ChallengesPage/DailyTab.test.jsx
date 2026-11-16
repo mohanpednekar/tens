@@ -1,9 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { ThemeProvider } from 'theme'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { startDailyRun } from 'game/dailyChallenges'
+import { generateDailyChallenge, getUtcDateId, startDailyRun } from 'game/dailyChallenges'
 import { createInitialGameState } from 'game/engine'
 import { DAILY_CHALLENGES_FEATURE } from 'game/layers'
+import { describeDailyChallenge } from './DailyTab'
 import ChallengesPage from './index'
 
 const base = () => ({
@@ -32,6 +33,22 @@ describe('Firmware Daily tab', () => {
     for (const id of ['10m', '1h', '10h']) expect(screen.getByLabelText(`daily ${id}`)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'start daily 1h' }))
     expect(game.actions.dailyStart).toHaveBeenCalledWith('1h')
+  })
+
+  it('shows each challenge\'s modified conditions, on the card and inside the run', () => {
+    const def = generateDailyChallenge(getUtcDateId(Date.now()), '10m')
+    expect(def.conditions.length).toBeGreaterThan(0)
+    wrap(<ChallengesPage game={makeGame(startDailyRun('1h', Date.now())(base()))} />)
+    fireEvent.click(screen.getByRole('tab', { name: 'open daily challenges' }))
+    expect(screen.getByLabelText('daily 10m conditions').textContent).toBe(describeDailyChallenge(def))
+    expect(screen.getByLabelText('daily 10m conditions').textContent).toContain(def.conditions[0])
+    fireEvent.click(screen.getByRole('button', { name: 'open daily 1h' }))
+    expect(screen.getByLabelText('daily run conditions')).toBeTruthy()
+  })
+
+  it('describes the head start in words', () => {
+    expect(describeDailyChallenge({ conditions: ['Costs ×5'], headStart: { scaleUps: 1, overclock: 5 } })).toBe('Costs ×5 · starts with 1 Scale Up · starts at Overclock 5')
+    expect(describeDailyChallenge({ conditions: [], headStart: { scaleUps: 0, overclock: 0 } })).toBe('')
   })
 
   it('shows a running card with Open / Restart / Forfeit and confirm-guards Forfeit', () => {

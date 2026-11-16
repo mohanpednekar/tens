@@ -1,11 +1,18 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import {
+  DAILY_BOT_ACTION_ORDER,
   DAILY_FORMATS,
+  DAILY_FORMAT_BY_ID,
+  DAILY_GENERATOR_VERSION,
+  DAILY_MAX_TARGET_BYTES,
+  DAILY_MODIFIER_POOL,
+  buildDailyCandidate,
   buyDailyClockSpeed,
   buyDailyTier,
   canRestartDailyRun,
   forfeitDailyRun,
   generateDailyChallenge,
+  getDailyChallengeValidation,
   getDailyCredits,
   getMsUntilNextUtcDay,
   getRunProgress,
@@ -18,10 +25,16 @@ import {
   tickDailyRuns,
 } from './dailyChallenges'
 import { createInitialGameState } from './engine'
-import { DAILY_CHALLENGES_FEATURE, TIER_DEFINITIONS } from './layers'
+import { DAILY_CHALLENGES_FEATURE } from './layers'
 
 const T0 = Date.UTC(2026, 10, 12, 10, 0, 0)
 const purged = () => ({ ...createInitialGameState(), purge: { ...createInitialGameState().purge, count: 1 } })
+const withRun = (state, formatId, patch) => ({
+  ...state,
+  daily: { ...state.daily, runs: { ...state.daily.runs, [formatId]: { ...state.daily.runs[formatId], ...patch } } },
+})
+const isoDates = (from, days) => Array.from({ length: days }, (_, i) => new Date(Date.parse(`${from}T00:00:00Z`) + i * 86400000).toISOString().slice(0, 10))
+const inBand = (format, seconds) => seconds > format.seconds / 2 && seconds <= format.botCeilingSeconds
 
 beforeEach(() => { DAILY_CHALLENGES_FEATURE.enabled = true })
 afterEach(() => { DAILY_CHALLENGES_FEATURE.enabled = false })
@@ -29,15 +42,84 @@ afterEach(() => { DAILY_CHALLENGES_FEATURE.enabled = false })
 describe('generator', () => {
   test('is deterministic and varies by date/format', () => {
     expect(generateDailyChallenge('2026-11-12', '1h')).toEqual(generateDailyChallenge('2026-11-12', '1h'))
+    expect(buildDailyCandidate('2026-11-12', '1h', 0)).toEqual(buildDailyCandidate('2026-11-12', '1h', 0))
     expect(generateDailyChallenge('2026-11-12', '1h')).not.toEqual(generateDailyChallenge('2026-11-12', '10m'))
-    const seeds = new Set(Array.from({ length: 30 }, (_, i) => generateDailyChallenge(`2026-12-${String(i + 1).padStart(2, '0')}`, '10h').seed))
-    expect(seeds.size).toBe(30)
+    const targets = new Set(isoDates('2026-12-01', 10).map(date => generateDailyChallenge(date, '10h').targetBytes))
+    expect(targets.size).toBeGreaterThan(5)
+  })
+
+  test('a definition carries modified conditions, a head start and a calculated target', () => {
+    for (const format of DAILY_FORMATS) {
+      const def = generateDailyChallenge('2026-11-12', format.id)
+      expect(def.generatorVersion).toBe(DAILY_GENERATOR_VERSION)
+      expect(def.targetBytes).toBeGreaterThan(0)
+      expect(def.targetBytes).toBeLessThanOrEqual(DAILY_MAX_TARGET_BYTES)
+      expect(def.stepSeconds).toBe(format.stepSeconds)
+      expect(def.conditions.length).toBe(Object.keys(def.levers).length)
+      for (const [lever, value] of Object.entries(def.levers)) {
+        expect(DAILY_MODIFIER_POOL.find(entry => entry.lever === lever).values).toContain(value)
+      }
+      expect(def.headStart).toEqual({ scaleUps: expect.any(Number), overclock: expect.any(Number) })
+      // The internal validation record never rides along in the definition a run stores.
+      expect(def).not.toHaveProperty('botSeconds')
+    }
   })
 
   test('UTC date ids ignore the local timezone', () => {
     expect(getUtcDateId(Date.UTC(2026, 11, 31, 23, 59, 59))).toBe('2026-12-31')
     expect(getUtcDateId(Date.UTC(2027, 0, 1))).toBe('2027-01-01')
     expect(getMsUntilNextUtcDay(Date.UTC(2026, 11, 31, 23, 0, 0))).toBe(3600000)
+  })
+})
+
+// The reference bot must win every definition after half the time limit and no later than the format's ceiling
+// (9 min / 50 min / 8 h). `scripts/simulate-daily-challenges.mjs` runs the same check over longer ranges.
+describe('calibration (reference bot)', () => {
+  const dates = [...isoDates('2026-11-12', 12), '2026-12-31', '2027-01-01', '2027-02-28', '2028-02-29']
+
+  test.each(DAILY_FORMATS.map(format => [format.id]))('%s: every definition is won inside the band', formatId => {
+    const format = DAILY_FORMAT_BY_ID[formatId]
+    const records = dates.map(date => ({ def: generateDailyChallenge(date, formatId), validation: getDailyChallengeValidation(date, formatId) }))
+    for (const { validation } of records) expect(inBand(format, validation.botSeconds)).toBe(true)
+    expect(records.filter(record => record.validation.attempt === 'fallback').length).toBeLessThanOrEqual(1)
+    expect(new Set(records.map(record => record.def.conditions.join('+'))).size).toBeGreaterThan(4)
+  }, 120000)
+
+  test.each(DAILY_FORMATS.map(format => [format.id]))('%s: the fixed fallback definition is inside the band', formatId => {
+    const fallback = buildDailyCandidate('2026-11-12', formatId, 'fallback')
+    expect(fallback.def.conditions).toEqual([])
+    expect(inBand(DAILY_FORMAT_BY_ID[formatId], fallback.validation.botSeconds)).toBe(true)
+  })
+
+  // Replays the bot through the public run actions: live play reproduces the simulated winning time exactly.
+  test.each(DAILY_FORMATS.map(format => [format.id]))('%s: live play matches the simulation', formatId => {
+    const format = DAILY_FORMAT_BY_ID[formatId]
+    const date = '2026-11-14'
+    const start = Date.parse(`${date}T00:00:00Z`) + 1000
+    const act = {
+      clockSpeed: now => buyDailyClockSpeed(formatId, now),
+      scaleUp: now => scaleUpDailyRun(formatId, now),
+      overclock: now => overclockDailyRun(formatId, now),
+    }
+    let state = startDailyRun(formatId, start)(purged())
+    for (let step = 0; step <= format.seconds / format.stepSeconds && state.daily.runs[formatId]; step++) {
+      const now = start + step * format.stepSeconds * 1000
+      state = tickDailyRuns(now)(state)
+      for (let pass = 0; pass < 20 && state.daily.runs[formatId]; pass++) {
+        const before = state.daily.runs[formatId].game
+        for (const key of DAILY_BOT_ACTION_ORDER) state = (act[key]?.(now) ?? buyDailyTier(formatId, key, now))(state)
+        if (state.daily.runs[formatId]?.game === before) break
+      }
+    }
+    const result = state.daily.results[date][formatId]
+    expect(result.won).toBe(true)
+    expect(result.bestSeconds).toBe(getDailyChallengeValidation(date, formatId).botSeconds)
+  }, 120000)
+
+  test.each(DAILY_FORMATS.map(format => [format.id]))('%s: a run that never acts earns nothing and expires', formatId => {
+    const started = startDailyRun(formatId, T0)(purged())
+    const after = tickDailyRuns(T0 + DAILY_FORMAT_BY_ID[formatId].seconds * 1000)(started)
+    expect(after.daily.results['2026-11-12'][formatId].lastOutcome).toBe('expired')
   })
 })
 
@@ -54,34 +136,51 @@ describe('review regressions', () => {
     expect(after.daily.results['2026-11-12']['10m'].lastOutcome).toBe('expired')
   })
 
-  test('a win is timed at the crossing tick, not at when the player returns', () => {
+  test('a win is timed at the crossing step, not at when the player returns', () => {
     const started = startDailyRun('10m', T0)(purged())
-    const run = started.daily.runs['10m']
-    const rich = { ...started, daily: { ...started.daily, runs: { '10m': { ...run, earnedBits: 10 ** run.def.targetExponent * 8 - 1 } } } }
+    const rich = withRun(started, '10m', { earnedBits: started.daily.runs['10m'].def.targetBytes * 8 - 1 })
     const bought = buyDailyTier('10m', 'tier01', T0)(rich)
     const after = tickDailyRuns(T0 + 600 * 1000)(bought)
     expect(after.daily.results['2026-11-12']['10m'].won).toBe(true)
-    expect(after.daily.results['2026-11-12']['10m'].bestSeconds).toBeLessThan(5)
+    expect(after.daily.results['2026-11-12']['10m'].bestSeconds).toBeLessThan(60)
+  })
+
+  test('a run from another generator version is dropped without a result', () => {
+    const started = startDailyRun('1h', T0)(purged())
+    const stale = withRun(started, '1h', { def: { dateId: '2026-11-12', formatId: '1h', generatorVersion: 1, limitSeconds: 3600, targetExponent: 4 } })
+    const after = tickDailyRuns(T0 + 1000)(stale)
+    expect(after.daily.runs['1h']).toBeNull()
+    expect(after.daily.results['2026-11-12']).toBeUndefined()
   })
 })
 
-describe('catch-up', () => {
-  test('a long gap is replayed in live-sized ticks and carried over across calls', () => {
+describe('stepping', () => {
+  test('a run advances in whole steps and carries the remainder; a gap is clamped to the limit', () => {
     const started = startDailyRun('10h', T0)(purged())
+    expect(tickDailyRuns(T0 + 29 * 1000)(started)).toBe(started)
     const once = tickDailyRuns(T0 + 10000 * 1000)(started)
-    expect(once.daily.runs['10h'].simSeconds).toBe(3600)
-    expect(once.daily.runs['10h'].lastTickAt).toBe(T0 + 3600 * 1000)
-    const done = tickDailyRuns(T0 + 10000 * 1000)(tickDailyRuns(T0 + 10000 * 1000)(once))
-    expect(done.daily.runs['10h'].simSeconds).toBe(10000)
+    expect(once.daily.runs['10h'].simSeconds).toBe(9990)
+    expect(once.daily.runs['10h'].lastTickAt).toBe(T0 + 9990 * 1000)
+    expect(tickDailyRuns(T0 + 10019 * 1000)(once)).toBe(once)
+    expect(tickDailyRuns(T0 + 10020 * 1000)(once).daily.runs['10h'].simSeconds).toBe(10020)
+  })
+
+  test('the run game carries the challenge levers through purchases and soft resets', () => {
+    const started = startDailyRun('1h', T0)(purged())
+    const { levers } = started.daily.runs['1h'].def
+    expect(started.daily.runs['1h'].game.runLevers).toEqual(levers)
+    const bought = buyDailyTier('1h', 'tier01', T0)(started)
+    expect(bought.daily.runs['1h'].game).not.toBe(started.daily.runs['1h'].game)
+    expect(tickDailyRuns(T0 + 60 * 1000)(bought).daily.runs['1h'].game.runLevers).toEqual(levers)
   })
 })
 
 describe('progress', () => {
-  test('uses the fractional exponent, so 50 B of a 1,000 B target is past the floor', () => {
-    const run = { def: { targetExponent: 3 }, earnedBits: 50 * 8 }
-    expect(getRunProgress(run)).toBeCloseTo(Math.log10(50) / 3, 5)
-    expect(getRunProgress(run)).toBeGreaterThan(0.5)
-    expect(getRunProgress({ def: { targetExponent: 3 }, earnedBits: 0 })).toBe(0)
+  test('is the share of the way to the target in powers of ten', () => {
+    const def = { targetBytes: 1000 }
+    expect(getRunProgress({ def, earnedBits: 50 * 8 })).toBeCloseTo(Math.log10(50) / 3, 5)
+    expect(getRunProgress({ def, earnedBits: 0 })).toBe(0)
+    expect(getRunProgress({ def, earnedBits: 1000 * 8 })).toBe(1)
   })
 })
 
@@ -116,18 +215,9 @@ describe('availability and lifecycle', () => {
     expect(restartDailyRun('1h', T0 + 1000)(started).daily.runs['1h'].startedAt).toBe(T0 + 1000)
   })
 
-  test('a run past its limit below the floor expires and earns nothing; a gap is clamped to the limit', () => {
-    const started = startDailyRun('10m', T0)(purged())
-    const after = tickDailyRuns(T0 + 100 * 3600 * 1000)(started)
-    expect(after.daily.runs['10m']).toBeFalsy()
-    expect(after.daily.results['2026-11-12']['10m'].lastOutcome).toBe('expired')
-    expect(getDailyCredits(after, '2026-11-12').total).toBe(0)
-  })
-
   test('a run past its limit beyond the floor completes for the participation credit only', () => {
     const started = startDailyRun('10m', T0)(purged())
-    const run = started.daily.runs['10m']
-    const near = { ...started, daily: { ...started.daily, runs: { '10m': { ...run, earnedBits: 10 ** (run.def.targetExponent - 0.5) * 8 } } } }
+    const near = withRun(started, '10m', { earnedBits: started.daily.runs['10m'].def.targetBytes ** 0.75 * 8 })
     const after = tickDailyRuns(T0 + 601 * 1000)(near)
     expect(after.daily.results['2026-11-12']['10m'].lastOutcome).toBe('completed')
     expect(getDailyCredits(after, '2026-11-12')).toEqual({ wins: 0, participation: 1, total: 1 })
@@ -136,38 +226,13 @@ describe('availability and lifecycle', () => {
   test('credits are capped at 4 under unlimited retries', () => {
     let state = purged()
     for (let attempt = 0; attempt < 3; attempt++) {
-      for (const { id } of DAILY_FORMATS) {
+      for (const { id, stepSeconds } of DAILY_FORMATS) {
         state = startDailyRun(id, T0)(state)
-        const run = state.daily.runs[id]
-        state = { ...state, daily: { ...state.daily, runs: { ...state.daily.runs, [id]: { ...run, earnedBits: 10 ** (run.def.targetExponent + 1) * 8, lastTickAt: T0 } } } }
-        state = tickDailyRuns(T0 + 1000)(state)
+        state = withRun(state, id, { earnedBits: state.daily.runs[id].def.targetBytes * 10 * 8 })
+        state = tickDailyRuns(T0 + stepSeconds * 1000)(state)
       }
     }
     expect(getDailyCredits(state, '2026-11-12')).toEqual({ wins: 3, participation: 1, total: 4 })
     expect(state.daily.results['2026-11-12']['10m'].attempts).toBe(3)
   })
-})
-
-// Reference bot: spends every action interval on Clock Speed, tiers (top-down), Scale Up and Overclock. Every
-// generated definition must be won inside 90% of the limit (per-format action cadence below).
-describe('solvability (reference bot)', () => {
-  const cadence = { '10m': 2, '1h': 30, '10h': 600 }
-  const dates = ['2026-11-12', '2026-12-31', '2027-01-01', '2027-02-28']
-  test.each(DAILY_FORMATS.flatMap(format => dates.map(date => [format.id, date])))('%s on %s is winnable', (formatId, date) => {
-    const start = Date.parse(`${date}T00:00:00Z`) + 1000
-    let state = startDailyRun(formatId, start)(purged())
-    const limit = DAILY_FORMATS.find(format => format.id === formatId).seconds * 0.9
-    let t = 0
-    while (t < limit && state.daily.runs[formatId]) {
-      t += cadence[formatId]
-      const now = start + t * 1000
-      state = tickDailyRuns(now)(state)
-      if (!state.daily.runs[formatId]) break
-      state = buyDailyClockSpeed(formatId, now)(state)
-      for (let i = TIER_DEFINITIONS.length - 1; i >= 0; i--) state = buyDailyTier(formatId, TIER_DEFINITIONS[i].id, now)(state)
-      state = scaleUpDailyRun(formatId, now)(state)
-      state = overclockDailyRun(formatId, now)(state)
-    }
-    expect(state.daily.results[date]?.[formatId]?.won).toBe(true)
-  }, 120000)
 })

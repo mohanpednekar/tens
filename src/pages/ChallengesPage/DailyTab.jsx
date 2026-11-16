@@ -90,6 +90,13 @@ export const formatDuration = seconds => {
   return `${s}s`
 }
 
+// A definition's modified conditions and seeded head start, as one short line.
+export const describeDailyChallenge = def => [
+  ...(def.conditions ?? []),
+  def.headStart?.scaleUps > 0 && `starts with ${def.headStart.scaleUps} Scale Up${def.headStart.scaleUps === 1 ? '' : 's'}`,
+  def.headStart?.overclock > 0 && `starts at Overclock ${def.headStart.overclock}`,
+].filter(Boolean).join(' · ')
+
 const OUTCOME_LABELS = { won: '✓ Won', completed: 'Completed (no win)', expired: 'Expired' }
 const BIG = Number.MAX_SAFE_INTEGER
 
@@ -104,8 +111,9 @@ const RunView = ({ format, run, actions, onBack }) => {
         <Button aria-label="back to daily challenges" onClick={onBack} type="button" variant="prestige">Back</Button>
       </BackBanner>
       <Meta>
-        Earn {formatAmount(10 ** run.def.targetExponent)} B · earned {formatAmount(bytes)} B · {formatDuration(run.def.limitSeconds - run.simSeconds)} left
+        Earn {formatAmount(run.def.targetBytes ?? 0)} B · earned {formatAmount(bytes)} B · {formatDuration(run.def.limitSeconds - run.simSeconds)} left
       </Meta>
+      {describeDailyChallenge(run.def) && <Meta aria-label="daily run conditions">{describeDailyChallenge(run.def)}</Meta>}
       <Bar $percent={Math.round(getRunProgress(run) * 100)}><span /></Bar>
       <Meta aria-label="daily run balance">Balance {formatCurrency(game.resources[MONEY_ID] ?? 0)}</Meta>
       {TIER_DEFINITIONS.filter(tier => isTierUnlocked(game)(tier)).map(tier => (
@@ -168,6 +176,7 @@ const DailyTab = ({ state, actions }) => {
           const run = state.daily.runs[format.id]
           const result = state.daily.results[today]?.[format.id]
           const lastDay = run && run.def.dateId !== today
+          const def = run ? run.def : generateDailyChallenge(today, format.id)
           return (
             <Row key={format.id} aria-label={`daily ${format.id}`}>
               <span>
@@ -178,11 +187,12 @@ const DailyTab = ({ state, actions }) => {
                   </Meta>
                 ) : (
                   <Meta>
-                    Earn {formatAmount(10 ** generateDailyChallenge(today, format.id).targetExponent)} B
+                    Earn {formatAmount(def.targetBytes)} B
                     {result ? ` · ${OUTCOME_LABELS[result.lastOutcome]}` : ' · Not started'}
                     {result?.bestSeconds != null && ` · personal best ${formatDuration(result.bestSeconds)}`}
                   </Meta>
                 )}
+                {describeDailyChallenge(def) && <Meta aria-label={`daily ${format.id} conditions`}>{describeDailyChallenge(def)}</Meta>}
               </span>
               <Actions>
                 {run ? (

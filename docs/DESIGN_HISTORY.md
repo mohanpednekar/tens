@@ -9434,3 +9434,13 @@ State is now `intro.computeBoosts` lanes; a running head is never preempted by a
 ## Data Stream balance kept through Prestige (#1096)
 
 Purge / challenge enter-exit used to reset `intro.bits` to 0 each cycle ("a new cycle starts the screen's balance from 0"). Dropped by maintainer request: Prestige never empties the Data Stream. Reboot (`buildEraIntroReset`) still zeroes it. Side effect: a challenge run starts with the carried balance (auto-convert may turn it into free tier01 units); accepted. The simulate-run-times skill was not re-run.
+
+## Daily challenges: seeded conditions, head start, calculated targets (2026-11)
+
+The basic slice drew only a start and a target exponent from fixed per-format ranges, tuned by hand against a naive bot — every day played the same and the 10 h target was reached by an attentive player in about half the time on some days and trivially on others. Generator v2 (`DAILY_GENERATOR_VERSION = 2`) derives the target from a reference-bot simulation instead (see `docs/ECONOMY_REFERENCE.md` "Daily challenges"). Choices made along the way:
+
+- **Band.** Maintainer rule: the ideal bot takes at least half the time and at most the epic's ceilings (9 min / 50 min / 8 h). Implemented as `(limit / 2, ceiling]` — the tighter reading, which also satisfies "half of the ceiling".
+- **Head start = state after the warm-up's last soft reset, not the warm-up's end state.** Starting from the end state was tried first: the tier cascade keeps producing on its own, so in the short formats an idle run earned nearly as much as the bot (most candidates were rejected as "winnable without acting", ~12% fell back). Starting right after a Scale Up / Overclock keeps the earned multipliers but leaves nothing producing, so an idle run earns exactly nothing and the first minutes are purchase-dense.
+- **Fixed step per format (1 / 5 / 30 s), live and simulated.** `tickGame` integrates per call, so a simulation at a coarser step than live play would not be exact. Quantising live play to the same step makes the calibration exact (a test replays the bot through the public actions and gets the identical time) and keeps a full generation at ~50 ms, cheap enough to run on the device.
+- **On-device generation stays** until #1064's published definitions; `Math.pow`/`log10` may differ in the last bit between JS engines, so two devices could in principle disagree on a target — acceptable while results are local only.
+

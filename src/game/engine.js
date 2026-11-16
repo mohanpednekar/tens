@@ -1571,7 +1571,9 @@ const getChallengeEffectTier = (state, effect) => {
 }
 
 // Run-wide lever of the active challenge (see tierChallenge in layers.js); `fallback` when none applies.
-const getChallengeLever = (state, name, fallback) => getActiveChallenge(state)?.levers?.[name] ?? fallback
+// `state.runLevers` carries the same levers for an isolated Daily challenge run (dailyChallenges.js) — the main
+// save never has that field.
+const getChallengeLever = (state, name, fallback) => getActiveChallenge(state)?.levers?.[name] ?? state.runLevers?.[name] ?? fallback
 
 // Challenge-driven output factor of one tier (F1 Half Duplex on Kilobytes, plus the run-wide `production` lever) —
 // shared by tickGame's production and MainPage's per-delivery preview so the two always agree.

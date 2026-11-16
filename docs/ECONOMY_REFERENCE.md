@@ -1516,6 +1516,32 @@ never cleared by Reboot — full save Reset only). `storage.js` still grandfathe
 
 ### Challenge mode (epic #1037, engine slice #1038)
 
+### Daily challenges (epic #1062)
+
+`src/game/dailyChallenges.js`. Three definitions per UTC date (10 min / 1 h / 10 h), derived on the device from `(dateId, formatId, DAILY_GENERATOR_VERSION)` with a seeded PRNG and memoised (generation simulates; ~50 ms per definition). A run is an isolated Factory-only game; it is won when the Bytes it has **earned** (production only) reach `def.targetBytes`.
+
+Each definition has three seeded parts:
+
+1. **Modified conditions** — `modifierCount` (1–2) distinct levers from `DAILY_MODIFIER_POOL` (`production` ×0.25/0.5/2/4, `clockSpeedPower` ^0.5/0.75/1.5/2, `scaleUpPower` ^0.5/0.75/1.5/2, `costMultiplier` ×0.1/0.5/5/25). They are the same run-wide levers Factory challenges use: the run's game carries them as `runLevers`, which `engine.js`'s `getChallengeLever` reads when no Factory challenge is active (the main save never has that field). `def.conditions` holds the player-facing labels.
+2. **Seeded progress** — the reference bot plays a seeded warm-up (`warmupSeconds` per format: 4–6 h / 2–4 h / 0–1 h, in 30 s steps) under those conditions, and the run starts from the state right after the warm-up's **last Scale Up / Overclock** (the fresh state if it never reset). The multipliers built so far are kept, the ladder is fresh and nothing produces yet, so a run that never acts earns nothing. `def.headStart` = `{ scaleUps, overclock }`. Starting balance = `10^startExponent` Bytes (seeded 4–6), re-granted by every Scale Up / Overclock inside the run.
+3. **Calculated target** — the bot then plays the run itself. Its earnings are read at a seeded step after half the time limit and no later than the format's `botCeilingSeconds`, and rounded **down** to the fewest significant digits (1–4) that still exceed what it had earned at half the limit. So the reference bot wins in `(limit / 2, botCeilingSeconds]` by construction:
+
+| Format | Limit | Step | Bot must win in |
+|--------|-------|------|-----------------|
+| 10 min | 600 s | 1 s | 5 min – 9 min |
+| 1 h | 3,600 s | 5 s | 30 min – 50 min |
+| 10 h | 36,000 s | 30 s | 5 h – 8 h |
+
+The ceilings and the bot's time are internal (`getDailyChallengeValidation`, never stored in a definition or shown to players).
+
+**Reference bot** (`DAILY_BOT_ACTION_ORDER`): before every step it takes everything on offer — Clock Speed, tiers top-down, Scale Up, Overclock — until nothing changes. **Stepping:** a run advances only in whole `stepSeconds`, live (`tickDailyRuns`, remainder carried) and in the simulation alike, so live play of the same actions reproduces the simulated time exactly (asserted in `dailyChallenges.test.js`).
+
+**Rejection:** a candidate is dropped when the bot earns nothing new inside the band (its earnings stalled after a soft reset) or reaches past `DAILY_MAX_TARGET_BYTES` (1e80 — clear of the Purge freeze); the next attempt index is folded into the seed, up to `DAILY_MAX_GENERATION_ATTEMPTS` (8), then a fixed fallback (no modifiers, no head start, target read at the ceiling) is used.
+
+**Progress / completion floor:** `getRunProgress` = `log10(earned) / log10(target)`; a run that times out at ≥ `DAILY_COMPLETION_FLOOR` (0.5) is *completed* (participation credit), below it *expired*. A stored run whose `generatorVersion` differs from the current one is dropped without a result.
+
+**Sweep:** `node scripts/simulate-daily-challenges.mjs --days 120` (exit 1 if any definition is out of band; `--date YYYY-MM-DD` prints one day's definitions and validation records). 120 dates from 2026-11-16: all in band; bot medians 6.3 min / 38 min / 6.1 h; fallback 0 / 0 / 1.
+
 ### Achievements (epic #1046, basic slice)
 
 Registry in `layers.js`: `ACHIEVEMENT_GROUPS` (id/name/`boostArea`, unused), `ACHIEVEMENT_DEFINITIONS` (id, name, group, trigger text, `secret`, `platformDependent`, `bonus` explanation and data `condition`), `ACHIEVEMENT_BY_ID`; groups First session / Foundry (20 Reclamation achievements) / Tier ladder / Early Factory (event-only triggers otherwise deferred). **`ACHIEVEMENTS_FEATURE.enabled`** (mutable; on in every build) gates detection, the More entry and the page. State `achievements: { earned{id:true}, counters{pings} }`, carried through Purge/Scale Up/Overclock/Reboot/Reformat/Flush; only a full Reset clears; `mergeState` forward-fills. `engine.js`: `isAchievementConditionMet` (at-least checks against current state), `detectAchievements` (run after every `tickGame` and `tapIntroBit`; returns the same state when nothing new), `getCompletedAchievementGroups`, `isAchievementEarned`. `tapIntroBit` increments the lifetime Ping counter. Pool-reset achievements are the first functional bonuses: `intro.poolExponentBonuses[poolIndex]` records 0/1/2 permanent upgrades, each awarded by a successful `flushStoragePool` call and recognized by `condition.kind = 'poolExponentBonus'`. These survive Reformat, Purge and Reboot and only clear on full Reset. The first replaces that pool's 1×→10× disk-size step's gap multiplier 0.99 with 0.9; the second replaces its 10×→100× step; other achievement bonuses remain placeholders.
