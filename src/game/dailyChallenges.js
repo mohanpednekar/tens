@@ -7,7 +7,7 @@
 //   1. modified conditions — run-wide levers (`DAILY_MODIFIER_POOL`), carried on the run's game as `runLevers`;
 //   2. seeded progress — the reference bot plays a seeded warm-up and the run starts right after its last
 //      Scale Up / Overclock: the multipliers it built are kept, the ladder is fresh, nothing produces yet;
-//   3. a seeded objective with a calculated target — what to do (earn Bytes, own a tier's units, complete levels
+//   3. a seeded objective with a calculated target — what to do (reach a balance, own a tier's units, complete levels
 //      of a tier, reach a Clock Speed level, Overclock at a final-tier level: `DAILY_OBJECTIVE_KINDS`) is drawn
 //      from the objectives the reference bot makes progress on, and how much is what the bot had reached at a
 //      seeded moment inside the calibration band (after half the time limit, no later than the format's bot
@@ -17,7 +17,10 @@
 //      switch for each one it has.
 // The reference bot plays every step in the 10-minute and 1-hour runs; in the 10-hour run it only acts at
 // check-ins `checkInSeconds` apart, where it holds or releases the Scale Up / Overclock automations.
-// It always wins in (limit / 2, botCeilingSeconds], and a run nobody touches never reaches the target.
+// It always wins in [limit / 2, botCeilingSeconds] — a candidate outside that band is discarded and regenerated —
+// and a run nobody touches reaches neither the target nor the lower attempt mark that counts a run as attempted.
+// Nothing here reads the player's main save: a definition and its starting state depend only on (date, format,
+// version), so every player gets the same challenge.
 // Server time, fetched definitions, rewards, weekly/monthly milestones and streaks are later slices. Every
 // function takes `nowMs` as an argument.
 import {
@@ -43,12 +46,9 @@ import { BITS_PER_BYTE, DAILY_CHALLENGES_FEATURE, MONEY_ID, TIER_DEFINITIONS } f
 // Bump whenever generator data or the reference bot changes; a run on another version is dropped.
 export const DAILY_GENERATOR_VERSION = 3
 export const DAILY_MAX_CREDITS = 4
-// A run that hits its time limit short of the target still counts as completed past this share of the way (in
-// powers of ten for the amount objectives, in levels for the level ones) to the target.
-export const DAILY_COMPLETION_FLOOR = 0.5
 // Candidates per (date, format) before the fixed known-good fallback (no modifiers, no head start) is used.
 export const DAILY_MAX_GENERATION_ATTEMPTS = 8
-// Candidates whose bot reaches past this are rejected: a run must stay well clear of the 1 Googol Bytes freeze.
+// Candidates whose bot's balance reaches past this are rejected: a run must stay well clear of the 1 Googol Bytes freeze.
 export const DAILY_MAX_TARGET_BYTES = 1e80
 const WARMUP_STEP_SECONDS = 30
 const BOT_MAX_PASSES = 20
@@ -60,11 +60,12 @@ const BUY_ALL = Number.MAX_SAFE_INTEGER
 // power of ten in the seeded starting balance (DAILY_START_MANTISSAS value × 10^n Bytes, re-granted by every
 // soft reset). `automations`: 'mix' = a seeded subset (never all, Kilobytes autobuyer always on), 'buying' = tier
 // autobuyers + Auto Clock Speed, 'all' = every automation. `checkInSeconds`: when set, the reference bot only acts
-// at the start and every that many seconds (otherwise it acts every step).
+// at the start and every that many seconds (otherwise it acts every step). `startPaused`: automations the run
+// has but that start switched off — releasing them is the player's decision.
 export const DAILY_FORMATS = [
   { id: '10m', label: '10 minutes', seconds: 600, stepSeconds: 1, botCeilingSeconds: 540, style: 'Hands-on: every second counts', warmupSeconds: [14400, 21600], startExponent: [3, 9], modifierCount: [1, 2], automations: 'mix', checkInSeconds: null },
   { id: '1h', label: '1 hour', seconds: 3600, stepSeconds: 5, botCeilingSeconds: 3000, style: 'Steady: check in now and then', warmupSeconds: [7200, 14400], startExponent: [3, 9], modifierCount: [1, 2], automations: 'buying', checkInSeconds: null },
-  { id: '10h', label: '10 hours', seconds: 36000, stepSeconds: 120, botCeilingSeconds: 28800, style: 'Passive: a few well-timed decisions', warmupSeconds: [0, 3600], startExponent: [3, 8], modifierCount: [1, 2], automations: 'all', checkInSeconds: 12600 },
+  { id: '10h', label: '10 hours', seconds: 36000, stepSeconds: 120, botCeilingSeconds: 28800, style: 'Passive: a few well-timed decisions', warmupSeconds: [0, 3600], startExponent: [3, 8], modifierCount: [1, 2], automations: 'all', startPaused: ['scaleUp', 'restage', 'overclock'], checkInSeconds: 12600 },
 ]
 export const DAILY_START_MANTISSAS = [1, 2, 5]
 export const DAILY_FORMAT_BY_ID = Object.fromEntries(DAILY_FORMATS.map(format => [format.id, format]))
@@ -171,18 +172,19 @@ const RUN_ACTIONS = {
   overclock: { make: () => overclockGame },
   restage: { make: amount => consumeXpForLastTierTickspeed(amount) },
   // arg: { key, enabled } — pause or resume one of the run's automations.
-  automation: { make: arg => AUTOMATION_BY_KEY[arg?.key]?.set(Boolean(arg.enabled)) ?? (game => game) },
+  automation: { make: arg => (Object.hasOwn(AUTOMATION_BY_KEY, arg?.key ?? '') ? AUTOMATION_BY_KEY[arg.key].set(Boolean(arg.enabled)) : game => game) },
 }
 
 // --- Objectives ---
 
-// Everything a run can be asked to do. A run tracks one number per objective key (`run.metrics`): Bytes earned,
-// and the peak this run of each tier's owned units, each tier's completed levels, the Clock Speed level, and the
+// Everything a run can be asked to do. A run tracks one number per objective key (`run.metrics`), each the peak
+// this run: the balance in Bytes (not Bytes produced — autobuyers spend inside a step, so production is not
+// observable from outside the engine), each tier's owned units, each tier's completed levels, the Clock Speed level, and the
 // final-tier completed level an Overclock was claimed at. `amount` kinds grow by orders of magnitude (targets are
 // rounded to few significant digits, progress is in powers of ten); the others are whole levels.
 const LAST_TIER = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
 export const DAILY_OBJECTIVE_KINDS = {
-  earn: { weight: 2, amount: true, describe: target => `Earn ${formatAmount(target)} B` },
+  balance: { weight: 2, amount: true, describe: target => `Reach a balance of ${formatAmount(target)} B` },
   own: { weight: 1, amount: true, perTier: true, describe: (target, tier) => `Own ${formatAmount(target)} ${tier.name}` },
   levels: { weight: 1, perTier: true, describe: (target, tier) => `Complete ${target} level${target === 1 ? '' : 's'} of ${tier.name}` },
   clock: { weight: 2, describe: target => `Reach Clock Speed level ${target}` },
@@ -195,8 +197,8 @@ const OBJECTIVE_BY_KEY = Object.fromEntries(OBJECTIVES.map(objective => [objecti
 const ZERO_METRICS = Object.fromEntries(OBJECTIVES.map(objective => [objective.key, 0]))
 
 // `before` is the game this one came from: an Overclock claimed in between (by hand or by Auto Overclock) counts.
-const readMetrics = (before, game, earnedBits, previous) => {
-  const next = { ...previous, earn: earnedBits / BITS_PER_BYTE, clock: Math.max(previous.clock, game.globalTickspeedMultiplier ?? 0) }
+const readMetrics = (before, game, previous) => {
+  const next = { ...previous, balance: Math.max(previous.balance, (game.resources[MONEY_ID] ?? 0) / BITS_PER_BYTE), clock: Math.max(previous.clock, game.globalTickspeedMultiplier ?? 0) }
   for (const tier of TIER_DEFINITIONS) {
     next[`own:${tier.id}`] = Math.max(previous[`own:${tier.id}`], game.owned?.[tier.id] ?? 0)
     next[`levels:${tier.id}`] = Math.max(previous[`levels:${tier.id}`], (game.purchaseLevels?.[tier.id] ?? 1) - 1)
@@ -206,16 +208,17 @@ const readMetrics = (before, game, earnedBits, previous) => {
   return next
 }
 
-// --- Tracked play: `{ game, earnedBits, metrics }`, advanced the same way live and in the simulation ---
+// --- Tracked play: `{ game, metrics }`, advanced the same way live and in the simulation ---
 
 // One step of production and automation. `onReset(game)` hears about a soft reset.
 const trackStep = (tracked, def, stepSeconds, onReset) => {
   const before = tracked.game
   const ticked = tickGame(stepSeconds, BUY_ALL)(before)
-  const earnedBits = tracked.earnedBits + Math.max(0, (ticked.resources[MONEY_ID] ?? 0) - (before.resources[MONEY_ID] ?? 0))
+  // Measured before a reset's re-grant, so a granted balance is never mistaken for one the run built up.
+  const metrics = readMetrics(before, ticked, tracked.metrics)
   const game = settleGame(before, ticked, def)
   if (onReset && getResetSignature(before) !== getResetSignature(game)) onReset(game)
-  return { game, earnedBits, metrics: readMetrics(before, game, earnedBits, tracked.metrics) }
+  return { game, metrics }
 }
 
 // One `RUN_ACTIONS` action; the same reference comes back when it does nothing.
@@ -223,9 +226,10 @@ const trackAction = (tracked, def, actionName, arg, onReset) => {
   const before = tracked.game
   const acted = RUN_ACTIONS[actionName].make(arg)(before)
   if (acted === before) return tracked
+  const metrics = readMetrics(before, acted, tracked.metrics)
   const game = settleGame(before, acted, def)
   if (onReset && getResetSignature(before) !== getResetSignature(game)) onReset(game)
-  return { game, earnedBits: tracked.earnedBits, metrics: readMetrics(before, game, tracked.earnedBits, tracked.metrics) }
+  return { game, metrics }
 }
 
 // --- Reference bot ---
@@ -251,7 +255,8 @@ const sweep = (tracked, def, onReset) => {
   return current
 }
 
-const START = game => ({ game, earnedBits: 0, metrics: ZERO_METRICS })
+// A run opens with its starting balance already counted, so that balance is never progress.
+const START = game => ({ game, metrics: { ...ZERO_METRICS, balance: (game.resources[MONEY_ID] ?? 0) / BITS_PER_BYTE } })
 
 // The sweeping bot from `game`. `series[i]` = the metrics at time i steps, after the bot has acted there (index 0 =
 // its opening moves) — the moment a live player who acts right after each step would be measured.
@@ -265,18 +270,19 @@ const simulateSweeping = (game, def, stepSeconds, steps, onReset) => {
   return series
 }
 
-// Check-in bot (the passive format). It touches the run only at check-ins, and only to hold (switch off) or
-// release (switch on) the Scale Up / Overclock automations. Each plan below is one whole-run schedule, as
-// `[checkInIndex, key, enabled]` moves; every plan is simulated once and the best one per objective is used.
-const HOLD = (key, from = 0) => [[from, key, false]]
-const HOLD_UNTIL = (key, until) => [[0, key, false], [until, key, true]]
+// Check-in bot (the passive format). The run's reset automations start paused (`startPaused`); the bot touches
+// the run only at check-ins, and only to release (switch on) or hold (switch off) them. Each plan below is one
+// whole-run schedule, as `[checkInIndex, key, enabled]` moves; every plan is simulated once and the best one per
+// objective is used.
+const RELEASE = (keys, at = 0) => keys.map(key => [at, key, true])
 export const DAILY_CHECK_IN_PLANS = [
-  [...HOLD('overclock'), ...HOLD('scaleUp')],
-  HOLD('overclock'),
-  HOLD('scaleUp'),
-  [...HOLD_UNTIL('overclock', 2), ...HOLD_UNTIL('scaleUp', 2)],
-  HOLD_UNTIL('overclock', 2),
-  [...HOLD('scaleUp'), ...HOLD_UNTIL('overclock', 2)],
+  RELEASE(['scaleUp', 'restage', 'overclock']),
+  RELEASE(['scaleUp', 'restage']),
+  [...RELEASE(['scaleUp', 'restage']), ...RELEASE(['overclock'], 1)],
+  [...RELEASE(['scaleUp', 'restage']), ...RELEASE(['overclock'], 2)],
+  [...RELEASE(['scaleUp', 'restage', 'overclock']), [1, 'overclock', false]],
+  [...RELEASE(['scaleUp', 'restage', 'overclock']), [2, 'scaleUp', false], [2, 'overclock', false]],
+  RELEASE(['overclock', 'restage']),
 ]
 // A plan as the bot's whole interaction with a run: `[{ step, actions: [[actionName, arg]] }]`.
 const schedulePlan = (plan, checkInSteps) => {
@@ -326,6 +332,22 @@ const calculateTarget = (objective, atHalf, atTarget, untouched) => {
   return null
 }
 
+// The attempt mark: a slightly lower target that makes a run count as attempted. It lies strictly between what an
+// untouched run reaches by the limit and the target, so starting a run and leaving never earns it. Null when there
+// is no room for one.
+const calculateAttemptMark = (objective, target, untouched) => {
+  if (!objective.amount) {
+    const mark = Math.max(untouched + 1, target - Math.max(1, Math.round(target * 0.2)))
+    return mark < target ? mark : null
+  }
+  for (const divisor of [10, 4, 2]) {
+    const mark = floorToSignificant(target / divisor, 1)
+    if (mark > untouched && mark < target) return mark
+  }
+  const between = floorToSignificant(Math.sqrt(Math.max(1, untouched) * target), 2)
+  return between > untouched && between < target ? between : null
+}
+
 // Objectives in a seeded weighted order (each drawn without replacement, by weight).
 const drawObjectiveOrder = (rng, objectives) => {
   const left = [...objectives]
@@ -360,7 +382,9 @@ export const buildDailyCandidate = (dateId, formatId, attempt) => {
     }
   }
   const levers = Object.fromEntries(modifiers.map(modifier => [modifier.lever, modifier.value]))
-  const automations = pickAutomations(rng, fallback && format.automations === 'mix' ? 'buying' : format.automations)
+  // The fallback has no automations at all (an untouched run then achieves nothing) and a sweeping bot.
+  const automations = fallback ? [] : pickAutomations(rng, format.automations)
+  const checkIn = Boolean(format.checkInSeconds) && !fallback
   const warmupSeconds = fallback ? 0 : pickInt(rng, format.warmupSeconds.map(seconds => seconds / WARMUP_STEP_SECONDS)) * WARMUP_STEP_SECONDS
   const stepsLimit = format.seconds / format.stepSeconds
   const stepsHalf = stepsLimit / 2
@@ -387,65 +411,73 @@ export const buildDailyCandidate = (dateId, formatId, attempt) => {
   // Head start: the state right after the warm-up's last soft reset (the fresh state when it never reset).
   let startGame = fresh
   simulateSweeping(fresh, def, WARMUP_STEP_SECONDS, warmupSeconds / WARMUP_STEP_SECONDS, game => { startGame = game })
+  for (const key of (fallback ? [] : format.startPaused ?? [])) startGame = settleGame(startGame, AUTOMATION_BY_KEY[key].set(false)(startGame), def)
 
-  // A run nobody touches (automations only): a target must lie beyond what it reaches by the limit, and it must
-  // stay clear of the Purge freeze. (The fallback only has to be solvable.)
-  const untouchedSeries = [ZERO_METRICS]
+  // A run nobody touches (automations only, as they start): the target and the attempt mark must lie beyond what
+  // it reaches by the limit, and it must stay clear of the Purge freeze.
+  const untouchedSeries = [START(startGame).metrics]
   for (let tracked = START(startGame), step = 0; step < stepsLimit; step++) {
     tracked = trackStep(tracked, def, format.stepSeconds)
     untouchedSeries.push(tracked.metrics)
   }
-  if (untouchedSeries[stepsLimit].earn > DAILY_MAX_TARGET_BYTES) return null
-  const untouched = fallback ? ZERO_METRICS : untouchedSeries[stepsLimit]
-  const options = fallback ? [OBJECTIVE_BY_KEY.earn] : drawObjectiveOrder(rng, OBJECTIVES)
-  const findTarget = (objective, series, beyond = untouched) => calculateTarget(objective, series[stepsHalf][objective.key], series[targetStep][objective.key], beyond[objective.key])
+  if (untouchedSeries[stepsLimit].balance > DAILY_MAX_TARGET_BYTES) return null
+  const untouched = untouchedSeries[stepsLimit]
+  // The fallback takes the first viable objective in the fixed list order (no seed involved).
+  const options = fallback ? OBJECTIVES : drawObjectiveOrder(rng, OBJECTIVES)
+  // `{ objective, target, attemptMark, botSeconds }` when the objective is viable on this play of the bot and the
+  // bot's winning time is inside the calibration band; otherwise null (the caller moves on, or discards).
+  const assess = (objective, series) => {
+    const target = calculateTarget(objective, series[stepsHalf][objective.key], series[targetStep][objective.key], untouched[objective.key])
+    if (target === null) return null
+    const attemptMark = calculateAttemptMark(objective, target, untouched[objective.key])
+    if (attemptMark === null) return null
+    const botSeconds = series.findIndex(metrics => metrics[objective.key] >= target) * format.stepSeconds
+    return botSeconds >= format.seconds / 2 && botSeconds <= format.botCeilingSeconds ? { objective, target, attemptMark, botSeconds } : null
+  }
   let chosen = null
-  if (format.checkInSeconds) {
+  if (checkIn) {
     // Every plan is played once (all metrics are tracked together); an objective takes the plan that leaves it
     // highest, and the first objective in the seeded order with a viable target is the day's.
     const plays = DAILY_CHECK_IN_PLANS
       .map(plan => schedulePlan(plan, format.checkInSeconds / format.stepSeconds))
       .map(plan => ({ plan, series: simulateSchedule(startGame, def, format.stepSeconds, targetStep, plan) }))
-      .filter(play => play.series[targetStep].earn <= DAILY_MAX_TARGET_BYTES)
+      .filter(play => play.series[targetStep].balance <= DAILY_MAX_TARGET_BYTES)
     for (const objective of options) {
       const best = plays.reduce((top, play) => (!top || play.series[targetStep][objective.key] > top.series[targetStep][objective.key] ? play : top), null)
-      const target = best && findTarget(objective, best.series)
-      if (target != null) { chosen = { objective, target, series: best.series, plan: best.plan }; break }
-    }
-    // No plan beats an untouched run on any objective: with these rules the automations are already playing it
-    // right, so the day is a leave-it-running one — the target only has to be reached inside the band.
-    if (!chosen) {
-      for (const objective of options) {
-        const best = plays.reduce((top, play) => (!top || play.series[targetStep][objective.key] > top.series[targetStep][objective.key] ? play : top), null)
-        const target = best && findTarget(objective, best.series, ZERO_METRICS)
-        if (target != null) { chosen = { objective, target, series: best.series, plan: best.plan, handsOff: true }; break }
-      }
+      const assessed = best && assess(objective, best.series)
+      if (assessed) { chosen = { ...assessed, plan: best.plan }; break }
     }
   } else {
     const series = simulateSweeping(startGame, def, format.stepSeconds, targetStep)
     // Rejected: the run would brush the Purge freeze.
-    if (series[targetStep].earn > DAILY_MAX_TARGET_BYTES) return null
+    if (series[targetStep].balance > DAILY_MAX_TARGET_BYTES) return null
     // The first objective, in the seeded order, that the bot advanced inside the band.
     for (const objective of options) {
-      const target = findTarget(objective, series)
-      if (target !== null) { chosen = { objective, target, series, plan: null }; break }
+      chosen = assess(objective, series)
+      if (chosen) { chosen = { ...chosen, plan: null }; break }
     }
   }
   if (!chosen) return null
-  const { objective, target, series, plan, handsOff = false } = chosen
+  const { objective, target, attemptMark, botSeconds, plan } = chosen
 
   return {
     def: {
       ...def,
-      objective: { key: objective.key, kind: objective.kind, target, label: objective.describe(target, objective.tier) },
+      objective: {
+        key: objective.key,
+        kind: objective.kind,
+        target,
+        label: objective.describe(target, objective.tier),
+        attemptMark, // reaching this much counts the run as attempted (participation), even without a win
+        attemptLabel: objective.describe(attemptMark, objective.tier),
+      },
       headStart: describeHeadStart(startGame),
     },
     startGame,
     validation: {
       attempt,
       warmupSeconds,
-      botSeconds: series.findIndex(metrics => metrics[objective.key] >= target) * format.stepSeconds,
-      handsOff, // check-in format: true when an untouched run also reaches the target by the limit
+      botSeconds,
       plan, // check-in format: the bot's whole interaction, `[{ step, actions }]`; null when it sweeps every step
     },
   }
@@ -457,6 +489,8 @@ const generate = (dateId, formatId) => {
   let entry = generated.get(key)
   if (!entry) {
     for (let attempt = 0; attempt < DAILY_MAX_GENERATION_ATTEMPTS && !entry; attempt++) entry = buildDailyCandidate(dateId, formatId, attempt)
+    // The fallback draws nothing from the seed, so it is the same definition for every date — and known good
+    // (asserted for every format in dailyChallenges.test.js).
     entry ??= buildDailyCandidate(dateId, formatId, 'fallback')
     if (generated.size > 64) generated.clear()
     generated.set(key, entry)
@@ -492,7 +526,7 @@ const setRun = (state, formatId, run) => ({
   daily: { ...state.daily, runs: { ...state.daily.runs, [formatId]: run } },
 })
 
-// Settles a run when its target is reached (won) or its limit passed (completed past the floor, else expired).
+// Settles a run when its target is reached (won) or its limit passed (completed past its attempt mark, else expired).
 const settleRun = (state, formatId, finishedMs) => {
   const run = state.daily.runs[formatId]
   if (!run) return state
@@ -500,7 +534,8 @@ const settleRun = (state, formatId, finishedMs) => {
   const timedOut = run.simSeconds >= run.def.limitSeconds
   if (!won && !timedOut) return state
 
-  const completed = won || getRunProgress(run) >= DAILY_COMPLETION_FLOOR
+  // Attempted: the run reached its attempt mark (always beyond what an untouched run gets to).
+  const completed = won || getRunValue(run) >= run.def.objective.attemptMark
   const previous = state.daily.results[run.def.dateId]?.[formatId] ?? { won: false, completed: false, bestSeconds: null, attempts: 0 }
   const bestSeconds = won
     ? (previous.bestSeconds === null ? run.simSeconds : Math.min(previous.bestSeconds, run.simSeconds))
@@ -533,8 +568,7 @@ export const startDailyRun = (formatId, nowMs) => state => {
     startedAt: nowMs,
     lastTickAt: nowMs,
     simSeconds: 0,
-    earnedBits: 0,
-    metrics: ZERO_METRICS,
+    metrics: START(startGame).metrics,
   })
 }
 
@@ -570,7 +604,7 @@ export const tickDailyRuns = nowMs => state => {
     // A device clock that went backwards restarts the wait from now.
     const lastTickAt = nowMs < run.lastTickAt ? nowMs : run.lastTickAt + stepsDue * stepSeconds * 1000
     if (stepsDue === 0 && lastTickAt === run.lastTickAt && stepsLeft > 0) continue
-    let tracked = { game: run.game, earnedBits: run.earnedBits, metrics: run.metrics }
+    let tracked = { game: run.game, metrics: run.metrics }
     let stepsDone = 0
     while (stepsDone < stepsDue) {
       tracked = trackStep(tracked, run.def, stepSeconds)
@@ -596,7 +630,7 @@ export const playDailyRun = (formatId, actionName, arg, nowMs) => state => {
   const caught = tickDailyRuns(nowMs)(state)
   const run = caught.daily.runs[formatId]
   if (!run) return caught
-  const before = { game: run.game, earnedBits: run.earnedBits, metrics: run.metrics }
+  const before = { game: run.game, metrics: run.metrics }
   const tracked = trackAction(before, run.def, actionName, arg)
   return tracked === before ? caught : settleRun(setRun(caught, formatId, { ...run, ...tracked }), formatId, nowMs)
 }

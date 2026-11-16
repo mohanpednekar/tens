@@ -32,11 +32,11 @@ const withRun = (state, formatId, patch) => ({
   ...state,
   daily: { ...state.daily, runs: { ...state.daily.runs, [formatId]: { ...state.daily.runs[formatId], ...patch } } },
 })
-// Sets a run's objective metric (and the earned Bits behind it, for the earn objective).
+// Sets a run's objective metric.
 const withValue = (state, formatId, value) => {
   const run = state.daily.runs[formatId]
   const { key } = run.def.objective
-  return withRun(state, formatId, { metrics: { ...run.metrics, [key]: value }, ...(key === 'earn' ? { earnedBits: value * 8 } : {}) })
+  return withRun(state, formatId, { metrics: { ...run.metrics, [key]: value } })
 }
 const isAmount = def => DAILY_OBJECTIVE_KINDS[def.objective.kind].amount
 const isoDates = (from, days) => Array.from({ length: days }, (_, i) => new Date(Date.parse(`${from}T00:00:00Z`) + i * 86400000).toISOString().slice(0, 10))
@@ -63,6 +63,10 @@ describe('generator', () => {
       expect(DAILY_OBJECTIVE_KINDS[def.objective.kind]).toBeTruthy()
       expect(def.objective.target).toBeGreaterThan(0)
       expect(def.objective.label).toBeTruthy()
+      // The attempt mark is a lower target of the same kind.
+      expect(def.objective.attemptMark).toBeGreaterThan(0)
+      expect(def.objective.attemptMark).toBeLessThan(def.objective.target)
+      expect(def.objective.attemptLabel).toBeTruthy()
       if (!isAmount(def)) expect(Number.isInteger(def.objective.target)).toBe(true)
       expect(def.stepSeconds).toBe(format.stepSeconds)
       expect(def.conditions.length).toBe(Object.keys(def.levers).length)
@@ -102,7 +106,8 @@ describe('calibration (reference bot)', () => {
   test.each(DAILY_FORMATS.map(format => [format.id]))('%s: the fixed fallback definition is inside the band', formatId => {
     const fallback = buildDailyCandidate('2026-11-12', formatId, 'fallback')
     expect(fallback.def.conditions).toEqual([])
-    expect(fallback.def.objective.kind).toBe('earn')
+    expect(fallback.def.automations).toEqual([])
+    expect(fallback.def.objective.attemptMark).toBeLessThan(fallback.def.objective.target)
     expect(inBand(DAILY_FORMAT_BY_ID[formatId], fallback.validation.botSeconds)).toBe(true)
   })
 
@@ -132,12 +137,23 @@ describe('calibration (reference bot)', () => {
     expect(result.bestSeconds).toBe(getDailyChallengeValidation(date, formatId).botSeconds)
   }, 120000)
 
-  // The 10-hour format may have leave-it-running days; the active formats never do.
-  test.each([['10m'], ['1h']])('%s: a run nobody touches does not win', formatId => {
+  // Starting a run and leaving it earns nothing: it reaches neither the target nor the attempt mark.
+  test.each(DAILY_FORMATS.map(format => [format.id]))('%s: a run nobody touches is not even an attempt', formatId => {
     for (const date of dates.slice(0, 6)) {
       const start = Date.parse(`${date}T00:00:00Z`) + 1000
       const after = tickDailyRuns(start + DAILY_FORMAT_BY_ID[formatId].seconds * 1000)(startDailyRun(formatId, start)(purged()))
-      expect(after.daily.results[date][formatId].won).toBe(false)
+      expect(after.daily.results[date][formatId].lastOutcome).toBe('expired')
+      expect(getDailyCredits(after, date).total).toBe(0)
+    }
+  })
+
+  test('a challenge does not depend on the player\'s own progress', () => {
+    const veteran = { ...purged(), purge: { ...purged().purge, count: 500, points: 1e9 }, era: { count: 3 }, prestigeSpeedBonusUnlocked: true, autoScaleUp: true, autoOverclock: true }
+    for (const { id } of DAILY_FORMATS) {
+      const a = startDailyRun(id, T0)(purged()).daily.runs[id]
+      const b = startDailyRun(id, T0)(veteran).daily.runs[id]
+      expect(b).toEqual(a)
+      expect(tickDailyRuns(T0 + 240 * 1000)(startDailyRun(id, T0)(veteran)).daily.runs[id]).toEqual(tickDailyRuns(T0 + 240 * 1000)(startDailyRun(id, T0)(purged())).daily.runs[id])
     }
   })
 })
@@ -154,24 +170,28 @@ describe('automations', () => {
     }
   })
 
-  test('a run starts with its automations on, and the switch pauses and resumes one', () => {
+  test('the 10-hour run starts with its reset automations paused; the switch releases and holds one', () => {
     const started = startDailyRun('10h', T0)(purged())
-    expect(keys.every(key => isDailyAutomationOn(started.daily.runs['10h'].game, key))).toBe(true)
-    const paused = playDailyRun('10h', 'automation', { key: 'overclock', enabled: false }, T0)(started)
-    expect(isDailyAutomationOn(paused.daily.runs['10h'].game, 'overclock')).toBe(false)
-    expect(isDailyAutomationOn(playDailyRun('10h', 'automation', { key: 'overclock', enabled: true }, T0)(paused).daily.runs['10h'].game, 'overclock')).toBe(true)
+    const paused = DAILY_FORMAT_BY_ID['10h'].startPaused
+    expect(keys.filter(key => !isDailyAutomationOn(started.daily.runs['10h'].game, key))).toEqual(keys.filter(key => paused.includes(key)))
+    const released = playDailyRun('10h', 'automation', { key: 'overclock', enabled: true }, T0)(started)
+    expect(isDailyAutomationOn(released.daily.runs['10h'].game, 'overclock')).toBe(true)
+    expect(isDailyAutomationOn(playDailyRun('10h', 'automation', { key: 'overclock', enabled: false }, T0)(released).daily.runs['10h'].game, 'overclock')).toBe(false)
+    const mix = startDailyRun('10m', T0)(purged()).daily.runs['10m']
+    expect(mix.def.automations.every(key => isDailyAutomationOn(mix.game, key))).toBe(true)
     // An automation the run does not have cannot be switched.
     const hour = startDailyRun('1h', T0)(purged())
     expect(playDailyRun('1h', 'automation', { key: 'scaleUp', enabled: false }, T0)(hour)).toBe(hour)
-    expect(playDailyRun('1h', 'automation', { key: 'nope', enabled: false }, T0)(hour)).toBe(hour)
+    for (const arg of [{ key: 'nope', enabled: false }, { key: 'constructor', enabled: false }, undefined]) expect(playDailyRun('1h', 'automation', arg, T0)(hour)).toBe(hour)
   })
 
-  test('automation plays the run: an untouched 10-hour run makes progress and never runs dry after an automatic reset', () => {
-    const started = startDailyRun('10h', T0)(purged())
+  test('automation plays the run: a released 10-hour run makes progress and never runs dry after an automatic reset', () => {
+    let started = startDailyRun('10h', T0)(purged())
+    for (const key of DAILY_FORMAT_BY_ID['10h'].startPaused) started = playDailyRun('10h', 'automation', { key, enabled: true }, T0)(started)
     const later = tickDailyRuns(T0 + 4 * 3600 * 1000)(started)
     const run = later.daily.runs['10h']
     if (run) {
-      expect(run.metrics.earn).toBeGreaterThan(0)
+      expect(run.metrics.balance).toBeGreaterThan(run.def.startBytes)
       expect(run.game.resources.base).toBeGreaterThan(0)
     } else expect(later.daily.results['2026-11-12']['10h']).toBeTruthy()
   })
@@ -250,6 +270,8 @@ describe('objectives', () => {
   test('the Overclock objective counts only an Overclock claimed in the run', () => {
     const started = startDailyRun('10m', T0)(purged())
     expect(started.daily.runs['10m'].metrics.overclock).toBe(0)
+    // The starting balance is counted from the start, so it is never progress.
+    expect(started.daily.runs['10m'].metrics.balance).toBe(started.daily.runs['10m'].def.startBytes)
     const run = started.daily.runs['10m']
     const ready = withRun(started, '10m', { game: { ...run.game, purchaseLevels: Object.fromEntries(Object.keys(run.game.purchaseLevels).map(id => [id, 30])) } })
     const after = playDailyRun('10m', 'overclock', undefined, T0)(ready)
@@ -281,10 +303,10 @@ describe('run actions', () => {
 
 describe('progress', () => {
   test('is the share of the way to the target in powers of ten for an amount objective', () => {
-    const def = { objective: { key: 'earn', kind: 'earn', target: 1000 } }
-    expect(getRunProgress({ def, metrics: { earn: 50 } })).toBeCloseTo(Math.log10(50) / 3, 5)
-    expect(getRunProgress({ def, metrics: { earn: 0 } })).toBe(0)
-    expect(getRunProgress({ def, metrics: { earn: 1000 } })).toBe(1)
+    const def = { objective: { key: 'balance', kind: 'balance', target: 1000 } }
+    expect(getRunProgress({ def, metrics: { balance: 50 } })).toBeCloseTo(Math.log10(50) / 3, 5)
+    expect(getRunProgress({ def, metrics: { balance: 0 } })).toBe(0)
+    expect(getRunProgress({ def, metrics: { balance: 1000 } })).toBe(1)
   })
 
   test('is the share of the levels for a level objective', () => {
@@ -325,13 +347,16 @@ describe('availability and lifecycle', () => {
     expect(restartDailyRun('1h', T0 + 1000)(started).daily.runs['1h'].startedAt).toBe(T0 + 1000)
   })
 
-  test('a run past its limit beyond the floor completes for the participation credit only', () => {
+  test('a run past its limit at the attempt mark counts as attempted, for the participation credit only', () => {
     const started = startDailyRun('10m', T0)(purged())
     const { def } = started.daily.runs['10m']
-    const near = withValue(started, '10m', isAmount(def) ? def.objective.target ** 0.75 : def.objective.target * 0.75)
+    const near = withValue(started, '10m', def.objective.attemptMark)
     const after = tickDailyRuns(T0 + 601 * 1000)(near)
     expect(after.daily.results['2026-11-12']['10m'].lastOutcome).toBe('completed')
     expect(getDailyCredits(after, '2026-11-12')).toEqual({ wins: 0, participation: 1, total: 1 })
+    // Just short of the mark is not an attempt.
+    const short = tickDailyRuns(T0 + 601 * 1000)(withValue(started, '10m', isAmount(def) ? def.objective.attemptMark * 0.99 : def.objective.attemptMark - 1))
+    expect(short.daily.results['2026-11-12']['10m'].lastOutcome).toBe('expired')
   })
 
   test('credits are capped at 4 under unlimited retries', () => {

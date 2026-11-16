@@ -166,7 +166,7 @@ export const describeDailyChallenge = def => [
   describeManual(def),
 ].filter(Boolean).join(' · ')
 
-const OUTCOME_LABELS = { won: '✓ Won', completed: 'Completed (no win)', expired: 'Expired' }
+const OUTCOME_LABELS = { won: '✓ Won', completed: 'Attempted (no win)', expired: 'Expired' }
 
 // A run is played on the Factory page itself: the same component the main game uses, fed the run's own game state
 // and actions that route to that run. Only the progress is separate.
@@ -202,6 +202,7 @@ const RunView = ({ format, run, actions, onBack }) => {
         <Meta>
           {objective.label} · now {formatAmount(reached)} · {formatDuration(run.def.limitSeconds - run.simSeconds)} left
         </Meta>
+        {objective.attemptLabel && <Meta aria-label="daily run attempt mark">Counts as attempted from: {objective.attemptLabel}</Meta>}
         {describeDailyChallenge(run.def) && <Meta aria-label="daily run conditions">{describeDailyChallenge(run.def)}</Meta>}
         <Bar $percent={percent}><span /></Bar>
         <AutomationSwitches onToggle={(key, enabled) => play('automation', { key, enabled })} run={run} />

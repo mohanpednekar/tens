@@ -1516,7 +1516,7 @@ never cleared by Reboot — full save Reset only). `storage.js` still grandfathe
 
 ### Daily challenges (epic #1062)
 
-`src/game/dailyChallenges.js`. Three definitions per UTC date (10 min / 1 h / 10 h), derived on the device from `(dateId, formatId, DAILY_GENERATOR_VERSION)` with a seeded PRNG and memoised (generation simulates; ~50 ms per definition). A run is an isolated Factory-only game; it is won when its objective metric reaches `def.objective.target` — at a step for the amount objectives, or at the purchase / Overclock itself for the level ones (`playDailyRun` settles after the action).
+`src/game/dailyChallenges.js`. Three definitions per UTC date (10 min / 1 h / 10 h), derived on the device from `(dateId, formatId, DAILY_GENERATOR_VERSION)` with a seeded PRNG and memoised (generation simulates; ~130–180 ms per definition). A run is an isolated Factory-only game; it is won when its objective metric reaches `def.objective.target` — at a step for the amount objectives, or at the purchase / Overclock itself for the level ones (`playDailyRun` settles after the action).
 
 Each definition has these seeded parts (plus its automations, below):
 
@@ -1526,13 +1526,13 @@ Each definition has these seeded parts (plus its automations, below):
 
    | Kind (`DAILY_OBJECTIVE_KINDS`) | Key | Metric | Example label | Weight |
    |---|---|---|---|---|
-   | `earn` | `earn` | Bytes earned (production only) | Earn 1e20 B | 2 |
+   | `balance` | `balance` | peak balance in Bytes this run (the starting balance is counted from the start, and a reset's re-grant is measured around, so neither is progress) | Reach a balance of 1e20 B | 2 |
    | `own` | `own:<tierId>` | peak units of that tier owned this run | Own 2e16 Petabytes | 1 per tier |
    | `levels` | `levels:<tierId>` | peak completed levels of that tier this run | Complete 7 levels of Gigabytes | 1 per tier |
    | `clock` | `clock` | peak Clock Speed level this run | Reach Clock Speed level 15 | 2 |
    | `overclock` | `overclock` | final-tier completed level an Overclock was claimed at in this run | Overclock at 8 QB levels | 3 |
 
-   The bot's metrics are read at half the limit and at a seeded step after it, no later than the format's `botCeilingSeconds`. An objective is *viable* when the bot advanced it between those two moments; its target is the later value — as is for the level kinds, rounded **down** to the fewest significant digits (1–4) that still exceed the half-limit value for the amount kinds (`earn`, `own`). One viable objective is drawn by weight (`def.objective` = `{ key, kind, target, label }`). So the reference bot wins in `(limit / 2, botCeilingSeconds]` by construction, whatever the objective:
+   The bot's metrics are read at half the limit and at a seeded step after it, no later than the format's `botCeilingSeconds`. An objective is *viable* when the bot advanced it between those two moments; its target is the later value — as is for the level kinds, rounded **down** to the fewest significant digits (1–4) that still exceed the half-limit value for the amount kinds (`balance`, `own`). One viable objective is drawn by weight (`def.objective` = `{ key, kind, target, label }`). So the reference bot wins in `(limit / 2, botCeilingSeconds]` by construction, whatever the objective:
 
 | Format | Limit | Step | Bot must win in |
 |--------|-------|------|-----------------|
@@ -1542,27 +1542,33 @@ Each definition has these seeded parts (plus its automations, below):
 
 The ceilings and the bot's time are internal (`getDailyChallengeValidation`, never stored in a definition or shown to players).
 
-**Automations per format** (`DAILY_AUTOMATIONS`: the engine's own tier autobuyers, tier tickspeed autobuyers, Auto Clock Speed / Scale Up / Restage / Overclock, at their base intervals; `def.automations` lists the keys a run has, all on at the start):
+**Automations per format** (`DAILY_AUTOMATIONS`: the engine's own tier autobuyers, tier tickspeed autobuyers, Auto Clock Speed / Scale Up / Restage / Overclock, at their base intervals; `def.automations` lists the keys a run has; all on at the start except a format's `startPaused` ones):
 
 | Format | `automations` | The run has | Reference bot |
 |--------|---------------|-------------|---------------|
 | 10 min | `mix` | a seeded subset — Kilobytes autobuyer always, each other tier autobuyer 65%, the tickspeed autobuyers as a block 50%, each global one 50%; never all of them | sweeps every step |
 | 1 h | `buying` | every tier autobuyer + Auto Clock Speed; tickspeed, Scale Up, Restage and Overclock are manual | sweeps every step |
-| 10 h | `all` | everything | acts only at check-ins (`checkInSeconds` 12,600 = 3.5 h: at 0, 3.5 h and 7 h) |
+| 10 h | `all` | everything; Auto Scale Up / Restage / Overclock start **paused** (`startPaused`) | acts only at check-ins (`checkInSeconds` 12,600 = 3.5 h: at 0, 3.5 h and 7 h) |
 
 A soft reset fired by an automation re-grants the starting balance just like a manual one (`settleGame` detects any reset by `getResetSignature`), and an Overclock claimed by Auto Overclock counts for the Overclock objective. The run header has a switch per automation the run has (`playDailyRun(…, 'automation', { key, enabled })`).
 
-**Reference bot.** *Sweep* (`DAILY_BOT_ACTION_ORDER`): takes everything on offer — Clock Speed, tiers top-down, Scale Up, Overclock — until nothing changes; per-tier tickspeed and Restage are left alone. In the 10-minute and 1-hour formats it sweeps before every step. *Check-in plans* (10 h, `DAILY_CHECK_IN_PLANS`): the bot only holds (switches off) or releases the Scale Up / Overclock automations at check-ins; each of the six whole-run plans (hold both, hold either, hold both or Overclock until the 7 h check-in, hold Scale Up and release Overclock at 7 h) is simulated once with every metric tracked, and an objective takes the plan that leaves it highest. `getDailyChallengeValidation().plan` is that plan as `[{ step, actions }]`.
+**Reference bot.** *Sweep* (`DAILY_BOT_ACTION_ORDER`): takes everything on offer — Clock Speed, tiers top-down, Scale Up, Overclock — until nothing changes; per-tier tickspeed and Restage are left alone. In the 10-minute and 1-hour formats it sweeps before every step. *Check-in plans* (10 h, `DAILY_CHECK_IN_PLANS`): the bot only releases (switches on) or holds (switches off) the reset automations at check-ins; each of the seven whole-run plans (release all three at the start; release Scale Up + Restage and never / at 3.5 h / at 7 h Overclock; release all then hold Overclock from 3.5 h, or hold Scale Up and Overclock from 7 h; release Overclock + Restage only) is simulated once with every metric tracked, and an objective takes the plan that leaves it highest. `getDailyChallengeValidation().plan` is that plan as `[{ step, actions }]`.
 
-**An untouched run must not win.** A target must also exceed what a run nobody touches (automations only) reaches by the full limit — always in the 10-minute and 1-hour formats. In the 10-hour format an untouched run gets two more hours than the bot's ceiling and the automations already play well, so on most days no plan beats it; those days are accepted as *leave-it-running* days (`validation.handsOff`: the target only has to fall inside the band). In a 60-date sweep 56 were leave-it-running and 4 needed a hold decision.
+**Band — discard and regenerate.** The reference bot's winning time must lie in 5–9 min / 30–50 min / 5–8 h (`[limit / 2, botCeilingSeconds]`). The target is built to land there, and `buildDailyCandidate` also checks the simulated time explicitly: a candidate outside the band is discarded and the next attempt generated.
+
+**An untouched run achieves nothing.** The target must exceed what a run nobody touches (automations only, as they start) reaches by the full limit — in every format. That is why the 10-hour run's reset automations start paused: with everything running, an untouched run was near-optimal and got two more hours than the bot's ceiling, so on 56 of 60 days nothing the player did mattered.
+
+**Attempt mark.** Every objective also carries a slightly lower target, `objective.attemptMark` (`attemptLabel` for display, `calculateAttemptMark`): reaching it by the limit makes the run count as *attempted* (result `completed`, the participation credit) even without a win. It lies strictly between what an untouched run reaches by the limit and the target — for an amount objective the target ÷ 10 (else ÷ 4, ÷ 2, else the geometric mean with the untouched value), for a level objective about 20% below the target and at least one level above the untouched value. An objective with no room for a mark is not viable. A run that times out below its mark is *expired*.
+
+**Independent of the player.** A definition and its starting state depend only on (UTC date, format, generator version). Nothing is read from the main save — no Purge count, Purge Points, speed bonus, automation unlocks or intervals — so every player gets the same challenge on the same footing (asserted in `dailyChallenges.test.js`). The only tie to the main game is the unlock (first Purge).
 
 **Stepping:** a run advances only in whole `stepSeconds`, live (`tickDailyRuns`, remainder carried) and in the simulation alike, so live play of the same actions reproduces the simulated time exactly (asserted in `dailyChallenges.test.js`, by sweeping or by replaying the plan). **Run UI and actions:** a run is played on the Factory page component itself (`MainPage`, fed the run's game and actions that route to `playDailyRun`), so it offers every Factory action — `RUN_ACTIONS`: `buyTier`, `tierTickspeed`, `clockSpeed`, `scaleUp`, `overclock`, `restage`, `automation`. Purge does nothing in a run, and the page's pinned progress bar shows the run's objective instead of Purge (`game.goal`, an optional `{ percent, label, ariaLabel }` on MainPage's `game` prop).
 
-**Rejection:** a candidate is dropped when no objective is viable (the bot's progress stalled after a soft reset) or the bot has earned past `DAILY_MAX_TARGET_BYTES` (1e80 — clear of the Purge freeze); the next attempt index is folded into the seed, up to `DAILY_MAX_GENERATION_ATTEMPTS` (8), then a fixed fallback (no modifiers, no head start, 10,000 B, an `earn` objective read at the ceiling) is used.
+**Rejection:** a candidate is dropped when no objective is viable (the bot's progress stalled after a soft reset) or the bot's balance passes `DAILY_MAX_TARGET_BYTES` (1e80 — clear of the Purge freeze); the next attempt index is folded into the seed, up to `DAILY_MAX_GENERATION_ATTEMPTS` (8), then a fixed fallback (no modifiers, no head start, no automations, 10,000 B, the first viable objective in list order read at the ceiling, sweeping bot) is used.
 
-**Progress / completion floor:** `getRunProgress` = `log10(value) / log10(target)` for the amount objectives, `value / target` for the level ones; a run that times out at ≥ `DAILY_COMPLETION_FLOOR` (0.5) is *completed* (participation credit), below it *expired*. A stored run whose `generatorVersion` differs from the current one is dropped without a result.
+**Progress:** `getRunProgress` = `log10(value) / log10(target)` for the amount objectives, `value / target` for the level ones (display only — the attempt mark, not a share of progress, decides *completed* vs *expired*). A stored run whose `generatorVersion` differs from the current one is dropped without a result.
 
-**Sweep:** `node scripts/simulate-daily-challenges.mjs --days 60` (exit 1 if any definition is out of band; `--date YYYY-MM-DD` prints one day's definitions and validation records). 60 dates from 2026-11-16: all in band, no fallbacks; bot medians 6.2 min / 37 min / 5.9 h; about 120 ms per definition (10 h: 80 ms).
+**Sweep:** `node scripts/simulate-daily-challenges.mjs --days 60` (exit 1 if any definition is out of band; `--date YYYY-MM-DD` prints one day's definitions and validation records). 60 dates from 2026-11-16: all in band; fallbacks 0 / 0 / 2; bot medians 5.9 min / 37 min / 6.3 h; about 130–180 ms per definition.
 
 ### Challenge mode (epic #1037, engine slice #1038)
 

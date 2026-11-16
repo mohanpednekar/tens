@@ -59,8 +59,12 @@ describe('Firmware Daily tab', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'open daily challenges' }))
     fireEvent.click(screen.getByRole('button', { name: 'open daily 10h' }))
     expect(screen.getByRole('group', { name: 'Auto-buy switches' })).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Auto Overclock: on' }))
-    expect(game.actions.dailyPlay).toHaveBeenCalledWith('10h', 'automation', { key: 'overclock', enabled: false })
+    // The reset automations start paused in the 10-hour run: releasing them is the player's call.
+    fireEvent.click(screen.getByRole('button', { name: 'Auto Overclock: paused' }))
+    expect(game.actions.dailyPlay).toHaveBeenCalledWith('10h', 'automation', { key: 'overclock', enabled: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Auto Clock Speed: on' }))
+    expect(game.actions.dailyPlay).toHaveBeenCalledWith('10h', 'automation', { key: 'speedUp', enabled: false })
+    expect(screen.getByLabelText('daily run attempt mark').textContent).toContain('Counts as attempted from:')
   })
 
   it('shows a running card with Open / Restart / Forfeit and confirm-guards Forfeit', () => {
