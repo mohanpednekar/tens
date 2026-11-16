@@ -1025,7 +1025,7 @@ const MainPage = ({ game }) => {
   // standalone multipliers anywhere, only fed into getGlobalTickspeedProductionMultiplier below.
   const currentGlobalTickspeedStepDisplay = 1 + getChallengeClockSpeedStep(state)
   // The same step before any Overclock (1% outside a challenge), for the "(was …)" half of the Overclock lines.
-  const baseGlobalTickspeedStepDisplay = 1 + getChallengeClockSpeedStep({ ...state, overclockLastClaimCompletedLevels: null })
+  const baseGlobalTickspeedStepDisplay = 1 + getChallengeClockSpeedStep({ ...state, overclockLastClaimCompletedLevels: null, overclockCount: 0 })
   // Each completed final-tier level multiplies Clock Speed's per-level rate by this (a constant).
   const overclockLevelEffectDisplay = 1 + OVERCLOCK_MULTIPLIER_STEP
   const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)

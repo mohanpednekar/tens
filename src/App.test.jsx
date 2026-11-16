@@ -1501,6 +1501,18 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
   expect(panel).toHaveTextContent(/clock speed's per-level rate is now 2\.59% \(was 1%\)\./i)
 })
 
+test('the Overclock card\'s "(was …)" baseline ignores a legacy overclockCount', () => {
+  seedMainGameState({
+    resources: { base: 10 },
+    owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
+    purchaseLevels: { tier09: 3, tier10: 12 },
+    overclockCount: 10,
+  })
+  render(<App />)
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent(/\(was 1%\)/i)
+})
+
 test('the Overclock card\'s disclosure explains it is unclaimed (no current-rate line) before the first claim', () => {
   seedMainGameState({
     resources: { base: 10 },
