@@ -96,11 +96,12 @@ const OUTCOME_LABELS = { won: '✓ Won', completed: 'Completed (no win)', expire
 const RunView = ({ format, run, actions, onBack }) => {
   const play = (name, arg) => actions.dailyPlay(format.id, name, arg)
   const percent = Math.round(getRunProgress(run) * 100)
-  const targetText = `${formatAmount(run.def.targetBytes ?? 0)} B`
+  const objective = run.def.objective ?? { label: '', target: 0 }
+  const reached = run.metrics?.[objective.key] ?? 0
   const runGame = {
     state: run.game,
     // The Factory page's pinned progress bar tracks the run's target instead of Purge.
-    goal: { percent, label: `${percent}% to ${targetText} earned`, ariaLabel: `progress toward earning ${targetText}` },
+    goal: { percent, label: `${percent}% · ${objective.label}`, ariaLabel: `progress toward the daily objective: ${objective.label}` },
     offlineProgress: null,
     buyMaxMode: false,
     actions: {
@@ -122,7 +123,7 @@ const RunView = ({ format, run, actions, onBack }) => {
           <Button aria-label="back to daily challenges" onClick={onBack} type="button" variant="prestige">Back</Button>
         </BackBanner>
         <Meta>
-          Earn {targetText} · earned {formatAmount(run.earnedBits / 8)} B · {formatDuration(run.def.limitSeconds - run.simSeconds)} left
+          {objective.label} · now {formatAmount(reached)} · {formatDuration(run.def.limitSeconds - run.simSeconds)} left
         </Meta>
         {describeDailyChallenge(run.def) && <Meta aria-label="daily run conditions">{describeDailyChallenge(run.def)}</Meta>}
         <Bar $percent={percent}><span /></Bar>
@@ -176,7 +177,7 @@ const DailyTab = ({ state, actions }) => {
                   </Meta>
                 ) : (
                   <Meta>
-                    Earn {formatAmount(def.targetBytes)} B
+                    {def.objective.label}
                     {result ? ` · ${OUTCOME_LABELS[result.lastOutcome]}` : ' · Not started'}
                     {result?.bestSeconds != null && ` · personal best ${formatDuration(result.bestSeconds)}`}
                   </Meta>

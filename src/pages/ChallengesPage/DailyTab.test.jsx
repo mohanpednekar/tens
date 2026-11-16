@@ -64,7 +64,7 @@ describe('Firmware Daily tab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'open daily 10m' }))
     expect(screen.getByLabelText('daily run 10m')).toBeTruthy()
     // The run is played on the Factory page itself, with its actions routed to the run and its pinned bar on the run's target.
-    expect(screen.getByLabelText('goal progress').textContent).toMatch(/% to .* B earned$/)
+    expect(screen.getByLabelText('goal progress').textContent).toContain(state.daily.runs['10m'].def.objective.label)
     expect(screen.queryByLabelText('purge progress')).toBeNull()
     fireEvent.click(screen.getAllByRole('button', { name: /^Buy.* for .*completed levels/ })[0])
     expect(game.actions.dailyPlay).toHaveBeenCalledWith('10m', 'buyTier', 'tier01')

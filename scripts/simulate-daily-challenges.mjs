@@ -41,16 +41,17 @@ for (const format of DAILY_FORMATS) {
   const outOfBand = rows.filter(row => !(row.validation.botSeconds > format.seconds / 2 && row.validation.botSeconds <= format.botCeilingSeconds))
   const fallbacks = rows.filter(row => row.validation.attempt === 'fallback').length
   const retries = rows.filter(row => row.validation.attempt !== 0 && row.validation.attempt !== 'fallback').length
-  const exponents = rows.map(row => Math.log10(row.def.targetBytes)).sort((a, b) => a - b)
+  const kinds = {}
+  for (const row of rows) kinds[row.def.objective.kind] = (kinds[row.def.objective.kind] ?? 0) + 1
   const quantile = (list, q) => list[Math.min(list.length - 1, Math.floor(q * list.length))]
   failed ||= outOfBand.length > 0
   console.log(`\n${format.label}: band (${fmt(format.seconds / 2)}, ${fmt(format.botCeilingSeconds)}] over ${rows.length} dates — ${ms.toFixed(0)} ms/definition`)
   console.log(`  bot win time  min ${fmt(times[0])} · median ${fmt(quantile(times, 0.5))} · max ${fmt(times[times.length - 1])} · out of band ${outOfBand.length}`)
-  console.log(`  retried ${retries} · fallback ${fallbacks} · target 1e${exponents[0].toFixed(1)} … 1e${quantile(exponents, 0.5).toFixed(1)} … 1e${exponents[exponents.length - 1].toFixed(1)} B`)
+  console.log(`  retried ${retries} · fallback ${fallbacks} · objectives ${JSON.stringify(kinds)}`)
   console.log(`  distinct condition sets ${new Set(rows.map(row => row.def.conditions.join(' + '))).size}`)
   for (const row of rows.slice(0, 6)) {
     const { def, validation } = row
-    console.log(`    ${def.dateId}  earn ${def.targetBytes.toExponential(2)} B  [${def.conditions.join(', ') || 'no modifiers'}]  start ${def.startBytes.toExponential(0)} B ${JSON.stringify(def.headStart)}  bot ${fmt(validation.botSeconds)}  attempt ${validation.attempt}`)
+    console.log(`    ${def.dateId}  ${def.objective.label}  [${def.conditions.join(', ') || 'no modifiers'}]  start ${def.startBytes.toExponential(0)} B ${JSON.stringify(def.headStart)}  bot ${fmt(validation.botSeconds)}  attempt ${validation.attempt}`)
   }
 }
 process.exit(failed ? 1 : 0)
