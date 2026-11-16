@@ -86,6 +86,9 @@ jobs:
             late_min=$(( (now_epoch - intended_epoch) / 60 ))
             echo "Scheduled firing '$EVENT_SCHEDULE' -> IST slot $clock:00, ${late_min} min late."
           else
+            if [ -n "$EVENT_SCHEDULE" ]; then
+              echo "::warning::Unrecognised schedule '$EVENT_SCHEDULE' - falling back to the clock; a late firing may resolve to the wrong slot. Keep the cron entries and this case in sync."
+            fi
             # workflow_dispatch (or an unrecognised cron string): fall back to the clock. Shift 3h
             # back so the 22:00 slot's weekday resolves correctly:
             # shifted hour 0-5 = 04:00 slot, 6-11 = 10:00, 12-17 = 16:00, 18-23 = 22:00.
@@ -721,8 +724,9 @@ jobs:
       - name: Sweep stalled claude/auto-* PRs
         # Deterministic and unconditional, same rationale as "Backlog issue hygiene" above (#60).
         # Comments (via the PAT, so autonomous-pr-followup.yml's issue_comment trigger fires) on
-        # claude/auto-* PRs idle 24h+ with a failing check or a merge conflict; escalates to an
-        # automation-retro issue after 3 sweep comments on one PR.
+        # claude/auto-* and devin/auto-* PRs idle 24h+ with a failing check or a merge conflict,
+        # refreshes ones behind main and nudges green-but-unmerged ones (see the script header);
+        # escalates to an automation-retro issue after 3 sweep comments on one PR.
         env:
           GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
         run: |

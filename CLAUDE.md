@@ -18,7 +18,7 @@ tabs — one row per automation spanning unlock → pause → speed; Compression
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
 second-level tabs). More (Manual / Releases / Achievements / Settings) is always available, including during the
-Byte Foundry gate; only Factory stays progress-gated. A third More entry, **Dev Mode**
+Byte Foundry gate; only Factory stays progress-gated. A further More entry, **Dev Mode**
 (`DevModePage`), renders only in a dev build (`import.meta.env.DEV`) — see "Dev Mode".
 
 ## Tech stack
@@ -331,7 +331,7 @@ creating one).
 
 **Never read a large reference doc whole.** `docs/DESIGN_HISTORY.md` (~200k tokens) and
 `docs/ECONOMY_REFERENCE.md` (~90k) cost more than everything else in a session combined, and
-`MAINPAGE_REFERENCE.md`/`AUTOMATION.md` are ~20-30k each. "Read it before touching X" below always
+`MAINPAGE_REFERENCE.md`/`AUTOMATION.md` are ~15-30k each. "Read it before touching X" below always
 means: `grep -n '^##' <doc>` (or grep the identifier you are changing), then Read only the matching
 sections with `offset`/`limit`. State a fact from these docs only after reading that section — never
 from memory of an earlier session or from this file's summary alone.
