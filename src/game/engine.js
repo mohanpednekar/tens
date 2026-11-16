@@ -733,7 +733,8 @@ export const formatMoneyBalance = value => {
     : `${formatScientific(bytes)} B`
 }
 
-// The exponent driving a cost epoch's multiplier (see getTierCost): 1, 2, 3, 5, 8, 12, 17, 23, 30,
+// The shared exponent series driving a cost epoch's multiplier for non-Factory-tier cost objects (the Flops
+// tiers; Factory tiers use getTierCostExponent, see getTierCost): 1, 2, 3, 5, 8, 12, 17, 23, 30,
 // … for epochs 0, 1, 2, 3, 4, 5, 6, 7, 8, … — each epoch's exponent grows over the previous one by
 // a linear increment (1, 1, 2, 3, 4, 5, 6, …: 1 at epoch 0, the epoch number itself from epoch 1
 // on), computed iteratively. This matches the Fibonacci-driven sequence it replaces (see
@@ -767,10 +768,24 @@ export const getPurchaseBlockSize = state => {
   return DEFAULT_PURCHASE_BLOCK_SIZE + PURCHASE_BLOCK_SIZE_GROWTH_STEP * Math.floor(levelsCompleted / PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS)
 }
 
+// Cost-epoch exponent for a FACTORY tier (TIER_DEFINITIONS): the first two increments are +1, +1 for
+// every tier (epochs 0, 1, 2 → exponent 1, 2, 3); from the third increment on it grows by a constant
+// per tier — tier01 +1, tier02 +2, … tier10 +10 per level (exponent = 3 + tierNumber × (epoch − 2)).
+// Anything that is not a Factory tier (e.g. the Flops tiers' `{ baseCost }` objects, which carry no
+// tier id) keeps the shared linear-increment series of getCostEpochExponent.
+export const getTierCostExponent = (tier, epoch) => {
+  const tierIndex = TIER_INDEX_BY_ID[tier?.id]
+  if (tierIndex === undefined) return getCostEpochExponent(epoch)
+  const e = clampNonNegative(epoch)
+  if (e <= 2) return e + 1
+  return 3 + (tierIndex + 1) * (e - 2)
+}
+
 // The PER-UNIT price of a single purchase — fixed for a given tier+level, independent of the
-// current block size: baseCost * 10^(getCostEpochExponent(epoch) - 1); each level multiplies
-// baseCost by 10 raised to (that level's cost-epoch exponent − 1). epoch = level - 1 — e.g. a
-// baseCost-10 tier's 4th level (epoch 3, exponent 5) costs 10^5 per unit. Every tier scales gently
+// current block size: baseCost * 10^(getTierCostExponent(tier, epoch) - 1); each level multiplies
+// baseCost by 10 raised to (that level's cost-epoch exponent − 1). epoch = level - 1 — e.g. tier01's
+// 4th level (epoch 3, exponent 4) costs 1e3 × 10^3 per unit; an id-less { baseCost: 10 } object (Flops)
+// uses the shared series, whose epoch-3 exponent is 5, so it costs 10^5. Every tier scales gently
 // relative to its own baseCost (the exponent is added to baseCost's own power of ten, not
 // compounded into it), so high tiers don't become permanently out of reach within a handful of
 // levels. Deep epochs still eventually overflow to Infinity, which is safe: an infinite cost is
@@ -789,7 +804,7 @@ export const getPurchaseBlockSize = state => {
 // integer — no rounding needed.
 export const getTierCost = (tier, level) => {
   const epoch = Math.max(0, level - 1)
-  return tier.baseCost * (10 ** (getCostEpochExponent(epoch) - 1))
+  return tier.baseCost * (10 ** (getTierCostExponent(tier, epoch) - 1))
 }
 
 // How many units a bulk purchase actually buys: capped by the requested quantity and by the units
