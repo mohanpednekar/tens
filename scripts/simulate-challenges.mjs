@@ -47,7 +47,9 @@ const argOf = (flag, fallback) => (args.includes(flag) ? args[args.indexOf(flag)
 const DT = Number(argOf('--dt', 10))
 const IDS = argOf('--ids', null)?.split(',')
 const OUT = argOf('--out', null)
-const MAX_SECONDS = 400 * 86400
+const TRACE_DAYS = Number(argOf('--trace', 0)) // >0: log Money exponent / Bit Rot losses every N simulated days of the challenge run
+const MAX_DAYS = Number(argOf('--max-days', 400))
+const MAX_SECONDS = MAX_DAYS * 86400
 
 function totalDisksBuilt(intro) {
   return Object.values(intro?.disksBuiltTotal ?? {}).reduce((sum, n) => sum + (n ?? 0), 0)
@@ -242,10 +244,13 @@ function actPlayer(state, options = {}) {
 }
 
 // Play until `done(state)` or MAX_SECONDS; returns seconds and the end state.
-function play(start, done) {
+function play(start, done, label = null) {
   let s = start
   let t = 0
   while (!done(s)) {
+    if (TRACE_DAYS > 0 && label && t % (TRACE_DAYS * 86400) === 0) {
+      process.stderr.write(`${label} day ${t / 86400}: money 1e${Math.log10(Math.max(1, s.resources[MONEY_ID] ?? 0)).toFixed(1)} bits, bitRotLosses ${s.challenges?.bitRotLosses ?? 0}, scaleUps ${s.scaleUpCount ?? 0}\n`)
+    }
     if (t >= MAX_SECONDS) return { seconds: t, reached: false, state: s }
     s = tickGame(DT, BUY_QUANTITY)(actPlayer(s))
     t += DT
@@ -306,7 +311,7 @@ for (const def of defs) {
   const chal = play(entered, s => {
     if (reachedGoogol == null && (s.resources[MONEY_ID] ?? 0) >= PURGE_THRESHOLD) reachedGoogol = s.challenges.activeSeconds
     return goalReached(s)
-  })
+  }, def.id)
   const ratio = chal.reached && normal.reached ? (chal.seconds / normal.seconds).toFixed(2) : 'n/a'
   const extra = def.id === 'F25' && reachedGoogol != null ? `Googol at ${fmt(reachedGoogol)}; Googol→goal ${fmt(chal.seconds - reachedGoogol)}` : ''
   rows.push(`| ${def.id} ${def.codename} | ${purgeCount} | ${normal.reached ? fmt(normal.seconds) : 'capped'} | ${chal.reached ? fmt(chal.seconds) : 'not completed in ' + fmt(MAX_SECONDS)} | ${ratio} | ${extra} |`)
