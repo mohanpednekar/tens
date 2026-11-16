@@ -122,7 +122,7 @@ const RunView = ({ format, run, actions, onBack }) => {
         </Row>
       ))}
       <Row>
-        <span><strong>Run upgrades</strong><Meta>{game.globalTickspeedMultiplier ? `Clock Speed level ${game.globalTickspeedMultiplier} · ` : ''}Scale Up / Overclock restore the starting balance</Meta></span>
+        <span><strong>Run upgrades</strong><Meta>{game.globalTickspeedMultiplier ? `Clock Speed level ${game.globalTickspeedMultiplier}` : ''}</Meta></span>
         <Actions>
           {isGlobalTickspeedMultiplierUnlocked(game) && (
             <Button aria-label={`buy Clock Speed in daily ${format.id}`} disabled={!can(buyGlobalTickspeedMultiplier)} onClick={() => actions.dailyClockSpeed(format.id)} type="button">Clock</Button>
@@ -162,7 +162,7 @@ const DailyTab = ({ state, actions }) => {
       <StatCard>
         <Heading>Daily challenges · {today}</Heading>
         <Meta aria-label="daily credits">
-          Credits today {credits.total}/{DAILY_MAX_CREDITS} (wins {credits.wins}/3 + participation {credits.participation}/1) · new challenges in {formatDuration(getMsUntilNextUtcDay(now) / 1000)}
+          Credits {credits.total}/{DAILY_MAX_CREDITS} · new in {formatDuration(getMsUntilNextUtcDay(now) / 1000)}
         </Meta>
         {DAILY_FORMATS.map(format => {
           const run = state.daily.runs[format.id]
@@ -172,8 +172,7 @@ const DailyTab = ({ state, actions }) => {
             <Row key={format.id} aria-label={`daily ${format.id}`}>
               <span>
                 <strong>{format.label}</strong>
-                <Meta>{format.style}</Meta>
-                {run ? (
+                                {run ? (
                   <Meta>
                     Running{lastDay ? ` (from ${run.def.dateId})` : ''} · {formatDuration(run.def.limitSeconds - run.simSeconds)} left · {Math.round(getRunProgress(run) * 100)}%
                   </Meta>
@@ -206,7 +205,6 @@ const DailyTab = ({ state, actions }) => {
             </Row>
           )
         })}
-        <Meta>Replays can improve your personal best (local to this device) but never earn more credits.</Meta>
       </StatCard>
       <ConfirmDialog
         confirmLabel={pending?.kind === 'restart' ? 'Restart' : 'Forfeit'}
@@ -220,7 +218,7 @@ const DailyTab = ({ state, actions }) => {
         open={Boolean(pending)}
         title={pending?.kind === 'restart' ? 'Restart this challenge?' : 'Forfeit this challenge?'}
       >
-        <p>This run's progress is lost{pending?.kind === 'restart' ? ' and a fresh run starts. Restart is only possible until UTC midnight.' : ' and earns nothing.'}</p>
+        <p>This run's progress is lost{pending?.kind === 'restart' ? ' and a fresh run starts.' : '.'}</p>
       </ConfirmDialog>
     </div>
   )
