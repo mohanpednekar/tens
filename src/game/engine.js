@@ -1826,7 +1826,7 @@ export const getChallengeClockSpeedMultiplier = state => hasChallengeEffect(stat
   : getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, getOverclockLevel(state) ?? 0) ** getChallengeLever(state, 'clockSpeedPower', 1)
 
 // What one Scale Up claim multiplies a tier's production by right now (2 normally; `scaleUpPower` lever: 2^power;
-// F22 Scale Out: 1). Shared by getTierScaleUpMultiplier's per-claim step and MainPage's Scale Up button.
+// F22 Scale Out: 1). Used by MainPage's Scale Up card and button; getTierScaleUpMultiplier applies the same power per claim.
 export const getScaleUpStepMultiplier = state =>
   hasChallengeEffect(state, 'scaleUpNoDoubling') ? 1 : SCALE_UP_MULTIPLIER_BASE ** getChallengeLever(state, 'scaleUpPower', 1)
 

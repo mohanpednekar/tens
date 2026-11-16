@@ -104,7 +104,7 @@ export const CHALLENGE_LAYER_FACTORY = 'F'
 // `effect` names the one run rule the engine applies while the challenge is active.
 // `levers` (optional) are run-wide nerfs on top of the named `effect`, all active only during the challenge:
 // `production` × every tier's output, `clockSpeedPower` / `scaleUpPower` raise the Clock Speed / per-tier Scale Up
-// multiplier to that power (<1 weakens it; 0 removes it), `costMultiplier` × every tier's purchase cost.
+// multiplier to that power (<1 weakens it; 0 removes it), `costMultiplier` × every tier's purchase cost (Factory purchases only; the Foundry's automatic Kilobytes conversion is not repriced).
 const tierChallenge = (index, code, kind, codename, effect, rule, levers = {}) => ({
   id: code, layer: CHALLENGE_LAYER_FACTORY,
   target: `${kind === 'tierTickspeed' ? '⚙ ' : ''}${TIER_DEFINITIONS[index].name}`,
@@ -116,7 +116,7 @@ const RAW_CHALLENGE_DEFINITIONS = [
   tierChallenge(2, 'F3', 'tierAutobuyer', 'Cascade Delete', 'cascadeDelete', 'Buying Gigabytes wipes the owned count of every lower tier (levels kept).', { costMultiplier: 6 }),
   tierChallenge(3, 'F4', 'tierAutobuyer', 'Premium Tier', 'premiumTier', 'Terabytes cost ×1000.', { clockSpeedPower: 0.85 }),
   tierChallenge(4, 'F5', 'tierAutobuyer', 'Hard Refresh', 'hardRefresh', 'Every 5 minutes the owned Petabytes count resets to 0 (levels kept).'),
-  tierChallenge(5, 'F6', 'tierAutobuyer', 'Address Space', 'addressSpace', 'Only nine tiers exist; Ronnabytes is the top of the ladder.', { production: 5 }),
+  tierChallenge(5, 'F6', 'tierAutobuyer', 'Address Space', 'addressSpace', 'Only nine tiers exist; Ronnabytes is the top of the ladder.', { production: 7 }),
   tierChallenge(6, 'F7', 'tierAutobuyer', 'Single Instance', 'singleInstance', 'Scale Up never doubles Zettabytes.', { costMultiplier: 5 }),
   tierChallenge(7, 'F8', 'tierAutobuyer', 'Memory Leak', 'memoryLeak', 'Yottabytes leak: 1% of the owned count is lost per second.'),
   tierChallenge(8, 'F9', 'tierAutobuyer', 'Bit Rot', 'bitRot', 'A corruption counter grows exponentially; if it overtakes your Bits the cycle restarts.', { scaleUpPower: 0.85 }),
@@ -143,7 +143,7 @@ const describeLevers = ({ production, clockSpeedPower, scaleUpPower, costMultipl
   production != null && `All production ×${production}.`,
   clockSpeedPower != null && `Clock Speed is raised to the power ${clockSpeedPower}.`,
   scaleUpPower != null && `Scale Up bonuses are raised to the power ${scaleUpPower}.`,
-  costMultiplier != null && `Every tier costs ×${costMultiplier}.`,
+  costMultiplier != null && `Tier purchases cost ×${costMultiplier}.`,
 ].filter(Boolean).join(' ')
 export const CHALLENGE_DEFINITIONS = RAW_CHALLENGE_DEFINITIONS.map(def => ({ ...def, rule: [def.rule, describeLevers(def.levers)].filter(Boolean).join(' ') }))
 // Challenge numbers (retuned by #1043 against the maintainer's bands: F1–F10 1–2×, F11–F20 2–10×, F21–F25 10–100×). All rules apply only while their challenge is active.

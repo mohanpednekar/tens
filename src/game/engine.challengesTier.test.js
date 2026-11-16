@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  buyTickspeedMultiplier, buyTierQuantity, getChallengeClockSpeedMultiplier, getChallengeProductionMultiplier, overclockGame, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
+  buyTickspeedMultiplier, buyTierQuantity, getChallengeClockSpeedMultiplier, getChallengeProductionMultiplier, getScaleUpStepMultiplier, overclockGame, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
   getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierTickspeedRequirement, getTierTickspeedSpend, getTierScaleUpMultiplier,
   isTierUnlocked, scaleUpGame, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
@@ -347,7 +347,7 @@ describe('run-wide challenge levers', () => {
   })
 
   it('getChallengeProductionMultiplier combines Half Duplex and the production lever, and is 1 outside challenges', () => {
-    expect(getChallengeProductionMultiplier(runOf('F6'), T(0))).toBe(5)
+    expect(getChallengeProductionMultiplier(runOf('F6'), T(0))).toBe(CHALLENGE_DEFINITIONS.find(def => def.id === 'F6').levers.production)
     expect(getChallengeProductionMultiplier(runOf('F17'), T(3))).toBe(0.5)
     expect(getChallengeProductionMultiplier(runOf('F1'), T(0))).toBe(HALF_DUPLEX_PRODUCTION_MULTIPLIER)
     expect(getChallengeProductionMultiplier(runOf('F1'), T(1))).toBe(1)
@@ -378,9 +378,16 @@ describe('lever behaviour through the engine', () => {
     expect(weakened).toBeGreaterThan(plain)
   })
 
-  it('the production lever scales what tickGame credits (F6 ×5 vs F2 ×1)', () => {
+  it('the production lever scales what tickGame credits (F6 vs F2 ×1)', () => {
     const credited = id => tickGame(1)(runOf(id, seed)).resources[MONEY_ID]
-    expect(credited('F6')).toBe(credited('F2') * 5)
+    expect(credited('F6')).toBe(credited('F2') * CHALLENGE_DEFINITIONS.find(def => def.id === 'F6').levers.production)
+  })
+
+  it('getScaleUpStepMultiplier is 2 normally, 2^power under a Scale Up lever, and 1 under F22', () => {
+    expect(getScaleUpStepMultiplier(createInitialGameState())).toBe(2)
+    expect(getScaleUpStepMultiplier(runOf('F12'))).toBeCloseTo(2 ** CHALLENGE_DEFINITIONS.find(def => def.id === 'F12').levers.scaleUpPower)
+    const base = createInitialGameState()
+    expect(getScaleUpStepMultiplier({ ...base, challenges: { ...base.challenges, active: 'F22' } })).toBe(1)
   })
 
   it('F9: Overclock also restarts the Bit Rot grace period', () => {

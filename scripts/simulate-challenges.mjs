@@ -228,7 +228,7 @@ function actSoftResets(state) {
   // last tier, a further Scale Up claim would reset that tier before Overclock's completed-level
   // requirement can be reached. Mirror Auto Scale Up's final-tier pause by deferring Scale Up
   // there and letting the simulation continue climbing until Overclock fires.
-  if ((state.scaleUpTargetTierIndex ?? 0) >= TIER_DEFINITIONS.length - 1) {
+  if ((state.scaleUpTargetTierIndex ?? 0) >= E.getEffectiveTierCount(state) - 1) {
     return overclockGame(state)
   }
   return overclockGame(scaleUpGame(state))
