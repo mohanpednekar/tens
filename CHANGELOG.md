@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- **F6 Address Space now matches its tier** — it targeted Exabytes (the F6 slot) but its rule capped the ladder at Ronnabytes. Exabytes is now the top tier (six tiers; 64-bit address-space theme) and the run's Clock Speed is raised to the 4th power to offset the smaller ladder (simulated ≈1.4× a normal run, in the F1–F10 band).
+- **F6 Address Space now matches its tier** — it targeted Exabytes (the F6 slot) but its rule capped the ladder at Ronnabytes. Exabytes is now the top tier (six tiers; 64-bit address-space theme) and the run's Scale Up is raised to the 3rd power and Clock Speed (which carries Overclock's bonus) to the 2nd to offset the smaller ladder (simulated ≈1.34× a normal run, in the F1–F10 band).
 - **Shorter UI copy** — trimmed descriptive text and challenge rule wording on the Challenges start dialog, Daily tab (removed per-format style lines and footnotes, compact credits line) and the Purge Points tutorial.
 - **Exiting a challenge is harder to hit by accident** — the Factory banner's Exit button is now hidden until you tap the challenge title; Challenges → Factory also shows a confirm-guarded Exit on the active challenge's row.
 - **Clock Speed shows its real per-level bonus** — the card beside the name now reads the current value (Overclock-scaled, and weakened inside a challenge that raises Clock Speed to a power) instead of a fixed "+1%/lvl".
