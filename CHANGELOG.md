@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Clock Speed shows its real per-level bonus** — the card beside the name now reads the current value (Overclock-scaled, and weakened inside a challenge that raises Clock Speed to a power) instead of a fixed "+1%/lvl".
 - **F9 Bit Rot is now completable** — it was effectively unbeatable: Scale Up and Overclock drop your Bits back to the start amount, so any soft reset after the grace period instantly restarted the cycle. They now restart the grace period instead, and F9 also weakens Scale Up bonuses (power 0.85).
 - **Challenges are now meant to bite (#1043)**: simulation showed most tier challenges changed a well-played run by under 1.1×, so most challenges now also carry run-wide nerfs on top of their named rule (tier purchases cost ×N, Clock Speed or Scale Up bonuses raised to a power below 1, all production ×0.5); F6 instead gets a production boost (×7) to offset its smaller ladder. F1–F10 target a 1×–2× longer run than a normal one, F11–F20 2×–10×, F21–F25 10×–100×. F6 Address Space now keeps nine tiers (six could not reach the goal) and F25's goal is 10^120 Bytes.
 - **Every automation now unlocks by Purge count instead of PP**: Auto Clock Speed at 8 Purges, Auto Restage 16, Auto Scale Up 32, Auto Overclock 64, Auto Purge 128 (no unlock cost; the PP speed-upgrade ladders are unchanged). Tier autobuyers and tier tickspeed autobuyers (and the challenges they unlock) now need twice as many Purges: autobuyers at 2, 4, … 20; tickspeed autobuyers at 22, 24, … 40.

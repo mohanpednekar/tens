@@ -1825,6 +1825,12 @@ export const getChallengeClockSpeedMultiplier = state => hasChallengeEffect(stat
   ? 1
   : getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, getOverclockLevel(state) ?? 0) ** getChallengeLever(state, 'clockSpeedPower', 1)
 
+// The Clock Speed bonus one level currently adds, as a fraction (0.01 = +1%/level): the base step scaled by the Overclock
+// level, then the `clockSpeedPower` lever; 0 under F21 Base Clock. What MainPage's Clock Speed card shows.
+export const getChallengeClockSpeedStep = state => hasChallengeEffect(state, 'clockSpeedDisabled')
+  ? 0
+  : (1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(getOverclockLevel(state) ?? 0)) ** getChallengeLever(state, 'clockSpeedPower', 1) - 1
+
 // What one Scale Up claim multiplies a tier's production by right now (2 normally; `scaleUpPower` lever: 2^power;
 // F22 Scale Out: 1). Used by MainPage's Scale Up card and button; getTierScaleUpMultiplier applies the same power per claim.
 export const getScaleUpStepMultiplier = state =>

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  buyTickspeedMultiplier, buyTierQuantity, getChallengeClockSpeedMultiplier, getChallengeProductionMultiplier, getScaleUpStepMultiplier, overclockGame, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
+  buyTickspeedMultiplier, buyTierQuantity, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getChallengeProductionMultiplier, getScaleUpStepMultiplier, overclockGame, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
   getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierTickspeedRequirement, getTierTickspeedSpend, getTierScaleUpMultiplier,
   isTierUnlocked, scaleUpGame, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
@@ -376,6 +376,14 @@ describe('lever behaviour through the engine', () => {
     const weakened = getEffectiveTierTickSpeedSeconds(runOf('F11', level), T(0))
     expect(getChallengeClockSpeedMultiplier(runOf('F11', level))).toBeCloseTo(getChallengeClockSpeedMultiplier(runOf('F2', level)) ** power)
     expect(weakened).toBeGreaterThan(plain)
+  })
+
+  it('getChallengeClockSpeedStep is the real per-level Clock Speed bonus: 1% base, scaled by Overclock and the power lever, 0 under F21', () => {
+    expect(getChallengeClockSpeedStep(createInitialGameState())).toBeCloseTo(0.01)
+    const power = CHALLENGE_DEFINITIONS.find(def => def.id === 'F11').levers.clockSpeedPower
+    expect(getChallengeClockSpeedStep(runOf('F11'))).toBeCloseTo(1.01 ** power - 1)
+    const base = createInitialGameState()
+    expect(getChallengeClockSpeedStep({ ...base, challenges: { ...base.challenges, active: 'F21' } })).toBe(0)
   })
 
   it('the production lever scales what tickGame credits (F6 vs F2 ×1)', () => {

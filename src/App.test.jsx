@@ -1467,7 +1467,7 @@ test('the Overclock button shows the per-level Overclock effect and completed-le
   expect(screen.getByRole('button', { name: /^overclock \(requires/i })).toHaveTextContent('⚡ QB 7/7')
 })
 
-test('Clock Speed shows the base per-level effect beside the name, not the Overclock-scaled live step', () => {
+test('Clock Speed shows the actual live per-level effect beside the name (Overclock-scaled), and the plain 1% before any Overclock', () => {
   seedMainGameState({
     resources: { base: 999 },
     globalTickspeedMultiplier: 1,
@@ -1478,8 +1478,9 @@ test('Clock Speed shows the base per-level effect beside the name, not the Overc
   render(<App />)
 
   const panel = screen.getByLabelText(/^global clock speed panel$/i)
-  expect(panel).toHaveTextContent('🏭 +1%/lvl')
-  expect(panel).not.toHaveTextContent('1.0146')
+  // Overclock level 4 → 1% × 1.1^4 ≈ 1.46% per level.
+  expect(panel).toHaveTextContent('🏭 +1.46%/lvl')
+  expect(panel).not.toHaveTextContent('+1%/lvl')
 })
 
 test('the Overclock card\'s disclosure states the current per-level Tickspeed rate once claimed', () => {
