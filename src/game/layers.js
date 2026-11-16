@@ -116,7 +116,7 @@ const RAW_CHALLENGE_DEFINITIONS = [
   tierChallenge(2, 'F3', 'tierAutobuyer', 'Cascade Delete', 'cascadeDelete', 'Buying Gigabytes resets lower tiers\' owned counts.', { costMultiplier: 6 }),
   tierChallenge(3, 'F4', 'tierAutobuyer', 'Premium Tier', 'premiumTier', 'Terabytes cost ×1000.', { clockSpeedPower: 0.85 }),
   tierChallenge(4, 'F5', 'tierAutobuyer', 'Hard Refresh', 'hardRefresh', 'Petabytes owned resets every 5 min.'),
-  tierChallenge(5, 'F6', 'tierAutobuyer', 'Address Space', 'addressSpace', 'Exabytes is the top tier.', { production: 500 }),
+  tierChallenge(5, 'F6', 'tierAutobuyer', 'Address Space', 'addressSpace', 'Exabytes is the top tier.', { clockSpeedPower: 4 }),
   tierChallenge(6, 'F7', 'tierAutobuyer', 'Single Instance', 'singleInstance', 'Scale Up never doubles Zettabytes.', { costMultiplier: 5 }),
   tierChallenge(7, 'F8', 'tierAutobuyer', 'Memory Leak', 'memoryLeak', 'Yottabytes lose 1% owned per second.'),
   tierChallenge(8, 'F9', 'tierAutobuyer', 'Bit Rot', 'bitRot', 'Corruption grows exponentially; if it passes your Bits, the cycle restarts.', { scaleUpPower: 0.85 }),

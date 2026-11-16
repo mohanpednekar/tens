@@ -347,7 +347,7 @@ describe('run-wide challenge levers', () => {
   })
 
   it('getChallengeProductionMultiplier combines Half Duplex and the production lever, and is 1 outside challenges', () => {
-    expect(getChallengeProductionMultiplier(runOf('F6'), T(0))).toBe(CHALLENGE_DEFINITIONS.find(def => def.id === 'F6').levers.production)
+    expect(getChallengeProductionMultiplier(runOf('F20'), T(0))).toBe(CHALLENGE_DEFINITIONS.find(def => def.id === 'F20').levers.production)
     expect(getChallengeProductionMultiplier(runOf('F17'), T(3))).toBe(0.5)
     expect(getChallengeProductionMultiplier(runOf('F1'), T(0))).toBe(HALF_DUPLEX_PRODUCTION_MULTIPLIER)
     expect(getChallengeProductionMultiplier(runOf('F1'), T(1))).toBe(1)
@@ -386,9 +386,9 @@ describe('lever behaviour through the engine', () => {
     expect(getChallengeClockSpeedStep({ ...base, challenges: { ...base.challenges, active: 'F21' } })).toBe(0)
   })
 
-  it('the production lever scales what tickGame credits (F6 vs F2 ×1)', () => {
+  it('the production lever scales what tickGame credits (F20 vs F2 ×1)', () => {
     const credited = id => tickGame(1)(runOf(id, seed)).resources[MONEY_ID]
-    expect(credited('F6')).toBe(credited('F2') * CHALLENGE_DEFINITIONS.find(def => def.id === 'F6').levers.production)
+    expect(credited('F20')).toBe(credited('F2') * CHALLENGE_DEFINITIONS.find(def => def.id === 'F20').levers.production)
   })
 
   it('getScaleUpStepMultiplier is 2 normally, 2^power under a Scale Up lever, and 1 under F22', () => {
