@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_TICKSPEED_SPEND_FRACTION, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -1475,7 +1475,7 @@ export const getScaleUpMultiplier = scaleUpCount =>
 export const getTierScaleUpMultiplier = (state, tierId) =>
   hasChallengeEffect(state, 'scaleUpNoDoubling') || getChallengeEffectTier(state, 'singleInstance') === tierId
     ? 1
-    : getScaleUpMultiplier(state.scaleUpTierCounts?.[tierId] ?? state.scaleUpCount ?? 0)
+    : getScaleUpMultiplier(state.scaleUpTierCounts?.[tierId] ?? state.scaleUpCount ?? 0) ** getChallengeLever(state, 'scaleUpPower', 1)
 
 // The index (see state.scaleUpTargetTierIndex) clamped into TIER_DEFINITIONS' actual bounds —
 // scaleUpTargetTierIndex itself is deliberately allowed to climb past the last tier (see its own
@@ -1570,14 +1570,23 @@ const getChallengeEffectTier = (state, effect) => {
   return def?.effect === effect ? def.automation.key : null
 }
 
-// F4 Premium Tier: the tier as priced during the run (a copy; TIER_DEFINITIONS is never edited).
+// Run-wide lever of the active challenge (see tierChallenge in layers.js); `fallback` when none applies.
+const getChallengeLever = (state, name, fallback) => getActiveChallenge(state)?.levers?.[name] ?? fallback
+
+// Challenge-driven output factor of one tier (F1 Half Duplex on Kilobytes, plus the run-wide `production` lever) —
+// shared by tickGame's production and MainPage's per-delivery preview so the two always agree.
+export const getChallengeProductionMultiplier = (state, tierId) =>
+  (getChallengeEffectTier(state, 'halfDuplex') === tierId ? HALF_DUPLEX_PRODUCTION_MULTIPLIER : 1) * getChallengeLever(state, 'production', 1)
+
+// The tier as priced during the run (F4 Premium Tier and the `costMultiplier` lever; a copy — TIER_DEFINITIONS is never edited).
 export const getChallengeTier = (state, tierId) => {
   const tier = TIER_BY_ID[tierId]
-  if (tier && getChallengeEffectTier(state, 'premiumTier') === tierId) return { ...tier, baseCost: tier.baseCost * PREMIUM_TIER_COST_MULTIPLIER }
-  return tier
+  if (!tier) return tier
+  const factor = (getChallengeEffectTier(state, 'premiumTier') === tierId ? PREMIUM_TIER_COST_MULTIPLIER : 1) * getChallengeLever(state, 'costMultiplier', 1)
+  return factor === 1 ? tier : { ...tier, baseCost: tier.baseCost * factor }
 }
 
-// F6 Address Space: only the first six tiers exist for the run.
+// F6 Address Space: only the first ADDRESS_SPACE_TIER_COUNT tiers exist for the run.
 export const getEffectiveTierCount = state => (hasChallengeEffect(state, 'addressSpace') ? ADDRESS_SPACE_TIER_COUNT : TIER_DEFINITIONS.length)
 export const getEffectiveLastTier = state => TIER_DEFINITIONS[getEffectiveTierCount(state) - 1]
 
@@ -1602,7 +1611,12 @@ export const getBitRotCorruption = state => {
   if (!hasChallengeEffect(state, 'bitRot')) return 0
   const t = clampNonNegative(state.challenges?.run?.cycleSeconds) - BIT_ROT_GRACE_SECONDS
   if (t <= 0) return 0
-  return Math.min(BIT_ROT_CORRUPTION_CAP, BIT_ROT_BASE_CORRUPTION * 2 ** (t / BIT_ROT_DOUBLING_SECONDS))
+  const raw = Math.min(BIT_ROT_CORRUPTION_CAP, BIT_ROT_BASE_CORRUPTION * 2 ** (t / BIT_ROT_DOUBLING_SECONDS))
+  // Bigger Foundry disks rot less: each Disk ladder size unlocked beyond the first divides corruption by
+  // BIT_ROT_DISK_RELIEF (unlockedDiskSteps survives Foundry resets, unlike built-disk counts). Never shown to the
+  // player; a small Foundry just keeps losing the cycle until its disks have grown.
+  const ladderStep = getUnlockedDiskSteps(state.intro)
+  return raw / BIT_ROT_DISK_RELIEF ** (ladderStep - 1)
 }
 
 // The Money level a run must reach to Purge: PURGE_THRESHOLD, or the active challenge's raised goal.
@@ -1820,6 +1834,23 @@ export const getNextBytePowerProgressFraction = moneyBits => {
   return Math.min(1, bytes / nextPowerBytes)
 }
 
+// The Clock Speed multiplier as it acts on production right now (F21 Base Clock: 1, Overclock has no effect with it;
+// `clockSpeedPower` lever: raised to that power). Shared by tier periods and MainPage's Clock Speed card.
+export const getChallengeClockSpeedMultiplier = state => hasChallengeEffect(state, 'clockSpeedDisabled')
+  ? 1
+  : getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, getOverclockLevel(state) ?? 0) ** getChallengeLever(state, 'clockSpeedPower', 1)
+
+// The Clock Speed bonus one level currently adds, as a fraction (0.01 = +1%/level): the base step scaled by the Overclock
+// level, then the `clockSpeedPower` lever; 0 under F21 Base Clock. What MainPage's Clock Speed card shows.
+export const getChallengeClockSpeedStep = state => hasChallengeEffect(state, 'clockSpeedDisabled')
+  ? 0
+  : (1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(getOverclockLevel(state) ?? 0)) ** getChallengeLever(state, 'clockSpeedPower', 1) - 1
+
+// What one Scale Up claim multiplies a tier's production by right now (2 normally; `scaleUpPower` lever: 2^power;
+// F22 Scale Out: 1). Used by MainPage's Scale Up card and button; getTierScaleUpMultiplier applies the same power per claim.
+export const getScaleUpStepMultiplier = state =>
+  hasChallengeEffect(state, 'scaleUpNoDoubling') ? 1 : SCALE_UP_MULTIPLIER_BASE ** getChallengeLever(state, 'scaleUpPower', 1)
+
 // A tier's actual production period after both tickspeed multipliers shrink it (see "Tier
 // production tickspeed" in CLAUDE.md) — the per-tier tickspeed level and the global tickspeed
 // multiplier both speed up how *often* a tier delivers a batch, not how much lands each time (see
@@ -1834,10 +1865,7 @@ export const getEffectiveTierTickSpeedSeconds = (state, tierId) => {
   // its own resource-funded tickspeed level rather than replacing it.
   const tickspeedMultiplier = getTickspeedProductionMultiplier(getEffectiveTickspeedLevel(state, tierId), getChallengeEffectTier(state, 'halfStep') === tierId ? HALF_STEP_PRODUCTION_STEP : TICKSPEED_PRODUCTION_STEP)
     * (tierId === getEffectiveLastTier(state).id ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0) : 1)
-  // F21 Base Clock: Clock Speed is disabled, and Overclock (which scales it) has no effect with it.
-  const globalTickspeedMultiplier = hasChallengeEffect(state, 'clockSpeedDisabled')
-    ? 1
-    : getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, getOverclockLevel(state) ?? 0)
+  const globalTickspeedMultiplier = getChallengeClockSpeedMultiplier(state)
   // F13 Clock Skew doubles the tier's base period; F17 Noisy Neighbour lengthens every other tier's period per Zettabytes level.
   const noisyTier = getChallengeEffectTier(state, 'noisyNeighbour')
   const challengePeriodFactor = (getChallengeEffectTier(state, 'clockSkew') === tierId ? CLOCK_SKEW_PERIOD_MULTIPLIER : 1)
@@ -2205,13 +2233,13 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     // is what grew ticksElapsed.
     // F10 Flat Rate: no per-level multiplier for the challenged tier; F1 Half Duplex halves its production.
     const tierMultiplier = getChallengeEffectTier(stateAfterAutobuyers, 'flatRate') === tier.id ? 1 : getPurchaseMilestoneMultiplier(stateAfterAutobuyers.purchaseLevels?.[tier.id] ?? 1)
-    const halfDuplexMultiplier = getChallengeEffectTier(stateAfterAutobuyers, 'halfDuplex') === tier.id ? HALF_DUPLEX_PRODUCTION_MULTIPLIER : 1
+    const challengeProductionMultiplier = getChallengeProductionMultiplier(stateAfterAutobuyers, tier.id)
     // Compute Boost lanes (see getFactoryTierBoostMultiplier) add up on the Factory tiers they cover —
     // Memory gets them too (see tickIntroProduction); a tier no lane covers stays at 1.
     const computeBoostMultiplier = getFactoryTierBoostMultiplier(stateAfterAutobuyers.intro, TIER_INDEX_BY_ID[tier.id] + 1)
     const flopsBoostMultiplier = getComputeFlopsTierProductionMultiplier(stateAfterAutobuyers, tier.id)
     const scaleUpMultiplier = getTierScaleUpMultiplier(stateAfterAutobuyers, tier.id)
-    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * scaleUpMultiplier * tierMultiplier * halfDuplexMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
+    const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * scaleUpMultiplier * tierMultiplier * challengeProductionMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
 
     // Bytes and Bits are ONE pool (MONEY_ID): tier01 produces whole Bytes (the tier row's "+N B"),
     // credited as production × BITS_PER_BYTE Bits. There is no separate Bytes balance.
@@ -7900,7 +7928,14 @@ export const unpinMuseumEntry = entryId => state => {
 // asymmetry between the two reset paths — see docs/DESIGN_HISTORY.md). A no-op (returns the same
 // state) while frozen (a frozen state is waiting on a real Prestige, not a Scale Up) or before the
 // scale-up target tier has reached that cycle's requirement.
-export const scaleUpGame = state => {
+// F9 Bit Rot: a soft reset starts a new cycle (Bits fall back to the start amount), so it also restarts the grace period —
+// otherwise any Scale Up/Overclock after the grace would hand corruption an instant win.
+const restartBitRotGrace = (before, after) =>
+  after !== before && hasChallengeEffect(after, 'bitRot') ? withChallengeRun(after, { cycleSeconds: 0 }) : after
+export const scaleUpGame = state => restartBitRotGrace(state, scaleUpGameCore(state))
+export const overclockGame = state => restartBitRotGrace(state, overclockGameCore(state))
+
+const scaleUpGameCore = state => {
   if (isProductionFrozen(state)) return state
   const targetTier = getScaleUpTargetTier(state)
   const targetTierCompletedLevels = Math.max(0, (state.purchaseLevels?.[targetTier.id] ?? 1) - 1)
@@ -8012,7 +8047,7 @@ export const scaleUpGame = state => {
 // below, so it simply starts re-accumulating scaleUpCount from 0 on the next cycle, same as after a
 // real Prestige. A no-op (returns the same state) while frozen or before the last tier has reached
 // that cycle's requirement — same guards as scaleUpGame.
-export const overclockGame = state => {
+const overclockGameCore = state => {
   if (isProductionFrozen(state)) return state
   if (hasChallengeEffect(state, 'overclockDisabled')) return state
   const lastTier = getEffectiveLastTier(state)

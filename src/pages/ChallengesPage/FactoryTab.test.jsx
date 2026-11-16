@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { ThemeProvider } from 'theme'
 import { describe, expect, it, vi } from 'vitest'
 import ChallengeBanner from 'components/ChallengeBanner'
@@ -51,15 +51,29 @@ describe('Firmware Challenges tab', () => {
 })
 
 describe('Factory challenge banner', () => {
-  it('shows nothing outside a challenge, and Exit is confirm-guarded inside one', () => {
+  it('hides Exit until the banner title is tapped, then it is confirm-guarded', () => {
     const { container } = wrap(<ChallengeBanner onExit={vi.fn()} state={owned()} />)
     expect(container.textContent).toBe('')
     const onExit = vi.fn()
     wrap(<ChallengeBanner onExit={onExit} state={enterChallenge('F25')(owned())} />)
     expect(screen.getByLabelText('active challenge banner').textContent).toContain('F25 · Scope Creep')
+    expect(screen.queryByRole('button', { name: /^Exit challenge F25/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /^F25 Scope Creep, show exit/ }))
     fireEvent.click(screen.getByRole('button', { name: /^Exit challenge F25/ }))
     expect(onExit).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Exit challenge' }))
     expect(onExit).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('Challenges → Factory tab Exit', () => {
+  it('shows a confirm-guarded Exit on the active challenge row only', () => {
+    const game = makeGame(enterChallenge('F25')(owned()))
+    wrap(<ChallengesPage game={game} />)
+    expect(screen.queryByLabelText('challenge F24')?.querySelector('button[aria-label^="Exit challenge"]')).toBeNull()
+    fireEvent.click(within(screen.getByLabelText('challenge F25')).getByRole('button', { name: /^Exit challenge F25/ }))
+    expect(game.actions.exitChallenge).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Exit challenge' }))
+    expect(game.actions.exitChallenge).toHaveBeenCalledTimes(1)
   })
 })

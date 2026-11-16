@@ -28905,6 +28905,29 @@
       "community": 0,
       "community_name": "lint-workflow-shell.mjs",
       "norm_label": "verify-maintainer-checklist.test.js"
+    },
+    {
+      "id": "scripts_simulate_challenges",
+      "label": "simulate-challenges.mjs",
+      "_origin": "ast",
+      "community": 21,
+      "community_name": "bump-version.mjs",
+      "file_type": "code",
+      "norm_label": "simulate-challenges.mjs",
+      "source_file": "scripts/simulate-challenges.mjs",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_components_challengeexitbutton",
+      "label": "ChallengeExitButton/index.jsx",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "createInitialGameState",
+      "file_type": "code",
+      "norm_label": "challengeexitbutton/index.jsx",
+      "source_file": "src/components/ChallengeExitButton/index.jsx",
+      "source_location": "L1"
     }
   ],
   "links": [

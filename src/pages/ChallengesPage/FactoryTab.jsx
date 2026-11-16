@@ -1,4 +1,5 @@
 import Button from 'components/Button'
+import ChallengeExitButton from 'components/ChallengeExitButton'
 import ConfirmDialog from 'components/ConfirmDialog'
 import StatCard from 'components/StatCard'
 import { formatChallengeGoal, formatChallengeTime, getChallengeTitle, getChallengeUnlockCondition } from 'game/challengeUi'
@@ -59,7 +60,7 @@ export const ChallengeStartDialog = ({ def, state, onCancel, onConfirm }) => {
 }
 
 // Challenges → Factory tab: every live challenge, in registry order.
-const ChallengesTab = ({ state, onStart }) => {
+const ChallengesTab = ({ state, onStart, onExit }) => {
   const active = getActiveChallenge(state)
   const live = CHALLENGE_DEFINITIONS.filter(def => LIVE_CHALLENGE_IDS.has(def.id))
   return (
@@ -86,6 +87,7 @@ const ChallengesTab = ({ state, onStart }) => {
                   <Meta>🔒 {getChallengeUnlockCondition(def)}</Meta>
                 )}
               </span>
+              {unlocked && status === 'active' && onExit && <ChallengeExitButton challenge={def} onExit={onExit} />}
               {unlocked && status !== 'active' && (
                 <Button
                   aria-label={`${status === 'completed' ? 'Repeat' : 'Start'} challenge ${getChallengeTitle(def)}${active ? ' (disabled: another challenge is active)' : ''}`}

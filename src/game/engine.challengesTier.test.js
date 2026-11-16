@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  buyTickspeedMultiplier, buyTierQuantity, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
+  buyTickspeedMultiplier, buyTierQuantity, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getChallengeProductionMultiplier, getScaleUpStepMultiplier, overclockGame, getChallengeTier, isTierTickspeedBlockedByChallenge, createInitialGameState, enterChallenge, getBitRotCorruption, getEffectiveTierCount,
   getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierTickspeedRequirement, getTierTickspeedSpend, getTierScaleUpMultiplier,
-  isTierUnlocked, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
+  isTierUnlocked, scaleUpGame, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
-import { BIT_ROT_GRACE_SECONDS, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS, WRITE_LOCK_HALT_SECONDS } from './layers'
+import { ADDRESS_SPACE_TIER_COUNT, HALF_DUPLEX_PRODUCTION_MULTIPLIER, BIT_ROT_DISK_RELIEF, BIT_ROT_GRACE_SECONDS, DISK_LADDER_BASE_SIZE_BITS, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS, WRITE_LOCK_HALT_SECONDS } from './layers'
 
 const T = index => TIER_DEFINITIONS[index].id
 
@@ -100,12 +100,11 @@ describe('tier autobuyer challenges', () => {
     expect(tickGame(1)(withChallenge(runOf('F1', seed), { activeSeconds: 299.5 })).owned[T(4)]).toBe(50)
   })
 
-  it('F6 Address Space leaves six tiers, with Exabytes as the final tier for Scale Up', () => {
-    const run = runOf('F6', state => ({ everUnlockedTierIds: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])), owned: { ...state.owned, [T(5)]: 1, [T(6)]: 1, [T(7)]: 5 } }))
-    expect(getEffectiveTierCount(run)).toBe(6)
-    expect(isTierUnlocked(run)(TIER_DEFINITIONS[5])).toBe(true)
-    expect(isTierUnlocked(run)(TIER_DEFINITIONS[6])).toBe(false)
-    expect(isTierUnlocked(run)(TIER_DEFINITIONS[7])).toBe(false)
+  it('F6 Address Space leaves nine tiers, with Ronnabytes as the final tier for Scale Up', () => {
+    const run = runOf('F6', state => ({ everUnlockedTierIds: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])), owned: { ...state.owned, [T(7)]: 1, [T(8)]: 1, [T(9)]: 5 } }))
+    expect(getEffectiveTierCount(run)).toBe(ADDRESS_SPACE_TIER_COUNT)
+    expect(isTierUnlocked(run)(TIER_DEFINITIONS[8])).toBe(true)
+    expect(isTierUnlocked(run)(TIER_DEFINITIONS[9])).toBe(false)
     expect(TIER_DEFINITIONS).toHaveLength(10)
     expect(getEffectiveTierCount(runOf('F1'))).toBe(10)
   })
@@ -143,6 +142,24 @@ describe('tier autobuyer challenges', () => {
     const safe = tickGame(1)({ ...rotting, resources: { ...rotting.resources, [MONEY_ID]: 1e12 } })
     expect(safe.challenges.bitRotLosses).toBe(0)
     expect(getBitRotCorruption(withRun(runOf('F1'), { cycleSeconds: 1e6 }))).toBe(0)
+  })
+
+  it('F9 Bit Rot: a Scale Up restarts the grace period (Bits fall back to the start amount)', () => {
+    const rotting = withRun(runOf('F9', state => ({ purchaseLevels: { ...state.purchaseLevels, [T(0)]: 4 }, scaleUpTargetTierIndex: 0 })), { cycleSeconds: BIT_ROT_GRACE_SECONDS + 200 })
+    const after = scaleUpGame(rotting)
+    expect(after).not.toBe(rotting)
+    expect(after.challenges.run.cycleSeconds).toBe(0)
+    expect(after.challenges.active).toBe('F9')
+    expect(scaleUpGame(withRun(runOf('F1', state => ({ purchaseLevels: { ...state.purchaseLevels, [T(0)]: 4 }, scaleUpTargetTierIndex: 0 })), { cycleSeconds: 999 })).challenges.run.cycleSeconds).toBe(999)
+  })
+
+  it('F9 Bit Rot: corruption falls by BIT_ROT_DISK_RELIEF per Foundry Disk ladder size beyond the first', () => {
+    const rotting = withRun(runOf('F9'), { cycleSeconds: BIT_ROT_GRACE_SECONDS + 200 })
+    const grown = {
+      ...rotting,
+      intro: { ...rotting.intro, capacity: 1e15, unlockedDiskSteps: 2, disksBuiltTotal: { [DISK_LADDER_BASE_SIZE_BITS]: 9 } },
+    }
+    expect(getBitRotCorruption(grown)).toBeCloseTo(getBitRotCorruption(rotting) / BIT_ROT_DISK_RELIEF)
   })
 
   it('F9 over one long gap equals the same gap in ticks', () => {
@@ -315,5 +332,84 @@ describe('tier tickspeed challenges', () => {
     const seed = state => ({ resources: { ...state.resources, [T(9)]: cost + 5 }, owned: { ...state.owned, [T(9)]: cost + 5 } })
     expect(buyTickspeedMultiplier(T(9))(runOf('F20', seed)).owned[T(9)]).toBe(5)
     expect(buyTickspeedMultiplier(T(9))(runOf('F2', seed)).owned[T(9)]).toBeGreaterThan(cost / 2)
+  })
+})
+
+describe('run-wide challenge levers', () => {
+  it('apply only while their challenge is active, and show in the rule text', () => {
+    const lever = CHALLENGE_DEFINITIONS.find(def => def.id === 'F16')
+    expect(lever.levers.costMultiplier).toBeGreaterThan(1)
+    expect(lever.rule).toContain(`×${lever.levers.costMultiplier}`)
+    const inside = runOf('F16')
+    expect(getChallengeTier(inside, T(0)).baseCost).toBe(TIER_DEFINITIONS[0].baseCost * lever.levers.costMultiplier)
+    expect(getChallengeTier(runOf('F12'), T(0)).baseCost).toBe(TIER_DEFINITIONS[0].baseCost)
+    expect(getChallengeTier(createInitialGameState(), T(0))).toBe(TIER_DEFINITIONS[0])
+  })
+
+  it('getChallengeProductionMultiplier combines Half Duplex and the production lever, and is 1 outside challenges', () => {
+    expect(getChallengeProductionMultiplier(runOf('F6'), T(0))).toBe(CHALLENGE_DEFINITIONS.find(def => def.id === 'F6').levers.production)
+    expect(getChallengeProductionMultiplier(runOf('F17'), T(3))).toBe(0.5)
+    expect(getChallengeProductionMultiplier(runOf('F1'), T(0))).toBe(HALF_DUPLEX_PRODUCTION_MULTIPLIER)
+    expect(getChallengeProductionMultiplier(runOf('F1'), T(1))).toBe(1)
+    expect(getChallengeProductionMultiplier(createInitialGameState(), T(0))).toBe(1)
+  })
+
+  it('Scale Up power weakens the Scale Up multiplier (F12: 2^(n·power))', () => {
+    const counts = Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 4]))
+    const power = CHALLENGE_DEFINITIONS.find(def => def.id === 'F12').levers.scaleUpPower
+    expect(getTierScaleUpMultiplier(runOf('F12', () => ({ scaleUpTierCounts: counts })), T(0))).toBeCloseTo(2 ** (4 * power))
+    expect(getTierScaleUpMultiplier(runOf('F1', () => ({ scaleUpTierCounts: counts })), T(0))).toBe(16)
+  })
+})
+
+describe('lever behaviour through the engine', () => {
+  const seed = state => ({
+    owned: { ...state.owned, [T(0)]: 100 },
+    resources: { ...state.resources, [T(0)]: 100, [MONEY_ID]: 0 },
+    tierProductionAccumulators: {},
+  })
+
+  it('clockSpeedPower raises the Clock Speed multiplier to that power in tier periods', () => {
+    const power = CHALLENGE_DEFINITIONS.find(def => def.id === 'F11').levers.clockSpeedPower
+    const level = (state, patch) => ({ ...state, globalTickspeedMultiplier: 50, ...patch })
+    const plain = getEffectiveTierTickSpeedSeconds(runOf('F2', level), T(0))
+    const weakened = getEffectiveTierTickSpeedSeconds(runOf('F11', level), T(0))
+    expect(getChallengeClockSpeedMultiplier(runOf('F11', level))).toBeCloseTo(getChallengeClockSpeedMultiplier(runOf('F2', level)) ** power)
+    expect(weakened).toBeGreaterThan(plain)
+  })
+
+  it('getChallengeClockSpeedStep is the real per-level Clock Speed bonus: 1% base, scaled by Overclock and the power lever, 0 under F21', () => {
+    expect(getChallengeClockSpeedStep(createInitialGameState())).toBeCloseTo(0.01)
+    const power = CHALLENGE_DEFINITIONS.find(def => def.id === 'F11').levers.clockSpeedPower
+    expect(getChallengeClockSpeedStep(runOf('F11'))).toBeCloseTo(1.01 ** power - 1)
+    const base = createInitialGameState()
+    expect(getChallengeClockSpeedStep({ ...base, challenges: { ...base.challenges, active: 'F21' } })).toBe(0)
+  })
+
+  it('the production lever scales what tickGame credits (F6 vs F2 ×1)', () => {
+    const credited = id => tickGame(1)(runOf(id, seed)).resources[MONEY_ID]
+    expect(credited('F6')).toBe(credited('F2') * CHALLENGE_DEFINITIONS.find(def => def.id === 'F6').levers.production)
+  })
+
+  it('getScaleUpStepMultiplier is 2 normally, 2^power under a Scale Up lever, and 1 under F22', () => {
+    expect(getScaleUpStepMultiplier(createInitialGameState())).toBe(2)
+    expect(getScaleUpStepMultiplier(runOf('F12'))).toBeCloseTo(2 ** CHALLENGE_DEFINITIONS.find(def => def.id === 'F12').levers.scaleUpPower)
+    const base = createInitialGameState()
+    expect(getScaleUpStepMultiplier({ ...base, challenges: { ...base.challenges, active: 'F22' } })).toBe(1)
+  })
+
+  it('F9: Overclock also restarts the Bit Rot grace period', () => {
+    const rotting = withRun(runOf('F9', state => ({ purchaseLevels: { ...state.purchaseLevels, [T(9)]: 6 } })), { cycleSeconds: BIT_ROT_GRACE_SECONDS + 200 })
+    const after = overclockGame(rotting)
+    expect(after).not.toBe(rotting)
+    expect(after.challenges.run.cycleSeconds).toBe(0)
+  })
+
+  it('F9: the Foundry relief survives a Foundry reset (it reads unlocked disk steps, not built-disk counts)', () => {
+    const rotting = withRun(runOf('F9'), { cycleSeconds: BIT_ROT_GRACE_SECONDS + 200 })
+    const grown = { ...rotting, intro: { ...rotting.intro, capacity: 1e15, unlockedDiskSteps: 3, disksBuiltTotal: { [DISK_LADDER_BASE_SIZE_BITS]: 9, [DISK_LADDER_BASE_SIZE_BITS * 10]: 9 } } }
+    const reset = { ...grown, intro: { ...grown.intro, disksBuiltTotal: {} } }
+    expect(getBitRotCorruption(grown)).toBeCloseTo(getBitRotCorruption(rotting) / BIT_ROT_DISK_RELIEF ** 2)
+    expect(getBitRotCorruption(reset)).toBeCloseTo(getBitRotCorruption(grown))
   })
 })
