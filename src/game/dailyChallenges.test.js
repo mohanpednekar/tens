@@ -43,6 +43,8 @@ describe('generator', () => {
     expect(generateDailyChallenge('2026-11-12', '1h')).not.toEqual(generateDailyChallenge('2026-11-12', '10m'))
     const targets = new Set(isoDates('2026-12-01', 10).map(date => generateDailyChallenge(date, '10h').targetBytes))
     expect(targets.size).toBeGreaterThan(5)
+    const balances = new Set(isoDates('2026-12-01', 10).map(date => generateDailyChallenge(date, '10h').startBytes))
+    expect(balances.size).toBeGreaterThan(3)
   })
 
   test('a definition carries modified conditions, a head start and a calculated target', () => {
@@ -56,6 +58,9 @@ describe('generator', () => {
       for (const [lever, value] of Object.entries(def.levers)) {
         expect(DAILY_MODIFIER_POOL.find(entry => entry.lever === lever).values).toContain(value)
       }
+      expect([1, 2, 5]).toContain(Number(def.startBytes.toExponential(0)[0]))
+      expect(def.startBytes).toBeGreaterThanOrEqual(10 ** format.startExponent[0])
+      expect(def.startBytes).toBeLessThanOrEqual(5 * 10 ** format.startExponent[1])
       expect(def.headStart).toEqual({ scaleUps: expect.any(Number), overclock: expect.any(Number) })
       // The internal validation record never rides along in the definition a run stores.
       expect(def).not.toHaveProperty('botSeconds')
@@ -183,7 +188,7 @@ describe('run actions', () => {
     const ready = withRun(started, '10m', { game: { ...run.game, purchaseLevels: Object.fromEntries(Object.keys(run.game.purchaseLevels).map(id => [id, 20])) } })
     const after = playDailyRun('10m', 'scaleUp', undefined, T0)(ready)
     expect(after.daily.runs['10m'].game).not.toBe(ready.daily.runs['10m'].game)
-    expect(after.daily.runs['10m'].game.resources.base).toBe(10 ** run.def.startExponent * 8)
+    expect(after.daily.runs['10m'].game.resources.base).toBe(run.def.startBytes * 8)
     expect(after.daily.runs['10m'].game.runLevers).toEqual(run.def.levers)
   })
 

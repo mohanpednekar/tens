@@ -81,11 +81,12 @@ export const formatDuration = seconds => {
   return `${s}s`
 }
 
-// A definition's modified conditions and seeded head start, as one short line.
+// A definition's modified conditions, then its seeded start (balance, Scale Ups, Overclock), as one short line.
 export const describeDailyChallenge = def => [
   ...(def.conditions ?? []),
-  def.headStart?.scaleUps > 0 && `starts with ${def.headStart.scaleUps} Scale Up${def.headStart.scaleUps === 1 ? '' : 's'}`,
-  def.headStart?.overclock > 0 && `starts at Overclock ${def.headStart.overclock}`,
+  def.startBytes > 0 && `starts with ${formatAmount(def.startBytes)} B`,
+  def.headStart?.scaleUps > 0 && `${def.headStart.scaleUps} Scale Up${def.headStart.scaleUps === 1 ? '' : 's'}`,
+  def.headStart?.overclock > 0 && `Overclock ${def.headStart.overclock}`,
 ].filter(Boolean).join(' · ')
 
 const OUTCOME_LABELS = { won: '✓ Won', completed: 'Completed (no win)', expired: 'Expired' }

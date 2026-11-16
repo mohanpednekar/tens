@@ -50,7 +50,7 @@ for (const format of DAILY_FORMATS) {
   console.log(`  distinct condition sets ${new Set(rows.map(row => row.def.conditions.join(' + '))).size}`)
   for (const row of rows.slice(0, 6)) {
     const { def, validation } = row
-    console.log(`    ${def.dateId}  earn ${def.targetBytes.toExponential(2)} B  [${def.conditions.join(', ') || 'no modifiers'}]  head start ${JSON.stringify(def.headStart)}  bot ${fmt(validation.botSeconds)}  attempt ${validation.attempt}`)
+    console.log(`    ${def.dateId}  earn ${def.targetBytes.toExponential(2)} B  [${def.conditions.join(', ') || 'no modifiers'}]  start ${def.startBytes.toExponential(0)} B ${JSON.stringify(def.headStart)}  bot ${fmt(validation.botSeconds)}  attempt ${validation.attempt}`)
   }
 }
 process.exit(failed ? 1 : 0)

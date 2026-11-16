@@ -41,13 +41,15 @@ const BUY_ALL = Number.MAX_SAFE_INTEGER
 
 // `stepSeconds`: a run advances in whole steps of this size, live and in the reference simulation alike, so the
 // calibration is exact. `botCeilingSeconds` (internal, never shown to players): the reference bot must win by
-// then, and no sooner than half the limit. `warmupSeconds`: seeded head-start range. `startExponent`: seeded
-// starting balance, 10^n Bytes (also re-granted by Scale Up / Overclock).
+// then, and no sooner than half the limit. `warmupSeconds`: seeded head-start range. `startExponent`: range of the
+// power of ten in the seeded starting balance (DAILY_START_MANTISSAS value × 10^n Bytes, re-granted by every
+// soft reset).
 export const DAILY_FORMATS = [
-  { id: '10m', label: '10 minutes', seconds: 600, stepSeconds: 1, botCeilingSeconds: 540, style: 'Hands-on: every second counts', warmupSeconds: [14400, 21600], startExponent: [4, 6], modifierCount: [1, 2] },
-  { id: '1h', label: '1 hour', seconds: 3600, stepSeconds: 5, botCeilingSeconds: 3000, style: 'Steady: check in now and then', warmupSeconds: [7200, 14400], startExponent: [4, 6], modifierCount: [1, 2] },
-  { id: '10h', label: '10 hours', seconds: 36000, stepSeconds: 30, botCeilingSeconds: 28800, style: 'Passive: a few well-timed decisions', warmupSeconds: [0, 3600], startExponent: [4, 6], modifierCount: [1, 2] },
+  { id: '10m', label: '10 minutes', seconds: 600, stepSeconds: 1, botCeilingSeconds: 540, style: 'Hands-on: every second counts', warmupSeconds: [14400, 21600], startExponent: [3, 9], modifierCount: [1, 2] },
+  { id: '1h', label: '1 hour', seconds: 3600, stepSeconds: 5, botCeilingSeconds: 3000, style: 'Steady: check in now and then', warmupSeconds: [7200, 14400], startExponent: [3, 9], modifierCount: [1, 2] },
+  { id: '10h', label: '10 hours', seconds: 36000, stepSeconds: 30, botCeilingSeconds: 28800, style: 'Passive: a few well-timed decisions', warmupSeconds: [0, 3600], startExponent: [3, 8], modifierCount: [1, 2] },
 ]
+export const DAILY_START_MANTISSAS = [1, 2, 5]
 export const DAILY_FORMAT_BY_ID = Object.fromEntries(DAILY_FORMATS.map(format => [format.id, format]))
 
 // Modified conditions: each challenge draws `modifierCount` distinct levers and one value for each. The levers are
@@ -91,7 +93,7 @@ const pickInt = (rng, [min, max]) => min + Math.floor(rng() * (max - min + 1))
 // --- Run game primitives (shared by live play and the reference simulation) ---
 
 const withLevers = (game, levers) => (game.runLevers === levers ? game : { ...game, runLevers: levers })
-const getStartBits = def => 10 ** def.startExponent * BITS_PER_BYTE
+const getStartBits = def => def.startBytes * BITS_PER_BYTE
 
 // One step of production. Returns the new game and the Bits it produced.
 const stepRunGame = (game, def, stepSeconds) => {
@@ -184,7 +186,8 @@ export const buildDailyCandidate = (dateId, formatId, attempt) => {
   const seed = hashString(`${dateId}|${formatId}|v${DAILY_GENERATOR_VERSION}|${attempt}`)
   const rng = createRng(seed)
 
-  const startExponent = fallback ? format.startExponent[0] : pickInt(rng, format.startExponent)
+  // Seeded starting balance: 1, 2 or 5 × a seeded power of ten (the fallback uses a plain 10,000 B).
+  const startBytes = fallback ? 1e4 : DAILY_START_MANTISSAS[Math.floor(rng() * DAILY_START_MANTISSAS.length)] * 10 ** pickInt(rng, format.startExponent)
   const modifiers = []
   if (!fallback) {
     const pool = [...DAILY_MODIFIER_POOL]
@@ -208,7 +211,7 @@ export const buildDailyCandidate = (dateId, formatId, attempt) => {
     generatorVersion: DAILY_GENERATOR_VERSION,
     limitSeconds: format.seconds,
     stepSeconds: format.stepSeconds,
-    startExponent, // starting balance = 10^startExponent Bytes
+    startBytes, // starting balance in Bytes, granted again by every soft reset
     levers,
     conditions: modifiers.map(modifier => DAILY_MODIFIER_POOL.find(entry => entry.lever === modifier.lever).describe(modifier.value)),
   }
