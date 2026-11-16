@@ -16,7 +16,7 @@
 // shared formula or any other tier. Each tier's cadence increases by 1s down the list — tier01=1s
 // up through tier10=10s — since a slower cadence divides that tier's real throughput (see
 // getTierBaseTickSpeedSeconds below) by up to 10x for the last tier, on top of the already-steep
-// cost curve (see getTierCost/getCostEpochExponent in engine.js). This ladder was tried once before
+// cost curve (see getTierCost/getTierCostExponent in engine.js). This ladder was tried once before
 // the tickspeed-multiplier system existed and reverted to a uniform 1s because nothing could offset
 // the slowdown; now that both the per-tier (tickspeedLevels) and global (globalTickspeedMultiplier)
 // tickspeed multipliers exist to shrink getEffectiveTierTickSpeedSeconds back down, later tiers are
@@ -875,8 +875,8 @@ export const COMPUTE_FLOPS_LAST_TIER_COST_PP = 1E30
 export const COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC = 0.0001
 // Ten Flops tiers (KFlops → QFlops), 1:1 with main-game tiers. Each tier's base PP cost matches
 // TIER_DEFINITIONS' baseCost ladder (1000 PP … 10^30 PP); per-unit price then scales on every
-// purchase via the same linear-increment 10-power epoch as Factory tiers (getCostEpochExponent),
-// not Factory's 8-purchase level blocks.
+// purchase via the shared linear-increment 10-power epoch (getCostEpochExponent — Factory tiers now use
+// the per-tier getTierCostExponent instead), not Factory's 8-purchase level blocks.
 export const COMPUTE_FLOPS_TIER_DEFINITIONS = [
   { id: 'flop01', name: 'Cores', outputLabel: 'KFlops', symbol: 'KF', baseCostPP: 1E3,  boostsTierId: 'tier01' },
   { id: 'flop02', name: 'Chips', outputLabel: 'MFlops', symbol: 'MF', baseCostPP: 1E6,  boostsTierId: 'tier02' },

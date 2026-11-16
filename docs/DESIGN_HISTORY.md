@@ -32,6 +32,19 @@ header once the hero switched to Bytes. Follow-up: wrap the hero in `MoneyHeroGr
 (`position: relative`) and absolutely position `BitsBalance` in the existing hero→bar gap so header
 height is the same with or without the line.
 
+### Factory tier cost series: shared linear increments → per-tier constant increments — 2026-11-16 (#1098)
+
+The `simulate-run-times` ideal bot needed ~21 days for a fresh save's first Purge: it reached ~1e76 Bits by
+day 1.75, then crawled the last 25 orders of magnitude. The cause was the shared cost-epoch series (increments
+1, 1, 2, 3, 4, … → per-level cost ratio 10^epoch), which made levels 13–15 cost ×10^11–13 each against a
+×1.25 production gain per level. Constants alone barely moved it (per-level multiplier 1.25→1.5: 3 d; Clock Speed
+step 3%: 1 d 8 h; Overclock step ×1.3: 1 d 3 h; capping the increment at 6/8/10: 6 d 22 h / 20 d / 20 d). The
+maintainer chose a per-tier series instead: the first two increments stay +1, +1 for every tier, then a constant
+increment equal to the tier number (tier01 +1 … tier10 +10) — `getTierCostExponent`. Ideal-bot first Purge: 1 d 6 h
+(2nd 1 d 3 h, 6th 1 d 15 h). Trade-off: low tiers are far cheaper, the top tiers dearer from ~level 5 (Quettabytes
+passes the goal at level 10; its last affordable level is 9, against 13 before), so Overclocks per run drop from 11 to 8. Flops tiers keep `getCostEpochExponent`
+(the series changed a third time in the entry below, and the maintainer wants those untouched).
+
 ### Production speed bonus: automatic log10 → 1 PP purchase, 1 + log10(n) with ×1.1 first Purge — 2026-11-15 (#1098, #1097, #1100)
 
 The 2026-11-09 automatic `log10(count)` bonus (inert below 10 Purges, ×1 at 10) gave nothing early, which

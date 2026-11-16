@@ -203,6 +203,7 @@ import {
   getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierCost,
+  getTierCostExponent,
   getTierProductionProgressPercent,
   getTierPurchasedCount,
   getTierQuantityCost,
@@ -5517,7 +5518,7 @@ describe('getCostEpochExponent', () => {
 // within it, summed) is this per-unit price times the CURRENT blockSize (see getTierQuantityCost
 // below) — the total that scales with block size, not the per-unit price itself.
 
-describe('getTierCost', () => {
+describe('getTierCost (no tier id: shared Flops/fallback series)', () => {
   const tier = { baseCost: 10 }
 
   it('costs baseCost at level 1', () => {
@@ -5560,6 +5561,58 @@ describe('getTierCost', () => {
     // even though the per-unit price itself never changes.
     expect(getTierQuantityCost(tier, 1, 8, 0, 8)).toBe(80) // full level at blockSize 8: 10/unit × 8
     expect(getTierQuantityCost(tier, 1, 13, 0, 13)).toBe(130) // full level at blockSize 13: 10/unit × 13
+  })
+})
+
+describe('getTierCostExponent (per-tier constant increments)', () => {
+  it('opens with +1, +1 for every Factory tier (epochs 0, 1, 2 → exponent 1, 2, 3)', () => {
+    for (const tier of TIER_DEFINITIONS) {
+      expect([0, 1, 2].map(e => getTierCostExponent(tier, e))).toEqual([1, 2, 3])
+    }
+  })
+
+  it('then grows by a constant tierNumber per level: tier01 +1, tier02 +2, … tier10 +10', () => {
+    TIER_DEFINITIONS.forEach((tier, index) => {
+      const k = index + 1
+      expect([3, 4, 5, 10].map(e => getTierCostExponent(tier, e))).toEqual([3 + k, 3 + 2 * k, 3 + 3 * k, 3 + 8 * k])
+    })
+  })
+
+  it('prices real tiers through getTierCost (tier01 level 5 = 1e3 × 10^4, tier10 level 5 = 1e30 × 10^(3 + 10×2 − 1))', () => {
+    expect(getTierCost(TIER_DEFINITIONS[0], 5)).toBe(1e3 * 10 ** 4)
+    expect(getTierCost(TIER_DEFINITIONS[9], 5)).toBe(1e30 * 10 ** 22)
+  })
+
+  it('leaves objects that are not Factory tiers (no tier id, e.g. Flops tiers) on the shared linear-increment series', () => {
+    for (const e of [0, 1, 2, 3, 4, 7]) {
+      expect(getTierCostExponent({ baseCost: 10 }, e)).toBe(getCostEpochExponent(e))
+    }
+  })
+})
+
+describe('getTierCost for Factory tiers (property-based)', () => {
+  it('never decreases with level, matches the shared series for levels 1-3, and grows faster for higher tiers beyond level 3', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: TIER_DEFINITIONS.length - 1 }),
+        fc.integer({ min: 1, max: 30 }),
+        fc.integer({ min: 1, max: 30 }),
+        (tierIndex, levelA, levelB) => {
+          const tier = TIER_DEFINITIONS[tierIndex]
+          const [lower, higher] = levelA <= levelB ? [levelA, levelB] : [levelB, levelA]
+          expect(getTierCost(tier, lower)).toBeLessThanOrEqual(getTierCost(tier, higher))
+          if (lower <= 3) {
+            expect(getTierCost(tier, lower)).toBe(getTierCost({ baseCost: tier.baseCost }, lower))
+          }
+          if (tierIndex < TIER_DEFINITIONS.length - 1 && higher > 3) {
+            const nextTier = TIER_DEFINITIONS[tierIndex + 1]
+            // same level: a higher tier's cost exponent is at least as large (its baseCost is larger too)
+            expect(getTierCost(nextTier, higher) / nextTier.baseCost).toBeGreaterThanOrEqual(getTierCost(tier, higher) / tier.baseCost)
+          }
+        }
+      ),
+      { numRuns: 200 }
+    )
   })
 })
 
@@ -7302,7 +7355,7 @@ describe('tickGame', () => {
   })
 
   it('bulk speed is only an upper limit: with 2-3 levels affordable it buys exactly those, not one or four', () => {
-    const state = withBulkSpeed(withAutobuyer(withMoney(createInitialGameState(), 1e7), tensTier.id), 2)
+    const state = withBulkSpeed(withAutobuyer(withMoney(createInitialGameState(), 1e6), tensTier.id), 2) // levels 1-3 cost 8e3 + 8e4 + 8e5 = 8.9e5
     const after = tickGame(0.011)(state)
     expect(after.purchaseLevels[tensTier.id]).toBeGreaterThan(2)
     expect(after.purchaseLevels[tensTier.id]).toBeLessThan(5)
