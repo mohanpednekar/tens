@@ -42,7 +42,7 @@ step 3%: 1 d 8 h; Overclock step ×1.3: 1 d 3 h; capping the increment at 6/8/10
 maintainer chose a per-tier series instead: the first two increments stay +1, +1 for every tier, then a constant
 increment equal to the tier number (tier01 +1 … tier10 +10) — `getTierCostExponent`. Ideal-bot first Purge: 1 d 6 h
 (2nd 1 d 3 h, 6th 1 d 15 h). Trade-off: low tiers are far cheaper, the top tiers dearer from ~level 5 (Quettabytes
-passes the goal at ~level 12), so Overclocks per run drop from 11 to 8. Flops tiers keep `getCostEpochExponent`
+passes the goal at level 10; its last affordable level is 9, against 13 before), so Overclocks per run drop from 11 to 8. Flops tiers keep `getCostEpochExponent`
 (the series changed a third time in the entry below, and the maintainer wants those untouched).
 
 ### Production speed bonus: automatic log10 → 1 PP purchase, 1 + log10(n) with ×1.1 first Purge — 2026-11-15 (#1098, #1097, #1100)

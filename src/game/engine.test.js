@@ -5518,7 +5518,7 @@ describe('getCostEpochExponent', () => {
 // within it, summed) is this per-unit price times the CURRENT blockSize (see getTierQuantityCost
 // below) — the total that scales with block size, not the per-unit price itself.
 
-describe('getTierCost', () => {
+describe('getTierCost (no tier id: shared Flops/fallback series)', () => {
   const tier = { baseCost: 10 }
 
   it('costs baseCost at level 1', () => {
@@ -5587,6 +5587,32 @@ describe('getTierCostExponent (per-tier constant increments)', () => {
     for (const e of [0, 1, 2, 3, 4, 7]) {
       expect(getTierCostExponent({ baseCost: 10 }, e)).toBe(getCostEpochExponent(e))
     }
+  })
+})
+
+describe('getTierCost for Factory tiers (property-based)', () => {
+  it('never decreases with level, matches the shared series for levels 1-3, and grows faster for higher tiers beyond level 3', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: TIER_DEFINITIONS.length - 1 }),
+        fc.integer({ min: 1, max: 30 }),
+        fc.integer({ min: 1, max: 30 }),
+        (tierIndex, levelA, levelB) => {
+          const tier = TIER_DEFINITIONS[tierIndex]
+          const [lower, higher] = levelA <= levelB ? [levelA, levelB] : [levelB, levelA]
+          expect(getTierCost(tier, lower)).toBeLessThanOrEqual(getTierCost(tier, higher))
+          if (lower <= 3) {
+            expect(getTierCost(tier, lower)).toBe(getTierCost({ baseCost: tier.baseCost }, lower))
+          }
+          if (tierIndex < TIER_DEFINITIONS.length - 1 && higher > 3) {
+            const nextTier = TIER_DEFINITIONS[tierIndex + 1]
+            // same level: a higher tier's cost exponent is at least as large (its baseCost is larger too)
+            expect(getTierCost(nextTier, higher) / nextTier.baseCost).toBeGreaterThanOrEqual(getTierCost(tier, higher) / tier.baseCost)
+          }
+        }
+      ),
+      { numRuns: 200 }
+    )
   })
 })
 
