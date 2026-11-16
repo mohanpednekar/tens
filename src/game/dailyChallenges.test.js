@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import {
+  DAILY_AUTOMATIONS,
   DAILY_BOT_ACTION_ORDER,
   DAILY_FORMATS,
   DAILY_FORMAT_BY_ID,
@@ -15,6 +16,7 @@ import {
   getMsUntilNextUtcDay,
   getRunProgress,
   getUtcDateId,
+  isDailyAutomationOn,
   isDailyChallengesAvailable,
   playDailyRun,
   restartDailyRun,
@@ -109,10 +111,16 @@ describe('calibration (reference bot)', () => {
     const format = DAILY_FORMAT_BY_ID[formatId]
     const date = '2026-11-14'
     const start = Date.parse(`${date}T00:00:00Z`) + 1000
+    const { plan } = getDailyChallengeValidation(date, formatId)
     let state = startDailyRun(formatId, start)(purged())
     for (let step = 0; step <= format.seconds / format.stepSeconds && state.daily.runs[formatId]; step++) {
       const now = start + step * format.stepSeconds * 1000
       state = tickDailyRuns(now)(state)
+      if (plan) {
+        // Check-in format: the bot's whole interaction is its plan.
+        for (const [name, arg] of plan.find(entry => entry.step === step)?.actions ?? []) state = playDailyRun(formatId, name, arg, now)(state)
+        continue
+      }
       for (let pass = 0; pass < 20 && state.daily.runs[formatId]; pass++) {
         const before = state.daily.runs[formatId].game
         for (const [name, arg] of DAILY_BOT_ACTION_ORDER) state = playDailyRun(formatId, name, arg, now)(state)
@@ -124,10 +132,48 @@ describe('calibration (reference bot)', () => {
     expect(result.bestSeconds).toBe(getDailyChallengeValidation(date, formatId).botSeconds)
   }, 120000)
 
-  test.each(DAILY_FORMATS.map(format => [format.id]))('%s: a run that never acts earns nothing and expires', formatId => {
-    const started = startDailyRun(formatId, T0)(purged())
-    const after = tickDailyRuns(T0 + DAILY_FORMAT_BY_ID[formatId].seconds * 1000)(started)
-    expect(after.daily.results['2026-11-12'][formatId].lastOutcome).toBe('expired')
+  // The 10-hour format may have leave-it-running days; the active formats never do.
+  test.each([['10m'], ['1h']])('%s: a run nobody touches does not win', formatId => {
+    for (const date of dates.slice(0, 6)) {
+      const start = Date.parse(`${date}T00:00:00Z`) + 1000
+      const after = tickDailyRuns(start + DAILY_FORMAT_BY_ID[formatId].seconds * 1000)(startDailyRun(formatId, start)(purged()))
+      expect(after.daily.results[date][formatId].won).toBe(false)
+    }
+  })
+})
+
+describe('automations', () => {
+  const keys = DAILY_AUTOMATIONS.map(automation => automation.key)
+  test('each format carries its own set', () => {
+    for (const date of isoDates('2026-11-12', 6)) {
+      const mix = generateDailyChallenge(date, '10m').automations
+      expect(mix).toContain('buy:tier01')
+      expect(mix.length).toBeLessThan(keys.length)
+      expect(generateDailyChallenge(date, '1h').automations).toEqual(keys.filter(key => key.startsWith('buy:') || key === 'speedUp'))
+      expect(generateDailyChallenge(date, '10h').automations).toEqual(keys)
+    }
+  })
+
+  test('a run starts with its automations on, and the switch pauses and resumes one', () => {
+    const started = startDailyRun('10h', T0)(purged())
+    expect(keys.every(key => isDailyAutomationOn(started.daily.runs['10h'].game, key))).toBe(true)
+    const paused = playDailyRun('10h', 'automation', { key: 'overclock', enabled: false }, T0)(started)
+    expect(isDailyAutomationOn(paused.daily.runs['10h'].game, 'overclock')).toBe(false)
+    expect(isDailyAutomationOn(playDailyRun('10h', 'automation', { key: 'overclock', enabled: true }, T0)(paused).daily.runs['10h'].game, 'overclock')).toBe(true)
+    // An automation the run does not have cannot be switched.
+    const hour = startDailyRun('1h', T0)(purged())
+    expect(playDailyRun('1h', 'automation', { key: 'scaleUp', enabled: false }, T0)(hour)).toBe(hour)
+    expect(playDailyRun('1h', 'automation', { key: 'nope', enabled: false }, T0)(hour)).toBe(hour)
+  })
+
+  test('automation plays the run: an untouched 10-hour run makes progress and never runs dry after an automatic reset', () => {
+    const started = startDailyRun('10h', T0)(purged())
+    const later = tickDailyRuns(T0 + 4 * 3600 * 1000)(started)
+    const run = later.daily.runs['10h']
+    if (run) {
+      expect(run.metrics.earn).toBeGreaterThan(0)
+      expect(run.game.resources.base).toBeGreaterThan(0)
+    } else expect(later.daily.results['2026-11-12']['10h']).toBeTruthy()
   })
 })
 
@@ -164,12 +210,12 @@ describe('review regressions', () => {
 describe('stepping', () => {
   test('a run advances in whole steps and carries the remainder; a gap is clamped to the limit', () => {
     const started = startDailyRun('10h', T0)(purged())
-    expect(tickDailyRuns(T0 + 29 * 1000)(started)).toBe(started)
-    const once = tickDailyRuns(T0 + 10000 * 1000)(started)
-    expect(once.daily.runs['10h'].simSeconds).toBe(9990)
-    expect(once.daily.runs['10h'].lastTickAt).toBe(T0 + 9990 * 1000)
-    expect(tickDailyRuns(T0 + 10019 * 1000)(once)).toBe(once)
-    expect(tickDailyRuns(T0 + 10020 * 1000)(once).daily.runs['10h'].simSeconds).toBe(10020)
+    expect(tickDailyRuns(T0 + 119 * 1000)(started)).toBe(started)
+    const once = tickDailyRuns(T0 + 1000 * 1000)(started)
+    expect(once.daily.runs['10h'].simSeconds).toBe(960)
+    expect(once.daily.runs['10h'].lastTickAt).toBe(T0 + 960 * 1000)
+    expect(tickDailyRuns(T0 + 1079 * 1000)(once)).toBe(once)
+    expect(tickDailyRuns(T0 + 1080 * 1000)(once).daily.runs['10h'].simSeconds).toBe(1080)
   })
 
   test('a device clock that went backwards restarts the wait from now, once', () => {

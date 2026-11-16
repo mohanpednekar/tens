@@ -2,6 +2,7 @@ import Button from 'components/Button'
 import ConfirmDialog from 'components/ConfirmDialog'
 import StatCard from 'components/StatCard'
 import {
+  DAILY_AUTOMATIONS,
   DAILY_FORMATS,
   DAILY_MAX_CREDITS,
   canRestartDailyRun,
@@ -10,6 +11,7 @@ import {
   getRunProgress,
   generateDailyChallenge,
   getUtcDateId,
+  isDailyAutomationOn,
 } from 'game/dailyChallenges'
 import { formatAmount } from 'game/engine'
 import MainPage from 'pages/MainPage'
@@ -81,12 +83,87 @@ export const formatDuration = seconds => {
   return `${s}s`
 }
 
+const AUTOMATION_GROUPS = [
+  { id: 'buy', title: 'Auto-buy', manual: labels => `${labels.join(' ')} buying` },
+  { id: 'tickspeed', title: 'Auto-tickspeed', manual: () => 'tickspeed' },
+  { id: 'global', title: 'Auto', manual: labels => labels.join(', ') },
+]
+
+// What the player has to do by hand in this run: every automation the run does not have, grouped. '' when it has all.
+export const describeManual = def => {
+  if (!def.automations) return ''
+  const has = new Set(def.automations)
+  const parts = AUTOMATION_GROUPS
+    .map(group => ({ group, missing: DAILY_AUTOMATIONS.filter(automation => automation.group === group.id && !has.has(automation.key)) }))
+    .filter(({ missing }) => missing.length > 0)
+    .map(({ group, missing }) => group.manual(missing.map(automation => automation.label)))
+  return parts.length > 0 ? `Manual: ${parts.join(', ')}` : ''
+}
+
+const SwitchRow = styled.div`
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+`
+
+const Chip = styled.button`
+  background: ${props => (props.$on ? props.theme.color.good : 'transparent')};
+  border: 1px solid ${props => (props.$on ? props.theme.color.good : props.theme.color.border)};
+  border-radius: 999px;
+  color: ${props => (props.$on ? props.theme.color.surface : props.theme.color.textMuted)};
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  min-height: 1.75rem;
+  padding: 0.1rem 0.6rem;
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+`
+
+// One switch per automation the run has: tap to pause or resume it.
+const AutomationSwitches = ({ run, onToggle }) => {
+  const has = new Set(run.def.automations ?? [])
+  return AUTOMATION_GROUPS.map(group => {
+    const automations = DAILY_AUTOMATIONS.filter(automation => automation.group === group.id && has.has(automation.key))
+    if (automations.length === 0) return null
+    return (
+      <SwitchRow key={group.id} aria-label={`${group.title} switches`} role="group">
+        <Meta as="span">{group.title}</Meta>
+        {automations.map(automation => {
+          const on = isDailyAutomationOn(run.game, automation.key)
+          const name = `${group.title} ${automation.label}`
+          return (
+            <Chip
+              key={automation.key}
+              aria-label={`${name}: ${on ? 'on' : 'paused'}`}
+              aria-pressed={on}
+              onClick={() => onToggle(automation.key, !on)}
+              title={`${name} is ${on ? 'on — tap to pause' : 'paused — tap to resume'}`}
+              type="button"
+              $on={on}
+            >
+              {automation.label}
+            </Chip>
+          )
+        })}
+      </SwitchRow>
+    )
+  })
+}
+
 // A definition's modified conditions, then its seeded start (balance, Scale Ups, Overclock), as one short line.
 export const describeDailyChallenge = def => [
   ...(def.conditions ?? []),
   def.startBytes > 0 && `starts with ${formatAmount(def.startBytes)} B`,
   def.headStart?.scaleUps > 0 && `${def.headStart.scaleUps} Scale Up${def.headStart.scaleUps === 1 ? '' : 's'}`,
   def.headStart?.overclock > 0 && `Overclock ${def.headStart.overclock}`,
+  describeManual(def),
 ].filter(Boolean).join(' · ')
 
 const OUTCOME_LABELS = { won: '✓ Won', completed: 'Completed (no win)', expired: 'Expired' }
@@ -127,6 +204,7 @@ const RunView = ({ format, run, actions, onBack }) => {
         </Meta>
         {describeDailyChallenge(run.def) && <Meta aria-label="daily run conditions">{describeDailyChallenge(run.def)}</Meta>}
         <Bar $percent={percent}><span /></Bar>
+        <AutomationSwitches onToggle={(key, enabled) => play('automation', { key, enabled })} run={run} />
       </StatCard>
       <MainPage game={runGame} />
     </>

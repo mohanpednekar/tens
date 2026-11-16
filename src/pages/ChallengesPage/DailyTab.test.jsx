@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateDailyChallenge, getUtcDateId, startDailyRun } from 'game/dailyChallenges'
 import { createInitialGameState } from 'game/engine'
 import { DAILY_CHALLENGES_FEATURE } from 'game/layers'
-import { describeDailyChallenge } from './DailyTab'
+import { describeDailyChallenge, describeManual } from './DailyTab'
 import ChallengesPage from './index'
 
 const base = () => ({
@@ -49,7 +49,18 @@ describe('Firmware Daily tab', () => {
   it('describes the head start in words', () => {
     expect(describeDailyChallenge({ conditions: ['Costs ×5'], startBytes: 5000, headStart: { scaleUps: 1, overclock: 5 } })).toBe('Costs ×5 · starts with 5,000 B · 1 Scale Up · Overclock 5')
     expect(describeDailyChallenge({ conditions: [], startBytes: 20000, headStart: { scaleUps: 0, overclock: 0 } })).toBe('starts with 20,000 B')
-    expect(describeDailyChallenge({ conditions: [] })).toBe('')
+    expect(describeDailyChallenge({ conditions: [], automations: generateDailyChallenge('2026-11-12', '10h').automations })).toBe('')
+  })
+
+  it('lists what stays manual, and offers a switch per automation the run has', () => {
+    expect(describeManual({ automations: generateDailyChallenge('2026-11-12', '1h').automations })).toBe('Manual: tickspeed, Scale Up, Restage, Overclock')
+    const game = makeGame(startDailyRun('10h', Date.now())(base()))
+    wrap(<ChallengesPage game={game} />)
+    fireEvent.click(screen.getByRole('tab', { name: 'open daily challenges' }))
+    fireEvent.click(screen.getByRole('button', { name: 'open daily 10h' }))
+    expect(screen.getByRole('group', { name: 'Auto-buy switches' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Auto Overclock: on' }))
+    expect(game.actions.dailyPlay).toHaveBeenCalledWith('10h', 'automation', { key: 'overclock', enabled: false })
   })
 
   it('shows a running card with Open / Restart / Forfeit and confirm-guards Forfeit', () => {

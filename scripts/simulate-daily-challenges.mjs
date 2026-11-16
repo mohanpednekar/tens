@@ -48,10 +48,11 @@ for (const format of DAILY_FORMATS) {
   console.log(`\n${format.label}: band (${fmt(format.seconds / 2)}, ${fmt(format.botCeilingSeconds)}] over ${rows.length} dates — ${ms.toFixed(0)} ms/definition`)
   console.log(`  bot win time  min ${fmt(times[0])} · median ${fmt(quantile(times, 0.5))} · max ${fmt(times[times.length - 1])} · out of band ${outOfBand.length}`)
   console.log(`  retried ${retries} · fallback ${fallbacks} · objectives ${JSON.stringify(kinds)}`)
+  if (format.checkInSeconds) console.log(`  leave-it-running days (an untouched run also gets there) ${rows.filter(row => row.validation.handsOff).length} · plans used ${JSON.stringify(rows.map(row => row.validation.plan.map(entry => `${entry.step}:${entry.actions.map(action => `${action[1].key}${action[1].enabled ? '+' : '-'}`).join('')}`).join(' ')).reduce((count, plan) => ({ ...count, [plan]: (count[plan] ?? 0) + 1 }), {}))}`)
   console.log(`  distinct condition sets ${new Set(rows.map(row => row.def.conditions.join(' + '))).size}`)
   for (const row of rows.slice(0, 6)) {
     const { def, validation } = row
-    console.log(`    ${def.dateId}  ${def.objective.label}  [${def.conditions.join(', ') || 'no modifiers'}]  start ${def.startBytes.toExponential(0)} B ${JSON.stringify(def.headStart)}  bot ${fmt(validation.botSeconds)}  attempt ${validation.attempt}`)
+    console.log(`    ${def.dateId}  ${def.objective.label}  [${def.conditions.join(', ') || 'no modifiers'}]  start ${def.startBytes.toExponential(0)} B ${JSON.stringify(def.headStart)}  automations ${def.automations.length}  bot ${fmt(validation.botSeconds)}  attempt ${validation.attempt}`)
   }
 }
 process.exit(failed ? 1 : 0)
