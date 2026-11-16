@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
   applyOfflineProgress, buyTierQuantity, createInitialGameState, enterChallenge, exitChallenge, getActiveChallenge,
   getLiveChallengeForAutomation, isChallengeUnlocked, tickGame,
-} from './engine'
-import { AUTOMATION_INTERVAL_CONFIG, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS } from './layers'
+} from 'game/engine'
+import { AUTOMATION_INTERVAL_CONFIG, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS } from 'game/layers'
 
 // Registry consistency + property tests for challenge mode (#1044). Uses the shipped live set (no clearing).
 const everythingUnlocked = () => {
@@ -65,10 +65,12 @@ describe('challenge mode (property-based)', () => {
     fc.assert(fc.property(fc.array(action, { maxLength: 5 }), actions => {
       let state = enterChallenge(id)(everythingUnlocked())
       expect(getActiveChallenge(state)?.id).toBe(id)
+      // enterChallenge resets the Factory cycle, so fund the run AFTER entering
+      state = { ...state, resources: { ...state.resources, [MONEY_ID]: 1e12 } }
       actions.forEach(a => {
         state = apply(state, a)
         Object.values(state.resources).forEach(v => {
-          expect(Number.isNaN(v)).toBe(false)
+          expect(Number.isFinite(v)).toBe(true)
           expect(v).toBeGreaterThanOrEqual(0)
         })
       })
