@@ -298,7 +298,7 @@ function buildCareerBase() {
     const r = play(s, normalDone)
     if (!r.reached) throw new Error('career cycle did not finish')
     s = purgeGame(r.state)
-    process.stderr.write(`career cycle ${i + 1} done (capacity ${s.intro?.capacity}, disks built ${Object.values(s.intro?.disksBuiltTotal ?? {}).reduce((a, b) => a + (b ?? 0), 0)})\n`)
+    process.stderr.write(`career cycle ${i + 1} done (capacity ${s.intro?.capacity}, disks built ${Object.values(s.intro?.disksBuiltTotal ?? {}).reduce((a, b) => a + (b ?? 0), 0)}, pools unlocked ${E.getUnlockedStoragePoolCount(s)}, sizes ${JSON.stringify(s.intro?.disksBuiltTotal)})\n`)
   }
   return s
 }
@@ -320,7 +320,16 @@ function seedFor(base, def) {
   return { state: s, purgeCount: target }
 }
 
-const base = buildCareerBase()
+// --foundry-step K: pretend the Foundry's Disk ladder has reached its Kth size (sizes below it built, K unlocked), as a
+// player who has done pool flushes would have. The career bot never flushes, so its ladder stays at the first size.
+const FOUNDRY_STEP = Number(argOf('--foundry-step', 0))
+const seedFoundryStep = s => {
+  if (FOUNDRY_STEP < 2) return s
+  const built = { ...(s.intro?.disksBuiltTotal ?? {}) }
+  for (let i = 1; i < FOUNDRY_STEP; i += 1) built[L.DISK_LADDER_BASE_SIZE_BITS * L.DISK_LADDER_SIZE_MULTIPLIER ** (i - 1)] = 9
+  return { ...s, intro: { ...s.intro, unlockedDiskSteps: FOUNDRY_STEP, disksBuiltTotal: built } }
+}
+const base = seedFoundryStep(buildCareerBase())
 const defs = CHALLENGE_DEFINITIONS.filter(d => (IDS ? IDS.includes(d.id) : ['F1', 'F21', 'F22', 'F23', 'F24', 'F25'].includes(d.id)))
 const rows = []
 for (const def of defs) {

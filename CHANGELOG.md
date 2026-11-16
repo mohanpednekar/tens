@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **F9 Bit Rot now rewards a grown Foundry**: corruption is divided by 10 for every Disk ladder size you have reached beyond the first, so a Foundry still on its first disk size keeps losing the cycle while one that has grown its disks can beat it. F9 also halves nothing else but weakens Scale Up bonuses (power 0.85).
 - **F9 Bit Rot: Scale Up and Overclock restart the grace period** — they drop your Bits back to the start amount, so previously any soft reset after the grace period instantly restarted the cycle and the challenge could not be completed.
 - **Challenges are now meant to bite (#1043)**: simulation showed most tier challenges changed a well-played run by under 1.1×, so each challenge now also carries run-wide nerfs on top of its named rule (tier costs ×N, Clock Speed or Scale Up bonuses raised to a power below 1, all production ×0.5). F1–F10 target a 1×–2× longer run than a normal one, F11–F20 2×–10×, F21–F25 10×–100×. F6 Address Space now keeps nine tiers with all production ×5 (six could not reach the goal) and F25's goal is 10^120 Bytes.
 - **Every automation now unlocks by Purge count instead of PP**: Auto Clock Speed at 8 Purges, Auto Restage 16, Auto Scale Up 32, Auto Overclock 64, Auto Purge 128 (no unlock cost; the PP speed-upgrade ladders are unchanged). Tier autobuyers and tier tickspeed autobuyers (and the challenges they unlock) now need twice as many Purges: autobuyers at 2, 4, … 20; tickspeed autobuyers at 22, 24, … 40.

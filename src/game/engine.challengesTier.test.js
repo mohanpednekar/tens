@@ -4,7 +4,7 @@ import {
   getEffectiveTierTickSpeedSeconds, getTickspeedMultiplierCost, getTickspeedMultiplierSpend, getTierCost, getTierTickspeedRequirement, getTierTickspeedSpend, getTierScaleUpMultiplier,
   isTierUnlocked, scaleUpGame, tickDiskLevelOneCachePull, tickDiskPull, tickGame,
 } from './engine'
-import { ADDRESS_SPACE_TIER_COUNT, BIT_ROT_GRACE_SECONDS, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS, WRITE_LOCK_HALT_SECONDS } from './layers'
+import { ADDRESS_SPACE_TIER_COUNT, BIT_ROT_DISK_RELIEF, BIT_ROT_GRACE_SECONDS, DISK_LADDER_BASE_SIZE_BITS, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, MONEY_ID, TIER_DEFINITIONS, WRITE_LOCK_HALT_SECONDS } from './layers'
 
 const T = index => TIER_DEFINITIONS[index].id
 
@@ -151,6 +151,15 @@ describe('tier autobuyer challenges', () => {
     expect(after.challenges.run.cycleSeconds).toBe(0)
     expect(after.challenges.active).toBe('F9')
     expect(scaleUpGame(withRun(runOf('F1', state => ({ purchaseLevels: { ...state.purchaseLevels, [T(0)]: 4 }, scaleUpTargetTierIndex: 0 })), { cycleSeconds: 999 })).challenges.run.cycleSeconds).toBe(999)
+  })
+
+  it('F9 Bit Rot: corruption falls by BIT_ROT_DISK_RELIEF per Foundry Disk ladder size beyond the first', () => {
+    const rotting = withRun(runOf('F9'), { cycleSeconds: BIT_ROT_GRACE_SECONDS + 200 })
+    const grown = {
+      ...rotting,
+      intro: { ...rotting.intro, capacity: 1e15, unlockedDiskSteps: 2, disksBuiltTotal: { [DISK_LADDER_BASE_SIZE_BITS]: 9 } },
+    }
+    expect(getBitRotCorruption(grown)).toBeCloseTo(getBitRotCorruption(rotting) / BIT_ROT_DISK_RELIEF)
   })
 
   it('F9 over one long gap equals the same gap in ticks', () => {

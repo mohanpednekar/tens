@@ -119,7 +119,7 @@ const RAW_CHALLENGE_DEFINITIONS = [
   tierChallenge(5, 'F6', 'tierAutobuyer', 'Address Space', 'addressSpace', 'Only nine tiers exist; Ronnabytes is the top of the ladder.', { production: 5 }),
   tierChallenge(6, 'F7', 'tierAutobuyer', 'Single Instance', 'singleInstance', 'Scale Up never doubles Zettabytes.', { costMultiplier: 5 }),
   tierChallenge(7, 'F8', 'tierAutobuyer', 'Memory Leak', 'memoryLeak', 'Yottabytes leak: 1% of the owned count is lost per second.'),
-  tierChallenge(8, 'F9', 'tierAutobuyer', 'Bit Rot', 'bitRot', 'A corruption counter grows exponentially; if it overtakes your Bits the cycle restarts.'),
+  tierChallenge(8, 'F9', 'tierAutobuyer', 'Bit Rot', 'bitRot', 'A corruption counter grows exponentially; if it overtakes your Bits the cycle restarts.', { scaleUpPower: 0.85 }),
   tierChallenge(9, 'F10', 'tierAutobuyer', 'Flat Rate', 'flatRate', 'Quettabytes get no per-level multiplier.'),
   tierChallenge(0, 'F11', 'tierTickspeed', 'Clock Gated', 'clockGated', "Kilobytes' tickspeed is disabled.", { clockSpeedPower: 0.4 }),
   tierChallenge(1, 'F12', 'tierTickspeed', 'Half Step', 'halfStep', 'Each Megabytes tickspeed level gives 5% instead of 10%.', { scaleUpPower: 0.75 }),
@@ -157,6 +157,7 @@ export const BIT_ROT_GRACE_SECONDS = 120 // F9: no corruption for this long afte
 export const BIT_ROT_BASE_CORRUPTION = 1000 // F9: corruption (Bits) when the grace period ends
 export const BIT_ROT_DOUBLING_SECONDS = 30 // F9: corruption doubles this often
 export const BIT_ROT_CORRUPTION_CAP = 1e6 // F9: cap, so the threat belongs to the early part of a run
+export const BIT_ROT_DISK_RELIEF = 10 // F9: corruption ÷ this per Foundry Disk ladder size beyond the first
 export const HALF_STEP_PRODUCTION_STEP = 0.05 // F12 (normally TICKSPEED_PRODUCTION_STEP = 0.1)
 export const CLOCK_SKEW_PERIOD_MULTIPLIER = 2 // F13
 export const RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE = 3 // F14
