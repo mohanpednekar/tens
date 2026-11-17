@@ -2,6 +2,7 @@ import Button from 'components/Button'
 import ConfirmDialog from 'components/ConfirmDialog'
 import StatCard from 'components/StatCard'
 import {
+  DAILY_AUTOMATIONS,
   DAILY_FORMATS,
   DAILY_MAX_CREDITS,
   canRestartDailyRun,
@@ -10,18 +11,10 @@ import {
   getRunProgress,
   generateDailyChallenge,
   getUtcDateId,
+  isDailyAutomationOn,
 } from 'game/dailyChallenges'
-import {
-  buyGlobalTickspeedMultiplier,
-  buyTierQuantity,
-  formatAmount,
-  formatCurrency,
-  isGlobalTickspeedMultiplierUnlocked,
-  isTierUnlocked,
-  overclockGame,
-  scaleUpGame,
-} from 'game/engine'
-import { MONEY_ID, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount } from 'game/engine'
+import MainPage from 'pages/MainPage'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -90,48 +83,132 @@ export const formatDuration = seconds => {
   return `${s}s`
 }
 
-const OUTCOME_LABELS = { won: '✓ Won', completed: 'Completed (no win)', expired: 'Expired' }
-const BIG = Number.MAX_SAFE_INTEGER
+const AUTOMATION_GROUPS = [
+  { id: 'buy', title: 'Auto-buy', manual: labels => `${labels.join(' ')} buying` },
+  { id: 'tickspeed', title: 'Auto-tickspeed', manual: () => 'tickspeed' },
+  { id: 'global', title: 'Auto', manual: labels => labels.join(', ') },
+]
 
+// What the player has to do by hand in this run: every automation the run does not have, grouped. '' when it has all.
+export const describeManual = def => {
+  if (!def.automations) return ''
+  const has = new Set(def.automations)
+  const parts = AUTOMATION_GROUPS
+    .map(group => ({ group, missing: DAILY_AUTOMATIONS.filter(automation => automation.group === group.id && !has.has(automation.key)) }))
+    .filter(({ missing }) => missing.length > 0)
+    .map(({ group, missing }) => group.manual(missing.map(automation => automation.label)))
+  return parts.length > 0 ? `Manual: ${parts.join(', ')}` : ''
+}
+
+const SwitchRow = styled.div`
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+`
+
+const Chip = styled.button`
+  background: ${props => (props.$on ? props.theme.color.good : 'transparent')};
+  border: 1px solid ${props => (props.$on ? props.theme.color.good : props.theme.color.border)};
+  border-radius: 999px;
+  color: ${props => (props.$on ? props.theme.color.surface : props.theme.color.textMuted)};
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  min-height: 1.75rem;
+  padding: 0.1rem 0.6rem;
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+`
+
+// One switch per automation the run has: tap to pause or resume it.
+const AutomationSwitches = ({ run, onToggle }) => {
+  const has = new Set(run.def.automations ?? [])
+  return AUTOMATION_GROUPS.map(group => {
+    const automations = DAILY_AUTOMATIONS.filter(automation => automation.group === group.id && has.has(automation.key))
+    if (automations.length === 0) return null
+    return (
+      <SwitchRow key={group.id} aria-label={`${group.title} switches`} role="group">
+        <Meta as="span">{group.title}</Meta>
+        {automations.map(automation => {
+          const on = isDailyAutomationOn(run.game, automation.key)
+          const name = `${group.title} ${automation.label}`
+          return (
+            <Chip
+              key={automation.key}
+              aria-label={`${name}: ${on ? 'on' : 'paused'}`}
+              aria-pressed={on}
+              onClick={() => onToggle(automation.key, !on)}
+              title={`${name} is ${on ? 'on — tap to pause' : 'paused — tap to resume'}`}
+              type="button"
+              $on={on}
+            >
+              {automation.label}
+            </Chip>
+          )
+        })}
+      </SwitchRow>
+    )
+  })
+}
+
+// A definition's modified conditions, then its seeded start (balance, Scale Ups, Overclock), as one short line.
+export const describeDailyChallenge = def => [
+  ...(def.conditions ?? []),
+  def.startBytes > 0 && `starts with ${formatAmount(def.startBytes)} B`,
+  def.headStart?.scaleUps > 0 && `${def.headStart.scaleUps} Scale Up${def.headStart.scaleUps === 1 ? '' : 's'}`,
+  def.headStart?.overclock > 0 && `Overclock ${def.headStart.overclock}`,
+  describeManual(def),
+].filter(Boolean).join(' · ')
+
+const OUTCOME_LABELS = { won: '✓ Won', completed: 'Attempted (no win)', expired: 'Expired' }
+
+// A run is played on the Factory page itself: the same component the main game uses, fed the run's own game state
+// and actions that route to that run. Only the progress is separate.
 const RunView = ({ format, run, actions, onBack }) => {
-  const game = run.game
-  const can = fn => fn(game) !== game
-  const bytes = run.earnedBits / 8
+  const play = (name, arg) => actions.dailyPlay(format.id, name, arg)
+  const percent = Math.round(getRunProgress(run) * 100)
+  const objective = run.def.objective ?? { label: '', target: 0 }
+  const reached = run.metrics?.[objective.key] ?? 0
+  const runGame = {
+    state: run.game,
+    // The Factory page's pinned progress bar tracks the run's target instead of Purge.
+    goal: { percent, label: `${percent}% · ${objective.label}`, ariaLabel: `progress toward the daily objective: ${objective.label}` },
+    offlineProgress: null,
+    buyMaxMode: false,
+    actions: {
+      buyTierQuantity: tierId => play('buyTier', tierId),
+      buyTickspeedMultiplier: tierId => play('tierTickspeed', tierId),
+      buyGlobalTickspeedMultiplier: () => play('clockSpeed'),
+      scaleUp: () => play('scaleUp'),
+      overclock: () => play('overclock'),
+      consumeXpForLastTierTickspeed: amount => play('restage', amount),
+      purge: () => {},
+      exitChallenge: () => {},
+    },
+  }
   return (
-    <StatCard aria-label={`daily run ${format.id}`}>
-      <BackBanner>
-        <Heading>Daily {format.label} — Factory run</Heading>
-        <Button aria-label="back to daily challenges" onClick={onBack} type="button" variant="prestige">Back</Button>
-      </BackBanner>
-      <Meta>
-        Earn {formatAmount(10 ** run.def.targetExponent)} B · earned {formatAmount(bytes)} B · {formatDuration(run.def.limitSeconds - run.simSeconds)} left
-      </Meta>
-      <Bar $percent={Math.round(getRunProgress(run) * 100)}><span /></Bar>
-      <Meta aria-label="daily run balance">Balance {formatCurrency(game.resources[MONEY_ID] ?? 0)}</Meta>
-      {TIER_DEFINITIONS.filter(tier => isTierUnlocked(game)(tier)).map(tier => (
-        <Row key={tier.id}>
-          <span><strong>{tier.name}</strong><Meta>owned {formatAmount(game.owned[tier.id] ?? 0)}</Meta></span>
-          <Button
-            aria-label={`buy ${tier.name} in daily ${format.id}`}
-            disabled={!can(buyTierQuantity(tier.id, BIG))}
-            onClick={() => actions.dailyBuyTier(format.id, tier.id)}
-            type="button"
-          >
-            Buy
-          </Button>
-        </Row>
-      ))}
-      <Row>
-        <span><strong>Run upgrades</strong><Meta>{game.globalTickspeedMultiplier ? `Clock Speed level ${game.globalTickspeedMultiplier}` : ''}</Meta></span>
-        <Actions>
-          {isGlobalTickspeedMultiplierUnlocked(game) && (
-            <Button aria-label={`buy Clock Speed in daily ${format.id}`} disabled={!can(buyGlobalTickspeedMultiplier)} onClick={() => actions.dailyClockSpeed(format.id)} type="button">Clock</Button>
-          )}
-          <Button aria-label={`Scale Up daily ${format.id}`} disabled={!can(scaleUpGame)} onClick={() => actions.dailyScaleUp(format.id)} type="button" variant="prestige">Scale Up</Button>
-          <Button aria-label={`Overclock daily ${format.id}`} disabled={!can(overclockGame)} onClick={() => actions.dailyOverclock(format.id)} type="button" variant="prestige">Overclock</Button>
-        </Actions>
-      </Row>
-    </StatCard>
+    <>
+      <StatCard aria-label={`daily run ${format.id}`}>
+        <BackBanner>
+          <Heading>Daily {format.label}</Heading>
+          <Button aria-label="back to daily challenges" onClick={onBack} type="button" variant="prestige">Back</Button>
+        </BackBanner>
+        <Meta>
+          {objective.label} · now {formatAmount(reached)} · {formatDuration(run.def.limitSeconds - run.simSeconds)} left
+        </Meta>
+        {objective.attemptLabel && <Meta aria-label="daily run attempt mark">Counts as attempted from: {objective.attemptLabel}</Meta>}
+        {describeDailyChallenge(run.def) && <Meta aria-label="daily run conditions">{describeDailyChallenge(run.def)}</Meta>}
+        <Bar $percent={percent}><span /></Bar>
+        <AutomationSwitches onToggle={(key, enabled) => play('automation', { key, enabled })} run={run} />
+      </StatCard>
+      <MainPage game={runGame} />
+    </>
   )
 }
 
@@ -168,6 +245,7 @@ const DailyTab = ({ state, actions }) => {
           const run = state.daily.runs[format.id]
           const result = state.daily.results[today]?.[format.id]
           const lastDay = run && run.def.dateId !== today
+          const def = run ? run.def : generateDailyChallenge(today, format.id)
           return (
             <Row key={format.id} aria-label={`daily ${format.id}`}>
               <span>
@@ -178,11 +256,12 @@ const DailyTab = ({ state, actions }) => {
                   </Meta>
                 ) : (
                   <Meta>
-                    Earn {formatAmount(10 ** generateDailyChallenge(today, format.id).targetExponent)} B
+                    {def.objective.label}
                     {result ? ` · ${OUTCOME_LABELS[result.lastOutcome]}` : ' · Not started'}
                     {result?.bestSeconds != null && ` · personal best ${formatDuration(result.bestSeconds)}`}
                   </Meta>
                 )}
+                {describeDailyChallenge(def) && <Meta aria-label={`daily ${format.id} conditions`}>{describeDailyChallenge(def)}</Meta>}
               </span>
               <Actions>
                 {run ? (
