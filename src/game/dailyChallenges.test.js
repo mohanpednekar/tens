@@ -298,6 +298,8 @@ describe('peaks', () => {
 
   test('levels reached before Auto Scale Up resets the ladder inside a step still count', () => {
     let state = startDailyRun('10h', T0)(purged())
+    // An objective this step cannot meet, so the run is still there to inspect afterwards.
+    state = withRun(state, '10h', { def: { ...state.daily.runs['10h'].def, objective: { key: 'clock', kind: 'clock', target: 1e6, attemptMark: 1e5, label: '', attemptLabel: '' } } })
     const run = state.daily.runs['10h']
     // Every tier sits at 5 completed levels — past any Scale Up requirement — but the tracker has not seen it yet.
     // Release Auto Scale Up first, THEN inject the levels straight into the game: no action runs in between, so
@@ -308,7 +310,6 @@ describe('peaks', () => {
     expect(state.daily.runs['10h'].metrics['levels:tier01']).toBe(0)
     const after = tickDailyRuns(T0 + DAILY_FORMAT_BY_ID['10h'].stepSeconds * 1000)(state)
     const result = after.daily.runs['10h']
-    if (!result) return expect(after.daily.results['2026-11-12']['10h']).toBeTruthy() // the objective itself was met
     // Auto Scale Up fired inside the step and reset the ladder...
     expect(result.game.purchaseLevels.tier01).toBeLessThan(6)
     expect(getResetCount(result.game)).toBeGreaterThan(getResetCount(run.game))
