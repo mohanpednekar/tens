@@ -1207,9 +1207,8 @@ const MainPage = ({ game }) => {
         </PurgeProgressTrack>
       </PurgeProgressBar>
 
-      <Header>
-        <h1>Byte Factory</h1>
-      </Header>
+      {/* Title hidden visually: the pinned progress bar (and any challenge/boost banner) already sits at the top. */}
+      <VisuallyHidden as="h1">Byte Factory</VisuallyHidden>
 
       <BoostTimerBar actions={actions} state={state} />
 
