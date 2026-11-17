@@ -58,3 +58,4 @@ SKILL.md).
 - [`runs/2026-11-09T184137Z-618c1c6.md`](./runs/2026-11-09T184137Z-618c1c6.md)
 - [`runs/2026-11-15T180051Z-3a9bddc.md`](./runs/2026-11-15T180051Z-3a9bddc.md)
 - [`runs/2026-11-16T015400Z-6fc91d5d.md`](./runs/2026-11-16T015400Z-6fc91d5d.md)
+- [`runs/2026-11-17T110854Z-ead9a9f.md`](./runs/2026-11-17T110854Z-ead9a9f.md)
