@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_PER_LEVEL, LAST_TIER_LEVEL_CREDIT_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -214,8 +214,10 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: 0,
   }), {}),
-  // Fractional remainder of the last tier's per-completed-level credit (see tickGame).
-  lastTierLevelCreditAccumulator: 0,
+  // Seconds banked toward the last tier's next level credit (see tickGame).
+  lastTierLevelCreditTimer: 0,
+  // Run-scoped (resets with the Factory cycle): the last tier (QB) has held a non-zero balance this run — see 'lastTierSpent'.
+  lastTierEarnedThisRun: false,
   // Permanent global level (not per-tier — there's only one to buy), null = not yet bought: how
   // many times Prestige Points have been spent to make Prestige itself automatic and faster (see
   // applyAutobuyerMilestones/getAutoPurgeAttemptRate) — never reset by prestige.
@@ -862,9 +864,10 @@ export const getTickspeedMultiplierSpend = (tierId, targetLevel) => {
 }
 
 // Owned count buyTickspeedMultiplier requires before buying `targetLevel`: the requirement itself,
-// and always at least spend + 1 so a purchase never drains the tier to 0 generators.
+// and at least spend + 1 so a purchase never drains the tier to 0 generators — except the last tier (QB), which may
+// spend down to exactly 0 (it is bought with Bits and top of the ladder; emptying it earns the 'quettaSpent' achievement).
 export const getTickspeedMultiplierRequirement = (tierId, targetLevel) =>
-  Math.max(getTickspeedMultiplierCost(tierId, targetLevel), getTickspeedMultiplierSpend(tierId, targetLevel) + 1)
+  Math.max(getTickspeedMultiplierCost(tierId, targetLevel), getTickspeedMultiplierSpend(tierId, targetLevel) + (tierId === getLastTierId() ? 0 : 1))
 
 // Historical PP-cost formula — a tier's autobuyer no longer costs PP to unlock at all; it unlocks
 // automatically at a prestige-count milestone instead (see getAutobuyerUnlockMilestone/
@@ -1341,10 +1344,18 @@ export const isAchievementConditionMet = (state, condition) => {
     case 'tierPurchased': return (state.purchased?.[condition.tierId] ?? 0) > 0 || (state.purchaseLevels?.[condition.tierId] ?? 1) > 1
     case 'clockSpeedLevel': return (state.globalTickspeedMultiplier ?? 0) >= condition.min
     case 'overclocked': return state.overclockLastClaimCompletedLevels != null
+    case 'lastTierSpent': return Boolean(state.lastTierEarnedThisRun) && (state.resources?.[getLastTierId()] ?? 0) === 0
     case 'poolExponentBonus': return (state.intro?.poolExponentBonuses?.[condition.poolIndex] ?? 0) >= condition.min
     default: return false
   }
 }
+
+// Seconds between last-tier credits at `completedLevels`: base period / (1 + log10(levels)), floored at
+// LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS (10 ms); Infinity with no completed level. Each credit is exactly 1 unit.
+export const getLastTierLevelCreditIntervalSeconds = completedLevels =>
+  completedLevels >= 1
+    ? Math.max(LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS / (1 + Math.log10(completedLevels)))
+    : Infinity
 
 export const isAchievementEarned = (state, id) => Boolean(state.achievements?.earned?.[id])
 
@@ -2269,24 +2280,26 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     }
   })
 
-  // Last-tier level credit: the last tier (QB) is credited LAST_TIER_LEVEL_CREDIT_PER_LEVEL units per completed
-  // level every LAST_TIER_LEVEL_CREDIT_PERIOD_SECONDS, independent of its balance/owned count/production.
-  let levelCreditAccumulator = stateAfterAutobuyers.lastTierLevelCreditAccumulator ?? 0
+  // Last-tier level credit (see getLastTierLevelCreditIntervalSeconds): exactly 1 unit each interval, independent of its
+  // balance/owned count/production. The timer banks elapsed seconds toward the next credit (not fractional units).
+  let levelCreditTimer = stateAfterAutobuyers.lastTierLevelCreditTimer ?? 0
   const creditTier = TIER_BY_ID[getLastTierId()]
   const creditLevels = Math.max(0, (stateAfterAutobuyers.purchaseLevels?.[creditTier.id] ?? 1) - 1)
-  if (creditLevels > 0 && isTierUnlocked(stateAfterAutobuyers)(creditTier) && !productionHalted) {
-    levelCreditAccumulator += creditLevels * LAST_TIER_LEVEL_CREDIT_PER_LEVEL * productiveSeconds / LAST_TIER_LEVEL_CREDIT_PERIOD_SECONDS
-    const whole = Math.floor(levelCreditAccumulator + TICK_ACCUMULATION_EPSILON)
-    if (whole > 0) {
-      levelCreditAccumulator = Math.max(0, levelCreditAccumulator - whole)
-      newResources[creditTier.id] = clampNonNegative((newResources[creditTier.id] ?? 0) + whole)
-      newOwned[creditTier.id] = clampNonNegative((newOwned[creditTier.id] ?? 0) + whole)
+  if (creditLevels > 0 && isAchievementEarned(stateAfterAutobuyers, 'quettaSpent') && isTierUnlocked(stateAfterAutobuyers)(creditTier) && !productionHalted) {
+    const interval = getLastTierLevelCreditIntervalSeconds(creditLevels)
+    levelCreditTimer += productiveSeconds
+    const credits = Math.floor(levelCreditTimer / interval + TICK_ACCUMULATION_EPSILON)
+    if (credits > 0) {
+      levelCreditTimer = Math.max(0, levelCreditTimer - credits * interval)
+      newResources[creditTier.id] = clampNonNegative((newResources[creditTier.id] ?? 0) + credits)
+      newOwned[creditTier.id] = clampNonNegative((newOwned[creditTier.id] ?? 0) + credits)
     }
   }
 
   const producedState = {
     ...stateAfterAutobuyers,
-    lastTierLevelCreditAccumulator: levelCreditAccumulator,
+    lastTierLevelCreditTimer: levelCreditTimer,
+    lastTierEarnedThisRun: Boolean(stateAfterAutobuyers.lastTierEarnedThisRun) || (newResources[creditTier.id] ?? 0) > 0,
     resources: newResources,
     owned: newOwned,
     tierProductionAccumulators: newAccumulators,
@@ -2457,6 +2470,11 @@ export const getTierSpendableAmount = (state, tier) =>
 export const getTierPurchasedCount = (state, tierId) =>
   state.purchased?.[tierId] ?? 0
 
+// Buying the last tier (QB) marks the run so Spent QB can fire if a later spend in this same cycle
+// empties it, including a purchase that never sits across a tickGame.
+const withLastTierHeldThisRun = (state, tierId) =>
+  tierId === getLastTierId() ? { ...state, lastTierEarnedThisRun: true } : state
+
 const buyTierCore = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = getChallengeTier(state, tierId)
@@ -2499,7 +2517,7 @@ const buyTierCore = tierId => state => {
     },
   }
 
-  return nextState
+  return withLastTierHeldThisRun(nextState, tierId)
 }
 
 export const buyTier = (tierId) => state => applyChallengePurchaseEffects(tierId, state, buyTierCore(tierId)(state))
@@ -2553,7 +2571,7 @@ const buyTierQuantityCore = (tierId, quantity) => state => {
     },
   }
 
-  return nextState
+  return withLastTierHeldThisRun(nextState, tierId)
 }
 
 export const buyTierQuantity = (tierId, quantity) => state => applyChallengePurchaseEffects(tierId, state, buyTierQuantityCore(tierId, quantity)(state))
@@ -7123,11 +7141,12 @@ export const setAutobuyerEnabled = (tierId, enabled) => state => {
 // delivery frequency by another 10% (see getTickspeedProductionMultiplier/
 // getEffectiveTierTickSpeedSeconds), without changing the amount delivered per batch or how
 // often the autobuyer attempts a purchase (see the flat rate in tickGame). resources[tier.id] and
-// owned[tier.id] move together, so requiring only `available >= cost` could drain a tier to
+// owned[tier.id] move together, so requiring only `available >= cost` could drain a non-last tier to
 // exactly 0 generators — production for that tier (and everything cascading from it) would stop
-// even though the purchase "succeeded". Require at least 1 generator left over instead.
-// Challenge-aware tickspeed charge for reaching `targetLevel`: F16 Egress Fees charges the next level's cost; the last
-// tier normally spends only a fraction of its requirement (getTickspeedMultiplierSpend) — F20 Burn Rate spends it all.
+// even though the purchase "succeeded". Require at least 1 generator left over instead, except the
+// last tier (QB), which may spend to 0 (Spent QB).
+// Challenge-aware tickspeed charge for reaching `targetLevel`: F16 Egress Fees charges the next level's cost; F20 Burn Rate
+// spends the full requirement (now the baseline spend for every tier, so F20 is a no-op on spend).
 const getTickspeedChargeLevel = (state, tierId, targetLevel) =>
   targetLevel + (getChallengeEffectTier(state, 'egressFees') === tierId ? 1 : 0)
 export const getTierTickspeedSpend = (state, tierId, targetLevel) => {
@@ -7137,7 +7156,7 @@ export const getTierTickspeedSpend = (state, tierId, targetLevel) => {
     : getTickspeedMultiplierSpend(tierId, level)
 }
 export const getTierTickspeedRequirement = (state, tierId, targetLevel) =>
-  Math.max(getTickspeedMultiplierCost(tierId, getTickspeedChargeLevel(state, tierId, targetLevel)), getTierTickspeedSpend(state, tierId, targetLevel) + 1)
+  Math.max(getTickspeedMultiplierCost(tierId, getTickspeedChargeLevel(state, tierId, targetLevel)), getTierTickspeedSpend(state, tierId, targetLevel) + (tierId === getLastTierId() ? 0 : 1))
 
 // Tier tickspeed challenge rules that forbid the next upgrade outright: F11 gated, F14 capped, F18 chained to the tier below.
 export const isTierTickspeedBlockedByChallenge = (state, tierId) => {
@@ -7163,7 +7182,9 @@ export const buyTickspeedMultiplier = tierId => state => {
   const available = state.resources[tier.id] ?? 0
   if (available < getTierTickspeedRequirement(state, tierId, currentLevel + 1)) return state
 
-  return {
+  // detectAchievements here so Spent QB latches on the spend itself, before a same-tick Auto Scale Up /
+  // Overclock / Purge can wipe lastTierEarnedThisRun.
+  return detectAchievements({
     ...state,
     resources: {
       ...state.resources,
@@ -7177,7 +7198,7 @@ export const buyTickspeedMultiplier = tierId => state => {
       ...state.tickspeedLevels,
       [tierId]: currentLevel + 1,
     },
-  }
+  })
 }
 
 // Autobuyer interval: tier N's autobuyer attempts a purchase every N seconds (1 s … 10 s) until

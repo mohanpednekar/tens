@@ -232,7 +232,7 @@ describe('review regressions', () => {
     const start = runOf('F20', state => ({ resources: { ...state.resources, [T(9)]: 50 }, owned: { ...state.owned, [T(9)]: 50 } }))
     const spend = getTierTickspeedSpend(start, T(9), 2)
     expect(spend).toBe(getTickspeedMultiplierCost(T(9), 2))
-    expect(getTierTickspeedRequirement(start, T(9), 2)).toBe(spend + 1)
+    expect(getTierTickspeedRequirement(start, T(9), 2)).toBe(spend) // last tier may spend to 0
     expect(getTierTickspeedSpend(runOf('F2'), T(9), 2)).toBe(spend)
   })
 

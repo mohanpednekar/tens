@@ -526,8 +526,9 @@ const InfoPage = () => {
             itself — buying one lowers that tier’s owned count.
           </li>
           <li>
-            {lastTierName}’ tickspeed upgrade needs the usual amount owned but only spends a tenth of
-            it (the 2nd upgrade needs 100, spends 10).
+            {lastTierName}’ tickspeed upgrade may spend your last unit (other tiers always keep one).
+            Spend all {lastTierName} after holding some in the same run to earn Spent QB — then 1 is
+            credited regardless of balance, more often with more completed levels.
           </li>
           <li>
             After {TIER_DEFINITIONS.length} Scale Ups in a run (the first onto {lastTierName}), the

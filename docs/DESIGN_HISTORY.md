@@ -9454,3 +9454,7 @@ The basic slice drew only a start and a target exponent from fixed per-format ra
 ## Last-tier tickspeed spend reverted; QB level credit (2026-11)
 
 The last tier's resource-funded tickspeed upgrade spent only 10% of its cost (`LAST_TIER_TICKSPEED_SPEND_FRACTION`); it now spends the full power-of-ten cost like every tier (requirement `cost + 1`). To offset, `tickGame` credits the last tier 1 unit per completed purchase level every 10 s (`lastTierLevelCreditAccumulator`), regardless of balance. Side effect: F20 Burn Rate ("spends its full requirement") is now a no-op rule and needs a redesign.
+
+## Spent QB gates last-tier credit; last tier may spend to 0 (2026-11)
+
+The unconditional per-level credit was too generous (it started as soon as QB had a completed level) and the `cost + 1` tickspeed reserve made "spend all your Quettabytes" unreachable. Credit is now gated on the Spent QB achievement (`quettaSpent` / `lastTierSpent`: run-scoped `lastTierEarnedThisRun` plus a 0 QB balance). Last-tier tickspeed requirement is `cost` so that spend is possible. The credit itself is exactly 1 unit per `10 / (1 + log10 completed levels)` s (floor 10 ms), not 1 per level per 10 s, with an elapsed-seconds timer (`lastTierLevelCreditTimer`) instead of a fractional-unit accumulator. `buyTickspeedMultiplier` runs `detectAchievements` so the badge latches before a same-tick Auto Scale Up / Overclock / Purge can wipe the run flag.

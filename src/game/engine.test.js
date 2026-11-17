@@ -359,6 +359,7 @@ import {
   isDiskWriteCacheCollectPaused,
   mergeRunPeaks,
   tickGame,
+  getLastTierLevelCreditIntervalSeconds,
   tickIntroAutoInvest,
   isSpeedUpgradeArmable,
   upgradePoolSpeed,
@@ -7924,20 +7925,20 @@ describe('buyTickspeedMultiplier', () => {
   const ninthTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 2]
   const unlockedNinthTierState = () => withOwned(createInitialGameState(), ninthTier.id, 1)
 
-  it('last tier: level 1 → 2 requires 11 owned and spends the full 10, with no autobuyer unlock', () => {
-    const state = withResource(unlockedLastTierState(), lastTier.id, 11)
+  it('last tier: level 1 → 2 requires 10 owned and spends the full 10, with no autobuyer unlock', () => {
+    const state = withResource(unlockedLastTierState(), lastTier.id, 10)
     expect(state.autobuyers[lastTier.id]).toBeNull()
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
-    expect(after.resources[lastTier.id]).toBe(1)
-    expect(after.owned[lastTier.id]).toBe(1)
+    expect(after.resources[lastTier.id]).toBe(0)
+    expect(after.owned[lastTier.id]).toBe(0)
   })
 
-  it('last tier: level 2 → 3 requires 101 owned and spends the full 100', () => {
-    const state = withResource(withTickspeedLevel(unlockedLastTierState(), lastTier.id, 2), lastTier.id, 101)
+  it('last tier: level 2 → 3 requires 100 owned and spends the full 100', () => {
+    const state = withResource(withTickspeedLevel(unlockedLastTierState(), lastTier.id, 2), lastTier.id, 100)
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.tickspeedLevels[lastTier.id]).toBe(3)
-    expect(after.resources[lastTier.id]).toBe(1)
+    expect(after.resources[lastTier.id]).toBe(0)
   })
 
   it('last tier: refuses below the full requirement', () => {
@@ -8002,7 +8003,7 @@ describe('buyTickspeedMultiplier', () => {
 
 describe('getTickspeedMultiplierSpend / getTickspeedMultiplierRequirement', () => {
   it('last tier spends its full cost like every tier', () => {
-    expect(getTickspeedMultiplierRequirement(lastTier.id, 3)).toBe(101)
+    expect(getTickspeedMultiplierRequirement(lastTier.id, 3)).toBe(100) // may spend down to exactly 0
     expect(getTickspeedMultiplierSpend(lastTier.id, 3)).toBe(100)
   })
 
@@ -12688,20 +12689,28 @@ describe('Compute Boost lanes', () => {
 })
 
 describe('last-tier level credit', () => {
-  const credited = (levels, seconds) => {
+  const credited = (levels, seconds, earned = true) => {
     const tier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
     let state = withMoney(withOwned(createInitialGameState(), tier.id, 1), 0)
-    state = { ...state, purchaseLevels: { ...state.purchaseLevels, [tier.id]: levels + 1 } }
+    state = { ...state, achievements: { ...state.achievements, earned: { quettaSpent: earned } }, purchaseLevels: { ...state.purchaseLevels, [tier.id]: levels + 1 } }
     for (let i = 0; i < seconds; i += 1) state = tickGame(1)(state)
     return state.resources[tier.id] ?? 0
   }
 
-  it('credits 1 per completed level per 10 s, independent of the balance', () => {
-    expect(credited(3, 10)).toBe(3)
+  it('credits logarithmically in completed levels, independent of the balance', () => {
+    expect(getLastTierLevelCreditIntervalSeconds(0)).toBe(Infinity)
+    expect(getLastTierLevelCreditIntervalSeconds(1)).toBeCloseTo(10)
+    expect(getLastTierLevelCreditIntervalSeconds(10)).toBeCloseTo(5)
+    expect(getLastTierLevelCreditIntervalSeconds(100)).toBeCloseTo(10 / 3)
+    expect(getLastTierLevelCreditIntervalSeconds(Infinity)).toBe(0.01) // floored at 10 ms
     expect(credited(1, 20)).toBe(2)
+    expect(credited(10, 20)).toBe(4)
+    expect(credited(100, 20)).toBe(6)
     expect(credited(0, 10)).toBe(0)
-    // Accrues continuously (fractions carry), not in 10 s batches: 3 levels → 1 unit after ~3.4 s.
-    expect(credited(3, 4)).toBe(1)
+    expect(credited(10, 20, false)).toBe(0) // gated behind the Spent QB achievement
+    // Whole units only, one per interval: nothing until the first interval elapses, then exactly 1.
+    expect(credited(10, 4)).toBe(0)
+    expect(credited(10, 5)).toBe(1)
   })
 })
 

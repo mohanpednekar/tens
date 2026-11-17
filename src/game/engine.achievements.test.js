@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  createInitialGameState, detectAchievements, eraGame, getCompletedAchievementGroups, isAchievementEarned,
-  overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
+  buyTickspeedMultiplier, buyTierQuantity, createInitialGameState, detectAchievements, eraGame,
+  getCompletedAchievementGroups, isAchievementEarned, overclockGame, purgeGame, resetByteFoundry,
+  scaleUpGame, tapIntroBit, tickGame,
 } from './engine'
 import { ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
 
@@ -18,6 +19,7 @@ const lateGame = () => {
     purchased: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 5])),
     globalTickspeedMultiplier: 40,
     overclockLastClaimCompletedLevels: 5,
+    lastTierEarnedThisRun: true, // QB held earlier this run, balance now 0
   }
 }
 
@@ -26,6 +28,46 @@ describe('achievements registry', () => {
     expect(new Set(ACHIEVEMENT_DEFINITIONS.map(d => d.id)).size).toBe(ACHIEVEMENT_DEFINITIONS.length)
     const groups = new Set(ACHIEVEMENT_GROUPS.map(g => g.id))
     expect(ACHIEVEMENT_DEFINITIONS.every(d => groups.has(d.group))).toBe(true)
+  })
+})
+
+describe('Spent QB', () => {
+  const lastId = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
+  it('needs QB earned this run AND a zero balance', () => {
+    const base = createInitialGameState()
+    expect(isAchievementEarned(detectAchievements(base), 'quettaSpent')).toBe(false)
+    expect(isAchievementEarned(detectAchievements({ ...base, lastTierEarnedThisRun: true }), 'quettaSpent')).toBe(true)
+    const holding = { ...base, lastTierEarnedThisRun: true, resources: { ...base.resources, [lastId]: 3 } }
+    expect(isAchievementEarned(detectAchievements(holding), 'quettaSpent')).toBe(false)
+  })
+
+  it('a tick that sees a QB balance marks the run; purge clears the mark', () => {
+    const base = createInitialGameState()
+    const held = tickGame(1)({ ...base, resources: { ...base.resources, [lastId]: 2 }, owned: { ...base.owned, [lastId]: 2 } })
+    expect(held.lastTierEarnedThisRun).toBe(true)
+    expect(purgeGame({ ...held, resources: { ...held.resources, [MONEY_ID]: PURGE_THRESHOLD } }).lastTierEarnedThisRun).toBe(false)
+  })
+
+  it('buying then spending to 0 without a tick earns Spent QB, and Scale Up keeps it', () => {
+    const last = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const base = createInitialGameState()
+    const funded = {
+      ...base,
+      owned: { ...base.owned, [lastId]: 1 },
+      resources: { ...base.resources, [lastId]: 0, [MONEY_ID]: last.baseCost },
+    }
+    const held = buyTierQuantity(lastId, 1)(funded)
+    expect(held.lastTierEarnedThisRun).toBe(true)
+    expect(held.resources[lastId]).toBe(1)
+    const ready = { ...held, resources: { ...held.resources, [lastId]: 10 }, owned: { ...held.owned, [lastId]: 10 } }
+    const spent = buyTickspeedMultiplier(lastId)(ready)
+    expect(spent.resources[lastId]).toBe(0)
+    expect(isAchievementEarned(spent, 'quettaSpent')).toBe(true)
+    const scaled = {
+      ...spent,
+      purchaseLevels: { ...spent.purchaseLevels, [TIER_DEFINITIONS[0].id]: 4 },
+    }
+    expect(isAchievementEarned(scaleUpGame(scaled), 'quettaSpent')).toBe(true)
   })
 })
 
