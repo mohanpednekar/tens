@@ -12700,6 +12700,8 @@ describe('last-tier level credit', () => {
     expect(credited(3, 10)).toBe(3)
     expect(credited(1, 20)).toBe(2)
     expect(credited(0, 10)).toBe(0)
+    // Accrues continuously (fractions carry), not in 10 s batches: 3 levels → 1 unit after ~3.4 s.
+    expect(credited(3, 4)).toBe(1)
   })
 })
 
