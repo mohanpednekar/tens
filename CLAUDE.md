@@ -763,6 +763,7 @@ into `main`, and do not rename it with an agent/session suffix.
 heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
 **No link styling:** it's a game — never underline (solid, dotted or on hover) just because something is
 clickable; use `cursor: pointer` and a `:focus-visible` outline instead.
+**Minimal UI text (standing rule, all future work):** game screens carry only the text strictly needed (labels, numbers, state). Explanations, rules, hints and flavor go in an expandable description (disclosure per the convention above, or the Manual) — never inline.
 **Segmented choices** (pick-one controls like the Boost preset): full width, equal-width buttons with a text label beside the icon — never tiny icon-only squares (`docs/COMPONENTS_REFERENCE.md`).
 
 ## Path aliases
