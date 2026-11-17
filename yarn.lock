@@ -4912,12 +4912,13 @@ pure-rand@^8.0.0:
   resolved "https://registry.yarnpkg.com/pure-rand/-/pure-rand-8.4.2.tgz#c83a7284ba06fe80e22d04077c48cd93dbecd883"
   integrity sha512-vvuOGgcuPJAirlHvuQw1TrOiw7ptaIXXmIbNuiNOY6lNGJJH49PQ1Kj4nd783nPdQhQdicgOjVI2yI/9BD6/Ng==
 
-qs@6.15.1:
-  version "6.15.1"
-  resolved "https://registry.yarnpkg.com/qs/-/qs-6.15.1.tgz#bdb55aed06bfac257a90c44a446a73fba5575c8f"
-  integrity sha512-6YHEFRL9mfgcAvql/XhwTvf5jKcOiiupt2FiJxHkiX1z4j7WL8J/jRHYLluORvc1XxB5rV20KoeK00gVJamspg==
+qs@6.15.1, qs@^6.17.1:
+  version "6.17.1"
+  resolved "https://registry.yarnpkg.com/qs/-/qs-6.17.1.tgz#43ac71d29ca0e9d0eed16a218e35b6cde5628e81"
+  integrity sha512-jd3COkaKVgGUW+ZHyEHCG9bH7RoaaiWuMgzsIBjUMVjLAaWGWpoUAVwljVvBHxRu/2qEHnadLGZrkutYUBPQJA==
   dependencies:
-    side-channel "^1.1.0"
+    es-define-property "^1.0.1"
+    side-channel "^1.1.1"
 
 re2js@^2.8.3:
   version "2.9.1"
