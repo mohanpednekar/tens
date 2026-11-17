@@ -44,8 +44,9 @@ import {
 } from './engine'
 import { BITS_PER_BYTE, DAILY_CHALLENGES_FEATURE, MONEY_ID, TIER_DEFINITIONS } from './layers'
 
-// Bump whenever generator data or the reference bot changes; a run on another version is dropped.
-export const DAILY_GENERATOR_VERSION = 4
+// Bump whenever generator data, the reference bot, or the engine behavior the generator simulates (e.g. the order
+// automations run in within a tick) changes; a run on another version is dropped.
+export const DAILY_GENERATOR_VERSION = 5
 export const DAILY_MAX_CREDITS = 4
 // Candidates per (date, format) before the fixed known-good fallback (no modifiers, no head start) is used.
 export const DAILY_MAX_GENERATION_ATTEMPTS = 8
