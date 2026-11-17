@@ -300,8 +300,12 @@ describe('peaks', () => {
     let state = startDailyRun('10h', T0)(purged())
     const run = state.daily.runs['10h']
     // Every tier sits at 5 completed levels — past any Scale Up requirement — but the tracker has not seen it yet.
-    state = withRun(state, '10h', { game: { ...run.game, purchaseLevels: Object.fromEntries(Object.keys(run.game.purchaseLevels).map(id => [id, 6])) } })
+    // Release Auto Scale Up first, THEN inject the levels straight into the game: no action runs in between, so
+    // nothing but the engine's own sampling inside the next tick can have seen them.
     state = playDailyRun('10h', 'automation', { key: 'scaleUp', enabled: true }, T0)(state)
+    const released = state.daily.runs['10h'].game
+    state = withRun(state, '10h', { game: { ...released, purchaseLevels: Object.fromEntries(Object.keys(released.purchaseLevels).map(id => [id, 6])) } })
+    expect(state.daily.runs['10h'].metrics['levels:tier01']).toBe(0)
     const after = tickDailyRuns(T0 + DAILY_FORMAT_BY_ID['10h'].stepSeconds * 1000)(state)
     const result = after.daily.runs['10h']
     if (!result) return expect(after.daily.results['2026-11-12']['10h']).toBeTruthy() // the objective itself was met
