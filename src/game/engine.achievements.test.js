@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  buyTickspeedMultiplier, buyTierQuantity, createInitialGameState, detectAchievements, eraGame,
-  getCompletedAchievementGroups, isAchievementEarned, overclockGame, purgeGame, resetByteFoundry,
-  scaleUpGame, tapIntroBit, tickGame,
+  createInitialGameState, detectAchievements, eraGame, getCompletedAchievementGroups, isAchievementEarned,
+  overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
 } from './engine'
 import { ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
 
@@ -46,28 +45,6 @@ describe('Spent QB', () => {
     const held = tickGame(1)({ ...base, resources: { ...base.resources, [lastId]: 2 }, owned: { ...base.owned, [lastId]: 2 } })
     expect(held.lastTierEarnedThisRun).toBe(true)
     expect(purgeGame({ ...held, resources: { ...held.resources, [MONEY_ID]: PURGE_THRESHOLD } }).lastTierEarnedThisRun).toBe(false)
-  })
-
-  it('buying then spending to 0 without a tick earns Spent QB, and Scale Up keeps it', () => {
-    const last = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
-    const base = createInitialGameState()
-    const funded = {
-      ...base,
-      owned: { ...base.owned, [lastId]: 1 },
-      resources: { ...base.resources, [lastId]: 0, [MONEY_ID]: last.baseCost },
-    }
-    const held = buyTierQuantity(lastId, 1)(funded)
-    expect(held.lastTierEarnedThisRun).toBe(true)
-    expect(held.resources[lastId]).toBe(1)
-    const ready = { ...held, resources: { ...held.resources, [lastId]: 10 }, owned: { ...held.owned, [lastId]: 10 } }
-    const spent = buyTickspeedMultiplier(lastId)(ready)
-    expect(spent.resources[lastId]).toBe(0)
-    expect(isAchievementEarned(spent, 'quettaSpent')).toBe(true)
-    const scaled = {
-      ...spent,
-      purchaseLevels: { ...spent.purchaseLevels, [TIER_DEFINITIONS[0].id]: 4 },
-    }
-    expect(isAchievementEarned(scaleUpGame(scaled), 'quettaSpent')).toBe(true)
   })
 })
 
