@@ -52,7 +52,28 @@ describe('autonomous-maintenance.yml slot schedule', () => {
   const claude = steps.find((step) => step.id === 'claude');
 
   it('fires at 4am/10am/4pm/10pm IST (UTC 22:30, 04:30, 10:30, 16:30)', () => {
-    expect(workflow.on.schedule).toEqual([{ cron: '30 22,4,10,16 * * *' }]);
+    expect(workflow.on.schedule).toEqual([
+      { cron: '30 22 * * *' },
+      { cron: '30 4 * * *' },
+      { cron: '30 10 * * *' },
+      { cron: '30 16 * * *' },
+    ]);
+  });
+
+  it('resolves a scheduled firing from its own cron entry, not the clock', () => {
+    expect(slot.env.EVENT_SCHEDULE).toBe('${{ github.event.schedule }}');
+    for (const { cron } of workflow.on.schedule) {
+      expect(slot.run).toContain(`"${cron}")`);
+    }
+    expect(slot.run).toContain('"30 22 * * *") clock=04');
+    expect(slot.run).toContain('"30 4 * * *")  clock=10');
+    expect(slot.run).toContain('"30 10 * * *") clock=16');
+    expect(slot.run).toContain('"30 16 * * *") clock=22');
+  });
+
+  it('tells the agent to finish the adversarial review before the headless run ends', () => {
+    const compose = steps.find((step) => step.id === 'compose-prompt');
+    expect(compose.run).toContain('Run that reviewer in the FOREGROUND');
   });
 
   it('resolves a model per kind and passes it to the Claude step', () => {

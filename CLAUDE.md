@@ -13,12 +13,12 @@ powers of ten. No routing library, no backend — state lives in React and persi
 (Foundry → Power → Compute → Factory → Firmware → Challenges → More) — not a router (see "Architecture"):
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
-`MainPage` (tier ladder), `PerksPage` (after first Prestige: 🤖 Automation / 🏁 Challenges / ✦ Prestige icon
+`MainPage` (tier ladder), `PerksPage` (Firmware, after first Prestige: 🤖 Automation / ✦ Prestige icon
 tabs — one row per automation spanning unlock → pause → speed; Compression, Overflow mode, Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
-second-level tabs). More (Manual / Releases / Settings) is always available, including during the
-Byte Foundry gate; only Factory stays progress-gated. A third More entry, **Dev Mode**
+second-level tabs). More (Manual / Releases / Achievements / Settings) is always available, including during the
+Byte Foundry gate; only Factory stays progress-gated. A further More entry, **Dev Mode**
 (`DevModePage`), renders only in a dev build (`import.meta.env.DEV`) — see "Dev Mode".
 
 ## Tech stack
@@ -279,6 +279,7 @@ outright), saying so when it deviates from lowest-number order.
   `claude/auto-*`/`devin/auto-*` PRs via the update-branch API.
 - `release.yml` — deterministic: on a `package.json` push to `main`, tags `v<x.y.z>` if absent and creates the GitHub
   Release from that version's `CHANGELOG.md` section ("Changelog convention").
+- `codeql.yml`, `mutation-testing.yml`, `mobile-build.yml` — non-agent scanning/build workflows (`docs/AUTOMATION.md`).
 - `main-ci-heal.yml` — on a failed `CI` run on `main`: reruns failed jobs once (flakiness check), and only if that
   also fails opens a `claude/heal-main-*` fix PR (#37; `docs/AUTOMATION.md` "Main CI heal").
 - `revert-deploy.yml` — manual only (#594): given a known-good `target_sha`, opens a PR restoring `main`'s tree to it
@@ -337,12 +338,21 @@ for) plus a pointer to the reference doc — write the full detail there, not he
 full here if no reference doc exists yet for that area (then consider whether the change warrants
 creating one).
 
+**Never read a large reference doc whole.** `docs/DESIGN_HISTORY.md` (~200k tokens) and
+`docs/ECONOMY_REFERENCE.md` (~90k) cost more than everything else in a session combined, and
+`MAINPAGE_REFERENCE.md`/`AUTOMATION.md` are ~15-30k each. "Read it before touching X" below always
+means: `grep -n '^##' <doc>` (or grep the identifier you are changing), then Read only the matching
+sections with `offset`/`limit`. State a fact from these docs only after reading that section — never
+from memory of an earlier session or from this file's summary alone.
+
 **`AGENTS.md`** (repo root) is a condensed mirror of this file for non-Claude AI tools (Codex, Cursor,
 etc. — Claude Code itself only reads `CLAUDE.md`). It declares itself non-authoritative and says to fix
 drift in the same change — whenever a change here touches something `AGENTS.md` also states (page
 count/names, field names, mechanic summaries, architecture description), update `AGENTS.md`'s condensed
 version in the same commit. It once drifted significantly (stale page count, a renamed field, a
 long-superseded Byte Foundry mechanic) before being resynced; don't let that recur.
+`.github/copilot-instructions.md` (Copilot's PR conventions) is a third, much shorter copy of the
+"Pull requests" rules — keep it consistent when those change.
 
 ### Changelog convention
 
@@ -410,6 +420,9 @@ src/
     engine.js             ← pure state functions (no React, no side effects)
     navAttention.js       ← pure predicates for AppNav attention dots (high/normal; Storage cues fold into Foundry;
                             Compute Flops affordability → `compute`)
+    dailyChallenges.js    ← Daily-challenge logic ("Daily challenges")
+    challengeUi.js        ← pure player-facing helpers for Factory challenge mode (goal/readout formatting), shared
+                            by Firmware and the Factory banner
     useIncrementalGame.js ← React hook: engine ↔ useState + localStorage + tick timer
     storage.js            ← localStorage read/write; every load goes through save-migration/, then forward field
                             merge (`mergeState`); multi-slot saves + Supporter entitlement (unlock code / dummy
@@ -433,10 +446,11 @@ src/
     AutoBoostPresetPicker ← full-width segmented Turbo / Balanced / Eco choice (Firmware → Power Automation)
     icons.js              ← shared glyphs (`COST_ICON` 🏷️ marks every cost)
     BoostBadge, BoostTimerBar, SpeedDetailsPopover, LeadIcon, Switch, Money, BuyMaxToggle (renders nothing until
-    `isBuyMaxUnlocked`), ConfirmDialog, OfflineProgressNotice, StatCard — see COMPONENTS_REFERENCE
+    `isBuyMaxUnlocked`), ConfirmDialog, OfflineProgressNotice, StatCard, ChallengeBanner, ChallengeExitButton — see
+    COMPONENTS_REFERENCE
     IncompatibleSaveNotice ← blocking overlay when a load cleared a pre-schema save; single **Start fresh** action;
                             rendered by `App.jsx` when `incompatibleSaveReason` is set
-  pages/                  ← ChallengesPage (page id `'challenges'`; top tabs 🏁 Factory / 📅 Daily; shown with Firmware), ByteFoundryPage, StoragePage, ComputePage, ComputeFlopsPage, MainPage, PerksPage,
+  pages/                  ← ChallengesPage (page id `'challenges'`; top tabs 🏁 Factory / 📅 Daily; shown with Firmware), AchievementsPage (`'achievements'`, More entry), ByteFoundryPage, StoragePage, ComputePage, ComputeFlopsPage, MainPage, PerksPage,
                             InfoPage, MilestonesPage, SettingsPage, DevModePage (+ `stateFields.js`: pure
                             Variables-tree helpers) — roles in "Architecture"; layout in MAINPAGE_REFERENCE.
                             Page ids: `'foundry'` (also holds Storage), `'boosters'` (Power), `'compute'` (Flops),
@@ -499,25 +513,19 @@ Strict three-layer separation:
    exportSaveJson, applyCloudSave, claimOfflineAdReward, devModeActive, toggleDevMode, setDevState, applyDevStateJson, resetDevState }` — the last five back
    Dev Mode; always present on the return value (not gated by `import.meta.env.DEV`) but consumed only
    by `DevModePage`, whose rendering *is* dev-build-gated, so unreachable from any shipped UI. Every
-   purchase — manual Buy and autobuyer ticks alike — always batches up to the current level's
-   cost-block boundary (see docs/ECONOMY_REFERENCE.md), via a `BUY_QUANTITY` constant
-   (`Number.MAX_SAFE_INTEGER` — a "buy as many as fit" sentinel, not a literal batch size, since the
-   cap is applied dynamically in the engine against the current, possibly-grown block size;
-   deliberately not `Infinity`, which `clampNonNegative` treats as invalid and silently clamps to 0 —
-   see `docs/DESIGN_HISTORY.md` for the incident) passed into `tickGame` as `autobuyerBatchSize` and
-   into `actions.buyTierQuantity` (this replaced a removed player-facing ×1/×10 "Bulk" toggle — no
-   persisted preference). On mount, a one-time `computeInitialGame` helper calls
-   `discardIncompatibleActiveSaveIfNeeded()` (clears the active slot when its payload fails
-   `getSaveIncompatibilityReason`), loads any saved state, and folds in offline progress
-   (`applyOfflineProgress`) before first render whenever elapsed real time (`loadLastSaveTimestamp()`
-   vs. now) warrants it, surfacing an `offlineProgress` summary (dismissed via
-   `dismissOfflineProgress`/`resetGame`) for the "Resumed from sleep" notice only past
-   `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` (10 minutes). Mount only covers time the app was
-   fully torn down (a backgrounded/suspended tab or PWA never remounts), so the live tick loop also
-   tracks its own last firing's wall-clock time and replays any gap past
-   `BACKGROUND_TICK_GAP_THRESHOLD_SECONDS` (2s) through the same `applyOfflineProgress` path — so
-   `offlineProgress` is **not** a mount-time-only, one-shot value. Full detail:
-   `docs/ECONOMY_REFERENCE.md`'s "Offline progress" section.
+   purchase — manual Buy and autobuyer ticks alike — batches up to the current level's cost-block
+   boundary (docs/ECONOMY_REFERENCE.md) via `BUY_QUANTITY` (`Number.MAX_SAFE_INTEGER` — a "buy as many
+   as fit" sentinel, not a batch size; deliberately not `Infinity`, which `clampNonNegative` silently
+   clamps to 0 — incident in `docs/DESIGN_HISTORY.md`), passed into `tickGame` as `autobuyerBatchSize`
+   and into `actions.buyTierQuantity` (no persisted bulk preference). On mount, a one-time
+   `computeInitialGame` helper calls `discardIncompatibleActiveSaveIfNeeded()` (clears the active slot
+   when its payload fails `getSaveIncompatibilityReason`), loads any saved state, and folds in offline
+   progress (`applyOfflineProgress`, elapsed since `loadLastSaveTimestamp()`) before first render; the
+   `offlineProgress` summary (dismissed via `dismissOfflineProgress`/`resetGame`) drives the "Resumed
+   from sleep" notice only past `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` (10 minutes). A
+   suspended tab/PWA never remounts, so the live tick loop also replays any wall-clock gap past
+   `BACKGROUND_TICK_GAP_THRESHOLD_SECONDS` (2s) through the same path — `offlineProgress` is **not** a
+   mount-time-only, one-shot value. Detail: `docs/ECONOMY_REFERENCE.md`'s "Offline progress".
 3. **`MainPage/index.jsx`** — a pure renderer driven by `TIER_DEFINITIONS` and the hook's `state`
    (a `game` prop from `App.jsx`, not its own `useIncrementalGame()` call). Renders each unlocked tier
    as one compact grid row. Purely game — live controls, numbers, status text; top-level destinations
@@ -557,8 +565,8 @@ Strict three-layer separation:
    Pure renderer — spec: `docs/ECONOMY_REFERENCE.md` "PP Compute (Flops)".
 5. **`InfoPage/index.jsx`** — a static Manual page holding every mechanic's evergreen explanation in
    short bullets/sub-headings (what used to be MainPage's click-to-expand `InfoDetails` disclosures —
-   Overview, Byte Foundry, Storage, Power, Compute (Flops), Clock Speed, Scale Up, Overclock, Tier
-   Autobuyers, Releases, Prestige, Sleep mode, Reboot). Numbers come from the same `engine.js`/`layers.js`
+   Overview, Prestige ladder, Byte Foundry, Storage, Power, Compute, Clock Speed, Scale Up, Overclock,
+   Tier Autobuyers, Releases, Purge, Sleep mode, Reboot). Numbers come from the same `engine.js`/`layers.js`
    constants the game uses, so they can't drift. Reads no `useIncrementalGame` state — only pure
    constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
    import) — the **only** in-app version surface. Reached via AppNav → More → Manual.
@@ -627,7 +635,7 @@ Reformat Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Pu
 PP reads **Purge Points**; the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). The Purge
 rename is carried through the code too (#987): `state.purge`, `purgeGame`,
 `PURGE_THRESHOLD`, `autoPurge`, automation keys `'speedUp'`/`'purge'` — while Prestige-Point,
-Compression, speed-bonus, `prestigeMuseum` and `metaPrestige` identifiers keep `prestige`. Pre-rename
+Compression, speed-bonus, `prestigeMuseum` identifiers keep `prestige`. Pre-rename
 save keys (`prestige`/`reboot` → `purge`, etc.) are renamed on load by `save-migration/migrateToV3`.
 
 There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with

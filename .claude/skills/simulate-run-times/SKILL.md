@@ -38,10 +38,9 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
 **Bot strategy** (ideal attentive player, fixed across every row):
 
 - **Foundry every tick:** Tap Memory when not full, and tap every VISIBLE pool's own local buffer
-  too (`getVisibleStoragePoolCount` — the same capacity-threshold-AND-disk-build-unlocked gate
-  `ByteFoundryPage` uses to decide which pool cards actually render a Memory tile; a merely
-  disk-build-unlocked pool with no card on screen yet isn't tappable by a real player, so the bot
-  must not tap it either) — the fill-based multiplier — `FILL_MULTIPLIER_*` in
+  too (`getVisibleStoragePoolCount` — the same Capacity-only pool-liveness gate
+  `ByteFoundryPage` uses to decide which pool cards actually render a Memory tile; a pool with no card
+  on screen yet isn't tappable by a real player, so the bot must not tap it either) — the fill-based multiplier — `FILL_MULTIPLIER_*` in
   `layers.js` — is independent per Data Stream/pool, so an attentive player keeps every VISIBLE one
   of them boosted, not just the Data Stream tile; Combine into a Byte when affordable. Byte Foundry
   funds Byte Factory pull-based and fully automatically now (`tickDiskPull`/
@@ -85,7 +84,8 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   multiplier whenever affordable; dump run XP into the last tier's XP-funded tickspeed when the
   min-consumption gate allows.
 - **Soft resets:** Scale Up first while its target advances through the tier ladder
-  (`getScaleUpRequirement`: a flat level 3). Once it targets the final tier, defer Scale Up and
+  (`getScaleUpRequirement`: 3 completed levels for each of the first ten claims, then 6, 9, 12, …
+  for repeated final-tier claims). Once it targets the final tier, defer Scale Up and
   continue climbing until Overclock (`getOverclockRequirement`) fires; otherwise repeatedly taking
   the level-3 Scale Up would prevent the first level-5 Overclock forever. This mirrors Auto Scale
   Up's own final-tier pause.
@@ -152,7 +152,6 @@ imports — leave them alone unless that resolution itself breaks.
 **Do not** reintroduce the old `BUY_QUANTITY = 10` hardcode or a Foundry-skipping bot: both are
 wrong against the current game (real Buy batches to the cost-block boundary;
 `mainGameUnlocked` starts false and only flips via Foundry conversion). Also don't reintroduce
-`getScaleUpRequirement`'s old `scaleUpCount + 6` or last-tier-multiples-of-3 shapes (superseded by
-the flat level-3 target mechanic). `actSoftResets` calls Scale Up first while moving through the
+`getScaleUpRequirement`'s old `scaleUpCount + 6` or last-tier-multiples-of-3 shapes (superseded by the 3-completed-levels target mechanic above). `actSoftResets` calls Scale Up first while moving through the
 tier ladder, then skips it at the final-tier target until Overclock fires; do not turn that branch
 back into an unconditional pair of reset calls, which would starve Overclock's level-5 gate.

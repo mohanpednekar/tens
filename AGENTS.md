@@ -15,8 +15,8 @@ Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rew
 shared bottom `AppNav` in progression order: **Foundry → Power → Compute → Factory → Firmware → Challenges → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
 item, and no second-level Data Stream | Storage tabs). **Firmware** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
-unlock/milestone → pause Switch → speed upgrade / Compression, Overflow mode, Buy max). More (Manual, Releases, Settings) is always available — even
-during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
+unlock/milestone → pause Switch → speed upgrade / Compression, Overflow mode, Buy max). More (Manual, Releases, Achievements, Settings) is always available — even
+during the Byte Foundry gate. A further More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
 production bundle; `yarn build:dev` builds a Dev-Mode-enabled variant published at `/tens/dev/` (own `dev:`-prefixed saves, no backward-compat); see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
 Reformat Byte Foundry live under Settings → Danger zone (see CLAUDE.md's SettingsPage entry for what
@@ -96,7 +96,9 @@ src/
     ComputeFlopsPage/index.jsx ← PP Compute (Flops); nav Compute, page id `'compute'`; reveals at 100 PP
     MainPage/index.jsx     ← the game (Byte Factory); data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← Manual; static mechanic explanations; reads no game state
-    PerksPage/index.jsx    ← Automation / Prestige icon tabs (feature-grouped); AppNav after first Prestige
+    PerksPage/index.jsx    ← Firmware: Automation / Prestige icon tabs (feature-grouped); AppNav after first Prestige
+    ChallengesPage/        ← page id `'challenges'`; top tabs 🏁 Factory / 📅 Daily
+    AchievementsPage/      ← page id `'achievements'`; via AppNav → More
     MilestonesPage/index.jsx ← Releases / Reboot status; via AppNav → More
     SettingsPage/index.jsx ← Supporter / Cloud save / Store / saves / System log / Reboot / Task Manager /
                               Legal / Reset; via AppNav → More
@@ -151,32 +153,30 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 
 ### Byte Foundry
 
-`ByteFoundryPage` is a pre-game tap-to-earn screen every fresh save must pass through once — a
-one-time-ever gate (`latchMainGameUnlocked` — see above) before `MainPage` (`tier01`/Kilobytes onward)
-is reachable. Tapping accumulates bits into the **Data Stream** (Buffer-capped, binary units —
-Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator grown via a single
-**Upgrade Capacity** / **Upgrade Bitrate** actions (one at a time; cost = current capacity / current Speed basis, a click starts a progress bar fed from the Buffer at base Speed × the Data Stream tap bonus; displayed Speed is
-*derived* from the Speed basis as `basis^e` via `getDataStreamSpeedBytesPerSecond`, capped at `Capacity^e`, where `e` starts at 0.5 and increases via a 10%-remaining-gap step per new pool, 10%-toward-next-pool per disk-size step; the first two Compact Pool achievements upgrade that pool's two disk-size steps to 10%-remaining-gap (`getDataStreamSpeedExponent`); not purchased) — entirely OUTSIDE the
-forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a separate fill-based
-multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer
-fullness; taps never speed a fill — a Data Stream ping speeds Upgrade Capacity/Bitrate, a pool ping speeds that pool's consumers (disks, merges, provisioning, lake). Disks (`StoragePage`) fill from their pool buffer (larger sizes via a write cache; clicking an empty disk
-also feeds it from smaller disks at the same time) and pull into Factory automatically, with no manual
-redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too (a Booster acquisition's first lake fill needs a full pool Staging, then it only needs the pool's disks full, no provisioning and Staging above the read-cache reservation) — but Cells,
-which spend banked Data Lake units for Cells/Batteries/Boost (`ComputePage`, nav **Power**), only
-buy via a single per-lake "🏷️ `<cost>`" control: it buys immediately if affordable, or arms a one-shot
-`autoConvertActive` flag that fills-then-buys exactly 1 over subsequent ticks and stops (never a
-persistent auto-buy loop) while its Storage pool is incomplete. Once that pool reaches 9/9/9 (latched per lake for the Reboot cycle via `boosterAuto`, surviving resets), the control
-becomes a non-clickable cost label and every affordable Booster converts automatically. Each
-compute-ladder entity caps at 10 normally, or 18 (10 primary + a gradually-filled 8-slot reserve) once
-that tier's outbound merge boundary has auto-merge unlocked. A separate PP **Compute (Flops)** screen
-(`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP. At a pool's 9/9/9, full-lake,
-unreachable-next-Booster wall, its pool-local Flush adds 1,000 permanent lake-only capacity, empties that
-pool's Storage/lake, and free-rebuilds its disks sequentially before persistent automatic Booster
-conversion resumes; rebuilding blocks only new provisioning starts in later pools. Lake speed is 10% of
-its pool's base Bandwidth, +10% additive per flush; the first two flushes also raise the shared Bitrate/pool Bandwidth exponent via permanent achievements. The generator, Disks, Data Lakes, and Compute entities are
-permanent across every real Prestige; Reboot (`buildEraIntroReset`) wipes Disks/Data
-Lakes/Compute entity balances to scratch while keeping `byteCreated`, the `mainGameUnlocked` latch, and
-select automation-unlock flags. The Data Stream balance is kept across ordinary cycles.
+`ByteFoundryPage` is a pre-game tap-to-earn screen every fresh save passes through once — a
+one-time-ever gate (`latchMainGameUnlocked` — see above) before `MainPage`. Pinging fills the **Data
+Stream** (Buffer-capped, binary units — Disks/Data Lakes/caches stay SI); Compile turns it into a
+permanent Byte generator grown via **Upgrade Capacity** / **Upgrade Bitrate** (one at a time, entirely
+OUTSIDE the forced priority order Disk Fill > Provision Disk > Compute Boost). Displayed Speed is
+*derived* (`getDataStreamSpeedBytesPerSecond`, exponent `getDataStreamSpeedExponent`), not purchased.
+A fill-based multiplier scales real delivery only, never the displayed Speed/Bandwidth; taps never
+speed a fill — a Data Stream ping speeds Upgrade Capacity/Bitrate, a pool ping speeds that pool's
+consumers (disks, merges, provisioning, lake). Disks fill from their pool buffer and pull into Factory
+automatically (no redeem step; clicking an empty disk expedites it, drawing on smaller disks too), and
+each pool's overflow feeds its own Data Lake. Lake units buy Boosters/Cells for Power (`ComputePage`)
+through one per-lake "🏷️ `<cost>`" control: buy now if affordable, else arm a one-shot
+`autoConvertActive` fill-then-buy-exactly-1 (never a persistent loop) — until that pool reaches 9/9/9
+(`boosterAuto`, latched per lake for the Reboot cycle, surviving resets), after which the control is a
+non-clickable cost label and every affordable Booster converts automatically. Each compute-ladder
+entity caps at 10, or 18 (10 + a gradually-filled 8-slot reserve) once that tier's outbound merge
+boundary has auto-merge. PP **Compute (Flops)** (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP.
+At a pool's 9/9/9, full-lake, unreachable-next-Booster wall, its pool-local **Flush** adds 1,000
+permanent lake-only capacity, empties that pool's Storage/lake, and free-rebuilds its disks one at a
+time (blocking only new provisioning starts in later pools); lake speed is 10% of its pool's base
+Bandwidth, +10% additive per flush, and a pool's first two flushes raise the Bitrate exponent via
+permanent achievements. The generator, Disks, Data Lakes, Compute entities and the Data Stream balance
+persist across every Purge; Reboot (`buildEraIntroReset`) wipes Disks/Data Lakes/Compute entity
+balances while keeping `byteCreated`, the `mainGameUnlocked` latch, and select automation-unlock flags.
 
 **Same caveat, extended to Data Stream Capacity, pool Bandwidth, Provision Disk, Data Lakes
 (fill/Boosters/capacity ladder), stranded-disk handling, the Buy/Upgrade button precedence, and
@@ -187,9 +187,11 @@ omitted; do not guess at any of it.** See `CLAUDE.md`'s "Economy model"/"Archite
 `ComputePage`, and check `docs/DESIGN_HISTORY.md` first if changing a formula/gate a past iteration may
 already have tried and rejected.
 
-After **100 lifetime Purges**, production no longer freezes at 1 Googol Bytes (optional Prestige
-to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Compression
-upgrades on Firmware → Prestige. Production speed bonus is a one-time 1 PP Firmware → Prestige purchase (×1.1 at 1 Purge, then ×(1 + log10 Purges): ×2 at 10, ×3 at 100, ×4 at 1,000), the PP tutorial — see `docs/ECONOMY_REFERENCE.md`.
+Once **Overflow mode** is unlocked (`isOverflowModeUnlocked`: Auto-Purge's interval upgraded to 1 s
+or less; permanent latch `purge.unboundedUnlocked`), production no longer freezes at 1 Googol Bytes
+and Purge is optional. PP earns 1 per 64 money-exponent powers beyond Googol, improvable via
+Compression on Firmware → Prestige. The production speed bonus is a one-time 1 PP purchase there (×1.1
+at 1 Purge, then ×(1 + log10 Purges)), the PP tutorial — see `docs/ECONOMY_REFERENCE.md`.
 
 For run times / pacing questions — and after any change that can significantly affect ideal Foundry
 or prestige timings — use the `simulate-run-times` skill and publish via `publish-strategy.sh`.
@@ -263,56 +265,31 @@ copies.
 
 ## Automation engine
 
-The unattended pipeline runs the **Claude** engine (`autonomous-maintenance.yml` +
-`autonomous-pr-followup.yml` + `dependabot-pr-followup.yml` + `pr-auto-merge.yml` +
-`automation-self-heal.yml`, via `anthropics/claude-code-action` where an agent is involved), on
-`claude/*` branches, four times daily at 4am/10am/4pm/10pm IST (slot → task kind → model). `automation-self-heal.yml` watches
-orchestration-workflow failures (including the Devin engine's) and opens draft `claude/self-heal-*`
-fixes or `automation-failure` issues (see `docs/AUTOMATION.md`). A parallel **Devin CLI** engine
-(`devin-autonomous-maintenance.yml`, `devin -p --prompt-file <file> --model swe --permission-mode
-dangerous --respect-workspace-trust false`, `workflow_dispatch` only since 2026-10-20) consumes the same `claude-task` backlog on
-`devin/auto-*` branches; its git/`gh` auth is `GH_AUTOMATION_PAT` plus a `DEVIN_CLI_CREDENTIALS` secret,
-and both engines share one 5-open-PR ceiling counting `claude/auto-*` and `devin/auto-*` together.
-`devin/auto-*` PRs get the same follow-up and low-risk auto-merge handling as `claude/auto-*`. The
-Devin prompt has no file-scope restriction — it may edit anything including `.github/workflows/` (its
-own file included); changes still land via PR, and workflow-file changes stay human-gated. It requires the same check-feedback →
-address → resolve → iterate-until-mergeable loop on its own PRs before the run ends (post-run feedback
-is `autonomous-pr-followup.yml`'s job). `pr-conflict-sweep.yml` fires on every push to `main` and
-comments on any open PR that became conflicted (the comment triggers the follow-up agent on automation
-branches) and merges `main` into non-draft behind-but-mergeable automation PRs (update-branch API). `devin-workflow-health.yml` (also `workflow_dispatch` only now) files an `automation-failure` issue
-when the workflow file stops parsing, no run has started in >26h, or the latest run didn't succeed.
-`release.yml` (deterministic, no agent) fires on pushes to `main` that touch `package.json`: it pushes
-annotated tag `v<x.y.z>` and creates a GitHub Release from that version's `CHANGELOG.md` section when
-the tag doesn't already exist — the post-merge half of #52 (pre-merge half: `yarn bump-version`).
+The unattended pipeline runs the **Claude** engine (`autonomous-maintenance.yml`,
+`autonomous-pr-followup.yml`, `dependabot-pr-followup.yml`, `pr-auto-merge.yml`,
+`automation-self-heal.yml`; `anthropics/claude-code-action` where an agent is involved) on `claude/*`
+branches, four times daily at 4am/10am/4pm/10pm IST (slot → task kind → model). A parallel **Devin CLI**
+engine (`devin-autonomous-maintenance.yml`; `workflow_dispatch` only since 2026-10-20, as is
+`devin-workflow-health.yml`) consumes the same `claude-task` backlog on `devin/auto-*` branches (auth:
+`DEVIN_CLI_CREDENTIALS`; git/`gh` via `GH_AUTOMATION_PAT`). Both engines share one 5-open-PR ceiling
+(`claude/auto-*` + `devin/auto-*` together) and the same follow-up and low-risk auto-merge handling.
+The Devin prompt has no file-scope restriction (it may edit `.github/workflows/`, its own file
+included), but every change lands via PR and workflow-file changes stay human-gated. On your own PR,
+loop check feedback → address → resolve threads until mergeable before the run ends (post-run feedback
+is `autonomous-pr-followup.yml`'s job).
 
-Each `autonomous-maintenance.yml` run's job summary carries the agent's closing `## RUN SUMMARY` (task
-picked, why, budget estimate) — the canonical place to see a run's reasoning, incl. no-PR Phase B runs (#74).
-Guard-step context feeds are bounded by standing rule (`docs/AUTOMATION.md`, #81): explicit `--limit`
-+ display cap with a "+N more" note; list feeds render number + title + labels only, never bodies.
-`autonomous-maintenance.yml` also feeds unpromoted Discussions "Ideas" (#66); gap-analysis may promote a
-substantial one to a `claude-task` issue linking the discussion (propose-only).
-Both engines' guard steps also render an orphaned-branch feed (#59,
-`scripts/orphan-branch-scan.sh`): remote `claude/*`/`devin/*`/`cursor/*` branches with no open PR —
-a run deletes merged/closed-issue stale ones and prefers resuming a still-open-issue branch over
-picking a new task. Shared helpers: `.github/actions/setup-node-yarn` (composite setup for trusted
-refs only),
-`scripts/pr-head-guard.sh` (fork/branch check sourced from main), and
-`scripts/claude-deny-settings.sh` (shared deny-list JSON for claude-code-action).
-
-## Reliability: cron dormancy
-
-GitHub Actions disables a workflow's `schedule` (cron) trigger after 60 days with no repository
-activity. `autonomous-maintenance.yml`'s primary mitigation is its own regular activity (merged PRs
-reset the dormancy clock) plus Phase B gap analysis keeping the backlog non-empty; the actual backstop
-is an external, out-of-band periodic check that re-triggers the workflow via `workflow_dispatch` if
-it's gone quiet longer than expected.
-
-## Reliability: concurrent runs
-
-`autonomous-maintenance.yml` carries a top-level `concurrency: { group: autonomous-maintenance,
-cancel-in-progress: false }` block so a manual `workflow_dispatch` can never race an in-progress
-scheduled run — it queues instead, since cancelling mid-task would orphan a `claude/auto-task-*`
-branch.
+Everything else lives in `docs/AUTOMATION.md` — read it before touching any `.github/workflows/*.yml`:
+`pr-conflict-sweep.yml`, `main-ci-heal.yml`, `revert-deploy.yml`, `release.yml` (on a `package.json`
+push to `main`, tags `v<x.y.z>` and creates the GitHub Release from that `CHANGELOG.md` section;
+pre-merge half is `yarn bump-version`), the run summary (`## RUN SUMMARY` in each run's job summary,
+#74), guard-step feeds (bounded by standing rule #81: explicit `--limit` + display cap with "+N more";
+number + title + labels only, never bodies), the Discussions "Ideas" feed (#66, propose-only), the
+orphaned-branch feed (#59, `scripts/orphan-branch-scan.sh`), shared helpers
+(`.github/actions/setup-node-yarn` — trusted refs only, `scripts/pr-head-guard.sh`,
+`scripts/claude-deny-settings.sh`), and two reliability rules: GitHub disables a `schedule` trigger
+after 60 days without repository activity (cron dormancy), and `autonomous-maintenance.yml`'s
+`concurrency` block uses `cancel-in-progress: false` so a manual dispatch queues behind a running task
+instead of orphaning its branch.
 
 ## Code review tooling
 
