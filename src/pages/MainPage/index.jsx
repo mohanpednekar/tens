@@ -40,20 +40,6 @@ const gridCell = css`
   white-space: nowrap;
 `
 
-const Header = styled.header`
-  color: ${props => props.theme.color.text};
-  text-align: center;
-
-  h1 {
-    margin: 0 0 0.25rem;
-    font-family: ${props => props.theme.font.display};
-    font-size: 1.75rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-  }
-`
-
-
 const TierList = styled.div`
   display: flex;
   flex-direction: column;
@@ -600,10 +586,10 @@ const TopPurgeBar = styled.div`
 `
 
 // Reserves space at the top of the page so TopPurgeBar (position: fixed) never overlaps the
-// Header underneath it. $height is measured live from the bar itself (see topPurgeBarHeight)
+// content underneath it. $height is measured live from the bar itself (see topPurgeBarHeight)
 // rather than a fixed constant — TopPurgeBar's flex-wrap lets its content wrap to two lines on
 // narrow viewports (the reminder sentence is long enough to wrap well before 40rem), and a
-// hardcoded single-line height would silently let the taller bar overlap the Header below it.
+// hardcoded single-line height would silently let the taller bar overlap the content below it.
 const TopPurgeBarSpacer = styled.div`
   height: ${props => props.$height}px;
 `
@@ -1121,7 +1107,7 @@ const MainPage = ({ game }) => {
   // TopPurgeBar's own rendered height, measured live rather than assumed — its flex-wrap lets
   // the reminder sentence wrap to two lines on narrow viewports, and both TopPurgeBarSpacer
   // (below) and StickyBalances' stuck offset need the bar's *actual* height to avoid the fixed bar
-  // overlapping the Header/balances underneath it. 60 (3.75rem at the default 16px root) is the
+  // overlapping the content/balances underneath it. 60 (3.75rem at the default 16px root) is the
   // single-line fallback used before this was measured, kept as the initial/no-ResizeObserver
   // value so behavior is unchanged in environments without ResizeObserver (e.g. jsdom in tests).
   const topPurgeBarRef = useRef(null)

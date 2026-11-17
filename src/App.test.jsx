@@ -4804,6 +4804,18 @@ describe('Byte Foundry Compute Boost', () => {
   })
 
 
+  test('Power keeps its h1 (hidden visually) once a boost timer bar takes the top of the screen', () => {
+    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3 })
+    render(<App />)
+    openBoosters()
+    expect(screen.getByRole('heading', { level: 1, name: /^⚡ power$/i }).tagName).toBe('H1')
+
+    fireEvent.click(screen.getByRole('button', { name: /activate turbo compute boost/i }))
+
+    const heading = screen.getByRole('heading', { level: 1, name: /^⚡ power$/i })
+    expect(heading.closest('header')).toBeNull()
+  })
+
   test('activating a boost spends exactly 1 Compute Cell and shows its own timer bar', () => {
     seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3 })
     render(<App />)
