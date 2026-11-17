@@ -12750,6 +12750,20 @@ describe('run peaks (Daily challenge runs)', () => {
     expect(isAchievementEarned(ticked, 'quettaSpent')).toBe(false) // the spend never happened first, so no stall
   })
 
+  it('a bigger reset beats a smaller one in the same tick: Auto Overclock runs before Auto Scale Up', () => {
+    const base = createInitialGameState()
+    const game = {
+      ...base,
+      autoScaleUp: true,
+      autoOverclock: true,
+      purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 6])),
+      owned: { ...base.owned, ...Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 1])) },
+    }
+    const ticked = tickGame(120)(withReadyIntervalBudgets(game))
+    expect(ticked.overclockLastClaimCompletedLevels).not.toBeNull() // Overclock claimed first...
+    expect(ticked.purchaseLevels.tier01).toBe(1)
+  })
+
   it('a tick samples the peaks before Auto Scale Up resets the ladder', () => {
     const base = createInitialGameState()
     const game = {
