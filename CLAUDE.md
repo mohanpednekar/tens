@@ -136,6 +136,15 @@ Then:
 the script). Path 2 (green checks, no review marker) still auto-merges low-risk bot/Dependabot PRs
 as before — it does not mark drafts ready.
 
+**Direct merge (maintainer standing rule; the one exception to "enable only" above):** in
+maintainer-driven interactive sessions, for every PR in this repo: once auto-merge is enabled and the PR is
+green — mergeable (no conflicts; bring a "behind" branch up to date first), every required check complete
+and passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for
+the **current head SHA** — merge it directly (`gh pr merge --merge` / `merge_pull_request`) instead of
+waiting for GitHub. The 10-minute quiet period does not apply. Never for `.github/workflows/**` diffs,
+never over a failing/pending check. Autonomous runs (`autonomous-maintenance.yml`, Devin, dev-team
+roles) keep their never-self-merge rule.
+
 Once anything is pushed to an open PR, stay on it: check CI status and review comments (human and bot —
 Copilot, Codex, etc.), and address every actionable item — fix it directly if small and confident, or
 ask first if ambiguous or architecturally significant. After pushing a fix, check again (new pushes can
@@ -463,7 +472,7 @@ scripts/                  ← bump-version.mjs ("Changelog convention"); generat
                             bot-authored `claude/*`/`devin/*` PRs; used by `autonomous-maintenance.yml` and
                             `autonomous-pr-followup.yml`), backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh,
                             sweep-stalled-auto-prs.sh (#60), sync-release-milestones.sh, configure-ios-plist.mjs,
-                            android-boot-smoke.sh, simulate-challenges.mjs (#1043 challenge balance sim), lint-workflow-shell.mjs, lint-conflict-markers.mjs, check-graphify-freshness.mjs
+                            android-boot-smoke.sh, simulate-challenges.mjs (#1043 challenge balance sim), simulate-daily-challenges.mjs (daily calibration sweep), lint-workflow-shell.mjs, lint-conflict-markers.mjs, check-graphify-freshness.mjs
                             (committed graph vs. working tree + malformed nodes/keys, #761, #1060), classify-claude-failure.sh (transient vs. real
                             Claude-step failure), orphan-branch-scan.sh (#59), verify-maintainer-checklist.mjs —
                             roles in docs/AUTOMATION.md (except resolve-pr-threads/generate-pwa-icons/configure-ios-plist/
@@ -605,9 +614,9 @@ this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop" (n
 
 State `achievements` (`earned`, lifetime `counters.pings`) survives every reset but a full Reset; registry `ACHIEVEMENT_GROUPS`/`ACHIEVEMENT_DEFINITIONS` in `layers.js`; `detectAchievements` runs after each tick/Ping; `AchievementsPage` (page id `'achievements'`, More entry) renders them. Whole feature behind `ACHIEVEMENTS_FEATURE.enabled` (on in every build). The 20 Foundry Reclamation I/II achievements are the first functional bonuses: they permanently upgrade each pool's two within-pool Bitrate exponent steps, retained across Reformat and Reboot. Other achievement bonuses remain deferred. Detail: `docs/ECONOMY_REFERENCE.md` "Achievements".
 
-### Daily challenges (epic #1062, basic slice)
+### Daily challenges (epic #1062)
 
-State `daily` (`runs[formatId]`, `results[dateId][formatId]`) survives every reset but a full Reset; logic in `src/game/dailyChallenges.js` (`generateDailyChallenge`, `startDailyRun`/`tickDailyRuns`/`restartDailyRun`/`forfeitDailyRun`, `buyDailyTier`/`buyDailyClockSpeed`/`scaleUpDailyRun`/`overclockDailyRun`, `getDailyCredits`); every function takes `nowMs`. Each run is an isolated Factory-only game won by Bytes *earned* (production, not balance); Scale Up/Overclock re-grant the start balance. Live in all builds behind `DAILY_CHALLENGES_FEATURE` (rollout switch) + first Purge; UI = Challenges page 📅 Daily tab (`pages/ChallengesPage/DailyTab.jsx`). Deferred: server time, fetched/validated definitions, rewards, weekly/monthly milestones, streak, Checkpoints, Antimatter (#1063–#1072).
+State `daily` (`runs[formatId]`, `results[dateId][formatId]`) survives every reset but a full Reset; logic in `src/game/dailyChallenges.js` (`generateDailyChallenge`, `getDailyChallengeValidation`, `startDailyRun`/`tickDailyRuns`/`restartDailyRun`/`forfeitDailyRun`, `playDailyRun(formatId, actionName, arg, nowMs)`, `getDailyCredits`); every function takes `nowMs`. Each run is an isolated Factory-only game won by reaching its seeded objective (`def.objective`; kinds in `DAILY_OBJECTIVE_KINDS`: reach a balance, own a tier's units, complete tier levels, reach a Clock Speed level, Overclock at a final-tier level; tracked in `run.metrics` from the run game's `runPeaks`, which the engine tick samples before its reset automations), played on the real Factory page: `DailyTab`'s `RunView` renders `MainPage` with the run's game as `state` and actions routed to `actions.dailyPlay` — only the progress is separate. Scale Up/Overclock/Restage re-grant the start balance. A definition (seeded by UTC date + format + `DAILY_GENERATOR_VERSION`) has modified conditions (`DAILY_MODIFIER_POOL` levers, on the run game as `runLevers`, read by the engine's `getChallengeLever`), seeded progress (starts right after a bot warm-up's last soft reset), a seeded starting balance (`startBytes`, 1/2/5 × 10^3–10^9 B; 10 h tops out at 10^8) and an objective drawn from those the reference bot advances, with a calculated target: the bot wins after half the limit and by `botCeilingSeconds` (9 min / 50 min / 8 h), by construction. Runs carry real engine automations by format (`def.automations`, `DAILY_AUTOMATIONS`: 10 min a seeded mix, 1 h buying only, 10 h everything; a switch each in the run header) and advance in whole `stepSeconds` (1 / 5 / 120 s); the 10 h run's reset automations start paused and its bot acts only at 3.5 h check-ins (`DAILY_CHECK_IN_PLANS`). Hard rules: the bot's time must be in 5–9 min / 30–50 min / 5–8 h or the candidate is discarded; a definition reads nothing from the main save; an untouched run reaches neither the target nor `objective.attemptMark` (the lower mark that makes a timed-out run count as attempted). Sweep: `scripts/simulate-daily-challenges.mjs`. Live in all builds behind `DAILY_CHALLENGES_FEATURE` (rollout switch) + first Purge; UI = Challenges page 📅 Daily tab (`pages/ChallengesPage/DailyTab.jsx`). Detail: `docs/ECONOMY_REFERENCE.md` "Daily challenges". Deferred: server time, fetched definitions, rewards, weekly/monthly milestones, streak, Checkpoints, Antimatter (#1063–#1072).
 
 ### Tiers, Prestige, Reboot (Era ascension)
 
@@ -754,6 +763,7 @@ into `main`, and do not rename it with an agent/session suffix.
 heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
 **No link styling:** it's a game — never underline (solid, dotted or on hover) just because something is
 clickable; use `cursor: pointer` and a `:focus-visible` outline instead.
+**Minimal UI text (standing rule, all future work):** game screens carry only the text strictly needed (labels, numbers, state). Explanations, rules, hints and flavor go in an expandable description (disclosure per the convention above, or the Manual) — never inline.
 **Segmented choices** (pick-one controls like the Boost preset): full width, equal-width buttons with a text label beside the icon — never tiny icon-only squares (`docs/COMPONENTS_REFERENCE.md`).
 
 ## Path aliases

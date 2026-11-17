@@ -7,7 +7,7 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getChallengeTier, getChallengeProductionMultiplier, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getScaleUpStepMultiplier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getComputeBoostLanes, getChallengeTier, getChallengeProductionMultiplier, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getScaleUpStepMultiplier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -52,7 +52,6 @@ const Header = styled.header`
     letter-spacing: 0.02em;
   }
 `
-
 
 const TierList = styled.div`
   display: flex;
@@ -600,10 +599,10 @@ const TopPurgeBar = styled.div`
 `
 
 // Reserves space at the top of the page so TopPurgeBar (position: fixed) never overlaps the
-// Header underneath it. $height is measured live from the bar itself (see topPurgeBarHeight)
+// content underneath it. $height is measured live from the bar itself (see topPurgeBarHeight)
 // rather than a fixed constant — TopPurgeBar's flex-wrap lets its content wrap to two lines on
 // narrow viewports (the reminder sentence is long enough to wrap well before 40rem), and a
-// hardcoded single-line height would silently let the taller bar overlap the Header below it.
+// hardcoded single-line height would silently let the taller bar overlap the content below it.
 const TopPurgeBarSpacer = styled.div`
   height: ${props => props.$height}px;
 `
@@ -964,6 +963,11 @@ const MainPage = ({ game }) => {
   const purchaseBlockSize = getPurchaseBlockSize(state)
   const showFullScreenPrompt = isFrozen && isFirstRun
   const showTopPurgeBar = isFrozen && !isFirstRun
+  // PurgeProgressBar is pinned to the bottom (above AppNav). Hide the page title only when
+  // something actually occupies the top: challenge banner, purge-available banner, a daily-run
+  // goal (DailyTab already shows its own heading above this page), or an active boost timer.
+  const hideScreenTitle = Boolean(activeChallenge) || showTopPurgeBar || Boolean(game.goal)
+    || getComputeBoostLanes(state.intro ?? {}).length > 0
   const lastTier = getEffectiveLastTier(state)
   const lastTierLevel = state.purchaseLevels?.[lastTier.id] ?? 1
   const lastTierUnlocked = isTierUnlocked(state)(lastTier)
@@ -1121,7 +1125,7 @@ const MainPage = ({ game }) => {
   // TopPurgeBar's own rendered height, measured live rather than assumed — its flex-wrap lets
   // the reminder sentence wrap to two lines on narrow viewports, and both TopPurgeBarSpacer
   // (below) and StickyBalances' stuck offset need the bar's *actual* height to avoid the fixed bar
-  // overlapping the Header/balances underneath it. 60 (3.75rem at the default 16px root) is the
+  // overlapping the content/balances underneath it. 60 (3.75rem at the default 16px root) is the
   // single-line fallback used before this was measured, kept as the initial/no-ResizeObserver
   // value so behavior is unchanged in environments without ResizeObserver (e.g. jsdom in tests).
   const topPurgeBarRef = useRef(null)
@@ -1191,24 +1195,29 @@ const MainPage = ({ game }) => {
         </>
       )}
 
-      <PurgeProgressBar aria-label="purge progress">
-        <PurgeProgressTrack $percent={purgeProgressPercent}>
+      {/* `game.goal` (a Daily challenge run) replaces the Purge goal on the pinned bar: a run has no Purge. */}
+      <PurgeProgressBar aria-label={game.goal ? 'goal progress' : 'purge progress'}>
+        <PurgeProgressTrack $percent={game.goal ? game.goal.percent : purgeProgressPercent}>
           <VisuallyHidden
             role="progressbar"
-            aria-label={`progress toward ${purgeGoalText}, when Purge becomes available`}
-            aria-valuenow={purgeProgressPercent}
+            aria-label={game.goal ? game.goal.ariaLabel : `progress toward ${purgeGoalText}, when Purge becomes available`}
+            aria-valuenow={game.goal ? game.goal.percent : purgeProgressPercent}
             aria-valuemin={0}
             aria-valuemax={100}
           />
           <PurgeProgressLabel>
-            {`${purgeProgressPercent}% to Purge`}
+            {game.goal ? game.goal.label : `${purgeProgressPercent}% to Purge`}
           </PurgeProgressLabel>
         </PurgeProgressTrack>
       </PurgeProgressBar>
 
-      <Header>
-        <h1>Byte Factory</h1>
-      </Header>
+      {hideScreenTitle ? (
+        <VisuallyHidden as="h1">Byte Factory</VisuallyHidden>
+      ) : (
+        <Header>
+          <h1>Byte Factory</h1>
+        </Header>
+      )}
 
       <BoostTimerBar actions={actions} state={state} />
 

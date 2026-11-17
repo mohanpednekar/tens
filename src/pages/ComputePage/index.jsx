@@ -532,9 +532,14 @@ const ComputePage = ({ game }) => {
 
   return (
     <RootDiv>
-      <Header>
-        <Title>⚡ Power</Title>
-      </Header>
+      {/* Title yields to the boost timer bar at the top (kept as a hidden heading for screen readers). */}
+      {boostActive ? (
+        <VisuallyHidden as="h1">⚡ Power</VisuallyHidden>
+      ) : (
+        <Header>
+          <Title>⚡ Power</Title>
+        </Header>
+      )}
 
       {boostActive && <BoostTimerBar actions={actions} state={state} />}
       {!boostActive && (

@@ -344,6 +344,14 @@ the quiet period above. That enables GitHub auto-merge only; never force-merge, 
 `main`, never GitHub-approve your own PR. Full detail: `CLAUDE.md` Pull requests +
 `docs/AUTOMATION.md` Auto-merge.
 
+**Direct merge (maintainer standing rule; the one exception to "enable only" above):** in
+maintainer-driven interactive sessions, for every PR in this repo: once auto-merge is enabled and the PR is
+green — mergeable (no conflicts; update a "behind" branch first), every required check complete and
+passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for the
+current head SHA — merge it directly (`gh pr merge --merge` / `merge_pull_request`). The quiet period
+does not apply. Never for `.github/workflows/**` diffs, never over a failing/pending check. Autonomous
+runs, Devin and dev-team roles keep their never-self-merge rule.
+
 ## AI-instruction file cost hygiene
 
 `.claude/skills/optimize-ai-files/SKILL.md` trims the token footprint of `CLAUDE.md`/this file/
@@ -398,5 +406,7 @@ publicly visible but isn't legally reusable without written permission. No `CODE
 Data Lakes (#1087): permanent 1-unit buffer (`fillBits`) + ×1/×10/×100/×1000 disks (`depositedUnits`); timed `lakeTransfer`s (`tickDataLakeTransfers`) move the buffer into ×1 disks and consolidate 9 smaller disks of every size + a full buffer into the next; ordinary pool disks fill directly (no write-cache flush). See `docs/ECONOMY_REFERENCE.md` "Hierarchical lake disks".
 
 Challenge mode (epic #1037): state `challenges`, registry `CHALLENGE_DEFINITIONS` and rollout Set `LIVE_CHALLENGE_IDS` (F1–F25 live; UI: Challenges page 🏁 Factory tab + Factory `ChallengeBanner`) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits` in `engine.js`; the three speed-upgrade buyers refuse until a live challenge is completed; definitions may carry run-wide `levers` (production / Clock Speed & Scale Up powers / cost multiplier), and F9's corruption falls with unlocked Foundry disk sizes. See `docs/ECONOMY_REFERENCE.md` "Challenge mode".
+
+Daily challenges (epic #1062): `src/game/dailyChallenges.js`, state `daily`; three seeded Factory-only runs per UTC date (10 min / 1 h / 10 h) with modified conditions (`DAILY_MODIFIER_POOL` levers via `runLevers`), a seeded head start and starting balance, and a seeded objective (reach a balance / own tier units / complete tier levels / Clock Speed level / Overclock level) whose target is calculated from a reference-bot simulation (bot wins after half the limit, by 9 min / 50 min / 8 h). Runs carry engine automations by format (10 min a seeded mix, 1 h buying only, 10 h everything, with switches). UI: Challenges page 📅 Daily tab; a run is played on the `MainPage` component itself, fed the run's own state. See `docs/ECONOMY_REFERENCE.md` "Daily challenges".
 
 Achievements (epic #1046, switch `ACHIEVEMENTS_FEATURE`, on): `achievements` state, `ACHIEVEMENT_*` registry in `layers.js`, `detectAchievements`/`getCompletedAchievementGroups` in `engine.js`, `AchievementsPage` under More. Foundry Reclamation I/II achievements permanently upgrade the two per-pool Bitrate steps across Reformat and Reboot. See `docs/ECONOMY_REFERENCE.md` "Achievements".

@@ -405,7 +405,7 @@ before, just with no dedicated progress display.
 
 **Power page** (`src/pages/ComputePage/index.jsx`, page id `'boosters'`). Power's own dedicated
 screen, split out of ByteFoundryPage — reached via AppNav once Power is revealed. Takes `{ game }`.
-A centered title `⚡ Power` is the page chrome (top-level navigation lives in AppNav).
+A centered title `⚡ Power` is the page chrome (visually replaced by the boost timer bar while a boost runs; a visually hidden h1 stays) (top-level navigation lives in AppNav).
 
 The whole page is deliberately terse — every string beyond a single-word entity label lives in a
 `title`/`aria-label` instead of visible text, and every compute-ladder tier fits its own row in one
@@ -648,7 +648,7 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   theme.color.accent`) — the same low-alpha progress-fill convention the Buy/Upgrade buttons use
   for their own cost-progress fills, already contrast-validated for `theme.color.text` on top of
   it (see `tokens.contrast.test.js`) — rather than a separate label rendered below a solid fill
-  bar. Its own `VisuallyHidden role="progressbar"` reuses `getPurgePercent`.
+  bar. Its own `VisuallyHidden role="progressbar"` reuses `getPurgePercent`. When the `game` prop carries `goal` (`{ percent, label, ariaLabel }` — a Daily challenge run rendered through this page), the bar shows that goal instead (`aria-label="goal progress"`).
 - **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
   `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
   `TierList`/`ScaleUpCard`/`GlobalTickspeedCard`) — token-driven
@@ -698,8 +698,8 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   action button sits *outside* its `Disclosure` as a sibling, so clicking Buy/Upgrade/Overclock
   never touches the disclosure. None of these is prose about *how* the mechanic works, only
   *what its current numbers are*.
-- **Page title.** The MainPage header is `<h1>Byte Factory</h1>` (screen name; AppNav short label **Factory** — not the game name
-  “Tens”). Top-level destinations (Foundry → Power → Compute → Factory → Firmware → More) live in
+- **Page title.** The MainPage heading is a centered `<h1>Byte Factory</h1>` (screen name; AppNav short label **Factory** — not the game name
+  “Tens”). It yields — visually hidden, kept as an h1 for screen readers — while a challenge banner, purge-available banner, daily-run goal (`game.goal`), or boost timer occupies the top. The purge progress bar itself is pinned to the *bottom*, above AppNav. Top-level destinations (Foundry → Power → Compute → Factory → Firmware → More) live in
   `App.jsx`'s shared `AppNav`, not as header buttons here.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against

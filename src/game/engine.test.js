@@ -357,6 +357,7 @@ import {
   getDiskWriteCacheFlushFill,
   isDiskReadCacheFlushPaused,
   isDiskWriteCacheCollectPaused,
+  mergeRunPeaks,
   tickGame,
   tickIntroAutoInvest,
   isSpeedUpgradeArmable,
@@ -12702,5 +12703,41 @@ describe('last-tier level credit', () => {
     expect(credited(3, 10, false)).toBe(0) // gated behind the Spent QB achievement
     // Accrues continuously (fractions carry), not in 10 s batches: 3 levels → 1 unit after ~3.4 s.
     expect(credited(3, 4)).toBe(1)
+  })
+})
+
+describe('run peaks (Daily challenge runs)', () => {
+  it('mergeRunPeaks raises each peak and never lowers one', () => {
+    const state = { ...createInitialGameState(), globalTickspeedMultiplier: 4 }
+    state.resources = { ...state.resources, [MONEY_ID]: 800 }
+    state.owned = { ...state.owned, tier01: 12 }
+    state.purchaseLevels = { ...state.purchaseLevels, tier02: 5 }
+    const peaks = mergeRunPeaks({ balance: 1000, clock: 2, owned: { tier01: 3, tier03: 9 }, purchaseLevels: { tier02: 7 } }, state)
+    expect(peaks.balance).toBe(1000)
+    expect(peaks.clock).toBe(4)
+    expect(peaks.owned.tier01).toBe(12)
+    expect(peaks.owned.tier03).toBe(9)
+    expect(peaks.purchaseLevels.tier02).toBe(7)
+    expect(peaks.purchaseLevels.tier01).toBe(1)
+  })
+
+  it('a main-game tick never gains runPeaks', () => {
+    const ticked = tickGame(1)(createInitialGameState())
+    expect('runPeaks' in ticked).toBe(false)
+  })
+
+  it('a tick samples the peaks before Auto Scale Up resets the ladder', () => {
+    const base = createInitialGameState()
+    const game = {
+      ...base,
+      autoScaleUp: true,
+      purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 6])),
+      runPeaks: { balance: 0, clock: 0, owned: {}, purchaseLevels: {} },
+    }
+    const ticked = tickGame(120)(game)
+    // The ladder was reset inside the tick...
+    expect(ticked.purchaseLevels.tier01).toBe(1)
+    // ...and the levels held just before it are kept on the returned state.
+    expect(ticked.runPeaks.purchaseLevels.tier01).toBe(6)
   })
 })

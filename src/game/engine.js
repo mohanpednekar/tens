@@ -1574,8 +1574,18 @@ const getChallengeEffectTier = (state, effect) => {
   return def?.effect === effect ? def.automation.key : null
 }
 
+// Peaks of an isolated Daily challenge run (see tickGame): `previous` raised to what `state` holds now.
+export const mergeRunPeaks = (previous, state) => ({
+  balance: Math.max(previous.balance ?? 0, clampNonNegative(state.resources?.[MONEY_ID])),
+  clock: Math.max(previous.clock ?? 0, state.globalTickspeedMultiplier ?? 0),
+  owned: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, Math.max(previous.owned?.[tier.id] ?? 0, state.owned?.[tier.id] ?? 0)])),
+  purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, Math.max(previous.purchaseLevels?.[tier.id] ?? 1, state.purchaseLevels?.[tier.id] ?? 1)])),
+})
+
 // Run-wide lever of the active challenge (see tierChallenge in layers.js); `fallback` when none applies.
-const getChallengeLever = (state, name, fallback) => getActiveChallenge(state)?.levers?.[name] ?? fallback
+// `state.runLevers` carries the same levers for an isolated Daily challenge run (dailyChallenges.js) — the main
+// save never has that field.
+const getChallengeLever = (state, name, fallback) => getActiveChallenge(state)?.levers?.[name] ?? state.runLevers?.[name] ?? fallback
 
 // Challenge-driven output factor of one tier (F1 Half Duplex on Kilobytes, plus the run-wide `production` lever) —
 // shared by tickGame's production and MainPage's per-delivery preview so the two always agree.
@@ -2355,7 +2365,13 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
   // Runs last, against this tick's final tier01 level (post autobuyer/Scale Up), so a Disk
   // sized for a level tier01 only just reached THIS tick can still redeem the same tick — see
   // tickStorage above (auto-fill itself already ran earlier, as part of stateAfterIntro).
-  let stateBeforeStorage = stateAfterScaleUp
+  // A Daily challenge run (dailyChallenges.js) carries `runPeaks`: the highest balance, owned units, purchase
+  // levels and Clock Speed level it has reached. They are sampled here from the state just BEFORE the reset
+  // automations above ran, so a milestone an autobuyer reached in this tick still counts when Auto Restage /
+  // Scale Up / Overclock wiped it in the same tick. The main save never has the field.
+  let stateBeforeStorage = stateAfterGlobalTickspeedAutobuyer.runPeaks
+    ? { ...stateAfterScaleUp, runPeaks: mergeRunPeaks(stateAfterGlobalTickspeedAutobuyer.runPeaks, stateAfterGlobalTickspeedAutobuyer) }
+    : stateAfterScaleUp
 
   // DeGoogol (Auto-Prestige interval ≤ OVERFLOW_MODE_MAX_INTERVAL_SECONDS): Auto-Prestige fires
   // here while production keeps running — the frozen branch above is skipped entirely.
