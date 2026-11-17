@@ -782,7 +782,10 @@ cheap while work is still private to the session, heavier once other reviewers c
    directly, rather than merging the instant the sign-off lands. A session actively driving such a
    PR should use `send_later` (or an equivalent short check-in) to re-check after the quiet window.
    The point is to give a concurrently-posting reviewer a moment to land one more comment before the
-   PR locks in. This never overrides the existing rule that a PR touching `.github/workflows/**` stays
+   PR locks in. **Exception — direct merge after auto-merge (maintainer standing rule):** in a
+   maintainer-driven interactive session, a PR with auto-merge enabled, an adversarial `APPROVE` marker
+   for its current head SHA, and everything green (mergeable, no running checks, no unresolved threads)
+   is merged directly with no quiet period. Autonomous runs/Devin/dev-team roles never self-merge. This never overrides the existing rule that a PR touching `.github/workflows/**` stays
    human-gated (Path 2/3 exclusions + the agent auto-merge rule's workflow carve-out; CODEOWNERS
    review isn't ruleset-enforced yet).
 

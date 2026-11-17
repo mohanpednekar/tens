@@ -344,11 +344,13 @@ the quiet period above. That enables GitHub auto-merge only; never force-merge, 
 `main`, never GitHub-approve your own PR. Full detail: `CLAUDE.md` Pull requests +
 `docs/AUTOMATION.md` Auto-merge.
 
-**Direct merge (maintainer standing rule):** once auto-merge is enabled and the PR is green —
-mergeable (no conflicts), every required check complete and passing, nothing still running, no
-unresolved review threads — merge it directly (`gh pr merge --merge`) rather than waiting for GitHub
-to do it. Applies to every PR in this repo; still never for `.github/workflows/**` diffs, never
-bypassing a failing/pending check, and never without the adversarial `APPROVE`.
+**Direct merge (maintainer standing rule; the one exception to "enable only" above):** in
+maintainer-driven interactive sessions, for every PR in this repo: once auto-merge is enabled and the PR is
+green — mergeable (no conflicts; update a "behind" branch first), every required check complete and
+passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for the
+current head SHA — merge it directly (`gh pr merge --merge` / `merge_pull_request`). The quiet period
+does not apply. Never for `.github/workflows/**` diffs, never over a failing/pending check. Autonomous
+runs, Devin and dev-team roles keep their never-self-merge rule.
 
 ## AI-instruction file cost hygiene
 
