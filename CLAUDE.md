@@ -612,7 +612,7 @@ this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop" (n
 
 ### Achievements (epic #1046, basic slice)
 
-State `achievements` (`earned`, lifetime `counters.pings`) survives every reset but a full Reset; registry `ACHIEVEMENT_GROUPS`/`ACHIEVEMENT_DEFINITIONS` in `layers.js`; `detectAchievements` runs after each tick/Ping; `AchievementsPage` (page id `'achievements'`, More entry) renders them. Whole feature behind `ACHIEVEMENTS_FEATURE.enabled` (on in every build). The 20 Foundry Reclamation I/II achievements are the first functional bonuses: they permanently upgrade each pool's two within-pool Bitrate exponent steps, retained across Reformat and Reboot. Other achievement bonuses remain deferred. Detail: `docs/ECONOMY_REFERENCE.md` "Achievements".
+State `achievements` (`earned`, lifetime `counters.pings`) survives every reset but a full Reset; registry `ACHIEVEMENT_GROUPS`/`ACHIEVEMENT_DEFINITIONS` in `layers.js`; `detectAchievements` runs after each tick/Ping; `AchievementsPage` (page id `'achievements'`, More entry) renders them. Whole feature behind `ACHIEVEMENTS_FEATURE.enabled` (on in every build). The 20 Foundry Reclamation I/II achievements are the first functional bonuses: they permanently upgrade each pool's two within-pool Bitrate exponent steps, retained across Reformat and Reboot. **Spent QB** is the second: it gates the last tier's per-level credit (see Scale Up paragraph below). Other achievement bonuses remain deferred. Detail: `docs/ECONOMY_REFERENCE.md` "Achievements".
 
 ### Daily challenges (epic #1062)
 
@@ -743,7 +743,7 @@ tier's **completed levels** (`purchaseLevels − 1`): each of the first ten Scal
 levels on the last unlocked tier; repeated final-tier claims then require 6, 9, 12, …. This is separate
 from the re-reveal mechanic: after a reset, a tier already unlocked by a previous Scale Up within the
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
-Once the **Spent QB** achievement is earned (`'lastTierSpent'`: QB held earlier this run via run-scoped `lastTierEarnedThisRun` — set on last-tier buy and tick — balance now 0; `buyTickspeedMultiplier` latches it before a same-tick reset), the last tier's tickspeed may spend down to 0 and the last tier (QB) is credited exactly 1 unit every `10/(1 + log10 completed levels)` s (min 10 ms) regardless of balance (`getLastTierLevelCreditIntervalSeconds`, `lastTierLevelCreditTimer`; `ECONOMY_REFERENCE`). Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
+The last tier's (QB) tickspeed may always spend down to 0; doing so after holding QB this run (`'lastTierSpent'`: run-scoped `lastTierEarnedThisRun`, set on last-tier buy and tick; `buyTickspeedMultiplier` latches the achievement before a same-tick reset) earns **Spent QB**, and once earned the last tier is credited exactly 1 unit every `10/(1 + log10 completed levels)` s regardless of balance (`getLastTierLevelCreditIntervalSeconds`, `lastTierLevelCreditTimer`; `ECONOMY_REFERENCE`). Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
 completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`
 (the single Overclock level; each claim replaces it, nothing is banked; Clock Speed's step is ×1.1 per level),
 not a fixed 5/8/11/14 ladder (Clock Speed's Overclock-scaled 1% step is under "Tiers, Prestige, Reboot" above).
