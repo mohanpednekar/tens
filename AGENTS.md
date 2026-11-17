@@ -344,6 +344,12 @@ the quiet period above. That enables GitHub auto-merge only; never force-merge, 
 `main`, never GitHub-approve your own PR. Full detail: `CLAUDE.md` Pull requests +
 `docs/AUTOMATION.md` Auto-merge.
 
+**Direct merge (maintainer standing rule):** once auto-merge is enabled and the PR is green —
+mergeable (no conflicts), every required check complete and passing, nothing still running, no
+unresolved review threads — merge it directly (`gh pr merge --merge`) rather than waiting for GitHub
+to do it. Applies to every PR in this repo; still never for `.github/workflows/**` diffs, never
+bypassing a failing/pending check, and never without the adversarial `APPROVE`.
+
 ## AI-instruction file cost hygiene
 
 `.claude/skills/optimize-ai-files/SKILL.md` trims the token footprint of `CLAUDE.md`/this file/

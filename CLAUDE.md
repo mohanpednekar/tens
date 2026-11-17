@@ -132,6 +132,12 @@ Then:
 - **`NEEDS CHANGES` / `BLOCK`**: fix (or stop); do not enable auto-merge; re-run the reviewer after
   the next final commit so the marker matches the new HEAD.
 
+**Direct merge (maintainer standing rule, all future PRs):** once auto-merge is enabled and the PR is
+green — mergeable (no conflicts), every required check complete and passing, nothing still running, no
+unresolved review threads — merge it directly (`gh pr merge --merge` / `merge_pull_request`) instead of
+waiting for GitHub to do it. Still never for `.github/workflows/**` diffs, never over a failing/pending
+check, never without the adversarial `APPROVE`.
+
 `pr-auto-merge.yml` Path 3 also reacts to that APPROVE marker on its own (belt-and-suspenders with
 the script). Path 2 (green checks, no review marker) still auto-merges low-risk bot/Dependabot PRs
 as before — it does not mark drafts ready.
