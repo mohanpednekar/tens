@@ -648,7 +648,7 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   theme.color.accent`) — the same low-alpha progress-fill convention the Buy/Upgrade buttons use
   for their own cost-progress fills, already contrast-validated for `theme.color.text` on top of
   it (see `tokens.contrast.test.js`) — rather than a separate label rendered below a solid fill
-  bar. Its own `VisuallyHidden role="progressbar"` reuses `getPurgePercent`.
+  bar. Its own `VisuallyHidden role="progressbar"` reuses `getPurgePercent`. When the `game` prop carries `goal` (`{ percent, label, ariaLabel }` — a Daily challenge run rendered through this page), the bar shows that goal instead (`aria-label="goal progress"`).
 - **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
   `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
   `TierList`/`ScaleUpCard`/`GlobalTickspeedCard`) — token-driven
