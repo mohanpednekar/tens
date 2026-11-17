@@ -204,6 +204,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
     trigger: `Buy your first ${tier.name}`,
     condition: { kind: 'tierPurchased', tierId: tier.id },
   })),
+  { id: 'quettaSpent', name: 'Spent QB', group: 'tierLadder', trigger: 'Spend all your Quettabytes after earning some in the same run', bonus: 'Every completed Quettabytes level now credits 1 Quettabyte every 10 seconds, regardless of balance', condition: { kind: 'lastTierSpent' } },
   { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Clock Speed level', condition: { kind: 'clockSpeedLevel', min: 1 } },
   { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Clock Speed level 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
   { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', condition: { kind: 'overclocked' } },

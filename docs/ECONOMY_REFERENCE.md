@@ -1761,7 +1761,7 @@ moment the tier itself unlocks — no autobuyer unlock or PP prerequisite of any
   since paying the exact cost would zero out the tier's own generator count). Called both manually and
   — for every tier whose tier tickspeed autobuyer is bought (`tierTickspeedAutobuyer[tier.id]`) —
   automatically by `tickGame`, once per tick, whenever affordable.
-- Every tier (including the last) spends the full `getTickspeedMultiplierCost`; `getTickspeedMultiplierRequirement` is `cost + 1` (keeps one generator).
+- Every tier (including the last) spends the full `getTickspeedMultiplierCost`; `getTickspeedMultiplierRequirement` is `cost + 1` (keeps one generator) — except the last tier, whose requirement is `cost` (it may spend to exactly 0, earning the Spent QB achievement).
 
 #### The global tickspeed multiplier
 
@@ -2796,7 +2796,7 @@ purchases were manual or automatic.
 - `OVERCLOCK_MULTIPLIER_STEP = 0.1` — per-level growth factor for Overclock's own reward (see `getOverclockMultiplier`/`getGlobalTickspeedProductionMultiplier`/`overclockGame`, "Overclock" above) — each claimed level multiplies the global tickspeed multiplier's single per-level step by a further ×1.1, folded directly into that existing track's own step rather than a separate multiplier stacked alongside it; unconditional, no PP unlock needed
 - `OVERCLOCK_REQUIREMENT_STEP = 3` — completed-level growth required between Overclock uses; the first use has a fixed 5-completed-level floor (`getOverclockRequirement` reads `overclockLastClaimCompletedLevels`, falling back to `overclockCount` for older saves)
 - `LAST_TIER_XP_TICKSPEED_STEP = 0.01` — each XP consumed via `consumeXpForLastTierTickspeed` within the current run compounds another 1% into the last tier's own delivery frequency (see `getLastTierXpTickspeedMultiplier`) — the separate Restage upgrade (left of Scale Up below the tier list, available once `isLastTierTickspeedXpUnlocked`), which stacks with that tier's own tickspeed level
-- `LAST_TIER_LEVEL_CREDIT_PER_LEVEL = 1`, `LAST_TIER_LEVEL_CREDIT_PERIOD_SECONDS = 10` — `tickGame` credits the last tier (QB) 1 unit per completed purchase level (`purchaseLevels − 1`) every 10 s into `resources`/`owned`, regardless of its balance; fractional remainder in `lastTierLevelCreditAccumulator`
+- `LAST_TIER_LEVEL_CREDIT_PER_LEVEL = 1`, `LAST_TIER_LEVEL_CREDIT_PERIOD_SECONDS = 10` — once the Spent QB achievement (`quettaSpent`, tier ladder group) is earned, `tickGame` credits the last tier (QB) 1 unit per completed purchase level (`purchaseLevels − 1`) every 10 s into `resources`/`owned`, regardless of its balance; fractional remainder in `lastTierLevelCreditAccumulator`
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1` — a single `consumeXpForLastTierTickspeed` call must spend at least this fraction of the XP already consumed this way (see `getLastTierXpTickspeedMinConsumption`), so repeat consumptions can't trickle in one XP at a time forever
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR = 1` — the practical minimum consumption before any XP has been consumed this way, since `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT` alone computes 0 at that point
 

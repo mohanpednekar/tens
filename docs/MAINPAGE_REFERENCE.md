@@ -847,7 +847,7 @@ below).
 
 The **last tier's** button stays the ordinary resource-funded tickspeed button for the whole cycle,
 and, like every tier, spends the full `getTickspeedMultiplierSpend` (e.g. 10 for the 2nd upgrade, requirement
-`cost + 1`); the visible label shows the spend, the aria-label/progress bar the requirement. Its XP-funded tickspeed is a **separate**
+`cost`, since QB may be spent to 0); the visible label shows the spend, the aria-label/progress bar the requirement. Its XP-funded tickspeed is a **separate**
 **Restage** card left of the Scale Up card (same `SpeedCardsRow`, below the tier list) (`aria-label="restage panel"`, shown once
 `isLastTierTickspeedXpUnlocked`) with a `🧬 {XP} XP` button — see docs/ECONOMY_REFERENCE.md's
 "The last tier's XP-funded tickspeed". The row's Details "tier ×N" multiplier includes the XP bonus.

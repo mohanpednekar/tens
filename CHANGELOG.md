@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Quettabytes level credit** — each completed Quettabytes purchase level now credits 1 Quettabyte every 10 seconds, regardless of the current balance.
+- **Spent QB achievement** — spend all your Quettabytes after earning some in the same run to unlock it; the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, each completed Quettabytes purchase level now credits 1 Quettabyte every 10 seconds, regardless of the current balance.
 
 ### Changed
 

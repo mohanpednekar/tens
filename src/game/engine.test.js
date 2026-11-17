@@ -8001,7 +8001,7 @@ describe('buyTickspeedMultiplier', () => {
 
 describe('getTickspeedMultiplierSpend / getTickspeedMultiplierRequirement', () => {
   it('last tier spends its full cost like every tier', () => {
-    expect(getTickspeedMultiplierRequirement(lastTier.id, 3)).toBe(101)
+    expect(getTickspeedMultiplierRequirement(lastTier.id, 3)).toBe(100) // may spend down to exactly 0
     expect(getTickspeedMultiplierSpend(lastTier.id, 3)).toBe(100)
   })
 
@@ -12687,10 +12687,10 @@ describe('Compute Boost lanes', () => {
 })
 
 describe('last-tier level credit', () => {
-  const credited = (levels, seconds) => {
+  const credited = (levels, seconds, earned = true) => {
     const tier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
     let state = withMoney(withOwned(createInitialGameState(), tier.id, 1), 0)
-    state = { ...state, purchaseLevels: { ...state.purchaseLevels, [tier.id]: levels + 1 } }
+    state = { ...state, achievements: { ...state.achievements, earned: { quettaSpent: earned } }, purchaseLevels: { ...state.purchaseLevels, [tier.id]: levels + 1 } }
     for (let i = 0; i < seconds; i += 1) state = tickGame(1)(state)
     return state.resources[tier.id] ?? 0
   }
@@ -12699,6 +12699,7 @@ describe('last-tier level credit', () => {
     expect(credited(3, 10)).toBe(3)
     expect(credited(1, 20)).toBe(2)
     expect(credited(0, 10)).toBe(0)
+    expect(credited(3, 10, false)).toBe(0) // gated behind the Spent QB achievement
     // Accrues continuously (fractions carry), not in 10 s batches: 3 levels → 1 unit after ~3.4 s.
     expect(credited(3, 4)).toBe(1)
   })

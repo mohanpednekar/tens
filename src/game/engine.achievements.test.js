@@ -18,6 +18,7 @@ const lateGame = () => {
     purchased: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 5])),
     globalTickspeedMultiplier: 40,
     overclockLastClaimCompletedLevels: 5,
+    lastTierEarnedThisRun: true, // QB held earlier this run, balance now 0
   }
 }
 
@@ -26,6 +27,24 @@ describe('achievements registry', () => {
     expect(new Set(ACHIEVEMENT_DEFINITIONS.map(d => d.id)).size).toBe(ACHIEVEMENT_DEFINITIONS.length)
     const groups = new Set(ACHIEVEMENT_GROUPS.map(g => g.id))
     expect(ACHIEVEMENT_DEFINITIONS.every(d => groups.has(d.group))).toBe(true)
+  })
+})
+
+describe('Spent QB', () => {
+  const lastId = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
+  it('needs QB earned this run AND a zero balance', () => {
+    const base = createInitialGameState()
+    expect(isAchievementEarned(detectAchievements(base), 'quettaSpent')).toBe(false)
+    expect(isAchievementEarned(detectAchievements({ ...base, lastTierEarnedThisRun: true }), 'quettaSpent')).toBe(true)
+    const holding = { ...base, lastTierEarnedThisRun: true, resources: { ...base.resources, [lastId]: 3 } }
+    expect(isAchievementEarned(detectAchievements(holding), 'quettaSpent')).toBe(false)
+  })
+
+  it('a tick that sees a QB balance marks the run; purge clears the mark', () => {
+    const base = createInitialGameState()
+    const held = tickGame(1)({ ...base, resources: { ...base.resources, [lastId]: 2 }, owned: { ...base.owned, [lastId]: 2 } })
+    expect(held.lastTierEarnedThisRun).toBe(true)
+    expect(purgeGame({ ...held, resources: { ...held.resources, [MONEY_ID]: PURGE_THRESHOLD } }).lastTierEarnedThisRun).toBe(false)
   })
 })
 

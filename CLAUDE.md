@@ -734,7 +734,7 @@ tier's **completed levels** (`purchaseLevels − 1`): each of the first ten Scal
 levels on the last unlocked tier; repeated final-tier claims then require 6, 9, 12, …. This is separate
 from the re-reveal mechanic: after a reset, a tier already unlocked by a previous Scale Up within the
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
-The last tier (QB) is also credited 1 unit per completed purchase level every 10 s regardless of balance (`lastTierLevelCreditAccumulator`; `ECONOMY_REFERENCE`). Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
+Once the **Spent QB** achievement is earned (`'lastTierSpent'`: QB held earlier this run via run-scoped `lastTierEarnedThisRun`, balance now 0 — the last tier's tickspeed may spend down to 0), the last tier (QB) is credited 1 unit per completed purchase level every 10 s regardless of balance (`lastTierLevelCreditAccumulator`; `ECONOMY_REFERENCE`). Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
 completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`
 (the single Overclock level; each claim replaces it, nothing is banked; Clock Speed's step is ×1.1 per level),
 not a fixed 5/8/11/14 ladder (Clock Speed's Overclock-scaled 1% step is under "Tiers, Prestige, Reboot" above).

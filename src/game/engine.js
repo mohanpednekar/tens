@@ -216,6 +216,8 @@ export const createInitialGameState = () => ({
   }), {}),
   // Fractional remainder of the last tier's per-completed-level credit (see tickGame).
   lastTierLevelCreditAccumulator: 0,
+  // Run-scoped (resets with the Factory cycle): the last tier (QB) has held a non-zero balance this run — see 'lastTierSpent'.
+  lastTierEarnedThisRun: false,
   // Permanent global level (not per-tier — there's only one to buy), null = not yet bought: how
   // many times Prestige Points have been spent to make Prestige itself automatic and faster (see
   // applyAutobuyerMilestones/getAutoPurgeAttemptRate) — never reset by prestige.
@@ -862,9 +864,10 @@ export const getTickspeedMultiplierSpend = (tierId, targetLevel) => {
 }
 
 // Owned count buyTickspeedMultiplier requires before buying `targetLevel`: the requirement itself,
-// and always at least spend + 1 so a purchase never drains the tier to 0 generators.
+// and at least spend + 1 so a purchase never drains the tier to 0 generators — except the last tier (QB), which may
+// spend down to exactly 0 (it is bought with Bits and top of the ladder; emptying it earns the 'quettaSpent' achievement).
 export const getTickspeedMultiplierRequirement = (tierId, targetLevel) =>
-  Math.max(getTickspeedMultiplierCost(tierId, targetLevel), getTickspeedMultiplierSpend(tierId, targetLevel) + 1)
+  Math.max(getTickspeedMultiplierCost(tierId, targetLevel), getTickspeedMultiplierSpend(tierId, targetLevel) + (tierId === getLastTierId() ? 0 : 1))
 
 // Historical PP-cost formula — a tier's autobuyer no longer costs PP to unlock at all; it unlocks
 // automatically at a prestige-count milestone instead (see getAutobuyerUnlockMilestone/
@@ -1341,6 +1344,7 @@ export const isAchievementConditionMet = (state, condition) => {
     case 'tierPurchased': return (state.purchased?.[condition.tierId] ?? 0) > 0 || (state.purchaseLevels?.[condition.tierId] ?? 1) > 1
     case 'clockSpeedLevel': return (state.globalTickspeedMultiplier ?? 0) >= condition.min
     case 'overclocked': return state.overclockLastClaimCompletedLevels != null
+    case 'lastTierSpent': return Boolean(state.lastTierEarnedThisRun) && (state.resources?.[getLastTierId()] ?? 0) === 0
     case 'poolExponentBonus': return (state.intro?.poolExponentBonuses?.[condition.poolIndex] ?? 0) >= condition.min
     default: return false
   }
@@ -2264,7 +2268,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
   let levelCreditAccumulator = stateAfterAutobuyers.lastTierLevelCreditAccumulator ?? 0
   const creditTier = TIER_BY_ID[getLastTierId()]
   const creditLevels = Math.max(0, (stateAfterAutobuyers.purchaseLevels?.[creditTier.id] ?? 1) - 1)
-  if (creditLevels > 0 && isTierUnlocked(stateAfterAutobuyers)(creditTier) && !productionHalted) {
+  if (creditLevels > 0 && isAchievementEarned(stateAfterAutobuyers, 'quettaSpent') && isTierUnlocked(stateAfterAutobuyers)(creditTier) && !productionHalted) {
     levelCreditAccumulator += creditLevels * LAST_TIER_LEVEL_CREDIT_PER_LEVEL * productiveSeconds / LAST_TIER_LEVEL_CREDIT_PERIOD_SECONDS
     const whole = Math.floor(levelCreditAccumulator + TICK_ACCUMULATION_EPSILON)
     if (whole > 0) {
@@ -2277,6 +2281,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
   const producedState = {
     ...stateAfterAutobuyers,
     lastTierLevelCreditAccumulator: levelCreditAccumulator,
+    lastTierEarnedThisRun: Boolean(stateAfterAutobuyers.lastTierEarnedThisRun) || (newResources[creditTier.id] ?? 0) > 0,
     resources: newResources,
     owned: newOwned,
     tierProductionAccumulators: newAccumulators,
@@ -7121,7 +7126,7 @@ export const getTierTickspeedSpend = (state, tierId, targetLevel) => {
     : getTickspeedMultiplierSpend(tierId, level)
 }
 export const getTierTickspeedRequirement = (state, tierId, targetLevel) =>
-  Math.max(getTickspeedMultiplierCost(tierId, getTickspeedChargeLevel(state, tierId, targetLevel)), getTierTickspeedSpend(state, tierId, targetLevel) + 1)
+  Math.max(getTickspeedMultiplierCost(tierId, getTickspeedChargeLevel(state, tierId, targetLevel)), getTierTickspeedSpend(state, tierId, targetLevel) + (tierId === getLastTierId() ? 0 : 1))
 
 // Tier tickspeed challenge rules that forbid the next upgrade outright: F11 gated, F14 capped, F18 chained to the tier below.
 export const isTierTickspeedBlockedByChallenge = (state, tierId) => {
