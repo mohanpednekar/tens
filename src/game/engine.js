@@ -7177,8 +7177,12 @@ export const buyTickspeedMultiplier = tierId => state => {
   const available = state.resources[tier.id] ?? 0
   if (available < getTierTickspeedRequirement(state, tierId, currentLevel + 1)) return state
 
-  return {
+  // Spending the last tier is the only way to empty it, and it proves QB was held this run — so Spent QB is detected
+  // right here, at the moment of the stall (not on a later tick, which a same-tick Auto Scale Up / Overclock / Purge
+  // could pre-empt by wiping the run).
+  return detectAchievements({
     ...state,
+    ...(tierId === getLastTierId() ? { lastTierEarnedThisRun: true } : {}),
     resources: {
       ...state.resources,
       [tier.id]: clampNonNegative(available - cost),
@@ -7191,7 +7195,7 @@ export const buyTickspeedMultiplier = tierId => state => {
       ...state.tickspeedLevels,
       [tierId]: currentLevel + 1,
     },
-  }
+  })
 }
 
 // Autobuyer interval: tier N's autobuyer attempts a purchase every N seconds (1 s … 10 s) until
