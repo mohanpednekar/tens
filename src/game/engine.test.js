@@ -359,7 +359,7 @@ import {
   isDiskWriteCacheCollectPaused,
   mergeRunPeaks,
   tickGame,
-  getLastTierLevelCreditRate,
+  getLastTierLevelCreditIntervalSeconds,
   tickIntroAutoInvest,
   isSpeedUpgradeArmable,
   upgradePoolSpeed,
@@ -12698,18 +12698,18 @@ describe('last-tier level credit', () => {
   }
 
   it('credits logarithmically in completed levels, independent of the balance', () => {
-    expect(getLastTierLevelCreditRate(0)).toBe(0)
-    expect(getLastTierLevelCreditRate(1)).toBeCloseTo(0.1)
-    expect(getLastTierLevelCreditRate(10)).toBeCloseTo(0.2)
-    expect(getLastTierLevelCreditRate(100)).toBeCloseTo(0.3)
-    expect(getLastTierLevelCreditRate(1e308)).toBeCloseTo(30.9) // still below the cap
-    expect(getLastTierLevelCreditRate(Infinity)).toBe(100) // capped at 1 per 10 ms
+    expect(getLastTierLevelCreditIntervalSeconds(0)).toBe(Infinity)
+    expect(getLastTierLevelCreditIntervalSeconds(1)).toBeCloseTo(10)
+    expect(getLastTierLevelCreditIntervalSeconds(10)).toBeCloseTo(5)
+    expect(getLastTierLevelCreditIntervalSeconds(100)).toBeCloseTo(10 / 3)
+    expect(getLastTierLevelCreditIntervalSeconds(Infinity)).toBe(0.01) // floored at 10 ms
     expect(credited(1, 20)).toBe(2)
     expect(credited(10, 20)).toBe(4)
     expect(credited(100, 20)).toBe(6)
     expect(credited(0, 10)).toBe(0)
     expect(credited(10, 20, false)).toBe(0) // gated behind the Spent QB achievement
-    // Accrues continuously (fractions carry), not in batches: 10 levels → 1 unit after 5 s.
+    // Whole units only, one per interval: nothing until the first interval elapses, then exactly 1.
+    expect(credited(10, 4)).toBe(0)
     expect(credited(10, 5)).toBe(1)
   })
 })
