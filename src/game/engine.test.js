@@ -12750,6 +12750,17 @@ describe('run peaks (Daily challenge runs)', () => {
     expect(isAchievementEarned(ticked, 'quettaSpent')).toBe(false) // the spend never happened first, so no stall
   })
 
+  it('the biggest reset wins: DeGoogol Auto-Prestige (Purge) fires before Auto Scale Up in the same tick', () => {
+    const base = createInitialGameState()
+    const game = withAutoPurgeBudget(withOverflowMode(withMoney({
+      ...base,
+      autoScaleUp: true,
+      purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 6])),
+    }, PURGE_THRESHOLD * 2)), 5)
+    const ticked = tickGame(1)(withReadyIntervalBudgets(game))
+    expect(ticked.purge.count).toBe(1) // the Purge ran (a Scale Up first would have zeroed Money and pre-empted it)
+  })
+
   it('a bigger reset beats a smaller one in the same tick: Auto Overclock runs before Auto Scale Up', () => {
     const base = createInitialGameState()
     const game = {

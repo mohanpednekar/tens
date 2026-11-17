@@ -2373,7 +2373,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
   // rate-accumulating budgets above, this is edge-triggered on affordability rather than a banked
   // rate, so it needs no elapsedSeconds scaling — calling tickGame more often (see TICK_RATE_MS)
   // only makes it react sooner after becoming affordable, not more often per real second.
-  // The last tier's XP-funded upgrade has its own PP-unlocked autobuyer (autoXpTickspeed, below).
+  // The last tier's XP-funded upgrade has its own PP-unlocked autobuyer (autoXpTickspeed, the Restage reset above).
   const stateAfterAutomation = TIER_DEFINITIONS.reduce((s, tier) => {
     // Gated on tierTickspeedAutobuyerEnabled (see setTierTickspeedAutobuyerEnabled) — paused
     // behaves exactly as if tierTickspeedAutobuyer were still false, for automation purposes only.
