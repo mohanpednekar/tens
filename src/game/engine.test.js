@@ -12734,6 +12734,22 @@ describe('run peaks (Daily challenge runs)', () => {
     expect('runPeaks' in ticked).toBe(false)
   })
 
+  it('a reset beats a spend in the same tick: Auto Scale Up wipes QB before the QB tickspeed autobuyer can spend it', () => {
+    const last = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const base = createInitialGameState()
+    let game = withTierTickspeedAutobuyer(base, last.id)
+    game = {
+      ...game,
+      autoScaleUp: true,
+      purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 6])),
+      resources: { ...game.resources, [last.id]: 10 }, // exactly the level-2 cost: spending would empty QB
+      owned: { ...game.owned, [last.id]: 10 },
+    }
+    const ticked = tickGame(120)(withReadyIntervalBudgets(game))
+    expect(ticked.purchaseLevels.tier01).toBe(1) // the reset ran
+    expect(isAchievementEarned(ticked, 'quettaSpent')).toBe(false) // the spend never happened first, so no stall
+  })
+
   it('a tick samples the peaks before Auto Scale Up resets the ladder', () => {
     const base = createInitialGameState()
     const game = {

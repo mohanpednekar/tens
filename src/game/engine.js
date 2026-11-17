@@ -2315,6 +2315,51 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     } : {}),
   }
 
+  // RESET PRIORITY: resets (Auto Scale Up, Auto Overclock, DeGoogol Auto-Prestige) always run BEFORE the spends below
+  // (tier / global tickspeed autobuyers, Auto Restage), so a reset and a spend can never conflict in one tick — the
+  // spends then act on the post-reset state.
+  // If Auto Scale Up is bought (see applyAutobuyerMilestones), trigger a Scale Up whenever eligible, at most
+  // once per 'scaleUp' interval. scaleUpGame re-validates the current target's completed-level
+  // requirement (see getScaleUpRequirement) and the production freeze. Gated on autoScaleUpEnabled
+  // (see setAutoScaleUpEnabled); the manual Scale Up button is unaffected.
+  const stateAfterAutoScaleUp = producedState.autoScaleUp
+    && (producedState.autoScaleUpEnabled ?? true)
+    ? runGlobalIntervalAutomation(producedState, elapsedSeconds, 'scaleUp', scaleUpGame)
+    : producedState
+
+  // Auto Overclock (PP unlock): claims Overclock whenever eligible, at most once per interval.
+  // overclockGame re-validates eligibility internally.
+  const stateAfterScaleUp = stateAfterAutoScaleUp.autoOverclock
+    && (stateAfterAutoScaleUp.autoOverclockEnabled ?? true)
+    ? runGlobalIntervalAutomation(stateAfterAutoScaleUp, elapsedSeconds, 'overclock', overclockGame)
+    : stateAfterAutoScaleUp
+
+  // Runs last, against this tick's final tier01 level (post autobuyer/Scale Up), so a Disk
+  // sized for a level tier01 only just reached THIS tick can still redeem the same tick — see
+  // tickStorage above (auto-fill itself already ran earlier, as part of stateAfterIntro).
+  // A Daily challenge run (dailyChallenges.js) carries `runPeaks`: the highest balance, owned units, purchase
+  // levels and Clock Speed level it has reached. They are sampled here from the state just BEFORE the reset
+  // automations above ran, so a milestone an autobuyer reached in this tick still counts when Auto Restage /
+  // Scale Up / Overclock wiped it in the same tick. The main save never has the field.
+  let stateBeforeSpends = producedState.runPeaks
+    ? { ...stateAfterScaleUp, runPeaks: mergeRunPeaks(producedState.runPeaks, producedState) }
+    : stateAfterScaleUp
+
+  // DeGoogol (Auto-Prestige interval ≤ OVERFLOW_MODE_MAX_INTERVAL_SECONDS): Auto-Prestige fires
+  // here while production keeps running — the frozen branch above is skipped entirely.
+  if (
+    isOverflowModeUnlocked(stateBeforeSpends)
+    && autoPurgeActive
+    && clampNonNegative(stateBeforeSpends.resources[MONEY_ID]) >= getPurgeGoalBits(stateBeforeSpends)
+  ) {
+    const budget = stateBeforeSpends.autoPurgeAttemptBudget ?? 0
+    if (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
+      stateBeforeSpends = purgeGame(stateBeforeSpends)
+    }
+  }
+
+
+  // Spends run on the post-reset state.
   // Only a tier whose tierTickspeedAutobuyer is unlocked (see applyAutobuyerMilestones)
   // self-upgrades its own tickspeed multiplier level one step per tick whenever affordable — no
   // manual click needed. buyTickspeedMultiplier re-validates internally (affordability, frozen state, tier
@@ -2332,7 +2377,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
       s, elapsedSeconds, getTierTickspeedIntervalSeconds(s, tier.id), s.tierTickspeedAttemptBudgets?.[tier.id] ?? 0, attempt,
     )
     return { ...next, tierTickspeedAttemptBudgets: { ...next.tierTickspeedAttemptBudgets, [tier.id]: budget } }
-  }, producedState)
+  }, stateBeforeSpends)
 
   // If the global tickspeed multiplier's autobuyer is bought (see applyAutobuyerMilestones), upgrade
   // it automatically the instant it's affordable — no manual click needed. buyGlobalTickspeedMultiplier
@@ -2354,45 +2399,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     ? runGlobalIntervalAutomation(stateAfterGlobalTickspeedAutobuyer, elapsedSeconds, 'restage', s => consumeXpForLastTierTickspeed(s.purge.xp)(s))
     : stateAfterGlobalTickspeedAutobuyer
 
-  // If Auto Scale Up is bought (see applyAutobuyerMilestones), trigger a Scale Up whenever eligible, at most
-  // once per 'scaleUp' interval. scaleUpGame re-validates the current target's completed-level
-  // requirement (see getScaleUpRequirement) and the production freeze. Gated on autoScaleUpEnabled
-  // (see setAutoScaleUpEnabled); the manual Scale Up button is unaffected.
-  const stateAfterAutoScaleUp = stateAfterAutoXp.autoScaleUp
-    && (stateAfterAutoXp.autoScaleUpEnabled ?? true)
-    ? runGlobalIntervalAutomation(stateAfterAutoXp, elapsedSeconds, 'scaleUp', scaleUpGame)
-    : stateAfterAutoXp
-
-  // Auto Overclock (PP unlock): claims Overclock whenever eligible, at most once per interval.
-  // overclockGame re-validates eligibility internally.
-  const stateAfterScaleUp = stateAfterAutoScaleUp.autoOverclock
-    && (stateAfterAutoScaleUp.autoOverclockEnabled ?? true)
-    ? runGlobalIntervalAutomation(stateAfterAutoScaleUp, elapsedSeconds, 'overclock', overclockGame)
-    : stateAfterAutoScaleUp
-
-  // Runs last, against this tick's final tier01 level (post autobuyer/Scale Up), so a Disk
-  // sized for a level tier01 only just reached THIS tick can still redeem the same tick — see
-  // tickStorage above (auto-fill itself already ran earlier, as part of stateAfterIntro).
-  // A Daily challenge run (dailyChallenges.js) carries `runPeaks`: the highest balance, owned units, purchase
-  // levels and Clock Speed level it has reached. They are sampled here from the state just BEFORE the reset
-  // automations above ran, so a milestone an autobuyer reached in this tick still counts when Auto Restage /
-  // Scale Up / Overclock wiped it in the same tick. The main save never has the field.
-  let stateBeforeStorage = stateAfterGlobalTickspeedAutobuyer.runPeaks
-    ? { ...stateAfterScaleUp, runPeaks: mergeRunPeaks(stateAfterGlobalTickspeedAutobuyer.runPeaks, stateAfterGlobalTickspeedAutobuyer) }
-    : stateAfterScaleUp
-
-  // DeGoogol (Auto-Prestige interval ≤ OVERFLOW_MODE_MAX_INTERVAL_SECONDS): Auto-Prestige fires
-  // here while production keeps running — the frozen branch above is skipped entirely.
-  if (
-    isOverflowModeUnlocked(stateBeforeStorage)
-    && autoPurgeActive
-    && clampNonNegative(stateBeforeStorage.resources[MONEY_ID]) >= getPurgeGoalBits(stateBeforeStorage)
-  ) {
-    const budget = stateBeforeStorage.autoPurgeAttemptBudget ?? 0
-    if (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
-      stateBeforeStorage = purgeGame(stateBeforeStorage)
-    }
-  }
+  const stateBeforeStorage = stateAfterAutoXp
 
   return tickStorage(stateBeforeStorage)
 }
