@@ -2470,6 +2470,11 @@ export const getTierSpendableAmount = (state, tier) =>
 export const getTierPurchasedCount = (state, tierId) =>
   state.purchased?.[tierId] ?? 0
 
+// Buying the last tier (QB) marks the run so Spent QB can fire if a later spend in this same cycle
+// empties it, including a purchase that never sits across a tickGame.
+const withLastTierHeldThisRun = (state, tierId) =>
+  tierId === getLastTierId() ? { ...state, lastTierEarnedThisRun: true } : state
+
 const buyTierCore = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = getChallengeTier(state, tierId)
@@ -2512,7 +2517,7 @@ const buyTierCore = tierId => state => {
     },
   }
 
-  return nextState
+  return withLastTierHeldThisRun(nextState, tierId)
 }
 
 export const buyTier = (tierId) => state => applyChallengePurchaseEffects(tierId, state, buyTierCore(tierId)(state))
@@ -2566,7 +2571,7 @@ const buyTierQuantityCore = (tierId, quantity) => state => {
     },
   }
 
-  return nextState
+  return withLastTierHeldThisRun(nextState, tierId)
 }
 
 export const buyTierQuantity = (tierId, quantity) => state => applyChallengePurchaseEffects(tierId, state, buyTierQuantityCore(tierId, quantity)(state))
@@ -7136,11 +7141,12 @@ export const setAutobuyerEnabled = (tierId, enabled) => state => {
 // delivery frequency by another 10% (see getTickspeedProductionMultiplier/
 // getEffectiveTierTickSpeedSeconds), without changing the amount delivered per batch or how
 // often the autobuyer attempts a purchase (see the flat rate in tickGame). resources[tier.id] and
-// owned[tier.id] move together, so requiring only `available >= cost` could drain a tier to
+// owned[tier.id] move together, so requiring only `available >= cost` could drain a non-last tier to
 // exactly 0 generators — production for that tier (and everything cascading from it) would stop
-// even though the purchase "succeeded". Require at least 1 generator left over instead.
-// Challenge-aware tickspeed charge for reaching `targetLevel`: F16 Egress Fees charges the next level's cost; the last
-// tier normally spends only a fraction of its requirement (getTickspeedMultiplierSpend) — F20 Burn Rate spends it all.
+// even though the purchase "succeeded". Require at least 1 generator left over instead, except the
+// last tier (QB), which may spend to 0 (Spent QB).
+// Challenge-aware tickspeed charge for reaching `targetLevel`: F16 Egress Fees charges the next level's cost; F20 Burn Rate
+// spends the full requirement (now the baseline spend for every tier, so F20 is a no-op on spend).
 const getTickspeedChargeLevel = (state, tierId, targetLevel) =>
   targetLevel + (getChallengeEffectTier(state, 'egressFees') === tierId ? 1 : 0)
 export const getTierTickspeedSpend = (state, tierId, targetLevel) => {
@@ -7176,7 +7182,9 @@ export const buyTickspeedMultiplier = tierId => state => {
   const available = state.resources[tier.id] ?? 0
   if (available < getTierTickspeedRequirement(state, tierId, currentLevel + 1)) return state
 
-  return {
+  // detectAchievements here so Spent QB latches on the spend itself, before a same-tick Auto Scale Up /
+  // Overclock / Purge can wipe lastTierEarnedThisRun.
+  return detectAchievements({
     ...state,
     resources: {
       ...state.resources,
@@ -7190,7 +7198,7 @@ export const buyTickspeedMultiplier = tierId => state => {
       ...state.tickspeedLevels,
       [tierId]: currentLevel + 1,
     },
-  }
+  })
 }
 
 // Autobuyer interval: tier N's autobuyer attempts a purchase every N seconds (1 s … 10 s) until

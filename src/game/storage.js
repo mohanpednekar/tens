@@ -533,6 +533,8 @@ const mergeState = rawSaved => {
   // forward via the explicit fallbacks below instead of silently lost to fresh's defaults.
   const {
     lastTierTickspeedXpUnlocked: _removed,
+    // Renamed to lastTierLevelCreditTimer — strip so legacy saves don't keep the dead accumulator.
+    lastTierLevelCreditAccumulator: _removedLastTierLevelCreditAccumulator,
     // Removed mechanics (autobuyer bulk modes, Auto-Prestige Autobuyer) — stripped so legacy saves don't keep dead keys.
     autobuyerBulkLevels: _removedBulk,
     autoPrestigeAutobuyer: _removedAutoPrestigeAutobuyer,

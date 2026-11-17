@@ -7925,20 +7925,20 @@ describe('buyTickspeedMultiplier', () => {
   const ninthTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 2]
   const unlockedNinthTierState = () => withOwned(createInitialGameState(), ninthTier.id, 1)
 
-  it('last tier: level 1 → 2 requires 11 owned and spends the full 10, with no autobuyer unlock', () => {
-    const state = withResource(unlockedLastTierState(), lastTier.id, 11)
+  it('last tier: level 1 → 2 requires 10 owned and spends the full 10, with no autobuyer unlock', () => {
+    const state = withResource(unlockedLastTierState(), lastTier.id, 10)
     expect(state.autobuyers[lastTier.id]).toBeNull()
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.tickspeedLevels[lastTier.id]).toBe(2)
-    expect(after.resources[lastTier.id]).toBe(1)
-    expect(after.owned[lastTier.id]).toBe(1)
+    expect(after.resources[lastTier.id]).toBe(0)
+    expect(after.owned[lastTier.id]).toBe(0)
   })
 
-  it('last tier: level 2 → 3 requires 101 owned and spends the full 100', () => {
-    const state = withResource(withTickspeedLevel(unlockedLastTierState(), lastTier.id, 2), lastTier.id, 101)
+  it('last tier: level 2 → 3 requires 100 owned and spends the full 100', () => {
+    const state = withResource(withTickspeedLevel(unlockedLastTierState(), lastTier.id, 2), lastTier.id, 100)
     const after = buyTickspeedMultiplier(lastTier.id)(state)
     expect(after.tickspeedLevels[lastTier.id]).toBe(3)
-    expect(after.resources[lastTier.id]).toBe(1)
+    expect(after.resources[lastTier.id]).toBe(0)
   })
 
   it('last tier: refuses below the full requirement', () => {

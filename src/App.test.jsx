@@ -677,10 +677,10 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
   const user = userEvent.setup()
 
   // The last tier (Quettabytes) has the cheapest tickspeed base cost (10^1), so level 1 → 2
-  // requires 11 of its own resource (keeps 1 generator) and spends the full 10.
+  // requires 10 of its own resource (it may spend the last unit) and spends the full 10.
   seedMainGameState({
-    resources: { base: 10, tier10: 11 },
-    owned: { tier09: 10, tier10: 11 },
+    resources: { base: 10, tier10: 10 },
+    owned: { tier09: 10, tier10: 10 },
     // autobuyers.tier10 is left at its default (null, locked) — the tickspeed multiplier is
     // enabled by default regardless.
   })

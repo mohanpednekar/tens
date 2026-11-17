@@ -532,6 +532,18 @@ describe('schema merge on load', () => {
     expect(loaded.lastTierTickspeedXpUnlocked).toBeUndefined()
   })
 
+  it('strips a stale lastTierLevelCreditAccumulator from an older save (renamed to lastTierLevelCreditTimer)', () => {
+    const oldSave = {
+      intro: { mainGameUnlocked: true },
+      resources: { [MONEY_ID]: 10 },
+      lastTierLevelCreditAccumulator: 0.4,
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.lastTierLevelCreditAccumulator).toBeUndefined()
+    expect(loaded.lastTierLevelCreditTimer).toBe(0)
+  })
+
   it('discards legacy resources.Ones instead of loading them', () => {
     localStorage.setItem('tens_game_state', JSON.stringify({
       resources: { Ones: 12345 },
