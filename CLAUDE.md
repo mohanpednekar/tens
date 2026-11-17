@@ -136,6 +136,15 @@ Then:
 the script). Path 2 (green checks, no review marker) still auto-merges low-risk bot/Dependabot PRs
 as before — it does not mark drafts ready.
 
+**Direct merge (maintainer standing rule; the one exception to "enable only" above):** in
+maintainer-driven interactive sessions, for every PR in this repo: once auto-merge is enabled and the PR is
+green — mergeable (no conflicts; bring a "behind" branch up to date first), every required check complete
+and passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for
+the **current head SHA** — merge it directly (`gh pr merge --merge` / `merge_pull_request`) instead of
+waiting for GitHub. The 10-minute quiet period does not apply. Never for `.github/workflows/**` diffs,
+never over a failing/pending check. Autonomous runs (`autonomous-maintenance.yml`, Devin, dev-team
+roles) keep their never-self-merge rule.
+
 Once anything is pushed to an open PR, stay on it: check CI status and review comments (human and bot —
 Copilot, Codex, etc.), and address every actionable item — fix it directly if small and confident, or
 ask first if ambiguous or architecturally significant. After pushing a fix, check again (new pushes can
