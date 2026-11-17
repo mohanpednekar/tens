@@ -2470,11 +2470,6 @@ export const getTierSpendableAmount = (state, tier) =>
 export const getTierPurchasedCount = (state, tierId) =>
   state.purchased?.[tierId] ?? 0
 
-// Buying the last tier (QB) marks the run so Spent QB can fire if a later spend in this same cycle
-// empties it, including a purchase that never sits across a tickGame.
-const withLastTierHeldThisRun = (state, tierId) =>
-  tierId === getLastTierId() ? { ...state, lastTierEarnedThisRun: true } : state
-
 const buyTierCore = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = getChallengeTier(state, tierId)
@@ -2517,7 +2512,7 @@ const buyTierCore = tierId => state => {
     },
   }
 
-  return withLastTierHeldThisRun(nextState, tierId)
+  return nextState
 }
 
 export const buyTier = (tierId) => state => applyChallengePurchaseEffects(tierId, state, buyTierCore(tierId)(state))
@@ -2571,7 +2566,7 @@ const buyTierQuantityCore = (tierId, quantity) => state => {
     },
   }
 
-  return withLastTierHeldThisRun(nextState, tierId)
+  return nextState
 }
 
 export const buyTierQuantity = (tierId, quantity) => state => applyChallengePurchaseEffects(tierId, state, buyTierQuantityCore(tierId, quantity)(state))
@@ -7182,9 +7177,7 @@ export const buyTickspeedMultiplier = tierId => state => {
   const available = state.resources[tier.id] ?? 0
   if (available < getTierTickspeedRequirement(state, tierId, currentLevel + 1)) return state
 
-  // detectAchievements here so Spent QB latches on the spend itself, before a same-tick Auto Scale Up /
-  // Overclock / Purge can wipe lastTierEarnedThisRun.
-  return detectAchievements({
+  return {
     ...state,
     resources: {
       ...state.resources,
@@ -7198,7 +7191,7 @@ export const buyTickspeedMultiplier = tierId => state => {
       ...state.tickspeedLevels,
       [tierId]: currentLevel + 1,
     },
-  })
+  }
 }
 
 // Autobuyer interval: tier N's autobuyer attempts a purchase every N seconds (1 s … 10 s) until
