@@ -844,6 +844,8 @@ export const OVERCLOCK_REQUIREMENT_STEP = 3
 // (purchaseLevels - 1), speeding up logarithmically: rate = (1 + log10(levels)) / period (1/10 s at 1 level, 1/5 s at 10,
 // 1/3.33 s at 100), independent of its balance/owned count (see engine.js's getLastTierLevelCreditRate/tickGame).
 export const LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS = 10
+// Hard ceiling: never faster than 1 unit per 10 ms.
+export const LAST_TIER_LEVEL_CREDIT_MAX_RATE_PER_SECOND = 100
 // Once the last tier has ever been the target of a successful Scale Up this cycle (see engine.js's
 // isLastTierTickspeedXpUnlocked — a scaleUpTierCounts-based latch, NOT a live owned check), a
 // separate XP-funded upgrade (shown beside Scale Up) becomes available — see engine.js's
