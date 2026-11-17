@@ -698,8 +698,8 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   action button sits *outside* its `Disclosure` as a sibling, so clicking Buy/Upgrade/Overclock
   never touches the disclosure. None of these is prose about *how* the mechanic works, only
   *what its current numbers are*.
-- **Page title.** The MainPage heading is a visually hidden `<h1>Byte Factory</h1>` (the pinned progress bar / banners sit at the top; screen name; AppNav short label **Factory** — not the game name
-  “Tens”). Top-level destinations (Foundry → Power → Compute → Factory → Firmware → More) live in
+- **Page title.** The MainPage heading is a centered `<h1>Byte Factory</h1>` (screen name; AppNav short label **Factory** — not the game name
+  “Tens”). It yields — visually hidden, kept as an h1 for screen readers — while a challenge banner, purge-available banner, daily-run goal (`game.goal`), or boost timer occupies the top. The purge progress bar itself is pinned to the *bottom*, above AppNav. Top-level destinations (Foundry → Power → Compute → Factory → Firmware → More) live in
   `App.jsx`'s shared `AppNav`, not as header buttons here.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against

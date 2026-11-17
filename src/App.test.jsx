@@ -134,10 +134,32 @@ test('renders the game title and the Kilobytes tier', () => {
   seedMainGameState()
   render(<App />)
 
-  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
+  const heading = screen.getByRole('heading', { level: 1, name: /^byte factory$/i })
+  expect(heading).toBeInTheDocument()
+  expect(heading.closest('header')).not.toBeNull()
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toBeInTheDocument()
   // Money=1 (MONEY_STARTING_AMOUNT) — Kilobytes' per-unit cost is 1,000, so nothing is affordable yet.
   expect(screen.getByRole('button', { name: /buy for 1,000 b\b/i })).toBeDisabled()
+})
+
+test('Factory keeps its h1 (hidden visually) once a boost timer bar takes the top of the screen', () => {
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, computeBoosts: { burst: { queue: [1], remainingSeconds: 30 } } },
+  })
+  render(<App />)
+
+  const heading = screen.getByRole('heading', { level: 1, name: /^byte factory$/i })
+  expect(heading.tagName).toBe('H1')
+  expect(heading.closest('header')).toBeNull()
+  expect(screen.getByLabelText(/^active turbo compute boost$/i)).toBeInTheDocument()
+})
+
+test('Factory keeps its h1 (hidden visually) once a challenge banner takes the top of the screen', () => {
+  seedMainGameState({ challenges: { active: 'F1' } })
+  render(<App />)
+
+  expect(screen.getByLabelText(/^active challenge banner$/i)).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i }).closest('header')).toBeNull()
 })
 
 test('shows the app version only on the Manual page', async () => {
@@ -1095,6 +1117,7 @@ test('from the 2nd prestige onward, reaching a googol shows a top banner instead
   expect(screen.queryByRole('dialog', { name: /purge required/i })).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^purge available banner$/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /purge \(requires/i })).toBeEnabled()
+  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i }).closest('header')).toBeNull()
 })
 
 test('the sticky PP display doubles as a Prestige button once Prestige is available', async () => {
