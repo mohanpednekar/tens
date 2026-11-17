@@ -204,7 +204,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
     trigger: `Buy your first ${tier.name}`,
     condition: { kind: 'tierPurchased', tierId: tier.id },
   })),
-  { id: 'quettaSpent', name: 'Spent QB', group: 'tierLadder', trigger: 'Spend all your Quettabytes after earning some in the same run', bonus: 'Every completed Quettabytes level now credits 1 Quettabyte every 10 seconds, regardless of balance', condition: { kind: 'lastTierSpent' } },
+  { id: 'quettaSpent', name: 'Spent QB', group: 'tierLadder', trigger: 'Spend all your Quettabytes after earning some in the same run', bonus: 'Quettabytes are credited regardless of balance: 1 per 10 s at 1 completed level, 1 per 5 s at 10, 1 per 3.33 s at 100', condition: { kind: 'lastTierSpent' } },
   { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Clock Speed level', condition: { kind: 'clockSpeedLevel', min: 1 } },
   { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Clock Speed level 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
   { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', condition: { kind: 'overclocked' } },
@@ -840,10 +840,10 @@ export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // count the previous claim was taken at, plus this step (see getOverclockRequirement/
 // overclockGame in engine.js).
 export const OVERCLOCK_REQUIREMENT_STEP = 3
-// The last tier (QB) is credited this many units per COMPLETED purchase level (purchaseLevels - 1) every
-// LAST_TIER_LEVEL_CREDIT_PERIOD_SECONDS, independent of its balance/owned count (see engine.js's tickGame).
-export const LAST_TIER_LEVEL_CREDIT_PER_LEVEL = 1
-export const LAST_TIER_LEVEL_CREDIT_PERIOD_SECONDS = 10
+// The last tier (QB) is credited 1 unit per LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS at 1 COMPLETED purchase level
+// (purchaseLevels - 1), speeding up logarithmically: rate = (1 + log10(levels)) / period (1/10 s at 1 level, 1/5 s at 10,
+// 1/3.33 s at 100), independent of its balance/owned count (see engine.js's getLastTierLevelCreditRate/tickGame).
+export const LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS = 10
 // Once the last tier has ever been the target of a successful Scale Up this cycle (see engine.js's
 // isLastTierTickspeedXpUnlocked — a scaleUpTierCounts-based latch, NOT a live owned check), a
 // separate XP-funded upgrade (shown beside Scale Up) becomes available — see engine.js's
