@@ -839,10 +839,10 @@ export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // count the previous claim was taken at, plus this step (see getOverclockRequirement/
 // overclockGame in engine.js).
 export const OVERCLOCK_REQUIREMENT_STEP = 3
-// The last tier's own tickspeed multiplier (buyTickspeedMultiplier) keeps its normal requirement
-// (getTickspeedMultiplierCost — owned must reach it) but only actually spends this fraction of it:
-// e.g. tier10's 2nd upgrade unlocks at 100 owned and consumes 10.
-export const LAST_TIER_TICKSPEED_SPEND_FRACTION = 0.1
+// The last tier (QB) is credited this many units per COMPLETED purchase level (purchaseLevels - 1) every
+// LAST_TIER_LEVEL_CREDIT_PERIOD_SECONDS, independent of its balance/owned count (see engine.js's tickGame).
+export const LAST_TIER_LEVEL_CREDIT_PER_LEVEL = 1
+export const LAST_TIER_LEVEL_CREDIT_PERIOD_SECONDS = 10
 // Once the last tier has ever been the target of a successful Scale Up this cycle (see engine.js's
 // isLastTierTickspeedXpUnlocked — a scaleUpTierCounts-based latch, NOT a live owned check), a
 // separate XP-funded upgrade (shown beside Scale Up) becomes available — see engine.js's

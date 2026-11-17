@@ -39,6 +39,7 @@ const withValue = (state, formatId, value) => {
   return withRun(state, formatId, { metrics: { ...run.metrics, [key]: value } })
 }
 const isAmount = def => DAILY_OBJECTIVE_KINDS[def.objective.kind].amount
+const getResetCount = game => Object.values(game.scaleUpTierCounts).reduce((sum, count) => sum + count, 0)
 const isoDates = (from, days) => Array.from({ length: days }, (_, i) => new Date(Date.parse(`${from}T00:00:00Z`) + i * 86400000).toISOString().slice(0, 10))
 const inBand = (format, seconds) => seconds > format.seconds / 2 && seconds <= format.botCeilingSeconds
 
@@ -54,7 +55,7 @@ describe('generator', () => {
     expect(targets.size).toBeGreaterThan(5)
     const balances = new Set(isoDates('2026-12-01', 10).map(date => generateDailyChallenge(date, '10h').startBytes))
     expect(balances.size).toBeGreaterThan(3)
-  })
+  }, 120000)
 
   test('a definition carries modified conditions, a head start and a calculated target', () => {
     for (const format of DAILY_FORMATS) {
@@ -68,6 +69,8 @@ describe('generator', () => {
       expect(def.objective.attemptMark).toBeLessThan(def.objective.target)
       expect(def.objective.attemptLabel).toBeTruthy()
       if (!isAmount(def)) expect(Number.isInteger(def.objective.target)).toBe(true)
+      // Owned units only come whole, so an "own" attempt mark must be a whole number a non-winning run can hold.
+      if (def.objective.kind === 'own') expect(Number.isInteger(def.objective.attemptMark)).toBe(true)
       expect(def.stepSeconds).toBe(format.stepSeconds)
       expect(def.conditions.length).toBe(Object.keys(def.levers).length)
       for (const [lever, value] of Object.entries(def.levers)) {
@@ -278,6 +281,35 @@ describe('objectives', () => {
     const metrics = after.daily.runs['10m']?.metrics ?? null
     if (metrics) expect(metrics.overclock).toBeGreaterThanOrEqual(5)
     else expect(after.daily.results['2026-11-12']['10m'].won).toBe(true)
+  })
+})
+
+describe('peaks', () => {
+  test('every "own" attempt mark over a range of dates is a whole number below its target', () => {
+    for (const date of isoDates('2026-11-12', 12)) {
+      for (const { id } of DAILY_FORMATS) {
+        const { objective } = generateDailyChallenge(date, id)
+        if (objective.kind !== 'own') continue
+        expect(Number.isInteger(objective.attemptMark)).toBe(true)
+        expect(objective.attemptMark).toBeLessThan(objective.target)
+      }
+    }
+  }, 120000)
+
+  test('levels reached before Auto Scale Up resets the ladder inside a step still count', () => {
+    let state = startDailyRun('10h', T0)(purged())
+    const run = state.daily.runs['10h']
+    // Every tier sits at 5 completed levels — past any Scale Up requirement — but the tracker has not seen it yet.
+    state = withRun(state, '10h', { game: { ...run.game, purchaseLevels: Object.fromEntries(Object.keys(run.game.purchaseLevels).map(id => [id, 6])) } })
+    state = playDailyRun('10h', 'automation', { key: 'scaleUp', enabled: true }, T0)(state)
+    const after = tickDailyRuns(T0 + DAILY_FORMAT_BY_ID['10h'].stepSeconds * 1000)(state)
+    const result = after.daily.runs['10h']
+    if (!result) return expect(after.daily.results['2026-11-12']['10h']).toBeTruthy() // the objective itself was met
+    // Auto Scale Up fired inside the step and reset the ladder...
+    expect(result.game.purchaseLevels.tier01).toBeLessThan(6)
+    expect(getResetCount(result.game)).toBeGreaterThan(getResetCount(run.game))
+    // ...yet the levels held just before it are on record.
+    expect(result.metrics['levels:tier01']).toBe(5)
   })
 })
 

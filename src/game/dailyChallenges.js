@@ -31,6 +31,7 @@ import {
   createInitialGameState,
   formatAmount,
   getOverclockLevel,
+  mergeRunPeaks,
   overclockGame,
   scaleUpGame,
   setAutoGlobalTickspeedEnabled,
@@ -44,7 +45,7 @@ import {
 import { BITS_PER_BYTE, DAILY_CHALLENGES_FEATURE, MONEY_ID, TIER_DEFINITIONS } from './layers'
 
 // Bump whenever generator data or the reference bot changes; a run on another version is dropped.
-export const DAILY_GENERATOR_VERSION = 3
+export const DAILY_GENERATOR_VERSION = 4
 export const DAILY_MAX_CREDITS = 4
 // Candidates per (date, format) before the fixed known-good fallback (no modifiers, no head start) is used.
 export const DAILY_MAX_GENERATION_ATTEMPTS = 8
@@ -185,7 +186,7 @@ const RUN_ACTIONS = {
 const LAST_TIER = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
 export const DAILY_OBJECTIVE_KINDS = {
   balance: { weight: 2, amount: true, describe: target => `Reach a balance of ${formatAmount(target)} B` },
-  own: { weight: 1, amount: true, perTier: true, describe: (target, tier) => `Own ${formatAmount(target)} ${tier.name}` },
+  own: { weight: 1, amount: true, wholeUnits: true, perTier: true, describe: (target, tier) => `Own ${formatAmount(target)} ${tier.name}` },
   levels: { weight: 1, perTier: true, describe: (target, tier) => `Complete ${target} level${target === 1 ? '' : 's'} of ${tier.name}` },
   clock: { weight: 2, describe: target => `Reach Clock Speed level ${target}` },
   overclock: { weight: 3, describe: target => `Overclock at ${target} ${LAST_TIER.symbol} levels` },
@@ -196,12 +197,20 @@ const OBJECTIVES = Object.entries(DAILY_OBJECTIVE_KINDS).flatMap(([kind, entry])
 const OBJECTIVE_BY_KEY = Object.fromEntries(OBJECTIVES.map(objective => [objective.key, objective]))
 const ZERO_METRICS = Object.fromEntries(OBJECTIVES.map(objective => [objective.key, 0]))
 
-// `before` is the game this one came from: an Overclock claimed in between (by hand or by Auto Overclock) counts.
+// A run's game carries `runPeaks` (engine.js `mergeRunPeaks`): the highest balance, owned units, purchase levels
+// and Clock Speed level it has held — raised inside the engine's tick just before its reset automations, and
+// here after every step and action, with the re-granted balance left out (see settleGame).
+const EMPTY_PEAKS = { balance: 0, clock: 0, owned: {}, purchaseLevels: {} }
+const withPeaks = (game, source = game) => ({ ...game, runPeaks: mergeRunPeaks(game.runPeaks ?? EMPTY_PEAKS, source) })
+
+// The metrics of a game whose `runPeaks` are up to date. `before` is the game it came from: an Overclock claimed
+// in between (by hand or by Auto Overclock) counts.
 const readMetrics = (before, game, previous) => {
-  const next = { ...previous, balance: Math.max(previous.balance, (game.resources[MONEY_ID] ?? 0) / BITS_PER_BYTE), clock: Math.max(previous.clock, game.globalTickspeedMultiplier ?? 0) }
+  const peaks = game.runPeaks
+  const next = { ...previous, balance: Math.max(previous.balance, peaks.balance / BITS_PER_BYTE), clock: Math.max(previous.clock, peaks.clock) }
   for (const tier of TIER_DEFINITIONS) {
-    next[`own:${tier.id}`] = Math.max(previous[`own:${tier.id}`], game.owned?.[tier.id] ?? 0)
-    next[`levels:${tier.id}`] = Math.max(previous[`levels:${tier.id}`], (game.purchaseLevels?.[tier.id] ?? 1) - 1)
+    next[`own:${tier.id}`] = Math.max(previous[`own:${tier.id}`], peaks.owned[tier.id] ?? 0)
+    next[`levels:${tier.id}`] = Math.max(previous[`levels:${tier.id}`], (peaks.purchaseLevels[tier.id] ?? 1) - 1)
   }
   const overclock = getOverclockLevel(game) ?? 0
   if (overclock !== (getOverclockLevel(before) ?? 0)) next.overclock = Math.max(previous.overclock, overclock)
@@ -213,12 +222,12 @@ const readMetrics = (before, game, previous) => {
 // One step of production and automation. `onReset(game)` hears about a soft reset.
 const trackStep = (tracked, def, stepSeconds, onReset) => {
   const before = tracked.game
-  const ticked = tickGame(stepSeconds, BUY_ALL)(before)
-  // Measured before a reset's re-grant, so a granted balance is never mistaken for one the run built up.
-  const metrics = readMetrics(before, ticked, tracked.metrics)
+  // Peaks are taken from the ticked game (and, inside the tick, from just before any automatic reset) — before
+  // settleGame re-grants a balance, so a granted balance is never mistaken for one the run built up.
+  const ticked = withPeaks(tickGame(stepSeconds, BUY_ALL)(before))
   const game = settleGame(before, ticked, def)
   if (onReset && getResetSignature(before) !== getResetSignature(game)) onReset(game)
-  return { game, metrics }
+  return { game, metrics: readMetrics(before, game, tracked.metrics) }
 }
 
 // One `RUN_ACTIONS` action; the same reference comes back when it does nothing.
@@ -226,10 +235,10 @@ const trackAction = (tracked, def, actionName, arg, onReset) => {
   const before = tracked.game
   const acted = RUN_ACTIONS[actionName].make(arg)(before)
   if (acted === before) return tracked
-  const metrics = readMetrics(before, acted, tracked.metrics)
-  const game = settleGame(before, acted, def)
+  // A soft reset rebuilds the game and drops the peaks: carry them over, then raise them to the acted state.
+  const game = settleGame(before, withPeaks({ ...acted, runPeaks: before.runPeaks }, acted), def)
   if (onReset && getResetSignature(before) !== getResetSignature(game)) onReset(game)
-  return { game, metrics }
+  return { game, metrics: readMetrics(before, game, tracked.metrics) }
 }
 
 // --- Reference bot ---
@@ -255,8 +264,10 @@ const sweep = (tracked, def, onReset) => {
   return current
 }
 
-// A run opens with its starting balance already counted, so that balance is never progress.
-const START = game => ({ game, metrics: { ...ZERO_METRICS, balance: (game.resources[MONEY_ID] ?? 0) / BITS_PER_BYTE } })
+// A run opens with fresh peaks taken from its starting state, so its starting balance is never progress and
+// nothing reached before the run (the warm-up) counts.
+const startPeaks = game => ({ ...game, runPeaks: mergeRunPeaks(EMPTY_PEAKS, game) })
+const START = game => ({ game, metrics: readMetrics(game, game, ZERO_METRICS) })
 
 // The sweeping bot from `game`. `series[i]` = the metrics at time i steps, after the bot has acted there (index 0 =
 // its opening moves) — the moment a live player who acts right after each step would be measured.
@@ -340,11 +351,13 @@ const calculateAttemptMark = (objective, target, untouched) => {
     const mark = Math.max(untouched + 1, target - Math.max(1, Math.round(target * 0.2)))
     return mark < target ? mark : null
   }
+  // Owned units only come whole, so their mark is rounded up to a whole unit (a balance can be any amount).
+  const attainable = mark => (objective.wholeUnits ? Math.ceil(mark) : mark)
   for (const divisor of [10, 4, 2]) {
-    const mark = floorToSignificant(target / divisor, 1)
+    const mark = attainable(floorToSignificant(target / divisor, 1))
     if (mark > untouched && mark < target) return mark
   }
-  const between = floorToSignificant(Math.sqrt(Math.max(1, untouched) * target), 2)
+  const between = attainable(floorToSignificant(Math.sqrt(Math.max(1, untouched) * target), 2))
   return between > untouched && between < target ? between : null
 }
 
@@ -407,11 +420,12 @@ export const buildDailyCandidate = (dateId, formatId, attempt) => {
   let fresh = createInitialGameState()
   fresh.resources = { ...fresh.resources, [MONEY_ID]: getStartBits(def) }
   for (const key of automations) fresh = AUTOMATION_BY_KEY[key].unlock(fresh)
-  fresh = withLevers(fresh, levers)
+  fresh = startPeaks(withLevers(fresh, levers))
   // Head start: the state right after the warm-up's last soft reset (the fresh state when it never reset).
   let startGame = fresh
   simulateSweeping(fresh, def, WARMUP_STEP_SECONDS, warmupSeconds / WARMUP_STEP_SECONDS, game => { startGame = game })
   for (const key of (fallback ? [] : format.startPaused ?? [])) startGame = settleGame(startGame, AUTOMATION_BY_KEY[key].set(false)(startGame), def)
+  startGame = startPeaks(startGame)
 
   // A run nobody touches (automations only, as they start): the target and the attempt mark must lie beyond what
   // it reaches by the limit, and it must stay clear of the Purge freeze.

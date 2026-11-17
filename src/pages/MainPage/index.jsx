@@ -1444,8 +1444,8 @@ const MainPage = ({ game }) => {
           // multiplier.
           const baseTickSpeed = getTierBaseTickSpeedSeconds(tier.id)
           const effectiveTickSpeed = getEffectiveTierTickSpeedSeconds(state, tier.id)
-          // Spends the tier's own resource (resources[tier.id] === owned[tier.id]); the last tier
-          // spends only 10% of its requirement. Mirrors buyTickspeedMultiplier's guard in engine.js.
+          // Spends the tier's own resource (resources[tier.id] === owned[tier.id]); every tier
+          // spends its full cost. Mirrors buyTickspeedMultiplier's guard in engine.js.
           const tickspeedCost = getTierTickspeedSpend(state, tier.id, tickspeedLevel + 1)
           const tickspeedRequirement = getTierTickspeedRequirement(state, tier.id, tickspeedLevel + 1)
           const canUpgradeTickspeed = resources >= tickspeedRequirement && !isFrozen && !isTierTickspeedBlockedByChallenge(state, tier.id)
