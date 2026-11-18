@@ -915,8 +915,8 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
   // MoneyHero (the "money display") switches to whole Bytes once the balance reaches 8000 Bits
   // (see engine.js's formatMoneyBalance) — 92,000 Bits = 11,500 Bytes.
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('11,500 B')
-  expect(screen.getByLabelText(/balance in bits/i)).toHaveTextContent('92,000 b')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1.15e4 B')
+  expect(screen.getByLabelText(/balance in bits/i)).toHaveTextContent('9.2e4 b')
 })
 
 test('manual Buy partially fills when funds only cover part of the cost block', async () => {

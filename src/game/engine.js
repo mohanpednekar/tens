@@ -664,7 +664,7 @@ const currencyNumberFormatter = new Intl.NumberFormat('en-US', { maximumFraction
 
 // Values at/above this switch from plain comma-grouped digits to exponential notation
 // (e.g. "6.5e13") for readability, shared by formatAmount and formatCurrency.
-const EXPONENTIAL_NOTATION_THRESHOLD = 1_000_000
+const EXPONENTIAL_NOTATION_THRESHOLD = 10_000 // i.e. plain digits up to 9,999
 
 // Intl's scientific notation always renders an uppercase "E" exponent marker with no option to
 // override it, so every exponential display in this app lowercases it after formatting.

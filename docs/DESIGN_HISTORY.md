@@ -9458,3 +9458,12 @@ The last tier's resource-funded tickspeed upgrade spent only 10% of its cost (`L
 ## Spent QB gates last-tier credit; last tier may spend to 0 (2026-11)
 
 The unconditional per-level credit was too generous (it started as soon as QB had a completed level) and the `cost + 1` tickspeed reserve made "spend all your Quettabytes" unreachable. Credit is now gated on the Spent QB achievement (`quettaSpent` / `lastTierSpent`: run-scoped `lastTierEarnedThisRun` plus a 0 QB balance). Last-tier tickspeed requirement is `cost` so that spend is possible. The credit itself is exactly 1 unit per `10 / (1 + log10 completed levels)` s (floor 10 ms), not 1 per level per 10 s, with an elapsed-seconds timer (`lastTierLevelCreditTimer`) instead of a fractional-unit accumulator. Reaching the stall IS the condition, so `buyTickspeedMultiplier` unlocks it at the spend (marks the run + `detectAchievements`), independent of any later tick or same-tick reset. A broader latch (flagging QB on every buy) was tried and reverted as unnecessary: only a tickspeed spend can empty QB, and that spend proves QB was held.
+
+## Single-line tier rows; exponential notation from 10,000 (2026-11)
+
+Factory tier rows went from two lines (symbol · owned · +production, then two half-width buttons) to one
+line (symbol · owned, fixed-width ⚙ / 🛒 tracks), roughly halving their height; production moved into the
+details disclosure. With the owned count and costs in narrow fixed columns, `EXPONENTIAL_NOTATION_THRESHOLD`
+dropped from 1,000,000 to 10,000 (maintainer request) so a plain number is at most four digits (`9,999`)
+before switching to `1e4` — "999,999 b" no longer competes for the same space. Below 24rem the symbol
+stacks above the owned count so long exponents (`6.167e115`) still fit at 320px.

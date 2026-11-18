@@ -48,7 +48,7 @@ describe('Firmware Daily tab', () => {
 
   it('describes the head start in words', () => {
     expect(describeDailyChallenge({ conditions: ['Costs ×5'], startBytes: 5000, headStart: { scaleUps: 1, overclock: 5 } })).toBe('Costs ×5 · starts with 5,000 B · 1 Scale Up · Overclock 5')
-    expect(describeDailyChallenge({ conditions: [], startBytes: 20000, headStart: { scaleUps: 0, overclock: 0 } })).toBe('starts with 20,000 B')
+    expect(describeDailyChallenge({ conditions: [], startBytes: 20000, headStart: { scaleUps: 0, overclock: 0 } })).toBe('starts with 2e4 B')
     expect(describeDailyChallenge({ conditions: [], automations: generateDailyChallenge('2026-11-12', '10h').automations })).toBe('')
   })
 
