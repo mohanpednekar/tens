@@ -258,6 +258,8 @@ jobs:
 
           Read CLAUDE.md first — it documents this repo's architecture,
           conventions, and testing setup, and you must follow it exactly.
+          Game rules, terminology and economy/UI conventions live in
+          src/CLAUDE.md: read it before any game-logic, economy or UI work.
           docs/DESIGN_HISTORY.md records approaches already tried and rejected —
           check it before changing a formula or workflow.
 
