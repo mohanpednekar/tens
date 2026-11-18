@@ -196,7 +196,7 @@ first `getComputeBoostCoveredTierCount` Factory tiers (`tickGame`). Exports:
   `getComputeBoostDescription(intro, tierIndex = 0)` (0-based Factory tier; that tier's own summed multiplier, only the lanes covering it, whole-lane time left and waiting boosts; null when no lane covers it), `COMPUTE_BOOST_LABELS`.
 
 Used on ByteFoundryPage's `DataStreamCard` (glow + badge after the Speed figure, tap button described by it) and MainPage's
-`TierLine` (glow + badge after the production figure + a line in the tier's details list).
+`TierLine` (glow + a line in the tier's details list).
 
 ## `Switch/index.js`
 

@@ -643,18 +643,43 @@ test('once the hero switches to Bytes, a small Bits line shows the exact bit bal
   expect(bitsLine).not.toHaveAttribute('role', 'status')
 })
 
-test('a byte-producing tier shows its per-tick production amount with the currency format, not a per-second rate', () => {
+// Production moved off the collapsed row into its details disclosure (the tier symbol toggles it).
+const expandTierDetails = async (user, tierName) => {
+  const layer = screen.getByLabelText(new RegExp(`^${tierName} layer$`, 'i'))
+  await user.click(within(layer).getByRole('button', { name: new RegExp(tierName, 'i') }))
+  return layer
+}
+
+test('a byte-producing tier shows its per-tick production amount with the currency format, not a per-second rate', async () => {
+  const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier01: 5 },
   })
   render(<App />)
 
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+5 B')
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).not.toHaveTextContent('/sec')
+  // The collapsed row shows only the owned count; production is in the details.
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).not.toHaveTextContent('+5 B')
+  const layer = await expandTierDetails(user, 'kilobytes')
+  expect(layer).toHaveTextContent('Production: +5 B per delivery')
+  expect(layer).not.toHaveTextContent('/sec')
 })
 
-test('a tickspeed multiplier level speeds up delivery frequency, not the amount per delivery or autobuyer purchase frequency', () => {
+test('the Buy button shows the tier\'s completed-level count beside the cart icon', () => {
+  seedMainGameState({
+    resources: { base: 10 },
+    owned: { tier01: 10 },
+    purchaseLevels: { tier01: 4 }, // 3 completed levels
+  })
+  render(<App />)
+
+  const buy = within(screen.getByLabelText(/^kilobytes layer$/i)).getByRole('button', { name: /^buy/i })
+  // The icon slot (aria-hidden; the accessible name carries the full sentence) holds 🛒 + level.
+  expect(buy.querySelector('[aria-hidden="true"]')).toHaveTextContent(/^🛒 3$/)
+})
+
+test('a tickspeed multiplier level speeds up delivery frequency, not the amount per delivery or autobuyer purchase frequency', async () => {
+  const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier01: 5 },
@@ -666,7 +691,7 @@ test('a tickspeed multiplier level speeds up delivery frequency, not the amount 
   // The displayed production figure is the raw per-delivery amount (owned) — level 3's ×1.21
   // speed bonus (10% per level) shortens how often a delivery lands, it never inflates the
   // amount, so this still reads +5 B.
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+5 B')
+  expect(await expandTierDetails(user, 'kilobytes')).toHaveTextContent('Production: +5 B')
   // The cumulative speed bonus no longer shows as a badge on the row itself (see "the
   // automation icon and percentage badge are removed from the tier row" below) — it's still
   // available in the tickspeed button's own title tooltip and the row's Details disclosure.
@@ -694,7 +719,8 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
   expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 })
 
-test('reaching 8 lifetime purchases of a tier multiplies its displayed production by ×1.25', () => {
+test('reaching 8 lifetime purchases of a tier multiplies its displayed production by ×1.25', async () => {
+  const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier01: 10 },
@@ -705,10 +731,11 @@ test('reaching 8 lifetime purchases of a tier multiplies its displayed productio
 
   // Crossing the 8-purchase milestone completes level 1: owned(10) × 1 B/tick × 1.25 = 12.5 B/tick
   // (the displayed amount floors to match tickGame's own floored credit).
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+12 B')
+  expect(await expandTierDetails(user, 'kilobytes')).toHaveTextContent('Production: +12 B')
 })
 
-test('a tier shows its full per-tick production amount, not a reduced rate', () => {
+test('a tier shows its full per-tick production amount, not a reduced rate', async () => {
+  const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier01: 10, tier02: 4 },
@@ -719,7 +746,7 @@ test('a tier shows its full per-tick production amount, not a reduced rate', () 
   // each time the tier's own tickspeed period completes — not divided by tickspeed, since it's
   // not shown as an averaged "/sec" rate. Megabytes PRODUCES Kilobytes (producesResourceId:
   // 'tier01'), so the amount reads in Kilobytes' own symbol (KB), not Megabytes' own (MB).
-  expect(screen.getByLabelText(/^megabytes layer$/i)).toHaveTextContent('+4 KB')
+  expect(await expandTierDetails(user, 'megabytes')).toHaveTextContent('Production: +4 KB')
 })
 
 test('a tier row has no separate "Details" label — clicking its name reveals base/effective tickspeed', async () => {
@@ -888,8 +915,8 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
   // MoneyHero (the "money display") switches to whole Bytes once the balance reaches 8000 Bits
   // (see engine.js's formatMoneyBalance) — 92,000 Bits = 11,500 Bytes.
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('11,500 B')
-  expect(screen.getByLabelText(/balance in bits/i)).toHaveTextContent('92,000 b')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1.15e4 B')
+  expect(screen.getByLabelText(/balance in bits/i)).toHaveTextContent('9.2e4 b')
 })
 
 test('manual Buy partially fills when funds only cover part of the cost block', async () => {
@@ -5998,7 +6025,8 @@ describe('Buy max mode', () => {
     await user.click(screen.getByRole('button', { name: /^open byte factory$/i }))
 
     const buyMaxButton = screen.getByRole('button', { name: /^Buy 2 full levels/ })
-    expect(buyMaxButton).toHaveTextContent('+2')
+    // Icon slot (aria-hidden): 🛒 + completed levels (0) with Buy max's +n suffixed straight on.
+    expect(buyMaxButton.querySelector('[aria-hidden="true"]')).toHaveTextContent(/^🛒 0\+2$/)
     await user.click(buyMaxButton)
     const kilobytesPanel = screen.getByLabelText(`${kilobytes.name} layer`)
     expect(within(kilobytesPanel).getByRole('progressbar', { name: `${kilobytes.name} cost-block progress` }))
