@@ -2,13 +2,27 @@
 
 **Section index** (grep `^#` for the live headings; read a section, never the whole file):
 - Pool-local reset loop — per-pool flush, Data Lake Booster auto-buy
-- Purchase block size and tier levels · Buy max mode · Adding a new tier
-- Byte Foundry — tap/Compile/auto-convert, pool Capacity, Capacity/Bitrate upgrades, Bandwidth, Disks, Compute Cores/Nodes (Power), Compute Boost, forced priority order
-- Tier production tickspeed · Offline progress · PP Compute (Flops)
-- Prestige Points / autobuyer unlock · Daily challenges · Challenge mode · Achievements
-- Reboot and Kernels — Era ascension, autobuyer milestones, pause flags, Clock Speed, last-tier XP tickspeed
-- Prestige and the Googol freeze · Scale Up · Overclock · Reset
-- Game state shape · Key engine functions · Constants · Upgrade Capacity / Speed
+- The (configurable) purchase block size and tier levels — cost/milestone levels, growing block size
+- Buy max mode — full-level Factory buys, single-level ladder repeat
+- Adding a new tier — one `TIER_DEFINITIONS` entry
+- Byte Foundry — tap/Compile, pool Capacity/Bandwidth, Capacity/Bitrate upgrades, auto-convert, Disks, Data Lakes, Power, Compute Boost, forced priority order
+- Tier production tickspeed — per-tier cadence, multipliers floored
+- Offline progress — sleep-mode simulation, 50% after 10 minutes
+- PP Compute (Flops) — KFlops→QFlops, PP-funded Factory boosts
+- Prestige Points, autobuyer unlock, and the tickspeed multiplier — PP award, Overflow, automation unlock
+- Daily challenges (epic #1062) — three seeded Factory-only runs per UTC date
+- Challenge mode (epic #1037, engine slice #1038) — F1–F25 Factory challenges, levers, gates
+- Achievements (epic #1046, basic slice) — registry, Reclamation bonuses, Spent QB
+- Reboot and Kernels (#407) — Era ascension, Kernels, autobuyer milestones, Clock Speed
+- Prestige and the Googol freeze — `PURGE_THRESHOLD` freeze, Overflow exception
+- Scale Up — cheaper soft-reset walking the tier ladder
+- Overclock — last-tier completed-level soft-reset
+- Prestige info is hidden until first prestige — first-run PP UI hiding
+- Reset — full save wipe vs Reformat Byte Foundry
+- Game state shape — persisted fields
+- Key engine functions (`src/game/engine.js`) — signature/purpose table
+- Constants (`src/game/layers.js`) — `layers.js` constants
+- Upgrade Capacity / Upgrade Speed — split Data Stream upgrades, Reformat auto-provision
 
 ## Pool-local reset loop
 
@@ -188,7 +202,8 @@ Nothing here ever fully "freezes" — there is no `completed`-style flag, and no
 Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
 
 **The loop:**
-#### Tap, Compile and auto-convert
+
+#### Tap, Compile and Data Stream
 
 1. **Tap** (`tapIntroBit`) — behavior depends on whether Storage itself has been revealed yet
    (`isStorageUnlocked(state)`, i.e. Buffer/pool Memory Capacity has reached 1 KiB — NOT
@@ -224,7 +239,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    seconds (derived from Capacity via `getDataStreamSpeedBytesPerSecond` — see point 5 below), so at
    the starting values this is exactly 1 bit/sec. Bits are capped at `capacity`; any amount a
    capacity cap actually clips is not banked forward, same rule tapping follows.
-#### Pool Memory Capacity
+#### Pool Memory Capacity and Bandwidth
 
 4. **Pool Memory Capacity.** **Standing rule: non-binary (SI-clean or decade-power) transforms are
    for storage-pool-scoped values only — `intro.capacity` itself keeps doubling plainly in binary**, since it's also
@@ -391,7 +406,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `docs/DESIGN_HISTORY.md`. `isMemoryCapacityUpgradeAvailable(state)` is simply
    `isPoolCapacityUpgradeAvailable(state)` — a full Buffer, the Combine prerequisite met, and not
    already at cap — with no dependency on any other action's own availability.
-#### Transfer-block UI removal and pool Bandwidth
+#### Transfer-block UI removal and auto-convert
 
 6. **`ByteFoundryPage` no longer renders any manual transfer-block UI** (removed — see
    `docs/DESIGN_HISTORY.md`): the always-on auto-convert below (`tickIntroAutoInvest`) is now the
@@ -772,6 +787,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    is no `diskAutoRedeemedSizes` any more (the old auto-redeem throttle was removed along with the
    manual/autobuyer-gated funding model it belonged to — see `docs/DESIGN_HISTORY.md`), so no
    exception to carve out here.
+
 #### Compute Cores / Nodes (Power)
 
 9. **Compute Cores/Nodes** (`intro.computeCores`/`intro.computeCoresEverEarned`/`intro.computeNodes`,
@@ -786,6 +802,10 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    buffer once the buffer is completely full), entirely decoupled from Storage Disks, and
    `buyBooster(tierIndex)` spends a lake's own banked units instantly — no transfer, no
    waiting.
+
+#### Data Lakes
+
+#### Hierarchical lake disks
 
    **Hierarchical lake disks (#1087) — current mechanic; where the paragraphs below describe slot-by-slot
    lake-disk filling (`fillDataLakeDisks`, `getDataLakeCurrentFillSubSize`, `DATA_LAKE_OVERFLOW_SEGMENT_LIMIT`,
@@ -975,6 +995,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    refunding a token back onto it). `isBoosterEntityAtCap` is the UI-facing mirror of this gate,
    letting `DataLakePanel`'s cost control say "entity full" instead of "not enough banked" when
    that's the actual reason.
+
+#### One-shot auto-convert
 
    **One-shot auto-convert** (`intro.dataLakes[tier].autoConvertActive`,
    `startDataLakeAutoConvert(tierIndex)`/`isDataLakeAutoConvertStartAvailable`/
