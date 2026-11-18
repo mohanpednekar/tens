@@ -659,7 +659,7 @@ a purchase control yet (deferred to #414, blocked pending maintainer-approved sp
 `getPrestigePointsAwarded`: 1 base PP at 1 Googol Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64)
 additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Compression
 upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then doubles PP-per-power; cost
-`100^(level+1)` PP). Production speed bonus (`getPrestigeProductionMultiplier`) is a one-time 1 PP purchase
+`10^(level+1)` PP). Production speed bonus (`getPrestigeProductionMultiplier`) is a one-time 1 PP purchase
 (`buyPrestigeSpeedBonus`/`prestigeSpeedBonusUnlocked`; Firmware → Prestige opens with a PP tutorial callout) giving
 ×1.1 for the 1st Purge (hardcoded `PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER`), then ×`1 + log10(count)` (×2 at 10, ×3 at 100, ×4 at 1,000…); see `docs/ECONOMY_REFERENCE.md`. `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
 (`getMoneyExponent`/`getPurgePercent`) — only the live freeze/Prestige trigger moved to
@@ -668,7 +668,7 @@ upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then do
 the exact `formatCurrency` amount (absolutely positioned in the existing gap — adds no height; hidden while `balancesCompressed`). Every other `formatCurrency` call
 (costs, production, the Prestige-threshold overlay) keeps reading in Bits.
 
-**Challenge mode (epic #1037; engine #1038 + UI #1039: Challenges page 🏁 Factory tab, inline start on Global Automation rows, `ChallengeBanner` atop Factory):** state `challenges` (`active`, `activeSeconds`, `completed`, `bestSeconds`, `enteredCount`, `exitedCount`); registry `CHALLENGE_DEFINITIONS` + the `LIVE_CHALLENGE_IDS` rollout Set (F1–F25 live; tier rules are `effect`-keyed with run-scoped `challenges.run`) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits`/`autoCompleteChallenges` in `engine.js` gate the three speed-upgrade buyers on completion. Definitions may also carry run-wide `levers` (`production`, `clockSpeedPower`, `scaleUpPower`, `costMultiplier`; read via `getChallengeLever`, active only inside the challenge); F9 Bit Rot's corruption also falls with unlocked Foundry disk sizes (unadvertised). Balance bands + per-challenge values: `docs/ECONOMY_REFERENCE.md` "Challenge mode"; sim: `scripts/simulate-challenges.mjs`.
+**Challenge mode (epic #1037; engine #1038 + UI #1039: Challenges page 🏁 Factory tab, inline start on Global Automation rows, `ChallengeBanner` atop Factory):** state `challenges` (`active`, `activeSeconds`, `completed`, `bestSeconds`, `enteredCount`, `exitedCount`); registry `CHALLENGE_DEFINITIONS` + the `LIVE_CHALLENGE_IDS` rollout Set (F1–F25 live; tier rules are `effect`-keyed with run-scoped `challenges.run`) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits`/`autoCompleteChallenges` in `engine.js` gate the three speed-upgrade buyers on completion. A challenge unlocks at `CHALLENGE_UNLOCK_PURGE_MULTIPLIER` (5) × its automation's unlock Purge (`getChallengeUnlockPurges`); tier autobuyers unlock at Purge n, tier tickspeed autobuyers at n + 10. Definitions may also carry run-wide `levers` (`production`, `clockSpeedPower`, `scaleUpPower`, `costMultiplier`; read via `getChallengeLever`, active only inside the challenge); F9 Bit Rot's corruption also falls with unlocked Foundry disk sizes (unadvertised). Balance bands + per-challenge values: `docs/ECONOMY_REFERENCE.md` "Challenge mode"; sim: `scripts/simulate-challenges.mjs`.
 
 ### Byte Foundry
 

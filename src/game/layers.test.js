@@ -225,8 +225,8 @@ describe('constants', () => {
     expect(PRESTIGE_POWERS_PER_PP_BASE).toBe(64)
   })
 
-  it('PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE is 100', () => {
-    expect(PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE).toBe(100)
+  it('PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE is 10', () => {
+    expect(PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE).toBe(10)
   })
 
   it('TICK_RATE_MS is a positive number', () => {
