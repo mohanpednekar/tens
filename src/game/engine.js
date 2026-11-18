@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, BUY_MAX_UNLOCK_COST, SLEEP_MODE_BASE_CAP_SECONDS, SLEEP_MODE_CAP_STEP_SECONDS, SLEEP_MODE_CAP_UPGRADE_COSTS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -261,6 +261,10 @@ export const createInitialGameState = () => ({
   // cumulative ACTIVE play seconds it multiplies by (see addActivePlaySeconds). Both survive
   // Purge, Scale Up, Overclock and Reboot.
   playtimeBonusUnlocked: false,
+  // Permanent: the 2 PP Buy max unlock (buyBuyMaxUnlock) and the Sleep mode cap level (buySleepModeCapUpgrade,
+  // 0..SLEEP_MODE_CAP_UPGRADE_COSTS.length). Both survive Purge, Scale Up, Overclock and Reboot.
+  buyMaxUnlocked: false,
+  sleepModeCapLevel: 0,
   // Permanent flag: the one-time PP unlock of the Purge-count production speed bonus (buyPrestigeSpeedBonus).
   prestigeSpeedBonusUnlocked: false,
   // Stamped on every save by this build so storage.js's one-time grandfathering of the old free speed bonus never re-runs.
@@ -1054,6 +1058,41 @@ export const buyPlaytimeBonus = state => {
   }
 }
 
+// One-time PP unlock (BUY_MAX_UNLOCK_COST) of Buy max mode. Permanent; not blocked by production freeze.
+export const buyBuyMaxUnlock = state => {
+  if (state.buyMaxUnlocked) return state
+  if (clampNonNegative(state.purge.points) < BUY_MAX_UNLOCK_COST) return state
+  const latched = latchComputeFlopsPageUnlocked(state)
+  return {
+    ...latched,
+    purge: { ...latched.purge, points: latched.purge.points - BUY_MAX_UNLOCK_COST },
+    buyMaxUnlocked: true,
+  }
+}
+
+// --- Sleep mode cap --- how much real absence offline progress simulates: SLEEP_MODE_BASE_CAP_SECONDS
+// (4h) + SLEEP_MODE_CAP_STEP_SECONDS (4h) per level, reaching MAX_OFFLINE_SECONDS (24h) at the last level.
+export const SLEEP_MODE_CAP_MAX_LEVEL = SLEEP_MODE_CAP_UPGRADE_COSTS.length
+export const getSleepModeCapLevel = state =>
+  Math.min(SLEEP_MODE_CAP_MAX_LEVEL, Math.floor(clampNonNegative(state?.sleepModeCapLevel ?? 0)))
+export const getMaxOfflineSeconds = state =>
+  Math.min(MAX_OFFLINE_SECONDS, SLEEP_MODE_BASE_CAP_SECONDS + SLEEP_MODE_CAP_STEP_SECONDS * getSleepModeCapLevel(state))
+// PP cost of the next level, or null once maxed.
+export const getSleepModeCapUpgradeCost = level => SLEEP_MODE_CAP_UPGRADE_COSTS[level] ?? null
+
+// Buys the next Sleep mode cap level. Permanent; not blocked by production freeze.
+export const buySleepModeCapUpgrade = state => {
+  const level = getSleepModeCapLevel(state)
+  const cost = getSleepModeCapUpgradeCost(level)
+  if (cost === null || clampNonNegative(state.purge.points) < cost) return state
+  const latched = latchComputeFlopsPageUnlocked(state)
+  return {
+    ...latched,
+    purge: { ...latched.purge, points: latched.purge.points - cost },
+    sleepModeCapLevel: level + 1,
+  }
+}
+
 // Called only by the live tick loop while the document is visible — never by offline/background
 // catch-up, and never by hidden-tab ticks — so simulated and unattended time don't count as active play.
 export const addActivePlaySeconds = seconds => state => ({
@@ -1417,6 +1456,8 @@ export const eraGame = state => {
     computeAutoChargeEnabled: state.computeAutoChargeEnabled ?? initial.computeAutoChargeEnabled,
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     playtimeBonusUnlocked: state.playtimeBonusUnlocked ?? initial.playtimeBonusUnlocked,
+    buyMaxUnlocked: state.buyMaxUnlocked ?? initial.buyMaxUnlocked,
+    sleepModeCapLevel: state.sleepModeCapLevel ?? initial.sleepModeCapLevel,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     speedBonusGrandfathered: state.speedBonusGrandfathered ?? initial.speedBonusGrandfathered,
     activePlaySeconds: state.activePlaySeconds ?? initial.activePlaySeconds,
@@ -2429,12 +2470,13 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state =>
     ? tickChallengeRun(elapsedSeconds, autobuyerBatchSize, state)
     : tickGameCore(elapsedSeconds, autobuyerBatchSize, 0)(state))
 
-// Real elapsed seconds away, capped at MAX_OFFLINE_SECONDS. At or below
+// Real elapsed seconds away, capped at capSeconds (the save's getMaxOfflineSeconds; MAX_OFFLINE_SECONDS,
+// the 24h hard ceiling, when omitted). At or below
 // OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, simulated at 100% speed (no reduction); beyond
 // it, the entire (capped) duration is scaled down by OFFLINE_PROGRESS_SPEED_MULTIPLIER instead —
 // then floored either way to give the number of 1-second ticks applyOfflineProgress will simulate.
-export const getOfflineEffectiveSeconds = elapsedRealSeconds => {
-  const cappedSeconds = Math.min(clampNonNegative(elapsedRealSeconds), MAX_OFFLINE_SECONDS)
+export const getOfflineEffectiveSeconds = (elapsedRealSeconds, capSeconds = MAX_OFFLINE_SECONDS) => {
+  const cappedSeconds = Math.min(clampNonNegative(elapsedRealSeconds), capSeconds, MAX_OFFLINE_SECONDS)
   const speedMultiplier = cappedSeconds > OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS
     ? OFFLINE_PROGRESS_SPEED_MULTIPLIER
     : 1
@@ -2445,12 +2487,12 @@ export const getOfflineEffectiveSeconds = elapsedRealSeconds => {
 // second at a time (rather than a single call with a large elapsedSeconds) so autobuyers get the
 // same one-purchase-attempt-per-second cadence they'd have had if the game had stayed open — at
 // full speed for a short absence, 50% speed beyond OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS
-// (see getOfflineEffectiveSeconds above), and capped to MAX_OFFLINE_SECONDS of real time either
-// way. tickGame unconditionally drives both the main-game tiers and the Byte Foundry
+// (see getOfflineEffectiveSeconds above), and capped to the save's own Sleep mode cap
+// (getMaxOfflineSeconds) of real time either way. tickGame unconditionally drives both the main-game tiers and the Byte Foundry
 // (tickIntroProduction/tickIntroAutoInvest/tickStorage*), so this same speed and cadence apply to
 // the entire game, not just tiers.
 export const applyOfflineProgress = (elapsedRealSeconds, autobuyerBatchSize = 1) => state => {
-  const effectiveSeconds = getOfflineEffectiveSeconds(elapsedRealSeconds)
+  const effectiveSeconds = getOfflineEffectiveSeconds(elapsedRealSeconds, getMaxOfflineSeconds(state))
   let result = state
   for (let i = 0; i < effectiveSeconds; i++) {
     result = tickGame(1, autobuyerBatchSize)(result)
@@ -2462,13 +2504,14 @@ export const applyOfflineProgress = (elapsedRealSeconds, autobuyerBatchSize = 1)
 // bring an absence from OFFLINE_PROGRESS_SPEED_MULTIPLIER up to 100% speed (the capped real elapsed
 // time minus what getOfflineEffectiveSeconds already granted). 0 for a short absence that already
 // ran at full speed.
-export const getOfflineRewardBonusSeconds = elapsedRealSeconds =>
-  Math.floor(Math.min(clampNonNegative(elapsedRealSeconds), MAX_OFFLINE_SECONDS)) - getOfflineEffectiveSeconds(elapsedRealSeconds)
+export const getOfflineRewardBonusSeconds = (elapsedRealSeconds, capSeconds = MAX_OFFLINE_SECONDS) =>
+  Math.floor(Math.min(clampNonNegative(elapsedRealSeconds), capSeconds, MAX_OFFLINE_SECONDS))
+    - getOfflineEffectiveSeconds(elapsedRealSeconds, capSeconds)
 
 // Replays the bonus seconds above with the same one-tick-per-simulated-second cadence as
 // applyOfflineProgress, so 50% catch-up + this bonus = the full absence simulated at 100% speed.
 export const applyOfflineRewardBonus = (elapsedRealSeconds, autobuyerBatchSize = 1) => state => {
-  const bonusSeconds = getOfflineRewardBonusSeconds(elapsedRealSeconds)
+  const bonusSeconds = getOfflineRewardBonusSeconds(elapsedRealSeconds, getMaxOfflineSeconds(state))
   let result = state
   for (let i = 0; i < bonusSeconds; i++) {
     result = tickGame(1, autobuyerBatchSize)(result)
@@ -2599,15 +2642,14 @@ export const buyTierQuantity = (tierId, quantity) => state => applyChallengePurc
 
 // --- Buy max mode --- a player-facing toggle (persisted as a UI preference, see storage.js's
 // loadBuyMaxPreference) that makes each manual purchase click buy as many levels as are
-// affordable instead of one. Unlocked once the save has completed its first Prestige (or any Era
-// ascension, which resets purge.count but implies earlier Prestiges). Autobuyers are unaffected.
-export const isBuyMaxUnlocked = state =>
-  clampNonNegative(state.purge?.count ?? 0) >= 1 || clampNonNegative(state.era?.count ?? 0) >= 1
+// affordable instead of one. Autobuyers are unaffected.
+// Bought once for BUY_MAX_UNLOCK_COST PP (buyBuyMaxUnlock); saves that had it free are grandfathered in storage.js.
+export const isBuyMaxUnlocked = state => Boolean(state.buyMaxUnlocked)
 
 // Firmware (Automation / Prestige) appears on the first Prestige ever — or earlier, as soon as any Power
 // Auto-charge boundary is bought, since that automation's switches (and Auto Boost's) live only on Firmware.
 export const isPerksPageRevealed = state =>
-  isBuyMaxUnlocked(state) || COMPUTE_MERGE_BOUNDARIES.some(boundary => Boolean(state.intro?.[boundary.autoFlagField]))
+  clampNonNegative(state.purge?.count ?? 0) >= 1 || clampNonNegative(state.era?.count ?? 0) >= 1 || COMPUTE_MERGE_BOUNDARIES.some(boundary => Boolean(state.intro?.[boundary.autoFlagField]))
 
 // Chains a single-level purchase action (state => state, same-reference no-op when it can't buy)
 // until it stops buying, capped at BUY_MAX_ITERATION_CAP. Used for every leveled purchase whose
@@ -7896,6 +7938,8 @@ const resetFactoryCycle = (state, awardPurge) => {
     computeAutoChargeEnabled: state.computeAutoChargeEnabled ?? initial.computeAutoChargeEnabled,
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     playtimeBonusUnlocked: state.playtimeBonusUnlocked ?? initial.playtimeBonusUnlocked,
+    buyMaxUnlocked: state.buyMaxUnlocked ?? initial.buyMaxUnlocked,
+    sleepModeCapLevel: state.sleepModeCapLevel ?? initial.sleepModeCapLevel,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     speedBonusGrandfathered: state.speedBonusGrandfathered ?? initial.speedBonusGrandfathered,
     activePlaySeconds: state.activePlaySeconds ?? initial.activePlaySeconds,
@@ -8058,6 +8102,8 @@ const scaleUpGameCore = state => {
     computeAutoChargeEnabled: state.computeAutoChargeEnabled ?? initial.computeAutoChargeEnabled,
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     playtimeBonusUnlocked: state.playtimeBonusUnlocked ?? initial.playtimeBonusUnlocked,
+    buyMaxUnlocked: state.buyMaxUnlocked ?? initial.buyMaxUnlocked,
+    sleepModeCapLevel: state.sleepModeCapLevel ?? initial.sleepModeCapLevel,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     speedBonusGrandfathered: state.speedBonusGrandfathered ?? initial.speedBonusGrandfathered,
     activePlaySeconds: state.activePlaySeconds ?? initial.activePlaySeconds,
@@ -8159,6 +8205,8 @@ const overclockGameCore = state => {
     computeAutoChargeEnabled: state.computeAutoChargeEnabled ?? initial.computeAutoChargeEnabled,
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     playtimeBonusUnlocked: state.playtimeBonusUnlocked ?? initial.playtimeBonusUnlocked,
+    buyMaxUnlocked: state.buyMaxUnlocked ?? initial.buyMaxUnlocked,
+    sleepModeCapLevel: state.sleepModeCapLevel ?? initial.sleepModeCapLevel,
     prestigeSpeedBonusUnlocked: state.prestigeSpeedBonusUnlocked ?? initial.prestigeSpeedBonusUnlocked,
     speedBonusGrandfathered: state.speedBonusGrandfathered ?? initial.speedBonusGrandfathered,
     activePlaySeconds: state.activePlaySeconds ?? initial.activePlaySeconds,

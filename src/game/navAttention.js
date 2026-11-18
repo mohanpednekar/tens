@@ -1,4 +1,5 @@
 import {
+  BUY_MAX_UNLOCK_COST,
   PLAYTIME_BONUS_UNLOCK_COST,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
@@ -8,6 +9,8 @@ import {
 } from 'game/layers'
 import {
   canBuyComputeFlopsTier,
+  getSleepModeCapLevel,
+  getSleepModeCapUpgradeCost,
   getSpeedUpgradeCostBits,
   isDiskSizeUnlockAvailable,
   isSpeedUpgradeArmable,
@@ -177,6 +180,9 @@ export const hasAffordablePrestigePerk = state => {
   const points = state.purge?.points ?? 0
   if (points >= getPrestigeDoublePpUpgradeCost(state.prestigeDoublePpLevel ?? 0)) return true
   if (!state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) return true
+  if (!state.buyMaxUnlocked && points >= BUY_MAX_UNLOCK_COST) return true
+  const sleepCost = getSleepModeCapUpgradeCost(getSleepModeCapLevel(state))
+  if (sleepCost !== null && points >= sleepCost) return true
   return !state.playtimeBonusUnlocked && points >= PLAYTIME_BONUS_UNLOCK_COST
 }
 

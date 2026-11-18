@@ -103,8 +103,11 @@ from legacy `purchased` counts.
 
 ### Buy max mode
 
-`isBuyMaxUnlocked(state)` — true once `purge.count >= 1` or `era.count >= 1` (Reboot resets
-the Prestige count but implies an earlier Prestige). The toggle itself is a per-device UI preference
+`isBuyMaxUnlocked(state)` — true once the permanent `buyMaxUnlocked` flag is set by the one-time
+`buyBuyMaxUnlock` (`BUY_MAX_UNLOCK_COST` = 2 PP, Firmware → Prestige → Purchasing; survives Purge/Reboot).
+`storage.js`'s `mergeState` grandfathers it once for saves without the field that already had it free
+(`purge.count >= 1` or `era.count >= 1`). Firmware's reveal (`isPerksPageRevealed`) keeps the old
+Purge/Reboot test. The toggle itself is a per-device UI preference
 (`storage.js`'s `loadBuyMaxPreference`/`saveBuyMaxPreference`, key `tens_buy_max_mode`), not game
 state, so no reset path needs to carry it; `useIncrementalGame` exposes `buyMaxMode`/`setBuyMaxMode`
 and picks each manual action's max variant only while the mode is on AND unlocked for the state being
@@ -1376,8 +1379,14 @@ as read-only accessors, currently unused by `MainPage` (see `docs/DESIGN_HISTORY
 
 ### Offline progress
 
-Time away from the game is simulated when the page is reopened, capped at `MAX_OFFLINE_SECONDS` (24
-hours) of real elapsed time before any speed reduction is applied. A short absence — at or below
+Time away from the game is simulated when the page is reopened, capped at the save's Sleep mode cap
+`getMaxOfflineSeconds(state)` of real elapsed time before any speed reduction is applied:
+`SLEEP_MODE_BASE_CAP_SECONDS` (4 h) + `SLEEP_MODE_CAP_STEP_SECONDS` (4 h) × `sleepModeCapLevel` (0–5,
+permanent, survives Purge/Reboot), never above `MAX_OFFLINE_SECONDS` (24 h). Levels are bought with
+`buySleepModeCapUpgrade` for `SLEEP_MODE_CAP_UPGRADE_COSTS` (4, 40, 400, 4,000, 40,000 PP;
+`getSleepModeCapUpgradeCost(level)` → null at max) on Firmware → Prestige. `getOfflineEffectiveSeconds`/
+`getOfflineRewardBonusSeconds` take the cap as an optional second argument (default 24 h); the hook
+passes it and stores it on the `offlineProgress` summary (`capSeconds`) for the rewarded-video top-up. A short absence — at or below
 `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` (10 minutes) — is simulated at **100% speed**, as if
 the screen had been on the whole time, and never surfaces the "Resumed from sleep" notice (there's nothing
 notable to report). Only once the (capped) elapsed duration exceeds that threshold does the entire
@@ -1642,6 +1651,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   multiplied into `tickGame`'s production multiplier. `activePlaySeconds` only grows via `addActivePlaySeconds`, called by the live
   tick loop in `useIncrementalGame` while `document.visibilityState === 'visible'` — never by offline/background catch-up, and never
   by hidden-tab ticks (throttled background timers still run `tickGame`). Both fields survive Purge/Scale Up/Overclock/Reboot.
+- **Active — Buy max (2 PP) / Sleep mode cap (4–40,000 PP):** see "Buy max mode" and "Offline progress".
 - **Active — Compression:** `buyPrestigeDoublePp(state)` permanently spends `getPrestigeDoublePpUpgradeCost(level)`
   PP (`10^(level+1)` — 10, 100, 1_000, …) to increment `prestigeDoublePpLevel`. Not blocked
   by production freeze. Halves powers-per-PP through level 6, then doubles PP-per-power.

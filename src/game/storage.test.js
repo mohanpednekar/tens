@@ -232,6 +232,24 @@ describe('schema merge on load', () => {
     expect(loaded.speedBonusGrandfathered).toBe(true)
   })
 
+  it.each([
+    // [purge count, era count, stored flag, expected]
+    [0, 0, undefined, false],
+    [1, 0, undefined, true], // pre-2-PP save that already had Buy max for free
+    [0, 1, undefined, true],
+    [5, 0, false, false], // new-build save that has not bought it
+    [0, 0, true, true],
+  ])('grandfathers Buy max once: %i Purges, %i Reboots, flag %s → %s', (count, eraCount, flag, expected) => {
+    const { buyMaxUnlocked: _a, ...save } = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify({
+      ...save,
+      ...(flag === undefined ? {} : { buyMaxUnlocked: flag }),
+      purge: { ...save.purge, count },
+      era: { ...save.era, count: eraCount },
+    }))
+    expect(loadGameState().buyMaxUnlocked).toBe(expected)
+  })
+
   it('applies Purge-count automation milestones to a loaded save (no PP, no next Purge needed)', () => {
     const save = createInitialGameState()
     localStorage.setItem('tens_game_state', JSON.stringify({ ...save, purge: { ...save.purge, count: 150 } }))

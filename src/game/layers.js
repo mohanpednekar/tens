@@ -687,6 +687,12 @@ export const OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS = 10 * 60
 // Real-world elapsed time is capped at 24 hours before the speed multiplier is applied, so a
 // very long absence can't turn into an unbounded simulation loop on load.
 export const MAX_OFFLINE_SECONDS = 24 * 60 * 60
+// Sleep mode cap (Firmware → Prestige): a save starts at SLEEP_MODE_BASE_CAP_SECONDS (4h) of simulated
+// absence; each PP level adds SLEEP_MODE_CAP_STEP_SECONDS (4h), up to MAX_OFFLINE_SECONDS (24h) at the
+// last level. Costs are per level (4, 40, 400, 4,000, 40,000 PP). See engine.js's getMaxOfflineSeconds.
+export const SLEEP_MODE_BASE_CAP_SECONDS = 4 * 60 * 60
+export const SLEEP_MODE_CAP_STEP_SECONDS = 4 * 60 * 60
+export const SLEEP_MODE_CAP_UPGRADE_COSTS = [4, 40, 400, 4000, 40000]
 
 // Supporter Prestige museum (meta QoL — no economy effect). Every prestige appends one history
 // entry; pinned entries are a player-curated subset. Caps keep localStorage bounded.
@@ -748,6 +754,8 @@ export const PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER = 1.1
 // ticks only — simulated offline/background catch-up and hidden-tab ticks never count). See
 // engine.js's getPlaytimeProductionMultiplier/buyPlaytimeBonus.
 export const PLAYTIME_BONUS_UNLOCK_COST = 100
+// One-time PP unlock for Buy max mode (see engine.js's isBuyMaxUnlocked/buyBuyMaxUnlock).
+export const BUY_MAX_UNLOCK_COST = 2
 export const PLAYTIME_BONUS_PER_HOUR = 0.01
 // Per-tier base cost for the tickspeed multiplier ladder (see engine.js's
 // getTickspeedMultiplierBaseCost/getTickspeedMultiplierCost) — 10^10 for the first tier (index 0),

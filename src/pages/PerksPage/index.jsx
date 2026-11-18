@@ -29,6 +29,10 @@ import {
   getLiveChallengeForAutomation,
   isChallengeCompleted,
   getActiveChallenge,
+  formatOfflineDuration,
+  getMaxOfflineSeconds,
+  getSleepModeCapLevel,
+  getSleepModeCapUpgradeCost,
   isBuyMaxUnlocked,
   isProductionFrozen,
   isOverflowModeUnlocked,
@@ -41,8 +45,10 @@ import {
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
+  BUY_MAX_UNLOCK_COST,
   PLAYTIME_BONUS_UNLOCK_COST,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
+  SLEEP_MODE_CAP_STEP_SECONDS,
 } from 'game/layers'
 import { hasAffordableAutomationPerk, hasAffordablePrestigePerk } from 'game/navAttention'
 import { useEffect, useState } from 'react'
@@ -469,7 +475,7 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction =
 
 export const PERKS_TABS = [
   { id: 'automation', icon: '🤖', ariaLabel: 'open automation', title: 'Automation — unlock, pause/resume and speed up every automation' },
-  { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Compression, playtime bonus, Overflow mode and Buy max' },
+  { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Speed bonus, Sleep mode, Compression, playtime bonus, Overflow mode and Buy max' },
 ]
 
 const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Math.round(ms * 10) / 10} ms`)
@@ -513,6 +519,11 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const canBuySpeedBonus = !state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
   const speedBonusMultiplier = getPrestigeProductionMultiplier(purgeCount)
   const canBuyPlaytimeBonus = !state.playtimeBonusUnlocked && points >= PLAYTIME_BONUS_UNLOCK_COST
+  const canBuyBuyMax = !isBuyMaxUnlocked(state) && points >= BUY_MAX_UNLOCK_COST
+  const sleepCapLevel = getSleepModeCapLevel(state)
+  const sleepCapCost = getSleepModeCapUpgradeCost(sleepCapLevel)
+  const sleepCapLabel = formatOfflineDuration(getMaxOfflineSeconds(state)).replace(/ 0m$/, '')
+  const sleepCapStepLabel = formatOfflineDuration(SLEEP_MODE_CAP_STEP_SECONDS).replace(/ 0m$/, '')
 
   // Auto-charge itself is bought per boundary on Power; Firmware holds its pause switch. Auto Boost is automatic once any
   // boundary is automated (no purchase); its on/off switch and preset live here too.
@@ -838,6 +849,28 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             />
           )}
         </Row>
+        <Row aria-label="sleep mode upgrade">
+          <RowLabelStack>
+            <RowLabel title="Longest absence simulated when you come back"><RowIcon>😴</RowIcon>Sleep mode</RowLabel>
+            <SubText>Up to {sleepCapLabel} away</SubText>
+          </RowLabelStack>
+          {sleepCapCost === null ? (
+            <UnlockedBadge icon="😴" name="Sleep mode" title="Sleep mode at its maximum" />
+          ) : (
+            <PpPurchaseButton
+              ariaLabel={`Buy Sleep mode level ${sleepCapLevel + 1} for ${formatAmount(sleepCapCost)} Purge Points — +${sleepCapStepLabel} of time away`}
+              color="#a78bfa"
+              cost={sleepCapCost}
+              disabled={points < sleepCapCost}
+              icon="⏫"
+              label={`${formatAmount(sleepCapCost)} PP`}
+              onClick={actions.buySleepModeCapUpgrade}
+              points={points}
+              progressLabel="Sleep mode upgrade PP progress"
+              title={`Spend Purge Points to simulate ${sleepCapStepLabel} more of time away`}
+            />
+          )}
+        </Row>
         <Row aria-label="compression upgrade">
           <RowLabelStack>
             <RowLabel>
@@ -897,15 +930,28 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           )}
         </Row>
       </Category>
-      {isBuyMaxUnlocked(state) && (
-        <Category aria-label="purchasing category">
-          <CategoryHeading>Purchasing</CategoryHeading>
-          <Row aria-label="buy max toggle">
-            <RowLabel title="Each purchase buys as many levels as you can afford (Factory tiers buy full levels only)"><RowIcon>⏭</RowIcon>Buy max</RowLabel>
+      <Category aria-label="purchasing category">
+        <CategoryHeading>Purchasing</CategoryHeading>
+        <Row aria-label="buy max toggle">
+          <RowLabel title="Each purchase buys as many levels as you can afford (Factory tiers buy full levels only)"><RowIcon>⏭</RowIcon>Buy max</RowLabel>
+          {isBuyMaxUnlocked(state) ? (
             <BuyMaxToggle game={game} />
-          </Row>
-        </Category>
-      )}
+          ) : (
+            <PpPurchaseButton
+              ariaLabel={`Unlock Buy max for ${BUY_MAX_UNLOCK_COST} Purge Points`}
+              color="#38bdf8"
+              cost={BUY_MAX_UNLOCK_COST}
+              disabled={!canBuyBuyMax}
+              icon="🔓"
+              label={`${formatAmount(BUY_MAX_UNLOCK_COST)} PP`}
+              onClick={actions.buyBuyMaxUnlock}
+              points={points}
+              progressLabel="Buy max unlock PP progress"
+              title="Spend Purge Points once to unlock the Buy max toggle"
+            />
+          )}
+        </Row>
+      </Category>
     </List>
   )
 

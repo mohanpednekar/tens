@@ -185,6 +185,11 @@ import {
   buyPrestigeSpeedBonus,
   getPlaytimeProductionMultiplier,
   buyPlaytimeBonus,
+  buyBuyMaxUnlock,
+  buySleepModeCapUpgrade,
+  getMaxOfflineSeconds,
+  getSleepModeCapLevel,
+  getSleepModeCapUpgradeCost,
   addActivePlaySeconds,
   getPurgePercent,
   getNextBytePowerProgressFraction,
@@ -370,7 +375,7 @@ import {
   getPoolTapMultiplier,
   getDataStreamTapMultiplier,
 } from './engine'
-import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, ACHIEVEMENT_DEFINITIONS, CHALLENGE_DEFINITIONS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
+import { BUY_MAX_UNLOCK_COST, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, ACHIEVEMENT_DEFINITIONS, CHALLENGE_DEFINITIONS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -7841,6 +7846,43 @@ describe('getOfflineEffectiveSeconds', () => {
   it('treats negative input as 0', () => {
     expect(getOfflineEffectiveSeconds(-50)).toBe(0)
   })
+
+  it('caps at a smaller per-save cap when given one', () => {
+    expect(getOfflineEffectiveSeconds(MAX_OFFLINE_SECONDS, 4 * 3600)).toBe(2 * 3600)
+    expect(getOfflineRewardBonusSeconds(MAX_OFFLINE_SECONDS, 4 * 3600)).toBe(2 * 3600)
+  })
+})
+
+describe('Sleep mode cap', () => {
+  it('starts at 4h and adds 4h per level up to the 24h ceiling', () => {
+    const state = createInitialGameState()
+    expect(getMaxOfflineSeconds(state)).toBe(4 * 3600)
+    expect([1, 2, 3, 4, 5].map(level => getMaxOfflineSeconds({ ...state, sleepModeCapLevel: level }) / 3600))
+      .toEqual([8, 12, 16, 20, 24])
+    expect(getMaxOfflineSeconds({ ...state, sleepModeCapLevel: 99 })).toBe(MAX_OFFLINE_SECONDS)
+  })
+
+  it('costs 4, 40, 400, 4,000, 40,000 PP and stops at the last level', () => {
+    let state = withPrestigePoints(createInitialGameState(), 44444)
+    for (const cost of [4, 40, 400, 4000, 40000]) {
+      expect(getSleepModeCapUpgradeCost(getSleepModeCapLevel(state))).toBe(cost)
+      const before = state.purge.points
+      state = buySleepModeCapUpgrade(state)
+      expect(state.purge.points).toBe(before - cost)
+    }
+    expect(state.sleepModeCapLevel).toBe(5)
+    expect(state.purge.points).toBe(0)
+    const rich = withPrestigePoints(state, 1e9)
+    expect(buySleepModeCapUpgrade(rich)).toBe(rich)
+    const poor = withPrestigePoints(createInitialGameState(), 3)
+    expect(buySleepModeCapUpgrade(poor)).toBe(poor)
+  })
+
+  it('a 24h absence simulates 2h at the base 4h cap and 12h at the max level (50% speed)', () => {
+    const state = createInitialGameState()
+    expect(getOfflineEffectiveSeconds(MAX_OFFLINE_SECONDS, getMaxOfflineSeconds(state))).toBe(7200)
+    expect(getOfflineEffectiveSeconds(MAX_OFFLINE_SECONDS, getMaxOfflineSeconds({ ...state, sleepModeCapLevel: 5 }))).toBe(43200)
+  })
 })
 
 // ─── applyOfflineProgress ─────────────────────────────────────────────────────
@@ -11594,11 +11636,32 @@ describe('purgeGame unboundedUnlocked latch', () => {
 describe('Buy max mode', () => {
   const blockCost = level => getTierCost(tensTier, level) * DEFAULT_PURCHASE_BLOCK_SIZE
 
-  it('unlocks only after the first Prestige (or any Era ascension)', () => {
+  it('unlocks only through the one-time 2 PP purchase, not by Purge or Era count', () => {
     const state = createInitialGameState()
     expect(isBuyMaxUnlocked(state)).toBe(false)
-    expect(isBuyMaxUnlocked({ ...state, purge: { ...state.purge, count: 1 } })).toBe(true)
-    expect(isBuyMaxUnlocked({ ...state, era: { count: 1 } })).toBe(true)
+    expect(isBuyMaxUnlocked({ ...state, purge: { ...state.purge, count: 1 } })).toBe(false)
+    expect(isBuyMaxUnlocked({ ...state, era: { count: 1 } })).toBe(false)
+    expect(isBuyMaxUnlocked({ ...state, buyMaxUnlocked: true })).toBe(true)
+  })
+
+  it('buyBuyMaxUnlock spends BUY_MAX_UNLOCK_COST PP once; no-ops when unaffordable or owned', () => {
+    const state = withPrestigePoints(createInitialGameState(), BUY_MAX_UNLOCK_COST + 1)
+    const after = buyBuyMaxUnlock(state)
+    expect(after.buyMaxUnlocked).toBe(true)
+    expect(after.purge.points).toBe(1)
+    expect(buyBuyMaxUnlock(after)).toBe(after)
+    const poor = withPrestigePoints(createInitialGameState(), BUY_MAX_UNLOCK_COST - 1)
+    expect(buyBuyMaxUnlock(poor)).toBe(poor)
+  })
+
+  it('keeps the unlock through Purge and Reboot', () => {
+    const owned = { ...createInitialGameState(), buyMaxUnlocked: true, sleepModeCapLevel: 3 }
+    const purged = purgeGame({ ...owned, resources: { ...owned.resources, [MONEY_ID]: PURGE_THRESHOLD } })
+    expect(purged.buyMaxUnlocked).toBe(true)
+    expect(purged.sleepModeCapLevel).toBe(3)
+    const rebooted = eraGame({ ...owned, purge: { ...owned.purge, points: ERA_ELIGIBILITY_PP } })
+    expect(rebooted.buyMaxUnlocked).toBe(true)
+    expect(rebooted.sleepModeCapLevel).toBe(3)
   })
 
   it('buys every affordable FULL tier level in one click, leaving the remainder unspent', () => {

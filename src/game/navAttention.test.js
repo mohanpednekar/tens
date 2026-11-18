@@ -370,6 +370,8 @@ describe('navAttention', () => {
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
       prestigeSpeedBonusUnlocked: true,
+      buyMaxUnlocked: true,
+      sleepModeCapLevel: 5,
       challenges: { ...createInitialGameState().challenges, completed: { F21: true, F22: true, F23: true, F24: true, F25: true } },
     }
     const automationOnly = { ...base, purge: { count: 1, points: getAutomationIntervalUpgradeCost('speedUp', 0) }, autoGlobalTickspeed: true }

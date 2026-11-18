@@ -1,5 +1,6 @@
 import StatCard from 'components/StatCard'
 import {
+  formatAmount,
   formatBitsInNearestUnit,
   formatOfflineDuration,
   getAutobuyerUnlockMilestone,
@@ -41,6 +42,10 @@ import {
   PRESTIGE_POWERS_PER_PP_BASE,
   PLAYTIME_BONUS_PER_HOUR,
   PLAYTIME_BONUS_UNLOCK_COST,
+  BUY_MAX_UNLOCK_COST,
+  SLEEP_MODE_BASE_CAP_SECONDS,
+  SLEEP_MODE_CAP_STEP_SECONDS,
+  SLEEP_MODE_CAP_UPGRADE_COSTS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
@@ -169,7 +174,7 @@ const InfoPage = () => {
             Purge — unless you have unlocked Overflow mode (see Purge).
           </li>
           <li>
-            After your first Purge, the <strong>Buy max</strong> toggle (Firmware → ✦ Prestige) makes
+            Once bought ({BUY_MAX_UNLOCK_COST} PP on Firmware → ✦ Prestige), the <strong>Buy max</strong> toggle makes
             each purchase buy as many levels as you can afford. Tiers buy full levels only — a
             partly bought level takes its own click.
           </li>
@@ -681,8 +686,10 @@ const InfoPage = () => {
         <h2>Sleep mode</h2>
         <ul>
           <li>
-            Time away (up to {formatOfflineDuration(MAX_OFFLINE_SECONDS)}) is simulated when you come
-            back. Absences of {formatOfflineDuration(OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS)}{' '}
+            Time away is simulated when you come back, up to{' '}
+            {formatOfflineDuration(SLEEP_MODE_BASE_CAP_SECONDS)} at first. Each Sleep mode upgrade (Firmware →
+            ✦ Prestige; {SLEEP_MODE_CAP_UPGRADE_COSTS.map(cost => formatAmount(cost)).join(' / ')} PP) adds{' '}
+            {formatOfflineDuration(SLEEP_MODE_CAP_STEP_SECONDS)}, up to {formatOfflineDuration(MAX_OFFLINE_SECONDS)}. Absences of {formatOfflineDuration(OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS)}{' '}
             or less run at full speed; longer ones run at{' '}
             {OFFLINE_PROGRESS_SPEED_MULTIPLIER * 100}% speed and show a “Resumed from sleep” summary.
           </li>

@@ -578,6 +578,10 @@ const mergeState = rawSaved => {
     // had it for free (>= 10 Purges) keep it.
     prestigeSpeedBonusUnlocked: saved.prestigeSpeedBonusUnlocked === true
       || (saved.speedBonusGrandfathered !== true && (saved.purge?.count ?? 0) >= GRANDFATHER_SPEED_BONUS_MIN_PURGES),
+    // Grandfathered once: a save written before Buy max became a 2 PP purchase (no `buyMaxUnlocked`
+    // field) keeps it if it already had it for free (any Purge or Reboot). The field's presence is the stamp.
+    buyMaxUnlocked: saved.buyMaxUnlocked === true
+      || (saved.buyMaxUnlocked === undefined && ((saved.purge?.count ?? 0) >= 1 || (saved.era?.count ?? 0) >= 1)),
     autoScaleUp: saved.autoScaleUp ?? legacyAutoSpeedUp ?? fresh.autoScaleUp,
     autoScaleUpEnabled: saved.autoScaleUpEnabled ?? legacyAutoSpeedUpEnabled ?? fresh.autoScaleUpEnabled,
     // A legacy separate `bytes` pool is dropped: its Bytes were already mirrored into Bits (one pool now).
