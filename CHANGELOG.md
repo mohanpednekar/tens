@@ -18,7 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - **Firmware → ✦ Prestige rows are terse**: each upgrade shows its value now → after buying; tap an upgrade's name for its description.
-- **Buy max is now a 2 PP Firmware upgrade** (Firmware → ✦ Prestige → Purchasing) instead of unlocking free at the first Purge. Saves that already had it keep it.
+- **Buy max is now a 2 PP Firmware upgrade** (Firmware → ✦ Prestige → Purchasing) instead of unlocking free at the first Purge. Existing saves must buy it too.
+- **No more free unlocks on load**: a save that never bought the Speed bonus no longer gets it for having 10+ Purges, and 100+ Purges no longer unlock Overflow mode by themselves (it needs Auto Purge at 1 s or faster).
 - **Sleep mode is capped at 4 h of time away by default** (was 24 h). New Firmware → ✦ Prestige upgrade adds 4 h per level for 4, 40, 400, 4,000 and 40,000 PP, back up to 24 h.
 - **Exponential notation from 10,000**: amounts switch to the `1.23e4` form after 9,999 (was after 999,999), everywhere in the game. The shown figure is cut off rather than rounded up, so 19,999 reads `1.999e4`, never `2e4`.
 - **Compact Factory tier rows**: each tier now fits on one line (symbol, owned amount, tickspeed and Buy buttons), about 45% shorter. The Buy button shows the tier's completed levels, with Buy max's `+n` right after it. Production moved into the row's details (tap the tier symbol).

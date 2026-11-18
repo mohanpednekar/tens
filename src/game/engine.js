@@ -269,7 +269,7 @@ export const createInitialGameState = () => ({
   cacheWarmUnlocked: false,
   // Permanent flag: the one-time PP unlock of the Purge-count production speed bonus (buyPrestigeSpeedBonus).
   prestigeSpeedBonusUnlocked: false,
-  // Stamped on every save by this build so storage.js's one-time grandfathering of the old free speed bonus never re-runs.
+  // Legacy stamp from the removed speed-bonus grandfathering; inert, kept so old/new saves share one shape.
   speedBonusGrandfathered: true,
   activePlaySeconds: 0,
   // RUN-SCOPED total of how many times Scale Up has been triggered (see scaleUpGame); the per-tier
@@ -2679,7 +2679,7 @@ export const buyTierQuantity = (tierId, quantity) => state => applyChallengePurc
 // --- Buy max mode --- a player-facing toggle (persisted as a UI preference, see storage.js's
 // loadBuyMaxPreference) that makes each manual purchase click buy as many levels as are
 // affordable instead of one. Autobuyers are unaffected.
-// Bought once for BUY_MAX_UNLOCK_COST PP (buyBuyMaxUnlock); saves that had it free are grandfathered in storage.js.
+// Bought once for BUY_MAX_UNLOCK_COST PP (buyBuyMaxUnlock); never granted for free.
 export const isBuyMaxUnlocked = state => Boolean(state.buyMaxUnlocked)
 
 // Firmware (Automation / Prestige) appears on the first Prestige ever — or earlier, as soon as any Power

@@ -210,9 +210,6 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', condition: { kind: 'overclocked' } },
 ].map(def => ({ secret: false, platformDependent: false, bonus: null, ...def }))
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.map(def => [def.id, def]))
-// Legacy rule (lifetime prestige count), kept only so storage.js can grandfather saves that reached
-// it before DeGoogol moved to the Auto-Prestige interval above.
-export const PURGE_UNBOUNDED_MIN_COUNT = 100
 // Base PP earning rate beyond Googol: 1 PP per this many additional money-exponent "powers"
 // (orders of magnitude above GOOGOL's own 10^100 exponent). Each Compression upgrade halves this
 // until 1 power per PP, then doubles PP per power instead (see getPrestigePowersPerPp/

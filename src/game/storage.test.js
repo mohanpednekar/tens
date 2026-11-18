@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState, eraGame, getUnlockedStoragePoolCount } from './engine'
-import { BYTES_ID, ERA_ELIGIBILITY_PP, INTRO_CAPACITY_CAP_BITS, MONEY_ID, MONEY_STARTING_AMOUNT, COMPUTE_FLOPS_TIER_DEFINITIONS, PURGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
+import { BYTES_ID, ERA_ELIGIBILITY_PP, INTRO_CAPACITY_CAP_BITS, MONEY_ID, MONEY_STARTING_AMOUNT, COMPUTE_FLOPS_TIER_DEFINITIONS, TIER_DEFINITIONS } from './layers'
 import { adaptSaveForLoad, applyDevGameStateJson, importSaveJson, serializeSaveForExport, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, getActiveSlotId, isDevModeActive, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, setDevModeActive, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
@@ -212,34 +212,29 @@ describe('discardIncompatibleActiveSaveIfNeeded', () => {
 
 describe('schema merge on load', () => {
   it.each([
-    // [purge count, stored flag, stored grandfather stamp, expected]
-    [9, undefined, undefined, false],
-    [10, undefined, undefined, true],
-    [50, false, undefined, true], // pre-11-09 saves stored the old flag as false
-    [3, true, undefined, true],
-    [50, false, true, false], // new-build save that has not bought it
-    [50, undefined, true, false],
-  ])('grandfathers the speed bonus once: %i Purges, flag %s, stamp %s → %s', (count, flag, stamp, expected) => {
+    // [purge count, stored flag, expected] — never granted for free, however many Purges
+    [9, undefined, false],
+    [10, undefined, false],
+    [50, false, false],
+    [3, true, true],
+  ])('keeps the speed bonus only when bought: %i Purges, flag %s → %s', (count, flag, expected) => {
     const { prestigeSpeedBonusUnlocked: _a, speedBonusGrandfathered: _b, ...save } = createInitialGameState()
     localStorage.setItem('tens_game_state', JSON.stringify({
       ...save,
       ...(flag === undefined ? {} : { prestigeSpeedBonusUnlocked: flag }),
-      ...(stamp === undefined ? {} : { speedBonusGrandfathered: stamp }),
       purge: { ...save.purge, count },
     }))
-    const loaded = loadGameState()
-    expect(loaded.prestigeSpeedBonusUnlocked).toBe(expected)
-    expect(loaded.speedBonusGrandfathered).toBe(true)
+    expect(loadGameState().prestigeSpeedBonusUnlocked).toBe(expected)
   })
 
   it.each([
     // [purge count, era count, stored flag, expected]
     [0, 0, undefined, false],
-    [1, 0, undefined, true], // pre-2-PP save that already had Buy max for free
-    [0, 1, undefined, true],
-    [5, 0, false, false], // new-build save that has not bought it
+    [1, 0, undefined, false], // pre-2-PP save that had Buy max for free: not kept
+    [0, 1, undefined, false],
+    [5, 0, false, false],
     [0, 0, true, true],
-  ])('grandfathers Buy max once: %i Purges, %i Reboots, flag %s → %s', (count, eraCount, flag, expected) => {
+  ])('keeps Buy max only when bought: %i Purges, %i Reboots, flag %s → %s', (count, eraCount, flag, expected) => {
     const { buyMaxUnlocked: _a, ...save } = createInitialGameState()
     localStorage.setItem('tens_game_state', JSON.stringify({
       ...save,
@@ -339,11 +334,12 @@ describe('schema merge on load', () => {
     localStorage.setItem('tens_game_state', JSON.stringify({
       saveSchemaVersion: 1,
       intro: { mainGameUnlocked: true },
-      purge: { count: PURGE_UNBOUNDED_MIN_COUNT, points: 0, xp: 0, highestMilestone: 0 },
+      purge: { count: 100, points: 0, xp: 0, highestMilestone: 0 },
       era: { count: 2 },
     }))
     const loaded = loadGameState()
-    expect(loaded.purge.unboundedUnlocked).toBe(true)
+    // No Purge-count grandfathering: Overflow mode needs its Auto Purge interval, not 100 Purges.
+    expect(loaded.purge.unboundedUnlocked).toBe(false)
     expect(loaded.era.count).toBe(2)
     expect(loaded.eons.balance).toBe(0)
     expect(loaded.computeFlopsAutobuyers[COMPUTE_FLOPS_TIER_DEFINITIONS[0].id]).toBe(1)

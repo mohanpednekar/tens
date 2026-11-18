@@ -187,7 +187,7 @@ omitted; do not guess at any of it.** See `CLAUDE.md`'s "Economy model"/"Archite
 `ComputePage`, and check `docs/DESIGN_HISTORY.md` first if changing a formula/gate a past iteration may
 already have tried and rejected.
 
-After **100 lifetime Purges**, production no longer freezes at 1 Googol Bytes (optional Prestige
+Once Overflow mode unlocks (Auto Purge interval ≤ 1 s), production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Compression
 upgrades on Firmware → Prestige. Production speed bonus is a one-time 1 PP Firmware → Prestige purchase (×1.1 at 1 Purge, then ×(1 + log10 Purges): ×2 at 10, ×3 at 100, ×4 at 1,000), the PP tutorial — see `docs/ECONOMY_REFERENCE.md`.
 

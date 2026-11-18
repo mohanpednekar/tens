@@ -519,7 +519,8 @@ const formatHours = seconds => `${Number((seconds / 3600).toFixed(1))}h`
 const compressionSummary = level => {
   const ppPerPower = getPrestigePpPerPower(level)
   if (ppPerPower > 1) return `${formatAmount(ppPerPower)} PP/power`
-  return `${formatAmount(getPrestigePowersPerPp(level))} powers/PP`
+  const powers = getPrestigePowersPerPp(level)
+  return `${formatAmount(powers)} power${powers === 1 ? '' : 's'}/PP`
 }
 // "now → after", sharing a common leading label ("KB lvl 0 → 1") or trailing unit ("64 → 32 powers/PP").
 const beforeAfter = (before, after) => {

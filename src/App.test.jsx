@@ -312,6 +312,7 @@ test('after a Reboot (prestige count 0, era 1) Firmware stays reachable with eve
   seedMainGameState({
     autobuyers: { tier01: 1 },
     autoScaleUp: true,
+    buyMaxUnlocked: true,
     era: { count: 1 },
     purge: { xp: 0, points: 0, count: 0, highestMilestone: 1 },
   })
@@ -6053,6 +6054,7 @@ describe('Buy max mode', () => {
     const kilobytes = TIER_DEFINITIONS[0]
     const blockCost = level => getTierCost(kilobytes, level) * DEFAULT_PURCHASE_BLOCK_SIZE
     seedMainGameState({
+      buyMaxUnlocked: true,
       purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
       resources: { base: blockCost(1) + blockCost(2) },
     })
