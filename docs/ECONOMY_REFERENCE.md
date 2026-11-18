@@ -1,5 +1,15 @@
 # Economy model reference
 
+**Section index** (grep `^#` for the live headings; read a section, never the whole file):
+- Pool-local reset loop — per-pool flush, Data Lake Booster auto-buy
+- Purchase block size and tier levels · Buy max mode · Adding a new tier
+- Byte Foundry — tap/Compile/auto-convert, pool Capacity, Capacity/Bitrate upgrades, Bandwidth, Disks, Compute Cores/Nodes (Power), Compute Boost, forced priority order
+- Tier production tickspeed · Offline progress · PP Compute (Flops)
+- Prestige Points / autobuyer unlock · Daily challenges · Challenge mode · Achievements
+- Reboot and Kernels — Era ascension, autobuyer milestones, pause flags, Clock Speed, last-tier XP tickspeed
+- Prestige and the Googol freeze · Scale Up · Overclock · Reset
+- Game state shape · Key engine functions · Constants · Upgrade Capacity / Speed
+
 ## Pool-local reset loop
 
 At a pool's terminal state (9/9/9 disks, full lake, and next Booster cost above lake capacity), the
@@ -178,6 +188,8 @@ Nothing here ever fully "freezes" — there is no `completed`-style flag, and no
 Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
 
 **The loop:**
+#### Tap, Compile and auto-convert
+
 1. **Tap** (`tapIntroBit`) — behavior depends on whether Storage itself has been revealed yet
    (`isStorageUnlocked(state)`, i.e. Buffer/pool Memory Capacity has reached 1 KiB — NOT
    `getVisibleStoragePoolCount(state) >= 1`, which pool 1's own always-live special case would
@@ -212,6 +224,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    seconds (derived from Capacity via `getDataStreamSpeedBytesPerSecond` — see point 5 below), so at
    the starting values this is exactly 1 bit/sec. Bits are capped at `capacity`; any amount a
    capacity cap actually clips is not banked forward, same rule tapping follows.
+#### Pool Memory Capacity
+
 4. **Pool Memory Capacity.** **Standing rule: non-binary (SI-clean or decade-power) transforms are
    for storage-pool-scoped values only — `intro.capacity` itself keeps doubling plainly in binary**, since it's also
    the Data Stream tile's own balance/capacity figure. Two earlier attempts got this wrong by sharing
@@ -359,6 +373,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      the bonus cap is simply a no-op). Expand/collapse is the "<symbol> Pool" title alone
      (`PoolTitleToggle`, a real `<button>` with `aria-expanded`; the tap target is a separate stretched
      `PoolTapButton` behind the readouts, so the two never nest and the tap can't block the title).
+#### Upgrade Data Stream (Capacity / Bitrate)
+
 5. **Upgrade Data Stream** (`queueIntroSpeedUpgrade` for Bitrate, `queueIntroCapacityUpgrade` for Capacity; the single consolidated upgrade button —
    replacing the former paired "Speed ×2"/Invest ladder and "Capacity ×2" actions, now removed).
    **Capacity is the only purchased progression variable**: the upgrade costs exactly the current
@@ -375,6 +391,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `docs/DESIGN_HISTORY.md`. `isMemoryCapacityUpgradeAvailable(state)` is simply
    `isPoolCapacityUpgradeAvailable(state)` — a full Buffer, the Combine prerequisite met, and not
    already at cap — with no dependency on any other action's own availability.
+#### Transfer-block UI removal and pool Bandwidth
+
 6. **`ByteFoundryPage` no longer renders any manual transfer-block UI** (removed — see
    `docs/DESIGN_HISTORY.md`): the always-on auto-convert below (`tickIntroAutoInvest`) is now the
    sole path from Data Stream bits to `tier01` units, with no click required and no per-cycle cap.
@@ -430,6 +448,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    untouched, Memory included. A full Reset also restarts the intro from true scratch (via
    `createInitialGameState()`'s fresh defaults for every field, generator and the `mainGameUnlocked`
    latch included — the ONE place `mainGameUnlocked` still genuinely goes back to `false`).
+#### Disks
+
 8. **Disks** (`disks: { [capacityBits]: currentlyFullCount }`, `disksBuiltTotal:
    { [capacityBits]: cumulativeBuiltCount }`, `diskCache: { [capacityBits]: bitsStaged }`,
    `diskProvisionPasses: { [capacityBits]: passesCollected }`,
@@ -752,6 +772,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    is no `diskAutoRedeemedSizes` any more (the old auto-redeem throttle was removed along with the
    manual/autobuyer-gated funding model it belonged to — see `docs/DESIGN_HISTORY.md`), so no
    exception to carve out here.
+#### Compute Cores / Nodes (Power)
+
 9. **Compute Cores/Nodes** (`intro.computeCores`/`intro.computeCoresEverEarned`/`intro.computeNodes`,
    all PERMANENT, carried over every real Prestige exactly like the Byte generator/Disks above) —
    earlier versions of this mechanic gated conversion on every Disk array size being built and full
@@ -1151,6 +1173,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    convert into can never re-hide or prevent the merge section once it's genuinely been earned.
    Saves must already include `intro.computeCoresEverEarned` in the current schema — `mergeState`
    does not backfill it from live balances on load.
+#### Compute Boost
+
 10. **Compute Boost** (`intro.computeBoosts = { [boostType]: { queue: [tierIndex, …], remainingSeconds } }`,
    run-scoped — reset to `{}` on every real Prestige, unlike the Cells/Batteries/… spent from; Scale Up/Overclock
    carry it). Each preset (`COMPUTE_BOOST_PRESETS`) is its own multiplier **lane**. Lanes of different
@@ -1186,6 +1210,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    Tap/Speed/Storage stay just as interactive as on the mandatory gate, and the always-on
    auto-convert keeps working too — there's no per-cycle cap to exhaust (see
    docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" section for the render-level detail).
+
+#### Forced priority order
 
 **Forced priority order.** The recurring "upgrade" actions above — Disk Fill (step 8) >
 Provision Disk (step 8) > Compute (step 10) — are ranked in a fixed
