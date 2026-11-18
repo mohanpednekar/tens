@@ -5408,6 +5408,22 @@ describe('formatCurrency', () => {
     expect(formatAmount(99999)).toBe('9.999e4')
   })
 
+  it('reads computed powers of ten as clean 1eN, never 9.999eN or a 0.0xx mantissa', () => {
+    const bad = []
+    for (const tier of TIER_DEFINITIONS) {
+      for (let level = 1; level <= 60; level += 1) {
+        const cost = getTierCost(tier, level)
+        if (!Number.isFinite(cost)) continue
+        const text = formatCurrency(cost)
+        if (/^0\.|9\.999e/.test(text)) bad.push(`${tier.id} L${level}: ${text}`)
+      }
+    }
+    expect(bad).toEqual([])
+    expect(formatAmount(9.999999999999999e82)).toBe('1e83')
+    expect(formatAmount(6.5e13)).toBe('6.5e13')
+    expect(formatAmount(1.2345e300)).toBe('1.234e300')
+  })
+
   it('switches to exponential notation at huge magnitudes', () => {
     expect(formatCurrency(1e21)).toBe('1e21 b')
   })

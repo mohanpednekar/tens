@@ -659,18 +659,27 @@ export const createInitialGameState = () => ({
 // Cached at module scope — Intl.NumberFormat construction is relatively expensive and these
 // run many times per render/tick.
 const plainNumberFormatter = new Intl.NumberFormat('en-US')
-// Truncates (never rounds up) so an exponential display never overstates a balance — e.g. 19,999 b
-// reads 1.999e4 b, not a misleading 2e4 b beside a 2e4 b cost it can't yet afford.
-const scientificNumberFormatter = new Intl.NumberFormat('en-US', { notation: 'scientific', roundingMode: 'trunc' })
 const currencyNumberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
 
 // Values at/above this switch from plain comma-grouped digits to exponential notation
 // (e.g. "6.5e13") for readability, shared by formatAmount and formatCurrency.
 const EXPONENTIAL_NOTATION_THRESHOLD = 10_000 // i.e. plain digits up to 9,999
 
-// Intl's scientific notation always renders an uppercase "E" exponent marker with no option to
-// override it, so every exponential display in this app lowercases it after formatting.
-const formatScientific = value => scientificNumberFormatter.format(value).replace('E', 'e')
+// Mantissa truncated to 3 decimals (never rounded up) so an exponential display never overstates
+// a balance — 19,999 b reads 1.999e4 b, not a misleading 2e4 b beside a 2e4 b cost. A tiny relative
+// nudge first absorbs float error from computed powers of ten (getTierCost's `10 ** k` can land on
+// 9.999999999999999e82), which must still read 1e83 — not 9.999e82 (and not ICU trunc's malformed
+// 0.099e84). Done by hand rather than Intl's `roundingMode: 'trunc'` for exactly that reason.
+const SCIENTIFIC_MANTISSA_DECIMALS = 1000
+const SCIENTIFIC_FLOAT_NUDGE = 1 + 1e-12
+const formatScientific = value => {
+  let exponent = Math.floor(Math.log10(value))
+  let mantissa = (value / 10 ** exponent) * SCIENTIFIC_FLOAT_NUDGE
+  if (mantissa >= 10) { mantissa /= 10; exponent += 1 }
+  if (mantissa < 1) { mantissa *= 10; exponent -= 1 }
+  const truncated = Math.floor(mantissa * SCIENTIFIC_MANTISSA_DECIMALS) / SCIENTIFIC_MANTISSA_DECIMALS
+  return `${Number(truncated.toFixed(3))}e${exponent}`
+}
 
 export const formatAmount = value => {
   const safeValue = clampNonNegative(value)

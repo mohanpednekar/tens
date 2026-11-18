@@ -9468,5 +9468,9 @@ dropped from 1,000,000 to 10,000 (maintainer request; 1,000 was tried briefly an
 aggressive for early-game numbers) so a plain number is at most four digits (`9,999`) before switching to
 `1e4`. That pulled early-game balances and costs into exponential form,
 where Intl's default rounding made 19,999 b read `2e4 b` beside a 2e4 b cost it couldn't afford, so
-`formatScientific` now uses `roundingMode: 'trunc'` (never overstates, like the floored plain path). Below 24rem the symbol
+`formatScientific` truncates the mantissa to 3 decimals (never overstates, like the floored plain path).
+Intl's `roundingMode: 'trunc'` was tried first and rejected: computed powers of ten such as
+`getTierCost`'s `10 ** k` land one float step low (`9.999999999999999e82`), which trunc printed as
+`9.999e82` and ICU sometimes as a malformed `0.099e84`. The hand-rolled version nudges by `1e-12`
+(relative) before truncating, so float error reads `1e83` while 19,999 still reads `1.999e4`. Below 24rem the symbol
 stacks above the owned count so long exponents (`6.167e115`) still fit at 320px.
