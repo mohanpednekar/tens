@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import StatCard from 'components/StatCard'
 import { getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
 import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS } from 'game/layers'
@@ -52,6 +53,24 @@ const GroupHeading = styled.h2`
   text-transform: uppercase;
 `
 
+// Only the name toggles a disclosure (convention); no link styling.
+const NameButton = styled.button`
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: inherit;
+  padding: 0;
+  text-align: left;
+  text-transform: inherit;
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+`
+
 const Row = styled.div`
   align-items: center;
   display: flex;
@@ -84,6 +103,10 @@ const Badge = styled.span`
 
 const AchievementsPage = ({ game }) => {
   const { state } = game
+  // Groups start collapsed; each row's description is its own disclosure.
+  const [openGroups, setOpenGroups] = useState({})
+  const [openRows, setOpenRows] = useState({})
+  const toggle = (setter, id) => setter(prev => ({ ...prev, [id]: !prev[id] }))
   const theme = useTheme()
   const completed = new Set(getCompletedAchievementGroups(state))
   const groups = ACHIEVEMENT_GROUPS.map(group => ({
@@ -105,7 +128,14 @@ const AchievementsPage = ({ game }) => {
           return (
             <Group aria-label={`${group.name} achievement group`} key={group.id}>
               <GroupHeading>
-                <span>{group.name}</span>
+                <NameButton
+                  aria-expanded={!!openGroups[group.id]}
+                  aria-label={`${group.name} group toggle`}
+                  onClick={() => toggle(setOpenGroups, group.id)}
+                  type="button"
+                >
+                  {openGroups[group.id] ? '▾' : '▸'} {group.name}
+                </NameButton>
                 <Badge
                   $color={isComplete ? theme.color.good : theme.color.textMuted}
                   aria-label={`${group.name} ${earnedCount} of ${group.members.length} earned${isComplete ? ', group complete' : ''}`}
@@ -113,15 +143,26 @@ const AchievementsPage = ({ game }) => {
                   {isComplete ? '✅ ' : ''}{earnedCount}/{group.members.length}
                 </Badge>
               </GroupHeading>
-              {group.members.map(def => {
+              {openGroups[group.id] && group.members.map(def => {
                 const earned = isAchievementEarned(state, def.id)
                 const masked = def.secret && !earned
                 const label = masked ? '???' : def.name
                 return (
                   <Row aria-label={`${label} achievement ${earned ? 'earned' : 'not yet earned'}`} key={def.id}>
                     <Text $earned={earned}>
-                      <strong>{label}</strong>
-                      {!masked && <Detail>{def.trigger}{def.bonus ? ` — ${def.bonus}` : ''}</Detail>}
+                      {masked ? (
+                        <strong>{label}</strong>
+                      ) : (
+                        <NameButton
+                          aria-expanded={!!openRows[def.id]}
+                          aria-label={`${def.name} details`}
+                          onClick={() => toggle(setOpenRows, def.id)}
+                          type="button"
+                        >
+                          <strong>{label}</strong>
+                        </NameButton>
+                      )}
+                      {!masked && openRows[def.id] && <Detail>{def.trigger}{def.bonus ? ` — ${def.bonus}` : ''}</Detail>}
                     </Text>
                     <Badge $color={earned ? theme.color.good : theme.color.disabled}>{earned ? '✅' : '🔒'}</Badge>
                   </Row>
