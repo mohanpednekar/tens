@@ -46,6 +46,8 @@ import {
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
   AUTOBUYER_UNLOCK_MILESTONE_STEP,
+  AUTOBUYER_INTERVAL_UPGRADE_BASE_COST,
+  PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE,
   GLOBAL_AUTOMATION_UNLOCK_PURGES,
   getStoragePoolMemoryBounds,
   DATA_STREAM_SPEED_EXPONENT_BASE,
@@ -606,8 +608,8 @@ const InfoPage = () => {
             An autobuyer buys <strong>one full level per attempt</strong>, only when that whole level
             (or the rest of a partly bought one) is affordable; Buy max never applies to it. Speed
             upgrades on that same row shorten its interval down to 10 ms; each level after that
-            doubles how many levels one attempt can buy, up to 1024. Every autobuyer’s speed
-            upgrades start at 100 PP.
+            doubles how many levels one attempt can buy, up to 1024. A tier autobuyer’s speed
+            upgrades start at {AUTOBUYER_INTERVAL_UPGRADE_BASE_COST} PP.
           </li>
         </ul>
       </Section>
@@ -649,7 +651,7 @@ const InfoPage = () => {
             upgrade halves the powers needed per PP, and once that reaches 1, doubles the PP per power.
           </li>
           <li>
-            Compression costs 100^(level+1) PP (100, 10,000, 1,000,000, …) on Firmware → ✦ Prestige and
+            Compression costs {PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE}^(level+1) PP (10, 100, 1,000, …) on Firmware → ✦ Prestige and
             is permanent across Purges.
           </li>
           <li>

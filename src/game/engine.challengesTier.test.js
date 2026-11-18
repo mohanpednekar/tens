@@ -14,7 +14,7 @@ const runOf = (id, patch = () => ({})) => {
   const base = createInitialGameState()
   const unlocked = {
     ...base,
-    purge: { ...base.purge, count: 20 },
+    purge: { ...base.purge, count: 1000 },
     autobuyers: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 1])),
     tierTickspeedAutobuyer: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])),
   }

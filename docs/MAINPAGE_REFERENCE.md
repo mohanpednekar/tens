@@ -747,8 +747,8 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   Before the cap the head also carries a terse inline interval (`InlineMeta`, `formatIntervalShort`:
   `64s`, `2.9s`, `212ms`; a tier autobuyer at the 10 ms floor shows only its bulk `×N`, up to 1024) —
   never its own line — and (tier / Flops cells) the cell grows one line downward for a full-width ⏫ speed upgrade (visible text is the cost only — the
-  doubling to `M/buy` is in its `aria-label`/`title`; every tier autobuyer / tier tickspeed autobuyer
-  chain starts at 100 PP). Locked: a 🔒
+  doubling to `M/buy` is in its `aria-label`/`title`; every tier autobuyer chain starts at 10 PP, every
+  tier tickspeed autobuyer chain at 100 PP). Locked: a 🔒
   `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) — every automation (global, tier, tier tickspeed) unlocks by Purge count; there is no PP unlock button. The Switch (`aria-pressed`, `aria-label`
   e.g. `"Auto Scale Up automation"`, `"<tier>'s autobuyer"`) sits at the head's right; the status is
   `"<name> active|paused"` (`role="img"`). Tier autobuyers: one `TierPair` card per tier (`aria-label="<tier> automation"`, the tier's Factory
