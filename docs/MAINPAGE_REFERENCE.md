@@ -770,8 +770,9 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   Playtime bonus 100 PP, Overflow mode — locked until Auto Purge's interval ≤ `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`)
   and *Purchasing* (Buy max: 2 PP unlock button, then `components/BuyMaxToggle`). Every row is an `UpgradeRow`:
   the name is a button (`"<name> details"`, `aria-expanded`) toggling a full-width description
-  (`"<name> description"`); under the name a terse value line (`"<name> value"`) shows `now → after` while
-  buyable, or just the current value once owned/maxed. All explanatory text lives only in the description.
+  (`"<name> description"`); under the name one short, plain value line (`"<name> value"`) — usually
+  `now → after` while buyable (e.g. "Time away: up to 4h → 8h"), the current effect once owned/maxed, or a plain
+  one-line summary where a before/after reads poorly (Buy max, Overflow mode, Cache Warm). All explanatory text lives only in the description.
 Firmware never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
 labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol
 once, its halves a ⚙/🤖 icon; Flops cells show the tier symbol (their category heading names the kind). Every automation is named

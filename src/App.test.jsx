@@ -2214,12 +2214,12 @@ test('Firmware → Prestige teaches PP with a tutorial: the first 1 PP buys the 
   await openPerksTab(user, /open prestige/i)
 
   expect(screen.getByLabelText(/^purge points tutorial$/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^speed bonus value$/i)).toHaveTextContent('×1 → ×1.1')
+  expect(screen.getByLabelText(/^speed bonus value$/i)).toHaveTextContent('Production ×1 → ×1.1')
   await user.click(screen.getByRole('button', { name: /unlock speed bonus for 1 purge points/i }))
 
   expect(screen.queryByLabelText(/^purge points tutorial$/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
-  expect(screen.getByLabelText(/^speed bonus value$/i)).toHaveTextContent(/^×1\.1$/)
+  expect(screen.getByLabelText(/^speed bonus value$/i)).toHaveTextContent(/^Production ×1\.1$/)
 })
 
 test('Firmware → Prestige upgrade names expand their description; values show now → after', async () => {
@@ -2228,9 +2228,9 @@ test('Firmware → Prestige upgrade names expand their description; values show 
   render(<App />)
   await openPerksTab(user, /open prestige/i)
 
-  expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent('4h → 8h')
-  expect(screen.getByLabelText(/^cache warm value$/i)).toHaveTextContent('KB lvl 0 → 1')
-  expect(screen.getByLabelText(/^buy max value$/i)).toHaveTextContent('Off → On')
+  expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent('Time away: up to 4h → 8h')
+  expect(screen.getByLabelText(/^cache warm value$/i)).toHaveTextContent('Start runs with KB level 1 done')
+  expect(screen.getByLabelText(/^buy max value$/i)).toHaveTextContent('Buy every affordable level in one tap')
   expect(screen.queryByLabelText(/^sleep mode description$/i)).not.toBeInTheDocument()
   const toggle = screen.getByRole('button', { name: /^sleep mode details$/i })
   await user.click(toggle)
@@ -2259,9 +2259,9 @@ test('Sleep mode levels are bought with PP until the 24h maximum', async () => {
   seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 40000, count: 1, highestMilestone: 1 }, sleepModeCapLevel: 4 })
   render(<App />)
   await openPerksTab(user, /open prestige/i)
-  expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent('20h → 24h')
+  expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent('Time away: up to 20h → 24h')
   await user.click(screen.getByRole('button', { name: /buy sleep mode level 5 for 4e4 purge points/i }))
-  expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent(/^24h$/)
+  expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent(/^Time away: up to 24h$/)
   expect(screen.getByLabelText(/^sleep mode unlocked$/i)).toBeInTheDocument()
 })
 

@@ -516,26 +516,17 @@ const formatIntervalShort = ms => (ms >= 1000 ? `${Number((ms / 1000).toFixed(ms
 
 const formatMultiplier = value => String(Number(value.toFixed(2)))
 const formatHours = seconds => `${Number((seconds / 3600).toFixed(1))}h`
-const compressionSummary = level => {
-  const ppPerPower = getPrestigePpPerPower(level)
-  if (ppPerPower > 1) return `${formatAmount(ppPerPower)} PP/power`
-  const powers = getPrestigePowersPerPp(level)
-  return `${formatAmount(powers)} power${powers === 1 ? '' : 's'}/PP`
-}
-// "now → after", sharing a common leading label ("KB lvl 0 → 1") or trailing unit ("64 → 32 powers/PP").
-const beforeAfter = (before, after) => {
-  const [b, a] = [before.split(' '), after.split(' ')]
-  if (b.length > 1 && b.length === a.length && b.slice(0, -1).join(' ') === a.slice(0, -1).join(' ')) {
-    return `${before} → ${a[a.length - 1]}`
-  }
-  if (b.length > 1 && b.length === a.length && b.slice(1).join(' ') === a.slice(1).join(' ')) {
-    return `${b[0]} → ${after}`
-  }
-  return `${before} → ${after}`
+// Compression in digits past 1 Googol (one power of ten = one more digit): "1 PP per 64 → 32 extra digits",
+// then "2 → 4 PP per extra digit".
+const compressionStep = level => {
+  const nextPpPerPower = getPrestigePpPerPower(level + 1)
+  if (nextPpPerPower > 1) return `${formatAmount(getPrestigePpPerPower(level))} → ${formatAmount(nextPpPerPower)} PP per extra digit`
+  const [now, next] = [getPrestigePowersPerPp(level), getPrestigePowersPerPp(level + 1)]
+  return `1 PP per ${formatAmount(now)} → ${formatAmount(next)} extra digit${next === 1 ? '' : 's'}`
 }
 
-// One Prestige upgrade: the name (the only toggle) opens its details; the line under it shows the
-// value now (owned/maxed) or now → after buying. Everything explanatory lives in the details.
+// One Prestige upgrade: the name (the only toggle) opens its details; the line under it is one short,
+// plain summary — usually now → after buying, or the current effect once owned/maxed.
 const UpgradeRow = ({ ariaLabel, icon, name, value, details, children }) => {
   const [open, setOpen] = useState(false)
   return (
@@ -903,7 +894,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           details="Multiplies all production, growing with your Purge count: ×1.1 after the 1st Purge, ×2 at 10, ×3 at 100, ×4 at 1,000… (×(1 + log₁₀ Purges)). One-time purchase, permanent."
           icon="🚀"
           name="Speed bonus"
-          value={state.prestigeSpeedBonusUnlocked ? `×${formatMultiplier(speedBonusMultiplier)}` : beforeAfter('×1', `×${formatMultiplier(speedBonusMultiplier)}`)}
+          value={state.prestigeSpeedBonusUnlocked ? `Production ×${formatMultiplier(speedBonusMultiplier)}` : `Production ×1 → ×${formatMultiplier(speedBonusMultiplier)}`}
         >
           {state.prestigeSpeedBonusUnlocked ? (
             <UnlockedBadge icon="🚀" name="Speed bonus" />
@@ -926,7 +917,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           details={`Longest time away simulated when you come back (at ${OFFLINE_PROGRESS_SPEED_MULTIPLIER * 100}% speed past ${OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS / 60} min). Each level adds ${sleepCapStepLabel}: ${SLEEP_MODE_CAP_UPGRADE_COSTS.map(cost => formatAmount(cost)).join(' / ')} PP, up to ${formatHours(MAX_OFFLINE_SECONDS)}.`}
           icon="😴"
           name="Sleep mode"
-          value={sleepCapCost === null ? sleepCapLabel : beforeAfter(sleepCapLabel, sleepCapNextLabel)}
+          value={sleepCapCost === null ? `Time away: up to ${sleepCapLabel}` : `Time away: up to ${sleepCapLabel} → ${sleepCapNextLabel}`}
         >
           {sleepCapCost === null ? (
             <UnlockedBadge icon="😴" name="Sleep mode" title="Sleep mode at its maximum" />
@@ -946,10 +937,10 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </UpgradeRow>
         <UpgradeRow
           ariaLabel="compression upgrade"
-          details={`Each level halves the money-exponent powers needed per Purge Point until 1, then doubles PP per power. Costs 10, 100, 1,000… PP. Earned PP is claimed once you reach 1 Googol Bytes.`}
+          details={`Past 1 Googol Bytes, each extra digit of your balance earns more Purge Points. Each level halves the digits needed per PP until 1, then doubles PP per digit. Costs 10, 100, 1,000… PP.`}
           icon="✦"
           name="Compression"
-          value={beforeAfter(compressionSummary(doublePpLevel), compressionSummary(doublePpLevel + 1))}
+          value={compressionStep(doublePpLevel)}
         >
           <PpPurchaseButton
             ariaLabel={`Buy Compression level ${doublePpLevel + 1} for ${formatAmount(doublePpCost)} Purge Points — ${doublePpLevel < 6 ? 'halves powers needed per PP' : 'doubles PP per power'}`}
@@ -968,7 +959,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           details={`Every Purge, challenge exit and Reboot starts with ${firstTier.name} level 1 already complete, free. One-time purchase, permanent. Not applied inside challenges.`}
           icon="🔥"
           name="Cache Warm"
-          value={state.cacheWarmUnlocked ? `${firstTier.symbol} lvl 1` : beforeAfter(`${firstTier.symbol} lvl 0`, `${firstTier.symbol} lvl 1`)}
+          value={state.cacheWarmUnlocked ? `Runs start with ${firstTier.symbol} level 1 done` : `Start runs with ${firstTier.symbol} level 1 done`}
         >
           {state.cacheWarmUnlocked ? (
             <UnlockedBadge icon="🔥" name="Cache Warm" />
@@ -991,7 +982,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           details={`+${PLAYTIME_BONUS_PER_HOUR * 100}% production per hour of active play. Offline, hidden-tab and background time don't count. One-time purchase, permanent.`}
           icon="⏱"
           name="Playtime bonus"
-          value={state.playtimeBonusUnlocked ? `×${formatMultiplier(playtimeMultiplierIfOwned)}` : beforeAfter('0%/h', `${PLAYTIME_BONUS_PER_HOUR * 100}%/h`)}
+          value={state.playtimeBonusUnlocked ? `Production ×${formatMultiplier(playtimeMultiplierIfOwned)}` : `+${PLAYTIME_BONUS_PER_HOUR * 100}% production per hour played`}
         >
           {state.playtimeBonusUnlocked ? (
             <UnlockedBadge icon="⏱" name="Playtime bonus" />
@@ -1014,7 +1005,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           details={`Keep earning past 1 Googol Bytes without freezing; Purge whenever you choose to claim PP. Unlocks when Auto Purge's interval reaches ${OVERFLOW_MODE_MAX_INTERVAL_SECONDS} s or less.`}
           icon="♾"
           name="Overflow mode"
-          value={isOverflowModeUnlocked(state) ? null : beforeAfter('Off', 'On')}
+          value={isOverflowModeUnlocked(state) ? null : 'Keep producing past 1 Googol Bytes'}
         >
           {isOverflowModeUnlocked(state) ? (
             <UnlockedBadge icon="♾" name="Overflow mode" />
@@ -1032,7 +1023,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           details="When on, each purchase buys as many levels as you can afford. Factory tiers buy full levels only — a partly bought level takes its own click. One-time purchase; the switch is per device."
           icon="⏭"
           name="Buy max"
-          value={isBuyMaxUnlocked(state) ? null : beforeAfter('Off', 'On')}
+          value={isBuyMaxUnlocked(state) ? null : 'Buy every affordable level in one tap'}
         >
           {isBuyMaxUnlocked(state) ? (
             <BuyMaxToggle game={game} />
