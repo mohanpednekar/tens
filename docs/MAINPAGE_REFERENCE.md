@@ -960,7 +960,7 @@ ternary — `Button`'s `resolveColor` auto-swaps a `variant` to `theme.color.dis
 Each row is a single-line CSS Grid (areas `'name upgrade buy'` / `'details details details'`):
 the tier symbol (`TierNameLabel`, `min-width: 2.2rem` so every row's count starts at the same x)
 and the owned count (`OwnedText`) share the flexible `name` track, then the tickspeed and Buy buttons
-sit in fixed tracks (`6.5rem`/`9rem`; `5.7rem`/`7.9rem` below `40rem`; `5.9rem`/`7.3rem` and `0.7rem` button text below `24rem`; Buy `6.9rem` + 4px gaps below `21rem`)
+sit in fixed tracks (`6.5rem`/`9rem`; `5.7rem`/`7.9rem` below `40rem`; `5.9rem`/`7.3rem` below `24.5rem`; Buy `6.9rem`, `0.7rem` button text and 4px gaps below `21rem`)
 so the buttons line up as columns down the list. Production is **not** on the row — it is the first
 line of the details disclosure (`Production: +X per delivery`), toggled by the tier symbol. The owned
 cell's "Owned: " label is a `VisuallyHidden` span (plus `title="Owned"`) — assert via
@@ -972,12 +972,12 @@ auto-collapses that tier's Details disclosure the instant the row scrolls fully 
 viewport — see "Auto-collapsing expanded disclosures on scroll" below.
 
 **Tier row type scale.** `TierName` uses `font.display` and steps from `lg` (desktop) to `md`
-(below `40rem`); `OwnedText` (`sm`, `xs` below `24rem`), `BuyButton`/`UpgradeButton` (`sm→xs`,
+(below `40rem`); `OwnedText` (`sm`, `xs` below `24.5rem`), `BuyButton`/`UpgradeButton` (`sm→xs`,
 `min-height: 2rem`), and `TierDetailsContent` (`xs`, with a `border-top` divider when expanded) all
 resolve their `font-size`/`line-height` from `theme.type.scale` (`theme/tokens.js`). `BuyButton` sets
 `font-weight: 700` (`UpgradeButton` keeps `Button`'s default `600`) so Buy — the rightmost,
 affordability-fill-colored control — reads as the heavier of the two. Row padding is a literal
-`3px` vertical (side padding and the list gap from `theme.space`). Below `24rem` the symbol stacks
+`3px` vertical (side padding and the list gap from `theme.space`). Below `24.5rem` the symbol stacks
 above the owned count (`TierNameTrigger` switches to a column) so the count gets the whole `name`
 track; the two lines stay shorter than the `2rem` buttons, so the row height doesn't change.
 

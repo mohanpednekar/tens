@@ -649,7 +649,7 @@ const InfoPage = () => {
             upgrade halves the powers needed per PP, and once that reaches 1, doubles the PP per power.
           </li>
           <li>
-            Compression costs 100^(level+1) PP (100, 10,000, 1,000,000, …) on Firmware → ✦ Prestige and
+            Compression costs 100^(level+1) PP (100, 1e4, 1e6, …) on Firmware → ✦ Prestige and
             is permanent across Purges.
           </li>
           <li>

@@ -9464,6 +9464,8 @@ The unconditional per-level credit was too generous (it started as soon as QB ha
 Factory tier rows went from two lines (symbol · owned · +production, then two half-width buttons) to one
 line (symbol · owned, fixed-width ⚙ / 🛒 tracks), roughly halving their height; production moved into the
 details disclosure. With the owned count and costs in narrow fixed columns, `EXPONENTIAL_NOTATION_THRESHOLD`
-dropped from 1,000,000 to 10,000 (maintainer request) so a plain number is at most four digits (`9,999`)
-before switching to `1e4` — "999,999 b" no longer competes for the same space. Below 24rem the symbol
+dropped from 1,000,000 to 1,000 (maintainer request; briefly 10,000) so a plain number is at most three
+digits (`999`) before switching to `1e3`. That pulled early-game balances and costs into exponential form,
+where Intl's default rounding made 19,999 b read `2e4 b` beside a 2e4 b cost it couldn't afford, so
+`formatScientific` now uses `roundingMode: 'trunc'` (never overstates, like the floored plain path). Below 24rem the symbol
 stacks above the owned count so long exponents (`6.167e115`) still fit at 320px.

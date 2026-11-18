@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- **Exponential notation from 10,000** — amounts switch to the `1.23e4` form after 9,999 (was after 999,999), everywhere in the game.
+- **Exponential notation from 1,000**: amounts switch to the `1.23e3` form after 999 (was after 999,999), everywhere in the game. The shown figure is cut off rather than rounded up, so 19,999 reads `1.999e4`, never `2e4`.
 - **Compact Factory tier rows**: each tier now fits on one line (symbol, owned amount, tickspeed and Buy buttons), about 45% shorter. The Buy button shows the tier's completed levels, with Buy max's `+n` right after it. Production moved into the row's details (tap the tier symbol).
 - **Achievements page is compact** — groups start collapsed and each achievement shows only its name and status; tap a group or achievement name to expand its trigger and bonus text.
 - **Automation resets now run before spends, biggest first** — within a tick, Auto-Prestige (Purge) > Auto Overclock > Auto Scale Up > Auto Restage, then the tickspeed autobuyers. A same-tick reset can no longer be pre-empted by a spend (or by a smaller reset), e.g. Auto Scale Up no longer lets the Quettabytes autobuyer empty QB first. Daily challenge definitions regenerate (generator version 5), so an in-progress daily run from before the update is dropped.

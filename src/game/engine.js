@@ -659,12 +659,14 @@ export const createInitialGameState = () => ({
 // Cached at module scope — Intl.NumberFormat construction is relatively expensive and these
 // run many times per render/tick.
 const plainNumberFormatter = new Intl.NumberFormat('en-US')
-const scientificNumberFormatter = new Intl.NumberFormat('en-US', { notation: 'scientific' })
+// Truncates (never rounds up) so an exponential display never overstates a balance — e.g. 19,999 b
+// reads 1.999e4 b, not a misleading 2e4 b beside a 2e4 b cost it can't yet afford.
+const scientificNumberFormatter = new Intl.NumberFormat('en-US', { notation: 'scientific', roundingMode: 'trunc' })
 const currencyNumberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
 
 // Values at/above this switch from plain comma-grouped digits to exponential notation
 // (e.g. "6.5e13") for readability, shared by formatAmount and formatCurrency.
-const EXPONENTIAL_NOTATION_THRESHOLD = 10_000 // i.e. plain digits up to 9,999
+const EXPONENTIAL_NOTATION_THRESHOLD = 1_000 // i.e. plain digits up to 999
 
 // Intl's scientific notation always renders an uppercase "E" exponent marker with no option to
 // override it, so every exponential display in this app lowercases it after formatting.

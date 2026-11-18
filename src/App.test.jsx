@@ -139,7 +139,7 @@ test('renders the game title and the Kilobytes tier', () => {
   expect(heading.closest('header')).not.toBeNull()
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toBeInTheDocument()
   // Money=1 (MONEY_STARTING_AMOUNT) — Kilobytes' per-unit cost is 1,000, so nothing is affordable yet.
-  expect(screen.getByRole('button', { name: /buy for 1,000 b\b/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /buy for 1e3 b\b/i })).toBeDisabled()
 })
 
 test('Factory keeps its h1 (hidden visually) once a boost timer bar takes the top of the screen', () => {
@@ -364,7 +364,7 @@ test('the Manual nav item opens the Info page and Factory returns, preserving ga
   seedMainGameState({ resources: { base: 1000 } })
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy for 1e3 b\b/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
@@ -401,11 +401,11 @@ test('buying Kilobytes deducts cost and increases owned count', async () => {
   seedMainGameState({ resources: { base: 1000 } })
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy for 1e3 b\b/i }))
 
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
   // Money=0 left; still at level 1 (1 of 8 purchased), unaffordable — button disabled.
-  expect(screen.getByRole('button', { name: /buy for 1,000 b \(0 completed levels, 1 of 8 purchased toward the next\)/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /buy for 1e3 b \(0 completed levels, 1 of 8 purchased toward the next\)/i })).toBeDisabled()
 })
 
 test('Reset appears only in Settings → Danger zone, not on the Byte Factory screen or in More', async () => {
@@ -434,7 +434,7 @@ test('reset game restores starting state once the confirm dialog is accepted', a
   render(<App />)
 
   // Buy Kilobytes to dirty the state — money=1,000, per-unit cost 1,000, so a single click buys 1 unit.
-  await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy for 1e3 b\b/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
   await openSettings(user)
@@ -457,7 +457,7 @@ test('reset clears localStorage once the confirm dialog is accepted', async () =
   seedMainGameState({ resources: { base: 1000 } })
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy for 1e3 b\b/i }))
 
   await openSettings(user)
   // After reset the save-effect fires with fresh state, so money should be back to 1
@@ -477,7 +477,7 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
   render(<App />)
 
   // Buy Kilobytes to dirty the state — money=1,000, per-unit cost 1,000, so a single click buys 1 unit.
-  await user.click(screen.getByRole('button', { name: /buy for 1,000 b\b/i }))
+  await user.click(screen.getByRole('button', { name: /buy for 1e3 b\b/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 
   await openSettings(user)
@@ -633,12 +633,13 @@ test('money balance is shown once at the top in full currency format, centered, 
 })
 
 test('once the hero switches to Bytes, a small Bits line shows the exact bit balance', () => {
-  seedMainGameState({ resources: { base: 8000 } })
+  // 8,009 b: not an exact whole-Byte figure, so the Bits line differs from the Bytes hero.
+  seedMainGameState({ resources: { base: 8009 } })
   render(<App />)
 
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1,000 B')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1.001e3 B')
   const bitsLine = screen.getByLabelText(/balance in bits/i)
-  expect(bitsLine).toHaveTextContent('8,000 b')
+  expect(bitsLine).toHaveTextContent('8.009e3 b')
   // Not a live region — Bits change every tick and role=status would spam assistive tech.
   expect(bitsLine).not.toHaveAttribute('role', 'status')
 })
@@ -886,9 +887,9 @@ test('the Buy button shows a cost-block progress bar reflecting purchases so far
   expect(progressBar).toHaveAttribute('aria-valuemax', '8')
   // The tier's level (lifetime purchase count) lives on the Buy button itself, not a separate cell.
   // 4 of 8 already done — 4 remain in the block; per-unit cost is 1,000, so 4 units cost $4,000 total.
-  const buyButton = screen.getByRole('button', { name: /buy ×4 for 4,000 b \(0 completed levels, 4 of 8 purchased toward the next\)/i })
+  const buyButton = screen.getByRole('button', { name: /buy ×4 for 4e3 b \(0 completed levels, 4 of 8 purchased toward the next\)/i })
   expect(buyButton).toBeInTheDocument()
-  expect(buyButton).toHaveTextContent('4,000 b')
+  expect(buyButton).toHaveTextContent('4e3 b')
   expect(buyButton).not.toHaveTextContent('+4/8')
   expect(buyButton).not.toHaveTextContent('+4')
   expect(screen.queryByText(/^level: /i)).not.toBeInTheDocument()
@@ -907,7 +908,7 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
 
   // Per-unit cost 1,000: $100,000 affords far more than the 8-unit block, so the full block
   // (capped there, not by funds) is what's bought — $8,000 total.
-  const buyButton = screen.getByRole('button', { name: /buy ×8 for 8,000 b\b/i })
+  const buyButton = screen.getByRole('button', { name: /buy ×8 for 1e3 B\b/i })
   expect(buyButton).toBeEnabled()
 
   await user.click(buyButton)
@@ -927,7 +928,7 @@ test('manual Buy partially fills when funds only cover part of the cost block', 
   })
   render(<App />)
 
-  const buyButton = screen.getByRole('button', { name: /buy ×3 for 3,000 b\b/i })
+  const buyButton = screen.getByRole('button', { name: /buy ×3 for 3e3 b\b/i })
   expect(buyButton).toBeEnabled()
 
   await user.click(buyButton)
@@ -1686,7 +1687,7 @@ test.each([
   await openPerksTab(user, /open automation/i)
   expect(screen.getByLabelText(`${name} active`)).toBeInTheDocument()
   expect(screen.queryByLabelText(rowName)).not.toBeInTheDocument()
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('1,000 PP')
+  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('1e3 PP')
 })
 
 test('Power pre-selects the highest automated tier on arrival', () => {
@@ -1978,7 +1979,7 @@ test('the Clock Speed Upgrade button costs another power of ten each level, and 
   })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /upgrade clock speed for 1,000 b/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade clock speed for 1e3 b/i })
   expect(upgradeButton).toBeDisabled()
   // The cumulative level/bonus shows only in the expanded description, not on the button itself.
   expect(upgradeButton).not.toHaveTextContent(/2\.01%/i)
@@ -2281,7 +2282,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
   expect(screen.queryByLabelText(/^megabytes's autobuyer unlocks at purge/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText("Megabytes's autobuyer active")).toBeInTheDocument()
   // Confirms no PP was spent to reach this state — the milestone unlock is free.
-  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent(/2,?000 PP/)
+  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent(/2e3 PP/)
 })
 
 test('no PP tabs or PP-based controls appear before the player has ever purged, even with an active autobuyer and unspent PP — Releases stays via More', async () => {
@@ -3676,10 +3677,10 @@ test('an expanded Data Lake shows its real balance, the 1-unit buffer, the in-fl
   expect(within(lake).getByRole('progressbar', { name: 'KB lake pool — fills its 1 KB buffer' })).toHaveAttribute('aria-valuenow', '50')
   expect(within(lake).getByRole('progressbar', { name: 'KB lake transfer — building a 10 KB disk' })).toHaveAttribute('aria-valuenow', '50')
   // 1000 banked + 10 in flight + half a unit in the buffer.
-  expect(within(lake).getByTitle('Currently filled')).toHaveTextContent(/^1,010(\.5)? KB/)
-  expect(within(lake).getByRole('group', { name: 'KB lake 1,000 KB disks' })).toBeTruthy()
-  expect(within(lake).getAllByLabelText('full 1,000 KB lake disk')).toHaveLength(1)
-  expect(within(lake).getAllByLabelText('empty 1,000 KB lake disk')).toHaveLength(1)
+  expect(within(lake).getByTitle('Currently filled')).toHaveTextContent(/^1\.01(05)?e3 KB/)
+  expect(within(lake).getByRole('group', { name: 'KB lake 1e3 KB disks' })).toBeTruthy()
+  expect(within(lake).getAllByLabelText('full 1e3 KB lake disk')).toHaveLength(1)
+  expect(within(lake).getAllByLabelText('empty 1e3 KB lake disk')).toHaveLength(1)
 })
 
 test('the Data Lake header shows time until the next Booster is banked, only while it is still short of the cost', () => {
@@ -5728,14 +5729,14 @@ describe('Compute (Flops) screen', () => {
     fireEvent.click(screen.getByRole('button', { name: /open compute/i }))
     expect(screen.getByRole('heading', { level: 1, name: /compute/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/cumulative flops boost/i)).toHaveTextContent(/0 Flops/i)
-    expect(screen.getByRole('button', { name: /buy cores \(kflops\) for 1,000 purge points/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /buy cores \(kflops\) for 1e3 purge points/i })).toBeDisabled()
   })
 
   test('buying KFlops at 1,000 PP spends PP and increments owned', () => {
     seedMainGameState({ purge: { xp: 0, points: 1000, count: 1, highestMilestone: 1 } })
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /open compute/i }))
-    fireEvent.click(screen.getByRole('button', { name: /buy cores \(kflops\) for 1,000 purge points/i }))
+    fireEvent.click(screen.getByRole('button', { name: /buy cores \(kflops\) for 1e3 purge points/i }))
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.purge.points).toBe(0)
     expect(saved.computeFlops.owned.flop01).toBe(1)

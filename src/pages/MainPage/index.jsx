@@ -120,7 +120,7 @@ const TierLine = styled(StatCard)`
     padding: 3px 3px 3px ${props => props.theme.space.sm};
   }
 
-  @media (max-width: 24rem) {
+  @media (max-width: 24.5rem) {
     grid-template-columns: minmax(0, 1fr) 5.9rem 7.3rem;
 
     /* Symbol stacks over the owned count so the count gets the full name track (both lines
@@ -745,7 +745,7 @@ const OwnedText = styled.span`
   margin: 0;
   ${gridCell}
 
-  @media (max-width: 24rem) {
+  @media (max-width: 24.5rem) {
     font-size: ${props => props.theme.type.scale.xs.size};
     line-height: 1.15;
   }
