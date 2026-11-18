@@ -545,12 +545,11 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   model"). Cost-block progress is no longer a `+n/8` string on the Buy button — it lives on the
   button as the dual-tone fill (`$progress` / `$secondaryProgress`) plus a `VisuallyHidden`
   `role="progressbar"` and the Buy `aria-label` (`N of {blockSize} purchased toward the next`).
-  Buy max mode is the exception: while a click would buy N full levels the icon slot shows `+N`
-  (see "Buy button" below). The cost label itself (`BuyButtonCostLabel`, a `styled(ButtonLabel)`) is
-  left-aligned rather than centered, and both it and the icon slot (`BuyButtonIcon`) are pinned to a
-  fixed half of the button's width — so every tier row's cost figure starts at the same x position
-  (the button's horizontal center) regardless of digit count, instead of drifting as the cost
-  string's length changes. This scoped pair lives only in `MainPage/index.jsx` and doesn't affect
+  The icon slot (`BuyButtonIcon`) shows `🛒` + the completed-level count; in Buy max mode, while a
+  click would buy N full levels, `+N` is suffixed straight onto it in `theme.color.warn`
+  (`BuyLevelExtra`, e.g. `🛒 42+3`). The cost label (`BuyButtonCostLabel`, a `styled(ButtonLabel)`)
+  is right-aligned, so every row's cost ends at the same x. Costs keep their `b`/`B` unit (Bits vs
+  Bytes). This scoped pair lives only in `MainPage/index.jsx` and doesn't affect
   the shared `Button`/`ButtonIcon`/`ButtonLabel` components used elsewhere in the app (Prestige,
   Reset, Firmware, …), which keep their default fixed-icon/centered-label layout.
 - **Tier name display.** The tier row heading (`TierName`, a `styled.h3`) and the Firmware page's
@@ -853,8 +852,7 @@ and, like every tier, spends the full `getTickspeedMultiplierSpend` (e.g. 10 for
 "The last tier's XP-funded tickspeed". The row's Details "tier ×N" multiplier includes the XP bonus.
 
 **No per-tier automation icon on the Factory view row.** A tier row's `name` grid area (shared by
-`TierNameTrigger` / `TierName`) holds the tier's symbol on the left and the owned count on the
-same first line, right-aligned to the row center — no tickspeed-bonus badge (see "Tickspeed multiplier"
+`TierNameTrigger` / `TierName`) holds the tier's symbol and the owned count — no tickspeed-bonus badge (see "Tickspeed multiplier"
 above) and no autobuyer status icon. An earlier version showed an always-visible, read-only
 `PpUpgradeBadge` here (a single 🤖 glyph, full opacity while active / dimmed `$dimmed` while paused,
 via the same icon-instead-of-text convention every other automation status badge in the app still
@@ -862,7 +860,7 @@ uses — the tier tickspeed/global tickspeed/Auto Scale Up statuses on Firmware 
 Automation, and the Auto Purge/Auto Scale Up status lines — see their own sections below) once
 a tier's unit-buying autobuyer was unlocked (`autobuyers`/`applyAutobuyerMilestones` — a free,
 prestige-count-milestone-triggered unlock, not a PP purchase). Both removed to keep the Factory view
-row down to just the tier name plus live production/owned figures and the two action buttons —
+row down to just the tier name, owned count and the two action buttons —
 autobuyer active/paused status is still visible (and, unlike the old read-only Game-view badge,
 directly toggleable) on Firmware → 🤖 Automation's Tier Autobuyers category, via the same
 `autobuyersEnabled`/`setAutobuyerEnabled` state (see "Firmware page" above).
@@ -945,8 +943,7 @@ explanation, so nothing about the accessible name/description regressed.
 by `tierIndex % theme.tierAccents.length` (cosmetic only, kept off text/button colors to avoid
 colliding with affordability semantics — those now resolve from `theme.color.good`/`warn`/`violet`/
 `disabled`/`text`/`textMuted`/`borderStrong` rather than raw hex: `TierDetailsContent`'s
-`ul`, `OwnedText`/`ProductionText` (token-native spans — `textMuted` for owned, `text`/`font-weight: 500`
-for production), and the
+`ul`, `OwnedText` (token-native span — `text`, `font-weight: 500`), and the
 Buy/tickspeed/XP-consume buttons all migrated in the same pass; the Firmware page's
 own instances of these same shared components are a separate surface and weren't touched), and plays
 a one-shot CSS reveal animation when a tier unlocks *during the
@@ -960,18 +957,12 @@ ternary — `Button`'s `resolveColor` auto-swaps a `variant` to `theme.color.dis
 `disabled`, not a hand-written `color={canX ? tokenA : theme.color.disabled}` (see
 `docs/COMPONENTS_REFERENCE.md`'s `Button/index.jsx` entry for the general mechanism).
 
-Each row is a CSS
-Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: a two-column
-layout where the top line is the tier symbol on the left and the owned count on the same line
-right-aligned to the row center (`OwnedText` uses `margin-left: auto` at the end of the left half
-inside `TierNameTrigger`'s full-width flex row — see "No per-tier automation icon on the Factory view
-row" above for the two badges that used to also share this area) and the production figure on the
-right (`ProductionText`, `text-align: right`). Below that, the
-tickspeed multiplier button and Buy each take one equal half, then a `details`-area line spanning
-both columns. There is no separate `autobuyer` grid row/line — an earlier version gave the
-autobuyer status badge its own row, then later folded it into the icon-only badge sharing the
-`name` area (freeing that vertical space, since a single glyph needs no row of its own) before
-removing the badge from this view entirely. Below `40rem`, only fonts/spacing shrink. The owned
+Each row is a single-line CSS Grid (areas `'name upgrade buy'` / `'details details details'`):
+the tier symbol (`TierNameLabel`, `min-width: 2.2rem` so every row's count starts at the same x)
+and the owned count (`OwnedText`) share the flexible `name` track, then the tickspeed and Buy buttons
+sit in fixed tracks (`6.5rem`/`9rem`; `5.7rem`/`7.9rem` below `40rem`; `5.2rem`/`7.3rem` below `24rem`)
+so the buttons line up as columns down the list. Production is **not** on the row — it is the first
+line of the details disclosure (`Production: +X per delivery`), toggled by the tier symbol. The owned
 cell's "Owned: " label is a `VisuallyHidden` span (plus `title="Owned"`) — assert via
 `toHaveTextContent`, not `getByText`. Grid cells use a shared `gridCell` mixin (`min-width: 0;
 overflow: hidden; text-overflow: ellipsis; white-space: nowrap`). `RootDiv` sets
@@ -981,19 +972,12 @@ auto-collapses that tier's Details disclosure the instant the row scrolls fully 
 viewport — see "Auto-collapsing expanded disclosures on scroll" below.
 
 **Tier row type scale.** `TierName` uses `font.display` and steps from `lg` (desktop) to `md`
-(below `40rem`); `OwnedText`/`ProductionText`, `BuyButton`/
-`UpgradeButton`, and `TierDetailsContent` all resolve their `font-size`/`line-height` from
-`theme.type.scale`
-(`theme/tokens.js`) rather than hand-tuned `em` values — owned count stays at `textMuted`/`sm→xs`,
-production reads stronger at `text`/`font-weight: 500`, the two
-buttons from `sm` to `xs`, and the details disclosure body sits at `xs` with a `border-top` divider
-when expanded. This gives the row three clear type/weight steps (name, production, owned/metrics)
-instead of a single flat size, and `BuyButton` additionally
-sets an explicit `font-weight: 700` (`UpgradeButton` stays at `Button`'s own default `600`) so Buy —
-already the rightmost, affordability-fill-colored control — reads as the visually heavier of the two,
-per its "stays the visually dominant control" requirement. Gaps/padding resolve from `theme.space`;
-the upgrade/Buy row separates from the stats line via `margin-top`. Layout (grid areas/columns) is
-unchanged; only typography, spacing, and the details divider moved.
+(below `40rem`); `OwnedText` (`sm`, `xs` below `24rem`), `BuyButton`/`UpgradeButton` (`sm→xs`,
+`min-height: 2.25rem`), and `TierDetailsContent` (`xs`, with a `border-top` divider when expanded) all
+resolve their `font-size`/`line-height` from `theme.type.scale` (`theme/tokens.js`). `BuyButton` sets
+`font-weight: 700` (`UpgradeButton` keeps `Button`'s default `600`) so Buy — the rightmost,
+affordability-fill-colored control — reads as the heavier of the two. Gaps/padding resolve from
+`theme.space`.
 
 **Tier row details disclosure.** Unlike the native `<details>`-based `Disclosure` a few other
 cards/categories use (see "No description prose on this page" above), a tier row has **no separate

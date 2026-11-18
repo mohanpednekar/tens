@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Compact Factory tier rows**: each tier now fits on one line (symbol, owned amount, tickspeed and Buy buttons), about a third shorter. The Buy button shows the tier's completed levels, with Buy max's `+n` right after it. Production moved into the row's details (tap the tier symbol).
 - **Automation resets now run before spends, biggest first** — within a tick, Auto-Prestige (Purge) > Auto Overclock > Auto Scale Up > Auto Restage, then the tickspeed autobuyers. A same-tick reset can no longer be pre-empted by a spend (or by a smaller reset), e.g. Auto Scale Up no longer lets the Quettabytes autobuyer empty QB first. Daily challenge definitions regenerate (generator version 5), so an in-progress daily run from before the update is dropped.
 - **Screen titles yield to top banners** — Factory hides its title (kept for screen readers) while a challenge banner, purge-available banner, daily-run header, or boost timer sits at the top; Power skips its title while a boost timer is shown.
 

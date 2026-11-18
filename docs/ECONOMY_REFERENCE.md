@@ -1362,7 +1362,7 @@ shown to the player.
 
 #### Production figure (tick-progress ring removed)
 
-Each tier row's `+X` production figure is the raw per-delivery credit (`owned ×
+Each tier row's `+X` production figure (first line of the row's details disclosure) is the raw per-delivery credit (`owned ×
 getPrestigeProductionMultiplier(purge.count) × getPurchaseMilestoneMultiplier(purchased)`, **not** divided by
 tickspeed, and **not** multiplied by either tickspeed multiplier — see "Multiplier outcomes are floored"
 above) — "how much lands each time the tier's (tickspeed-shrunk) period completes," not a per-second
