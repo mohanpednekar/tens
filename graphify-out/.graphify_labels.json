@@ -1,13 +1,9 @@
 {
   "1": "MainPage/index.jsx",
   "2": "AppDelegate",
-  "3": "layers.js",
-  "5": "ComputePage/index.jsx",
-  "6": "engine.test.js",
   "7": "Automation workflows",
   "12": "run-simulation.mjs",
   "15": "engine.js",
-  "18": "InfoPage/index.jsx",
   "21": "bump-version.mjs",
   "22": "MilestonesPage/index.jsx",
   "24": "ComputeFlopsPage/index.jsx",

@@ -18,7 +18,7 @@ const withAutomations = overrides => ({
   autoXpTickspeed: true,
   autoOverclock: true,
   autoPurge: 1,
-  purge: { ...createInitialGameState().purge, points: 1e9, count: 4 },
+  purge: { ...createInitialGameState().purge, points: 1e9, count: 1000 },
   ...overrides,
 })
 const atGoal = (state, money = PURGE_THRESHOLD) => ({ ...state, resources: { ...state.resources, [MONEY_ID]: money } })
@@ -48,7 +48,7 @@ describe('with no live challenge (shipped behaviour)', () => {
     const bought = buyAutomationIntervalUpgrade('speedUp')(state)
     expect(bought.automationIntervalLevels.speedUp).toBe(1)
     const purged = purgeGame(atGoal(state))
-    expect(purged.purge.count).toBe(5)
+    expect(purged.purge.count).toBe(1001)
     expect(purged.purge.points).toBeGreaterThan(state.purge.points)
   })
 
@@ -159,7 +159,7 @@ describe('completion', () => {
 describe('what ends or keeps an active challenge', () => {
   it('Reboot clears the active challenge without completing it', () => {
     makeLive('F21')
-    const running = enterChallenge('F21')(withAutomations({ purge: { ...createInitialGameState().purge, points: ERA_ELIGIBILITY_PP, count: 4 } }))
+    const running = enterChallenge('F21')(withAutomations({ purge: { ...createInitialGameState().purge, points: ERA_ELIGIBILITY_PP, count: 1000 } }))
     const rebooted = eraGame(running)
     expect(rebooted).not.toBe(running)
     expect(rebooted.challenges.active).toBeNull()
@@ -271,7 +271,7 @@ describe('global challenge rules', () => {
 
   it('F25 raises the goal: no freeze or Purge between 1 Googol Bytes and the raised goal', () => {
     makeLive('F25')
-    const state = withAutomations({ purge: { ...createInitialGameState().purge, points: 1e9, count: 4 } })
+    const state = withAutomations({ purge: { ...createInitialGameState().purge, points: 1e9, count: 1000 } })
     const between = atGoal(state, PURGE_THRESHOLD * 10)
     expect(isProductionFrozen(between)).toBe(true)
     expect(purgeGame(between)).not.toBe(between)

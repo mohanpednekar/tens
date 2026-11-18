@@ -218,8 +218,8 @@ export const PURGE_UNBOUNDED_MIN_COUNT = 100
 // until 1 power per PP, then doubles PP per power instead (see getPrestigePowersPerPp/
 // getPrestigePpPerPower in engine.js).
 export const PRESTIGE_POWERS_PER_PP_BASE = 64
-// Each Compression upgrade costs 100^(level+1) PP — 100, 10_000, 1_000_000, …
-export const PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE = 100
+// Each Compression upgrade costs 10^(level+1) PP — 10, 100, 1_000, …
+export const PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE = 10
 // The global tick fires 10x a second (a sub-second granularity, not "one tick = one real
 // second") — engine.js's tickGame receives elapsedSeconds = TICK_RATE_MS / 1000 = 0.1 per call,
 // and every real-world-time-based rate (autobuyer/Auto-Prestige attempt budgets) is explicitly
@@ -774,10 +774,10 @@ export const AUTOBUYER_BULK_MAX_EXTRA_LEVELS = Math.floor(Math.log2(BUY_MAX_ITER
 // autobuyer's purchase-attempt interval by AUTOBUYER_INTERVAL_MULTIPLIER, from the tier's base (tier N =
 // N × AUTOBUYER_BASE_INTERVAL_SECONDS, i.e. 1 s … 10 s) down to
 // the AUTOBUYER_MIN_INTERVAL_SECONDS floor (see engine.js's getAutobuyerIntervalSeconds /
-// getAutobuyerIntervalMaxLevel). Cost: AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (100 PP, same for every
+// getAutobuyerIntervalMaxLevel). Cost: AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10 PP, same for every
 // tier), doubling per level on the SI-clean 1,2,4,…,64,125,250,500 ladder (×1000 every ten levels) —
 // see engine.js's getAutobuyerIntervalUpgradeCost.
-export const AUTOBUYER_INTERVAL_UPGRADE_BASE_COST = 100
+export const AUTOBUYER_INTERVAL_UPGRADE_BASE_COST = 10
 export const AUTOBUYER_BASE_INTERVAL_SECONDS = 1
 export const AUTOBUYER_INTERVAL_MULTIPLIER = 0.9
 export const AUTOBUYER_MIN_INTERVAL_SECONDS = 0.01
@@ -796,22 +796,25 @@ export const AUTOMATION_INTERVAL_CONFIG = {
   overclock: { baseCost: 32, baseSeconds: 256 },
   purge: { baseCost: 64, baseSeconds: 1024 },
 }
-// Per-tier tickspeed autobuyer: same 100 PP start as the tier autobuyer chain, 16 s base.
+// Per-tier tickspeed autobuyer: 100 PP first upgrade, 16 s base.
 export const TIER_TICKSPEED_INTERVAL_CONFIG = { baseCost: 100, baseSeconds: 16 }
 // How many times the player must have purged before a tier's unit-buying autobuyer unlocks
 // automatically (see engine.js's getAutobuyerUnlockMilestone/applyAutobuyerMilestones) — replaces
 // the old PP-cost-funded unlock entirely: no purchase, no PP spent, just a milestone reached by
-// prestige count. tier01 unlocks after the 2nd Purge, tier02 after the 4th, … tier10
-// after the 20th (AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP).
-export const AUTOBUYER_UNLOCK_MILESTONE_START = 2
-export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 2
+// prestige count. The nth tier unlocks after the nth Purge (tier01 at 1 … tier10 at 10;
+// AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP).
+export const AUTOBUYER_UNLOCK_MILESTONE_START = 1
+export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 1
 // Same milestone-based automatic-unlock mechanism as the autobuyer unlock above, but for a tier's
 // own tickspeed-multiplier autobuyer (see engine.js's getTierTickspeedAutobuyerMilestone) — starts
-// later (Purge 22 for tier01) and spaces out two Purges per tier (22, 24, … 40 for tier10),
+// 10 Purges after the tier's autobuyer (Purge n + 10: 11 for tier01 … 20 for tier10),
 // reflecting that it's a later-game convenience layered on top of the (now free)
 // unit-buying autobuyer above. Also no longer PP-funded.
-export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 22
-export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 2
+export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 11
+export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 1
+// A challenge unlocks at this multiple of its target automation's unlock Purge count (engine.js's
+// getChallengeUnlockPurges): tier01's F1 at Purge 5, F21 (Clock Speed, automation at 8) at 40.
+export const CHALLENGE_UNLOCK_PURGE_MULTIPLIER = 5
 // Speed Up (the global tickspeed multiplier — see engine.js's
 // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) speeds up *every* tier's
 // production at once. Every level compounds by the same rate.

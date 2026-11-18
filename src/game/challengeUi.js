@@ -1,5 +1,5 @@
 import { BITS_PER_BYTE, CLOCK_DRIFT_INTERVAL_SECONDS, DUTY_CYCLE_WINDOW_SECONDS, HARD_REFRESH_INTERVAL_SECONDS, MONEY_ID, PURGE_THRESHOLD } from './layers'
-import { formatCurrency, getActiveChallenge, getAutobuyerUnlockMilestone, getBitRotCorruption, getGlobalAutomationUnlockMilestone, getTierTickspeedAutobuyerMilestone } from './engine'
+import { formatCurrency, getActiveChallenge, getBitRotCorruption, getChallengeUnlockPurges } from './engine'
 
 // Player-facing helpers for challenge mode (epic #1037); pure, shared by Firmware and the Factory banner.
 export const formatChallengeTime = totalSeconds => {
@@ -16,12 +16,7 @@ export const formatChallengeTime = totalSeconds => {
 export const formatChallengeGoal = goalBits =>
   goalBits === PURGE_THRESHOLD ? '1 Googol Bytes' : `10^${Math.round(Math.log10(goalBits / BITS_PER_BYTE))} Bytes`
 
-export const getChallengeUnlockCondition = def => {
-  const { kind, key } = def.automation
-  if (kind === 'tierAutobuyer') return `Unlocks at Purge ${getAutobuyerUnlockMilestone(key)}`
-  if (kind === 'tierTickspeed') return `Unlocks at Purge ${getTierTickspeedAutobuyerMilestone(key)}`
-  return `Unlocks at Purge ${getGlobalAutomationUnlockMilestone(key)}`
-}
+export const getChallengeUnlockCondition = def => `Unlocks at Purge ${getChallengeUnlockPurges(def)}`
 
 export const getChallengeTitle = def => `${def.id} · ${def.target} · ${def.codename}`
 

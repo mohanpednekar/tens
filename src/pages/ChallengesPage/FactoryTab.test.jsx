@@ -13,7 +13,7 @@ const owned = () => ({
   autoXpTickspeed: true,
   autoOverclock: true,
   autoPurge: 1,
-  purge: { ...createInitialGameState().purge, points: 1e9, count: 5 },
+  purge: { ...createInitialGameState().purge, points: 1e9, count: 1000 },
   autobuyers: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 1])),
   tierTickspeedAutobuyer: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])),
 })
@@ -31,7 +31,7 @@ describe('Firmware Challenges tab', () => {
   it('hides codename and rule while locked and shows the unlock condition', () => {
     wrap(<ChallengesPage game={makeGame(createInitialGameState())} />)
     const row = screen.getByLabelText('challenge F21')
-    expect(row.textContent).toContain('Unlocks at Purge 8')
+    expect(row.textContent).toContain('Unlocks at Purge 40')
     expect(row.textContent).not.toContain('Base Clock')
   })
 

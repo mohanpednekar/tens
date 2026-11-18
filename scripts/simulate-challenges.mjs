@@ -303,17 +303,14 @@ function buildCareerBase() {
   return s
 }
 
-// Representative Purge for each challenge: ~1.5 × the Purge its automation unlocks at (F1: exactly 1).
+// Representative Purge for each challenge: ~1.5 × the Purge the challenge unlocks at.
 function unlockPurge(def) {
-  const { kind, key } = def.automation
-  if (kind === 'tierAutobuyer') return E.getAutobuyerUnlockMilestone(key)
-  if (kind === 'tierTickspeed') return E.getTierTickspeedAutobuyerMilestone(key)
-  return L.GLOBAL_AUTOMATION_UNLOCK_PURGES[key]
+  return E.getChallengeUnlockPurges(def)
 }
 
 function seedFor(base, def) {
   const need = unlockPurge(def)
-  const target = def.id === 'F1' ? 1 : Math.round(need * 1.5)
+  const target = Math.round(need * 1.5)
   // unlock via milestone at `need`, then set the representative count.
   let s = applyAutobuyerMilestones({ ...base, purge: { ...base.purge, count: Math.max(need, target) } })
   s = { ...s, purge: { ...s.purge, count: target } }
