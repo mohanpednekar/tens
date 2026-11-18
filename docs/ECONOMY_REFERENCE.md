@@ -13,7 +13,7 @@ already underway. Completed rebuilds continuously auto-buy affordable Boosters f
 The first reset permanently fixes lake speed at 50%; reset two onward advances the existing normal
 bandwidth ladder, dynamically bounded for non-final pools by half the next pool's bandwidth.
 
-Referenced from `CLAUDE.md`'s Economy model section. Read this before touching
+Referenced from `src/CLAUDE.md`'s Economy model section. Read this before touching
 `src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or any economy/prestige/tickspeed
 constant or formula — it's the full mechanic reference (cost/production formulas, the purchase
 block size and level system, Prestige Points, the per-tier and global tickspeed multipliers, the

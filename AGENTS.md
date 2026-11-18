@@ -1,13 +1,13 @@
 # AGENTS.md
 
 Context for AI agents working on this repository. This is a condensed pointer, not a second source
-of truth — `CLAUDE.md` (plus its `docs/*.md` references) is authoritative for current behavior. If
+of truth — `CLAUDE.md` and `src/CLAUDE.md` (game rules/economy/page roles; plus their `docs/*.md` references) are authoritative for current behavior. If
 anything below ever conflicts with `CLAUDE.md`, `CLAUDE.md` wins; fix this file to match in the same
 change rather than letting the two drift (a stale mirror here is worse than no mirror at all).
 
-Player labels (issue #988; code identifiers unchanged): Power page = id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers`; Cores → Superclouds (KFlops → QFlops outputs) = `flop01`–`flop10`; Clock Speed = global tickspeed; Bitrate/Bandwidth/Staging/Compile/Ping/Flush Pool/Turbo-Balanced-Eco replace the old Speed/pool speed/buffer/Combine/tap/Reset Pool/Burst-Standard-Sustain. Full table: `CLAUDE.md`.
+Player labels (issue #988; code identifiers unchanged): Power page = id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers`; Cores → Superclouds (KFlops → QFlops outputs) = `flop01`–`flop10`; Clock Speed = global tickspeed; Bitrate/Bandwidth/Staging/Compile/Ping/Flush Pool/Turbo-Balanced-Eco replace the old Speed/pool speed/buffer/Combine/tap/Reset Pool/Burst-Standard-Sustain. Full table: `src/CLAUDE.md`.
 
-Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Purge** (formerly named Reboot, now the Era-ascension layer; PP = Purge Points), the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). Code and state use the Purge names too (`purge`, `purgeGame`, `PURGE_THRESHOLD`, automation keys `speedUp`/`purge`; older `prestige`/`reboot` save keys migrate via `save-migration/migrateToV3`); only Prestige-Point/museum identifiers keep `prestige`. Player labels (#986): Firmware = `'perks'`, Compression = `prestigeDoublePpLevel`, Reboot = `era`/`eraGame`, Kernels = `eons`, Reformat = `resetByteFoundry`, Releases = `'milestones'`, System log = `prestigeMuseum`, Manual = `'info'`; see CLAUDE.md.
+Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Purge** (formerly named Reboot, now the Era-ascension layer; PP = Purge Points), the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). Code and state use the Purge names too (`purge`, `purgeGame`, `PURGE_THRESHOLD`, automation keys `speedUp`/`purge`; older `prestige`/`reboot` save keys migrate via `save-migration/migrateToV3`); only Prestige-Point/museum identifiers keep `prestige`. Player labels (#986): Firmware = `'perks'`, Compression = `prestigeDoublePpLevel`, Reboot = `era`/`eraGame`, Kernels = `eons`, Reformat = `resetByteFoundry`, Releases = `'milestones'`, System log = `prestigeMuseum`, Manual = `'info'`; see `src/CLAUDE.md`.
 
 ## Project
 
@@ -181,7 +181,7 @@ balances while keeping `byteCreated`, the `mainGameUnlocked` latch, and select a
 **Same caveat, extended to Data Stream Capacity, pool Bandwidth, Provision Disk, Data Lakes
 (fill/Boosters/capacity ladder), stranded-disk handling, the Buy/Upgrade button precedence, and
 pool-liveness-is-Capacity-only — every formula/threshold/UI-rendering/gating detail is deliberately
-omitted; do not guess at any of it.** See `CLAUDE.md`'s "Economy model"/"Architecture" and
+omitted; do not guess at any of it.** See `src/CLAUDE.md` ("Economy model", "Architecture — page renderers") and
 `docs/ECONOMY_REFERENCE.md`/`docs/COMPONENTS_REFERENCE.md`; read those before touching
 `src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or `ByteFoundryPage`/`StoragePage`/
 `ComputePage`, and check `docs/DESIGN_HISTORY.md` first if changing a formula/gate a past iteration may

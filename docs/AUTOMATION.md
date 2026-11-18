@@ -626,7 +626,7 @@ that defaults to squash — see issue #343):
    `claude/heal-main-*`, `dependabot/*`; never a fork),
    auto-merge is enabled immediately once the diff meets a conservative "low risk" bar (shared
    implementation: `scripts/pr-low-risk-eligible.sh` / `scripts/enable-auto-merge-if-eligible.sh`):
-   the whole diff touches only `CLAUDE.md`/`*.test.js`/`*.test.jsx` (docs/tests-only), OR total
+   the whole diff touches only `CLAUDE.md`/`*/CLAUDE.md`/`*.test.js`/`*.test.jsx` (docs/tests-only), OR total
    changed lines ≤50, OR it's a Dependabot PR with a patch/minor semver bump (major bumps wait for
    approval). A PR touching anything under `.github/workflows/` is **always** excluded from this
    path regardless of size or content. This path does **not** mark drafts ready (a still-draft PR

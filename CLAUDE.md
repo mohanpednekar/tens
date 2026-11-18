@@ -267,28 +267,16 @@ code/secret-scanning alerts not already tracked get the same (Dependabot alerts 
 0(c)/B). Phase A may weigh Impact to reorder *within* a priority tier (`priority:high` still jumps
 outright), saying so when it deviates from lowest-number order.
 
-- `devin-autonomous-maintenance.yml` — Devin-CLI counterpart, `workflow_dispatch` only (its 4-hourly schedule was removed 2026-10-20: the Devin plan lacks the `swe` model), opens `devin/auto-*` PRs
-  (auth `DEVIN_CLI_CREDENTIALS`; git/`gh` via `GH_AUTOMATION_PAT`). The 5-open-PR ceiling counts `devin/auto-*` +
-  `claude/auto-*` together. May edit workflows incl. its own, but workflow-file changes stay human-gated
-  (`pr-auto-merge.yml` excludes `.github/workflows/**` from green-checks auto-merge). Every change still lands via PR. Follows the Pull-requests
-  convention; post-run feedback is `autonomous-pr-followup.yml`'s job.
-- `devin-workflow-health.yml` — `workflow_dispatch` only (daily schedule removed with the above); files an `automation-failure` issue if the Devin workflow doesn't
-  parse, hasn't started in 26h, or its latest completed run wasn't `success`.
-- `pr-conflict-sweep.yml` — on every push to `main`, flags newly conflicted open PRs (on `claude/auto-*`/`devin/auto-*`
-  the comment triggers the follow-up agent to merge-and-resolve) and merges `main` into non-draft mergeable-but-behind
-  `claude/auto-*`/`devin/auto-*` PRs via the update-branch API.
-- `release.yml` — deterministic: on a `package.json` push to `main`, tags `v<x.y.z>` if absent and creates the GitHub
-  Release from that version's `CHANGELOG.md` section ("Changelog convention").
-- `codeql.yml`, `mutation-testing.yml`, `mobile-build.yml` — non-agent scanning/build workflows (`docs/AUTOMATION.md`).
-- `main-ci-heal.yml` — on a failed `CI` run on `main`: reruns failed jobs once (flakiness check), and only if that
-  also fails opens a `claude/heal-main-*` fix PR (#37; `docs/AUTOMATION.md` "Main CI heal").
-- `revert-deploy.yml` — manual only (#594): given a known-good `target_sha`, opens a PR restoring `main`'s tree to it
-  (never pushes to `main`).
-- `autonomous-pr-followup.yml` (review comments/CI failures on `claude/auto-*`/`devin/auto-*`),
-  `dependabot-pr-followup.yml` (failing checks on `dependabot/*` PRs when the bump broke call sites; Phase 0 owns
-  `@dependabot rebase`), `pr-auto-merge.yml` (native auto-merge on human approval, or green checks alone for
-  `claude/*`/`devin/auto-*` meeting the low-risk bar), `automation-self-heal.yml` (draft `claude/self-heal-*` fix or
-  `automation-failure` issue for failed orchestration runs; never edits `ci.yml`/`deploy.yml`/itself).
+Other workflows (full behavior: `docs/AUTOMATION.md`): `devin-autonomous-maintenance.yml` (Devin-CLI counterpart,
+`workflow_dispatch` only, `devin/auto-*` PRs; the 5-open-PR ceiling counts `devin/auto-*` + `claude/auto-*` together;
+its workflow-file changes stay human-gated) + `devin-workflow-health.yml` (its watchdog); `pr-conflict-sweep.yml` (on
+push to `main`: flags conflicted PRs, refreshes behind `claude/auto-*`/`devin/auto-*` PRs); `release.yml` (tag +
+GitHub Release on a `package.json` bump, no agent); `main-ci-heal.yml` (red `main` CI: rerun once, then a
+`claude/heal-main-*` PR); `revert-deploy.yml` (manual; PR restoring `main` to a known-good SHA, never pushes `main`);
+`autonomous-pr-followup.yml` / `dependabot-pr-followup.yml` (review comments / CI failures on agent and Dependabot
+PRs); `pr-auto-merge.yml` (the auto-merge paths); `automation-self-heal.yml` (draft fix or `automation-failure` issue
+for failed orchestration runs; never edits `ci.yml`/`deploy.yml`/itself); `codeql.yml`, `mutation-testing.yml`,
+`mobile-build.yml` (non-agent scanning/build).
 
 **Maintainer checklist (#62) verification (#63).** `scripts/verify-maintainer-checklist.mjs` runs each
 `autonomous-maintenance.yml` invocation and strikes through API-verifiable #62 items that now pass.
@@ -317,7 +305,7 @@ touching any `.github/workflows/*.yml` file or reasoning in detail about the una
 
 ## Documentation
 
-Always update this file (`CLAUDE.md`) in the same change/commit as any code change it describes —
+Always update this file (`CLAUDE.md`, or `src/CLAUDE.md` for the sections it holds) in the same change/commit as any code change it describes —
 don't leave it as a follow-up. If a change touches function signatures, constants, state shape,
 economy/game-rule behavior, or file layout documented below, update the corresponding
 section here before considering the change done. A code change and a stale doc describing the old
@@ -452,7 +440,7 @@ src/
                             rendered by `App.jsx` when `incompatibleSaveReason` is set
   pages/                  ← ChallengesPage (page id `'challenges'`; top tabs 🏁 Factory / 📅 Daily; shown with Firmware), AchievementsPage (`'achievements'`, More entry), ByteFoundryPage, StoragePage, ComputePage, ComputeFlopsPage, MainPage, PerksPage,
                             InfoPage, MilestonesPage, SettingsPage, DevModePage (+ `stateFields.js`: pure
-                            Variables-tree helpers) — roles in "Architecture"; layout in MAINPAGE_REFERENCE.
+                            Variables-tree helpers) — roles in `src/CLAUDE.md`; layout in MAINPAGE_REFERENCE.
                             Page ids: `'foundry'` (also holds Storage), `'boosters'` (Power), `'compute'` (Flops),
                             `'game'` (Factory), `'perks'` (Firmware), `'milestones'`, `'info'`, `'settings'`, `'dev'`
   theme/                  ← tokens.js (design-token source of truth: per-mode color/shadow/tier-accent +
@@ -479,18 +467,13 @@ vite.config.js            ← thin wrapper over `viteConfigFactory.js` (aliases,
 firestore.rules           ← owner-only `saves/{uid}` rules; stryker.config.json ← Stryker mutation testing of `engine.js`
                             (weekly non-blocking `mutation-testing.yml`; `yarn stryker run`)
 playwright.config.js, e2e/ ← real-browser suite, specs in docs/TESTING_REFERENCE.md
-scripts/                  ← bump-version.mjs ("Changelog convention"); generate-pwa-icons.mjs (`yarn gen-pwa-icons`, not
-                            in the build; re-run only if the icon design changes); adversarialReviewMarker.js
-                            ("Pull requests"); pr-low-risk-eligible.sh, enable-auto-merge-if-eligible.sh,
-                            resolve-pr-threads.sh (`list` read-only; `resolve` takes explicit IDs, never bulk; only repo-owner/
-                            bot-authored `claude/*`/`devin/*` PRs; used by `autonomous-maintenance.yml` and
-                            `autonomous-pr-followup.yml`), backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh,
-                            sweep-stalled-auto-prs.sh (#60), sync-release-milestones.sh, configure-ios-plist.mjs,
-                            android-boot-smoke.sh, simulate-challenges.mjs (#1043 challenge balance sim), simulate-daily-challenges.mjs (daily calibration sweep), lint-workflow-shell.mjs, lint-conflict-markers.mjs, check-graphify-freshness.mjs
-                            (committed graph vs. working tree + malformed nodes/keys, #761, #1060), classify-claude-failure.sh (transient vs. real
-                            Claude-step failure), orphan-branch-scan.sh (#59), verify-maintainer-checklist.mjs —
-                            roles in docs/AUTOMATION.md (except resolve-pr-threads/generate-pwa-icons/configure-ios-plist/
-                            check-graphify-freshness/classify-claude-failure, above and in their own headers); most have a sibling `*.test.js`
+scripts/                  ← automation, release, lint and simulation helpers (`ls scripts/`; most have a sibling `*.test.js`;
+                            roles in docs/AUTOMATION.md or each script's header). Named elsewhere here: bump-version.mjs,
+                            adversarialReviewMarker.js, pr-low-risk-eligible.sh, enable-auto-merge-if-eligible.sh,
+                            lint-workflow-shell.mjs, lint-conflict-markers.mjs, simulate-challenges.mjs,
+                            simulate-daily-challenges.mjs, verify-maintainer-checklist.mjs, sync-release-milestones.sh.
+                            resolve-pr-threads.sh: `list` read-only; `resolve` takes explicit IDs, never bulk.
+                            generate-pwa-icons.mjs is not in the build — re-run only if the icon design changes.
 public/                   ← generated PWA icons, favicon.ico, robots.txt (old CRA `index.html`/`manifest.json`/`logo*.png`
                             removed — DESIGN_HISTORY.md)
 ```
@@ -526,68 +509,9 @@ Strict three-layer separation:
    suspended tab/PWA never remounts, so the live tick loop also replays any wall-clock gap past
    `BACKGROUND_TICK_GAP_THRESHOLD_SECONDS` (2s) through the same path — `offlineProgress` is **not** a
    mount-time-only, one-shot value. Detail: `docs/ECONOMY_REFERENCE.md`'s "Offline progress".
-3. **`MainPage/index.jsx`** — a pure renderer driven by `TIER_DEFINITIONS` and the hook's `state`
-   (a `game` prop from `App.jsx`, not its own `useIncrementalGame()` call). Renders each unlocked tier
-   as one compact grid row. Purely game — live controls, numbers, status text; top-level destinations
-   live in `App.jsx`'s shared `AppNav` (Byte Factory is this page), so MainPage carries no page-to-page
-   open-* links. Full layout: `docs/MAINPAGE_REFERENCE.md`.
-4. **`ByteFoundryPage/index.jsx`** — the tap screen, a pure renderer taking `{ game, focusNonce }`; how a
-   save's first Prestige cycle earns its first Kilobytes. A mandatory gate while `intro.mainGameUnlocked`
-   is false (AppNav omits Factory; More stays), permanently latched true the instant Storage's
-   capacity threshold ("1 KiB") is crossed (`latchMainGameUnlocked`/`isStorageUnlocked`) — one-time-ever,
-   never resets. Once latched, the Data Stream tile itself is the tap target (`actions.tapIntroBit`).
-   Shows Data Stream (shared Compile/Bitrate/Capacity + Provision Disk in its own card) then one `PoolCard`
-   per VISIBLE pool (`getVisibleStoragePoolCount`: PURE Capacity-based, independent of
-   `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount`, which stay disk-build-only — see "Pool liveness"
-   below); each pool embeds its `DiskArrayRow`s and `DataLakePanel` (`bare`, `tierIndex={poolIndex}`).
-   Disk Fill is automatic. Every action is gated by the forced priority order — Data Lake Booster
-   purchases, its capacity Upgrade, and Upgrade Capacity / Bitrate are the three exceptions. Pool/staging/
-   Bandwidth/Provision Disk/queue detail: **`docs/FOUNDRY_MECHANICS_REFERENCE.md`**; UI layout:
-   `docs/MAINPAGE_REFERENCE.md`; formulas: `docs/ECONOMY_REFERENCE.md`; component contracts:
-   `docs/COMPONENTS_REFERENCE.md`.
-4a. **`StoragePage/index.jsx`** — thin reusable every-size DiskArrayRow list (ascending, via
-   `getDiskSizesToShow`) — NOT the Provision Disk button, which stays on ByteFoundryPage. Takes
-   `{ game }`. Primary UI path is Foundry's continuous sections; this file remains for reuse/tests. A
-   pure renderer ("engine re-validates, UI just mirrors it", like every page here).
-4b. **`ComputePage/index.jsx`** — Foundry **Power** screen (page id `'boosters'`; player label only), `{ game }`; reached
-   via AppNav once `isComputeCoreConversionUnlocked`. Hosts the nine-boundary merge chain (Cell → Battery → … → Fusion,
-   "Charge up"/"Auto-charge"; ⚡ Charge button = 1 unit/s top→bottom row then instant 8→1, `startComputeCharge`/`tickComputeCharges`) behind a later one-time `intro.computeMergePageUnlocked` reveal. "Compute" names the
-   page/feature only — entities drop the word in every player-visible label. Deliberately terse (icon-only controls,
-   full sentence in `title`/`aria-label`; mechanic prose lives in the Manual). Top card = Boost timer bars per running multiplier lane
-   (`intro.computeBoosts`: different multipliers run in parallel and add up; same multiplier queues behind the running boost, waiting ones strongest-tier-first; one row per same-tier group, Pop-or-Forfeit on the lane's last row, Stack on its first, per `boostType`, enforced in the engine too) (Auto Boost is automatic: one token per automated charge start, `autoBoostFromTier`; its Switch + preset, like Auto-charge's pause Switch `computeAutoChargeEnabled`, live on Firmware → Automation → Power Automation);
-   then per-tier rows — the ONE selected tier shows the 3 Boost presets inline. Constants: `COMPUTE_ENTITY_CAP` 10,
-   `COMPUTE_MERGE_RATIO` 8, `COMPUTE_MERGE_RESERVE_CAP` 8. Cells (`computeCores`) are bought from the matching Data Lake,
-   not minted from Capacity. Detail: `docs/FOUNDRY_MECHANICS_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`, `docs/DESIGN_HISTORY.md`.
-4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), `{ game }`; AppNav once
-   `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in `computeFlops.pageUnlocked`). Ten tiers Cores→Superclouds,
-   outputs KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`; page keeps "Compute" + 🖥), PP-funded on the same 10³ ladder as Factory tiers, priced
-   per-unit via `getCostEpochExponent` (not 8-buy blocks). Owned counts permanent across Prestige; per-cycle boost resets.
-   Pure renderer — spec: `docs/ECONOMY_REFERENCE.md` "PP Compute (Flops)".
-5. **`InfoPage/index.jsx`** — a static Manual page holding every mechanic's evergreen explanation in
-   short bullets/sub-headings (what used to be MainPage's click-to-expand `InfoDetails` disclosures —
-   Overview, Prestige ladder, Byte Foundry, Storage, Power, Compute, Clock Speed, Scale Up, Overclock,
-   Tier Autobuyers, Releases, Purge, Sleep mode, Reboot). Numbers come from the same `engine.js`/`layers.js`
-   constants the game uses, so they can't drift. Reads no `useIncrementalGame` state — only pure
-   constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
-   import) — the **only** in-app version surface. Reached via AppNav → More → Manual.
-6. **`MilestonesPage/index.jsx`** — Releases / Reboot status screen (autobuyer unlock
-   milestones live once, on Firmware → Automation — not repeated here). Releases: v1.0 The first Kilobyte, v2.0 Go Googol, v3.0 Open
-   Compute, v4.0 DeGoogoled, v5.0 First Reboot. Reached via AppNav → More (`page = 'milestones'`); always
-   reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
-7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
-    Supporter pack (unlock code / dummy checkout), Cloud save (`CloudSaveSection.jsx`, only when
-    `CLOUD_SAVE_ENABLED`: sign-in, upload/download, Delete account and data), Backup / Restore
-    (`ManualSaveSection.jsx`, always: copy/download/paste/file → `applyCloudSave`), Store
-    (`StoreSection.jsx`, only when IAP is on), multi-slot saves, System log, Reboot
-    (Reboots/Kernels display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Task
-    Manager, Legal (`LegalSection.jsx`: Privacy Policy / Terms links), and Danger zone — Reset (full save wipe) and **Reformat Byte Foundry** (Capacity /
-    Storage / Compute + upgrades wipe to scratch; Compile / Upgrade Capacity / Upgrade Bitrate
-    convenience-auto up to prior highs; smaller Disk sizes re-provision with no provisioning cost (one buffer fill per disk); Factory + Prestige kept). Takes `{ game, onReset,
-    onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
-    `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
-    aside from local form state.
-8. **`DevModePage/index.jsx`** — dev-build-only sandbox, see "Dev Mode". Reached via AppNav → More
-   (`page = 'dev'`), gate-exempt like Settings/Releases. Takes `{ game }`.
+3–8. **Page renderers** (`MainPage`, `ByteFoundryPage`, `StoragePage`, `ComputePage`, `ComputeFlopsPage`,
+   `InfoPage`, `MilestonesPage`, `SettingsPage`, `DevModePage`) — pure renderers of the hook's state (mostly
+   `{ game }`; engine re-validates, UI mirrors it). Roles, props and gates: **`src/CLAUDE.md`** "Architecture — page renderers".
 
 ## Dev Mode
 
@@ -603,176 +527,13 @@ state to the active slot, then redirects every save read/write to an isolated `'
 
 ## Economy model
 
-### Pool-local flushes
-
-**Lake hierarchy (#1087):** each Data Lake is one permanent 1-unit buffer (`fillBits`) + ×1/×10/×100/×1000 disks (`depositedUnits`, counts derived); pool input feeds the buffer, then timed `lakeTransfer`s move it into ×1 disks and consolidate 9 smaller disks of every denomination + a full buffer into the next size (×1000 slots come only from Flush). Boosters spend banked disks + a full buffer only; the collapsed lake shows `getDataLakeBoosterProgressPercent`. Detail: `docs/ECONOMY_REFERENCE.md` "Hierarchical lake disks".
-
-Each Storage pool has an independent end-of-progression **flush** (`flushStoragePool`; formerly "reset"), offered only at 9/9/9 disks, with a
-completely full Data Lake, when the next Booster costs more than the lake can hold. It empties only that
-pool's disks, buffer, and lake (Booster state and prior reset rewards remain) and permanently adds 1,000
-units of lake-only capacity. Lake speed is 10% of its pool's base Bandwidth, +10% additive per flush (`getDataLakeSpeedMultiplier`; 70% after 6); flushes no longer change pool Bandwidth. After a flush the pool provisions its disks automatically and for
-free, one at a time smallest-first, waiting for each disk to fill; while it rebuilds, later pools cannot
-start new provisioning (already-active work may finish). Whenever all 9/9/9 disks are provisioned
-(including before the first reset) — a status latched per lake (`boosterAuto`) for the whole Reboot cycle, surviving pool resets, Reformat Byte Foundry and Prestige — the lake's Booster control becomes a non-clickable cost label and
-the lake automatically buys every affordable Booster until slots fill or the next cost exceeds capacity;
-filling the lake at that wall enables the next reset. Pools never transfer or share resources through
-this loop. Full detail: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop" (now the flush loop).
-
-### Achievements (epic #1046, basic slice)
-
-State `achievements` (`earned`, lifetime `counters.pings`) survives every reset but a full Reset; registry `ACHIEVEMENT_GROUPS`/`ACHIEVEMENT_DEFINITIONS` in `layers.js`; `detectAchievements` runs after each tick/Ping; `AchievementsPage` (page id `'achievements'`, More entry) renders them. Whole feature behind `ACHIEVEMENTS_FEATURE.enabled` (on in every build). The 20 Foundry Reclamation I/II achievements are the first functional bonuses: they permanently upgrade each pool's two within-pool Bitrate exponent steps, retained across Reformat and Reboot. **Spent QB** is the second: it gates the last tier's per-level credit (see Scale Up paragraph below). Other achievement bonuses remain deferred. Detail: `docs/ECONOMY_REFERENCE.md` "Achievements".
-
-### Daily challenges (epic #1062)
-
-State `daily` (`runs[formatId]`, `results[dateId][formatId]`) survives every reset but a full Reset; logic in `src/game/dailyChallenges.js` (`generateDailyChallenge`/`getDailyChallengeValidation(dateId, formatId)`, `startDailyRun`/`restartDailyRun(formatId, nowMs)`, `forfeitDailyRun(formatId)`, `tickDailyRuns(nowMs)`, `playDailyRun(formatId, actionName, arg, nowMs)`, `getDailyCredits(state, dateId)`; none reads the clock itself). Three definitions per UTC date (10 min / 1 h / 10 h), seeded by date + format + `DAILY_GENERATOR_VERSION` (bump it whenever generator data, the reference bot, or engine behavior it simulates changes — an engine diff can silently invalidate every definition), each with `DAILY_MODIFIER_POOL` levers (run game's `runLevers`, read by `getChallengeLever`), seeded progress, a seeded `startBytes`, real engine automations (`DAILY_AUTOMATIONS`) and a seeded objective (`DAILY_OBJECTIVE_KINDS`, tracked in `run.metrics` from `runPeaks`) whose target is calculated from a reference bot. A run is an isolated Factory-only game played on the real Factory page (`DailyTab`'s `RunView` renders `MainPage` with the run's game; actions → `actions.dailyPlay`). Hard rules: the bot's time must land in 5–9 min / 30–50 min / 5–8 h or the candidate is discarded; a definition reads nothing from the main save; an untouched run reaches neither the target nor `objective.attemptMark`. Sweep: `scripts/simulate-daily-challenges.mjs`. Behind `DAILY_CHALLENGES_FEATURE` + first Purge; UI = Challenges page 📅 Daily tab. Deferred: server time, fetched definitions, rewards, weekly/monthly milestones, streak, Checkpoints, Antimatter (#1063–#1072). Detail: `docs/ECONOMY_REFERENCE.md` "Daily challenges".
-
-### Tiers, Prestige, Reboot (Era ascension)
-
-**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Charger = a tier's 8-slot reserve row (bottom row, `getComputeReserveHeld`); Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Flush Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
-
-**Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Purge, Reboot,
-Reformat Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Purge** (formerly the name Reboot, now the Era-ascension layer) and
-PP reads **Purge Points**; the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). The Purge
-rename is carried through the code too (#987): `state.purge`, `purgeGame`,
-`PURGE_THRESHOLD`, `autoPurge`, automation keys `'speedUp'`/`'purge'` — while Prestige-Point,
-Compression, speed-bonus, `prestigeMuseum` identifiers keep `prestige`. Pre-rename
-save keys (`prestige`/`reboot` → `purge`, etc.) are renamed on load by `save-migration/migrateToV3`.
-
-There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
-display names `Kilobytes` through `Quettabytes`. Every tier is bought directly with the base currency
-(`MONEY_ID = 'base'`, display name "Bits") and, once owned, produces the tier immediately below it,
-cascading down the ladder; `tier01` (Kilobytes) is the special case where cost is still Bits but
-production is a whole-Byte amount (`BYTES_ID = 'bytes'`, displayed as `B`) credited to Bits at
-`BITS_PER_BYTE` (8) per Byte. A tier's per-level cost is `getTierCost` = `baseCost × 10^(getTierCostExponent − 1)`: exponent 1, 2, 3 for the first three levels on every tier, then +tierNumber per level (tier01 +1 … tier10 +10). **Bytes and Bits are ONE pool** (`resources.base`) — there is no separate
-Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Clock Speed** (the global
-tickspeed multiplier on MainPage, formerly "Latency"/"Tickspeed"/"Clock Speed"; code: `globalTickspeed*`, automation key `speedUp`) is paid from that Bits balance —
-initial activation costs **10 Bytes (80 Bits)**. It unlocks once level 1 of tier01 is purchased; there
-are no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
-Reaching Money ≥ `PURGE_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
-since a Byte is 8 Bits) freezes the economy except for Prestige — unless `isOverflowModeUnlocked(state)`
-is true (permanent `purge.unboundedUnlocked` latch; unlocked once Auto-Prestige's interval is upgraded to
-`OVERFLOW_MODE_MAX_INTERVAL_SECONDS` (1 s) or less, carried through Reboot), in which case production
-continues and Prestige is optional (see `isProductionFrozen`). **Reboot** (`eraGame`) is a separate voluntary meta-prestige at **1 Googol unspent PP**
-(`ERA_ELIGIBILITY_PP`): it awards **Kernels** (+1 base, +1 per Kernel Amplifier level — shop deferred to #414),
-increments `era.count`, resets the full Foundry (generator upgrades, Disks, Data Lakes, compute ladder
-entities, Memory/gate) plus the ordinary Factory cycle (`purge.points`/`count`/`prestigeDoublePpLevel`
-→ 0, `computeFlops.owned` → 0, `cumulativeBoost` fresh), while keeping automation unlocks/pause flags
-(except Compression level), tier/tickspeed autobuyer milestone objects, `purge.unboundedUnlocked`,
-System log, hyperscalers, Kernel upgrade levels, Flops autobuyer unlock flags, and page latches. Reboot *N*
-free-unlocks the *N*th Flops tier's autobuyer (Cores (KFlops) at Reboot 1, …). Hyperscalers (bought with Kernels in
-#414) add permanent +0.01%/s each to every Factory tier's Flops multiplier via
-`getHyperscalerFlopsBoostRate` — the engine/hook action (`buyHyperscaler`) is wired, but no page renders
-a purchase control yet (deferred to #414, blocked pending maintainer-approved spend design). Full detail:
-`docs/ECONOMY_REFERENCE.md`'s "Reboot and Kernels". Prestige (Purge) Points are awarded by
-`getPrestigePointsAwarded`: 1 base PP at 1 Googol Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64)
-additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Compression
-upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then doubles PP-per-power; cost
-`10^(level+1)` PP). Production speed bonus (`getPrestigeProductionMultiplier`) is a one-time 1 PP purchase
-(`buyPrestigeSpeedBonus`/`prestigeSpeedBonusUnlocked`; Firmware → Prestige opens with a PP tutorial callout) giving
-×1.1 for the 1st Purge (hardcoded `PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER`), then ×`1 + log10(count)` (×2 at 10, ×3 at 100, ×4 at 1,000…); see `docs/ECONOMY_REFERENCE.md`. `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
-(`getMoneyExponent`/`getPurgePercent`) — only the live freeze/Prestige trigger moved to
-`PURGE_THRESHOLD`; see `docs/DESIGN_HISTORY.md` for why. MainPage's headline balance (`MoneyHero`) switches from Bits to whole Bytes once the balance reaches
-8000 Bits (`formatMoneyBalance`, `MONEY_BYTES_DISPLAY_THRESHOLD`); a small Bits subline then shows
-the exact `formatCurrency` amount (absolutely positioned in the existing gap — adds no height; hidden while `balancesCompressed`). Every other `formatCurrency` call
-(costs, production, the Prestige-threshold overlay) keeps reading in Bits.
-
-**Challenge mode (epic #1037; engine #1038 + UI #1039: Challenges page 🏁 Factory tab, inline start on Global Automation rows, `ChallengeBanner` atop Factory):** state `challenges` (`active`, `activeSeconds`, `completed`, `bestSeconds`, `enteredCount`, `exitedCount`); registry `CHALLENGE_DEFINITIONS` + the `LIVE_CHALLENGE_IDS` rollout Set (F1–F25 live; tier rules are `effect`-keyed with run-scoped `challenges.run`) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits`/`autoCompleteChallenges` in `engine.js` gate the three speed-upgrade buyers on completion. A challenge unlocks at `CHALLENGE_UNLOCK_PURGE_MULTIPLIER` (5) × its automation's unlock Purge (`getChallengeUnlockPurges`); tier autobuyers unlock at Purge n, tier tickspeed autobuyers at n + 10. Definitions may also carry run-wide `levers` (`production`, `clockSpeedPower`, `scaleUpPower`, `costMultiplier`; read via `getChallengeLever`, active only inside the challenge); F9 Bit Rot's corruption also falls with unlocked Foundry disk sizes (unadvertised). Balance bands + per-challenge values: `docs/ECONOMY_REFERENCE.md` "Challenge mode"; sim: `scripts/simulate-challenges.mjs`.
-
-### Byte Foundry
-
-Bytes are produced entirely by the **Byte Foundry** (`ByteFoundryPage`), a tap-to-earn screen every fresh
-save passes through once before the main game — a ONE-TIME-EVER gate (`latchMainGameUnlocked`/
-`intro.mainGameUnlocked`) gone permanently across every Prestige and Reboot once Storage's
-capacity threshold is reached. Pinging fills the **Data Stream** (Buffer-capped) which Compile turns into
-a permanent Byte generator; **Upgrade Capacity** / **Upgrade Bitrate** grow it one at a time
-(`queueIntroSpeedUpgrade`, `tickCapacityUpgradeDrain`; sit OUTSIDE the forced priority order). Displayed
-Speed is derived (`getDataStreamSpeedBytesPerSecond`, exponent `getDataStreamSpeedExponent`);
-the exponent starts at 0.5, climbs by 10% toward 1.0 at each pool boundary and by 10% toward
-its next pool within an array; the first two Compact Pool achievements upgrade that pool's two
-array steps to 10% toward 1.0 (`getDataStreamSpeedExponent`; details in `docs/ECONOMY_REFERENCE.md`). Reboot keeps the generator and
-gate latch but resets Capacity (`buildEraIntroReset`). Recurring actions follow a **forced priority
-order** Disk Fill > Provision Disk > Compute Boost (a lower one is disabled, in UI and engine, while a
-higher one is available; Provision Disk outranks Compute only while ARMED — `isProvisionDiskInProgress`). An always-on auto-convert (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`)
-turns Data Stream bits into free `tier01` units. Generator, Disks, Data Lakes, and every compute-ladder
-entity (Cell → … → Fusion) are PERMANENT across real Prestige; only tier01's purchase-block
-progress resets per cycle (the Data Stream balance is kept). Nothing here ever fully freezes.
-
-**Hard rules (full text and the rest of the Foundry mechanics: `docs/FOUNDRY_MECHANICS_REFERENCE.md`):**
-- **Fill multiplier** (`FILL_MULTIPLIER_*`, `getFillMultiplierPercent`): displayed Speed/Bandwidth never
-  change; a fill-dependent multiplier (1000% empty → 100% at 50% → 10% full (log-linear)) scales only the
-  real per-tick amount delivered (`getFillCurveDelta` integrates the curve so a 1s offline tick matches live 0.1s ticks).
-  **Tap bonuses never scale a fill** (the curve already reaches 10×); they speed CONSUMERS ×(1 + bonus%),
-  decaying 1%/s: Data Stream ping → Upgrade Capacity/Bitrate drains (`getDataStreamTapMultiplier`); pool ping →
-  Provision Disk draw, read-cache flush, write-cache merges, lower-size rebuild, Data Lake drain (`getPoolTapMultiplier`).
-- **Standing rule — `intro.capacity` keeps doubling plainly in binary** (IEC `KiB`/`MiB`, step 1024);
-  non-binary (SI-clean/decade-power) transforms are for storage-pool-scoped values only
-  (`getStoragePoolCapacity`, `getDecadePowerEquivalentBits`, `getSiCleanEquivalentBits`) — two earlier
-  attempts shared one raw value between both displays and got this wrong (`docs/DESIGN_HISTORY.md`).
-- **Pool liveness is Capacity-only**: a pool is live (visible, buffer/Bandwidth, read cache) once
-  `intro.capacity` reaches `getPoolCapacityUnlockThresholdBits`, independent of disk builds
-  (`getVisibleStoragePoolCount`). `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` stay
-  disk-build-only and drive the disk ladder. Folding them into one primitive was tried and reverted.
-- **Disks** (`provisionDisk`, `tickDiskAutoFill`, `tickDiskPull`, `tickDiskLevelOneCachePull`): ladder
-  advances every `DISK_ARRAY_LADDER_CAP` (9) disks; Factory is funded **pull-based** from full disks,
-  fully automatic (no click, no autobuyer gate). Disks/caches/builds are PERMANENT across Prestige.
-  The pool's smallest size's read cache fills from its pool buffer as a timed 5× transfer (`CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER`). Every size above its pool's smallest fills DIRECTLY from the pool buffer by default — landing the instant it is funded, no write-cache flush stage (#1087) (pool fill
-  order: read cache, then write caches smallest size first); clicking an empty disk expedites it
-  (`expediteDiskFill`) — it jumps ahead of the other write caches for the pool buffer, consumes the smaller full
-  disks of its pool it needs in parallel alongside that buffer, and lands the instant it is funded (`docs/ECONOMY_REFERENCE.md`).
-  Stranded disks are never destroyed or swept into Bits; merges never cross a pool boundary.
-- **Data Lakes** (`intro.dataLakes`): a lake fill waits for a full pool buffer only to START a Booster acquisition (`acquiring`, cleared on purchase; Boosters are paid with whole disks, exact change, never broken) and is never
-  interrupted once under way (`isDataLakeDiskFillStartAllowed`). Booster control is "one click, one full fill-then-buy conversion,
-  then stop" until the pool's era-long `boosterAuto` latch is set (then it auto-buys); `buyBooster` spends only banked lake units, outside the
-  forced priority order; sub-sizes capped 9/9/9 (`DATA_LAKE_SUB_SIZE_DISK_CAPS`).
-- **Display**: Disk labels bare numbers; pool/lake CAPACITY in its fixed unit
-  (`formatDiskSizeInPoolUnit`); buffer BALANCE self-sizes (`formatPoolBalance`).
-
-**The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
-loop, auto-convert conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Power
-Cells/Batteries/Boost, every forced-priority-order predicate, cost/production formulas, the (configurable,
-growing) purchase block size and level system, Prestige Points and every PP-funded automation, the
-per-tier and global tickspeed multipliers, the last tier's XP-funded tickspeed, Scale Up, Overclock,
-Reset, the complete game state shape, and the engine function/constants tables — lives in
-`docs/ECONOMY_REFERENCE.md`. Read it (and `docs/FOUNDRY_MECHANICS_REFERENCE.md` for Foundry/Storage/Lake/Power) before touching `src/game/engine.js`, `src/game/layers.js`,
-`TIER_DEFINITIONS`, `ByteFoundryPage`/`StoragePage`/`ComputePage`, or any economy/prestige/tickspeed
-constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about to change a
-formula/gate a past iteration may already have tried and rejected (e.g. the `<=` vs. `===`
-bank-redeemability check, the flat vs. dynamic transfer cost).
-
-**Buy max mode** (unlocked after the first Prestige, `isBuyMaxUnlocked`; toggled on Firmware → Prestige) — a per-device toggle
-(`tens_buy_max_mode`, not game state) making each manual leveled purchase buy every affordable level:
-`buyTierMaxLevels` for Factory tiers (FULL levels only; partial progress or an unaffordable full level
-falls back to the ordinary single-level click) and `repeatPurchaseMax` for single-level ladders.
-Detail: `docs/ECONOMY_REFERENCE.md`'s "Buy max mode".
-
-Scale Up uses persisted, run-scoped `scaleUpTierCounts`: each claim doubles the current target and all
-earlier tiers, while the newly recorded successor begins at ×1. Requirements are based on the target
-tier's **completed levels** (`purchaseLevels − 1`): each of the first ten Scale Ups requires 3 completed
-levels on the last unlocked tier; repeated final-tier claims then require 6, 9, 12, …. This is separate
-from the re-reveal mechanic: after a reset, a tier already unlocked by a previous Scale Up within the
-same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
-The last tier's (QB) tickspeed may always spend down to 0; doing so after holding QB this run (`'lastTierSpent'`: run-scoped `lastTierEarnedThisRun`; `buyTickspeedMultiplier` unlocks it at the moment the spend empties QB — reaching that stall is the condition, not a later tick) earns **Spent QB**, and once earned the last tier is credited exactly 1 unit every `10/(1 + log10 completed levels)` s regardless of balance (`getLastTierLevelCreditIntervalSeconds`, `lastTierLevelCreditTimer`; `ECONOMY_REFERENCE`). Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
-completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`
-(the single Overclock level; each claim replaces it, nothing is banked; Clock Speed's step is ×1.1 per level),
-not a fixed 5/8/11/14 ladder (Clock Speed's Overclock-scaled 1% step is under "Tiers, Prestige, Reboot" above).
-
-For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
-affect a single run's length), use the `simulate-run-times` skill
-(`.claude/skills/simulate-run-times/SKILL.md`): it plays out full runs with the real engine functions
-rather than reasoning about the formulas by hand. **Also re-run and publish** that skill whenever
-making a change that can significantly affect ideal Foundry / prestige timings (economy constants
-or formulas in `engine.js`/`layers.js`, Foundry/Disk/Compute/Capacity/tickspeed/autobuyer/
-prestige rules, purchase-batch behavior, or the skill's own bot strategy). Publishing writes **one
-new file per run** onto the stable orphan branch `ideal-run-strategy` via
-`publish-strategy.sh` (`runs/<UTC-stamp>-<sha>.md` + `README.md` index) — never merge that branch
-into `main`, and do not rename it with an agent/session suffix.
-
-**Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Clock Speed/Overclock
-heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
-**No link styling:** it's a game — never underline (solid, dotted or on hover) just because something is
-clickable; use `cursor: pointer` and a `:focus-visible` outline instead.
-**Minimal UI text (standing rule, all future work):** game screens carry only the text strictly needed (labels, numbers, state). Explanations, rules, hints and flavor go in an expandable description (disclosure per the convention above, or the Manual) — never inline.
-**Segmented choices** (pick-one controls like the Boost preset): full width, equal-width buttons with a text label beside the icon — never tiny icon-only squares (`docs/COMPONENTS_REFERENCE.md`).
+Moved to **`src/CLAUDE.md`** (auto-loads when a session reads any file under `src/`): terminology and the
+player-label ↔ code map, tiers/Prestige/Purge/Reboot, Challenge mode, Daily challenges, Achievements, Byte
+Foundry hard rules, pool-local flushes, Buy max, Scale Up/Overclock, and the UI conventions (expand/collapse,
+no link styling, minimal UI text, segmented choices). **Read it before any game-logic, economy, balance or UI
+work — including spec/issue/doc work that never opens a `src/` file.** Full formulas: `docs/ECONOMY_REFERENCE.md`;
+Foundry/Storage/Lake/Power: `docs/FOUNDRY_MECHANICS_REFERENCE.md`; check `docs/DESIGN_HISTORY.md` before changing
+a formula/gate a past iteration may have tried.
 
 ## Path aliases
 

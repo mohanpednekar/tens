@@ -65,7 +65,7 @@ authorizations** sections. Flag:
   `engine.js` like `getTierCost`/`getPurchaseMilestoneMultiplier`/`getPrestigeProductionMultiplier`)
   that the issue's Explicit Authorizations section does not specifically permit.
 - Any file changed that has nothing to do with the issue's stated goal and isn't an expected
-  accompanying change (test updates for the new behavior, and a `CLAUDE.md` doc sync are expected
+  accompanying change (test updates for the new behavior, and a `CLAUDE.md`/`src/CLAUDE.md` doc sync are expected
   per `CLAUDE.md`'s own Documentation section — those are not drift).
 
 ## 6. Report

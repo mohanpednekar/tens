@@ -1,5 +1,17 @@
 # Design history & rationale
 
+### Game rules split into `src/CLAUDE.md` — 2026-11-18
+
+Root `CLAUDE.md` had regrown to ~83 KB (~20k tokens) and loads into every session, including the many
+automation runs (triage, housekeeping, docs-sync, PR follow-ups) that never touch game code. Its "Economy
+model" section and the page-renderer half of "Architecture" (~29 KB) moved verbatim to `src/CLAUDE.md`,
+which Claude Code loads on demand when a session reads any file under `src/`; the root keeps a pointer
+that lists what moved and says to read it explicitly before spec/issue/doc work on game rules. The
+designer and code-reviewer agents, the autonomous prompt and `AGENTS.md` point at it too, and
+`pr-low-risk-eligible.sh` treats any `*/CLAUDE.md` as docs. Rejected: moving it into a `docs/*_REFERENCE.md`
+file (would never auto-load, so code sessions would lose the hard rules) and moving it under `src/game/`
+only (page and component work also needs the terminology map and UI conventions).
+
 ### Maintenance slots resolved from the cron entry, not the clock — 2026-11-16
 
 `autonomous-maintenance.yml` used one combined cron (`30 22,4,10,16 * * *`) and inferred the slot from

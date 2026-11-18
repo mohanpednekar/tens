@@ -43,7 +43,7 @@ element is an empty disk of a write-cache size (any size above its pool's smalle
 which fills it from smaller full disks and Staging at once; the queued disk then reads
 `aria-label="empty … disk queued for filling"` with a dashed info border. Byte Foundry funds Byte Factory pull-based and fully
 automatically, every tick (`tickDiskPull`/`tickDiskLevelOneCachePull` in `engine.js` — see
-CLAUDE.md's "Economy model"); the manual Redeem button and the cache-release-to-Bits control this
+src/CLAUDE.md's "Economy model"); the manual Redeem button and the cache-release-to-Bits control this
 component used to expose were both retired along with that mechanic. Only when
 `isDiskReadCacheEligible(size)` is true (the pool's own smallest size, the one whose Data Lake
 sub-slot is ×1 — every larger size fills via its write cache (from Staging) and renders no read
@@ -77,7 +77,7 @@ matches this size, a plain centered `"Rebuilding <size> x <N> array - Ready in N
 replaces the cache strip (disk circles stay, showing "not yet built"/"rebuilding" status; `<size>`
 via `formatDiskSize` e.g. `1 KB`, `<N>` is the 1-indexed disk under construction). Neither size
 label uses `text-transform: uppercase` — deliberately, so lowercase `b` (bits, Cache) never
-visually collapses into uppercase `B` (Bytes, Disks); see CLAUDE.md's "Economy model" for the
+visually collapses into uppercase `B` (Bytes, Disks); see src/CLAUDE.md's "Economy model" for the
 `Kb`/`KB` distinction this exists to preserve.
 Takes `{ actions, size, state }` (a slice of the `game` object each caller already has) rather than
 the whole `game` prop, since it renders per-size and both call sites map over multiple sizes —

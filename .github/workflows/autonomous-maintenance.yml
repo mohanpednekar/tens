@@ -827,7 +827,8 @@ jobs:
           avoid at all costs. Work efficiently regardless: avoid redundant reads and re-checks.
 
           Read CLAUDE.md first — it documents this repo's architecture, conventions, and testing
-          setup, and you must follow it exactly.
+          setup, and you must follow it exactly. Game rules, terminology and economy/UI conventions
+          live in src/CLAUDE.md: read it before any game-logic, economy, balance or UI work.
 
           Currently-open autonomous PRs (branch: title):
           $OPEN_PRS
