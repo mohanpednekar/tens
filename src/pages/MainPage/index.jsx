@@ -56,7 +56,7 @@ const Header = styled.header`
 const TierList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${props => props.theme.space.sm};
+  gap: ${props => props.theme.space.xs};
 `
 
 // One accent hue per tier (cycled by index, via theme.tierAccents — see theme/tokens.js),
@@ -74,31 +74,26 @@ const reveal = keyframes`
 
 // Fixed grid areas (rather than flex flow) so each field always renders in the same slot —
 // the row's shape depends only on the viewport width, never on how many digits a value has.
-// Top line: tier symbol on the left of the left half; owned count on the same line but
-// right-aligned to the row center (end of the left half via margin-left: auto); production
-// on the right. Button row: tickspeed
-// and Buy each take exactly half the row (equal column halves) — Buy stays rightmost as the
-// constantly-clicked control. Bottom line: a single 'details' area spanning both columns,
+// One line: tier symbol + owned count, then fixed-width tickspeed and Buy buttons (fixed
+// tracks, so every row's buttons line up as columns; Buy stays rightmost as the
+// constantly-clicked control). Production lives in the details disclosure, not on the row.
+// Bottom line: a single 'details' area spanning every column,
 // holding the per-tier click-to-expand disclosure's content (see TierDetailsContent below) —
 // only rendered at all while expanded, so a collapsed row contributes zero height there. There
 // is no separate visible trigger for it (no "Details" label): TierName itself (wrapped in
 // TierNameTrigger, in the 'name' area) is the only trigger (no whole-tile click) — a React-controlled
 // disclosure rather than native <details>/<summary>, see openTierDetailIds in MainPage for why.
-// There used to be a dedicated 'autobuyer' grid row for the per-tier
-// autobuyer status badge; it's folded into the 'name' row instead now that the badge is a
-// single icon rather than a written "Active"/"Paused" line (see MainPage), so the row no longer
-// needs the extra vertical space for it.
+// The per-tier autobuyer status badge is gone from this row (status lives on Firmware).
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
-    'name production'
-    'upgrade buy'
-    'details details';
-  grid-template-columns: 1fr 1fr;
+    'name upgrade buy'
+    'details details details';
+  grid-template-columns: minmax(0, 1fr) 6.5rem 9rem;
   align-items: center;
   column-gap: ${props => props.theme.space.sm};
-  row-gap: ${props => props.theme.space.xs};
-  padding: ${props => props.theme.space.sm} ${props => props.theme.space.md};
+  row-gap: 0;
+  padding: 3px ${props => props.theme.space.xs} 3px ${props => props.theme.space.md};
   border-left: 3px solid ${props => props.$accent};
   transition: border-color ${props => props.theme.motion.duration.base} ${props => props.theme.motion.easing.standard};
   animation: ${props => (props.$animateReveal ? css`${reveal} 0.4s ease-out` : 'none')};
@@ -119,9 +114,44 @@ const TierLine = styled(StatCard)`
   }
 
   @media (max-width: 40rem) {
-    /* Same areas as desktop; equal halves keep the two buttons matched. */
-    column-gap: ${props => props.theme.space.xs};
-    padding: ${props => props.theme.space.sm} ${props => props.theme.space.sm};
+    /* Same areas as desktop; narrower fixed button tracks for phone widths. */
+    grid-template-columns: minmax(0, 1fr) 5.7rem 7.9rem;
+    column-gap: 6px;
+    padding: 3px 3px 3px ${props => props.theme.space.sm};
+  }
+
+  @media (max-width: 24.5rem) {
+    grid-template-columns: minmax(0, 1fr) 5.9rem 7.3rem;
+
+    /* Symbol stacks over the owned count so the count gets the full name track (both lines
+       together are still shorter than the 2rem buttons, so the row height is unchanged). */
+    & > div:first-child {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    & h3 {
+      font-size: ${props => props.theme.type.scale.sm.size};
+      line-height: 1.1;
+    }
+
+    & h3 > span {
+      min-width: 0;
+    }
+  }
+
+  @media (max-width: 21rem) {
+    grid-template-columns: minmax(0, 1fr) 5.9rem 6.9rem;
+    column-gap: 4px;
+
+    & button > span:first-child {
+      padding-right: 0.25em;
+    }
+
+    & button {
+      font-size: 0.7rem;
+      padding: 0 0.35em;
+    }
   }
 `
 
@@ -489,7 +519,7 @@ const BalancesSentinel = styled.div`
 // for free; TierName (the h3 inside it) keeps its own heading semantics, since applying role via
 // ARIA only overrides an element's OWN implicit role, never a nested descendant's.
 const TierNameTrigger = styled.div`
-  align-items: baseline;
+  align-items: center;
   column-gap: ${props => props.theme.space.sm};
   display: flex;
   grid-area: name;
@@ -624,7 +654,7 @@ const MutedText = styled.p`
 
 // Occupies the top line's first track. Used to also share this line with a compact tickspeed
 // bonus badge and an autobuyer status icon — both removed to keep the row down to just the tier
-// name plus live production/owned figures and the two action buttons; the tickspeed bonus is
+// name plus the owned count and the two action buttons; the tickspeed bonus is
 // still visible in the row's own Details disclosure below, and autobuyer status still shows on
 // the Firmware page.
 const TierName = styled.h3`
@@ -635,8 +665,8 @@ const TierName = styled.h3`
   font-size: ${props => props.theme.type.scale.lg.size};
   line-height: ${props => props.theme.type.scale.lg.lineHeight};
   font-weight: 700;
+  flex-shrink: 0;
   margin: 0;
-  min-width: 0;
 
   @media (max-width: 40rem) {
     font-size: ${props => props.theme.type.scale.md.size};
@@ -648,6 +678,7 @@ const TierName = styled.h3`
 const TierNameLabel = styled.span`
   cursor: pointer;
   flex-shrink: 0;
+  min-width: 2.2rem;
 
   &:focus-visible {
     outline: 2px solid ${props => props.theme.color.accent};
@@ -702,40 +733,21 @@ const Disclosure = styled.details`
   }
 `
 
-// Owned count lives on the first line, right-aligned to the row center (pushed to the end of
-// the left half with margin-left: auto). Sibling of TierName inside TierNameTrigger — not nested
-// in the h3 (nesting would pollute the heading's accessible name).
+// Owned count, left-aligned right after the fixed-width symbol so every row's count starts at
+// the same x. Sibling of TierName inside TierNameTrigger — not nested in the h3 (nesting would
+// pollute the heading's accessible name). Production is in the details disclosure instead.
 const OwnedText = styled.span`
-  color: ${props => props.theme.color.textMuted};
-  flex-shrink: 0;
-  font-size: ${props => props.theme.type.scale.sm.size};
-  line-height: ${props => props.theme.type.scale.sm.lineHeight};
-  font-weight: 400;
-  margin: 0;
-  margin-left: auto;
-  text-align: right;
-  ${gridCell}
-
-  @media (max-width: 40rem) {
-    font-size: ${props => props.theme.type.scale.xs.size};
-    line-height: ${props => props.theme.type.scale.xs.lineHeight};
-  }
-`
-
-// Production reads slightly stronger than owned — the live output figure on the stats line.
-const ProductionText = styled.span`
-  grid-area: production;
   color: ${props => props.theme.color.text};
   font-size: ${props => props.theme.type.scale.sm.size};
   line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  font-variant-numeric: tabular-nums;
   font-weight: 500;
   margin: 0;
-  text-align: right;
   ${gridCell}
 
-  @media (max-width: 40rem) {
+  @media (max-width: 24.5rem) {
     font-size: ${props => props.theme.type.scale.xs.size};
-    line-height: ${props => props.theme.type.scale.xs.lineHeight};
+    line-height: 1.15;
   }
 `
 
@@ -746,55 +758,51 @@ const BuyButton = styled(Button)`
   width: 100%;
   font-size: ${props => props.theme.type.scale.sm.size};
   font-weight: 700;
-  margin-top: ${props => props.theme.space.xs};
-  padding: 0.4em 0.45em;
+  min-height: 2rem;
+  padding: 0 0.6em;
   ${gridCell}
 
   @media (max-width: 40rem) {
     font-size: ${props => props.theme.type.scale.xs.size};
-    padding: 0.38em 0.4em;
+    padding: 0 0.5em;
   }
 `
 
-// Scoped to the tier row's Buy button cost label only — not the shared Button component used
-// elsewhere in the app (Prestige, Reset, PP Upgrades, …), which keep ButtonIcon/ButtonLabel's
-// default fixed-icon/centered-label layout unchanged. Here, the icon+level slot and the cost label
-// each take a fixed half of the button's width, and the cost label is left-aligned (rather than
-// centered) from that halfway point — so every tier row's cost figure starts at the same x
-// position (the button's horizontal center) regardless of how many digits the level/progress or
-// cost strings have, instead of drifting as those change. `padding-right` reserves a real gap
-// before the cost label — a trailing space character in the JSX content isn't reliable here, since
-// browsers trim trailing whitespace at a flex item's own box edge (border-box sizing, set globally
-// in GlobalStyle.js, keeps this box exactly 50% wide including the padding). `min-width: 0` +
-// overflow/ellipsis clip a level/progress string too long to fit its half (e.g. once the block size
-// has grown, or at a high level number) instead of letting it spill into the cost label's box —
-// without min-width: 0, a flex item's default min-width: auto prevents overflow: hidden from
-// engaging at all.
+// Scoped to the tier row's Buy button only (the shared Button's ButtonIcon/ButtonLabel keep their
+// default layout elsewhere). Left: 🛒 + completed levels (+ Buy max's "+n" levels, heavier weight —
+// not a hue: it always sits on the warn/good fill, where a tinted color fails AA contrast);
+// right: the cost, right-aligned so every row's cost ends at the same x. `min-width: 0` +
+// ellipsis clip an over-long level string instead of letting it spill into the cost.
 const BuyButtonIcon = styled(ButtonIcon)`
-  flex: 0 0 50%;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  padding-right: 0.35em;
+  padding-right: 0.5em;
+  font-variant-numeric: tabular-nums;
+`
+
+const BuyLevelExtra = styled.span`
+  font-weight: 800;
 `
 
 const BuyButtonCostLabel = styled(ButtonLabel)`
-  flex: 0 0 50%;
-  text-align: left;
+  flex: 1 0 auto;
+  text-align: right;
 `
 
 const UpgradeButton = styled(Button)`
   grid-area: upgrade;
   width: 100%;
   font-size: ${props => props.theme.type.scale.sm.size};
-  margin-top: ${props => props.theme.space.xs};
-  padding: 0.4em 0.45em;
+  min-height: 2rem;
+  padding: 0 0.5em;
   ${gridCell}
 
   @media (max-width: 40rem) {
     font-size: ${props => props.theme.type.scale.xs.size};
-    padding: 0.38em 0.4em;
+    padding: 0 0.4em;
   }
 `
 
@@ -1445,6 +1453,11 @@ const MainPage = ({ game }) => {
           const milestoneMultiplier = getPurchaseMilestoneMultiplier(tierLevel)
           const tierScaleUpMultiplier = getTierScaleUpMultiplier(state, tier.id)
           const production = Math.floor(owned * prestigeBonus * tierScaleUpMultiplier * milestoneMultiplier * getChallengeProductionMultiplier(state, tier.id))
+          const productionText = tier.producesResourceId === MONEY_ID
+            ? formatCurrency(production)
+            : tier.producesResourceId === BYTES_ID
+              ? formatBytes(production)
+              : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`
           // Surfaced only in the row's collapsed-by-default TierDetails disclosure below — the
           // base value is otherwise invisible to players now that it diverges per tier again
           // (see "Tier production tickspeed" in CLAUDE.md), and the effective value shows how
@@ -1467,9 +1480,9 @@ const MainPage = ({ game }) => {
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
           // (via formatCost) in place of its full name. The full sentence stays in aria-label/
           // title for assistive tech. Cost-block progress lives on the button as the dual-tone
-          // fill plus a VisuallyHidden progressbar (and in the aria-label) — not as `+n/8` text
-          // next to the cart icon. Buy-max mode is the exception: "+<levels>" full levels sit
-          // beside the icon so the click still previews how many levels it will buy.
+          // fill plus a VisuallyHidden progressbar (and in the aria-label) — not as `+n/8` text.
+          // Beside the cart icon: the completed-level count, suffixed in Buy max mode with
+          // "+<levels>" so the click still previews how many full levels it will buy.
           const buyLevelQuantityText = maxLevelsPreview.levels > 0 ? `+${formatAmount(maxLevelsPreview.levels)}` : ''
           // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
           // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
@@ -1522,6 +1535,7 @@ const MainPage = ({ game }) => {
               {isDetailsOpen && (
                 <TierDetailsContent id={detailsId}>
                   <ul>
+                    <li>Production: +{productionText} per delivery</li>
                     <li>Base tickspeed: delivers every {formatRate(baseTickSpeed)}s</li>
                     <li>
                       Effective tickspeed: every {formatRate(effectiveTickSpeed)}s (tier ×{formatRate(tickspeedMultiplier)}, global ×{formatRate(globalTickspeedMultiplier)})
@@ -1536,13 +1550,6 @@ const MainPage = ({ game }) => {
                   </ul>
                 </TierDetailsContent>
               )}
-              <ProductionText>
-                +{tier.producesResourceId === MONEY_ID
-                  ? formatCurrency(production)
-                  : tier.producesResourceId === BYTES_ID
-                    ? formatBytes(production)
-                    : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
-              </ProductionText>
               <UpgradeButton
                 aria-label={tickspeedLabel}
                 variant="success"
@@ -1571,7 +1578,7 @@ const MainPage = ({ game }) => {
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
               >
-                <BuyButtonIcon>🛒{buyLevelQuantityText && ` ${buyLevelQuantityText}`} </BuyButtonIcon>
+                <BuyButtonIcon>🛒 {formatAmount(completedLevels)}{buyLevelQuantityText && <BuyLevelExtra>{buyLevelQuantityText}</BuyLevelExtra>}</BuyButtonIcon>
                 <BuyButtonCostLabel>{formatCurrency(maxLevelsPreview.levels > 0 ? (maxLevelsPreview.partialQuantity > 0 ? maxLevelsPreview.partialCost : maxLevelsPreview.lastLevelCost) : displayCost)}</BuyButtonCostLabel>
                 <VisuallyHidden
                   role="progressbar"
