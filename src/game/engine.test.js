@@ -5372,12 +5372,12 @@ describe('formatAmount', () => {
   })
 
   it('formats large integers without decimals', () => {
-    expect(formatAmount(999)).toBe('999')
+    expect(formatAmount(1000)).toBe('1,000')
   })
 
   it('switches to exponential notation at the threshold, like formatCurrency', () => {
-    expect(formatAmount(999)).toBe('999')
-    expect(formatAmount(1000)).toBe('1e3')
+    expect(formatAmount(9999)).toBe('9,999')
+    expect(formatAmount(10000)).toBe('1e4')
   })
 
   it('treats negative values as 0', () => {
@@ -5398,11 +5398,11 @@ describe('formatCurrency', () => {
   })
 
   it('formats a comma-grouped mid-size amount with a b suffix, just below the exponential threshold', () => {
-    expect(formatCurrency(999)).toBe('999 b')
+    expect(formatCurrency(9999)).toBe('9,999 b')
   })
 
   it('switches to exponential notation at the threshold, like formatAmount', () => {
-    expect(formatCurrency(1000)).toBe('1e3 b')
+    expect(formatCurrency(10000)).toBe('1e4 b')
     // Truncates, never rounds up: a balance must never read as covering a cost it can't.
     expect(formatCurrency(19999)).toBe('1.999e4 b')
     expect(formatAmount(99999)).toBe('9.999e4')
@@ -5443,11 +5443,11 @@ describe('formatCurrency', () => {
 describe('formatBytes', () => {
   it('formats a comma-grouped amount with a B suffix, just below the exponential threshold', () => {
     expect(formatBytes(500)).toBe('500 B')
-    expect(formatBytes(999)).toBe('999 B')
+    expect(formatBytes(9999)).toBe('9,999 B')
   })
 
   it('switches to exponential notation at the threshold, like formatCurrency', () => {
-    expect(formatBytes(1000)).toBe('1e3 B')
+    expect(formatBytes(10000)).toBe('1e4 B')
   })
 
   it('treats negative values as 0', () => {
@@ -5471,18 +5471,18 @@ describe('formatMoneyBalance', () => {
   })
 
   it('switches to whole Bytes (floored, ÷ BITS_PER_BYTE) with a B suffix at/above the threshold', () => {
-    expect(formatMoneyBalance(8000)).toBe('1e3 B')
+    expect(formatMoneyBalance(8000)).toBe('1,000 B')
     expect(formatMoneyBalance(8000)).not.toContain(' b')
   })
 
   it('floors rather than rounds when converting to Bytes, so it never overstates the balance', () => {
-    expect(formatMoneyBalance(8007)).toBe('1e3 B') // 1000.875 Bytes floors to 1000
-    expect(formatMoneyBalance(8008)).toBe('1.001e3 B')
+    expect(formatMoneyBalance(8007)).toBe('1,000 B') // 1000.875 Bytes floors to 1000
+    expect(formatMoneyBalance(8008)).toBe('1,001 B')
   })
 
   it('reuses formatCurrency\'s own exponential-notation threshold once converted to Bytes', () => {
-    expect(formatMoneyBalance(7_999)).toBe('7.999e3 b') // below the Bytes switch, already scientific
-    expect(formatMoneyBalance(1_000 * BITS_PER_BYTE)).toBe('1e3 B') // 1,000 Bytes — scientific
+    expect(formatMoneyBalance(9_999 * BITS_PER_BYTE)).toBe('9,999 B') // 9,999 Bytes — still plain
+    expect(formatMoneyBalance(10_000 * BITS_PER_BYTE)).toBe('1e4 B') // 10,000 Bytes — switches to scientific
   })
 
   it('renders huge balances in scientific notation, matching formatCurrency\'s own behavior', () => {
