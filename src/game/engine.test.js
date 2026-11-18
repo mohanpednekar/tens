@@ -5376,8 +5376,8 @@ describe('formatAmount', () => {
   })
 
   it('switches to exponential notation at the threshold, like formatCurrency', () => {
-    expect(formatAmount(999999)).toBe('999,999')
-    expect(formatAmount(1000000)).toBe('1e6')
+    expect(formatAmount(9999)).toBe('9,999')
+    expect(formatAmount(10000)).toBe('1e4')
   })
 
   it('treats negative values as 0', () => {
@@ -5398,11 +5398,30 @@ describe('formatCurrency', () => {
   })
 
   it('formats a comma-grouped mid-size amount with a b suffix, just below the exponential threshold', () => {
-    expect(formatCurrency(999999)).toBe('999,999 b')
+    expect(formatCurrency(9999)).toBe('9,999 b')
   })
 
   it('switches to exponential notation at the threshold, like formatAmount', () => {
-    expect(formatCurrency(1000000)).toBe('1e6 b')
+    expect(formatCurrency(10000)).toBe('1e4 b')
+    // Truncates, never rounds up: a balance must never read as covering a cost it can't.
+    expect(formatCurrency(19999)).toBe('1.999e4 b')
+    expect(formatAmount(99999)).toBe('9.999e4')
+  })
+
+  it('reads computed powers of ten as clean 1eN, never 9.999eN or a 0.0xx mantissa', () => {
+    const bad = []
+    for (const tier of TIER_DEFINITIONS) {
+      for (let level = 1; level <= 60; level += 1) {
+        const cost = getTierCost(tier, level)
+        if (!Number.isFinite(cost)) continue
+        const text = formatCurrency(cost)
+        if (/^0\.|9\.999e/.test(text)) bad.push(`${tier.id} L${level}: ${text}`)
+      }
+    }
+    expect(bad).toEqual([])
+    expect(formatAmount(9.999999999999999e82)).toBe('1e83')
+    expect(formatAmount(6.5e13)).toBe('6.5e13')
+    expect(formatAmount(1.2345e300)).toBe('1.234e300')
   })
 
   it('switches to exponential notation at huge magnitudes', () => {
@@ -5440,11 +5459,11 @@ describe('formatCurrency', () => {
 describe('formatBytes', () => {
   it('formats a comma-grouped amount with a B suffix, just below the exponential threshold', () => {
     expect(formatBytes(500)).toBe('500 B')
-    expect(formatBytes(999999)).toBe('999,999 B')
+    expect(formatBytes(9999)).toBe('9,999 B')
   })
 
   it('switches to exponential notation at the threshold, like formatCurrency', () => {
-    expect(formatBytes(1000000)).toBe('1e6 B')
+    expect(formatBytes(10000)).toBe('1e4 B')
   })
 
   it('treats negative values as 0', () => {
@@ -5478,8 +5497,8 @@ describe('formatMoneyBalance', () => {
   })
 
   it('reuses formatCurrency\'s own exponential-notation threshold once converted to Bytes', () => {
-    expect(formatMoneyBalance(999_999 * BITS_PER_BYTE)).toBe('999,999 B') // 999,999 Bytes — still plain
-    expect(formatMoneyBalance(1_000_000 * BITS_PER_BYTE)).toBe('1e6 B') // 1,000,000 Bytes — switches to scientific
+    expect(formatMoneyBalance(9_999 * BITS_PER_BYTE)).toBe('9,999 B') // 9,999 Bytes — still plain
+    expect(formatMoneyBalance(10_000 * BITS_PER_BYTE)).toBe('1e4 B') // 10,000 Bytes — switches to scientific
   })
 
   it('renders huge balances in scientific notation, matching formatCurrency\'s own behavior', () => {
