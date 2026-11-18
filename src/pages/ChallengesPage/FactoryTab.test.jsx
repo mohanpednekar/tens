@@ -5,6 +5,7 @@ import ChallengeBanner from 'components/ChallengeBanner'
 import { createInitialGameState, enterChallenge } from 'game/engine'
 import { CHALLENGE_DEFINITIONS, TIER_DEFINITIONS } from 'game/layers'
 import ChallengesPage from './index'
+import PerksPage from 'pages/PerksPage'
 
 const owned = () => ({
   ...createInitialGameState(),
@@ -13,7 +14,7 @@ const owned = () => ({
   autoXpTickspeed: true,
   autoOverclock: true,
   autoPurge: 1,
-  purge: { ...createInitialGameState().purge, points: 1e9, count: 5 },
+  purge: { ...createInitialGameState().purge, points: 1e9, count: 1000 },
   autobuyers: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 1])),
   tierTickspeedAutobuyer: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])),
 })
@@ -31,7 +32,7 @@ describe('Firmware Challenges tab', () => {
   it('hides codename and rule while locked and shows the unlock condition', () => {
     wrap(<ChallengesPage game={makeGame(createInitialGameState())} />)
     const row = screen.getByLabelText('challenge F21')
-    expect(row.textContent).toContain('Unlocks at Purge 8')
+    expect(row.textContent).toContain('Unlocks at Purge 40')
     expect(row.textContent).not.toContain('Base Clock')
   })
 
@@ -75,5 +76,16 @@ describe('Challenges → Factory tab Exit', () => {
     expect(game.actions.exitChallenge).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Exit challenge' }))
     expect(game.actions.exitChallenge).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('Firmware challenge gate', () => {
+  it('shows a disabled lock (no codename) while the automation is owned but the challenge is not unlocked', () => {
+    const state = { ...owned(), purge: { ...owned().purge, count: 39 } }
+    wrap(<PerksPage game={makeGame(state)} />)
+    const lock = screen.getByRole('button', { name: 'Challenge F21 unlocks at purge 40' })
+    expect(lock).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /^Start challenge F21/ })).toBeNull()
+    expect(document.body.textContent).not.toContain('Base Clock')
   })
 })

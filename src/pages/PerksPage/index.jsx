@@ -3,7 +3,7 @@ import Button, { ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Butt
 import AutoBoostPresetPicker from 'components/AutoBoostPresetPicker'
 import StatCard from 'components/StatCard'
 import { ChallengeStartDialog } from 'pages/ChallengesPage/FactoryTab'
-import { getChallengeTitle } from 'game/challengeUi'
+import { getChallengeTitle, getChallengeUnlockCondition } from 'game/challengeUi'
 import Switch from 'components/Switch'
 import {
   formatAmount,
@@ -33,6 +33,7 @@ import {
   isProductionFrozen,
   isOverflowModeUnlocked,
   getPrestigeProductionMultiplier,
+  isChallengeUnlocked,
 } from 'game/engine'
 import {
   CHALLENGE_DEFINITIONS,
@@ -541,7 +542,17 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   ))
 
   // Inline start control standing where the speed upgrade will go, until the challenge is completed.
-  const challengeStartButton = def => (
+  const challengeStartButton = def => (!isChallengeUnlocked(state, def.id) ? (
+    <Button
+      aria-label={`Challenge ${def.id} ${getChallengeUnlockCondition(def).toLowerCase()}`}
+      disabled
+      title={getChallengeUnlockCondition(def)}
+      type="button"
+      variant="prestige"
+    >
+      🔒 {def.id}
+    </Button>
+  ) : (
     <Button
       aria-label={`Start challenge ${getChallengeTitle(def)} to unlock ${def.target} speed upgrades${activeChallenge ? ' (disabled: another challenge is active)' : ''}`}
       disabled={Boolean(activeChallenge)}
@@ -552,7 +563,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     >
       🏁 {def.id}
     </Button>
-  )
+  ))
 
   // The live, not-yet-completed challenge standing in for an automation's speed upgrade, if any.
   const gateChallengeFor = (kind, key) => {
