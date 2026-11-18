@@ -56,7 +56,7 @@ const Header = styled.header`
 const TierList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${props => props.theme.space.sm};
+  gap: ${props => props.theme.space.xs};
 `
 
 // One accent hue per tier (cycled by index, via theme.tierAccents — see theme/tokens.js),
@@ -96,7 +96,7 @@ const TierLine = styled(StatCard)`
   align-items: center;
   column-gap: ${props => props.theme.space.sm};
   row-gap: 0;
-  padding: ${props => props.theme.space.xs} ${props => props.theme.space.sm} ${props => props.theme.space.xs} ${props => props.theme.space.md};
+  padding: 3px ${props => props.theme.space.xs} 3px ${props => props.theme.space.md};
   border-left: 3px solid ${props => props.$accent};
   transition: border-color ${props => props.theme.motion.duration.base} ${props => props.theme.motion.easing.standard};
   animation: ${props => (props.$animateReveal ? css`${reveal} 0.4s ease-out` : 'none')};
@@ -120,7 +120,7 @@ const TierLine = styled(StatCard)`
     /* Same areas as desktop; narrower fixed button tracks for phone widths. */
     grid-template-columns: minmax(0, 1fr) 5.7rem 7.9rem;
     column-gap: 6px;
-    padding: ${props => props.theme.space.xs} ${props => props.theme.space.xs} ${props => props.theme.space.xs} ${props => props.theme.space.sm};
+    padding: 3px 3px 3px ${props => props.theme.space.sm};
   }
 
   @media (max-width: 24rem) {
@@ -731,7 +731,7 @@ const BuyButton = styled(Button)`
   width: 100%;
   font-size: ${props => props.theme.type.scale.sm.size};
   font-weight: 700;
-  min-height: 2.25rem;
+  min-height: 2rem;
   padding: 0 0.6em;
   ${gridCell}
 
@@ -768,7 +768,7 @@ const UpgradeButton = styled(Button)`
   grid-area: upgrade;
   width: 100%;
   font-size: ${props => props.theme.type.scale.sm.size};
-  min-height: 2.25rem;
+  min-height: 2rem;
   padding: 0 0.5em;
   ${gridCell}
 

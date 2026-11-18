@@ -973,7 +973,7 @@ viewport — see "Auto-collapsing expanded disclosures on scroll" below.
 
 **Tier row type scale.** `TierName` uses `font.display` and steps from `lg` (desktop) to `md`
 (below `40rem`); `OwnedText` (`sm`, `xs` below `24rem`), `BuyButton`/`UpgradeButton` (`sm→xs`,
-`min-height: 2.25rem`), and `TierDetailsContent` (`xs`, with a `border-top` divider when expanded) all
+`min-height: 2rem`), and `TierDetailsContent` (`xs`, with a `border-top` divider when expanded) all
 resolve their `font-size`/`line-height` from `theme.type.scale` (`theme/tokens.js`). `BuyButton` sets
 `font-weight: 700` (`UpgradeButton` keeps `Button`'s default `600`) so Buy — the rightmost,
 affordability-fill-colored control — reads as the heavier of the two. Gaps/padding resolve from
