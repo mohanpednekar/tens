@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Achievements page is compact** — groups start collapsed and each achievement shows only its name and status; tap a group or achievement name to expand its trigger and bonus text.
 - **Automation resets now run before spends, biggest first** — within a tick, Auto-Prestige (Purge) > Auto Overclock > Auto Scale Up > Auto Restage, then the tickspeed autobuyers. A same-tick reset can no longer be pre-empted by a spend (or by a smaller reset), e.g. Auto Scale Up no longer lets the Quettabytes autobuyer empty QB first. Daily challenge definitions regenerate (generator version 5), so an in-progress daily run from before the update is dropped.
 - **Screen titles yield to top banners** — Factory hides its title (kept for screen readers) while a challenge banner, purge-available banner, daily-run header, or boost timer sits at the top; Power skips its title while a boost timer is shown.
 
