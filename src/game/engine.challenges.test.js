@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   applyOfflineProgress, autoCompleteChallenges, buyAutomationIntervalUpgrade, buyAutobuyerIntervalUpgrade, buyGlobalTickspeedMultiplier,
   buyTierTickspeedIntervalUpgrade, consumeXpForLastTierTickspeed, createInitialGameState, enterChallenge, eraGame, exitChallenge,
-  getActiveChallenge, getEffectiveTierTickSpeedSeconds, getPurgePercent, getPurgeGoalBits, getTierScaleUpMultiplier, isChallengeUnlocked,
+  getActiveChallenge, getEffectiveTierTickSpeedSeconds, getChallengeUnlockPurges, getPurgePercent, getPurgeGoalBits, getTierScaleUpMultiplier, isChallengeUnlocked,
   isProductionFrozen, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tickGame,
 } from './engine'
 import { CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, ERA_ELIGIBILITY_PP, LIVE_CHALLENGE_IDS, MONEY_ID, PURGE_THRESHOLD, SCOPE_CREEP_PURGE_GOAL, TIER_DEFINITIONS } from './layers'
@@ -38,6 +38,28 @@ describe('challenge registry', () => {
 
   it('ships all 25 live', () => {
     expect(SHIPPED_LIVE).toEqual(CHALLENGE_DEFINITIONS.map(def => def.id))
+  })
+})
+
+describe('challenge unlock Purge count', () => {
+  it('is 5x the automation unlock Purge', () => {
+    expect(['F1', 'F10', 'F11', 'F20', 'F21', 'F25'].map(id => getChallengeUnlockPurges(CHALLENGE_BY_ID[id]))).toEqual([5, 50, 55, 100, 40, 640])
+  })
+
+  it('needs both the automation and the Purge count', () => {
+    const at = count => withAutomations({ purge: { ...createInitialGameState().purge, count } })
+    expect(isChallengeUnlocked(at(39), 'F21')).toBe(false)
+    expect(isChallengeUnlocked(at(40), 'F21')).toBe(true)
+    const tier = count => ({ ...at(count), autobuyers: { ...createInitialGameState().autobuyers, [FIRST_TIER]: 1 } })
+    expect(isChallengeUnlocked(tier(4), 'F1')).toBe(false)
+    expect(isChallengeUnlocked(tier(5), 'F1')).toBe(true)
+  })
+
+  it('stays unlocked once completed or while active, even at a low Purge count', () => {
+    const low = withAutomations({ purge: { ...createInitialGameState().purge, count: 0 } })
+    expect(isChallengeUnlocked(low, 'F21')).toBe(false)
+    expect(isChallengeUnlocked({ ...low, challenges: { ...low.challenges, completed: { F21: true } } }, 'F21')).toBe(true)
+    expect(isChallengeUnlocked({ ...low, challenges: { ...low.challenges, active: 'F21' } }, 'F21')).toBe(true)
   })
 })
 

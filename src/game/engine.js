@@ -1438,7 +1438,7 @@ export const eraGame = state => {
 }
 
 // Leveled PP upgrade: each purchase halves powers-per-PP until 1, then doubles PP-per-power
-// (see getPrestigePowersPerPp/getPrestigePpPerPower). Cost is 100^(level+1) PP. Not blocked by
+// (see getPrestigePowersPerPp/getPrestigePpPerPower). Cost is 10^(level+1) PP. Not blocked by
 // production freeze — buying before an optional Prestige is the point. Permanent once bought.
 export const buyPrestigeDoublePp = state => {
   const currentLevel = state.prestigeDoublePpLevel ?? 0
@@ -7245,7 +7245,7 @@ export const getAutobuyerSpeedUpgradeMaxLevel = tierId => getAutobuyerIntervalMa
 export const getSiCleanDoublingFactor = level =>
   SI_CLEAN_LOCAL_SEQUENCE[level % 10] * (1000 ** Math.floor(level / 10))
 
-// Tier autobuyer speed: AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (100 PP) × the doubling ladder, every tier alike.
+// Tier autobuyer speed: AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10 PP) × the doubling ladder, every tier alike.
 export const getAutobuyerIntervalUpgradeCost = level =>
   AUTOBUYER_INTERVAL_UPGRADE_BASE_COST * getSiCleanDoublingFactor(level)
 

@@ -12,7 +12,7 @@
 //
 // Starting saves (assumptions): the Foundry (Disks/Lakes/Capacity) is carried from a bot career of
 // CAREER_CYCLES cycles; purge.count is then set to the representative Purge (~1.5 × the challenge's unlock
-// Purge, F1: exactly 1), PP is left as banked by the career, and automation milestones are re-applied.
+// Purge), PP is left as banked by the career, and automation milestones are re-applied.
 // No PP automations are bought and no achievement bonuses apply.
 import { register } from 'node:module'
 import { writeFileSync } from 'node:fs'
