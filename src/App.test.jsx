@@ -6025,7 +6025,8 @@ describe('Buy max mode', () => {
     await user.click(screen.getByRole('button', { name: /^open byte factory$/i }))
 
     const buyMaxButton = screen.getByRole('button', { name: /^Buy 2 full levels/ })
-    expect(buyMaxButton).toHaveTextContent('+2')
+    // Icon slot (aria-hidden): 🛒 + completed levels (0) with Buy max's +n suffixed straight on.
+    expect(buyMaxButton.querySelector('[aria-hidden="true"]')).toHaveTextContent(/^🛒 0\+2$/)
     await user.click(buyMaxButton)
     const kilobytesPanel = screen.getByLabelText(`${kilobytes.name} layer`)
     expect(within(kilobytesPanel).getByRole('progressbar', { name: `${kilobytes.name} cost-block progress` }))

@@ -546,8 +546,8 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   button as the dual-tone fill (`$progress` / `$secondaryProgress`) plus a `VisuallyHidden`
   `role="progressbar"` and the Buy `aria-label` (`N of {blockSize} purchased toward the next`).
   The icon slot (`BuyButtonIcon`) shows `🛒` + the completed-level count; in Buy max mode, while a
-  click would buy N full levels, `+N` is suffixed straight onto it in `theme.color.warn`
-  (`BuyLevelExtra`, e.g. `🛒 42+3`). The cost label (`BuyButtonCostLabel`, a `styled(ButtonLabel)`)
+  click would buy N full levels, `+N` is suffixed straight onto it at `font-weight: 800`
+  (`BuyLevelExtra`, e.g. `🛒 42+3`; no hue — it always sits on the warn/good fill, where a tint fails AA). The cost label (`BuyButtonCostLabel`, a `styled(ButtonLabel)`)
   is right-aligned, so every row's cost ends at the same x. Costs keep their `b`/`B` unit (Bits vs
   Bytes). This scoped pair lives only in `MainPage/index.jsx` and doesn't affect
   the shared `Button`/`ButtonIcon`/`ButtonLabel` components used elsewhere in the app (Prestige,
@@ -555,7 +555,7 @@ The row is display-only: an explicit **⚡ Charge** button beside it
 - **Tier name display.** The tier row heading (`TierName`, a `styled.h3`) and the Firmware page's
   per-tier row label both render `tier.symbol` (e.g. `B`, `KB`) as the visible text, not the full
   `tier.name` — a decluttering choice, since the compact symbol already appears throughout the row
-  (cost/production strings via `RESOURCE_SYMBOL`) and the full name would be redundant clutter at this
+  (cost strings via `RESOURCE_SYMBOL`) and the full name would be redundant clutter at this
   density. The full name isn't dropped: `TierNameLabel` wraps a `<VisuallyHidden>{tier.name}</VisuallyHidden>`
   ahead of an `aria-hidden="true"` span holding the visible symbol, so the heading's accessible name is
   still the tier's full name (unchanged for screen-reader heading navigation) even though sighted users
@@ -720,8 +720,8 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   word (🛒 Buy, ✦ Prestige, ↺ Reset) plus the cost, and (via `formatCost`) the paying tier's short
   `RESOURCE_SYMBOL` (e.g. `Ks`) instead of its full name — while each button's `aria-label` carries the
   full descriptive sentence (`"Buy ×10 for $100"`, `"Prestige (requires 1 Googol Money)"`, `"Reset
-  game"`, …) used by assistive tech and `getByRole('button', { name })` tests. Buy's icon slot is
-  otherwise empty except in Buy max mode, where it carries `+N` full levels (see "Owned vs. level"
+  game"`, …) used by assistive tech and `getByRole('button', { name })` tests. Buy's icon slot
+  carries the completed-level count, plus `+N` full levels in Buy max mode (see "Owned vs. level"
   above); ordinary cost-block progress is the fill + hidden progressbar, not `+n/8` text.
 
 **Factory view (no second-level tabs).** `MainPage` renders only the tier ladder and its cards
@@ -960,7 +960,7 @@ ternary — `Button`'s `resolveColor` auto-swaps a `variant` to `theme.color.dis
 Each row is a single-line CSS Grid (areas `'name upgrade buy'` / `'details details details'`):
 the tier symbol (`TierNameLabel`, `min-width: 2.2rem` so every row's count starts at the same x)
 and the owned count (`OwnedText`) share the flexible `name` track, then the tickspeed and Buy buttons
-sit in fixed tracks (`6.5rem`/`9rem`; `5.7rem`/`7.9rem` below `40rem`; `5.2rem`/`7.3rem` below `24rem`)
+sit in fixed tracks (`6.5rem`/`9rem`; `5.7rem`/`7.9rem` below `40rem`; `5.9rem`/`7.3rem` and `0.7rem` button text below `24rem`)
 so the buttons line up as columns down the list. Production is **not** on the row — it is the first
 line of the details disclosure (`Production: +X per delivery`), toggled by the tier symbol. The owned
 cell's "Owned: " label is a `VisuallyHidden` span (plus `title="Owned"`) — assert via

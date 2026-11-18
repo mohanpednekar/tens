@@ -83,10 +83,7 @@ const reveal = keyframes`
 // is no separate visible trigger for it (no "Details" label): TierName itself (wrapped in
 // TierNameTrigger, in the 'name' area) is the only trigger (no whole-tile click) — a React-controlled
 // disclosure rather than native <details>/<summary>, see openTierDetailIds in MainPage for why.
-// There used to be a dedicated 'autobuyer' grid row for the per-tier
-// autobuyer status badge; it's folded into the 'name' row instead now that the badge is a
-// single icon rather than a written "Active"/"Paused" line (see MainPage), so the row no longer
-// needs the extra vertical space for it.
+// The per-tier autobuyer status badge is gone from this row (status lives on Firmware).
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
@@ -124,7 +121,12 @@ const TierLine = styled(StatCard)`
   }
 
   @media (max-width: 24rem) {
-    grid-template-columns: minmax(0, 1fr) 5.2rem 7.3rem;
+    grid-template-columns: minmax(0, 1fr) 5.9rem 7.3rem;
+
+    & button {
+      font-size: 0.7rem;
+      padding: 0 0.35em;
+    }
   }
 `
 
@@ -742,7 +744,8 @@ const BuyButton = styled(Button)`
 `
 
 // Scoped to the tier row's Buy button only (the shared Button's ButtonIcon/ButtonLabel keep their
-// default layout elsewhere). Left: 🛒 + completed levels (+ Buy max's "+n" levels in warn gold);
+// default layout elsewhere). Left: 🛒 + completed levels (+ Buy max's "+n" levels, heavier weight —
+// not a hue: it always sits on the warn/good fill, where a tinted color fails AA contrast);
 // right: the cost, right-aligned so every row's cost ends at the same x. `min-width: 0` +
 // ellipsis clip an over-long level string instead of letting it spill into the cost.
 const BuyButtonIcon = styled(ButtonIcon)`
@@ -756,7 +759,7 @@ const BuyButtonIcon = styled(ButtonIcon)`
 `
 
 const BuyLevelExtra = styled.span`
-  color: ${props => props.theme.color.warn};
+  font-weight: 800;
 `
 
 const BuyButtonCostLabel = styled(ButtonLabel)`
