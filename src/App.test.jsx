@@ -2255,15 +2255,15 @@ test('a locked badge appears on Firmware → Automation for a tier whose autobuy
 
   seedMainGameState({
     resources: { base: 10 },
-    // tier01's autobuyer unlocks at Purge 2; tier02's milestone (Purge 4) isn't met yet at count 3.
+    // tier01's autobuyer unlocks at Purge 1; tier02's milestone (Purge 2) isn't met yet at count 1.
     owned: { tier01: 16 }, // fully purchases two levels, unlocking Megabytes
     everUnlockedTierIds: { tier01: true, tier02: true },
-    purge: { xp: 0, points: 100, count: 3, highestMilestone: 1 },
+    purge: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  expect(screen.getByLabelText(/^megabytes's autobuyer unlocks at purge 4$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^megabytes's autobuyer unlocks at purge 2$/i)).toBeInTheDocument()
 })
 
 test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone is reached', async () => {
@@ -2273,7 +2273,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
     resources: { base: 10 },
     owned: { tier01: 16 },
     everUnlockedTierIds: { tier01: true, tier02: true },
-    purge: { xp: 0, points: 2000, count: 4, highestMilestone: 1 }, // meets megabytes' milestone (4)
+    purge: { xp: 0, points: 2000, count: 2, highestMilestone: 1 }, // meets megabytes' milestone (2)
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
@@ -2307,19 +2307,19 @@ test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) p
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 }, // the unit-buying autobuyer is already unlocked
-    purge: { xp: 0, points: 1000, count: 21, highestMilestone: 1 }, // one short of Kilobytes's tickspeed milestone (22)
+    purge: { xp: 0, points: 1000, count: 10, highestMilestone: 1 }, // one short of Kilobytes's tickspeed milestone (11)
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 22$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 11$/i)).toBeInTheDocument()
 })
 
 test('a tier\'s tickspeed autobuyer auto-unlocks (no PP spent) once its own prestige milestone is reached', async () => {
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 },
-    purge: { xp: 0, points: 10, count: 22, highestMilestone: 1 }, // meets Kilobytes's tickspeed milestone (22)
+    purge: { xp: 0, points: 10, count: 11, highestMilestone: 1 }, // meets Kilobytes's tickspeed milestone (11)
   })
   render(<App />)
   await openPerksTab(userEvent.setup(), /open automation/i)
@@ -2487,23 +2487,23 @@ test('Firmware → Automation lists every tier\'s autobuyer/tier-tickspeed-autob
 
   seedMainGameState({
     resources: { base: 10 },
-    purge: { xp: 0, points: 0, count: 7, highestMilestone: 1 },
+    purge: { xp: 0, points: 0, count: 3, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  // Purge count 7 meets Kilobytes/Megabytes/Gigabytes' autobuyer-unlock milestones (2/4/6) but not
-  // Terabytes' (8) — each already-met tier shows as unlocked, the next one as still locked.
+  // Purge count 3 meets Kilobytes/Megabytes/Gigabytes' autobuyer-unlock milestones (1/2/3) but not
+  // Terabytes' (4) — each already-met tier shows as unlocked, the next one as still locked.
   expect(screen.getByLabelText(/^kilobytes's autobuyer active$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^megabytes's autobuyer active$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^gigabytes's autobuyer active$/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^terabytes's autobuyer unlocks at purge 8$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^terabytes's autobuyer unlocks at purge 4$/i)).toBeInTheDocument()
 
-  // None of the tier tickspeed autobuyer milestones (22+) are anywhere close yet.
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 22$/i)).toBeInTheDocument()
+  // None of the tier tickspeed autobuyer milestones (11+) are reached yet.
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 11$/i)).toBeInTheDocument()
   const tickspeedProgress = screen.getByRole('progressbar', { name: /^kilobytes tickspeed autobuyer milestone progress$/i })
-  expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '7')
-  expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '22')
+  expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '3')
+  expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '11')
 
   // Releases no longer repeats these — it keeps only Chapters / Reboot.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
@@ -2539,17 +2539,17 @@ test('an autobuyer active/paused badge appears on Firmware → Automation once i
 test('no autobuyer pause button appears on Firmware → Automation before its autobuyer is unlocked', async () => {
   const user = userEvent.setup()
 
-  // Megabytes' autobuyer unlocks at Purge 4 (getAutobuyerUnlockMilestone) — Purge 3 is enough to
-  // have unlocked Kilobytes (milestone 2) but not Megabytes.
+  // Megabytes' autobuyer unlocks at Purge 2 (getAutobuyerUnlockMilestone) — Purge 1 is enough to
+  // have unlocked Kilobytes (milestone 1) but not Megabytes.
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier02: 1 },
-    purge: { xp: 0, points: 0, count: 3, highestMilestone: 1 },
+    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  expect(screen.getByLabelText("Megabytes's autobuyer unlocks at Purge 4")).toBeInTheDocument()
+  expect(screen.getByLabelText("Megabytes's autobuyer unlocks at Purge 2")).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /^Megabytes's autobuyer$/i })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^Kilobytes's autobuyer$/i })).toBeInTheDocument()
 })
@@ -2643,7 +2643,7 @@ test('a tier whose autobuyer is unlocked but not yet tickspeed-automated still o
   render(<App />)
   await openPerksTab(userEvent.setup(), /open automation/i)
 
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 22$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 11$/i)).toBeInTheDocument()
 })
 
 test('clicking the money balance expands a breakdown of every global production multiplier currently in effect, and collapses again on a second click', async () => {

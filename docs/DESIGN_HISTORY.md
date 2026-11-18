@@ -9472,5 +9472,9 @@ where Intl's default rounding made 19,999 b read `2e4 b` beside a 2e4 b cost it 
 Intl's `roundingMode: 'trunc'` was tried first and rejected: computed powers of ten such as
 `getTierCost`'s `10 ** k` land one float step low (`9.999999999999999e82`), which trunc printed as
 `9.999e82` and ICU sometimes as a malformed `0.099e84`. The hand-rolled version nudges by `1e-12`
-(relative) before truncating, so float error reads `1e83` while 19,999 still reads `1.999e4`. Below 24rem the symbol
+(relative) before truncating, so float error reads `1e83` while 19,999 still reads `1.999e4`. Below 24.5rem the symbol
 stacks above the owned count so long exponents (`6.167e115`) still fit at 320px.
+
+## Faster autobuyer unlocks, 5× challenge unlocks, cheaper PP upgrades (2026-11)
+
+Maintainer request. Superseded: tier autobuyer n at Purge 2n (2 … 20) → n; tier tickspeed autobuyer at 20 + 2n (22 … 40) → n + 10; challenges unlocked with their automation → at 5× its unlock Purge (`CHALLENGE_UNLOCK_PURGE_MULTIPLIER`); tier autobuyer speed chain base 100 → 10 PP (tier tickspeed chain stays 100); Compression `100^(level+1)` → `10^(level+1)`. Because Reboot zeroes `purge.count`, a completed or active challenge bypasses the count check rather than adding a new latch field. Firmware shows a disabled `🔒 Fn` (no codename) where the 🏁 start control would stand while the automation is owned but the challenge is still locked.

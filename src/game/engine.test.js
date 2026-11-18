@@ -5825,32 +5825,32 @@ describe('getAutobuyerUnlockCost', () => {
 })
 
 describe('getAutobuyerUnlockMilestone', () => {
-  it('requires 2 purges for the first tier', () => {
-    expect(getAutobuyerUnlockMilestone(tensTier.id)).toBe(2)
+  it('requires 1 purge for the first tier', () => {
+    expect(getAutobuyerUnlockMilestone(tensTier.id)).toBe(1)
   })
 
-  it('increases by 2 purges per subsequent tier, up to 20 for the 10th/last tier', () => {
-    expect(getAutobuyerUnlockMilestone(thousandsTier.id)).toBe(4)
-    expect(getAutobuyerUnlockMilestone(TIER_DEFINITIONS[9].id)).toBe(20)
+  it('the nth tier unlocks at Purge n, up to 10 for the 10th/last tier', () => {
+    expect(getAutobuyerUnlockMilestone(thousandsTier.id)).toBe(2)
+    expect(getAutobuyerUnlockMilestone(TIER_DEFINITIONS[9].id)).toBe(10)
   })
 
   it('treats an unrecognized tier id as index 0 (the earliest milestone)', () => {
-    expect(getAutobuyerUnlockMilestone('does_not_exist')).toBe(2)
+    expect(getAutobuyerUnlockMilestone('does_not_exist')).toBe(1)
   })
 })
 
 describe('getTierTickspeedAutobuyerMilestone', () => {
-  it('requires 22 purges for the first tier', () => {
-    expect(getTierTickspeedAutobuyerMilestone(tensTier.id)).toBe(22)
+  it('requires 11 purges for the first tier', () => {
+    expect(getTierTickspeedAutobuyerMilestone(tensTier.id)).toBe(11)
   })
 
-  it('increases by 2 purges per subsequent tier, up to 40 for the 10th/last tier', () => {
-    expect(getTierTickspeedAutobuyerMilestone(thousandsTier.id)).toBe(24)
-    expect(getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[9].id)).toBe(40)
+  it('the nth tier unlocks at Purge n + 10, up to 20 for the 10th/last tier', () => {
+    expect(getTierTickspeedAutobuyerMilestone(thousandsTier.id)).toBe(12)
+    expect(getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[9].id)).toBe(20)
   })
 
   it('treats an unrecognized tier id as index 0 (the earliest milestone)', () => {
-    expect(getTierTickspeedAutobuyerMilestone('does_not_exist')).toBe(22)
+    expect(getTierTickspeedAutobuyerMilestone('does_not_exist')).toBe(11)
   })
 })
 
@@ -5861,7 +5861,7 @@ describe('applyAutobuyerMilestones', () => {
   })
 
   it('unlocks exactly the tiers whose milestone is met, and nothing else', () => {
-    const state = withPurgeCount(createInitialGameState(), 6)
+    const state = withPurgeCount(createInitialGameState(), 3)
     const after = applyAutobuyerMilestones(state)
     expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(1)
     expect(after.autobuyers[TIER_DEFINITIONS[1].id]).toBe(1)
@@ -5869,14 +5869,14 @@ describe('applyAutobuyerMilestones', () => {
     expect(after.autobuyers[TIER_DEFINITIONS[3].id]).toBeNull()
   })
 
-  it('never unlocks a tier tickspeed autobuyer before Purge 22', () => {
-    const state = withPurgeCount(createInitialGameState(), 21)
+  it('never unlocks a tier tickspeed autobuyer before Purge 11', () => {
+    const state = withPurgeCount(createInitialGameState(), 10)
     const after = applyAutobuyerMilestones(state)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[0].id]).toBe(false)
   })
 
-  it('unlocks the first tier tickspeed autobuyer at Purge 22, the second at 24', () => {
-    const state = withPurgeCount(createInitialGameState(), 24)
+  it('unlocks the first tier tickspeed autobuyer at Purge 11, the second at 12', () => {
+    const state = withPurgeCount(createInitialGameState(), 12)
     const after = applyAutobuyerMilestones(state)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[0].id]).toBe(true)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[1].id]).toBe(true)
@@ -8127,13 +8127,13 @@ describe('buyGlobalTickspeedMultiplier', () => {
 // ─── buyPrestigeDoublePp / getPrestigeDoublePpUpgradeCost ────────────────────
 
 describe('getPrestigeDoublePpUpgradeCost', () => {
-  it('costs 100 PP for the first upgrade', () => {
-    expect(getPrestigeDoublePpUpgradeCost(0)).toBe(100)
+  it('costs 10 PP for the first upgrade', () => {
+    expect(getPrestigeDoublePpUpgradeCost(0)).toBe(10)
   })
 
-  it('costs 100^(level+1) PP for each subsequent level', () => {
-    expect(getPrestigeDoublePpUpgradeCost(1)).toBe(10_000)
-    expect(getPrestigeDoublePpUpgradeCost(2)).toBe(1_000_000)
+  it('costs 10^(level+1) PP for each subsequent level', () => {
+    expect(getPrestigeDoublePpUpgradeCost(1)).toBe(100)
+    expect(getPrestigeDoublePpUpgradeCost(2)).toBe(1_000)
   })
 })
 
@@ -8153,14 +8153,14 @@ describe('getPrestigePowersPerPp / getPrestigePpPerPower', () => {
 
 describe('buyPrestigeDoublePp', () => {
   it('spends the upgrade cost and increments prestigeDoublePpLevel', () => {
-    const state = withPrestigePoints(createInitialGameState(), 100)
+    const state = withPrestigePoints(createInitialGameState(), 10)
     const after = buyPrestigeDoublePp(state)
     expect(after.prestigeDoublePpLevel).toBe(1)
     expect(after.purge.points).toBe(0)
   })
 
   it('is a no-op without enough PP', () => {
-    const state = withPrestigePoints(createInitialGameState(), 99)
+    const state = withPrestigePoints(createInitialGameState(), 9)
     expect(buyPrestigeDoublePp(state)).toBe(state)
   })
 
@@ -8170,8 +8170,8 @@ describe('buyPrestigeDoublePp', () => {
     expect(after.prestigeDoublePpLevel).toBe(1)
   })
 
-  it('latches Compute Flops pageUnlocked so reveal survives spending exactly 100 PP', () => {
-    const state = withPrestigePoints(createInitialGameState(), 100)
+  it('latches Compute Flops pageUnlocked so reveal survives spending 100 PP', () => {
+    const state = withPrestigePoints({ ...createInitialGameState(), prestigeDoublePpLevel: 1 }, 100)
     expect(state.computeFlops.pageUnlocked).toBe(false)
     const after = buyPrestigeDoublePp(state)
     expect(after.computeFlops.pageUnlocked).toBe(true)
@@ -8496,12 +8496,13 @@ describe('purgeGame', () => {
     expect(after.tickspeedLevels[tensTier.id]).toBe(1)
   })
 
-  it('auto-unlocks the first tier\'s autobuyer on the second prestige (milestone 2), not the first', () => {
+  it('auto-unlocks the first tier\'s autobuyer on the first prestige (milestone 1), the second tier\'s on the second', () => {
     const state = withMoney(createInitialGameState(), PURGE_THRESHOLD)
     const first = purgeGame(state)
-    expect(first.autobuyers[tensTier.id]).toBeNull()
+    expect(first.autobuyers[tensTier.id]).toBe(1)
+    expect(first.autobuyers[thousandsTier.id]).toBeNull()
     const after = purgeGame(withMoney(first, PURGE_THRESHOLD))
-    expect(after.autobuyers[tensTier.id]).toBe(1)
+    expect(after.autobuyers[thousandsTier.id]).toBe(1)
   })
 
   it('leaves a later tier\'s autobuyer locked (null) until its own milestone is reached', () => {
@@ -8549,10 +8550,9 @@ describe('purgeGame', () => {
       'autoScaleUp', 'autoScaleUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
     )
     const after = purgeGame(state)
-    // The first tier's autobuyer unlocks at milestone 2 (not yet at count 1) — confirms the autobuyers
-    // fallback produced a real object (not undefined) applyAutobuyerMilestones could safely build on,
-    // with every tier correctly null (not undefined).
-    expect(after.autobuyers[tensTier.id]).toBeNull()
+    // The first tier's autobuyer unlocks at milestone 1 — confirms the autobuyers fallback produced a
+    // real object (not undefined) applyAutobuyerMilestones could safely build on, with later tiers null.
+    expect(after.autobuyers[tensTier.id]).toBe(1)
     expect(after.autobuyers[thousandsTier.id]).toBeNull()
     expect(after.autobuyersEnabled).toEqual(fresh.autobuyersEnabled)
     expect(after.tierTickspeedAutobuyer).toEqual(fresh.tierTickspeedAutobuyer)
@@ -12159,8 +12159,8 @@ const withPpForInterval = (points, autobuyer = 1) => {
 }
 
 describe('autobuyer interval upgrade', () => {
-  it('costs 1 PP doubling on the 125-based ladder', () => {
-    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(getAutobuyerIntervalUpgradeCost)).toEqual([100, 200, 400, 6400, 12500, 25000, 50000, 100000, 200000])
+  it('costs 10 PP doubling on the 125-based ladder', () => {
+    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(getAutobuyerIntervalUpgradeCost)).toEqual([10, 20, 40, 640, 1250, 2500, 5000, 10000, 20000])
   })
 
   it('multiplies the interval by 0.9 per level and caps at 10ms', () => {
