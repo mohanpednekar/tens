@@ -574,8 +574,8 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   `BalancesSentinel` (falls back to always-expanded when IntersectionObserver is unavailable, e.g.
   jsdom); the stick position drops below `TopPurgeBar` when it's showing, by that bar's own
   live-measured height (`topPurgeBarHeight`, see below) rather than a guessed constant, to avoid
-  underlap. There is no aggregate `+X/sec` line — each tier row's own `+X` figure is the per-tier
-  replacement. In the compressed side-by-side layout, `CenteredCard`'s `align-items: center` (needed
+  underlap. There is no aggregate `+X/sec` line — each tier's `+X` production (first line of its row's
+  details disclosure) is the per-tier replacement. In the compressed side-by-side layout, `CenteredCard`'s `align-items: center` (needed
   so its content centers when expanded) would otherwise let a flex-column child shrink-wrap to its own
   full content width instead of the card's allotted half-share — silently defeating the `overflow:
   hidden`/`text-overflow: ellipsis` truncation meant to keep a long balance or PP status string from
@@ -960,7 +960,7 @@ ternary — `Button`'s `resolveColor` auto-swaps a `variant` to `theme.color.dis
 Each row is a single-line CSS Grid (areas `'name upgrade buy'` / `'details details details'`):
 the tier symbol (`TierNameLabel`, `min-width: 2.2rem` so every row's count starts at the same x)
 and the owned count (`OwnedText`) share the flexible `name` track, then the tickspeed and Buy buttons
-sit in fixed tracks (`6.5rem`/`9rem`; `5.7rem`/`7.9rem` below `40rem`; `5.9rem`/`7.3rem` and `0.7rem` button text below `24rem`)
+sit in fixed tracks (`6.5rem`/`9rem`; `5.7rem`/`7.9rem` below `40rem`; `5.9rem`/`7.3rem` and `0.7rem` button text below `24rem`; Buy `6.9rem` + 4px gaps below `21rem`)
 so the buttons line up as columns down the list. Production is **not** on the row — it is the first
 line of the details disclosure (`Production: +X per delivery`), toggled by the tier symbol. The owned
 cell's "Owned: " label is a `VisuallyHidden` span (plus `title="Owned"`) — assert via
@@ -976,8 +976,10 @@ viewport — see "Auto-collapsing expanded disclosures on scroll" below.
 `min-height: 2rem`), and `TierDetailsContent` (`xs`, with a `border-top` divider when expanded) all
 resolve their `font-size`/`line-height` from `theme.type.scale` (`theme/tokens.js`). `BuyButton` sets
 `font-weight: 700` (`UpgradeButton` keeps `Button`'s default `600`) so Buy — the rightmost,
-affordability-fill-colored control — reads as the heavier of the two. Gaps/padding resolve from
-`theme.space`.
+affordability-fill-colored control — reads as the heavier of the two. Row padding is a literal
+`3px` vertical (side padding and the list gap from `theme.space`). Below `24rem` the symbol stacks
+above the owned count (`TierNameTrigger` switches to a column) so the count gets the whole `name`
+track; the two lines stay shorter than the `2rem` buttons, so the row height doesn't change.
 
 **Tier row details disclosure.** Unlike the native `<details>`-based `Disclosure` a few other
 cards/categories use (see "No description prose on this page" above), a tier row has **no separate
@@ -1001,10 +1003,10 @@ give, and (being a normal, non-`display: contents`-promoted grid item) correctly
 width when expanded.
 
 Only the name toggles — the rest of the tile (and the Owned count) is inert, so Buy/tickspeed clicks can never also toggle it. Expanding it lists,
-in the `<ul>`: the tier's base tickspeed (`getTierBaseTickSpeedSeconds`, from `layers.js`) and effective
+in the `<ul>`: the tier's per-delivery production (`Production: +X per delivery`), its base tickspeed (`getTierBaseTickSpeedSeconds`, from `layers.js`) and effective
 tickspeed (`getEffectiveTierTickSpeedSeconds`, with the contributing tier/global tickspeed multipliers
 named inline), the purchase milestone multiplier and the lifetime purchase count driving it
-(`getPurchaseMilestoneMultiplier`), the Scale Up multiplier (only shown once `scaleUpCount > 0`), for
+(`getPurchaseMilestoneMultiplier`), the Scale Up multiplier (only shown once `scaleUpCount > 0`), any Power boost description,
 and the tier's cost/produces resource symbols. This — plus the
 tickspeed button's own `title` tooltip — is now the only place `MainPage` surfaces a tier's
 base/effective tickspeed numbers at all, now that the compact per-tier badge that used to show the

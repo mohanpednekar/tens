@@ -123,6 +123,31 @@ const TierLine = styled(StatCard)`
   @media (max-width: 24rem) {
     grid-template-columns: minmax(0, 1fr) 5.9rem 7.3rem;
 
+    /* Symbol stacks over the owned count so the count gets the full name track (both lines
+       together are still shorter than the 2rem buttons, so the row height is unchanged). */
+    & > div:first-child {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    & h3 {
+      font-size: ${props => props.theme.type.scale.sm.size};
+      line-height: 1.1;
+    }
+
+    & h3 > span {
+      min-width: 0;
+    }
+  }
+
+  @media (max-width: 21rem) {
+    grid-template-columns: minmax(0, 1fr) 5.9rem 6.9rem;
+    column-gap: 4px;
+
+    & button > span:first-child {
+      padding-right: 0.25em;
+    }
+
     & button {
       font-size: 0.7rem;
       padding: 0 0.35em;
@@ -722,7 +747,7 @@ const OwnedText = styled.span`
 
   @media (max-width: 24rem) {
     font-size: ${props => props.theme.type.scale.xs.size};
-    line-height: ${props => props.theme.type.scale.xs.lineHeight};
+    line-height: 1.15;
   }
 `
 
