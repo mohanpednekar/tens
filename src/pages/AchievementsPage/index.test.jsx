@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ThemeProvider } from 'styled-components'
 import AppMenu from 'components/AppMenu'
@@ -8,6 +8,7 @@ import { buildTheme } from 'theme/tokens'
 import AchievementsPage from '.'
 
 const renderWithTheme = ui => render(<ThemeProvider theme={buildTheme('dark')}>{ui}</ThemeProvider>)
+const openGroup = name => fireEvent.click(screen.getByLabelText(`${name} group toggle`))
 const gameWith = earned => ({ state: { ...createInitialGameState(), achievements: { earned, counters: { pings: 0 } } } })
 
 beforeEach(() => { ACHIEVEMENTS_FEATURE.enabled = true })
@@ -17,8 +18,12 @@ describe('AchievementsPage', () => {
   it('lists groups with earned counts and marks earned vs unearned', () => {
     renderWithTheme(<AchievementsPage game={gameWith({ helloWorld: true })} />)
     expect(screen.getByLabelText('First session 1 of 4 earned')).toBeTruthy()
+    expect(screen.queryByLabelText('Hello, World achievement earned')).toBeNull()
+    openGroup('First session')
     expect(screen.getByLabelText('Hello, World achievement earned')).toBeTruthy()
     expect(screen.getByLabelText('Ping of Death achievement not yet earned')).toBeTruthy()
+    expect(screen.queryByText('Ping 256 times')).toBeNull()
+    fireEvent.click(screen.getByLabelText('Ping of Death details'))
     expect(screen.getByText('Ping 256 times')).toBeTruthy()
   })
 
@@ -30,12 +35,16 @@ describe('AchievementsPage', () => {
     )
     try {
       const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({})} />)
+      openGroup('First session')
       expect(screen.getByLabelText('??? achievement not yet earned')).toBeTruthy()
       expect(screen.queryByText('Hidden trigger')).toBeNull()
       expect(screen.queryByText('Platform Name')).toBeNull()
+      expect(screen.queryByLabelText('Platform Name details')).toBeNull()
       unmount()
       renderWithTheme(<AchievementsPage game={gameWith({ testSecret: true })} />)
+      openGroup('First session')
       expect(screen.getByLabelText('Hidden Name achievement earned')).toBeTruthy()
+      fireEvent.click(screen.getByLabelText('Hidden Name details'))
       expect(screen.getByText('Hidden trigger')).toBeTruthy()
     } finally {
       ACHIEVEMENT_DEFINITIONS.length = 0
