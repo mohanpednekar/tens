@@ -29,7 +29,6 @@ import {
   getLiveChallengeForAutomation,
   isChallengeCompleted,
   getActiveChallenge,
-  formatOfflineDuration,
   getMaxOfflineSeconds,
   getSleepModeCapLevel,
   getSleepModeCapUpgradeCost,
@@ -37,6 +36,7 @@ import {
   isProductionFrozen,
   isOverflowModeUnlocked,
   getPrestigeProductionMultiplier,
+  getPlaytimeProductionMultiplier,
   isChallengeUnlocked,
 } from 'game/engine'
 import {
@@ -46,7 +46,13 @@ import {
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   BUY_MAX_UNLOCK_COST,
+  CACHE_WARM_UNLOCK_COST,
+  MAX_OFFLINE_SECONDS,
+  OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS,
+  OFFLINE_PROGRESS_SPEED_MULTIPLIER,
+  PLAYTIME_BONUS_PER_HOUR,
   PLAYTIME_BONUS_UNLOCK_COST,
+  SLEEP_MODE_CAP_UPGRADE_COSTS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   SLEEP_MODE_CAP_STEP_SECONDS,
 } from 'game/layers'
@@ -322,6 +328,32 @@ const RowLabelStack = styled.span`
   min-width: 0;
 `
 
+const NameButton = styled.button`
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+`
+
+// Expanded upgrade description: full row width under the label/action pair.
+const Details = styled.p`
+  color: ${props => props.theme.color.textMuted};
+  font-size: 0.82em;
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  line-height: 1.35;
+  margin: 0.3rem 0 0;
+  padding-left: calc(1.5em / 0.82 + 0.45rem);
+`
+
 const RowControls = styled.div`
   align-items: center;
   display: flex;
@@ -482,6 +514,45 @@ const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Mat
 // Terse inline form for cell heads: `64s`, `2.9s`, `212ms`.
 const formatIntervalShort = ms => (ms >= 1000 ? `${Number((ms / 1000).toFixed(ms >= 10000 ? 0 : 1))}s` : `${Math.round(ms)}ms`)
 
+const formatMultiplier = value => String(Number(value.toFixed(2)))
+const formatHours = seconds => `${Number((seconds / 3600).toFixed(1))}h`
+const compressionSummary = level => {
+  const ppPerPower = getPrestigePpPerPower(level)
+  if (ppPerPower > 1) return `${formatAmount(ppPerPower)} PP/power`
+  return `${formatAmount(getPrestigePowersPerPp(level))} powers/PP`
+}
+// "now → after", sharing a common leading label ("KB lvl 0 → 1") or trailing unit ("64 → 32 powers/PP").
+const beforeAfter = (before, after) => {
+  const [b, a] = [before.split(' '), after.split(' ')]
+  if (b.length > 1 && b.length === a.length && b.slice(0, -1).join(' ') === a.slice(0, -1).join(' ')) {
+    return `${before} → ${a[a.length - 1]}`
+  }
+  if (b.length > 1 && b.length === a.length && b.slice(1).join(' ') === a.slice(1).join(' ')) {
+    return `${b[0]} → ${after}`
+  }
+  return `${before} → ${after}`
+}
+
+// One Prestige upgrade: the name (the only toggle) opens its details; the line under it shows the
+// value now (owned/maxed) or now → after buying. Everything explanatory lives in the details.
+const UpgradeRow = ({ ariaLabel, icon, name, value, details, children }) => {
+  const [open, setOpen] = useState(false)
+  return (
+    <Row aria-label={ariaLabel}>
+      <RowLabelStack>
+        <RowLabel>
+          <NameButton aria-expanded={open} aria-label={`${name} details`} onClick={() => setOpen(prev => !prev)} type="button">
+            <RowIcon>{icon}</RowIcon>{name}
+          </NameButton>
+        </RowLabel>
+        {value && <SubText aria-label={`${name} value`}>{value}</SubText>}
+      </RowLabelStack>
+      {children}
+      {open && <Details aria-label={`${name} description`}>{details}</Details>}
+    </Row>
+  )
+}
+
 const GLOBAL_AUTOMATIONS = [
   { key: 'speedUp', name: 'Auto Clock Speed', icon: '🌐', owned: s => s.autoGlobalTickspeed ?? false, enabled: s => s.autoGlobalTickspeedEnabled ?? true, setEnabled: 'setAutoGlobalTickspeedEnabled' },
   { key: 'restage', name: 'Auto Restage', icon: '🧬', owned: s => s.autoXpTickspeed ?? false, enabled: s => s.autoXpTickspeedEnabled ?? true, setEnabled: 'setAutoXpTickspeedEnabled' },
@@ -509,21 +580,20 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
 
   const doublePpLevel = state.prestigeDoublePpLevel ?? 0
   const doublePpCost = getPrestigeDoublePpUpgradeCost(doublePpLevel)
-  const powersPerPp = getPrestigePowersPerPp(doublePpLevel)
-  const ppPerPower = getPrestigePpPerPower(doublePpLevel)
   const canBuyDoublePp = !isFirstRun && points >= doublePpCost
-  const doublePpUpgradeSummary = ppPerPower > 1
-    ? `${formatAmount(ppPerPower)} PP per power`
-    : `1 PP per ${formatAmount(powersPerPp)} power${powersPerPp === 1 ? '' : 's'}`
 
   const canBuySpeedBonus = !state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
-  const speedBonusMultiplier = getPrestigeProductionMultiplier(purgeCount)
+  const speedBonusMultiplier = getPrestigeProductionMultiplier(purgeCount, true)
   const canBuyPlaytimeBonus = !state.playtimeBonusUnlocked && points >= PLAYTIME_BONUS_UNLOCK_COST
   const canBuyBuyMax = !isBuyMaxUnlocked(state) && points >= BUY_MAX_UNLOCK_COST
   const sleepCapLevel = getSleepModeCapLevel(state)
   const sleepCapCost = getSleepModeCapUpgradeCost(sleepCapLevel)
-  const sleepCapLabel = formatOfflineDuration(getMaxOfflineSeconds(state)).replace(/ 0m$/, '')
-  const sleepCapStepLabel = formatOfflineDuration(SLEEP_MODE_CAP_STEP_SECONDS).replace(/ 0m$/, '')
+  const sleepCapLabel = formatHours(getMaxOfflineSeconds(state))
+  const sleepCapNextLabel = formatHours(getMaxOfflineSeconds({ ...state, sleepModeCapLevel: sleepCapLevel + 1 }))
+  const sleepCapStepLabel = formatHours(SLEEP_MODE_CAP_STEP_SECONDS)
+  const canBuyCacheWarm = !state.cacheWarmUnlocked && points >= CACHE_WARM_UNLOCK_COST
+  const firstTier = TIER_DEFINITIONS[0]
+  const playtimeMultiplierIfOwned = getPlaytimeProductionMultiplier({ ...state, playtimeBonusUnlocked: true })
 
   // Auto-charge itself is bought per boundary on Power; Firmware holds its pause switch. Auto Boost is automatic once any
   // boundary is automated (no purchase); its on/off switch and preset live here too.
@@ -827,11 +897,13 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             Purge Points (PP) buy permanent upgrades. Start with the Speed bonus.
           </Tutorial>
         )}
-        <Row aria-label="speed bonus upgrade">
-          <RowLabelStack>
-            <RowLabel title="Permanent production speed bonus that grows with your Purge count"><RowIcon>🚀</RowIcon>Speed bonus</RowLabel>
-            <SubText>×2 at 10 Purges, ×3 at 100, ×4 at 1,000…{state.prestigeSpeedBonusUnlocked ? ` = ×${Number(speedBonusMultiplier.toFixed(2))} now` : ''}</SubText>
-          </RowLabelStack>
+        <UpgradeRow
+          ariaLabel="speed bonus upgrade"
+          details="Multiplies all production, growing with your Purge count: ×1.1 after the 1st Purge, ×2 at 10, ×3 at 100, ×4 at 1,000… (×(1 + log₁₀ Purges)). One-time purchase, permanent."
+          icon="🚀"
+          name="Speed bonus"
+          value={state.prestigeSpeedBonusUnlocked ? `×${formatMultiplier(speedBonusMultiplier)}` : beforeAfter('×1', `×${formatMultiplier(speedBonusMultiplier)}`)}
+        >
           {state.prestigeSpeedBonusUnlocked ? (
             <UnlockedBadge icon="🚀" name="Speed bonus" />
           ) : (
@@ -845,15 +917,16 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               onClick={actions.buyPrestigeSpeedBonus}
               points={points}
               progressLabel="Speed bonus unlock PP progress"
-              title="Spend Purge Points once to multiply all production (×2 at 10 Purges, ×3 at 100, ×4 at 1,000, growing every Purge), permanently"
             />
           )}
-        </Row>
-        <Row aria-label="sleep mode upgrade">
-          <RowLabelStack>
-            <RowLabel title="Longest absence simulated when you come back"><RowIcon>😴</RowIcon>Sleep mode</RowLabel>
-            <SubText>Up to {sleepCapLabel} away</SubText>
-          </RowLabelStack>
+        </UpgradeRow>
+        <UpgradeRow
+          ariaLabel="sleep mode upgrade"
+          details={`Longest time away simulated when you come back (at ${OFFLINE_PROGRESS_SPEED_MULTIPLIER * 100}% speed past ${OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS / 60} min). Each level adds ${sleepCapStepLabel}: ${SLEEP_MODE_CAP_UPGRADE_COSTS.map(cost => formatAmount(cost)).join(' / ')} PP, up to ${formatHours(MAX_OFFLINE_SECONDS)}.`}
+          icon="😴"
+          name="Sleep mode"
+          value={sleepCapCost === null ? sleepCapLabel : beforeAfter(sleepCapLabel, sleepCapNextLabel)}
+        >
           {sleepCapCost === null ? (
             <UnlockedBadge icon="😴" name="Sleep mode" title="Sleep mode at its maximum" />
           ) : (
@@ -867,17 +940,16 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               onClick={actions.buySleepModeCapUpgrade}
               points={points}
               progressLabel="Sleep mode upgrade PP progress"
-              title={`Spend Purge Points to simulate ${sleepCapStepLabel} more of time away`}
             />
           )}
-        </Row>
-        <Row aria-label="compression upgrade">
-          <RowLabelStack>
-            <RowLabel>
-              <RowIcon>✦</RowIcon>Compression
-            </RowLabel>
-            <SubText>{doublePpUpgradeSummary}</SubText>
-          </RowLabelStack>
+        </UpgradeRow>
+        <UpgradeRow
+          ariaLabel="compression upgrade"
+          details={`Each level halves the money-exponent powers needed per Purge Point until 1, then doubles PP per power. Costs 10, 100, 1,000… PP. Earned PP is claimed once you reach 1 Googol Bytes.`}
+          icon="✦"
+          name="Compression"
+          value={beforeAfter(compressionSummary(doublePpLevel), compressionSummary(doublePpLevel + 1))}
+        >
           <PpPurchaseButton
             ariaLabel={`Buy Compression level ${doublePpLevel + 1} for ${formatAmount(doublePpCost)} Purge Points — ${doublePpLevel < 6 ? 'halves powers needed per PP' : 'doubles PP per power'}`}
             color="#fbbf24"
@@ -888,13 +960,38 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             onClick={actions.buyPrestigeDoublePp}
             points={points}
             progressLabel="Compression upgrade PP progress"
-            title={doublePpLevel < 6
-              ? 'Halves how many money-exponent powers are needed per Purge Point (claimable once you reach 1 Googol Bytes)'
-              : 'Doubles how many Purge Points each power earns (claimable once you reach 1 Googol Bytes)'}
           />
-        </Row>
-        <Row aria-label="playtime bonus upgrade">
-          <RowLabel title="+1% production speed per hour of active play (offline and background time excluded)"><RowIcon>⏱</RowIcon>Playtime bonus</RowLabel>
+        </UpgradeRow>
+        <UpgradeRow
+          ariaLabel="cache warm upgrade"
+          details={`Every Purge, challenge exit and Reboot starts with ${firstTier.name} level 1 already complete, free. One-time purchase, permanent. Not applied inside challenges.`}
+          icon="🔥"
+          name="Cache Warm"
+          value={state.cacheWarmUnlocked ? `${firstTier.symbol} lvl 1` : beforeAfter(`${firstTier.symbol} lvl 0`, `${firstTier.symbol} lvl 1`)}
+        >
+          {state.cacheWarmUnlocked ? (
+            <UnlockedBadge icon="🔥" name="Cache Warm" />
+          ) : (
+            <PpPurchaseButton
+              ariaLabel={`Unlock Cache Warm for ${CACHE_WARM_UNLOCK_COST} Purge Points`}
+              color="#f97316"
+              cost={CACHE_WARM_UNLOCK_COST}
+              disabled={!canBuyCacheWarm}
+              icon="🔓"
+              label={`${formatAmount(CACHE_WARM_UNLOCK_COST)} PP`}
+              onClick={actions.buyCacheWarm}
+              points={points}
+              progressLabel="Cache Warm unlock PP progress"
+            />
+          )}
+        </UpgradeRow>
+        <UpgradeRow
+          ariaLabel="playtime bonus upgrade"
+          details={`+${PLAYTIME_BONUS_PER_HOUR * 100}% production per hour of active play. Offline, hidden-tab and background time don't count. One-time purchase, permanent.`}
+          icon="⏱"
+          name="Playtime bonus"
+          value={state.playtimeBonusUnlocked ? `×${formatMultiplier(playtimeMultiplierIfOwned)}` : beforeAfter('0%/h', `${PLAYTIME_BONUS_PER_HOUR * 100}%/h`)}
+        >
           {state.playtimeBonusUnlocked ? (
             <UnlockedBadge icon="⏱" name="Playtime bonus" />
           ) : (
@@ -908,19 +1005,16 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               onClick={actions.buyPlaytimeBonus}
               points={points}
               progressLabel="Playtime bonus unlock PP progress"
-              title="Spend Purge Points once to enable +1% production speed per hour of active play"
             />
           )}
-        </Row>
-        <Row aria-label="overflow mode unlock">
-          <RowLabelStack>
-            <RowLabel title="Earn past 1 Googol Bytes without freezing; Purge voluntarily to claim PP"><RowIcon>♾</RowIcon>Overflow mode</RowLabel>
-            {!isOverflowModeUnlocked(state) && (
-              <SubText>
-                Auto Purge ≤ {OVERFLOW_MODE_MAX_INTERVAL_SECONDS} s
-              </SubText>
-            )}
-          </RowLabelStack>
+        </UpgradeRow>
+        <UpgradeRow
+          ariaLabel="overflow mode unlock"
+          details={`Keep earning past 1 Googol Bytes without freezing; Purge whenever you choose to claim PP. Unlocks when Auto Purge's interval reaches ${OVERFLOW_MODE_MAX_INTERVAL_SECONDS} s or less.`}
+          icon="♾"
+          name="Overflow mode"
+          value={isOverflowModeUnlocked(state) ? null : beforeAfter('Off', 'On')}
+        >
           {isOverflowModeUnlocked(state) ? (
             <UnlockedBadge icon="♾" name="Overflow mode" />
           ) : (
@@ -928,12 +1022,17 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               ♾ 🔒
             </Badge>
           )}
-        </Row>
+        </UpgradeRow>
       </Category>
       <Category aria-label="purchasing category">
         <CategoryHeading>Purchasing</CategoryHeading>
-        <Row aria-label="buy max toggle">
-          <RowLabel title="Each purchase buys as many levels as you can afford (Factory tiers buy full levels only)"><RowIcon>⏭</RowIcon>Buy max</RowLabel>
+        <UpgradeRow
+          ariaLabel="buy max toggle"
+          details="When on, each purchase buys as many levels as you can afford. Factory tiers buy full levels only — a partly bought level takes its own click. One-time purchase; the switch is per device."
+          icon="⏭"
+          name="Buy max"
+          value={isBuyMaxUnlocked(state) ? null : beforeAfter('Off', 'On')}
+        >
           {isBuyMaxUnlocked(state) ? (
             <BuyMaxToggle game={game} />
           ) : (
@@ -947,10 +1046,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               onClick={actions.buyBuyMaxUnlock}
               points={points}
               progressLabel="Buy max unlock PP progress"
-              title="Spend Purge Points once to unlock the Buy max toggle"
             />
           )}
-        </Row>
+        </UpgradeRow>
       </Category>
     </List>
   )

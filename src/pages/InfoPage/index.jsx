@@ -43,6 +43,7 @@ import {
   PLAYTIME_BONUS_PER_HOUR,
   PLAYTIME_BONUS_UNLOCK_COST,
   BUY_MAX_UNLOCK_COST,
+  CACHE_WARM_UNLOCK_COST,
   SLEEP_MODE_BASE_CAP_SECONDS,
   SLEEP_MODE_CAP_STEP_SECONDS,
   SLEEP_MODE_CAP_UPGRADE_COSTS,
@@ -665,6 +666,10 @@ const InfoPage = () => {
           <li>
             Your first Purge Point buys the Purge speed bonus ({PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP on Firmware → Prestige):
             production speed grows with your Purge count, forever: ×1.1 after your first Purge, ×2 at 10 Purges, ×3 at 100, ×4 at 1,000, and so on (×(1 + log₁₀ Purges)).
+          </li>
+          <li>
+            Cache Warm ({CACHE_WARM_UNLOCK_COST} PP on Firmware → Prestige) starts every Purge with
+            Kilobytes level 1 already complete.
           </li>
           <li>
             The one-time Playtime bonus ({PLAYTIME_BONUS_UNLOCK_COST} PP on Firmware → Prestige) adds

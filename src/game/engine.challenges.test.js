@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  applyOfflineProgress, autoCompleteChallenges, buyAutomationIntervalUpgrade, buyAutobuyerIntervalUpgrade, buyGlobalTickspeedMultiplier,
+  applyOfflineProgress, applyOfflineRewardBonus, autoCompleteChallenges, buyAutomationIntervalUpgrade, buyAutobuyerIntervalUpgrade, buyGlobalTickspeedMultiplier,
   buyTierTickspeedIntervalUpgrade, consumeXpForLastTierTickspeed, createInitialGameState, enterChallenge, eraGame, exitChallenge,
   getActiveChallenge, getEffectiveTierTickSpeedSeconds, getChallengeUnlockPurges, getPurgePercent, getPurgeGoalBits, getTierScaleUpMultiplier, isChallengeUnlocked,
   isProductionFrozen, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tickGame,
@@ -322,6 +322,16 @@ describe('purge progress under a raised goal', () => {
   })
 })
 
+describe('Cache Warm and challenges', () => {
+  it('is not applied on entering a challenge, and is applied on exit', () => {
+    makeLive('F21')
+    const kb = TIER_DEFINITIONS[0].id
+    const entered = enterChallenge('F21')({ ...withAutomations(), cacheWarmUnlocked: true })
+    expect(entered.purchaseLevels[kb]).toBe(1)
+    expect(exitChallenge(entered).purchaseLevels[kb]).toBe(2)
+  })
+})
+
 describe('challenge clock', () => {
   it('counts live ticks and offline replay, and is a no-op reference outside a challenge', () => {
     makeLive('F21')
@@ -330,5 +340,16 @@ describe('challenge clock', () => {
     const running = enterChallenge('F21')(idle)
     expect(tickGame(0.5)(running).challenges.activeSeconds).toBeCloseTo(0.5)
     expect(applyOfflineProgress(30)(running).challenges.activeSeconds).toBe(30)
+  })
+
+  it('offline replay stops at the save\'s Sleep mode cap; the ad bonus uses the catch-up\'s cap', () => {
+    makeLive('F21')
+    const running = enterChallenge('F21')(withAutomations())
+    const day = 24 * 3600
+    // Level 0: 4h cap at 50% speed → 7,200 simulated seconds of a 24h absence.
+    expect(applyOfflineProgress(day)(running).challenges.activeSeconds).toBe(7200)
+    // Upgrading after the catch-up must not enlarge the bonus: the summary's 4h cap is passed in.
+    const upgraded = { ...running, sleepModeCapLevel: 5 }
+    expect(applyOfflineRewardBonus(day, 1, 4 * 3600)(upgraded).challenges.activeSeconds).toBe(7200)
   })
 })

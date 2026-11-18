@@ -186,6 +186,8 @@ import {
   getPlaytimeProductionMultiplier,
   buyPlaytimeBonus,
   buyBuyMaxUnlock,
+  buyCacheWarm,
+  applyCacheWarm,
   buySleepModeCapUpgrade,
   getMaxOfflineSeconds,
   getSleepModeCapLevel,
@@ -375,7 +377,7 @@ import {
   getPoolTapMultiplier,
   getDataStreamTapMultiplier,
 } from './engine'
-import { BUY_MAX_UNLOCK_COST, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, ACHIEVEMENT_DEFINITIONS, CHALLENGE_DEFINITIONS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
+import { BUY_MAX_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, ACHIEVEMENT_DEFINITIONS, CHALLENGE_DEFINITIONS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -7850,6 +7852,44 @@ describe('getOfflineEffectiveSeconds', () => {
   it('caps at a smaller per-save cap when given one', () => {
     expect(getOfflineEffectiveSeconds(MAX_OFFLINE_SECONDS, 4 * 3600)).toBe(2 * 3600)
     expect(getOfflineRewardBonusSeconds(MAX_OFFLINE_SECONDS, 4 * 3600)).toBe(2 * 3600)
+  })
+})
+
+describe('Cache Warm', () => {
+  const kb = TIER_DEFINITIONS[0].id
+  const blockSize = DEFAULT_PURCHASE_BLOCK_SIZE
+
+  it('buyCacheWarm spends 20 PP once, completing KB level 1 immediately; no-ops when unaffordable or owned', () => {
+    const state = withPrestigePoints(createInitialGameState(), CACHE_WARM_UNLOCK_COST + 5)
+    const after = buyCacheWarm(state)
+    expect(after.cacheWarmUnlocked).toBe(true)
+    expect(after.purge.points).toBe(5)
+    expect(after.purchaseLevels[kb]).toBe(2)
+    expect(after.owned[kb]).toBe(blockSize)
+    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID])
+    expect(buyCacheWarm(after)).toBe(after)
+    const poor = withPrestigePoints(createInitialGameState(), CACHE_WARM_UNLOCK_COST - 1)
+    expect(buyCacheWarm(poor)).toBe(poor)
+  })
+
+  it('tops up a partly bought level 1 and leaves a tier past level 1 alone', () => {
+    const base = { ...createInitialGameState(), cacheWarmUnlocked: true }
+    const partial = { ...base, owned: { ...base.owned, [kb]: 3 }, purchased: { ...base.purchased, [kb]: 3 }, purchaseLevelProgress: { ...base.purchaseLevelProgress, [kb]: 3 } }
+    const warmed = applyCacheWarm(partial)
+    expect(warmed.owned[kb]).toBe(blockSize)
+    expect(warmed.purchaseLevels[kb]).toBe(2)
+    expect(warmed.purchaseLevelProgress[kb]).toBe(0)
+    expect(applyCacheWarm(warmed)).toBe(warmed)
+    expect(applyCacheWarm(createInitialGameState())).toEqual(createInitialGameState())
+  })
+
+  it('applies after every Purge and Reboot, keeping the unlock', () => {
+    const owned = { ...createInitialGameState(), cacheWarmUnlocked: true }
+    const purged = purgeGame({ ...owned, resources: { ...owned.resources, [MONEY_ID]: PURGE_THRESHOLD } })
+    expect(purged.cacheWarmUnlocked).toBe(true)
+    expect(purged.purchaseLevels[kb]).toBe(2)
+    const rebooted = eraGame({ ...owned, purge: { ...owned.purge, points: ERA_ELIGIBILITY_PP } })
+    expect(rebooted.purchaseLevels[kb]).toBe(2)
   })
 })
 

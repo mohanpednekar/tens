@@ -756,6 +756,9 @@ export const PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER = 1.1
 export const PLAYTIME_BONUS_UNLOCK_COST = 100
 // One-time PP unlock for Buy max mode (see engine.js's isBuyMaxUnlocked/buyBuyMaxUnlock).
 export const BUY_MAX_UNLOCK_COST = 2
+// One-time PP unlock for Cache Warm: every Purge (and challenge exit / Reboot) starts with the first
+// tier's level 1 already complete, free. See engine.js's applyCacheWarm/buyCacheWarm.
+export const CACHE_WARM_UNLOCK_COST = 20
 export const PLAYTIME_BONUS_PER_HOUR = 0.01
 // Per-tier base cost for the tickspeed multiplier ladder (see engine.js's
 // getTickspeedMultiplierBaseCost/getTickspeedMultiplierCost) — 10^10 for the first tier (index 0),

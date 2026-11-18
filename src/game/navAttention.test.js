@@ -372,6 +372,7 @@ describe('navAttention', () => {
       prestigeSpeedBonusUnlocked: true,
       buyMaxUnlocked: true,
       sleepModeCapLevel: 5,
+      cacheWarmUnlocked: true,
       challenges: { ...createInitialGameState().challenges, completed: { F21: true, F22: true, F23: true, F24: true, F25: true } },
     }
     const automationOnly = { ...base, purge: { count: 1, points: getAutomationIntervalUpgradeCost('speedUp', 0) }, autoGlobalTickspeed: true }

@@ -2213,11 +2213,55 @@ test('Firmware → Prestige teaches PP with a tutorial: the first 1 PP buys the 
   await openPerksTab(user, /open prestige/i)
 
   expect(screen.getByLabelText(/^purge points tutorial$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^speed bonus value$/i)).toHaveTextContent('×1 → ×1.1')
   await user.click(screen.getByRole('button', { name: /unlock speed bonus for 1 purge points/i }))
 
   expect(screen.queryByLabelText(/^purge points tutorial$/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
-  expect(screen.getByLabelText(/^speed bonus upgrade$/i)).toHaveTextContent('×1.1 now')
+  expect(screen.getByLabelText(/^speed bonus value$/i)).toHaveTextContent(/^×1\.1$/)
+})
+
+test('Firmware → Prestige upgrade names expand their description; values show now → after', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 }, buyMaxUnlocked: false })
+  render(<App />)
+  await openPerksTab(user, /open prestige/i)
+
+  expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent('4h → 8h')
+  expect(screen.getByLabelText(/^cache warm value$/i)).toHaveTextContent('KB lvl 0 → 1')
+  expect(screen.getByLabelText(/^buy max value$/i)).toHaveTextContent('Off → On')
+  expect(screen.queryByLabelText(/^sleep mode description$/i)).not.toBeInTheDocument()
+  const toggle = screen.getByRole('button', { name: /^sleep mode details$/i })
+  await user.click(toggle)
+  expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  expect(screen.getByLabelText(/^sleep mode description$/i)).toHaveTextContent('4 / 40 / 400 / 4,000 / 4e4 PP')
+  await user.click(toggle)
+  expect(screen.queryByLabelText(/^sleep mode description$/i)).not.toBeInTheDocument()
+})
+
+test.each([
+  ['Buy max', /unlock buy max for 2 purge points/i, 2, /buy max mode toggle|buy max/i],
+  ['Cache Warm', /unlock cache warm for 20 purge points/i, 20, /cache warm unlocked/i],
+])('%s is bought with PP on Firmware → Prestige', async (_name, button, cost, ownedLabel) => {
+  const user = userEvent.setup()
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: cost, count: 1, highestMilestone: 1 }, buyMaxUnlocked: false })
+  render(<App />)
+  await openPerksTab(user, /open prestige/i)
+  await user.click(screen.getByRole('button', { name: button }))
+  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
+  expect(screen.queryByRole('button', { name: button })).not.toBeInTheDocument()
+  expect(screen.getAllByLabelText(ownedLabel).length).toBeGreaterThan(0)
+})
+
+test('Sleep mode levels are bought with PP until the 24h maximum', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 40000, count: 1, highestMilestone: 1 }, sleepModeCapLevel: 4 })
+  render(<App />)
+  await openPerksTab(user, /open prestige/i)
+  expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent('20h → 24h')
+  await user.click(screen.getByRole('button', { name: /buy sleep mode level 5 for 4e4 purge points/i }))
+  expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent(/^24h$/)
+  expect(screen.getByLabelText(/^sleep mode unlocked$/i)).toBeInTheDocument()
 })
 
 test('the playtime bonus is unlocked for 100 PP on Firmware → Prestige', async () => {

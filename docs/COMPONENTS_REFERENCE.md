@@ -213,8 +213,8 @@ small icon-only squares — and the selected option is identified by styling alo
 
 ## `BuyMaxToggle/index.jsx`
 
-`{ game }` — the Buy max mode toggle. Renders nothing until `isBuyMaxUnlocked(game.state)` (first
-Prestige or any Reboot); then a `components/Switch` (`aria-label="Toggle buy max mode"`,
+`{ game }` — the Buy max mode toggle. Renders nothing until `isBuyMaxUnlocked(game.state)` (the 2 PP
+Buy max purchase); then a `components/Switch` (`aria-label="Toggle buy max mode"`,
 `aria-pressed`, `$on`) that calls
 `game.setBuyMaxMode(!game.buyMaxMode)`. Used only on Firmware → ✦ Prestige (`pages/PerksPage`'s Purchasing row); mechanic in
 `docs/ECONOMY_REFERENCE.md`'s "Buy max mode".

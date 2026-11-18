@@ -1386,7 +1386,8 @@ permanent, survives Purge/Reboot), never above `MAX_OFFLINE_SECONDS` (24 h). Lev
 `buySleepModeCapUpgrade` for `SLEEP_MODE_CAP_UPGRADE_COSTS` (4, 40, 400, 4,000, 40,000 PP;
 `getSleepModeCapUpgradeCost(level)` → null at max) on Firmware → Prestige. `getOfflineEffectiveSeconds`/
 `getOfflineRewardBonusSeconds` take the cap as an optional second argument (default 24 h); the hook
-passes it and stores it on the `offlineProgress` summary (`capSeconds`) for the rewarded-video top-up. A short absence — at or below
+passes it and stores it on the `offlineProgress` summary (`capSeconds`); the rewarded-video top-up passes that
+same cap to `applyOfflineRewardBonus(elapsed, batch, capSeconds)` so an upgrade bought in between can't enlarge it. A short absence — at or below
 `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` (10 minutes) — is simulated at **100% speed**, as if
 the screen had been on the whole time, and never surfaces the "Resumed from sleep" notice (there's nothing
 notable to report). Only once the (capped) elapsed duration exceeds that threshold does the entire
@@ -1652,6 +1653,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   tick loop in `useIncrementalGame` while `document.visibilityState === 'visible'` — never by offline/background catch-up, and never
   by hidden-tab ticks (throttled background timers still run `tickGame`). Both fields survive Purge/Scale Up/Overclock/Reboot.
 - **Active — Buy max (2 PP) / Sleep mode cap (4–40,000 PP):** see "Buy max mode" and "Offline progress".
+- **Active — Cache Warm (20 PP):** `buyCacheWarm` sets permanent `cacheWarmUnlocked`; `applyCacheWarm` then starts every Purge, challenge exit and Reboot with tier01's level 1 complete for free (no Bits spent; not inside challenges).
 - **Active — Compression:** `buyPrestigeDoublePp(state)` permanently spends `getPrestigeDoublePpUpgradeCost(level)`
   PP (`10^(level+1)` — 10, 100, 1_000, …) to increment `prestigeDoublePpLevel`. Not blocked
   by production freeze. Halves powers-per-PP through level 6, then doubles PP-per-power.
@@ -2623,8 +2625,11 @@ purchases were manual or automatic.
 
 | Function | Signature | Purpose |
 |----------|-----------|---------|
-| `isBuyMaxUnlocked` | `state → boolean` | Buy max mode unlock: `purge.count >= 1 \|\| era.count >= 1` |
-| `isPerksPageRevealed` | `state → boolean` | Firmware AppNav page reveal — alias of `isBuyMaxUnlocked` |
+| `isBuyMaxUnlocked` | `state → boolean` | Buy max mode unlock: `state.buyMaxUnlocked` (bought for `BUY_MAX_UNLOCK_COST` 2 PP) |
+| `buyBuyMaxUnlock` | `state → state` | One-time 2 PP purchase setting `buyMaxUnlocked`; same reference when owned/unaffordable |
+| `buyCacheWarm` / `applyCacheWarm` | `state → state` | 20 PP one-time `cacheWarmUnlocked`; `applyCacheWarm` completes tier01's level 1 free (owned/purchased += remaining block, level → 2) after `purgeGame`, `exitChallenge`, `eraGame` and on purchase; no-op inside a challenge or past level 1 |
+| `getMaxOfflineSeconds` / `getSleepModeCapLevel` / `getSleepModeCapUpgradeCost` / `buySleepModeCapUpgrade` | see "Offline progress" | Sleep mode cap: 4 h + 4 h × `sleepModeCapLevel` (0–5), costs 4/40/400/4,000/40,000 PP |
+| `isPerksPageRevealed` | `state → boolean` | Firmware AppNav page reveal — `purge.count >= 1 \|\| era.count >= 1` (or any Auto-charge bought) |
 | `buyTierMaxLevels` | `tierId → state → state` | Buy max for a Factory tier: every affordable FULL level from zero progress; partial progress / no affordable full level falls back to `buyTierQuantity`; no-op while frozen |
 | `getTierMaxLevelsPreview` | `(state, tierId) → { levels, cost }` | What one `buyTierMaxLevels` click would buy (`levels: 0` when it would fall back) |
 | `repeatPurchaseMax` | `action → state → state` | Chains a one-level purchase action until it returns the same reference (cap `BUY_MAX_ITERATION_CAP`) |
@@ -2823,7 +2828,7 @@ purchases were manual or automatic.
 | `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (10,000 — plain digits up to 9,999; the mantissa truncates, never rounds up); scientific notation at/above as a hand-built `${mantissa}e${exponent}` (e.g. `6.5e13`) via `formatScientific`: the mantissa is truncated to 3 decimals (never rounded up) after a `1e-12` relative nudge that absorbs float error, so a computed `10 ** k` reads `1ek`, not `9.999e…` — see `docs/DESIGN_HISTORY.md`) — used for non-money amounts (owned/purchased counts, and per-tier per-tick production amounts, except a tier producing the base currency which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
 | `formatCurrency` | `value → string` | Full comma-grouped string below `EXPONENTIAL_NOTATION_THRESHOLD`, suffixed with `RESOURCE_SYMBOL(MONEY_ID)` (`b`), floored (never rounds up); exponential notation at/above the same threshold, same lowercase-`e` exponent marker as `formatAmount` (e.g. `6.5e13 b`) — EXCEPT when the exponential-range mantissa is exactly `BITS_PER_BYTE` (8), an exact whole-Byte figure at a clean power of ten (e.g. `8e6` bits = `1e6` Bytes exactly), which renders converted to Bytes instead (`1e6 B`, `RESOURCE_SYMBOL(BYTES_ID)`) rather than the arbitrary-looking bit count — `PURGE_THRESHOLD` (`8e100`) is a real live example. Used for every Money amount (costs, production rates, the Prestige-threshold overlay), except `MainPage`'s own headline balance readout once it grows large enough — see `formatMoneyBalance` below. See `docs/DESIGN_HISTORY.md` |
 | `formatMoneyBalance` | `value → string` | `MainPage`'s `MoneyHero` headline balance only: below `MONEY_BYTES_DISPLAY_THRESHOLD` (8000 bits — module-scoped in `engine.js`, not exported; exactly 1000 Bytes, the same Byte-scale threshold `formatDiskSize`'s SI scale considers "1 KB") renders identically to `formatCurrency`; at/above it, converts into whole Bytes (`÷ BITS_PER_BYTE`, floored, same never-overstate rounding `formatCurrency` itself uses) and renders with a trailing `B` instead of `b`, exponential notation at/above the same `EXPONENTIAL_NOTATION_THRESHOLD` (applied to the converted Byte count). Below the threshold a Bytes reading would round to 0 or read as an unhelpfully tiny fraction, so Bits stays the more legible unit until there's at least a full Byte's worth of KB to show. Every other Money display in the app keeps using `formatCurrency` unchanged |
-| `getOfflineEffectiveSeconds` | `elapsedRealSeconds → number` | Caps `elapsedRealSeconds` at `MAX_OFFLINE_SECONDS`, then floors it as-is (100% speed) if at or below `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS`, otherwise scales the entire capped duration by `OFFLINE_PROGRESS_SPEED_MULTIPLIER` (50%) before flooring — the number of simulated 1-second ticks `applyOfflineProgress` will replay |
+| `getOfflineEffectiveSeconds` | `(elapsedRealSeconds, capSeconds = MAX_OFFLINE_SECONDS) → number` | Caps `elapsedRealSeconds` at `min(capSeconds, MAX_OFFLINE_SECONDS)` (callers pass `getMaxOfflineSeconds(state)`), then floors it as-is (100% speed) if at or below `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS`, otherwise scales the entire capped duration by `OFFLINE_PROGRESS_SPEED_MULTIPLIER` (50%) before flooring — the number of simulated 1-second ticks `applyOfflineProgress` will replay |
 | `applyOfflineProgress` | `(elapsedRealSeconds, autobuyerBatchSize = 1) → state → state` | Replays `tickGame(1, autobuyerBatchSize)` once per simulated second from `getOfflineEffectiveSeconds` |
 | `formatOfflineDuration` | `totalSeconds → string` | `"1h 2m"` / `"1m 30s"` / `"45s"` (hours+minutes only above an hour, minutes+seconds only above a minute) — used to summarize the offline-progress notice's elapsed/simulated durations |
 | `RESOURCE_SYMBOL` (`layers.js`) | `resourceId → string` | Returns the matching tier's `symbol`, `'b'` (lowercase — the base currency's "Bits" symbol) fallback for `MONEY_ID`/unknown ids |
