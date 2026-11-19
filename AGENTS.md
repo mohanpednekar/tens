@@ -346,7 +346,7 @@ the quiet period above. That enables GitHub auto-merge only; never force-merge, 
 
 **Direct merge (maintainer standing rule; the one exception to "enable only" above):** in
 maintainer-driven interactive sessions, for every PR in this repo: once auto-merge is enabled and the PR is
-green — mergeable (no conflicts; update a "behind" branch first), every required check complete and
+green — mergeable (no conflicts; update a "behind" branch first, then re-run the reviewer for the new head), every required check complete and
 passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for the
 current head SHA — merge it directly (`gh pr merge --merge` / `merge_pull_request`). The quiet period
 does not apply. Never for `.github/workflows/**` diffs, never over a failing/pending check. Autonomous
