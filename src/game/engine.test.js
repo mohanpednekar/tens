@@ -188,6 +188,7 @@ import {
   buyBuyMaxUnlock,
   buyCacheWarm,
   applyCacheWarm,
+  getCacheWarmTier,
   buySleepModeCapUpgrade,
   getMaxOfflineSeconds,
   getSleepModeCapLevel,
@@ -7881,6 +7882,25 @@ describe('Cache Warm', () => {
     expect(warmed.purchaseLevelProgress[kb]).toBe(0)
     expect(applyCacheWarm(warmed)).toBe(warmed)
     expect(applyCacheWarm(createInitialGameState())).toEqual(createInitialGameState())
+  })
+
+  it('targets the highest tier whose Storage pool is unlocked, revealing it', () => {
+    const tier02 = TIER_DEFINITIONS[1].id
+    const twoPools = withIntro({ ...createInitialGameState(), cacheWarmUnlocked: true }, {
+      disksBuiltTotal: {
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
+      },
+    })
+    expect(getCacheWarmTier(twoPools).id).toBe(tier02)
+    expect(isTierUnlocked(twoPools)(TIER_DEFINITIONS[1])).toBe(false)
+    const warmed = applyCacheWarm(twoPools)
+    expect(warmed.purchaseLevels[tier02]).toBe(2)
+    expect(warmed.owned[tier02]).toBe(blockSize)
+    expect(warmed.purchaseLevels[kb]).toBe(1)
+    expect(warmed.resources[MONEY_ID]).toBe(twoPools.resources[MONEY_ID])
+    expect(isTierUnlocked(warmed)(TIER_DEFINITIONS[1])).toBe(true)
   })
 
   it('applies after every Purge and Reboot, keeping the unlock', () => {

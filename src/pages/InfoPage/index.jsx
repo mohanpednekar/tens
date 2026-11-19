@@ -669,7 +669,7 @@ const InfoPage = () => {
           </li>
           <li>
             Cache Warm ({CACHE_WARM_UNLOCK_COST} PP on Firmware → Prestige) starts every Purge with
-            Kilobytes level 1 already complete.
+            level 1 of your highest tier that has an unlocked Storage pool already complete.
           </li>
           <li>
             The one-time Playtime bonus ({PLAYTIME_BONUS_UNLOCK_COST} PP on Firmware → Prestige) adds

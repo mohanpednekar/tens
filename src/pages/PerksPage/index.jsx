@@ -37,6 +37,7 @@ import {
   isOverflowModeUnlocked,
   getPrestigeProductionMultiplier,
   getPlaytimeProductionMultiplier,
+  getCacheWarmTier,
   isChallengeUnlocked,
 } from 'game/engine'
 import {
@@ -584,7 +585,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const sleepCapNextLabel = formatHours(getMaxOfflineSeconds({ ...state, sleepModeCapLevel: sleepCapLevel + 1 }))
   const sleepCapStepLabel = formatHours(SLEEP_MODE_CAP_STEP_SECONDS)
   const canBuyCacheWarm = !state.cacheWarmUnlocked && points >= CACHE_WARM_UNLOCK_COST
-  const firstTier = TIER_DEFINITIONS[0]
+  const cacheWarmTier = getCacheWarmTier(state)
   const playtimeMultiplierIfOwned = getPlaytimeProductionMultiplier({ ...state, playtimeBonusUnlocked: true })
 
   // Auto-charge itself is bought per boundary on Power; Firmware holds its pause switch. Auto Boost is automatic once any
@@ -956,10 +957,10 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </UpgradeRow>
         <UpgradeRow
           ariaLabel="cache warm upgrade"
-          details={`Every Purge, challenge exit and Reboot starts with ${firstTier.name} level 1 already complete, free. One-time purchase, permanent. Not applied inside challenges.`}
+          details={`Every Purge, challenge exit and Reboot starts with level 1 of your highest tier that has an unlocked Storage pool already complete, free (now ${cacheWarmTier.name}). One-time purchase, permanent. Not applied inside challenges.`}
           icon="🔥"
           name="Cache Warm"
-          value={state.cacheWarmUnlocked ? `Runs start with ${firstTier.symbol} level 1 done` : `Start runs with ${firstTier.symbol} level 1 done`}
+          value={state.cacheWarmUnlocked ? `Runs start with ${cacheWarmTier.symbol} level 1 done` : `Start runs with ${cacheWarmTier.symbol} level 1 done`}
         >
           {state.cacheWarmUnlocked ? (
             <UnlockedBadge icon="🔥" name="Cache Warm" />

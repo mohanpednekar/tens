@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Cache Warm** (20 PP, Firmware → ✦ Prestige): every Purge, challenge exit and Reboot starts with Kilobytes level 1 already complete.
+- **Cache Warm** (20 PP, Firmware → ✦ Prestige): every Purge, challenge exit and Reboot starts with level 1 of your highest tier that has an unlocked Storage pool already complete (Kilobytes with one pool, Megabytes with two, …).
 
 ### Changed
 

@@ -1084,13 +1084,18 @@ export const buyCacheWarm = state => {
   })
 }
 
-// Cache Warm: completes the first tier's level 1 for free (no Bits spent) — the remaining units of
-// that level are credited as owned/purchased and the tier moves to level 2. Runs after every
-// Factory-cycle reset outside a challenge (purgeGame, exitChallenge, eraGame) and once on purchase;
-// a no-op without the unlock, inside a challenge, or once the tier is already past level 1.
+// Cache Warm's target: the highest tier whose Storage pool is unlocked (pool N ↔ tier N; pool 1 is
+// always unlocked, so Kilobytes at minimum).
+export const getCacheWarmTier = state =>
+  TIER_DEFINITIONS[Math.min(TIER_DEFINITIONS.length, Math.max(1, getUnlockedStoragePoolCount(state))) - 1]
+
+// Cache Warm: completes that tier's level 1 for free (no Bits spent) — the remaining units of the
+// level are credited as owned/purchased (which also reveals the tier) and it moves to level 2. Runs
+// after every Factory-cycle reset outside a challenge (purgeGame, exitChallenge, eraGame) and once on
+// purchase; a no-op without the unlock, inside a challenge, or once the tier is already past level 1.
 export const applyCacheWarm = state => {
   if (!state.cacheWarmUnlocked || getActiveChallenge(state)) return state
-  const tierId = TIER_DEFINITIONS[0].id
+  const tierId = getCacheWarmTier(state).id
   if ((state.purchaseLevels?.[tierId] ?? 1) > 1) return state
   const remaining = Math.max(0, getPurchaseBlockSize(state) - (state.purchaseLevelProgress?.[tierId] ?? 0))
   return {
