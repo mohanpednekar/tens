@@ -669,7 +669,7 @@ const InfoPage = () => {
           </li>
           <li>
             Cache Warm ({CACHE_WARM_UNLOCK_COST} PP on Firmware → Prestige) starts every Purge, Scale Up and Overclock with
-            level 1 of your highest tier that has an unlocked Storage pool already complete.
+            level 1 already complete for the tier of the Storage pool you are currently building.
           </li>
           <li>
             The one-time Playtime bonus ({PLAYTIME_BONUS_UNLOCK_COST} PP on Firmware → Prestige) adds

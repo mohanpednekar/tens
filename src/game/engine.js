@@ -1084,8 +1084,9 @@ export const buyCacheWarm = state => {
   })
 }
 
-// Cache Warm's target: the highest tier whose Storage pool is unlocked (pool N ↔ tier N; pool 1 is
-// always unlocked, so Kilobytes at minimum).
+// Cache Warm's target: the tier of the Storage pool currently being built — the newest unlocked pool,
+// which is always the incomplete one (pool N unlocks only once pool N − 1 is fully built; pool N ↔
+// tier N). Pool 1 is always unlocked, so Kilobytes at minimum; once every pool is built, the last tier.
 export const getCacheWarmTier = state =>
   TIER_DEFINITIONS[Math.min(TIER_DEFINITIONS.length, Math.max(1, getUnlockedStoragePoolCount(state))) - 1]
 

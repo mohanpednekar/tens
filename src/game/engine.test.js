@@ -7884,7 +7884,7 @@ describe('Cache Warm', () => {
     expect(applyCacheWarm(createInitialGameState())).toEqual(createInitialGameState())
   })
 
-  it('targets the highest tier whose Storage pool is unlocked, revealing it', () => {
+  it('targets the tier of the incomplete pool being built (pool 1 full → pool 2 / MB), revealing it', () => {
     const tier02 = TIER_DEFINITIONS[1].id
     const twoPools = withIntro({ ...createInitialGameState(), cacheWarmUnlocked: true }, {
       disksBuiltTotal: {
@@ -7893,6 +7893,9 @@ describe('Cache Warm', () => {
         [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
       },
     })
+    expect(getCacheWarmTier(createInitialGameState()).id).toBe(kb) // pool 1 still being built
+    expect(isStoragePoolUnlocked(twoPools, 2)).toBe(true)
+    expect(isStoragePoolUnlocked(twoPools, 3)).toBe(false) // pool 2 is the incomplete one
     expect(getCacheWarmTier(twoPools).id).toBe(tier02)
     expect(isTierUnlocked(twoPools)(TIER_DEFINITIONS[1])).toBe(false)
     const warmed = applyCacheWarm(twoPools)
