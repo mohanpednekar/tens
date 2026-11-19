@@ -7903,6 +7903,20 @@ describe('Cache Warm', () => {
     expect(isTierUnlocked(warmed)(TIER_DEFINITIONS[1])).toBe(true)
   })
 
+  it('re-applies after Scale Up and Overclock, and a refused one stays a same-reference no-op', () => {
+    const owned = { ...createInitialGameState(), cacheWarmUnlocked: true }
+    expect(scaleUpGame(owned)).toBe(owned)
+    expect(overclockGame(owned)).toBe(owned)
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
+    const ready = { ...owned, purchaseLevels: { ...owned.purchaseLevels, [kb]: 10, [lastTier]: 9 }, owned: { ...owned.owned, [kb]: 99 } }
+    for (const reset of [scaleUpGame, overclockGame]) {
+      const after = reset(ready)
+      expect(after).not.toBe(ready)
+      expect(after.purchaseLevels[kb]).toBe(2)
+      expect(after.owned[kb]).toBe(blockSize)
+    }
+  })
+
   it('applies after every Purge and Reboot, keeping the unlock', () => {
     const owned = { ...createInitialGameState(), cacheWarmUnlocked: true }
     const purged = purgeGame({ ...owned, resources: { ...owned.resources, [MONEY_ID]: PURGE_THRESHOLD } })

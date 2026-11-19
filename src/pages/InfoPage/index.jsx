@@ -668,7 +668,7 @@ const InfoPage = () => {
             production speed grows with your Purge count, forever: ×1.1 after your first Purge, ×2 at 10 Purges, ×3 at 100, ×4 at 1,000, and so on (×(1 + log₁₀ Purges)).
           </li>
           <li>
-            Cache Warm ({CACHE_WARM_UNLOCK_COST} PP on Firmware → Prestige) starts every Purge with
+            Cache Warm ({CACHE_WARM_UNLOCK_COST} PP on Firmware → Prestige) starts every Purge, Scale Up and Overclock with
             level 1 of your highest tier that has an unlocked Storage pool already complete.
           </li>
           <li>

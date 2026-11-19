@@ -1651,7 +1651,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   tick loop in `useIncrementalGame` while `document.visibilityState === 'visible'` — never by offline/background catch-up, and never
   by hidden-tab ticks (throttled background timers still run `tickGame`). Both fields survive Purge/Scale Up/Overclock/Reboot.
 - **Active — Buy max (2 PP) / Sleep mode cap (4–40,000 PP):** see "Buy max mode" and "Offline progress".
-- **Active — Cache Warm (20 PP):** `buyCacheWarm` sets permanent `cacheWarmUnlocked`; `applyCacheWarm` then starts every Purge, challenge exit and Reboot with level 1 of the highest tier whose Storage pool is unlocked complete for free (no Bits spent; not inside challenges).
+- **Active — Cache Warm (20 PP):** `buyCacheWarm` sets permanent `cacheWarmUnlocked`; `applyCacheWarm` then starts every Purge, Scale Up, Overclock, challenge exit and Reboot with level 1 of the highest tier whose Storage pool is unlocked complete for free (no Bits spent; not inside challenges).
 - **Active — Compression:** `buyPrestigeDoublePp(state)` permanently spends `getPrestigeDoublePpUpgradeCost(level)`
   PP (`10^(level+1)` — 10, 100, 1_000, …) to increment `prestigeDoublePpLevel`. Not blocked
   by production freeze. Halves powers-per-PP through level 6, then doubles PP-per-power.
@@ -2625,7 +2625,7 @@ purchases were manual or automatic.
 |----------|-----------|---------|
 | `isBuyMaxUnlocked` | `state → boolean` | Buy max mode unlock: `state.buyMaxUnlocked` (bought for `BUY_MAX_UNLOCK_COST` 2 PP) |
 | `buyBuyMaxUnlock` | `state → state` | One-time 2 PP purchase setting `buyMaxUnlocked`; same reference when owned/unaffordable |
-| `buyCacheWarm` / `applyCacheWarm` / `getCacheWarmTier` | `state → state` / `state → tier` | 20 PP one-time `cacheWarmUnlocked`; `applyCacheWarm` completes level 1 of `getCacheWarmTier(state)` — the highest tier whose Storage pool is unlocked (`getUnlockedStoragePoolCount`, pool N ↔ tier N; at least tier01) — free, revealing it (owned/purchased += remaining block, level → 2) after `purgeGame`, `exitChallenge`, `eraGame` and on purchase; no-op inside a challenge or past level 1 |
+| `buyCacheWarm` / `applyCacheWarm` / `getCacheWarmTier` | `state → state` / `state → tier` | 20 PP one-time `cacheWarmUnlocked`; `applyCacheWarm` completes level 1 of `getCacheWarmTier(state)` — the highest tier whose Storage pool is unlocked (`getUnlockedStoragePoolCount`, pool N ↔ tier N; at least tier01) — free, revealing it, after `purgeGame`/`scaleUpGame`/`overclockGame`/`exitChallenge`/`eraGame` (only when the reset fired) and on purchase (owned/purchased += remaining block, level → 2) after `purgeGame`, `exitChallenge`, `eraGame` and on purchase; no-op inside a challenge or past level 1 |
 | `getMaxOfflineSeconds` / `getSleepModeCapLevel` / `getSleepModeCapUpgradeCost` / `buySleepModeCapUpgrade` | see "Offline progress" | Sleep mode cap: 4 h + 4 h × `sleepModeCapLevel` (0–5), costs 4/40/400/4,000/40,000 PP |
 | `isPerksPageRevealed` | `state → boolean` | Firmware AppNav page reveal — `purge.count >= 1 \|\| era.count >= 1` (or any Auto-charge bought) |
 | `buyTierMaxLevels` | `tierId → state → state` | Buy max for a Factory tier: every affordable FULL level from zero progress; partial progress / no affordable full level falls back to `buyTierQuantity`; no-op while frozen |

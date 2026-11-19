@@ -1091,8 +1091,8 @@ export const getCacheWarmTier = state =>
 
 // Cache Warm: completes that tier's level 1 for free (no Bits spent) — the remaining units of the
 // level are credited as owned/purchased (which also reveals the tier) and it moves to level 2. Runs
-// after every Factory-cycle reset outside a challenge (purgeGame, exitChallenge, eraGame) and once on
-// purchase; a no-op without the unlock, inside a challenge, or once the tier is already past level 1.
+// after every reset that wipes owned tiers outside a challenge (purgeGame, exitChallenge, eraGame,
+// scaleUpGame, overclockGame) and once on purchase; a no-op without the unlock, inside a challenge, or once the tier is already past level 1.
 export const applyCacheWarm = state => {
   if (!state.cacheWarmUnlocked || getActiveChallenge(state)) return state
   const tierId = getCacheWarmTier(state).id
@@ -8094,8 +8094,11 @@ export const unpinMuseumEntry = entryId => state => {
 // otherwise any Scale Up/Overclock after the grace would hand corruption an instant win.
 const restartBitRotGrace = (before, after) =>
   after !== before && hasChallengeEffect(after, 'bitRot') ? withChallengeRun(after, { cycleSeconds: 0 }) : after
-export const scaleUpGame = state => restartBitRotGrace(state, scaleUpGameCore(state))
-export const overclockGame = state => restartBitRotGrace(state, overclockGameCore(state))
+// Cache Warm re-applies after every reset that wipes owned tiers (only when the reset actually fired,
+// so a refused Scale Up/Overclock still returns the same state reference).
+const withCacheWarm = (state, next) => (next === state ? next : applyCacheWarm(next))
+export const scaleUpGame = state => restartBitRotGrace(state, withCacheWarm(state, scaleUpGameCore(state)))
+export const overclockGame = state => restartBitRotGrace(state, withCacheWarm(state, overclockGameCore(state)))
 
 const scaleUpGameCore = state => {
   if (isProductionFrozen(state)) return state
