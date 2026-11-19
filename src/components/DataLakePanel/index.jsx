@@ -136,7 +136,7 @@ const LakeFilledText = styled.span`
   text-shadow: 0 0 2px ${props => props.theme.color.surface};
 `
 
-// Thin progress bar under the balance, shown on a collapsed lake header: progress toward the next
+// Thin progress bar under the balance, shown on every lake header (collapsed or expanded, #1142): progress toward the next
 // disk. `ThinProgressBar` is reused by
 // ByteFoundryPage's running-upgrade tile so both read the same. Default top margin spaces the bar
 // under the lake title/sub rows (LakeHeader has no flex gap); the upgrade tile zeroes it via a
@@ -507,18 +507,16 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                 </LakeSubRow>
                 {headerOnly
                   ? <LakeFilledText $withBar title={costReachable ? `Banked toward the next ${boosterLabel} (${nextCostSize})` : `The next ${boosterLabel} costs more than this lake can hold (${nextCostSize}) — Scale Out or Flush Pool`}>{barText}</LakeFilledText>
-                  : <LakeFilledText title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>}
+                  : <LakeFilledText $withBar title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>}
                 {/* Full-width thin progress bar under the lake header, collapsed or expanded (#1142). */}
-                {(
-                  <ThinProgressBar
-                    role="progressbar"
-                    aria-label={`${label} lake fill progress`}
-                    aria-valuenow={poolReady ? boosterPercent : 0}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    $fill={headerFillFraction}
-                  />
-                )}
+                <ThinProgressBar
+                  role="progressbar"
+                  aria-label={`${label} lake fill progress`}
+                  aria-valuenow={poolReady ? boosterPercent : 0}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  $fill={headerFillFraction}
+                />
               </LakeHeader>
             )}
 

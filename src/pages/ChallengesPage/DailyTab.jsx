@@ -333,7 +333,7 @@ const DailyTab = ({ state, actions }) => {
           const open = openDetails.has(format.id)
           const conditions = describeDailyChallenge(def)
           const status = run
-            ? `${lastDay ? `from ${run.def.dateId} · ` : ''}${formatDuration(run.def.limitSeconds - run.simSeconds)} left`
+            ? `${lastDay ? `from ${run.def.dateId} · ` : ''}${formatDuration(run.def.limitSeconds - run.simSeconds)} left · ${Math.round(getRunProgress(run) * 100)}%`
             : [
                 result && OUTCOME_LABELS[result.lastOutcome],
                 result?.bestSeconds != null && `best ${formatDuration(result.bestSeconds)}`,
@@ -342,7 +342,7 @@ const DailyTab = ({ state, actions }) => {
             <Row $formatId={format.id} key={format.id} aria-label={`daily ${format.id}`}>
               <FormatLabel
                 aria-expanded={open}
-                aria-label={`${format.label} details`}
+                aria-label={`${format.id} ${format.label} details`}
                 onClick={() => toggleDetails(format.id)}
                 onKeyDown={event => {
                   if (event.key === 'Enter' || event.key === ' ') {
@@ -373,7 +373,19 @@ const DailyTab = ({ state, actions }) => {
                   {result ? '↻ Replay' : '🏁 Start'}
                 </ActionButton>
               )}
-              {run && <RowBar $formatId={format.id} $percent={Math.round(getRunProgress(run) * 100)}><span /></RowBar>}
+              {run && (
+                <RowBar
+                  $formatId={format.id}
+                  $percent={Math.round(getRunProgress(run) * 100)}
+                  aria-label={`daily ${format.id} progress`}
+                  aria-valuemax={100}
+                  aria-valuemin={0}
+                  aria-valuenow={Math.round(getRunProgress(run) * 100)}
+                  role="progressbar"
+                >
+                  <span />
+                </RowBar>
+              )}
               {open && (
                 <RowDetails>
                   {conditions && <Meta aria-label={`daily ${format.id} conditions`}>{conditions}</Meta>}

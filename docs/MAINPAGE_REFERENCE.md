@@ -806,7 +806,7 @@ itself — `ScaleUpCard` is likewise always shown (unlike `OverclockCard`, still
 tier having ever been unlocked — see below), but stays down below `TierList` (paired with Overclock) rather
 than joining this card, since its own target walks through the tier ladder one tier at a time (see
 "Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
-through. Below `TierList`: `RestageCard` (once revealed), `ScaleUpCard` and `OverclockCard` each get their own full-width `SpeedCardsRow` (no side-by-side pairs). Clock Speed shows the live per-level bonus `🏭 +X%/lvl` (`getChallengeClockSpeedStep`: 1% scaled by Overclock, weakened by a challenge's `clockSpeedPower`, 0 under F21; Overclock's disclosure shows the same rate) and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock). `CardTitleGroup` wraps the name/effect onto a second line when a half-width card is too narrow (phone widths around 320px).
+through. Feature cards sit in two pairs (#1137): `RestageCard` (once revealed) shares the top `SpeedCardsRow` with Clock Speed; below `TierList`, `ScaleUpCard` and `OverclockCard` (once revealed) share one row; a lone card fills its row. Clock Speed shows the live per-level bonus `🏭 +X%/lvl` (`getChallengeClockSpeedStep`: 1% scaled by Overclock, weakened by a challenge's `clockSpeedPower`, 0 under F21; Overclock's disclosure shows the same rate) and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock). `CardTitleGroup` wraps the name/effect onto a second line when a half-width card is too narrow (phone widths around 320px).
 (Earlier iterations tried grouping all three speed-related cards together at the top; this
 was reverted to the current split — Clock Speed alone at top, Restage + Scale Up then Overclock below the tier list —
 per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying
@@ -865,7 +865,7 @@ below).
 The **last tier's** button stays the ordinary resource-funded tickspeed button for the whole cycle,
 and, like every tier, spends the full `getTickspeedMultiplierSpend` (e.g. 10 for the 2nd upgrade, requirement
 `cost`, since QB may be spent to 0); the visible label shows the spend, the aria-label/progress bar the requirement. Its XP-funded tickspeed is a **separate**
-**Restage** card left of the Scale Up card (same `SpeedCardsRow`, below the tier list) (`aria-label="restage panel"`, shown once
+**Restage** card right of the Clock Speed card (same `SpeedCardsRow`, above the tier list — #1137) (`aria-label="restage panel"`, shown once
 `isLastTierTickspeedXpUnlocked`) with a `🧬 {XP} XP` button — see docs/ECONOMY_REFERENCE.md's
 "The last tier's XP-funded tickspeed". The row's Details "tier ×N" multiplier includes the XP bonus.
 
@@ -888,7 +888,7 @@ unchanged by the move to Firmware — see `docs/ECONOMY_REFERENCE.md` for costs/
 `docs/DESIGN_HISTORY.md` ("PP Upgrades tab split…") for why the page is split three ways.
 
 **Scale Up and Overclock cards, below the tier list.** Restage (once revealed) + `ScaleUpCard` share
-one `SpeedCardsRow` placed directly below `TierList`; `OverclockCard` gets the next full-width row
+one `SpeedCardsRow` placed directly below `TierList`, shared with `OverclockCard` once revealed (#1137)
 when revealed — not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why Clock Speed
 stays on top while these sit below the tier list). Restage + Scale Up stay side by side at every width (`flex: 1 1 0`, `min-width: 0`, no wrap); `CardTitleGroup` wraps the effect under the heading (`min-width: 0`, `flex-wrap`) so a paired card at ~320px doesn't overflow into its neighbor. The earlier
 below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below);

@@ -4588,19 +4588,6 @@ export const formatDiskSize = formatBitsInNearestSiUnit
 // on the ordinary trimmed formatDiskSize, since those are mostly round/exact/slow-changing figures.
 export const formatDiskSizeStable = bits => formatMemoryAmountStable(bits, getSiByteUnit(bits))
 
-// A Disk's own bare numeric size, with NO unit suffix — used only for the small in-square label
-// (DiskArrayRow/DataLakePanel), where the surrounding pool/lake card already establishes the unit
-// (a "KB Pool" card's own disks are implicitly KB-denominated — see CLAUDE.md's "Economy model").
-// aria-labels/tooltips keep using formatDiskSize's own unit-suffixed form for accessibility; only
-// the visible square text drops it. Safe to reuse formatDiskSize's own auto-nearest-unit pick here
-// (rather than a pool-fixed one) since an individual disk's size only ever spans 1-100x a pool's
-// own unit, never the 1000x that would actually require pinning it — see
-// formatDiskSizeInPoolUnit's own doc comment below for the case that does.
-export const formatDiskSizeBare = bits => {
-  const unit = getSiByteUnit(bits)
-  return formatAmount(floorToDecimals(bits / unit.divisor, MEMORY_AMOUNT_DECIMAL_PLACES))
-}
-
 // Formats `bits` in poolIndex's own FIXED SI unit (KB for pool 1, MB for pool 2, … — the same
 // mapping SI_BYTE_UNIT_SYMBOLS/TIER_DEFINITIONS already use), rather than formatDiskSize's own
 // auto-nearest-unit pick — never converting up to the next unit even once the value reaches 1000x

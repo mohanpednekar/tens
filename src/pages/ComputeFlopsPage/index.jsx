@@ -1,4 +1,4 @@
-import Button, { ButtonContent } from 'components/Button'
+import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import {
@@ -224,7 +224,7 @@ const ComputeFlopsPage = ({ game }) => {
                 >
                   {flopTier.symbol}
                 </TierSymbol>
-                <OwnedText title="Owned">{formatAmount(owned)}</OwnedText>
+                <OwnedText title="Owned"><VisuallyHidden>Owned: </VisuallyHidden>{formatAmount(owned)}</OwnedText>
               </NameCell>
               <BoostText title={`${factoryName} production multiplier`}>
                 {factoryTier?.symbol ?? factoryName} ×{liveMultiplier.toFixed(2)}

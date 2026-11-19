@@ -9498,3 +9498,24 @@ being filled — a pool fills (staging buffer) once Capacity makes it live, even
 "highest pool holding a disk" rule was dropped before merge because the TB pool in question had only a read cache.
 Flushes and disk progress no longer move the target at all.
 
+
+### Compact layouts per screen — three reversed decisions (2026-11-19, epic #1135)
+
+The maintainer approved per-screen compact layouts after three rounds of mockups (one shared row style was
+rejected: "use the ideas, not the same style everywhere"). Three earlier decisions were deliberately reversed:
+
+- **Factory feature-card pairs are back** (#1137): Clock Speed + Restage above the tier list, Scale Up + Overclock
+  below it — the maintainer's explicit placement. The 2026-11 entry above dropped half-width pairs because the
+  title + effect chips wrapped unevenly on 360–390px phones; that still happens, so each card is now a column with
+  `justify-content: space-between` (button pinned to the card bottom) and a top accent edge, so a wrapped chip
+  changes only the header height and both buttons stay level.
+- **Disk/cache size labels move out of the cells** (#1142): the in-cell bare number (`formatDiskSizeBare`, removed)
+  repeated the same size on every circle. Each row now states its size once, with its unit, in a label column
+  (`1 Kb` cache blocks, `1 KB` disks) — the maintainer's rule that units stay explicit (Kb = kilobits,
+  KB = kilobytes). Disks stay circles because shapes carry meaning: squares are reserved for future SSD upgrades.
+- **Releases → Milestones** (#1143): the #989 rename to "Releases" (with v1.0…v5.0 numbering) is reversed; the
+  maintainer wants "Milestones" and no version numbers, shown as a timeline.
+
+The first mockup baseline for the Foundry was also wrong (a Capacity-only seed showing five empty pools); the
+approved design was rebuilt from real phone screenshots and engine-simulated saves — seed realistic states
+(e.g. the `simulate-run-times` bot) before judging a layout.

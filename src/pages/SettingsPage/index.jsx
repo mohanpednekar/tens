@@ -257,8 +257,8 @@ const Body = styled.div`
   }
 `
 
-const SettingsItem = ({ icon, label, value, danger = false, inline, defaultOpen = false, children }) => {
-  const [open, setOpen] = useState(defaultOpen)
+const SettingsItem = ({ icon, label, value, danger = false, inline, children }) => {
+  const [open, setOpen] = useState(false)
   if (inline) {
     return (
       <Item>
