@@ -138,7 +138,7 @@ as before — it does not mark drafts ready.
 
 **Direct merge (maintainer standing rule; the one exception to "enable only" above):** in
 maintainer-driven interactive sessions, for every PR in this repo: once auto-merge is enabled and the PR is
-green — mergeable (no conflicts; bring a "behind" branch up to date first), every required check complete
+green — mergeable (no conflicts; bring a "behind" branch up to date first, then re-run the reviewer for the new head), every required check complete
 and passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for
 the **current head SHA** — merge it directly (`gh pr merge --merge` / `merge_pull_request`) instead of
 waiting for GitHub. The 10-minute quiet period does not apply. Never for `.github/workflows/**` diffs,
