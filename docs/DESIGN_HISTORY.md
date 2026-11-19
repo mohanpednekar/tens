@@ -9478,3 +9478,13 @@ stacks above the owned count so long exponents (`6.167e115`) still fit at 320px.
 ## Faster autobuyer unlocks, 5× challenge unlocks, cheaper PP upgrades (2026-11)
 
 Maintainer request. Superseded: tier autobuyer n at Purge 2n (2 … 20) → n; tier tickspeed autobuyer at 20 + 2n (22 … 40) → n + 10; challenges unlocked with their automation → at 5× its unlock Purge (`CHALLENGE_UNLOCK_PURGE_MULTIPLIER`); tier autobuyer speed chain base 100 → 10 PP (tier tickspeed chain stays 100); Compression `100^(level+1)` → `10^(level+1)`. Because Reboot zeroes `purge.count`, a completed or active challenge bypasses the count check rather than adding a new latch field. Firmware shows a disabled `🔒 Fn` (no codename) where the 🏁 start control would stand while the automation is owned but the challenge is still locked.
+
+### No grandfathering of unpurchased or unearned unlocks (2026-11-18, #1130)
+
+Maintainer rule: an existing save keeps only what it actually bought with PP, or what a Purge-count
+milestone it actually reached grants. #1130 first grandfathered the newly paid Buy max (2 PP) for saves that had it
+free; that was dropped before merge, along with the two older load-time grants in `storage.js`'s `mergeState`:
+the ≥10-Purge free speed bonus (`speedBonusGrandfathered`, now an inert field) and the ≥100-Purge Overflow mode
+latch (`PURGE_UNBOUNDED_MIN_COUNT`, removed — Overflow mode now latches only from the Auto Purge interval). A flag
+already stored as `true` by an earlier load cannot be told apart from a purchase, so those stay.
+

@@ -15,7 +15,7 @@ Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rew
 shared bottom `AppNav` in progression order: **Foundry → Power → Compute → Factory → Firmware → Challenges → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
 item, and no second-level Data Stream | Storage tabs). **Firmware** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
-unlock/milestone → pause Switch → speed upgrade / Compression, Overflow mode, Buy max). More (Manual, Releases, Settings) is always available — even
+unlock/milestone → pause Switch → speed upgrade / Speed bonus, Sleep mode cap (4 h + 4 h per PP level), Compression, Cache Warm (20 PP), Overflow mode, Buy max (2 PP)). More (Manual, Releases, Settings) is always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
 production bundle; `yarn build:dev` builds a Dev-Mode-enabled variant published at `/tens/dev/` (own `dev:`-prefixed saves, no backward-compat); see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
@@ -187,7 +187,7 @@ omitted; do not guess at any of it.** See `CLAUDE.md`'s "Economy model"/"Archite
 `ComputePage`, and check `docs/DESIGN_HISTORY.md` first if changing a formula/gate a past iteration may
 already have tried and rejected.
 
-After **100 lifetime Purges**, production no longer freezes at 1 Googol Bytes (optional Prestige
+Once Overflow mode unlocks (Auto Purge interval ≤ 1 s), production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Compression
 upgrades on Firmware → Prestige. Production speed bonus is a one-time 1 PP Firmware → Prestige purchase (×1.1 at 1 Purge, then ×(1 + log10 Purges): ×2 at 10, ×3 at 100, ×4 at 1,000), the PP tutorial — see `docs/ECONOMY_REFERENCE.md`.
 

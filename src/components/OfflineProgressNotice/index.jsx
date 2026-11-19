@@ -134,7 +134,7 @@ const OfflineProgressNotice = ({
   const canWatchForBonus = Boolean(claimOfflineAdReward)
     && monetization.adsAvailable
     && !offlineProgress.rewardClaimed
-    && getOfflineRewardBonusSeconds(offlineProgress.elapsedRealSeconds) > 0
+    && getOfflineRewardBonusSeconds(offlineProgress.elapsedRealSeconds, offlineProgress.capSeconds) > 0
 
   const watchForBonus = async () => {
     const summary = offlineProgress
