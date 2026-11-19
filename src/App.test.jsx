@@ -5378,7 +5378,7 @@ describe('Compute auto-charge automation', () => {
     openBoosters()
 
     const autoButton = screen.getByRole('button', { name: /unlock the charger for cells into batteries/i })
-    expect(autoButton).toHaveTextContent('🔓 Charger 🔗 6/10')
+    expect(autoButton).toHaveTextContent('🔓 6/10')
     expect(autoButton).toBeDisabled() // below the 10-unit unlock cost
   })
 

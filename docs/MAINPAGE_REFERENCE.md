@@ -471,7 +471,15 @@ live inside the selected tier):
 
    - **Before unlocked:** just a `StatusText` line with the current `intro.computeCores`/
      `intro.computeNodes` counts as two symbol-prefixed fractions (`"⬡ N/10 · 🔗 N/10"`).
-   - **Once unlocked:** TWO rows per compute-ladder entity Cell through Fusion (issues
+   - **Once unlocked (layout since #1141 — supersedes the "Row 2" placement below):** a vertical
+     **merge chain**. Each tier is one node (`TierBlock`): `TierSelectButton` (marker, symbol, label +
+     `→ <boosted tiers>` hint, then 10 small `NormalSlot` circles for held count) with the node's Charger
+     on the same line (`NodeSide`: the 8-slot `ReserveSlotsRow` once unlocked, else a compact
+     `🔓 <held>/10` unlock button, same aria-label). Between a tier and the next sits a dashed
+     `Connector` carrying that boundary's merge button (`TierActionButton`: `<sym> 8→1 <next sym>`
+     before the Charger, `⚡ Charge` after; same aria-labels), shown under the same `showDetail` rule,
+     else a small gap. Only the selected node shows the 3 presets (no "Boosts …" caption there — the
+     header hint already says it). Originally: TWO rows per compute-ladder entity Cell through Fusion (issues
      #321/#326), each pair wrapped in a `TierBlock` inside a `TierBlocksGroup`
      (`aria-label="compute entities"`), driven off an `ENTITY_ROWS` array (10 entries, in the same
      Cell-through-Fusion order `COMPUTE_BOOST_TIER_FIELDS` in `layers.js` uses, so a row's
@@ -1187,3 +1195,8 @@ labelled row (size once, with unit, then an unlabeled strip; read cache above it
 the disks it fills), cache blocks are thin flat rectangles, disks are ≤`2rem` accent-tinted circles, and the
 lake's buffer / transfer pills became a caption over a full-width `ThinProgressBar` (the lake header keeps
 its thin bar when expanded). Headers, collapsed pools, Data Stream, Provision Disk and Reformat are unchanged.
+
+### Power merge chain (#1141)
+
+See the "Once unlocked" bullet under **Power page**: nodes with held-count dots and their Charger on the
+header line, 8→1 / ⚡ Charge on a dashed connector to the next tier, presets only on the selected node.
