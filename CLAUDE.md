@@ -17,7 +17,7 @@ until Storage's own capacity threshold is reached — never again after that, pe
 tabs — one row per automation spanning unlock → pause → speed; Compression, Overflow mode, Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
-second-level tabs). More (Manual / Releases / Settings) is always available, including during the
+second-level tabs). More (Manual / Milestones / Settings) is always available, including during the
 Byte Foundry gate; only Factory stays progress-gated. A third More entry, **Dev Mode**
 (`DevModePage`), renders only in a dev build (`import.meta.env.DEV`) — see "Dev Mode".
 
@@ -423,7 +423,7 @@ src/
   components/             ← prop contracts/styling: docs/COMPONENTS_REFERENCE.md (Button, Money, StatCard, ...)
     AppNav                ← fixed bottom bar Foundry → Power → Compute → Factory → Firmware → Challenges → More; Factory omitted
                             during the Foundry gate; attention dots via navAttention.js
-    AppMenu               ← More sheet — Manual / Releases / Settings (always reachable; Reset / Reformat Byte
+    AppMenu               ← More sheet — Manual / Milestones / Settings (always reachable; Reset / Reformat Byte
                             Foundry only in Settings → Danger zone)
     Button (`.jsx`)       ← semantic `variant` prop → theme tokens; deprecated raw `color` still supported
     DiskArrayRow          ← one Disk array's status `{ actions, size, state }`; only click = empty write-cache-size
@@ -558,15 +558,17 @@ Strict three-layer separation:
 5. **`InfoPage/index.jsx`** — a static Manual page holding every mechanic's evergreen explanation in
    short bullets/sub-headings (what used to be MainPage's click-to-expand `InfoDetails` disclosures —
    Overview, Byte Foundry, Storage, Power, Compute (Flops), Clock Speed, Scale Up, Overclock, Tier
-   Autobuyers, Releases, Prestige, Sleep mode, Reboot). Numbers come from the same `engine.js`/`layers.js`
+   Autobuyers, Milestones, Prestige, Sleep mode, Reboot). Numbers come from the same `engine.js`/`layers.js`
    constants the game uses, so they can't drift. Reads no `useIncrementalGame` state — only pure
    constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
    import) — the **only** in-app version surface. Reached via AppNav → More → Manual.
-6. **`MilestonesPage/index.jsx`** — Releases / Reboot status screen (autobuyer unlock
-   milestones live once, on Firmware → Automation — not repeated here). Releases: v1.0 The first Kilobyte, v2.0 Go Googol, v3.0 Open
-   Compute, v4.0 DeGoogoled, v5.0 First Reboot. Reached via AppNav → More (`page = 'milestones'`); always
+6. **`MilestonesPage/index.jsx`** — Milestones / Reboot status screen (autobuyer unlock
+   milestones live once, on Firmware → Automation — not repeated here). A timeline with no version numbers:
+   The first Kilobyte, Go Googol, Open Compute, DeGoogoled, First Reboot; then one Reboots · Kernels line. Reached via AppNav → More (`page = 'milestones'`); always
    reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
-7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
+7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`), laid out as a
+    grouped list (`SettingsGroup.jsx`: Game / Data / Display / Danger zone captions; each `SettingsItem` row shows its
+    key value and expands its section in place, aria-label `"<name> settings"`; Theme is an inline control):
     Supporter pack (unlock code / dummy checkout), Cloud save (`CloudSaveSection.jsx`, only when
     `CLOUD_SAVE_ENABLED`: sign-in, upload/download, Delete account and data), Backup / Restore
     (`ManualSaveSection.jsx`, always: copy/download/paste/file → `applyCloudSave`), Store
@@ -579,7 +581,7 @@ Strict three-layer separation:
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
     aside from local form state.
 8. **`DevModePage/index.jsx`** — dev-build-only sandbox, see "Dev Mode". Reached via AppNav → More
-   (`page = 'dev'`), gate-exempt like Settings/Releases. Takes `{ game }`.
+   (`page = 'dev'`), gate-exempt like Settings/Milestones. Takes `{ game }`.
 
 ## Dev Mode
 
@@ -620,7 +622,7 @@ State `daily` (`runs[formatId]`, `results[dateId][formatId]`) survives every res
 
 ### Tiers, Prestige, Reboot (Era ascension)
 
-**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Charger = a tier's 8-slot reserve row (bottom row, `getComputeReserveHeld`); Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Flush Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Releases = page id `'milestones'`; System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
+**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Charger = a tier's 8-slot reserve row (bottom row, `getComputeReserveHeld`); Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Flush Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Milestones = page id `'milestones'` (renamed back from Releases, #1143); System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
 
 **Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Purge, Reboot,
 Reformat Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Purge** (formerly the name Reboot, now the Era-ascension layer) and

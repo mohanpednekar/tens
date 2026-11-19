@@ -12,7 +12,7 @@ Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open by
 **Compute** (`open compute`, page id `'compute'`, once `isComputeFlopsPageRevealed`) →
 **Factory** (`open byte factory`, page id `'game'`, only once `mainGameUnlocked`) → **Firmware**
 (`open firmware`, once first Prestige/Reboot) → **More** (`open more menu`, always — opens `AppMenu`,
-which holds Manual / Releases / Settings). Storage is
+which holds Manual / Milestones / Settings). Storage is
 **not** a top-level item — it lives under Foundry as continuous Data Stream + Disk sections on the
 same screen.
 Active item uses `aria-current="page"` plus accent/surface styling from theme tokens. Exports

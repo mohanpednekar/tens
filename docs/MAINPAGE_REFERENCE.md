@@ -11,7 +11,7 @@ deliberately purely game — live controls, numbers, and status text only. Every
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Manual"), reachable via AppNav's Manual
 item; see CLAUDE.md's Architecture section for the split. Top-level page switching lives in
-`App.jsx`'s shared `components/AppNav` (Foundry → Power → Compute → Factory → Firmware → More; Manual / Releases / Settings in More) — pages
+`App.jsx`'s shared `components/AppNav` (Foundry → Power → Compute → Factory → Firmware → More; Manual / Milestones / Settings in More) — pages
 themselves take `{ game }` only and carry no Back / open-* navigation props. Storage is not a
 top-level AppNav item (continuous Foundry sections). `MainPage` is only
 ever rendered while the Byte Foundry gate isn't active — i.e. `state.intro.mainGameUnlocked` is
@@ -24,7 +24,7 @@ simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, acti
 view-tab system of its own. Unlike the old design, nothing here ever goes read-only — the page
 renders identically whether reached as the mandatory gate or voluntarily; AppNav
 omits Factory during the gate so there is still no escape hatch via the production screen
-(More — Manual / Releases / Settings — stays reachable).
+(More — Manual / Milestones / Settings — stays reachable).
 
 Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
 `docs/COMPONENTS_REFERENCE.md`), rendered right after the page title whenever the hook reports a
@@ -728,7 +728,7 @@ The row is display-only: an explicit **⚡ Charge** button beside it
 (`GlobalTickspeedCard`, `TierList`, `ScaleUpCard`, `OverclockCard`) — it no longer has a tab bar or any
 PP-spending control. Its sticky Money/PP balances stay; the speed-bonus breakdown points at "Firmware →
 Prestige" while the bonus is locked. Every PP purchase, every free autobuyer milestone, Buy max, and every
-automation pause toggle live on the separate **Firmware** page (below). Releases / Reboot status live on
+automation pause toggle live on the separate **Firmware** page (below). Milestones / Reboot status live on
 `MilestonesPage` (AppNav → More). Full-save Reset lives only under More → Settings → Danger zone.
 
 **Firmware page (`pages/PerksPage`).** Its own AppNav destination (page id `'perks'`, item `open firmware`, 🔧,
@@ -1107,7 +1107,7 @@ the Googol freeze" below.
 `App.jsx` switches screens via a local `page` `useState` (`'game'`/`'info'`/`'foundry'`/`'boosters'`/
 `'compute'`/`'perks'`/`'milestones'`/`'settings'`/`'dev'`, default `'game'`) — not a routing library —
 plus a shared fixed bottom `AppNav` (Foundry → Power → Compute → Factory → Firmware → More; Manual is in More) and
-`AppMenu` (More sheet → Manual / Releases / Settings / Dev Mode in dev builds). Legacy `page === 'storage'`
+`AppMenu` (More sheet → Manual / Milestones / Settings / Dev Mode in dev builds). Legacy `page === 'storage'`
 rewrites to `'foundry'`. Which screen renders is derived, not `page` directly:
 `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked || page === 'foundry')`.
 `GATE_EXEMPT_PAGES` = `'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`, so those
@@ -1166,3 +1166,17 @@ upgrades, then a tile grid once fully upgraded; Compute autobuyers as tiles.
 Two `SpeedCardsRow` pairs: `global clock speed panel` + `restage panel` (`RestageCard`, violet edge) above
 `TierList`, `scale up panel` + `overclock panel` below it. Each pair renders only its revealed cards; a lone
 card takes the full width. The PP strip (`purge points display`) stays, since it doubles as the Purge button.
+
+### Settings + Milestones (#1143)
+
+**Settings** is a grouped list (`SettingsPage/SettingsGroup.jsx`): uppercase captions (Game · Data · Display ·
+Danger zone) over inset groups. Each `SettingsItem` is a one-line `button` (`"<name> settings"`, `aria-expanded`):
+icon tile · name · key value (Supporter `Free`/`Unlocked`, Save slots = active slot name, Reboot = Kernels, System
+log / Task Manager `🔒` until Supporter) · `›`. Tapping expands the existing section (`supporter pack section`,
+`save slots section`, `reboot section`, …, `danger zone`) in place; the section's own h2 is visually hidden. Cloud
+save / Store rows appear only when their feature is on. Theme is an inline System / Light / Dark control
+(`theme preference`). Tests expand every entry via `expandSettingsSections()` in `App.test.jsx`.
+
+**Milestones** (`MilestonesPage`, More → `open milestones`, renamed back from Releases): one card with a
+vertical timeline (`milestones category`), one dot per milestone (aria-label `"<name> milestone reached|not yet
+reached"`, no version numbers), then one `reboot status` line: `⏻ N Reboots · N Kernels ·` eligibility badge.

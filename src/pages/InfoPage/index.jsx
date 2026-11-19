@@ -620,8 +620,8 @@ const InfoPage = () => {
         </ul>
       </Section>
 
-      <Section aria-label="releases section">
-        <h2>Releases</h2>
+      <Section aria-label="milestones section">
+        <h2>Milestones</h2>
         <ul>
           <li>
             <strong>Tier autobuyers:</strong> one tier every{' '}
@@ -634,7 +634,7 @@ const InfoPage = () => {
             {firstTierTickspeedAutobuyerMilestone}, then every{' '}
             {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP === 1 ? 'Purge' : `${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Purges`} after that.
           </li>
-          <li>More → Releases tracks your story releases (v1.0 … v5.0) and Reboot progress.</li>
+          <li>More → Milestones tracks your story milestones and Reboot progress.</li>
         </ul>
       </Section>
 
@@ -714,7 +714,7 @@ const InfoPage = () => {
             Ways to spend Kernels are coming in a later update.
           </li>
           <li>
-            Reboot from More → Settings → Reboot (asks for confirmation). More → Releases
+            Reboot from More → Settings → Reboot (asks for confirmation). More → Milestones
             shows your Reboots, Kernels and eligibility.
           </li>
           <li>

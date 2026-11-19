@@ -113,9 +113,16 @@ const seedMainGameState = (overrides = {}) => {
 
 // Reset lives only under Settings → Danger zone (More → Settings), never on MainPage or in the
 // More sheet itself. Tests that click Reset must open Settings first.
+// Settings is a grouped list of collapsed entries (#1143); tests expand every entry so each
+// section's controls are reachable exactly as before.
+const expandSettingsSections = () => {
+  for (const toggle of screen.queryAllByRole('button', { name: / settings$/i, expanded: false })) fireEvent.click(toggle)
+}
+
 const openSettings = async user => {
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expandSettingsSections()
 }
 
 
@@ -231,7 +238,7 @@ test('AppNav exposes accessibly-labeled Foundry, Manual, and More once unlocked'
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
 })
 
-test('More menu reaches Releases and Settings from any screen without progress gates', async () => {
+test('More menu reaches Milestones and Settings from any screen without progress gates', async () => {
   const user = userEvent.setup()
   render(<App />) // fresh gate — no mainGameUnlocked yet
 
@@ -243,12 +250,13 @@ test('More menu reaches Releases and Settings from any screen without progress g
   // Reset is not duplicated in the More sheet — only under Settings → Danger zone.
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
 
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /^releases$/i })).toBeInTheDocument()
-  expect(screen.getByLabelText(/releases category/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /^milestones$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/milestones category/i)).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expandSettingsSections()
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
@@ -421,6 +429,7 @@ test('Reset appears only in Settings → Danger zone, not on the Byte Factory sc
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /reformat byte foundry/i })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expandSettingsSections()
 
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
@@ -2331,7 +2340,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent(/2,?000 PP/)
 })
 
-test('no PP tabs or PP-based controls appear before the player has ever purged, even with an active autobuyer and unspent PP — Releases stays via More', async () => {
+test('no PP tabs or PP-based controls appear before the player has ever purged, even with an active autobuyer and unspent PP — Milestones stays via More', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
@@ -2342,10 +2351,10 @@ test('no PP tabs or PP-based controls appear before the player has ever purged, 
 
   expect(screen.queryByLabelText(/^purge points display$/i)).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
-  // Chapters (Releases) stays reachable pre-prestige via AppNav → More.
+  // Chapters (Milestones) stays reachable pre-prestige via AppNav → More.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
-  expect(screen.getByLabelText(/^releases page$/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
 })
 
 test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) prestige milestone is reached, independent of the unit-buying autobuyer', async () => {
@@ -2513,7 +2522,7 @@ test('the Firmware tab NavDots go dark once a tier is fully done and nothing els
   expect(screen.queryByLabelText(/perk available$/i)).not.toBeInTheDocument()
 })
 
-test('Releases is reachable via More both before and after the first prestige (unlike Firmware)', async () => {
+test('Milestones is reachable via More both before and after the first prestige (unlike Firmware)', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2525,8 +2534,8 @@ test('Releases is reachable via More both before and after the first prestige (u
   expect(screen.queryByRole('tab', { name: /open automation/i })).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
-  expect(screen.getByLabelText(/^releases page$/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
 })
 
 test('Firmware → Automation lists every tier\'s autobuyer/tier-tickspeed-autobuyer unlock milestone once, reflecting what\'s already unlocked', async () => {
@@ -2552,9 +2561,9 @@ test('Firmware → Automation lists every tier\'s autobuyer/tier-tickspeed-autob
   expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '3')
   expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '11')
 
-  // Releases no longer repeats these — it keeps only Chapters / Reboot.
+  // Milestones no longer repeats these — it keeps only Chapters / Reboot.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
   expect(screen.queryByLabelText(/autobuyer unlock milestones category$/i)).not.toBeInTheDocument()
   expect(screen.queryByLabelText(/^tier tickspeed autobuyer milestones category$/i)).not.toBeInTheDocument()
 })
@@ -5536,7 +5545,7 @@ test('the mandatory Byte Foundry gate (before mainGameUnlocked) blocks Factory b
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /open byte factory/i })).not.toBeInTheDocument()
-  // Utilities must not require progress — More (Manual / Releases / Settings) stays available.
+  // Utilities must not require progress — More (Manual / Milestones / Settings) stays available.
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
 })
@@ -5578,7 +5587,7 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry leaves Factor
   vi.useRealTimers()
 })
 
-// --- Chapters (Releases page) ---
+// --- Chapters (Milestones page) ---
 // Chapter rows read intro.mainGameUnlocked, purge.count, computeFlops.pageUnlocked,
 // isOverflowModeUnlocked, and era.count — see CLAUDE.md / MAINPAGE_REFERENCE. "The first Kilobyte"
 // is always ✅ once this view is reachable; Go Googol varies with purge.count; separate tests cover
@@ -5596,14 +5605,13 @@ test.each([
   })
   render(<App />)
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
 
-  expect(screen.getByLabelText(/^releases category$/i)).toBeInTheDocument()
-  const firstKilobyteRow = screen.getByLabelText(/^v1.0 the first kilobyte release$/i)
-  expect(firstKilobyteRow).toHaveTextContent('✅')
-
-  const goGoogolRow = screen.getByLabelText(/^v2.0 go googol release$/i)
-  expect(goGoogolRow).toHaveTextContent(reached ? '✅' : '🔒')
+  expect(screen.getByLabelText(/^milestones category$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^the first kilobyte milestone reached$/i)).toHaveTextContent('The first Kilobyte')
+  expect(screen.getByLabelText(reached ? /^go googol milestone reached$/i : /^go googol milestone not yet reached$/i)).toBeInTheDocument()
+  // No version numbers on the timeline (#1143).
+  expect(screen.getByLabelText(/^milestones category$/i)).not.toHaveTextContent(/v\d\.0/)
 })
 
 test('Chapters track Compute, DeGoogol, and Era milestones', async () => {
@@ -5617,11 +5625,11 @@ test('Chapters track Compute, DeGoogol, and Era milestones', async () => {
   })
   render(<App />)
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
 
-  expect(screen.getByLabelText(/^v3.0 open compute release$/i)).toHaveTextContent('✅')
-  expect(screen.getByLabelText(/^v4.0 degoogoled release$/i)).toHaveTextContent('✅')
-  expect(screen.getByLabelText(/^v5.0 first reboot release$/i)).toHaveTextContent('✅')
+  expect(screen.getByLabelText(/^open compute milestone reached$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^degoogoled milestone reached$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^first reboot milestone reached$/i)).toBeInTheDocument()
   expect(screen.queryByLabelText(/^coming soon/i)).not.toBeInTheDocument()
 })
 
@@ -5691,8 +5699,8 @@ test('Settings Reboot confirms, resets Foundry assets, and keeps automation', as
   expect(saved.era.count).toBe(1)
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
-  expect(screen.getByLabelText(/^v5.0 first reboot release$/i)).toHaveTextContent('✅')
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  expect(screen.getByLabelText(/^first reboot milestone reached$/i)).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open byte foundry/i }))
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
@@ -5759,6 +5767,7 @@ test('Reboot survives a page reload', async () => {
   render(<App />)
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expandSettingsSections()
   expect(screen.getByLabelText(/^reboot section$/i)).toHaveTextContent('1 Kernel')
 })
 
