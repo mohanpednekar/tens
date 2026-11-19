@@ -9493,6 +9493,8 @@ already stored as `true` by an earlier load cannot be told apart from a purchase
 #1131 first targeted the newest pool unlocked by the disk chain (`getUnlockedStoragePoolCount`). In play, a later
 pool can hold disks (filling) while an earlier pool is still incomplete — e.g. a TB pool with 1 TB disks while the
 GB pool's 100 GB disk is still queued — and that chain pointed at Gigabytes. The maintainer's rule is the highest pool
-being filled, so `getCacheWarmTier` now picks the highest pool holding any disk (or the next once it is 9/9/9). It
-also no longer drops back after an earlier pool's Flush, since flushing clears only that pool's `disksBuiltTotal`.
+being filled — a pool fills (staging buffer) once Capacity makes it live, even before it has any disks — so
+`getCacheWarmTier` now uses `getVisibleStoragePoolCount` (Capacity-based pool liveness). A short-lived intermediate
+"highest pool holding a disk" rule was dropped before merge because the TB pool in question had only a read cache.
+Flushes and disk progress no longer move the target at all.
 

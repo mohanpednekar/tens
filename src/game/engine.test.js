@@ -7884,16 +7884,10 @@ describe('Cache Warm', () => {
     expect(applyCacheWarm(createInitialGameState())).toEqual(createInitialGameState())
   })
 
-  it('moves to the next pool once the highest pool with disks is fully built (pool 1 full → MB), revealing it', () => {
+  it('completes the target tier\'s level 1 for free, revealing it', () => {
     const tier02 = TIER_DEFINITIONS[1].id
-    const twoPools = withIntro({ ...createInitialGameState(), cacheWarmUnlocked: true }, {
-      disksBuiltTotal: {
-        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
-        [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP,
-        [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
-      },
-    })
-    expect(getCacheWarmTier(createInitialGameState()).id).toBe(kb) // no disks yet
+    const twoPools = withIntro({ ...createInitialGameState(), cacheWarmUnlocked: true }, { capacity: 8 * 1024 ** 2 })
+    expect(getCacheWarmTier(createInitialGameState()).id).toBe(kb) // only pool 1 live
     expect(getCacheWarmTier(twoPools).id).toBe(tier02)
     expect(isTierUnlocked(twoPools)(TIER_DEFINITIONS[1])).toBe(false)
     const warmed = applyCacheWarm(twoPools)
@@ -7904,15 +7898,12 @@ describe('Cache Warm', () => {
     expect(isTierUnlocked(warmed)(TIER_DEFINITIONS[1])).toBe(true)
   })
 
-  it('follows the highest pool holding disks, even when an earlier pool is incomplete', () => {
-    // GB pool (3) part-built, TB pool (4) holding a 1 TB disk → Terabytes, not Gigabytes.
-    const state = withIntro({ ...createInitialGameState(), cacheWarmUnlocked: true }, {
-      disksBuiltTotal: { [FIRST_DISK_SIZE * 1e6]: 9, [FIRST_DISK_SIZE * 1e7]: 9, [FIRST_DISK_SIZE * 1e9]: 1 },
-    })
+  it('follows the highest pool live by Capacity, even with no disks there and an earlier pool incomplete', () => {
+    // 4 TiB of Capacity makes the TB pool (4) live; no disks anywhere → Terabytes, not Kilobytes/Gigabytes.
+    const state = withIntro({ ...createInitialGameState(), cacheWarmUnlocked: true }, { capacity: 8 * 1024 ** 4 })
+    expect(getVisibleStoragePoolCount(state)).toBe(4)
     expect(getCacheWarmTier(state).id).toBe(TIER_DEFINITIONS[3].id)
-    // A disk under construction counts too.
-    const building = withIntro(createInitialGameState(), { diskBuild: { size: FIRST_DISK_SIZE * 1e3 } })
-    expect(getCacheWarmTier(building).id).toBe(TIER_DEFINITIONS[1].id)
+    expect(getCacheWarmTier(withIntro(state, { capacity: 8 * 1024 ** 3 })).id).toBe(TIER_DEFINITIONS[2].id)
   })
 
   it('re-applies after Scale Up and Overclock, and a refused one stays a same-reference no-op', () => {

@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Cache Warm** (20 PP, Firmware → ✦ Prestige): every Purge, Scale Up, Overclock, challenge exit and Reboot starts with level 1 already complete for the tier of your highest Storage pool being filled — the highest pool with disks (Terabytes once the TB pool has a disk, even if the GB pool is unfinished), or the next pool once that one is full.
+- **Cache Warm** (20 PP, Firmware → ✦ Prestige): every Purge, Scale Up, Overclock, challenge exit and Reboot starts with level 1 already complete for the tier of your highest Storage pool being filled (e.g. Terabytes once the TB pool is unlocked, even with no disks there yet and the GB pool unfinished).
 
 ### Changed
 
