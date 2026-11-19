@@ -957,7 +957,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </UpgradeRow>
         <UpgradeRow
           ariaLabel="cache warm upgrade"
-          details={`Every Purge, Scale Up, Overclock, challenge exit and Reboot starts with level 1 already complete, free, for the tier of the Storage pool you are currently building (now ${cacheWarmTier.name}). One-time purchase, permanent. Not applied inside challenges.`}
+          details={`Every Purge, Scale Up, Overclock, challenge exit and Reboot starts with level 1 already complete, free, for the tier of your highest unlocked Storage pool, disks or not (now ${cacheWarmTier.name}). One-time purchase, permanent. Not applied inside challenges.`}
           icon="🔥"
           name="Cache Warm"
           value={state.cacheWarmUnlocked ? `Runs start with ${cacheWarmTier.symbol} level 1 done` : `Start runs with ${cacheWarmTier.symbol} level 1 done`}
