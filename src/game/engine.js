@@ -1084,11 +1084,11 @@ export const buyCacheWarm = state => {
   })
 }
 
-// Cache Warm's target: the tier of the Storage pool currently being built — the newest unlocked pool,
-// which is always the incomplete one (pool N unlocks only once pool N − 1 is fully built; pool N ↔
-// tier N). Pool 1 is always unlocked, so Kilobytes at minimum; once every pool is built, the last tier.
+// Cache Warm's target: the tier of the highest Storage pool being filled — the highest pool live by Data
+// Stream Capacity (getVisibleStoragePoolCount; its staging buffer fills whether or not it has any disks
+// yet), pool N ↔ tier N. Independent of the disk-unlock chain: an earlier pool may still be incomplete.
 export const getCacheWarmTier = state =>
-  TIER_DEFINITIONS[Math.min(TIER_DEFINITIONS.length, Math.max(1, getUnlockedStoragePoolCount(state))) - 1]
+  TIER_DEFINITIONS[Math.min(TIER_DEFINITIONS.length, Math.max(1, getVisibleStoragePoolCount(state))) - 1]
 
 // Cache Warm: completes that tier's level 1 for free (no Bits spent) — the remaining units of the
 // level are credited as owned/purchased (which also reveals the tier) and it moves to level 2. Runs
