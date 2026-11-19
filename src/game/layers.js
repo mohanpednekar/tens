@@ -754,7 +754,7 @@ export const PLAYTIME_BONUS_UNLOCK_COST = 100
 // One-time PP unlock for Buy max mode (see engine.js's isBuyMaxUnlocked/buyBuyMaxUnlock).
 export const BUY_MAX_UNLOCK_COST = 2
 // One-time PP unlock for Cache Warm: every Purge, Scale Up, Overclock, challenge exit and Reboot starts with level 1 of
-// the tier of the Storage pool being built (the newest, incomplete pool) already complete, free. See engine.js's
+// the tier of the highest Storage pool being filled (highest pool with disks, or the next once it is full) already complete, free. See engine.js's
 // getCacheWarmTier/applyCacheWarm/buyCacheWarm.
 export const CACHE_WARM_UNLOCK_COST = 20
 export const PLAYTIME_BONUS_PER_HOUR = 0.01

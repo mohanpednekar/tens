@@ -1084,11 +1084,27 @@ export const buyCacheWarm = state => {
   })
 }
 
-// Cache Warm's target: the tier of the Storage pool currently being built — the newest unlocked pool,
-// which is always the incomplete one (pool N unlocks only once pool N − 1 is fully built; pool N ↔
-// tier N). Pool 1 is always unlocked, so Kilobytes at minimum; once every pool is built, the last tier.
-export const getCacheWarmTier = state =>
-  TIER_DEFINITIONS[Math.min(TIER_DEFINITIONS.length, Math.max(1, getUnlockedStoragePoolCount(state))) - 1]
+// Cache Warm's target: the tier of the highest Storage pool being filled — the highest pool holding any
+// provisioned disk (built, present or under construction), or the next pool once that one is fully built
+// (9/9/9), since the next pool is then the one being filled. Pool N ↔ tier N; Kilobytes when no pool has
+// a disk yet. Independent of the disk-unlock chain: a later pool can hold disks (e.g. after an earlier
+// pool's flush) while an earlier pool is incomplete, and the later one still gets the bonus.
+const poolHasAnyDisk = (state, poolIndex) => {
+  const intro = state.intro ?? {}
+  return getStoragePoolSizes(poolIndex).some(size =>
+    (intro.disksBuiltTotal?.[size] ?? 0) > 0 || (intro.disks?.[size] ?? 0) > 0 || intro.diskBuild?.size === size)
+}
+export const getCacheWarmTier = state => {
+  const poolCount = Math.min(getStoragePoolCount(), TIER_DEFINITIONS.length)
+  let pool = 1
+  for (let poolIndex = poolCount; poolIndex >= 1; poolIndex -= 1) {
+    if (poolHasAnyDisk(state, poolIndex)) {
+      pool = isStoragePoolFullyBuilt(state, poolIndex) && poolIndex < poolCount ? poolIndex + 1 : poolIndex
+      break
+    }
+  }
+  return TIER_DEFINITIONS[pool - 1]
+}
 
 // Cache Warm: completes that tier's level 1 for free (no Bits spent) — the remaining units of the
 // level are credited as owned/purchased (which also reveals the tier) and it moves to level 2. Runs

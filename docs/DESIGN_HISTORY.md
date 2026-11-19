@@ -9488,3 +9488,11 @@ the ≥10-Purge free speed bonus (`speedBonusGrandfathered`, now an inert field)
 latch (`PURGE_UNBOUNDED_MIN_COUNT`, removed — Overflow mode now latches only from the Auto Purge interval). A flag
 already stored as `true` by an earlier load cannot be told apart from a purchase, so those stay.
 
+### Cache Warm targets the highest pool being filled (2026-11-19)
+
+#1131 first targeted the newest pool unlocked by the disk chain (`getUnlockedStoragePoolCount`). In play, a later
+pool can hold disks (filling) while an earlier pool is still incomplete — e.g. a TB pool with 1 TB disks while the
+GB pool's 100 GB disk is still queued — and that chain pointed at Gigabytes. The maintainer's rule is the highest pool
+being filled, so `getCacheWarmTier` now picks the highest pool holding any disk (or the next once it is 9/9/9). It
+also no longer drops back after an earlier pool's Flush, since flushing clears only that pool's `disksBuiltTotal`.
+

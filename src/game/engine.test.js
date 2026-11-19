@@ -7884,7 +7884,7 @@ describe('Cache Warm', () => {
     expect(applyCacheWarm(createInitialGameState())).toEqual(createInitialGameState())
   })
 
-  it('targets the tier of the incomplete pool being built (pool 1 full → pool 2 / MB), revealing it', () => {
+  it('moves to the next pool once the highest pool with disks is fully built (pool 1 full → MB), revealing it', () => {
     const tier02 = TIER_DEFINITIONS[1].id
     const twoPools = withIntro({ ...createInitialGameState(), cacheWarmUnlocked: true }, {
       disksBuiltTotal: {
@@ -7893,9 +7893,7 @@ describe('Cache Warm', () => {
         [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
       },
     })
-    expect(getCacheWarmTier(createInitialGameState()).id).toBe(kb) // pool 1 still being built
-    expect(isStoragePoolUnlocked(twoPools, 2)).toBe(true)
-    expect(isStoragePoolUnlocked(twoPools, 3)).toBe(false) // pool 2 is the incomplete one
+    expect(getCacheWarmTier(createInitialGameState()).id).toBe(kb) // no disks yet
     expect(getCacheWarmTier(twoPools).id).toBe(tier02)
     expect(isTierUnlocked(twoPools)(TIER_DEFINITIONS[1])).toBe(false)
     const warmed = applyCacheWarm(twoPools)
@@ -7904,6 +7902,17 @@ describe('Cache Warm', () => {
     expect(warmed.purchaseLevels[kb]).toBe(1)
     expect(warmed.resources[MONEY_ID]).toBe(twoPools.resources[MONEY_ID])
     expect(isTierUnlocked(warmed)(TIER_DEFINITIONS[1])).toBe(true)
+  })
+
+  it('follows the highest pool holding disks, even when an earlier pool is incomplete', () => {
+    // GB pool (3) part-built, TB pool (4) holding a 1 TB disk → Terabytes, not Gigabytes.
+    const state = withIntro({ ...createInitialGameState(), cacheWarmUnlocked: true }, {
+      disksBuiltTotal: { [FIRST_DISK_SIZE * 1e6]: 9, [FIRST_DISK_SIZE * 1e7]: 9, [FIRST_DISK_SIZE * 1e9]: 1 },
+    })
+    expect(getCacheWarmTier(state).id).toBe(TIER_DEFINITIONS[3].id)
+    // A disk under construction counts too.
+    const building = withIntro(createInitialGameState(), { diskBuild: { size: FIRST_DISK_SIZE * 1e3 } })
+    expect(getCacheWarmTier(building).id).toBe(TIER_DEFINITIONS[1].id)
   })
 
   it('re-applies after Scale Up and Overclock, and a refused one stays a same-reference no-op', () => {
