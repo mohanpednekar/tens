@@ -7884,18 +7884,10 @@ describe('Cache Warm', () => {
     expect(applyCacheWarm(createInitialGameState())).toEqual(createInitialGameState())
   })
 
-  it('targets the tier of the incomplete pool being built (pool 1 full → pool 2 / MB), revealing it', () => {
+  it('completes the target tier\'s level 1 for free, revealing it', () => {
     const tier02 = TIER_DEFINITIONS[1].id
-    const twoPools = withIntro({ ...createInitialGameState(), cacheWarmUnlocked: true }, {
-      disksBuiltTotal: {
-        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
-        [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP,
-        [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
-      },
-    })
-    expect(getCacheWarmTier(createInitialGameState()).id).toBe(kb) // pool 1 still being built
-    expect(isStoragePoolUnlocked(twoPools, 2)).toBe(true)
-    expect(isStoragePoolUnlocked(twoPools, 3)).toBe(false) // pool 2 is the incomplete one
+    const twoPools = withIntro({ ...createInitialGameState(), cacheWarmUnlocked: true }, { capacity: 8 * 1024 ** 2 })
+    expect(getCacheWarmTier(createInitialGameState()).id).toBe(kb) // only pool 1 live
     expect(getCacheWarmTier(twoPools).id).toBe(tier02)
     expect(isTierUnlocked(twoPools)(TIER_DEFINITIONS[1])).toBe(false)
     const warmed = applyCacheWarm(twoPools)
@@ -7904,6 +7896,14 @@ describe('Cache Warm', () => {
     expect(warmed.purchaseLevels[kb]).toBe(1)
     expect(warmed.resources[MONEY_ID]).toBe(twoPools.resources[MONEY_ID])
     expect(isTierUnlocked(warmed)(TIER_DEFINITIONS[1])).toBe(true)
+  })
+
+  it('follows the highest pool live by Capacity, even with no disks there and an earlier pool incomplete', () => {
+    // 4 TiB of Capacity makes the TB pool (4) live; no disks anywhere → Terabytes, not Kilobytes/Gigabytes.
+    const state = withIntro({ ...createInitialGameState(), cacheWarmUnlocked: true }, { capacity: 8 * 1024 ** 4 })
+    expect(getVisibleStoragePoolCount(state)).toBe(4)
+    expect(getCacheWarmTier(state).id).toBe(TIER_DEFINITIONS[3].id)
+    expect(getCacheWarmTier(withIntro(state, { capacity: 8 * 1024 ** 3 })).id).toBe(TIER_DEFINITIONS[2].id)
   })
 
   it('re-applies after Scale Up and Overclock, and a refused one stays a same-reference no-op', () => {
