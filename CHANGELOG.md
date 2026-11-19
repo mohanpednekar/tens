@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Challenges are compact**: the Factory tab is a 5×5 grid of F1–F25 tiles (done / ready / locked at a glance, with a legend); tap a tile for its rule and Start in one panel below. The Daily tab is one row per format (objective, status, Start / Resume); tap the format for its conditions and Restart / Forfeit.
+- **Firmware automation is compact**: each tier autobuyer pair fits on one line under ⚙ Tickspeed / 🤖 Buy column headers, with its challenge or upgrade inline. Once every tier is fully upgraded the list becomes a 5×2 grid of pause toggles, and Compute autobuyers are a 5×2 grid too (🔒 R<n> until their Reboot).
+- **Compute (Flops) is compact**: each tier is one row like the Factory tiers (symbol, owned, boosted tier ×, PP Buy). Tap the symbol for its full name and effect.
 - **Firmware → ✦ Prestige rows are terse**: each upgrade shows a one-line summary (usually its value now → after buying); tap an upgrade's name for its description.
 - **Buy max is now a 2 PP Firmware upgrade** (Firmware → ✦ Prestige → Purchasing) instead of unlocking free at the first Purge. Existing saves must buy it too.
 - **No more free unlocks on load**: a save that never bought the Speed bonus no longer gets it for having 10+ Purges, and 100+ Purges no longer unlock Overflow mode by themselves (it needs Auto Purge at 1 s or faster).

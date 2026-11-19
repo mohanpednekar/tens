@@ -5651,7 +5651,7 @@ test('Compute autobuyer milestones list Era unlocks once Compute is revealed', a
 
   expect(screen.getByLabelText(/^compute autobuyers category$/i)).toBeInTheDocument()
   expect(within(screen.getByLabelText(/^Cores · KFlops autobuyer$/i)).getByLabelText("Cores (KFlops) autobuyer active")).toBeInTheDocument()
-  expect(screen.getByLabelText(/^Chips · MFlops autobuyer$/i)).toHaveTextContent('🔒 2')
+  expect(screen.getByLabelText(/^Chips · MFlops autobuyer$/i)).toHaveTextContent('🔒 R2')
 })
 
 test('Settings Reboot confirms, resets Foundry assets, and keeps automation', async () => {

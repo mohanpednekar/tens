@@ -24,6 +24,7 @@ const makeGame = state => ({ state, actions: new Proxy({}, { get: (target, key) 
 describe('Firmware Challenges tab', () => {
   it.each(CHALLENGE_DEFINITIONS.map(def => [def.id, def]))('%s lists code, target and codename once unlocked', (id, def) => {
     wrap(<ChallengesPage game={makeGame(owned())} />)
+    fireEvent.click(screen.getByRole('button', { name: `${id} ${def.codename}, ready` }))
     const row = screen.getByLabelText(`challenge ${id}`)
     expect(row.textContent).toContain(`${id} · ${def.target} · ${def.codename}`)
     expect(row.textContent).toContain(def.rule)
@@ -31,6 +32,9 @@ describe('Firmware Challenges tab', () => {
 
   it('hides codename and rule while locked and shows the unlock condition', () => {
     wrap(<ChallengesPage game={makeGame(createInitialGameState())} />)
+    const tile = screen.getByRole('button', { name: 'F21, locked' })
+    expect(tile.textContent).toBe('F21🔒 P40')
+    fireEvent.click(tile)
     const row = screen.getByLabelText('challenge F21')
     expect(row.textContent).toContain('Unlocks at Purge 40')
     expect(row.textContent).not.toContain('Base Clock')
@@ -39,6 +43,7 @@ describe('Firmware Challenges tab', () => {
   it('starts a challenge only after confirming', () => {
     const game = makeGame(owned())
     wrap(<ChallengesPage game={game} />)
+    fireEvent.click(screen.getByRole('button', { name: 'F21 Base Clock, ready' }))
     fireEvent.click(screen.getByRole('button', { name: /^Start challenge F21/ }))
     expect(game.actions.enterChallenge).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Start challenge' }))
@@ -47,6 +52,8 @@ describe('Firmware Challenges tab', () => {
 
   it('disables other start controls while a challenge is active', () => {
     wrap(<ChallengesPage game={makeGame(enterChallenge('F21')(owned()))} />)
+    expect(screen.getByRole('button', { name: 'F21 Base Clock, active' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'F22 Scale Out, ready' }))
     expect(screen.getByRole('button', { name: /^Start challenge F22/ })).toBeDisabled()
   })
 })
@@ -68,10 +75,10 @@ describe('Factory challenge banner', () => {
 })
 
 describe('Challenges → Factory tab Exit', () => {
-  it('shows a confirm-guarded Exit on the active challenge row only', () => {
+  it('opens the active challenge in the detail panel with a confirm-guarded Exit', () => {
     const game = makeGame(enterChallenge('F25')(owned()))
     wrap(<ChallengesPage game={game} />)
-    expect(screen.queryByLabelText('challenge F24')?.querySelector('button[aria-label^="Exit challenge"]')).toBeNull()
+    expect(screen.queryByLabelText('challenge F24')).toBeNull()
     fireEvent.click(within(screen.getByLabelText('challenge F25')).getByRole('button', { name: /^Exit challenge F25/ }))
     expect(game.actions.exitChallenge).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Exit challenge' }))

@@ -745,17 +745,23 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   automation is a single line, label + Switch, nothing else (its interval moves to the cell's `title`).
   Before the cap the head also carries a terse inline interval (`InlineMeta`, `formatIntervalShort`:
   `64s`, `2.9s`, `212ms`; a tier autobuyer at the 10 ms floor shows only its bulk `×N`, up to 1024) —
-  never its own line — and (tier / Flops cells) the cell grows one line downward for a full-width ⏫ speed upgrade (visible text is the cost only — the
-  doubling to `M/buy` is in its `aria-label`/`title`; every tier autobuyer chain starts at 10 PP, every
-  tier tickspeed autobuyer chain at 100 PP). Locked: a 🔒
+  never its own line — and the ⏫ speed upgrade or 🏁/🔒 challenge chip sits at the end of the head line
+  (`inlineAction`; tier cells shrink it via `InlineAction $narrow`), dropping below only when it doesn't
+  fit (visible text is the cost only — the doubling to `M/buy` is in its `aria-label`/`title`; every tier
+  autobuyer chain starts at 10 PP, every tier tickspeed autobuyer chain at 100 PP). Locked: a 🔒
   `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) — every automation (global, tier, tier tickspeed) unlocks by Purge count; there is no PP unlock button. The Switch (`aria-pressed`, `aria-label`
   e.g. `"Auto Scale Up automation"`, `"<tier>'s autobuyer"`) sits at the head's right; the status is
   `"<name> active|paused"` (`role="img"`). Tier autobuyers: one `TierPair` card per tier (`aria-label="<tier> automation"`, the tier's Factory
-  accent stripe, grid `1.9rem | 1fr | 1fr`) = tier symbol, then the ⚙ tickspeed autobuyer half (left — where the
-  Factory row's tickspeed button sits) and the 🤖 autobuyer half (right — where Buy sits); each half is a
-  `bare` `$narrow` `AutomationRow`, so with both capped a tier is one line. Flops cells are `$narrow`
-  (`minmax(4.75rem, 1fr)` → three-up at 320px; label = tier **symbol** `KB`/`MF`, full name hidden +
-  `title`; 0.88em font, Switch `zoom: 0.85`, button glyph hidden and the cost wraps instead of ellipsizing); global cells are
+  accent stripe, grid `1.8rem | 1fr | 1fr`) under a `TierTableHead` (`Tier · ⚙ Tickspeed · 🤖 Buy`, aria-hidden) =
+  tier symbol, then the tickspeed autobuyer half (left — where the Factory row's tickspeed button sits) and the
+  autobuyer half (right — where Buy sits); each half is an icon-less `bare` `$narrow` `inlineAction`
+  `AutomationRow` (the header names the column; the status stays as a hidden `role="img"`), so a tier is one line
+  at 430px. Once **every** tier's two autobuyers are owned, fully upgraded and challenge-free
+  (`tierAutomationFullyUpgraded`), the table becomes a 5-up `TileGrid` (`tier autobuyer tiles`): one `Tile` per
+  tier (`"<tier> automation"`) = accent-coloured symbol + two `TileToggle`s ⚙ / 🤖 (same `aria-label`s and
+  `aria-pressed` as the Switches, dot = on/paused). *Compute Autobuyers* is always that tile grid
+  (`compute autobuyer tiles`): owned tiles show a `TileToggle` (`on`/`paused`, aria-label
+  `"<Name> (<Output>) autobuyer"`), locked tiles a `MilestoneBadge` rendered `🔒 R<n>` (Reboot). Global cells are
   `minmax(15rem, 1fr)` (one per row on a phone, two-up wider) and pass `inlineAction`, so their
   upgrade/unlock button (glyph hidden, colour-coded) ends the head line — one line whenever it fits; the
   head wraps (`CellHead $wrap`) so a very long cost drops the button to its own line rather than
@@ -775,7 +781,7 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   one-line summary where a before/after reads poorly (Buy max, Overflow mode, Cache Warm). All explanatory text lives only in the description.
 Firmware never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
 labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol
-once, its halves a ⚙/🤖 icon; Flops cells show the tier symbol (their category heading names the kind). Every automation is named
+once (halves icon-less under the column header); Flops tiles show the tier symbol (their category heading names the kind). Every automation is named
 `Auto <feature>` (no hyphen) in every accessible name; on Firmware the *visible* global/Booster label drops
 the redundant `Auto` (`Speed Up`, `Restage`, …, `Boost`) since the category heading already says it. Factory's Clock Speed / Scale Up / Overclock cards share
 `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem heading); Factory carries no
@@ -1112,3 +1118,45 @@ is PERMANENT (`latchMainGameUnlocked` in `engine.js`; never reset by a real Pres
 so `!intro.mainGameUnlocked` is true only on a save's very first cycle. `page` is independent of it, so
 no syncing effect is needed: the gate resolving just reveals whatever `page` already was (typically
 `'game'`).
+
+## Compact screen layouts (epic #1135)
+
+Each screen got its own compact layout (not one shared style) following the Factory tier-row ideas:
+an item reads at a glance, values/buttons line up, details open only from the item's name, no prose on
+the screen.
+
+### Compute (Flops) — `ComputeFlopsPage` (#1138)
+
+One `TierRow` per Flops tier in the Factory tier-row look: 3px tier-accent left stripe
+(`theme.tierAccents`), grid areas `'name boost buy' / 'details details details'`, Buy in a fixed
+`9rem` track (`7.9rem` below `40rem`, `7.3rem` below `24.5rem`). Name cell = `TierSymbol` (`KF`…`QF`,
+`role="button"`, aria-label `"<Name> (<Output>) details"`, the only details toggle) + owned count;
+boost cell = `"<Factory symbol> ×<multiplier, 2dp>"`, right-aligned and muted; details = name, output,
+per-unit rate and the 4dp multiplier. Buy keeps its aria-label
+(`buy <Name> (<Output>) for <cost> Purge Points`) and uses `variant="success"`.
+
+### Challenges — `ChallengesPage` Factory / Daily tabs (#1139)
+
+**🏁 Factory** (`FactoryTab.jsx`): a legend (`● done N · ● ready N · ● locked N`, ready counts the
+active one too), then a 5-column grid (`factory challenge tiles`) of one `<button>` tile per live
+challenge in registry order (F1–F10 tier autobuyers, F11–F20 tier tickspeed, F21–F25 global). Tile =
+`F<n>` + one status line: `✓<best>` (good), the target tag `getChallengeTag` (tier symbol, `⚙`-prefixed
+for tickspeed, or the automation glyph 🌐⏩🧬🚀✦) when ready (warn border), `active` (warn fill), or
+`🔒 P<unlock Purge>` (faded). Tile aria-label `"F<n> <Codename>, ready|completed|active"` (locked:
+`"F<n>, locked"` — no codename), `aria-pressed` on the selected one. One detail panel
+(`challenge F<n>`) under the grid shows the selected tile (default: the active challenge, else the
+first ready one): full title + rule (or the unlock condition), then Start / Repeat (same aria-labels as
+before) or the shared `ChallengeExitButton`.
+
+**📅 Daily** (`DailyTab.jsx`): a one-line header (date · `daily credits`), then one row per format
+(`daily <id>`, Factory tier-row look with a per-format accent): format id label (`role="button"`,
+`"<10 minutes|1 hour|10 hours> details"`, the only details toggle), objective in bold + status (time
+left while running, outcome / best once played), and one action in a fixed track — `open daily <id>`
+(▶ Resume) while running, else `start|replay daily <id>`. A running row adds a thin progress bar. The
+details hold `daily <id> conditions` and, while running, `restart daily <id>` / `forfeit daily <id>`
+(confirm-guarded as before). `RunView` is unchanged.
+
+### Firmware → Automation (#1140)
+
+See the 🤖 Automation bullet above: one-line global rows, a headed tier table with inline challenge chips /
+upgrades, then a tile grid once fully upgraded; Compute autobuyers as tiles.

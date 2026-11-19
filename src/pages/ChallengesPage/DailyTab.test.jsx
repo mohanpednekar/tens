@@ -40,6 +40,8 @@ describe('Firmware Daily tab', () => {
     expect(def.conditions.length).toBeGreaterThan(0)
     wrap(<ChallengesPage game={makeGame(startDailyRun('1h', Date.now())(base()))} />)
     fireEvent.click(screen.getByRole('tab', { name: 'open daily challenges' }))
+    expect(screen.queryByLabelText('daily 10m conditions')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '10 minutes details' }))
     expect(screen.getByLabelText('daily 10m conditions').textContent).toBe(describeDailyChallenge(def))
     expect(screen.getByLabelText('daily 10m conditions').textContent).toContain(def.conditions[0])
     fireEvent.click(screen.getByRole('button', { name: 'open daily 1h' }))
@@ -67,11 +69,14 @@ describe('Firmware Daily tab', () => {
     expect(screen.getByLabelText('daily run attempt mark').textContent).toContain('Counts as attempted from:')
   })
 
-  it('shows a running card with Open / Restart / Forfeit and confirm-guards Forfeit', () => {
+  it('shows a running row with Resume, Restart / Forfeit behind its label, and confirm-guards Forfeit', () => {
     const state = startDailyRun('10m', Date.now())(base())
     const game = makeGame(state)
     wrap(<ChallengesPage game={game} />)
     fireEvent.click(screen.getByRole('tab', { name: 'open daily challenges' }))
+    expect(screen.queryByRole('button', { name: 'forfeit daily 10m' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '10 minutes details' }))
+    expect(screen.getByRole('button', { name: 'restart daily 10m' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'forfeit daily 10m' }))
     expect(game.actions.dailyForfeit).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Forfeit' }))
