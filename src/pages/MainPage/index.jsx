@@ -155,12 +155,13 @@ const TierLine = styled(StatCard)`
   }
 `
 
-// Feature cards share one shape: neutral border, a 3px left accent stripe (same treatment as the
-// tier rows' stripe), compact padding and a 1rem heading — previously each card had its own
+// Feature cards share one shape: neutral border, a 3px top accent edge (they sit in side-by-side pairs),
+// compact padding and a 1rem heading — previously each card had its own
 // full-border hue and Clock Speed had a much larger heading/padding than its siblings.
 const featureCard = accent => css`
-  border-left: 3px solid ${accent};
+  border-top: 3px solid ${accent};
   gap: 0.4rem;
+  justify-content: space-between;
   padding: 0.6rem 0.75rem;
 
   h2 {
@@ -217,6 +218,10 @@ const GlobalTickspeedCard = styled(StatCard)`
   ${featureCard('#1d4ed8')}
 `
 
+const RestageCard = styled(StatCard)`
+  ${featureCard('#8b5cf6')}
+`
+
 const OverclockCard = styled(StatCard)`
   ${featureCard('#c2410c')}
 `
@@ -232,9 +237,8 @@ const OverclockButton = styled(Button)`
   }
 `
 
-// Every feature card (Clock Speed above the tier list; Restage, Scale Up, Overclock below it) gets its
-// own full-width SpeedCardsRow, so their title + effect chips line up consistently. Supersedes the
-// earlier side-by-side pairs — see docs/DESIGN_HISTORY.md.
+// Feature cards sit in two side-by-side pairs (#1137): Clock Speed + Restage above the tier list, Scale
+// Up + Overclock below it. A lone card in a pair takes the full width (flex: 1 1 0).
 const SpeedCardsRow = styled.div`
   display: flex;
   gap: 0.4rem;
@@ -1349,8 +1353,9 @@ const MainPage = ({ game }) => {
       </StickyBalances>
 
 
-      {globalTickspeedCardEverRevealed && (
+      {(globalTickspeedCardEverRevealed || isLastTierXpUnlocked) && (
       <SpeedCardsRow>
+        {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global clock speed panel">
           <Disclosure>
             <summary>
@@ -1399,6 +1404,53 @@ const MainPage = ({ game }) => {
             />
           </Button>
         </GlobalTickspeedCard>
+        )}
+        {isLastTierXpUnlocked && (
+          <RestageCard aria-label="restage panel">
+            <Disclosure>
+              <summary>
+                <CardTitleGroup>
+                  <h2>Restage</h2>
+                  <CardEffect
+                    title={`Each XP consumed makes ${lastTier.name} ticks faster by this factor (compounding)`}
+                    onClick={event => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                    }}
+                  >
+                    {lastTier.symbol} +{formatBonusPercent(getLastTierXpTickspeedMultiplier(1))}%/XP
+                  </CardEffect>
+                </CardTitleGroup>
+              </summary>
+              <MutedText>
+                {formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpConsumed), { precise: true })} faster {lastTier.name} ticks
+                {' '}from {formatAmount(lastTierXpConsumed)} XP consumed. Next consumption needs at least {formatAmount(lastTierXpMinConsumption)} XP.
+              </MutedText>
+            </Disclosure>
+            <Button
+              aria-label={`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)${challengeDisabled('restageDisabled') ? challengeNote : ''}`}
+              variant="smart"
+              disabled={!canConsumeLastTierXp}
+              onClick={handleConsumeLastTierXp}
+              title={lastTierOwned > 0
+                ? `Consume XP for a compounding +1% ${lastTier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`
+                : `No ${lastTier.name} owned right now — nothing to speed up, so this stays disabled until you own at least one again`}
+              type="button"
+              $progress={lastTierXpProgressPercent}
+              $pulse={canConsumeLastTierXp}
+            >
+              <ButtonIcon>🧬 </ButtonIcon>
+              <ButtonLabel>{formatAmount(lastTierXpBalance)} XP</ButtonLabel>
+              <VisuallyHidden
+                role="progressbar"
+                aria-label={`${lastTier.name} Restage progress`}
+                aria-valuenow={lastTierXpProgressPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              />
+            </Button>
+          </RestageCard>
+        )}
       </SpeedCardsRow>
       )}
 
@@ -1593,54 +1645,6 @@ const MainPage = ({ game }) => {
         })}
       </TierList>
 
-      {isLastTierXpUnlocked && (
-      <SpeedCardsRow>
-        <GlobalTickspeedCard aria-label="restage panel">
-          <Disclosure>
-            <summary>
-              <CardTitleGroup>
-                <h2>Restage</h2>
-                <CardEffect
-                  title={`Each XP consumed makes ${lastTier.name} ticks faster by this factor (compounding)`}
-                  onClick={event => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                  }}
-                >
-                  {lastTier.symbol} +{formatBonusPercent(getLastTierXpTickspeedMultiplier(1))}%/XP
-                </CardEffect>
-              </CardTitleGroup>
-            </summary>
-            <MutedText>
-              {formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpConsumed), { precise: true })} faster {lastTier.name} ticks
-              {' '}from {formatAmount(lastTierXpConsumed)} XP consumed. Next consumption needs at least {formatAmount(lastTierXpMinConsumption)} XP.
-            </MutedText>
-          </Disclosure>
-          <Button
-            aria-label={`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)${challengeDisabled('restageDisabled') ? challengeNote : ''}`}
-            variant="smart"
-            disabled={!canConsumeLastTierXp}
-            onClick={handleConsumeLastTierXp}
-            title={lastTierOwned > 0
-              ? `Consume XP for a compounding +1% ${lastTier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`
-              : `No ${lastTier.name} owned right now — nothing to speed up, so this stays disabled until you own at least one again`}
-            type="button"
-            $progress={lastTierXpProgressPercent}
-            $pulse={canConsumeLastTierXp}
-          >
-            <ButtonIcon>🧬 </ButtonIcon>
-            <ButtonLabel>{formatAmount(lastTierXpBalance)} XP</ButtonLabel>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label={`${lastTier.name} Restage progress`}
-              aria-valuenow={lastTierXpProgressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
-          </Button>
-        </GlobalTickspeedCard>
-      </SpeedCardsRow>
-      )}
 
       <SpeedCardsRow>
         <ScaleUpCard aria-label="scale up panel">
@@ -1687,10 +1691,7 @@ const MainPage = ({ game }) => {
           </ScaleUpButton>
         </ScaleUpCard>
 
-      </SpeedCardsRow>
-
-      {overclockEverRevealed && (
-      <SpeedCardsRow>
+        {overclockEverRevealed && (
         <OverclockCard aria-label="overclock panel">
           <Disclosure>
             <summary>
@@ -1735,8 +1736,8 @@ const MainPage = ({ game }) => {
             />
           </OverclockButton>
         </OverclockCard>
+        )}
       </SpeedCardsRow>
-      )}
 
     </RootDiv>
   )

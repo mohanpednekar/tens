@@ -1308,7 +1308,7 @@ test('the scale up and overclock panels render below the tier list, not above it
   expect(regions.indexOf('overclock panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('once the last tier has been a Scale Up target, a separate Restage panel appears left of Scale Up below the tier list, and the last tier keeps its own tickspeed button', () => {
+test('once the last tier has been a Scale Up target, a separate Restage panel appears beside Clock Speed above the tier list, and the last tier keeps its own tickspeed button', () => {
   seedMainGameState({
     resources: { base: 12345, tier10: 25 },
     owned: { tier09: 10, tier10: 25 },
@@ -1322,8 +1322,10 @@ test('once the last tier has been a Scale Up target, a separate Restage panel ap
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
   expect(regions).toContain('global clock speed panel')
   expect(regions.indexOf('global clock speed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
-  expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
-  expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('scale up panel'))
+  // Restage pairs with Clock Speed above the tier list (#1137); Scale Up pairs with Overclock below it.
+  expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('global clock speed panel'))
+  expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('scale up panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 
   const xpPanel = screen.getByLabelText(/^restage panel$/i)
   expect(xpPanel).toHaveTextContent('QB +1%/XP')

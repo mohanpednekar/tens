@@ -783,8 +783,8 @@ Firmware never shows level numbers (only intervals, `N/buy` and costs). Global-a
 labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol
 once (halves icon-less under the column header); Flops tiles show the tier symbol (their category heading names the kind). Every automation is named
 `Auto <feature>` (no hyphen) in every accessible name; on Firmware the *visible* global/Booster label drops
-the redundant `Auto` (`Speed Up`, `Restage`, …, `Boost`) since the category heading already says it. Factory's Clock Speed / Scale Up / Overclock cards share
-`featureCard(accent)` (neutral border + 3px left accent stripe, 1rem heading); Factory carries no
+the redundant `Auto` (`Speed Up`, `Restage`, …, `Boost`) since the category heading already says it. Factory's Clock Speed / Restage / Scale Up / Overclock cards share
+`featureCard(accent)` (neutral border + 3px top accent edge, 1rem heading, button pinned to the card bottom); Factory carries no
 "Auto" labels — automation status and toggles live only on Firmware.
 Tab dots: Automation `automation perk available` (`hasAffordableAutomationPerk`: an automation unlock
 or Auto Purge speed level), Prestige `prestige perk available` (`hasAffordablePrestigePerk`:
@@ -793,10 +793,10 @@ progress fill + hidden `role="progressbar"` (`PpPurchaseButton`); see "Accessibi
 
 **Global Tickspeed card (Factory view).** Unlike every other automation upgrade, this one is
 Money-funded (not PP-funded) and lives on the Factory view as its own `GlobalTickspeedCard`, rendered
-at the very top of the Factory view (alone in its own `SpeedCardsRow`; Restage now sits left of Scale Up below the tier list) — above `TierList`/tier 1, before anything else — since it's
+at the very top of the Factory view (sharing its `SpeedCardsRow` with `RestageCard` once Restage unlocks — #1137; Scale Up and Overclock share the row below the tier list) — above `TierList`/tier 1, before anything else — since it's
 relevant from the very start of a run, well before Overclock or Prestige are, or even the tier list
 itself — `ScaleUpCard` is likewise always shown (unlike `OverclockCard`, still gated on the last
-tier having ever been unlocked — see below), but stays down in its own row below `TierList` rather
+tier having ever been unlocked — see below), but stays down below `TierList` (paired with Overclock) rather
 than joining this card, since its own target walks through the tier ladder one tier at a time (see
 "Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
 through. Below `TierList`: `RestageCard` (once revealed), `ScaleUpCard` and `OverclockCard` each get their own full-width `SpeedCardsRow` (no side-by-side pairs). Clock Speed shows the live per-level bonus `🏭 +X%/lvl` (`getChallengeClockSpeedStep`: 1% scaled by Overclock, weakened by a challenge's `clockSpeedPower`, 0 under F21; Overclock's disclosure shows the same rate) and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock). `CardTitleGroup` wraps the name/effect onto a second line when a half-width card is too narrow (phone widths around 320px).
@@ -1160,3 +1160,9 @@ details hold `daily <id> conditions` and, while running, `restart daily <id>` / 
 
 See the 🤖 Automation bullet above: one-line global rows, a headed tier table with inline challenge chips /
 upgrades, then a tile grid once fully upgraded; Compute autobuyers as tiles.
+
+### Factory feature cards (#1137)
+
+Two `SpeedCardsRow` pairs: `global clock speed panel` + `restage panel` (`RestageCard`, violet edge) above
+`TierList`, `scale up panel` + `overclock panel` below it. Each pair renders only its revealed cards; a lone
+card takes the full width. The PP strip (`purge points display`) stays, since it doubles as the Purge button.
