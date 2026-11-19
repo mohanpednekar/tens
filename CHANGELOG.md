@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Factory feature cards sit in pairs**: Clock Speed and Restage side by side above the tiers, Scale Up and Overclock side by side below them (Restage moved up from below the tiers).
 - **Settings is a grouped list**: Game / Data / Display / Danger zone, each entry one line with its key value (e.g. your Kernels, the active save slot); tap an entry to open it. Theme is chosen inline.
 - **Releases is renamed back to Milestones** and shows a timeline of milestones without version numbers, with Reboots and Kernels on one line.
+- **Foundry disks are compact**: an open pool's disk and cache rows each state their size once (e.g. `1 Kb` cache, `1 KB` disks) instead of on every circle, cache blocks are thin bars, and a lake's buffer is a thin full-width bar. Everything else on the Foundry is unchanged.
 - **Compute (Flops) is compact**: each tier is one row like the Factory tiers (symbol, owned, boosted tier ×, PP Buy). Tap the symbol for its full name and effect.
 - **Firmware → ✦ Prestige rows are terse**: each upgrade shows a one-line summary (usually its value now → after buying); tap an upgrade's name for its description.
 - **Buy max is now a 2 PP Firmware upgrade** (Firmware → ✦ Prestige → Purchasing) instead of unlocking free at the first Purge. Existing saves must buy it too.

@@ -3785,7 +3785,8 @@ test('a collapsed pool still shows its Data Lake heading and action row', () => 
   expect(headerBar).toHaveAttribute('aria-valuemax', '100')
   expect(headerBar).toHaveAttribute('aria-valuenow', '50')
   fireEvent.click(within(pool1).getByRole('button', { name: /expand pool 1/i }))
-  expect(within(pool1).queryByRole('progressbar', { name: /KB lake fill progress/i })).not.toBeInTheDocument()
+  // Expanded, the lake header keeps its full-width thin bar (#1142).
+  expect(within(pool1).getByRole('progressbar', { name: /KB lake fill progress/i })).toBeInTheDocument()
 })
 
 test('a collapsed completed Data Lake header bar reads full, not empty', () => {
@@ -4299,8 +4300,8 @@ describe('Byte Foundry Storage', () => {
     const cacheGroup = screen.getByRole('group', { name: /^1 kb read cache$/i })
     expect(diskGroup).toBeInTheDocument()
     expect(cacheGroup).toBeInTheDocument()
-    expect(within(cacheGroup).getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(within(diskGroup).getAllByText('1').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(within(cacheGroup).getAllByLabelText(/^1 KB cache block \d+$/).length).toBe(DISK_CACHE_BLOCK_COUNT)
+    expect(within(diskGroup).getAllByLabelText(/1 KB disk/).length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/\/10 built/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
@@ -4314,23 +4315,24 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('group', { name: /^1 kb read cache$/i })).toBeInTheDocument()
   })
 
-  test('cache squares and disk circles carry bit-scale vs Byte-scale size labels inside each cell', () => {
+  test('cache and disk rows each state their size once, with its unit, beside an unlabeled strip (#1142)', () => {
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
     render(<App />)
 
-    // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits
-    // labeled "1 Kb" (bit-scale); each disk circle shows a bare "1" (no unit — the surrounding pool
-    // card already establishes the KB scale, see formatDiskSizeBare). Scoped to the disk/cache
-    // groups themselves (see the test above for why).
+    // currentBankSize is 8000 bits (a real "1 KB" disk) — its 8 cache blocks are 1000 bits each, so
+    // the cache row reads "1 Kb" (bit-scale) and the disk row "1 KB" (Byte-scale), once each, in the
+    // row label; the cells themselves carry no text.
     const diskGroup = screen.getByRole('group', { name: /^1 kb disks$/i })
     const cacheGroup = screen.getByRole('group', { name: /^1 kb read cache$/i })
-    expect(diskGroup).toBeInTheDocument()
-    expect(cacheGroup).toBeInTheDocument()
-    expect(within(cacheGroup).getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(within(diskGroup).getAllByText('1').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(cacheGroup.textContent).toBe('')
+    expect(diskGroup.textContent).toBe('')
+    expect(cacheGroup.previousElementSibling.textContent).toBe('1 Kb')
+    expect(diskGroup.previousElementSibling.textContent).toBe('1 KB')
+    // Read cache sits above the disks it feeds.
+    expect(cacheGroup.compareDocumentPosition(diskGroup) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  test('Foundry stacks multiple size arrays as continuous sections with in-cell size labels and no redeem ActionHint', () => {
+  test('Foundry stacks multiple size arrays as continuous sections with per-row size labels and no redeem ActionHint', () => {
     const size10kb = currentBankSize * 10
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
@@ -4345,12 +4347,12 @@ describe('Byte Foundry Storage', () => {
 
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
+    expect(screen.getAllByText('1 Kb').length).toBe(1)
     // Only the pool's smallest size (1 KB) ever shows a read cache — 10 KB fills exclusively via
     // write-cache ripple from below (see isDiskReadCacheEligible in engine.js).
     expect(screen.queryByRole('group', { name: /^10 kb read cache$/i })).not.toBeInTheDocument()
-    expect(within(screen.getByRole('group', { name: /^1 kb disks$/i })).getAllByText('1').length).toBe(DISK_ARRAY_LADDER_CAP)
-    expect(within(screen.getByRole('group', { name: /^10 kb disks$/i })).getAllByText('10').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(screen.getByRole('group', { name: /^1 kb disks$/i }).previousElementSibling.textContent).toBe('1 KB')
+    expect(screen.getByRole('group', { name: /^10 kb disks$/i }).previousElementSibling.textContent).toBe('10 KB')
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Disks —/)).not.toBeInTheDocument()

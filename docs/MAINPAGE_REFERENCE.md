@@ -139,7 +139,7 @@ separate `PoolSummaryButton` (toggling expand/collapse) ABOVE the balance tile i
 into it — folded together per player feedback that the two looked like disconnected pieces rather
 than one control. A still-earlier iteration also rendered a second, always-visible, non-interactive
 tile here showing that pool's Data Lake fill level as "`<symbol>` Lake · NN%" — removed as redundant
-with the equivalent live fill level `components/DataLakePanel`'s own `LakePoolTile` already shows
+with the equivalent live fill level `components/DataLakePanel`'s own buffer caption + thin bar (formerly `LakePoolTile`, #1142) already shows
 once the card is expanded (see below); the standalone copy only duplicated it a second time above
 the fold. Only once expanded does the card also render that pool's own `components/DiskArrayRow`s
 and its own `components/DataLakePanel` (`bare` mode) — see both below.
@@ -218,7 +218,7 @@ language `DiskArrayRow` uses for Storage's own Disks — showing every completed
 live left-to-right fill (`LakeSquareFill`, driven by `getDataLakeNextTransferTarget`/
 `getDataLakeFillBits`) on whichever ONE slot is actively filling right now; a hidden
 `role="progressbar"` (`aria-label="… lake deposits"`) still exposes the lake's overall
-deposited-units/capacity fraction for a11y. A dedicated `LakePoolTile` sits right below the header
+deposited-units/capacity fraction for a11y. The buffer caption + full-width thin bar (formerly a `LakePoolTile` pill, #1142) sits right below the header
 row, ALWAYS visible whenever an open slot exists, reading "`<fillBits>` / `<open slot size>`" once
 `isDataLakePoolReady` or a static "Locked · 0 / `<size>`" before that (deliberately keyed off
 `isDataLakePoolReady`, not the lake's `isDataLakeBoosterUnlocked`/unlock state, which can diverge
@@ -361,17 +361,16 @@ automatically now (`tickDiskPull`/`tickDiskLevelOneCachePull`), not through a pl
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
   array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Staging refills it continuously at 5× the pool's Bandwidth after a
   level-1 cache pull or new unlock (`tickDiskAutoFill`; a partly filled block shows its real fill); a full cache flushes to an empty disk over
-  one cache-block production duration when no tier claim blocks. Each block shows its bit-scale
-  size as an in-cell label and its own fill fraction only — a block reads **full** (`$full` — a
+  one cache-block production duration when no tier claim blocks. The row's size is labelled once, in
+  bit-scale (`1 Kb`), in the row's label column (#1142); each thin flat block shows only its own fill fraction — a block reads **full** (`$full` — a
   raised fill) once its own share of `intro.diskCache[size]` is filled, or shows a partial/flushing
   fill while a read-cache-to-disk flush is draining it. `aria-label` is the plain `"<size> cache
   block N"` (or `"… flushing to disk"` mid-flush); `title` explains the fill/flush state only.
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
-  (9) `DiskSquare`s — each labeled inside with a BARE number, no unit (`formatDiskSizeBare` — the
-  surrounding pool card already establishes the scale; `aria-label`/`title` keep the full
-  unit-suffixed `formatDiskSize` form) — a fixed-length
-  strip that **always** keeps all 9 circles on one unbroken row (circles flex-shrink; never wraps
-  on mobile); in-cell labels use `0.65rem` font:
+  (9) `DiskSquare`s — unlabeled circles (the row label states the size once with its unit, e.g. `1 KB`,
+  #1142; `aria-label`/`title` keep the full `formatDiskSize` form) — a fixed-length
+  strip that **always** keeps all 9 circles on one unbroken row (circles flex-shrink, max `2rem`; never
+  wraps on mobile):
   **full** (leftmost), split into a full disk about to be auto-pulled THIS TICK
   (`isDiskPullEligible` — matching its tier's current level at zero progress) rendering
   `$pullEligible` (good/green, pulsing, `aria-label="<size> disk pulling into <tier>"`), vs any
@@ -1169,7 +1168,7 @@ card takes the full width. The PP strip (`purge points display`) stays, since it
 
 ### Settings + Milestones (#1143)
 
-**Settings** is a grouped list (`SettingsPage/SettingsGroup.jsx`): uppercase captions (Game · Data · Display ·
+**Settings** is a grouped list (`SettingsGroup`/`SettingsItem` in `SettingsPage/index.jsx`): uppercase captions (Game · Data · Display ·
 Danger zone) over inset groups. Each `SettingsItem` is a one-line `button` (`"<name> settings"`, `aria-expanded`):
 icon tile · name · key value (Supporter `Free`/`Unlocked`, Save slots = active slot name, Reboot = Kernels, System
 log / Task Manager `🔒` until Supporter) · `›`. Tapping expands the existing section (`supporter pack section`,
@@ -1180,3 +1179,11 @@ save / Store rows appear only when their feature is on. Theme is an inline Syste
 **Milestones** (`MilestonesPage`, More → `open milestones`, renamed back from Releases): one card with a
 vertical timeline (`milestones category`), one dot per milestone (aria-label `"<name> milestone reached|not yet
 reached"`, no version numbers), then one `reboot status` line: `⏻ N Reboots · N Kernels ·` eligibility badge.
+
+### Foundry open pool (#1142)
+
+Only the open pool's disk area and its lake's buffer changed: every `DiskArrayRow` / lake disk row is a
+labelled row (size once, with unit, then an unlabeled strip; read cache above its disks, write cache above
+the disks it fills), cache blocks are thin flat rectangles, disks are ≤`2rem` accent-tinted circles, and the
+lake's buffer / transfer pills became a caption over a full-width `ThinProgressBar` (the lake header keeps
+its thin bar when expanded). Headers, collapsed pools, Data Stream, Provision Disk and Reformat are unchanged.

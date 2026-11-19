@@ -2,7 +2,6 @@ import {
   canDiskSizeFeedWriteCache,
   formatCacheSize,
   formatDiskSize,
-  formatDiskSizeBare,
   getDiskReadCacheFlush,
   getDiskReadCacheFlushFill,
   getDiskProvisionPassesCollected,
@@ -30,34 +29,38 @@ import {
 import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_SIZE_MULTIPLIER } from 'game/layers'
 import styled, { keyframes } from 'styled-components'
 
-// One size's Cache+Disks strip: size identity lives INSIDE each cell (bit-scale on cache
-// squares, Byte-scale on disk circles) — no external Cache/Disks titles or array header.
-// Built/full counts stay visual. Sizes stack cleanly when Foundry lists every array
-// (smallest→largest across sizes is the caller's job).
+// One size's Cache+Disks strip (#1142): every row is a fixed label column (the size, written ONCE
+// with its unit — bit-scale `1 Kb` for read-cache blocks, Byte-scale `1 KB` for disks, `→ 10 KB` for
+// a write cache) followed by its strip; cells carry no text. Read cache sits above the disks it
+// feeds and a write cache directly above the disks it fills. Disks are circles (spinning disks —
+// squares are reserved for SSDs); cache blocks are thin flat rectangles.
 const DiskSizeRow = styled.div`
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: ${props => props.theme.space.xs};
+  gap: 6px;
   width: 100%;
 `
 
-// Size text painted inside each square/circle. No text-transform: uppercase — would collapse
-// Cache's lowercase "b" (bits) into Disks' uppercase "B" (Bytes).
-const CellLabel = styled.span`
-  pointer-events: none;
-  font-family: ${props => props.theme.font.display};
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1;
-  color: ${props => (props.$emphasis ? props.theme.color.text : props.theme.color.textMuted)};
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: clip;
+const LabeledRow = styled.div`
+  align-items: center;
+  column-gap: ${props => props.theme.space.sm};
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr);
+  width: 100%;
 `
+
+const RowLabel = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
 
 // Shown in place of the cache strip while this size's array is mid-build (see intro.diskBuild
 // in engine.js) — every IO operation against it is disallowed for the build's duration, so the
@@ -75,7 +78,8 @@ const RebuildingText = styled.p`
 const SquaresRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
-  gap: 3px;
+  gap: 4px;
+  justify-content: space-between;
   width: 100%;
 `
 
@@ -118,6 +122,7 @@ const DiskSquare = styled.div.attrs(props => ({
 }))`
   flex: 1 1 1.2rem;
   min-width: 0;
+  max-width: 2rem;
   aspect-ratio: 1;
   display: inline-flex;
   align-items: center;
@@ -137,7 +142,7 @@ const DiskSquare = styled.div.attrs(props => ({
     props.$full
       ? (props.$pullEligible
         ? props.theme.color.good
-        : props.theme.color.surfaceRaised)
+        : `color-mix(in srgb, ${props.theme.color.accent} 40%, transparent)`)
       : props.$empty
         ? props.theme.color.surfaceSunken
         : 'transparent'};
@@ -177,7 +182,7 @@ const CacheBlocksRow = styled.div`
 const CacheBlock = styled.div`
   flex: 1 1 1.2rem;
   min-width: 0;
-  aspect-ratio: 1;
+  height: 1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -191,7 +196,7 @@ const CacheBlock = styled.div`
         : props.theme.color.surfaceSunken};
   background: ${props =>
     props.$full
-      ? (props.$flushing ? props.theme.color.info : props.theme.color.surfaceRaised)
+      ? (props.$flushing ? props.theme.color.info : `color-mix(in srgb, ${props.theme.color.accent} 30%, transparent)`)
       : 'transparent'};
   overflow: hidden;
   position: relative;
@@ -227,15 +232,13 @@ const WriteCacheSegment = styled.div`
   flex: 1 1 1.2rem;
   min-width: 0;
   /* The single full-width flush bar ($flushBar) spans roughly DISK_LADDER_SIZE_MULTIPLIER
-     collecting segments' combined width — aspect-ratio: 1 there would square that whole width into
-     a giant block instead of a thin bar, so it uses that same ratio instead to land back near one
-     segment's own height. */
-  aspect-ratio: ${props => (props.$flushBar ? DISK_LADDER_SIZE_MULTIPLIER : 1)};
+     collecting segments' combined width; every segment and the flush bar share one thin height. */
+  height: 0.75rem;
   border-radius: ${props => props.theme.radius.sm};
   border: 1.5px solid ${props =>
     props.$active ? props.theme.color.accent : props.theme.color.surfaceSunken};
   background: ${props =>
-    props.$filled ? props.theme.color.surfaceRaised : 'transparent'};
+    props.$filled ? `color-mix(in srgb, ${props.theme.color.accent} 30%, transparent)` : 'transparent'};
   overflow: hidden;
   position: relative;
 `
@@ -271,10 +274,6 @@ const DiskArrayRow = ({ actions, size, state }) => {
   const cached = intro.diskCache?.[size] ?? 0
   const blockBits = size / DISK_CACHE_BLOCK_COUNT
   const sizeLabel = formatDiskSize(size)
-  // Bare number, no unit — the surrounding pool card already establishes the scale (see
-  // formatDiskSizeBare's own doc comment in engine.js); aria-labels/tooltips keep the full
-  // unit-suffixed sizeLabel above.
-  const bareSizeLabel = formatDiskSizeBare(size)
   const blockLabel = formatCacheSize(blockBits)
   // Nth disk currently under construction (1-indexed); disksBuiltTotal hasn't incremented yet.
   const buildOrdinal = rebuilding
@@ -339,6 +338,8 @@ const DiskArrayRow = ({ actions, size, state }) => {
           {`Rebuilding ${sizeLabel} x ${buildOrdinal} array - Ready in ${rebuildReadySeconds}s`}
         </RebuildingText>
       ) : hasReadCache ? (
+        <LabeledRow>
+        <RowLabel aria-hidden="true" title={`${blockLabel} read-cache blocks`}>{blockLabel}</RowLabel>
         <CacheBlocksRow
           role="group"
           aria-label={
@@ -376,14 +377,16 @@ const DiskArrayRow = ({ actions, size, state }) => {
                 {partialFill > 0 ? (
                   <CacheFillIndicator $fill={partialFill} $flushing={readFlushing} />
                 ) : null}
-                <CellLabel $emphasis={isFull || readFlushing}>{blockLabel}</CellLabel>
               </CacheBlock>
             )
           })}
         </CacheBlocksRow>
+        </LabeledRow>
       ) : null}
 
       {writeMerge && !rebuilding ? (
+        <LabeledRow>
+        <RowLabel aria-hidden="true" title={`${sizeLabel} write cache`}>→ {sizeLabel}</RowLabel>
         <WriteCacheRow
           role="progressbar"
           aria-label={
@@ -424,8 +427,11 @@ const DiskArrayRow = ({ actions, size, state }) => {
             </WriteCacheSegment>
           )}
         </WriteCacheRow>
+        </LabeledRow>
       ) : null}
 
+      <LabeledRow>
+      <RowLabel aria-hidden="true" title={`${sizeLabel} disks`}>{sizeLabel}</RowLabel>
       <SquaresRow role="group" aria-label={`${sizeLabel} disks`}>
         {Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {
           const isFull = index < full
@@ -489,11 +495,11 @@ const DiskArrayRow = ({ actions, size, state }) => {
               $clickable={isClickable}
               $queued={isQueued}
             >
-              <CellLabel $emphasis={isFull || isEmpty}>{bareSizeLabel}</CellLabel>
             </DiskSquare>
           )
         })}
       </SquaresRow>
+      </LabeledRow>
     </DiskSizeRow>
   )
 }

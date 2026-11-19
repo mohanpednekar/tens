@@ -266,8 +266,9 @@ disk-breakdown mixed-radix proof, and every gating predicate: `docs/ECONOMY_REFE
 
 **Booster auto latch & lake replay.** `dataLakes[n].boosterAuto` latches (in `tickDataLakeAutoConvert`) the first time the pool is fully built (9/9/9); the lake then auto-buys every affordable Booster for the whole Era, through pool resets, `resetByteFoundry` (carried into the fresh lakes) and Prestige; only Reboot clears it. `foundryResetCaps.lakes[n] = { capacityLevel, purchased }` records lake highs, and `tickFoundryResetConvenience` replays Booster buys, then capacity upgrades, up to them (an upgrade waits until the Booster target is met, the entity is capped, or the next Booster cost exceeds lake capacity).
 
-**Display conventions.** A Disk's in-square size label is a bare number (`formatDiskSizeBare`;
-aria-labels/tooltips keep unit-suffixed `formatDiskSize`). A pool's/Data Lake's CAPACITY (and a lake's
+**Display conventions.** Disk/cache cells carry no text; each row states its size once, with its unit, in a
+label column (`1 Kb` cache blocks, `1 KB` disks, `→ 10 KB` write cache — #1142); aria-labels/tooltips keep
+unit-suffixed `formatDiskSize`. Disks are circles; squares are reserved for SSDs. A pool's/Data Lake's CAPACITY (and a lake's
 balance) always renders in its own fixed unit (`formatDiskSizeInPoolUnit`) — a maxed KB lake reads
 "1000 KB", never "1 MB". A pool's buffer BALANCE (`PoolBalanceText`) self-sizes below that unit
 (`formatPoolBalance`/`formatPoolBalanceStable`, e.g. "398.3 KB / 1 MB"). Details:

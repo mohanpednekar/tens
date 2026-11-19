@@ -47,9 +47,12 @@ CLAUDE.md's "Economy model"); the manual Redeem button and the cache-release-to-
 component used to expose were both retired along with that mechanic. Only when
 `isDiskReadCacheEligible(size)` is true (the pool's own smallest size, the one whose Data Lake
 sub-slot is ×1 — every larger size fills via its write cache (from Staging) and renders no read
-cache strip at all) does it show a `DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of squares
-(`aria-label="… read cache"`), each labeled inside with its bit-scale block size (`formatCacheSize`
-— e.g. `1 Kb`). A full block gets an accent-colored border (matching a full `DiskSquare`'s own
+cache strip at all) does it show a `DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of thin flat
+blocks (`aria-label="… read cache"`, `1rem` tall), directly above its disks. **Every row (#1142) is a
+`LabeledRow`: a fixed `3.4rem` right-aligned label column stating the size ONCE with its unit, then an
+unlabeled strip** — read cache `formatCacheSize` (bit-scale, e.g. `1 Kb`), write cache `→ <formatDiskSize>`,
+disks `formatDiskSize` (Byte-scale, e.g. `1 KB`); the label is `aria-hidden` (the strip's group
+aria-label already names it). Full blocks/disks are accent-tinted. A full block gets an accent-colored border (matching a full `DiskSquare`'s own
 convention below); a partially-filled block (whether filling UP from Staging or draining DOWN during
 a flush to disk) renders a proportional `CacheFillIndicator` overlay growing left-to-right — accent-
 colored while filling, info-colored while flushing — so the fill level itself is always visible, not
@@ -59,10 +62,9 @@ filled). Then an optional **write cache** progress row when
 collecting — each a tenth of the disk, filling from Staging or, when expedited, from smaller disks; solid
 bar draining left-to-right while flushing — an expedited transfer pauses on tier match), then a fixed `DISK_ARRAY_LADDER_CAP`-circle (9) disk strip that **always** keeps all 9
 circles on one unbroken row at every viewport (circles flex-shrink together — never wraps to a
-second row), each labeled inside at `0.65rem` with a BARE number, no unit
-(`formatDiskSizeBare` — the surrounding pool card already establishes the scale; e.g. `1`, not
-`1 KB`). No external array header and no `"Cache"` / `"Disks"`
-row titles — shapes plus in-cell labels carry identity; built/full counts stay visual. A full disk
+second row; `max-width: 2rem`, spaced across the row), cells carry NO text. Shapes carry meaning: disks
+are circles (spinning disks) — squares are reserved for future SSDs. No external array header and no
+`"Cache"` / `"Disks"` row titles; built/full counts stay visual. A full disk
 about to be auto-pulled this tick (`isDiskPullEligible` — full, matching its tier's current level,
 and that level at zero progress) renders `$pullEligible` (good/green, pulsing, `aria-label="…disk
 pulling into <tier>"`); any other full disk (blocked by partial tier progress, "too early," or
@@ -109,11 +111,11 @@ directly below its disks, not in a separate panel after all the pool cards.
 
 **`SpeedDetailsPopover`** (`components/SpeedDetailsPopover/index.jsx`) — `{ anchorRef, id, onClose, title, rows: [{ label, value }], note? }`. Rendered by the caller only while open; portals a `role="dialog"` panel to `<body>`, fixed just below the anchor and right-aligned to it (right edge clamped 8px from the viewport; flips above the anchor when it would overflow the bottom, else clamps to the viewport; re-measured every render). Opening moves focus to the panel (`preventScroll`); closing returns focus to the anchor if focus was inside. It calls `onClose` on a pointer press outside both the panel and the anchor (the anchor's own click toggles), any wheel, touch-move or scroll whose target is outside the panel (including over the anchor), Escape, or a window resize. Clicks inside stop propagation so they never reach the anchor's React ancestors.
 
-`DataLakePanel` (`bare tierIndex={poolIndex}`; optional `section="header"`/`"body"` splits the title+stats rows from the fill tile/squares, a collapsed pool card renders `header` — its big centered text is the next Booster's affordability — `getDataLakeBoosterProgressPercent`, e.g. "87%" — above a thin `ThinProgressBar` of that same percentage, reused by ByteFoundryPage's running-upgrade tile; the real lake balance shows only in the expanded header, whose body renders the 1-unit buffer tile, an in-flight transfer tile and ×1/×10/×100/×1000 disk squares in the pool's fixed unit) renders one lake as a single self-contained block —
+`DataLakePanel` (`bare tierIndex={poolIndex}`; optional `section="header"`/`"body"` splits the title+stats rows from the fill tile/squares, a collapsed pool card renders `header` — its big centered text is the next Booster's affordability — `getDataLakeBoosterProgressPercent`, e.g. "87%" — above a thin `ThinProgressBar` of that same percentage, reused by ByteFoundryPage's running-upgrade tile; the real lake balance shows only in the expanded header, whose header also keeps its thin bar (#1142) and whose body renders the 1-unit buffer caption + thin bar, an in-flight transfer caption + thin bar, and ×1/×10/×100/×1000 disk squares in the pool's fixed unit) renders one lake as a single self-contained block —
 not a labelled table row: a header row pairing the lake's title ("`<symbol>` Lake", e.g. "KB Lake" —
 the size unit is always part of the visible name) with a single next-Booster-cost control in place of
 a lifetime-purchased-count readout (the cost figure alone is self-explanatory — see below for what
-this control does); laid out like a pool/Data Stream tile (`LakeHeader`): name top-left with the Booster target price + buy control (🏷️) under it, ⚡ current fill speed top-right (the pool's Bandwidth while the lake drains/overflows automatically, else 0), the filled amount (full disks plus the open slot, `formatPoolBalance`) big and centered, and 🗜 Flush Pool / Scale Out under the speed when offered (otherwise `⏳ time left` there — `(next Booster cost − filled) / fill speed`, shown only while still short of the cost, the lake can hold it, the Booster entity isn't at cap, and the lake is filling); then a dedicated `LakePoolTile` (own
+this control does); laid out like a pool/Data Stream tile (`LakeHeader`): name top-left with the Booster target price + buy control (🏷️) under it, ⚡ current fill speed top-right (the pool's Bandwidth while the lake drains/overflows automatically, else 0), the filled amount (full disks plus the open slot, `formatPoolBalance`) big and centered, and 🗜 Flush Pool / Scale Out under the speed when offered (otherwise `⏳ time left` there — `(next Booster cost − filled) / fill speed`, shown only while still short of the cost, the lake can hold it, the Booster entity isn't at cap, and the lake is filling); then the buffer as a `LakeCaption` (`buffer` · `<fill> / <unit>`) over a full-width `ThinProgressBar` (#1142; formerly a `LakePoolTile` pill — own
 `FillableStatCard`-style element, purely additive over the per-square fill overlay below — same
 `fillBits`/`getDataLakeNextTransferTarget` data, no separate mechanic) showing "`<fillBits>` /
 `<open slot size>`" — ALWAYS rendered whenever an open slot exists (`currentFillSubSize !== null`),
@@ -132,8 +134,8 @@ otherwise show live-looking fill data the engine can never actually advance; the
 stretch to fill the whole row) per sub-size present at the lake's current capacity level (×1/×10/×100,
 smallest first, each capped per `DATA_LAKE_SUB_SIZE_DISK_CAPS` — 9/9/9, one unit short of that
 level's own capacity; the level's own last unit fills through the lake's own retained buffer instead
-of a disk square, see `getDataLakeNextFillSubSize` in `engine.js`), each labeled inside with a BARE
-number, no unit (`formatDiskSizeBare`, same convention `DiskArrayRow`'s own `DiskSquare` uses) — the
+of a disk square, see `getDataLakeNextFillSubSize` in `engine.js`), each row a `LakeLabeledRow` (the size
+once, in the pool's fixed unit, e.g. `10 KB`, then unlabeled circles — same rule as `DiskArrayRow`) — the
 same "one unbroken row
 per size" shape `DiskArrayRow` uses for Storage — a lake disk just fills and completes, with no
 pull-eligibility distinction to render — the one currently-open slot shows a live left-to-right fill toward its

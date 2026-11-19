@@ -567,7 +567,7 @@ Strict three-layer separation:
    The first Kilobyte, Go Googol, Open Compute, DeGoogoled, First Reboot; then one Reboots · Kernels line. Reached via AppNav → More (`page = 'milestones'`); always
    reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`), laid out as a
-    grouped list (`SettingsGroup.jsx`: Game / Data / Display / Danger zone captions; each `SettingsItem` row shows its
+    grouped list (`SettingsGroup`/`SettingsItem` in `index.jsx`: Game / Data / Display / Danger zone captions; each `SettingsItem` row shows its
     key value and expands its section in place, aria-label `"<name> settings"`; Theme is an inline control):
     Supporter pack (unlock code / dummy checkout), Cloud save (`CloudSaveSection.jsx`, only when
     `CLOUD_SAVE_ENABLED`: sign-in, upload/download, Delete account and data), Backup / Restore
@@ -718,7 +718,8 @@ progress resets per cycle (the Data Stream balance is kept). Nothing here ever f
   interrupted once under way (`isDataLakeDiskFillStartAllowed`). Booster control is "one click, one full fill-then-buy conversion,
   then stop" until the pool's era-long `boosterAuto` latch is set (then it auto-buys); `buyBooster` spends only banked lake units, outside the
   forced priority order; sub-sizes capped 9/9/9 (`DATA_LAKE_SUB_SIZE_DISK_CAPS`).
-- **Display**: Disk labels bare numbers; pool/lake CAPACITY in its fixed unit
+- **Display**: each disk/cache row states its size once with its unit (`1 Kb` cache, `1 KB` disks; cells
+  unlabeled; disks are circles — squares reserved for SSDs); pool/lake CAPACITY in its fixed unit
   (`formatDiskSizeInPoolUnit`); buffer BALANCE self-sizes (`formatPoolBalance`).
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
