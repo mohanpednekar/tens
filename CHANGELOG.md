@@ -11,8 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Spent QB achievement** — spend all your Quettabytes after earning some in the same run to unlock it; the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, Quettabytes are credited regardless of the current balance, 1 at a time, more often with more completed levels (logarithmically): every 10 s at 1 level, every 5 s at 10, every 3.33 s at 100.
 
+### Added
+
+- **Cache Warm** (20 PP, Firmware → ✦ Prestige): every Purge, Scale Up, Overclock, challenge exit and Reboot starts with level 1 already complete for the tier of the Storage pool you are currently building (Kilobytes while building pool 1, Megabytes while building pool 2, …).
+
 ### Changed
 
+- **Firmware → ✦ Prestige rows are terse**: each upgrade shows a one-line summary (usually its value now → after buying); tap an upgrade's name for its description.
+- **Buy max is now a 2 PP Firmware upgrade** (Firmware → ✦ Prestige → Purchasing) instead of unlocking free at the first Purge. Existing saves must buy it too.
+- **No more free unlocks on load**: a save that never bought the Speed bonus no longer gets it for having 10+ Purges, and 100+ Purges no longer unlock Overflow mode by themselves (it needs Auto Purge at 1 s or faster).
+- **Sleep mode is capped at 4 h of time away by default** (was 24 h). New Firmware → ✦ Prestige upgrade adds 4 h per level for 4, 40, 400, 4,000 and 40,000 PP, back up to 24 h.
 - **Exponential notation from 10,000**: amounts switch to the `1.23e4` form after 9,999 (was after 999,999), everywhere in the game. The shown figure is cut off rather than rounded up, so 19,999 reads `1.999e4`, never `2e4`.
 - **Compact Factory tier rows**: each tier now fits on one line (symbol, owned amount, tickspeed and Buy buttons), about 45% shorter. The Buy button shows the tier's completed levels, with Buy max's `+n` right after it. Production moved into the row's details (tap the tier symbol).
 - **Faster automation unlocks and cheaper PP upgrades** — the nth tier's autobuyer now unlocks at Purge n (was 2n) and its tickspeed autobuyer at Purge n + 10 (was 20 + 2n); global automations are unchanged. Each challenge now unlocks at 5× the Purges its automation needed (e.g. F1 at Purge 5, F21 at 40); until then Firmware shows a locked 🔒 Fn in place of the 🏁 start button). Tier autobuyer speed upgrades start at 10 PP (was 100), and Compression costs 10, 100, 1,000, … PP (was 100, 10,000, …).
