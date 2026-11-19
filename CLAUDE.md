@@ -759,7 +759,7 @@ new file per run** onto the stable orphan branch `ideal-run-strategy` via
 `publish-strategy.sh` (`runs/<UTC-stamp>-<sha>.md` + `README.md` index) — never merge that branch
 into `main`, and do not rename it with an agent/session suffix.
 
-**Cache Warm** (`CACHE_WARM_UNLOCK_COST` 20 PP, `cacheWarmUnlocked`): `applyCacheWarm` completes level 1 of `getCacheWarmTier` (tier of the Storage pool being built — the newest unlocked, incomplete pool; pool N ↔ tier N) free after every Purge/Scale Up/Overclock/challenge exit/Reboot (`ECONOMY_REFERENCE`). **Firmware → Prestige rows** are `UpgradeRow`s: name toggles the description, one short plain value line, usually `now → after` (`MAINPAGE_REFERENCE`).
+**Cache Warm** (`CACHE_WARM_UNLOCK_COST` 20 PP, `cacheWarmUnlocked`): `applyCacheWarm` completes level 1 of `getCacheWarmTier` (tier of the highest Storage pool being filled — highest pool live by Capacity, `getVisibleStoragePoolCount`, disks or not; pool N ↔ tier N) free after every Purge/Scale Up/Overclock/challenge exit/Reboot (`ECONOMY_REFERENCE`). **Firmware → Prestige rows** are `UpgradeRow`s: name toggles the description, one short plain value line, usually `now → after` (`MAINPAGE_REFERENCE`).
 **Sleep mode cap:** offline progress simulates at most `getMaxOfflineSeconds(state)` = 4 h + 4 h per `sleepModeCapLevel` (0–5, PP costs `SLEEP_MODE_CAP_UPGRADE_COSTS` 4/40/400/4,000/40,000; `buySleepModeCapUpgrade`) up to 24 h. Detail: `docs/ECONOMY_REFERENCE.md` "Offline progress".
 
 **Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Clock Speed/Overclock
