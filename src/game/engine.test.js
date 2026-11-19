@@ -185,6 +185,14 @@ import {
   buyPrestigeSpeedBonus,
   getPlaytimeProductionMultiplier,
   buyPlaytimeBonus,
+  buyBuyMaxUnlock,
+  buyCacheWarm,
+  applyCacheWarm,
+  getCacheWarmTier,
+  buySleepModeCapUpgrade,
+  getMaxOfflineSeconds,
+  getSleepModeCapLevel,
+  getSleepModeCapUpgradeCost,
   addActivePlaySeconds,
   getPurgePercent,
   getNextBytePowerProgressFraction,
@@ -370,7 +378,7 @@ import {
   getPoolTapMultiplier,
   getDataStreamTapMultiplier,
 } from './engine'
-import { AUTOBUYER_BULK_MAX_EXTRA_LEVELS, ACHIEVEMENT_DEFINITIONS, CHALLENGE_DEFINITIONS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, PURGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
+import { BUY_MAX_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, ACHIEVEMENT_DEFINITIONS, CHALLENGE_DEFINITIONS, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PURGE_THRESHOLD, TICK_RATE_MS, TIER_DEFINITIONS } from './layers'
 
 // Seeds intro.unlockedDiskSteps high enough that the Foundry-reset disk-size gate never clamps the ladder.
 const ALL_DISK_STEPS_UNLOCKED = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
@@ -5376,8 +5384,8 @@ describe('formatAmount', () => {
   })
 
   it('switches to exponential notation at the threshold, like formatCurrency', () => {
-    expect(formatAmount(999999)).toBe('999,999')
-    expect(formatAmount(1000000)).toBe('1e6')
+    expect(formatAmount(9999)).toBe('9,999')
+    expect(formatAmount(10000)).toBe('1e4')
   })
 
   it('treats negative values as 0', () => {
@@ -5398,11 +5406,30 @@ describe('formatCurrency', () => {
   })
 
   it('formats a comma-grouped mid-size amount with a b suffix, just below the exponential threshold', () => {
-    expect(formatCurrency(999999)).toBe('999,999 b')
+    expect(formatCurrency(9999)).toBe('9,999 b')
   })
 
   it('switches to exponential notation at the threshold, like formatAmount', () => {
-    expect(formatCurrency(1000000)).toBe('1e6 b')
+    expect(formatCurrency(10000)).toBe('1e4 b')
+    // Truncates, never rounds up: a balance must never read as covering a cost it can't.
+    expect(formatCurrency(19999)).toBe('1.999e4 b')
+    expect(formatAmount(99999)).toBe('9.999e4')
+  })
+
+  it('reads computed powers of ten as clean 1eN, never 9.999eN or a 0.0xx mantissa', () => {
+    const bad = []
+    for (const tier of TIER_DEFINITIONS) {
+      for (let level = 1; level <= 60; level += 1) {
+        const cost = getTierCost(tier, level)
+        if (!Number.isFinite(cost)) continue
+        const text = formatCurrency(cost)
+        if (/^0\.|9\.999e/.test(text)) bad.push(`${tier.id} L${level}: ${text}`)
+      }
+    }
+    expect(bad).toEqual([])
+    expect(formatAmount(9.999999999999999e82)).toBe('1e83')
+    expect(formatAmount(6.5e13)).toBe('6.5e13')
+    expect(formatAmount(1.2345e300)).toBe('1.234e300')
   })
 
   it('switches to exponential notation at huge magnitudes', () => {
@@ -5440,11 +5467,11 @@ describe('formatCurrency', () => {
 describe('formatBytes', () => {
   it('formats a comma-grouped amount with a B suffix, just below the exponential threshold', () => {
     expect(formatBytes(500)).toBe('500 B')
-    expect(formatBytes(999999)).toBe('999,999 B')
+    expect(formatBytes(9999)).toBe('9,999 B')
   })
 
   it('switches to exponential notation at the threshold, like formatCurrency', () => {
-    expect(formatBytes(1000000)).toBe('1e6 B')
+    expect(formatBytes(10000)).toBe('1e4 B')
   })
 
   it('treats negative values as 0', () => {
@@ -5478,8 +5505,8 @@ describe('formatMoneyBalance', () => {
   })
 
   it('reuses formatCurrency\'s own exponential-notation threshold once converted to Bytes', () => {
-    expect(formatMoneyBalance(999_999 * BITS_PER_BYTE)).toBe('999,999 B') // 999,999 Bytes — still plain
-    expect(formatMoneyBalance(1_000_000 * BITS_PER_BYTE)).toBe('1e6 B') // 1,000,000 Bytes — switches to scientific
+    expect(formatMoneyBalance(9_999 * BITS_PER_BYTE)).toBe('9,999 B') // 9,999 Bytes — still plain
+    expect(formatMoneyBalance(10_000 * BITS_PER_BYTE)).toBe('1e4 B') // 10,000 Bytes — switches to scientific
   })
 
   it('renders huge balances in scientific notation, matching formatCurrency\'s own behavior', () => {
@@ -5806,32 +5833,32 @@ describe('getAutobuyerUnlockCost', () => {
 })
 
 describe('getAutobuyerUnlockMilestone', () => {
-  it('requires 2 purges for the first tier', () => {
-    expect(getAutobuyerUnlockMilestone(tensTier.id)).toBe(2)
+  it('requires 1 purge for the first tier', () => {
+    expect(getAutobuyerUnlockMilestone(tensTier.id)).toBe(1)
   })
 
-  it('increases by 2 purges per subsequent tier, up to 20 for the 10th/last tier', () => {
-    expect(getAutobuyerUnlockMilestone(thousandsTier.id)).toBe(4)
-    expect(getAutobuyerUnlockMilestone(TIER_DEFINITIONS[9].id)).toBe(20)
+  it('the nth tier unlocks at Purge n, up to 10 for the 10th/last tier', () => {
+    expect(getAutobuyerUnlockMilestone(thousandsTier.id)).toBe(2)
+    expect(getAutobuyerUnlockMilestone(TIER_DEFINITIONS[9].id)).toBe(10)
   })
 
   it('treats an unrecognized tier id as index 0 (the earliest milestone)', () => {
-    expect(getAutobuyerUnlockMilestone('does_not_exist')).toBe(2)
+    expect(getAutobuyerUnlockMilestone('does_not_exist')).toBe(1)
   })
 })
 
 describe('getTierTickspeedAutobuyerMilestone', () => {
-  it('requires 22 purges for the first tier', () => {
-    expect(getTierTickspeedAutobuyerMilestone(tensTier.id)).toBe(22)
+  it('requires 11 purges for the first tier', () => {
+    expect(getTierTickspeedAutobuyerMilestone(tensTier.id)).toBe(11)
   })
 
-  it('increases by 2 purges per subsequent tier, up to 40 for the 10th/last tier', () => {
-    expect(getTierTickspeedAutobuyerMilestone(thousandsTier.id)).toBe(24)
-    expect(getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[9].id)).toBe(40)
+  it('the nth tier unlocks at Purge n + 10, up to 20 for the 10th/last tier', () => {
+    expect(getTierTickspeedAutobuyerMilestone(thousandsTier.id)).toBe(12)
+    expect(getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[9].id)).toBe(20)
   })
 
   it('treats an unrecognized tier id as index 0 (the earliest milestone)', () => {
-    expect(getTierTickspeedAutobuyerMilestone('does_not_exist')).toBe(22)
+    expect(getTierTickspeedAutobuyerMilestone('does_not_exist')).toBe(11)
   })
 })
 
@@ -5842,7 +5869,7 @@ describe('applyAutobuyerMilestones', () => {
   })
 
   it('unlocks exactly the tiers whose milestone is met, and nothing else', () => {
-    const state = withPurgeCount(createInitialGameState(), 6)
+    const state = withPurgeCount(createInitialGameState(), 3)
     const after = applyAutobuyerMilestones(state)
     expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(1)
     expect(after.autobuyers[TIER_DEFINITIONS[1].id]).toBe(1)
@@ -5850,14 +5877,14 @@ describe('applyAutobuyerMilestones', () => {
     expect(after.autobuyers[TIER_DEFINITIONS[3].id]).toBeNull()
   })
 
-  it('never unlocks a tier tickspeed autobuyer before Purge 22', () => {
-    const state = withPurgeCount(createInitialGameState(), 21)
+  it('never unlocks a tier tickspeed autobuyer before Purge 11', () => {
+    const state = withPurgeCount(createInitialGameState(), 10)
     const after = applyAutobuyerMilestones(state)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[0].id]).toBe(false)
   })
 
-  it('unlocks the first tier tickspeed autobuyer at Purge 22, the second at 24', () => {
-    const state = withPurgeCount(createInitialGameState(), 24)
+  it('unlocks the first tier tickspeed autobuyer at Purge 11, the second at 12', () => {
+    const state = withPurgeCount(createInitialGameState(), 12)
     const after = applyAutobuyerMilestones(state)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[0].id]).toBe(true)
     expect(after.tierTickspeedAutobuyer[TIER_DEFINITIONS[1].id]).toBe(true)
@@ -7822,6 +7849,117 @@ describe('getOfflineEffectiveSeconds', () => {
   it('treats negative input as 0', () => {
     expect(getOfflineEffectiveSeconds(-50)).toBe(0)
   })
+
+  it('caps at a smaller per-save cap when given one', () => {
+    expect(getOfflineEffectiveSeconds(MAX_OFFLINE_SECONDS, 4 * 3600)).toBe(2 * 3600)
+    expect(getOfflineRewardBonusSeconds(MAX_OFFLINE_SECONDS, 4 * 3600)).toBe(2 * 3600)
+  })
+})
+
+describe('Cache Warm', () => {
+  const kb = TIER_DEFINITIONS[0].id
+  const blockSize = DEFAULT_PURCHASE_BLOCK_SIZE
+
+  it('buyCacheWarm spends 20 PP once, completing KB level 1 immediately; no-ops when unaffordable or owned', () => {
+    const state = withPrestigePoints(createInitialGameState(), CACHE_WARM_UNLOCK_COST + 5)
+    const after = buyCacheWarm(state)
+    expect(after.cacheWarmUnlocked).toBe(true)
+    expect(after.purge.points).toBe(5)
+    expect(after.purchaseLevels[kb]).toBe(2)
+    expect(after.owned[kb]).toBe(blockSize)
+    expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID])
+    expect(buyCacheWarm(after)).toBe(after)
+    const poor = withPrestigePoints(createInitialGameState(), CACHE_WARM_UNLOCK_COST - 1)
+    expect(buyCacheWarm(poor)).toBe(poor)
+  })
+
+  it('tops up a partly bought level 1 and leaves a tier past level 1 alone', () => {
+    const base = { ...createInitialGameState(), cacheWarmUnlocked: true }
+    const partial = { ...base, owned: { ...base.owned, [kb]: 3 }, purchased: { ...base.purchased, [kb]: 3 }, purchaseLevelProgress: { ...base.purchaseLevelProgress, [kb]: 3 } }
+    const warmed = applyCacheWarm(partial)
+    expect(warmed.owned[kb]).toBe(blockSize)
+    expect(warmed.purchaseLevels[kb]).toBe(2)
+    expect(warmed.purchaseLevelProgress[kb]).toBe(0)
+    expect(applyCacheWarm(warmed)).toBe(warmed)
+    expect(applyCacheWarm(createInitialGameState())).toEqual(createInitialGameState())
+  })
+
+  it('targets the tier of the incomplete pool being built (pool 1 full → pool 2 / MB), revealing it', () => {
+    const tier02 = TIER_DEFINITIONS[1].id
+    const twoPools = withIntro({ ...createInitialGameState(), cacheWarmUnlocked: true }, {
+      disksBuiltTotal: {
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
+      },
+    })
+    expect(getCacheWarmTier(createInitialGameState()).id).toBe(kb) // pool 1 still being built
+    expect(isStoragePoolUnlocked(twoPools, 2)).toBe(true)
+    expect(isStoragePoolUnlocked(twoPools, 3)).toBe(false) // pool 2 is the incomplete one
+    expect(getCacheWarmTier(twoPools).id).toBe(tier02)
+    expect(isTierUnlocked(twoPools)(TIER_DEFINITIONS[1])).toBe(false)
+    const warmed = applyCacheWarm(twoPools)
+    expect(warmed.purchaseLevels[tier02]).toBe(2)
+    expect(warmed.owned[tier02]).toBe(blockSize)
+    expect(warmed.purchaseLevels[kb]).toBe(1)
+    expect(warmed.resources[MONEY_ID]).toBe(twoPools.resources[MONEY_ID])
+    expect(isTierUnlocked(warmed)(TIER_DEFINITIONS[1])).toBe(true)
+  })
+
+  it('re-applies after Scale Up and Overclock, and a refused one stays a same-reference no-op', () => {
+    const owned = { ...createInitialGameState(), cacheWarmUnlocked: true }
+    expect(scaleUpGame(owned)).toBe(owned)
+    expect(overclockGame(owned)).toBe(owned)
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
+    const ready = { ...owned, purchaseLevels: { ...owned.purchaseLevels, [kb]: 10, [lastTier]: 9 }, owned: { ...owned.owned, [kb]: 99 } }
+    for (const reset of [scaleUpGame, overclockGame]) {
+      const after = reset(ready)
+      expect(after).not.toBe(ready)
+      expect(after.purchaseLevels[kb]).toBe(2)
+      expect(after.owned[kb]).toBe(blockSize)
+    }
+  })
+
+  it('applies after every Purge and Reboot, keeping the unlock', () => {
+    const owned = { ...createInitialGameState(), cacheWarmUnlocked: true }
+    const purged = purgeGame({ ...owned, resources: { ...owned.resources, [MONEY_ID]: PURGE_THRESHOLD } })
+    expect(purged.cacheWarmUnlocked).toBe(true)
+    expect(purged.purchaseLevels[kb]).toBe(2)
+    const rebooted = eraGame({ ...owned, purge: { ...owned.purge, points: ERA_ELIGIBILITY_PP } })
+    expect(rebooted.purchaseLevels[kb]).toBe(2)
+  })
+})
+
+describe('Sleep mode cap', () => {
+  it('starts at 4h and adds 4h per level up to the 24h ceiling', () => {
+    const state = createInitialGameState()
+    expect(getMaxOfflineSeconds(state)).toBe(4 * 3600)
+    expect([1, 2, 3, 4, 5].map(level => getMaxOfflineSeconds({ ...state, sleepModeCapLevel: level }) / 3600))
+      .toEqual([8, 12, 16, 20, 24])
+    expect(getMaxOfflineSeconds({ ...state, sleepModeCapLevel: 99 })).toBe(MAX_OFFLINE_SECONDS)
+  })
+
+  it('costs 4, 40, 400, 4,000, 40,000 PP and stops at the last level', () => {
+    let state = withPrestigePoints(createInitialGameState(), 44444)
+    for (const cost of [4, 40, 400, 4000, 40000]) {
+      expect(getSleepModeCapUpgradeCost(getSleepModeCapLevel(state))).toBe(cost)
+      const before = state.purge.points
+      state = buySleepModeCapUpgrade(state)
+      expect(state.purge.points).toBe(before - cost)
+    }
+    expect(state.sleepModeCapLevel).toBe(5)
+    expect(state.purge.points).toBe(0)
+    const rich = withPrestigePoints(state, 1e9)
+    expect(buySleepModeCapUpgrade(rich)).toBe(rich)
+    const poor = withPrestigePoints(createInitialGameState(), 3)
+    expect(buySleepModeCapUpgrade(poor)).toBe(poor)
+  })
+
+  it('a 24h absence simulates 2h at the base 4h cap and 12h at the max level (50% speed)', () => {
+    const state = createInitialGameState()
+    expect(getOfflineEffectiveSeconds(MAX_OFFLINE_SECONDS, getMaxOfflineSeconds(state))).toBe(7200)
+    expect(getOfflineEffectiveSeconds(MAX_OFFLINE_SECONDS, getMaxOfflineSeconds({ ...state, sleepModeCapLevel: 5 }))).toBe(43200)
+  })
 })
 
 // ─── applyOfflineProgress ─────────────────────────────────────────────────────
@@ -8108,13 +8246,13 @@ describe('buyGlobalTickspeedMultiplier', () => {
 // ─── buyPrestigeDoublePp / getPrestigeDoublePpUpgradeCost ────────────────────
 
 describe('getPrestigeDoublePpUpgradeCost', () => {
-  it('costs 100 PP for the first upgrade', () => {
-    expect(getPrestigeDoublePpUpgradeCost(0)).toBe(100)
+  it('costs 10 PP for the first upgrade', () => {
+    expect(getPrestigeDoublePpUpgradeCost(0)).toBe(10)
   })
 
-  it('costs 100^(level+1) PP for each subsequent level', () => {
-    expect(getPrestigeDoublePpUpgradeCost(1)).toBe(10_000)
-    expect(getPrestigeDoublePpUpgradeCost(2)).toBe(1_000_000)
+  it('costs 10^(level+1) PP for each subsequent level', () => {
+    expect(getPrestigeDoublePpUpgradeCost(1)).toBe(100)
+    expect(getPrestigeDoublePpUpgradeCost(2)).toBe(1_000)
   })
 })
 
@@ -8134,14 +8272,14 @@ describe('getPrestigePowersPerPp / getPrestigePpPerPower', () => {
 
 describe('buyPrestigeDoublePp', () => {
   it('spends the upgrade cost and increments prestigeDoublePpLevel', () => {
-    const state = withPrestigePoints(createInitialGameState(), 100)
+    const state = withPrestigePoints(createInitialGameState(), 10)
     const after = buyPrestigeDoublePp(state)
     expect(after.prestigeDoublePpLevel).toBe(1)
     expect(after.purge.points).toBe(0)
   })
 
   it('is a no-op without enough PP', () => {
-    const state = withPrestigePoints(createInitialGameState(), 99)
+    const state = withPrestigePoints(createInitialGameState(), 9)
     expect(buyPrestigeDoublePp(state)).toBe(state)
   })
 
@@ -8151,8 +8289,8 @@ describe('buyPrestigeDoublePp', () => {
     expect(after.prestigeDoublePpLevel).toBe(1)
   })
 
-  it('latches Compute Flops pageUnlocked so reveal survives spending exactly 100 PP', () => {
-    const state = withPrestigePoints(createInitialGameState(), 100)
+  it('latches Compute Flops pageUnlocked so reveal survives spending 100 PP', () => {
+    const state = withPrestigePoints({ ...createInitialGameState(), prestigeDoublePpLevel: 1 }, 100)
     expect(state.computeFlops.pageUnlocked).toBe(false)
     const after = buyPrestigeDoublePp(state)
     expect(after.computeFlops.pageUnlocked).toBe(true)
@@ -8477,12 +8615,13 @@ describe('purgeGame', () => {
     expect(after.tickspeedLevels[tensTier.id]).toBe(1)
   })
 
-  it('auto-unlocks the first tier\'s autobuyer on the second prestige (milestone 2), not the first', () => {
+  it('auto-unlocks the first tier\'s autobuyer on the first prestige (milestone 1), the second tier\'s on the second', () => {
     const state = withMoney(createInitialGameState(), PURGE_THRESHOLD)
     const first = purgeGame(state)
-    expect(first.autobuyers[tensTier.id]).toBeNull()
+    expect(first.autobuyers[tensTier.id]).toBe(1)
+    expect(first.autobuyers[thousandsTier.id]).toBeNull()
     const after = purgeGame(withMoney(first, PURGE_THRESHOLD))
-    expect(after.autobuyers[tensTier.id]).toBe(1)
+    expect(after.autobuyers[thousandsTier.id]).toBe(1)
   })
 
   it('leaves a later tier\'s autobuyer locked (null) until its own milestone is reached', () => {
@@ -8530,10 +8669,9 @@ describe('purgeGame', () => {
       'autoScaleUp', 'autoScaleUpEnabled', 'autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'
     )
     const after = purgeGame(state)
-    // The first tier's autobuyer unlocks at milestone 2 (not yet at count 1) — confirms the autobuyers
-    // fallback produced a real object (not undefined) applyAutobuyerMilestones could safely build on,
-    // with every tier correctly null (not undefined).
-    expect(after.autobuyers[tensTier.id]).toBeNull()
+    // The first tier's autobuyer unlocks at milestone 1 — confirms the autobuyers fallback produced a
+    // real object (not undefined) applyAutobuyerMilestones could safely build on, with later tiers null.
+    expect(after.autobuyers[tensTier.id]).toBe(1)
     expect(after.autobuyers[thousandsTier.id]).toBeNull()
     expect(after.autobuyersEnabled).toEqual(fresh.autobuyersEnabled)
     expect(after.tierTickspeedAutobuyer).toEqual(fresh.tierTickspeedAutobuyer)
@@ -11575,11 +11713,32 @@ describe('purgeGame unboundedUnlocked latch', () => {
 describe('Buy max mode', () => {
   const blockCost = level => getTierCost(tensTier, level) * DEFAULT_PURCHASE_BLOCK_SIZE
 
-  it('unlocks only after the first Prestige (or any Era ascension)', () => {
+  it('unlocks only through the one-time 2 PP purchase, not by Purge or Era count', () => {
     const state = createInitialGameState()
     expect(isBuyMaxUnlocked(state)).toBe(false)
-    expect(isBuyMaxUnlocked({ ...state, purge: { ...state.purge, count: 1 } })).toBe(true)
-    expect(isBuyMaxUnlocked({ ...state, era: { count: 1 } })).toBe(true)
+    expect(isBuyMaxUnlocked({ ...state, purge: { ...state.purge, count: 1 } })).toBe(false)
+    expect(isBuyMaxUnlocked({ ...state, era: { count: 1 } })).toBe(false)
+    expect(isBuyMaxUnlocked({ ...state, buyMaxUnlocked: true })).toBe(true)
+  })
+
+  it('buyBuyMaxUnlock spends BUY_MAX_UNLOCK_COST PP once; no-ops when unaffordable or owned', () => {
+    const state = withPrestigePoints(createInitialGameState(), BUY_MAX_UNLOCK_COST + 1)
+    const after = buyBuyMaxUnlock(state)
+    expect(after.buyMaxUnlocked).toBe(true)
+    expect(after.purge.points).toBe(1)
+    expect(buyBuyMaxUnlock(after)).toBe(after)
+    const poor = withPrestigePoints(createInitialGameState(), BUY_MAX_UNLOCK_COST - 1)
+    expect(buyBuyMaxUnlock(poor)).toBe(poor)
+  })
+
+  it('keeps the unlock through Purge and Reboot', () => {
+    const owned = { ...createInitialGameState(), buyMaxUnlocked: true, sleepModeCapLevel: 3 }
+    const purged = purgeGame({ ...owned, resources: { ...owned.resources, [MONEY_ID]: PURGE_THRESHOLD } })
+    expect(purged.buyMaxUnlocked).toBe(true)
+    expect(purged.sleepModeCapLevel).toBe(3)
+    const rebooted = eraGame({ ...owned, purge: { ...owned.purge, points: ERA_ELIGIBILITY_PP } })
+    expect(rebooted.buyMaxUnlocked).toBe(true)
+    expect(rebooted.sleepModeCapLevel).toBe(3)
   })
 
   it('buys every affordable FULL tier level in one click, leaving the remainder unspent', () => {
@@ -12140,8 +12299,8 @@ const withPpForInterval = (points, autobuyer = 1) => {
 }
 
 describe('autobuyer interval upgrade', () => {
-  it('costs 1 PP doubling on the 125-based ladder', () => {
-    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(getAutobuyerIntervalUpgradeCost)).toEqual([100, 200, 400, 6400, 12500, 25000, 50000, 100000, 200000])
+  it('costs 10 PP doubling on the 125-based ladder', () => {
+    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(getAutobuyerIntervalUpgradeCost)).toEqual([10, 20, 40, 640, 1250, 2500, 5000, 10000, 20000])
   })
 
   it('multiplies the interval by 0.9 per level and caps at 10ms', () => {

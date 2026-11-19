@@ -196,7 +196,7 @@ first `getComputeBoostCoveredTierCount` Factory tiers (`tickGame`). Exports:
   `getComputeBoostDescription(intro, tierIndex = 0)` (0-based Factory tier; that tier's own summed multiplier, only the lanes covering it, whole-lane time left and waiting boosts; null when no lane covers it), `COMPUTE_BOOST_LABELS`.
 
 Used on ByteFoundryPage's `DataStreamCard` (glow + badge after the Speed figure, tap button described by it) and MainPage's
-`TierLine` (glow + badge after the production figure + a line in the tier's details list).
+`TierLine` (glow + a line in the tier's details list).
 
 ## `Switch/index.js`
 
@@ -213,8 +213,8 @@ small icon-only squares — and the selected option is identified by styling alo
 
 ## `BuyMaxToggle/index.jsx`
 
-`{ game }` — the Buy max mode toggle. Renders nothing until `isBuyMaxUnlocked(game.state)` (first
-Prestige or any Reboot); then a `components/Switch` (`aria-label="Toggle buy max mode"`,
+`{ game }` — the Buy max mode toggle. Renders nothing until `isBuyMaxUnlocked(game.state)` (the 2 PP
+Buy max purchase); then a `components/Switch` (`aria-label="Toggle buy max mode"`,
 `aria-pressed`, `$on`) that calls
 `game.setBuyMaxMode(!game.buyMaxMode)`. Used only on Firmware → ✦ Prestige (`pages/PerksPage`'s Purchasing row); mechanic in
 `docs/ECONOMY_REFERENCE.md`'s "Buy max mode".

@@ -312,6 +312,7 @@ test('after a Reboot (prestige count 0, era 1) Firmware stays reachable with eve
   seedMainGameState({
     autobuyers: { tier01: 1 },
     autoScaleUp: true,
+    buyMaxUnlocked: true,
     era: { count: 1 },
     purge: { xp: 0, points: 0, count: 0, highestMilestone: 1 },
   })
@@ -643,18 +644,43 @@ test('once the hero switches to Bytes, a small Bits line shows the exact bit bal
   expect(bitsLine).not.toHaveAttribute('role', 'status')
 })
 
-test('a byte-producing tier shows its per-tick production amount with the currency format, not a per-second rate', () => {
+// Production moved off the collapsed row into its details disclosure (the tier symbol toggles it).
+const expandTierDetails = async (user, tierName) => {
+  const layer = screen.getByLabelText(new RegExp(`^${tierName} layer$`, 'i'))
+  await user.click(within(layer).getByRole('button', { name: new RegExp(tierName, 'i') }))
+  return layer
+}
+
+test('a byte-producing tier shows its per-tick production amount with the currency format, not a per-second rate', async () => {
+  const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier01: 5 },
   })
   render(<App />)
 
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+5 B')
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).not.toHaveTextContent('/sec')
+  // The collapsed row shows only the owned count; production is in the details.
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).not.toHaveTextContent('+5 B')
+  const layer = await expandTierDetails(user, 'kilobytes')
+  expect(layer).toHaveTextContent('Production: +5 B per delivery')
+  expect(layer).not.toHaveTextContent('/sec')
 })
 
-test('a tickspeed multiplier level speeds up delivery frequency, not the amount per delivery or autobuyer purchase frequency', () => {
+test('the Buy button shows the tier\'s completed-level count beside the cart icon', () => {
+  seedMainGameState({
+    resources: { base: 10 },
+    owned: { tier01: 10 },
+    purchaseLevels: { tier01: 4 }, // 3 completed levels
+  })
+  render(<App />)
+
+  const buy = within(screen.getByLabelText(/^kilobytes layer$/i)).getByRole('button', { name: /^buy/i })
+  // The icon slot (aria-hidden; the accessible name carries the full sentence) holds 🛒 + level.
+  expect(buy.querySelector('[aria-hidden="true"]')).toHaveTextContent(/^🛒 3$/)
+})
+
+test('a tickspeed multiplier level speeds up delivery frequency, not the amount per delivery or autobuyer purchase frequency', async () => {
+  const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier01: 5 },
@@ -666,7 +692,7 @@ test('a tickspeed multiplier level speeds up delivery frequency, not the amount 
   // The displayed production figure is the raw per-delivery amount (owned) — level 3's ×1.21
   // speed bonus (10% per level) shortens how often a delivery lands, it never inflates the
   // amount, so this still reads +5 B.
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+5 B')
+  expect(await expandTierDetails(user, 'kilobytes')).toHaveTextContent('Production: +5 B')
   // The cumulative speed bonus no longer shows as a badge on the row itself (see "the
   // automation icon and percentage badge are removed from the tier row" below) — it's still
   // available in the tickspeed button's own title tooltip and the row's Details disclosure.
@@ -694,7 +720,8 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
   expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 })
 
-test('reaching 8 lifetime purchases of a tier multiplies its displayed production by ×1.25', () => {
+test('reaching 8 lifetime purchases of a tier multiplies its displayed production by ×1.25', async () => {
+  const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier01: 10 },
@@ -705,10 +732,11 @@ test('reaching 8 lifetime purchases of a tier multiplies its displayed productio
 
   // Crossing the 8-purchase milestone completes level 1: owned(10) × 1 B/tick × 1.25 = 12.5 B/tick
   // (the displayed amount floors to match tickGame's own floored credit).
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+12 B')
+  expect(await expandTierDetails(user, 'kilobytes')).toHaveTextContent('Production: +12 B')
 })
 
-test('a tier shows its full per-tick production amount, not a reduced rate', () => {
+test('a tier shows its full per-tick production amount, not a reduced rate', async () => {
+  const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier01: 10, tier02: 4 },
@@ -719,7 +747,7 @@ test('a tier shows its full per-tick production amount, not a reduced rate', () 
   // each time the tier's own tickspeed period completes — not divided by tickspeed, since it's
   // not shown as an averaged "/sec" rate. Megabytes PRODUCES Kilobytes (producesResourceId:
   // 'tier01'), so the amount reads in Kilobytes' own symbol (KB), not Megabytes' own (MB).
-  expect(screen.getByLabelText(/^megabytes layer$/i)).toHaveTextContent('+4 KB')
+  expect(await expandTierDetails(user, 'megabytes')).toHaveTextContent('Production: +4 KB')
 })
 
 test('a tier row has no separate "Details" label — clicking its name reveals base/effective tickspeed', async () => {
@@ -888,8 +916,8 @@ test('manual Buy clicks buy as many units as are currently affordable, not just 
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
   // MoneyHero (the "money display") switches to whole Bytes once the balance reaches 8000 Bits
   // (see engine.js's formatMoneyBalance) — 92,000 Bits = 11,500 Bytes.
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('11,500 B')
-  expect(screen.getByLabelText(/balance in bits/i)).toHaveTextContent('92,000 b')
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1.15e4 B')
+  expect(screen.getByLabelText(/balance in bits/i)).toHaveTextContent('9.2e4 b')
 })
 
 test('manual Buy partially fills when funds only cover part of the cost block', async () => {
@@ -1622,7 +1650,7 @@ test('Firmware groups by feature: Automation holds every automation, Prestige th
   expect(screen.queryByLabelText(/^production speed bonus upgrade$/i)).not.toBeInTheDocument()
   expect(screen.getByRole('tab', { name: /open prestige/i })).toHaveAttribute(
     'title',
-    'Prestige — Compression, playtime bonus, Overflow mode and Buy max',
+    'Prestige — Speed bonus, Sleep mode, Compression, playtime bonus, Overflow mode and Buy max',
   )
 })
 
@@ -2186,11 +2214,55 @@ test('Firmware → Prestige teaches PP with a tutorial: the first 1 PP buys the 
   await openPerksTab(user, /open prestige/i)
 
   expect(screen.getByLabelText(/^purge points tutorial$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^speed bonus value$/i)).toHaveTextContent('Production ×1 → ×1.1')
   await user.click(screen.getByRole('button', { name: /unlock speed bonus for 1 purge points/i }))
 
   expect(screen.queryByLabelText(/^purge points tutorial$/i)).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
-  expect(screen.getByLabelText(/^speed bonus upgrade$/i)).toHaveTextContent('×1.1 now')
+  expect(screen.getByLabelText(/^speed bonus value$/i)).toHaveTextContent(/^Production ×1\.1$/)
+})
+
+test('Firmware → Prestige upgrade names expand their description; values show now → after', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 }, buyMaxUnlocked: false })
+  render(<App />)
+  await openPerksTab(user, /open prestige/i)
+
+  expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent('Time away: up to 4h → 8h')
+  expect(screen.getByLabelText(/^cache warm value$/i)).toHaveTextContent('Start runs with KB level 1 done')
+  expect(screen.getByLabelText(/^buy max value$/i)).toHaveTextContent('Buy every affordable level in one tap')
+  expect(screen.queryByLabelText(/^sleep mode description$/i)).not.toBeInTheDocument()
+  const toggle = screen.getByRole('button', { name: /^sleep mode details$/i })
+  await user.click(toggle)
+  expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  expect(screen.getByLabelText(/^sleep mode description$/i)).toHaveTextContent('4 / 40 / 400 / 4,000 / 4e4 PP')
+  await user.click(toggle)
+  expect(screen.queryByLabelText(/^sleep mode description$/i)).not.toBeInTheDocument()
+})
+
+test.each([
+  ['Buy max', /unlock buy max for 2 purge points/i, 2, /buy max mode toggle|buy max/i],
+  ['Cache Warm', /unlock cache warm for 20 purge points/i, 20, /cache warm unlocked/i],
+])('%s is bought with PP on Firmware → Prestige', async (_name, button, cost, ownedLabel) => {
+  const user = userEvent.setup()
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: cost, count: 1, highestMilestone: 1 }, buyMaxUnlocked: false })
+  render(<App />)
+  await openPerksTab(user, /open prestige/i)
+  await user.click(screen.getByRole('button', { name: button }))
+  expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
+  expect(screen.queryByRole('button', { name: button })).not.toBeInTheDocument()
+  expect(screen.getAllByLabelText(ownedLabel).length).toBeGreaterThan(0)
+})
+
+test('Sleep mode levels are bought with PP until the 24h maximum', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 40000, count: 1, highestMilestone: 1 }, sleepModeCapLevel: 4 })
+  render(<App />)
+  await openPerksTab(user, /open prestige/i)
+  expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent('Time away: up to 20h → 24h')
+  await user.click(screen.getByRole('button', { name: /buy sleep mode level 5 for 4e4 purge points/i }))
+  expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent(/^Time away: up to 24h$/)
+  expect(screen.getByLabelText(/^sleep mode unlocked$/i)).toBeInTheDocument()
 })
 
 test('the playtime bonus is unlocked for 100 PP on Firmware → Prestige', async () => {
@@ -2228,15 +2300,15 @@ test('a locked badge appears on Firmware → Automation for a tier whose autobuy
 
   seedMainGameState({
     resources: { base: 10 },
-    // tier01's autobuyer unlocks at Purge 2; tier02's milestone (Purge 4) isn't met yet at count 3.
+    // tier01's autobuyer unlocks at Purge 1; tier02's milestone (Purge 2) isn't met yet at count 1.
     owned: { tier01: 16 }, // fully purchases two levels, unlocking Megabytes
     everUnlockedTierIds: { tier01: true, tier02: true },
-    purge: { xp: 0, points: 100, count: 3, highestMilestone: 1 },
+    purge: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  expect(screen.getByLabelText(/^megabytes's autobuyer unlocks at purge 4$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^megabytes's autobuyer unlocks at purge 2$/i)).toBeInTheDocument()
 })
 
 test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone is reached', async () => {
@@ -2246,7 +2318,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
     resources: { base: 10 },
     owned: { tier01: 16 },
     everUnlockedTierIds: { tier01: true, tier02: true },
-    purge: { xp: 0, points: 2000, count: 4, highestMilestone: 1 }, // meets megabytes' milestone (4)
+    purge: { xp: 0, points: 2000, count: 2, highestMilestone: 1 }, // meets megabytes' milestone (2)
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
@@ -2280,19 +2352,19 @@ test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) p
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 }, // the unit-buying autobuyer is already unlocked
-    purge: { xp: 0, points: 1000, count: 21, highestMilestone: 1 }, // one short of Kilobytes's tickspeed milestone (22)
+    purge: { xp: 0, points: 1000, count: 10, highestMilestone: 1 }, // one short of Kilobytes's tickspeed milestone (11)
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 22$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 11$/i)).toBeInTheDocument()
 })
 
 test('a tier\'s tickspeed autobuyer auto-unlocks (no PP spent) once its own prestige milestone is reached', async () => {
   seedMainGameState({
     resources: { base: 10 },
     autobuyers: { tier01: 1 },
-    purge: { xp: 0, points: 10, count: 22, highestMilestone: 1 }, // meets Kilobytes's tickspeed milestone (22)
+    purge: { xp: 0, points: 10, count: 11, highestMilestone: 1 }, // meets Kilobytes's tickspeed milestone (11)
   })
   render(<App />)
   await openPerksTab(userEvent.setup(), /open automation/i)
@@ -2460,23 +2532,23 @@ test('Firmware → Automation lists every tier\'s autobuyer/tier-tickspeed-autob
 
   seedMainGameState({
     resources: { base: 10 },
-    purge: { xp: 0, points: 0, count: 7, highestMilestone: 1 },
+    purge: { xp: 0, points: 0, count: 3, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  // Purge count 7 meets Kilobytes/Megabytes/Gigabytes' autobuyer-unlock milestones (2/4/6) but not
-  // Terabytes' (8) — each already-met tier shows as unlocked, the next one as still locked.
+  // Purge count 3 meets Kilobytes/Megabytes/Gigabytes' autobuyer-unlock milestones (1/2/3) but not
+  // Terabytes' (4) — each already-met tier shows as unlocked, the next one as still locked.
   expect(screen.getByLabelText(/^kilobytes's autobuyer active$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^megabytes's autobuyer active$/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/^gigabytes's autobuyer active$/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/^terabytes's autobuyer unlocks at purge 8$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^terabytes's autobuyer unlocks at purge 4$/i)).toBeInTheDocument()
 
-  // None of the tier tickspeed autobuyer milestones (22+) are anywhere close yet.
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 22$/i)).toBeInTheDocument()
+  // None of the tier tickspeed autobuyer milestones (11+) are reached yet.
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 11$/i)).toBeInTheDocument()
   const tickspeedProgress = screen.getByRole('progressbar', { name: /^kilobytes tickspeed autobuyer milestone progress$/i })
-  expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '7')
-  expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '22')
+  expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '3')
+  expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '11')
 
   // Releases no longer repeats these — it keeps only Chapters / Reboot.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
@@ -2512,17 +2584,17 @@ test('an autobuyer active/paused badge appears on Firmware → Automation once i
 test('no autobuyer pause button appears on Firmware → Automation before its autobuyer is unlocked', async () => {
   const user = userEvent.setup()
 
-  // Megabytes' autobuyer unlocks at Purge 4 (getAutobuyerUnlockMilestone) — Purge 3 is enough to
-  // have unlocked Kilobytes (milestone 2) but not Megabytes.
+  // Megabytes' autobuyer unlocks at Purge 2 (getAutobuyerUnlockMilestone) — Purge 1 is enough to
+  // have unlocked Kilobytes (milestone 1) but not Megabytes.
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier02: 1 },
-    purge: { xp: 0, points: 0, count: 3, highestMilestone: 1 },
+    purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  expect(screen.getByLabelText("Megabytes's autobuyer unlocks at Purge 4")).toBeInTheDocument()
+  expect(screen.getByLabelText("Megabytes's autobuyer unlocks at Purge 2")).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /^Megabytes's autobuyer$/i })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^Kilobytes's autobuyer$/i })).toBeInTheDocument()
 })
@@ -2616,7 +2688,7 @@ test('a tier whose autobuyer is unlocked but not yet tickspeed-automated still o
   render(<App />)
   await openPerksTab(userEvent.setup(), /open automation/i)
 
-  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 22$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^kilobytes's tickspeed autobuyer unlocks at purge 11$/i)).toBeInTheDocument()
 })
 
 test('clicking the money balance expands a breakdown of every global production multiplier currently in effect, and collapses again on a second click', async () => {
@@ -5982,6 +6054,7 @@ describe('Buy max mode', () => {
     const kilobytes = TIER_DEFINITIONS[0]
     const blockCost = level => getTierCost(kilobytes, level) * DEFAULT_PURCHASE_BLOCK_SIZE
     seedMainGameState({
+      buyMaxUnlocked: true,
       purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
       resources: { base: blockCost(1) + blockCost(2) },
     })
@@ -5998,7 +6071,8 @@ describe('Buy max mode', () => {
     await user.click(screen.getByRole('button', { name: /^open byte factory$/i }))
 
     const buyMaxButton = screen.getByRole('button', { name: /^Buy 2 full levels/ })
-    expect(buyMaxButton).toHaveTextContent('+2')
+    // Icon slot (aria-hidden): 🛒 + completed levels (0) with Buy max's +n suffixed straight on.
+    expect(buyMaxButton.querySelector('[aria-hidden="true"]')).toHaveTextContent(/^🛒 0\+2$/)
     await user.click(buyMaxButton)
     const kilobytesPanel = screen.getByLabelText(`${kilobytes.name} layer`)
     expect(within(kilobytesPanel).getByRole('progressbar', { name: `${kilobytes.name} cost-block progress` }))

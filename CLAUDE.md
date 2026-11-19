@@ -667,7 +667,7 @@ a purchase control yet (deferred to #414, blocked pending maintainer-approved sp
 `getPrestigePointsAwarded`: 1 base PP at 1 Googol Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64)
 additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Compression
 upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then doubles PP-per-power; cost
-`100^(level+1)` PP). Production speed bonus (`getPrestigeProductionMultiplier`) is a one-time 1 PP purchase
+`10^(level+1)` PP). Production speed bonus (`getPrestigeProductionMultiplier`) is a one-time 1 PP purchase
 (`buyPrestigeSpeedBonus`/`prestigeSpeedBonusUnlocked`; Firmware → Prestige opens with a PP tutorial callout) giving
 ×1.1 for the 1st Purge (hardcoded `PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER`), then ×`1 + log10(count)` (×2 at 10, ×3 at 100, ×4 at 1,000…); see `docs/ECONOMY_REFERENCE.md`. `GOOGOL` (1e100) is still exported and used by the exponent-based formulas
 (`getMoneyExponent`/`getPurgePercent`) — only the live freeze/Prestige trigger moved to
@@ -676,7 +676,7 @@ upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then do
 the exact `formatCurrency` amount (absolutely positioned in the existing gap — adds no height; hidden while `balancesCompressed`). Every other `formatCurrency` call
 (costs, production, the Prestige-threshold overlay) keeps reading in Bits.
 
-**Challenge mode (epic #1037; engine #1038 + UI #1039: Challenges page 🏁 Factory tab, inline start on Global Automation rows, `ChallengeBanner` atop Factory):** state `challenges` (`active`, `activeSeconds`, `completed`, `bestSeconds`, `enteredCount`, `exitedCount`); registry `CHALLENGE_DEFINITIONS` + the `LIVE_CHALLENGE_IDS` rollout Set (F1–F25 live; tier rules are `effect`-keyed with run-scoped `challenges.run`) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits`/`autoCompleteChallenges` in `engine.js` gate the three speed-upgrade buyers on completion. Definitions may also carry run-wide `levers` (`production`, `clockSpeedPower`, `scaleUpPower`, `costMultiplier`; read via `getChallengeLever`, active only inside the challenge); F9 Bit Rot's corruption also falls with unlocked Foundry disk sizes (unadvertised). Balance bands + per-challenge values: `docs/ECONOMY_REFERENCE.md` "Challenge mode"; sim: `scripts/simulate-challenges.mjs`.
+**Challenge mode (epic #1037; engine #1038 + UI #1039: Challenges page 🏁 Factory tab, inline start on Global Automation rows, `ChallengeBanner` atop Factory):** state `challenges` (`active`, `activeSeconds`, `completed`, `bestSeconds`, `enteredCount`, `exitedCount`); registry `CHALLENGE_DEFINITIONS` + the `LIVE_CHALLENGE_IDS` rollout Set (F1–F25 live; tier rules are `effect`-keyed with run-scoped `challenges.run`) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits`/`autoCompleteChallenges` in `engine.js` gate the three speed-upgrade buyers on completion. A challenge unlocks at `CHALLENGE_UNLOCK_PURGE_MULTIPLIER` (5) × its automation's unlock Purge (`getChallengeUnlockPurges`); tier autobuyers unlock at Purge n, tier tickspeed autobuyers at n + 10. Definitions may also carry run-wide `levers` (`production`, `clockSpeedPower`, `scaleUpPower`, `costMultiplier`; read via `getChallengeLever`, active only inside the challenge); F9 Bit Rot's corruption also falls with unlocked Foundry disk sizes (unadvertised). Balance bands + per-challenge values: `docs/ECONOMY_REFERENCE.md` "Challenge mode"; sim: `scripts/simulate-challenges.mjs`.
 
 ### Byte Foundry
 
@@ -739,7 +739,7 @@ constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about
 formula/gate a past iteration may already have tried and rejected (e.g. the `<=` vs. `===`
 bank-redeemability check, the flat vs. dynamic transfer cost).
 
-**Buy max mode** (unlocked after the first Prestige, `isBuyMaxUnlocked`; toggled on Firmware → Prestige) — a per-device toggle
+**Buy max mode** (one-time `BUY_MAX_UNLOCK_COST` 2 PP purchase, `buyMaxUnlocked`/`isBuyMaxUnlocked`, never granted for free; toggled on Firmware → Prestige) — a per-device toggle
 (`tens_buy_max_mode`, not game state) making each manual leveled purchase buy every affordable level:
 `buyTierMaxLevels` for Factory tiers (FULL levels only; partial progress or an unaffordable full level
 falls back to the ordinary single-level click) and `repeatPurchaseMax` for single-level ladders.
@@ -766,6 +766,9 @@ prestige rules, purchase-batch behavior, or the skill's own bot strategy). Publi
 new file per run** onto the stable orphan branch `ideal-run-strategy` via
 `publish-strategy.sh` (`runs/<UTC-stamp>-<sha>.md` + `README.md` index) — never merge that branch
 into `main`, and do not rename it with an agent/session suffix.
+
+**Cache Warm** (`CACHE_WARM_UNLOCK_COST` 20 PP, `cacheWarmUnlocked`): `applyCacheWarm` completes level 1 of `getCacheWarmTier` (tier of the Storage pool being built — the newest unlocked, incomplete pool; pool N ↔ tier N) free after every Purge/Scale Up/Overclock/challenge exit/Reboot (`ECONOMY_REFERENCE`). **Firmware → Prestige rows** are `UpgradeRow`s: name toggles the description, one short plain value line, usually `now → after` (`MAINPAGE_REFERENCE`).
+**Sleep mode cap:** offline progress simulates at most `getMaxOfflineSeconds(state)` = 4 h + 4 h per `sleepModeCapLevel` (0–5, PP costs `SLEEP_MODE_CAP_UPGRADE_COSTS` 4/40/400/4,000/40,000; `buySleepModeCapUpgrade`) up to 24 h. Detail: `docs/ECONOMY_REFERENCE.md` "Offline progress".
 
 **Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Clock Speed/Overclock
 heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.

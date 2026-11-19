@@ -545,18 +545,17 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   model"). Cost-block progress is no longer a `+n/8` string on the Buy button — it lives on the
   button as the dual-tone fill (`$progress` / `$secondaryProgress`) plus a `VisuallyHidden`
   `role="progressbar"` and the Buy `aria-label` (`N of {blockSize} purchased toward the next`).
-  Buy max mode is the exception: while a click would buy N full levels the icon slot shows `+N`
-  (see "Buy button" below). The cost label itself (`BuyButtonCostLabel`, a `styled(ButtonLabel)`) is
-  left-aligned rather than centered, and both it and the icon slot (`BuyButtonIcon`) are pinned to a
-  fixed half of the button's width — so every tier row's cost figure starts at the same x position
-  (the button's horizontal center) regardless of digit count, instead of drifting as the cost
-  string's length changes. This scoped pair lives only in `MainPage/index.jsx` and doesn't affect
+  The icon slot (`BuyButtonIcon`) shows `🛒` + the completed-level count; in Buy max mode, while a
+  click would buy N full levels, `+N` is suffixed straight onto it at `font-weight: 800`
+  (`BuyLevelExtra`, e.g. `🛒 42+3`; no hue — it always sits on the warn/good fill, where a tint fails AA). The cost label (`BuyButtonCostLabel`, a `styled(ButtonLabel)`)
+  is right-aligned, so every row's cost ends at the same x. Costs keep their `b`/`B` unit (Bits vs
+  Bytes). This scoped pair lives only in `MainPage/index.jsx` and doesn't affect
   the shared `Button`/`ButtonIcon`/`ButtonLabel` components used elsewhere in the app (Prestige,
   Reset, Firmware, …), which keep their default fixed-icon/centered-label layout.
 - **Tier name display.** The tier row heading (`TierName`, a `styled.h3`) and the Firmware page's
   per-tier row label both render `tier.symbol` (e.g. `B`, `KB`) as the visible text, not the full
   `tier.name` — a decluttering choice, since the compact symbol already appears throughout the row
-  (cost/production strings via `RESOURCE_SYMBOL`) and the full name would be redundant clutter at this
+  (cost strings via `RESOURCE_SYMBOL`) and the full name would be redundant clutter at this
   density. The full name isn't dropped: `TierNameLabel` wraps a `<VisuallyHidden>{tier.name}</VisuallyHidden>`
   ahead of an `aria-hidden="true"` span holding the visible symbol, so the heading's accessible name is
   still the tier's full name (unchanged for screen-reader heading navigation) even though sighted users
@@ -575,8 +574,8 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   `BalancesSentinel` (falls back to always-expanded when IntersectionObserver is unavailable, e.g.
   jsdom); the stick position drops below `TopPurgeBar` when it's showing, by that bar's own
   live-measured height (`topPurgeBarHeight`, see below) rather than a guessed constant, to avoid
-  underlap. There is no aggregate `+X/sec` line — each tier row's own `+X` figure is the per-tier
-  replacement. In the compressed side-by-side layout, `CenteredCard`'s `align-items: center` (needed
+  underlap. There is no aggregate `+X/sec` line — each tier's `+X` production (first line of its row's
+  details disclosure) is the per-tier replacement. In the compressed side-by-side layout, `CenteredCard`'s `align-items: center` (needed
   so its content centers when expanded) would otherwise let a flex-column child shrink-wrap to its own
   full content width instead of the card's allotted half-share — silently defeating the `overflow:
   hidden`/`text-overflow: ellipsis` truncation meant to keep a long balance or PP status string from
@@ -721,8 +720,8 @@ The row is display-only: an explicit **⚡ Charge** button beside it
   word (🛒 Buy, ✦ Prestige, ↺ Reset) plus the cost, and (via `formatCost`) the paying tier's short
   `RESOURCE_SYMBOL` (e.g. `Ks`) instead of its full name — while each button's `aria-label` carries the
   full descriptive sentence (`"Buy ×10 for $100"`, `"Prestige (requires 1 Googol Money)"`, `"Reset
-  game"`, …) used by assistive tech and `getByRole('button', { name })` tests. Buy's icon slot is
-  otherwise empty except in Buy max mode, where it carries `+N` full levels (see "Owned vs. level"
+  game"`, …) used by assistive tech and `getByRole('button', { name })` tests. Buy's icon slot
+  carries the completed-level count, plus `+N` full levels in Buy max mode (see "Owned vs. level"
   above); ordinary cost-block progress is the fill + hidden progressbar, not `+n/8` text.
 
 **Factory view (no second-level tabs).** `MainPage` renders only the tier ladder and its cards
@@ -733,8 +732,8 @@ automation pause toggle live on the separate **Firmware** page (below). Releases
 `MilestonesPage` (AppNav → More). Full-save Reset lives only under More → Settings → Danger zone.
 
 **Firmware page (`pages/PerksPage`).** Its own AppNav destination (page id `'perks'`, item `open firmware`, 🔧,
-between Factory and More), shown once `isPerksPageRevealed` (= `isBuyMaxUnlocked`: first Prestige or
-Reboot) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
+between Factory and More), shown once `isPerksPageRevealed` (first Prestige or
+Reboot, or any Auto-charge bought) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
 attention). Header shows the spendable PP (`aria-label="purge points display"`). Two **icon-only**
 tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyph, the full name is in
 `aria-label`/`title`), defaulting to Automation and reset to it by `focusNonce` on each AppNav visit.
@@ -747,8 +746,8 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   Before the cap the head also carries a terse inline interval (`InlineMeta`, `formatIntervalShort`:
   `64s`, `2.9s`, `212ms`; a tier autobuyer at the 10 ms floor shows only its bulk `×N`, up to 1024) —
   never its own line — and (tier / Flops cells) the cell grows one line downward for a full-width ⏫ speed upgrade (visible text is the cost only — the
-  doubling to `M/buy` is in its `aria-label`/`title`; every tier autobuyer / tier tickspeed autobuyer
-  chain starts at 100 PP). Locked: a 🔒
+  doubling to `M/buy` is in its `aria-label`/`title`; every tier autobuyer chain starts at 10 PP, every
+  tier tickspeed autobuyer chain at 100 PP). Locked: a 🔒
   `MilestoneBadge` in the head (`"<subject> unlocks at <unit> N"` + hidden progressbar) — every automation (global, tier, tier tickspeed) unlocks by Purge count; there is no PP unlock button. The Switch (`aria-pressed`, `aria-label`
   e.g. `"Auto Scale Up automation"`, `"<tier>'s autobuyer"`) sits at the head's right; the status is
   `"<name> active|paused"` (`role="img"`). Tier autobuyers: one `TierPair` card per tier (`aria-label="<tier> automation"`, the tier's Factory
@@ -767,8 +766,13 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Power Automation* (once any tier's Auto-charge is bought on Power: an `auto-charge row` pause Switch — `computeAutoChargeEnabled` — plus an `auto boost row` Switch and the full-width Boost preset picker), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
-  *Purge Points* (Compression leveled upgrade; Overflow mode, locked until Auto Purge's interval ≤
-  `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`) and *Purchasing* (Buy max, `components/BuyMaxToggle`).
+  *Purge Points* (Speed bonus 1 PP, Sleep mode 4 h → 24 h ladder, Compression leveled upgrade, Cache Warm 20 PP,
+  Playtime bonus 100 PP, Overflow mode — locked until Auto Purge's interval ≤ `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`)
+  and *Purchasing* (Buy max: 2 PP unlock button, then `components/BuyMaxToggle`). Every row is an `UpgradeRow`:
+  the name is a button (`"<name> details"`, `aria-expanded`) toggling a full-width description
+  (`"<name> description"`); under the name one short, plain value line (`"<name> value"`) — usually
+  `now → after` while buyable (e.g. "Time away: up to 4h → 8h"), the current effect once owned/maxed, or a plain
+  one-line summary where a before/after reads poorly (Buy max, Overflow mode, Cache Warm). All explanatory text lives only in the description.
 Firmware never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
 labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol
 once, its halves a ⚙/🤖 icon; Flops cells show the tier symbol (their category heading names the kind). Every automation is named
@@ -853,8 +857,7 @@ and, like every tier, spends the full `getTickspeedMultiplierSpend` (e.g. 10 for
 "The last tier's XP-funded tickspeed". The row's Details "tier ×N" multiplier includes the XP bonus.
 
 **No per-tier automation icon on the Factory view row.** A tier row's `name` grid area (shared by
-`TierNameTrigger` / `TierName`) holds the tier's symbol on the left and the owned count on the
-same first line, right-aligned to the row center — no tickspeed-bonus badge (see "Tickspeed multiplier"
+`TierNameTrigger` / `TierName`) holds the tier's symbol and the owned count — no tickspeed-bonus badge (see "Tickspeed multiplier"
 above) and no autobuyer status icon. An earlier version showed an always-visible, read-only
 `PpUpgradeBadge` here (a single 🤖 glyph, full opacity while active / dimmed `$dimmed` while paused,
 via the same icon-instead-of-text convention every other automation status badge in the app still
@@ -862,7 +865,7 @@ uses — the tier tickspeed/global tickspeed/Auto Scale Up statuses on Firmware 
 Automation, and the Auto Purge/Auto Scale Up status lines — see their own sections below) once
 a tier's unit-buying autobuyer was unlocked (`autobuyers`/`applyAutobuyerMilestones` — a free,
 prestige-count-milestone-triggered unlock, not a PP purchase). Both removed to keep the Factory view
-row down to just the tier name plus live production/owned figures and the two action buttons —
+row down to just the tier name, owned count and the two action buttons —
 autobuyer active/paused status is still visible (and, unlike the old read-only Game-view badge,
 directly toggleable) on Firmware → 🤖 Automation's Tier Autobuyers category, via the same
 `autobuyersEnabled`/`setAutobuyerEnabled` state (see "Firmware page" above).
@@ -945,8 +948,7 @@ explanation, so nothing about the accessible name/description regressed.
 by `tierIndex % theme.tierAccents.length` (cosmetic only, kept off text/button colors to avoid
 colliding with affordability semantics — those now resolve from `theme.color.good`/`warn`/`violet`/
 `disabled`/`text`/`textMuted`/`borderStrong` rather than raw hex: `TierDetailsContent`'s
-`ul`, `OwnedText`/`ProductionText` (token-native spans — `textMuted` for owned, `text`/`font-weight: 500`
-for production), and the
+`ul`, `OwnedText` (token-native span — `text`, `font-weight: 500`), and the
 Buy/tickspeed/XP-consume buttons all migrated in the same pass; the Firmware page's
 own instances of these same shared components are a separate surface and weren't touched), and plays
 a one-shot CSS reveal animation when a tier unlocks *during the
@@ -960,18 +962,12 @@ ternary — `Button`'s `resolveColor` auto-swaps a `variant` to `theme.color.dis
 `disabled`, not a hand-written `color={canX ? tokenA : theme.color.disabled}` (see
 `docs/COMPONENTS_REFERENCE.md`'s `Button/index.jsx` entry for the general mechanism).
 
-Each row is a CSS
-Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: a two-column
-layout where the top line is the tier symbol on the left and the owned count on the same line
-right-aligned to the row center (`OwnedText` uses `margin-left: auto` at the end of the left half
-inside `TierNameTrigger`'s full-width flex row — see "No per-tier automation icon on the Factory view
-row" above for the two badges that used to also share this area) and the production figure on the
-right (`ProductionText`, `text-align: right`). Below that, the
-tickspeed multiplier button and Buy each take one equal half, then a `details`-area line spanning
-both columns. There is no separate `autobuyer` grid row/line — an earlier version gave the
-autobuyer status badge its own row, then later folded it into the icon-only badge sharing the
-`name` area (freeing that vertical space, since a single glyph needs no row of its own) before
-removing the badge from this view entirely. Below `40rem`, only fonts/spacing shrink. The owned
+Each row is a single-line CSS Grid (areas `'name upgrade buy'` / `'details details details'`):
+the tier symbol (`TierNameLabel`, `min-width: 2.2rem` so every row's count starts at the same x)
+and the owned count (`OwnedText`) share the flexible `name` track, then the tickspeed and Buy buttons
+sit in fixed tracks (`6.5rem`/`9rem`; `5.7rem`/`7.9rem` below `40rem`; `5.9rem`/`7.3rem` below `24.5rem`; Buy `6.9rem`, `0.7rem` button text and 4px gaps below `21rem`)
+so the buttons line up as columns down the list. Production is **not** on the row — it is the first
+line of the details disclosure (`Production: +X per delivery`), toggled by the tier symbol. The owned
 cell's "Owned: " label is a `VisuallyHidden` span (plus `title="Owned"`) — assert via
 `toHaveTextContent`, not `getByText`. Grid cells use a shared `gridCell` mixin (`min-width: 0;
 overflow: hidden; text-overflow: ellipsis; white-space: nowrap`). `RootDiv` sets
@@ -981,19 +977,14 @@ auto-collapses that tier's Details disclosure the instant the row scrolls fully 
 viewport — see "Auto-collapsing expanded disclosures on scroll" below.
 
 **Tier row type scale.** `TierName` uses `font.display` and steps from `lg` (desktop) to `md`
-(below `40rem`); `OwnedText`/`ProductionText`, `BuyButton`/
-`UpgradeButton`, and `TierDetailsContent` all resolve their `font-size`/`line-height` from
-`theme.type.scale`
-(`theme/tokens.js`) rather than hand-tuned `em` values — owned count stays at `textMuted`/`sm→xs`,
-production reads stronger at `text`/`font-weight: 500`, the two
-buttons from `sm` to `xs`, and the details disclosure body sits at `xs` with a `border-top` divider
-when expanded. This gives the row three clear type/weight steps (name, production, owned/metrics)
-instead of a single flat size, and `BuyButton` additionally
-sets an explicit `font-weight: 700` (`UpgradeButton` stays at `Button`'s own default `600`) so Buy —
-already the rightmost, affordability-fill-colored control — reads as the visually heavier of the two,
-per its "stays the visually dominant control" requirement. Gaps/padding resolve from `theme.space`;
-the upgrade/Buy row separates from the stats line via `margin-top`. Layout (grid areas/columns) is
-unchanged; only typography, spacing, and the details divider moved.
+(below `40rem`); `OwnedText` (`sm`, `xs` below `24.5rem`), `BuyButton`/`UpgradeButton` (`sm→xs`,
+`min-height: 2rem`), and `TierDetailsContent` (`xs`, with a `border-top` divider when expanded) all
+resolve their `font-size`/`line-height` from `theme.type.scale` (`theme/tokens.js`). `BuyButton` sets
+`font-weight: 700` (`UpgradeButton` keeps `Button`'s default `600`) so Buy — the rightmost,
+affordability-fill-colored control — reads as the heavier of the two. Row padding is a literal
+`3px` vertical (side padding and the list gap from `theme.space`). Below `24.5rem` the symbol stacks
+above the owned count (`TierNameTrigger` switches to a column) so the count gets the whole `name`
+track; the two lines stay shorter than the `2rem` buttons, so the row height doesn't change.
 
 **Tier row details disclosure.** Unlike the native `<details>`-based `Disclosure` a few other
 cards/categories use (see "No description prose on this page" above), a tier row has **no separate
@@ -1017,10 +1008,10 @@ give, and (being a normal, non-`display: contents`-promoted grid item) correctly
 width when expanded.
 
 Only the name toggles — the rest of the tile (and the Owned count) is inert, so Buy/tickspeed clicks can never also toggle it. Expanding it lists,
-in the `<ul>`: the tier's base tickspeed (`getTierBaseTickSpeedSeconds`, from `layers.js`) and effective
+in the `<ul>`: the tier's per-delivery production (`Production: +X per delivery`), its base tickspeed (`getTierBaseTickSpeedSeconds`, from `layers.js`) and effective
 tickspeed (`getEffectiveTierTickSpeedSeconds`, with the contributing tier/global tickspeed multipliers
 named inline), the purchase milestone multiplier and the lifetime purchase count driving it
-(`getPurchaseMilestoneMultiplier`), the Scale Up multiplier (only shown once `scaleUpCount > 0`), for
+(`getPurchaseMilestoneMultiplier`), the Scale Up multiplier (only shown once `scaleUpCount > 0`), any Power boost description,
 and the tier's cost/produces resource symbols. This — plus the
 tickspeed button's own `title` tooltip — is now the only place `MainPage` surfaces a tier's
 base/effective tickspeed numbers at all, now that the compact per-tier badge that used to show the

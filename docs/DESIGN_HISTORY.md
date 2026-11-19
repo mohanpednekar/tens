@@ -9475,3 +9475,33 @@ The last tier's resource-funded tickspeed upgrade spent only 10% of its cost (`L
 ## Spent QB gates last-tier credit; last tier may spend to 0 (2026-11)
 
 The unconditional per-level credit was too generous (it started as soon as QB had a completed level) and the `cost + 1` tickspeed reserve made "spend all your Quettabytes" unreachable. Credit is now gated on the Spent QB achievement (`quettaSpent` / `lastTierSpent`: run-scoped `lastTierEarnedThisRun` plus a 0 QB balance). Last-tier tickspeed requirement is `cost` so that spend is possible. The credit itself is exactly 1 unit per `10 / (1 + log10 completed levels)` s (floor 10 ms), not 1 per level per 10 s, with an elapsed-seconds timer (`lastTierLevelCreditTimer`) instead of a fractional-unit accumulator. Reaching the stall IS the condition, so `buyTickspeedMultiplier` unlocks it at the spend (marks the run + `detectAchievements`), independent of any later tick or same-tick reset. A broader latch (flagging QB on every buy) was tried and reverted as unnecessary: only a tickspeed spend can empty QB, and that spend proves QB was held.
+
+## Single-line tier rows; exponential notation from 10,000 (2026-11)
+
+Factory tier rows went from two lines (symbol · owned · +production, then two half-width buttons) to one
+line (symbol · owned, fixed-width ⚙ / 🛒 tracks), roughly halving their height; production moved into the
+details disclosure. With the owned count and costs in narrow fixed columns, `EXPONENTIAL_NOTATION_THRESHOLD`
+dropped from 1,000,000 to 10,000 (maintainer request; 1,000 was tried briefly and backed out as too
+aggressive for early-game numbers) so a plain number is at most four digits (`9,999`) before switching to
+`1e4`. That pulled early-game balances and costs into exponential form,
+where Intl's default rounding made 19,999 b read `2e4 b` beside a 2e4 b cost it couldn't afford, so
+`formatScientific` truncates the mantissa to 3 decimals (never overstates, like the floored plain path).
+Intl's `roundingMode: 'trunc'` was tried first and rejected: computed powers of ten such as
+`getTierCost`'s `10 ** k` land one float step low (`9.999999999999999e82`), which trunc printed as
+`9.999e82` and ICU sometimes as a malformed `0.099e84`. The hand-rolled version nudges by `1e-12`
+(relative) before truncating, so float error reads `1e83` while 19,999 still reads `1.999e4`. Below 24.5rem the symbol
+stacks above the owned count so long exponents (`6.167e115`) still fit at 320px.
+
+## Faster autobuyer unlocks, 5× challenge unlocks, cheaper PP upgrades (2026-11)
+
+Maintainer request. Superseded: tier autobuyer n at Purge 2n (2 … 20) → n; tier tickspeed autobuyer at 20 + 2n (22 … 40) → n + 10; challenges unlocked with their automation → at 5× its unlock Purge (`CHALLENGE_UNLOCK_PURGE_MULTIPLIER`); tier autobuyer speed chain base 100 → 10 PP (tier tickspeed chain stays 100); Compression `100^(level+1)` → `10^(level+1)`. Because Reboot zeroes `purge.count`, a completed or active challenge bypasses the count check rather than adding a new latch field. Firmware shows a disabled `🔒 Fn` (no codename) where the 🏁 start control would stand while the automation is owned but the challenge is still locked.
+
+### No grandfathering of unpurchased or unearned unlocks (2026-11-18, #1130)
+
+Maintainer rule: an existing save keeps only what it actually bought with PP, or what a Purge-count
+milestone it actually reached grants. #1130 first grandfathered the newly paid Buy max (2 PP) for saves that had it
+free; that was dropped before merge, along with the two older load-time grants in `storage.js`'s `mergeState`:
+the ≥10-Purge free speed bonus (`speedBonusGrandfathered`, now an inert field) and the ≥100-Purge Overflow mode
+latch (`PURGE_UNBOUNDED_MIN_COUNT`, removed — Overflow mode now latches only from the Auto Purge interval). A flag
+already stored as `true` by an earlier load cannot be told apart from a purchase, so those stay.
+
