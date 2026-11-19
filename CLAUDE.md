@@ -14,7 +14,7 @@ powers of ten. No routing library, no backend — state lives in React and persi
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
 `MainPage` (tier ladder), `PerksPage` (Firmware, after first Prestige: 🤖 Automation / ✦ Prestige icon
-tabs — one row per automation spanning unlock → pause → speed; Compression, Overflow mode, Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
+tabs — one row per automation spanning unlock → pause → speed; Prestige: Speed bonus, Sleep mode cap, Compression, Cache Warm, Overflow mode, Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
 second-level tabs). More (Manual / Releases / Achievements / Settings) is always available, including during the
@@ -530,7 +530,7 @@ state to the active slot, then redirects every save read/write to an isolated `'
 Moved to **`src/CLAUDE.md`** (auto-loads when a session reads any file under `src/`): terminology and the
 player-label ↔ code map, tiers/Prestige/Purge/Reboot, Challenge mode, Daily challenges, Achievements, Byte
 Foundry hard rules, pool-local flushes, Buy max, Scale Up/Overclock, and the UI conventions (expand/collapse,
-no link styling, minimal UI text, segmented choices). **Read it before any game-logic, economy, balance or UI
+no link styling, minimal UI text, segmented choices), Cache Warm and the Sleep mode cap. **Read it before any game-logic, economy, balance or UI
 work — including spec/issue/doc work that never opens a `src/` file.** Full formulas: `docs/ECONOMY_REFERENCE.md`;
 Foundry/Storage/Lake/Power: `docs/FOUNDRY_MECHANICS_REFERENCE.md`; check `docs/DESIGN_HISTORY.md` before changing
 a formula/gate a past iteration may have tried.

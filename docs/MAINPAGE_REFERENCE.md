@@ -732,8 +732,8 @@ automation pause toggle live on the separate **Firmware** page (below). Releases
 `MilestonesPage` (AppNav → More). Full-save Reset lives only under More → Settings → Danger zone.
 
 **Firmware page (`pages/PerksPage`).** Its own AppNav destination (page id `'perks'`, item `open firmware`, 🔧,
-between Factory and More), shown once `isPerksPageRevealed` (= `isBuyMaxUnlocked`: first Prestige or
-Reboot) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
+between Factory and More), shown once `isPerksPageRevealed` (first Prestige or
+Reboot, or any Auto-charge bought) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
 attention). Header shows the spendable PP (`aria-label="purge points display"`). Two **icon-only**
 tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyph, the full name is in
 `aria-label`/`title`), defaulting to Automation and reset to it by `focusNonce` on each AppNav visit.
@@ -766,8 +766,13 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Power Automation* (once any tier's Auto-charge is bought on Power: an `auto-charge row` pause Switch — `computeAutoChargeEnabled` — plus an `auto boost row` Switch and the full-width Boost preset picker), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
-  *Purge Points* (Compression leveled upgrade; Overflow mode, locked until Auto Purge's interval ≤
-  `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`) and *Purchasing* (Buy max, `components/BuyMaxToggle`).
+  *Purge Points* (Speed bonus 1 PP, Sleep mode 4 h → 24 h ladder, Compression leveled upgrade, Cache Warm 20 PP,
+  Playtime bonus 100 PP, Overflow mode — locked until Auto Purge's interval ≤ `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`)
+  and *Purchasing* (Buy max: 2 PP unlock button, then `components/BuyMaxToggle`). Every row is an `UpgradeRow`:
+  the name is a button (`"<name> details"`, `aria-expanded`) toggling a full-width description
+  (`"<name> description"`); under the name one short, plain value line (`"<name> value"`) — usually
+  `now → after` while buyable (e.g. "Time away: up to 4h → 8h"), the current effect once owned/maxed, or a plain
+  one-line summary where a before/after reads poorly (Buy max, Overflow mode, Cache Warm). All explanatory text lives only in the description.
 Firmware never shows level numbers (only intervals, `N/buy` and costs). Global-automation and Prestige
 labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol
 once, its halves a ⚙/🤖 icon; Flops cells show the tier symbol (their category heading names the kind). Every automation is named
