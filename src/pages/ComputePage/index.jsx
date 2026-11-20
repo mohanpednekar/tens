@@ -77,6 +77,7 @@ const NodeSide = styled.div`
   align-items: center;
   display: flex;
   flex: 0 0 auto;
+  margin-left: auto;
   gap: 4px;
 `
 
@@ -124,10 +125,13 @@ const SelectMarker = styled.span`
 
 // Row 1: tier name/symbol plus a row of COMPUTE_ENTITY_CAP (10) normal slots — "First row shows 10
 // slots ... also has Name and symbol of the tier" (issue #321).
+// Wraps only when the node's Charger can't fit beside the dots (~320px phones): the Charger then
+// drops to its own right-aligned line instead of overlapping them.
 const TierHeaderRow = styled.div`
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  row-gap: 2px;
   gap: ${props => props.theme.space.xs};
   width: 100%;
 `
@@ -143,7 +147,7 @@ const TierSelectButton = styled.button`
   flex: 1 1 auto;
   align-items: center;
   gap: ${props => props.theme.space.xs};
-  min-width: 0;
+  min-width: fit-content;
   border: none;
   border-radius: ${props => props.theme.radius.sm};
   background: none;
@@ -176,7 +180,6 @@ const NodeText = styled.span`
   flex: 1 1 auto;
   flex-direction: column;
   gap: 3px;
-  min-width: 0;
 `
 
 const NodeTitle = styled.span`
@@ -199,11 +202,10 @@ const TierSymbol = styled.span`
 
 const SlotsRow = styled.div`
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   flex-wrap: nowrap;
   justify-content: flex-start;
   gap: 3px;
-  min-width: 0;
 `
 
 // A single discrete normal-capacity slot (one of COMPUTE_ENTITY_CAP) — filled once its index is
