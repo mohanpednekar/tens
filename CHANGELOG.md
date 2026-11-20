@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Power: Boost presets are no longer disabled by a pending Disk Fill or an armed Provision Disk (blockers invisible on the Power screen) — holding a token is enough.
+
 - A cost within float error of a clean multiple of 8 Bits (e.g. `8e92 b`) now reads `1e92 B` instead of `9.999e91 B`.
 
 ### Added

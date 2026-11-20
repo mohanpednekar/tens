@@ -1,6 +1,6 @@
 import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration } from 'components/BoostTimerBar'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
-import { canActivateComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostLane, getComputeBoostLanes, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getChargerUnlockProgress, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeChargeAvailable, isComputeCharging, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress } from 'game/engine'
+import { formatAmount, formatOfflineDuration, getComputeBoostLane, getComputeBoostLanes, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getChargerUnlockProgress, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeChargeAvailable, isComputeCharging, isComputeMergeStartAvailableAtBoundary } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
 import { Fragment, useState } from 'react'
 import styled from 'styled-components'
@@ -454,11 +454,8 @@ const ENTITY_ROWS = [
 const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && output < outputCap
 
 // Compute's own dedicated screen — split out of ByteFoundryPage (see "Byte Foundry" in CLAUDE.md)
-// once revealed (isComputeCoreConversionUnlocked), reached via AppNav. Activation is still gated
-// by the Byte Foundry's forced priority order — Disk Fill > Speed > Provision Disk > Compute —
-// so a preset can show disabled here even while mechanically activatable
-// (canActivateComputeBoost), if something ranked above Compute (which lives back on
-// ByteFoundryPage/StoragePage) currently outranks it. The ten-tier merge chain (Core → Node →
+// once revealed (isComputeCoreConversionUnlocked), reached via AppNav. Boost activation only needs a held
+// token — it is not arbitrated against Disk Fill / Provision Disk. The ten-tier merge chain (Core → Node →
 // Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer, see
 // issues #280/#321) lives here too, alongside Boost — one page for everything Compute, rather
 // than a second dedicated screen. Render order top to bottom: a card with the current boost
@@ -488,7 +485,6 @@ const ComputePage = ({ game }) => {
     return getComputeBoostLanes(intro)[0]?.queue[0] ?? 1
   })
 
-  const blockedByPriority = isDiskFillAvailable(state) || isProvisionDiskInProgress(state)
   const boostLanes = getComputeBoostLanes(intro)
   const boostActive = boostLanes.length > 0
   const activeBoostTierIndexes = boostLanes.map(lane => lane.queue[0])
@@ -515,7 +511,6 @@ const ComputePage = ({ game }) => {
           // multiplier runs in parallel and adds up.
           const lane = getComputeBoostLane(intro, boostType)
           const queues = Boolean(lane)
-          const blockedTitle = 'Take a higher-priority upgrade first (Disk Fill or Provision Disk)'
           const spendText = `×${multiplier} production, ${formatPresetDuration(durationSeconds)}`
 
           return (
@@ -527,11 +522,9 @@ const ComputePage = ({ game }) => {
               disabled={!isComputeBoostTurnAvailable(state, boostType, armedTierIndex)}
               onClick={() => actions.activateComputeBoost(boostType, armedTierIndex)}
               title={
-                canActivateComputeBoost(state, boostType, armedTierIndex) && blockedByPriority
-                  ? blockedTitle
-                  : queues
-                    ? `Queue ${nextLabel}: runs after the current one, ${spendText} — up to ${COMPUTE_BOOST_MAX_STACKS}x`
-                    : `${nextLabel}: ${spendText} — runs alongside other boosts and adds up`
+                queues
+                  ? `Queue ${nextLabel}: runs after the current one, ${spendText} — up to ${COMPUTE_BOOST_MAX_STACKS}x`
+                  : `${nextLabel}: ${spendText} — runs alongside other boosts and adds up`
               }
               type="button"
               variant="prestige"
