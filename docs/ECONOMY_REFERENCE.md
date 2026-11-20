@@ -1732,15 +1732,15 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   upper limit: `buyTierUpToLevels` buys as many whole clean levels as are affordable up to it (zero level
   progress required), otherwise falls back to a single level. Permanent across Prestige/Scale Up/Overclock/Era.
 - **Global automations unlock by Purge count, not PP.** `GLOBAL_AUTOMATION_UNLOCK_PURGES` (`layers.js`;
-  `getGlobalAutomationUnlockMilestone(key)`): Clock Speed 8, Restage 16, Scale Up 32, Overclock 64, Purge 128.
+  `getGlobalAutomationUnlockMilestone(key)`): Clock Speed 8, Scale Up 16, Restage 32, Overclock 64, Purge 128.
   `applyAutobuyerMilestones` (run by `purgeGame`) sets `autoGlobalTickspeed`/`autoXpTickspeed`/`autoScaleUp`/
   `autoOverclock`/`autoPurge` (→ 1) when `purge.count` reaches each, spending no PP and never revoking. The
   PP-funded part is only each chain's interval upgrades (`AUTOMATION_INTERVAL_CONFIG[key].baseCost` first level:
-  Clock Speed 8, Scale Up 16, Restage 16, Overclock 32, Purge 64), unchanged; tier autobuyer / tier tickspeed
+  Clock Speed 8, Scale Up 16, Restage 32, Overclock 32, Purge 64), unchanged; tier autobuyer / tier tickspeed
   chains start at 10 PP / 100 PP (`AUTOBUYER_INTERVAL_UPGRADE_BASE_COST` / `TIER_TICKSPEED_INTERVAL_CONFIG.baseCost`).
   The old `buyAutoScaleUp`/`buyAutoOverclock`/`buyAutoPurge`/`buyTickspeedAutobuyer`/`buyXpTickspeedAutobuyer`,
   `getAutomationUnlockCost` and `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` were removed.
-- **Active — Auto Scale Up:** `autoScaleUp = true` at Purge 32. Once unlocked, `tickGame` calls `scaleUpGame` on its interval timer
+- **Active — Auto Scale Up:** `autoScaleUp = true` at Purge 16. Once unlocked, `tickGame` calls `scaleUpGame` on its interval timer
   (see "Automation interval chains") whenever `autoScaleUpEnabled` is also true. Final-tier requirements
   progress 3, 6, 9, and so on, so an automatic claim at level 3 leaves Overclock available at level 5
   before the next Scale Up. Permanent.
@@ -1945,7 +1945,7 @@ its one purpose.
   (`purchased`/levels untouched; the last tier's own counts untouched). No-op if not unlocked, if the
   last tier's own `owned` is 0 (nothing to speed up — see `docs/DESIGN_HISTORY.md`), if `amount` isn't a
   positive integer, is below the minimum, exceeds unspent XP, or production is frozen.
-- **Automation: the Auto Restage** (`autoXpTickspeed`, unlocked at Purge 16 (no PP); permanent across
+- **Automation: the Auto Restage** (`autoXpTickspeed`, unlocked at Purge 32 (no PP); permanent across
   Prestige/Scale Up/Overclock/Era like the other global automations). While bought and
   `autoXpTickspeedEnabled` (pause via `setAutoXpTickspeedEnabled`, same Firmware row), `tickGame` calls
   `consumeXpForLastTierTickspeed(purge.xp)` through `runGlobalIntervalAutomation(…, 'restage', …)` —
@@ -2355,9 +2355,9 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // Up — only by a real Prestige — see "Overclock" below
   computeAutoChargeEnabled: true,                        // permanent pause switch for ALL Power Auto-charge boundaries (Firmware → Automation);
                                                           // paused = no NEW timed reserve merge starts (in-flight finishes; instant merge unaffected)
-  autoXpTickspeed: false,                                // permanent GLOBAL flag: Auto Restage unlocked (Purge 16); survives Prestige/Scale Up/Overclock/Era
+  autoXpTickspeed: false,                                // permanent GLOBAL flag: Auto Restage unlocked (Purge 32); survives Prestige/Scale Up/Overclock/Era
   autoXpTickspeedEnabled: true,                          // permanent pause/resume preference for Auto Restage
-  autoScaleUp: false,                                    // permanent GLOBAL flag: Auto Scale Up unlocked (Purge 32) — eligible Scale Up
+  autoScaleUp: false,                                    // permanent GLOBAL flag: Auto Scale Up unlocked (Purge 16) — eligible Scale Up
                                                           // claims automatic at every target, including the final tier
                                                           // (see applyAutobuyerMilestones)
   autoScaleUpEnabled: true,                              // permanent GLOBAL flag, default true: whether Auto

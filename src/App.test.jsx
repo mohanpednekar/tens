@@ -1667,8 +1667,8 @@ test('Firmware groups by feature: Automation holds every automation, Prestige th
 
 test.each([
   { name: 'Auto Clock Speed', milestone: 8 },
-  { name: 'Auto Restage', milestone: 16 },
-  { name: 'Auto Scale Up', milestone: 32 },
+  { name: 'Auto Restage', milestone: 32 },
+  { name: 'Auto Scale Up', milestone: 16 },
   { name: 'Auto Overclock', milestone: 64 },
   { name: 'Auto Purge', milestone: 128 },
 ])('$name unlocks at Purge $milestone with no PP cost: locked badge before, active row after', async ({ name, milestone }) => {
@@ -2113,7 +2113,7 @@ test('Global Automation lists every step with its Purge milestone while locked',
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  for (const [name, milestone] of [['Auto Clock Speed', 8], ['Auto Restage', 16], ['Auto Scale Up', 32], ['Auto Overclock', 64], ['Auto Purge', 128]]) {
+  for (const [name, milestone] of [['Auto Clock Speed', 8], ['Auto Scale Up', 16], ['Auto Restage', 32], ['Auto Overclock', 64], ['Auto Purge', 128]]) {
     expect(screen.getByLabelText(`${name} unlocks at Purge ${milestone}`)).toBeInTheDocument()
   }
 })
@@ -2303,7 +2303,7 @@ test('locked global automations report Purge progress toward their milestone', a
 
   const progress = screen.getByRole('progressbar', { name: /auto scale up unlock milestone progress/i })
   expect(progress).toHaveAttribute('aria-valuenow', '10')
-  expect(progress).toHaveAttribute('aria-valuemax', '32')
+  expect(progress).toHaveAttribute('aria-valuemax', '16')
 })
 
 test('a locked badge appears on Firmware → Automation for a tier whose autobuyer milestone has not been reached yet', async () => {

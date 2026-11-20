@@ -55,6 +55,7 @@ import {
   AUTOBUYER_INTERVAL_UPGRADE_BASE_COST,
   PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE,
   GLOBAL_AUTOMATION_UNLOCK_PURGES,
+  AUTOMATION_INTERVAL_CONFIG,
   getStoragePoolMemoryBounds,
   DATA_STREAM_SPEED_EXPONENT_BASE,
   DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED,
@@ -543,7 +544,7 @@ const InfoPage = () => {
             Restage upgrade appears beside Clock Speed (above the tier list): spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
             It resets every other tier’s owned quantity and your Bits. Auto Restage
-            (Firmware → Automation, unlocked at Purge {GLOBAL_AUTOMATION_UNLOCK_PURGES.restage}) spends it for you, every 64 s at first —
+            (Firmware → Automation, unlocked at Purge {GLOBAL_AUTOMATION_UNLOCK_PURGES.restage}) spends it for you, every {AUTOMATION_INTERVAL_CONFIG.restage.baseSeconds} s at first —
             faster with its speed upgrades.
           </li>
         </ul>

@@ -798,11 +798,11 @@ export const AUTOBUYER_MIN_INTERVAL_SECONDS = 0.01
 // count (GLOBAL_AUTOMATION_UNLOCK_PURGES, tier milestones) with no unlock cost — only the upgrades.
 // Purge count at which each global automation unlocks automatically (no PP cost; see engine.js's
 // applyAutobuyerMilestones). The interval-upgrade ladders below are PP-funded and unchanged.
-export const GLOBAL_AUTOMATION_UNLOCK_PURGES = { speedUp: 8, restage: 16, scaleUp: 32, overclock: 64, purge: 128 }
+export const GLOBAL_AUTOMATION_UNLOCK_PURGES = { speedUp: 8, scaleUp: 16, restage: 32, overclock: 64, purge: 128 }
 export const AUTOMATION_INTERVAL_CONFIG = {
   speedUp: { baseCost: 8, baseSeconds: 1 },
   scaleUp: { baseCost: 16, baseSeconds: 64 },
-  restage: { baseCost: 16, baseSeconds: 64 },
+  restage: { baseCost: 32, baseSeconds: 128 },
   overclock: { baseCost: 32, baseSeconds: 256 },
   purge: { baseCost: 64, baseSeconds: 1024 },
 }

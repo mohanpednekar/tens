@@ -6154,12 +6154,12 @@ describe('getPrestigePointsAwarded (property-based)', () => {
 // ─── getGlobalAutomationUnlockMilestone / applyAutobuyerMilestones (global automations) ──────
 
 describe('global automation unlock milestones', () => {
-  it('unlock by Purge count (Clock Speed 8, Restage 16, Scale Up 32, Overclock 64, Purge 128)', () => {
-    expect(['speedUp', 'restage', 'scaleUp', 'overclock', 'purge'].map(getGlobalAutomationUnlockMilestone)).toEqual([8, 16, 32, 64, 128])
+  it('unlock by Purge count (Clock Speed 8, Scale Up 16, Restage 32, Overclock 64, Purge 128)', () => {
+    expect(['speedUp', 'scaleUp', 'restage', 'overclock', 'purge'].map(getGlobalAutomationUnlockMilestone)).toEqual([8, 16, 32, 64, 128])
   })
 
   it('leave each interval-upgrade ladder starting at its own PP baseCost', () => {
-    expect(['speedUp', 'scaleUp', 'restage', 'overclock', 'purge'].map(key => getAutomationIntervalUpgradeCost(key, 0))).toEqual([8, 16, 16, 32, 64])
+    expect(['speedUp', 'scaleUp', 'restage', 'overclock', 'purge'].map(key => getAutomationIntervalUpgradeCost(key, 0))).toEqual([8, 16, 32, 32, 64])
   })
 
   it('applyAutobuyerMilestones unlocks each global automation exactly at its milestone, spending no PP', () => {
@@ -6167,7 +6167,7 @@ describe('global automation unlock milestones', () => {
     const flags = s => [s.autoGlobalTickspeed, s.autoXpTickspeed, s.autoScaleUp, s.autoOverclock, s.autoPurge ?? null]
     expect(flags(at(7))).toEqual([false, false, false, false, null])
     expect(flags(at(8))).toEqual([true, false, false, false, null])
-    expect(flags(at(16))).toEqual([true, true, false, false, null])
+    expect(flags(at(16))).toEqual([true, false, true, false, null])
     expect(flags(at(32))).toEqual([true, true, true, false, null])
     expect(flags(at(64))).toEqual([true, true, true, true, null])
     expect(flags(at(128))).toEqual([true, true, true, true, 1])
@@ -9453,7 +9453,7 @@ describe('setAutoXpTickspeedEnabled', () => {
     // Interval-driven like the other global automations: 1 s of a 64 s interval doesn't fire yet.
     const early = tickGame(1)(state)
     expect(early.lastTierXpConsumed).toBe(0)
-    expect(early.automationAttemptBudgets.restage).toBeCloseTo(1 / 64)
+    expect(early.automationAttemptBudgets.restage).toBeCloseTo(1 / 128)
     state = { ...state, automationAttemptBudgets: { ...state.automationAttemptBudgets, restage: 1 } }
     state = withResource(withOwned(state, thousandsTier.id, 30), thousandsTier.id, 30)
     state = withMoney(state, 5)
@@ -12461,15 +12461,15 @@ describe('automation interval chains', () => {
     expect(setAutoOverclockEnabled(false)(upgraded).autoOverclockEnabled).toBe(false)
   })
 
-  it('Auto Restage has its own speed chain (16 PP first level, 64 s base), available once Restage is bought', () => {
+  it('Auto Restage has its own speed chain (32 PP first level, 128 s base), available once Restage is bought', () => {
     const locked = withPoints(base(), 100)
     expect(buyAutomationIntervalUpgrade('restage')(locked)).toBe(locked)
-    const s = withPoints({ ...base(), autoXpTickspeed: true }, 20)
-    expect(getAutomationIntervalSeconds(s, 'restage')).toBe(64)
+    const s = withPoints({ ...base(), autoXpTickspeed: true }, 40)
+    expect(getAutomationIntervalSeconds(s, 'restage')).toBe(128)
     const upgraded = buyAutomationIntervalUpgrade('restage')(s)
     expect(upgraded.automationIntervalLevels.restage).toBe(1)
-    expect(upgraded.purge.points).toBe(4)
-    expect(getAutomationIntervalSeconds(upgraded, 'restage')).toBeCloseTo(57.6)
+    expect(upgraded.purge.points).toBe(8)
+    expect(getAutomationIntervalSeconds(upgraded, 'restage')).toBeCloseTo(115.2)
   })
 
   it('Clock Speed autobuyer waits for its interval timer', () => {
