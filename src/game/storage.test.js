@@ -1390,12 +1390,11 @@ describe('challenge state persistence (#1044)', () => {
 
   it.each([
     ['tierAutobuyer', { autobuyerIntervalLevels: { tier01: 1 } }, 'F1'],
-    ['tierTickspeed', { tierTickspeedIntervalLevels: { tier01: 1 } }, null],
+    ['tierTickspeed', { tierTickspeedIntervalLevels: { tier01: 1 } }, 'F11'],
   ])('auto-completes for the %s chain and leaves automations with no level gated', (_kind, patch, expectedId) => {
     saveGameState({ ...createInitialGameState(), ...patch })
     const completed = loadGameState().challenges.completed
-    if (expectedId) expect(completed[expectedId]).toBe(true)
+    expect(completed[expectedId]).toBe(true)
     expect(completed.F21).toBeUndefined()
-    expect(Object.keys(completed).length).toBeGreaterThan(0)
   })
 })
