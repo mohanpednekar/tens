@@ -240,70 +240,39 @@ milestone is `v0.7.0`, targeting Era ascension / Reboot (`#407` / `#411–#414`,
 
 ## Automation workflows
 
-The Claude-side and GitHub automation workflows under `.github/workflows/` run unattended — opening
-and fixing up PRs, and merging them only past an approval boundary: only a low-risk diff on an allowlisted
-bot-authored branch (`scripts/pr-low-risk-eligible.sh`) merges without human approval — on green checks
-alone, or via an adversarial `APPROVE` marker on that same eligible diff. Sessions (interactive and autonomous) also enable
-auto-merge on any adversarially-`APPROVE`d PR not touching `.github/workflows/**` (see "Pull requests");
-every other PR waits for human approval. Their git/GitHub write operations authenticate via the
-`GH_AUTOMATION_PAT` secret, not `GITHUB_TOKEN` (whose pushes/merges can't trigger other workflows;
-read-only guard steps, `autonomous-maintenance.yml`'s "Surface a broken deploy.yml run" alert comment/issue, and
-some workflows, e.g. `devin-workflow-health.yml`/`deploy.yml`, use `GITHUB_TOKEN`). The PAT includes `Workflows: write`, so autonomous runs
-may push `.github/workflows/**` changes when a task authorizes it; `.github/CODEOWNERS` review still
-applies once branch protection requires it (issue #62; `docs/AUTOMATION.md`'s "Auto-merge" prerequisites).
+Claude/GitHub automation under `.github/workflows/` runs unattended: it opens and fixes PRs, and merges only
+past an approval boundary — a low-risk diff on an allowlisted bot-authored branch
+(`scripts/pr-low-risk-eligible.sh`) merges with no human approval, on green checks alone or via an adversarial
+`APPROVE` marker. Sessions (interactive and autonomous) also enable auto-merge on any adversarially-`APPROVE`d PR
+not touching `.github/workflows/**` (see "Pull requests"); every other PR waits for human approval. Git/GitHub
+writes authenticate via the `GH_AUTOMATION_PAT` secret, not `GITHUB_TOKEN` (its pushes/merges can't trigger other
+workflows; read-only guard steps, the deploy-failure alert, and `devin-workflow-health.yml`/`deploy.yml` use
+`GITHUB_TOKEN`). The PAT has `Workflows: write`, so autonomous runs may push `.github/workflows/**` changes when a
+task authorizes it; `.github/CODEOWNERS` review still applies once branch protection requires it (#62).
 
-**Shared helpers** (`docs/AUTOMATION.md` "Shared workflow helpers"): `.github/actions/setup-node-yarn`
-(trusted refs only — PR-follow-up workflows keep setup inline because their checkout is untrusted PR
-code), `scripts/pr-head-guard.sh` (fork + branch-prefix check from a sparse **main** checkout before the
-pinned-SHA checkout), `scripts/claude-deny-settings.sh` (claude-code-action `settings` deny JSON; base
-list always protects `ci.yml`/`deploy.yml`/`release.yml`/`automation-self-heal.yml`).
+**Orchestration model.** The maintainer orchestrates; `autonomous-maintenance.yml` develops. `claude-task` issues
+(`.github/ISSUE_TEMPLATE/claude-task.yml`) are its backlog — four slots daily (4am/10am/4pm/10pm IST), each mapped
+to a task kind + model, one unit of work per run: Phase 0 (CI/CD failures + unaddressed critical/high Dependabot
+alerts) > Phase A (backlog: `priority:high` → normal/FIFO → `priority:low`) > Phase B (maintenance menu). A run that
+notices a genuine out-of-scope bug files a `claude-task` + `bug` issue (explicit **Impact** line) rather than fixing
+it mid-run; untracked guard-step code/secret-scanning alerts get the same (Dependabot alerts stay with Phase 0(c)/B).
+Phase A may weigh Impact to reorder *within* a priority tier (`priority:high` still jumps), saying so when it
+deviates from lowest-number order.
 
-**Orchestration model.** The maintainer orchestrates; the scheduled workflow develops. `claude-task`
-issues (`.github/ISSUE_TEMPLATE/claude-task.yml`) are the backlog for `autonomous-maintenance.yml`
-(four slots daily, 4am/10am/4pm/10pm IST, each mapped to a task kind + model by the `Resolve slot` step — `docs/AUTOMATION.md` "Slot schedule"), one unit of work per run: Phase 0 (CI/CD failures + unaddressed
-critical/high Dependabot alerts) > Phase A (backlog: `priority:high` → normal/FIFO → `priority:low`) >
-Phase B (maintenance menu: tests, dependency/security incl. medium/low alerts, code quality, doc sync,
-workflow self-improvement, gap analysis). A run that notices a genuine out-of-scope bug files a
-`claude-task` + `bug` issue (explicit **Impact** line) instead of fixing it mid-run; guard-step
-code/secret-scanning alerts not already tracked get the same (Dependabot alerts stay with Phase
-0(c)/B). Phase A may weigh Impact to reorder *within* a priority tier (`priority:high` still jumps
-outright), saying so when it deviates from lowest-number order.
+Shared helpers (`.github/actions/setup-node-yarn` — trusted refs only; `scripts/pr-head-guard.sh`;
+`scripts/claude-deny-settings.sh`), every other workflow (`devin-*`, `pr-conflict-sweep`, `release`, `main-ci-heal`,
+`revert-deploy`, `*-pr-followup`, `pr-auto-merge`, `automation-self-heal`, `codeql`, `mutation-testing`,
+`mobile-build`), the slot schedule, the #62 maintainer checklist verification (#63; a new manual-only prerequisite
+adds a line to #62 and, if API-checkable, to `scripts/verify-maintainer-checklist.mjs`'s `CHECKS`), the `## RUN SUMMARY`
+job-summary step (#74), the Ideas-discussion feed (#66), and guard-feed bounds (any new feed passes an explicit
+`--limit` + display cap with a "+N more" note, titles/labels only, never bodies — #81) are in
+**`docs/AUTOMATION.md`** — read it before touching any `.github/workflows/*.yml` or reasoning about the pipeline.
 
-Other workflows (full behavior: `docs/AUTOMATION.md`): `devin-autonomous-maintenance.yml` (Devin-CLI counterpart,
-`workflow_dispatch` only, `devin/auto-*` PRs; the 5-open-PR ceiling counts `devin/auto-*` + `claude/auto-*` together;
-its workflow-file changes stay human-gated) + `devin-workflow-health.yml` (its watchdog); `pr-conflict-sweep.yml` (on
-push to `main`: flags conflicted PRs, refreshes behind `claude/auto-*`/`devin/auto-*` PRs); `release.yml` (tag +
-GitHub Release on a `package.json` bump, no agent); `main-ci-heal.yml` (red `main` CI: rerun once, then a
-`claude/heal-main-*` PR); `revert-deploy.yml` (manual; PR restoring `main` to a known-good SHA, never pushes `main`);
-`autonomous-pr-followup.yml` / `dependabot-pr-followup.yml` (review comments / CI failures on agent and Dependabot
-PRs); `pr-auto-merge.yml` (the auto-merge paths); `automation-self-heal.yml` (draft fix or `automation-failure` issue
-for failed orchestration runs; never edits `ci.yml`/`deploy.yml`/itself); `codeql.yml`, `mutation-testing.yml`,
-`mobile-build.yml` (non-agent scanning/build).
-
-**Maintainer checklist (#62) verification (#63).** `scripts/verify-maintainer-checklist.mjs` runs each
-`autonomous-maintenance.yml` invocation and strikes through API-verifiable #62 items that now pass.
-Convention: a new `claude-task` issue that adds a manual-only prerequisite must add a line to #62
-(what to check, why); extend the script's `CHECKS` if it's API-checkable. Detail: `docs/AUTOMATION.md`.
-
-**Run summary (#74):** each `autonomous-maintenance.yml` run's final "Write run summary" step copies the
-agent's closing `## RUN SUMMARY` (phase/task picked, why, budget estimate) into the job summary — the
-canonical place to see a run's reasoning, esp. Phase B runs that open no PR.
-
-Guard-step context feeds are bounded: any new feed passes an explicit `--limit` and display-cap with a
-"+N more" note; list feeds render number + title + labels only, never bodies (`docs/AUTOMATION.md`, #81).
-`autonomous-maintenance.yml` also feeds unpromoted GitHub Discussions "Ideas" (#66); Phase B item 6 may
-promote a substantial one to a `claude-task` issue linking the discussion URL (propose-only).
-
-**Budget discipline applies to every Claude Code session — interactive and automated.** Self-estimate
-the remaining rolling 5-hour Claude usage window and keep a session at or under roughly **50%** of a full window,
-recalculated each time — soft target, modest overshoot is not a failure. If a task looks too large even
-after buffering, land the largest coherent, test-covered slice first (`Part of #N` instead of `Closes
-#N`, plus a comment on what remains) rather than risk a runaway session — see `docs/AUTOMATION.md`'s
-"Budget discipline" / Cost implications (~15-20% held back for test/commit/push/PR-open).
-
-For full phase-by-phase logic (guard-step details, `blocked`-label mechanics, the 5-PR ceiling,
-auto-merge's exact low-risk bar, manual prerequisites), see `docs/AUTOMATION.md` — read it before
-touching any `.github/workflows/*.yml` file or reasoning in detail about the unattended pipeline.
+**Budget discipline applies to every Claude Code session, interactive and automated.** Self-estimate the remaining
+rolling 5-hour usage window and stay at or under roughly **50%** of a full window, recalculated each time (soft
+target). If a task looks too large, land the largest coherent test-covered slice first (`Part of #N`, plus a comment
+on what remains) rather than risk a runaway session — `docs/AUTOMATION.md` "Budget discipline" (~15-20% held back for
+test/commit/push/PR-open).
 
 ## Documentation
 
