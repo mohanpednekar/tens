@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- A cost within float error of a clean multiple of 8 Bits (e.g. `8e92 b`) now reads `1e92 B` instead of `9.999e91 B`.
+
 ### Added
 
 - **Spent QB achievement** — spend all your Quettabytes after earning some in the same run to unlock it; the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, Quettabytes are credited regardless of the current balance, 1 at a time, more often with more completed levels (logarithmically): every 10 s at 1 level, every 5 s at 10, every 3.33 s at 100.
