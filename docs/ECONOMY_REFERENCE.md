@@ -37,7 +37,7 @@ already underway. Completed rebuilds continuously auto-buy affordable Boosters f
 The first reset permanently fixes lake speed at 50%; reset two onward advances the existing normal
 bandwidth ladder, dynamically bounded for non-final pools by half the next pool's bandwidth.
 
-Referenced from `CLAUDE.md`'s Economy model section. Read this before touching
+Referenced from `src/CLAUDE.md`'s Economy model section. Read this before touching
 `src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or any economy/prestige/tickspeed
 constant or formula — it's the full mechanic reference (cost/production formulas, the purchase
 block size and level system, Prestige Points, the per-tier and global tickspeed multipliers, the
@@ -124,6 +124,15 @@ corresponds to now depends on the current block size, while the level number its
 Saves must already carry `purchaseLevels`/`purchaseLevelProgress` in the current schema —
 `storage.js`'s `mergeState` only fills missing fields from fresh defaults and does not derive levels
 from legacy `purchased` counts.
+
+### Buy mode (Level / Single)
+
+A per-device UI preference (`storage.js` `loadBuyUnitPreference`/`saveBuyUnitPreference`, key `tens_buy_unit_mode`, not game
+state; hook `buyUnitMode`/`setBuyUnitMode`, read via `buyUnitModeRef`). **Level** (default): a manual Factory Buy fills up to the level
+boundary (and Buy max may buy full levels). **Single**: a manual Factory tier Buy is `buyTierQuantity(tierId, 1)` and overrides Buy max for
+that button; tier autobuyers get `AUTOBUYER_UNIT_BATCH` (`'unit'`) as `autobuyerBatchSize`, so each attempt buys ONE unit at the same
+interval (a block of `getPurchaseBlockSize` units takes that many attempts) and the speed-upgrade bulk-level path is skipped. Other ladders
+(tickspeed, Compute Flops, …) are unaffected.
 
 ### Buy max mode
 
@@ -1712,7 +1721,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   `elapsedSeconds / getAutobuyerIntervalSeconds(state, tierId)`. Needs the autobuyer unlocked; kept
   through Prestige/Scale Up/Overclock/Era. UI: the tier's row on Firmware → Automation → Tier Autobuyers.
 - **Active — Automation interval chains:** `AUTOMATION_INTERVAL_CONFIG` (`speedUp` 8 PP/1 s, `scaleUp`
-  16 PP/64 s, `restage` 16 PP/64 s, `overclock` 32 PP/256 s, `purge` 64 PP/1024 s) and `TIER_TICKSPEED_INTERVAL_CONFIG`
+  16 PP/64 s, `restage` 32 PP/128 s, `overclock` 32 PP/256 s, `purge` 64 PP/1024 s) and `TIER_TICKSPEED_INTERVAL_CONFIG`
   (100 PP/16 s per tier). Cost = baseCost × the shared doubling ladder (`getSiCleanDoublingFactor`: 1, 2, 4, …, 64, 125, …);
   interval = baseSeconds × 0.9^level, floor 10 ms. `buyAutomationIntervalUpgrade(key)` /
   `buyTierTickspeedIntervalUpgrade(tierId)` (state: `automationIntervalLevels`,
@@ -1724,7 +1733,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
 - **Active — Autobuyer bulk (past the speed floor):** a tier's autobuyer buys ONE whole level (all 8
   blocks) per attempt, only when fully affordable; with partial level progress it completes the rest
   of that level, again only when the whole remainder is affordable (`canAffordRestOfTierLevel`) — never
-  a partial purchase (the `autobuyerBatchSize` argument and Buy max mode are ignored by autobuyers).
+  a partial purchase (Buy max mode is ignored by autobuyers; `autobuyerBatchSize === AUTOBUYER_UNIT_BATCH` (`'unit'`, Buy mode Single) makes each attempt buy exactly ONE unit via `buyTierQuantity(tier, 1)` at the same interval and skips the bulk-level path; any other value — including the default — keeps whole-level attempts).
   The tier's PP **speed upgrades** (`buyAutobuyerIntervalUpgrade`, ×0.9 interval per level) continue past the
   10 ms floor (`getAutobuyerIntervalMaxLevel`): each extra level doubles how many FULL levels one attempt may buy
   (`getAutobuyerBulkLevels` = 2^extra: 1, 2, 4, … up to `2^AUTOBUYER_BULK_MAX_EXTRA_LEVELS` = 1024 =
@@ -1732,15 +1741,15 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   upper limit: `buyTierUpToLevels` buys as many whole clean levels as are affordable up to it (zero level
   progress required), otherwise falls back to a single level. Permanent across Prestige/Scale Up/Overclock/Era.
 - **Global automations unlock by Purge count, not PP.** `GLOBAL_AUTOMATION_UNLOCK_PURGES` (`layers.js`;
-  `getGlobalAutomationUnlockMilestone(key)`): Clock Speed 8, Restage 16, Scale Up 32, Overclock 64, Purge 128.
+  `getGlobalAutomationUnlockMilestone(key)`): Clock Speed 8, Scale Up 16, Restage 32, Overclock 64, Purge 128.
   `applyAutobuyerMilestones` (run by `purgeGame`) sets `autoGlobalTickspeed`/`autoXpTickspeed`/`autoScaleUp`/
   `autoOverclock`/`autoPurge` (→ 1) when `purge.count` reaches each, spending no PP and never revoking. The
   PP-funded part is only each chain's interval upgrades (`AUTOMATION_INTERVAL_CONFIG[key].baseCost` first level:
-  Clock Speed 8, Scale Up 16, Restage 16, Overclock 32, Purge 64), unchanged; tier autobuyer / tier tickspeed
+  Clock Speed 8, Scale Up 16, Restage 32, Overclock 32, Purge 64) (Restage costs 32 PP and starts at 128 s); tier autobuyer / tier tickspeed
   chains start at 10 PP / 100 PP (`AUTOBUYER_INTERVAL_UPGRADE_BASE_COST` / `TIER_TICKSPEED_INTERVAL_CONFIG.baseCost`).
   The old `buyAutoScaleUp`/`buyAutoOverclock`/`buyAutoPurge`/`buyTickspeedAutobuyer`/`buyXpTickspeedAutobuyer`,
   `getAutomationUnlockCost` and `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` were removed.
-- **Active — Auto Scale Up:** `autoScaleUp = true` at Purge 32. Once unlocked, `tickGame` calls `scaleUpGame` on its interval timer
+- **Active — Auto Scale Up:** `autoScaleUp = true` at Purge 16. Once unlocked, `tickGame` calls `scaleUpGame` on its interval timer
   (see "Automation interval chains") whenever `autoScaleUpEnabled` is also true. Final-tier requirements
   progress 3, 6, 9, and so on, so an automatic claim at level 3 leaves Overclock available at level 5
   before the next Scale Up. Permanent.
@@ -1945,11 +1954,11 @@ its one purpose.
   (`purchased`/levels untouched; the last tier's own counts untouched). No-op if not unlocked, if the
   last tier's own `owned` is 0 (nothing to speed up — see `docs/DESIGN_HISTORY.md`), if `amount` isn't a
   positive integer, is below the minimum, exceeds unspent XP, or production is frozen.
-- **Automation: the Auto Restage** (`autoXpTickspeed`, unlocked at Purge 16 (no PP); permanent across
+- **Automation: the Auto Restage** (`autoXpTickspeed`, unlocked at Purge 32 (no PP); permanent across
   Prestige/Scale Up/Overclock/Era like the other global automations). While bought and
   `autoXpTickspeedEnabled` (pause via `setAutoXpTickspeedEnabled`, same Firmware row), `tickGame` calls
   `consumeXpForLastTierTickspeed(purge.xp)` through `runGlobalIntervalAutomation(…, 'restage', …)` —
-  at most once per `getAutomationIntervalSeconds(state, 'restage')` (64 s × 0.9^level, upgraded via
+  at most once per `getAutomationIntervalSeconds(state, 'restage')` (128 s × 0.9^level, upgraded via
   `buyAutomationIntervalUpgrade('restage')`), after the Purge / Overclock / Scale Up resets and before the spends (it wipes lower tiers, so it is the smallest reset) — and
   no-ops until all of that function's guards pass. The last tier's tier tickspeed autobuyer is separate
   and always drives the ordinary `buyTickspeedMultiplier`.
@@ -2355,9 +2364,9 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // Up — only by a real Prestige — see "Overclock" below
   computeAutoChargeEnabled: true,                        // permanent pause switch for ALL Power Auto-charge boundaries (Firmware → Automation);
                                                           // paused = no NEW timed reserve merge starts (in-flight finishes; instant merge unaffected)
-  autoXpTickspeed: false,                                // permanent GLOBAL flag: Auto Restage unlocked (Purge 16); survives Prestige/Scale Up/Overclock/Era
+  autoXpTickspeed: false,                                // permanent GLOBAL flag: Auto Restage unlocked (Purge 32); survives Prestige/Scale Up/Overclock/Era
   autoXpTickspeedEnabled: true,                          // permanent pause/resume preference for Auto Restage
-  autoScaleUp: false,                                    // permanent GLOBAL flag: Auto Scale Up unlocked (Purge 32) — eligible Scale Up
+  autoScaleUp: false,                                    // permanent GLOBAL flag: Auto Scale Up unlocked (Purge 16) — eligible Scale Up
                                                           // claims automatic at every target, including the final tier
                                                           // (see applyAutobuyerMilestones)
   autoScaleUpEnabled: true,                              // permanent GLOBAL flag, default true: whether Auto

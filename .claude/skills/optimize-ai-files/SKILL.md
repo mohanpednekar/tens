@@ -10,7 +10,8 @@ sentence/section to remove; always re-derive what's redundant from the current t
 ## Scope, in priority order
 
 1. `CLAUDE.md` and `.claude/CLAUDE.md` — loaded into **every** session unconditionally. Highest
-   value per word cut.
+   value per word cut. Then any nested `**/CLAUDE.md` (e.g. `src/CLAUDE.md`, loaded whenever a session
+   reads files in that directory).
 2. `AGENTS.md` — a condensed mirror read by non-Claude tools; also loaded whenever those tools work
    in this repo.
 3. `.claude/agents/*.md`, `.claude/skills/*/SKILL.md` — loaded only when that agent/skill is

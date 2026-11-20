@@ -43,7 +43,7 @@ element is an empty disk of a write-cache size (any size above its pool's smalle
 which fills it from smaller full disks and Staging at once; the queued disk then reads
 `aria-label="empty … disk queued for filling"` with a dashed info border. Byte Foundry funds Byte Factory pull-based and fully
 automatically, every tick (`tickDiskPull`/`tickDiskLevelOneCachePull` in `engine.js` — see
-CLAUDE.md's "Economy model"); the manual Redeem button and the cache-release-to-Bits control this
+src/CLAUDE.md's "Economy model"); the manual Redeem button and the cache-release-to-Bits control this
 component used to expose were both retired along with that mechanic. Only when
 `isDiskReadCacheEligible(size)` is true (the pool's own smallest size, the one whose Data Lake
 sub-slot is ×1 — every larger size fills via its write cache (from Staging) and renders no read
@@ -79,7 +79,7 @@ matches this size, a plain centered `"Rebuilding <size> x <N> array - Ready in N
 replaces the cache strip (disk circles stay, showing "not yet built"/"rebuilding" status; `<size>`
 via `formatDiskSize` e.g. `1 KB`, `<N>` is the 1-indexed disk under construction). Neither size
 label uses `text-transform: uppercase` — deliberately, so lowercase `b` (bits, Cache) never
-visually collapses into uppercase `B` (Bytes, Disks); see CLAUDE.md's "Economy model" for the
+visually collapses into uppercase `B` (Bytes, Disks); see src/CLAUDE.md's "Economy model" for the
 `Kb`/`KB` distinction this exists to preserve.
 Takes `{ actions, size, state }` (a slice of the `game` object each caller already has) rather than
 the whole `game` prop, since it renders per-size and both call sites map over multiple sizes —
@@ -212,6 +212,13 @@ Automation row.
 **Segmented choices (UI convention).** A pick-one control (e.g. Firmware's Auto Boost preset: Turbo / Balanced /
 Eco) is full width, one equal-width button per option with a text label beside its icon (`🔋 Eco`) — never a row of
 small icon-only squares — and the selected option is identified by styling alone (no tick): `prestige` variant plus a tinted fill, 2px border and bold label.
+
+## `BuyModeToggle/index.jsx`
+
+`{ game }` — segmented two-button choice (`role="group"` `aria-label="buy mode"`; buttons `aria-label="buy level mode"` /
+`"buy single mode"`, `aria-pressed`): **Level** (default, `game.buyUnitMode` false) or **Single** (one unit per manual Factory Buy
+and per tier autobuyer attempt). Calls `game.setBuyUnitMode(bool)`; per-device (`tens_buy_unit_mode`). Used only on Firmware →
+✦ Prestige → Purchasing; mechanic in `src/CLAUDE.md` "Buy mode".
 
 ## `BuyMaxToggle/index.jsx`
 

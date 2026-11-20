@@ -51,7 +51,7 @@ inventory is your coverage checklist for the rest of the review.
 
 ### 2. Load the repo's invariants
 
-Read the sections of `CLAUDE.md` covering the areas the diff touches, plus whichever `docs/*.md`
+Read the sections of `CLAUDE.md` (and `src/CLAUDE.md` for game logic, economy or UI) covering the areas the diff touches, plus whichever `docs/*.md`
 reference file covers it in depth (`docs/ECONOMY_REFERENCE.md` for `engine.js`/`layers.js`,
 `docs/MAINPAGE_REFERENCE.md` for `MainPage`, `docs/COMPONENTS_REFERENCE.md` for `Button`/`Money`/
 `StatCard`, `docs/THEMING_REFERENCE.md` for `src/theme/*`, `docs/PWA_REFERENCE.md` for
@@ -113,7 +113,7 @@ Run each of these explicitly and record a per-check result — silence is not a 
 - **Tests**: every behavior change has a test that would fail without the change (check the test
   actually exercises the new path, not just runs near it). Deleted/weakened assertions are
   findings. If the diff claims a bug fix, look for the regression test.
-- **Docs sync**: CLAUDE.md (and the `docs/*.md` reference file covering the touched area, and
+- **Docs sync**: CLAUDE.md / `src/CLAUDE.md` (and the `docs/*.md` reference file covering the touched area, and
   AGENTS.md where it overlaps) must be updated in the *same* diff as any change to function
   signatures, constants, state shape, behavior, or file layout it documents. Grep
   CLAUDE.md and the relevant `docs/*.md` for each renamed symbol and changed constant value; a

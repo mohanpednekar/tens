@@ -1,5 +1,34 @@
 # Design history & rationale
 
+### Game rules split into `src/CLAUDE.md` — 2026-11-18
+
+Root `CLAUDE.md` had regrown to ~83 KB (~20k tokens) and loads into every session, including the many
+automation runs (triage, housekeeping, docs-sync, PR follow-ups) that never touch game code. Its "Economy
+model" section and the page-renderer half of "Architecture" (~29 KB) moved verbatim to `src/CLAUDE.md`,
+which Claude Code loads on demand when a session reads any file under `src/`; the root keeps a pointer
+that lists what moved and says to read it explicitly before spec/issue/doc work on game rules. The
+designer and code-reviewer agents, the autonomous prompt and `AGENTS.md` point at it too, and
+`pr-low-risk-eligible.sh` treats any `*/CLAUDE.md` as docs. Rejected: moving it into a `docs/*_REFERENCE.md`
+file (would never auto-load, so code sessions would lose the hard rules) and moving it under `src/game/`
+only (page and component work also needs the terminology map and UI conventions).
+
+### Maintenance slots resolved from the cron entry, not the clock — 2026-11-16
+
+`autonomous-maintenance.yml` used one combined cron (`30 22,4,10,16 * * *`) and inferred the slot from
+the IST clock shifted 3h back, which tolerates a firing up to ~3h late. GitHub delivered firings
+3.5–5.5h late in practice (about three a day), so a late firing ran as the *next* slot: on 2026-11-13
+the 22:00 IST Friday retro fired at 22:04 UTC and ran as Saturday's 04:00 tech-debt (tech-debt ran
+twice, retro was lost), and no run resolved to the 10:00 IST slot on Nov 14–16, so qa-review and its
+weekly overrides never executed. Fixed with one cron entry per slot, mapped through
+`github.event.schedule`; the weekday comes from the firing's intended time. This cannot recover a
+firing GitHub drops outright — the step now logs each firing's lateness so that can be told apart.
+
+Same pass: PR-opening runs spawned the adversarial `code-reviewer` in the background and then ended
+their turn; a headless run exits at that point, killing the reviewer, so #1088/#1089/#1093/#1099 got
+no review marker and no auto-merge and waited 5–45h for a manual merge. The prompt now requires the
+reviewer in the foreground. And `scripts/sweep-stalled-auto-prs.sh` was committed `100644`, so the
+workflow's `-x` guard skipped the stalled-PR sweep on every run; it is now executable.
+
 ### Overclock no longer banks completed levels — 2026-11-11
 
 `overclockCount` was a running total of completed final-tier levels across every Overclock claim
@@ -9596,3 +9625,7 @@ The superseded two-row layout, for reference:
 > Economy-reference summary of that layout (also superseded): "ComputePage shows two rows per tier — row 1 the
 > name/symbol plus 10 normal-slot squares; row 2 an instant Charge up plus an Unlock Auto-charge button (live
 > progress toward sacrificing 10 of the output), or once unlocked ⚡ Charge plus the 8 reserve-slot squares."
+
+## pr-auto-merge Path 2 moved from check_suite to workflow_run (2026-11-20)
+
+Bot PRs (e.g. #1123, #1128) sat `blocked` with all checks green for days. Path 2 triggered on `check_suite: completed` with conclusion `success`, but GitHub never fires workflows for check suites created by GitHub Actions (recursion guard); only third-party suites (CodeQL, Cursor — both `neutral`) arrived, so the `if` was always false and the job always `skipped`. Fixed by triggering on `workflow_run: [CI]` completed (success, `pull_request` event), as the follow-up workflows already do. Path 3 additionally goes stale whenever `pr-conflict-sweep` update-branch moves the head SHA after the APPROVE marker.

@@ -1667,8 +1667,8 @@ test('Firmware groups by feature: Automation holds every automation, Prestige th
 
 test.each([
   { name: 'Auto Clock Speed', milestone: 8 },
-  { name: 'Auto Restage', milestone: 16 },
-  { name: 'Auto Scale Up', milestone: 32 },
+  { name: 'Auto Restage', milestone: 32 },
+  { name: 'Auto Scale Up', milestone: 16 },
   { name: 'Auto Overclock', milestone: 64 },
   { name: 'Auto Purge', milestone: 128 },
 ])('$name unlocks at Purge $milestone with no PP cost: locked badge before, active row after', async ({ name, milestone }) => {
@@ -2113,12 +2113,12 @@ test('Global Automation lists every step with its Purge milestone while locked',
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  for (const [name, milestone] of [['Auto Clock Speed', 8], ['Auto Restage', 16], ['Auto Scale Up', 32], ['Auto Overclock', 64], ['Auto Purge', 128]]) {
+  for (const [name, milestone] of [['Auto Clock Speed', 8], ['Auto Scale Up', 16], ['Auto Restage', 32], ['Auto Overclock', 64], ['Auto Purge', 128]]) {
     expect(screen.getByLabelText(`${name} unlocks at Purge ${milestone}`)).toBeInTheDocument()
   }
 })
 
-test('Firmware lists global automations in one order: Auto Clock Speed → Restage → Scale Up → Overclock → Purge', async () => {
+test('Firmware lists global automations in one order: Auto Clock Speed → Scale Up → Restage → Overclock → Purge', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
@@ -2130,12 +2130,12 @@ test('Firmware lists global automations in one order: Auto Clock Speed → Resta
     autoXpTickspeed: true,
   })
   render(<App />)
-  const order = ['auto clock speed', 'auto restage', 'auto scale up', 'auto overclock', 'auto purge']
+  const order = ['auto clock speed', 'auto scale up', 'auto restage', 'auto overclock', 'auto purge']
   await openPerksTab(user, /open automation/i)
   const rows = within(screen.getByLabelText('global automation category')).getAllByLabelText(/ row$/)
   expect(rows.map(row => row.getAttribute('aria-label'))).toEqual(order.map(name => `${name} row`))
   // Visible labels drop the redundant "Auto" (the category heading says it); accessible names keep it.
-  expect(rows.map(row => row.textContent)).toEqual(['Clock Speed', 'Restage', 'Scale Up', 'Overclock', 'Purge'].map(n => expect.stringContaining(n)))
+  expect(rows.map(row => row.textContent)).toEqual(['Clock Speed', 'Scale Up', 'Restage', 'Overclock', 'Purge'].map(n => expect.stringContaining(n)))
   rows.forEach(row => expect(row).not.toHaveTextContent(/auto/i))
   expect(screen.getByRole('button', { name: /^Auto Clock Speed automation$/i })).toBeInTheDocument()
 })
@@ -2303,7 +2303,7 @@ test('locked global automations report Purge progress toward their milestone', a
 
   const progress = screen.getByRole('progressbar', { name: /auto scale up unlock milestone progress/i })
   expect(progress).toHaveAttribute('aria-valuenow', '10')
-  expect(progress).toHaveAttribute('aria-valuemax', '32')
+  expect(progress).toHaveAttribute('aria-valuemax', '16')
 })
 
 test('a locked badge appears on Firmware → Automation for a tier whose autobuyer milestone has not been reached yet', async () => {

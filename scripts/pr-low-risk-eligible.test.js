@@ -40,7 +40,7 @@ describe('pr-low-risk-eligible.sh', () => {
       isCrossRepository: false,
       additions: 200,
       deletions: 50,
-      files: ['CLAUDE.md', 'src/game/engine.test.js'],
+      files: ['CLAUDE.md', 'src/CLAUDE.md', 'src/game/engine.test.js'],
     });
     expect(r.status).toBe(0);
     expect(r.stdout).toMatch(/docs\/tests-only/);

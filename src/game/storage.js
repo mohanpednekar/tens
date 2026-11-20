@@ -843,6 +843,26 @@ export const saveBuyMaxPreference = enabled => {
   }
 }
 
+/** Buy unit mode preference — a per-device UI preference: false (default) = "Buy level" (a manual Factory Buy fills up to the
+ * level boundary), true = "Buy unit" (one unit per click). Survives reset/clearGameState like Buy max. */
+export const BUY_UNIT_PREFERENCE_KEY = 'tens_buy_unit_mode'
+
+export const loadBuyUnitPreference = () => {
+  try {
+    return localStorage.getItem(BUY_UNIT_PREFERENCE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+export const saveBuyUnitPreference = enabled => {
+  try {
+    localStorage.setItem(BUY_UNIT_PREFERENCE_KEY, enabled ? 'true' : 'false')
+  } catch {
+    // Silently ignore (quota / private browsing)
+  }
+}
+
 /** UI theme preference — separate from game save data; survives reset/clearGameState. */
 export const THEME_PREFERENCE_KEY = 'tens_theme_preference'
 

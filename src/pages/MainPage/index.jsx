@@ -967,7 +967,9 @@ const MainPage = ({ game }) => {
   const challengeDisabled = effect => activeChallenge?.effect === effect
   const challengeNote = activeChallenge ? ` — disabled by challenge ${activeChallenge.id} ${activeChallenge.codename}` : ''
   const isFirstRun = purge.count === 0
-  const buyMaxActive = Boolean(game.buyMaxMode) && isBuyMaxUnlocked(state)
+  // Buy unit mode (Firmware → Prestige): a manual Buy takes exactly one unit and overrides Buy max for the tier button.
+  const buyUnitActive = Boolean(game.buyUnitMode)
+  const buyMaxActive = Boolean(game.buyMaxMode) && isBuyMaxUnlocked(state) && !buyUnitActive
   // The purchase block size every tier's current level currently requires to complete — a single
   // global value (see getPurchaseBlockSize in engine.js), starting at DEFAULT_PURCHASE_BLOCK_SIZE
   // and growing over the course of a run; computed once here rather than per-tier below, since
@@ -1477,11 +1479,12 @@ const MainPage = ({ game }) => {
           // F4 Premium Tier: price the tier as the engine will charge it.
           const pricedTier = getChallengeTier(state, tier.id) ?? tier
           const affordableQuantity = getTierAffordableQuantity(pricedTier, tierLevel, purchaseBlockSize, doneInBlock, costResource, Number.MAX_SAFE_INTEGER)
+          const buyQuantity = buyUnitActive ? Math.min(1, affordableQuantity) : affordableQuantity
           const unitCost = getTierQuantityCost(pricedTier, tierLevel, purchaseBlockSize, doneInBlock, 1)
-          const displayCost = affordableQuantity > 0 ? getTierQuantityCost(pricedTier, tierLevel, purchaseBlockSize, doneInBlock, affordableQuantity) : unitCost
+          const displayCost = buyQuantity > 0 ? getTierQuantityCost(pricedTier, tierLevel, purchaseBlockSize, doneInBlock, buyQuantity) : unitCost
           const canAfford = affordableQuantity > 0 && !isFrozen
           const donePercent = (doneInBlock / purchaseBlockSize) * 100
-          const availablePercent = (affordableQuantity / purchaseBlockSize) * 100
+          const availablePercent = (buyQuantity / purchaseBlockSize) * 100
           // The tier's own Money-funded tickspeed level — enabled by default (no autobuyer unlock
           // or PP prerequisite at all, see tickspeedLevels/buyTickspeedMultiplier in engine.js);
           // level 1 is the baseline ×1, no bonus yet, each further level speeds up this tier's own
@@ -1527,7 +1530,7 @@ const MainPage = ({ game }) => {
           const maxLevelsPreview = buyMaxActive ? getTierMaxLevelsPreview(state, tier.id) : { levels: 0, cost: 0, lastLevelCost: 0, partialQuantity: 0, partialCost: 0 }
           const buyLabel = maxLevelsPreview.levels > 0
             ? `Buy ${formatAmount(maxLevelsPreview.levels)} full level${maxLevelsPreview.levels === 1 ? '' : 's'} for ${formatCurrency(maxLevelsPreview.cost)} total; highest level costs ${formatCurrency(maxLevelsPreview.partialQuantity > 0 ? maxLevelsPreview.partialCost : maxLevelsPreview.lastLevelCost)}${maxLevelsPreview.partialQuantity > 0 ? ` (${maxLevelsPreview.partialQuantity} of ${purchaseBlockSize} purchases toward the next level)` : ''} (${formatAmount(completedLevels)} completed levels)`
-            : `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (${formatAmount(completedLevels)} completed levels, ${formatAmount(doneInBlock)} of ${purchaseBlockSize} purchased toward the next)`
+            : `Buy${buyQuantity > 1 ? ` ×${buyQuantity}` : ''} for ${formatCurrency(displayCost)} (${formatAmount(completedLevels)} completed levels, ${formatAmount(doneInBlock)} of ${purchaseBlockSize} purchased toward the next)`
           const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}${tickspeedRequirement > tickspeedCost + 1 ? ` (requires ${formatCost(tickspeedRequirement, tier.id)} owned)` : ''}`
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
           // (via formatCost) in place of its full name. The full sentence stays in aria-label/
