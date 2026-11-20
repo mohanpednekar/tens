@@ -184,7 +184,7 @@ const W = cardHtml
 const hudTop = ({ bytes, pp, purge, eta }) => [
   `<div class="card"><div class="big">${bytes}</div><div class="bar"><i style="width:38%"></i></div></div>`,
   ...(pp ? [`<div class="card"><div class="mut">Prestige</div><div class="gold" style="font-size:24px">${pp}</div></div>`] : []),
-  `<div class="card"><div class="wt">Clock Speed<span class="mut">+1%/lvl</span></div><div class="btn">🌐 10 B</div></div>`,
+  `<div class="card"><div class="wt">Accelerate<span class="mut">+1%/lvl</span></div><div class="btn">🌐 10 B</div></div>`,
   `<div class="card"><div class="wt">Purge<span class="mut">${purge}%</span></div><div class="bar" style="height:12px"><i style="width:${purge}%"></i></div><div class="mut" style="margin-top:6px">${eta}</div></div>`,
 ]
 

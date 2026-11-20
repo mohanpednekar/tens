@@ -103,7 +103,7 @@ export const CHALLENGE_LAYER_FACTORY = 'F'
 // 'global' → automationIntervalLevels[key] (key in AUTOMATION_INTERVAL_CONFIG).
 // `effect` names the one run rule the engine applies while the challenge is active.
 // `levers` (optional) are run-wide nerfs on top of the named `effect`, all active only during the challenge:
-// `production` × every tier's output, `clockSpeedPower` / `scaleUpPower` raise the Clock Speed / per-tier Scale Up
+// `production` × every tier's output, `clockSpeedPower` / `scaleUpPower` raise the Accelerate / per-tier Scale Up
 // multiplier to that power (<1 weakens it; 0 removes it), `costMultiplier` × every tier's purchase cost (Factory purchases only; the Foundry's automatic Kilobytes conversion is not repriced).
 const tierChallenge = (index, code, kind, codename, effect, rule, levers = {}) => ({
   id: code, layer: CHALLENGE_LAYER_FACTORY,
@@ -132,7 +132,7 @@ const RAW_CHALLENGE_DEFINITIONS = [
   tierChallenge(8, 'F19', 'tierTickspeed', 'Duty Cycle', 'dutyCycle', 'Ronnabytes tickspeed alternates 30 s on, 30 s off.', { clockSpeedPower: 0.25 }),
   tierChallenge(9, 'F20', 'tierTickspeed', 'Burn Rate', 'burnRate', 'Quettabytes tickspeed spends its full requirement.', { production: 0.5, scaleUpPower: 0.75, costMultiplier: 3 }),
 
-  { id: 'F21', layer: CHALLENGE_LAYER_FACTORY, target: 'Clock Speed', codename: 'Base Clock', automation: { kind: 'global', key: 'speedUp' }, effect: 'clockSpeedDisabled', rule: 'Clock Speed is disabled.', goal: PURGE_THRESHOLD },
+  { id: 'F21', layer: CHALLENGE_LAYER_FACTORY, target: 'Accelerate', codename: 'Base Clock', automation: { kind: 'global', key: 'speedUp' }, effect: 'clockSpeedDisabled', rule: 'Accelerate is disabled.', goal: PURGE_THRESHOLD },
   { id: 'F22', layer: CHALLENGE_LAYER_FACTORY, target: 'Scale Up', codename: 'Scale Out', automation: { kind: 'global', key: 'scaleUp' }, effect: 'scaleUpNoDoubling', rule: 'Scale Up doubles nothing.', goal: PURGE_THRESHOLD },
   { id: 'F23', layer: CHALLENGE_LAYER_FACTORY, target: 'Restage', codename: 'Code Freeze', automation: { kind: 'global', key: 'restage' }, effect: 'restageDisabled', rule: 'Restage disabled.', goal: PURGE_THRESHOLD, levers: { costMultiplier: 250 } },
   { id: 'F24', layer: CHALLENGE_LAYER_FACTORY, target: 'Overclock', codename: 'Stock Cooling', automation: { kind: 'global', key: 'overclock' }, effect: 'overclockDisabled', rule: 'Overclock is disabled.', goal: PURGE_THRESHOLD, levers: { scaleUpPower: 0.5, clockSpeedPower: 0.5 } },
@@ -141,7 +141,7 @@ const RAW_CHALLENGE_DEFINITIONS = [
 // Player-facing text for a challenge's run-wide levers, appended to its rule.
 const describeLevers = ({ production, clockSpeedPower, scaleUpPower, costMultiplier } = {}) => [
   production != null && `Production ×${production}.`,
-  clockSpeedPower != null && `Clock Speed ^${clockSpeedPower}.`,
+  clockSpeedPower != null && `Accelerate ^${clockSpeedPower}.`,
   scaleUpPower != null && `Scale Up ^${scaleUpPower}.`,
   costMultiplier != null && `Costs ×${costMultiplier}.`,
 ].filter(Boolean).join(' ')
@@ -205,8 +205,8 @@ export const ACHIEVEMENT_DEFINITIONS = [
     condition: { kind: 'tierPurchased', tierId: tier.id },
   })),
   { id: 'quettaSpent', name: 'Spent QB', group: 'tierLadder', trigger: 'Spend all your Quettabytes after earning some in the same run', bonus: 'Quettabytes are credited regardless of balance: 1 every 10 s at 1 completed level, every 5 s at 10, every 3.33 s at 100', condition: { kind: 'lastTierSpent' } },
-  { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Clock Speed level', condition: { kind: 'clockSpeedLevel', min: 1 } },
-  { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Clock Speed level 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
+  { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Accelerate level', condition: { kind: 'clockSpeedLevel', min: 1 } },
+  { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Accelerate level 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
   { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', condition: { kind: 'overclocked' } },
 ].map(def => ({ secret: false, platformDependent: false, bonus: null, ...def }))
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.map(def => [def.id, def]))
@@ -823,7 +823,7 @@ export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 1
 export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 11
 export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 1
 // A challenge unlocks at this multiple of its target automation's unlock Purge count (engine.js's
-// getChallengeUnlockPurges): tier01's F1 at Purge 5, F21 (Clock Speed, automation at 8) at 40.
+// getChallengeUnlockPurges): tier01's F1 at Purge 5, F21 (Accelerate, automation at 8) at 40.
 export const CHALLENGE_UNLOCK_PURGE_MULTIPLIER = 5
 // Speed Up (the global tickspeed multiplier — see engine.js's
 // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) speeds up *every* tier's

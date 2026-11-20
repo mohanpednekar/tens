@@ -369,7 +369,7 @@ describe('lever behaviour through the engine', () => {
     tierProductionAccumulators: {},
   })
 
-  it('clockSpeedPower raises the Clock Speed multiplier to that power in tier periods', () => {
+  it('clockSpeedPower raises the Accelerate multiplier to that power in tier periods', () => {
     const power = CHALLENGE_DEFINITIONS.find(def => def.id === 'F11').levers.clockSpeedPower
     const level = (state, patch) => ({ ...state, globalTickspeedMultiplier: 50, ...patch })
     const plain = getEffectiveTierTickSpeedSeconds(runOf('F2', level), T(0))
@@ -378,7 +378,7 @@ describe('lever behaviour through the engine', () => {
     expect(weakened).toBeGreaterThan(plain)
   })
 
-  it('getChallengeClockSpeedStep is the real per-level Clock Speed bonus: 1% base, scaled by Overclock and the power lever, 0 under F21', () => {
+  it('getChallengeClockSpeedStep is the real per-level Accelerate bonus: 1% base, scaled by Overclock and the power lever, 0 under F21', () => {
     expect(getChallengeClockSpeedStep(createInitialGameState())).toBeCloseTo(0.01)
     const power = CHALLENGE_DEFINITIONS.find(def => def.id === 'F11').levers.clockSpeedPower
     expect(getChallengeClockSpeedStep(runOf('F11'))).toBeCloseTo(1.01 ** power - 1)

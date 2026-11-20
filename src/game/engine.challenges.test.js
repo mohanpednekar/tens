@@ -263,7 +263,7 @@ describe('auto-complete for existing saves', () => {
 })
 
 describe('global challenge rules', () => {
-  it('F21 disables Clock Speed (by hand/automation) and its tickspeed effect, Overclock included', () => {
+  it('F21 disables Accelerate (by hand/automation) and its tickspeed effect, Overclock included', () => {
     makeLive('F21')
     const free = { ...withAutomations(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 1e9 }, purchaseLevels: { ...createInitialGameState().purchaseLevels, [FIRST_TIER]: 2 } }
     expect(buyGlobalTickspeedMultiplier(free)).not.toBe(free)
