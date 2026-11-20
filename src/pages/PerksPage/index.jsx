@@ -1187,7 +1187,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <CategoryHeading>Purchasing</CategoryHeading>
         <UpgradeRow
           ariaLabel="buy mode toggle"
-          details="Level (default): each Factory Buy fills as many units as you can afford, up to the end of the current level. Unit: each Buy purchases exactly one unit (it overrides Buy max for the Buy button). The choice is per device."
+          details="Level (default): each Factory Buy fills as many units as you can afford, up to the end of the current level. Single: each Buy purchases exactly one unit (it overrides Buy max for the Buy button). The choice is per device."
           icon="🛒"
           name="Buy mode"
         >

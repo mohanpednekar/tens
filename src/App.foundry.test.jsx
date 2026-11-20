@@ -2777,7 +2777,7 @@ describe('Buy max mode', () => {
     expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
   })
 
-  test('Buy mode defaults to level; Unit makes the tier Buy button buy exactly one unit and persists', async () => {
+  test('Buy mode defaults to level; Single makes the tier Buy button buy exactly one unit and persists', async () => {
     const user = userEvent.setup()
     const kilobytes = TIER_DEFINITIONS[0]
     seedMainGameState({
@@ -2787,8 +2787,8 @@ describe('Buy max mode', () => {
     render(<App />)
     await openPerksTab(user, /open prestige/i)
     expect(screen.getByRole('button', { name: /^buy level mode$/i })).toHaveAttribute('aria-pressed', 'true')
-    await user.click(screen.getByRole('button', { name: /^buy unit mode$/i }))
-    expect(screen.getByRole('button', { name: /^buy unit mode$/i })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: /^buy single mode$/i }))
+    expect(screen.getByRole('button', { name: /^buy single mode$/i })).toHaveAttribute('aria-pressed', 'true')
     expect(localStorage.getItem('tens_buy_unit_mode')).toBe('true')
     await user.click(screen.getByRole('button', { name: /^open byte factory$/i }))
 

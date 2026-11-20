@@ -220,7 +220,7 @@ bank-redeemability check, the flat vs. dynamic transfer cost).
 (`tens_buy_max_mode`, not game state) making each manual leveled purchase buy every affordable level:
 `buyTierMaxLevels` for Factory tiers (FULL levels only; partial progress or an unaffordable full level
 falls back to the ordinary single-level click) and `repeatPurchaseMax` for single-level ladders.
-**Buy mode** (Firmware → Prestige → Purchasing, `components/BuyModeToggle`, per-device `tens_buy_unit_mode`, `buyUnitMode`/`setBuyUnitMode` on the hook): *Level* (default) = a manual Factory tier Buy fills up to the level boundary; *Unit* = exactly one unit per click (`buyTierQuantity(tierId, 1)`), overriding Buy max for that button only. Autobuyers are unaffected.
+**Buy mode** (Level / Single; Firmware → Prestige → Purchasing, `components/BuyModeToggle`, per-device `tens_buy_unit_mode`, `buyUnitMode`/`setBuyUnitMode` on the hook): *Level* (default) = a manual Factory tier Buy fills up to the level boundary; *Single* = exactly one unit per click (`buyTierQuantity(tierId, 1)`), overriding Buy max for that button only. Autobuyers are unaffected.
 Detail: `docs/ECONOMY_REFERENCE.md`'s "Buy max mode".
 
 Scale Up uses persisted, run-scoped `scaleUpTierCounts`: each claim doubles the current target and all
