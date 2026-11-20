@@ -6,7 +6,7 @@
 - Unclassified: 30 file(s) not represented in the graph (top: .xml 9, (none) 8, .properties 2)
 
 ## Summary
-- 3427 nodes · 10491 edges · 176 communities (135 shown, 41 thin omitted)
+- 3487 nodes · 10542 edges · 176 communities (135 shown, 41 thin omitted)
 - Extraction: 78% EXTRACTED · 22% INFERRED · 0% AMBIGUOUS · INFERRED: 2298 edges (avg confidence: 0.95)
 - Token cost: 0 input · 0 output
 

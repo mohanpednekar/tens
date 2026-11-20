@@ -10,6 +10,8 @@
 // screenshots it at 2x. If Playwright's expected Chromium build isn't installed, set
 // PW_CHROMIUM_PATH to a chromium binary — the same override the e2e suite uses (e2e/README.md).
 import { spawn } from 'node:child_process'
+import { rmSync } from 'node:fs'
+import { connect } from 'node:net'
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -38,23 +40,39 @@ const NAVIGATION = {
   game: [],
 }
 
+const portInUse = port => new Promise(done => {
+  const socket = connect({ host: '127.0.0.1', port })
+  socket.once('connect', () => { socket.destroy(); done(true) })
+  socket.once('error', () => done(false))
+})
+
 const waitForServer = async (url, child) => {
   let exited = false
-  child?.once('exit', () => { exited = true })
+  child.once('exit', () => { exited = true })
   for (let attempt = 0; attempt < 60; attempt++) {
-    // With --strictPort a busy port makes vite exit at once; fail instead of capturing whatever
-    // else is listening there (e.g. an orphaned server running older code).
-    if (exited) throw new Error(`yarn dev exited — is port ${PORT} already in use?`)
-    try { if ((await fetch(url)).ok) return } catch { /* not up yet */ }
+    if (exited) throw new Error('yarn dev exited before the server came up')
+    try { if ((await fetch(url)).ok && !exited) return } catch { /* not up yet */ }
     await new Promise(done => setTimeout(done, 500))
   }
   throw new Error(`dev server did not start at ${url}`)
 }
 
+// Cleanup that must also run on Ctrl-C / SIGTERM, which skip `finally` blocks.
+const cleanups = new Set()
+const runCleanups = () => { for (const cleanup of cleanups) cleanup(); cleanups.clear() }
+for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]]) {
+  process.once(signal, () => { runCleanups(); process.exit(code) })
+}
+
 const startDevServer = async () => {
+  // Refuse a busy port up front: whatever answers there (e.g. a server orphaned by an earlier
+  // run) may be serving older code, and the mockups must come from this checkout.
+  if (await portInUse(PORT)) throw new Error(`port ${PORT} is already in use — stop that server or pass --port`)
   const child = spawn('yarn', ['dev', '--port', String(PORT), '--strictPort'], { stdio: 'ignore', detached: true })
   child.unref()
-  const stop = () => { try { process.kill(-child.pid) } catch { /* already gone */ } }
+  // The dev server runs in its own process group, so a terminal Ctrl-C doesn't reach it.
+  const stop = () => { try { process.kill(-child.pid) } catch { /* already gone */ } cleanups.delete(stop) }
+  cleanups.add(stop)
   const url = `http://127.0.0.1:${PORT}/tens/`
   try { await waitForServer(url, child) } catch (error) { stop(); throw error }
   return { url, stop }
@@ -110,10 +128,10 @@ const main = async () => {
   const mockups = MOCKUPS.filter(m => !only || only.has(m.id))
   if (mockups.length === 0) throw new Error('no mockups selected')
   const server = args['base-url'] ? { url: args['base-url'], stop: () => {} } : await startDevServer()
-  // The dev server runs in its own process group, so a terminal Ctrl-C doesn't reach it.
-  for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { server.stop(); process.exit(130) })
   let work
   let browser
+  const removeWork = () => { if (work) rmSync(work, { recursive: true, force: true }) }
+  cleanups.add(removeWork)
   try {
     work = await mkdtemp(join(tmpdir(), 'tens-mockups-'))
     browser = await chromium.launch(process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {})
@@ -134,6 +152,7 @@ const main = async () => {
     await browser?.close()
     server.stop()
     if (work) await rm(work, { recursive: true, force: true })
+    cleanups.delete(removeWork)
   }
 }
 
