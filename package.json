@@ -62,6 +62,7 @@
     "test": "vitest run",
     "test:watch": "vitest --host 127.0.0.1",
     "test:e2e": "playwright test",
+    "mockups:large-screens": "node scripts/large-screen-mockups/generate.mjs",
     "audit": "yarn audit",
     "lint:workflows": "node scripts/lint-workflow-shell.mjs && node scripts/lint-conflict-markers.mjs",
     "bump-version": "node scripts/bump-version.mjs",
