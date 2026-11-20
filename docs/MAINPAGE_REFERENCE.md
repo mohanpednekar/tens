@@ -723,7 +723,7 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   upgrade/unlock button (glyph hidden, colour-coded) ends the head line — one line whenever it fits; the
   head wraps (`CellHead $wrap`) so a very long cost drops the button to its own line rather than
   ellipsizing the name. Categories: *Global Automation* (cells
-  `"<name> row"`, Auto Clock Speed → Auto Restage → Auto Scale Up → Auto Overclock → Auto Purge; Restage
+  `"<name> row"`, Auto Clock Speed → Auto Scale Up → Auto Restage → Auto Overclock → Auto Purge; Restage
   and Scale Up both need Clock Speed, Overclock needs both, Purge needs Overclock — engine-enforced),
   *Tier Autobuyers* (all ten tiers always listed; halves
   `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Power Automation* (once any tier's Auto-charge is bought on Power: an `auto-charge row` pause Switch — `computeAutoChargeEnabled` — plus an `auto boost row` Switch and the full-width Boost preset picker), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).

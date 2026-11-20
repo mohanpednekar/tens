@@ -9,10 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Firmware → Automation: global automation rows now align their interval, pause Switch and action in fixed columns.
-
-- Nav attention dots no longer light for Factory cues (affordable levels, Clock Speed, Scale Up, Overclock, Purge) whose automation is unlocked, enabled and faster than 1 s; a paused automation still lights its dot.
 - Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
+- Nav attention dots no longer light for Factory cues (affordable levels, Clock Speed, Scale Up, Overclock, Purge) whose automation is unlocked, enabled and faster than 1 s; a paused automation still lights its dot.
+- Firmware → Automation: global automation rows now align their interval, pause Switch and action in fixed columns, and list Scale Up before Restage.
 
 ### Fixed
 
@@ -90,10 +89,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Auto Restage (16 PP, Perks → Unlocks).** Once bought, XP is spent on Restage automatically whenever possible (each spend still resets every other tier's owned quantity and Bits). Pause it on Perks → Toggles.
 - **Dev build published beside production**: `yarn build:dev` produces a build with Dev Mode enabled (presets, Variables tree, state-JSON editor), and the Pages deploy now serves it at `/tens/dev/` while production stays at `/tens/`. The dev build keeps its own separate saves (every storage key is `dev:`-prefixed), invisible to the main game, and, like Dev Mode itself, carries no backward-compatibility burden (any save loads; missing fields are filled in, no "incompatible save" notice).
 - Settings → Import / export save: copy, download, paste or choose a save file to replace the active slot — hand-built test saves can now be loaded directly on a phone/PWA, no second computer or dev build needed.
-
-### Changed
-
-- Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
 
 ### Fixed
 
@@ -280,10 +275,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Completed 9/9/9 pools now show the next Booster cost as a label and convert affordable Lake
   contents automatically, without a conversion button.
 
-### Changed
-
-- Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
-
 ### Fixed
 
 - **Rebuild tile always shows a time.** While a rebuilding size's pool is not live yet, the time (and ⚡ speed) are projected from the Bandwidth the pool will have once live instead of being hidden.
@@ -448,10 +439,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   and stops — never a standing auto-buy loop. While converting, the control shows as a label instead
   of a button. Starting is blocked if the matching compute entity is already full. The lake's old
   lifetime-purchased-count text is gone — the cost figure alone is self-explanatory.
-
-### Changed
-
-- Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
 
 ### Fixed
 - **The game loads again.** A bad merge left conflict markers in the Data Lake fill math, so the app could not build. Those markers are gone.
@@ -669,10 +656,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Foundry now funds Byte Factory tier levels **pull-based and fully automatically, every tick**,
   with no click and no autobuyer needed — see the "Byte Foundry storage funding is now fully
   automatic (pull-based)" entry under Changed below. `DiskArrayRow` is a pure status display now.
-
-### Changed
-
-- Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
 
 ### Fixed
 - **An ordinary Prestige wiped Era ascension progress** — `prestigeGame` never carried
@@ -1536,10 +1519,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   since the buffer's own ceiling always equals the "Capacity" stat already shown in the same card —
   it now shows just the current amount.
 
-### Changed
-
-- Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
-
 ### Fixed
 - A Disk array's cache could get stuck fully staged, never converting into its disk, if a
   *smaller* size's cache was still mid-fill and exhausted that tick's available Memory first —
@@ -1572,10 +1551,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **"Speed Up" renamed to "Scale Up," and redesigned to unlock tiers one at a time instead of gating only on the last tier.** A Scale Up is now available once the tier it's currently working through (starting with Kilobytes) hits level 3 (displayed Lv.2) — firing it doubles production speed (stacking, same as before) and permanently unlocks the next tier, on top of keeping every tier already reached. The Scale Up card is now always shown from the very first cycle, rather than staying hidden until the last tier unlocks. Once every tier has been reached, Scale Up settles into a repeating "every 3 levels of the last tier" endgame phase (level 3, then 6, then 9, …) instead of its old +1-per-activation last-tier-only ladder.
 - **Data Lake's capacity-increase button now reads "⚡ Scale Out"** (was "⚡ Upgrade") — same action, cost, and gating as before.
 
-### Changed
-
-- Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
-
 ### Fixed
 - **Scale Up and Overclock no longer erase Era ascension progress.** Both soft-resets were silently
   wiping era count, Eons balance, hyperscaler count, Eon upgrade levels, and Flops autobuyer
@@ -1595,10 +1570,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Buttons use short symbols with a more compact tier row layout; autobuyer upgrades are now guarded against zeroing out a tier's own generator count.
 - Full agent output is now shown in maintenance workflow runs for diagnosability.
 
-### Changed
-
-- Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
-
 ### Fixed
 - Granted the `issues` permission so the maintenance workflow's guard step can see the task backlog.
 
@@ -1613,10 +1584,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Data Lake speed and Flush**: lakes now fill at 10% of their pool's base Bandwidth, +10% (additive) per pool flush (70% after 6). Pool resets ("Compact Pool") are renamed **Flush Pool**, and flushes no longer raise pool Bandwidth.
 - Buy button moved to the rightmost column, ahead of Upgrade/Unlock.
 - Pivoted autonomous maintenance to a GitHub Issues task backlog; raised unattended-run turn budgets.
-
-### Changed
-
-- Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
 
 ### Fixed
 - CodeQL-flagged injection and untrusted-checkout risks; a TOCTOU gap in PR follow-up, fixed by pinning checkout to a commit SHA.
@@ -1639,10 +1606,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Manual Buy grabs the maximum affordable quantity instead of always buying 1.
 - Tier row layout made stable regardless of value length.
 
-### Changed
-
-- Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
-
 ### Fixed
 - The Upgrade mechanic now correctly boosts autobuyer purchase yield instead of passive production.
 - Inconsistent currency notation in the per-tier production rate.
@@ -1653,10 +1616,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `CLAUDE.md` documenting the project's architecture and conventions.
 - Redesign to a compact one-line-per-tier layout with currency formatting.
 - A Googol-based prestige system.
-
-### Changed
-
-- Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
 
 ### Fixed
 - Tier-rename regressions and a broken Copilot review workflow.

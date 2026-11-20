@@ -1712,7 +1712,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   `elapsedSeconds / getAutobuyerIntervalSeconds(state, tierId)`. Needs the autobuyer unlocked; kept
   through Prestige/Scale Up/Overclock/Era. UI: the tier's row on Firmware → Automation → Tier Autobuyers.
 - **Active — Automation interval chains:** `AUTOMATION_INTERVAL_CONFIG` (`speedUp` 8 PP/1 s, `scaleUp`
-  16 PP/64 s, `restage` 16 PP/64 s, `overclock` 32 PP/256 s, `purge` 64 PP/1024 s) and `TIER_TICKSPEED_INTERVAL_CONFIG`
+  16 PP/64 s, `restage` 32 PP/128 s, `overclock` 32 PP/256 s, `purge` 64 PP/1024 s) and `TIER_TICKSPEED_INTERVAL_CONFIG`
   (100 PP/16 s per tier). Cost = baseCost × the shared doubling ladder (`getSiCleanDoublingFactor`: 1, 2, 4, …, 64, 125, …);
   interval = baseSeconds × 0.9^level, floor 10 ms. `buyAutomationIntervalUpgrade(key)` /
   `buyTierTickspeedIntervalUpgrade(tierId)` (state: `automationIntervalLevels`,
@@ -1736,7 +1736,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   `applyAutobuyerMilestones` (run by `purgeGame`) sets `autoGlobalTickspeed`/`autoXpTickspeed`/`autoScaleUp`/
   `autoOverclock`/`autoPurge` (→ 1) when `purge.count` reaches each, spending no PP and never revoking. The
   PP-funded part is only each chain's interval upgrades (`AUTOMATION_INTERVAL_CONFIG[key].baseCost` first level:
-  Clock Speed 8, Scale Up 16, Restage 32, Overclock 32, Purge 64), unchanged; tier autobuyer / tier tickspeed
+  Clock Speed 8, Scale Up 16, Restage 32, Overclock 32, Purge 64) (Restage costs 32 PP and starts at 128 s); tier autobuyer / tier tickspeed
   chains start at 10 PP / 100 PP (`AUTOBUYER_INTERVAL_UPGRADE_BASE_COST` / `TIER_TICKSPEED_INTERVAL_CONFIG.baseCost`).
   The old `buyAutoScaleUp`/`buyAutoOverclock`/`buyAutoPurge`/`buyTickspeedAutobuyer`/`buyXpTickspeedAutobuyer`,
   `getAutomationUnlockCost` and `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` were removed.
@@ -1949,7 +1949,7 @@ its one purpose.
   Prestige/Scale Up/Overclock/Era like the other global automations). While bought and
   `autoXpTickspeedEnabled` (pause via `setAutoXpTickspeedEnabled`, same Firmware row), `tickGame` calls
   `consumeXpForLastTierTickspeed(purge.xp)` through `runGlobalIntervalAutomation(…, 'restage', …)` —
-  at most once per `getAutomationIntervalSeconds(state, 'restage')` (64 s × 0.9^level, upgraded via
+  at most once per `getAutomationIntervalSeconds(state, 'restage')` (128 s × 0.9^level, upgraded via
   `buyAutomationIntervalUpgrade('restage')`), after the Purge / Overclock / Scale Up resets and before the spends (it wipes lower tiers, so it is the smallest reset) — and
   no-ops until all of that function's guards pass. The last tier's tier tickspeed autobuyer is separate
   and always drives the ordinary `buyTickspeedMultiplier`.

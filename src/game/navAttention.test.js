@@ -346,6 +346,26 @@ describe('navAttention', () => {
     expect(hasScaleUpAvailable(withLevel(0))).toBe(true) // enabled but 64 s
   })
 
+  it('suppresses the Clock Speed and Overclock cues only while enabled and faster than 1 s', () => {
+    const initial = createInitialGameState()
+    const tier01 = TIER_DEFINITIONS[0]
+    const clockBase = {
+      ...initial,
+      intro: { ...initial.intro, mainGameUnlocked: true, byteCreated: true },
+      purchaseLevels: { [tier01.id]: 2 },
+      resources: { ...initial.resources, [MONEY_ID]: 10 * BITS_PER_BYTE },
+      globalTickspeedMultiplier: null,
+      autoGlobalTickspeed: true,
+    }
+    const withLevel = level => ({ ...clockBase, automationIntervalLevels: { ...clockBase.automationIntervalLevels, speedUp: level } })
+    expect(hasAffordableGlobalTickspeed(withLevel(0))).toBe(true) // exactly 1 s is not < 1 s
+    expect(hasAffordableGlobalTickspeed(withLevel(1))).toBe(false) // 0.9 s, enabled
+    expect(hasAffordableGlobalTickspeed({ ...withLevel(1), autoGlobalTickspeedEnabled: false })).toBe(true)
+    const oc = { ...initial, intro: { ...initial.intro, mainGameUnlocked: true }, purchaseLevels: { [lastTierId]: 6 }, everUnlockedTierIds: { [lastTierId]: true }, autoOverclock: true, automationIntervalLevels: { ...initial.automationIntervalLevels, overclock: 60 } }
+    expect(hasOverclockAvailable(oc)).toBe(false)
+    expect(hasOverclockAvailable({ ...oc, autoOverclockEnabled: false })).toBe(true)
+  })
+
   it('suppresses the affordable-level cue for a tier whose enabled autobuyer is faster than 1 s', () => {
     const tierId = TIER_DEFINITIONS[0].id
     const base = {
