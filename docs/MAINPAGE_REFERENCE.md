@@ -754,7 +754,7 @@ Money-funded (not PP-funded) and lives on the Factory view as its own `GlobalTic
 at the very top of the Factory view (sharing its `SpeedCardsRow` with `RestageCard` once Restage unlocks — #1137; Scale Up and Overclock share the row below the tier list) — above `TierList`/tier 1, before anything else — since it's
 relevant from the very start of a run, well before Overclock or Prestige are, or even the tier list
 itself — `ScaleUpCard` is likewise always shown (unlike `OverclockCard`, still gated on the last
-tier having ever been unlocked — see below), but stays down below `TierList` (paired with Overclock) rather
+tier having ever been unlocked — see below), but stays down below `TierList` (stacked with Overclock) rather
 than joining this card, since its own target walks through the tier ladder one tier at a time (see
 "Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
 through. Feature cards are short full-width rows (`SpeedCardsRow` is a column; `featureCard` lays each card out as a row: title/effect + disclosure left, action button right (9rem desktop, 7.9/7.3/6.9rem on phones; drops below the text while the disclosure is open); 3px left accent edge, padding and button column match `TierLine` so edges align): Accelerate then `RestageCard` (once revealed) above `TierList`; `ScaleUpCard` then `OverclockCard` (once revealed) below it. Accelerate shows the live per-level bonus `🏭 +X%/lvl` (`getChallengeClockSpeedStep`: 1% scaled by Overclock, weakened by a challenge's `clockSpeedPower`, 0 under F21; Overclock's disclosure shows the same rate) and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock). `CardTitleGroup` wraps the name/effect onto a second line when the left column is too narrow (phone widths around 320px).
@@ -839,7 +839,7 @@ unchanged by the move to Firmware — see `docs/ECONOMY_REFERENCE.md` for costs/
 `docs/DESIGN_HISTORY.md` ("PP Upgrades tab split…") for why the page is split three ways.
 
 **Scale Up and Overclock cards, below the tier list.** `ScaleUpCard` + `OverclockCard` (once revealed) share
-one `SpeedCardsRow` placed directly below `TierList` (#1137); Restage pairs with `GlobalTickspeedCard` above the
+one `SpeedCardsRow` placed directly below `TierList` (#1137); Restage stacks under `GlobalTickspeedCard` above the
 tier list instead (see "Global Tickspeed card" above). Cards are full-width rows stacked in `SpeedCardsRow` (a column); `CardTitleGroup` wraps the effect under the heading (`min-width: 0`, `flex-wrap`) on narrow phones (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below);
 `OverclockCard` is gated and, when revealed, sits below Scale Up.
 Both soft-reset cards (and Accelerate) share `featureCard(accent)`: `TierLine`-matched
