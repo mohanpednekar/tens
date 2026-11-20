@@ -3,6 +3,7 @@ import fc from 'fast-check'
 import * as boostEngine from 'game/engine'
 import {
   activateComputeBoost,
+  getChargerUnlockProgress,
   buyAutobuyerIntervalUpgrade,
   buyAutomationIntervalUpgrade,
   buyTierTickspeedIntervalUpgrade,
@@ -4834,6 +4835,8 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
   it('manual merge fills the output tier\'s reserve once its own auto-merge is unlocked (#740)', () => {
     const state = withIntro(createInitialGameState(), {
       autoMergeNodesIntoCluster: true,
+      // Legacy state: Cells→Batteries Charger progress already full but its flag unset.
+      chargerUnlockProgress: { autoMergeCoresIntoNode: COMPUTE_ENTITY_CAP },
       computeCores: COMPUTE_MERGE_RATIO,
       computeNodes: COMPUTE_ENTITY_CAP,
     })
@@ -4950,21 +4953,52 @@ describe.each([
     expect(merge(state)).toBe(state)
   })
 
+  it('puts the first COMPUTE_ENTITY_CAP charges into the Charger instead of the output, banking the remainder', () => {
+    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO * 2 + 3, [outputField]: COMPUTE_ENTITY_CAP })
+    const after = merge(state)
+    expect(after.intro[outputField]).toBe(COMPUTE_ENTITY_CAP) // no output made — and none needed room
+    expect(after.intro[inputField]).toBe(3)
+    expect(getChargerUnlockProgress(after, autoFlagField)).toBe(2)
+    expect(after.intro[autoFlagField]).toBe(false)
+  })
+
+  it('unlocks the Charger automatically on the COMPUTE_ENTITY_CAP-th charge, with no sacrifice, and stops there', () => {
+    const state = withIntro(createInitialGameState(), {
+      [inputField]: COMPUTE_MERGE_RATIO * 3,
+      [outputField]: 4,
+      chargerUnlockProgress: { [autoFlagField]: COMPUTE_ENTITY_CAP - 1 },
+    })
+    const after = merge(state)
+    expect(after.intro[autoFlagField]).toBe(true)
+    expect(getChargerUnlockProgress(after, autoFlagField)).toBe(COMPUTE_ENTITY_CAP)
+    expect(after.intro[outputField]).toBe(4) // nothing sacrificed, nothing made
+    expect(after.intro[inputField]).toBe(COMPUTE_MERGE_RATIO * 2) // only the unlocking charge spent
+  })
+
+  it('keeps Charger progress through a real Prestige', () => {
+    const state = withMoney(withIntro(createInitialGameState(), { chargerUnlockProgress: { [autoFlagField]: 6 } }), PURGE_THRESHOLD)
+    expect(getChargerUnlockProgress(purgeGame(state), autoFlagField)).toBe(6)
+  })
+
+  // Legacy state only (progress full but flag unset): charges then make output, as before.
+  const full = { chargerUnlockProgress: { [autoFlagField]: COMPUTE_ENTITY_CAP } }
+
   it('converts every complete group of COMPUTE_MERGE_RATIO into 1 of the output entity, banking the remainder', () => {
-    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO * 2 + 3 })
+    const state = withIntro(createInitialGameState(), { ...full, [inputField]: COMPUTE_MERGE_RATIO * 2 + 3 })
     const after = merge(state)
     expect(after.intro[outputField]).toBe(2)
     expect(after.intro[inputField]).toBe(3)
   })
 
   it('accumulates onto any already-permanent output balance rather than overwriting it', () => {
-    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [outputField]: 7 })
+    const state = withIntro(createInitialGameState(), { ...full, [inputField]: COMPUTE_MERGE_RATIO, [outputField]: 7 })
     const after = merge(state)
     expect(after.intro[outputField]).toBe(8)
   })
 
   it('is a same-reference no-op once the output is already at COMPUTE_ENTITY_CAP, even with enough input to merge', () => {
     const state = withIntro(createInitialGameState(), {
+      ...full,
       [inputField]: COMPUTE_MERGE_RATIO * 3,
       [outputField]: COMPUTE_ENTITY_CAP,
     })
@@ -4973,6 +5007,7 @@ describe.each([
 
   it('caps the gain at the remaining room under COMPUTE_ENTITY_CAP, leaving surplus input unconverted rather than overflowing the output past the cap', () => {
     const state = withIntro(createInitialGameState(), {
+      ...full,
       [inputField]: COMPUTE_MERGE_RATIO * 3, // enough for 3 more of the output
       [outputField]: COMPUTE_ENTITY_CAP - 1, // only room for 1 more
     })
@@ -12947,5 +12982,19 @@ describe('run peaks (Daily challenge runs)', () => {
     expect(ticked.purchaseLevels.tier01).toBe(1)
     // ...and the levels held just before it are kept on the returned state.
     expect(ticked.runPeaks.purchaseLevels.tier01).toBe(6)
+  })
+})
+
+describe('getChargerUnlockProgress / Charger progress carry (#1141 follow-up)', () => {
+  it('reads a corrupted value as 0 instead of NaN', () => {
+    const state = withIntro(createInitialGameState(), { chargerUnlockProgress: { autoMergeCoresIntoNode: 'oops' } })
+    expect(getChargerUnlockProgress(state, 'autoMergeCoresIntoNode')).toBe(0)
+  })
+
+  it('keeps Charger progress through Reboot but Reformat wipes it with the rest of the Foundry', () => {
+    const seeded = withIntro(createInitialGameState(), { chargerUnlockProgress: { autoMergeCoresIntoNode: 7 } })
+    const rebooted = eraGame({ ...seeded, purge: { ...seeded.purge, points: ERA_ELIGIBILITY_PP } })
+    expect(getChargerUnlockProgress(rebooted, 'autoMergeCoresIntoNode')).toBe(7)
+    expect(getChargerUnlockProgress(resetByteFoundry(seeded), 'autoMergeCoresIntoNode')).toBe(0)
   })
 })

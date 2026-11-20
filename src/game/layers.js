@@ -499,9 +499,10 @@ export const COMPUTE_ENTITY_CAP = 10
 // mergeComputeSupercomputersIntoMegacomputer in engine.js — each player-triggered (a button click),
 // never automatic on tick UNLESS that boundary's auto-merge has been unlocked (below). Nothing
 // spends a Megacomputer yet — it's the top of the chain today (see issue #280's "Out of scope").
-// Each of the 9 manual merges above can also be permanently automated (see issues #316/#321,
-// enableAutoMergeCoresIntoNode/enableAutoMergeNodesIntoCluster etc. in engine.js) by sacrificing
-// ALL COMPUTE_ENTITY_CAP (10) currently-held units of that merge's own output entity — once
+// Each of the 9 manual merges above can also be permanently automated (see issues #316/#321): a
+// boundary's first COMPUTE_ENTITY_CAP (10) manual charges build its Charger (getChargerUnlockProgress in
+// engine.js) and the 10th unlocks it; saves already holding 10 of the output may instead sacrifice exactly
+// 10 of them (enableAutoMerge* — legacy route) — once
 // unlocked, that boundary's merging (both manual and automatic) fully transitions to a timed
 // RESERVE-POOL system instead of firing instantly (see COMPUTE_MERGE_RESERVE_CAP /
 // getComputeMergeDurationSeconds below).

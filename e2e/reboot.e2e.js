@@ -17,6 +17,8 @@ test.beforeEach(async ({ page }) => {
 test('rebooting from Settings awards Kernels and resets Foundry Capacity, but keeps the gate permanently unlocked', async ({ page }) => {
   await page.getByRole('button', { name: /open more menu/i }).click()
   await page.getByRole('button', { name: /open settings/i }).click()
+  // Settings is a grouped list (#1143): expand the Reboot entry first.
+  await page.getByRole('button', { name: /^reboot settings$/i }).click()
   await page.getByRole('button', { name: /reboot — open confirmation/i }).click()
   await page.getByRole('button', { name: /^reboot$/i }).click()
 
