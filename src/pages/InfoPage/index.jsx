@@ -434,8 +434,8 @@ const InfoPage = () => {
             {COMPUTE_MERGE_RATIO} held). It is instant.
           </li>
           <li>
-            Sacrifice {COMPUTE_ENTITY_CAP} of the next entity to unlock the Charger for that step. This
-            adds the Charger, a row of {COMPUTE_MERGE_RESERVE_CAP} slots ({COMPUTE_ENTITY_AUTO_MERGE_CAP} held in
+            A step's first {COMPUTE_ENTITY_CAP} charges go into its Charger instead of the next entity (🔓 n/{COMPUTE_ENTITY_CAP});
+            the {COMPUTE_ENTITY_CAP}th unlocks it, with nothing sacrificed. The Charger holds {COMPUTE_MERGE_RESERVE_CAP} more ({COMPUTE_ENTITY_AUTO_MERGE_CAP} held in
             total) that fills as the entity keeps growing past {COMPUTE_ENTITY_CAP}. Press ⚡ Charge
             to move units from the top row into the Charger one per second, then {COMPUTE_MERGE_RATIO} → 1 merges
             instantly.

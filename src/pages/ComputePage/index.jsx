@@ -1,9 +1,9 @@
 import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration } from 'components/BoostTimerBar'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
-import { canActivateComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostLane, getComputeBoostLanes, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeChargeAvailable, isComputeCharging, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress } from 'game/engine'
+import { canActivateComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostLane, getComputeBoostLanes, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getChargerUnlockProgress, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeChargeAvailable, isComputeCharging, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
 import { Fragment, useState } from 'react'
-import styled, { useTheme } from 'styled-components'
+import styled from 'styled-components'
 
 const RootDiv = styled.div`
   display: flex;
@@ -235,11 +235,29 @@ const TierActionButton = styled(CompactButton)`
 const ChargerBadge = styled(CompactButton)`
   min-height: 1.9rem;
   min-width: 3.9rem;
+`
 
-  &:disabled {
-    cursor: default;
-    opacity: 1;
-  }
+// The node's Charger status (not a control): reserve n/8 or unlock progress n/10 as a proportional fill,
+// gold while an auto-charge runs. Explicit colours — a disabled Button would grey every state alike.
+const ChargerStatus = styled.span`
+  align-items: center;
+  background: ${props => {
+    const tint = props.$running ? props.theme.color.warn : props.theme.color.accent
+    const pct = props.$running ? 100 : Math.round(props.$fill * 100)
+    return `linear-gradient(90deg, color-mix(in srgb, ${tint} 28%, ${props.theme.color.surfaceSunken}) ${pct}%, ${props.theme.color.surfaceSunken} ${pct}%)`
+  }};
+  border: 1px solid ${props => (props.$running ? props.theme.color.warn : props.theme.color.borderStrong)};
+  border-radius: ${props => props.theme.radius.sm};
+  color: ${props => (props.$running ? props.theme.color.warn : props.theme.color.text)};
+  display: inline-flex;
+  font-size: 0.78em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  justify-content: center;
+  min-height: 1.9rem;
+  min-width: 3.9rem;
+  padding: 0 0.6em;
+  white-space: nowrap;
 `
 
 // Issue #326: which compute-ladder tier is currently armed to fund a Boost — a small status line
@@ -465,7 +483,6 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
-  const theme = useTheme()
   // Issue #326: which compute-ladder tier is armed to fund the next Boost activation — purely
   // local UI state (free to change, no cost). One tier is ALWAYS selected (it can be switched, never cleared):
   // on arrival, the highest tier whose charge is automated, else the active boost's own tier, else Cells.
@@ -523,7 +540,7 @@ const ComputePage = ({ game }) => {
                     : `${nextLabel}: ${spendText} — runs alongside other boosts and adds up`
               }
               type="button"
-              variant="neutral"
+              variant="prestige"
             >
               <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatPresetDuration(durationSeconds)}`}</ButtonContent>
             </CompactButton>
@@ -567,7 +584,11 @@ const ComputePage = ({ game }) => {
               const hasMergeRow = Boolean(row.autoFlagField)
               const autoEnabled = hasMergeRow ? Boolean(intro[row.autoFlagField]) : false
               const autoCostHeld = row.autoCostField ? (intro[row.autoCostField] ?? 0) : 0
+              // Legacy route only: a save already holding 10 of the output may still sacrifice them.
               const canEnableAuto = hasMergeRow && !autoEnabled && autoCostHeld >= COMPUTE_ENTITY_CAP
+              // New route: the boundary's first 10 charges build its Charger (getChargerUnlockProgress).
+              const chargerProgress = hasMergeRow ? getChargerUnlockProgress(state, row.autoFlagField) : 0
+              const chargingCharger = hasMergeRow && !autoEnabled && chargerProgress < COMPUTE_ENTITY_CAP
               const autoUnlockProgress = Math.min(100, (autoCostHeld / COMPUTE_ENTITY_CAP) * 100)
               const remainingSeconds = row.timerField ? (intro[row.timerField] ?? 0) : 0
               const merging = remainingSeconds > 0
@@ -624,52 +645,61 @@ const ComputePage = ({ game }) => {
               ) : (
                 <TierActionButton
                   aria-label={`charge up ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
-                  disabled={!canMerge(count, intro[row.mergeOutputField] ?? 0, outputCap)}
+                  disabled={chargingCharger ? count < COMPUTE_MERGE_RATIO : !canMerge(count, intro[row.mergeOutputField] ?? 0, outputCap)}
                   onClick={() => actions[row.mergeAction]()}
                   title={
-                    (intro[row.mergeOutputField] ?? 0) >= outputCap
-                      ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
-                      : `Charge up: spend ${COMPUTE_MERGE_RATIO} ${row.label} for 1 ${row.mergeOutputLabel}`
+                    chargingCharger
+                      ? `Charge up: spend ${COMPUTE_MERGE_RATIO} ${row.label} into this tier's Charger (${chargerProgress}/${COMPUTE_ENTITY_CAP}) — the first ${COMPUTE_ENTITY_CAP} charges unlock Auto-charge, then charges make ${row.mergeOutputLabel}`
+                      : (intro[row.mergeOutputField] ?? 0) >= outputCap
+                        ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
+                        : `Charge up: spend ${COMPUTE_MERGE_RATIO} ${row.label} for 1 ${row.mergeOutputLabel}`
                   }
                   type="button"
                   variant="success"
                 >
-                  <ButtonContent>{`${row.symbol} ${COMPUTE_MERGE_RATIO}→1 ${nextSymbol}`}</ButtonContent>
+                  <ButtonContent>{`${row.symbol} ${COMPUTE_MERGE_RATIO}→1 ${chargingCharger ? '🔌' : nextSymbol}`}</ButtonContent>
                 </TierActionButton>
               ))
               // The node's own Charger (8 reserve slots) once unlocked, else its 🔓 unlock.
               const nodeSide = hasMergeRow && (autoEnabled ? (
-                <ChargerBadge
+                <ChargerStatus
+                  $fill={reserveHeld / COMPUTE_MERGE_RESERVE_CAP}
+                  $running={merging}
                   aria-label={
                     merging
                       ? `${row.label} charger, auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left`
                       : `${row.label} charger, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
                   }
-                  disabled
+                  role="img"
                   title={
                     merging
                       ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
                       : `Charger: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — fills past ${COMPUTE_ENTITY_CAP} held and charges on its own when full, or press Charge to move units into it one per second`
                   }
-                  type="button"
-                  variant={merging ? 'prestige' : 'plain'}
-                  $progress={merging ? 100 : (reserveHeld / COMPUTE_MERGE_RESERVE_CAP) * 100}
-                  $progressColor={merging ? undefined : theme.color.accent}
                 >
-                  <ButtonContent>{merging ? `⏳ ${formatOfflineDuration(remainingSeconds)}` : `🔌 ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP}`}</ButtonContent>
-                </ChargerBadge>
-              ) : (
+                  {merging ? `⏳ ${formatOfflineDuration(remainingSeconds)}` : `🔌 ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP}`}
+                </ChargerStatus>
+              ) : canEnableAuto ? (
+                // Legacy save already holding 10 of the output: the old sacrifice unlock stays available.
                 <ChargerBadge
                   aria-label={row.autoAriaLabel}
-                  disabled={!canEnableAuto}
                   onClick={() => actions[row.enableAutoAction]()}
-                  title={`Unlock this tier's Charger: sacrifice ${COMPUTE_ENTITY_CAP} of your ${formatAmount(autoCostHeld)} ${row.autoCostLabel} — it then charges on its own whenever ${row.label} is completely full, via a timed reserve charge`}
+                  title={`Unlock this tier's Charger now: sacrifice ${COMPUTE_ENTITY_CAP} of your ${formatAmount(autoCostHeld)} ${row.autoCostLabel}`}
                   type="button"
                   variant="info"
                   $progress={autoUnlockProgress}
                 >
-                  <ButtonContent>{`🔓 ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
+                  <ButtonContent>{`🔓 ${COMPUTE_ENTITY_CAP}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
                 </ChargerBadge>
+              ) : (
+                <ChargerStatus
+                  $fill={chargerProgress / COMPUTE_ENTITY_CAP}
+                  aria-label={`${row.label} charger unlock, ${chargerProgress}/${COMPUTE_ENTITY_CAP} charges`}
+                  role="img"
+                  title={`Charger: ${chargerProgress}/${COMPUTE_ENTITY_CAP} — this tier's first ${COMPUTE_ENTITY_CAP} charges build it, then it charges on its own whenever ${row.label} is completely full`}
+                >
+                  {`🔓 ${chargerProgress}/${COMPUTE_ENTITY_CAP}`}
+                </ChargerStatus>
               ))
               // The connector shows whenever its merge matters (same progressive rule as before);
               // otherwise a small gap keeps the chain readable.

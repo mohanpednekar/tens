@@ -1101,7 +1101,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    committed inputs. The auto-trigger is a no-op while its own merge is in flight or the output is capped.
 
    **Auto-charge automation** (code: auto-merge) (see issues #316/#321): each of the 9 manual merges above can be
-   permanently automated, one tier boundary at a time. `enableAutoMergeCoresIntoNode`/
+   permanently automated, one tier boundary at a time. **Primary route (#1141 follow-up):** a boundary's
+   first `COMPUTE_ENTITY_CAP` (10) manual charges (`mergeCompute*Into*`) build its Charger instead of
+   producing an output unit — each adds 1 to `intro.chargerUnlockProgress[autoFlagField]`
+   (`getChargerUnlockProgress`, 0..10; needs no output room; permanent through Purge and Reboot like the
+   flags) and the 10th sets the auto flag, with no sacrifice; a multi-group click stops at the unlock.
+   **Legacy route** (kept for saves already holding the output): `enableAutoMergeCoresIntoNode`/
    `enableAutoMergeNodesIntoCluster`/`enableAutoMergeClustersIntoNetwork`/
    `enableAutoMergeNetworksIntoGrid`/`enableAutoMergeGridsIntoFabric`/`enableAutoMergeFabricsIntoCloud`/
    `enableAutoMergeCloudsIntoDatacenter`/`enableAutoMergeDatacentersIntoSupercomputer`/
@@ -2574,7 +2579,8 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // instant computeCoresEverEarned (above, not the live
                                                           // computeCores balance) first reaches
                                                           // COMPUTE_CORES_PER_NODE (8)
-    autoMergeCoresIntoNode: false,                        // PERMANENT — each flipped once by the matching
+    chargerUnlockProgress: {},                            // { [autoFlagField]: 0..10 } charges toward each boundary's Charger (getChargerUnlockProgress); permanent
+    autoMergeCoresIntoNode: false,                        // PERMANENT — each flipped once by the 10th charge (above) or the matching
     autoMergeNodesIntoCluster: false,                     // enableAutoMerge* action (sacrifices exactly
     autoMergeClustersIntoNetwork: false,                  // COMPUTE_ENTITY_CAP (10) held units of that
     autoMergeNetworksIntoGrid: false,                     // merge's OWN output entity, not its whole live

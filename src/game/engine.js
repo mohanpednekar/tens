@@ -600,13 +600,14 @@ export const createInitialGameState = () => ({
     // computeCores balance — merging Nodes back down, or spending Cores on a Boost (even before
     // ever holding 8 at once), must never prevent or re-hide the page once earned.
     computeMergePageUnlocked: false,
-    // PERMANENT — each flips true (via enableAutoMergeNodesIntoCluster etc.) once, by sacrificing
-    // ALL COMPUTE_ENTITY_CAP (10) currently-held units of the merge's OWN output entity — e.g.
-    // sacrifice 10 Clusters to enable auto-merging Nodes into Clusters. Once set, tickGame also
+    // PERMANENT — each flips true once its boundary's first COMPUTE_ENTITY_CAP (10) manual charges have
+    // filled chargerUnlockProgress (see getChargerUnlockProgress), or — legacy route kept for saves
+    // already holding them — via enableAutoMergeNodesIntoCluster etc. by sacrificing 10 of the output. Once set, tickGame also
     // auto-fires that specific 8-for-1 merge whenever its input entity is completely full (10, not
     // the manual button's own 8 — automation only ever mops up an entity the player let cap out,
     // never preempting a more efficient manual merge at 8). The manual merge button stays available
     // either way. See tickAutoMerge/enableAutoMerge further down this file.
+    chargerUnlockProgress: {},
     autoMergeCoresIntoNode: false,
     autoMergeNodesIntoCluster: false,
     autoMergeClustersIntoNetwork: false,
@@ -1408,6 +1409,7 @@ const buildEraIntroReset = (state, initial) => {
     // Achieved pool exponent boosts survive the much larger Reboot, like achievements themselves.
     poolExponentBonuses: { ...(state.intro?.poolExponentBonuses ?? {}) },
     foundryResetCaps: {},
+    chargerUnlockProgress: { ...(state.intro?.chargerUnlockProgress ?? {}) },
     autoMergeCoresIntoNode: state.intro?.autoMergeCoresIntoNode ?? initial.intro.autoMergeCoresIntoNode,
     autoMergeNodesIntoCluster: state.intro?.autoMergeNodesIntoCluster ?? initial.intro.autoMergeNodesIntoCluster,
     autoMergeClustersIntoNetwork: state.intro?.autoMergeClustersIntoNetwork ?? initial.intro.autoMergeClustersIntoNetwork,
@@ -6685,9 +6687,31 @@ export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?
 // instantComputeMergeAtBoundary), and this pre-unlock path retires
 // permanently for it (an engine-level guard, not just a UI one — see "Security notes" in
 // CLAUDE.md).
+// Charges made at a boundary toward its Charger (Auto-charge), 0..COMPUTE_ENTITY_CAP (#1141 follow-up):
+// before a boundary is automated, its first COMPUTE_ENTITY_CAP manual 8→1 charges build the Charger
+// instead of producing an output unit; at COMPUTE_ENTITY_CAP the Charger unlocks automatically, with no
+// sacrifice. Stored per auto flag in intro.chargerUnlockProgress; permanent like the flags themselves.
+export const getChargerUnlockProgress = (state, autoFlagField) =>
+  Math.max(0, Math.min(COMPUTE_ENTITY_CAP, Math.floor(state.intro?.chargerUnlockProgress?.[autoFlagField] ?? 0)))
+
 const mergeComputeEntities = (inputField, outputField, autoFlagField) => state => {
   if (state.intro?.[autoFlagField]) return state
   const input = state.intro?.[inputField] ?? 0
+  // Charges go into the Charger first: no output room needed, and the merge stops at the unlock.
+  const progress = getChargerUnlockProgress(state, autoFlagField)
+  const chargerMerges = Math.min(COMPUTE_ENTITY_CAP - progress, Math.floor(input / COMPUTE_MERGE_RATIO))
+  if (chargerMerges > 0) {
+    const nextProgress = progress + chargerMerges
+    return {
+      ...state,
+      intro: {
+        ...state.intro,
+        [inputField]: input - chargerMerges * COMPUTE_MERGE_RATIO,
+        chargerUnlockProgress: { ...(state.intro?.chargerUnlockProgress ?? {}), [autoFlagField]: nextProgress },
+        ...(nextProgress >= COMPUTE_ENTITY_CAP ? { [autoFlagField]: true } : {}),
+      },
+    }
+  }
   const output = state.intro?.[outputField] ?? 0
   const roomForOutput = Math.max(0, getComputeFieldEffectiveCap(state, outputField) - output)
   const outputGained = Math.min(roomForOutput, Math.floor(input / COMPUTE_MERGE_RATIO))
@@ -7910,6 +7934,7 @@ const resetFactoryCycle = (state, awardPurge) => {
       // The auto-merge unlock flags (see issue #316) are one-time, irreversible purchases just
       // like the compute-ladder entities and reveal latch above — carried through a real Prestige
       // unchanged, never re-locked.
+      chargerUnlockProgress: { ...(state.intro?.chargerUnlockProgress ?? {}) },
       autoMergeCoresIntoNode: state.intro?.autoMergeCoresIntoNode ?? initial.intro.autoMergeCoresIntoNode,
       autoMergeNodesIntoCluster: state.intro?.autoMergeNodesIntoCluster ?? initial.intro.autoMergeNodesIntoCluster,
       autoMergeClustersIntoNetwork: state.intro?.autoMergeClustersIntoNetwork ?? initial.intro.autoMergeClustersIntoNetwork,

@@ -474,73 +474,18 @@ live inside the selected tier):
    - **Once unlocked (layout since #1141 — supersedes the "Row 2" placement below):** a vertical
      **merge chain**. Each tier is one node (`TierBlock`; armed = gold border, no marker dot): `TierSelectButton`
      (symbol, bold label + muted `→ <boosted tiers>` hint, then 10 green `NormalSlot` dots for held count) with the
-     node's Charger on the same line (`NodeSide`, wraps below the dots only on ~320px phones): once unlocked a
-     display-only `ChargerBadge` — `🔌 <reserve>/8` with a proportional progress fill, or `⏳ <countdown>`
-     while an auto-charge runs (aria-label `"<Label> charger, n/8 filled"` / `"…, auto-charge in progress, …
-     left"`); before that the `🔓 <held>/10` unlock badge (same aria-label, progress fill). Between a tier and
-     the next sits a dashed `Connector` with that boundary's small pill (`TierActionButton`, `variant="success"`:
-     `<sym> 8→1 <next sym>` before the Charger, `⚡ Charge` / `⏳ n/8` while charging after; same
-     aria-labels), shown under the same `showDetail` rule, else a small gap. Presets are muted
-     (`variant="neutral"`). Only the selected node shows the 3 presets (no "Boosts …" caption there — the
-     header hint already says it). Originally: TWO rows per compute-ladder entity Cell through Fusion (issues
-     #321/#326), each pair wrapped in a `TierBlock` inside a `TierBlocksGroup`
-     (`aria-label="compute entities"`), driven off an `ENTITY_ROWS` array (10 entries, in the same
-     Cell-through-Fusion order `COMPUTE_BOOST_TIER_FIELDS` in `layers.js` uses, so a row's
-     array index + 1 IS its Boost `tierIndex`).
-     - **Row 1** (`TierHeaderRow`): a `TierSelectButton` (its own clickable `<button>`) wrapping the
-       tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label (`TierLabel`, e.g. `"Clusters"`; the
-       `n/10` count is a `VisuallyHidden` span, the dots carry it visually) + a leading `SelectMarker`
-       (filled dot while armed) + a `SlotsRow` (`role="group"`, `aria-label="<Label> slots"`) of `COMPUTE_ENTITY_CAP`
-       (10) `NormalSlot` squares — both the label and the slots read off `primaryHeld =
-       min(count, COMPUTE_ENTITY_CAP)`, not the raw entity count, so this row always reads
-       `min(held, 10)/10` and never overflows past "10/10" once auto-merge is unlocked and the
-       entity has grown into its own reserve (the "extra" shows up in row 2's `ReserveSlotsRow`
-       instead — see below) — the same discrete-square convention `StoragePage`'s own `DiskSquare`
-       uses, just non-interactive (a plain status square, not a button). Clicking `TierSelectButton`
-       toggles
-       `selectedBoostTierIndex` (local component state) to select/collapse that tier — the selected
-       block hosts the presets (2); the selected and active-boost tiers always render even if
-       otherwise locked — highlighted
-       (`$selected`/`aria-pressed`, plus a highlighted `TierBlock` border) while armed.
-     - **Row 2** (`TierMergeRow`) is progressively disclosed (`showDetail`): rendered only for the
-       armed tier, or when that tier is merging, a merge is startable/possible, reserve slots hold
-       tokens, or (pre-auto) Auto-charge unlock progress is above 0 — otherwise the tier is one line.
-       For every tier except the last (Fusion, no row 2 at all —
-       see issue #280's "Out of scope" — though its row 1 is still Boost-selectable, the only place
-       a Fusion has any use at all):
-       - **Before that boundary's auto-charge is unlocked:** an instant Charge up button (`TierActionButton`,
-         `flex: 1 1 0; width: 100%` — fills exactly half the row, the same "two equal-width buttons"
-         look `MainPage`'s own tier-row Buy/Upgrade pair uses, rather than a small icon-only square —
-         `variant="prestige"`, visible content "<input symbol> 8→1 <output symbol>" (e.g. ⬡ 8→1 🔗), `aria-label` spelling out the full action
-         e.g. "charge up 8 batteries into 1 pack") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
-         tier is held and the produced tier is under its effective cap (`getComputeFieldEffectiveCap` — 18
-         once that tier's own auto-charge is unlocked), calling the matching
-         `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-charge button filling the
-         other half (`TierActionButton`, `variant="info"`, `$progress` set to the live percentage
-         toward its own unlock cost — the same `Button` `progressFill` mechanic Factory's own Buy
-         buttons use for cost-block progress — visible content `` "🤖 <held>/<COMPUTE_ENTITY_CAP>" ``
-         instead of a bare "🤖 Auto", so the button is self-explanatory the same way a Factory Buy
-         button is; `aria-label="unlock the Charger for <…> into <…>"`) — enabled once
-         `COMPUTE_ENTITY_CAP` (10) of the produced tier is held, calling the matching
-         `game.actions.enableAutoMerge*` action.
-       - **Once unlocked:** a `ReserveSlotsRow` — a single `<button>` wrapping `COMPUTE_MERGE_RESERVE_CAP`
-         (8) `ReserveSlot` squares — reading `getComputeReserveHeld(state, tierIndex)` (0..8), NOT an
-         atomic empty/full toggle: a squares fills in one at a time as the entity's own held count
-         keeps growing past its primary 10 (via continued Booster purchases or a lower-tier charge),
-         up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a charge is actually in flight
-         the reserve instead reads as fully committed regardless of the live count (which has by then
-         dropped back toward 10 and may be accumulating the next batch) —
-The row is display-only: an explicit **⚡ Charge** button beside it
-         (`aria-label` "charge <tier>: move units down one per second, then merge 8 into 1 <output>",
-         label `⚡ Charge`, `⏳ n/8` (Charger fill) while running) calls `actions.startComputeCharge(boundaryIndex)`;
-         enabled per `isComputeChargeAvailable` (Auto-charge bought, ≥ `COMPUTE_MERGE_RATIO` (8) held, no
-         timed merge or charge running, output has room). While charging the top row dims one slot per
-         transferred unit and the bottom row fills. `aria-label`: "<Tier> charger, auto-charge in progress, <time> left"
-         while an automatic charge runs, else "<Tier> charger, N/8 filled" (the bottom row is called the **Charger**). While an automatic charge is in
-         flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
-         inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
-         live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` filled count. There is
-         no merge-duration upgrade button (removed, #755).
+     node's Charger on the same line (`NodeSide`, wraps below the dots only on ~320px phones), a display-only
+     `ChargerStatus` (`role="img"`, explicit colours): once unlocked `🔌 <reserve>/8` with a proportional accent
+     fill, or gold `⏳ <countdown>` while an auto-charge runs (aria-label `"<Label> charger, n/8 filled"` /
+     `"…, auto-charge in progress, … left"`); before that `🔓 <charges>/10` — Charger unlock progress
+     (`getChargerUnlockProgress`; aria-label `"<Label> charger unlock, n/10 charges"`). A legacy save already
+     holding 10 of the output instead gets the old clickable sacrifice badge (`row.autoAriaLabel`). Between a tier
+     and the next sits a dashed `Connector` with that boundary's small pill (`TierActionButton`,
+     `variant="success"`): `<sym> 8→1 🔌` while charges still build the Charger, `<sym> 8→1 <next sym>` after,
+     `⚡ Charge` / `⏳ n/8` once automated; same aria-labels; shown under the same `showDetail` rule, else a
+     small gap. Presets keep `variant="prestige"` (gold when they can act, faded when disabled). Only the selected node shows the 3 presets (no "Boosts …" caption there — the
+     header hint already says it). Row-level detail (`ENTITY_ROWS`, `primaryHeld = min(count, 10)`, selection state, `showDetail`) is unchanged; the
+     previous two-row layout is recorded in `docs/DESIGN_HISTORY.md` ("Power merge chain").
 
      Nothing spends a Megacomputer beyond funding a Boost — see issue #280's "Out of scope".
      "Compute" names the page/feature only — no entity label carries a "Compute" prefix.
