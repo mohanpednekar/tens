@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { forfeitDailyRun, playDailyRun, restartDailyRun, startDailyRun, tickDailyRuns } from './dailyChallenges'
 import { addActivePlaySeconds, buyBuyMaxUnlock, buyCacheWarm, buyPlaytimeBonus, buyPrestigeSpeedBonus, buySleepModeCapUpgrade, getMaxOfflineSeconds, activateComputeBoost, applyOfflineProgress, applyOfflineRewardBonus, buyAutobuyerIntervalUpgrade, buyAutomationIntervalUpgrade, buyTierTickspeedIntervalUpgrade, setAutoOverclockEnabled, setComputeAutoChargeEnabled, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyTickspeedMultiplier, buyTierMaxLevels, buyTierQuantity, setAutoXpTickspeedEnabled, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, expediteDiskFill, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, startComputeCharge, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, enterChallenge, eraGame, exitChallenge, getOfflineEffectiveSeconds, getOfflineRewardBonusSeconds, isBuyMaxUnlocked, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, queueIntroSpeedUpgrade, unlockNextDiskSizeByFoundryReset, pinMuseumEntry, purgeGame, provisionDisk, queueDiskBuild, repeatPurchaseMax, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, flushStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPurgeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeAutoBoostEnabled, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry } from './engine'
 import { MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OPS_SAMPLE_CAP, OPS_SAMPLE_INTERVAL_MS, TICK_RATE_MS } from './layers'
-import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, loadBuyMaxPreference, saveBuyMaxPreference, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
+import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, loadBuyMaxPreference, saveBuyMaxPreference, loadBuyUnitPreference, saveBuyUnitPreference, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
 
 // Every purchase — manual Buy and autobuyer ticks alike — always batches up to the current
 // level's cost-block boundary. The actual cap is applied dynamically inside the engine (see
@@ -218,13 +218,25 @@ const computeInitialGame = () => {
       setBuyMaxModeState(Boolean(enabled))
     }, [])
 
+    // Buy level / Buy unit (default level): same per-device ref pattern. Unit mode makes a manual Factory tier Buy
+    // buy exactly one unit and takes precedence over Buy max for that button only.
+    const [buyUnitMode, setBuyUnitModeState] = useState(loadBuyUnitPreference)
+    const buyUnitModeRef = useRef(buyUnitMode)
+    const setBuyUnitMode = useCallback(enabled => {
+      buyUnitModeRef.current = Boolean(enabled)
+      saveBuyUnitPreference(Boolean(enabled))
+      setBuyUnitModeState(Boolean(enabled))
+    }, [])
+
     const actions = useMemo(() => {
       // Leveled manual purchases pick their Buy-max variant only while the mode is on AND unlocked
       // for the state being updated — the engine stays the source of truth for the unlock.
       const buyOneOrMax = (single, max) =>
         setState(prev => (buyMaxModeRef.current && isBuyMaxUnlocked(prev) ? max : single)(prev))
       return {
-      buyTierQuantity: tierId => buyOneOrMax(buyTierQuantity(tierId, BUY_QUANTITY), buyTierMaxLevels(tierId)),
+      buyTierQuantity: tierId => (buyUnitModeRef.current
+        ? setState(prev => buyTierQuantity(tierId, 1)(prev))
+        : buyOneOrMax(buyTierQuantity(tierId, BUY_QUANTITY), buyTierMaxLevels(tierId))),
       buyTickspeedMultiplier: tierId => buyOneOrMax(buyTickspeedMultiplier(tierId), repeatPurchaseMax(buyTickspeedMultiplier(tierId))),
       buyAutobuyerIntervalUpgrade: tierId => setState(buyAutobuyerIntervalUpgrade(tierId)),
       buyAutomationIntervalUpgrade: key => setState(buyAutomationIntervalUpgrade(key)),
@@ -490,6 +502,7 @@ const computeInitialGame = () => {
     applyCloudSave,
     applyDevStateJson,
     buyMaxMode,
+    buyUnitMode,
     claimOfflineAdReward,
     clearSlot,
     devModeActive,
@@ -509,6 +522,7 @@ const computeInitialGame = () => {
     saveSlots,
     savesMeta,
     setBuyMaxMode,
+    setBuyUnitMode,
     setDevState,
     state,
     switchSaveSlot,

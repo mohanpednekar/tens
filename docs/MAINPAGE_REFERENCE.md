@@ -719,8 +719,9 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   `aria-pressed` as the Switches, dot = on/paused). *Compute Autobuyers* is always that tile grid
   (`compute autobuyer tiles`): owned tiles show a `TileToggle` (`on`/`paused`, aria-label
   `"<Name> (<Output>) autobuyer"`), locked tiles a `MilestoneBadge` rendered `🔒 R<n>` (Reboot). Global cells are
-  `minmax(15rem, 1fr)` (one per row on a phone, two-up wider) and pass `inlineAction`, so their
-  upgrade/unlock button (glyph hidden, colour-coded) ends the head line — one line whenever it fits; the
+  `minmax(18.5rem, 1fr)` (one per row on a phone, two-up wider) and pass `inlineAction`: each head is name (grows) · interval ·
+  action (challenge/upgrade button, glyph hidden, colour-coded; an empty fixed-width slot when maxed) · the pause Switch, which is
+  permanent and always flush right (tier cells use the same order) — one line whenever it fits; the
   head wraps (`CellHead $wrap`) so a very long cost drops the button to its own line rather than
   ellipsizing the name. Categories: *Global Automation* (cells
   `"<name> row"`, Auto Clock Speed → Auto Scale Up → Auto Restage → Auto Overclock → Auto Purge; Restage

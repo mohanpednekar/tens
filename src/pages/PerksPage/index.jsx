@@ -1,4 +1,5 @@
 import BuyMaxToggle from 'components/BuyMaxToggle'
+import BuyModeToggle from 'components/BuyModeToggle'
 import Button, { ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
 import AutoBoostPresetPicker from 'components/AutoBoostPresetPicker'
 import StatCard from 'components/StatCard'
@@ -169,7 +170,7 @@ const CellGrid = styled.div`
   gap: 0.4rem;
   /* $narrow: tier/Flops cells show only the symbol (KB, MF…), so three fit a 320px phone; named
      (global) cells need a full row on a phone and go two-up on wider screens. */
-  grid-template-columns: repeat(auto-fill, minmax(${props => (props.$narrow ? '4.75rem' : '15rem')}, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(${props => (props.$narrow ? '4.75rem' : '18.5rem')}, 1fr));
 `
 
 // A tier's compact label: visible symbol, full name for assistive tech and the tooltip.
@@ -320,14 +321,14 @@ const CellHead = styled.div`
   /* $wrap (inline-action cells): when a long cost won't fit, the button drops to its own line
      instead of the name collapsing to an ellipsis — one line whenever it fits. */
   flex-wrap: ${props => (props.$wrap ? 'wrap' : 'nowrap')};
-  gap: 0.25rem;
+  gap: 0.15rem;
   row-gap: 0.3rem;
   justify-content: space-between;
   min-height: 1.9rem;
 
   /* Wide (global) rows: the name takes the slack so the interval, Switch and action columns line up row to row. */
   ${props => props.$wrap && !props.$narrow && `
-    column-gap: 0.5rem;
+    column-gap: 0.4rem;
 
     & > span:first-child {
       flex: 1 1 auto;
@@ -353,7 +354,7 @@ const InlineMeta = styled.span`
 
   ${props => props.$wide && `
     margin-left: 0;
-    min-width: 3.4em;
+    min-width: 2.9em;
     text-align: right;
   `}
 `
@@ -366,7 +367,7 @@ const InlineAction = styled.span`
 
   /* Wide rows: a fixed-width action column keeps the Switch at the same x on every row. */
   ${props => !props.$narrow && `
-    min-width: 5rem;
+    min-width: 4.2rem;
 
     & > button {
       width: 100%;
@@ -607,7 +608,7 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction =
         </RowLabel>
         {owned && subText && <InlineMeta $wide={!narrow}>{subText}</InlineMeta>}
         {/* Action (challenge / upgrade) sits left of the permanent Switch, which stays flush right. */}
-        {inlineAction && action && <InlineAction $narrow={narrow}>{action}</InlineAction>}
+        {inlineAction && (action || (!narrow && owned && onToggle)) && <InlineAction $narrow={narrow}>{action}</InlineAction>}
         {owned && onToggle && (
           <Switch
             $on={enabled}
@@ -1184,6 +1185,14 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
       </Category>
       <Category aria-label="purchasing category">
         <CategoryHeading>Purchasing</CategoryHeading>
+        <UpgradeRow
+          ariaLabel="buy mode toggle"
+          details="Level (default): each Factory Buy fills as many units as you can afford, up to the end of the current level. Unit: each Buy purchases exactly one unit (it overrides Buy max for the Buy button). The choice is per device."
+          icon="🛒"
+          name="Buy mode"
+        >
+          <BuyModeToggle game={game} />
+        </UpgradeRow>
         <UpgradeRow
           ariaLabel="buy max toggle"
           details="When on, each purchase buys as many levels as you can afford. Factory tiers buy full levels only — a partly bought level takes its own click. One-time purchase; the switch is per device."

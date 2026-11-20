@@ -2777,6 +2777,27 @@ describe('Buy max mode', () => {
     expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
   })
 
+  test('Buy mode defaults to level; Unit makes the tier Buy button buy exactly one unit and persists', async () => {
+    const user = userEvent.setup()
+    const kilobytes = TIER_DEFINITIONS[0]
+    seedMainGameState({
+      purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+      resources: { base: getTierCost(kilobytes, 1) * 3 },
+    })
+    render(<App />)
+    await openPerksTab(user, /open prestige/i)
+    expect(screen.getByRole('button', { name: /^buy level mode$/i })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: /^buy unit mode$/i }))
+    expect(screen.getByRole('button', { name: /^buy unit mode$/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(localStorage.getItem('tens_buy_unit_mode')).toBe('true')
+    await user.click(screen.getByRole('button', { name: /^open byte factory$/i }))
+
+    const panel = screen.getByLabelText(`${kilobytes.name} layer`)
+    await user.click(within(panel).getByRole('button', { name: /^Buy for/ }))
+    expect(within(panel).getByRole('progressbar', { name: `${kilobytes.name} cost-block progress` }))
+      .toHaveAttribute('aria-valuenow', '1')
+  })
+
   test('once unlocked, toggling it on makes the tier Buy button buy every affordable full level', async () => {
     const user = userEvent.setup()
     const kilobytes = TIER_DEFINITIONS[0]
