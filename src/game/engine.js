@@ -2118,6 +2118,9 @@ const runGlobalIntervalAutomation = (state, elapsedSeconds, key, attempt) => {
 // first level (0 owned generators produce $0 income, and the starting balance only ever covers
 // 1 unit) and stalls forever — then reverts to the normal autobuyerBatchSize from its second
 // level onward.
+// Buy mode "Single" (see useIncrementalGame's buyUnitMode): passed as autobuyerBatchSize, each autobuyer attempt buys ONE unit
+// instead of finishing a whole level — same interval, so a block of PURCHASE_BLOCK units takes that many times longer.
+export const AUTOBUYER_UNIT_BATCH = 'unit'
 const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) => state => {
   // The Byte Foundry intro runs first, every tick: passive production, then any in-progress disk
   // array build counts down (tickProvisionDisk — unconditional, bypasses nothing), then Storage's own
@@ -2296,6 +2299,13 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
       // Bulk: speed upgrades past the interval floor double how many whole clean levels one attempt may
       // buy (getAutobuyerBulkLevels) — as many as are affordable up to that limit; with none affordable
       // it falls through to the ordinary single-level path. Buy max never applies here.
+      if (autobuyerBatchSize === AUTOBUYER_UNIT_BATCH) {
+        const nextUnit = buyTierQuantity(tier.id, 1)(result)
+        if (nextUnit === result) break
+        result = nextUnit
+        budget -= 1
+        continue
+      }
       const bulkLevels = getAutobuyerBulkLevels(result, tier.id)
       if (bulkLevels > 1 && levelProgress === 0) {
         const bulked = buyTierUpToLevels(tier.id, bulkLevels)(result)

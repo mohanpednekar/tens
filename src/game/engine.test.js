@@ -7747,6 +7747,16 @@ describe('tickGame', () => {
     expect(after.globalTickspeedMultiplier).toBe(1)
   })
 
+  it('Single buy mode: an autobuyer attempt buys one unit (same interval), Level mode finishes the whole level', () => {
+    const state = withAutobuyer(withMoney(createInitialGameState(), 1e12), tensTier.id)
+    const startLevel = state.purchaseLevels?.[tensTier.id] ?? 1
+    const level = tickGame(1, Number.MAX_SAFE_INTEGER)(state)
+    const single = tickGame(1, boostEngine.AUTOBUYER_UNIT_BATCH)(state)
+    expect(level.purchaseLevels[tensTier.id]).toBeGreaterThan(startLevel)
+    expect(single.purchaseLevelProgress[tensTier.id]).toBe(1)
+    expect(single.purchaseLevels[tensTier.id]).toBe(startLevel)
+  })
+
   it('does not purchase automatically while a tier\'s autobuyer is paused (autobuyersEnabled false), even when affordable', () => {
     const state = withAutobuyerEnabled(
       withAutobuyer(withMoney(createInitialGameState(), 10000), tensTier.id),
