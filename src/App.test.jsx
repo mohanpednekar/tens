@@ -113,9 +113,16 @@ const seedMainGameState = (overrides = {}) => {
 
 // Reset lives only under Settings → Danger zone (More → Settings), never on MainPage or in the
 // More sheet itself. Tests that click Reset must open Settings first.
+// Settings is a grouped list of collapsed entries (#1143); tests expand every entry so each
+// section's controls are reachable exactly as before.
+const expandSettingsSections = () => {
+  for (const toggle of screen.queryAllByRole('button', { name: / settings$/i, expanded: false })) fireEvent.click(toggle)
+}
+
 const openSettings = async user => {
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expandSettingsSections()
 }
 
 
@@ -231,7 +238,7 @@ test('AppNav exposes accessibly-labeled Foundry, Manual, and More once unlocked'
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
 })
 
-test('More menu reaches Releases and Settings from any screen without progress gates', async () => {
+test('More menu reaches Milestones and Settings from any screen without progress gates', async () => {
   const user = userEvent.setup()
   render(<App />) // fresh gate — no mainGameUnlocked yet
 
@@ -243,12 +250,13 @@ test('More menu reaches Releases and Settings from any screen without progress g
   // Reset is not duplicated in the More sheet — only under Settings → Danger zone.
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
 
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /^releases$/i })).toBeInTheDocument()
-  expect(screen.getByLabelText(/releases category/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /^milestones$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/milestones category/i)).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expandSettingsSections()
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
@@ -421,6 +429,7 @@ test('Reset appears only in Settings → Danger zone, not on the Byte Factory sc
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /reformat byte foundry/i })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expandSettingsSections()
 
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
@@ -1308,7 +1317,7 @@ test('the scale up and overclock panels render below the tier list, not above it
   expect(regions.indexOf('overclock panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('once the last tier has been a Scale Up target, a separate Restage panel appears left of Scale Up below the tier list, and the last tier keeps its own tickspeed button', () => {
+test('once the last tier has been a Scale Up target, a separate Restage panel appears beside Clock Speed above the tier list, and the last tier keeps its own tickspeed button', () => {
   seedMainGameState({
     resources: { base: 12345, tier10: 25 },
     owned: { tier09: 10, tier10: 25 },
@@ -1322,8 +1331,10 @@ test('once the last tier has been a Scale Up target, a separate Restage panel ap
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
   expect(regions).toContain('global clock speed panel')
   expect(regions.indexOf('global clock speed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
-  expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
-  expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('scale up panel'))
+  // Restage pairs with Clock Speed above the tier list (#1137); Scale Up pairs with Overclock below it.
+  expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('global clock speed panel'))
+  expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('scale up panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 
   const xpPanel = screen.getByLabelText(/^restage panel$/i)
   expect(xpPanel).toHaveTextContent('QB +1%/XP')
@@ -2329,7 +2340,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent(/2,?000 PP/)
 })
 
-test('no PP tabs or PP-based controls appear before the player has ever purged, even with an active autobuyer and unspent PP — Releases stays via More', async () => {
+test('no PP tabs or PP-based controls appear before the player has ever purged, even with an active autobuyer and unspent PP — Milestones stays via More', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
@@ -2340,10 +2351,10 @@ test('no PP tabs or PP-based controls appear before the player has ever purged, 
 
   expect(screen.queryByLabelText(/^purge points display$/i)).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
-  // Chapters (Releases) stays reachable pre-prestige via AppNav → More.
+  // Chapters (Milestones) stays reachable pre-prestige via AppNav → More.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
-  expect(screen.getByLabelText(/^releases page$/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
 })
 
 test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) prestige milestone is reached, independent of the unit-buying autobuyer', async () => {
@@ -2511,7 +2522,7 @@ test('the Firmware tab NavDots go dark once a tier is fully done and nothing els
   expect(screen.queryByLabelText(/perk available$/i)).not.toBeInTheDocument()
 })
 
-test('Releases is reachable via More both before and after the first prestige (unlike Firmware)', async () => {
+test('Milestones is reachable via More both before and after the first prestige (unlike Firmware)', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2523,8 +2534,8 @@ test('Releases is reachable via More both before and after the first prestige (u
   expect(screen.queryByRole('tab', { name: /open automation/i })).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
-  expect(screen.getByLabelText(/^releases page$/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
 })
 
 test('Firmware → Automation lists every tier\'s autobuyer/tier-tickspeed-autobuyer unlock milestone once, reflecting what\'s already unlocked', async () => {
@@ -2550,9 +2561,9 @@ test('Firmware → Automation lists every tier\'s autobuyer/tier-tickspeed-autob
   expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '3')
   expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '11')
 
-  // Releases no longer repeats these — it keeps only Chapters / Reboot.
+  // Milestones no longer repeats these — it keeps only Chapters / Reboot.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
   expect(screen.queryByLabelText(/autobuyer unlock milestones category$/i)).not.toBeInTheDocument()
   expect(screen.queryByLabelText(/^tier tickspeed autobuyer milestones category$/i)).not.toBeInTheDocument()
 })

@@ -7,7 +7,7 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 
 Player labels (issue #988; code identifiers unchanged): Power page = id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers`; Cores → Superclouds (KFlops → QFlops outputs) = `flop01`–`flop10`; Clock Speed = global tickspeed; Bitrate/Bandwidth/Staging/Compile/Ping/Flush Pool/Turbo-Balanced-Eco replace the old Speed/pool speed/buffer/Combine/tap/Reset Pool/Burst-Standard-Sustain. Full table: `CLAUDE.md`.
 
-Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Purge** (formerly named Reboot, now the Era-ascension layer; PP = Purge Points), the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). Code and state use the Purge names too (`purge`, `purgeGame`, `PURGE_THRESHOLD`, automation keys `speedUp`/`purge`; older `prestige`/`reboot` save keys migrate via `save-migration/migrateToV3`); only Prestige-Point/museum identifiers keep `prestige`. Player labels (#986): Firmware = `'perks'`, Compression = `prestigeDoublePpLevel`, Reboot = `era`/`eraGame`, Kernels = `eons`, Reformat = `resetByteFoundry`, Releases = `'milestones'`, System log = `prestigeMuseum`, Manual = `'info'`; see CLAUDE.md.
+Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Purge** (formerly named Reboot, now the Era-ascension layer; PP = Purge Points), the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). Code and state use the Purge names too (`purge`, `purgeGame`, `PURGE_THRESHOLD`, automation keys `speedUp`/`purge`; older `prestige`/`reboot` save keys migrate via `save-migration/migrateToV3`); only Prestige-Point/museum identifiers keep `prestige`. Player labels (#986): Firmware = `'perks'`, Compression = `prestigeDoublePpLevel`, Reboot = `era`/`eraGame`, Kernels = `eons`, Reformat = `resetByteFoundry`, Milestones = `'milestones'`, System log = `prestigeMuseum`, Manual = `'info'`; see CLAUDE.md.
 
 ## Project
 
@@ -15,7 +15,7 @@ Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rew
 shared bottom `AppNav` in progression order: **Foundry → Power → Compute → Factory → Firmware → Challenges → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
 item, and no second-level Data Stream | Storage tabs). **Firmware** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
-unlock/milestone → pause Switch → speed upgrade / Speed bonus, Sleep mode cap (4 h + 4 h per PP level), Compression, Cache Warm (20 PP), Overflow mode, Buy max (2 PP)). More (Manual, Releases, Settings) is always available — even
+unlock/milestone → pause Switch → speed upgrade / Speed bonus, Sleep mode cap (4 h + 4 h per PP level), Compression, Cache Warm (20 PP), Overflow mode, Buy max (2 PP)). More (Manual, Milestones, Settings) is always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
 production bundle; `yarn build:dev` builds a Dev-Mode-enabled variant published at `/tens/dev/` (own `dev:`-prefixed saves, no backward-compat); see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
@@ -81,7 +81,7 @@ src/
     storage.js             ← localStorage persistence; calls save-migration on every load, then mergeState.
                               Also Dev Mode's own isolated `'dev'` slot (separate from numbered player slots)
   components/
-    AppNav/, AppMenu/      ← bottom nav (Foundry → Power → Compute → Factory → Firmware → Challenges → More) + More sheet (Manual / Releases / Settings)
+    AppNav/, AppMenu/      ← bottom nav (Foundry → Power → Compute → Factory → Firmware → Challenges → More) + More sheet (Manual / Milestones / Settings)
     Button/, BuyMaxToggle/, Switch/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/, BoostBadge/, SpeedDetailsPopover/, LeadIcon/
                             ← shared styled components; see docs/COMPONENTS_REFERENCE.md
     DataLakePanel/          ← one Data Lake's own self-contained block (title + disk-square rows
@@ -97,7 +97,7 @@ src/
     MainPage/index.jsx     ← the game (Byte Factory); data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← Manual; static mechanic explanations; reads no game state
     PerksPage/index.jsx    ← Automation / Prestige icon tabs (feature-grouped); AppNav after first Prestige
-    MilestonesPage/index.jsx ← Releases / Reboot status; via AppNav → More
+    MilestonesPage/index.jsx ← Milestones timeline / Reboot status; via AppNav → More
     SettingsPage/index.jsx ← Supporter / Cloud save / Store / saves / System log / Reboot / Task Manager /
                               Legal / Reset; via AppNav → More
     DevModePage/index.jsx  ← dev-build-only sandbox; isolated save toggle, quick-seed presets, a
@@ -133,7 +133,7 @@ overriding whatever `page` says, except on gate-exempt utility pages
 (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`) — whenever
 `intro.mainGameUnlocked` is still false (see "Byte Foundry"). Storage is continuous Foundry sections
 (Data Stream + Disks), not gate-exempt on its own. Factory stays hidden during the gate; More (Manual /
-Releases / Settings) stays reachable so utilities never require unlocking the main game. Once unlocked, Foundry is just
+Milestones / Settings) stays reachable so utilities never require unlocking the main game. Once unlocked, Foundry is just
 another AppNav destination. `intro.mainGameUnlocked` is PERMANENT (`latchMainGameUnlocked` in
 `engine.js`) — never reset by a real Prestige or Reboot — so the gate is effectively
 one-time-ever, on a save's very first cycle only.

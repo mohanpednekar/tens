@@ -434,8 +434,8 @@ const InfoPage = () => {
             {COMPUTE_MERGE_RATIO} held). It is instant.
           </li>
           <li>
-            Sacrifice {COMPUTE_ENTITY_CAP} of the next entity to unlock the Charger for that step. This
-            adds the Charger, a row of {COMPUTE_MERGE_RESERVE_CAP} slots ({COMPUTE_ENTITY_AUTO_MERGE_CAP} held in
+            A step's first {COMPUTE_ENTITY_CAP} charges go into its Charger instead of the next entity (🔓 n/{COMPUTE_ENTITY_CAP});
+            the {COMPUTE_ENTITY_CAP}th unlocks it, with nothing sacrificed. The Charger holds {COMPUTE_MERGE_RESERVE_CAP} more ({COMPUTE_ENTITY_AUTO_MERGE_CAP} held in
             total) that fills as the entity keeps growing past {COMPUTE_ENTITY_CAP}. Press ⚡ Charge
             to move units from the top row into the Charger one per second, then {COMPUTE_MERGE_RATIO} → 1 merges
             instantly.
@@ -540,7 +540,7 @@ const InfoPage = () => {
           </li>
           <li>
             After {TIER_DEFINITIONS.length} Scale Ups in a run (the first onto {lastTierName}), the
-            Restage upgrade appears left of Scale Up (below the tier list): spend XP for +1% faster {lastTierName} ticks per XP
+            Restage upgrade appears beside Clock Speed (above the tier list): spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
             It resets every other tier’s owned quantity and your Bits. Auto Restage
             (Firmware → Automation, unlocked at Purge {GLOBAL_AUTOMATION_UNLOCK_PURGES.restage}) spends it for you, every 64 s at first —
@@ -620,8 +620,8 @@ const InfoPage = () => {
         </ul>
       </Section>
 
-      <Section aria-label="releases section">
-        <h2>Releases</h2>
+      <Section aria-label="milestones section">
+        <h2>Milestones</h2>
         <ul>
           <li>
             <strong>Tier autobuyers:</strong> one tier every{' '}
@@ -634,7 +634,7 @@ const InfoPage = () => {
             {firstTierTickspeedAutobuyerMilestone}, then every{' '}
             {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP === 1 ? 'Purge' : `${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Purges`} after that.
           </li>
-          <li>More → Releases tracks your story releases (v1.0 … v5.0) and Reboot progress.</li>
+          <li>More → Milestones tracks your story milestones and Reboot progress.</li>
         </ul>
       </Section>
 
@@ -714,7 +714,7 @@ const InfoPage = () => {
             Ways to spend Kernels are coming in a later update.
           </li>
           <li>
-            Reboot from More → Settings → Reboot (asks for confirmation). More → Releases
+            Reboot from More → Settings → Reboot (asks for confirmation). More → Milestones
             shows your Reboots, Kernels and eligibility.
           </li>
           <li>
