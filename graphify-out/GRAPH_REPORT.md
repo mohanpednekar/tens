@@ -1,17 +1,17 @@
 # Graph Report - tens  (2026-11-20)
 
 ## Corpus Check
-- 233 files · ~603,151 words
+- 233 files · ~603,376 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 30 file(s) not represented in the graph (top: .xml 9, (none) 8, .properties 2)
 
 ## Summary
-- 3427 nodes · 10489 edges · 176 communities (135 shown, 41 thin omitted)
+- 3427 nodes · 10491 edges · 176 communities (135 shown, 41 thin omitted)
 - Extraction: 78% EXTRACTED · 22% INFERRED · 0% AMBIGUOUS · INFERRED: 2298 edges (avg confidence: 0.95)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0dcab942`
+- Built from commit: `f5dacda7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -191,7 +191,7 @@
 7. `tickGame()` - 86 edges
 8. `clampNonNegative()` - 85 edges
 9. `Economy model — Byte Foundry (full text)` - 85 edges
-10. `createInitialGameState()` - 82 edges
+10. `createInitialGameState()` - 83 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Release (`release.yml`)` --references--> `extractVersionSection()`  [INFERRED]

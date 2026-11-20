@@ -1,3 +1,4 @@
+import { createInitialGameState } from '../../src/game/engine.js'
 import { COMPOSERS, MOCKUPS, SEEDS, STATUS_LABELS, composeFrame, galleryMarkdown, paneRects } from './manifest.mjs'
 
 describe('large-screen mockup manifest', () => {
@@ -41,6 +42,19 @@ describe('large-screen mockup manifest', () => {
 
   test('seeds produce schema-v3 saves', () => {
     for (const build of Object.values(SEEDS)) expect(build().saveSchemaVersion).toBe(3)
+  })
+
+  // Seeds go through mergeState on load; a field with the wrong shape (e.g. an array where the
+  // schema keeps a tier map) would merge into junk keys, so every seeded tier map must keep the
+  // fresh state's keys and value types.
+  test.each(Object.keys(SEEDS))('seed %s keeps the fresh state\'s tier-map shapes', name => {
+    const fresh = createInitialGameState()
+    const seed = SEEDS[name]()
+    for (const field of ['owned', 'purchased', 'purchaseLevels', 'everUnlockedTierIds']) {
+      expect(Array.isArray(seed[field])).toBe(false)
+      expect(Object.keys(seed[field]).sort()).toEqual(Object.keys(fresh[field]).sort())
+      for (const id of Object.keys(fresh[field])) expect(typeof seed[field][id]).toBe(typeof fresh[field][id])
+    }
   })
 
   test('gallery lists every mockup image', () => {

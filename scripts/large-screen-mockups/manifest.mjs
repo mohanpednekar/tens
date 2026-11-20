@@ -17,14 +17,16 @@ const owned = (state, values) => {
   return next
 }
 
+// Only `owned` is seeded: `purchased`/`purchaseLevels` stay at their fresh values, a state the
+// game can reach (tiers produced rather than bought). `everUnlockedTierIds` keeps the schema's
+// `{ tierXX: boolean }` map shape.
 const withTiers = (state, values, extra) => {
   const tiers = owned(state, values)
   return {
     saveSchemaVersion: 3,
     ...state,
     owned: tiers,
-    purchased: tiers,
-    everUnlockedTierIds: Object.keys(tiers).slice(0, values.filter(Boolean).length),
+    everUnlockedTierIds: Object.fromEntries(Object.keys(state.everUnlockedTierIds).map(id => [id, tiers[id] > 0])),
     ...extra(state),
   }
 }

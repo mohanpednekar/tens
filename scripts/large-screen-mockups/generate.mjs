@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // Generates the large-screen layout mockups for epic #1152 into docs/design/large-screens/.
 //
-//   node scripts/large-screen-mockups/generate.mjs [--base-url URL] [--out DIR] [--only id,id] [--format jpeg|png]
+//   node scripts/large-screen-mockups/generate.mjs [--base-url URL] [--port N] [--out DIR] [--only id,id] [--format jpeg|png]
 //
-// Without --base-url it starts `yarn dev` on 127.0.0.1 (port 5199) and stops it afterwards.
+// Without --base-url it starts `yarn dev` on 127.0.0.1 (--port, default 5199, strict) and stops it
+// afterwards, including on Ctrl-C / SIGTERM.
 // Each pane is a real capture of the app (seeded localStorage save, chromium via Playwright);
 // generate then composes the frame (rail, dividers, chips, cards) from manifest.mjs and
 // screenshots it at 2x. If Playwright's expected Chromium build isn't installed, set
@@ -37,8 +38,13 @@ const NAVIGATION = {
   game: [],
 }
 
-const waitForServer = async url => {
+const waitForServer = async (url, child) => {
+  let exited = false
+  child?.once('exit', () => { exited = true })
   for (let attempt = 0; attempt < 60; attempt++) {
+    // With --strictPort a busy port makes vite exit at once; fail instead of capturing whatever
+    // else is listening there (e.g. an orphaned server running older code).
+    if (exited) throw new Error(`yarn dev exited — is port ${PORT} already in use?`)
     try { if ((await fetch(url)).ok) return } catch { /* not up yet */ }
     await new Promise(done => setTimeout(done, 500))
   }
@@ -50,7 +56,7 @@ const startDevServer = async () => {
   child.unref()
   const stop = () => { try { process.kill(-child.pid) } catch { /* already gone */ } }
   const url = `http://127.0.0.1:${PORT}/tens/`
-  try { await waitForServer(url) } catch (error) { stop(); throw error }
+  try { await waitForServer(url, child) } catch (error) { stop(); throw error }
   return { url, stop }
 }
 
@@ -104,9 +110,12 @@ const main = async () => {
   const mockups = MOCKUPS.filter(m => !only || only.has(m.id))
   if (mockups.length === 0) throw new Error('no mockups selected')
   const server = args['base-url'] ? { url: args['base-url'], stop: () => {} } : await startDevServer()
-  const work = await mkdtemp(join(tmpdir(), 'tens-mockups-'))
+  // The dev server runs in its own process group, so a terminal Ctrl-C doesn't reach it.
+  for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { server.stop(); process.exit(130) })
+  let work
   let browser
   try {
+    work = await mkdtemp(join(tmpdir(), 'tens-mockups-'))
     browser = await chromium.launch(process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {})
     await mkdir(outDir, { recursive: true })
     for (const mockup of mockups) {
@@ -124,7 +133,7 @@ const main = async () => {
   } finally {
     await browser?.close()
     server.stop()
-    await rm(work, { recursive: true, force: true })
+    if (work) await rm(work, { recursive: true, force: true })
   }
 }
 
