@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Firmware → Automation: global automation rows now align their interval, pause Switch and action in fixed columns.
+
 - Nav attention dots no longer light for Factory cues (affordable levels, Clock Speed, Scale Up, Overclock, Purge) whose automation is unlocked, enabled and faster than 1 s; a paused automation still lights its dot.
 - Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
 

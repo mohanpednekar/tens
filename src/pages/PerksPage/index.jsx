@@ -325,6 +325,13 @@ const CellHead = styled.div`
   justify-content: space-between;
   min-height: 1.9rem;
 
+  /* Wide (global) rows: the name takes the slack so the interval, Switch and action columns line up row to row. */
+  ${props => props.$wrap && !props.$narrow && `
+    & > span:first-child {
+      flex: 1 1 auto;
+    }
+  `}
+
   & > span:first-child {
     min-width: 0;
     overflow: hidden;
@@ -341,6 +348,12 @@ const InlineMeta = styled.span`
   font-weight: 400;
   margin-left: auto;
   white-space: nowrap;
+
+  ${props => props.$wide && `
+    margin-left: 0;
+    min-width: 3.4em;
+    text-align: right;
+  `}
 `
 
 // Wide (global) cells keep their upgrade/unlock button on the head line itself, right-aligned.
@@ -349,6 +362,15 @@ const InlineMeta = styled.span`
 const InlineAction = styled.span`
   flex-shrink: 0;
   margin-left: auto;
+
+  /* Wide rows: a fixed-width action column keeps the Switch at the same x on every row. */
+  ${props => !props.$narrow && `
+    min-width: 5rem;
+
+    & > button {
+      width: 100%;
+    }
+  `}
 
   & > button {
     min-width: 3.75rem;
@@ -568,7 +590,7 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction =
   const action = owned ? ownedAction : lockedAction
   return (
     <Cell $bare={bare} $narrow={narrow} aria-label={ariaLabel} title={title}>
-      <CellHead $wrap={inlineAction}>
+      <CellHead $narrow={narrow} $wrap={inlineAction}>
         <RowLabel>
           {/* Icon-less cells (tier/Flops lists, whose category heading names the kind) keep the
               status for assistive tech only — the Switch already shows it visually. */}
@@ -582,7 +604,7 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction =
           ))}
           {label}
         </RowLabel>
-        {owned && subText && <InlineMeta>{subText}</InlineMeta>}
+        {owned && subText && <InlineMeta $wide={!narrow}>{subText}</InlineMeta>}
         {owned && onToggle && (
           <Switch
             $on={enabled}
