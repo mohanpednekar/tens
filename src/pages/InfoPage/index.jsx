@@ -615,7 +615,8 @@ const InfoPage = () => {
             An autobuyer buys <strong>one full level per attempt</strong>, only when that whole level
             (or the rest of a partly bought one) is affordable; Buy max never applies to it. Speed
             upgrades on that same row shorten its interval down to 10 ms; each level after that
-            doubles how many levels one attempt can buy, up to 1024. A tier autobuyer’s speed
+            doubles how many levels one attempt can buy, up to 1024. In Buy mode <strong>Single</strong>{' '}
+            (Firmware → Prestige) an attempt buys one unit instead, at the same interval, and those extra levels pause. A tier autobuyer’s speed
             upgrades start at {AUTOBUYER_INTERVAL_UPGRADE_BASE_COST} PP.
           </li>
         </ul>

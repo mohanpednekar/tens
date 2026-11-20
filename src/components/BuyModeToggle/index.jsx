@@ -25,7 +25,7 @@ const ChoiceButton = styled(Button)`
 
 const OPTIONS = [
   { id: 'level', unit: false, icon: '📶', label: 'Level', title: 'Buy level: each Buy fills as many units as you can afford, up to the end of the current level.' },
-  { id: 'single', unit: true, icon: '1️⃣', label: 'Single', title: 'Buy single: each Buy — and each autobuyer attempt, at the same interval — purchases exactly one unit, so autobuying a level takes up to 8× longer.' },
+  { id: 'single', unit: true, icon: '1️⃣', label: 'Single', title: 'Buy single: each Buy — and each autobuyer attempt, at the same interval — purchases exactly one unit, so autobuying is much slower (bulk-level upgrades are suspended).' },
 ]
 
 const BuyModeToggle = ({ game }) => (

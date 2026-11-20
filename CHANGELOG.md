@@ -9,13 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower).
+- Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
 
 - Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
 - Nav attention dots no longer light for Factory cues (affordable levels, Clock Speed, Scale Up, Overclock, Purge) whose automation is unlocked, enabled and faster than 1 s; a paused automation still lights its dot.
-- Firmware → Automation: global automation rows (global and tier autobuyers) now keep the pause Switch flush right with the challenge or upgrade button beside it, in fixed columns, and list Scale Up before Restage.
+- Firmware → Automation: global automation rows and tier autobuyer rows now keep the pause Switch flush right with the challenge or upgrade button beside it, in fixed columns, and list Scale Up before Restage.
 
 ### Fixed
 

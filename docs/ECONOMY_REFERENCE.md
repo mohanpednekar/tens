@@ -125,6 +125,15 @@ Saves must already carry `purchaseLevels`/`purchaseLevelProgress` in the current
 `storage.js`'s `mergeState` only fills missing fields from fresh defaults and does not derive levels
 from legacy `purchased` counts.
 
+### Buy mode (Level / Single)
+
+A per-device UI preference (`storage.js` `loadBuyUnitPreference`/`saveBuyUnitPreference`, key `tens_buy_unit_mode`, not game
+state; hook `buyUnitMode`/`setBuyUnitMode`, read via `buyUnitModeRef`). **Level** (default): a manual Factory Buy fills up to the level
+boundary (and Buy max may buy full levels). **Single**: a manual Factory tier Buy is `buyTierQuantity(tierId, 1)` and overrides Buy max for
+that button; tier autobuyers get `AUTOBUYER_UNIT_BATCH` (`'unit'`) as `autobuyerBatchSize`, so each attempt buys ONE unit at the same
+interval (a block of `getPurchaseBlockSize` units takes that many attempts) and the speed-upgrade bulk-level path is skipped. Other ladders
+(tickspeed, Compute Flops, …) are unaffected.
+
 ### Buy max mode
 
 `isBuyMaxUnlocked(state)` — true once the permanent `buyMaxUnlocked` flag is set by the one-time
@@ -1724,7 +1733,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
 - **Active — Autobuyer bulk (past the speed floor):** a tier's autobuyer buys ONE whole level (all 8
   blocks) per attempt, only when fully affordable; with partial level progress it completes the rest
   of that level, again only when the whole remainder is affordable (`canAffordRestOfTierLevel`) — never
-  a partial purchase (the `autobuyerBatchSize` argument and Buy max mode are ignored by autobuyers).
+  a partial purchase (Buy max mode is ignored by autobuyers; `autobuyerBatchSize === AUTOBUYER_UNIT_BATCH` (`'unit'`, Buy mode Single) makes each attempt buy exactly ONE unit via `buyTierQuantity(tier, 1)` at the same interval and skips the bulk-level path; any other value — including the default — keeps whole-level attempts).
   The tier's PP **speed upgrades** (`buyAutobuyerIntervalUpgrade`, ×0.9 interval per level) continue past the
   10 ms floor (`getAutobuyerIntervalMaxLevel`): each extra level doubles how many FULL levels one attempt may buy
   (`getAutobuyerBulkLevels` = 2^extra: 1, 2, 4, … up to `2^AUTOBUYER_BULK_MAX_EXTRA_LEVELS` = 1024 =

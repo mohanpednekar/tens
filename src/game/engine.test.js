@@ -7757,6 +7757,13 @@ describe('tickGame', () => {
     expect(single.purchaseLevels[tensTier.id]).toBe(startLevel)
   })
 
+  it('Single buy mode: an unaffordable attempt buys nothing and keeps the attempt budget banked', () => {
+    const state = withAutobuyer(withMoney(createInitialGameState(), 0), tensTier.id)
+    const after = tickGame(1, boostEngine.AUTOBUYER_UNIT_BATCH)(state)
+    expect(after.owned[tensTier.id]).toBe(0)
+    expect(after.autobuyerAttemptBudgets[tensTier.id]).toBeGreaterThanOrEqual(1 - 1e-9)
+  })
+
   it('does not purchase automatically while a tier\'s autobuyer is paused (autobuyersEnabled false), even when affordable', () => {
     const state = withAutobuyerEnabled(
       withAutobuyer(withMoney(createInitialGameState(), 10000), tensTier.id),

@@ -2800,6 +2800,24 @@ describe('Buy max mode', () => {
       .toHaveAttribute('aria-valuenow', '1')
   })
 
+  test('Single overrides Buy max for the tier Buy button (one unit even with Buy max on and unlocked)', async () => {
+    const user = userEvent.setup()
+    const kilobytes = TIER_DEFINITIONS[0]
+    localStorage.setItem('tens_buy_max_mode', 'true')
+    localStorage.setItem('tens_buy_unit_mode', 'true')
+    seedMainGameState({
+      buyMaxUnlocked: true,
+      purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+      resources: { base: getTierCost(kilobytes, 1) * DEFAULT_PURCHASE_BLOCK_SIZE * 3 },
+      autobuyersEnabled: { [kilobytes.id]: false },
+    })
+    render(<App />)
+    const panel = screen.getByLabelText(`${kilobytes.name} layer`)
+    await user.click(within(panel).getByRole('button', { name: /^Buy for/ }))
+    expect(within(panel).getByRole('progressbar', { name: `${kilobytes.name} cost-block progress` }))
+      .toHaveAttribute('aria-valuenow', '1')
+  })
+
   test('once unlocked, toggling it on makes the tier Buy button buy every affordable full level', async () => {
     const user = userEvent.setup()
     const kilobytes = TIER_DEFINITIONS[0]

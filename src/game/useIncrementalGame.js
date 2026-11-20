@@ -16,7 +16,7 @@ import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, loadBuyM
 // default), so there's nothing left to persist.
 const BUY_QUANTITY = Number.MAX_SAFE_INTEGER
 // Autobuyer batch for the current Buy mode: Level (default) finishes whole levels per attempt, Single buys one unit.
-const getAutobuyerBatch = () => (loadBuyUnitPreference() ? AUTOBUYER_UNIT_BATCH : BUY_QUANTITY)
+const autobuyerBatchFor = unitMode => (unitMode ? AUTOBUYER_UNIT_BATCH : BUY_QUANTITY)
 
 // A real-world gap between two successive live ticks larger than this is treated as the tab/app
 // having been backgrounded or suspended by the browser/OS — see the tick-loop effect below —
@@ -33,12 +33,12 @@ const BACKGROUND_TICK_GAP_THRESHOLD_SECONDS = 2
 // back null for a gap at or below OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS — that short an
 // absence is simulated at full speed, "as if the screen was always on," so there's nothing to
 // notify the player about.
-const computeOfflineCatchUp = (elapsedRealSeconds, state) => {
+const computeOfflineCatchUp = (elapsedRealSeconds, state, autobuyerBatch = BUY_QUANTITY) => {
   const effectiveSeconds = elapsedRealSeconds > 0 ? getOfflineEffectiveSeconds(elapsedRealSeconds, getMaxOfflineSeconds(state)) : 0
   if (effectiveSeconds <= 0) return null
 
   return {
-    state: applyOfflineProgress(elapsedRealSeconds, getAutobuyerBatch())(state),
+    state: applyOfflineProgress(elapsedRealSeconds, autobuyerBatch)(state),
     offlineProgress: elapsedRealSeconds > OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS
       ? { elapsedRealSeconds, effectiveSeconds, capSeconds: getMaxOfflineSeconds(state) }
       : null,
@@ -66,7 +66,7 @@ const computeInitialGame = () => {
 
     const lastSaveTimestamp = loadLastSaveTimestamp()
     const elapsedRealSeconds = lastSaveTimestamp ? (Date.now() - lastSaveTimestamp) / 1000 : 0
-    const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, loaded)
+    const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, loaded, autobuyerBatchFor(loadBuyUnitPreference()))
     const result = caughtUp ?? { state: loaded, offlineProgress: null }
     return {
       ...result,
@@ -138,7 +138,7 @@ const computeInitialGame = () => {
           const capSeconds = getMaxOfflineSeconds(stateRef.current)
           const effectiveSeconds = getOfflineEffectiveSeconds(gapSeconds, capSeconds)
           if (effectiveSeconds > 0) {
-            setState(prev => applyOfflineProgress(gapSeconds, getAutobuyerBatch())(prev))
+            setState(prev => applyOfflineProgress(gapSeconds, autobuyerBatchFor(buyUnitModeRef.current))(prev))
             if (gapSeconds > OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS) {
               setOfflineProgress({ elapsedRealSeconds: gapSeconds, effectiveSeconds, capSeconds })
             }
@@ -151,7 +151,7 @@ const computeInitialGame = () => {
         // 2s catch-up threshold) so production continues; only visible ticks count as active play.
         const elapsed = TICK_RATE_MS / 1000
         setState(prev => {
-          const next = tickGame(elapsed, getAutobuyerBatch())(prev)
+          const next = tickGame(elapsed, autobuyerBatchFor(buyUnitModeRef.current))(prev)
           return document.visibilityState === 'visible' ? addActivePlaySeconds(elapsed)(next) : next
         })
         lastTickRealTime = Date.now()
@@ -378,7 +378,7 @@ const computeInitialGame = () => {
   const claimOfflineAdReward = useCallback(summary => {
     if (!summary || summary.rewardClaimed || claimedOfflineRewardsRef.current.has(summary)) return false
     claimedOfflineRewardsRef.current.add(summary)
-    setState(prev => applyOfflineRewardBonus(summary.elapsedRealSeconds, getAutobuyerBatch(), summary.capSeconds)(prev))
+    setState(prev => applyOfflineRewardBonus(summary.elapsedRealSeconds, autobuyerBatchFor(buyUnitModeRef.current), summary.capSeconds)(prev))
     setOfflineProgress(prev => (prev === summary
       ? { ...summary, effectiveSeconds: summary.effectiveSeconds + getOfflineRewardBonusSeconds(summary.elapsedRealSeconds, summary.capSeconds), rewardClaimed: true }
       : prev))
@@ -400,7 +400,7 @@ const computeInitialGame = () => {
     const nextState = loaded ?? createInitialGameState()
     const lastSaveTimestamp = loadLastSaveTimestamp()
     const elapsedRealSeconds = lastSaveTimestamp ? (Date.now() - lastSaveTimestamp) / 1000 : 0
-    const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, nextState)
+    const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, nextState, autobuyerBatchFor(buyUnitModeRef.current))
     setState(caughtUp?.state ?? nextState)
     setOfflineProgress(caughtUp?.offlineProgress ?? null)
     setIncompatibleSaveReason(incompatibleReason)
