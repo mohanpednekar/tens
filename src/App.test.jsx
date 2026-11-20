@@ -2135,7 +2135,7 @@ test('Firmware lists global automations in one order: Auto Clock Speed → Scale
   const rows = within(screen.getByLabelText('global automation category')).getAllByLabelText(/ row$/)
   expect(rows.map(row => row.getAttribute('aria-label'))).toEqual(order.map(name => `${name} row`))
   // Visible labels drop the redundant "Auto" (the category heading says it); accessible names keep it.
-  expect(rows.map(row => row.textContent)).toEqual(['Clock Speed', 'Restage', 'Scale Up', 'Overclock', 'Purge'].map(n => expect.stringContaining(n)))
+  expect(rows.map(row => row.textContent)).toEqual(['Clock Speed', 'Scale Up', 'Restage', 'Overclock', 'Purge'].map(n => expect.stringContaining(n)))
   rows.forEach(row => expect(row).not.toHaveTextContent(/auto/i))
   expect(screen.getByRole('button', { name: /^Auto Clock Speed automation$/i })).toBeInTheDocument()
 })
