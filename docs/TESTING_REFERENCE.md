@@ -7,7 +7,7 @@ version — read it before writing or restructuring tests, or touching `e2e/` / 
 ## Unit and component tests (Vitest)
 
 - Test files live next to source: `engine.test.js`, `layers.test.js`, `storage.test.js`,
-  `save-migration/index.test.js`, `navAttention.test.js`, `App.test.jsx`.
+  `save-migration/index.test.js`, `navAttention.test.js`, `App.test.jsx` + `App.foundry.test.jsx` (one file split in two so Vitest runs them in parallel; the Foundry/Power/Dev Mode half duplicates the shared prelude helpers).
 - Environment: jsdom, globals enabled (`describe`/`it`/`expect` without imports), setup file
   `src/setupTests.js` (imports `@testing-library/jest-dom/vitest`).
 - Component tests use Testing Library (`render`, `screen`, `userEvent`) and query by role/label text
