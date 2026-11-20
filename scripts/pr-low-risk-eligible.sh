@@ -5,7 +5,7 @@
 #   - bot-authored branch prefixes only (claude/*, dependabot/*)
 #   - never a fork (isCrossRepository)
 #   - never touches .github/workflows/
-#   - docs/tests-only (CLAUDE.md / *.test.js / *.test.jsx), OR total lines ≤ 50,
+#   - docs/tests-only (CLAUDE.md / */CLAUDE.md / *.test.js / *.test.jsx), OR total lines ≤ 50,
 #     OR Dependabot patch/minor semver bump
 #
 # Usage:
@@ -99,7 +99,7 @@ docs_tests_only=true
 while IFS= read -r f; do
   [ -z "$f" ] && continue
   case "$f" in
-    CLAUDE.md|*.test.js|*.test.jsx) ;;
+    CLAUDE.md|*/CLAUDE.md|*.test.js|*.test.jsx) ;;
     *) docs_tests_only=false ;;
   esac
 done <<<"$files"

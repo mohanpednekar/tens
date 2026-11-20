@@ -81,7 +81,7 @@ transparency, conflict-avoidance sequencing) that have guided this model.
 
 ### Scheduled maintenance (`autonomous-maintenance.yml`)
 
-Runs four times daily at **4:00am, 10:00am, 4:00pm and 10:00pm IST** (cron `30 22,4,10,16 * * *` UTC; see "Slot schedule" below for what each slot does and which model it uses — IST is UTC+5:30;
+Runs four times daily at **4:00am, 10:00am, 4:00pm and 10:00pm IST** (four separate cron entries — `30 22`, `30 4`, `30 10`, `30 16` `* * *` UTC — one per slot; see "Slot schedule" below for what each slot does and which model it uses — IST is UTC+5:30;
 plus manual `workflow_dispatch`) via `anthropics/claude-code-action@v1`. Each run does exactly
 one unit of work, chosen in three phases —
 Phase 0 always outranks Phase A, which always outranks Phase B. Two follow-up steps reconcile the
@@ -94,8 +94,10 @@ next scheduled run retries automatically. Confirmed live on 2026-07-29: a run ex
 — broadened to the current 5xx-inclusive check so a purely transient Anthropic-side overload doesn't
 read as a real break to the next run's Phase 0 CI check.
 
-**Slot schedule.** The `Resolve slot, task kind and model` step (id `slot`) maps the firing time (IST,
-shifted 3h back so late cron firings and the 22:00 weekday resolve correctly) to a task *kind*, a
+**Slot schedule.** The `Resolve slot, task kind and model` step (id `slot`) maps each scheduled firing to its slot by the
+cron entry that produced it (`github.event.schedule` — never the clock, since GitHub delivers these
+firings hours late; the weekday is the IST day of the firing's *intended* time, and the step logs how
+late it arrived), falling back to the IST clock shifted 3h back for `workflow_dispatch`, and from the slot to a task *kind*, a
 `--model` alias and a `pr_free` flag; non-`implement` kinds prepend a "slot brief" to the prompt that
 replaces Phase A/B (Phase 0 CI/security repair always outranks it). `pr_free` kinds (issues/comments
 only; `qa-review` included, as it mainly posts review markers) bypass the 5-PR ceiling and the empty-run warning. `workflow_dispatch` takes `slot` and `model`
@@ -624,7 +626,7 @@ that defaults to squash — see issue #343):
    `claude/heal-main-*`, `dependabot/*`; never a fork),
    auto-merge is enabled immediately once the diff meets a conservative "low risk" bar (shared
    implementation: `scripts/pr-low-risk-eligible.sh` / `scripts/enable-auto-merge-if-eligible.sh`):
-   the whole diff touches only `CLAUDE.md`/`*.test.js`/`*.test.jsx` (docs/tests-only), OR total
+   the whole diff touches only `CLAUDE.md`/`*/CLAUDE.md`/`*.test.js`/`*.test.jsx` (docs/tests-only), OR total
    changed lines ≤50, OR it's a Dependabot PR with a patch/minor semver bump (major bumps wait for
    approval). A PR touching anything under `.github/workflows/` is **always** excluded from this
    path regardless of size or content. This path does **not** mark drafts ready (a still-draft PR
