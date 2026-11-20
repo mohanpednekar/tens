@@ -1963,14 +1963,14 @@ export const getNextBytePowerProgressFraction = moneyBits => {
   return Math.min(1, bytes / nextPowerBytes)
 }
 
-// The Clock Speed multiplier as it acts on production right now (F21 Base Clock: 1, Overclock has no effect with it;
-// `clockSpeedPower` lever: raised to that power). Shared by tier periods and MainPage's Clock Speed card.
+// The Accelerate multiplier as it acts on production right now (F21 Base Clock: 1, Overclock has no effect with it;
+// `clockSpeedPower` lever: raised to that power). Shared by tier periods and MainPage's Accelerate card.
 export const getChallengeClockSpeedMultiplier = state => hasChallengeEffect(state, 'clockSpeedDisabled')
   ? 1
   : getGlobalTickspeedProductionMultiplier(state.globalTickspeedMultiplier ?? null, getOverclockLevel(state) ?? 0) ** getChallengeLever(state, 'clockSpeedPower', 1)
 
-// The Clock Speed bonus one level currently adds, as a fraction (0.01 = +1%/level): the base step scaled by the Overclock
-// level, then the `clockSpeedPower` lever; 0 under F21 Base Clock. What MainPage's Clock Speed card shows.
+// The Accelerate bonus one level currently adds, as a fraction (0.01 = +1%/level): the base step scaled by the Overclock
+// level, then the `clockSpeedPower` lever; 0 under F21 Base Clock. What MainPage's Accelerate card shows.
 export const getChallengeClockSpeedStep = state => hasChallengeEffect(state, 'clockSpeedDisabled')
   ? 0
   : (1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(getOverclockLevel(state) ?? 0)) ** getChallengeLever(state, 'clockSpeedPower', 1) - 1
@@ -2434,7 +2434,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
   }
 
   // A Daily challenge run (dailyChallenges.js) carries `runPeaks`: the highest balance, owned units, purchase
-  // levels and Clock Speed level it has reached. They are sampled from the state just BEFORE the reset
+  // levels and Accelerate level it has reached. They are sampled from the state just BEFORE the reset
   // automations below run, so a milestone an autobuyer reached in this tick still counts when a reset wipes it in the
   // same tick. The main save never has the field.
   // Resets rebuild the state from scratch and drop the field, so it is re-attached once the resets are done.

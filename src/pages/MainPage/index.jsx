@@ -225,7 +225,7 @@ const OverclockCard = styled(StatCard)`
   ${featureCard('#c2410c')}
 `
 
-// Feature cards are short full-width rows stacked in two groups: Clock Speed + Restage above the tier
+// Feature cards are short full-width rows stacked in two groups: Accelerate + Restage above the tier
 // list, Scale Up + Overclock below it (name/effect left, action button right).
 const SpeedCardsRow = styled.div`
   display: flex;
@@ -1032,7 +1032,7 @@ const MainPage = ({ game }) => {
   const currentGlobalTickspeedStepDisplay = 1 + getChallengeClockSpeedStep(state)
   // The same step before any Overclock (1% outside a challenge), for the "(was …)" half of the Overclock lines.
   const baseGlobalTickspeedStepDisplay = 1 + getChallengeClockSpeedStep({ ...state, overclockLastClaimCompletedLevels: null, overclockCount: 0 })
-  // Each completed final-tier level multiplies Clock Speed's per-level rate by this (a constant).
+  // Each completed final-tier level multiplies Accelerate's per-level rate by this (a constant).
   const overclockLevelEffectDisplay = 1 + OVERCLOCK_MULTIPLIER_STEP
   const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)
   const canOverclock = !isFrozen && !challengeDisabled('overclockDisabled') && lastTierLevelDisplay >= overclockRequirement
@@ -1058,7 +1058,7 @@ const MainPage = ({ game }) => {
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
   const canBuyGlobalTickspeed = !isFrozen && !challengeDisabled('clockSpeedDisabled') && globalTickspeedUnlocked && isGlobalTickspeedAffordable(state)
-  // The last tier's XP-funded tickspeed — a separate upgrade shown beside Clock Speed once the last tier
+  // The last tier's XP-funded tickspeed — a separate upgrade shown beside Accelerate once the last tier
   // has been a Scale Up target this cycle (isLastTierTickspeedXpUnlocked). Always spends the entire
   // XP balance in one action, since every consumption resets every other tier's owned quantity and
   // Bits; disabled while the last tier owns nothing (nothing to speed up — see
@@ -1304,7 +1304,7 @@ const MainPage = ({ game }) => {
               </li>
               {globalTickspeedCardEverRevealed && (
                 <li>
-                  Clock Speed: {isGlobalTickspeedActive
+                  Accelerate: {isGlobalTickspeedActive
                     ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier`
                     : 'not yet active'}
                 </li>
@@ -1312,7 +1312,7 @@ const MainPage = ({ game }) => {
               {overclockEverRevealed && (
                 <li>
                   Overclock: {overclockLevel > 0
-                    ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was ${formatGlobalTickspeedBonusPercent(baseGlobalTickspeedStepDisplay)}%)`
+                    ? `Accelerate's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was ${formatGlobalTickspeedBonusPercent(baseGlobalTickspeedStepDisplay)}%)`
                     : `not yet claimed (reach ${formatAmount(overclockRequirementDisplay)} completed levels on ${lastTier.name})`}
                 </li>
               )}
@@ -1346,13 +1346,13 @@ const MainPage = ({ game }) => {
       {(globalTickspeedCardEverRevealed || isLastTierXpUnlocked) && (
       <SpeedCardsRow>
         {globalTickspeedCardEverRevealed && (
-        <GlobalTickspeedCard aria-label="global clock speed panel">
+        <GlobalTickspeedCard aria-label="global accelerate panel">
           <Disclosure>
             <summary>
               <CardTitleGroup>
-                <h2>Clock Speed</h2>
+                <h2>Accelerate</h2>
                 <CardEffect
-                  title="Each Clock Speed level makes every tier's production ticks faster by this factor (this is the live rate: Overclock raises it and some challenges weaken it)"
+                  title="Each Accelerate level makes every tier's production ticks faster by this factor (this is the live rate: Overclock raises it and some challenges weaken it)"
                   onClick={event => {
                     event.preventDefault()
                     event.stopPropagation()
@@ -1371,8 +1371,8 @@ const MainPage = ({ game }) => {
           <Button
             aria-label={
               isGlobalTickspeedActive
-                ? `Upgrade Clock Speed for ${formatBytes(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
-                : `Enable Clock Speed for ${formatBytes(globalTickspeedCost)}`
+                ? `Upgrade Accelerate for ${formatBytes(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
+                : `Enable Accelerate for ${formatBytes(globalTickspeedCost)}`
             }
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
             disabled={!canBuyGlobalTickspeed}
@@ -1387,7 +1387,7 @@ const MainPage = ({ game }) => {
             <ButtonLabel>{formatBytes(globalTickspeedCost)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
-              aria-label="Clock Speed progress"
+              aria-label="Accelerate progress"
               aria-valuenow={globalTickspeedProgressPercent}
               aria-valuemin={0}
               aria-valuemax={100}
@@ -1478,7 +1478,7 @@ const MainPage = ({ game }) => {
           // level 1 is the baseline ×1, no bonus yet, each further level speeds up this tier's own
           // delivery frequency by another 10% (see getEffectiveTierTickSpeedSeconds in engine.js) —
           // it does NOT change how much lands per delivery, only how often one arrives. The last
-          // tier's separate XP-funded upgrade (beside Clock Speed) multiplies on top of this.
+          // tier's separate XP-funded upgrade (beside Accelerate) multiplies on top of this.
           const tickspeedLevel = state.tickspeedLevels?.[tier.id] ?? 1
           const tickspeedMultiplier = getTickspeedProductionMultiplier(tickspeedLevel)
             * (tier.id === lastTier.id ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0) : 1)
@@ -1689,7 +1689,7 @@ const MainPage = ({ game }) => {
               <CardTitleGroup>
                 <h2>Overclock</h2>
                 <CardEffect
-                  title="Each completed level multiplies Clock Speed's per-level rate"
+                  title="Each completed level multiplies Accelerate's per-level rate"
                   onClick={event => {
                     event.preventDefault()
                     event.stopPropagation()
@@ -1701,16 +1701,16 @@ const MainPage = ({ game }) => {
             </summary>
             <MutedText>
               {overclockLevel > 0
-                ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was ${formatGlobalTickspeedBonusPercent(baseGlobalTickspeedStepDisplay)}%).`
-                : `Not claimed yet — reach ${formatAmount(overclockRequirementDisplay)} completed ${lastTier.name} levels. Each completed level then multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay}.`}
+                ? `Accelerate's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was ${formatGlobalTickspeedBonusPercent(baseGlobalTickspeedStepDisplay)}%).`
+                : `Not claimed yet — reach ${formatAmount(overclockRequirementDisplay)} completed ${lastTier.name} levels. Each completed level then multiplies Accelerate's per-level rate by ×${overclockLevelEffectDisplay}.`}
             </MutedText>
           </Disclosure>
           <Button
-            aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus; each completed ${lastTier.name} level (${formatAmount(lastTierLevelDisplay)} now) multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay}`}
+            aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus; each completed ${lastTier.name} level (${formatAmount(lastTierLevelDisplay)} now) multiplies Accelerate's per-level rate by ×${overclockLevelEffectDisplay}`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
             onClick={actions.overclock}
-            title={`Resets tiers (and Scale Up's bonus); each completed ${lastTier.name} level multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay} — requires ${overclockRequirementDisplay} completed levels${challengeDisabled('overclockDisabled') ? challengeNote : ''}`}
+            title={`Resets tiers (and Scale Up's bonus); each completed ${lastTier.name} level multiplies Accelerate's per-level rate by ×${overclockLevelEffectDisplay} — requires ${overclockRequirementDisplay} completed levels${challengeDisabled('overclockDisabled') ? challengeNote : ''}`}
             type="button"
             $progress={overclockProgressPercent}
             $progressColor="#fb923c"

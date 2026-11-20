@@ -6154,7 +6154,7 @@ describe('getPrestigePointsAwarded (property-based)', () => {
 // ─── getGlobalAutomationUnlockMilestone / applyAutobuyerMilestones (global automations) ──────
 
 describe('global automation unlock milestones', () => {
-  it('unlock by Purge count (Clock Speed 8, Scale Up 16, Restage 32, Overclock 64, Purge 128)', () => {
+  it('unlock by Purge count (Accelerate 8, Scale Up 16, Restage 32, Overclock 64, Purge 128)', () => {
     expect(['speedUp', 'scaleUp', 'restage', 'overclock', 'purge'].map(getGlobalAutomationUnlockMilestone)).toEqual([8, 16, 32, 64, 128])
   })
 
@@ -8232,7 +8232,7 @@ describe('isGlobalTickspeedMultiplierUnlocked', () => {
 })
 
 describe('buyGlobalTickspeedMultiplier', () => {
-  it('spends 10 Bytes to activate Clock Speed (global tickspeed multiplier) at level 1', () => {
+  it('spends 10 Bytes to activate Accelerate (global tickspeed multiplier) at level 1', () => {
     const state = withBytes(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)
     const after = buyGlobalTickspeedMultiplier(state)
     expect(after.globalTickspeedMultiplier).toBe(1)
@@ -12466,7 +12466,7 @@ describe('automation interval chains', () => {
     expect(after.tierTickspeedIntervalLevels.tier01).toBe(1)
   })
 
-  it('Auto Overclock speed chain starts at 32 PP once Auto Overclock is unlocked, and the pause toggle works', () => {
+  it('Auto Overaccelerate chain starts at 32 PP once Auto Overclock is unlocked, and the pause toggle works', () => {
     const s = base()
     expect(setAutoOverclockEnabled(false)(s)).toBe(s)
     const locked = withPoints(base(), 100)
@@ -12489,7 +12489,7 @@ describe('automation interval chains', () => {
     expect(getAutomationIntervalSeconds(upgraded, 'restage')).toBeCloseTo(115.2)
   })
 
-  it('Clock Speed autobuyer waits for its interval timer', () => {
+  it('Accelerate autobuyer waits for its interval timer', () => {
     const state = { ...base(), autoGlobalTickspeed: true, automationIntervalLevels: { ...base().automationIntervalLevels, speedUp: 0 } }
     const half = tickGame(0.5)(state)
     expect(half.automationAttemptBudgets.speedUp).toBeCloseTo(0.5)

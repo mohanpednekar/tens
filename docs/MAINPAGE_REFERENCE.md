@@ -646,7 +646,7 @@ live inside the selected tier):
   there's nothing to reveal. Each Factory feature card (`GlobalTickspeedCard` / Restage / `ScaleUpCard` /
   `OverclockCard`) wraps its `<h2>` in a `Disclosure` (`styled.details`/`<summary>`, collapsed by default,
   the heading itself the only way to *open* it — no separate visible "expand" affordance). The body is
-  always present (an unclaimed/inactive line before first use, then the live status): Clock Speed's
+  always present (an unclaimed/inactive line before first use, then the live status): Accelerate's
   `+N% faster ticks on every tier.` (or "Not active yet…"), Restage's XP multiplier, Scale Up's reset
   + doubling line, Overclock's current per-level rate (or "Not claimed yet…") — see "Scale Up and
   Overclock cards" above. Each starts collapsed until the player clicks that heading.
@@ -663,7 +663,7 @@ live inside the selected tier):
   (`components/BuyMaxToggle`, rendered only on Firmware → ✦ Prestige once `isBuyMaxUnlocked`): while on, a click that can afford at least one FULL level
   from zero progress buys every such level (`buyTierMaxLevels`) and the button previews it as
   `+N` with the summed cost (`getTierMaxLevelsPreview`; aria-label `Buy N full level(s) for …`);
-  otherwise the button keeps the normal single-level text and behavior below. Clock Speed, tier tickspeed,
+  otherwise the button keeps the normal single-level text and behavior below. Accelerate, tier tickspeed,
   Compression, Auto Purge and Flops buttons keep their single-level cost text but buy every
   affordable level per click in that mode (`repeatPurchaseMax`). Renders its cost-block progress as an
   on-button gradient fill via `Button`'s `$progress`/`$secondaryProgress` props (green = units already
@@ -724,8 +724,8 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
   permanent and always flush right (tier cells use the same order) — one line whenever it fits; the
   head wraps (`CellHead $wrap`) so a very long cost drops the button to its own line rather than
   ellipsizing the name. Categories: *Global Automation* (cells
-  `"<name> row"`, Auto Clock Speed → Auto Scale Up → Auto Restage → Auto Overclock → Auto Purge; Restage
-  and Scale Up both need Clock Speed, Overclock needs both, Purge needs Overclock — engine-enforced),
+  `"<name> row"`, Auto Accelerate → Auto Scale Up → Auto Restage → Auto Overclock → Auto Purge; Restage
+  and Scale Up both need Accelerate, Overclock needs both, Purge needs Overclock — engine-enforced),
   *Tier Autobuyers* (all ten tiers always listed; halves
   `"<tier> tickspeed autobuyer"` / `"<tier> autobuyer"`), *Power Automation* (once any tier's Auto-charge is bought on Power: an `auto-charge row` pause Switch — `computeAutoChargeEnabled` — plus an `auto boost row` Switch and the full-width Boost preset picker), *Compute Autobuyers* (Era milestones, once the Flops page is unlocked; no speed chain).
   Each milestone appears only here — `MilestonesPage` doesn't repeat them.
@@ -741,7 +741,7 @@ Firmware never shows level numbers (only intervals, `N/buy` and costs). Global-a
 labels are `<RowIcon>` (fixed-width icon cell) + name; each `TierPair` card shows the tier symbol
 once (halves icon-less under the column header); Flops tiles show the tier symbol (their category heading names the kind). Every automation is named
 `Auto <feature>` (no hyphen) in every accessible name; on Firmware the *visible* global/Booster label drops
-the redundant `Auto` (`Speed Up`, `Restage`, …, `Boost`) since the category heading already says it. Factory's Clock Speed / Restage / Scale Up / Overclock cards share
+the redundant `Auto` (`Speed Up`, `Restage`, …, `Boost`) since the category heading already says it. Factory's Accelerate / Restage / Scale Up / Overclock cards share
 `featureCard(accent)` (neutral border + 3px top accent edge, 1rem heading, button pinned to the card bottom); Factory carries no
 "Auto" labels — automation status and toggles live only on Firmware.
 Tab dots: Automation `automation perk available` (`hasAffordableAutomationPerk`: an automation unlock
@@ -757,9 +757,9 @@ itself — `ScaleUpCard` is likewise always shown (unlike `OverclockCard`, still
 tier having ever been unlocked — see below), but stays down below `TierList` (paired with Overclock) rather
 than joining this card, since its own target walks through the tier ladder one tier at a time (see
 "Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
-through. Feature cards are short full-width rows (`SpeedCardsRow` is a column; `featureCard` lays each card out as a row: title/effect + disclosure left, 9rem action button right; 3px left accent edge, padding and button column match `TierLine` so edges align): Clock Speed then `RestageCard` (once revealed) above `TierList`; `ScaleUpCard` then `OverclockCard` (once revealed) below it. Clock Speed shows the live per-level bonus `🏭 +X%/lvl` (`getChallengeClockSpeedStep`: 1% scaled by Overclock, weakened by a challenge's `clockSpeedPower`, 0 under F21; Overclock's disclosure shows the same rate) and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock). `CardTitleGroup` wraps the name/effect onto a second line when the left column is too narrow (phone widths around 320px).
+through. Feature cards are short full-width rows (`SpeedCardsRow` is a column; `featureCard` lays each card out as a row: title/effect + disclosure left, 9rem action button right; 3px left accent edge, padding and button column match `TierLine` so edges align): Accelerate then `RestageCard` (once revealed) above `TierList`; `ScaleUpCard` then `OverclockCard` (once revealed) below it. Accelerate shows the live per-level bonus `🏭 +X%/lvl` (`getChallengeClockSpeedStep`: 1% scaled by Overclock, weakened by a challenge's `clockSpeedPower`, 0 under F21; Overclock's disclosure shows the same rate) and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock). `CardTitleGroup` wraps the name/effect onto a second line when the left column is too narrow (phone widths around 320px).
 (Earlier iterations tried grouping all three speed-related cards together at the top; this
-was later reverted to a split, and is now (#1137) Clock Speed + Restage above the tier list, Scale Up + Overclock below it —
+was later reverted to a split, and is now (#1137) Accelerate + Restage above the tier list, Scale Up + Overclock below it —
 per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying
 `engine.js` mechanics. The heading text itself never changes
 (`Tickspeed`, no level/percent readout — shortened first from `Global Tickspeed Multiplier` to
@@ -789,7 +789,7 @@ the card stays visible rather than disappearing if tier02's owned count is later
 Prestige/Scale Up; Reset clears the flag alongside `overclockEverRevealed`. It
 needs no `!isFirstRun` gate — unlike the Firmware page, it has nothing to do with Prestige Points, so
 it's available (once tier02 is owned) even during a player's very first run. Clicking is optional: once
-Auto Clock Speed is unlocked (Purge 8; see ECONOMY_REFERENCE "Global automations unlock by Purge count"), `tickGame` calls `buyGlobalTickspeedMultiplier` automatically every tick, so the
+Auto Accelerate is unlocked (Purge 8; see ECONOMY_REFERENCE "Global automations unlock by Purge count"), `tickGame` calls `buyGlobalTickspeedMultiplier` automatically every tick, so the
 level climbs on its own whenever Money allows — the manual button works identically either way.
 
 **Tickspeed multiplier (Factory view, per tier).** Every unlocked tier's row carries a Money-funded
@@ -816,7 +816,7 @@ below).
 The **last tier's** button stays the ordinary resource-funded tickspeed button for the whole cycle,
 and, like every tier, spends the full `getTickspeedMultiplierSpend` (e.g. 10 for the 2nd upgrade, requirement
 `cost`, since QB may be spent to 0); the visible label shows the spend, the aria-label/progress bar the requirement. Its XP-funded tickspeed is a **separate**
-**Restage** card right of the Clock Speed card (same `SpeedCardsRow`, above the tier list — #1137) (`aria-label="restage panel"`, shown once
+**Restage** card right of the Accelerate card (same `SpeedCardsRow`, above the tier list — #1137) (`aria-label="restage panel"`, shown once
 `isLastTierTickspeedXpUnlocked`) with a `🧬 {XP} XP` button — see docs/ECONOMY_REFERENCE.md's
 "The last tier's XP-funded tickspeed". The row's Details "tier ×N" multiplier includes the XP bonus.
 
@@ -843,7 +843,7 @@ one `SpeedCardsRow` placed directly below `TierList` (#1137); Restage pairs with
 tier list instead (see "Global Tickspeed card" above). Paired cards stay side by side at every width (`flex: 1 1 0`, `min-width: 0`, no wrap); `CardTitleGroup` wraps the effect under the heading (`min-width: 0`, `flex-wrap`) so a paired card at ~320px doesn't overflow into its neighbor. The earlier
 below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below);
 `OverclockCard` is gated and, when revealed, sits beside Scale Up; a lone card fills its row.
-Both soft-reset cards (and Clock Speed) share `featureCard(accent)`: compact `0.6rem 0.75rem`
+Both soft-reset cards (and Accelerate) share `featureCard(accent)`: compact `0.6rem 0.75rem`
 padding, a `0.4rem` internal gap and a 3px top accent edge; their headings have no default margin, their
 buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`. `ScaleUpCard`'s heading
 is a `Disclosure` like the others (collapsed by default): the body states the reset + doubling and
@@ -871,7 +871,7 @@ expressed in completed levels — Scale Up requires 3 levels for each tier's fir
 `everRevealed`-flag, latched permanently true and reset only on a full Reset — unlike `ScaleUpCard`,
 which carries no such gate at all (see above); Overclock's own gate is unaffected by Scale Up's
 redesign, still sitting purely on the last tier reaching a level. `OverclockButton` (sized to
-match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {lastTier.symbol} {completed}/{required}` only; the effect `🌐 ×1.1/lvl` (🌐 = Clock Speed, the thing multiplied) sits beside the card's name (`CardEffect`) — the fixed per-level effect (`1 + OVERCLOCK_MULTIPLIER_STEP`) and the final tier's completed levels vs. this cycle's requirement — with an `aria-label` of `Overclock (requires {required} completed {lastTier.name}
+match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {lastTier.symbol} {completed}/{required}` only; the effect `🌐 ×1.1/lvl` (🌐 = Accelerate, the thing multiplied) sits beside the card's name (`CardEffect`) — the fixed per-level effect (`1 + OVERCLOCK_MULTIPLIER_STEP`) and the final tier's completed levels vs. this cycle's requirement — with an `aria-label` of `Overclock (requires {required} completed {lastTier.name}
 levels) — …`. `ScaleUpButton` similarly reads `⏩ {targetTier.symbol} {completed}/{required}`; its effect `🏭 ×2` (🏭 = tier production), plus `· 🔓 TB` when the successor is Terabytes, sits beside the card's name, with
 `aria-label` `Scale Up (requires {required} completed {targetTier.name} levels) — doubles production
 for tiers unlocked so far[ and unlocks TB]`
@@ -886,7 +886,7 @@ to be a deliberate, occasional decision reached via this card, not a frequent on
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
 whose summary is a `CardTitleGroup` of the heading plus `CardEffect` (`🌐 +10%/lvl`; its click is
 stopped so only the "Overclock" name toggles), so expanding never squeezes the body into a
-title-row column. The body is always present (collapsed by default): clicking "Overclock" reveals a `MutedText` line, `Clock Speed's per-level rate is now {currentStep}% (was 1%)` once claimed, or `Not claimed yet — reach {required} completed {lastTier.name} levels…` before the first claim.
+title-row column. The body is always present (collapsed by default): clicking "Overclock" reveals a `MutedText` line, `Accelerate's per-level rate is now {currentStep}% (was 1%)` once claimed, or `Not claimed yet — reach {required} completed {lastTier.name} levels…` before the first claim.
 `{currentStep}` is `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate
 (`OverclockButton` shows only `{symbol} {completed}/{required}`; the +10%/lvl effect sits beside the card name — see above); this is the one Overclock-specific number not otherwise visible
 anywhere on the Factory view. Beyond that one figure, Overclock has no visible effect of its own to
@@ -1120,7 +1120,7 @@ upgrades, then a tile grid once fully upgraded; Compute autobuyers as tiles.
 
 ### Factory feature cards (#1137)
 
-Two `SpeedCardsRow` pairs: `global clock speed panel` + `restage panel` (`RestageCard`, violet edge) above
+Two `SpeedCardsRow` pairs: `global accelerate panel` + `restage panel` (`RestageCard`, violet edge) above
 `TierList`, `scale up panel` + `overclock panel` below it. Each pair renders only its revealed cards; a lone
 card takes the full width. The PP strip (`purge points display`) stays, since it doubles as the Purge button.
 

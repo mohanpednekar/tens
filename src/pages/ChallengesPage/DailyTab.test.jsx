@@ -64,7 +64,7 @@ describe('Firmware Daily tab', () => {
     // The reset automations start paused in the 10-hour run: releasing them is the player's call.
     fireEvent.click(screen.getByRole('button', { name: 'Auto Overclock: paused' }))
     expect(game.actions.dailyPlay).toHaveBeenCalledWith('10h', 'automation', { key: 'overclock', enabled: true })
-    fireEvent.click(screen.getByRole('button', { name: 'Auto Clock Speed: on' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Auto Accelerate: on' }))
     expect(game.actions.dailyPlay).toHaveBeenCalledWith('10h', 'automation', { key: 'speedUp', enabled: false })
     expect(screen.getByLabelText('daily run attempt mark').textContent).toContain('Counts as attempted from:')
   })

@@ -957,7 +957,7 @@ test('applies offline progress at 100% speed and shows no notice for an absence 
   seedMainGameState({
     resources: { base: 0 },
     owned: { tier01: 5, tier02: 1 },
-    purchaseLevels: { tier01: 2 }, // level 1 purchased → Clock Speed unlocked
+    purchaseLevels: { tier01: 2 }, // level 1 purchased → Accelerate unlocked
   })
   // 100 real seconds ago, well under the 10-minute full-speed threshold → 100 simulated seconds at
   // 100% speed → Kilobytes delivers every 1s, so 100 deliveries land in that window → 500 Bytes,
@@ -966,7 +966,7 @@ test('applies offline progress at 100% speed and shows no notice for an absence 
 
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /enable clock speed for 10 b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /enable accelerate for 10 b/i })).toBeEnabled()
   expect(screen.queryByLabelText(/^offline progress notice$/i)).not.toBeInTheDocument()
 })
 
@@ -982,7 +982,7 @@ test('applies offline progress at 50% speed and shows a notice for an absence pa
 
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /enable clock speed for 10 b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /enable accelerate for 10 b/i })).toBeEnabled()
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 })
 
@@ -1092,7 +1092,7 @@ test('catches up a real-world gap detected mid-session by the live tick loop, wi
 
   // 1000s real -> 500s simulated at 50% speed; Kilobytes' 1s tickspeed fits 500 deliveries into
   // that window -> 5 generators x 500 deliveries = 2,500 Bytes.
-  expect(screen.getByRole('button', { name: /enable clock speed for 10 b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /enable accelerate for 10 b/i })).toBeEnabled()
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 
   unmount()
@@ -1115,7 +1115,7 @@ test('catches up a real-world gap as soon as the page becomes visible again, eve
   Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
   act(() => { document.dispatchEvent(new Event('visibilitychange')) })
 
-  expect(screen.getByRole('button', { name: /enable clock speed for 10 b/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /enable accelerate for 10 b/i })).toBeEnabled()
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 
   unmount()
@@ -1317,7 +1317,7 @@ test('the scale up and overclock panels render below the tier list, not above it
   expect(regions.indexOf('overclock panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('once the last tier has been a Scale Up target, a separate Restage panel appears beside Clock Speed above the tier list, and the last tier keeps its own tickspeed button', () => {
+test('once the last tier has been a Scale Up target, a separate Restage panel appears beside Accelerate above the tier list, and the last tier keeps its own tickspeed button', () => {
   seedMainGameState({
     resources: { base: 12345, tier10: 25 },
     owned: { tier09: 10, tier10: 25 },
@@ -1329,10 +1329,10 @@ test('once the last tier has been a Scale Up target, a separate Restage panel ap
   render(<App />)
 
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
-  expect(regions).toContain('global clock speed panel')
-  expect(regions.indexOf('global clock speed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
-  // Restage pairs with Clock Speed above the tier list (#1137); Scale Up pairs with Overclock below it.
-  expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('global clock speed panel'))
+  expect(regions).toContain('global accelerate panel')
+  expect(regions.indexOf('global accelerate panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
+  // Restage pairs with Accelerate above the tier list (#1137); Scale Up pairs with Overclock below it.
+  expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('global accelerate panel'))
   expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
   expect(regions.indexOf('scale up panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 
@@ -1398,7 +1398,7 @@ test('Scale Up resets the global tickspeed multiplier level back to not-yet-boug
   seedMainGameState({
     resources: { base: 12345 },
     owned: { tier02: 1, tier09: 10, tier10: 25 },
-    // Clock Speed is unlocked by tier01's own completed level 1 (purchaseLevels 2) — which a Scale
+    // Accelerate is unlocked by tier01's own completed level 1 (purchaseLevels 2) — which a Scale
     // Up also resets, so the card drops back to its not-yet-revealed state entirely.
     purchaseLevels: { tier01: 4, tier09: 3, tier10: 6 },
     globalTickspeedMultiplier: 2,
@@ -1407,7 +1407,7 @@ test('Scale Up resets the global tickspeed multiplier level back to not-yet-boug
 
   // The cumulative bonus only shows in the expanded description, not the button itself — the
   // description stays in the DOM (and toHaveTextContent-visible) even while collapsed.
-  expect(screen.getByLabelText(/^global clock speed panel$/i)).toHaveTextContent(/faster ticks on every tier/i)
+  expect(screen.getByLabelText(/^global accelerate panel$/i)).toHaveTextContent(/faster ticks on every tier/i)
 
   await user.click(screen.getByRole('button', { name: /scale up \(requires 3 completed kilobytes levels/i }))
 
@@ -1415,8 +1415,8 @@ test('Scale Up resets the global tickspeed multiplier level back to not-yet-boug
   // itself stays on screen (progressive-disclosure latch: once revealed it never disappears
   // again) but drops back to its not-yet-active "Enable" state, same as a save that never
   // bought it.
-  expect(screen.getByLabelText(/^global clock speed panel$/i)).not.toHaveTextContent(/faster ticks on every tier/i)
-  expect(screen.getByRole('button', { name: /enable clock speed for 10 b/i })).toBeDisabled()
+  expect(screen.getByLabelText(/^global accelerate panel$/i)).not.toHaveTextContent(/faster ticks on every tier/i)
+  expect(screen.getByRole('button', { name: /enable accelerate for 10 b/i })).toBeDisabled()
 })
 
 test('the Scale Up button is disabled once production freezes at a googol', () => {
@@ -1523,13 +1523,13 @@ test('the Overclock button shows the per-level Overclock effect and completed-le
   // The button shows the fixed per-level effect (×1.1) and completed/required last-tier levels — no
   // computed total rate.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus; each completed quettabytes level \(7 now\) multiplies clock speed's per-level rate by ×1\.1/i,
+    name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus; each completed quettabytes level \(7 now\) multiplies accelerate's per-level rate by ×1\.1/i,
   })).toBeInTheDocument()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('🌐 +10%/lvl')
   expect(screen.getByRole('button', { name: /^overclock \(requires/i })).toHaveTextContent('⚡ QB 7/7')
 })
 
-test('Clock Speed shows the actual live per-level effect beside the name (Overclock-scaled), and the plain 1% before any Overclock', () => {
+test('Accelerate shows the actual live per-level effect beside the name (Overclock-scaled), and the plain 1% before any Overclock', () => {
   seedMainGameState({
     resources: { base: 999 },
     globalTickspeedMultiplier: 1,
@@ -1539,7 +1539,7 @@ test('Clock Speed shows the actual live per-level effect beside the name (Overcl
   })
   render(<App />)
 
-  const panel = screen.getByLabelText(/^global clock speed panel$/i)
+  const panel = screen.getByLabelText(/^global accelerate panel$/i)
   // Overclock level 4 → 1% × 1.1^4 ≈ 1.46% per level.
   expect(panel).toHaveTextContent('🏭 +1.46%/lvl')
   expect(panel).not.toHaveTextContent('+1%/lvl')
@@ -1560,7 +1560,7 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
   render(<App />)
 
   const panel = screen.getByLabelText(/^overclock panel$/i)
-  expect(panel).toHaveTextContent(/clock speed's per-level rate is now 2\.59% \(was 1%\)\./i)
+  expect(panel).toHaveTextContent(/accelerate's per-level rate is now 2\.59% \(was 1%\)\./i)
 })
 
 test('the Overclock card\'s "(was …)" baseline ignores a legacy overclockCount', () => {
@@ -1666,7 +1666,7 @@ test('Firmware groups by feature: Automation holds every automation, Prestige th
 })
 
 test.each([
-  { name: 'Auto Clock Speed', milestone: 8 },
+  { name: 'Auto Accelerate', milestone: 8 },
   { name: 'Auto Restage', milestone: 32 },
   { name: 'Auto Scale Up', milestone: 16 },
   { name: 'Auto Overclock', milestone: 64 },
@@ -1687,7 +1687,7 @@ test.each([
   cleanup()
   localStorage.clear()
 
-  const flag = { 'Auto Clock Speed': 'autoGlobalTickspeed', 'Auto Restage': 'autoXpTickspeed', 'Auto Scale Up': 'autoScaleUp', 'Auto Overclock': 'autoOverclock', 'Auto Purge': 'autoPurge' }[name]
+  const flag = { 'Auto Accelerate': 'autoGlobalTickspeed', 'Auto Restage': 'autoXpTickspeed', 'Auto Scale Up': 'autoScaleUp', 'Auto Overclock': 'autoOverclock', 'Auto Purge': 'autoPurge' }[name]
   seedMainGameState({
     resources: { base: 10 },
     [flag]: true,
@@ -1839,7 +1839,7 @@ test('the global latency panel renders above the tier list, not below it', () =>
   render(<App />)
 
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
-  expect(regions.indexOf('global clock speed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('global accelerate panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
 })
 
 test('a static "unlocked" badge shows on Firmware → Automation once Auto Scale Up has been bought', async () => {
@@ -1911,16 +1911,16 @@ test('pausing Auto Scale Up via its toggle stops it from firing automatically, e
   vi.useRealTimers()
 })
 
-test('no Global Clock Speed panel appears before the second tier has ever been owned', () => {
+test('no Global Accelerate panel appears before the second tier has ever been owned', () => {
   seedMainGameState({
     resources: { base: 10 },
   })
   render(<App />)
 
-  expect(screen.queryByLabelText(/^global clock speed panel$/i)).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^global accelerate panel$/i)).not.toBeInTheDocument()
 })
 
-test('an Enable Clock Speed button appears once level 1 of the first tier completes (even during the first run), and spends 10 Bytes to activate level 1', async () => {
+test('an Enable Accelerate button appears once level 1 of the first tier completes (even during the first run), and spends 10 Bytes to activate level 1', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1929,27 +1929,27 @@ test('an Enable Clock Speed button appears once level 1 of the first tier comple
   })
   render(<App />)
 
-  const globalTickspeedButton = screen.getByRole('button', { name: /enable clock speed for 10 b/i })
+  const globalTickspeedButton = screen.getByRole('button', { name: /enable accelerate for 10 b/i })
   expect(globalTickspeedButton).toBeEnabled()
 
   await user.click(globalTickspeedButton)
 
-  const upgradeButton = screen.getByRole('button', { name: /upgrade clock speed for 100 b/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade accelerate for 100 b/i })
   expect(upgradeButton).toBeInTheDocument()
   // The cumulative level/bonus shows only in the expanded description, never on the button
   // itself or the heading — both stay compact regardless of level.
   expect(upgradeButton).not.toHaveTextContent(/\+1%/i)
-  expect(screen.getByRole('heading', { level: 2, name: 'Clock Speed' })).not.toHaveTextContent(/\+1%/i)
-  const panel = screen.getByLabelText(/^global clock speed panel$/i)
+  expect(screen.getByRole('heading', { level: 2, name: 'Accelerate' })).not.toHaveTextContent(/\+1%/i)
+  const panel = screen.getByLabelText(/^global accelerate panel$/i)
   // No level numbers anywhere — only the effect.
   expect(panel).not.toHaveTextContent(/lv\./i)
   // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
   expect(panel).toHaveTextContent(/\+1%/i)
-  // Clock Speed spends Bits (10 B = 80 b) from the one shared balance.
+  // Accelerate spends Bits (10 B = 80 b) from the one shared balance.
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
 })
 
-test('the Clock Speed panel\'s bonus line is collapsed until the heading is clicked, and clicking the revealed line does not collapse it', async () => {
+test('the Accelerate panel\'s bonus line is collapsed until the heading is clicked, and clicking the revealed line does not collapse it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1958,7 +1958,7 @@ test('the Clock Speed panel\'s bonus line is collapsed until the heading is clic
   })
   render(<App />)
 
-  const heading = screen.getByRole('heading', { level: 2, name: 'Clock Speed' })
+  const heading = screen.getByRole('heading', { level: 2, name: 'Accelerate' })
   const statusLine = screen.getByText(/faster ticks on every tier\./i)
   expect(statusLine).not.toBeVisible()
 
@@ -1973,41 +1973,41 @@ test('the Clock Speed panel\'s bonus line is collapsed until the heading is clic
   expect(statusLine).not.toBeVisible()
 })
 
-test('the Enable Clock Speed button stays disabled without enough Bits', () => {
+test('the Enable Accelerate button stays disabled without enough Bits', () => {
   seedMainGameState({
     resources: { base: 79 },
     purchaseLevels: { tier01: 2 },
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /enable clock speed for 10 b/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /enable accelerate for 10 b/i })).toBeDisabled()
 })
 
-test('the Clock Speed Upgrade button costs another power of ten each level, and shows the compounding bonus with decimal precision below 100%', () => {
+test('the Accelerate Upgrade button costs another power of ten each level, and shows the compounding bonus with decimal precision below 100%', () => {
   seedMainGameState({
     resources: { base: 999 },
     globalTickspeedMultiplier: 2,
   })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /upgrade clock speed for 1,000 b/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade accelerate for 1,000 b/i })
   expect(upgradeButton).toBeDisabled()
   // The cumulative level/bonus shows only in the expanded description, not on the button itself.
   expect(upgradeButton).not.toHaveTextContent(/2\.01%/i)
-  const panel = screen.getByLabelText(/^global clock speed panel$/i)
+  const panel = screen.getByLabelText(/^global accelerate panel$/i)
   // Level 2 is still below the first 10-level milestone — two regular 1% levels compounded
   // (1.01^2 ≈ ×1.0201) land on a fractional percentage, shown to 2 decimal places.
   expect(panel).toHaveTextContent(/\+2\.01%/i)
 })
 
-test('Clock Speed level 10 stays on the same uniform compounded step as every other level — no separate milestone bonus', () => {
+test('Accelerate level 10 stays on the same uniform compounded step as every other level — no separate milestone bonus', () => {
   seedMainGameState({
     resources: { base: 1e15 },
     globalTickspeedMultiplier: 10,
   })
   render(<App />)
 
-  expect(screen.getByLabelText(/^global clock speed panel$/i)).toHaveTextContent(/\+10\.46%/i)
+  expect(screen.getByLabelText(/^global accelerate panel$/i)).toHaveTextContent(/\+10\.46%/i)
 })
 
 test('the global tickspeed bonus keeps fractional percent precision between milestones', () => {
@@ -2017,7 +2017,7 @@ test('the global tickspeed bonus keeps fractional percent precision between mile
   })
   render(<App />)
 
-  expect(screen.getByLabelText(/^global clock speed panel$/i)).toHaveTextContent(/\+47\.41%/i)
+  expect(screen.getByLabelText(/^global accelerate panel$/i)).toHaveTextContent(/\+47\.41%/i)
 })
 
 test('the global tickspeed bonus switches to an "Nx" multiplier once uniform compounding crosses +100%', () => {
@@ -2027,7 +2027,7 @@ test('the global tickspeed bonus switches to an "Nx" multiplier once uniform com
   })
   render(<App />)
 
-  const panel = screen.getByLabelText(/^global clock speed panel$/i)
+  const panel = screen.getByLabelText(/^global accelerate panel$/i)
   expect(panel).toHaveTextContent(/2\.01x/i)
 })
 
@@ -2046,10 +2046,10 @@ const allTiersSmartSeed = () => ({
 // state and aria-label/name strings differ per automation.
 test.each([
   {
-    name: 'Auto Clock Speed',
+    name: 'Auto Accelerate',
     seed: { owned: { tier09: 10 }, autoGlobalTickspeed: true },
-    pauseName: /^Auto Clock Speed automation$/i,
-    resumeName: /^Auto Clock Speed automation$/i,
+    pauseName: /^Auto Accelerate automation$/i,
+    resumeName: /^Auto Accelerate automation$/i,
   },
   {
     name: 'Auto Scale Up',
@@ -2113,12 +2113,12 @@ test('Global Automation lists every step with its Purge milestone while locked',
   render(<App />)
   await openPerksTab(user, /open automation/i)
 
-  for (const [name, milestone] of [['Auto Clock Speed', 8], ['Auto Scale Up', 16], ['Auto Restage', 32], ['Auto Overclock', 64], ['Auto Purge', 128]]) {
+  for (const [name, milestone] of [['Auto Accelerate', 8], ['Auto Scale Up', 16], ['Auto Restage', 32], ['Auto Overclock', 64], ['Auto Purge', 128]]) {
     expect(screen.getByLabelText(`${name} unlocks at Purge ${milestone}`)).toBeInTheDocument()
   }
 })
 
-test('Firmware lists global automations in one order: Auto Clock Speed → Scale Up → Restage → Overclock → Purge', async () => {
+test('Firmware lists global automations in one order: Auto Accelerate → Scale Up → Restage → Overclock → Purge', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
@@ -2130,14 +2130,14 @@ test('Firmware lists global automations in one order: Auto Clock Speed → Scale
     autoXpTickspeed: true,
   })
   render(<App />)
-  const order = ['auto clock speed', 'auto scale up', 'auto restage', 'auto overclock', 'auto purge']
+  const order = ['auto accelerate', 'auto scale up', 'auto restage', 'auto overclock', 'auto purge']
   await openPerksTab(user, /open automation/i)
   const rows = within(screen.getByLabelText('global automation category')).getAllByLabelText(/ row$/)
   expect(rows.map(row => row.getAttribute('aria-label'))).toEqual(order.map(name => `${name} row`))
   // Visible labels drop the redundant "Auto" (the category heading says it); accessible names keep it.
-  expect(rows.map(row => row.textContent)).toEqual(['Clock Speed', 'Scale Up', 'Restage', 'Overclock', 'Purge'].map(n => expect.stringContaining(n)))
+  expect(rows.map(row => row.textContent)).toEqual(['Accelerate', 'Scale Up', 'Restage', 'Overclock', 'Purge'].map(n => expect.stringContaining(n)))
   rows.forEach(row => expect(row).not.toHaveTextContent(/auto/i))
-  expect(screen.getByRole('button', { name: /^Auto Clock Speed automation$/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /^Auto Accelerate automation$/i })).toBeInTheDocument()
 })
 
 test('Auto Purge offers no speed upgrade or interval until it is bought', async () => {
@@ -2446,10 +2446,10 @@ test('a tier autobuyer\'s speed upgrade continues past the 10 ms floor, showing 
 // the interval moves to the cell's title.
 test.each([
   {
-    name: 'a global automation (Auto Clock Speed)',
+    name: 'a global automation (Auto Accelerate)',
     seed: () => ({ autoGlobalTickspeed: true, automationIntervalLevels: { speedUp: getAutomationIntervalMaxLevel('speedUp') } }),
-    cell: /^auto clock speed row$/i,
-    toggle: /^Auto Clock Speed automation$/i,
+    cell: /^auto accelerate row$/i,
+    toggle: /^Auto Accelerate automation$/i,
   },
   {
     name: 'a tier autobuyer',
@@ -2725,7 +2725,7 @@ test('clicking the money balance expands a breakdown of every global production 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: 3x production speed from 100 purges/i)
   expect(breakdown).toHaveTextContent(/scale up: 2 activations; multiplier varies by tier/i)
-  expect(breakdown).toHaveTextContent(/clock speed: \+[\d.]+% faster ticks on every tier(?! \(lv)/i)
+  expect(breakdown).toHaveTextContent(/accelerate: \+[\d.]+% faster ticks on every tier(?! \(lv)/i)
 
   await user.click(moneyDisplay)
 
@@ -2739,7 +2739,7 @@ test('the money balance breakdown reports a not-yet-activated status for each gl
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier02: 1, tier10: 10 },
-    purchaseLevels: { tier01: 2 }, // Clock Speed revealed (tier01 level 1 purchased) but not yet active
+    purchaseLevels: { tier01: 2 }, // Accelerate revealed (tier01 level 1 purchased) but not yet active
     purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
@@ -2748,7 +2748,7 @@ test('the money balance breakdown reports a not-yet-activated status for each gl
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(1 PP on firmware → prestige\)/i)
   expect(breakdown).toHaveTextContent(/scale up: not yet activated \(reach 3 completed levels on kilobytes\)/i)
-  expect(breakdown).toHaveTextContent(/clock speed: not yet active/i)
+  expect(breakdown).toHaveTextContent(/accelerate: not yet active/i)
 })
 
 test('the money balance breakdown omits the Prestige speed bonus line before the first prestige, but still shows Scale Up/Global Tickspeed status once those are revealed', async () => {
@@ -2765,10 +2765,10 @@ test('the money balance breakdown omits the Prestige speed bonus line before the
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).not.toHaveTextContent(/prestige speed bonus/i)
   expect(breakdown).toHaveTextContent(/scale up: not yet activated/i)
-  expect(breakdown).toHaveTextContent(/clock speed: not yet active/i)
+  expect(breakdown).toHaveTextContent(/accelerate: not yet active/i)
 })
 
-test('the money balance breakdown\'s Overclock line reports the boosted per-level Clock Speed rate once active, not a standalone bonus percentage', async () => {
+test('the money balance breakdown\'s Overclock line reports the boosted per-level Accelerate rate once active, not a standalone bonus percentage', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2782,7 +2782,7 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(
-    /overclock: clock speed's per-level rate is now 1\.21% \(was 1%\)/i
+    /overclock: accelerate's per-level rate is now 1\.21% \(was 1%\)/i
   )
 })
 
