@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- Factory tier Buy button: a long cost (e.g. `9.999e91 B`) no longer squeezes the completed-levels count down to `0…`; the cost now shrinks instead.
 - A cost within float error of a clean multiple of 8 Bits (e.g. `8e92 b`) now reads `1e92 B` instead of `9.999e91 B`.
 
 ### Added

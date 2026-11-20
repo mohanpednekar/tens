@@ -678,7 +678,8 @@ const EXPONENTIAL_NOTATION_THRESHOLD = 10_000 // i.e. plain digits up to 9,999
 // 9.999999999999999e82), which must still read 1e83 — not 9.999e82 (and not ICU trunc's malformed
 // 0.099e84). Done by hand rather than Intl's `roundingMode: 'trunc'` for exactly that reason. The
 // "never overstates" guarantee holds to float precision only: an integer within ~1e-12 (relative) of
-// a power of ten, e.g. 999,999,999,999, reads 1e12.
+// a power of ten, e.g. 999,999,999,999, reads 1e12. The Bits→Bytes snap below is wider: a mantissa
+// within EXPONENTIAL_BYTE_MANTISSA_TOLERANCE (1e-9 absolute) of 8 reads as the clean 1eN B.
 const SCIENTIFIC_MANTISSA_DECIMALS = 1000
 const SCIENTIFIC_FLOAT_NUDGE = 1 + 1e-12
 const formatScientific = value => {
