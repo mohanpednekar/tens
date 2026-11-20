@@ -808,7 +808,7 @@ than joining this card, since its own target walks through the tier ladder one t
 "Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
 through. Feature cards sit in two pairs (#1137): `RestageCard` (once revealed) shares the top `SpeedCardsRow` with Clock Speed; below `TierList`, `ScaleUpCard` and `OverclockCard` (once revealed) share one row; a lone card fills its row. Clock Speed shows the live per-level bonus `🏭 +X%/lvl` (`getChallengeClockSpeedStep`: 1% scaled by Overclock, weakened by a challenge's `clockSpeedPower`, 0 under F21; Overclock's disclosure shows the same rate) and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock). `CardTitleGroup` wraps the name/effect onto a second line when a half-width card is too narrow (phone widths around 320px).
 (Earlier iterations tried grouping all three speed-related cards together at the top; this
-was reverted to the current split — Clock Speed alone at top, Restage + Scale Up then Overclock below the tier list —
+was later reverted to a split, and is now (#1137) Clock Speed + Restage above the tier list, Scale Up + Overclock below it —
 per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying
 `engine.js` mechanics. The heading text itself never changes
 (`Tickspeed`, no level/percent readout — shortened first from `Global Tickspeed Multiplier` to
@@ -887,14 +887,13 @@ directly toggleable) on Firmware → 🤖 Automation's Tier Autobuyers category,
 unchanged by the move to Firmware — see `docs/ECONOMY_REFERENCE.md` for costs/effects and
 `docs/DESIGN_HISTORY.md` ("PP Upgrades tab split…") for why the page is split three ways.
 
-**Scale Up and Overclock cards, below the tier list.** Restage (once revealed) + `ScaleUpCard` share
-one `SpeedCardsRow` placed directly below `TierList`, shared with `OverclockCard` once revealed (#1137)
-when revealed — not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why Clock Speed
-stays on top while these sit below the tier list). Restage + Scale Up stay side by side at every width (`flex: 1 1 0`, `min-width: 0`, no wrap); `CardTitleGroup` wraps the effect under the heading (`min-width: 0`, `flex-wrap`) so a paired card at ~320px doesn't overflow into its neighbor. The earlier
+**Scale Up and Overclock cards, below the tier list.** `ScaleUpCard` + `OverclockCard` (once revealed) share
+one `SpeedCardsRow` placed directly below `TierList` (#1137); Restage pairs with `GlobalTickspeedCard` above the
+tier list instead (see "Global Tickspeed card" above). Paired cards stay side by side at every width (`flex: 1 1 0`, `min-width: 0`, no wrap); `CardTitleGroup` wraps the effect under the heading (`min-width: 0`, `flex-wrap`) so a paired card at ~320px doesn't overflow into its neighbor. The earlier
 below-40rem single-column stack was dropped at the maintainer's request (see `docs/DESIGN_HISTORY.md`). `ScaleUpCard` always renders (see below);
-`OverclockCard` is gated and, when revealed, sits in the next row rather than beside Scale Up.
+`OverclockCard` is gated and, when revealed, sits beside Scale Up; a lone card fills its row.
 Both soft-reset cards (and Clock Speed) share `featureCard(accent)`: compact `0.6rem 0.75rem`
-padding, a `0.4rem` internal gap and a 3px left accent stripe; their headings have no default margin, their
+padding, a `0.4rem` internal gap and a 3px top accent edge; their headings have no default margin, their
 buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`. `ScaleUpCard`'s heading
 is a `Disclosure` like the others (collapsed by default): the body states the reset + doubling and
 the completed-level requirement.

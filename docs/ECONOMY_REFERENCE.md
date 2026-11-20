@@ -2029,7 +2029,7 @@ the next cycle. Can fire without a manual click once Auto Scale Up is bought.
 
 `MainPage` surfaces this as a `ScaleUpCard` (cyan accent; Factory view only), rendered directly below
 `TierList` sharing a `SpeedCardsRow` with `OverclockCard` (once revealed; a lone Scale Up fills the row; Restage pairs with Clock Speed above the tiers — #1137) — `GlobalTickspeedCard` renders separately at the top of the Game
-view (alone; Restage sits with Scale Up below the tier list), since it's the one control relevant before the last tier is even reachable (see "Global Tickspeed
+view (paired with Restage once revealed), since it's the one control relevant before the last tier is even reachable (see "Global Tickspeed
 card" in docs/MAINPAGE_REFERENCE.md). Unlike `OverclockCard` (still gated on `overclockEverRevealed`,
 the last tier having ever been unlocked — see docs/MAINPAGE_REFERENCE.md), `ScaleUpCard` is always
 shown — relevant from the very first cycle, well before the last tier even exists. The button
