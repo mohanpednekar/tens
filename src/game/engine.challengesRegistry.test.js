@@ -12,7 +12,7 @@ const everythingUnlocked = () => {
   return {
     ...base,
     autoGlobalTickspeed: true, autoScaleUp: true, autoXpTickspeed: true, autoOverclock: true, autoPurge: 1,
-    purge: { ...base.purge, points: 1e9, count: 4 },
+    purge: { ...base.purge, points: 1e9, count: 1e6 },
     autobuyers: { ...base.autobuyers, ...Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, base.autobuyers?.[t.id] ?? { enabled: true }])) },
     tierTickspeedAutobuyer: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, true])),
     resources: { ...base.resources, [MONEY_ID]: 1e12 },
