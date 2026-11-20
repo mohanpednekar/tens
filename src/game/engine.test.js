@@ -5436,6 +5436,11 @@ describe('formatAmount', () => {
 // ─── formatCurrency ──────────────────────────────────────────────────────────
 
 describe('formatCurrency', () => {
+  it('snaps a near-8e92 bit amount to a clean 1e92 B instead of truncating to 9.999e91 B', () => {
+    expect(formatCurrency(8e92 * (1 - 5e-11))).toBe('1e92 B')
+    expect(formatCurrency(8e92)).toBe('1e92 B')
+  })
+
   it('formats zero', () => {
     expect(formatCurrency(0)).toBe('0 b')
   })
