@@ -12466,7 +12466,7 @@ describe('automation interval chains', () => {
     expect(after.tierTickspeedIntervalLevels.tier01).toBe(1)
   })
 
-  it('Auto Overaccelerate chain starts at 32 PP once Auto Overclock is unlocked, and the pause toggle works', () => {
+  it('Auto Overclock speed chain starts at 32 PP once Auto Overclock is unlocked, and the pause toggle works', () => {
     const s = base()
     expect(setAutoOverclockEnabled(false)(s)).toBe(s)
     const locked = withPoints(base(), 100)

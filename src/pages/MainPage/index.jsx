@@ -155,24 +155,35 @@ const TierLine = styled(StatCard)`
   }
 `
 
-// Feature cards share one shape: neutral border, a 3px left accent edge and the tier rows' padding/button width (so edges line up) and a 1rem
-// heading, laid out as one short full-width row (title/effect left, action button right).
+// Feature cards share one shape: neutral border, a 3px left accent edge, a 1rem heading and one short
+// full-width row (title/effect left, action button right). Padding, column gap and the button track
+// mirror TierLine at every breakpoint (--feature-button-width = TierLine's Buy column), so edges line
+// up with the tier rows. Opening a card's disclosure drops the button under the text so the body
+// gets the full card width.
 const featureCard = accent => css`
+  --feature-button-width: 9rem;
   align-items: center;
   border-left: 3px solid ${accent};
-  flex-direction: row;
-  gap: ${props => props.theme.space.sm};
-  justify-content: space-between;
+  column-gap: ${props => props.theme.space.sm};
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--feature-button-width);
   padding: 0.3rem ${props => props.theme.space.xs} 0.3rem ${props => props.theme.space.md};
+  row-gap: 0.4rem;
 
   > details {
-    flex: 1 1 0;
     min-width: 0;
   }
 
   > button {
-    flex: 0 0 9rem;
-    width: 9rem;
+    width: var(--feature-button-width);
+  }
+
+  &:has(> details[open]) {
+    grid-template-columns: minmax(0, 1fr);
+
+    > button {
+      justify-self: end;
+    }
   }
 
   h2 {
@@ -180,6 +191,21 @@ const featureCard = accent => css`
     font-size: 1rem;
     line-height: 1.2;
     margin: 0;
+  }
+
+  @media (max-width: 40rem) {
+    --feature-button-width: 7.9rem;
+    column-gap: 6px;
+    padding: 0.3rem 3px 0.3rem ${props => props.theme.space.sm};
+  }
+
+  @media (max-width: 24.5rem) {
+    --feature-button-width: 7.3rem;
+  }
+
+  @media (max-width: 21rem) {
+    --feature-button-width: 6.9rem;
+    column-gap: 4px;
   }
 `
 
