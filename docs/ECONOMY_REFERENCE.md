@@ -1,5 +1,29 @@
 # Economy model reference
 
+**Section index** (grep `^#` for the live headings; read a section, never the whole file):
+- Pool-local reset loop — per-pool flush, Data Lake Booster auto-buy
+- The (configurable) purchase block size and tier levels — cost/milestone levels, growing block size
+- Buy max mode — full-level Factory buys, single-level ladder repeat
+- Adding a new tier — one `TIER_DEFINITIONS` entry
+- Byte Foundry — tap/Compile, pool Capacity/Bandwidth, Capacity/Bitrate upgrades, auto-convert, Disks, Data Lakes, Power, Compute Boost, forced priority order
+- Tier production tickspeed — per-tier cadence, multipliers floored
+- Offline progress — sleep-mode simulation, 50% after 10 minutes
+- PP Compute (Flops) — KFlops→QFlops, PP-funded Factory boosts
+- Prestige Points, autobuyer unlock, and the tickspeed multiplier — PP award, Overflow, automation unlock
+- Daily challenges (epic #1062) — three seeded Factory-only runs per UTC date
+- Challenge mode (epic #1037, engine slice #1038) — F1–F25 Factory challenges, levers, gates
+- Achievements (epic #1046, basic slice) — registry, Reclamation bonuses, Spent QB
+- Reboot and Kernels (#407) — Era ascension, Kernels, autobuyer milestones, Clock Speed
+- Prestige and the Googol freeze — `PURGE_THRESHOLD` freeze, Overflow exception
+- Scale Up — cheaper soft-reset walking the tier ladder
+- Overclock — last-tier completed-level soft-reset
+- Prestige info is hidden until first prestige — first-run PP UI hiding
+- Reset — full save wipe vs Reformat Byte Foundry
+- Game state shape — persisted fields
+- Key engine functions (`src/game/engine.js`) — signature/purpose table
+- Constants (`src/game/layers.js`) — `layers.js` constants
+- Upgrade Capacity / Upgrade Speed — split Data Stream upgrades, Reformat auto-provision
+
 ## Pool-local reset loop
 
 At a pool's terminal state (9/9/9 disks, full lake, and next Booster cost above lake capacity), the
@@ -180,6 +204,9 @@ Nothing here ever fully "freezes" — there is no `completed`-style flag, and no
 Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
 
 **The loop:**
+
+#### Tap, Compile and Data Stream
+
 1. **Tap** (`tapIntroBit`) — behavior depends on whether Storage itself has been revealed yet
    (`isStorageUnlocked(state)`, i.e. Buffer/pool Memory Capacity has reached 1 KiB — NOT
    `getVisibleStoragePoolCount(state) >= 1`, which pool 1's own always-live special case would
@@ -214,6 +241,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    seconds (derived from Capacity via `getDataStreamSpeedBytesPerSecond` — see point 5 below), so at
    the starting values this is exactly 1 bit/sec. Bits are capped at `capacity`; any amount a
    capacity cap actually clips is not banked forward, same rule tapping follows.
+#### Pool Memory Capacity and Bandwidth
+
 4. **Pool Memory Capacity.** **Standing rule: non-binary (SI-clean or decade-power) transforms are
    for storage-pool-scoped values only — `intro.capacity` itself keeps doubling plainly in binary**, since it's also
    the Data Stream tile's own balance/capacity figure. Two earlier attempts got this wrong by sharing
@@ -361,6 +390,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      the bonus cap is simply a no-op). Expand/collapse is the "<symbol> Pool" title alone
      (`PoolTitleToggle`, a real `<button>` with `aria-expanded`; the tap target is a separate stretched
      `PoolTapButton` behind the readouts, so the two never nest and the tap can't block the title).
+#### Upgrade Data Stream (Capacity / Bitrate)
+
 5. **Upgrade Data Stream** (`queueIntroSpeedUpgrade` for Bitrate, `queueIntroCapacityUpgrade` for Capacity; the single consolidated upgrade button —
    replacing the former paired "Speed ×2"/Invest ladder and "Capacity ×2" actions, now removed).
    **Capacity is the only purchased progression variable**: the upgrade costs exactly the current
@@ -377,6 +408,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `docs/DESIGN_HISTORY.md`. `isMemoryCapacityUpgradeAvailable(state)` is simply
    `isPoolCapacityUpgradeAvailable(state)` — a full Buffer, the Combine prerequisite met, and not
    already at cap — with no dependency on any other action's own availability.
+#### Transfer-block UI removal and auto-convert
+
 6. **`ByteFoundryPage` no longer renders any manual transfer-block UI** (removed — see
    `docs/DESIGN_HISTORY.md`): the always-on auto-convert below (`tickIntroAutoInvest`) is now the
    sole path from Data Stream bits to `tier01` units, with no click required and no per-cycle cap.
@@ -432,6 +465,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    untouched, Memory included. A full Reset also restarts the intro from true scratch (via
    `createInitialGameState()`'s fresh defaults for every field, generator and the `mainGameUnlocked`
    latch included — the ONE place `mainGameUnlocked` still genuinely goes back to `false`).
+#### Disks
+
 8. **Disks** (`disks: { [capacityBits]: currentlyFullCount }`, `disksBuiltTotal:
    { [capacityBits]: cumulativeBuiltCount }`, `diskCache: { [capacityBits]: bitsStaged }`,
    `diskProvisionPasses: { [capacityBits]: passesCollected }`,
@@ -754,6 +789,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    is no `diskAutoRedeemedSizes` any more (the old auto-redeem throttle was removed along with the
    manual/autobuyer-gated funding model it belonged to — see `docs/DESIGN_HISTORY.md`), so no
    exception to carve out here.
+
+#### Compute Cores / Nodes (Power)
+
 9. **Compute Cores/Nodes** (`intro.computeCores`/`intro.computeCoresEverEarned`/`intro.computeNodes`,
    all PERMANENT, carried over every real Prestige exactly like the Byte generator/Disks above) —
    earlier versions of this mechanic gated conversion on every Disk array size being built and full
@@ -766,6 +804,10 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    buffer once the buffer is completely full), entirely decoupled from Storage Disks, and
    `buyBooster(tierIndex)` spends a lake's own banked units instantly — no transfer, no
    waiting.
+
+#### Data Lakes
+
+#### Hierarchical lake disks
 
    **Hierarchical lake disks (#1087) — current mechanic; where the paragraphs below describe slot-by-slot
    lake-disk filling (`fillDataLakeDisks`, `getDataLakeCurrentFillSubSize`, `DATA_LAKE_OVERFLOW_SEGMENT_LIMIT`,
@@ -955,6 +997,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    refunding a token back onto it). `isBoosterEntityAtCap` is the UI-facing mirror of this gate,
    letting `DataLakePanel`'s cost control say "entity full" instead of "not enough banked" when
    that's the actual reason.
+
+#### One-shot auto-convert
 
    **One-shot auto-convert** (`intro.dataLakes[tier].autoConvertActive`,
    `startDataLakeAutoConvert(tierIndex)`/`isDataLakeAutoConvertStartAvailable`/
@@ -1154,6 +1198,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    convert into can never re-hide or prevent the merge section once it's genuinely been earned.
    Saves must already include `intro.computeCoresEverEarned` in the current schema — `mergeState`
    does not backfill it from live balances on load.
+#### Compute Boost
+
 10. **Compute Boost** (`intro.computeBoosts = { [boostType]: { queue: [tierIndex, …], remainingSeconds } }`,
    run-scoped — reset to `{}` on every real Prestige, unlike the Cells/Batteries/… spent from; Scale Up/Overclock
    carry it). Each preset (`COMPUTE_BOOST_PRESETS`) is its own multiplier **lane**. Lanes of different
@@ -1189,6 +1235,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    Tap/Speed/Storage stay just as interactive as on the mandatory gate, and the always-on
    auto-convert keeps working too — there's no per-cycle cap to exhaust (see
    docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" section for the render-level detail).
+
+#### Forced priority order
 
 **Forced priority order.** The recurring "upgrade" actions above — Disk Fill (step 8) >
 Provision Disk (step 8) > Compute (step 10) — are ranked in a fixed

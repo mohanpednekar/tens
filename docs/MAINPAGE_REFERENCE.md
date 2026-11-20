@@ -1,5 +1,7 @@
 # MainPage reference
 
+**Index:** this file is one long field-by-field reference for the tier-row grid, sticky HUD, Factory view and Firmware page, followed by `## App.jsx routing and the Foundry gate`. Grep for a field name (or `^#`) and read only that part.
+
 Referenced from `CLAUDE.md`'s Architecture section. Read this before touching
 `src/pages/MainPage/index.jsx` or its styled sub-components/layout — it's the full field-by-field
 reference for the compact tier-row grid, the sticky HUD balances, the Factory view, the Firmware page
