@@ -2569,17 +2569,12 @@ describe('isComputeBoostTurnAvailable / isComputeUpgradeTurnAvailable', () => {
   })
 
 
-  it('is false while a Disk Fill (higher priority) is currently available', () => {
-    const state = withIntro(createInitialGameState(), { ...computeReady, disks: { [FIRST_DISK_SIZE]: 1 } })
-    expect(isComputeBoostTurnAvailable(state, 'burst', 1)).toBe(false)
-    expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
-  })
-
-  it('is false while Provision Disk (higher priority) is currently available', () => {
-    // A running Provision Disk build (armed) outranks Compute.
-    const state = withIntro(createInitialGameState(), { ...computeReady, capacity: 8192, diskBuildQueued: true })
-    expect(isComputeBoostTurnAvailable(state, 'burst', 1)).toBe(false)
-    expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
+  it('stays true while Disk Fill or an armed Provision Disk is pending — boosts are not arbitrated against them', () => {
+    const fill = withIntro(createInitialGameState(), { ...computeReady, disks: { [FIRST_DISK_SIZE]: 1 } })
+    expect(isComputeBoostTurnAvailable(fill, 'burst', 1)).toBe(true)
+    const prov = withIntro(createInitialGameState(), { ...computeReady, capacity: 8192, diskBuildQueued: true })
+    expect(isComputeBoostTurnAvailable(prov, 'burst', 1)).toBe(true)
+    expect(isComputeUpgradeTurnAvailable(prov)).toBe(true)
   })
 })
 

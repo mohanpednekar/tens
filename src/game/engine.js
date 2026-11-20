@@ -7123,10 +7123,10 @@ export const canActivateComputeBoost = (state, boostType, tierIndex) => {
   return (state.intro[field] ?? 0) >= 1
 }
 
-// Forced-priority turn (Disk Fill > Provision Disk > Compute Boost).
+// Boosts are no longer arbitrated against Disk Fill / Provision Disk: they live on their own Power screen,
+// where a Foundry-side blocker is invisible, so a held token always activates.
 export const isComputeBoostTurnAvailable = (state, boostType, tierIndex) =>
-  canActivateComputeBoost(state, boostType, tierIndex) &&
-  !isDiskFillAvailable(state) && !isProvisionDiskInProgress(state)
+  canActivateComputeBoost(state, boostType, tierIndex)
 
 // Stack = queue one more boost of the lane's running head tier.
 export const canStackComputeBoost = (state, boostType) => {
@@ -7135,8 +7135,7 @@ export const canStackComputeBoost = (state, boostType) => {
 }
 
 export const isStackComputeBoostTurnAvailable = (state, boostType) =>
-  canStackComputeBoost(state, boostType) &&
-  !isDiskFillAvailable(state) && !isProvisionDiskInProgress(state)
+  canStackComputeBoost(state, boostType)
 
 // Whether any Compute Boost action currently has its turn.
 export const isComputeUpgradeTurnAvailable = state =>
