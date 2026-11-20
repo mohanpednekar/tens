@@ -363,11 +363,9 @@ const InlineMeta = styled.span`
 // Switch and only drops below when it genuinely doesn't fit.
 const InlineAction = styled.span`
   flex-shrink: 0;
-  margin-left: auto;
 
   /* Wide rows: a fixed-width action column keeps the Switch at the same x on every row. */
   ${props => !props.$narrow && `
-    margin-left: 0;
     min-width: 5rem;
 
     & > button {
@@ -608,8 +606,8 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction =
           {label}
         </RowLabel>
         {owned && subText && <InlineMeta $wide={!narrow}>{subText}</InlineMeta>}
-        {/* Wide (global) rows: action (challenge / upgrade) sits left of the permanent Switch, which stays flush right. */}
-        {inlineAction && !narrow && action && <InlineAction $narrow={narrow}>{action}</InlineAction>}
+        {/* Action (challenge / upgrade) sits left of the permanent Switch, which stays flush right. */}
+        {inlineAction && action && <InlineAction $narrow={narrow}>{action}</InlineAction>}
         {owned && onToggle && (
           <Switch
             $on={enabled}
@@ -621,7 +619,6 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction =
         )}
         {owned && !onToggle && ownedBadge}
         {!owned && lockedBadge}
-        {inlineAction && narrow && action && <InlineAction $narrow={narrow}>{action}</InlineAction>}
       </CellHead>
       {!inlineAction && action && <CellAction $narrow={narrow}>{action}</CellAction>}
     </Cell>
