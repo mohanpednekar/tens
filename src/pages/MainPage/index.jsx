@@ -155,14 +155,25 @@ const TierLine = styled(StatCard)`
   }
 `
 
-// Feature cards share one shape: neutral border, a 3px top accent edge (they sit in side-by-side pairs),
-// compact padding and a 1rem heading — previously each card had its own
-// full-border hue and Clock Speed had a much larger heading/padding than its siblings.
+// Feature cards share one shape: neutral border, a 3px top accent edge, compact padding and a 1rem
+// heading, laid out as one short full-width row (title/effect left, action button right).
 const featureCard = accent => css`
+  align-items: center;
   border-top: 3px solid ${accent};
-  gap: 0.4rem;
+  flex-direction: row;
+  gap: 0.6rem;
   justify-content: space-between;
-  padding: 0.6rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+
+  > details {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  > button {
+    flex: 0 0 auto;
+    min-width: 7.5rem;
+  }
 
   h2 {
     font-family: ${props => props.theme.font.display};
@@ -237,14 +248,14 @@ const OverclockButton = styled(Button)`
   }
 `
 
-// Feature cards sit in two side-by-side pairs (#1137): Clock Speed + Restage above the tier list, Scale
-// Up + Overclock below it. A lone card in a pair takes the full width (flex: 1 1 0).
+// Feature cards are short full-width rows stacked in two groups: Clock Speed + Restage above the tier
+// list, Scale Up + Overclock below it (name/effect left, action button right).
 const SpeedCardsRow = styled.div`
   display: flex;
+  flex-direction: column;
   gap: 0.4rem;
 
   > * {
-    flex: 1 1 0;
     min-width: 0;
   }
 `
