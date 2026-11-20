@@ -7,14 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- A cost within float error of a clean multiple of 8 Bits (e.g. `8e92 b`) now reads `1e92 B` instead of `9.999e91 B`.
+
 ### Added
 
-- **Quettabytes level credit** — each completed Quettabytes purchase level now credits 1 Quettabyte every 10 seconds, regardless of the current balance.
+- **Spent QB achievement** — spend all your Quettabytes after earning some in the same run to unlock it; the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, Quettabytes are credited regardless of the current balance, 1 at a time, more often with more completed levels (logarithmically): every 10 s at 1 level, every 5 s at 10, every 3.33 s at 100.
+
+### Added
+
+- **Cache Warm** (20 PP, Firmware → ✦ Prestige): every Purge, Scale Up, Overclock, challenge exit and Reboot starts with level 1 already complete for the tier of your highest Storage pool being filled (e.g. Terabytes once the TB pool is unlocked, even with no disks there yet and the GB pool unfinished).
 
 ### Changed
 
-- **Quettabytes tickspeed upgrades spend their full power-of-ten cost** again (previously only 10% of it).
+- **Challenges are compact**: the Factory tab is a 5×5 grid of F1–F25 tiles (done / ready / locked at a glance, with a legend); tap a tile for its rule and Start in one panel below. The Daily tab is one row per format (objective, status, Start / Resume); tap the format for its conditions and Restart / Forfeit.
+- **Firmware automation is compact**: each tier autobuyer pair fits on one line under ⚙ Tickspeed / 🤖 Buy column headers, with its challenge or upgrade inline. Once every tier is fully upgraded the list becomes a 5×2 grid of pause toggles, and Compute autobuyers are a 5×2 grid too (🔒 R<n> until their Reboot).
+- **Factory feature cards sit in pairs**: Clock Speed and Restage side by side above the tiers, Scale Up and Overclock side by side below them (Restage moved up from below the tiers).
+- **Settings is a grouped list**: Game / Data / Display / Danger zone, each entry one line with its key value (e.g. your Kernels, the active save slot); tap an entry to open it. Theme is chosen inline.
+- **Releases is renamed back to Milestones** and shows a timeline of milestones without version numbers, with Reboots and Kernels on one line.
+- **Foundry disks are compact**: an open pool's disk and cache rows each state their size once (e.g. `1 Kb` cache, `1 KB` disks) instead of on every circle, cache blocks are thin bars, full disks and cache blocks are tinted, and a lake's buffer is a thin full-width bar. Pool headers, the Data Stream and Provision Disk are unchanged.
+- **Power is a merge chain**: each tier is one compact node (held count as dots, its Charger as a 🔌 n/8 badge on the same line), and the 8→1 Charge up / ⚡ Charge button sits on a small pill on the link to the next tier. Only the selected tier shows its Boost presets.
+- **A Power tier's Charger unlocks from its first 10 charges**: until a step is automated, each 8→1 charge goes into its Charger (🔓 n/10) instead of making the next tier, and the 10th unlocks it — nothing is sacrificed any more. Saves already holding 10 of the next tier keep the old instant unlock.
+- **Compute (Flops) is compact**: each tier is one row like the Factory tiers (symbol, owned, boosted tier ×, PP Buy). Tap the symbol for its full name and effect.
+- **Firmware → ✦ Prestige rows are terse**: each upgrade shows a one-line summary (usually its value now → after buying); tap an upgrade's name for its description.
+- **Buy max is now a 2 PP Firmware upgrade** (Firmware → ✦ Prestige → Purchasing) instead of unlocking free at the first Purge. Existing saves must buy it too.
+- **No more free unlocks on load**: a save that never bought the Speed bonus no longer gets it for having 10+ Purges, and 100+ Purges no longer unlock Overflow mode by themselves (it needs Auto Purge at 1 s or faster).
+- **Sleep mode is capped at 4 h of time away by default** (was 24 h). New Firmware → ✦ Prestige upgrade adds 4 h per level for 4, 40, 400, 4,000 and 40,000 PP, back up to 24 h.
+- **Exponential notation from 10,000**: amounts switch to the `1.23e4` form after 9,999 (was after 999,999), everywhere in the game. The shown figure is cut off rather than rounded up, so 19,999 reads `1.999e4`, never `2e4`.
+- **Compact Factory tier rows**: each tier now fits on one line (symbol, owned amount, tickspeed and Buy buttons), about 45% shorter. The Buy button shows the tier's completed levels, with Buy max's `+n` right after it. Production moved into the row's details (tap the tier symbol).
+- **Faster automation unlocks and cheaper PP upgrades** — the nth tier's autobuyer now unlocks at Purge n (was 2n) and its tickspeed autobuyer at Purge n + 10 (was 20 + 2n); global automations are unchanged. Each challenge now unlocks at 5× the Purges its automation needed (e.g. F1 at Purge 5, F21 at 40); until then Firmware shows a locked 🔒 Fn in place of the 🏁 start button). Tier autobuyer speed upgrades start at 10 PP (was 100), and Compression costs 10, 100, 1,000, … PP (was 100, 10,000, …).
+- **Achievements page is compact** — groups start collapsed and each achievement shows only its name and status; tap a group or achievement name to expand its trigger and bonus text.
+- **Automation resets now run before spends, biggest first** — within a tick, Auto-Prestige (Purge) > Auto Overclock > Auto Scale Up > Auto Restage, then the tickspeed autobuyers. A same-tick reset can no longer be pre-empted by a spend (or by a smaller reset), e.g. Auto Scale Up no longer lets the Quettabytes autobuyer empty QB first. Daily challenge definitions regenerate (generator version 5), so an in-progress daily run from before the update is dropped.
+- **Screen titles yield to top banners** — Factory hides its title (kept for screen readers) while a challenge banner, purge-available banner, daily-run header, or boost timer sits at the top; Power skips its title while a boost timer is shown.
 
+- **Daily challenges are real challenges now** — each day's three runs get seeded modified conditions (e.g. Production ×2, Costs ×5, Clock Speed ^1.5), a seeded starting balance (1,000 B up to 5e9 B), a seeded head start (Scale Ups / Overclock already earned) and a seeded objective — reach a balance, own an amount of one tier, complete a number of levels of one tier, reach a Clock Speed level, or Overclock at a given Quettabytes level — whose target is calculated from a simulated ideal run, calibrated so that ideal play wins in the second half of the time limit (5–9 min, 30–50 min, 5–8 h). Runs now have automations, by format: the 10-minute run a seeded mix (some are always missing, so it needs active play), the 1-hour run automatic buying with manual Scale Up / Overclock, the 10-hour run everything, with a switch for each automation — Auto Scale Up, Restage and Overclock start paused, and when to release or hold them is the run's key decision. Every challenge also shows a slightly lower attempt mark: reaching it counts the run as attempted even without a win, and it can never be reached by starting a run and leaving it. Challenges are the same for every player, whatever their progress. Runs advance in steps of 1 s / 5 s / 2 min. A daily run in progress from the previous version is dropped.
+- **Daily runs use the Factory screen** — a daily run is now played on the same Factory page as the main game (tier rows, Clock Speed, per-tier tickspeed, Scale Up, Overclock), with only its progress tracked separately.
+- **Quettabytes tickspeed upgrades spend their full power-of-ten cost** again (previously only 10% of it).
 - **F6 Address Space now matches its tier** — it targeted Exabytes (the F6 slot) but its rule capped the ladder at Ronnabytes. Exabytes is now the top tier (six tiers; 64-bit address-space theme) and the run's Scale Up is raised to the 3rd power and Clock Speed (which carries Overclock's bonus) to the 2nd to offset the smaller ladder (simulated ≈1.34× a normal run, in the F1–F10 band).
 - **Shorter UI copy** — trimmed descriptive text and challenge rule wording on the Challenges start dialog, Daily tab (removed per-format style lines and footnotes, compact credits line) and the Purge Points tutorial.
 - **Exiting a challenge is harder to hit by accident** — the Factory banner's Exit button is now hidden until you tap the challenge title; Challenges → Factory also shows a confirm-guarded Exit on the active challenge's row.

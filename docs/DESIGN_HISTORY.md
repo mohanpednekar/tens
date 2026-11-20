@@ -9435,6 +9435,164 @@ State is now `intro.computeBoosts` lanes; a running head is never preempted by a
 
 Purge / challenge enter-exit used to reset `intro.bits` to 0 each cycle ("a new cycle starts the screen's balance from 0"). Dropped by maintainer request: Prestige never empties the Data Stream. Reboot (`buildEraIntroReset`) still zeroes it. Side effect: a challenge run starts with the carried balance (auto-convert may turn it into free tier01 units); accepted. The simulate-run-times skill was not re-run.
 
+## Daily challenges: seeded conditions, head start, calculated targets (2026-11)
+
+The basic slice drew only a start and a target exponent from fixed per-format ranges, tuned by hand against a naive bot — every day played the same and the 10 h target was reached by an attentive player in about half the time on some days and trivially on others. Generator v2 (`DAILY_GENERATOR_VERSION = 2`) derives the target from a reference-bot simulation instead (see `docs/ECONOMY_REFERENCE.md` "Daily challenges"). Choices made along the way:
+
+- **Band.** Maintainer rule: the ideal bot takes at least half the time and at most the epic's ceilings (9 min / 50 min / 8 h). Implemented as `(limit / 2, ceiling]` — the tighter reading, which also satisfies "half of the ceiling".
+- **Head start = state after the warm-up's last soft reset, not the warm-up's end state.** Starting from the end state was tried first: the tier cascade keeps producing on its own, so in the short formats an idle run earned nearly as much as the bot (most candidates were rejected as "winnable without acting", ~12% fell back). Starting right after a Scale Up / Overclock keeps the earned multipliers but leaves nothing producing, so an idle run earns exactly nothing and the first minutes are purchase-dense.
+- **Fixed step per format (1 / 5 / 30 s), live and simulated.** `tickGame` integrates per call, so a simulation at a coarser step than live play would not be exact. Quantising live play to the same step makes the calibration exact (a test replays the bot through the public actions and gets the identical time) and keeps a full generation at ~50 ms, cheap enough to run on the device.
+- **On-device generation stays** until #1064's published definitions; `Math.pow`/`log10` may differ in the last bit between JS engines, so two devices could in principle disagree on a target — acceptable while results are local only.
+- **Runs render `MainPage`, not a bespoke view.** The first version had its own small Buy / Clock / Scale Up / Overclock list; the maintainer asked for the identical Factory UI with only progress tracked separately. `MainPage` already takes its whole world as a `game` prop, so `RunView` passes the run's game state and actions routed to `playDailyRun` — no fork of the page.
+- **Objectives are drawn from what the bot actually advanced.** Maintainer ideas: "earn orders of magnitude of something", "buy n levels of something", "Overclock for n QB". Rather than drawing an objective first and rejecting the candidate when the bot never moves it (most level objectives are flat inside any given window), every metric is tracked during the one bot simulation and the objective is drawn by weight from the viable ones — no extra simulations, no extra retries. Overclock objectives are rare (about 1 in 120) because an Overclock seldom lands inside the band.
+- **Automations per format, and why most 10-hour days are leave-it-running.** Maintainer: the 10-minute run needs active play with some automations missing, the 1-hour run is standard (answered: buying automated), the 10-hour run keeps every automation and should need a visit only every 3–4 hours for key decisions (answered: a switch for every automation). The first 10-hour bot searched greedily at each check-in (run / hold / claim for Overclock, then Scale Up, each simulated to the target step): 2.3 s per definition and a third of the days fell back, because the rule "an untouched run must not win" gives the untouched run the full 10 hours against the bot's 8 — and with every automation on, the game already plays itself close to optimally. Replaced by six fixed whole-run hold/release plans simulated once each (80 ms per definition), and days where no plan beats the untouched run are accepted as leave-it-running days rather than rejected. About 1 day in 15 currently needs a hold decision; raising that share needs rules that make an automation harmful (or reset automations that start paused) — not done here.
+- **Attempt mark, and the 10-hour run's paused resets.** Maintainer rules: the bot's time must be inside 5–9 min / 30–50 min / 5–8 h or the challenge is discarded and regenerated; challenges are independent of the player's progress; every challenge has a slightly lower target that counts as "actually attempted", unreachable by starting and leaving. The last rule ended the leave-it-running days: an untouched 10-hour run with every automation on reached the target itself. Its reset automations (Scale Up, Restage, Overclock) therefore start paused — all automations are still there, but an untouched run never resets and falls far short, and releasing/holding them at a check-in is the decision. The 50%-of-progress completion floor was replaced by the explicit per-objective `attemptMark`.
+- **"Earn" became "Reach a balance".** The first objective counted Bytes *earned* as each step's balance gain. Once runs had autobuyers that was wrong: they spend inside the engine's tick, so a step where they spent more than it produced counted nothing, and the total depended on the step size. Production is not observable from outside `tickGame`, so the objective is now the peak balance — the number on screen — measured before a reset's re-grant and starting from the starting balance, so granted Bytes never count as progress.
+
+- **Peaks sampled inside the tick.** Two review bots independently found that a level or amount reached by an autobuyer and wiped by Auto Scale Up / Overclock in the same step was never seen, since metrics were read only from the state a step returns (and the 10-hour run steps 120 s at a time). The engine tick now carries a run's `runPeaks` and raises them from the state just before the reset automations. Attempt marks for owned units are whole numbers for the same reason they found a "0.1 Megabytes" mark unreachable.
+
 ## Last-tier tickspeed spend reverted; QB level credit (2026-11)
 
 The last tier's resource-funded tickspeed upgrade spent only 10% of its cost (`LAST_TIER_TICKSPEED_SPEND_FRACTION`); it now spends the full power-of-ten cost like every tier (requirement `cost + 1`). To offset, `tickGame` credits the last tier 1 unit per completed purchase level every 10 s (`lastTierLevelCreditAccumulator`), regardless of balance. Side effect: F20 Burn Rate ("spends its full requirement") is now a no-op rule and needs a redesign.
+
+## Spent QB gates last-tier credit; last tier may spend to 0 (2026-11)
+
+The unconditional per-level credit was too generous (it started as soon as QB had a completed level) and the `cost + 1` tickspeed reserve made "spend all your Quettabytes" unreachable. Credit is now gated on the Spent QB achievement (`quettaSpent` / `lastTierSpent`: run-scoped `lastTierEarnedThisRun` plus a 0 QB balance). Last-tier tickspeed requirement is `cost` so that spend is possible. The credit itself is exactly 1 unit per `10 / (1 + log10 completed levels)` s (floor 10 ms), not 1 per level per 10 s, with an elapsed-seconds timer (`lastTierLevelCreditTimer`) instead of a fractional-unit accumulator. Reaching the stall IS the condition, so `buyTickspeedMultiplier` unlocks it at the spend (marks the run + `detectAchievements`), independent of any later tick or same-tick reset. A broader latch (flagging QB on every buy) was tried and reverted as unnecessary: only a tickspeed spend can empty QB, and that spend proves QB was held.
+
+## Single-line tier rows; exponential notation from 10,000 (2026-11)
+
+Factory tier rows went from two lines (symbol · owned · +production, then two half-width buttons) to one
+line (symbol · owned, fixed-width ⚙ / 🛒 tracks), roughly halving their height; production moved into the
+details disclosure. With the owned count and costs in narrow fixed columns, `EXPONENTIAL_NOTATION_THRESHOLD`
+dropped from 1,000,000 to 10,000 (maintainer request; 1,000 was tried briefly and backed out as too
+aggressive for early-game numbers) so a plain number is at most four digits (`9,999`) before switching to
+`1e4`. That pulled early-game balances and costs into exponential form,
+where Intl's default rounding made 19,999 b read `2e4 b` beside a 2e4 b cost it couldn't afford, so
+`formatScientific` truncates the mantissa to 3 decimals (never overstates, like the floored plain path).
+Intl's `roundingMode: 'trunc'` was tried first and rejected: computed powers of ten such as
+`getTierCost`'s `10 ** k` land one float step low (`9.999999999999999e82`), which trunc printed as
+`9.999e82` and ICU sometimes as a malformed `0.099e84`. The hand-rolled version nudges by `1e-12`
+(relative) before truncating, so float error reads `1e83` while 19,999 still reads `1.999e4`. Below 24.5rem the symbol
+stacks above the owned count so long exponents (`6.167e115`) still fit at 320px.
+
+## Faster autobuyer unlocks, 5× challenge unlocks, cheaper PP upgrades (2026-11)
+
+Maintainer request. Superseded: tier autobuyer n at Purge 2n (2 … 20) → n; tier tickspeed autobuyer at 20 + 2n (22 … 40) → n + 10; challenges unlocked with their automation → at 5× its unlock Purge (`CHALLENGE_UNLOCK_PURGE_MULTIPLIER`); tier autobuyer speed chain base 100 → 10 PP (tier tickspeed chain stays 100); Compression `100^(level+1)` → `10^(level+1)`. Because Reboot zeroes `purge.count`, a completed or active challenge bypasses the count check rather than adding a new latch field. Firmware shows a disabled `🔒 Fn` (no codename) where the 🏁 start control would stand while the automation is owned but the challenge is still locked.
+
+### No grandfathering of unpurchased or unearned unlocks (2026-11-18, #1130)
+
+Maintainer rule: an existing save keeps only what it actually bought with PP, or what a Purge-count
+milestone it actually reached grants. #1130 first grandfathered the newly paid Buy max (2 PP) for saves that had it
+free; that was dropped before merge, along with the two older load-time grants in `storage.js`'s `mergeState`:
+the ≥10-Purge free speed bonus (`speedBonusGrandfathered`, now an inert field) and the ≥100-Purge Overflow mode
+latch (`PURGE_UNBOUNDED_MIN_COUNT`, removed — Overflow mode now latches only from the Auto Purge interval). A flag
+already stored as `true` by an earlier load cannot be told apart from a purchase, so those stay.
+
+### Cache Warm targets the highest pool being filled (2026-11-19)
+
+#1131 first targeted the newest pool unlocked by the disk chain (`getUnlockedStoragePoolCount`). In play, a later
+pool can hold disks (filling) while an earlier pool is still incomplete — e.g. a TB pool with 1 TB disks while the
+GB pool's 100 GB disk is still queued — and that chain pointed at Gigabytes. The maintainer's rule is the highest pool
+being filled — a pool fills (staging buffer) once Capacity makes it live, even before it has any disks — so
+`getCacheWarmTier` now uses `getVisibleStoragePoolCount` (Capacity-based pool liveness). A short-lived intermediate
+"highest pool holding a disk" rule was dropped before merge because the TB pool in question had only a read cache.
+Flushes and disk progress no longer move the target at all.
+
+
+### Compact layouts per screen — three reversed decisions (2026-11-19, epic #1135)
+
+The maintainer approved per-screen compact layouts after three rounds of mockups (one shared row style was
+rejected: "use the ideas, not the same style everywhere"). Three earlier decisions were deliberately reversed:
+
+- **Factory feature-card pairs are back** (#1137): Clock Speed + Restage above the tier list, Scale Up + Overclock
+  below it — the maintainer's explicit placement. The 2026-11 entry above dropped half-width pairs because the
+  title + effect chips wrapped unevenly on 360–390px phones; that still happens, so each card is now a column with
+  `justify-content: space-between` (button pinned to the card bottom) and a top accent edge, so a wrapped chip
+  changes only the header height and both buttons stay level.
+- **Disk/cache size labels move out of the cells** (#1142): the in-cell bare number (`formatDiskSizeBare`, removed)
+  repeated the same size on every circle. Each row now states its size once, with its unit, in a label column
+  (`1 Kb` cache blocks, `1 KB` disks) — the maintainer's rule that units stay explicit (Kb = kilobits,
+  KB = kilobytes). Disks stay circles because shapes carry meaning: squares are reserved for future SSD upgrades.
+- **Releases → Milestones** (#1143): the #989 rename to "Releases" (with v1.0…v5.0 numbering) is reversed; the
+  maintainer wants "Milestones" and no version numbers, shown as a timeline.
+
+The first mockup baseline for the Foundry was also wrong (a Capacity-only seed showing five empty pools); the
+approved design was rebuilt from real phone screenshots and engine-simulated saves — seed realistic states
+(e.g. the `simulate-run-times` bot) before judging a layout.
+
+### Power merge chain and charge-built Chargers (2026-11-20, #1141)
+
+Power's tiers became a vertical merge chain: one node per tier (held-count dots, the Charger as a compact `🔌 n/8`
+status badge on the same line), with each boundary's 8→1 / ⚡ Charge as a small pill on the link to the next tier.
+A first cut (8 tiny Charger slots beside the dots, loud gold pills, no padding) was rejected by the maintainer as
+having lost the page's look, and was restyled toward the approved mockup — keep Power's controls readable as
+buttons (presets stay gold when they can act) and the Charger as one badge.
+
+Charger unlock rule changed at the same time (maintainer decision): a boundary's first 10 charges now build its
+Charger (`chargerUnlockProgress`, 🔓 n/10) instead of producing output, and the 10th unlocks it with no sacrifice.
+The old "sacrifice 10 of the output" unlock is kept only for saves already holding them.
+
+The superseded two-row layout, for reference:
+> Originally: TWO rows per compute-ladder entity Cell through Fusion (issues
+> #321/#326), each pair wrapped in a `TierBlock` inside a `TierBlocksGroup`
+> (`aria-label="compute entities"`), driven off an `ENTITY_ROWS` array (10 entries, in the same
+> Cell-through-Fusion order `COMPUTE_BOOST_TIER_FIELDS` in `layers.js` uses, so a row's
+> array index + 1 IS its Boost `tierIndex`).
+> - **Row 1** (`TierHeaderRow`): a `TierSelectButton` (its own clickable `<button>`) wrapping the
+> tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label (`TierLabel`, e.g. `"Clusters"`; the
+> `n/10` count is a `VisuallyHidden` span, the dots carry it visually) + a leading `SelectMarker`
+> (filled dot while armed) + a `SlotsRow` (`role="group"`, `aria-label="<Label> slots"`) of `COMPUTE_ENTITY_CAP`
+> (10) `NormalSlot` squares — both the label and the slots read off `primaryHeld =
+> min(count, COMPUTE_ENTITY_CAP)`, not the raw entity count, so this row always reads
+> `min(held, 10)/10` and never overflows past "10/10" once auto-merge is unlocked and the
+> entity has grown into its own reserve (the "extra" shows up in row 2's `ReserveSlotsRow`
+> instead — see below) — the same discrete-square convention `StoragePage`'s own `DiskSquare`
+> uses, just non-interactive (a plain status square, not a button). Clicking `TierSelectButton`
+> toggles
+> `selectedBoostTierIndex` (local component state) to select/collapse that tier — the selected
+> block hosts the presets (2); the selected and active-boost tiers always render even if
+> otherwise locked — highlighted
+> (`$selected`/`aria-pressed`, plus a highlighted `TierBlock` border) while armed.
+> - **Row 2** (`TierMergeRow`) is progressively disclosed (`showDetail`): rendered only for the
+> armed tier, or when that tier is merging, a merge is startable/possible, reserve slots hold
+> tokens, or (pre-auto) Auto-charge unlock progress is above 0 — otherwise the tier is one line.
+> For every tier except the last (Fusion, no row 2 at all —
+> see issue #280's "Out of scope" — though its row 1 is still Boost-selectable, the only place
+> a Fusion has any use at all):
+> - **Before that boundary's auto-charge is unlocked:** an instant Charge up button (`TierActionButton`,
+> `flex: 1 1 0; width: 100%` — fills exactly half the row, the same "two equal-width buttons"
+> look `MainPage`'s own tier-row Buy/Upgrade pair uses, rather than a small icon-only square —
+> `variant="prestige"`, visible content "<input symbol> 8→1 <output symbol>" (e.g. ⬡ 8→1 🔗), `aria-label` spelling out the full action
+> e.g. "charge up 8 batteries into 1 pack") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
+> tier is held and the produced tier is under its effective cap (`getComputeFieldEffectiveCap` — 18
+> once that tier's own auto-charge is unlocked), calling the matching
+> `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-charge button filling the
+> other half (`TierActionButton`, `variant="info"`, `$progress` set to the live percentage
+> toward its own unlock cost — the same `Button` `progressFill` mechanic Factory's own Buy
+> buttons use for cost-block progress — visible content `` "🤖 <held>/<COMPUTE_ENTITY_CAP>" ``
+> instead of a bare "🤖 Auto", so the button is self-explanatory the same way a Factory Buy
+> button is; `aria-label="unlock the Charger for <…> into <…>"`) — enabled once
+> `COMPUTE_ENTITY_CAP` (10) of the produced tier is held, calling the matching
+> `game.actions.enableAutoMerge*` action.
+> - **Once unlocked:** a `ReserveSlotsRow` — a single `<button>` wrapping `COMPUTE_MERGE_RESERVE_CAP`
+> (8) `ReserveSlot` squares — reading `getComputeReserveHeld(state, tierIndex)` (0..8), NOT an
+> atomic empty/full toggle: a squares fills in one at a time as the entity's own held count
+> keeps growing past its primary 10 (via continued Booster purchases or a lower-tier charge),
+> up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a charge is actually in flight
+> the reserve instead reads as fully committed regardless of the live count (which has by then
+> dropped back toward 10 and may be accumulating the next batch) —
+> The row is display-only: an explicit **⚡ Charge** button beside it
+> (`aria-label` "charge <tier>: move units down one per second, then merge 8 into 1 <output>",
+> label `⚡ Charge`, `⏳ n/8` (Charger fill) while running) calls `actions.startComputeCharge(boundaryIndex)`;
+> enabled per `isComputeChargeAvailable` (Auto-charge bought, ≥ `COMPUTE_MERGE_RATIO` (8) held, no
+> timed merge or charge running, output has room). While charging the top row dims one slot per
+> transferred unit and the bottom row fills. `aria-label`: "<Tier> charger, auto-charge in progress, <time> left"
+> while an automatic charge runs, else "<Tier> charger, N/8 filled" (the bottom row is called the **Charger**). While an automatic charge is in
+> flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
+> inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
+> live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` filled count. There is
+> no merge-duration upgrade button (removed, #755).
+>
+> Economy-reference summary of that layout (also superseded): "ComputePage shows two rows per tier — row 1 the
+> name/symbol plus 10 normal-slot squares; row 2 an instant Charge up plus an Unlock Auto-charge button (live
+> progress toward sacrificing 10 of the output), or once unlocked ⚡ Charge plus the 8 reserve-slot squares."

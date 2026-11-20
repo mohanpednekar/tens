@@ -4,12 +4,14 @@ import ConfirmDialog from 'components/ConfirmDialog'
 import { formatAmount, formatCurrency, formatMoneyBalance, getEonsAwarded, isEraEligible, isProductionFrozen } from 'game/engine'
 import { MUSEUM_PIN_CAP } from 'game/layers'
 import { FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE as UNLOCK_CODE, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage } from 'game/storage'
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 import CloudSaveSection from './CloudSaveSection'
 import ManualSaveSection from './ManualSaveSection'
 import LegalSection from './LegalSection'
 import StoreSection from './StoreSection'
 import { CodeForm, CodeInput, Row, Section, StatusText } from './styles'
+import { CLOUD_SAVE_ENABLED } from 'services/config'
+import { getMonetizationService } from 'services/monetization'
 
 // Always-reachable Settings screen (via AppNav → More). Holds Supporter pack
 // (unlock code / dummy checkout), save slots, System log, Task Manager, and Reset —
@@ -101,10 +103,17 @@ const LockedNote = styled.p`
   margin: 0;
 `
 
+// Compact segmented Auto/Light/Dark control, inline on the Theme row.
 const ThemeOptionRow = styled.div`
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  flex-shrink: 0;
+  gap: 0.25rem;
+
+  & > button {
+    font-size: 0.78rem;
+    min-height: 1.9rem;
+    padding: 0.2em 0.6em;
+  }
 `
 
 const buildSparklinePath = (samples, key) => {
@@ -122,6 +131,162 @@ const buildSparklinePath = (samples, key) => {
       return `${i === 0 ? 'M' : 'L'}${x.toFixed(2)} ${y.toFixed(2)}`
     })
     .join(' ')
+}
+
+// Settings as a grouped list (#1143): small uppercase captions over inset groups of one-line
+// entries — icon tile · name · key value · chevron. Tapping an entry's row expands its existing
+// section content in place (the section's own heading is kept for assistive tech only). An entry
+// may instead carry an inline control (`inline`) and never expand.
+
+const Caption = styled.h2`
+  color: ${props => (props.$danger ? props.theme.color.danger : props.theme.color.textMuted)};
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin: 0.9rem 0.2rem 0.35rem;
+  text-transform: uppercase;
+`
+
+const Group = styled.div`
+  background: ${props => props.theme.color.surface};
+  border: 1px solid ${props => props.theme.color.border};
+  border-radius: ${props => props.theme.radius.lg};
+  overflow: hidden;
+`
+
+const SettingsGroup = ({ label, danger = false, children }) => (
+  <div>
+    <Caption $danger={danger}>{label}</Caption>
+    <Group>{children}</Group>
+  </div>
+)
+
+const Item = styled.div`
+  & + & {
+    border-top: 1px solid ${props => props.theme.color.border};
+  }
+`
+
+const headRow = css`
+  align-items: center;
+  background: none;
+  border: 0;
+  color: ${props => (props.$danger ? props.theme.color.danger : props.theme.color.text)};
+  display: flex;
+  font: inherit;
+  gap: 0.65rem;
+  min-height: 2.9rem;
+  padding: 0.45rem 0.75rem;
+  text-align: left;
+  width: 100%;
+`
+
+const HeadButton = styled.button`
+  ${headRow}
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: -2px;
+  }
+`
+
+const HeadStatic = styled.div`
+  ${headRow}
+`
+
+const IconTile = styled.span`
+  align-items: center;
+  background: ${props => props.theme.color.surfaceSunken};
+  border-radius: ${props => props.theme.radius.sm};
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  height: 1.65rem;
+  justify-content: center;
+  width: 1.65rem;
+`
+
+const Name = styled.span`
+  flex: 1 1 auto;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const Value = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const Chevron = styled.span`
+  color: ${props => props.theme.color.textFaint};
+  flex-shrink: 0;
+  transform: rotate(${props => (props.$open ? '90deg' : '0deg')});
+  transition: transform 120ms ease;
+`
+
+// The expanded section renders flat inside the group (no nested card chrome); its own h2 stays in
+// the accessibility tree but is visually hidden since the row above already names it.
+const Body = styled.div`
+  border-top: 1px solid ${props => props.theme.color.border};
+  padding: 0.6rem 0.75rem 0.75rem;
+
+  & > section {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  & > section > h2 {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+  }
+`
+
+const SettingsItem = ({ icon, label, value, danger = false, inline, children }) => {
+  const [open, setOpen] = useState(false)
+  if (inline) {
+    return (
+      <Item>
+        <HeadStatic $danger={danger}>
+          <IconTile aria-hidden="true">{icon}</IconTile>
+          <Name>{label}</Name>
+          {inline}
+        </HeadStatic>
+      </Item>
+    )
+  }
+  return (
+    <Item>
+      <HeadButton
+        $danger={danger}
+        aria-expanded={open}
+        aria-label={`${label} settings`}
+        onClick={() => setOpen(prev => !prev)}
+        type="button"
+      >
+        <IconTile aria-hidden="true">{icon}</IconTile>
+        <Name>{label}</Name>
+        {value != null && value !== '' && <Value>{value}</Value>}
+        <Chevron $open={open} aria-hidden="true">›</Chevron>
+      </HeadButton>
+      {open && <Body>{children}</Body>}
+    </Item>
+  )
 }
 
 const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }) => {
@@ -199,6 +364,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
     setEraConfirmOpen(false)
   }
 
+  const storeAvailable = Boolean(getMonetizationService().iapAvailable)
   const moneyPath = buildSparklinePath(game.opsSamples ?? [], 'money')
   const ppPath = buildSparklinePath(game.opsSamples ?? [], 'prestigePoints')
 
@@ -208,349 +374,377 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         <h1>Settings</h1>
       </Header>
 
-      <Section aria-label="about section">
-        <h2>About</h2>
-        <p>Tens — an incremental game themed around powers of ten.</p>
-      </Section>
-
-      <Section aria-label="supporter pack section">
-        <h2>Supporter pack</h2>
-        <p>
-          Optional meta extras only — extra save slots, System log pins, and the Task
-          Manager. Never changes Bits, PP, Disks, Compute, or unlock order. Real payment comes
-          later; for now use a code or the dummy checkout.
-        </p>
-        {supporter ? (
-          <StatusText>
-            Unlocked
-            {game.savesMeta?.supporterSource === 'dummy_purchase' ? ' (dummy checkout)' : ' (unlock code)'}.
-            {' '}{SUPPORTER_SLOT_COUNT} save slots · System log · Task Manager.
-          </StatusText>
-        ) : (
-          <>
-            <LockedNote>
-              Free: {FREE_SLOT_COUNT} save slot. Unlock code (placeholder): <code>{UNLOCK_CODE}</code>
-            </LockedNote>
-            <CodeForm onSubmit={handleRedeem}>
-              <CodeInput
-                aria-label="supporter unlock code"
-                autoComplete="off"
-                onChange={event => setCode(event.target.value)}
-                placeholder="Enter unlock code"
-                value={code}
-              />
-              <Button aria-label="redeem supporter unlock code" type="submit" variant="primary">
-                <ButtonContent>Redeem code</ButtonContent>
-              </Button>
-            </CodeForm>
-            <Button
-              aria-label="dummy supporter checkout"
-              onClick={handleDummyPurchase}
-              type="button"
-              variant="neutral"
-            >
-              <ButtonContent>Dummy checkout (free)</ButtonContent>
-            </Button>
-          </>
-        )}
-        {codeStatus && <StatusText $error={codeStatus.error}>{codeStatus.text}</StatusText>}
-      </Section>
-
-      <CloudSaveSection game={game} />
-
-      <ManualSaveSection game={game} />
-
-      <StoreSection />
-
-      <Section aria-label="save slots section">
-        <h2>Save slots</h2>
-        <p>
-          Independent runs on this device. Switching saves the current slot first. Reset / Clear
-          wipe progress only — your Supporter unlock is never removed here.
-        </p>
-        {devModeActive && (
-          <LockedNote>
-            Dev Mode is active — Play/Clear are disabled here so a dev-only session can't touch a
-            real save. Disable Dev Mode first.
-          </LockedNote>
-        )}
-        {(game.saveSlots ?? []).map(slot => (
-          <SlotRow $active={slot.isActive} key={slot.id}>
-            <SlotLabel>
-              <strong>{slot.name}{slot.isActive ? ' · active' : ''}</strong>
-              <span>
-                {!slot.unlocked
-                  ? 'Locked — unlock Supporter pack'
-                  : slot.isEmpty
-                    ? 'Empty (starts at Byte Foundry)'
-                    : 'Has saved progress'}
-              </span>
-            </SlotLabel>
-            {slot.unlocked && (
-              <Row>
-                {!slot.isActive && (
-                  <Button
-                    aria-label={`switch to ${slot.name}`}
-                    disabled={devModeActive}
-                    onClick={() => game.switchSaveSlot(slot.id)}
-                    title={devModeActive ? 'Disable Dev Mode first' : undefined}
-                    type="button"
-                    variant="primary"
-                  >
-                    <ButtonContent>Play</ButtonContent>
+      <SettingsGroup label="Game">
+        <SettingsItem icon="💛" label="Supporter" value={supporter ? 'Unlocked' : 'Free'}>
+          <Section aria-label="supporter pack section">
+            <h2>Supporter pack</h2>
+            <p>
+              Optional meta extras only — extra save slots, System log pins, and the Task
+              Manager. Never changes Bits, PP, Disks, Compute, or unlock order. Real payment comes
+              later; for now use a code or the dummy checkout.
+            </p>
+            {supporter ? (
+              <StatusText>
+                Unlocked
+                {game.savesMeta?.supporterSource === 'dummy_purchase' ? ' (dummy checkout)' : ' (unlock code)'}.
+                {' '}{SUPPORTER_SLOT_COUNT} save slots · System log · Task Manager.
+              </StatusText>
+            ) : (
+              <>
+                <LockedNote>
+                  Free: {FREE_SLOT_COUNT} save slot. Unlock code (placeholder): <code>{UNLOCK_CODE}</code>
+                </LockedNote>
+                <CodeForm onSubmit={handleRedeem}>
+                  <CodeInput
+                    aria-label="supporter unlock code"
+                    autoComplete="off"
+                    onChange={event => setCode(event.target.value)}
+                    placeholder="Enter unlock code"
+                    value={code}
+                  />
+                  <Button aria-label="redeem supporter unlock code" type="submit" variant="primary">
+                    <ButtonContent>Redeem code</ButtonContent>
                   </Button>
-                )}
+                </CodeForm>
                 <Button
-                  aria-label={`rename ${slot.name}`}
-                  onClick={() => handleRename(slot)}
+                  aria-label="dummy supporter checkout"
+                  onClick={handleDummyPurchase}
                   type="button"
                   variant="neutral"
                 >
-                  <ButtonContent>Rename</ButtonContent>
+                  <ButtonContent>Dummy checkout (free)</ButtonContent>
                 </Button>
-                <Button
-                  aria-label={`clear ${slot.name}`}
-                  disabled={devModeActive || (frozen && slot.isActive)}
-                  onClick={() => handleClearSlot(slot)}
-                  title={
-                    devModeActive
-                      ? 'Disable Dev Mode first'
-                      : frozen && slot.isActive
-                        ? 'Purge first — production is frozen at 1 Googol Bytes'
-                        : 'Erase this slot only (asks for confirmation)'
-                  }
-                  type="button"
-                  variant="danger"
-                >
-                  <ButtonContent>Clear…</ButtonContent>
-                </Button>
-              </Row>
-            )}
-          </SlotRow>
-        ))}
-      </Section>
-
-      <Section aria-label="system log section">
-        <h2>System log</h2>
-        {!supporter ? (
-          <LockedNote>
-            History still records in the background. Unlock Supporter to browse past purges and pin up to {MUSEUM_PIN_CAP}.
-            {history.length > 0 && ` Latest: Purge #${history[0].purgeNumber} (+${history[0].pointsAwarded} PP).`}
-          </LockedNote>
-        ) : (
-          <>
-            <p>Pin standout runs — display only, no bonuses. Cap {MUSEUM_PIN_CAP} pins.</p>
-            {pinnedEntries.length > 0 && (
-              <>
-                <LockedNote>Pinned</LockedNote>
-                <MuseumList aria-label="pinned purge entries">
-                  {pinnedEntries.map(entry => (
-                    <MuseumItem key={`pin-${entry.id}`}>
-                      <div>
-                        <strong>Purge #{entry.purgeNumber}</strong>
-                        <div>
-                          <span>+{entry.pointsAwarded} PP · {formatMoneyBalance(entry.moneyBits)}</span>
-                        </div>
-                      </div>
-                      <Button
-                        aria-label={`unpin purge ${entry.purgeNumber}`}
-                        onClick={() => game.actions.unpinMuseumEntry(entry.id)}
-                        type="button"
-                        variant="neutral"
-                      >
-                        <ButtonContent>Unpin</ButtonContent>
-                      </Button>
-                    </MuseumItem>
-                  ))}
-                </MuseumList>
               </>
             )}
-            <LockedNote>Recent history</LockedNote>
-            {visibleHistory.length === 0 ? (
-              <LockedNote>No purges recorded yet.</LockedNote>
-            ) : (
-              <MuseumList aria-label="system log history">
-                {visibleHistory.map(entry => (
-                  <MuseumItem key={entry.id}>
-                    <div>
-                      <strong>Purge #{entry.purgeNumber}</strong>
-                      <div>
-                        <span>+{entry.pointsAwarded} PP · {formatCurrency(entry.moneyBits)}</span>
-                      </div>
-                    </div>
-                    {pinnedSet.has(entry.id) ? (
+            {codeStatus && <StatusText $error={codeStatus.error}>{codeStatus.text}</StatusText>}
+          </Section>
+        </SettingsItem>
+        <SettingsItem icon="💾" label="Save slots" value={game.saveSlots?.find(slot => slot.isActive)?.name}>
+          <Section aria-label="save slots section">
+            <h2>Save slots</h2>
+            <p>
+              Independent runs on this device. Switching saves the current slot first. Reset / Clear
+              wipe progress only — your Supporter unlock is never removed here.
+            </p>
+            {devModeActive && (
+              <LockedNote>
+                Dev Mode is active — Play/Clear are disabled here so a dev-only session can't touch a
+                real save. Disable Dev Mode first.
+              </LockedNote>
+            )}
+            {(game.saveSlots ?? []).map(slot => (
+              <SlotRow $active={slot.isActive} key={slot.id}>
+                <SlotLabel>
+                  <strong>{slot.name}{slot.isActive ? ' · active' : ''}</strong>
+                  <span>
+                    {!slot.unlocked
+                      ? 'Locked — unlock Supporter pack'
+                      : slot.isEmpty
+                        ? 'Empty (starts at Byte Foundry)'
+                        : 'Has saved progress'}
+                  </span>
+                </SlotLabel>
+                {slot.unlocked && (
+                  <Row>
+                    {!slot.isActive && (
                       <Button
-                        aria-label={`unpin purge ${entry.purgeNumber}`}
-                        onClick={() => game.actions.unpinMuseumEntry(entry.id)}
+                        aria-label={`switch to ${slot.name}`}
+                        disabled={devModeActive}
+                        onClick={() => game.switchSaveSlot(slot.id)}
+                        title={devModeActive ? 'Disable Dev Mode first' : undefined}
                         type="button"
-                        variant="neutral"
+                        variant="primary"
                       >
-                        <ButtonContent>Unpin</ButtonContent>
-                      </Button>
-                    ) : (
-                      <Button
-                        aria-label={`pin purge ${entry.purgeNumber}`}
-                        disabled={pinnedSet.size >= MUSEUM_PIN_CAP}
-                        onClick={() => game.actions.pinMuseumEntry(entry.id)}
-                        type="button"
-                        variant="neutral"
-                      >
-                        <ButtonContent>Pin</ButtonContent>
+                        <ButtonContent>Play</ButtonContent>
                       </Button>
                     )}
-                  </MuseumItem>
-                ))}
-              </MuseumList>
-            )}
-          </>
-        )}
-      </Section>
-
-      <Section aria-label="reboot section">
-        <h2>Reboot</h2>
-        <p>
-          Voluntary meta-prestige when you hold enough unspent Purge Points — no production
-          freeze. Awards Kernels for future upgrades.
-        </p>
-        <Row>
-          <span>Reboots</span>
-          <strong>{eraCount}</strong>
-        </Row>
-        <Row>
-          <span>Kernels</span>
-          <strong>{eonsBalance} {eonWord(eonsBalance)}</strong>
-        </Row>
-        <p>
-          {eraEligible
-            ? `Ready — next Reboot awards ${eonsAwarded} ${eonWord(eonsAwarded)}.`
-            : `Requires 1 Googol PP unspent (you have ${formatAmount(unspentPp)} PP).`}
-        </p>
-        <Button
-          aria-label={
-            eraEligible
-              ? 'Reboot — open confirmation'
-              : 'Reboot — requires 1 Googol unspent Purge Points'
-          }
-          disabled={!eraEligible}
-          onClick={() => setEraConfirmOpen(true)}
-          type="button"
-          variant="prestige"
-        >
-          <ButtonContent>⏻ Reboot…</ButtonContent>
-        </Button>
-      </Section>
-
-      <Section aria-label="task manager section">
-        <h2>Task Manager</h2>
-        {!supporter ? (
-          <LockedNote>Unlock Supporter for live Bits and Purge Point sparklines. Information only — no production change.</LockedNote>
-        ) : (
-          <>
-            <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.purge?.points ?? 0}</p>
-            <LockedNote>Bits</LockedNote>
-            <SparklineSvg aria-label="bits sparkline" role="img" viewBox="0 0 100 40">
-              <path d={moneyPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
-            </SparklineSvg>
-            <LockedNote>Purge Points</LockedNote>
-            <SparklineSvg aria-label="purge points sparkline" role="img" viewBox="0 0 100 40">
-              <path d={ppPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
-            </SparklineSvg>
-          </>
-        )}
-      </Section>
-
-      <Section aria-label="appearance section">
-        <h2>Appearance</h2>
-        <p>Choose light or dark mode, or match your device (System).</p>
-        <ThemeOptionRow role="group" aria-label="theme preference">
-          {[
-            { id: 'system', label: 'System' },
-            { id: 'light', label: 'Light' },
-            { id: 'dark', label: 'Dark' },
-          ].map(({ id, label }) => (
+                    <Button
+                      aria-label={`rename ${slot.name}`}
+                      onClick={() => handleRename(slot)}
+                      type="button"
+                      variant="neutral"
+                    >
+                      <ButtonContent>Rename</ButtonContent>
+                    </Button>
+                    <Button
+                      aria-label={`clear ${slot.name}`}
+                      disabled={devModeActive || (frozen && slot.isActive)}
+                      onClick={() => handleClearSlot(slot)}
+                      title={
+                        devModeActive
+                          ? 'Disable Dev Mode first'
+                          : frozen && slot.isActive
+                            ? 'Purge first — production is frozen at 1 Googol Bytes'
+                            : 'Erase this slot only (asks for confirmation)'
+                      }
+                      type="button"
+                      variant="danger"
+                    >
+                      <ButtonContent>Clear…</ButtonContent>
+                    </Button>
+                  </Row>
+                )}
+              </SlotRow>
+            ))}
+          </Section>
+        </SettingsItem>
+        <SettingsItem icon="⏻" label="Reboot" value={`${eonsBalance} ${eonWord(eonsBalance)}`}>
+          <Section aria-label="reboot section">
+            <h2>Reboot</h2>
+            <p>
+              Voluntary meta-prestige when you hold enough unspent Purge Points — no production
+              freeze. Awards Kernels for future upgrades.
+            </p>
+            <Row>
+              <span>Reboots</span>
+              <strong>{eraCount}</strong>
+            </Row>
+            <Row>
+              <span>Kernels</span>
+              <strong>{eonsBalance} {eonWord(eonsBalance)}</strong>
+            </Row>
+            <p>
+              {eraEligible
+                ? `Ready — next Reboot awards ${eonsAwarded} ${eonWord(eonsAwarded)}.`
+                : `Requires 1 Googol PP unspent (you have ${formatAmount(unspentPp)} PP).`}
+            </p>
             <Button
-              key={id}
-              aria-label={`use ${label.toLowerCase()} theme`}
-              aria-pressed={themePreference === id}
-              onClick={() => onThemePreferenceChange?.(id)}
+              aria-label={
+                eraEligible
+                  ? 'Reboot — open confirmation'
+                  : 'Reboot — requires 1 Googol unspent Purge Points'
+              }
+              disabled={!eraEligible}
+              onClick={() => setEraConfirmOpen(true)}
               type="button"
-              variant={themePreference === id ? 'primary' : 'neutral'}
+              variant="prestige"
             >
-              <ButtonContent>{label}</ButtonContent>
+              <ButtonContent>⏻ Reboot…</ButtonContent>
             </Button>
-          ))}
-        </ThemeOptionRow>
-      </Section>
+          </Section>
+        </SettingsItem>
+        <SettingsItem icon="📜" label="System log" value={supporter ? `${history.length}` : '🔒'}>
+          <Section aria-label="system log section">
+            <h2>System log</h2>
+            {!supporter ? (
+              <LockedNote>
+                History still records in the background. Unlock Supporter to browse past purges and pin up to {MUSEUM_PIN_CAP}.
+                {history.length > 0 && ` Latest: Purge #${history[0].purgeNumber} (+${history[0].pointsAwarded} PP).`}
+              </LockedNote>
+            ) : (
+              <>
+                <p>Pin standout runs — display only, no bonuses. Cap {MUSEUM_PIN_CAP} pins.</p>
+                {pinnedEntries.length > 0 && (
+                  <>
+                    <LockedNote>Pinned</LockedNote>
+                    <MuseumList aria-label="pinned purge entries">
+                      {pinnedEntries.map(entry => (
+                        <MuseumItem key={`pin-${entry.id}`}>
+                          <div>
+                            <strong>Purge #{entry.purgeNumber}</strong>
+                            <div>
+                              <span>+{entry.pointsAwarded} PP · {formatMoneyBalance(entry.moneyBits)}</span>
+                            </div>
+                          </div>
+                          <Button
+                            aria-label={`unpin purge ${entry.purgeNumber}`}
+                            onClick={() => game.actions.unpinMuseumEntry(entry.id)}
+                            type="button"
+                            variant="neutral"
+                          >
+                            <ButtonContent>Unpin</ButtonContent>
+                          </Button>
+                        </MuseumItem>
+                      ))}
+                    </MuseumList>
+                  </>
+                )}
+                <LockedNote>Recent history</LockedNote>
+                {visibleHistory.length === 0 ? (
+                  <LockedNote>No purges recorded yet.</LockedNote>
+                ) : (
+                  <MuseumList aria-label="system log history">
+                    {visibleHistory.map(entry => (
+                      <MuseumItem key={entry.id}>
+                        <div>
+                          <strong>Purge #{entry.purgeNumber}</strong>
+                          <div>
+                            <span>+{entry.pointsAwarded} PP · {formatCurrency(entry.moneyBits)}</span>
+                          </div>
+                        </div>
+                        {pinnedSet.has(entry.id) ? (
+                          <Button
+                            aria-label={`unpin purge ${entry.purgeNumber}`}
+                            onClick={() => game.actions.unpinMuseumEntry(entry.id)}
+                            type="button"
+                            variant="neutral"
+                          >
+                            <ButtonContent>Unpin</ButtonContent>
+                          </Button>
+                        ) : (
+                          <Button
+                            aria-label={`pin purge ${entry.purgeNumber}`}
+                            disabled={pinnedSet.size >= MUSEUM_PIN_CAP}
+                            onClick={() => game.actions.pinMuseumEntry(entry.id)}
+                            type="button"
+                            variant="neutral"
+                          >
+                            <ButtonContent>Pin</ButtonContent>
+                          </Button>
+                        )}
+                      </MuseumItem>
+                    ))}
+                  </MuseumList>
+                )}
+              </>
+            )}
+          </Section>
+        </SettingsItem>
+        <SettingsItem icon="📈" label="Task Manager" value={supporter ? null : '🔒'}>
+          <Section aria-label="task manager section">
+            <h2>Task Manager</h2>
+            {!supporter ? (
+              <LockedNote>Unlock Supporter for live Bits and Purge Point sparklines. Information only — no production change.</LockedNote>
+            ) : (
+              <>
+                <p>Live session samples (not persisted). Balance: {formatMoneyBalance(game.state.resources?.base ?? 0)} · PP: {game.state.purge?.points ?? 0}</p>
+                <LockedNote>Bits</LockedNote>
+                <SparklineSvg aria-label="bits sparkline" role="img" viewBox="0 0 100 40">
+                  <path d={moneyPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
+                </SparklineSvg>
+                <LockedNote>Purge Points</LockedNote>
+                <SparklineSvg aria-label="purge points sparkline" role="img" viewBox="0 0 100 40">
+                  <path d={ppPath || 'M0 40'} fill="none" stroke="currentColor" strokeWidth="1.5" />
+                </SparklineSvg>
+              </>
+            )}
+          </Section>
+        </SettingsItem>
+      </SettingsGroup>
 
-      <LegalSection />
+      <SettingsGroup label="Data">
+        {CLOUD_SAVE_ENABLED && (
+          <SettingsItem icon="☁" label="Cloud save">
+            <CloudSaveSection game={game} />
+          </SettingsItem>
+        )}
+        <SettingsItem icon="🗄" label="Backup / Restore">
+          <ManualSaveSection game={game} />
+        </SettingsItem>
+        {storeAvailable && (
+          <SettingsItem icon="🛒" label="Store">
+            <StoreSection />
+          </SettingsItem>
+        )}
+        <SettingsItem icon="ℹ" label="About">
+          <Section aria-label="about section">
+            <h2>About</h2>
+            <p>Tens — an incremental game themed around powers of ten.</p>
+          </Section>
+        </SettingsItem>
+        <SettingsItem icon="⚖" label="Legal">
+          <LegalSection />
+        </SettingsItem>
+      </SettingsGroup>
 
-      <Section aria-label="danger zone">
-        <h2>Danger zone</h2>
-        <p>
-          Erase the <strong>active</strong> save (“{game.saveSlots?.find(s => s.isActive)?.name ?? 'Save 1'}”)
-          and start from the Byte Foundry. Other slots and your Supporter unlock stay.
-        </p>
-        <Button
-          aria-describedby="settings-reset-description"
-          aria-label="Reset game"
-          disabled={frozen}
-          onClick={onReset}
-          title={
-            frozen
-              ? 'Purge first — production is frozen at 1 Googol Bytes'
-              : 'Erases the active save slot and starts over (asks for confirmation)'
-          }
-          type="button"
-          variant="danger"
-        >
-          <ButtonContent>↺ Reset active save…</ButtonContent>
-          <VisuallyHidden id="settings-reset-description">
-            Erases the active save slot and starts over; other slots and Supporter unlock stay
-          </VisuallyHidden>
-        </Button>
-        <p>
-          Restart the Byte Foundry on the active save — Data Stream Capacity, Disks, Data Lakes and
-          Compute entities. Compile, Upgrade Capacity, Upgrade Bitrate, Provision Disk and Data Lake
-          upgrades/Cells then replay automatically up to your pre-reset highs.
-          Byte Factory and Purge progress stay.
-        </p>
-        <Button
-          aria-describedby="settings-reset-foundry-description"
-          aria-label="Reformat Byte Foundry"
-          disabled={frozen}
-          onClick={onResetByteFoundry}
-          title={
-            frozen
-              ? 'Purge first — production is frozen at 1 Googol Bytes'
-              : 'Restarts the Foundry; Compile, Data Stream upgrades, Disks and Data Lakes replay automatically up to prior highs'
-          }
-          type="button"
-          variant="danger"
-        >
-          <ButtonContent>↺ Reformat Byte Foundry…</ButtonContent>
-          <VisuallyHidden id="settings-reset-foundry-description">
-            Restarts Capacity, Storage, Data Lakes and Compute from scratch, then replays upgrades,
-            Disks and Data Lakes automatically up to pre-reset highs; Byte Factory and Purge progress stay
-          </VisuallyHidden>
-        </Button>
-        <p>Wipe every slot’s progress on this device. Does not remove the Supporter unlock.</p>
-        <Button
-          aria-label="Erase all save progress"
-          disabled={frozen || devModeActive}
-          onClick={handleEraseAll}
-          title={
-            devModeActive
-              ? 'Disable Dev Mode first'
-              : frozen
-                ? 'Purge first — production is frozen at 1 Googol Bytes'
-                : 'Erases all slots but keeps Supporter unlock (asks for confirmation)'
-          }
-          type="button"
-          variant="danger"
-        >
-          <ButtonContent>Erase all save progress…</ButtonContent>
-        </Button>
-      </Section>
+      <SettingsGroup label="Display">
+        <SettingsItem
+          icon="🎨"
+          inline={(
+              <ThemeOptionRow role="group" aria-label="theme preference">
+              {[
+                { id: 'system', label: 'System' },
+                { id: 'light', label: 'Light' },
+                { id: 'dark', label: 'Dark' },
+              ].map(({ id, label }) => (
+                <Button
+                  key={id}
+                  aria-label={`use ${id} theme`}
+                  aria-pressed={themePreference === id}
+                  onClick={() => onThemePreferenceChange?.(id)}
+                  type="button"
+                  variant={themePreference === id ? 'primary' : 'neutral'}
+                >
+                  <ButtonContent>{label}</ButtonContent>
+                </Button>
+              ))}
+            </ThemeOptionRow>
+          )}
+          label="Theme"
+        />
+      </SettingsGroup>
+
+      <SettingsGroup danger label="Danger zone">
+        <SettingsItem danger icon="⚠" label="Reset, Reformat, Erase…">
+          <Section aria-label="danger zone">
+            <h2>Danger zone</h2>
+            <p>
+              Erase the <strong>active</strong> save (“{game.saveSlots?.find(s => s.isActive)?.name ?? 'Save 1'}”)
+              and start from the Byte Foundry. Other slots and your Supporter unlock stay.
+            </p>
+            <Button
+              aria-describedby="settings-reset-description"
+              aria-label="Reset game"
+              disabled={frozen}
+              onClick={onReset}
+              title={
+                frozen
+                  ? 'Purge first — production is frozen at 1 Googol Bytes'
+                  : 'Erases the active save slot and starts over (asks for confirmation)'
+              }
+              type="button"
+              variant="danger"
+            >
+              <ButtonContent>↺ Reset active save…</ButtonContent>
+              <VisuallyHidden id="settings-reset-description">
+                Erases the active save slot and starts over; other slots and Supporter unlock stay
+              </VisuallyHidden>
+            </Button>
+            <p>
+              Restart the Byte Foundry on the active save — Data Stream Capacity, Disks, Data Lakes and
+              Compute entities. Compile, Upgrade Capacity, Upgrade Bitrate, Provision Disk and Data Lake
+              upgrades/Cells then replay automatically up to your pre-reset highs.
+              Byte Factory and Purge progress stay.
+            </p>
+            <Button
+              aria-describedby="settings-reset-foundry-description"
+              aria-label="Reformat Byte Foundry"
+              disabled={frozen}
+              onClick={onResetByteFoundry}
+              title={
+                frozen
+                  ? 'Purge first — production is frozen at 1 Googol Bytes'
+                  : 'Restarts the Foundry; Compile, Data Stream upgrades, Disks and Data Lakes replay automatically up to prior highs'
+              }
+              type="button"
+              variant="danger"
+            >
+              <ButtonContent>↺ Reformat Byte Foundry…</ButtonContent>
+              <VisuallyHidden id="settings-reset-foundry-description">
+                Restarts Capacity, Storage, Data Lakes and Compute from scratch, then replays upgrades,
+                Disks and Data Lakes automatically up to pre-reset highs; Byte Factory and Purge progress stay
+              </VisuallyHidden>
+            </Button>
+            <p>Wipe every slot’s progress on this device. Does not remove the Supporter unlock.</p>
+            <Button
+              aria-label="Erase all save progress"
+              disabled={frozen || devModeActive}
+              onClick={handleEraseAll}
+              title={
+                devModeActive
+                  ? 'Disable Dev Mode first'
+                  : frozen
+                    ? 'Purge first — production is frozen at 1 Googol Bytes'
+                    : 'Erases all slots but keeps Supporter unlock (asks for confirmation)'
+              }
+              type="button"
+              variant="danger"
+            >
+              <ButtonContent>Erase all save progress…</ButtonContent>
+            </Button>
+          </Section>
+        </SettingsItem>
+      </SettingsGroup>
 
       <ConfirmDialog
         cancelLabel="Cancel"

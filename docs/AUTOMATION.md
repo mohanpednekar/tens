@@ -651,7 +651,8 @@ ready; enable auto-merge via the script above for low-risk diffs, or plain `gh p
 the `main` ruleset requires no human approval today, so the adversarial APPROVE is the gate).
 Workflow-file diffs: mark ready only, never enable auto-merge. Enabling auto-merge here is an explicit standing exception to
 "never self-merge"; force-merging, pushing to `main`, and GitHub-approving your own PR remain
-forbidden. Workflow-file PRs remain human-gated via the Path 2/3 exclusions and the agent rule above (CODEOWNERS
+forbidden (the one other exception: maintainer-driven interactive sessions may merge directly once
+auto-merge is enabled and everything is green — see the quiet-period step in "PR review & testing cadence"). Workflow-file PRs remain human-gated via the Path 2/3 exclusions and the agent rule above (CODEOWNERS
 review is not yet enforced by the ruleset — #62).
 
 **Three one-time manual prerequisites** (not settable through tools available to a Claude Code
@@ -782,7 +783,10 @@ cheap while work is still private to the session, heavier once other reviewers c
    directly, rather than merging the instant the sign-off lands. A session actively driving such a
    PR should use `send_later` (or an equivalent short check-in) to re-check after the quiet window.
    The point is to give a concurrently-posting reviewer a moment to land one more comment before the
-   PR locks in. This never overrides the existing rule that a PR touching `.github/workflows/**` stays
+   PR locks in. **Exception — direct merge after auto-merge (maintainer standing rule):** in a
+   maintainer-driven interactive session, a PR with auto-merge enabled, an adversarial `APPROVE` marker
+   for its current head SHA, and everything green (mergeable, no running checks, no unresolved threads)
+   is merged directly with no quiet period. Autonomous runs/Devin/dev-team roles never self-merge. This never overrides the existing rule that a PR touching `.github/workflows/**` stays
    human-gated (Path 2/3 exclusions + the agent auto-merge rule's workflow carve-out; CODEOWNERS
    review isn't ruleset-enforced yet).
 

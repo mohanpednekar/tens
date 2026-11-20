@@ -7,7 +7,7 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getChallengeTier, getChallengeProductionMultiplier, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getScaleUpStepMultiplier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getComputeBoostLanes, getChallengeTier, getChallengeProductionMultiplier, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getScaleUpStepMultiplier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -53,11 +53,10 @@ const Header = styled.header`
   }
 `
 
-
 const TierList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${props => props.theme.space.sm};
+  gap: ${props => props.theme.space.xs};
 `
 
 // One accent hue per tier (cycled by index, via theme.tierAccents — see theme/tokens.js),
@@ -75,31 +74,26 @@ const reveal = keyframes`
 
 // Fixed grid areas (rather than flex flow) so each field always renders in the same slot —
 // the row's shape depends only on the viewport width, never on how many digits a value has.
-// Top line: tier symbol on the left of the left half; owned count on the same line but
-// right-aligned to the row center (end of the left half via margin-left: auto); production
-// on the right. Button row: tickspeed
-// and Buy each take exactly half the row (equal column halves) — Buy stays rightmost as the
-// constantly-clicked control. Bottom line: a single 'details' area spanning both columns,
+// One line: tier symbol + owned count, then fixed-width tickspeed and Buy buttons (fixed
+// tracks, so every row's buttons line up as columns; Buy stays rightmost as the
+// constantly-clicked control). Production lives in the details disclosure, not on the row.
+// Bottom line: a single 'details' area spanning every column,
 // holding the per-tier click-to-expand disclosure's content (see TierDetailsContent below) —
 // only rendered at all while expanded, so a collapsed row contributes zero height there. There
 // is no separate visible trigger for it (no "Details" label): TierName itself (wrapped in
 // TierNameTrigger, in the 'name' area) is the only trigger (no whole-tile click) — a React-controlled
 // disclosure rather than native <details>/<summary>, see openTierDetailIds in MainPage for why.
-// There used to be a dedicated 'autobuyer' grid row for the per-tier
-// autobuyer status badge; it's folded into the 'name' row instead now that the badge is a
-// single icon rather than a written "Active"/"Paused" line (see MainPage), so the row no longer
-// needs the extra vertical space for it.
+// The per-tier autobuyer status badge is gone from this row (status lives on Firmware).
 const TierLine = styled(StatCard)`
   display: grid;
   grid-template-areas:
-    'name production'
-    'upgrade buy'
-    'details details';
-  grid-template-columns: 1fr 1fr;
+    'name upgrade buy'
+    'details details details';
+  grid-template-columns: minmax(0, 1fr) 6.5rem 9rem;
   align-items: center;
   column-gap: ${props => props.theme.space.sm};
-  row-gap: ${props => props.theme.space.xs};
-  padding: ${props => props.theme.space.sm} ${props => props.theme.space.md};
+  row-gap: 0;
+  padding: 3px ${props => props.theme.space.xs} 3px ${props => props.theme.space.md};
   border-left: 3px solid ${props => props.$accent};
   transition: border-color ${props => props.theme.motion.duration.base} ${props => props.theme.motion.easing.standard};
   animation: ${props => (props.$animateReveal ? css`${reveal} 0.4s ease-out` : 'none')};
@@ -120,18 +114,54 @@ const TierLine = styled(StatCard)`
   }
 
   @media (max-width: 40rem) {
-    /* Same areas as desktop; equal halves keep the two buttons matched. */
-    column-gap: ${props => props.theme.space.xs};
-    padding: ${props => props.theme.space.sm} ${props => props.theme.space.sm};
+    /* Same areas as desktop; narrower fixed button tracks for phone widths. */
+    grid-template-columns: minmax(0, 1fr) 5.7rem 7.9rem;
+    column-gap: 6px;
+    padding: 3px 3px 3px ${props => props.theme.space.sm};
+  }
+
+  @media (max-width: 24.5rem) {
+    grid-template-columns: minmax(0, 1fr) 5.9rem 7.3rem;
+
+    /* Symbol stacks over the owned count so the count gets the full name track (both lines
+       together are still shorter than the 2rem buttons, so the row height is unchanged). */
+    & > div:first-child {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    & h3 {
+      font-size: ${props => props.theme.type.scale.sm.size};
+      line-height: 1.1;
+    }
+
+    & h3 > span {
+      min-width: 0;
+    }
+  }
+
+  @media (max-width: 21rem) {
+    grid-template-columns: minmax(0, 1fr) 5.9rem 6.9rem;
+    column-gap: 4px;
+
+    & button > span:first-child {
+      padding-right: 0.25em;
+    }
+
+    & button {
+      font-size: 0.7rem;
+      padding: 0 0.35em;
+    }
   }
 `
 
-// Feature cards share one shape: neutral border, a 3px left accent stripe (same treatment as the
-// tier rows' stripe), compact padding and a 1rem heading — previously each card had its own
+// Feature cards share one shape: neutral border, a 3px top accent edge (they sit in side-by-side pairs),
+// compact padding and a 1rem heading — previously each card had its own
 // full-border hue and Clock Speed had a much larger heading/padding than its siblings.
 const featureCard = accent => css`
-  border-left: 3px solid ${accent};
+  border-top: 3px solid ${accent};
   gap: 0.4rem;
+  justify-content: space-between;
   padding: 0.6rem 0.75rem;
 
   h2 {
@@ -188,6 +218,10 @@ const GlobalTickspeedCard = styled(StatCard)`
   ${featureCard('#1d4ed8')}
 `
 
+const RestageCard = styled(StatCard)`
+  ${featureCard('#8b5cf6')}
+`
+
 const OverclockCard = styled(StatCard)`
   ${featureCard('#c2410c')}
 `
@@ -203,9 +237,8 @@ const OverclockButton = styled(Button)`
   }
 `
 
-// Every feature card (Clock Speed above the tier list; Restage, Scale Up, Overclock below it) gets its
-// own full-width SpeedCardsRow, so their title + effect chips line up consistently. Supersedes the
-// earlier side-by-side pairs — see docs/DESIGN_HISTORY.md.
+// Feature cards sit in two side-by-side pairs (#1137): Clock Speed + Restage above the tier list, Scale
+// Up + Overclock below it. A lone card in a pair takes the full width (flex: 1 1 0).
 const SpeedCardsRow = styled.div`
   display: flex;
   gap: 0.4rem;
@@ -490,7 +523,7 @@ const BalancesSentinel = styled.div`
 // for free; TierName (the h3 inside it) keeps its own heading semantics, since applying role via
 // ARIA only overrides an element's OWN implicit role, never a nested descendant's.
 const TierNameTrigger = styled.div`
-  align-items: baseline;
+  align-items: center;
   column-gap: ${props => props.theme.space.sm};
   display: flex;
   grid-area: name;
@@ -600,10 +633,10 @@ const TopPurgeBar = styled.div`
 `
 
 // Reserves space at the top of the page so TopPurgeBar (position: fixed) never overlaps the
-// Header underneath it. $height is measured live from the bar itself (see topPurgeBarHeight)
+// content underneath it. $height is measured live from the bar itself (see topPurgeBarHeight)
 // rather than a fixed constant — TopPurgeBar's flex-wrap lets its content wrap to two lines on
 // narrow viewports (the reminder sentence is long enough to wrap well before 40rem), and a
-// hardcoded single-line height would silently let the taller bar overlap the Header below it.
+// hardcoded single-line height would silently let the taller bar overlap the content below it.
 const TopPurgeBarSpacer = styled.div`
   height: ${props => props.$height}px;
 `
@@ -625,7 +658,7 @@ const MutedText = styled.p`
 
 // Occupies the top line's first track. Used to also share this line with a compact tickspeed
 // bonus badge and an autobuyer status icon — both removed to keep the row down to just the tier
-// name plus live production/owned figures and the two action buttons; the tickspeed bonus is
+// name plus the owned count and the two action buttons; the tickspeed bonus is
 // still visible in the row's own Details disclosure below, and autobuyer status still shows on
 // the Firmware page.
 const TierName = styled.h3`
@@ -636,8 +669,8 @@ const TierName = styled.h3`
   font-size: ${props => props.theme.type.scale.lg.size};
   line-height: ${props => props.theme.type.scale.lg.lineHeight};
   font-weight: 700;
+  flex-shrink: 0;
   margin: 0;
-  min-width: 0;
 
   @media (max-width: 40rem) {
     font-size: ${props => props.theme.type.scale.md.size};
@@ -649,6 +682,7 @@ const TierName = styled.h3`
 const TierNameLabel = styled.span`
   cursor: pointer;
   flex-shrink: 0;
+  min-width: 2.2rem;
 
   &:focus-visible {
     outline: 2px solid ${props => props.theme.color.accent};
@@ -703,40 +737,21 @@ const Disclosure = styled.details`
   }
 `
 
-// Owned count lives on the first line, right-aligned to the row center (pushed to the end of
-// the left half with margin-left: auto). Sibling of TierName inside TierNameTrigger — not nested
-// in the h3 (nesting would pollute the heading's accessible name).
+// Owned count, left-aligned right after the fixed-width symbol so every row's count starts at
+// the same x. Sibling of TierName inside TierNameTrigger — not nested in the h3 (nesting would
+// pollute the heading's accessible name). Production is in the details disclosure instead.
 const OwnedText = styled.span`
-  color: ${props => props.theme.color.textMuted};
-  flex-shrink: 0;
-  font-size: ${props => props.theme.type.scale.sm.size};
-  line-height: ${props => props.theme.type.scale.sm.lineHeight};
-  font-weight: 400;
-  margin: 0;
-  margin-left: auto;
-  text-align: right;
-  ${gridCell}
-
-  @media (max-width: 40rem) {
-    font-size: ${props => props.theme.type.scale.xs.size};
-    line-height: ${props => props.theme.type.scale.xs.lineHeight};
-  }
-`
-
-// Production reads slightly stronger than owned — the live output figure on the stats line.
-const ProductionText = styled.span`
-  grid-area: production;
   color: ${props => props.theme.color.text};
   font-size: ${props => props.theme.type.scale.sm.size};
   line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  font-variant-numeric: tabular-nums;
   font-weight: 500;
   margin: 0;
-  text-align: right;
   ${gridCell}
 
-  @media (max-width: 40rem) {
+  @media (max-width: 24.5rem) {
     font-size: ${props => props.theme.type.scale.xs.size};
-    line-height: ${props => props.theme.type.scale.xs.lineHeight};
+    line-height: 1.15;
   }
 `
 
@@ -747,55 +762,51 @@ const BuyButton = styled(Button)`
   width: 100%;
   font-size: ${props => props.theme.type.scale.sm.size};
   font-weight: 700;
-  margin-top: ${props => props.theme.space.xs};
-  padding: 0.4em 0.45em;
+  min-height: 2rem;
+  padding: 0 0.6em;
   ${gridCell}
 
   @media (max-width: 40rem) {
     font-size: ${props => props.theme.type.scale.xs.size};
-    padding: 0.38em 0.4em;
+    padding: 0 0.5em;
   }
 `
 
-// Scoped to the tier row's Buy button cost label only — not the shared Button component used
-// elsewhere in the app (Prestige, Reset, PP Upgrades, …), which keep ButtonIcon/ButtonLabel's
-// default fixed-icon/centered-label layout unchanged. Here, the icon+level slot and the cost label
-// each take a fixed half of the button's width, and the cost label is left-aligned (rather than
-// centered) from that halfway point — so every tier row's cost figure starts at the same x
-// position (the button's horizontal center) regardless of how many digits the level/progress or
-// cost strings have, instead of drifting as those change. `padding-right` reserves a real gap
-// before the cost label — a trailing space character in the JSX content isn't reliable here, since
-// browsers trim trailing whitespace at a flex item's own box edge (border-box sizing, set globally
-// in GlobalStyle.js, keeps this box exactly 50% wide including the padding). `min-width: 0` +
-// overflow/ellipsis clip a level/progress string too long to fit its half (e.g. once the block size
-// has grown, or at a high level number) instead of letting it spill into the cost label's box —
-// without min-width: 0, a flex item's default min-width: auto prevents overflow: hidden from
-// engaging at all.
+// Scoped to the tier row's Buy button only (the shared Button's ButtonIcon/ButtonLabel keep their
+// default layout elsewhere). Left: 🛒 + completed levels (+ Buy max's "+n" levels, heavier weight —
+// not a hue: it always sits on the warn/good fill, where a tinted color fails AA contrast);
+// right: the cost, right-aligned so every row's cost ends at the same x. `min-width: 0` +
+// ellipsis clip an over-long level string instead of letting it spill into the cost.
 const BuyButtonIcon = styled(ButtonIcon)`
-  flex: 0 0 50%;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  padding-right: 0.35em;
+  padding-right: 0.5em;
+  font-variant-numeric: tabular-nums;
+`
+
+const BuyLevelExtra = styled.span`
+  font-weight: 800;
 `
 
 const BuyButtonCostLabel = styled(ButtonLabel)`
-  flex: 0 0 50%;
-  text-align: left;
+  flex: 1 0 auto;
+  text-align: right;
 `
 
 const UpgradeButton = styled(Button)`
   grid-area: upgrade;
   width: 100%;
   font-size: ${props => props.theme.type.scale.sm.size};
-  margin-top: ${props => props.theme.space.xs};
-  padding: 0.4em 0.45em;
+  min-height: 2rem;
+  padding: 0 0.5em;
   ${gridCell}
 
   @media (max-width: 40rem) {
     font-size: ${props => props.theme.type.scale.xs.size};
-    padding: 0.38em 0.4em;
+    padding: 0 0.4em;
   }
 `
 
@@ -964,6 +975,11 @@ const MainPage = ({ game }) => {
   const purchaseBlockSize = getPurchaseBlockSize(state)
   const showFullScreenPrompt = isFrozen && isFirstRun
   const showTopPurgeBar = isFrozen && !isFirstRun
+  // PurgeProgressBar is pinned to the bottom (above AppNav). Hide the page title only when
+  // something actually occupies the top: challenge banner, purge-available banner, a daily-run
+  // goal (DailyTab already shows its own heading above this page), or an active boost timer.
+  const hideScreenTitle = Boolean(activeChallenge) || showTopPurgeBar || Boolean(game.goal)
+    || getComputeBoostLanes(state.intro ?? {}).length > 0
   const lastTier = getEffectiveLastTier(state)
   const lastTierLevel = state.purchaseLevels?.[lastTier.id] ?? 1
   const lastTierUnlocked = isTierUnlocked(state)(lastTier)
@@ -1052,7 +1068,7 @@ const MainPage = ({ game }) => {
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
   const canBuyGlobalTickspeed = !isFrozen && !challengeDisabled('clockSpeedDisabled') && globalTickspeedUnlocked && isGlobalTickspeedAffordable(state)
-  // The last tier's XP-funded tickspeed — a separate upgrade shown left of Scale Up once the last tier
+  // The last tier's XP-funded tickspeed — a separate upgrade shown beside Clock Speed once the last tier
   // has been a Scale Up target this cycle (isLastTierTickspeedXpUnlocked). Always spends the entire
   // XP balance in one action, since every consumption resets every other tier's owned quantity and
   // Bits; disabled while the last tier owns nothing (nothing to speed up — see
@@ -1121,7 +1137,7 @@ const MainPage = ({ game }) => {
   // TopPurgeBar's own rendered height, measured live rather than assumed — its flex-wrap lets
   // the reminder sentence wrap to two lines on narrow viewports, and both TopPurgeBarSpacer
   // (below) and StickyBalances' stuck offset need the bar's *actual* height to avoid the fixed bar
-  // overlapping the Header/balances underneath it. 60 (3.75rem at the default 16px root) is the
+  // overlapping the content/balances underneath it. 60 (3.75rem at the default 16px root) is the
   // single-line fallback used before this was measured, kept as the initial/no-ResizeObserver
   // value so behavior is unchanged in environments without ResizeObserver (e.g. jsdom in tests).
   const topPurgeBarRef = useRef(null)
@@ -1191,24 +1207,29 @@ const MainPage = ({ game }) => {
         </>
       )}
 
-      <PurgeProgressBar aria-label="purge progress">
-        <PurgeProgressTrack $percent={purgeProgressPercent}>
+      {/* `game.goal` (a Daily challenge run) replaces the Purge goal on the pinned bar: a run has no Purge. */}
+      <PurgeProgressBar aria-label={game.goal ? 'goal progress' : 'purge progress'}>
+        <PurgeProgressTrack $percent={game.goal ? game.goal.percent : purgeProgressPercent}>
           <VisuallyHidden
             role="progressbar"
-            aria-label={`progress toward ${purgeGoalText}, when Purge becomes available`}
-            aria-valuenow={purgeProgressPercent}
+            aria-label={game.goal ? game.goal.ariaLabel : `progress toward ${purgeGoalText}, when Purge becomes available`}
+            aria-valuenow={game.goal ? game.goal.percent : purgeProgressPercent}
             aria-valuemin={0}
             aria-valuemax={100}
           />
           <PurgeProgressLabel>
-            {`${purgeProgressPercent}% to Purge`}
+            {game.goal ? game.goal.label : `${purgeProgressPercent}% to Purge`}
           </PurgeProgressLabel>
         </PurgeProgressTrack>
       </PurgeProgressBar>
 
-      <Header>
-        <h1>Byte Factory</h1>
-      </Header>
+      {hideScreenTitle ? (
+        <VisuallyHidden as="h1">Byte Factory</VisuallyHidden>
+      ) : (
+        <Header>
+          <h1>Byte Factory</h1>
+        </Header>
+      )}
 
       <BoostTimerBar actions={actions} state={state} />
 
@@ -1332,8 +1353,9 @@ const MainPage = ({ game }) => {
       </StickyBalances>
 
 
-      {globalTickspeedCardEverRevealed && (
+      {(globalTickspeedCardEverRevealed || isLastTierXpUnlocked) && (
       <SpeedCardsRow>
+        {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global clock speed panel">
           <Disclosure>
             <summary>
@@ -1382,6 +1404,53 @@ const MainPage = ({ game }) => {
             />
           </Button>
         </GlobalTickspeedCard>
+        )}
+        {isLastTierXpUnlocked && (
+          <RestageCard aria-label="restage panel">
+            <Disclosure>
+              <summary>
+                <CardTitleGroup>
+                  <h2>Restage</h2>
+                  <CardEffect
+                    title={`Each XP consumed makes ${lastTier.name} ticks faster by this factor (compounding)`}
+                    onClick={event => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                    }}
+                  >
+                    {lastTier.symbol} +{formatBonusPercent(getLastTierXpTickspeedMultiplier(1))}%/XP
+                  </CardEffect>
+                </CardTitleGroup>
+              </summary>
+              <MutedText>
+                {formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpConsumed), { precise: true })} faster {lastTier.name} ticks
+                {' '}from {formatAmount(lastTierXpConsumed)} XP consumed. Next consumption needs at least {formatAmount(lastTierXpMinConsumption)} XP.
+              </MutedText>
+            </Disclosure>
+            <Button
+              aria-label={`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)${challengeDisabled('restageDisabled') ? challengeNote : ''}`}
+              variant="smart"
+              disabled={!canConsumeLastTierXp}
+              onClick={handleConsumeLastTierXp}
+              title={lastTierOwned > 0
+                ? `Consume XP for a compounding +1% ${lastTier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`
+                : `No ${lastTier.name} owned right now — nothing to speed up, so this stays disabled until you own at least one again`}
+              type="button"
+              $progress={lastTierXpProgressPercent}
+              $pulse={canConsumeLastTierXp}
+            >
+              <ButtonIcon>🧬 </ButtonIcon>
+              <ButtonLabel>{formatAmount(lastTierXpBalance)} XP</ButtonLabel>
+              <VisuallyHidden
+                role="progressbar"
+                aria-label={`${lastTier.name} Restage progress`}
+                aria-valuenow={lastTierXpProgressPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              />
+            </Button>
+          </RestageCard>
+        )}
       </SpeedCardsRow>
       )}
 
@@ -1418,7 +1487,7 @@ const MainPage = ({ game }) => {
           // level 1 is the baseline ×1, no bonus yet, each further level speeds up this tier's own
           // delivery frequency by another 10% (see getEffectiveTierTickSpeedSeconds in engine.js) —
           // it does NOT change how much lands per delivery, only how often one arrives. The last
-          // tier's separate XP-funded upgrade (left of Scale Up) multiplies on top of this.
+          // tier's separate XP-funded upgrade (beside Clock Speed) multiplies on top of this.
           const tickspeedLevel = state.tickspeedLevels?.[tier.id] ?? 1
           const tickspeedMultiplier = getTickspeedProductionMultiplier(tickspeedLevel)
             * (tier.id === lastTier.id ? getLastTierXpTickspeedMultiplier(state.lastTierXpConsumed ?? 0) : 1)
@@ -1436,6 +1505,11 @@ const MainPage = ({ game }) => {
           const milestoneMultiplier = getPurchaseMilestoneMultiplier(tierLevel)
           const tierScaleUpMultiplier = getTierScaleUpMultiplier(state, tier.id)
           const production = Math.floor(owned * prestigeBonus * tierScaleUpMultiplier * milestoneMultiplier * getChallengeProductionMultiplier(state, tier.id))
+          const productionText = tier.producesResourceId === MONEY_ID
+            ? formatCurrency(production)
+            : tier.producesResourceId === BYTES_ID
+              ? formatBytes(production)
+              : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`
           // Surfaced only in the row's collapsed-by-default TierDetails disclosure below — the
           // base value is otherwise invisible to players now that it diverges per tier again
           // (see "Tier production tickspeed" in CLAUDE.md), and the effective value shows how
@@ -1458,9 +1532,9 @@ const MainPage = ({ game }) => {
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
           // (via formatCost) in place of its full name. The full sentence stays in aria-label/
           // title for assistive tech. Cost-block progress lives on the button as the dual-tone
-          // fill plus a VisuallyHidden progressbar (and in the aria-label) — not as `+n/8` text
-          // next to the cart icon. Buy-max mode is the exception: "+<levels>" full levels sit
-          // beside the icon so the click still previews how many levels it will buy.
+          // fill plus a VisuallyHidden progressbar (and in the aria-label) — not as `+n/8` text.
+          // Beside the cart icon: the completed-level count, suffixed in Buy max mode with
+          // "+<levels>" so the click still previews how many full levels it will buy.
           const buyLevelQuantityText = maxLevelsPreview.levels > 0 ? `+${formatAmount(maxLevelsPreview.levels)}` : ''
           // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
           // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
@@ -1513,6 +1587,7 @@ const MainPage = ({ game }) => {
               {isDetailsOpen && (
                 <TierDetailsContent id={detailsId}>
                   <ul>
+                    <li>Production: +{productionText} per delivery</li>
                     <li>Base tickspeed: delivers every {formatRate(baseTickSpeed)}s</li>
                     <li>
                       Effective tickspeed: every {formatRate(effectiveTickSpeed)}s (tier ×{formatRate(tickspeedMultiplier)}, global ×{formatRate(globalTickspeedMultiplier)})
@@ -1527,13 +1602,6 @@ const MainPage = ({ game }) => {
                   </ul>
                 </TierDetailsContent>
               )}
-              <ProductionText>
-                +{tier.producesResourceId === MONEY_ID
-                  ? formatCurrency(production)
-                  : tier.producesResourceId === BYTES_ID
-                    ? formatBytes(production)
-                    : `${formatAmount(production)} ${RESOURCE_SYMBOL(tier.producesResourceId)}`}
-              </ProductionText>
               <UpgradeButton
                 aria-label={tickspeedLabel}
                 variant="success"
@@ -1562,7 +1630,7 @@ const MainPage = ({ game }) => {
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
               >
-                <BuyButtonIcon>🛒{buyLevelQuantityText && ` ${buyLevelQuantityText}`} </BuyButtonIcon>
+                <BuyButtonIcon>🛒 {formatAmount(completedLevels)}{buyLevelQuantityText && <BuyLevelExtra>{buyLevelQuantityText}</BuyLevelExtra>}</BuyButtonIcon>
                 <BuyButtonCostLabel>{formatCurrency(maxLevelsPreview.levels > 0 ? (maxLevelsPreview.partialQuantity > 0 ? maxLevelsPreview.partialCost : maxLevelsPreview.lastLevelCost) : displayCost)}</BuyButtonCostLabel>
                 <VisuallyHidden
                   role="progressbar"
@@ -1577,54 +1645,6 @@ const MainPage = ({ game }) => {
         })}
       </TierList>
 
-      {isLastTierXpUnlocked && (
-      <SpeedCardsRow>
-        <GlobalTickspeedCard aria-label="restage panel">
-          <Disclosure>
-            <summary>
-              <CardTitleGroup>
-                <h2>Restage</h2>
-                <CardEffect
-                  title={`Each XP consumed makes ${lastTier.name} ticks faster by this factor (compounding)`}
-                  onClick={event => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                  }}
-                >
-                  {lastTier.symbol} +{formatBonusPercent(getLastTierXpTickspeedMultiplier(1))}%/XP
-                </CardEffect>
-              </CardTitleGroup>
-            </summary>
-            <MutedText>
-              {formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpConsumed), { precise: true })} faster {lastTier.name} ticks
-              {' '}from {formatAmount(lastTierXpConsumed)} XP consumed. Next consumption needs at least {formatAmount(lastTierXpMinConsumption)} XP.
-            </MutedText>
-          </Disclosure>
-          <Button
-            aria-label={`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} ${lastTier.name} tickspeed (resets every other tier's owned quantity and Bits to 0)${challengeDisabled('restageDisabled') ? challengeNote : ''}`}
-            variant="smart"
-            disabled={!canConsumeLastTierXp}
-            onClick={handleConsumeLastTierXp}
-            title={lastTierOwned > 0
-              ? `Consume XP for a compounding +1% ${lastTier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`
-              : `No ${lastTier.name} owned right now — nothing to speed up, so this stays disabled until you own at least one again`}
-            type="button"
-            $progress={lastTierXpProgressPercent}
-            $pulse={canConsumeLastTierXp}
-          >
-            <ButtonIcon>🧬 </ButtonIcon>
-            <ButtonLabel>{formatAmount(lastTierXpBalance)} XP</ButtonLabel>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label={`${lastTier.name} Restage progress`}
-              aria-valuenow={lastTierXpProgressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
-          </Button>
-        </GlobalTickspeedCard>
-      </SpeedCardsRow>
-      )}
 
       <SpeedCardsRow>
         <ScaleUpCard aria-label="scale up panel">
@@ -1671,10 +1691,7 @@ const MainPage = ({ game }) => {
           </ScaleUpButton>
         </ScaleUpCard>
 
-      </SpeedCardsRow>
-
-      {overclockEverRevealed && (
-      <SpeedCardsRow>
+        {overclockEverRevealed && (
         <OverclockCard aria-label="overclock panel">
           <Disclosure>
             <summary>
@@ -1719,8 +1736,8 @@ const MainPage = ({ game }) => {
             />
           </OverclockButton>
         </OverclockCard>
+        )}
       </SpeedCardsRow>
-      )}
 
     </RootDiv>
   )

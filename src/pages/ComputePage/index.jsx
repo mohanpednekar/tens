@@ -1,8 +1,8 @@
 import BoostTimerBar, { COMPUTE_BOOST_DISPLAY, describeCoveredTiers, formatPresetDuration } from 'components/BoostTimerBar'
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
-import { canActivateComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostLane, getComputeBoostLanes, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeChargeAvailable, isComputeCharging, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress } from 'game/engine'
+import { canActivateComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostLane, getComputeBoostLanes, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getChargerUnlockProgress, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeChargeAvailable, isComputeCharging, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -36,23 +36,66 @@ const StatusText = styled.p`
   text-align: center;
 `
 
-// One block per compute-ladder entity — two rows apiece (see TierHeaderRow/TierMergeRow below),
-// replacing the old single-row-per-tier layout now that a boundary's own reserve-merge slots (see
-// issue #321) need a dedicated second row once auto-charge is unlocked for it.
+// One node per compute-ladder entity (see TierHeaderRow below), joined by Connectors.
+// The merge chain (#1141): tier nodes stacked top-to-bottom, joined by a dashed connector that
+// carries that boundary's 8→1 Charge up / ⚡ Charge button, so a merge reads as flowing down the chain.
 const TierBlocksGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${props => props.theme.space.sm};
+  gap: 0;
   width: 100%;
+`
+
+const Connector = styled.div`
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 1.9rem;
+  position: relative;
+  width: 100%;
+
+  &::before {
+    border-left: 2px dashed ${props => props.theme.color.borderStrong};
+    bottom: 0;
+    content: '';
+    left: 50%;
+    position: absolute;
+    top: 0;
+  }
+
+  > * {
+    position: relative;
+  }
+`
+
+const ConnectorGap = styled.div`
+  height: 0.6rem;
+`
+
+// The Charger (or its 🔓 unlock) sits on the node's own header line, right side.
+const NodeSide = styled.div`
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  margin-left: auto;
+  gap: 4px;
+`
+
+const BoostsHint = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  flex: 0 0 auto;
+  font-size: 0.78em;
+  font-weight: 400;
+  white-space: nowrap;
 `
 
 const TierBlock = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${props => (props.$spacious ? props.theme.space.sm : '4px')};
+  gap: 6px;
   width: 100%;
-  padding: ${props => (props.$spacious ? '0.7rem 0.8rem' : '0.2rem 0.6rem')};
-  border-radius: ${props => props.theme.radius.md};
+  padding: 0.45rem 0.6rem;
+  border-radius: ${props => props.theme.radius.lg};
   background: ${props => props.theme.color.surface};
   border: 1px solid ${props => (props.$selected ? props.theme.color.warn : props.theme.color.border)};
 `
@@ -71,23 +114,15 @@ const BoostCard = styled.section`
   border: 1px solid ${props => props.theme.color.border};
 `
 
-// Filled dot = the tier that powers boosts.
-const SelectMarker = styled.span`
-  flex: 0 0 auto;
-  width: 0.7rem;
-  height: 0.7rem;
-  border-radius: 50%;
-  border: 1.5px solid ${props => (props.$selected ? props.theme.color.warn : props.theme.color.textMuted)};
-  background: ${props => (props.$selected ? props.theme.color.warn : 'transparent')};
-`
-
 // Row 1: tier name/symbol plus a row of COMPUTE_ENTITY_CAP (10) normal slots — "First row shows 10
 // slots ... also has Name and symbol of the tier" (issue #321).
+// Wraps only when the node's Charger can't fit beside the dots (~320px phones): the Charger then
+// drops to its own right-aligned line instead of overlapping them.
 const TierHeaderRow = styled.div`
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
-  gap: ${props => props.theme.space.xs};
+  flex-wrap: wrap;
+  gap: 4px ${props => props.theme.space.xs};
   width: 100%;
 `
 
@@ -101,8 +136,8 @@ const TierSelectButton = styled.button`
   display: flex;
   flex: 1 1 auto;
   align-items: center;
-  gap: ${props => props.theme.space.xs};
-  min-width: 0;
+  gap: 0.5rem;
+  min-width: fit-content;
   border: none;
   border-radius: ${props => props.theme.radius.sm};
   background: none;
@@ -124,9 +159,24 @@ const TierSelectButton = styled.button`
 
 const TierLabel = styled.span`
   flex: 0 0 auto;
-  font-weight: 600;
-  font-size: ${props => (props.$spacious ? '1.05em' : '0.9em')};
+  font-weight: 700;
+  font-size: 0.95rem;
   white-space: nowrap;
+`
+
+// Label + boosted-tier hint over the held-count dots (two short lines inside the select button).
+const NodeText = styled.span`
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 5px;
+`
+
+const NodeTitle = styled.span`
+  align-items: baseline;
+  display: flex;
+  gap: 0.35rem;
+  min-width: 0;
 `
 
 // A fixed width (rather than the symbol's own natural glyph width) keeps every tier's label
@@ -135,18 +185,17 @@ const TierLabel = styled.span`
 // tiers and reads as misaligned across the ten rows.
 const TierSymbol = styled.span`
   flex: 0 0 auto;
-  width: 1.4em;
-  font-size: 1em;
+  width: 1.6rem;
+  font-size: 1.15rem;
   text-align: center;
 `
 
 const SlotsRow = styled.div`
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   flex-wrap: nowrap;
-  justify-content: flex-end;
-  gap: 2px;
-  min-width: 0;
+  justify-content: flex-start;
+  gap: 3px;
 `
 
 // A single discrete normal-capacity slot (one of COMPUTE_ENTITY_CAP) — filled once its index is
@@ -154,26 +203,11 @@ const SlotsRow = styled.div`
 // StoragePage's own DiskSquare uses, just non-interactive (a plain status square, not a button).
 const NormalSlot = styled.span`
   flex: 0 0 auto;
-  width: ${props => (props.$spacious ? '1.1rem' : '0.85rem')};
-  height: ${props => (props.$spacious ? '1.1rem' : '0.85rem')};
-  border-radius: ${props => props.theme.radius.sm};
-  border: 1.2px solid ${props => (props.$filled ? props.theme.color.accent : props.theme.color.surfaceSunken)};
-  background: ${props => (props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
-`
-
-// Row 2: pre-unlock, an instant Merge button + an Unlock Auto-charge button; post-unlock, an explicit
-// ⚡ Charge button (left) plus the Charger (the 8 auto-charge slots, display only) — Charge moves units down one per
-// second, then merges 8→1 instantly (issue #1033; the slots were a clickable instant merge in #321).
-// The post-unlock ReserveSlotsRow branch stretches itself via flex: 1 1 auto and right-aligns its
-// own slots internally, filling the row exactly like MainPage's own tier-row Buy/Upgrade pair;
-// justify-content: flex-end keeps that branch's slots pinned right regardless.
-const TierMergeRow = styled.div`
-  display: flex;
-  align-items: stretch;
-  justify-content: flex-end;
-  flex-wrap: nowrap;
-  gap: ${props => (props.$spacious ? props.theme.space.sm : props.theme.space.xs)};
-  width: 100%;
+  width: 0.62rem;
+  height: 0.62rem;
+  border-radius: 50%;
+  border: 1.2px solid ${props => (props.$filled ? props.theme.color.good : props.theme.color.borderStrong)};
+  background: ${props => (props.$filled ? props.theme.color.good : 'transparent')};
 `
 
 const CompactButton = styled(Button)`
@@ -182,65 +216,44 @@ const CompactButton = styled(Button)`
   flex: 0 0 auto;
 `
 
-// Row 2's pre-unlock Merge/Auto-charge pair — each fills exactly half the row (flex: 1 1 0,
-// width: 100%), the same "two equal-width buttons split the row" look MainPage's own tier rows use
-// for their Upgrade/Buy pair, rather than small icon-only squares hugging one edge with the rest of
-// the row left empty.
+// The connector's merge / ⚡ Charge button: a small, quiet pill centred on the dashed line (it lights
+// up only when it can act — Button's variant colour; disabled reads muted).
 const TierActionButton = styled(CompactButton)`
-  flex: 1 1 0;
-  width: 100%;
-  ${props => props.$spacious && 'font-size: 0.9em; padding: 0.7em 0.8em;'}
+  border-radius: 999px;
+  font-size: 0.72rem;
+  min-height: 1.45rem;
+  min-width: 4.5rem;
+  padding: 0.1em 0.75em;
 `
 
-const ReserveSlotsRow = styled.button`
-  display: flex;
-  flex: 1 1 auto;
+// The node's Charger as one compact badge ("🔌 n/8", a progress fill for the partial reserve, or
+// "⏳ <countdown>" while an auto-charge runs) — display-only, same accessible name as the old slot row.
+const ChargerBadge = styled(CompactButton)`
+  min-height: 1.9rem;
+  min-width: 3.9rem;
+`
+
+// The node's Charger status (not a control): reserve n/8 or unlock progress n/10 as a proportional fill,
+// gold while an auto-charge runs. Explicit colours — a disabled Button would grey every state alike.
+const ChargerStatus = styled.span`
   align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-  min-width: 0;
-  border: 1px solid ${props => (props.$clickable ? props.theme.color.accent : 'transparent')};
+  background: ${props => {
+    const tint = props.$running ? props.theme.color.warn : props.theme.color.accent
+    const pct = props.$running ? 100 : Math.round(props.$fill * 100)
+    return `linear-gradient(90deg, color-mix(in srgb, ${tint} 28%, ${props.theme.color.surfaceSunken}) ${pct}%, ${props.theme.color.surfaceSunken} ${pct}%)`
+  }};
+  border: 1px solid ${props => (props.$running ? props.theme.color.warn : props.theme.color.borderStrong)};
   border-radius: ${props => props.theme.radius.sm};
-  background: ${props => (props.$clickable ? props.theme.color.surfaceRaised : 'none')};
-  padding: 2px 4px;
-  color: inherit;
-  font: inherit;
-  cursor: ${props => (props.$clickable ? 'pointer' : 'default')};
-
-  &:hover:not(:disabled) {
-    filter: brightness(1.15);
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
-  }
-`
-
-// A reserve-pool slot (one of COMPUTE_MERGE_RESERVE_CAP, 8) — three visual states: empty (idle,
-// nothing banked yet), filled (gradually accumulating toward the next automatic merge — see
-// engine.js's getComputeReserveHeld, fed by continued Booster purchases/lower-tier merges past the
-// primary COMPUTE_ENTITY_CAP slots), or merging (a merge actually in flight, timing down to
-// completion — the same "warn" color the countdown text itself uses, distinct from the plain
-// accent used for "banked but not yet committed" so the two don't read as the same state).
-const ReserveSlot = styled.span`
-  flex: 0 0 auto;
-  width: 0.85rem;
-  height: 0.85rem;
-  border-radius: ${props => props.theme.radius.sm};
-  border: 1.2px solid ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.accent : props.theme.color.surfaceSunken)};
-  background: ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
-`
-
-const MergeCountdown = styled.span`
-  flex: 0 0 auto;
+  color: ${props => (props.$running ? props.theme.color.warn : props.theme.color.text)};
+  display: inline-flex;
   font-size: 0.78em;
-  font-family: ${props => props.theme.font.display};
-  color: ${props => props.theme.color.warn};
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  justify-content: center;
+  min-height: 1.9rem;
+  min-width: 3.9rem;
+  padding: 0 0.6em;
+  white-space: nowrap;
 `
 
 // Issue #326: which compute-ladder tier is currently armed to fund a Boost — a small status line
@@ -451,11 +464,9 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // than a second dedicated screen. Render order top to bottom: a card with the current boost
 // effect, the active boost timer bar (Pop/Forfeit, Stack) and Auto Boost preference, THEN the tier rows — the one selected
 // tier shows the armed status line + 3 preset buttons inside its own block, below its merge row.
-// Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1 is COMPUTE_ENTITY_CAP (10)
-// normal slots plus the tier's name/symbol; row 2 is, pre-unlock, an instant Merge button + an
-// Unlock Auto-charge button, or, post-unlock, the "🤖 Auto-charge" row of COMPUTE_MERGE_RESERVE_CAP
-// (8) auto-charge slots — clicking it instantly charges 8 → 1 whenever isCompute*MergeStartAvailable
-// allows it. Only the automatic merge (at the full extended cap) commits 8 tokens to the reserve
+// Each tier is one chain node (see ENTITY_ROWS/TierBlock above): COMPUTE_ENTITY_CAP (10) held-count dots
+// plus the tier's name/symbol and its Charger status (🔓 n/10 while its first 10 charges build it, then
+// 🔌 n/8 / ⏳); the link to the next tier carries the 8→1 Charge up or ⚡ Charge pill. Only the automatic merge (at the full extended cap) commits 8 tokens to the reserve
 // and counts down that boundary's live duration (see getComputeMergeDurationSeconds in the engine).
 // "Compute" names the page/feature only — individual entities drop the word (Core, Node,
 // Cluster, … not "Compute Core"/"Compute Node"/…). The merge section itself only renders once
@@ -489,9 +500,12 @@ const ComputePage = ({ game }) => {
   // in the top card before the merge chain unlocks (Cores armed implicitly, no tier rows yet).
   const boostPresets = armedRow && (
     <>
-      <ArmedStatusText title={`Boosts ${describeCoveredTiers(armedTierIndex, 'name')}`}>
-        {`Boosts ${describeCoveredTiers(armedTierIndex)}`}
-      </ArmedStatusText>
+      {/* In the chain each node's header already reads "→ <tiers>", so only the pre-chain card repeats it. */}
+      {!intro.computeMergePageUnlocked && (
+        <ArmedStatusText title={`Boosts ${describeCoveredTiers(armedTierIndex, 'name')}`}>
+          {`Boosts ${describeCoveredTiers(armedTierIndex)}`}
+        </ArmedStatusText>
+      )}
       <BoostRow role="group" aria-label="compute boost">
         {Object.keys(COMPUTE_BOOST_PRESETS).map(boostType => {
           const multiplier = getComputeBoostTierMultiplier(boostType, armedTierIndex)
@@ -532,9 +546,14 @@ const ComputePage = ({ game }) => {
 
   return (
     <RootDiv>
-      <Header>
-        <Title>⚡ Power</Title>
-      </Header>
+      {/* Title yields to the boost timer bar at the top (kept as a hidden heading for screen readers). */}
+      {boostActive ? (
+        <VisuallyHidden as="h1">⚡ Power</VisuallyHidden>
+      ) : (
+        <Header>
+          <Title>⚡ Power</Title>
+        </Header>
+      )}
 
       {boostActive && <BoostTimerBar actions={actions} state={state} />}
       {!boostActive && (
@@ -559,7 +578,11 @@ const ComputePage = ({ game }) => {
               const hasMergeRow = Boolean(row.autoFlagField)
               const autoEnabled = hasMergeRow ? Boolean(intro[row.autoFlagField]) : false
               const autoCostHeld = row.autoCostField ? (intro[row.autoCostField] ?? 0) : 0
+              // Legacy route only: a save already holding 10 of the output may still sacrifice them.
               const canEnableAuto = hasMergeRow && !autoEnabled && autoCostHeld >= COMPUTE_ENTITY_CAP
+              // New route: the boundary's first 10 charges build its Charger (getChargerUnlockProgress).
+              const chargerProgress = hasMergeRow ? getChargerUnlockProgress(state, row.autoFlagField) : 0
+              const chargingCharger = hasMergeRow && !autoEnabled && chargerProgress < COMPUTE_ENTITY_CAP
               const autoUnlockProgress = Math.min(100, (autoCostHeld / COMPUTE_ENTITY_CAP) * 100)
               const remainingSeconds = row.timerField ? (intro[row.timerField] ?? 0) : 0
               const merging = remainingSeconds > 0
@@ -568,7 +591,7 @@ const ComputePage = ({ game }) => {
               // Once auto-charge is unlocked, `count` can climb past COMPUTE_ENTITY_CAP into the
               // boundary's own gradually-filling reserve (see getComputeReserveHeld) — the primary
               // slot row always reads at most COMPUTE_ENTITY_CAP/COMPUTE_ENTITY_CAP; the "extra"
-              // shows up as reserve fill in row 2 instead, never as an overflowing "14/10".
+              // shows up as the Charger's reserve fill instead, never as an overflowing "14/10".
               const reserveHeld = hasMergeRow ? getComputeReserveHeld(state, tierIndex) : 0
               // A manual Charge moves units from the top row down into the bottom row one per second.
               const charging = hasMergeRow && isComputeCharging(state, rowIndex)
@@ -578,11 +601,10 @@ const ComputePage = ({ game }) => {
               // Progressive disclosure: the merge/auto row only shows for the selected tier or when
               // there is something to act on or watch, so idle tiers stay a single line.
               const canMergeNow = autoEnabled ? startAvailable : canMerge(count, intro[row.mergeOutputField] ?? 0, outputCap)
-              // Spacious layout for tiers not yet automated (always show their merge/auto row);
-              // the tight layout is for already-automated tiers.
-              const spacious = !autoEnabled
+              // Tiers not yet automated always show their connector (merge + unlock path); automated
+              // tiers show it only while there is something to act on or watch.
               const showDetail = hasMergeRow && (
-                spacious || armedTierIndex === tierIndex || merging || charging || canMergeNow || reserveHeld > 0
+                !autoEnabled || armedTierIndex === tierIndex || merging || charging || canMergeNow || reserveHeld > 0
               )
 
               // Only unlocked tiers render: the first, anything held/automated/merging, one whose
@@ -595,9 +617,92 @@ const ComputePage = ({ game }) => {
                 || (prevRow && ((intro[prevRow.countField] ?? 0) >= COMPUTE_MERGE_RATIO || intro[prevRow.autoFlagField]))
               if (!unlocked) return null
 
+              const nextSymbol = ENTITY_ROWS[rowIndex + 1]?.symbol ?? '⬆'
+              // Pre-unlock merge (instant 8→1) or post-unlock ⚡ Charge — on the connector to the next tier.
+              const connectorButton = hasMergeRow && (autoEnabled ? (
+                <TierActionButton
+                  aria-label={`charge ${row.label.toLowerCase()}: move units down one per second, then merge ${COMPUTE_MERGE_RATIO} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
+                  disabled={!chargeAvailable}
+                  onClick={() => actions.startComputeCharge(rowIndex)}
+                  title={
+                    charging
+                      ? 'Charging — one unit moves into the Charger each second, then it merges'
+                      : (intro[row.mergeOutputField] ?? 0) >= outputCap
+                        ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
+                        : `Charge: move units from the top row into the Charger one per second, then merge ${COMPUTE_MERGE_RATIO} into 1 ${row.mergeOutputLabel} (needs ${COMPUTE_MERGE_RATIO} ${row.label} held)`
+                  }
+                  type="button"
+                  variant="success"
+                >
+                  <ButtonContent>{charging ? `⏳ ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP}` : '⚡ Charge'}</ButtonContent>
+                </TierActionButton>
+              ) : (
+                <TierActionButton
+                  aria-label={`charge up ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
+                  disabled={chargingCharger ? count < COMPUTE_MERGE_RATIO : !canMerge(count, intro[row.mergeOutputField] ?? 0, outputCap)}
+                  onClick={() => actions[row.mergeAction]()}
+                  title={
+                    chargingCharger
+                      ? `Charge up: spend ${COMPUTE_MERGE_RATIO} ${row.label} into this tier's Charger (${chargerProgress}/${COMPUTE_ENTITY_CAP}) — the first ${COMPUTE_ENTITY_CAP} charges unlock Auto-charge, then charges make ${row.mergeOutputLabel}`
+                      : (intro[row.mergeOutputField] ?? 0) >= outputCap
+                        ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
+                        : `Charge up: spend ${COMPUTE_MERGE_RATIO} ${row.label} for 1 ${row.mergeOutputLabel}`
+                  }
+                  type="button"
+                  variant="success"
+                >
+                  <ButtonContent>{`${row.symbol} ${COMPUTE_MERGE_RATIO}→1 ${chargingCharger ? '🔌' : nextSymbol}`}</ButtonContent>
+                </TierActionButton>
+              ))
+              // The node's own Charger (8 reserve slots) once unlocked, else its 🔓 unlock.
+              const nodeSide = hasMergeRow && (autoEnabled ? (
+                <ChargerStatus
+                  $fill={reserveHeld / COMPUTE_MERGE_RESERVE_CAP}
+                  $running={merging}
+                  aria-label={
+                    merging
+                      ? `${row.label} charger, auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left`
+                      : `${row.label} charger, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
+                  }
+                  role="img"
+                  title={
+                    merging
+                      ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
+                      : `Charger: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — fills past ${COMPUTE_ENTITY_CAP} held and charges on its own when full, or press Charge to move units into it one per second`
+                  }
+                >
+                  {merging ? `⏳ ${formatOfflineDuration(remainingSeconds)}` : `🔌 ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP}`}
+                </ChargerStatus>
+              ) : canEnableAuto ? (
+                // Legacy save already holding 10 of the output: the old sacrifice unlock stays available.
+                <ChargerBadge
+                  aria-label={row.autoAriaLabel}
+                  onClick={() => actions[row.enableAutoAction]()}
+                  title={`Unlock this tier's Charger now: sacrifice ${COMPUTE_ENTITY_CAP} of your ${formatAmount(autoCostHeld)} ${row.autoCostLabel}`}
+                  type="button"
+                  variant="info"
+                  $progress={autoUnlockProgress}
+                >
+                  <ButtonContent>{`🔓 ${COMPUTE_ENTITY_CAP}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
+                </ChargerBadge>
+              ) : (
+                <ChargerStatus
+                  $fill={chargerProgress / COMPUTE_ENTITY_CAP}
+                  aria-label={`${row.label} charger unlock, ${chargerProgress}/${COMPUTE_ENTITY_CAP} charges`}
+                  role="img"
+                  title={`Charger: ${chargerProgress}/${COMPUTE_ENTITY_CAP} — this tier's first ${COMPUTE_ENTITY_CAP} charges build it, then it charges on its own whenever ${row.label} is completely full`}
+                >
+                  {`🔓 ${chargerProgress}/${COMPUTE_ENTITY_CAP}`}
+                </ChargerStatus>
+              ))
+              // The connector shows whenever its merge matters (same progressive rule as before);
+              // otherwise a small gap keeps the chain readable.
+              const showConnector = hasMergeRow && showDetail
+
               return (
-                <TierBlock key={row.key} data-boost-tier aria-label={`${row.label} tier`} $selected={armedTierIndex === tierIndex} $spacious={spacious}>
-                  <TierHeaderRow $spacious={spacious}>
+                <Fragment key={row.key}>
+                <TierBlock data-boost-tier aria-label={`${row.label} tier`} $selected={armedTierIndex === tierIndex}>
+                  <TierHeaderRow>
                     <TierSelectButton
                       type="button"
                       onClick={() => setSelectedBoostTierIndex(tierIndex)}
@@ -606,99 +711,29 @@ const ComputePage = ({ game }) => {
                       title={`Select ${row.label} to show its Boost presets — they'll boost ${describeCoveredTiers(tierIndex, 'name')}`}
                       $selected={armedTierIndex === tierIndex}
                     >
-                      <SelectMarker aria-hidden="true" $selected={armedTierIndex === tierIndex} />
                       <TierSymbol aria-hidden="true">{row.symbol}</TierSymbol>
-                      <TierLabel $spacious={spacious}>
-                        {row.label}
-                        <VisuallyHidden>{` ${formatAmount(primaryHeld)}/${COMPUTE_ENTITY_CAP}`}</VisuallyHidden>
-                      </TierLabel>
-                      <SlotsRow role="group" aria-label={`${row.label} slots`}>
-                        {Array.from({ length: COMPUTE_ENTITY_CAP }, (_, index) => (
-                          <NormalSlot key={index} $filled={index < primaryHeld} $spacious={spacious} aria-hidden="true" />
-                        ))}
-                      </SlotsRow>
-                    </TierSelectButton>
-                  </TierHeaderRow>
-
-                  {showDetail && (
-                  <TierMergeRow $spacious={spacious}>
-                    {hasMergeRow && (
-                      autoEnabled ? (
-                        <>
-                        <TierActionButton
-                          aria-label={`charge ${row.label.toLowerCase()}: move units down one per second, then merge ${COMPUTE_MERGE_RATIO} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
-                          disabled={!chargeAvailable}
-                          onClick={() => actions.startComputeCharge(rowIndex)}
-                          title={
-                            charging
-                              ? 'Charging — one unit moves into the Charger each second, then it merges'
-                              : (intro[row.mergeOutputField] ?? 0) >= outputCap
-                                ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
-                                : `Charge: move units from the top row into the Charger one per second, then merge ${COMPUTE_MERGE_RATIO} into 1 ${row.mergeOutputLabel} (needs ${COMPUTE_MERGE_RATIO} ${row.label} held)`
-                          }
-                          type="button"
-                          variant="prestige"
-                        >
-                          <ButtonContent>{charging ? `⏳ ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP}` : '⚡ Charge'}</ButtonContent>
-                        </TierActionButton>
-                        <ReserveSlotsRow
-                          aria-label={
-                            merging
-                              ? `${row.label} charger, auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left`
-                              : `${row.label} charger, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
-                          }
-                          disabled
-                          $clickable={false}
-                          title={
-                            merging
-                              ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
-                              : `Charger: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — fills past ${COMPUTE_ENTITY_CAP} held and charges on its own when full, or press Charge to move units into it one per second`
-                          }
-                          type="button"
-                        >
-                          {merging && <MergeCountdown>{formatOfflineDuration(remainingSeconds)}</MergeCountdown>}
-                          {Array.from({ length: COMPUTE_MERGE_RESERVE_CAP }, (_, index) => (
-                            <ReserveSlot key={index} $filled={index < reserveHeld} $merging={merging} aria-hidden="true" />
+                      <NodeText>
+                        <NodeTitle>
+                          <TierLabel>
+                            {row.label}
+                            <VisuallyHidden>{` ${formatAmount(primaryHeld)}/${COMPUTE_ENTITY_CAP}`}</VisuallyHidden>
+                          </TierLabel>
+                          <BoostsHint aria-hidden="true">→ {describeCoveredTiers(tierIndex)}</BoostsHint>
+                        </NodeTitle>
+                        <SlotsRow role="group" aria-label={`${row.label} slots`}>
+                          {Array.from({ length: COMPUTE_ENTITY_CAP }, (_, index) => (
+                            <NormalSlot key={index} $filled={index < primaryHeld} aria-hidden="true" />
                           ))}
-                        </ReserveSlotsRow>
-                        </>
-                      ) : (
-                        <>
-                          <TierActionButton
-                            aria-label={`charge up ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
-                            disabled={!canMerge(count, intro[row.mergeOutputField] ?? 0, outputCap)}
-                            onClick={() => actions[row.mergeAction]()}
-                            title={
-                              (intro[row.mergeOutputField] ?? 0) >= outputCap
-                                ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
-                                : `Charge up: spend ${COMPUTE_MERGE_RATIO} ${row.label} for 1 ${row.mergeOutputLabel}`
-                            }
-                            type="button"
-                            variant="prestige"
-                            $spacious
-                          >
-                            <ButtonContent>{`${row.symbol} ${COMPUTE_MERGE_RATIO}→1 ${ENTITY_ROWS[rowIndex + 1]?.symbol ?? '⬆'}`}</ButtonContent>
-                          </TierActionButton>
-                          <TierActionButton
-                            aria-label={row.autoAriaLabel}
-                            disabled={!canEnableAuto}
-                            onClick={() => actions[row.enableAutoAction]()}
-                            title={`Unlock this tier's Charger: sacrifice ${COMPUTE_ENTITY_CAP} of your ${formatAmount(autoCostHeld)} ${row.autoCostLabel} — it then charges on its own whenever ${row.label} is completely full, via a timed reserve charge`}
-                            type="button"
-                            variant="info"
-                            $progress={autoUnlockProgress}
-                            $spacious
-                          >
-                            <ButtonContent>{`🔓 Charger ${ENTITY_ROWS[rowIndex + 1]?.symbol ?? ''} ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
-                          </TierActionButton>
-                        </>
-                      )
-                    )}
-                  </TierMergeRow>
-                  )}
+                        </SlotsRow>
+                      </NodeText>
+                    </TierSelectButton>
+                    {nodeSide && <NodeSide>{nodeSide}</NodeSide>}
+                  </TierHeaderRow>
 
                   {armedTierIndex === tierIndex && boostPresets}
                 </TierBlock>
+                {showConnector ? <Connector>{connectorButton}</Connector> : <ConnectorGap />}
+                </Fragment>
               )
             })}
           </TierBlocksGroup>

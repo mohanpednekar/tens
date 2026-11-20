@@ -7,7 +7,7 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 
 Player labels (issue #988; code identifiers unchanged): Power page = id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers`; Cores → Superclouds (KFlops → QFlops outputs) = `flop01`–`flop10`; Clock Speed = global tickspeed; Bitrate/Bandwidth/Staging/Compile/Ping/Flush Pool/Turbo-Balanced-Eco replace the old Speed/pool speed/buffer/Combine/tap/Reset Pool/Burst-Standard-Sustain. Full table: `CLAUDE.md`.
 
-Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Purge** (formerly named Reboot, now the Era-ascension layer; PP = Purge Points), the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). Code and state use the Purge names too (`purge`, `purgeGame`, `PURGE_THRESHOLD`, automation keys `speedUp`/`purge`; older `prestige`/`reboot` save keys migrate via `save-migration/migrateToV3`); only Prestige-Point/museum identifiers keep `prestige`. Player labels (#986): Firmware = `'perks'`, Compression = `prestigeDoublePpLevel`, Reboot = `era`/`eraGame`, Kernels = `eons`, Reformat = `resetByteFoundry`, Releases = `'milestones'`, System log = `prestigeMuseum`, Manual = `'info'`; see CLAUDE.md.
+Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rewards; the Factory reset is **Purge** (formerly named Reboot, now the Era-ascension layer; PP = Purge Points), the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). Code and state use the Purge names too (`purge`, `purgeGame`, `PURGE_THRESHOLD`, automation keys `speedUp`/`purge`; older `prestige`/`reboot` save keys migrate via `save-migration/migrateToV3`); only Prestige-Point/museum identifiers keep `prestige`. Player labels (#986): Firmware = `'perks'`, Compression = `prestigeDoublePpLevel`, Reboot = `era`/`eraGame`, Kernels = `eons`, Reformat = `resetByteFoundry`, Milestones = `'milestones'`, System log = `prestigeMuseum`, Manual = `'info'`; see CLAUDE.md.
 
 ## Project
 
@@ -15,7 +15,7 @@ Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rew
 shared bottom `AppNav` in progression order: **Foundry → Power → Compute → Factory → Firmware → Challenges → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
 item, and no second-level Data Stream | Storage tabs). **Firmware** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
-unlock/milestone → pause Switch → speed upgrade / Compression, Overflow mode, Buy max). More (Manual, Releases, Settings) is always available — even
+unlock/milestone → pause Switch → speed upgrade / Speed bonus, Sleep mode cap (4 h + 4 h per PP level), Compression, Cache Warm (20 PP), Overflow mode, Buy max (2 PP)). More (Manual, Milestones, Settings) is always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
 production bundle; `yarn build:dev` builds a Dev-Mode-enabled variant published at `/tens/dev/` (own `dev:`-prefixed saves, no backward-compat); see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
@@ -81,7 +81,7 @@ src/
     storage.js             ← localStorage persistence; calls save-migration on every load, then mergeState.
                               Also Dev Mode's own isolated `'dev'` slot (separate from numbered player slots)
   components/
-    AppNav/, AppMenu/      ← bottom nav (Foundry → Power → Compute → Factory → Firmware → Challenges → More) + More sheet (Manual / Releases / Settings)
+    AppNav/, AppMenu/      ← bottom nav (Foundry → Power → Compute → Factory → Firmware → Challenges → More) + More sheet (Manual / Milestones / Settings)
     Button/, BuyMaxToggle/, Switch/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/, BoostBadge/, SpeedDetailsPopover/, LeadIcon/
                             ← shared styled components; see docs/COMPONENTS_REFERENCE.md
     DataLakePanel/          ← one Data Lake's own self-contained block (title + disk-square rows
@@ -97,7 +97,7 @@ src/
     MainPage/index.jsx     ← the game (Byte Factory); data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← Manual; static mechanic explanations; reads no game state
     PerksPage/index.jsx    ← Automation / Prestige icon tabs (feature-grouped); AppNav after first Prestige
-    MilestonesPage/index.jsx ← Releases / Reboot status; via AppNav → More
+    MilestonesPage/index.jsx ← Milestones timeline / Reboot status; via AppNav → More
     SettingsPage/index.jsx ← Supporter / Cloud save / Store / saves / System log / Reboot / Task Manager /
                               Legal / Reset; via AppNav → More
     DevModePage/index.jsx  ← dev-build-only sandbox; isolated save toggle, quick-seed presets, a
@@ -133,7 +133,7 @@ overriding whatever `page` says, except on gate-exempt utility pages
 (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`) — whenever
 `intro.mainGameUnlocked` is still false (see "Byte Foundry"). Storage is continuous Foundry sections
 (Data Stream + Disks), not gate-exempt on its own. Factory stays hidden during the gate; More (Manual /
-Releases / Settings) stays reachable so utilities never require unlocking the main game. Once unlocked, Foundry is just
+Milestones / Settings) stays reachable so utilities never require unlocking the main game. Once unlocked, Foundry is just
 another AppNav destination. `intro.mainGameUnlocked` is PERMANENT (`latchMainGameUnlocked` in
 `engine.js`) — never reset by a real Prestige or Reboot — so the gate is effectively
 one-time-ever, on a save's very first cycle only.
@@ -187,7 +187,7 @@ omitted; do not guess at any of it.** See `CLAUDE.md`'s "Economy model"/"Archite
 `ComputePage`, and check `docs/DESIGN_HISTORY.md` first if changing a formula/gate a past iteration may
 already have tried and rejected.
 
-After **100 lifetime Purges**, production no longer freezes at 1 Googol Bytes (optional Prestige
+Once Overflow mode unlocks (Auto Purge interval ≤ 1 s), production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Compression
 upgrades on Firmware → Prestige. Production speed bonus is a one-time 1 PP Firmware → Prestige purchase (×1.1 at 1 Purge, then ×(1 + log10 Purges): ×2 at 10, ×3 at 100, ×4 at 1,000), the PP tutorial — see `docs/ECONOMY_REFERENCE.md`.
 
@@ -344,6 +344,14 @@ the quiet period above. That enables GitHub auto-merge only; never force-merge, 
 `main`, never GitHub-approve your own PR. Full detail: `CLAUDE.md` Pull requests +
 `docs/AUTOMATION.md` Auto-merge.
 
+**Direct merge (maintainer standing rule; the one exception to "enable only" above):** in
+maintainer-driven interactive sessions, for every PR in this repo: once auto-merge is enabled and the PR is
+green — mergeable (no conflicts; update a "behind" branch first, then re-run the reviewer for the new head), every required check complete and
+passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for the
+current head SHA — merge it directly (`gh pr merge --merge` / `merge_pull_request`). The quiet period
+does not apply. Never for `.github/workflows/**` diffs, never over a failing/pending check. Autonomous
+runs, Devin and dev-team roles keep their never-self-merge rule.
+
 ## AI-instruction file cost hygiene
 
 `.claude/skills/optimize-ai-files/SKILL.md` trims the token footprint of `CLAUDE.md`/this file/
@@ -397,6 +405,8 @@ publicly visible but isn't legally reusable without written permission. No `CODE
 
 Data Lakes (#1087): permanent 1-unit buffer (`fillBits`) + ×1/×10/×100/×1000 disks (`depositedUnits`); timed `lakeTransfer`s (`tickDataLakeTransfers`) move the buffer into ×1 disks and consolidate 9 smaller disks of every size + a full buffer into the next; ordinary pool disks fill directly (no write-cache flush). See `docs/ECONOMY_REFERENCE.md` "Hierarchical lake disks".
 
-Challenge mode (epic #1037): state `challenges`, registry `CHALLENGE_DEFINITIONS` and rollout Set `LIVE_CHALLENGE_IDS` (F1–F25 live; UI: Challenges page 🏁 Factory tab + Factory `ChallengeBanner`) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits` in `engine.js`; the three speed-upgrade buyers refuse until a live challenge is completed; definitions may carry run-wide `levers` (production / Clock Speed & Scale Up powers / cost multiplier), and F9's corruption falls with unlocked Foundry disk sizes. See `docs/ECONOMY_REFERENCE.md` "Challenge mode".
+Challenge mode (epic #1037): state `challenges`, registry `CHALLENGE_DEFINITIONS` and rollout Set `LIVE_CHALLENGE_IDS` (F1–F25 live; UI: Challenges page 🏁 Factory tab + Factory `ChallengeBanner`) in `layers.js`; `enterChallenge`/`exitChallenge`/`getPurgeGoalBits` in `engine.js`; a challenge unlocks at 5× its automation's unlock Purge (tier autobuyer n at Purge n, tier tickspeed n + 10); the three speed-upgrade buyers refuse until a live challenge is completed; definitions may carry run-wide `levers` (production / Clock Speed & Scale Up powers / cost multiplier), and F9's corruption falls with unlocked Foundry disk sizes. See `docs/ECONOMY_REFERENCE.md` "Challenge mode".
+
+Daily challenges (epic #1062): `src/game/dailyChallenges.js`, state `daily`; three seeded Factory-only runs per UTC date (10 min / 1 h / 10 h) with modified conditions (`DAILY_MODIFIER_POOL` levers via `runLevers`), a seeded head start and starting balance, and a seeded objective (reach a balance / own tier units / complete tier levels / Clock Speed level / Overclock level) whose target is calculated from a reference-bot simulation (bot wins after half the limit, by 9 min / 50 min / 8 h). Runs carry engine automations by format (10 min a seeded mix, 1 h buying only, 10 h everything, with switches). UI: Challenges page 📅 Daily tab; a run is played on the `MainPage` component itself, fed the run's own state. See `docs/ECONOMY_REFERENCE.md` "Daily challenges".
 
 Achievements (epic #1046, switch `ACHIEVEMENTS_FEATURE`, on): `achievements` state, `ACHIEVEMENT_*` registry in `layers.js`, `detectAchievements`/`getCompletedAchievementGroups` in `engine.js`, `AchievementsPage` under More. Foundry Reclamation I/II achievements permanently upgrade the two per-pool Bitrate steps across Reformat and Reboot. See `docs/ECONOMY_REFERENCE.md` "Achievements".

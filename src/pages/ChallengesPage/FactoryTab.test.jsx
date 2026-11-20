@@ -2,9 +2,11 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { ThemeProvider } from 'theme'
 import { describe, expect, it, vi } from 'vitest'
 import ChallengeBanner from 'components/ChallengeBanner'
-import { createInitialGameState, enterChallenge } from 'game/engine'
+import { createInitialGameState, enterChallenge, getAutobuyerSpeedUpgradeMaxLevel, getTierTickspeedIntervalMaxLevel } from 'game/engine'
 import { CHALLENGE_DEFINITIONS, TIER_DEFINITIONS } from 'game/layers'
 import ChallengesPage from './index'
+import PerksPage from 'pages/PerksPage'
+import ComputeFlopsPage from 'pages/ComputeFlopsPage'
 
 const owned = () => ({
   ...createInitialGameState(),
@@ -13,7 +15,7 @@ const owned = () => ({
   autoXpTickspeed: true,
   autoOverclock: true,
   autoPurge: 1,
-  purge: { ...createInitialGameState().purge, points: 1e9, count: 5 },
+  purge: { ...createInitialGameState().purge, points: 1e9, count: 1000 },
   autobuyers: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 1])),
   tierTickspeedAutobuyer: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])),
 })
@@ -23,6 +25,7 @@ const makeGame = state => ({ state, actions: new Proxy({}, { get: (target, key) 
 describe('Firmware Challenges tab', () => {
   it.each(CHALLENGE_DEFINITIONS.map(def => [def.id, def]))('%s lists code, target and codename once unlocked', (id, def) => {
     wrap(<ChallengesPage game={makeGame(owned())} />)
+    fireEvent.click(screen.getByRole('button', { name: `${id} ${def.codename}, ready` }))
     const row = screen.getByLabelText(`challenge ${id}`)
     expect(row.textContent).toContain(`${id} · ${def.target} · ${def.codename}`)
     expect(row.textContent).toContain(def.rule)
@@ -30,14 +33,18 @@ describe('Firmware Challenges tab', () => {
 
   it('hides codename and rule while locked and shows the unlock condition', () => {
     wrap(<ChallengesPage game={makeGame(createInitialGameState())} />)
+    const tile = screen.getByRole('button', { name: 'F21, locked' })
+    expect(tile.textContent).toBe('F21🔒 P40')
+    fireEvent.click(tile)
     const row = screen.getByLabelText('challenge F21')
-    expect(row.textContent).toContain('Unlocks at Purge 8')
+    expect(row.textContent).toContain('Unlocks at Purge 40')
     expect(row.textContent).not.toContain('Base Clock')
   })
 
   it('starts a challenge only after confirming', () => {
     const game = makeGame(owned())
     wrap(<ChallengesPage game={game} />)
+    fireEvent.click(screen.getByRole('button', { name: 'F21 Base Clock, ready' }))
     fireEvent.click(screen.getByRole('button', { name: /^Start challenge F21/ }))
     expect(game.actions.enterChallenge).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Start challenge' }))
@@ -46,6 +53,8 @@ describe('Firmware Challenges tab', () => {
 
   it('disables other start controls while a challenge is active', () => {
     wrap(<ChallengesPage game={makeGame(enterChallenge('F21')(owned()))} />)
+    expect(screen.getByRole('button', { name: 'F21 Base Clock, active' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'F22 Scale Out, ready' }))
     expect(screen.getByRole('button', { name: /^Start challenge F22/ })).toBeDisabled()
   })
 })
@@ -67,13 +76,74 @@ describe('Factory challenge banner', () => {
 })
 
 describe('Challenges → Factory tab Exit', () => {
-  it('shows a confirm-guarded Exit on the active challenge row only', () => {
+  it('opens the active challenge in the detail panel with a confirm-guarded Exit', () => {
     const game = makeGame(enterChallenge('F25')(owned()))
     wrap(<ChallengesPage game={game} />)
-    expect(screen.queryByLabelText('challenge F24')?.querySelector('button[aria-label^="Exit challenge"]')).toBeNull()
+    expect(screen.queryByLabelText('challenge F24')).toBeNull()
     fireEvent.click(within(screen.getByLabelText('challenge F25')).getByRole('button', { name: /^Exit challenge F25/ }))
     expect(game.actions.exitChallenge).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Exit challenge' }))
     expect(game.actions.exitChallenge).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('Firmware challenge gate', () => {
+  it('shows a disabled lock (no codename) while the automation is owned but the challenge is not unlocked', () => {
+    const state = { ...owned(), purge: { ...owned().purge, count: 39 } }
+    wrap(<PerksPage game={makeGame(state)} />)
+    const lock = screen.getByRole('button', { name: 'Challenge F21 unlocks at purge 40' })
+    expect(lock).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /^Start challenge F21/ })).toBeNull()
+    expect(document.body.textContent).not.toContain('Base Clock')
+  })
+})
+
+describe('Firmware tier autobuyers once fully upgraded (#1140)', () => {
+  const maxed = () => {
+    const state = owned()
+    return {
+      ...state,
+      autobuyerIntervalLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, getAutobuyerSpeedUpgradeMaxLevel(tier.id)])),
+      tierTickspeedIntervalLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, getTierTickspeedIntervalMaxLevel()])),
+      tierTickspeedAutobuyerEnabled: { tier03: false },
+      challenges: { ...state.challenges, completed: Object.fromEntries(CHALLENGE_DEFINITIONS.map(def => [def.id, true])) },
+    }
+  }
+
+  it('keeps the headed table while any tier can still be upgraded', () => {
+    wrap(<PerksPage game={makeGame(owned())} />)
+    expect(screen.queryByRole('group', { name: 'tier autobuyer tiles' })).toBeNull()
+    expect(screen.getByLabelText('Kilobytes automation')).toBeInTheDocument()
+  })
+
+  it('collapses to a tile grid of pause toggles that call the same actions', () => {
+    const game = makeGame(maxed())
+    wrap(<PerksPage game={game} />)
+    const grid = screen.getByRole('group', { name: 'tier autobuyer tiles' })
+    expect(within(grid).getAllByLabelText(/ automation$/)).toHaveLength(TIER_DEFINITIONS.length)
+    const gbTick = within(grid).getByRole('button', { name: "Gigabytes's tickspeed autobuyer" })
+    expect(gbTick).toHaveAttribute('aria-pressed', 'false')
+    expect(within(grid).getByLabelText("Gigabytes's tickspeed autobuyer paused")).toBeInTheDocument()
+    fireEvent.click(gbTick)
+    expect(game.actions.setTierTickspeedAutobuyerEnabled).toHaveBeenCalledWith('tier03', true)
+    fireEvent.click(within(grid).getByRole('button', { name: "Kilobytes's autobuyer" }))
+    expect(game.actions.setAutobuyerEnabled).toHaveBeenCalledWith('tier01', false)
+  })
+})
+
+describe('Compute (Flops) rows (#1138)', () => {
+  it('opens a tier\'s name and effect only from its symbol', () => {
+    const state = { ...owned(), computeFlops: { ...owned().computeFlops, pageUnlocked: true, owned: { flop01: 3 } } }
+    wrap(<ComputeFlopsPage game={makeGame(state)} />)
+    const row = screen.getByLabelText('Cores · KFlops compute tier')
+    expect(row.textContent).not.toContain('Cores')
+    expect(row.textContent).toContain('Owned: 3')
+    const symbol = within(row).getByRole('button', { name: 'Cores (KFlops) details' })
+    expect(symbol).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(symbol)
+    expect(symbol).toHaveAttribute('aria-expanded', 'true')
+    expect(row.textContent).toContain('Cores · KFlops')
+    fireEvent.keyDown(symbol, { key: 'Enter' })
+    expect(row.textContent).not.toContain('Cores · KFlops')
   })
 })

@@ -1,7 +1,7 @@
 import styled, { css, keyframes } from 'styled-components'
 import { ATTENTION_HIGH } from 'game/navAttention'
 
-// Bottom bar order follows play progression: Foundry → Power → Compute → Factory → Firmware → Challenges, then More (Manual / Releases / Settings).
+// Bottom bar order follows play progression: Foundry → Power → Compute → Factory → Firmware → Challenges, then More (Manual / Milestones / Settings).
 // Storage is folded into Foundry as continuous Memory + Disk sections (same Memory pool +
 // DiskArrayRow). Factory stays progress-gated; More stays available during the Foundry gate.
 // Accessible names: open byte foundry / open power / open compute / open byte factory / open firmware / open more menu.
@@ -155,7 +155,7 @@ const AppNav = ({
         aria-label="open more menu"
         $active={utilityActive}
         onClick={onOpenMore}
-        title="Manual, Releases, Settings"
+        title="Manual, Milestones, Settings"
         type="button"
       >
         <Icon aria-hidden="true">⋯</Icon>

@@ -25,7 +25,7 @@ const resolveInitialThemeMode = () => resolveThemeMode(loadThemePreference())
 
 // Utilities stay reachable during the Byte Foundry gate. Storage is no longer a top-level page —
 // it lives under Foundry as continuous sections — so it is not gate-exempt on its own. 'dev' is
-// exempt for the same reason Settings/Releases are — Dev Mode has to be reachable precisely
+// exempt for the same reason Settings/Milestones are — Dev Mode has to be reachable precisely
 // when you want to seed past the gate, and it's a dev-build-only destination regardless (see
 // AppMenu's `import.meta.env.DEV` guard).
 const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'achievements', 'settings', 'dev'])

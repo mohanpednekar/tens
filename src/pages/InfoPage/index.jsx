@@ -1,5 +1,6 @@
 import StatCard from 'components/StatCard'
 import {
+  formatAmount,
   formatBitsInNearestUnit,
   formatOfflineDuration,
   getAutobuyerUnlockMilestone,
@@ -41,11 +42,18 @@ import {
   PRESTIGE_POWERS_PER_PP_BASE,
   PLAYTIME_BONUS_PER_HOUR,
   PLAYTIME_BONUS_UNLOCK_COST,
+  BUY_MAX_UNLOCK_COST,
+  CACHE_WARM_UNLOCK_COST,
+  SLEEP_MODE_BASE_CAP_SECONDS,
+  SLEEP_MODE_CAP_STEP_SECONDS,
+  SLEEP_MODE_CAP_UPGRADE_COSTS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
   AUTOBUYER_UNLOCK_MILESTONE_STEP,
+  AUTOBUYER_INTERVAL_UPGRADE_BASE_COST,
+  PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE,
   GLOBAL_AUTOMATION_UNLOCK_PURGES,
   getStoragePoolMemoryBounds,
   DATA_STREAM_SPEED_EXPONENT_BASE,
@@ -167,7 +175,7 @@ const InfoPage = () => {
             Purge — unless you have unlocked Overflow mode (see Purge).
           </li>
           <li>
-            After your first Purge, the <strong>Buy max</strong> toggle (Firmware → ✦ Prestige) makes
+            Once bought ({BUY_MAX_UNLOCK_COST} PP on Firmware → ✦ Prestige), the <strong>Buy max</strong> toggle makes
             each purchase buy as many levels as you can afford. Tiers buy full levels only — a
             partly bought level takes its own click.
           </li>
@@ -426,8 +434,8 @@ const InfoPage = () => {
             {COMPUTE_MERGE_RATIO} held). It is instant.
           </li>
           <li>
-            Sacrifice {COMPUTE_ENTITY_CAP} of the next entity to unlock the Charger for that step. This
-            adds the Charger, a row of {COMPUTE_MERGE_RESERVE_CAP} slots ({COMPUTE_ENTITY_AUTO_MERGE_CAP} held in
+            A step's first {COMPUTE_ENTITY_CAP} charges go into its Charger instead of the next entity (🔓 n/{COMPUTE_ENTITY_CAP});
+            the {COMPUTE_ENTITY_CAP}th unlocks it, with nothing sacrificed. The Charger holds {COMPUTE_MERGE_RESERVE_CAP} more ({COMPUTE_ENTITY_AUTO_MERGE_CAP} held in
             total) that fills as the entity keeps growing past {COMPUTE_ENTITY_CAP}. Press ⚡ Charge
             to move units from the top row into the Charger one per second, then {COMPUTE_MERGE_RATIO} → 1 merges
             instantly.
@@ -526,12 +534,13 @@ const InfoPage = () => {
             itself — buying one lowers that tier’s owned count.
           </li>
           <li>
-            {lastTierName}’ tickspeed upgrade needs the usual amount owned but only spends a tenth of
-            it (the 2nd upgrade needs 100, spends 10).
+            {lastTierName}’ tickspeed upgrade may spend your last unit (other tiers always keep one).
+            Spend all {lastTierName} after holding some in the same run to earn Spent QB — then 1 is
+            credited regardless of balance, more often with more completed levels.
           </li>
           <li>
             After {TIER_DEFINITIONS.length} Scale Ups in a run (the first onto {lastTierName}), the
-            Restage upgrade appears left of Scale Up (below the tier list): spend XP for +1% faster {lastTierName} ticks per XP
+            Restage upgrade appears beside Clock Speed (above the tier list): spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
             It resets every other tier’s owned quantity and your Bits. Auto Restage
             (Firmware → Automation, unlocked at Purge {GLOBAL_AUTOMATION_UNLOCK_PURGES.restage}) spends it for you, every 64 s at first —
@@ -605,14 +614,14 @@ const InfoPage = () => {
             An autobuyer buys <strong>one full level per attempt</strong>, only when that whole level
             (or the rest of a partly bought one) is affordable; Buy max never applies to it. Speed
             upgrades on that same row shorten its interval down to 10 ms; each level after that
-            doubles how many levels one attempt can buy, up to 1024. Every autobuyer’s speed
-            upgrades start at 100 PP.
+            doubles how many levels one attempt can buy, up to 1024. A tier autobuyer’s speed
+            upgrades start at {AUTOBUYER_INTERVAL_UPGRADE_BASE_COST} PP.
           </li>
         </ul>
       </Section>
 
-      <Section aria-label="releases section">
-        <h2>Releases</h2>
+      <Section aria-label="milestones section">
+        <h2>Milestones</h2>
         <ul>
           <li>
             <strong>Tier autobuyers:</strong> one tier every{' '}
@@ -625,7 +634,7 @@ const InfoPage = () => {
             {firstTierTickspeedAutobuyerMilestone}, then every{' '}
             {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP === 1 ? 'Purge' : `${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Purges`} after that.
           </li>
-          <li>More → Releases tracks your story releases (v1.0 … v5.0) and Reboot progress.</li>
+          <li>More → Milestones tracks your story milestones and Reboot progress.</li>
         </ul>
       </Section>
 
@@ -648,7 +657,7 @@ const InfoPage = () => {
             upgrade halves the powers needed per PP, and once that reaches 1, doubles the PP per power.
           </li>
           <li>
-            Compression costs 100^(level+1) PP (100, 10,000, 1,000,000, …) on Firmware → ✦ Prestige and
+            Compression costs {PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE}^(level+1) PP (10, 100, 1,000, …) on Firmware → ✦ Prestige and
             is permanent across Purges.
           </li>
           <li>
@@ -657,6 +666,10 @@ const InfoPage = () => {
           <li>
             Your first Purge Point buys the Purge speed bonus ({PRESTIGE_SPEED_BONUS_UNLOCK_COST} PP on Firmware → Prestige):
             production speed grows with your Purge count, forever: ×1.1 after your first Purge, ×2 at 10 Purges, ×3 at 100, ×4 at 1,000, and so on (×(1 + log₁₀ Purges)).
+          </li>
+          <li>
+            Cache Warm ({CACHE_WARM_UNLOCK_COST} PP on Firmware → Prestige) starts every Purge, Scale Up and Overclock with
+            level 1 already complete for the tier of your highest unlocked Storage pool, with or without disks.
           </li>
           <li>
             The one-time Playtime bonus ({PLAYTIME_BONUS_UNLOCK_COST} PP on Firmware → Prestige) adds
@@ -678,8 +691,10 @@ const InfoPage = () => {
         <h2>Sleep mode</h2>
         <ul>
           <li>
-            Time away (up to {formatOfflineDuration(MAX_OFFLINE_SECONDS)}) is simulated when you come
-            back. Absences of {formatOfflineDuration(OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS)}{' '}
+            Time away is simulated when you come back, up to{' '}
+            {formatOfflineDuration(SLEEP_MODE_BASE_CAP_SECONDS)} at first. Each Sleep mode upgrade (Firmware →
+            ✦ Prestige; {SLEEP_MODE_CAP_UPGRADE_COSTS.map(cost => formatAmount(cost)).join(' / ')} PP) adds{' '}
+            {formatOfflineDuration(SLEEP_MODE_CAP_STEP_SECONDS)}, up to {formatOfflineDuration(MAX_OFFLINE_SECONDS)}. Absences of {formatOfflineDuration(OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS)}{' '}
             or less run at full speed; longer ones run at{' '}
             {OFFLINE_PROGRESS_SPEED_MULTIPLIER * 100}% speed and show a “Resumed from sleep” summary.
           </li>
@@ -699,7 +714,7 @@ const InfoPage = () => {
             Ways to spend Kernels are coming in a later update.
           </li>
           <li>
-            Reboot from More → Settings → Reboot (asks for confirmation). More → Releases
+            Reboot from More → Settings → Reboot (asks for confirmation). More → Milestones
             shows your Reboots, Kernels and eligibility.
           </li>
           <li>

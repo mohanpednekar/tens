@@ -1,6 +1,9 @@
 import {
+  BUY_MAX_UNLOCK_COST,
+  CACHE_WARM_UNLOCK_COST,
   PLAYTIME_BONUS_UNLOCK_COST,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
+  COMPUTE_ENTITY_CAP,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   COMPUTE_MERGE_RATIO,
   INTRO_BYTE_COMBINE_COST,
@@ -8,6 +11,9 @@ import {
 } from 'game/layers'
 import {
   canBuyComputeFlopsTier,
+  getChargerUnlockProgress,
+  getSleepModeCapLevel,
+  getSleepModeCapUpgradeCost,
   getSpeedUpgradeCostBits,
   isDiskSizeUnlockAvailable,
   isSpeedUpgradeArmable,
@@ -177,6 +183,10 @@ export const hasAffordablePrestigePerk = state => {
   const points = state.purge?.points ?? 0
   if (points >= getPrestigeDoublePpUpgradeCost(state.prestigeDoublePpLevel ?? 0)) return true
   if (!state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) return true
+  if (!state.buyMaxUnlocked && points >= BUY_MAX_UNLOCK_COST) return true
+  if (!state.cacheWarmUnlocked && points >= CACHE_WARM_UNLOCK_COST) return true
+  const sleepCost = getSleepModeCapUpgradeCost(getSleepModeCapLevel(state))
+  if (sleepCost !== null && points >= sleepCost) return true
   return !state.playtimeBonusUnlocked && points >= PLAYTIME_BONUS_UNLOCK_COST
 }
 
@@ -218,7 +228,9 @@ const hasInstantMergeAvailable = state =>
     if (state.intro?.[auto]) return false
     const held = state.intro?.[input] ?? 0
     const out = state.intro?.[output] ?? 0
-    return held >= COMPUTE_MERGE_RATIO && out < getComputeFieldEffectiveCap(state, output)
+    // While charges still build the Charger they need no output room (see getChargerUnlockProgress).
+    return held >= COMPUTE_MERGE_RATIO &&
+      (getChargerUnlockProgress(state, auto) < COMPUTE_ENTITY_CAP || out < getComputeFieldEffectiveCap(state, output))
   })
 
 export const hasComputeAttention = state => {
