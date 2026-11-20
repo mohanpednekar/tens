@@ -122,6 +122,7 @@ const seedMainGameState = (overrides = {}) => {
 const openSettings = async user => {
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expandSettingsSections()
 }
 
 
