@@ -317,7 +317,7 @@ export const MOCKUPS = [
   {
     id: 'control-room-early', status: 'approved', issues: [1159], width: 1366, height: 1024,
     title: 'Control Room early (S2): only unlocked cards; empty right column dropped',
-    panes: [pane('cre-factory', 1000, 870, 's2', 'game', { hideHud: true })],
+    panes: [pane('cre-factory', 972, 846, 's2', 'game', { hideHud: true })],
     layout: {
       kind: 'controlRoom', rail: { width: 88, active: 'Factory', items: ['Foundry', 'Power', 'Factory', 'More'] },
       top: hudTop({ bytes: '3e13 B', purge: 3, eta: 'first Purge ahead' }),

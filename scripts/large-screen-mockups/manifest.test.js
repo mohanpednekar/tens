@@ -34,6 +34,11 @@ describe('large-screen mockup manifest', () => {
     paneRects(mockup).forEach(({ width }, index) => expect(mockup.panes[index].width).toBe(width))
   })
 
+  test.each(MOCKUPS.filter(m => m.layout.kind === 'controlRoom').map(m => [m.id, m]))('%s captures its centre pane at its drawn size', (_, mockup) => {
+    expect(mockup.panes[0].width).toBe(mockup.layout.centre.width)
+    expect(mockup.panes[0].height).toBe(mockup.layout.centre.height)
+  })
+
   test('hinge mockups put the divider at the window centre', () => {
     for (const mockup of MOCKUPS.filter(m => m.layout.fold)) {
       expect(mockup.layout.dividers[0]).toBe(Math.floor(mockup.width / 2))
