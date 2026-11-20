@@ -476,6 +476,9 @@ scripts/                  ← automation, release, lint and simulation helpers (
                             simulate-daily-challenges.mjs, verify-maintainer-checklist.mjs, sync-release-milestones.sh.
                             resolve-pr-threads.sh: `list` read-only; `resolve` takes explicit IDs, never bulk.
                             generate-pwa-icons.mjs is not in the build — re-run only if the icon design changes.
+                            large-screen-mockups/ (`yarn mockups:large-screens`): regenerates epic #1152's design mockups into
+                            docs/design/large-screens/ from real app captures (`PW_CHROMIUM_PATH` as for e2e) — the one committed
+                            exception to throwaway aesthetic-review scripts.
 public/                   ← generated PWA icons, favicon.ico, robots.txt (old CRA `index.html`/`manifest.json`/`logo*.png`
                             removed — DESIGN_HISTORY.md)
 ```
