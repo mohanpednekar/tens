@@ -17,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Challenges are compact**: the Factory tab is a 5×5 grid of F1–F25 tiles (done / ready / locked at a glance, with a legend); tap a tile for its rule and Start in one panel below. The Daily tab is one row per format (objective, status, Start / Resume); tap the format for its conditions and Restart / Forfeit.
+- **Firmware automation is compact**: each tier autobuyer pair fits on one line under ⚙ Tickspeed / 🤖 Buy column headers, with its challenge or upgrade inline. Once every tier is fully upgraded the list becomes a 5×2 grid of pause toggles, and Compute autobuyers are a 5×2 grid too (🔒 R<n> until their Reboot).
+- **Factory feature cards sit in pairs**: Clock Speed and Restage side by side above the tiers, Scale Up and Overclock side by side below them (Restage moved up from below the tiers).
+- **Settings is a grouped list**: Game / Data / Display / Danger zone, each entry one line with its key value (e.g. your Kernels, the active save slot); tap an entry to open it. Theme is chosen inline.
+- **Releases is renamed back to Milestones** and shows a timeline of milestones without version numbers, with Reboots and Kernels on one line.
+- **Foundry disks are compact**: an open pool's disk and cache rows each state their size once (e.g. `1 Kb` cache, `1 KB` disks) instead of on every circle, cache blocks are thin bars, full disks and cache blocks are tinted, and a lake's buffer is a thin full-width bar. Pool headers, the Data Stream and Provision Disk are unchanged.
+- **Power is a merge chain**: each tier is one compact node (held count as dots, its Charger as a 🔌 n/8 badge on the same line), and the 8→1 Charge up / ⚡ Charge button sits on a small pill on the link to the next tier. Only the selected tier shows its Boost presets.
+- **A Power tier's Charger unlocks from its first 10 charges**: until a step is automated, each 8→1 charge goes into its Charger (🔓 n/10) instead of making the next tier, and the 10th unlocks it — nothing is sacrificed any more. Saves already holding 10 of the next tier keep the old instant unlock.
+- **Compute (Flops) is compact**: each tier is one row like the Factory tiers (symbol, owned, boosted tier ×, PP Buy). Tap the symbol for its full name and effect.
 - **Firmware → ✦ Prestige rows are terse**: each upgrade shows a one-line summary (usually its value now → after buying); tap an upgrade's name for its description.
 - **Buy max is now a 2 PP Firmware upgrade** (Firmware → ✦ Prestige → Purchasing) instead of unlocking free at the first Purge. Existing saves must buy it too.
 - **No more free unlocks on load**: a save that never bought the Speed bonus no longer gets it for having 10+ Purges, and 100+ Purges no longer unlock Overflow mode by themselves (it needs Auto Purge at 1 s or faster).

@@ -210,10 +210,10 @@ const TierPair = styled.div`
   border: 1px solid ${props => props.theme.color.border};
   border-left: 3px solid ${props => props.$accent};
   border-radius: ${props => props.theme.radius.sm};
-  column-gap: 0.45rem;
+  column-gap: 0.3rem;
   display: grid;
-  grid-template-columns: 1.9rem minmax(0, 1fr) minmax(0, 1fr);
-  padding: 0.35rem 0.35rem 0.35rem 0.45rem;
+  grid-template-columns: 1.8rem minmax(0, 1fr) minmax(0, 1fr);
+  padding: 0.35rem 0.25rem 0.35rem 0.45rem;
 
   & > :first-child {
     align-items: center;
@@ -228,6 +228,90 @@ const TierPairList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+`
+
+// Column headers over the tier table (same tracks as TierPair).
+const TierTableHead = styled.div`
+  color: ${props => props.theme.color.textFaint};
+  column-gap: 0.3rem;
+  display: grid;
+  font-size: 0.68rem;
+  font-weight: 600;
+  grid-template-columns: 1.8rem minmax(0, 1fr) minmax(0, 1fr);
+  letter-spacing: 0.06em;
+  padding: 0 0.25rem 0 calc(0.45rem + 3px);
+  text-transform: uppercase;
+`
+
+// Five-up tile grid (Challenges-style): fully upgraded tier autobuyers and every Compute autobuyer.
+const TileGrid = styled.div`
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+`
+
+const Tile = styled.div`
+  align-items: center;
+  aspect-ratio: 1.25;
+  background: ${props => (props.$on ? `color-mix(in srgb, ${props.theme.color.good} 14%, ${props.theme.color.surface})` : props.theme.color.surface)};
+  border: 1px solid ${props => (props.$on ? props.theme.color.good : props.theme.color.border)};
+  border-radius: ${props => props.theme.radius.md};
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+  min-width: 0;
+  padding: 2px;
+`
+
+const TileSymbol = styled.span`
+  color: ${props => props.$color ?? props.theme.color.text};
+  font-family: ${props => props.theme.font.display};
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.1;
+  opacity: ${props => (props.$dimmed ? 0.55 : 1)};
+`
+
+const TileToggles = styled.span`
+  display: flex;
+  gap: 4px;
+`
+
+// Small on/paused toggle inside a tile — same accessible name and aria-pressed contract as Switch.
+const TileToggle = styled.button`
+  align-items: center;
+  background: none;
+  border: 0;
+  border-radius: ${props => props.theme.radius.sm};
+  color: ${props => props.theme.color.textMuted};
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.72rem;
+  gap: 2px;
+  min-height: 1.4rem;
+  padding: 0 2px;
+
+  &::after {
+    background: ${props => (props.$on ? props.theme.color.good : props.theme.color.borderStrong)};
+    border-radius: 50%;
+    content: '';
+    display: inline-block;
+    height: 8px;
+    width: 8px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 1px;
+  }
+`
+
+const TileLock = styled.span`
+  color: ${props => props.theme.color.textFaint};
+  font-size: 0.68rem;
+  white-space: nowrap;
 `
 
 const CellHead = styled.div`
@@ -260,6 +344,8 @@ const InlineMeta = styled.span`
 `
 
 // Wide (global) cells keep their upgrade/unlock button on the head line itself, right-aligned.
+// Narrow tier cells use it too: the 🏁/🔒 challenge chip or ⏫ cost sits on the same line as the
+// Switch and only drops below when it genuinely doesn't fit.
 const InlineAction = styled.span`
   flex-shrink: 0;
   margin-left: auto;
@@ -273,6 +359,15 @@ const InlineAction = styled.span`
   & > button > :first-child {
     display: none;
   }
+
+  ${props => props.$narrow && `
+    && > button {
+      font-size: 0.78rem;
+      min-height: 1.6rem;
+      min-width: 0;
+      padding: 0.15em 0.4em;
+    }
+  `}
 `
 
 // Full-width action under a cell's head (upgrade or unlock button). Narrow cells drop the button's
@@ -405,7 +500,7 @@ const progressPercent = (numerator, denominator) => Math.min(100, Math.round((nu
 
 // A free milestone unlock (prestige- or era-count based) not reached yet: 🔒 + target with a hidden
 // progressbar (aria-label "<subject> unlocks at <unit> N"). Once reached, the row shows its Switch.
-const MilestoneBadge = ({ icon, subject, unit, milestone, current, progressLabel }) => {
+const MilestoneBadge = ({ icon, subject, unit, milestone, current, progressLabel, display }) => {
   const theme = useTheme()
   return (
     <RowControls>
@@ -415,7 +510,7 @@ const MilestoneBadge = ({ icon, subject, unit, milestone, current, progressLabel
         aria-label={`${subject} unlocks at ${unit} ${milestone}`}
         title={`${subject} — unlocks at ${unit} ${milestone} (you're at ${unit} ${current})`}
       >
-        {icon && `${icon} `}🔒 {milestone}
+        {display ?? <>{icon && `${icon} `}🔒 {milestone}</>}
       </Badge>
       <VisuallyHidden
         role="progressbar"
@@ -499,7 +594,7 @@ const AutomationRow = ({ ariaLabel, narrow = false, bare = false, inlineAction =
         )}
         {owned && !onToggle && ownedBadge}
         {!owned && lockedBadge}
-        {inlineAction && action && <InlineAction>{action}</InlineAction>}
+        {inlineAction && action && <InlineAction $narrow={narrow}>{action}</InlineAction>}
       </CellHead>
       {!inlineAction && action && <CellAction $narrow={narrow}>{action}</CellAction>}
     </Cell>
@@ -645,6 +740,19 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     return def && !isChallengeCompleted(state, def.id) ? def : null
   }
 
+  // Once every tier's tickspeed autobuyer and autobuyer is owned and fully upgraded (no gate challenge
+  // left), the tier table collapses to a Challenges-style tile grid of pause toggles.
+  const tierAutomationFullyUpgraded = TIER_DEFINITIONS.every(tier => {
+    const level = state.autobuyerIntervalLevels?.[tier.id] ?? 0
+    const tickLevel = state.tierTickspeedIntervalLevels?.[tier.id] ?? 0
+    return (state.autobuyers[tier.id] ?? null) !== null
+      && Boolean(state.tierTickspeedAutobuyer?.[tier.id])
+      && level >= getAutobuyerSpeedUpgradeMaxLevel(tier.id)
+      && tickLevel >= getTierTickspeedIntervalMaxLevel()
+      && !gateChallengeFor('tierTickspeed', tier.id)
+      && !gateChallengeFor('tierAutobuyer', tier.id)
+  })
+
   const renderAutomation = () => (
     <List aria-label="automation firmware page">
       <Category aria-label="global automation category">
@@ -702,7 +810,35 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
 
       <Category aria-label="tier autobuyers category">
         <CategoryHeading>Tier Autobuyers</CategoryHeading>
+        {tierAutomationFullyUpgraded ? (
+          <TileGrid aria-label="tier autobuyer tiles" role="group">
+            {TIER_DEFINITIONS.map((tier, tierIndex) => {
+              const enabled = state.autobuyersEnabled?.[tier.id] ?? true
+              const tickEnabled = state.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true
+              const tickName = `${tier.name}'s tickspeed autobuyer`
+              const unitName = `${tier.name}'s autobuyer`
+              return (
+                <Tile $on={enabled && tickEnabled} aria-label={`${tier.name} automation`} key={tier.id} title={`${tier.name}: tickspeed autobuyer and autobuyer fully upgraded`}>
+                  <TileSymbol $color={theme.tierAccents[tierIndex % theme.tierAccents.length]}>
+                    <TierSymbol tier={tier} />
+                  </TileSymbol>
+                  <TileToggles>
+                    <VisuallyHidden role="img" aria-label={`${tickName} ${tickEnabled ? 'active' : 'paused'}`} />
+                    <TileToggle $on={tickEnabled} aria-label={tickName} aria-pressed={tickEnabled} onClick={() => actions.setTierTickspeedAutobuyerEnabled(tier.id, !tickEnabled)} title={`${tickEnabled ? 'Pause' : 'Resume'} ${tickName}`} type="button">⚙</TileToggle>
+                    <VisuallyHidden role="img" aria-label={`${unitName} ${enabled ? 'active' : 'paused'}`} />
+                    <TileToggle $on={enabled} aria-label={unitName} aria-pressed={enabled} onClick={() => actions.setAutobuyerEnabled(tier.id, !enabled)} title={`${enabled ? 'Pause' : 'Resume'} ${unitName}`} type="button">🤖</TileToggle>
+                  </TileToggles>
+                </Tile>
+              )
+            })}
+          </TileGrid>
+        ) : (
         <TierPairList>
+        <TierTableHead aria-hidden="true">
+          <span>Tier</span>
+          <span>⚙ Tickspeed</span>
+          <span>🤖 Buy</span>
+        </TierTableHead>
         {/* All ten tiers stay listed (owned ones included) so unlock history is never lost. */}
         {TIER_DEFINITIONS.map((tier, tierIndex) => {
           const owned = (state.autobuyers[tier.id] ?? null) !== null
@@ -728,7 +864,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   ariaLabel={`${tier.name} tickspeed autobuyer`}
                   enabled={tickEnabled}
                   bare
-                  icon="⚙"
+                  inlineAction
                   label=""
                   narrow
                   lockedBadge={(
@@ -759,7 +895,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   ariaLabel={`${tier.name} autobuyer`}
                   enabled={enabled}
                   bare
-                  icon="🤖"
+                  inlineAction
                   label=""
                   narrow
                   lockedBadge={(
@@ -798,6 +934,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           )
         })}
         </TierPairList>
+        )}
       </Category>
 
       {isAnyAutoChargeUnlocked && (
@@ -848,34 +985,38 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
       {state.computeFlops?.pageUnlocked && (
         <Category aria-label="compute autobuyers category">
           <CategoryHeading>Compute Autobuyers</CategoryHeading>
-          <CellGrid $narrow>
+          <TileGrid aria-label="compute autobuyer tiles" role="group">
           {COMPUTE_FLOPS_TIER_DEFINITIONS.map(flopTier => {
             const owned = (state.computeFlopsAutobuyers?.[flopTier.id] ?? null) !== null
             const enabled = state.computeFlopsAutobuyersEnabled?.[flopTier.id] ?? true
+            const name = `${flopTier.name} (${flopTier.outputLabel}) autobuyer`
+            const milestone = getFlopsAutobuyerUnlockEra(flopTier.id)
             return (
-              <AutomationRow
-                key={flopTier.id}
-                ariaLabel={`${flopTier.name} · ${flopTier.outputLabel} autobuyer`}
-                enabled={enabled}
-                label={<TierSymbol tier={flopTier} />}
-                narrow
-                lockedBadge={(
-                  <MilestoneBadge
-                    current={eraCount}
-                    milestone={getFlopsAutobuyerUnlockEra(flopTier.id)}
-                    progressLabel={`${flopTier.name} (${flopTier.outputLabel}) autobuyer unlock milestone progress`}
-                    subject={`${flopTier.name} (${flopTier.outputLabel}) autobuyer`}
-                    unit="Reboot"
-                  />
+              <Tile $on={owned && enabled} aria-label={`${flopTier.name} · ${flopTier.outputLabel} autobuyer`} key={flopTier.id}>
+                <TileSymbol $dimmed={!owned}><TierSymbol tier={flopTier} /></TileSymbol>
+                {owned ? (
+                  <>
+                    <VisuallyHidden role="img" aria-label={`${name} ${enabled ? 'active' : 'paused'}`} />
+                    <TileToggle $on={enabled} aria-label={name} aria-pressed={enabled} onClick={() => actions.setComputeFlopsAutobuyerEnabled(flopTier.id, !enabled)} title={`${enabled ? 'Pause' : 'Resume'} ${name}`} type="button">
+                      {enabled ? 'on' : 'paused'}
+                    </TileToggle>
+                  </>
+                ) : (
+                  <TileLock>
+                    <MilestoneBadge
+                      current={eraCount}
+                      display={`🔒 R${milestone}`}
+                      milestone={milestone}
+                      progressLabel={`${flopTier.name} (${flopTier.outputLabel}) autobuyer unlock milestone progress`}
+                      subject={`${flopTier.name} (${flopTier.outputLabel}) autobuyer`}
+                      unit="Reboot"
+                    />
+                  </TileLock>
                 )}
-                name={`${flopTier.name} (${flopTier.outputLabel}) autobuyer`}
-                onToggle={() => actions.setComputeFlopsAutobuyerEnabled(flopTier.id, !enabled)}
-                owned={owned}
-                toggleLabel={`${flopTier.name} (${flopTier.outputLabel}) autobuyer`}
-              />
+              </Tile>
             )
           })}
-          </CellGrid>
+          </TileGrid>
         </Category>
       )}
     </List>
