@@ -1043,8 +1043,11 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `mergeComputeFabricsIntoCloud`/`mergeComputeCloudsIntoDatacenter`/
    `mergeComputeDatacentersIntoSupercomputer`/`mergeComputeSupercomputersIntoMegacomputer` in
    `engine.js`, all built off the same `mergeComputeEntities(inputField, outputField, autoFlagField)`
-   factory — converting every complete group of `COMPUTE_MERGE_RATIO` of the input entity into 1 of
-   the output entity in a single call, capped at whatever room remains under
+   factory. **Charges build the Charger first:** while the boundary's `chargerUnlockProgress` is below
+   `COMPUTE_ENTITY_CAP` (10), each complete group of `COMPUTE_MERGE_RATIO` adds 1 to that progress and
+   produces NO output (no output room needed); the call stops at the 10th, which sets the auto flag (see
+   "auto-merge" below). Only in the legacy state (progress full, flag unset) does a call instead convert
+   every complete group into 1 of the output entity, capped at whatever room remains under
    the output's effective cap (`COMPUTE_ENTITY_CAP`, 10, or `COMPUTE_ENTITY_AUTO_MERGE_CAP`, 18, once the output tier's own outbound auto-merge is unlocked — `getComputeFieldEffectiveCap`, so a lower merge fills that tier's reserve), leaving surplus input unconverted — a same-reference no-op below one full
    group of 8, or once the output is already at cap. Nothing yet spends a Megacomputer — it's the top
    of the chain today (see issue #280's "Out of scope").

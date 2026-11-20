@@ -548,7 +548,9 @@ Strict three-layer separation:
    full sentence in `title`/`aria-label`; mechanic prose lives in the Manual). Top card = Boost timer bars per running multiplier lane
    (`intro.computeBoosts`: different multipliers run in parallel and add up; same multiplier queues behind the running boost, waiting ones strongest-tier-first; one row per same-tier group, Pop-or-Forfeit on the lane's last row, Stack on its first, per `boostType`, enforced in the engine too) (Auto Boost is automatic: one token per automated charge start, `autoBoostFromTier`; its Switch + preset, like Auto-charge's pause Switch `computeAutoChargeEnabled`, live on Firmware → Automation → Power Automation);
    then per-tier rows — the ONE selected tier shows the 3 Boost presets inline. Constants: `COMPUTE_ENTITY_CAP` 10,
-   `COMPUTE_MERGE_RATIO` 8, `COMPUTE_MERGE_RESERVE_CAP` 8. Cells (`computeCores`) are bought from the matching Data Lake,
+   `COMPUTE_MERGE_RATIO` 8, `COMPUTE_MERGE_RESERVE_CAP` 8. A boundary's first 10 manual charges build its Charger
+   (`intro.chargerUnlockProgress`, `getChargerUnlockProgress`) instead of the next tier; the 10th unlocks Auto-charge
+   with no sacrifice (legacy sacrifice-10 kept only for saves already holding them). Cells (`computeCores`) are bought from the matching Data Lake,
    not minted from Capacity. Detail: `docs/FOUNDRY_MECHANICS_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`, `docs/DESIGN_HISTORY.md`.
 4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), `{ game }`; AppNav once
    `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in `computeFlops.pageUnlocked`). Ten tiers Cores→Superclouds,
