@@ -1935,7 +1935,7 @@ the whole time — see "Tickspeed multiplier" above). Once the **last tier**
 successful Scale Up this cycle (`isLastTierTickspeedXpUnlocked` — with 10 tiers, exactly the run's 10th
 Scale Up; maintainer-confirmed as "first Restage after 10 Scale Ups, then 10% additional XP each time"),
 a **Restage** card appears on
-MainPage beside the Accelerate card (sharing its `SpeedCardsRow`). XP (`purge.xp`) is otherwise absent from the UI — this is
+MainPage below the Accelerate card (sharing its `SpeedCardsRow`). XP (`purge.xp`) is otherwise absent from the UI — this is
 its one purpose.
 
 - `isLastTierTickspeedXpUnlocked(state) = (state.scaleUpTierCounts?.[lastTier.id] ?? 0) >= 1` — revealing
@@ -2163,7 +2163,7 @@ occasional player decision given how much it costs the run (wiping Scale Up's bo
 everything else).
 
 `MainPage` surfaces this as an `OverclockCard` (orange accent; Factory view only), rendered directly below
-the tier list beside Scale Up in the same `SpeedCardsRow` (#1137) (see "Scale Up"
+the tier list below Scale Up in the same `SpeedCardsRow` (#1137) (see "Scale Up"
 above) — not grouped with `GlobalTickspeedCard`, which renders separately at the top of the Factory view.
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as the Scale Up card. The button (the default `Button` size) shows `⚡ {symbol} {completed}/{required}` — e.g. `⚡ QB 7/12` (the final tier's completed levels vs. the requirement); the fixed

@@ -757,7 +757,7 @@ itself — `ScaleUpCard` is likewise always shown (unlike `OverclockCard`, still
 tier having ever been unlocked — see below), but stays down below `TierList` (paired with Overclock) rather
 than joining this card, since its own target walks through the tier ladder one tier at a time (see
 "Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
-through. Feature cards are short full-width rows (`SpeedCardsRow` is a column; `featureCard` lays each card out as a row: title/effect + disclosure left, 9rem action button right; 3px left accent edge, padding and button column match `TierLine` so edges align): Accelerate then `RestageCard` (once revealed) above `TierList`; `ScaleUpCard` then `OverclockCard` (once revealed) below it. Accelerate shows the live per-level bonus `🏭 +X%/lvl` (`getChallengeClockSpeedStep`: 1% scaled by Overclock, weakened by a challenge's `clockSpeedPower`, 0 under F21; Overclock's disclosure shows the same rate) and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock). `CardTitleGroup` wraps the name/effect onto a second line when the left column is too narrow (phone widths around 320px).
+through. Feature cards are short full-width rows (`SpeedCardsRow` is a column; `featureCard` lays each card out as a row: title/effect + disclosure left, action button right (9rem desktop, 7.9/7.3/6.9rem on phones; drops below the text while the disclosure is open); 3px left accent edge, padding and button column match `TierLine` so edges align): Accelerate then `RestageCard` (once revealed) above `TierList`; `ScaleUpCard` then `OverclockCard` (once revealed) below it. Accelerate shows the live per-level bonus `🏭 +X%/lvl` (`getChallengeClockSpeedStep`: 1% scaled by Overclock, weakened by a challenge's `clockSpeedPower`, 0 under F21; Overclock's disclosure shows the same rate) and Restage `<lastTier.symbol> ×1.01/XP` as `CardEffect` beside their names (same pattern as Scale Up/Overclock). `CardTitleGroup` wraps the name/effect onto a second line when the left column is too narrow (phone widths around 320px).
 (Earlier iterations tried grouping all three speed-related cards together at the top; this
 was later reverted to a split, and is now (#1137) Accelerate + Restage above the tier list, Scale Up + Overclock below it —
 per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying
@@ -1118,9 +1118,8 @@ upgrades, then a tile grid once fully upgraded; Compute autobuyers as tiles.
 
 ### Factory feature cards (#1137)
 
-Two `SpeedCardsRow` pairs: `global accelerate panel` + `restage panel` (`RestageCard`, violet edge) above
-`TierList`, `scale up panel` + `overclock panel` below it. Each pair renders only its revealed cards; a lone
-card takes the full width. The PP strip (`purge points display`) stays, since it doubles as the Purge button.
+Two stacked `SpeedCardsRow` groups of full-width rows: `global accelerate panel` then `restage panel` (`RestageCard`, violet edge) above
+`TierList`, `scale up panel` then `overclock panel` below it. Each group renders only its revealed cards. The PP strip (`purge points display`) stays, since it doubles as the Purge button.
 
 ### Settings + Milestones (#1143)
 
