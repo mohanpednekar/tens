@@ -155,15 +155,15 @@ const TierLine = styled(StatCard)`
   }
 `
 
-// Feature cards share one shape: neutral border, a 3px top accent edge, compact padding and a 1rem
+// Feature cards share one shape: neutral border, a 3px left accent edge and the tier rows' padding/button width (so edges line up) and a 1rem
 // heading, laid out as one short full-width row (title/effect left, action button right).
 const featureCard = accent => css`
   align-items: center;
-  border-top: 3px solid ${accent};
+  border-left: 3px solid ${accent};
   flex-direction: row;
-  gap: 0.6rem;
+  gap: ${props => props.theme.space.sm};
   justify-content: space-between;
-  padding: 0.5rem 0.75rem;
+  padding: 0.3rem ${props => props.theme.space.xs} 0.3rem ${props => props.theme.space.md};
 
   > details {
     flex: 1 1 0;
@@ -171,8 +171,8 @@ const featureCard = accent => css`
   }
 
   > button {
-    flex: 0 0 auto;
-    min-width: 7.5rem;
+    flex: 0 0 9rem;
+    width: 9rem;
   }
 
   h2 {
