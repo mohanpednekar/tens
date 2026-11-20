@@ -2783,6 +2783,8 @@ describe('Buy max mode', () => {
     seedMainGameState({
       purge: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
       resources: { base: getTierCost(kilobytes, 1) * 3 },
+      // Purge 1 unlocks the Kilobytes autobuyer; pause it so a real-timer tick can't buy between steps.
+      autobuyersEnabled: { [kilobytes.id]: false },
     })
     render(<App />)
     await openPerksTab(user, /open prestige/i)
