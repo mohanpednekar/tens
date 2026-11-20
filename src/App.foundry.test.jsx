@@ -1528,14 +1528,13 @@ describe('Byte Foundry Compute Boost', () => {
     expect(screen.getByRole('button', { name: /activate eco compute boost/i })).toBeDisabled()
   })
 
-  test('every activation button stays disabled while a higher-priority action (Disk Fill) is currently available, even with a Compute Cell in hand', () => {
-    // A built, pull-eligible 1 KB disk (tier01 with no partial level progress) is the highest-
-    // priority Foundry action — nothing below it (including Boost activation) may be offered.
+  test('activation buttons stay enabled while a Disk Fill is pending — boosts are not arbitrated against Foundry actions', () => {
+    // A built, pull-eligible 1 KB disk must not block a held Cell from funding a boost.
     seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 1, disks: { 8000: 1 } })
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /activate turbo compute boost/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /activate turbo compute boost/i })).toBeEnabled()
   })
 
   // Regression test: an unrecognized computeBoostType (e.g. a corrupted/hand-edited save, or a
