@@ -113,9 +113,16 @@ const seedMainGameState = (overrides = {}) => {
 
 // Reset lives only under Settings → Danger zone (More → Settings), never on MainPage or in the
 // More sheet itself. Tests that click Reset must open Settings first.
+// Settings is a grouped list of collapsed entries (#1143); tests expand every entry so each
+// section's controls are reachable exactly as before.
+const expandSettingsSections = () => {
+  for (const toggle of screen.queryAllByRole('button', { name: / settings$/i, expanded: false })) fireEvent.click(toggle)
+}
+
 const openSettings = async user => {
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expandSettingsSections()
 }
 
 
@@ -231,7 +238,7 @@ test('AppNav exposes accessibly-labeled Foundry, Manual, and More once unlocked'
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
 })
 
-test('More menu reaches Releases and Settings from any screen without progress gates', async () => {
+test('More menu reaches Milestones and Settings from any screen without progress gates', async () => {
   const user = userEvent.setup()
   render(<App />) // fresh gate — no mainGameUnlocked yet
 
@@ -243,12 +250,13 @@ test('More menu reaches Releases and Settings from any screen without progress g
   // Reset is not duplicated in the More sheet — only under Settings → Danger zone.
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
 
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /^releases$/i })).toBeInTheDocument()
-  expect(screen.getByLabelText(/releases category/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /^milestones$/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/milestones category/i)).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expandSettingsSections()
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
@@ -421,6 +429,7 @@ test('Reset appears only in Settings → Danger zone, not on the Byte Factory sc
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /reformat byte foundry/i })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expandSettingsSections()
 
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /reset game/i })).toBeInTheDocument()
@@ -1308,7 +1317,7 @@ test('the scale up and overclock panels render below the tier list, not above it
   expect(regions.indexOf('overclock panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('once the last tier has been a Scale Up target, a separate Restage panel appears left of Scale Up below the tier list, and the last tier keeps its own tickspeed button', () => {
+test('once the last tier has been a Scale Up target, a separate Restage panel appears beside Clock Speed above the tier list, and the last tier keeps its own tickspeed button', () => {
   seedMainGameState({
     resources: { base: 12345, tier10: 25 },
     owned: { tier09: 10, tier10: 25 },
@@ -1322,8 +1331,10 @@ test('once the last tier has been a Scale Up target, a separate Restage panel ap
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
   expect(regions).toContain('global clock speed panel')
   expect(regions.indexOf('global clock speed panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
-  expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
-  expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('scale up panel'))
+  // Restage pairs with Clock Speed above the tier list (#1137); Scale Up pairs with Overclock below it.
+  expect(regions.indexOf('restage panel')).toBeGreaterThan(regions.indexOf('global clock speed panel'))
+  expect(regions.indexOf('restage panel')).toBeLessThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('scale up panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 
   const xpPanel = screen.getByLabelText(/^restage panel$/i)
   expect(xpPanel).toHaveTextContent('QB +1%/XP')
@@ -2329,7 +2340,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent(/2,?000 PP/)
 })
 
-test('no PP tabs or PP-based controls appear before the player has ever purged, even with an active autobuyer and unspent PP — Releases stays via More', async () => {
+test('no PP tabs or PP-based controls appear before the player has ever purged, even with an active autobuyer and unspent PP — Milestones stays via More', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
@@ -2340,10 +2351,10 @@ test('no PP tabs or PP-based controls appear before the player has ever purged, 
 
   expect(screen.queryByLabelText(/^purge points display$/i)).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
-  // Chapters (Releases) stays reachable pre-prestige via AppNav → More.
+  // Chapters (Milestones) stays reachable pre-prestige via AppNav → More.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
-  expect(screen.getByLabelText(/^releases page$/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
 })
 
 test('a tier\'s tickspeed autobuyer shows a locked badge until its own (later) prestige milestone is reached, independent of the unit-buying autobuyer', async () => {
@@ -2511,7 +2522,7 @@ test('the Firmware tab NavDots go dark once a tier is fully done and nothing els
   expect(screen.queryByLabelText(/perk available$/i)).not.toBeInTheDocument()
 })
 
-test('Releases is reachable via More both before and after the first prestige (unlike Firmware)', async () => {
+test('Milestones is reachable via More both before and after the first prestige (unlike Firmware)', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2523,8 +2534,8 @@ test('Releases is reachable via More both before and after the first prestige (u
   expect(screen.queryByRole('tab', { name: /open automation/i })).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
-  expect(screen.getByLabelText(/^releases page$/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  expect(screen.getByLabelText(/^milestones page$/i)).toBeInTheDocument()
 })
 
 test('Firmware → Automation lists every tier\'s autobuyer/tier-tickspeed-autobuyer unlock milestone once, reflecting what\'s already unlocked', async () => {
@@ -2550,9 +2561,9 @@ test('Firmware → Automation lists every tier\'s autobuyer/tier-tickspeed-autob
   expect(tickspeedProgress).toHaveAttribute('aria-valuenow', '3')
   expect(tickspeedProgress).toHaveAttribute('aria-valuemax', '11')
 
-  // Releases no longer repeats these — it keeps only Chapters / Reboot.
+  // Milestones no longer repeats these — it keeps only Chapters / Reboot.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
   expect(screen.queryByLabelText(/autobuyer unlock milestones category$/i)).not.toBeInTheDocument()
   expect(screen.queryByLabelText(/^tier tickspeed autobuyer milestones category$/i)).not.toBeInTheDocument()
 })
@@ -3774,7 +3785,8 @@ test('a collapsed pool still shows its Data Lake heading and action row', () => 
   expect(headerBar).toHaveAttribute('aria-valuemax', '100')
   expect(headerBar).toHaveAttribute('aria-valuenow', '50')
   fireEvent.click(within(pool1).getByRole('button', { name: /expand pool 1/i }))
-  expect(within(pool1).queryByRole('progressbar', { name: /KB lake fill progress/i })).not.toBeInTheDocument()
+  // Expanded, the lake header keeps its full-width thin bar (#1142).
+  expect(within(pool1).getByRole('progressbar', { name: /KB lake fill progress/i })).toBeInTheDocument()
 })
 
 test('a collapsed completed Data Lake header bar reads full, not empty', () => {
@@ -4288,8 +4300,8 @@ describe('Byte Foundry Storage', () => {
     const cacheGroup = screen.getByRole('group', { name: /^1 kb read cache$/i })
     expect(diskGroup).toBeInTheDocument()
     expect(cacheGroup).toBeInTheDocument()
-    expect(within(cacheGroup).getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(within(diskGroup).getAllByText('1').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(within(cacheGroup).getAllByLabelText(/^1 KB cache block \d+$/).length).toBe(DISK_CACHE_BLOCK_COUNT)
+    expect(within(diskGroup).getAllByLabelText(/1 KB disk/).length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/\/10 built/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
@@ -4303,23 +4315,24 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('group', { name: /^1 kb read cache$/i })).toBeInTheDocument()
   })
 
-  test('cache squares and disk circles carry bit-scale vs Byte-scale size labels inside each cell', () => {
+  test('cache and disk rows each state their size once, with its unit, beside an unlabeled strip (#1142)', () => {
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
     render(<App />)
 
-    // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits
-    // labeled "1 Kb" (bit-scale); each disk circle shows a bare "1" (no unit — the surrounding pool
-    // card already establishes the KB scale, see formatDiskSizeBare). Scoped to the disk/cache
-    // groups themselves (see the test above for why).
+    // currentBankSize is 8000 bits (a real "1 KB" disk) — its 8 cache blocks are 1000 bits each, so
+    // the cache row reads "1 Kb" (bit-scale) and the disk row "1 KB" (Byte-scale), once each, in the
+    // row label; the cells themselves carry no text.
     const diskGroup = screen.getByRole('group', { name: /^1 kb disks$/i })
     const cacheGroup = screen.getByRole('group', { name: /^1 kb read cache$/i })
-    expect(diskGroup).toBeInTheDocument()
-    expect(cacheGroup).toBeInTheDocument()
-    expect(within(cacheGroup).getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(within(diskGroup).getAllByText('1').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(cacheGroup.textContent).toBe('')
+    expect(diskGroup.textContent).toBe('')
+    expect(cacheGroup.previousElementSibling.textContent).toBe('1 Kb')
+    expect(diskGroup.previousElementSibling.textContent).toBe('1 KB')
+    // Read cache sits above the disks it feeds.
+    expect(cacheGroup.compareDocumentPosition(diskGroup) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  test('Foundry stacks multiple size arrays as continuous sections with in-cell size labels and no redeem ActionHint', () => {
+  test('Foundry stacks multiple size arrays as continuous sections with per-row size labels and no redeem ActionHint', () => {
     const size10kb = currentBankSize * 10
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
@@ -4334,12 +4347,12 @@ describe('Byte Foundry Storage', () => {
 
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
+    expect(screen.getAllByText('1 Kb').length).toBe(1)
     // Only the pool's smallest size (1 KB) ever shows a read cache — 10 KB fills exclusively via
     // write-cache ripple from below (see isDiskReadCacheEligible in engine.js).
     expect(screen.queryByRole('group', { name: /^10 kb read cache$/i })).not.toBeInTheDocument()
-    expect(within(screen.getByRole('group', { name: /^1 kb disks$/i })).getAllByText('1').length).toBe(DISK_ARRAY_LADDER_CAP)
-    expect(within(screen.getByRole('group', { name: /^10 kb disks$/i })).getAllByText('10').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(screen.getByRole('group', { name: /^1 kb disks$/i }).previousElementSibling.textContent).toBe('1 KB')
+    expect(screen.getByRole('group', { name: /^10 kb disks$/i }).previousElementSibling.textContent).toBe('10 KB')
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Disks —/)).not.toBeInTheDocument()
@@ -5050,7 +5063,8 @@ describe('ComputePage merge chain', () => {
   describe('tier detail row is progressively disclosed', () => {
     const base = { bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true }
     const nodesMerge = () => screen.queryByRole('button', { name: /charge up 8 batteries into 1 pack/i })
-    const nodesAuto = () => screen.queryByRole('button', { name: /unlock the charger for batteries into packs/i })
+    // Before its Charger unlocks, a tier shows its charge progress (#1141 follow-up: first 10 charges build it).
+    const nodesAuto = () => screen.queryByRole('img', { name: /^batteries charger unlock/i })
 
     test('a non-automated unlocked tier always shows its merge/auto buttons (spacious layout)', () => {
       seedIntroState({ ...base, computeCores: 1, computeNodes: 2 })
@@ -5078,11 +5092,10 @@ describe('ComputePage merge chain', () => {
     })
 
     test('Auto-charge unlock progress (cost tier held > 0) reveals the row', () => {
-      seedIntroState({ ...base, computeNodes: 2, computeClusters: 3 })
+      seedIntroState({ ...base, computeNodes: 2, computeClusters: 3, chargerUnlockProgress: { autoMergeNodesIntoCluster: 4 } })
       render(<App />)
       openBoosters()
-
-      expect(nodesAuto()).toBeDisabled()
+      expect(nodesAuto()).toHaveTextContent('🔓 4/10')
     })
 
     test('an in-flight reserve merge reveals the row', () => {
@@ -5090,7 +5103,7 @@ describe('ComputePage merge chain', () => {
       render(<App />)
       openBoosters()
 
-      expect(screen.getByRole('button', { name: /batteries charger, auto-charge in progress/i })).toBeInTheDocument()
+      expect(screen.getByRole('img', { name: /batteries charger, auto-charge in progress/i })).toBeInTheDocument()
     })
 
     test('the selected tier is marked via aria-pressed and a single tier is armed at a time', () => {
@@ -5105,19 +5118,35 @@ describe('ComputePage merge chain', () => {
     })
   })
 
-  test('merging spends 8 of the input entity for 1 of the output entity', () => {
+  test('before its Charger unlocks, a charge spends 8 of the input into the Charger, not the output', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: 9, computeClusters: 1,
     })
     render(<App />)
     openBoosters()
-
-    fireEvent.click(screen.getByRole('button', { name: /charge up 8 batteries into 1 pack/i }))
-
+    const pill = screen.getByRole('button', { name: /charge up 8 batteries into 1 pack/i })
+    expect(pill).toHaveTextContent('🔌')
+    fireEvent.click(pill)
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeNodes).toBe(1)
-    expect(saved.intro.computeClusters).toBe(2)
+    expect(saved.intro.computeClusters).toBe(1)
+    expect(saved.intro.chargerUnlockProgress.autoMergeNodesIntoCluster).toBe(1)
+    expect(screen.getByRole('img', { name: /^batteries charger unlock, 1\/10 charges$/i })).toBeInTheDocument()
+  })
+
+  test('the 10th charge unlocks the Charger automatically, with nothing sacrificed', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeNodes: 9, computeClusters: 3, chargerUnlockProgress: { autoMergeNodesIntoCluster: 9 },
+    })
+    render(<App />)
+    openBoosters()
+    fireEvent.click(screen.getByRole('button', { name: /charge up 8 batteries into 1 pack/i }))
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.autoMergeNodesIntoCluster).toBe(true)
+    expect(saved.intro.computeClusters).toBe(3)
+    expect(screen.getByRole('img', { name: /^batteries charger, 0\/8 filled$/i })).toBeInTheDocument()
   })
 
   test('Cells merges into Batteries exactly like every other boundary (issue #321)', () => {
@@ -5134,7 +5163,7 @@ describe('ComputePage merge chain', () => {
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeCores).toBe(1)
-    expect(saved.intro.computeNodes).toBe(2)
+    expect(saved.intro.chargerUnlockProgress.autoMergeCoresIntoNode).toBe(1)
   })
 
   test('unlocking the Charger for Cells into Batteries sacrifices 10 Batteries and removes the manual merge button', () => {
@@ -5174,6 +5203,8 @@ describe('ComputePage merge chain', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeClusters: 24, computeNetworks: 10,
+      // Charger progress already complete (legacy flag unset), so a charge would need output room.
+      chargerUnlockProgress: { autoMergeClustersIntoNetwork: COMPUTE_ENTITY_CAP },
     })
     render(<App />)
     openBoosters()
@@ -5224,7 +5255,7 @@ describe('ComputePage merge chain', () => {
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeSupercomputers).toBe(1)
-    expect(saved.intro.computeMegacomputers).toBe(2)
+    expect(saved.intro.chargerUnlockProgress.autoMergeSupercomputersIntoMegacomputer).toBe(1)
   })
 
   test('no entity name in the merge chain UI carries a redundant "Compute" prefix', () => {
@@ -5243,7 +5274,7 @@ describe('ComputePage merge chain', () => {
 describe('Compute auto-charge automation', () => {
   const openBoosters = () => fireEvent.click(screen.getByRole('button', { name: /open power/i }))
 
-  test('an "enable auto-charge" control is always shown for Batteries into Packs, disabled below 10 held Packs', () => {
+  test('Charger unlock progress is always shown for Batteries into Packs; the old sacrifice button only for a legacy save holding 10 Packs', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeClusters: 9,
@@ -5251,7 +5282,8 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /unlock the charger for batteries into packs/i })).toBeDisabled()
+    expect(screen.getByRole('img', { name: /^batteries charger unlock, 0\/10 charges$/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /unlock the charger for batteries into packs/i })).toBeNull()
   })
 
   test('enabling auto-charge sacrifices exactly 10 held Packs and replaces the button with an Auto badge', () => {
@@ -5312,7 +5344,7 @@ describe('Compute auto-charge automation', () => {
     openBoosters()
 
     // Cells is the highest automated tier, so it is pre-selected on arrival.
-    const autoRow = screen.getByRole('button', { name: /^cells charger/i })
+    const autoRow = screen.getByRole('img', { name: /^cells charger/i })
     const presets = within(screen.getByLabelText(/^cells tier$/i)).getByLabelText(/^compute boost$/i)
     expect(autoRow.compareDocumentPosition(presets) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
@@ -5350,23 +5382,19 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    const row = screen.getByRole('button', { name: /^batteries charger/i })
-    expect(row).toBeDisabled()
+    const row = screen.getByRole('img', { name: /^batteries charger/i })
     expect(row).not.toHaveTextContent(/auto-charge/i) // no label on the slot row
     expect(row).not.toHaveTextContent('⬆')
   })
 
-  test('the pre-unlock Auto button shows live progress toward its own unlock cost, matching Factory\'s own Buy-button convention', () => {
+  test('before the Charger unlocks, its badge shows charge progress (the first 10 charges build it)', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
-      computeNodes: 6,
+      computeNodes: 6, chargerUnlockProgress: { autoMergeCoresIntoNode: 6 },
     })
     render(<App />)
     openBoosters()
-
-    const autoButton = screen.getByRole('button', { name: /unlock the charger for cells into batteries/i })
-    expect(autoButton).toHaveTextContent('🔓 Charger 🔗 6/10')
-    expect(autoButton).toBeDisabled() // below the 10-unit unlock cost
+    expect(screen.getByRole('img', { name: /^cells charger unlock, 6\/10 charges$/i })).toHaveTextContent('🔓 6/10')
   })
 
   test('the reserve-slot row shows a partial, gradually-filled count once auto-charge is unlocked, not just empty-or-full', () => {
@@ -5377,7 +5405,7 @@ describe('Compute auto-charge automation', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByRole('button', { name: /batteries charger, 3\/8 filled/i })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /batteries charger, 3\/8 filled/i })).toBeInTheDocument()
   })
 
 })
@@ -5534,7 +5562,7 @@ test('the mandatory Byte Foundry gate (before mainGameUnlocked) blocks Factory b
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /open byte factory/i })).not.toBeInTheDocument()
-  // Utilities must not require progress — More (Manual / Releases / Settings) stays available.
+  // Utilities must not require progress — More (Manual / Milestones / Settings) stays available.
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
 })
@@ -5576,7 +5604,7 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry leaves Factor
   vi.useRealTimers()
 })
 
-// --- Chapters (Releases page) ---
+// --- Chapters (Milestones page) ---
 // Chapter rows read intro.mainGameUnlocked, purge.count, computeFlops.pageUnlocked,
 // isOverflowModeUnlocked, and era.count — see CLAUDE.md / MAINPAGE_REFERENCE. "The first Kilobyte"
 // is always ✅ once this view is reachable; Go Googol varies with purge.count; separate tests cover
@@ -5594,14 +5622,13 @@ test.each([
   })
   render(<App />)
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
 
-  expect(screen.getByLabelText(/^releases category$/i)).toBeInTheDocument()
-  const firstKilobyteRow = screen.getByLabelText(/^v1.0 the first kilobyte release$/i)
-  expect(firstKilobyteRow).toHaveTextContent('✅')
-
-  const goGoogolRow = screen.getByLabelText(/^v2.0 go googol release$/i)
-  expect(goGoogolRow).toHaveTextContent(reached ? '✅' : '🔒')
+  expect(screen.getByLabelText(/^milestones category$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^the first kilobyte milestone reached$/i)).toHaveTextContent('The first Kilobyte')
+  expect(screen.getByLabelText(reached ? /^go googol milestone reached$/i : /^go googol milestone not yet reached$/i)).toBeInTheDocument()
+  // No version numbers on the timeline (#1143).
+  expect(screen.getByLabelText(/^milestones category$/i)).not.toHaveTextContent(/v\d\.0/)
 })
 
 test('Chapters track Compute, DeGoogol, and Era milestones', async () => {
@@ -5615,11 +5642,11 @@ test('Chapters track Compute, DeGoogol, and Era milestones', async () => {
   })
   render(<App />)
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
 
-  expect(screen.getByLabelText(/^v3.0 open compute release$/i)).toHaveTextContent('✅')
-  expect(screen.getByLabelText(/^v4.0 degoogoled release$/i)).toHaveTextContent('✅')
-  expect(screen.getByLabelText(/^v5.0 first reboot release$/i)).toHaveTextContent('✅')
+  expect(screen.getByLabelText(/^open compute milestone reached$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^degoogoled milestone reached$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^first reboot milestone reached$/i)).toBeInTheDocument()
   expect(screen.queryByLabelText(/^coming soon/i)).not.toBeInTheDocument()
 })
 
@@ -5651,7 +5678,7 @@ test('Compute autobuyer milestones list Era unlocks once Compute is revealed', a
 
   expect(screen.getByLabelText(/^compute autobuyers category$/i)).toBeInTheDocument()
   expect(within(screen.getByLabelText(/^Cores · KFlops autobuyer$/i)).getByLabelText("Cores (KFlops) autobuyer active")).toBeInTheDocument()
-  expect(screen.getByLabelText(/^Chips · MFlops autobuyer$/i)).toHaveTextContent('🔒 2')
+  expect(screen.getByLabelText(/^Chips · MFlops autobuyer$/i)).toHaveTextContent('🔒 R2')
 })
 
 test('Settings Reboot confirms, resets Foundry assets, and keeps automation', async () => {
@@ -5689,8 +5716,8 @@ test('Settings Reboot confirms, resets Foundry assets, and keeps automation', as
   expect(saved.era.count).toBe(1)
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
-  await user.click(screen.getByRole('button', { name: /open releases/i }))
-  expect(screen.getByLabelText(/^v5.0 first reboot release$/i)).toHaveTextContent('✅')
+  await user.click(screen.getByRole('button', { name: /open milestones/i }))
+  expect(screen.getByLabelText(/^first reboot milestone reached$/i)).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open byte foundry/i }))
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
@@ -5757,6 +5784,7 @@ test('Reboot survives a page reload', async () => {
   render(<App />)
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  expandSettingsSections()
   expect(screen.getByLabelText(/^reboot section$/i)).toHaveTextContent('1 Kernel')
 })
 

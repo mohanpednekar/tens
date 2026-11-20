@@ -26,29 +26,107 @@ const Heading = styled.h2`
   text-transform: uppercase;
 `
 
-const Row = styled.div`
-  align-items: center;
-  column-gap: 0.6rem;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  padding: 0.5rem 0;
+const DailyHeader = styled.p`
+  color: ${props => props.theme.color.textMuted};
+  font-size: ${props => props.theme.type.scale.xs.size};
+  margin: 0.1rem 0 0.5rem;
+  text-align: center;
+`
 
-  & + & {
-    border-top: 1px solid ${props => props.theme.color.border};
+const FORMAT_ACCENT = { '10m': 'good', '1h': 'info', '10h': 'violet' }
+
+// One line per format in the Factory tier-row look: format label (the details toggle), objective +
+// status, and the main action in a fixed track. Conditions and Restart/Forfeit live in the details.
+const Row = styled(StatCard)`
+  align-items: center;
+  border-left: 3px solid ${props => props.theme.color[FORMAT_ACCENT[props.$formatId]] ?? props.theme.color.accent};
+  column-gap: ${props => props.theme.space.sm};
+  display: grid;
+  grid-template-areas:
+    'label text action'
+    'bar bar bar'
+    'details details details';
+  grid-template-columns: 2.6rem minmax(0, 1fr) 6.5rem;
+  padding: 3px 3px 3px ${props => props.theme.space.sm};
+  row-gap: 0;
+`
+
+const RowList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.space.xs};
+`
+
+const FormatLabel = styled.span`
+  cursor: pointer;
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.md.size};
+  font-weight: 700;
+  grid-area: label;
+
+  &:focus-visible {
+    border-radius: ${props => props.theme.radius.sm};
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
   }
+`
+
+const RowText = styled.span`
+  font-size: ${props => props.theme.type.scale.sm.size};
+  grid-area: text;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  > span {
+    color: ${props => props.theme.color.textMuted};
+    font-size: ${props => props.theme.type.scale.xs.size};
+  }
+`
+
+const ActionButton = styled(Button)`
+  font-size: ${props => props.theme.type.scale.xs.size};
+  grid-area: action;
+  min-height: 2rem;
+  padding: 0 0.5em;
+  width: 100%;
+`
+
+const RowBar = styled.div`
+  background: ${props => props.theme.color.border};
+  border-radius: 999px;
+  grid-area: bar;
+  height: 4px;
+  margin: 3px 0 2px;
+  overflow: hidden;
+
+  > span {
+    background: ${props => props.theme.color[FORMAT_ACCENT[props.$formatId]] ?? props.theme.color.good};
+    display: block;
+    height: 100%;
+    width: ${props => props.$percent}%;
+  }
+`
+
+const RowDetails = styled.div`
+  border-top: 1px solid ${props => props.theme.color.border};
+  grid-area: details;
+  margin-top: ${props => props.theme.space.xs};
+  padding: ${props => props.theme.space.xs} 0 2px;
+`
+
+const DetailActions = styled.div`
+  display: flex;
+  gap: 0.4rem;
+  justify-content: flex-end;
+  margin-top: 0.3rem;
 `
 
 const Meta = styled.span`
   color: ${props => props.theme.color.textMuted};
   display: block;
   font-size: 0.85rem;
-`
-
-const Actions = styled.span`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  justify-content: flex-end;
 `
 
 const Bar = styled.div`
@@ -217,6 +295,13 @@ const DailyTab = ({ state, actions }) => {
   const [now, setNow] = useState(() => Date.now())
   const [openFormat, setOpenFormat] = useState(null)
   const [pending, setPending] = useState(null) // { kind: 'restart' | 'forfeit', formatId }
+  const [openDetails, setOpenDetails] = useState(() => new Set())
+  const toggleDetails = id => setOpenDetails(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  })
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(id)
@@ -236,55 +321,86 @@ const DailyTab = ({ state, actions }) => {
 
   return (
     <div aria-label="daily firmware page">
-      <StatCard>
-        <Heading>Daily challenges · {today}</Heading>
-        <Meta aria-label="daily credits">
-          Credits {credits.total}/{DAILY_MAX_CREDITS} · new in {formatDuration(getMsUntilNextUtcDay(now) / 1000)}
-        </Meta>
+      <DailyHeader>
+        {today} · <span aria-label="daily credits">Credits {credits.total}/{DAILY_MAX_CREDITS} · new in {formatDuration(getMsUntilNextUtcDay(now) / 1000)}</span>
+      </DailyHeader>
+      <RowList>
         {DAILY_FORMATS.map(format => {
           const run = state.daily.runs[format.id]
           const result = state.daily.results[today]?.[format.id]
           const lastDay = run && run.def.dateId !== today
           const def = run ? run.def : generateDailyChallenge(today, format.id)
+          const open = openDetails.has(format.id)
+          const conditions = describeDailyChallenge(def)
+          const status = run
+            ? `${lastDay ? `from ${run.def.dateId} · ` : ''}${formatDuration(run.def.limitSeconds - run.simSeconds)} left · ${Math.round(getRunProgress(run) * 100)}%`
+            : [
+                result && OUTCOME_LABELS[result.lastOutcome],
+                result?.bestSeconds != null && `best ${formatDuration(result.bestSeconds)}`,
+              ].filter(Boolean).join(' · ')
           return (
-            <Row key={format.id} aria-label={`daily ${format.id}`}>
-              <span>
-                <strong>{format.label}</strong>
-                                {run ? (
-                  <Meta>
-                    Running{lastDay ? ` (from ${run.def.dateId})` : ''} · {formatDuration(run.def.limitSeconds - run.simSeconds)} left · {Math.round(getRunProgress(run) * 100)}%
-                  </Meta>
-                ) : (
-                  <Meta>
-                    {def.objective.label}
-                    {result ? ` · ${OUTCOME_LABELS[result.lastOutcome]}` : ' · Not started'}
-                    {result?.bestSeconds != null && ` · personal best ${formatDuration(result.bestSeconds)}`}
-                  </Meta>
-                )}
-                {describeDailyChallenge(def) && <Meta aria-label={`daily ${format.id} conditions`}>{describeDailyChallenge(def)}</Meta>}
-              </span>
-              <Actions>
-                {run ? (
-                  <>
-                    <Button aria-label={`open daily ${format.id}`} onClick={() => setOpenFormat(format.id)} type="button" variant="prestige">Open</Button>
-                    {!lastDay && <Button aria-label={`restart daily ${format.id}`} onClick={() => setPending({ kind: 'restart', formatId: format.id })} type="button">Restart</Button>}
-                    <Button aria-label={`forfeit daily ${format.id}`} onClick={() => setPending({ kind: 'forfeit', formatId: format.id })} type="button">Forfeit</Button>
-                  </>
-                ) : (
-                  <Button
-                    aria-label={`${result ? 'replay' : 'start'} daily ${format.id}`}
-                    onClick={() => { actions.dailyStart(format.id); setOpenFormat(format.id) }}
-                    type="button"
-                    variant="prestige"
-                  >
-                    {result ? 'Replay' : 'Start'}
-                  </Button>
-                )}
-              </Actions>
+            <Row $formatId={format.id} key={format.id} aria-label={`daily ${format.id}`}>
+              <FormatLabel
+                aria-expanded={open}
+                aria-label={`${format.id} ${format.label} details`}
+                onClick={() => toggleDetails(format.id)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    toggleDetails(format.id)
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                title={format.label}
+              >
+                {format.id}
+              </FormatLabel>
+              <RowText title={`${def.objective.label} · ${status}`}>
+                <strong>{def.objective.label}</strong>{status && <span> · {status}</span>}
+              </RowText>
+              {run ? (
+                <ActionButton aria-label={`open daily ${format.id}`} onClick={() => setOpenFormat(format.id)} type="button" variant="primary">
+                  ▶ Resume
+                </ActionButton>
+              ) : (
+                <ActionButton
+                  aria-label={`${result ? 'replay' : 'start'} daily ${format.id}`}
+                  onClick={() => { actions.dailyStart(format.id); setOpenFormat(format.id) }}
+                  type="button"
+                  variant="prestige"
+                >
+                  {result ? '↻ Replay' : '🏁 Start'}
+                </ActionButton>
+              )}
+              {run && (
+                <RowBar
+                  $formatId={format.id}
+                  $percent={Math.round(getRunProgress(run) * 100)}
+                  aria-label={`daily ${format.id} progress`}
+                  aria-valuemax={100}
+                  aria-valuemin={0}
+                  aria-valuenow={Math.round(getRunProgress(run) * 100)}
+                  role="progressbar"
+                >
+                  <span />
+                </RowBar>
+              )}
+              {open && (
+                <RowDetails>
+                  {conditions && <Meta aria-label={`daily ${format.id} conditions`}>{conditions}</Meta>}
+                  {run && (
+                    <DetailActions>
+                      {!lastDay && <Button aria-label={`restart daily ${format.id}`} onClick={() => setPending({ kind: 'restart', formatId: format.id })} type="button">Restart</Button>}
+                      <Button aria-label={`forfeit daily ${format.id}`} onClick={() => setPending({ kind: 'forfeit', formatId: format.id })} type="button" variant="danger">Forfeit</Button>
+                    </DetailActions>
+                  )}
+                </RowDetails>
+              )}
             </Row>
           )
         })}
-      </StatCard>
+      </RowList>
       <ConfirmDialog
         confirmLabel={pending?.kind === 'restart' ? 'Restart' : 'Forfeit'}
         onCancel={() => setPending(null)}
