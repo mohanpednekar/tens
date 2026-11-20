@@ -329,6 +329,8 @@ current head SHA — merge it directly (`gh pr merge --merge` / `merge_pull_requ
 does not apply. Never for `.github/workflows/**` diffs, never over a failing/pending check. Autonomous
 runs, Devin and dev-team roles keep their never-self-merge rule.
 
+**Merge-when-met rule (maintainer standing rule):** once the requested behavior is delivered and the green-and-`APPROVE` conditions above hold, proceed to merge rather than holding for polish; leftovers become a follow-up PR.
+
 ## AI-instruction file cost hygiene
 
 `.claude/skills/optimize-ai-files/SKILL.md` trims the token footprint of `CLAUDE.md`/this file/
