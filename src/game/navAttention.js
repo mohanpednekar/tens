@@ -3,6 +3,7 @@ import {
   CACHE_WARM_UNLOCK_COST,
   PLAYTIME_BONUS_UNLOCK_COST,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
+  COMPUTE_ENTITY_CAP,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   COMPUTE_MERGE_RATIO,
   INTRO_BYTE_COMBINE_COST,
@@ -10,6 +11,7 @@ import {
 } from 'game/layers'
 import {
   canBuyComputeFlopsTier,
+  getChargerUnlockProgress,
   getSleepModeCapLevel,
   getSleepModeCapUpgradeCost,
   getSpeedUpgradeCostBits,
@@ -226,7 +228,9 @@ const hasInstantMergeAvailable = state =>
     if (state.intro?.[auto]) return false
     const held = state.intro?.[input] ?? 0
     const out = state.intro?.[output] ?? 0
-    return held >= COMPUTE_MERGE_RATIO && out < getComputeFieldEffectiveCap(state, output)
+    // While charges still build the Charger they need no output room (see getChargerUnlockProgress).
+    return held >= COMPUTE_MERGE_RATIO &&
+      (getChargerUnlockProgress(state, auto) < COMPUTE_ENTITY_CAP || out < getComputeFieldEffectiveCap(state, output))
   })
 
 export const hasComputeAttention = state => {

@@ -73,16 +73,19 @@ commit as any change to the mechanics it describes.
    `getFactoryTierBoostMultiplier`, `getComputeBoostPoolMultiplier`); the same multiplier queues behind the running
    head (never preempted), the rest in descending funding-tier strength, max `COMPUTE_BOOST_MAX_STACKS` per lane
    (`activateComputeBoost(type, tier)` starts or queues; a finished head hands over, carrying overshoot). Pre-lane
-   saves (`computeBoostType`/…) are read as one lane by `getComputeBoostLanes`), THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
-   `COMPUTE_ENTITY_CAP` (10) normal-slot squares (never above 10/10, even once auto-charge is unlocked and
-   the entity has grown into its reserve) plus a `TierSelectButton` selecting that tier — only the ONE selected tier block shows
-   `ArmedStatusText` + the 3 Turbo/Balanced/Eco presets inline, at that tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-charge unlocks, Charge up (`COMPUTE_MERGE_RATIO`, 8) + Unlock
-   Auto-charge `TierActionButton`s (the latter with a live progress fill toward its
-   `COMPUTE_ENTITY_CAP`-unit cost), or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot
-   squares (gradually filled, `getComputeReserveHeld`), labelled "🤖 Auto-charge" (display only) beside an explicit **⚡ Charge** button: Charge moves one unit per second
-   (`COMPUTE_CHARGE_TRANSFER_SECONDS`) from the top row into the bottom row — units already held past 10 count — then merges 8→1 instantly
-   (`startComputeCharge`/`tickComputeCharges`, state `intro.computeChargeSeconds`; cancels if input < 8 or the output is full; the automatic timed charge at 18 held still happens and waits while a Charge runs); the selected tier's presets render below this row — Fusion has no
-   row 2. Cells (`computeCores`) come from buying them from the matching Data Lake on Foundry's `DataLakePanel`, not
+   saves (`computeBoostType`/…) are read as one lane by `getComputeBoostLanes`), THEN the merge chain (#1141): one node per tier — `COMPUTE_ENTITY_CAP` (10) held-count dots (never above
+   10/10, even once the entity has grown into its reserve), a `TierSelectButton` arming that tier (only the ONE armed
+   node shows the 3 Turbo/Balanced/Eco presets, at that tier's own boost; a tier-N boost covers the first N Factory tiers,
+   `getComputeBoostCoveredTierCount`), and the node's Charger status on the same line. **Charger unlock:** a boundary's
+   first `COMPUTE_ENTITY_CAP` (10) manual charges (8→1, `mergeCompute*Into*`) build its Charger instead of the next
+   tier (`intro.chargerUnlockProgress`, `getChargerUnlockProgress`, shown `🔓 n/10`; no output room needed) and the
+   10th sets the auto flag with no sacrifice; saves already holding 10 of the output may still use the legacy
+   sacrifice (`enableAutoMerge*`). Once unlocked the Charger shows its `COMPUTE_MERGE_RESERVE_CAP` (8) reserve
+   (`getComputeReserveHeld`) as `🔌 n/8`, gold `⏳` while a timed auto-charge runs, and the link to the next tier
+   carries an explicit **⚡ Charge** pill: Charge moves one unit per second (`COMPUTE_CHARGE_TRANSFER_SECONDS`) into the
+   Charger — units already held past 10 count — then merges 8→1 instantly (`startComputeCharge`/`tickComputeCharges`,
+   state `intro.computeChargeSeconds`; cancels if input < 8 or the output is full; the automatic timed charge at 18
+   held still happens and waits while a Charge runs). Fusion has no link below it. Cells (`computeCores`) come from buying them from the matching Data Lake on Foundry's `DataLakePanel`, not
    minted from Data Stream Capacity. Full button/gate/aria-label detail: `docs/MAINPAGE_REFERENCE.md`; render-order and
    Stack/Pop/Forfeit rationale: `docs/DESIGN_HISTORY.md`.
 

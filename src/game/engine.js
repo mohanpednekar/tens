@@ -6691,8 +6691,10 @@ export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?
 // before a boundary is automated, its first COMPUTE_ENTITY_CAP manual 8→1 charges build the Charger
 // instead of producing an output unit; at COMPUTE_ENTITY_CAP the Charger unlocks automatically, with no
 // sacrifice. Stored per auto flag in intro.chargerUnlockProgress; permanent like the flags themselves.
-export const getChargerUnlockProgress = (state, autoFlagField) =>
-  Math.max(0, Math.min(COMPUTE_ENTITY_CAP, Math.floor(state.intro?.chargerUnlockProgress?.[autoFlagField] ?? 0)))
+export const getChargerUnlockProgress = (state, autoFlagField) => {
+  const raw = Number(state.intro?.chargerUnlockProgress?.[autoFlagField] ?? 0)
+  return Number.isFinite(raw) ? Math.max(0, Math.min(COMPUTE_ENTITY_CAP, Math.floor(raw))) : 0
+}
 
 const mergeComputeEntities = (inputField, outputField, autoFlagField) => state => {
   if (state.intro?.[autoFlagField]) return state

@@ -12984,3 +12984,17 @@ describe('run peaks (Daily challenge runs)', () => {
     expect(ticked.runPeaks.purchaseLevels.tier01).toBe(6)
   })
 })
+
+describe('getChargerUnlockProgress / Charger progress carry (#1141 follow-up)', () => {
+  it('reads a corrupted value as 0 instead of NaN', () => {
+    const state = withIntro(createInitialGameState(), { chargerUnlockProgress: { autoMergeCoresIntoNode: 'oops' } })
+    expect(getChargerUnlockProgress(state, 'autoMergeCoresIntoNode')).toBe(0)
+  })
+
+  it('keeps Charger progress through Reboot but Reformat wipes it with the rest of the Foundry', () => {
+    const seeded = withIntro(createInitialGameState(), { chargerUnlockProgress: { autoMergeCoresIntoNode: 7 } })
+    const rebooted = eraGame({ ...seeded, purge: { ...seeded.purge, points: ERA_ELIGIBILITY_PP } })
+    expect(getChargerUnlockProgress(rebooted, 'autoMergeCoresIntoNode')).toBe(7)
+    expect(getChargerUnlockProgress(resetByteFoundry(seeded), 'autoMergeCoresIntoNode')).toBe(0)
+  })
+})
