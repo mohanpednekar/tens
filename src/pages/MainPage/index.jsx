@@ -1032,7 +1032,7 @@ const MainPage = ({ game }) => {
   const currentGlobalTickspeedStepDisplay = 1 + getChallengeClockSpeedStep(state)
   // The same step before any Overclock (1% outside a challenge), for the "(was …)" half of the Overclock lines.
   const baseGlobalTickspeedStepDisplay = 1 + getChallengeClockSpeedStep({ ...state, overclockLastClaimCompletedLevels: null, overclockCount: 0 })
-  // Each completed final-tier level multiplies Accelerate's per-level rate by this (a constant).
+  // Each completed final-tier level multiplies the per-level speed bonus by this (a constant).
   const overclockLevelEffectDisplay = 1 + OVERCLOCK_MULTIPLIER_STEP
   const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)
   const canOverclock = !isFrozen && !challengeDisabled('overclockDisabled') && lastTierLevelDisplay >= overclockRequirement
@@ -1312,7 +1312,7 @@ const MainPage = ({ game }) => {
               {overclockEverRevealed && (
                 <li>
                   Overclock: {overclockLevel > 0
-                    ? `Accelerate's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was ${formatGlobalTickspeedBonusPercent(baseGlobalTickspeedStepDisplay)}%)`
+                    ? `The per-level speed bonus is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was ${formatGlobalTickspeedBonusPercent(baseGlobalTickspeedStepDisplay)}%)`
                     : `not yet claimed (reach ${formatAmount(overclockRequirementDisplay)} completed levels on ${lastTier.name})`}
                 </li>
               )}
@@ -1689,7 +1689,7 @@ const MainPage = ({ game }) => {
               <CardTitleGroup>
                 <h2>Overclock</h2>
                 <CardEffect
-                  title="Each completed level multiplies Accelerate's per-level rate"
+                  title="Each completed level multiplies the per-level speed bonus"
                   onClick={event => {
                     event.preventDefault()
                     event.stopPropagation()
@@ -1701,16 +1701,16 @@ const MainPage = ({ game }) => {
             </summary>
             <MutedText>
               {overclockLevel > 0
-                ? `Accelerate's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was ${formatGlobalTickspeedBonusPercent(baseGlobalTickspeedStepDisplay)}%).`
-                : `Not claimed yet — reach ${formatAmount(overclockRequirementDisplay)} completed ${lastTier.name} levels. Each completed level then multiplies Accelerate's per-level rate by ×${overclockLevelEffectDisplay}.`}
+                ? `The per-level speed bonus is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was ${formatGlobalTickspeedBonusPercent(baseGlobalTickspeedStepDisplay)}%).`
+                : `Not claimed yet — reach ${formatAmount(overclockRequirementDisplay)} completed ${lastTier.name} levels. Each completed level then multiplies the per-level speed bonus by ×${overclockLevelEffectDisplay}.`}
             </MutedText>
           </Disclosure>
           <Button
-            aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus; each completed ${lastTier.name} level (${formatAmount(lastTierLevelDisplay)} now) multiplies Accelerate's per-level rate by ×${overclockLevelEffectDisplay}`}
+            aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus; each completed ${lastTier.name} level (${formatAmount(lastTierLevelDisplay)} now) multiplies the per-level speed bonus by ×${overclockLevelEffectDisplay}`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
             onClick={actions.overclock}
-            title={`Resets tiers (and Scale Up's bonus); each completed ${lastTier.name} level multiplies Accelerate's per-level rate by ×${overclockLevelEffectDisplay} — requires ${overclockRequirementDisplay} completed levels${challengeDisabled('overclockDisabled') ? challengeNote : ''}`}
+            title={`Resets tiers (and Scale Up's bonus); each completed ${lastTier.name} level multiplies the per-level speed bonus by ×${overclockLevelEffectDisplay} — requires ${overclockRequirementDisplay} completed levels${challengeDisabled('overclockDisabled') ? challengeNote : ''}`}
             type="button"
             $progress={overclockProgressPercent}
             $progressColor="#fb923c"

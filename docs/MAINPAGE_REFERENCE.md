@@ -646,7 +646,7 @@ live inside the selected tier):
   there's nothing to reveal. Each Factory feature card (`GlobalTickspeedCard` / Restage / `ScaleUpCard` /
   `OverclockCard`) wraps its `<h2>` in a `Disclosure` (`styled.details`/`<summary>`, collapsed by default,
   the heading itself the only way to *open* it — no separate visible "expand" affordance). The body is
-  always present (an unclaimed/inactive line before first use, then the live status): Accelerate's
+  always present (an unclaimed/inactive line before first use, then the live status): the Accelerate
   `+N% faster ticks on every tier.` (or "Not active yet…"), Restage's XP multiplier, Scale Up's reset
   + doubling line, Overclock's current per-level rate (or "Not claimed yet…") — see "Scale Up and
   Overclock cards" above. Each starts collapsed until the player clicks that heading.
@@ -886,7 +886,7 @@ to be a deliberate, occasional decision reached via this card, not a frequent on
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
 whose summary is a `CardTitleGroup` of the heading plus `CardEffect` (`🌐 +10%/lvl`; its click is
 stopped so only the "Overclock" name toggles), so expanding never squeezes the body into a
-title-row column. The body is always present (collapsed by default): clicking "Overclock" reveals a `MutedText` line, `Accelerate's per-level rate is now {currentStep}% (was 1%)` once claimed, or `Not claimed yet — reach {required} completed {lastTier.name} levels…` before the first claim.
+title-row column. The body is always present (collapsed by default): clicking "Overclock" reveals a `MutedText` line, `The per-level speed bonus is now {currentStep}% (was 1%)` once claimed, or `Not claimed yet — reach {required} completed {lastTier.name} levels…` before the first claim.
 `{currentStep}` is `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate
 (`OverclockButton` shows only `{symbol} {completed}/{required}`; the +10%/lvl effect sits beside the card name — see above); this is the one Overclock-specific number not otherwise visible
 anywhere on the Factory view. Beyond that one figure, Overclock has no visible effect of its own to

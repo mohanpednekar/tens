@@ -585,7 +585,7 @@ const InfoPage = () => {
             and Purge Points are kept.
           </li>
           <li>
-            In exchange, multiplies Accelerate’s per-level rate by ×1.1 for each completed level you
+            In exchange, multiplies the per-level speed bonus by ×1.1 for each completed level you
             had when you claimed (1% → 1.1% → 1.21% → …).
           </li>
           <li>

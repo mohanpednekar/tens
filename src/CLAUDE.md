@@ -231,8 +231,8 @@ from the re-reveal mechanic: after a reset, a tier already unlocked by a previou
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
 The last tier's (QB) tickspeed may always spend down to 0; doing so after holding QB this run (`'lastTierSpent'`: run-scoped `lastTierEarnedThisRun`; `buyTickspeedMultiplier` unlocks it at the moment the spend empties QB — reaching that stall is the condition, not a later tick) earns **Spent QB**, and once earned the last tier is credited exactly 1 unit every `10/(1 + log10 completed levels)` s regardless of balance (`getLastTierLevelCreditIntervalSeconds`, `lastTierLevelCreditTimer`; `ECONOMY_REFERENCE`). Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
 completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`
-(the single Overclock level; each claim replaces it, nothing is banked; Accelerate's step is ×1.1 per level),
-not a fixed 5/8/11/14 ladder (Accelerate's Overclock-scaled 1% step is under "Tiers, Prestige, Reboot" above).
+(the single Overclock level; each claim replaces it, nothing is banked; the Accelerate step is ×1.1 per level),
+not a fixed 5/8/11/14 ladder (the Accelerate Overclock-scaled 1% step is under "Tiers, Prestige, Reboot" above).
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill

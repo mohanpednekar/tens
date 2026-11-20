@@ -1523,7 +1523,7 @@ test('the Overclock button shows the per-level Overclock effect and completed-le
   // The button shows the fixed per-level effect (×1.1) and completed/required last-tier levels — no
   // computed total rate.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus; each completed quettabytes level \(7 now\) multiplies accelerate's per-level rate by ×1\.1/i,
+    name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus; each completed quettabytes level \(7 now\) multiplies the per-level speed bonus by ×1\.1/i,
   })).toBeInTheDocument()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('🌐 +10%/lvl')
   expect(screen.getByRole('button', { name: /^overclock \(requires/i })).toHaveTextContent('⚡ QB 7/7')
@@ -1560,7 +1560,7 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
   render(<App />)
 
   const panel = screen.getByLabelText(/^overclock panel$/i)
-  expect(panel).toHaveTextContent(/accelerate's per-level rate is now 2\.59% \(was 1%\)\./i)
+  expect(panel).toHaveTextContent(/the per-level speed bonus is now 2\.59% \(was 1%\)\./i)
 })
 
 test('the Overclock card\'s "(was …)" baseline ignores a legacy overclockCount', () => {
@@ -1618,7 +1618,7 @@ test('clicking Overclock once eligible records the last tier\'s whole completed-
   // again).
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /overclock \(requires 10 completed quettabytes levels/i })).toBeDisabled()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent(/rate is now 1\.95% \(was 1%\)\./i)
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent(/speed bonus is now 1\.95% \(was 1%\)\./i)
   expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('🏭 ×2')
 })
 
@@ -2782,7 +2782,7 @@ test('the money balance breakdown\'s Overclock line reports the boosted per-leve
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(
-    /overclock: accelerate's per-level rate is now 1\.21% \(was 1%\)/i
+    /overclock: the per-level speed bonus is now 1\.21% \(was 1%\)/i
   )
 })
 
