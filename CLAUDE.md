@@ -406,7 +406,7 @@ src/
   game/
     layers.js             ← TIER_DEFINITIONS + all game constants (single source of truth)
     engine.js             ← pure state functions (no React, no side effects)
-    navAttention.js       ← pure predicates for AppNav attention dots (high/normal; Storage cues fold into Foundry;
+    navAttention.js       ← pure predicates for AppNav attention dots (high/normal; Factory cues muted while their automation is enabled and <1 s; Storage cues fold into Foundry;
                             Compute Flops affordability → `compute`)
     dailyChallenges.js    ← Daily-challenge logic ("Daily challenges")
     challengeUi.js        ← pure player-facing helpers for Factory challenge mode (goal/readout formatting), shared

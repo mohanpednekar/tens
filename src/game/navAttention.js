@@ -19,6 +19,8 @@ import {
   isSpeedUpgradeArmable,
   getComputeFieldEffectiveCap,
   getAutomationIntervalMaxLevel,
+  getAutomationIntervalSeconds,
+  getAutobuyerIntervalSeconds,
   isAutomationIntervalChainUnlocked,
   getLiveChallengeForAutomation,
   isChallengeCompleted,
@@ -102,6 +104,25 @@ const isTransferBlockAffordable = state =>
   isIntroConversionUnlocked(state) &&
   (state.intro?.bits ?? 0) >= getIntroKilobyteConversionCost(state)
 
+// An automation that is unlocked, enabled and fires faster than once a second (upgrades included) handles its
+// action itself, so its cue never lights a nav dot. Paused (toggled off) automations still qualify for the dot.
+const FAST_AUTOMATION_SECONDS = 1
+const GLOBAL_AUTOMATION_FLAGS = {
+  speedUp: ['autoGlobalTickspeed', 'autoGlobalTickspeedEnabled'],
+  scaleUp: ['autoScaleUp', 'autoScaleUpEnabled'],
+  overclock: ['autoOverclock', 'autoOverclockEnabled'],
+  purge: ['autoPurge', 'autoPurgeEnabled'],
+}
+const isGlobalAutomationFast = (state, key) => {
+  const [unlockedField, enabledField] = GLOBAL_AUTOMATION_FLAGS[key]
+  const unlocked = key === 'purge' ? (state[unlockedField] ?? null) !== null : (state[unlockedField] ?? false)
+  return Boolean(unlocked) && (state[enabledField] ?? true) && getAutomationIntervalSeconds(state, key) < FAST_AUTOMATION_SECONDS
+}
+const isTierAutobuyerFast = (state, tierId) =>
+  (state.autobuyers?.[tierId] ?? null) !== null &&
+  (state.autobuyersEnabled?.[tierId] ?? true) &&
+  getAutobuyerIntervalSeconds(state, tierId) < FAST_AUTOMATION_SECONDS
+
 const pickLevel = (high, normal) => {
   if (high) return ATTENTION_HIGH
   if (normal) return ATTENTION_NORMAL
@@ -113,7 +134,7 @@ export const hasAffordableFullLevel = state => {
   if (isProductionFrozen(state)) return false
   const blockSize = getPurchaseBlockSize(state)
   return TIER_DEFINITIONS.some(tier => {
-    if (!isTierUnlocked(state)(tier)) return false
+    if (!isTierUnlocked(state)(tier) || isTierAutobuyerFast(state, tier.id)) return false
     const level = state.purchaseLevels?.[tier.id] ?? 1
     const levelProgress = state.purchaseLevelProgress?.[tier.id] ?? 0
     const remaining = Math.max(0, blockSize - levelProgress)
@@ -132,28 +153,31 @@ export const hasAffordableFullLevel = state => {
 
 export const hasAffordableGlobalTickspeed = state => {
   if (isProductionFrozen(state)) return false
-  if (!isGlobalTickspeedMultiplierUnlocked(state)) return false
+  if (!isGlobalTickspeedMultiplierUnlocked(state) || isGlobalAutomationFast(state, 'speedUp')) return false
   return isGlobalTickspeedAffordable(state)
 }
 
 export const hasScaleUpAvailable = state => {
-  if (isProductionFrozen(state)) return false
+  if (isProductionFrozen(state) || isGlobalAutomationFast(state, 'scaleUp')) return false
   const tier = getScaleUpTargetTier(state)
   const completedLevels = Math.max(0, (state.purchaseLevels?.[tier.id] ?? 1) - 1)
   return completedLevels >= getScaleUpRequirement(state)
 }
 
 export const hasOverclockAvailable = state => {
-  if (isProductionFrozen(state)) return false
+  if (isProductionFrozen(state) || isGlobalAutomationFast(state, 'overclock')) return false
   const tier = lastTier()
   if (!isTierUnlocked(state)(tier)) return false
   const completedLevels = Math.max(0, (state.purchaseLevels?.[tier.id] ?? 1) - 1)
   return completedLevels >= getOverclockRequirement(state)
 }
 
+/** Frozen at the Purge threshold with no fast Auto Purge to clear it. */
+export const hasPurgeAttention = state => isProductionFrozen(state) && !isGlobalAutomationFast(state, 'purge')
+
 /** Byte Factory-view cues (buys, purge, Scale Up / Overclock, Money tickspeed). */
 export const hasTiersGameAttention = state =>
-  isProductionFrozen(state) ||
+  hasPurgeAttention(state) ||
   hasAffordableFullLevel(state) ||
   hasAffordableGlobalTickspeed(state) ||
   hasScaleUpAvailable(state) ||
@@ -198,7 +222,7 @@ export const hasTiersAttention = state => hasTiersGameAttention(state)
 
 export const getTiersAttentionLevel = state =>
   pickLevel(
-    isProductionFrozen(state) || hasAffordableFullLevel(state),
+    hasPurgeAttention(state) || hasAffordableFullLevel(state),
     hasTiersAttention(state),
   )
 

@@ -331,6 +331,35 @@ describe('navAttention', () => {
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })
 
+  it('suppresses the Scale Up cue only while its automation is enabled and faster than 1 s', () => {
+    const base = {
+      ...createInitialGameState(),
+      intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
+      purchaseLevels: { [lastTierId]: 4 },
+      scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
+      scaleUpCount: 0,
+      autoScaleUp: true,
+    }
+    const withLevel = level => ({ ...base, automationIntervalLevels: { ...base.automationIntervalLevels, scaleUp: level } })
+    expect(hasScaleUpAvailable(withLevel(60))).toBe(false) // 64 × 0.9^60 < 1 s, enabled
+    expect(hasScaleUpAvailable({ ...withLevel(60), autoScaleUpEnabled: false })).toBe(true) // fast but toggled off
+    expect(hasScaleUpAvailable(withLevel(0))).toBe(true) // enabled but 64 s
+  })
+
+  it('suppresses the affordable-level cue for a tier whose enabled autobuyer is faster than 1 s', () => {
+    const tierId = TIER_DEFINITIONS[0].id
+    const base = {
+      ...createInitialGameState(),
+      intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
+      resources: { [MONEY_ID]: 1e30 },
+      autobuyers: { ...createInitialGameState().autobuyers, [tierId]: 1 },
+    }
+    const fast = { ...base, autobuyerIntervalLevels: { ...base.autobuyerIntervalLevels, [tierId]: 80 } }
+    expect(hasAffordableFullLevel({ ...base })).toBe(true)
+    expect(hasAffordableFullLevel(fast)).toBe(false)
+    expect(hasAffordableFullLevel({ ...fast, autobuyersEnabled: { ...fast.autobuyersEnabled, [tierId]: false } })).toBe(true)
+  })
+
   it('lights Factory when Overclock is available on the last tier', () => {
     const state = {
       ...createInitialGameState(),
