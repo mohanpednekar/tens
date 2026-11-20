@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { forfeitDailyRun, playDailyRun, restartDailyRun, startDailyRun, tickDailyRuns } from './dailyChallenges'
-import { addActivePlaySeconds, buyBuyMaxUnlock, buyCacheWarm, buyPlaytimeBonus, buyPrestigeSpeedBonus, buySleepModeCapUpgrade, getMaxOfflineSeconds, activateComputeBoost, applyOfflineProgress, applyOfflineRewardBonus, buyAutobuyerIntervalUpgrade, buyAutomationIntervalUpgrade, buyTierTickspeedIntervalUpgrade, setAutoOverclockEnabled, setComputeAutoChargeEnabled, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyTickspeedMultiplier, buyTierMaxLevels, buyTierQuantity, setAutoXpTickspeedEnabled, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, expediteDiskFill, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, startComputeCharge, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, enterChallenge, eraGame, exitChallenge, getOfflineEffectiveSeconds, getOfflineRewardBonusSeconds, isBuyMaxUnlocked, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, queueIntroSpeedUpgrade, unlockNextDiskSizeByFoundryReset, pinMuseumEntry, purgeGame, provisionDisk, queueDiskBuild, repeatPurchaseMax, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, flushStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPurgeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeAutoBoostEnabled, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry } from './engine'
+import { addActivePlaySeconds, buyBuyMaxUnlock, buyCacheWarm, buyPlaytimeBonus, buyPrestigeSpeedBonus, buySleepModeCapUpgrade, getMaxOfflineSeconds, activateComputeBoost, applyOfflineProgress, AUTOBUYER_UNIT_BATCH, applyOfflineRewardBonus, buyAutobuyerIntervalUpgrade, buyAutomationIntervalUpgrade, buyTierTickspeedIntervalUpgrade, setAutoOverclockEnabled, setComputeAutoChargeEnabled, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyTickspeedMultiplier, buyTierMaxLevels, buyTierQuantity, setAutoXpTickspeedEnabled, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, expediteDiskFill, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, startComputeCharge, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, enterChallenge, eraGame, exitChallenge, getOfflineEffectiveSeconds, getOfflineRewardBonusSeconds, isBuyMaxUnlocked, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, queueIntroSpeedUpgrade, unlockNextDiskSizeByFoundryReset, pinMuseumEntry, purgeGame, provisionDisk, queueDiskBuild, repeatPurchaseMax, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, flushStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPurgeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeAutoBoostEnabled, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry } from './engine'
 import { MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OPS_SAMPLE_CAP, OPS_SAMPLE_INTERVAL_MS, TICK_RATE_MS } from './layers'
-import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, loadBuyMaxPreference, saveBuyMaxPreference, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
+import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, loadBuyMaxPreference, saveBuyMaxPreference, loadBuyUnitPreference, saveBuyUnitPreference, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
 
 // Every purchase — manual Buy and autobuyer ticks alike — always batches up to the current
 // level's cost-block boundary. The actual cap is applied dynamically inside the engine (see
@@ -15,6 +15,8 @@ import { applyDevGameStateJson, importSaveJson, serializeSaveForExport, loadBuyM
 // player-facing ×1/×10 "Bulk" toggle; it's now a fixed engine behavior (the toggle's former
 // default), so there's nothing left to persist.
 const BUY_QUANTITY = Number.MAX_SAFE_INTEGER
+// Autobuyer batch for the current Buy mode: Level (default) finishes whole levels per attempt, Single buys one unit.
+const autobuyerBatchFor = unitMode => (unitMode ? AUTOBUYER_UNIT_BATCH : BUY_QUANTITY)
 
 // A real-world gap between two successive live ticks larger than this is treated as the tab/app
 // having been backgrounded or suspended by the browser/OS — see the tick-loop effect below —
@@ -31,12 +33,12 @@ const BACKGROUND_TICK_GAP_THRESHOLD_SECONDS = 2
 // back null for a gap at or below OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS — that short an
 // absence is simulated at full speed, "as if the screen was always on," so there's nothing to
 // notify the player about.
-const computeOfflineCatchUp = (elapsedRealSeconds, state) => {
+const computeOfflineCatchUp = (elapsedRealSeconds, state, autobuyerBatch = BUY_QUANTITY) => {
   const effectiveSeconds = elapsedRealSeconds > 0 ? getOfflineEffectiveSeconds(elapsedRealSeconds, getMaxOfflineSeconds(state)) : 0
   if (effectiveSeconds <= 0) return null
 
   return {
-    state: applyOfflineProgress(elapsedRealSeconds, BUY_QUANTITY)(state),
+    state: applyOfflineProgress(elapsedRealSeconds, autobuyerBatch)(state),
     offlineProgress: elapsedRealSeconds > OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS
       ? { elapsedRealSeconds, effectiveSeconds, capSeconds: getMaxOfflineSeconds(state) }
       : null,
@@ -64,7 +66,7 @@ const computeInitialGame = () => {
 
     const lastSaveTimestamp = loadLastSaveTimestamp()
     const elapsedRealSeconds = lastSaveTimestamp ? (Date.now() - lastSaveTimestamp) / 1000 : 0
-    const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, loaded)
+    const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, loaded, autobuyerBatchFor(loadBuyUnitPreference()))
     const result = caughtUp ?? { state: loaded, offlineProgress: null }
     return {
       ...result,
@@ -136,7 +138,7 @@ const computeInitialGame = () => {
           const capSeconds = getMaxOfflineSeconds(stateRef.current)
           const effectiveSeconds = getOfflineEffectiveSeconds(gapSeconds, capSeconds)
           if (effectiveSeconds > 0) {
-            setState(prev => applyOfflineProgress(gapSeconds, BUY_QUANTITY)(prev))
+            setState(prev => applyOfflineProgress(gapSeconds, autobuyerBatchFor(buyUnitModeRef.current))(prev))
             if (gapSeconds > OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS) {
               setOfflineProgress({ elapsedRealSeconds: gapSeconds, effectiveSeconds, capSeconds })
             }
@@ -149,7 +151,7 @@ const computeInitialGame = () => {
         // 2s catch-up threshold) so production continues; only visible ticks count as active play.
         const elapsed = TICK_RATE_MS / 1000
         setState(prev => {
-          const next = tickGame(elapsed, BUY_QUANTITY)(prev)
+          const next = tickGame(elapsed, autobuyerBatchFor(buyUnitModeRef.current))(prev)
           return document.visibilityState === 'visible' ? addActivePlaySeconds(elapsed)(next) : next
         })
         lastTickRealTime = Date.now()
@@ -218,13 +220,25 @@ const computeInitialGame = () => {
       setBuyMaxModeState(Boolean(enabled))
     }, [])
 
+    // Buy level / Buy unit (default level): same per-device ref pattern. Unit mode makes a manual Factory tier Buy
+    // buy exactly one unit and takes precedence over Buy max for that button only.
+    const [buyUnitMode, setBuyUnitModeState] = useState(loadBuyUnitPreference)
+    const buyUnitModeRef = useRef(buyUnitMode)
+    const setBuyUnitMode = useCallback(enabled => {
+      buyUnitModeRef.current = Boolean(enabled)
+      saveBuyUnitPreference(Boolean(enabled))
+      setBuyUnitModeState(Boolean(enabled))
+    }, [])
+
     const actions = useMemo(() => {
       // Leveled manual purchases pick their Buy-max variant only while the mode is on AND unlocked
       // for the state being updated — the engine stays the source of truth for the unlock.
       const buyOneOrMax = (single, max) =>
         setState(prev => (buyMaxModeRef.current && isBuyMaxUnlocked(prev) ? max : single)(prev))
       return {
-      buyTierQuantity: tierId => buyOneOrMax(buyTierQuantity(tierId, BUY_QUANTITY), buyTierMaxLevels(tierId)),
+      buyTierQuantity: tierId => (buyUnitModeRef.current
+        ? setState(prev => buyTierQuantity(tierId, 1)(prev))
+        : buyOneOrMax(buyTierQuantity(tierId, BUY_QUANTITY), buyTierMaxLevels(tierId))),
       buyTickspeedMultiplier: tierId => buyOneOrMax(buyTickspeedMultiplier(tierId), repeatPurchaseMax(buyTickspeedMultiplier(tierId))),
       buyAutobuyerIntervalUpgrade: tierId => setState(buyAutobuyerIntervalUpgrade(tierId)),
       buyAutomationIntervalUpgrade: key => setState(buyAutomationIntervalUpgrade(key)),
@@ -364,7 +378,7 @@ const computeInitialGame = () => {
   const claimOfflineAdReward = useCallback(summary => {
     if (!summary || summary.rewardClaimed || claimedOfflineRewardsRef.current.has(summary)) return false
     claimedOfflineRewardsRef.current.add(summary)
-    setState(prev => applyOfflineRewardBonus(summary.elapsedRealSeconds, BUY_QUANTITY, summary.capSeconds)(prev))
+    setState(prev => applyOfflineRewardBonus(summary.elapsedRealSeconds, autobuyerBatchFor(buyUnitModeRef.current), summary.capSeconds)(prev))
     setOfflineProgress(prev => (prev === summary
       ? { ...summary, effectiveSeconds: summary.effectiveSeconds + getOfflineRewardBonusSeconds(summary.elapsedRealSeconds, summary.capSeconds), rewardClaimed: true }
       : prev))
@@ -386,7 +400,7 @@ const computeInitialGame = () => {
     const nextState = loaded ?? createInitialGameState()
     const lastSaveTimestamp = loadLastSaveTimestamp()
     const elapsedRealSeconds = lastSaveTimestamp ? (Date.now() - lastSaveTimestamp) / 1000 : 0
-    const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, nextState)
+    const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, nextState, autobuyerBatchFor(buyUnitModeRef.current))
     setState(caughtUp?.state ?? nextState)
     setOfflineProgress(caughtUp?.offlineProgress ?? null)
     setIncompatibleSaveReason(incompatibleReason)
@@ -490,6 +504,7 @@ const computeInitialGame = () => {
     applyCloudSave,
     applyDevStateJson,
     buyMaxMode,
+    buyUnitMode,
     claimOfflineAdReward,
     clearSlot,
     devModeActive,
@@ -509,6 +524,7 @@ const computeInitialGame = () => {
     saveSlots,
     savesMeta,
     setBuyMaxMode,
+    setBuyUnitMode,
     setDevState,
     state,
     switchSaveSlot,

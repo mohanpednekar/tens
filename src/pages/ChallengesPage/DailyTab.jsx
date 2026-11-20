@@ -259,6 +259,7 @@ const RunView = ({ format, run, actions, onBack }) => {
     goal: { percent, label: `${percent}% · ${objective.label}`, ariaLabel: `progress toward the daily objective: ${objective.label}` },
     offlineProgress: null,
     buyMaxMode: false,
+    buyUnitMode: false,
     actions: {
       buyTierQuantity: tierId => play('buyTier', tierId),
       buyTickspeedMultiplier: tierId => play('tierTickspeed', tierId),

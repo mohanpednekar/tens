@@ -213,6 +213,13 @@ Automation row.
 Eco) is full width, one equal-width button per option with a text label beside its icon (`🔋 Eco`) — never a row of
 small icon-only squares — and the selected option is identified by styling alone (no tick): `prestige` variant plus a tinted fill, 2px border and bold label.
 
+## `BuyModeToggle/index.jsx`
+
+`{ game }` — segmented two-button choice (`role="group"` `aria-label="buy mode"`; buttons `aria-label="buy level mode"` /
+`"buy single mode"`, `aria-pressed`): **Level** (default, `game.buyUnitMode` false) or **Single** (one unit per manual Factory Buy
+and per tier autobuyer attempt). Calls `game.setBuyUnitMode(bool)`; per-device (`tens_buy_unit_mode`). Used only on Firmware →
+✦ Prestige → Purchasing; mechanic in `src/CLAUDE.md` "Buy mode".
+
 ## `BuyMaxToggle/index.jsx`
 
 `{ game }` — the Buy max mode toggle. Renders nothing until `isBuyMaxUnlocked(game.state)` (the 2 PP

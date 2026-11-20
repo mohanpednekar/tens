@@ -145,6 +145,8 @@ waiting for GitHub. The 10-minute quiet period does not apply. Never for `.githu
 never over a failing/pending check. Autonomous runs (`autonomous-maintenance.yml`, Devin, dev-team
 roles) keep their never-self-merge rule.
 
+**Merge-when-met rule (maintainer standing rule):** whenever the requested behavior is delivered and the green-and-`APPROVE` conditions above hold, proceed to merge rather than holding for further polish — anything left over becomes a follow-up PR, not a reason to wait.
+
 Once anything is pushed to an open PR, stay on it: check CI status and review comments (human and bot —
 Copilot, Codex, etc.), and address every actionable item — fix it directly if small and confident, or
 ask first if ambiguous or architecturally significant. After pushing a fix, check again (new pushes can
@@ -406,7 +408,7 @@ src/
   game/
     layers.js             ← TIER_DEFINITIONS + all game constants (single source of truth)
     engine.js             ← pure state functions (no React, no side effects)
-    navAttention.js       ← pure predicates for AppNav attention dots (high/normal; Storage cues fold into Foundry;
+    navAttention.js       ← pure predicates for AppNav attention dots (high/normal; Factory cues muted while their automation is enabled and <1 s; Storage cues fold into Foundry;
                             Compute Flops affordability → `compute`)
     dailyChallenges.js    ← Daily-challenge logic ("Daily challenges")
     challengeUi.js        ← pure player-facing helpers for Factory challenge mode (goal/readout formatting), shared

@@ -15,7 +15,7 @@ Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rew
 shared bottom `AppNav` in progression order: **Foundry → Power → Compute → Factory → Firmware → Challenges → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
 item, and no second-level Data Stream | Storage tabs). **Firmware** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
-unlock/milestone → pause Switch → speed upgrade / Speed bonus, Sleep mode cap (4 h + 4 h per PP level), Compression, Cache Warm (20 PP), Playtime bonus (100 PP), Overflow mode, Buy max (2 PP)). More (Manual, Milestones, Achievements, Settings) is always available — even
+unlock/milestone → pause Switch → speed upgrade / Speed bonus, Sleep mode cap (4 h + 4 h per PP level), Compression, Cache Warm (20 PP), Playtime bonus (100 PP), Overflow mode, Buy max (2 PP), Buy mode Level/Single). More (Manual, Milestones, Achievements, Settings) is always available — even
 during the Byte Foundry gate. A further More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
 production bundle; `yarn build:dev` builds a Dev-Mode-enabled variant published at `/tens/dev/` (own `dev:`-prefixed saves, no backward-compat); see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
@@ -328,6 +328,8 @@ passing, nothing still running, no unresolved review threads, and an adversarial
 current head SHA — merge it directly (`gh pr merge --merge` / `merge_pull_request`). The quiet period
 does not apply. Never for `.github/workflows/**` diffs, never over a failing/pending check. Autonomous
 runs, Devin and dev-team roles keep their never-self-merge rule.
+
+**Merge-when-met rule (maintainer standing rule):** once the requested behavior is delivered and the green-and-`APPROVE` conditions above hold, proceed to merge rather than holding for polish; leftovers become a follow-up PR.
 
 ## AI-instruction file cost hygiene
 
