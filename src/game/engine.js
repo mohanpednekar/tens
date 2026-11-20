@@ -708,7 +708,9 @@ const formatAsCleanBytesIfExactMultiple = safeValue => {
   const exponent = Math.floor(Math.log10(safeValue))
   const mantissa = safeValue / 10 ** exponent
   if (Math.abs(mantissa - BITS_PER_BYTE) > EXPONENTIAL_BYTE_MANTISSA_TOLERANCE) return null
-  return `${formatScientific(safeValue / BITS_PER_BYTE)} ${RESOURCE_SYMBOL(BYTES_ID)}`
+  // The mantissa is within tolerance of 8, so the Byte figure is a clean power of ten; snap to it
+  // (dividing the raw value can land a hair below, e.g. 9.99999999e91, and truncate to 9.999e91).
+  return `${formatScientific(10 ** exponent)} ${RESOURCE_SYMBOL(BYTES_ID)}`
 }
 
 // Comma-grouped currency string below the threshold, exponential above it (same threshold and
