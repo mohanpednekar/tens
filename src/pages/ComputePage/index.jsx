@@ -3,7 +3,7 @@ import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import { canActivateComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostLane, getComputeBoostLanes, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeChargeAvailable, isComputeCharging, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProvisionDiskInProgress } from 'game/engine'
 import { COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
 import { Fragment, useState } from 'react'
-import styled from 'styled-components'
+import styled, { useTheme } from 'styled-components'
 
 const RootDiv = styled.div`
   display: flex;
@@ -50,7 +50,7 @@ const Connector = styled.div`
   align-items: center;
   display: flex;
   justify-content: center;
-  min-height: 2.1rem;
+  min-height: 1.9rem;
   position: relative;
   width: 100%;
 
@@ -69,7 +69,7 @@ const Connector = styled.div`
 `
 
 const ConnectorGap = styled.div`
-  height: ${props => props.theme.space.sm};
+  height: 0.6rem;
 `
 
 // The Charger (or its 🔓 unlock) sits on the node's own header line, right side.
@@ -84,16 +84,17 @@ const NodeSide = styled.div`
 const BoostsHint = styled.span`
   color: ${props => props.theme.color.textMuted};
   flex: 0 0 auto;
-  font-size: 0.75em;
+  font-size: 0.78em;
+  font-weight: 400;
   white-space: nowrap;
 `
 
 const TierBlock = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
-  padding: 0.2rem 0.5rem;
+  padding: 0.45rem 0.6rem;
   border-radius: ${props => props.theme.radius.lg};
   background: ${props => props.theme.color.surface};
   border: 1px solid ${props => (props.$selected ? props.theme.color.warn : props.theme.color.border)};
@@ -113,16 +114,6 @@ const BoostCard = styled.section`
   border: 1px solid ${props => props.theme.color.border};
 `
 
-// Filled dot = the tier that powers boosts.
-const SelectMarker = styled.span`
-  flex: 0 0 auto;
-  width: 0.7rem;
-  height: 0.7rem;
-  border-radius: 50%;
-  border: 1.5px solid ${props => (props.$selected ? props.theme.color.warn : props.theme.color.textMuted)};
-  background: ${props => (props.$selected ? props.theme.color.warn : 'transparent')};
-`
-
 // Row 1: tier name/symbol plus a row of COMPUTE_ENTITY_CAP (10) normal slots — "First row shows 10
 // slots ... also has Name and symbol of the tier" (issue #321).
 // Wraps only when the node's Charger can't fit beside the dots (~320px phones): the Charger then
@@ -131,8 +122,7 @@ const TierHeaderRow = styled.div`
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  row-gap: 2px;
-  gap: ${props => props.theme.space.xs};
+  gap: 4px ${props => props.theme.space.xs};
   width: 100%;
 `
 
@@ -146,7 +136,7 @@ const TierSelectButton = styled.button`
   display: flex;
   flex: 1 1 auto;
   align-items: center;
-  gap: ${props => props.theme.space.xs};
+  gap: 0.5rem;
   min-width: fit-content;
   border: none;
   border-radius: ${props => props.theme.radius.sm};
@@ -169,8 +159,8 @@ const TierSelectButton = styled.button`
 
 const TierLabel = styled.span`
   flex: 0 0 auto;
-  font-weight: 600;
-  font-size: 0.9em;
+  font-weight: 700;
+  font-size: 0.95rem;
   white-space: nowrap;
 `
 
@@ -179,7 +169,7 @@ const NodeText = styled.span`
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
 `
 
 const NodeTitle = styled.span`
@@ -195,8 +185,8 @@ const NodeTitle = styled.span`
 // tiers and reads as misaligned across the ten rows.
 const TierSymbol = styled.span`
   flex: 0 0 auto;
-  width: 1.4em;
-  font-size: 1em;
+  width: 1.6rem;
+  font-size: 1.15rem;
   text-align: center;
 `
 
@@ -213,8 +203,8 @@ const SlotsRow = styled.div`
 // StoragePage's own DiskSquare uses, just non-interactive (a plain status square, not a button).
 const NormalSlot = styled.span`
   flex: 0 0 auto;
-  width: 0.6rem;
-  height: 0.6rem;
+  width: 0.62rem;
+  height: 0.62rem;
   border-radius: 50%;
   border: 1.2px solid ${props => (props.$filled ? props.theme.color.good : props.theme.color.borderStrong)};
   background: ${props => (props.$filled ? props.theme.color.good : 'transparent')};
@@ -230,60 +220,26 @@ const CompactButton = styled(Button)`
 // width: 100%), the same "two equal-width buttons split the row" look MainPage's own tier rows use
 // for their Upgrade/Buy pair, rather than small icon-only squares hugging one edge with the rest of
 // the row left empty.
-// The connector's merge / ⚡ Charge button: a small pill centred on the dashed line.
+// The connector's merge / ⚡ Charge button: a small, quiet pill centred on the dashed line (it lights
+// up only when it can act — Button's variant colour; disabled reads muted).
 const TierActionButton = styled(CompactButton)`
-  min-width: 5.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  min-height: 1.45rem;
+  min-width: 4.5rem;
+  padding: 0.1em 0.75em;
 `
 
-const ReserveSlotsRow = styled.button`
-  display: flex;
-  flex: 1 1 auto;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-  min-width: 0;
-  border: 1px solid ${props => (props.$clickable ? props.theme.color.accent : 'transparent')};
-  border-radius: ${props => props.theme.radius.sm};
-  background: ${props => (props.$clickable ? props.theme.color.surfaceRaised : 'none')};
-  padding: 2px 4px;
-  color: inherit;
-  font: inherit;
-  cursor: ${props => (props.$clickable ? 'pointer' : 'default')};
-
-  &:hover:not(:disabled) {
-    filter: brightness(1.15);
-  }
+// The node's Charger as one compact badge ("🔌 n/8", a progress fill for the partial reserve, or
+// "⏳ <countdown>" while an auto-charge runs) — display-only, same accessible name as the old slot row.
+const ChargerBadge = styled(CompactButton)`
+  min-height: 1.9rem;
+  min-width: 3.9rem;
 
   &:disabled {
-    cursor: not-allowed;
+    cursor: default;
+    opacity: 1;
   }
-
-  &:focus-visible {
-    outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
-  }
-`
-
-// A reserve-pool slot (one of COMPUTE_MERGE_RESERVE_CAP, 8) — three visual states: empty (idle,
-// nothing banked yet), filled (gradually accumulating toward the next automatic merge — see
-// engine.js's getComputeReserveHeld, fed by continued Booster purchases/lower-tier merges past the
-// primary COMPUTE_ENTITY_CAP slots), or merging (a merge actually in flight, timing down to
-// completion — the same "warn" color the countdown text itself uses, distinct from the plain
-// accent used for "banked but not yet committed" so the two don't read as the same state).
-const ReserveSlot = styled.span`
-  flex: 0 0 auto;
-  width: 0.85rem;
-  height: 0.85rem;
-  border-radius: ${props => props.theme.radius.sm};
-  border: 1.2px solid ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.accent : props.theme.color.surfaceSunken)};
-  background: ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
-`
-
-const MergeCountdown = styled.span`
-  flex: 0 0 auto;
-  font-size: 0.78em;
-  font-family: ${props => props.theme.font.display};
-  color: ${props => props.theme.color.warn};
 `
 
 // Issue #326: which compute-ladder tier is currently armed to fund a Boost — a small status line
@@ -509,6 +465,7 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
+  const theme = useTheme()
   // Issue #326: which compute-ladder tier is armed to fund the next Boost activation — purely
   // local UI state (free to change, no cost). One tier is ALWAYS selected (it can be switched, never cleared):
   // on arrival, the highest tier whose charge is automated, else the active boost's own tier, else Cells.
@@ -566,7 +523,7 @@ const ComputePage = ({ game }) => {
                     : `${nextLabel}: ${spendText} — runs alongside other boosts and adds up`
               }
               type="button"
-              variant="prestige"
+              variant="neutral"
             >
               <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatPresetDuration(durationSeconds)}`}</ButtonContent>
             </CompactButton>
@@ -660,7 +617,7 @@ const ComputePage = ({ game }) => {
                         : `Charge: move units from the top row into the Charger one per second, then merge ${COMPUTE_MERGE_RATIO} into 1 ${row.mergeOutputLabel} (needs ${COMPUTE_MERGE_RATIO} ${row.label} held)`
                   }
                   type="button"
-                  variant="prestige"
+                  variant="success"
                 >
                   <ButtonContent>{charging ? `⏳ ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP}` : '⚡ Charge'}</ButtonContent>
                 </TierActionButton>
@@ -675,35 +632,34 @@ const ComputePage = ({ game }) => {
                       : `Charge up: spend ${COMPUTE_MERGE_RATIO} ${row.label} for 1 ${row.mergeOutputLabel}`
                   }
                   type="button"
-                  variant="prestige"
+                  variant="success"
                 >
                   <ButtonContent>{`${row.symbol} ${COMPUTE_MERGE_RATIO}→1 ${nextSymbol}`}</ButtonContent>
                 </TierActionButton>
               ))
               // The node's own Charger (8 reserve slots) once unlocked, else its 🔓 unlock.
               const nodeSide = hasMergeRow && (autoEnabled ? (
-                <ReserveSlotsRow
+                <ChargerBadge
                   aria-label={
                     merging
                       ? `${row.label} charger, auto-charge in progress, ${formatOfflineDuration(remainingSeconds)} left`
                       : `${row.label} charger, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} filled`
                   }
                   disabled
-                  $clickable={false}
                   title={
                     merging
                       ? `Auto-charging: ${formatOfflineDuration(remainingSeconds)} left`
                       : `Charger: ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} — fills past ${COMPUTE_ENTITY_CAP} held and charges on its own when full, or press Charge to move units into it one per second`
                   }
                   type="button"
+                  variant={merging ? 'prestige' : 'plain'}
+                  $progress={merging ? 100 : (reserveHeld / COMPUTE_MERGE_RESERVE_CAP) * 100}
+                  $progressColor={merging ? undefined : theme.color.accent}
                 >
-                  {merging && <MergeCountdown>{formatOfflineDuration(remainingSeconds)}</MergeCountdown>}
-                  {Array.from({ length: COMPUTE_MERGE_RESERVE_CAP }, (_, index) => (
-                    <ReserveSlot key={index} $filled={index < reserveHeld} $merging={merging} aria-hidden="true" />
-                  ))}
-                </ReserveSlotsRow>
+                  <ButtonContent>{merging ? `⏳ ${formatOfflineDuration(remainingSeconds)}` : `🔌 ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP}`}</ButtonContent>
+                </ChargerBadge>
               ) : (
-                <CompactButton
+                <ChargerBadge
                   aria-label={row.autoAriaLabel}
                   disabled={!canEnableAuto}
                   onClick={() => actions[row.enableAutoAction]()}
@@ -713,7 +669,7 @@ const ComputePage = ({ game }) => {
                   $progress={autoUnlockProgress}
                 >
                   <ButtonContent>{`🔓 ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
-                </CompactButton>
+                </ChargerBadge>
               ))
               // The connector shows whenever its merge matters (same progressive rule as before);
               // otherwise a small gap keeps the chain readable.
@@ -731,7 +687,6 @@ const ComputePage = ({ game }) => {
                       title={`Select ${row.label} to show its Boost presets — they'll boost ${describeCoveredTiers(tierIndex, 'name')}`}
                       $selected={armedTierIndex === tierIndex}
                     >
-                      <SelectMarker aria-hidden="true" $selected={armedTierIndex === tierIndex} />
                       <TierSymbol aria-hidden="true">{row.symbol}</TierSymbol>
                       <NodeText>
                         <NodeTitle>

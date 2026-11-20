@@ -472,13 +472,16 @@ live inside the selected tier):
    - **Before unlocked:** just a `StatusText` line with the current `intro.computeCores`/
      `intro.computeNodes` counts as two symbol-prefixed fractions (`"⬡ N/10 · 🔗 N/10"`).
    - **Once unlocked (layout since #1141 — supersedes the "Row 2" placement below):** a vertical
-     **merge chain**. Each tier is one node (`TierBlock`): `TierSelectButton` (marker, symbol, label +
-     `→ <boosted tiers>` hint, then 10 small `NormalSlot` circles for held count) with the node's Charger
-     on the same line (`NodeSide`: the 8-slot `ReserveSlotsRow` once unlocked, else a compact
-     `🔓 <held>/10` unlock button, same aria-label). Between a tier and the next sits a dashed
-     `Connector` carrying that boundary's merge button (`TierActionButton`: `<sym> 8→1 <next sym>`
-     before the Charger, `⚡ Charge` after; same aria-labels), shown under the same `showDetail` rule,
-     else a small gap. Only the selected node shows the 3 presets (no "Boosts …" caption there — the
+     **merge chain**. Each tier is one node (`TierBlock`; armed = gold border, no marker dot): `TierSelectButton`
+     (symbol, bold label + muted `→ <boosted tiers>` hint, then 10 green `NormalSlot` dots for held count) with the
+     node's Charger on the same line (`NodeSide`, wraps below the dots only on ~320px phones): once unlocked a
+     display-only `ChargerBadge` — `🔌 <reserve>/8` with a proportional progress fill, or `⏳ <countdown>`
+     while an auto-charge runs (aria-label `"<Label> charger, n/8 filled"` / `"…, auto-charge in progress, …
+     left"`); before that the `🔓 <held>/10` unlock badge (same aria-label, progress fill). Between a tier and
+     the next sits a dashed `Connector` with that boundary's small pill (`TierActionButton`, `variant="success"`:
+     `<sym> 8→1 <next sym>` before the Charger, `⚡ Charge` / `⏳ n/8` while charging after; same
+     aria-labels), shown under the same `showDetail` rule, else a small gap. Presets are muted
+     (`variant="neutral"`). Only the selected node shows the 3 presets (no "Boosts …" caption there — the
      header hint already says it). Originally: TWO rows per compute-ladder entity Cell through Fusion (issues
      #321/#326), each pair wrapped in a `TierBlock` inside a `TierBlocksGroup`
      (`aria-label="compute entities"`), driven off an `ENTITY_ROWS` array (10 entries, in the same
