@@ -213,18 +213,6 @@ const ScaleUpCard = styled(StatCard)`
   ${featureCard('#0e7490')}
 `
 
-// Matches the tier rows' own Buy/tickspeed button font size (see BuyButton/UpgradeButton) rather
-// than the larger default Button size every other standalone card button uses — keeps this
-// button visually consistent with the tier list just above it.
-const ScaleUpButton = styled(Button)`
-  font-size: 0.82em;
-  padding: 0.35em 0.6em;
-
-  @media (max-width: 40rem) {
-    font-size: 0.78em;
-  }
-`
-
 const GlobalTickspeedCard = styled(StatCard)`
   ${featureCard('#1d4ed8')}
 `
@@ -235,17 +223,6 @@ const RestageCard = styled(StatCard)`
 
 const OverclockCard = styled(StatCard)`
   ${featureCard('#c2410c')}
-`
-
-// Matches ScaleUpButton's own font-size override, same rationale (stays visually consistent with
-// the tier list's Buy/tickspeed buttons rather than the larger standalone-card default).
-const OverclockButton = styled(Button)`
-  font-size: 0.82em;
-  padding: 0.35em 0.6em;
-
-  @media (max-width: 40rem) {
-    font-size: 0.78em;
-  }
 `
 
 // Feature cards are short full-width rows stacked in two groups: Clock Speed + Restage above the tier
@@ -1682,7 +1659,7 @@ const MainPage = ({ game }) => {
               {scaleUpSuccessorTier ? `, and unlocks ${scaleUpSuccessorTier.name}` : ''}. Needs {formatAmount(scaleUpRequirementDisplay)} completed {scaleUpTargetTier.name} levels.
             </MutedText>
           </Disclosure>
-          <ScaleUpButton
+          <Button
             aria-label={`Scale Up (requires ${scaleUpRequirementDisplay} completed ${scaleUpTargetTier.name} levels) — ${scaleUpVerb} production for tiers unlocked so far${scaleUpUnlocksTB ? ' and unlocks TB' : ''}`}
             color={canScaleUp ? '#22d3ee' : 'darkgrey'}
             disabled={!canScaleUp}
@@ -1702,7 +1679,7 @@ const MainPage = ({ game }) => {
               aria-valuemin={0}
               aria-valuemax={100}
             />
-          </ScaleUpButton>
+          </Button>
         </ScaleUpCard>
 
         {overclockEverRevealed && (
@@ -1728,7 +1705,7 @@ const MainPage = ({ game }) => {
                 : `Not claimed yet — reach ${formatAmount(overclockRequirementDisplay)} completed ${lastTier.name} levels. Each completed level then multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay}.`}
             </MutedText>
           </Disclosure>
-          <OverclockButton
+          <Button
             aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus; each completed ${lastTier.name} level (${formatAmount(lastTierLevelDisplay)} now) multiplies Clock Speed's per-level rate by ×${overclockLevelEffectDisplay}`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
@@ -1748,7 +1725,7 @@ const MainPage = ({ game }) => {
               aria-valuemin={0}
               aria-valuemax={100}
             />
-          </OverclockButton>
+          </Button>
         </OverclockCard>
         )}
       </SpeedCardsRow>
