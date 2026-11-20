@@ -136,8 +136,8 @@ const LakeFilledText = styled.span`
   text-shadow: 0 0 2px ${props => props.theme.color.surface};
 `
 
-// Thin progress bar under the balance, shown on a collapsed lake header: progress toward the next
-// disk (the same fraction the expanded LakePoolTile shows). `ThinProgressBar` is reused by
+// Thin progress bar under the balance, shown on every lake header (collapsed or expanded, #1142): progress toward the next
+// disk. `ThinProgressBar` is reused by
 // ByteFoundryPage's running-upgrade tile so both read the same. Default top margin spaces the bar
 // under the lake title/sub rows (LakeHeader has no flex gap); the upgrade tile zeroes it via a
 // local wrapper so it does not stack on FillableStatCard's gap.
@@ -202,15 +202,46 @@ const StatusText = styled.p`
 const LakeSizeRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
-  gap: 3px;
+  gap: 4px;
+  justify-content: space-between;
   width: 100%;
+`
+
+// Same labelled-row shape as DiskArrayRow (#1142): the size once, with its unit, then an unlabeled strip.
+const LakeLabeledRow = styled.div`
+  align-items: center;
+  column-gap: ${props => props.theme.space.sm};
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr);
+  width: 100%;
+`
+
+const LakeRowLabel = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+// Buffer / transfer as a small caption line over a full-width thin bar (replaces the old pill).
+const LakeCaption = styled.div`
+  color: ${props => props.theme.color.textMuted};
+  display: flex;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  justify-content: space-between;
+  margin-top: 0.15rem;
 `
 
 const LakeSquare = styled.div`
   position: relative;
   flex: 1 1 1.2rem;
   min-width: 0;
-  max-width: 2.5rem;
+  max-width: 2rem;
   aspect-ratio: 1;
   display: inline-flex;
   align-items: center;
@@ -218,7 +249,7 @@ const LakeSquare = styled.div`
   overflow: hidden;
   border-radius: 50%;
   border: 1.5px solid ${props => (props.$full ? props.theme.color.accent : props.theme.color.surfaceSunken)};
-  background: ${props => (props.$full ? props.theme.color.surfaceRaised : 'transparent')};
+  background: ${props => (props.$full ? `color-mix(in srgb, ${props.theme.color.accent} 40%, transparent)` : 'transparent')};
 `
 
 // The one slot currently filling (a transfer under way, getDataLakeTransferFraction in
@@ -233,51 +264,7 @@ const LakeSquareFill = styled.div`
   transform: scaleX(${props => props.$fill});
 `
 
-const LakeSquareLabel = styled.span`
-  position: relative;
-  pointer-events: none;
-  font-family: ${props => props.theme.font.display};
-  font-size: 0.6rem;
-  font-weight: 600;
-  color: ${props => props.theme.color.textMuted};
-  font-variant-numeric: tabular-nums;
-`
 
-// A dedicated fillable tile — same visual language as the per-square LakeSquareFill overlay above,
-// just surfaced as its own explicit element inside the Data Lake section rather than only as a
-// sliver on one small square. Purely additive: shows the exact SAME data
-// (getDataLakeCurrentDiskFillFraction/getDataLakeFillBits) the square overlay already reads, no
-// change to how filling actually works. Represents progress toward the smallest currently-unfilled
-// disk in the lake — the instant it reaches full, that disk completes (see fillDataLakeBuffer).
-const LakePoolTile = styled.div`
-  position: relative;
-  width: 100%;
-  min-height: 1.8rem;
-  border-radius: ${props => props.theme.radius.md};
-  overflow: hidden;
-  background: color-mix(in srgb, ${props => props.theme.color.surfaceSunken} 45%, ${props => props.theme.color.surface});
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`
-
-const LakePoolFill = styled.div`
-  position: absolute;
-  inset: 0;
-  background: ${props => props.theme.color.accent};
-  opacity: 0.35;
-  transform-origin: left center;
-  transform: scaleX(${props => props.$fill});
-`
-
-const LakePoolLabel = styled.span`
-  position: relative;
-  font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.sm.size};
-  font-weight: 600;
-  color: ${props => props.theme.color.text};
-  font-variant-numeric: tabular-nums;
-`
 
 // Icon + amount only, cost/state tucked into the title/aria-label rather than a second visible
 // line — matches every other milestone-style action button on this page (Upgrade Data Stream,
@@ -520,17 +507,16 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                 </LakeSubRow>
                 {headerOnly
                   ? <LakeFilledText $withBar title={costReachable ? `Banked toward the next ${boosterLabel} (${nextCostSize})` : `The next ${boosterLabel} costs more than this lake can hold (${nextCostSize}) — Scale Out or Flush Pool`}>{barText}</LakeFilledText>
-                  : <LakeFilledText title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>}
-                {headerOnly && (
-                  <ThinProgressBar
-                    role="progressbar"
-                    aria-label={`${label} lake fill progress`}
-                    aria-valuenow={poolReady ? boosterPercent : 0}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    $fill={headerFillFraction}
-                  />
-                )}
+                  : <LakeFilledText $withBar title="Currently filled">{formatSpeedText(formatPoolBalance(filledBits, tierIndex))}</LakeFilledText>}
+                {/* Full-width thin progress bar under the lake header, collapsed or expanded (#1142). */}
+                <ThinProgressBar
+                  role="progressbar"
+                  aria-label={`${label} lake fill progress`}
+                  aria-valuenow={poolReady ? boosterPercent : 0}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  $fill={headerFillFraction}
+                />
               </LakeHeader>
             )}
 
@@ -540,25 +526,25 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               const bufferFraction = poolReady ? getDataLakeBufferFillFraction(state, tierIndex) : 0
               const unitLabel = formatDiskSize(unitBits)
               return (
-                <LakePoolTile
-                  role="progressbar"
-                  aria-label={`${label} lake pool — fills its ${unitLabel} buffer`}
-                  aria-valuenow={Math.round(bufferFraction * 100)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  title={
-                    poolReady
-                      ? `${label} Lake buffer — pool input fills this permanent ${unitLabel} buffer first; each full buffer is then moved into a ${unitLabel} disk (or consolidated with 9 disks of every smaller size into a larger one)`
-                      : `${label} Lake pool — waiting on a ${unitLabel} disk to be built in Storage before this can start filling`
-                  }
-                >
-                  <LakePoolFill $fill={bufferFraction} />
-                  <LakePoolLabel>
-                    {poolReady
-                      ? `${formatDiskSize(fillBits)} / ${unitLabel} buffer`
-                      : `Locked · 0 / ${unitLabel}`}
-                  </LakePoolLabel>
-                </LakePoolTile>
+                <div title={
+                  poolReady
+                    ? `${label} Lake buffer — pool input fills this permanent ${unitLabel} buffer first; each full buffer is then moved into a ${unitLabel} disk (or consolidated with 9 disks of every smaller size into a larger one)`
+                    : `${label} Lake pool — waiting on a ${unitLabel} disk to be built in Storage before this can start filling`
+                }>
+                  <LakeCaption>
+                    <span>buffer</span>
+                    <span>{poolReady ? `${formatDiskSize(fillBits)} / ${unitLabel}` : `Locked · 0 / ${unitLabel}`}</span>
+                  </LakeCaption>
+                  <ThinProgressBar
+                    role="progressbar"
+                    aria-label={`${label} lake pool — fills its ${unitLabel} buffer`}
+                    aria-valuenow={Math.round(bufferFraction * 100)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    $fill={bufferFraction}
+                    style={{ marginTop: '0.2rem' }}
+                  />
+                </div>
               )
             })()}
 
@@ -566,17 +552,21 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               const transferFraction = getDataLakeTransferFraction(state, tierIndex)
               const targetLabel = formatDiskSizeInPoolUnit(unitBits * transfer.target, tierIndex)
               return (
-                <LakePoolTile
-                  role="progressbar"
-                  aria-label={`${label} lake transfer — building a ${targetLabel} disk`}
-                  aria-valuenow={Math.round(transferFraction * 100)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  title={`Moving the full buffer${transfer.target > 1 ? ' and every smaller disk' : ''} into one ${targetLabel} disk`}
-                >
-                  <LakePoolFill $fill={transferFraction} />
-                  <LakePoolLabel>{`→ ${targetLabel} disk · ${Math.round(transferFraction * 100)}%`}</LakePoolLabel>
-                </LakePoolTile>
+                <div title={`Moving the full buffer${transfer.target > 1 ? ' and every smaller disk' : ''} into one ${targetLabel} disk`}>
+                  <LakeCaption>
+                    <span>→ {targetLabel} disk</span>
+                    <span>{Math.round(transferFraction * 100)}%</span>
+                  </LakeCaption>
+                  <ThinProgressBar
+                    role="progressbar"
+                    aria-label={`${label} lake transfer — building a ${targetLabel} disk`}
+                    aria-valuenow={Math.round(transferFraction * 100)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    $fill={transferFraction}
+                    style={{ marginTop: '0.2rem' }}
+                  />
+                </div>
               )
             })()}
 
@@ -590,9 +580,10 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               const fillFraction = isFillingThisSize ? getDataLakeTransferFraction(state, tierIndex) : 0
               // Fixed pool unit ("1000 KB", never an auto-converted "1 MB"), like the lake's capacity.
               const sizeLabel = formatDiskSizeInPoolUnit(slotSizeBits, tierIndex)
-              const bareSizeLabel = String(subSize)
               return (
-                <LakeSizeRow key={subSize} role="group" aria-label={`${label} lake ${sizeLabel} disks`}>
+                <LakeLabeledRow key={subSize}>
+                <LakeRowLabel aria-hidden="true">{sizeLabel}</LakeRowLabel>
+                <LakeSizeRow role="group" aria-label={`${label} lake ${sizeLabel} disks`}>
                   {Array.from({ length: totalSlots }, (_, index) => {
                     const isFull = index < full
                     const isFilling = !isFull && index === full && isFillingThisSize
@@ -609,11 +600,11 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                         }
                       >
                         {isFilling && <LakeSquareFill $fill={fillFraction} />}
-                        <LakeSquareLabel>{bareSizeLabel}</LakeSquareLabel>
                       </LakeSquare>
                     )
                   })}
                 </LakeSizeRow>
+                </LakeLabeledRow>
               )
             })}
             {showBody && (

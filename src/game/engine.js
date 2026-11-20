@@ -600,13 +600,14 @@ export const createInitialGameState = () => ({
     // computeCores balance — merging Nodes back down, or spending Cores on a Boost (even before
     // ever holding 8 at once), must never prevent or re-hide the page once earned.
     computeMergePageUnlocked: false,
-    // PERMANENT — each flips true (via enableAutoMergeNodesIntoCluster etc.) once, by sacrificing
-    // ALL COMPUTE_ENTITY_CAP (10) currently-held units of the merge's OWN output entity — e.g.
-    // sacrifice 10 Clusters to enable auto-merging Nodes into Clusters. Once set, tickGame also
+    // PERMANENT — each flips true once its boundary's first COMPUTE_ENTITY_CAP (10) manual charges have
+    // filled chargerUnlockProgress (see getChargerUnlockProgress), or — legacy route kept for saves
+    // already holding them — via enableAutoMergeNodesIntoCluster etc. by sacrificing 10 of the output. Once set, tickGame also
     // auto-fires that specific 8-for-1 merge whenever its input entity is completely full (10, not
     // the manual button's own 8 — automation only ever mops up an entity the player let cap out,
     // never preempting a more efficient manual merge at 8). The manual merge button stays available
     // either way. See tickAutoMerge/enableAutoMerge further down this file.
+    chargerUnlockProgress: {},
     autoMergeCoresIntoNode: false,
     autoMergeNodesIntoCluster: false,
     autoMergeClustersIntoNetwork: false,
@@ -677,7 +678,8 @@ const EXPONENTIAL_NOTATION_THRESHOLD = 10_000 // i.e. plain digits up to 9,999
 // 9.999999999999999e82), which must still read 1e83 — not 9.999e82 (and not ICU trunc's malformed
 // 0.099e84). Done by hand rather than Intl's `roundingMode: 'trunc'` for exactly that reason. The
 // "never overstates" guarantee holds to float precision only: an integer within ~1e-12 (relative) of
-// a power of ten, e.g. 999,999,999,999, reads 1e12.
+// a power of ten, e.g. 999,999,999,999, reads 1e12. The Bits→Bytes snap below is wider: a mantissa
+// within EXPONENTIAL_BYTE_MANTISSA_TOLERANCE (1e-9 absolute) of 8 reads as the clean 1eN B.
 const SCIENTIFIC_MANTISSA_DECIMALS = 1000
 const SCIENTIFIC_FLOAT_NUDGE = 1 + 1e-12
 const formatScientific = value => {
@@ -707,7 +709,9 @@ const formatAsCleanBytesIfExactMultiple = safeValue => {
   const exponent = Math.floor(Math.log10(safeValue))
   const mantissa = safeValue / 10 ** exponent
   if (Math.abs(mantissa - BITS_PER_BYTE) > EXPONENTIAL_BYTE_MANTISSA_TOLERANCE) return null
-  return `${formatScientific(safeValue / BITS_PER_BYTE)} ${RESOURCE_SYMBOL(BYTES_ID)}`
+  // The mantissa is within tolerance of 8, so the Byte figure is a clean power of ten; snap to it
+  // (dividing the raw value can land a hair below, e.g. 9.99999999e91, and truncate to 9.999e91).
+  return `${formatScientific(10 ** exponent)} ${RESOURCE_SYMBOL(BYTES_ID)}`
 }
 
 // Comma-grouped currency string below the threshold, exponential above it (same threshold and
@@ -1408,6 +1412,7 @@ const buildEraIntroReset = (state, initial) => {
     // Achieved pool exponent boosts survive the much larger Reboot, like achievements themselves.
     poolExponentBonuses: { ...(state.intro?.poolExponentBonuses ?? {}) },
     foundryResetCaps: {},
+    chargerUnlockProgress: { ...(state.intro?.chargerUnlockProgress ?? {}) },
     autoMergeCoresIntoNode: state.intro?.autoMergeCoresIntoNode ?? initial.intro.autoMergeCoresIntoNode,
     autoMergeNodesIntoCluster: state.intro?.autoMergeNodesIntoCluster ?? initial.intro.autoMergeNodesIntoCluster,
     autoMergeClustersIntoNetwork: state.intro?.autoMergeClustersIntoNetwork ?? initial.intro.autoMergeClustersIntoNetwork,
@@ -4588,19 +4593,6 @@ export const formatDiskSize = formatBitsInNearestSiUnit
 // on the ordinary trimmed formatDiskSize, since those are mostly round/exact/slow-changing figures.
 export const formatDiskSizeStable = bits => formatMemoryAmountStable(bits, getSiByteUnit(bits))
 
-// A Disk's own bare numeric size, with NO unit suffix — used only for the small in-square label
-// (DiskArrayRow/DataLakePanel), where the surrounding pool/lake card already establishes the unit
-// (a "KB Pool" card's own disks are implicitly KB-denominated — see CLAUDE.md's "Economy model").
-// aria-labels/tooltips keep using formatDiskSize's own unit-suffixed form for accessibility; only
-// the visible square text drops it. Safe to reuse formatDiskSize's own auto-nearest-unit pick here
-// (rather than a pool-fixed one) since an individual disk's size only ever spans 1-100x a pool's
-// own unit, never the 1000x that would actually require pinning it — see
-// formatDiskSizeInPoolUnit's own doc comment below for the case that does.
-export const formatDiskSizeBare = bits => {
-  const unit = getSiByteUnit(bits)
-  return formatAmount(floorToDecimals(bits / unit.divisor, MEMORY_AMOUNT_DECIMAL_PLACES))
-}
-
 // Formats `bits` in poolIndex's own FIXED SI unit (KB for pool 1, MB for pool 2, … — the same
 // mapping SI_BYTE_UNIT_SYMBOLS/TIER_DEFINITIONS already use), rather than formatDiskSize's own
 // auto-nearest-unit pick — never converting up to the next unit even once the value reaches 1000x
@@ -6698,9 +6690,33 @@ export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?
 // instantComputeMergeAtBoundary), and this pre-unlock path retires
 // permanently for it (an engine-level guard, not just a UI one — see "Security notes" in
 // CLAUDE.md).
+// Charges made at a boundary toward its Charger (Auto-charge), 0..COMPUTE_ENTITY_CAP (#1141 follow-up):
+// before a boundary is automated, its first COMPUTE_ENTITY_CAP manual 8→1 charges build the Charger
+// instead of producing an output unit; at COMPUTE_ENTITY_CAP the Charger unlocks automatically, with no
+// sacrifice. Stored per auto flag in intro.chargerUnlockProgress; permanent like the flags themselves.
+export const getChargerUnlockProgress = (state, autoFlagField) => {
+  const raw = Number(state.intro?.chargerUnlockProgress?.[autoFlagField] ?? 0)
+  return Number.isFinite(raw) ? Math.max(0, Math.min(COMPUTE_ENTITY_CAP, Math.floor(raw))) : 0
+}
+
 const mergeComputeEntities = (inputField, outputField, autoFlagField) => state => {
   if (state.intro?.[autoFlagField]) return state
   const input = state.intro?.[inputField] ?? 0
+  // Charges go into the Charger first: no output room needed, and the merge stops at the unlock.
+  const progress = getChargerUnlockProgress(state, autoFlagField)
+  const chargerMerges = Math.min(COMPUTE_ENTITY_CAP - progress, Math.floor(input / COMPUTE_MERGE_RATIO))
+  if (chargerMerges > 0) {
+    const nextProgress = progress + chargerMerges
+    return {
+      ...state,
+      intro: {
+        ...state.intro,
+        [inputField]: input - chargerMerges * COMPUTE_MERGE_RATIO,
+        chargerUnlockProgress: { ...(state.intro?.chargerUnlockProgress ?? {}), [autoFlagField]: nextProgress },
+        ...(nextProgress >= COMPUTE_ENTITY_CAP ? { [autoFlagField]: true } : {}),
+      },
+    }
+  }
   const output = state.intro?.[outputField] ?? 0
   const roomForOutput = Math.max(0, getComputeFieldEffectiveCap(state, outputField) - output)
   const outputGained = Math.min(roomForOutput, Math.floor(input / COMPUTE_MERGE_RATIO))
@@ -6741,9 +6757,10 @@ export const mergeComputeDatacentersIntoSupercomputer = mergeComputeEntities('co
 export const mergeComputeSupercomputersIntoMegacomputer = mergeComputeEntities('computeSupercomputers', 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
 
 // --- Compute auto-merge automation & reserve-merge timers --- see issues #316/#321/#377. Each of
-// the 9 manual merges above can be permanently automated, one tier boundary at a time, by
-// sacrificing ALL COMPUTE_ENTITY_CAP (10) currently-held units of that merge's own OUTPUT entity —
-// e.g. enableAutoMergeNodesIntoCluster spends 10 Clusters to flip autoMergeNodesIntoCluster on.
+// the 9 manual merges above can be permanently automated, one tier boundary at a time: its first
+// COMPUTE_ENTITY_CAP (10) manual charges build the Charger (getChargerUnlockProgress / mergeComputeEntities)
+// and the 10th flips the flag; the legacy route sacrifices exactly 10 of the OUTPUT entity instead — e.g.
+// enableAutoMergeNodesIntoCluster spends 10 Clusters to flip autoMergeNodesIntoCluster on.
 // Once enabled, the INPUT entity's own effective cap rises from COMPUTE_ENTITY_CAP to
 // COMPUTE_ENTITY_AUTO_MERGE_CAP (18 — see getComputeEntityEffectiveCap/isComputeEntityAutoMergeUnlocked
 // above and layers.js), and the AUTOMATIC merge at that boundary uses a timed RESERVE pool (see
@@ -7923,6 +7940,7 @@ const resetFactoryCycle = (state, awardPurge) => {
       // The auto-merge unlock flags (see issue #316) are one-time, irreversible purchases just
       // like the compute-ladder entities and reveal latch above — carried through a real Prestige
       // unchanged, never re-locked.
+      chargerUnlockProgress: { ...(state.intro?.chargerUnlockProgress ?? {}) },
       autoMergeCoresIntoNode: state.intro?.autoMergeCoresIntoNode ?? initial.intro.autoMergeCoresIntoNode,
       autoMergeNodesIntoCluster: state.intro?.autoMergeNodesIntoCluster ?? initial.intro.autoMergeNodesIntoCluster,
       autoMergeClustersIntoNetwork: state.intro?.autoMergeClustersIntoNetwork ?? initial.intro.autoMergeClustersIntoNetwork,

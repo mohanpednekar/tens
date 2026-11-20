@@ -17,7 +17,7 @@ until Storage's own capacity threshold is reached — never again after that, pe
 tabs — one row per automation spanning unlock → pause → speed; Prestige: Speed bonus, Sleep mode cap, Compression, Cache Warm, Playtime bonus, Overflow mode; Purchasing: Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
-second-level tabs). More (Manual / Releases / Achievements / Settings) is always available, including during the
+second-level tabs). More (Manual / Milestones / Achievements / Settings) is always available, including during the
 Byte Foundry gate; only Factory stays progress-gated. A further More entry, **Dev Mode**
 (`DevModePage`), renders only in a dev build (`import.meta.env.DEV`) — see "Dev Mode".
 
@@ -138,7 +138,7 @@ as before — it does not mark drafts ready.
 
 **Direct merge (maintainer standing rule; the one exception to "enable only" above):** in
 maintainer-driven interactive sessions, for every PR in this repo: once auto-merge is enabled and the PR is
-green — mergeable (no conflicts; bring a "behind" branch up to date first), every required check complete
+green — mergeable (no conflicts; bring a "behind" branch up to date first, then re-run the reviewer for the new head), every required check complete
 and passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for
 the **current head SHA** — merge it directly (`gh pr merge --merge` / `merge_pull_request`) instead of
 waiting for GitHub. The 10-minute quiet period does not apply. Never for `.github/workflows/**` diffs,
@@ -424,7 +424,7 @@ src/
   components/             ← prop contracts/styling: docs/COMPONENTS_REFERENCE.md (Button, Money, StatCard, ...)
     AppNav                ← fixed bottom bar Foundry → Power → Compute → Factory → Firmware → Challenges → More; Factory omitted
                             during the Foundry gate; attention dots via navAttention.js
-    AppMenu               ← More sheet — Manual / Releases / Settings (always reachable; Reset / Reformat Byte
+    AppMenu               ← More sheet — Manual / Milestones / Settings (always reachable; Reset / Reformat Byte
                             Foundry only in Settings → Danger zone)
     Button (`.jsx`)       ← semantic `variant` prop → theme tokens; deprecated raw `color` still supported
     DiskArrayRow          ← one Disk array's status `{ actions, size, state }`; only click = empty write-cache-size

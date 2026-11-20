@@ -9527,3 +9527,101 @@ being filled — a pool fills (staging buffer) once Capacity makes it live, even
 "highest pool holding a disk" rule was dropped before merge because the TB pool in question had only a read cache.
 Flushes and disk progress no longer move the target at all.
 
+
+### Compact layouts per screen — three reversed decisions (2026-11-19, epic #1135)
+
+The maintainer approved per-screen compact layouts after three rounds of mockups (one shared row style was
+rejected: "use the ideas, not the same style everywhere"). Three earlier decisions were deliberately reversed:
+
+- **Factory feature-card pairs are back** (#1137): Clock Speed + Restage above the tier list, Scale Up + Overclock
+  below it — the maintainer's explicit placement. The 2026-11 entry above dropped half-width pairs because the
+  title + effect chips wrapped unevenly on 360–390px phones; that still happens, so each card is now a column with
+  `justify-content: space-between` (button pinned to the card bottom) and a top accent edge, so a wrapped chip
+  changes only the header height and both buttons stay level.
+- **Disk/cache size labels move out of the cells** (#1142): the in-cell bare number (`formatDiskSizeBare`, removed)
+  repeated the same size on every circle. Each row now states its size once, with its unit, in a label column
+  (`1 Kb` cache blocks, `1 KB` disks) — the maintainer's rule that units stay explicit (Kb = kilobits,
+  KB = kilobytes). Disks stay circles because shapes carry meaning: squares are reserved for future SSD upgrades.
+- **Releases → Milestones** (#1143): the #989 rename to "Releases" (with v1.0…v5.0 numbering) is reversed; the
+  maintainer wants "Milestones" and no version numbers, shown as a timeline.
+
+The first mockup baseline for the Foundry was also wrong (a Capacity-only seed showing five empty pools); the
+approved design was rebuilt from real phone screenshots and engine-simulated saves — seed realistic states
+(e.g. the `simulate-run-times` bot) before judging a layout.
+
+### Power merge chain and charge-built Chargers (2026-11-20, #1141)
+
+Power's tiers became a vertical merge chain: one node per tier (held-count dots, the Charger as a compact `🔌 n/8`
+status badge on the same line), with each boundary's 8→1 / ⚡ Charge as a small pill on the link to the next tier.
+A first cut (8 tiny Charger slots beside the dots, loud gold pills, no padding) was rejected by the maintainer as
+having lost the page's look, and was restyled toward the approved mockup — keep Power's controls readable as
+buttons (presets stay gold when they can act) and the Charger as one badge.
+
+Charger unlock rule changed at the same time (maintainer decision): a boundary's first 10 charges now build its
+Charger (`chargerUnlockProgress`, 🔓 n/10) instead of producing output, and the 10th unlocks it with no sacrifice.
+The old "sacrifice 10 of the output" unlock is kept only for saves already holding them.
+
+The superseded two-row layout, for reference:
+> Originally: TWO rows per compute-ladder entity Cell through Fusion (issues
+> #321/#326), each pair wrapped in a `TierBlock` inside a `TierBlocksGroup`
+> (`aria-label="compute entities"`), driven off an `ENTITY_ROWS` array (10 entries, in the same
+> Cell-through-Fusion order `COMPUTE_BOOST_TIER_FIELDS` in `layers.js` uses, so a row's
+> array index + 1 IS its Boost `tierIndex`).
+> - **Row 1** (`TierHeaderRow`): a `TierSelectButton` (its own clickable `<button>`) wrapping the
+> tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label (`TierLabel`, e.g. `"Clusters"`; the
+> `n/10` count is a `VisuallyHidden` span, the dots carry it visually) + a leading `SelectMarker`
+> (filled dot while armed) + a `SlotsRow` (`role="group"`, `aria-label="<Label> slots"`) of `COMPUTE_ENTITY_CAP`
+> (10) `NormalSlot` squares — both the label and the slots read off `primaryHeld =
+> min(count, COMPUTE_ENTITY_CAP)`, not the raw entity count, so this row always reads
+> `min(held, 10)/10` and never overflows past "10/10" once auto-merge is unlocked and the
+> entity has grown into its own reserve (the "extra" shows up in row 2's `ReserveSlotsRow`
+> instead — see below) — the same discrete-square convention `StoragePage`'s own `DiskSquare`
+> uses, just non-interactive (a plain status square, not a button). Clicking `TierSelectButton`
+> toggles
+> `selectedBoostTierIndex` (local component state) to select/collapse that tier — the selected
+> block hosts the presets (2); the selected and active-boost tiers always render even if
+> otherwise locked — highlighted
+> (`$selected`/`aria-pressed`, plus a highlighted `TierBlock` border) while armed.
+> - **Row 2** (`TierMergeRow`) is progressively disclosed (`showDetail`): rendered only for the
+> armed tier, or when that tier is merging, a merge is startable/possible, reserve slots hold
+> tokens, or (pre-auto) Auto-charge unlock progress is above 0 — otherwise the tier is one line.
+> For every tier except the last (Fusion, no row 2 at all —
+> see issue #280's "Out of scope" — though its row 1 is still Boost-selectable, the only place
+> a Fusion has any use at all):
+> - **Before that boundary's auto-charge is unlocked:** an instant Charge up button (`TierActionButton`,
+> `flex: 1 1 0; width: 100%` — fills exactly half the row, the same "two equal-width buttons"
+> look `MainPage`'s own tier-row Buy/Upgrade pair uses, rather than a small icon-only square —
+> `variant="prestige"`, visible content "<input symbol> 8→1 <output symbol>" (e.g. ⬡ 8→1 🔗), `aria-label` spelling out the full action
+> e.g. "charge up 8 batteries into 1 pack") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
+> tier is held and the produced tier is under its effective cap (`getComputeFieldEffectiveCap` — 18
+> once that tier's own auto-charge is unlocked), calling the matching
+> `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-charge button filling the
+> other half (`TierActionButton`, `variant="info"`, `$progress` set to the live percentage
+> toward its own unlock cost — the same `Button` `progressFill` mechanic Factory's own Buy
+> buttons use for cost-block progress — visible content `` "🤖 <held>/<COMPUTE_ENTITY_CAP>" ``
+> instead of a bare "🤖 Auto", so the button is self-explanatory the same way a Factory Buy
+> button is; `aria-label="unlock the Charger for <…> into <…>"`) — enabled once
+> `COMPUTE_ENTITY_CAP` (10) of the produced tier is held, calling the matching
+> `game.actions.enableAutoMerge*` action.
+> - **Once unlocked:** a `ReserveSlotsRow` — a single `<button>` wrapping `COMPUTE_MERGE_RESERVE_CAP`
+> (8) `ReserveSlot` squares — reading `getComputeReserveHeld(state, tierIndex)` (0..8), NOT an
+> atomic empty/full toggle: a squares fills in one at a time as the entity's own held count
+> keeps growing past its primary 10 (via continued Booster purchases or a lower-tier charge),
+> up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a charge is actually in flight
+> the reserve instead reads as fully committed regardless of the live count (which has by then
+> dropped back toward 10 and may be accumulating the next batch) —
+> The row is display-only: an explicit **⚡ Charge** button beside it
+> (`aria-label` "charge <tier>: move units down one per second, then merge 8 into 1 <output>",
+> label `⚡ Charge`, `⏳ n/8` (Charger fill) while running) calls `actions.startComputeCharge(boundaryIndex)`;
+> enabled per `isComputeChargeAvailable` (Auto-charge bought, ≥ `COMPUTE_MERGE_RATIO` (8) held, no
+> timed merge or charge running, output has room). While charging the top row dims one slot per
+> transferred unit and the bottom row fills. `aria-label`: "<Tier> charger, auto-charge in progress, <time> left"
+> while an automatic charge runs, else "<Tier> charger, N/8 filled" (the bottom row is called the **Charger**). While an automatic charge is in
+> flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
+> inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
+> live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` filled count. There is
+> no merge-duration upgrade button (removed, #755).
+>
+> Economy-reference summary of that layout (also superseded): "ComputePage shows two rows per tier — row 1 the
+> name/symbol plus 10 normal-slot squares; row 2 an instant Charge up plus an Unlock Auto-charge button (live
+> progress toward sacrificing 10 of the output), or once unlocked ⚡ Charge plus the 8 reserve-slot squares."
