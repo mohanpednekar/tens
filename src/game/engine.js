@@ -6754,9 +6754,10 @@ export const mergeComputeDatacentersIntoSupercomputer = mergeComputeEntities('co
 export const mergeComputeSupercomputersIntoMegacomputer = mergeComputeEntities('computeSupercomputers', 'computeMegacomputers', 'autoMergeSupercomputersIntoMegacomputer')
 
 // --- Compute auto-merge automation & reserve-merge timers --- see issues #316/#321/#377. Each of
-// the 9 manual merges above can be permanently automated, one tier boundary at a time, by
-// sacrificing ALL COMPUTE_ENTITY_CAP (10) currently-held units of that merge's own OUTPUT entity —
-// e.g. enableAutoMergeNodesIntoCluster spends 10 Clusters to flip autoMergeNodesIntoCluster on.
+// the 9 manual merges above can be permanently automated, one tier boundary at a time: its first
+// COMPUTE_ENTITY_CAP (10) manual charges build the Charger (getChargerUnlockProgress / mergeComputeEntities)
+// and the 10th flips the flag; the legacy route sacrifices exactly 10 of the OUTPUT entity instead — e.g.
+// enableAutoMergeNodesIntoCluster spends 10 Clusters to flip autoMergeNodesIntoCluster on.
 // Once enabled, the INPUT entity's own effective cap rises from COMPUTE_ENTITY_CAP to
 // COMPUTE_ENTITY_AUTO_MERGE_CAP (18 — see getComputeEntityEffectiveCap/isComputeEntityAutoMergeUnlocked
 // above and layers.js), and the AUTOMATIC merge at that boundary uses a timed RESERVE pool (see

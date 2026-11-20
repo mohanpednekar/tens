@@ -9592,3 +9592,7 @@ The superseded two-row layout, for reference:
 > inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
 > live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` filled count. There is
 > no merge-duration upgrade button (removed, #755).
+>
+> Economy-reference summary of that layout (also superseded): "ComputePage shows two rows per tier — row 1 the
+> name/symbol plus 10 normal-slot squares; row 2 an instant Charge up plus an Unlock Auto-charge button (live
+> progress toward sacrificing 10 of the output), or once unlocked ⚡ Charge plus the 8 reserve-slot squares."

@@ -471,7 +471,7 @@ live inside the selected tier):
 
    - **Before unlocked:** just a `StatusText` line with the current `intro.computeCores`/
      `intro.computeNodes` counts as two symbol-prefixed fractions (`"⬡ N/10 · 🔗 N/10"`).
-   - **Once unlocked (layout since #1141 — supersedes the "Row 2" placement below):** a vertical
+   - **Once unlocked (layout since #1141; the earlier two-row layout is in `docs/DESIGN_HISTORY.md`):** a vertical
      **merge chain**. Each tier is one node (`TierBlock`; armed = gold border, no marker dot): `TierSelectButton`
      (symbol, bold label + muted `→ <boosted tiers>` hint, then 10 green `NormalSlot` dots for held count) with the
      node's Charger on the same line (`NodeSide`, wraps below the dots only on ~320px phones), a display-only

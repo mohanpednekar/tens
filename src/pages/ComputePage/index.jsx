@@ -216,10 +216,6 @@ const CompactButton = styled(Button)`
   flex: 0 0 auto;
 `
 
-// Row 2's pre-unlock Merge/Auto-charge pair — each fills exactly half the row (flex: 1 1 0,
-// width: 100%), the same "two equal-width buttons split the row" look MainPage's own tier rows use
-// for their Upgrade/Buy pair, rather than small icon-only squares hugging one edge with the rest of
-// the row left empty.
 // The connector's merge / ⚡ Charge button: a small, quiet pill centred on the dashed line (it lights
 // up only when it can act — Button's variant colour; disabled reads muted).
 const TierActionButton = styled(CompactButton)`
@@ -468,11 +464,9 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // than a second dedicated screen. Render order top to bottom: a card with the current boost
 // effect, the active boost timer bar (Pop/Forfeit, Stack) and Auto Boost preference, THEN the tier rows — the one selected
 // tier shows the armed status line + 3 preset buttons inside its own block, below its merge row.
-// Each tier renders two rows (see ENTITY_ROWS/TierBlock above): row 1 is COMPUTE_ENTITY_CAP (10)
-// normal slots plus the tier's name/symbol; row 2 is, pre-unlock, an instant Merge button + an
-// Unlock Auto-charge button, or, post-unlock, the "🤖 Auto-charge" row of COMPUTE_MERGE_RESERVE_CAP
-// (8) auto-charge slots — clicking it instantly charges 8 → 1 whenever isCompute*MergeStartAvailable
-// allows it. Only the automatic merge (at the full extended cap) commits 8 tokens to the reserve
+// Each tier is one chain node (see ENTITY_ROWS/TierBlock above): COMPUTE_ENTITY_CAP (10) held-count dots
+// plus the tier's name/symbol and its Charger status (🔓 n/10 while its first 10 charges build it, then
+// 🔌 n/8 / ⏳); the link to the next tier carries the 8→1 Charge up or ⚡ Charge pill. Only the automatic merge (at the full extended cap) commits 8 tokens to the reserve
 // and counts down that boundary's live duration (see getComputeMergeDurationSeconds in the engine).
 // "Compute" names the page/feature only — individual entities drop the word (Core, Node,
 // Cluster, … not "Compute Core"/"Compute Node"/…). The merge section itself only renders once
@@ -597,7 +591,7 @@ const ComputePage = ({ game }) => {
               // Once auto-charge is unlocked, `count` can climb past COMPUTE_ENTITY_CAP into the
               // boundary's own gradually-filling reserve (see getComputeReserveHeld) — the primary
               // slot row always reads at most COMPUTE_ENTITY_CAP/COMPUTE_ENTITY_CAP; the "extra"
-              // shows up as reserve fill in row 2 instead, never as an overflowing "14/10".
+              // shows up as the Charger's reserve fill instead, never as an overflowing "14/10".
               const reserveHeld = hasMergeRow ? getComputeReserveHeld(state, tierIndex) : 0
               // A manual Charge moves units from the top row down into the bottom row one per second.
               const charging = hasMergeRow && isComputeCharging(state, rowIndex)

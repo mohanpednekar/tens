@@ -1126,19 +1126,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    like every other compute-ladder field). This is what actually switches that boundary over to the
    reserve system described above: the automatic merge is timed; the player's ⚡ Charge (`startComputeCharge`/`tickComputeCharges`, state `intro.computeChargeSeconds`, one unit per `COMPUTE_CHARGE_TRANSFER_SECONDS` from the top row into the bottom row, then an instant 8→1) is the manual path.
 
-   **`ComputePage` shows two rows per tier** (issue #321): row 1 is the tier's name/symbol plus
-   `COMPUTE_ENTITY_CAP` (10) normal-slot squares — always reading `min(held, 10)/10`, never
-   overflowing past "10/10" even once auto-charge is unlocked and the entity itself has grown into its
-   own reserve (the "extra" shows up in row 2 instead); row 2 is, before that boundary's auto-charge is
-   unlocked, an instant `TierActionButton` Charge up (disabled below `COMPUTE_MERGE_RATIO` held) plus an
-   Unlock Auto-charge `TierActionButton` (disabled below `COMPUTE_ENTITY_CAP` of the output entity
-   held, showing a live `$progress` fill and its own held/cap figure toward that cost) — or, once
-   unlocked, an explicit ⚡ Charge button (left) plus the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot squares
-   (display only, no label): Charge moves one unit per second from the top row into the bottom row, then merges 8 → 1 instantly. The row shows a countdown while an automatic charge is in flight, or gradually filling (`getComputeReserveHeld`) while accumulating
-   toward the next automatic trigger. Cells' (`computeCores`) own row 2 follows the identical charge-boundary shape as
-   every other tier (Cell → Battery) — obtaining Cells themselves happens on Foundry's own
-   `DataLakePanel` (its Booster-conversion control, see "Buying Boosters" above), not on `ComputePage`
-   at all. Fusion (the last tier) has no row 2 at all — nothing to charge into or automate past it.
+   **`ComputePage` renders the ladder as a merge chain** (#1141): one node per tier — `COMPUTE_ENTITY_CAP` (10)
+   held-count dots (always `min(held, 10)/10`; growth past 10 shows as Charger reserve fill) and the node's Charger
+   status (`🔓 n/10` while charges build it, `🔌 n/8` reserve / gold `⏳` countdown once automated) — joined by a link
+   carrying that boundary's 8→1 Charge up (pre-unlock) or ⚡ Charge pill. Obtaining Cells happens on Foundry's
+   `DataLakePanel`, not here; Fusion has no link below it. Full layout and aria contract: `docs/MAINPAGE_REFERENCE.md`
+   (Power page).
 
    A new, permanent, one-time reveal latch, `intro.computeMergePageUnlocked` (defaults `false`,
    never re-clears once set, carried over unchanged by every real Prestige exactly like the
