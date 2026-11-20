@@ -9596,3 +9596,7 @@ The superseded two-row layout, for reference:
 > Economy-reference summary of that layout (also superseded): "ComputePage shows two rows per tier — row 1 the
 > name/symbol plus 10 normal-slot squares; row 2 an instant Charge up plus an Unlock Auto-charge button (live
 > progress toward sacrificing 10 of the output), or once unlocked ⚡ Charge plus the 8 reserve-slot squares."
+
+## pr-auto-merge Path 2 moved from check_suite to workflow_run (2026-11-20)
+
+Bot PRs (e.g. #1123, #1128) sat `blocked` with all checks green for days. Path 2 triggered on `check_suite: completed` with conclusion `success`, but GitHub never fires workflows for check suites created by GitHub Actions (recursion guard); only third-party suites (CodeQL, Cursor — both `neutral`) arrived, so the `if` was always false and the job always `skipped`. Fixed by triggering on `workflow_run: [CI]` completed (success, `pull_request` event), as the follow-up workflows already do. Path 3 additionally goes stale whenever `pr-conflict-sweep` update-branch moves the head SHA after the APPROVE marker.
