@@ -192,7 +192,7 @@ const InfoPage = () => {
         <ul>
           <li>
             <strong>Purge</strong> — at 1 Googol Bytes. <em>Resets:</em> Bits and resources, owned
-            Factory tiers, Scale Ups, Overclocks, Clock Speed, Restage XP, the per-cycle Compute (Flops) boost.{' '}
+            Factory tiers, Scale Ups, Overclocks, Accelerate, Restage XP, the per-cycle Compute (Flops) boost.{' '}
             <em>Keeps:</em> the Data Stream balance, Purge Points, Compression levels, automation unlocks, Overflow mode, the
             Byte generator, Capacity, Disks, Data Lakes, Compute entities, owned Compute (Flops)
             units and the System log.
@@ -521,8 +521,8 @@ const InfoPage = () => {
         </ul>
       </Section>
 
-      <Section aria-label="clock speed section">
-        <h2>Clock Speed</h2>
+      <Section aria-label="accelerate section">
+        <h2>Accelerate</h2>
         <ul>
           <li>
             Spend Bytes to make every tier’s production ticks 1% faster per level, compounding — more
@@ -541,7 +541,7 @@ const InfoPage = () => {
           </li>
           <li>
             After {TIER_DEFINITIONS.length} Scale Ups in a run (the first onto {lastTierName}), the
-            Restage upgrade appears beside Clock Speed (above the tier list): spend XP for +1% faster {lastTierName} ticks per XP
+            Restage upgrade appears beside Accelerate (above the tier list): spend XP for +1% faster {lastTierName} ticks per XP
             (compounding). Each Restage must add at least 10% to the XP already restaged (minimum 1).
             It resets every other tier’s owned quantity and your Bits. Auto Restage
             (Firmware → Automation, unlocked at Purge {GLOBAL_AUTOMATION_UNLOCK_PURGES.restage}) spends it for you, every {AUTOMATION_INTERVAL_CONFIG.restage.baseSeconds} s at first —
@@ -585,7 +585,7 @@ const InfoPage = () => {
             and Purge Points are kept.
           </li>
           <li>
-            In exchange, multiplies Clock Speed’s per-level rate by ×1.1 for each completed level you
+            In exchange, multiplies the per-level speed bonus by ×1.1 for each completed level you
             had when you claimed (1% → 1.1% → 1.21% → …).
           </li>
           <li>

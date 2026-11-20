@@ -1,14 +1,14 @@
 // Daily challenges (epic #1062). Pure state functions over `state.daily`
 // (`{ runs: { [formatId]: run | null }, results: { [dateId]: { [formatId]: result } } }`).
 //
-// Each run is an isolated Factory-only game (`run.game`) with its own tier ladder, Clock Speed, Scale Up and
+// Each run is an isolated Factory-only game (`run.game`) with its own tier ladder, Accelerate, Scale Up and
 // Overclock — nothing leaks to or from the main save. A definition is derived on the device from (UTC date, format)
 // with a seeded PRNG and has these seeded parts:
 //   1. modified conditions — run-wide levers (`DAILY_MODIFIER_POOL`), carried on the run's game as `runLevers`;
 //   2. seeded progress — the reference bot plays a seeded warm-up and the run starts right after its last
 //      Scale Up / Overclock: the multipliers it built are kept, the ladder is fresh, nothing produces yet;
 //   3. a seeded objective with a calculated target — what to do (reach a balance, own a tier's units, complete levels
-//      of a tier, reach a Clock Speed level, Overclock at a final-tier level: `DAILY_OBJECTIVE_KINDS`) is drawn
+//      of a tier, reach an Accelerate level, Overclock at a final-tier level: `DAILY_OBJECTIVE_KINDS`) is drawn
 //      from the objectives the reference bot makes progress on, and how much is what the bot had reached at a
 //      seeded moment inside the calibration band (after half the time limit, no later than the format's bot
 //      ceiling), rounded down to a clean number.
@@ -61,7 +61,7 @@ const BUY_ALL = Number.MAX_SAFE_INTEGER
 // then, and no sooner than half the limit. `warmupSeconds`: seeded head-start range. `startExponent`: range of the
 // power of ten in the seeded starting balance (DAILY_START_MANTISSAS value × 10^n Bytes, re-granted by every
 // soft reset). `automations`: 'mix' = a seeded subset (never all, Kilobytes autobuyer always on), 'buying' = tier
-// autobuyers + Auto Clock Speed, 'all' = every automation. `checkInSeconds`: when set, the reference bot only acts
+// autobuyers + Auto Accelerate, 'all' = every automation. `checkInSeconds`: when set, the reference bot only acts
 // at the start and every that many seconds (otherwise it acts every step). `startPaused`: automations the run
 // has but that start switched off — releasing them is the player's decision.
 export const DAILY_FORMATS = [
@@ -76,7 +76,7 @@ export const DAILY_FORMAT_BY_ID = Object.fromEntries(DAILY_FORMATS.map(format =>
 // the engine's run-wide challenge levers (`getChallengeLever`).
 export const DAILY_MODIFIER_POOL = [
   { lever: 'production', values: [0.25, 0.5, 2, 4], describe: value => `Production ×${value}` },
-  { lever: 'clockSpeedPower', values: [0.5, 0.75, 1.5, 2], describe: value => `Clock Speed ^${value}` },
+  { lever: 'clockSpeedPower', values: [0.5, 0.75, 1.5, 2], describe: value => `Accelerate ^${value}` },
   { lever: 'scaleUpPower', values: [0.5, 0.75, 1.5, 2], describe: value => `Scale Up ^${value}` },
   { lever: 'costMultiplier', values: [0.1, 0.5, 5, 25], describe: value => `Costs ×${value}` },
 ]
@@ -96,7 +96,7 @@ export const DAILY_AUTOMATIONS = [
     set: enabled => setTierTickspeedAutobuyerEnabled(tier.id, enabled),
     isOn: game => game.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true,
   })),
-  { key: 'speedUp', group: 'global', label: 'Clock Speed', unlock: game => ({ ...game, autoGlobalTickspeed: true }), set: setAutoGlobalTickspeedEnabled, isOn: game => game.autoGlobalTickspeedEnabled ?? true },
+  { key: 'speedUp', group: 'global', label: 'Accelerate', unlock: game => ({ ...game, autoGlobalTickspeed: true }), set: setAutoGlobalTickspeedEnabled, isOn: game => game.autoGlobalTickspeedEnabled ?? true },
   { key: 'scaleUp', group: 'global', label: 'Scale Up', unlock: game => ({ ...game, autoScaleUp: true }), set: setAutoScaleUpEnabled, isOn: game => game.autoScaleUpEnabled ?? true },
   { key: 'restage', group: 'global', label: 'Restage', unlock: game => ({ ...game, autoXpTickspeed: true }), set: setAutoXpTickspeedEnabled, isOn: game => game.autoXpTickspeedEnabled ?? true },
   { key: 'overclock', group: 'global', label: 'Overclock', unlock: game => ({ ...game, autoOverclock: true }), set: setAutoOverclockEnabled, isOn: game => game.autoOverclockEnabled ?? true },
@@ -181,7 +181,7 @@ const RUN_ACTIONS = {
 
 // Everything a run can be asked to do. A run tracks one number per objective key (`run.metrics`), each the peak
 // this run: the balance in Bytes (not Bytes produced — autobuyers spend inside a step, so production is not
-// observable from outside the engine), each tier's owned units, each tier's completed levels, the Clock Speed level, and the
+// observable from outside the engine), each tier's owned units, each tier's completed levels, the Accelerate level, and the
 // final-tier completed level an Overclock was claimed at. `amount` kinds grow by orders of magnitude (targets are
 // rounded to few significant digits, progress is in powers of ten); the others are whole levels.
 const LAST_TIER = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
@@ -189,7 +189,7 @@ export const DAILY_OBJECTIVE_KINDS = {
   balance: { weight: 2, amount: true, describe: target => `Reach a balance of ${formatAmount(target)} B` },
   own: { weight: 1, amount: true, wholeUnits: true, perTier: true, describe: (target, tier) => `Own ${formatAmount(target)} ${tier.name}` },
   levels: { weight: 1, perTier: true, describe: (target, tier) => `Complete ${target} level${target === 1 ? '' : 's'} of ${tier.name}` },
-  clock: { weight: 2, describe: target => `Reach Clock Speed level ${target}` },
+  clock: { weight: 2, describe: target => `Reach Accelerate level ${target}` },
   overclock: { weight: 3, describe: target => `Overclock at ${target} ${LAST_TIER.symbol} levels` },
 }
 const OBJECTIVES = Object.entries(DAILY_OBJECTIVE_KINDS).flatMap(([kind, entry]) => (entry.perTier
@@ -199,7 +199,7 @@ const OBJECTIVE_BY_KEY = Object.fromEntries(OBJECTIVES.map(objective => [objecti
 const ZERO_METRICS = Object.fromEntries(OBJECTIVES.map(objective => [objective.key, 0]))
 
 // A run's game carries `runPeaks` (engine.js `mergeRunPeaks`): the highest balance, owned units, purchase levels
-// and Clock Speed level it has held — raised inside the engine's tick just before its reset automations, and
+// and Accelerate level it has held — raised inside the engine's tick just before its reset automations, and
 // here after every step and action, with the re-granted balance left out (see settleGame).
 const EMPTY_PEAKS = { balance: 0, clock: 0, owned: {}, purchaseLevels: {} }
 const withPeaks = (game, source = game) => ({ ...game, runPeaks: mergeRunPeaks(game.runPeaks ?? EMPTY_PEAKS, source) })
@@ -244,7 +244,7 @@ const trackAction = (tracked, def, actionName, arg, onReset) => {
 
 // --- Reference bot ---
 
-// The sweep: everything on offer — Clock Speed, tiers top-down, Scale Up, Overclock — until nothing changes
+// The sweep: everything on offer — Accelerate, tiers top-down, Scale Up, Overclock — until nothing changes
 // (per-tier tickspeed and Restage are left alone: taking tickspeed greedily made no measurable difference in the
 // sweep). `[actionName, arg]` pairs, exported so tests can replay it through the public run action.
 const TIER_IDS_TOP_DOWN = TIER_DEFINITIONS.map(tier => tier.id).reverse()

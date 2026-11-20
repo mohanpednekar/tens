@@ -51,7 +51,7 @@ Continues the root `CLAUDE.md`'s "Architecture" (layers 1–2: `engine.js`, `use
    Pure renderer — spec: `docs/ECONOMY_REFERENCE.md` "PP Compute (Flops)".
 5. **`InfoPage/index.jsx`** — a static Manual page holding every mechanic's evergreen explanation in
    short bullets/sub-headings (what used to be MainPage's click-to-expand `InfoDetails` disclosures —
-   Overview, Prestige ladder, Byte Foundry, Storage, Power, Compute, Clock Speed, Scale Up, Overclock,
+   Overview, Prestige ladder, Byte Foundry, Storage, Power, Compute, Accelerate, Scale Up, Overclock,
    Tier Autobuyers, Milestones, Purge, Sleep mode, Reboot). Numbers come from the same `engine.js`/`layers.js`
    constants the game uses, so they can't drift. Reads no `useIncrementalGame` state — only pure
    constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
@@ -104,11 +104,11 @@ State `daily` (`runs[formatId]`, `results[dateId][formatId]`) survives every res
 
 ### Tiers, Prestige, Reboot (Era ascension)
 
-**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Clock Speed = `globalTickspeed*`/`speedUp`; Charger = a tier's 8-slot reserve row (bottom row, `getComputeReserveHeld`); Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Flush Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Milestones = page id `'milestones'` (renamed back from Releases, #1143); System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
+**Player label ↔ code (issue #988; code identifiers never renamed):** Power = page id `'boosters'`; Cell → Fusion = `computeCores` → `computeMegacomputers` (merge verbs "Charge up"/"Auto-charge"); Cores → Superclouds = `flop01`–`flop10` (outputs KFlops → QFlops); Accelerate = `globalTickspeed*`/`speedUp`; Charger = a tier's 8-slot reserve row (bottom row, `getComputeReserveHeld`); Turbo/Balanced/Eco = presets `burst`/`standard`/`sustain`; Bitrate = Data Stream Speed; Bandwidth = pool speed; Staging = pool buffer; Compile = Combine; Ping = tap; Flush Pool = pool reset; Disk full = Purge-threshold overlay headline; Overflow mode = `isOverflowModeUnlocked`; Firmware = page id `'perks'`/`PerksPage`; Compression = `prestigeDoublePpLevel`; Reboot = `era`/`eraGame` (Era ascension); Kernels = `eons`; Kernel Amplifier = `eonAmplifier*`; Reformat (Byte Foundry) = `resetByteFoundry`; Milestones = page id `'milestones'` (renamed back from Releases, #1143); System log = `prestigeMuseum`; Task Manager = Ops dashboard (`opsSamples`); Backup / Restore = import/export save; Sleep mode = offline progress; Manual = page id `'info'`.
 
 **Terminology:** "Prestige" is the umbrella term for every reset-for-rewards (Purge, Reboot,
 Reformat Byte Foundry, pool resets); the Factory reset at 1 Googol Bytes is **Purge** (formerly the name Reboot, now the Era-ascension layer) and
-PP reads **Purge Points**; the global tickspeed track is **Clock Speed** (formerly Speed Up/Latency). The Purge
+PP reads **Purge Points**; the global tickspeed track is **Accelerate** (formerly Clock Speed/Speed Up/Latency). The Purge
 rename is carried through the code too (#987): `state.purge`, `purgeGame`,
 `PURGE_THRESHOLD`, `autoPurge`, automation keys `'speedUp'`/`'purge'` — while Prestige-Point,
 Compression, speed-bonus, `prestigeMuseum` identifiers keep `prestige`. Pre-rename
@@ -120,8 +120,8 @@ display names `Kilobytes` through `Quettabytes`. Every tier is bought directly w
 cascading down the ladder; `tier01` (Kilobytes) is the special case where cost is still Bits but
 production is a whole-Byte amount (`BYTES_ID = 'bytes'`, displayed as `B`) credited to Bits at
 `BITS_PER_BYTE` (8) per Byte. A tier's per-level cost is `getTierCost` = `baseCost × 10^(getTierCostExponent − 1)`: exponent 1, 2, 3 for the first three levels on every tier, then +tierNumber per level (tier01 +1 … tier10 +10). **Bytes and Bits are ONE pool** (`resources.base`) — there is no separate
-Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Clock Speed** (the global
-tickspeed multiplier on MainPage, formerly "Latency"/"Tickspeed"/"Clock Speed"; code: `globalTickspeed*`, automation key `speedUp`) is paid from that Bits balance —
+Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Accelerate** (the global
+tickspeed multiplier on MainPage, formerly "Clock Speed"/"Latency"/"Tickspeed"; code: `globalTickspeed*`, automation key `speedUp`) is paid from that Bits balance —
 initial activation costs **10 Bytes (80 Bits)**. It unlocks once level 1 of tier01 is purchased; there
 are no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
 Reaching Money ≥ `PURGE_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
@@ -231,8 +231,8 @@ from the re-reveal mechanic: after a reset, a tier already unlocked by a previou
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
 The last tier's (QB) tickspeed may always spend down to 0; doing so after holding QB this run (`'lastTierSpent'`: run-scoped `lastTierEarnedThisRun`; `buyTickspeedMultiplier` unlocks it at the moment the spend empties QB — reaching that stall is the condition, not a later tick) earns **Spent QB**, and once earned the last tier is credited exactly 1 unit every `10/(1 + log10 completed levels)` s regardless of balance (`getLastTierLevelCreditIntervalSeconds`, `lastTierLevelCreditTimer`; `ECONOMY_REFERENCE`). Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at (the
 completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`
-(the single Overclock level; each claim replaces it, nothing is banked; Clock Speed's step is ×1.1 per level),
-not a fixed 5/8/11/14 ladder (Clock Speed's Overclock-scaled 1% step is under "Tiers, Prestige, Reboot" above).
+(the single Overclock level; each claim replaces it, nothing is banked; the Accelerate step is ×1.1 per level),
+not a fixed 5/8/11/14 ladder (the Accelerate Overclock-scaled 1% step is under "Tiers, Prestige, Reboot" above).
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill
@@ -248,7 +248,7 @@ into `main`, and do not rename it with an agent/session suffix.
 **Cache Warm** (`CACHE_WARM_UNLOCK_COST` 20 PP, `cacheWarmUnlocked`): `applyCacheWarm` completes level 1 of `getCacheWarmTier` (tier of the highest Storage pool being filled — highest pool live by Capacity, `getVisibleStoragePoolCount`, disks or not; pool N ↔ tier N) free after every Purge/Scale Up/Overclock/challenge exit/Reboot (`ECONOMY_REFERENCE`). **Firmware → Prestige rows** are `UpgradeRow`s: name toggles the description, one short plain value line, usually `now → after` (`MAINPAGE_REFERENCE`).
 **Sleep mode cap:** offline progress simulates at most `getMaxOfflineSeconds(state)` = 4 h + 4 h per `sleepModeCapLevel` (0–5, PP costs `SLEEP_MODE_CAP_UPGRADE_COSTS` 4/40/400/4,000/40,000; `buySleepModeCapUpgrade`) up to 24 h. Detail: `docs/ECONOMY_REFERENCE.md` "Offline progress".
 
-**Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Clock Speed/Overclock
+**Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Accelerate/Overclock
 heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
 **No link styling:** it's a game — never underline (solid, dotted or on hover) just because something is
 clickable; use `cursor: pointer` and a `:focus-visible` outline instead.

@@ -13,8 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Clock Speed is renamed **Accelerate** (a verb, like Restage, Scale Up and Overclock), and the four cards are now short full-width rows aligned with the tier rows instead of tall half-width tiles.
 - Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
-- Nav attention dots no longer light for Factory cues (affordable levels, Clock Speed, Scale Up, Overclock, Purge) whose automation is unlocked, enabled and faster than 1 s; a paused automation still lights its dot.
+- Nav attention dots no longer light for Factory cues (affordable levels, Accelerate, Scale Up, Overclock, Purge) whose automation is unlocked, enabled and faster than 1 s; a paused automation still lights its dot.
 - Firmware → Automation: global automation rows and tier autobuyer rows now keep the pause Switch flush right with the challenge or upgrade button beside it, in fixed columns, and list Scale Up before Restage.
 
 ### Fixed
@@ -35,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Challenges are compact**: the Factory tab is a 5×5 grid of F1–F25 tiles (done / ready / locked at a glance, with a legend); tap a tile for its rule and Start in one panel below. The Daily tab is one row per format (objective, status, Start / Resume); tap the format for its conditions and Restart / Forfeit.
 - **Firmware automation is compact**: each tier autobuyer pair fits on one line under ⚙ Tickspeed / 🤖 Buy column headers, with its challenge or upgrade inline. Once every tier is fully upgraded the list becomes a 5×2 grid of pause toggles, and Compute autobuyers are a 5×2 grid too (🔒 R<n> until their Reboot).
-- **Factory feature cards sit in pairs**: Clock Speed and Restage side by side above the tiers, Scale Up and Overclock side by side below them (Restage moved up from below the tiers).
+- **Restage moved up** from below the tiers to sit under Accelerate above them (the four feature cards are full-width rows; see Changed).
 - **Settings is a grouped list**: Game / Data / Display / Danger zone, each entry one line with its key value (e.g. your Kernels, the active save slot); tap an entry to open it. Theme is chosen inline.
 - **Releases is renamed back to Milestones** and shows a timeline of milestones without version numbers, with Reboots and Kernels on one line.
 - **Foundry disks are compact**: an open pool's disk and cache rows each state their size once (e.g. `1 Kb` cache, `1 KB` disks) instead of on every circle, cache blocks are thin bars, full disks and cache blocks are tinted, and a lake's buffer is a thin full-width bar. Pool headers, the Data Stream and Provision Disk are unchanged.
