@@ -3,7 +3,12 @@ name: Auto-merge on approval
 on:
   pull_request_review:
     types: [submitted]
-  check_suite:
+  # Path 2 trigger. NOT check_suite: GitHub never fires check_suite workflows for suites created by
+  # GitHub Actions itself (recursion guard), so the old trigger only saw third-party suites (CodeQL,
+  # Cursor: "neutral", never "success") and the green-checks path never ran — every bot PR sat
+  # "blocked" until someone merged it by hand. workflow_run on CI is delivered normally.
+  workflow_run:
+    workflows: [CI]
     types: [completed]
   issue_comment:
     types: [created]
@@ -37,12 +42,15 @@ jobs:
   # easy-to-verify-after-the-fact changes; everything else (including any workflow-file
   # change, at any size) still needs a human to approve via Path 1.
   auto-merge-low-risk:
-    if: github.event_name == 'check_suite' && github.event.check_suite.conclusion == 'success'
+    if: >
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
-      CHECK_SUITE_BRANCH: ${{ github.event.check_suite.head_branch }}
+      CHECK_SUITE_BRANCH: ${{ github.event.workflow_run.head_branch }}
     steps:
       - name: Checkout eligibility scripts
         uses: actions/checkout@v7

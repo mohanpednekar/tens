@@ -619,7 +619,7 @@ that defaults to squash — see issue #343):
 1. **On human approval** (`pull_request_review: submitted`) — if the review is an approval from the
    repo owner or a collaborator/member, auto-merge is enabled unconditionally, any PR, any size.
    Repo-wide, not just autonomous PRs.
-2. **On green checks, without waiting for approval** (`check_suite: completed`, conclusion `success`)
+2. **On green checks, without waiting for approval** (`workflow_run: [CI]` completed, conclusion `success` — not `check_suite`, which GitHub never delivers for Actions-created suites)
    — for PRs on our own automation's branches only (`claude/auto-*`, `claude/self-heal-*`,
    `claude/heal-main-*`, `dependabot/*`; never a fork),
    auto-merge is enabled immediately once the diff meets a conservative "low risk" bar (shared
