@@ -162,7 +162,7 @@ export const hasTiersGameAttention = state =>
 // The Perks page's tabs (see pages/PerksPage), grouped by feature: Automation = every unlocked
 // automation's PP speed chain; Prestige = the speed bonus, Double PP and the playtime bonus.
 // Pause/resume toggles are never "affordable".
-const GLOBAL_AUTOMATION_KEYS = ['speedUp', 'restage', 'scaleUp', 'overclock', 'purge']
+const GLOBAL_AUTOMATION_KEYS = ['speedUp', 'scaleUp', 'restage', 'overclock', 'purge']
 
 export const hasAffordableAutomationPerk = state => {
   if ((state.purge?.count ?? 0) < 1) return false

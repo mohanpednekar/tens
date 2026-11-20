@@ -2118,7 +2118,7 @@ test('Global Automation lists every step with its Purge milestone while locked',
   }
 })
 
-test('Firmware lists global automations in one order: Auto Clock Speed → Restage → Scale Up → Overclock → Purge', async () => {
+test('Firmware lists global automations in one order: Auto Clock Speed → Scale Up → Restage → Overclock → Purge', async () => {
   const user = userEvent.setup()
   seedMainGameState({
     resources: { base: 10 },
@@ -2130,7 +2130,7 @@ test('Firmware lists global automations in one order: Auto Clock Speed → Resta
     autoXpTickspeed: true,
   })
   render(<App />)
-  const order = ['auto clock speed', 'auto restage', 'auto scale up', 'auto overclock', 'auto purge']
+  const order = ['auto clock speed', 'auto scale up', 'auto restage', 'auto overclock', 'auto purge']
   await openPerksTab(user, /open automation/i)
   const rows = within(screen.getByLabelText('global automation category')).getAllByLabelText(/ row$/)
   expect(rows.map(row => row.getAttribute('aria-label'))).toEqual(order.map(name => `${name} row`))
