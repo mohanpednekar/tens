@@ -778,12 +778,13 @@ const BuyButton = styled(Button)`
 // right: the cost, right-aligned so every row's cost ends at the same x. `min-width: 0` +
 // ellipsis clip an over-long level string instead of letting it spill into the cost.
 const BuyButtonIcon = styled(ButtonIcon)`
-  flex: 0 1 auto;
+  flex: 0 0 auto;
+  max-width: 55%;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  padding-right: 0.5em;
+  padding-right: 0.35em;
   font-variant-numeric: tabular-nums;
 `
 
@@ -792,7 +793,9 @@ const BuyLevelExtra = styled.span`
 `
 
 const BuyButtonCostLabel = styled(ButtonLabel)`
-  flex: 1 0 auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
   text-align: right;
 `
 
