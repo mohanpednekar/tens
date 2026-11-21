@@ -7,8 +7,8 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getComputeBoostLanes, getChallengeTier, getChallengeProductionMultiplier, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getScaleUpStepMultiplier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getComputeBoostLanes, getChallengeTier, getChallengeProductionMultiplier, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getScaleUpStepMultiplier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getLevelMultiplierBase, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
 
@@ -1517,9 +1517,9 @@ const MainPage = ({ game }) => {
           // CLAUDE.md); neither tickspeed multiplier appears here since both now speed up
           // *delivery frequency* instead of inflating the per-delivery amount. Floored to match
           // tickGame's own floored production credit — prestigeBonus is the only fractional factor
-          // left here (getPurchaseMilestoneMultiplier is always a power of 2; getTierScaleUpMultiplier is too
+          // left here (getPurchaseMilestoneMultiplier can be fractional with Level power bonuses; getTierScaleUpMultiplier is a power of 2
           // outside a Scale Up-weakening challenge), so without flooring this preview could show a fraction that never actually lands.
-          const milestoneMultiplier = getPurchaseMilestoneMultiplier(tierLevel)
+          const milestoneMultiplier = getPurchaseMilestoneMultiplier(tierLevel, getLevelMultiplierBase(state))
           const tierScaleUpMultiplier = getTierScaleUpMultiplier(state, tier.id)
           const production = Math.floor(owned * prestigeBonus * tierScaleUpMultiplier * milestoneMultiplier * getChallengeProductionMultiplier(state, tier.id))
           const productionText = tier.producesResourceId === MONEY_ID
@@ -1642,7 +1642,7 @@ const MainPage = ({ game }) => {
                 variant="plain"
                 disabled={!canAfford}
                 onClick={() => actions.buyTierQuantity(tier.id)}
-                title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — completing every level (${purchaseBlockSize} purchases) also multiplies it by ×${PURCHASE_MILESTONE_MULTIPLIER_BASE}`}
+                title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — completing every level (${purchaseBlockSize} purchases) also multiplies it by ×${getLevelMultiplierBase(state)}`}
                 $progress={donePercent}
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
