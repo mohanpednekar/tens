@@ -1028,7 +1028,7 @@ const MainPage = ({ game }) => {
 
   // Overclock: a second, rarer soft-reset than Scale Up, claimable once the last tier's own
   // COMPLETED-level count reaches the next Overclock requirement — 5 initially (a minimum only;
-  // the player may keep climbing first), then three more than the completed-level count the
+  // the player may keep climbing first), then four more (fewer with Overclock step achievements) than the completed-level count the
   // previous claim was actually taken at (see getOverclockRequirement/overclockGame in engine.js).
   // Unlike Scale Up, claiming it also
   // wipes Scale Up's per-tier bonuses back to ×1 (scaleUpTierCounts resets) in exchange for
