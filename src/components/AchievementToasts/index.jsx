@@ -30,6 +30,7 @@ const Toast = styled.div`
   color: ${props => props.theme.color.text};
   max-width: 26rem;
   padding: ${props => props.theme.space.sm} ${props => props.theme.space.lg};
+  text-align: center;
   width: 100%;
 `
 
