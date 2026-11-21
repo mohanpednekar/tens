@@ -7382,9 +7382,23 @@ export const getAutobuyerSpeedUpgradeMaxLevel = tierId => getAutobuyerIntervalMa
 export const getSiCleanDoublingFactor = level =>
   SI_CLEAN_LOCAL_SEQUENCE[level % 10] * (1000 ** Math.floor(level / 10))
 
-// Tier autobuyer speed: AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10 PP) × the doubling ladder, every tier alike.
-export const getAutobuyerIntervalUpgradeCost = level =>
-  AUTOBUYER_INTERVAL_UPGRADE_BASE_COST * getSiCleanDoublingFactor(level)
+// Cost on the clean 1,2,4,8,16,32,64,125,250,500 series (×1000 per ten). `base` is a series rung times a
+// power of ten (8, 16 … 64; 10 → 10,20,…,640,1250; 100 → 100,200,…,6400,12500), so the changeover to
+// 125 happens at 1250 / 12500 for the 10× / 100× variants and every cost stays clean.
+const siCleanSeriesCost = (base, level) => {
+  let scale = 1
+  let start = SI_CLEAN_LOCAL_SEQUENCE.indexOf(base)
+  while (start === -1 && scale < base) {
+    scale *= 10
+    start = SI_CLEAN_LOCAL_SEQUENCE.indexOf(base / scale)
+  }
+  if (start === -1) throw new Error(`siCleanSeriesCost: base ${base} is not a series rung × 10^k`)
+  return scale * getSiCleanDoublingFactor(start + level)
+}
+
+// Tier autobuyer speed: tier number × AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10, 20, 30 … PP) × the doubling ladder.
+export const getAutobuyerIntervalUpgradeCost = (level, tierId = TIER_DEFINITIONS[0].id) =>
+  ((TIER_INDEX_BY_ID[tierId] ?? 0) + 1) * siCleanSeriesCost(AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, level)
 
 export const buyAutobuyerIntervalUpgrade = tierId => state => {
   if (isProductionFrozen(state)) return state
@@ -7393,7 +7407,7 @@ export const buyAutobuyerIntervalUpgrade = tierId => state => {
   if (state.autobuyers[tierId] == null) return state
   const level = state.autobuyerIntervalLevels?.[tierId] ?? 0
   if (level >= getAutobuyerSpeedUpgradeMaxLevel(tierId)) return state
-  const cost = getAutobuyerIntervalUpgradeCost(level)
+  const cost = getAutobuyerIntervalUpgradeCost(level, tierId)
   if (clampNonNegative(state.purge.points) < cost) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
@@ -7415,7 +7429,7 @@ export const getAutomationIntervalSeconds = (state, key) =>
     AUTOMATION_INTERVAL_CONFIG[key].baseSeconds * AUTOBUYER_INTERVAL_MULTIPLIER ** (state.automationIntervalLevels?.[key] ?? 0),
   )
 export const getAutomationIntervalUpgradeCost = (key, level) =>
-  AUTOMATION_INTERVAL_CONFIG[key].baseCost * getSiCleanDoublingFactor(level)
+  siCleanSeriesCost(AUTOMATION_INTERVAL_CONFIG[key].baseCost, level)
 
 // The automation each chain speeds up must already be unlocked.
 const isAutomationIntervalChainAvailable = (state, key) => {
@@ -7453,8 +7467,8 @@ export const getTierTickspeedIntervalSeconds = (state, tierId) =>
     AUTOBUYER_MIN_INTERVAL_SECONDS,
     TIER_TICKSPEED_INTERVAL_CONFIG.baseSeconds * AUTOBUYER_INTERVAL_MULTIPLIER ** (state.tierTickspeedIntervalLevels?.[tierId] ?? 0),
   )
-export const getTierTickspeedIntervalUpgradeCost = level =>
-  TIER_TICKSPEED_INTERVAL_CONFIG.baseCost * getSiCleanDoublingFactor(level)
+export const getTierTickspeedIntervalUpgradeCost = (level, tierId = TIER_DEFINITIONS[0].id) =>
+  ((TIER_INDEX_BY_ID[tierId] ?? 0) + 1) * siCleanSeriesCost(TIER_TICKSPEED_INTERVAL_CONFIG.baseCost, level)
 
 export const buyTierTickspeedIntervalUpgrade = tierId => state => {
   if (isProductionFrozen(state)) return state
@@ -7463,7 +7477,7 @@ export const buyTierTickspeedIntervalUpgrade = tierId => state => {
   if (!state.tierTickspeedAutobuyer?.[tierId]) return state
   const level = state.tierTickspeedIntervalLevels?.[tierId] ?? 0
   if (level >= getTierTickspeedIntervalMaxLevel()) return state
-  const cost = getTierTickspeedIntervalUpgradeCost(level)
+  const cost = getTierTickspeedIntervalUpgradeCost(level, tierId)
   if (clampNonNegative(state.purge.points) < cost) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)

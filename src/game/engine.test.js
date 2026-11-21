@@ -12352,7 +12352,14 @@ const withPpForInterval = (points, autobuyer = 1) => {
 
 describe('autobuyer interval upgrade', () => {
   it('costs 10 PP doubling on the 125-based ladder', () => {
-    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(getAutobuyerIntervalUpgradeCost)).toEqual([10, 20, 40, 640, 1250, 2500, 5000, 10000, 20000])
+    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(l => getAutobuyerIntervalUpgradeCost(l))).toEqual([10, 20, 40, 640, 1250, 2500, 5000, 10000, 20000])
+  })
+
+  it('scales the first cost by tier number (10, 20, 30 … PP) on both tier chains', () => {
+    const ids = TIER_DEFINITIONS.map(t => t.id)
+    expect(ids.map(id => getAutobuyerIntervalUpgradeCost(0, id))).toEqual([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+    expect(ids.map(id => getTierTickspeedIntervalUpgradeCost(0, id))).toEqual([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])
+    expect(getAutobuyerIntervalUpgradeCost(7, 'tier03')).toBe(3750)
   })
 
   it('multiplies the interval by 0.9 per level and caps at 10ms', () => {
@@ -12431,7 +12438,7 @@ describe('automation interval chains', () => {
   })
 
   it('double on the 125-based ladder and cap at 10ms', () => {
-    expect([6, 7, 8, 10].map(l => getAutomationIntervalUpgradeCost('speedUp', l))).toEqual([512, 1000, 2000, 8000])
+    expect([6, 7, 8, 10].map(l => getAutomationIntervalUpgradeCost('speedUp', l))).toEqual([500, 1000, 2000, 8000])
     for (const k of ['speedUp', 'scaleUp', 'overclock', 'purge']) {
       const s = { ...base(), automationIntervalLevels: { ...base().automationIntervalLevels, [k]: getAutomationIntervalMaxLevel(k) } }
       expect(getAutomationIntervalSeconds(s, k)).toBe(0.01)
