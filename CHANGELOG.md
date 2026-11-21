@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Five **Level power** achievements (complete 5 levels on each of the first five tiers) each raise the per-level production multiplier by 0.05, from ×1.25 up to ×1.5, during the first Purge.
+- Five **Level power** achievements (complete 5 levels on Megabytes, Terabytes, Exabytes, Yottabytes and Quettabytes) each raise the per-level production multiplier by 0.05, from ×1.25 up to ×1.5, during the first Purge.
 
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 

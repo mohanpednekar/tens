@@ -174,10 +174,11 @@ export const LIVE_CHALLENGE_IDS = new Set(CHALLENGE_DEFINITIONS.map(def => def.i
 export const ACHIEVEMENTS_FEATURE = { enabled: true }
 // Daily challenges (epic #1062, basic slice): live in every build (maintainer request); mutable so tests can flip it.
 export const DAILY_CHALLENGES_FEATURE = { enabled: true }
-// Level power achievements (one per tier01–tier05): each raises the per-level production multiplier
+// Level power achievements (one per tier in LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS: every other tier, 2, 4, … 10): each raises the per-level production multiplier
 // (PURCHASE_MILESTONE_MULTIPLIER_BASE) by this much; all five reach 1.5.
 export const LEVEL_POWER_ACHIEVEMENT_BONUS = 0.05
 export const LEVEL_POWER_ACHIEVEMENT_LEVELS = 5
+export const LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS = [2, 4, 6, 8, 10]
 // Groups in display order; `boostArea` is unused until the bonus slice (#1052).
 export const ACHIEVEMENT_GROUPS = [
   { id: 'firstSession', name: 'First session', boostArea: 'foundry' },
@@ -213,13 +214,13 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Accelerate level', condition: { kind: 'clockSpeedLevel', min: 1 } },
   { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Accelerate level 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
   { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', condition: { kind: 'overclocked' } },
-  ...[1, 2, 3, 4, 5].map(n => ({
-    id: `levelPower${n}`,
-    name: ['Level up', 'Leveled', 'Level headed', 'Level best', 'Level playing field'][n - 1],
+  ...LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((tierNumber, i) => ({
+    id: `levelPower${i + 1}`,
+    name: ['Level up', 'Leveled', 'Level headed', 'Level best', 'Level playing field'][i],
     group: 'levelPower',
-    trigger: `Complete ${LEVEL_POWER_ACHIEVEMENT_LEVELS} levels on ${TIER_DEFINITIONS[n - 1].name}`,
+    trigger: `Complete ${LEVEL_POWER_ACHIEVEMENT_LEVELS} levels on ${TIER_DEFINITIONS[tierNumber - 1].name}`,
     bonus: `The per-level production multiplier rises by ${LEVEL_POWER_ACHIEVEMENT_BONUS} (×1.25 → ×1.5 with all five)`,
-    condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[n - 1].id, min: LEVEL_POWER_ACHIEVEMENT_LEVELS + 1 },
+    condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: LEVEL_POWER_ACHIEVEMENT_LEVELS + 1 },
   })),
 ].map(def => ({ secret: false, platformDependent: false, bonus: null, ...def }))
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.map(def => [def.id, def]))
