@@ -126,6 +126,8 @@ and 2 PP, which made the first levels trivially cheap. The bulk cap became exact
 8/16/32/64 PP bases (`getSiCleanDoublingFactor` is now the shared ladder; `getAutobuyerIntervalUpgradeCost`
 applies the 100 PP base on top).
 
+**Superseded (PR #1177):** at maintainer request the per-tier start returned — tier *n*'s autobuyer / tickspeed chains start at 10·n / 100·n PP — and every speed chain now advances along the clean 1…64,125,250,500 series via `siCleanSeriesCost` (10/100 bases use the 10×/100× variant, changeover at 1,250 / 12,500) instead of baseCost × ladder. Tiers 3/5/6/7/9 are therefore ×n multiples of the series, not on it.
+
 Later in the same PR the two tier lists (autobuyers, tickspeed autobuyers) merged back into one card per
 tier, mirroring the Factory row's own positions — ⚙ tickspeed on the left, 🤖 buy on the right — so the
 same tier's automations sit where the player already looks for them; capped, a tier is one line.
