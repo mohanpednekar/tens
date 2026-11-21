@@ -7378,7 +7378,8 @@ const siCleanSeriesCost = (base, level) => {
     scale *= 10
     start = SI_CLEAN_LOCAL_SEQUENCE.indexOf(base / scale)
   }
-  return scale * getSiCleanDoublingFactor(Math.max(0, start) + level)
+  if (start === -1) throw new Error(`siCleanSeriesCost: base ${base} is not a series rung × 10^k`)
+  return scale * getSiCleanDoublingFactor(start + level)
 }
 
 // Tier autobuyer speed: tier number × AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10, 20, 30 … PP) × the doubling ladder.

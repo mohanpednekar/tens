@@ -784,16 +784,16 @@ export const AUTOBUYER_BULK_MAX_EXTRA_LEVELS = Math.floor(Math.log2(BUY_MAX_ITER
 // autobuyer's purchase-attempt interval by AUTOBUYER_INTERVAL_MULTIPLIER, from the tier's base (tier N =
 // N × AUTOBUYER_BASE_INTERVAL_SECONDS, i.e. 1 s … 10 s) down to
 // the AUTOBUYER_MIN_INTERVAL_SECONDS floor (see engine.js's getAutobuyerIntervalSeconds /
-// getAutobuyerIntervalMaxLevel). Cost: AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10 PP, same for every
-// tier), doubling per level on the SI-clean 1,2,4,…,64,125,250,500 ladder (×1000 every ten levels) —
+// getAutobuyerIntervalMaxLevel). Cost: AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10 PP × tier number: 10, 20, 30 …),
+// doubling per level on the SI-clean 1,2,4,…,64,125,250,500 ladder (×1000 every ten levels) —
 // see engine.js's getAutobuyerIntervalUpgradeCost.
 export const AUTOBUYER_INTERVAL_UPGRADE_BASE_COST = 10
 export const AUTOBUYER_BASE_INTERVAL_SECONDS = 1
 export const AUTOBUYER_INTERVAL_MULTIPLIER = 0.9
 export const AUTOBUYER_MIN_INTERVAL_SECONDS = 0.01
 // Interval upgrade chains for the global/per-tier automations (engine.js's
-// buyAutomationIntervalUpgrade / buyTierTickspeedIntervalUpgrade): cost = baseCost × the same
-// 1,2,4,…,64,125,… ladder as the tier autobuyer chain; interval = baseSeconds × 0.9^level, 10 ms floor.
+// buyAutomationIntervalUpgrade / buyTierTickspeedIntervalUpgrade): cost = baseCost's rung of the same
+// 1,2,4,…,64,125,… series, advanced per level (siCleanSeriesCost; per-tier chains × tier number); interval = baseSeconds × 0.9^level, 10 ms floor.
 // baseCost is the first interval-upgrade level's cost; every automation itself unlocks by Purge
 // count (GLOBAL_AUTOMATION_UNLOCK_PURGES, tier milestones) with no unlock cost — only the upgrades.
 // Purge count at which each global automation unlocks automatically (no PP cost; see engine.js's

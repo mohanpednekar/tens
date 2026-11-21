@@ -1714,7 +1714,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   PP (`10^(level+1)` — 10, 100, 1_000, …) to increment `prestigeDoublePpLevel`. Not blocked
   by production freeze. Halves powers-per-PP through level 6, then doubles PP-per-power.
 - **Active — Autobuyer interval:** `buyAutobuyerIntervalUpgrade(tierId)` permanently spends PP
-  (`getAutobuyerIntervalUpgradeCost(level)` = `siCleanSeriesCost(AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10), level)` — the base is a rung (×10^k) of the SI-clean ladder 1,2,4,…,64,125,250,500 × 1000^floor(rung/10) and the cost advances `level` rungs, so every cost is clean — 10 PP first level, 125 changeover at 1,250; tier tickspeed 100 → 12,500; × tier number: tier *n* pays *n*× — 10, 20, 30 … PP first level)
+  (`getAutobuyerIntervalUpgradeCost(level, tierId)` (and `getTierTickspeedIntervalUpgradeCost(level, tierId)`) = `siCleanSeriesCost(AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10), level)` — the base is a rung (×10^k) of the SI-clean ladder 1,2,4,…,64,125,250,500 × 1000^floor(rung/10) and the cost advances `level` rungs, so costs follow the series — 10 PP first level, 125 changeover at 1,250; tier tickspeed 100 → 12,500; × tier number: tier *n* pays *n*× — 10, 20, 30 … PP first level)
   to multiply that tier's autobuyer interval (base `getAutobuyerBaseIntervalSeconds` = tier N → N s, autobuyer only, independent of tickspeed/manual buys) by `AUTOBUYER_INTERVAL_MULTIPLIER` (0.9) per level in
   `autobuyerIntervalLevels[tierId]`, floored at `AUTOBUYER_MIN_INTERVAL_SECONDS` (10 ms; max level
   `getAutobuyerIntervalMaxLevel(tierId)`, e.g. 44 for tier01, 66 for tier10). `tickGame` accrues attempt budget at
@@ -1722,7 +1722,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   through Prestige/Scale Up/Overclock/Era. UI: the tier's row on Firmware → Automation → Tier Autobuyers.
 - **Active — Automation interval chains:** `AUTOMATION_INTERVAL_CONFIG` (`speedUp` 8 PP/1 s, `scaleUp`
   16 PP/64 s, `restage` 32 PP/128 s, `overclock` 32 PP/256 s, `purge` 64 PP/1024 s) and `TIER_TICKSPEED_INTERVAL_CONFIG`
-  (100 PP/16 s per tier). Cost = baseCost × the shared doubling ladder (`getSiCleanDoublingFactor`: 1, 2, 4, …, 64, 125, …);
+  (100 PP/16 s per tier). Cost = the series rung of baseCost advanced `level` rungs (`siCleanSeriesCost`; ladder 1, 2, 4, …, 64, 125, 250, 500 × 1000 per ten; 10/100 bases use the 10×/100× variant); the per-tier chains multiply that by the tier number;
   interval = baseSeconds × 0.9^level, floor 10 ms. `buyAutomationIntervalUpgrade(key)` /
   `buyTierTickspeedIntervalUpgrade(tierId)` (state: `automationIntervalLevels`,
   `tierTickspeedIntervalLevels`, permanent). Each automation accrues a run-scoped budget

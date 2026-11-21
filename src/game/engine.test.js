@@ -12352,7 +12352,7 @@ const withPpForInterval = (points, autobuyer = 1) => {
 
 describe('autobuyer interval upgrade', () => {
   it('costs 10 PP doubling on the 125-based ladder', () => {
-    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(getAutobuyerIntervalUpgradeCost)).toEqual([10, 20, 40, 640, 1250, 2500, 5000, 10000, 20000])
+    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(l => getAutobuyerIntervalUpgradeCost(l))).toEqual([10, 20, 40, 640, 1250, 2500, 5000, 10000, 20000])
   })
 
   it('scales the first cost by tier number (10, 20, 30 … PP) on both tier chains', () => {
