@@ -8,11 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Achievement toasts: each earned achievement (including those earned while away) shows a stacked toast for 5 s, started 0.25 s apart.
+
+- Ten **Level power** achievements (reach level 10 on each tier) each add 0.05 to the per-level production multiplier. It now starts at ×1.0 (was ×1.25) and reaches ×1.5 once all ten are earned, so the first Purge is slower and later ones faster. Daily challenges' fallback start balance rose to 1,000,000 B (generator version 6).
 
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
 
+- Factory tier level costs now widen: the gap between consecutive levels' costs (in powers of ten) starts at the tier number and grows by 1 after every 10 levels at the same gap.
+
+- Firmware speed-upgrade costs now sit on the clean 1‑2‑4‑8…64‑125‑250‑500 series (×1000 per ten) throughout — no more 5.12e17 / 1.6e13; Tier *n*'s autobuyer / tickspeed upgrades start at 10·n / 100·n PP (10, 20, 30… / 100, 200, 300…) instead of 10 / 100 for every tier; the chains use the 10×/100× variant (…640 → 1,250, …6,400 → 12,500). Tier-row cost pills no longer truncate (they wrap instead).
 - Clock Speed is renamed **Accelerate** (a verb, like Restage, Scale Up and Overclock), and the four cards are now short full-width rows aligned with the tier rows instead of tall half-width tiles.
 - Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
 - Nav attention dots no longer light for Factory cues (affordable levels, Accelerate, Scale Up, Overclock, Purge) whose automation is unlocked, enabled and faster than 1 s; a paused automation still lights its dot.

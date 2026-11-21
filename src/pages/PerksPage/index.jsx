@@ -320,7 +320,7 @@ const CellHead = styled.div`
   display: flex;
   /* $wrap (inline-action cells): when a long cost won't fit, the button drops to its own line
      instead of the name collapsing to an ellipsis — one line whenever it fits. */
-  flex-wrap: ${props => (props.$wrap && !props.$narrow ? 'wrap' : 'nowrap')};
+  flex-wrap: ${props => (props.$wrap ? 'wrap' : 'nowrap')};
   gap: 0.15rem;
   row-gap: 0.3rem;
   justify-content: space-between;
@@ -385,19 +385,18 @@ const InlineAction = styled.span`
   }
 
   ${props => props.$narrow && `
-    flex-shrink: 1;
-    min-width: 0;
-    overflow: hidden;
+    flex-shrink: 0;
+    margin-left: auto;
+    /* Common minimum so a wide cost (1,000 PP) doesn't shift its row's interval/Switch columns. */
+    min-width: 4.4rem;
 
     && > button {
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
       white-space: nowrap;
+      width: 100%;
       font-size: 0.78rem;
       min-height: 1.6rem;
       min-width: 0;
-      padding: 0.15em 0.4em;
+      padding: 0.15em 0.45em;
     }
   `}
 `
@@ -881,13 +880,13 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           const maxed = level >= getAutobuyerSpeedUpgradeMaxLevel(tier.id)
           const atFloor = level >= getAutobuyerIntervalMaxLevel(tier.id)
           const bulkLevels = owned ? getAutobuyerBulkLevels(state, tier.id) : 1
-          const cost = getAutobuyerIntervalUpgradeCost(level)
+          const cost = getAutobuyerIntervalUpgradeCost(level, tier.id)
 
           const tickOwned = state.tierTickspeedAutobuyer?.[tier.id] ?? false
           const tickEnabled = state.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true
           const tickLevel = state.tierTickspeedIntervalLevels?.[tier.id] ?? 0
           const tickMaxed = tickLevel >= getTierTickspeedIntervalMaxLevel()
-          const tickCost = getTierTickspeedIntervalUpgradeCost(tickLevel)
+          const tickCost = getTierTickspeedIntervalUpgradeCost(tickLevel, tier.id)
           const tickChallenge = gateChallengeFor('tierTickspeed', tier.id)
           const unitChallenge = gateChallengeFor('tierAutobuyer', tier.id)
           return (
