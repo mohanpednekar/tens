@@ -12355,6 +12355,13 @@ describe('autobuyer interval upgrade', () => {
     expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(getAutobuyerIntervalUpgradeCost)).toEqual([10, 20, 40, 640, 1250, 2500, 5000, 10000, 20000])
   })
 
+  it('scales the first cost by tier number (10, 20, 30 … PP) on both tier chains', () => {
+    const ids = TIER_DEFINITIONS.map(t => t.id)
+    expect(ids.map(id => getAutobuyerIntervalUpgradeCost(0, id))).toEqual([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+    expect(ids.map(id => getTierTickspeedIntervalUpgradeCost(0, id))).toEqual([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])
+    expect(getAutobuyerIntervalUpgradeCost(7, 'tier03')).toBe(3750)
+  })
+
   it('multiplies the interval by 0.9 per level and caps at 10ms', () => {
     let s = withPpForInterval(1e30)
     s = buyAutobuyerIntervalUpgrade('tier01')(s)

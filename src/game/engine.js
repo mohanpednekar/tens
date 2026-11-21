@@ -7381,9 +7381,9 @@ const siCleanSeriesCost = (base, level) => {
   return scale * getSiCleanDoublingFactor(Math.max(0, start) + level)
 }
 
-// Tier autobuyer speed: AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10 PP) × the doubling ladder, every tier alike.
-export const getAutobuyerIntervalUpgradeCost = level =>
-  siCleanSeriesCost(AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, level)
+// Tier autobuyer speed: tier number × AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10, 20, 30 … PP) × the doubling ladder.
+export const getAutobuyerIntervalUpgradeCost = (level, tierId = TIER_DEFINITIONS[0].id) =>
+  ((TIER_INDEX_BY_ID[tierId] ?? 0) + 1) * siCleanSeriesCost(AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, level)
 
 export const buyAutobuyerIntervalUpgrade = tierId => state => {
   if (isProductionFrozen(state)) return state
@@ -7392,7 +7392,7 @@ export const buyAutobuyerIntervalUpgrade = tierId => state => {
   if (state.autobuyers[tierId] == null) return state
   const level = state.autobuyerIntervalLevels?.[tierId] ?? 0
   if (level >= getAutobuyerSpeedUpgradeMaxLevel(tierId)) return state
-  const cost = getAutobuyerIntervalUpgradeCost(level)
+  const cost = getAutobuyerIntervalUpgradeCost(level, tierId)
   if (clampNonNegative(state.purge.points) < cost) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)
@@ -7452,8 +7452,8 @@ export const getTierTickspeedIntervalSeconds = (state, tierId) =>
     AUTOBUYER_MIN_INTERVAL_SECONDS,
     TIER_TICKSPEED_INTERVAL_CONFIG.baseSeconds * AUTOBUYER_INTERVAL_MULTIPLIER ** (state.tierTickspeedIntervalLevels?.[tierId] ?? 0),
   )
-export const getTierTickspeedIntervalUpgradeCost = level =>
-  siCleanSeriesCost(TIER_TICKSPEED_INTERVAL_CONFIG.baseCost, level)
+export const getTierTickspeedIntervalUpgradeCost = (level, tierId = TIER_DEFINITIONS[0].id) =>
+  ((TIER_INDEX_BY_ID[tierId] ?? 0) + 1) * siCleanSeriesCost(TIER_TICKSPEED_INTERVAL_CONFIG.baseCost, level)
 
 export const buyTierTickspeedIntervalUpgrade = tierId => state => {
   if (isProductionFrozen(state)) return state
@@ -7462,7 +7462,7 @@ export const buyTierTickspeedIntervalUpgrade = tierId => state => {
   if (!state.tierTickspeedAutobuyer?.[tierId]) return state
   const level = state.tierTickspeedIntervalLevels?.[tierId] ?? 0
   if (level >= getTierTickspeedIntervalMaxLevel()) return state
-  const cost = getTierTickspeedIntervalUpgradeCost(level)
+  const cost = getTierTickspeedIntervalUpgradeCost(level, tierId)
   if (clampNonNegative(state.purge.points) < cost) return state
 
   const latched = latchComputeFlopsPageUnlocked(state)

@@ -877,13 +877,13 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           const maxed = level >= getAutobuyerSpeedUpgradeMaxLevel(tier.id)
           const atFloor = level >= getAutobuyerIntervalMaxLevel(tier.id)
           const bulkLevels = owned ? getAutobuyerBulkLevels(state, tier.id) : 1
-          const cost = getAutobuyerIntervalUpgradeCost(level)
+          const cost = getAutobuyerIntervalUpgradeCost(level, tier.id)
 
           const tickOwned = state.tierTickspeedAutobuyer?.[tier.id] ?? false
           const tickEnabled = state.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true
           const tickLevel = state.tierTickspeedIntervalLevels?.[tier.id] ?? 0
           const tickMaxed = tickLevel >= getTierTickspeedIntervalMaxLevel()
-          const tickCost = getTierTickspeedIntervalUpgradeCost(tickLevel)
+          const tickCost = getTierTickspeedIntervalUpgradeCost(tickLevel, tier.id)
           const tickChallenge = gateChallengeFor('tierTickspeed', tier.id)
           const unitChallenge = gateChallengeFor('tierAutobuyer', tier.id)
           return (
