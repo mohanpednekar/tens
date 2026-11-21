@@ -478,7 +478,9 @@ instead, in one session:
    conflicts for real, fixes failing CI at the root cause (never by weakening a test), runs the
    adversarial `code-reviewer` on the current head and posts its marker, addresses and resolves
    review threads, and waits for CI.
-3. Merges it directly (`gh pr merge --merge --delete-branch`) only when every check is green on the
+3. Merges it directly (REST `PUT /pulls/{n}/merge` with `merge_method=merge`, then deletes the branch —
+   Claude Code Remote sessions have no GraphQL, so `gh pr …` commands and `scripts/resolve-pr-threads.sh`
+   are replaced by REST/`ccr` routes) only when every check is green on the
    current head, it's conflict-free, has an `APPROVE` marker for that head, and has no unresolved
    threads. PRs touching `.github/workflows/**` are merged too: the human gate on workflow files
    exists so workflows can't drift by editing themselves in a loop, and this routine is not a
