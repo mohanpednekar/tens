@@ -566,10 +566,10 @@ const mergeState = rawSaved => {
     ...savedClean,
     // Saves from before accelerateBoughtThisCycle existed: an Accelerate buy made earlier this cycle can't be
     // recovered, so a save already partway through a cycle (Accelerate level or Overclock level present)
-    // is conservatively treated as having bought Accelerate — never hand out 'Overclock fast' for free.
+    // (Accelerate level, Scale Up count or Overclock level present) is conservatively treated as having bought Accelerate — never hand out 'Overclock fast' for free.
     accelerateBoughtThisCycle: typeof saved.accelerateBoughtThisCycle === 'boolean'
       ? saved.accelerateBoughtThisCycle
-      : saved.globalTickspeedMultiplier != null || saved.overclockLastClaimCompletedLevels != null || (saved.overclockCount ?? 0) > 0,
+      : saved.globalTickspeedMultiplier != null || saved.overclockLastClaimCompletedLevels != null || (saved.overclockCount ?? 0) > 0 || (saved.scaleUpCount ?? 0) > 0,
     scaleUpCount: saved.scaleUpCount ?? legacySpeedUpCount ?? fresh.scaleUpCount,
     scaleUpTierCounts: mergeTierMap(
       fresh.scaleUpTierCounts,

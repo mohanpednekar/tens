@@ -8268,23 +8268,6 @@ const scaleUpGameCore = state => {
   }
 }
 
-// A second, steeper soft-reset than Scale Up (see scaleUpGame above), gated behind the last tier's
-// LEVEL reaching getOverclockRequirement(state) — level 5 initially, then three more
-// than the last claimed level.
-// Resets everything scaleUpGame does (every per-run field back to a fresh game, permanent
-// automation toggles/flags carried over unchanged) — but where scaleUpGame increments scaleUpCount
-// and eligible scaleUpTierCounts entries, overclockGame resets both through the fresh initial state,
-// wiping Scale Up's per-tier production multipliers. The Overclock level is set directly to the
-// last tier's *current* completed-level count (not accumulated — nothing is banked), so a
-// player who claims late (last claimed at 5, last tier now at 8) simply gets level 8. This is
-// always at least +3 over the previous level, since the eligibility check above guarantees it.
-// Overclock's reward (getOverclockMultiplier — folded into getGlobalTickspeedProductionMultiplier's
-// single uniform per-level step, see getEffectiveTierTickSpeedSeconds) is keyed off getOverclockLevel.
-// `autoScaleUp` (the automation toggle deciding whether Scale Up
-// fires automatically) is unaffected by wiping scaleUpCount — it's still carried over permanently
-// below, so it simply starts re-accumulating scaleUpCount from 0 on the next cycle, same as after a
-// real Prestige. A no-op (returns the same state) while frozen or before the last tier has reached
-// that cycle's requirement — same guards as scaleUpGame.
 // Counters behind the three Overclock step achievements, recorded on each successful claim (`before` is the
 // state the claim was made from): the deepest FIRST claim of a Purge cycle, a second-or-later claim made
 // without ever buying Accelerate this cycle, and a claim at OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL+ completed
@@ -8297,12 +8280,30 @@ const recordOverclockAchievementCounters = (before, after) => {
   const counters = { pings: 0, ...after.achievements?.counters }
   const firstOfCycle = getOverclockLevel(before) === null
   const next = { ...counters }
+  // Each achievement only counts once the previous one is earned, so a later one is never held without the earlier.
   if (firstOfCycle) next.maxFirstOverclock = Math.max(counters.maxFirstOverclock ?? 0, completed)
-  else if (!before.accelerateBoughtThisCycle) next.acceleratelessOverclocks = 1
-  if (isOverflowModeUnlocked(before) && completed >= OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL) next.overflowDeepOverclock = 1
+  else if (!before.accelerateBoughtThisCycle && isAchievementEarned(before, 'overclockStep1')) next.acceleratelessOverclocks = 1
+  if (isOverflowModeUnlocked(before) && completed >= OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL && isAchievementEarned(before, 'overclockStep2')) next.overflowDeepOverclock = 1
   return { ...after, achievements: { earned: {}, ...after.achievements, counters: next } }
 }
 
+// A second, steeper soft-reset than Scale Up (see scaleUpGame above), gated behind the last tier's
+// LEVEL reaching getOverclockRequirement(state) — level 5 initially, then getOverclockRequirementStep
+// (4, fewer with Overclock step achievements) more than the last claimed level.
+// Resets everything scaleUpGame does (every per-run field back to a fresh game, permanent
+// automation toggles/flags carried over unchanged) — but where scaleUpGame increments scaleUpCount
+// and eligible scaleUpTierCounts entries, overclockGame resets both through the fresh initial state,
+// wiping Scale Up's per-tier production multipliers. The Overclock level is set directly to the
+// last tier's *current* completed-level count (not accumulated — nothing is banked), so a
+// player who claims late (last claimed at 5, last tier now at 8) simply gets level 8. This is
+// always at least the current Overclock step (1–4) over the previous level, since the eligibility check above guarantees it.
+// Overclock's reward (getOverclockMultiplier — folded into getGlobalTickspeedProductionMultiplier's
+// single uniform per-level step, see getEffectiveTierTickSpeedSeconds) is keyed off getOverclockLevel.
+// `autoScaleUp` (the automation toggle deciding whether Scale Up
+// fires automatically) is unaffected by wiping scaleUpCount — it's still carried over permanently
+// below, so it simply starts re-accumulating scaleUpCount from 0 on the next cycle, same as after a
+// real Prestige. A no-op (returns the same state) while frozen or before the last tier has reached
+// that cycle's requirement — same guards as scaleUpGame.
 const overclockGameCore = state => {
   if (isProductionFrozen(state)) return state
   if (hasChallengeEffect(state, 'overclockDisabled')) return state

@@ -197,7 +197,7 @@ describe('Overclock step achievements', () => {
   })
 
   it('Overclock fast: a second claim earns it only if no Accelerate was bought this Purge', () => {
-    const base = { ...withLevels(fresh(), 9), overclockLastClaimCompletedLevels: 5 }
+    const base = { ...withLevels(fresh(), 9), overclockLastClaimCompletedLevels: 5, achievements: { counters: { pings: 0 }, earned: { overclockStep1: true } } }
     expect(isAchievementEarned(overclockGame(base), 'overclockStep2')).toBe(true)
     expect(isAchievementEarned(overclockGame({ ...base, accelerateBoughtThisCycle: true }), 'overclockStep2')).toBe(false)
     // The first claim never counts, even without Accelerate.
@@ -214,11 +214,26 @@ describe('Overclock step achievements', () => {
   })
 
   it('Beyond Googol: needs Overflow mode (DeGoogol) AND 12+ completed levels', () => {
-    const unbounded = state => ({ ...state, purge: { ...state.purge, unboundedUnlocked: true } })
+    const withPrior = state => ({ ...state, achievements: { counters: { pings: 0 }, earned: { overclockStep1: true, overclockStep2: true } } })
+    const unbounded = state => withPrior({ ...state, purge: { ...state.purge, unboundedUnlocked: true } })
     const deep = withLevels(fresh(), 12)
     expect(isAchievementEarned(overclockGame(unbounded(deep)), 'overclockStep3')).toBe(true)
     expect(isAchievementEarned(overclockGame(unbounded(withLevels(fresh(), 11))), 'overclockStep3')).toBe(false)
-    expect(isAchievementEarned(overclockGame(deep), 'overclockStep3')).toBe(false)
+    expect(isAchievementEarned(overclockGame(withPrior(deep)), 'overclockStep3')).toBe(false)
+  })
+
+  it('is strictly ordered: a later achievement is never earned without the earlier one', () => {
+    // Second claim, no Accelerate, but Patient Overclock not earned -> Overclock fast does not count.
+    const noStep1 = { ...withLevels(fresh(), 9), overclockLastClaimCompletedLevels: 5 }
+    expect(isAchievementEarned(overclockGame(noStep1), 'overclockStep2')).toBe(false)
+    // Post-DeGoogol deep claim with only Patient Overclock earned -> Beyond Googol does not count.
+    const onlyStep1 = { ...withLevels(fresh(), 12), purge: { ...fresh().purge, unboundedUnlocked: true }, achievements: { counters: { pings: 0 }, earned: { overclockStep1: true } } }
+    expect(isAchievementEarned(overclockGame(onlyStep1), 'overclockStep3')).toBe(false)
+    // And the chain works in order within one Purge: deep first claim, then an Accelerate-free second claim.
+    const first = overclockGame(withLevels(fresh(), 6))
+    expect(isAchievementEarned(first, 'overclockStep1')).toBe(true)
+    const second = overclockGame(withLevels(first, getOverclockRequirement(first)))
+    expect(isAchievementEarned(second, 'overclockStep2')).toBe(true)
   })
 
   it('Scale Up carries the cycle flag, and Reboot clears it', () => {
@@ -252,6 +267,11 @@ describe('Overclock step achievements', () => {
     expect(loaded.accelerateBoughtThisCycle).toBe(true)
     const eligible = { ...loaded, purchaseLevels: { ...loaded.purchaseLevels, [lastTierId]: 10 } }
     expect(isAchievementEarned(overclockGame(eligible), 'overclockStep2')).toBe(false)
+    // Also mid-cycle: a Scale Up already claimed (Scale Up resets the Accelerate level to null).
+    const scaled = { ...JSON.parse(JSON.stringify(createInitialGameState())), scaleUpCount: 1 }
+    delete scaled.accelerateBoughtThisCycle
+    localStorage.setItem('tens_game_state', JSON.stringify(scaled))
+    expect(loadGameState().accelerateBoughtThisCycle).toBe(true)
     // A fresh legacy save with no Accelerate or Overclock yet is not flagged.
     const early = JSON.parse(JSON.stringify(createInitialGameState()))
     delete early.accelerateBoughtThisCycle
