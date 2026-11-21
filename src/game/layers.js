@@ -174,11 +174,11 @@ export const LIVE_CHALLENGE_IDS = new Set(CHALLENGE_DEFINITIONS.map(def => def.i
 export const ACHIEVEMENTS_FEATURE = { enabled: true }
 // Daily challenges (epic #1062, basic slice): live in every build (maintainer request); mutable so tests can flip it.
 export const DAILY_CHALLENGES_FEATURE = { enabled: true }
-// Level power achievements (one per tier in LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS: every other tier, 2, 4, … 10): each raises the per-level production multiplier
-// (PURCHASE_MILESTONE_MULTIPLIER_BASE) by this much; all five reach 1.5.
+// Level power achievements (one per tier): each raises the per-level production multiplier
+// (PURCHASE_MILESTONE_MULTIPLIER_BASE) by this much; all ten reach 1.5 from the 1.0 base.
 export const LEVEL_POWER_ACHIEVEMENT_BONUS = 0.05
 export const LEVEL_POWER_ACHIEVEMENT_LEVEL = 10
-export const LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS = [2, 4, 6, 8, 10]
+export const LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 // Groups in display order; `boostArea` is unused until the bonus slice (#1052).
 export const ACHIEVEMENT_GROUPS = [
   { id: 'firstSession', name: 'First session', boostArea: 'foundry' },
@@ -216,10 +216,10 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', condition: { kind: 'overclocked' } },
   ...LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((tierNumber, i) => ({
     id: `levelPower${i + 1}`,
-    name: ['Level up', 'Leveled', 'Level headed', 'Level best', 'Level playing field'][i],
+    name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${LEVEL_POWER_ACHIEVEMENT_LEVEL}`,
     group: 'levelPower',
     trigger: `Reach level ${LEVEL_POWER_ACHIEVEMENT_LEVEL} on ${TIER_DEFINITIONS[tierNumber - 1].name}`,
-    bonus: `The per-level production multiplier rises by ${LEVEL_POWER_ACHIEVEMENT_BONUS} (×1.25 → ×1.5 with all five)`,
+    bonus: `The per-level production multiplier rises by ${LEVEL_POWER_ACHIEVEMENT_BONUS} (×1.0 → ×1.5 with all ten)`,
     condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: LEVEL_POWER_ACHIEVEMENT_LEVEL },
   })),
 ].map(def => ({ secret: false, platformDependent: false, bonus: null, ...def }))
@@ -750,7 +750,7 @@ export const BUY_MAX_ITERATION_CAP = 1024
 // 2.2x faster per the simulate-run-times skill — 2d7h → ~1d1h38m at PP 0) without materially
 // changing Overclock's own claim shape, which stays gated on the last tier's completed levels
 // (getOverclockRequirement), not this multiplier — see docs/DESIGN_HISTORY.md.
-export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.25
+export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.0
 // Every 10th level uses this larger multiplier instead of PURCHASE_MILESTONE_MULTIPLIER_BASE for
 // that one level — a bigger milestone every 10 levels on top of the regular one every level (see
 // engine.js's getPurchaseMilestoneMultiplier). This "every 10th level" cadence is independent of

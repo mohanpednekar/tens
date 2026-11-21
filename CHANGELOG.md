@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Five **Level power** achievements (reach level 10 on Megabytes, Terabytes, Exabytes, Yottabytes and Quettabytes) each raise the per-level production multiplier by 0.05, from ×1.25 up to ×1.5, during the first Purge.
+- Ten **Level power** achievements (reach level 10 on each tier) each add 0.05 to the per-level production multiplier. It now starts at ×1.0 (was ×1.25) and reaches ×1.5 once all ten are earned, so the first Purge is slower and later ones faster. Daily challenges' fallback start balance rose to 1,000,000 B (generator version 6).
 
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 

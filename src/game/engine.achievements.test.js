@@ -131,13 +131,13 @@ describe('persistence across resets', () => {
 })
 
 describe('Level power achievements', () => {
-  it('each of tier02/04/06/08/10 at level 10 adds 0.05 to the level multiplier, reaching 1.5', () => {
+  it('start at 1.0; each tier at level 10 adds 0.05, reaching 1.5 with all ten', () => {
     const base = createInitialGameState()
-    expect(getLevelMultiplierBase(base)).toBe(1.25)
-    const levels = n => ({ ...base, purchaseLevels: { ...base.purchaseLevels, ...Object.fromEntries([1, 3, 5, 7, 9].slice(0, n).map(i => [TIER_DEFINITIONS[i].id, 10])) } })
-    expect(getLevelMultiplierBase(detectAchievements(levels(1)))).toBe(1.3)
-    expect(getLevelMultiplierBase(detectAchievements(levels(5)))).toBe(1.5)
-    expect(getLevelMultiplierBase(detectAchievements({ ...levels(0), purchaseLevels: { ...base.purchaseLevels, tier01: 10, tier03: 10 } }))).toBe(1.25)
+    expect(getLevelMultiplierBase(base)).toBe(1)
+    const levels = n => ({ ...base, purchaseLevels: { ...base.purchaseLevels, ...Object.fromEntries(TIER_DEFINITIONS.slice(0, n).map(t => [t.id, 10])) } })
+    expect(getLevelMultiplierBase(detectAchievements(levels(1)))).toBe(1.05)
+    expect(getLevelMultiplierBase(detectAchievements(levels(4)))).toBe(1.2)
+    expect(getLevelMultiplierBase(detectAchievements(levels(10)))).toBe(1.5)
   })
 
   it('getPurchaseMilestoneMultiplier uses the supplied base', () => {

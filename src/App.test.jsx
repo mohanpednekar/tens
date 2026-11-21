@@ -729,9 +729,10 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
   expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 })
 
-test('reaching 8 lifetime purchases of a tier multiplies its displayed production by ×1.25', async () => {
+test('reaching 8 lifetime purchases of a tier multiplies its displayed production by the level multiplier (×1.25 with five Level power achievements)', async () => {
   const user = userEvent.setup()
   seedMainGameState({
+    achievements: { earned: Object.fromEntries([1, 2, 3, 4, 5].map(n => [`levelPower${n}`, true])), counters: { pings: 0 } },
     resources: { base: 10 },
     owned: { tier01: 10 },
     purchased: { tier01: 8 },
