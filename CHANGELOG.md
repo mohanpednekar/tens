@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Achievements page** shows ordered steps of the same thing as one leveled row (Ping, each pool's Reclamation, Accelerate, Level power, Overclock step) with a `Lv n/N` badge and the next goal. Earned achievements and bonuses are unchanged.
+
 - Each Overclock after the first now needs 4 more completed last-tier levels than the previous claim (was 3) until the Overclock step achievements are earned.
 
 - Factory tier level costs now widen: the gap between consecutive levels' costs (in powers of ten) starts at the tier number and grows by 1 after every 10 levels at the same gap.

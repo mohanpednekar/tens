@@ -20,11 +20,19 @@ describe('AchievementsPage', () => {
     expect(screen.getByLabelText('First session 1 of 4 earned')).toBeTruthy()
     expect(screen.queryByLabelText('Hello, World achievement earned')).toBeNull()
     openGroup('First session')
-    expect(screen.getByLabelText('Hello, World achievement earned')).toBeTruthy()
-    expect(screen.getByLabelText('Ping of Death achievement not yet earned')).toBeTruthy()
-    expect(screen.queryByText('Ping 256 times')).toBeNull()
-    fireEvent.click(screen.getByLabelText('Ping of Death details'))
-    expect(screen.getByText('Ping 256 times')).toBeTruthy()
+    expect(screen.getByLabelText('Ping achievement level 1 of 2')).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('Ping details'))
+    expect(screen.getByLabelText('Ping level 1 earned')).toBeTruthy()
+    expect(screen.getByLabelText('Ping level 2 not yet earned')).toBeTruthy()
+  })
+
+  it('collapses ordered steps into one leveled row', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({ levelPower1: true, levelPower2: true, overclockStep1: true })} />)
+    openGroup('Level power')
+    expect(screen.getAllByLabelText(/achievement level/)).toHaveLength(1)
+    expect(screen.getByLabelText('Level power achievement level 2 of 10')).toBeTruthy()
+    openGroup('Overclock step')
+    expect(screen.getByLabelText('Overclock step achievement level 1 of 3')).toBeTruthy()
   })
 
   it('masks secret achievements until earned and hides platform-dependent ones', () => {
