@@ -3,9 +3,10 @@ import {
   buyTickspeedMultiplier, createInitialGameState, detectAchievements, eraGame, getCompletedAchievementGroups,
   getLevelMultiplierBase, getOverclockRequirement, getOverclockRequirementStep, getPurchaseMilestoneMultiplier, getTierCostExponent, buyGlobalTickspeedMultiplier, isAchievementEarned, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
 } from './engine'
+import { loadGameState } from './storage'
 import { ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
 
-beforeEach(() => { ACHIEVEMENTS_FEATURE.enabled = true })
+beforeEach(() => { ACHIEVEMENTS_FEATURE.enabled = true; localStorage.clear() })
 afterEach(() => { ACHIEVEMENTS_FEATURE.enabled = false })
 
 const earnedIds = state => Object.keys(state.achievements.earned)
@@ -218,6 +219,44 @@ describe('Overclock step achievements', () => {
     expect(isAchievementEarned(overclockGame(unbounded(deep)), 'overclockStep3')).toBe(true)
     expect(isAchievementEarned(overclockGame(unbounded(withLevels(fresh(), 11))), 'overclockStep3')).toBe(false)
     expect(isAchievementEarned(overclockGame(deep), 'overclockStep3')).toBe(false)
+  })
+
+  it('Scale Up carries the cycle flag, and Reboot clears it', () => {
+    const flagged = { ...withLevels(fresh(), 3), accelerateBoughtThisCycle: true }
+    const scaled = scaleUpGame({ ...flagged, scaleUpTargetTierIndex: 0 })
+    expect(scaled).not.toBe(flagged)
+    expect(scaled.accelerateBoughtThisCycle).toBe(true)
+    const rebootable = { ...flagged, purge: { ...flagged.purge, points: 1e100 } }
+    expect(eraGame(rebootable).accelerateBoughtThisCycle).toBe(false)
+  })
+
+  it('claims inside a challenge never record the counters (F6 shrinks the tier ladder)', () => {
+    const base = fresh()
+    const inF6 = {
+      ...base,
+      challenges: { ...base.challenges, active: 'F6', run: {} },
+      purge: { ...base.purge, unboundedUnlocked: true },
+      purchaseLevels: { ...base.purchaseLevels, tier06: 13 },
+    }
+    const after = overclockGame(inF6)
+    expect(after.overclockLastClaimCompletedLevels).toBe(12) // the claim itself still works
+    expect(isAchievementEarned(after, 'overclockStep1')).toBe(false)
+    expect(isAchievementEarned(after, 'overclockStep3')).toBe(false)
+  })
+
+  it('a legacy save (no accelerateBoughtThisCycle key) that is mid-cycle never gets Overclock fast for free', () => {
+    const legacy = { ...JSON.parse(JSON.stringify(createInitialGameState())), overclockLastClaimCompletedLevels: 5, globalTickspeedMultiplier: 7 }
+    delete legacy.accelerateBoughtThisCycle
+    localStorage.setItem('tens_game_state', JSON.stringify(legacy))
+    const loaded = loadGameState()
+    expect(loaded.accelerateBoughtThisCycle).toBe(true)
+    const eligible = { ...loaded, purchaseLevels: { ...loaded.purchaseLevels, [lastTierId]: 10 } }
+    expect(isAchievementEarned(overclockGame(eligible), 'overclockStep2')).toBe(false)
+    // A fresh legacy save with no Accelerate or Overclock yet is not flagged.
+    const early = JSON.parse(JSON.stringify(createInitialGameState()))
+    delete early.accelerateBoughtThisCycle
+    localStorage.setItem('tens_game_state', JSON.stringify(early))
+    expect(loadGameState().accelerateBoughtThisCycle).toBe(false)
   })
 })
 

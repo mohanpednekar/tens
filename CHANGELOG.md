@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Three **Overclock step** achievements, each making later Overclocks need 1 fewer extra completed last-tier level (the step now starts at +4 and drops to +1): claim the first Overclock of a Purge at 6+ completed levels; claim two Overclocks in one Purge without buying any Accelerate; and, after DeGoogol, claim an Overclock at 12+ completed levels.
+- Three **Overclock step** achievements, each making later Overclocks need 1 fewer extra completed last-tier level (the step now starts at +4 and drops to +1): claim the first Overclock of a Purge at 6+ completed levels; claim two Overclocks in one Purge without buying any Accelerate; and, after DeGoogol, claim an Overclock at 12+ completed levels. They are earned from new claims only (not retroactive) and claims inside challenges don't count.
 - Achievement toasts: each earned achievement (including those earned while away) shows a stacked toast for 5 s, started 0.25 s apart.
 
 - Ten **Level power** achievements (reach level 10 on each tier) each add 0.05 to the per-level production multiplier. It now starts at ×1.0 (was ×1.25) and reaches ×1.5 once all ten are earned, so the first Purge is slower and later ones faster. Daily challenges' fallback start balance rose to 1,000,000 B (generator version 6).

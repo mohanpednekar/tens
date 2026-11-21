@@ -1626,8 +1626,8 @@ export const getScaleUpRequirement = state =>
 // climbing before claiming. Later claims require four completed levels more (fewer with Overclock step achievements) than the
 // completed-level count the previous claim was actually taken at
 // (state.overclockLastClaimCompletedLevels + getOverclockRequirementStep) — e.g. available at 5,
-// claimed at 7 → next available at 10; claimed at 11 → next at 14. Never a predetermined 5, 8, 11,
-// 14 sequence. Legacy saves written before overclockLastClaimCompletedLevels existed fall back to
+// claimed at 7 → next available at 11 at step 4; claimed at 11 → next at 15. Never a predetermined
+// ladder. Legacy saves written before overclockLastClaimCompletedLevels existed fall back to
 // overclockCount itself (the level recorded by the previous claim under the old semantics).
 export const getOverclockRequirement = state => {
   const lastClaim = getOverclockLevel(state)
@@ -8290,6 +8290,9 @@ const scaleUpGameCore = state => {
 // without ever buying Accelerate this cycle, and a claim at OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL+ completed
 // last-tier levels after DeGoogol.
 const recordOverclockAchievementCounters = (before, after) => {
+  // Challenge runs change what 'last tier' and Accelerate mean (F6 caps the tier ladder, F21 disables Accelerate),
+  // so they never count toward these permanent achievements.
+  if (getActiveChallenge(before)) return after
   const completed = Math.max(0, (before.purchaseLevels?.[getEffectiveLastTier(before).id] ?? 1) - 1)
   const counters = { pings: 0, ...after.achievements?.counters }
   const firstOfCycle = getOverclockLevel(before) === null
