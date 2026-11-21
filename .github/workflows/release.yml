@@ -5,7 +5,7 @@ name: Release
 # `yarn bump-version` — scripts/bump-version.mjs) already landed the version
 # bump inside the merged PR diff, so this workflow only ever *reads* main and
 # pushes a tag + Release — never a commit, never a PR.
-# Deterministic shell only, no agent — matching pr-auto-merge.yml's rationale
+# Deterministic shell only, no agent — matching the repo's deterministic-shell rationale
 # (speed, determinism, no model-quota spend on a mechanical check).
 #
 # No concurrency group on purpose: each run tags the version found at its own
