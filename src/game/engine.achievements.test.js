@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   buyTickspeedMultiplier, createInitialGameState, detectAchievements, eraGame, getCompletedAchievementGroups,
-  getLevelMultiplierBase, getPurchaseMilestoneMultiplier, getTierCostExponent, isAchievementEarned, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
+  getLevelMultiplierBase, getOverclockRequirement, getOverclockRequirementStep, getPurchaseMilestoneMultiplier, getTierCostExponent, buyGlobalTickspeedMultiplier, isAchievementEarned, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
 } from './engine'
 import { ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
 
@@ -13,7 +13,7 @@ const lateGame = () => {
   const initial = createInitialGameState()
   return {
     ...initial,
-    achievements: { earned: {}, counters: { pings: 10000 } },
+    achievements: { earned: {}, counters: { pings: 10000, maxFirstOverclock: 6, acceleratelessOverclocks: 1, overflowDeepOverclock: 1 } },
     intro: { ...initial.intro, byteCreated: true, mainGameUnlocked: true },
     purchased: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 5])),
     purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 10])),
@@ -173,3 +173,51 @@ describe('Level power achievements', () => {
     expect(gaps.slice(10)).toEqual([4, 4])
   })
 })
+
+describe('Overclock step achievements', () => {
+  const lastTierId = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
+  const withLevels = (state, completed) => ({ ...state, purchaseLevels: { ...state.purchaseLevels, [lastTierId]: completed + 1 } })
+  const fresh = () => createInitialGameState()
+
+  it('the step starts at 4 and drops 1 per earned achievement, never below 1', () => {
+    const at = n => ({ ...fresh(), overclockLastClaimCompletedLevels: 10, achievements: { counters: { pings: 0 }, earned: Object.fromEntries(['overclockStep1', 'overclockStep2', 'overclockStep3'].slice(0, n).map(id => [id, true])) } })
+    expect([0, 1, 2, 3].map(n => getOverclockRequirement(at(n)))).toEqual([14, 13, 12, 11])
+    expect(getOverclockRequirementStep(at(3))).toBe(1)
+  })
+
+  it('Patient Overclock: only a first claim of the Purge at 6+ completed levels earns it', () => {
+    const shallow = overclockGame(withLevels(fresh(), 5))
+    expect(isAchievementEarned(shallow, 'overclockStep1')).toBe(false)
+    const deep = overclockGame(withLevels(fresh(), 6))
+    expect(isAchievementEarned(deep, 'overclockStep1')).toBe(true)
+    // A later (non-first) claim at 6+ levels does not count.
+    const later = overclockGame({ ...withLevels(fresh(), 9), overclockLastClaimCompletedLevels: 5 })
+    expect(isAchievementEarned(later, 'overclockStep1')).toBe(false)
+  })
+
+  it('Overclock fast: a second claim earns it only if no Accelerate was bought this Purge', () => {
+    const base = { ...withLevels(fresh(), 9), overclockLastClaimCompletedLevels: 5 }
+    expect(isAchievementEarned(overclockGame(base), 'overclockStep2')).toBe(true)
+    expect(isAchievementEarned(overclockGame({ ...base, accelerateBoughtThisCycle: true }), 'overclockStep2')).toBe(false)
+    // The first claim never counts, even without Accelerate.
+    expect(isAchievementEarned(overclockGame(withLevels(fresh(), 5)), 'overclockStep2')).toBe(false)
+  })
+
+  it('buying Accelerate sets the cycle flag; Scale Up and Overclock carry it; Purge clears it', () => {
+    const rich = { ...fresh(), resources: { ...fresh().resources, [MONEY_ID]: 1e12 }, purchased: { tier01: 1 }, purchaseLevels: { ...fresh().purchaseLevels, tier01: 2 } }
+    const bought = buyGlobalTickspeedMultiplier(rich)
+    expect(bought.accelerateBoughtThisCycle).toBe(true)
+    const eligible = { ...withLevels(bought, 5) }
+    expect(overclockGame(eligible).accelerateBoughtThisCycle).toBe(true)
+    expect(purgeGame({ ...bought, resources: { ...bought.resources, [MONEY_ID]: PURGE_THRESHOLD } }).accelerateBoughtThisCycle).toBe(false)
+  })
+
+  it('Beyond Googol: needs Overflow mode (DeGoogol) AND 12+ completed levels', () => {
+    const unbounded = state => ({ ...state, purge: { ...state.purge, unboundedUnlocked: true } })
+    const deep = withLevels(fresh(), 12)
+    expect(isAchievementEarned(overclockGame(unbounded(deep)), 'overclockStep3')).toBe(true)
+    expect(isAchievementEarned(overclockGame(unbounded(withLevels(fresh(), 11))), 'overclockStep3')).toBe(false)
+    expect(isAchievementEarned(overclockGame(deep), 'overclockStep3')).toBe(false)
+  })
+})
+

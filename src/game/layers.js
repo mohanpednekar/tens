@@ -178,6 +178,10 @@ export const DAILY_CHALLENGES_FEATURE = { enabled: true }
 // (PURCHASE_MILESTONE_MULTIPLIER_BASE) by this much; all ten reach 1.5 from the 1.0 base.
 export const LEVEL_POWER_ACHIEVEMENT_BONUS = 0.05
 export const LEVEL_POWER_ACHIEVEMENT_LEVEL = 10
+// Overclock step achievements: first Overclock of a Purge claimed at this many completed last-tier levels (min is 5),
+// and the post-DeGoogol claim depth.
+export const PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL = 6
+export const OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL = 12
 export const LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 // Groups in display order; `boostArea` is unused until the bonus slice (#1052).
 export const ACHIEVEMENT_GROUPS = [
@@ -186,6 +190,7 @@ export const ACHIEVEMENT_GROUPS = [
   { id: 'tierLadder', name: 'Tier ladder', boostArea: 'factory' },
   { id: 'earlyFactory', name: 'Early Factory', boostArea: 'factory' },
   { id: 'levelPower', name: 'Level power', boostArea: 'factory' },
+  { id: 'overclockStep', name: 'Overclock step', boostArea: 'factory' },
 ]
 // `condition` is evaluated by engine.js `isAchievementConditionMet` against CURRENT state ("at least"
 // thresholds, so a save past a trigger earns it on load). `bonus` is a placeholder (#1052).
@@ -222,6 +227,9 @@ export const ACHIEVEMENT_DEFINITIONS = [
     bonus: `The per-level production multiplier rises by ${LEVEL_POWER_ACHIEVEMENT_BONUS} (×1.0 → ×1.5 with all ten)`,
     condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: LEVEL_POWER_ACHIEVEMENT_LEVEL },
   })),
+  { id: 'overclockStep1', name: 'Patient Overclock', group: 'overclockStep', trigger: `Claim the first Overclock of a Purge at ${PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level than the one before (+4 → +3)', condition: { kind: 'counter', key: 'maxFirstOverclock', min: PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL } },
+  { id: 'overclockStep2', name: 'Overclock fast', group: 'overclockStep', trigger: 'Claim two Overclocks in one Purge without buying any Accelerate', bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+3 → +2)', condition: { kind: 'counter', key: 'acceleratelessOverclocks', min: 1 } },
+  { id: 'overclockStep3', name: 'Beyond Googol', group: 'overclockStep', trigger: `After DeGoogol, claim an Overclock at ${OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+2 → +1)', condition: { kind: 'counter', key: 'overflowDeepOverclock', min: 1 } },
 ].map(def => ({ secret: false, platformDependent: false, bonus: null, ...def }))
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.map(def => [def.id, def]))
 // Base PP earning rate beyond Googol: 1 PP per this many additional money-exponent "powers"
@@ -869,7 +877,7 @@ export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // is available at 5 completed final-tier levels; each later claim requires the completed-level
 // count the previous claim was taken at, plus this step (see getOverclockRequirement/
 // overclockGame in engine.js).
-export const OVERCLOCK_REQUIREMENT_STEP = 3
+export const OVERCLOCK_REQUIREMENT_STEP = 4
 // The last tier (QB) is credited exactly 1 unit every interval of LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS / (1 + log10(levels))
 // seconds at `levels` COMPLETED purchase levels (purchaseLevels - 1): every 10 s at 1, 5 s at 10, 3.33 s at 100, never faster
 // than LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS; independent of its balance/owned count (engine.js's tickGame).
