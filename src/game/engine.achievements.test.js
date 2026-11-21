@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   buyTickspeedMultiplier, createInitialGameState, detectAchievements, eraGame, getCompletedAchievementGroups,
-  isAchievementEarned, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
+  getLevelMultiplierBase, getPurchaseMilestoneMultiplier, isAchievementEarned, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
 } from './engine'
 import { ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
 
@@ -16,6 +16,7 @@ const lateGame = () => {
     achievements: { earned: {}, counters: { pings: 10000 } },
     intro: { ...initial.intro, byteCreated: true, mainGameUnlocked: true },
     purchased: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 5])),
+    purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 6])),
     globalTickspeedMultiplier: 40,
     overclockLastClaimCompletedLevels: 5,
     lastTierEarnedThisRun: true, // QB held earlier this run, balance now 0
@@ -126,5 +127,20 @@ describe('persistence across resets', () => {
     expect(earnedIds(overclockGame(earned()))).toEqual(ids)
     const rebootable = { ...earned(), purge: { ...earned().purge, points: 1e100 } }
     expect(earnedIds(eraGame(rebootable))).toEqual(ids)
+  })
+})
+
+describe('Level power achievements', () => {
+  it('each of tier01–tier05 at 5 completed levels adds 0.05 to the level multiplier, reaching 1.5', () => {
+    const base = createInitialGameState()
+    expect(getLevelMultiplierBase(base)).toBe(1.25)
+    const levels = n => ({ ...base, purchaseLevels: { ...base.purchaseLevels, ...Object.fromEntries(TIER_DEFINITIONS.slice(0, n).map(t => [t.id, 6])) } })
+    expect(getLevelMultiplierBase(detectAchievements(levels(1)))).toBe(1.3)
+    expect(getLevelMultiplierBase(detectAchievements(levels(5)))).toBe(1.5)
+    expect(getLevelMultiplierBase(detectAchievements(levels(10)))).toBe(1.5)
+  })
+
+  it('getPurchaseMilestoneMultiplier uses the supplied base', () => {
+    expect(getPurchaseMilestoneMultiplier(3, 1.5)).toBeCloseTo(2.25)
   })
 })
