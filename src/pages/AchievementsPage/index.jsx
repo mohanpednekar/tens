@@ -138,13 +138,14 @@ const AchievementsPage = ({ game }) => {
   })).filter(group => group.members.length > 0)
 
   const totalStars = getAchievementStars(state)
+  const bonusStars = groups.reduce((sum, group) => sum + getAchievementGroupStars(state, group.id).bonus, 0)
   const maxStars = groups.reduce((sum, group) => sum + getAchievementGroupStars(state, group.id).total, 0)
 
   return (
     <RootDiv>
       <Header>
         <h1>Achievements</h1>
-        <TotalStars aria-label={`total stars ${totalStars} of ${maxStars}`}>⭐ {totalStars}/{maxStars}</TotalStars>
+        <TotalStars aria-label={`total stars ${totalStars} of ${maxStars}`}>⭐ {totalStars}/{maxStars}{bonusStars > 0 ? ` (incl. ${bonusStars} bonus)` : ''}</TotalStars>
       </Header>
 
       <List aria-label="achievements page">
@@ -167,7 +168,7 @@ const AchievementsPage = ({ game }) => {
                   $color={isComplete ? theme.color.good : theme.color.textMuted}
                   aria-label={`${group.name} ${earnedCount} of ${group.members.length} earned${isComplete ? ', group complete' : ''}`}
                 >
-                  {isComplete ? '✅ ' : ''}{earnedCount}/{group.members.length} · ⭐ {stars.earned + stars.bonus}/{stars.total}
+                  {isComplete ? '✅ ' : ''}{earnedCount}/{group.members.length} · ⭐ {stars.earned + stars.bonus}/{stars.total}{stars.bonus > 0 ? ` (+${stars.bonus} bonus)` : ''}
                 </Badge>
               </GroupHeading>
               {openGroups[group.id] && buildEntries(group.members).map(entry => {
