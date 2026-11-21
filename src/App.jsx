@@ -1,3 +1,4 @@
+import AchievementToasts from 'components/AchievementToasts'
 import AppMenu from 'components/AppMenu'
 import { ACHIEVEMENTS_FEATURE } from 'game/layers'
 import AchievementsPage from 'pages/AchievementsPage'
@@ -179,6 +180,7 @@ function App() {
         onNavigate={navigate}
         open={menuOpen}
       />
+      <AchievementToasts baselineEarned={game.initialEarnedAchievements} state={game.state} />
       {game.incompatibleSaveReason ? (
         <IncompatibleSaveNotice onDismiss={game.dismissIncompatibleSaveNotice} />
       ) : null}

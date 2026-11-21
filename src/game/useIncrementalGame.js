@@ -61,6 +61,7 @@ const computeInitialGame = () => {
         state: createInitialGameState(),
         offlineProgress: null,
         incompatibleSaveReason,
+        baselineEarned: {},
       }
     }
 
@@ -72,6 +73,8 @@ const computeInitialGame = () => {
       ...result,
       state: latchComputeFlopsPageUnlocked(result.state),
       incompatibleSaveReason: null,
+      // Earned map before offline catch-up, so AchievementToasts announces away-time unlocks.
+      baselineEarned: loaded.achievements?.earned ?? {},
     }
   }
 
@@ -514,6 +517,7 @@ const computeInitialGame = () => {
     exportSaveJson,
     incompatibleSaveReason,
     offlineProgress,
+    initialEarnedAchievements: initial.baselineEarned,
     opsSamples,
     purchaseSupporterDummy,
     redeemUnlockCode,
