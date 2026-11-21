@@ -2485,17 +2485,17 @@
     minimist "^1.2.8"
     typescript "~4.2.4"
 
-"@revenuecat/purchases-capacitor@14.1.0":
-  version "14.1.0"
-  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-capacitor/-/purchases-capacitor-14.1.0.tgz#ee074f2bc730d0cb9f90b8bd7d4740d224286c44"
-  integrity sha512-TnJF5DZFtg73ILxoyYQj2znq2fOwEmA5GaBCOvrcUwdqWXFL4p6ja3ZOne+i9eY8JAUvfijt2DVEeHL5gosl4A==
+"@revenuecat/purchases-capacitor@14.1.1":
+  version "14.1.1"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-capacitor/-/purchases-capacitor-14.1.1.tgz#8c24e06479c21b893278da80a28d340fbedfffc5"
+  integrity sha512-CHrAPawhvUAg1J94qWywvYfka0RLTp751lMUO+SefVXkwwqamv6PJPuLEmF7SME/vk8QJt8Pz0zuu5mEJIkWug==
   dependencies:
-    "@revenuecat/purchases-typescript-internal-esm" "20.1.0"
+    "@revenuecat/purchases-typescript-internal-esm" "20.8.0"
 
-"@revenuecat/purchases-typescript-internal-esm@20.1.0":
-  version "20.1.0"
-  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-typescript-internal-esm/-/purchases-typescript-internal-esm-20.1.0.tgz#6681a8f947a55af8858e227332e815855b6a32e1"
-  integrity sha512-v5m80eNfQ1mnDJJoR12+CwKyyvH/gaUQnd7QbqpCWEt+VsNlfaNvNxACyaaVlYH+5MTz47xmqrsnnOEBqq5z0Q==
+"@revenuecat/purchases-typescript-internal-esm@20.8.0":
+  version "20.8.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-typescript-internal-esm/-/purchases-typescript-internal-esm-20.8.0.tgz#0fb1c3b3ec57b8337a1902103a86b422f7c24265"
+  integrity sha512-AKtiz36MMMtWUoCj3eijpwGBGQ6siChRHX5x6WLfVSbnVifjGtnH3Z4Wn7jmEIwtZegXywuRVsd8NCiIfdEXlg==
 
 "@rolldown/binding-android-arm-eabi@1.2.18":
   version "1.2.18"
