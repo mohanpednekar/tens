@@ -1480,6 +1480,21 @@ export const getCompletedAchievementGroups = state =>
     return members.length > 0 && members.every(def => isAchievementEarned(state, def.id))
   }).map(group => group.id)
 
+// Stars: 1 per earned achievement (each level of a leveled row counts), plus a completion bonus per fully
+// earned group equal to that group's size (a completed section doubles its stars). Derived, never stored.
+export const getAchievementGroupStars = (state, groupId) => {
+  const members = ACHIEVEMENT_DEFINITIONS.filter(def => def.group === groupId && !def.platformDependent)
+  const earned = members.filter(def => isAchievementEarned(state, def.id)).length
+  const complete = members.length > 0 && earned === members.length
+  return { earned, bonus: complete ? members.length : 0, total: members.length * 2, complete }
+}
+
+export const getAchievementStars = state =>
+  ACHIEVEMENT_GROUPS.reduce((sum, group) => {
+    const { earned, bonus } = getAchievementGroupStars(state, group.id)
+    return sum + earned + bonus
+  }, 0)
+
 export const eraGame = state => {
   if (!isEraEligible(state)) return state
 

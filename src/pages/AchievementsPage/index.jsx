@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import StatCard from 'components/StatCard'
-import { getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
+import { getAchievementGroupStars, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
 import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
 
@@ -29,6 +29,12 @@ const Header = styled.header`
     font-family: ${props => props.theme.font.display};
     font-size: 1.5rem;
   }
+`
+
+const TotalStars = styled.div`
+  color: ${props => props.theme.color.text};
+  font-size: 1.1rem;
+  margin-top: 0.25rem;
 `
 
 const List = styled.div`
@@ -131,16 +137,21 @@ const AchievementsPage = ({ game }) => {
     members: ACHIEVEMENT_DEFINITIONS.filter(def => def.group === group.id && !def.platformDependent),
   })).filter(group => group.members.length > 0)
 
+  const totalStars = getAchievementStars(state)
+  const maxStars = groups.reduce((sum, group) => sum + getAchievementGroupStars(state, group.id).total, 0)
+
   return (
     <RootDiv>
       <Header>
         <h1>Achievements</h1>
+        <TotalStars aria-label={`total stars ${totalStars} of ${maxStars}`}>⭐ {totalStars}/{maxStars}</TotalStars>
       </Header>
 
       <List aria-label="achievements page">
         {groups.map(group => {
           const earnedCount = group.members.filter(def => isAchievementEarned(state, def.id)).length
           const isComplete = completed.has(group.id)
+          const stars = getAchievementGroupStars(state, group.id)
           return (
             <Group aria-label={`${group.name} achievement group`} key={group.id}>
               <GroupHeading>
@@ -156,7 +167,7 @@ const AchievementsPage = ({ game }) => {
                   $color={isComplete ? theme.color.good : theme.color.textMuted}
                   aria-label={`${group.name} ${earnedCount} of ${group.members.length} earned${isComplete ? ', group complete' : ''}`}
                 >
-                  {isComplete ? '✅ ' : ''}{earnedCount}/{group.members.length}
+                  {isComplete ? '✅ ' : ''}{earnedCount}/{group.members.length} · ⭐ {stars.earned + stars.bonus}/{stars.total}
                 </Badge>
               </GroupHeading>
               {openGroups[group.id] && buildEntries(group.members).map(entry => {

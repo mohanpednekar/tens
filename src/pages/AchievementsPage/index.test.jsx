@@ -26,6 +26,15 @@ describe('AchievementsPage', () => {
     expect(screen.getByLabelText('Ping level 2 not yet earned')).toBeTruthy()
   })
 
+  it('shows total stars with a bonus for fully completed groups', () => {
+    const first = ACHIEVEMENT_DEFINITIONS.filter(def => def.group === 'firstSession')
+    const earned = Object.fromEntries(first.map(def => [def.id, true]))
+    renderWithTheme(<AchievementsPage game={gameWith({ ...earned, levelPower1: true })} />)
+    // 4 first-session stars + 4 completion bonus + 1 level power star
+    expect(screen.getByLabelText(/^total stars 9 of /)).toBeTruthy()
+    expect(screen.getByText(/⭐ 8\/8/)).toBeTruthy()
+  })
+
   it('collapses ordered steps into one leveled row', () => {
     renderWithTheme(<AchievementsPage game={gameWith({ levelPower1: true, levelPower2: true, overclockStep1: true })} />)
     openGroup('Level power')
