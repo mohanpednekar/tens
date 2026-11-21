@@ -253,7 +253,7 @@ file list below — so surfacing the failure to a human is the full extent of wh
 
 **Maintainer-checklist verification (#63).** A plain-Node step, `Verify maintainer checklist (#62)`
 (`scripts/verify-maintainer-checklist.mjs`, tested by `.test.js`), runs every invocation. It checks the
-API-verifiable items on pinned issue #62 (PAT secret exists, `allow_auto_merge`, `test` required on
+API-verifiable items on pinned issue #62 (PAT secret exists, `test` required on
 `main`, Code Owners review required, Discussions enabled, PAT Projects scope via `gh project list`) and
 rewrites passing `- [ ] text` lines to `- [x] ~~text~~` (also normalising checked-without-strike lines),
 commenting once when all verifiable items are done. API errors leave a line untouched. It never edits
@@ -563,7 +563,8 @@ from the PR babysitter routine (ascending PR-number order, see above) or a maint
 interactive session (`CLAUDE.md` "Direct merge"). Merge commits only: the Main ruleset's
 `allowed_merge_methods` is `merge` + `rebase`; squash is rejected (issue #343). The former low-risk
 bar and its helpers (`scripts/pr-low-risk-eligible.sh`, `scripts/enable-auto-merge-if-eligible.sh`)
-were removed with it.
+were removed with it. Auto-merge requests armed before this cutover stay queued in GitHub until
+disarmed; the babysitter disarms any it finds.
 
 **After final commit (agent duty).** For every finished autonomous or interactive PR: run the
 adversarial reviewer on the final head → post the
@@ -580,7 +581,8 @@ session):
   only covers `GITHUB_TOKEN`), alongside
   `CLAUDE_CODE_OAUTH_TOKEN`.
 - Branch protection on `main` requiring the `test` check from `ci.yml`. ("Allow auto-merge" in
-  Settings → General is no longer used; #62 still lists it.)
+  Settings → General is no longer used and is best turned off, so nothing can arm it; the #62
+  checklist verifier no longer checks it.)
 - "Require review from Code Owners" in that same branch-protection rule, so the `.github/CODEOWNERS`
   entry mapping `.github/workflows/**` to the repo owner actually takes effect (tracked in issue #62's
   checklist until confirmed done).
