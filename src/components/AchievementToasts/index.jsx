@@ -67,7 +67,9 @@ function AchievementToasts({ state, baseline }) {
     }
     const fresh = earnedIds.filter(id => !seen.current.has(id) && ACHIEVEMENT_BY_ID[id])
     seen.current = current
-    const schedule = (fn, ms) => setTimeout(() => { if (mounted.current) fn() }, ms)
+    const epoch = baseline.epoch
+    // Queued toasts from an older save are dropped when the epoch moves on.
+    const schedule = (fn, ms) => setTimeout(() => { if (mounted.current && seenEpoch.current === epoch) fn() }, ms)
     for (const id of fresh) {
       const now = Date.now()
       const startAt = Math.max(now, nextSlotAt.current)

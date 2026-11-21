@@ -60,6 +60,16 @@ describe('AchievementToasts', () => {
     unmount()
   })
 
+  it('drops queued toasts when the epoch moves on', () => {
+    const { rerender, unmount } = render(ui(mk([]), { epoch: 0, earned: {} }))
+    rerender(ui(mk(['helloWorld', 'itCompiles']), { epoch: 0, earned: {} }))
+    act(() => { vi.advanceTimersByTime(1) })
+    rerender(ui(mk([]), { epoch: 1, earned: {} }))
+    act(() => { vi.advanceTimersByTime(1000) })
+    expect(toasts()).toHaveLength(1)
+    unmount()
+  })
+
   it('still shows offline toasts under StrictMode', () => {
     const { unmount } = render(<StrictMode>{ui(mk(['helloWorld']))}</StrictMode>)
     act(() => { vi.advanceTimersByTime(1) })
