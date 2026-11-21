@@ -387,9 +387,12 @@ const InlineAction = styled.span`
   ${props => props.$narrow && `
     flex-shrink: 0;
     margin-left: auto;
+    /* Common minimum so a wide cost (1,000 PP) doesn't shift its row's interval/Switch columns. */
+    min-width: 4.4rem;
 
     && > button {
       white-space: nowrap;
+      width: 100%;
       font-size: 0.78rem;
       min-height: 1.6rem;
       min-width: 0;
