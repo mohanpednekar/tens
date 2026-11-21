@@ -35,6 +35,13 @@ describe('AchievementsPage', () => {
     expect(screen.getByText(/⭐ 8\/8/)).toBeTruthy()
   })
 
+  it('collapses the tier purchases into one leveled row', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({ tier01Bought: true, tier02Bought: true, tier03Bought: true })} />)
+    openGroup('Tier ladder')
+    expect(screen.getByLabelText('First purchase achievement level 3 of 10')).toBeTruthy()
+    expect(screen.getByLabelText('Spent QB achievement not yet earned')).toBeTruthy()
+  })
+
   it('collapses ordered steps into one leveled row', () => {
     renderWithTheme(<AchievementsPage game={gameWith({ levelPower1: true, levelPower2: true, overclockStep1: true })} />)
     openGroup('Level power')

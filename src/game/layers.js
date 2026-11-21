@@ -240,6 +240,7 @@ export const ACHIEVEMENT_SERIES = [
     name: `${tier.symbol} Reclamation`,
     members: [`pool${String(index + 1).padStart(2, '0')}ResetI`, `pool${String(index + 1).padStart(2, '0')}ResetII`],
   })),
+  { id: 'tierBought', name: 'First purchase', members: TIER_DEFINITIONS.map((_, i) => `tier${String(i + 1).padStart(2, '0')}Bought`) },
   { id: 'accelerate', name: 'Accelerate', members: ['tickTock', 'megahertzMyth'] },
   { id: 'levelPower', name: 'Level power', members: LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((_, i) => `levelPower${i + 1}`) },
   { id: 'overclockStep', name: 'Overclock step', members: ['overclockStep1', 'overclockStep2', 'overclockStep3'] },
