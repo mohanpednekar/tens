@@ -78,15 +78,20 @@ describe('AchievementToasts', () => {
     unmount()
   })
 
-  it('caps simultaneous toasts and starts each lifetime only once it is shown', () => {
+  it('caps simultaneous toasts and still delivers every overflow toast', () => {
     const ids = ['helloWorld', 'itCompiles', 'pingOfDeath', 'kibiNotKilo', 'tier01Bought', 'tier02Bought', 'tier03Bought']
     const { rerender, unmount } = render(ui(mk([])))
     rerender(ui(mk(ids)))
-    act(() => { vi.advanceTimersByTime(2000) })
-    expect(toasts()).toHaveLength(5)
-    act(() => { vi.advanceTimersByTime(3000) })
-    expect(toasts().length).toBeGreaterThan(0)
-    act(() => { vi.advanceTimersByTime(10000) })
+    const shown = new Set()
+    let maxAtOnce = 0
+    for (let t = 0; t < 12000; t += 250) {
+      const region = screen.getByRole('status', { name: 'achievement notifications' })
+      maxAtOnce = Math.max(maxAtOnce, toasts().length)
+      Array.from(region.children).forEach(el => shown.add(el.textContent))
+      act(() => { vi.advanceTimersByTime(250) })
+    }
+    expect(maxAtOnce).toBe(5)
+    expect(shown.size).toBe(7)
     expect(toasts()).toHaveLength(0)
     unmount()
   })
