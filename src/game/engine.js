@@ -2376,11 +2376,11 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     if (ticksElapsed <= 0) return
 
     // Floored so owned/resources stay integer-valued: owned, ticksElapsed, scaleUpMultiplier
-    // (always a power of 2), tierMultiplier (fractional when Level power achievements raise the
-    // base — floored below along with the rest; see getPurchaseMilestoneMultiplier), and computeBoostMultiplier (always one of
-    // COMPUTE_BOOST_PRESETS' own integer multipliers, or 1) are already integers, so only the
-    // fractional Purge-count production multiplier (getPrestigeProductionMultiplier, e.g. 316
-    // Purges → ×3.5) can introduce a fraction here — always >= 1, so flooring never zeroes
+    // (always a power of 2) and computeBoostMultiplier (always one of COMPUTE_BOOST_PRESETS' own
+    // integer multipliers, or 1) are already integers, so only two factors can introduce a fraction
+    // here: tierMultiplier (fractional once Level power achievements raise the base; see
+    // getPurchaseMilestoneMultiplier) and the Purge-count production multiplier
+    // (getPrestigeProductionMultiplier, e.g. 316 Purges → ×3.5) — both always >= 1, so flooring never zeroes
     // out production for a tier with owned > 0. Neither tickspeed multiplier appears in this
     // formula at all anymore — they've already done their work by shrinking tickSpeed above, which
     // is what grew ticksElapsed.
