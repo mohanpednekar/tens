@@ -11,9 +11,11 @@ adversarial review, resolve threads, and merge directly in ascending PR-number o
 place that owns PR state instead of four event-driven workflows racing each other on the same PR.
 Trade-offs accepted: feedback and conflicts now wait for the next daily run instead of being handled
 within minutes, and a human GitHub approval no longer auto-enables auto-merge (the old Path 1).
-Workflow-file PRs stay human-gated for workflow-driven agents, but the routine may merge them:
-the gate existed only to stop workflows drifting by editing themselves in a loop, and a non-workflow
-routine can't form that loop. Current behavior: `docs/AUTOMATION.md` "PR babysitter" /
+Workflow-file PRs follow the maintainer's no-loop tenet: no workflow may update workflows, directly or
+indirectly, without human approval; an upstream actor that workflows never update can't form a loop.
+So the routine (whose prompt no workflow can edit) may merge workflow-file PRs that no workflow
+authored, but a workflow-authored one (e.g. `autonomous-maintenance.yml` editing a workflow) would be
+workflows updating themselves through the routine, so it still needs the maintainer's approval. Current behavior: `docs/AUTOMATION.md` "PR babysitter" /
 "Auto-merge".
 
 ### Game rules split into `src/CLAUDE.md` — 2026-11-18

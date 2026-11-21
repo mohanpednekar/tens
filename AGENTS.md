@@ -378,8 +378,8 @@ publicly visible but isn't legally reusable without written permission. No `CODE
 - Timer effects are cleaned up on unmount.
 - Save/load wraps `localStorage` in try/catch (quota/private-browsing) and strips
   `__proto__`/`constructor` from parsed JSON before merge.
-- `.github/workflows/**` changes require the repo owner's review (except via the PR babysitter routine,
-  which may merge them), enforced by `scripts/pr-low-risk-eligible.sh`'s exclusion and (once branch protection enables "Require review from Code Owners")
+- `.github/workflows/**` changes require the repo owner's review (the PR babysitter routine may merge one no
+  workflow authored — no workflow may update workflows, directly or indirectly, without human approval), enforced by `scripts/pr-low-risk-eligible.sh`'s exclusion and (once branch protection enables "Require review from Code Owners")
   `.github/CODEOWNERS`.
 
 Data Lakes (#1087): permanent 1-unit buffer (`fillBits`) + ×1/×10/×100/×1000 disks (`depositedUnits`); timed `lakeTransfer`s (`tickDataLakeTransfers`) move the buffer into ×1 disks and consolidate 9 smaller disks of every size + a full buffer into the next; ordinary pool disks fill directly (no write-cache flush). See `docs/ECONOMY_REFERENCE.md` "Hierarchical lake disks".
