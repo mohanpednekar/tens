@@ -53,12 +53,14 @@ import {
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
   AUTOBUYER_UNLOCK_MILESTONE_STEP,
   AUTOBUYER_INTERVAL_UPGRADE_BASE_COST,
+  TIER_TICKSPEED_INTERVAL_CONFIG,
   PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE,
   GLOBAL_AUTOMATION_UNLOCK_PURGES,
   AUTOMATION_INTERVAL_CONFIG,
   getStoragePoolMemoryBounds,
   DATA_STREAM_SPEED_EXPONENT_BASE,
   DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED,
+  OVERCLOCK_REQUIREMENT_STEP,
 } from 'game/layers'
 import { version } from '../../../package.json'
 import styled from 'styled-components'
@@ -590,8 +592,8 @@ const InfoPage = () => {
           </li>
           <li>
             The first claim needs {overclockFirstRequirement} completed levels — a minimum; you can
-            keep climbing first. Each later claim needs three more completed levels than the previous
-            claim was taken at.
+            keep climbing first. Each later claim needs {OVERCLOCK_REQUIREMENT_STEP} more completed levels
+            than the previous claim was taken at (fewer with the Overclock step achievements).
           </li>
           <li>
             Nothing is banked — each claim replaces the previous one, so only the completed level
@@ -617,7 +619,7 @@ const InfoPage = () => {
             upgrades on that same row shorten its interval down to 10 ms; each level after that
             doubles how many levels one attempt can buy, up to 1024. In Buy mode <strong>Single</strong>{' '}
             (Firmware → Prestige) an attempt buys one unit instead, at the same interval, and those extra levels pause. A tier autobuyer’s speed
-            upgrades start at {AUTOBUYER_INTERVAL_UPGRADE_BASE_COST} PP.
+            upgrades start at {AUTOBUYER_INTERVAL_UPGRADE_BASE_COST} PP × the tier’s number (10, 20, 30 …); its tickspeed autobuyer’s at {TIER_TICKSPEED_INTERVAL_CONFIG.baseCost} PP × the same.
           </li>
         </ul>
       </Section>

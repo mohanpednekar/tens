@@ -126,6 +126,8 @@ and 2 PP, which made the first levels trivially cheap. The bulk cap became exact
 8/16/32/64 PP bases (`getSiCleanDoublingFactor` is now the shared ladder; `getAutobuyerIntervalUpgradeCost`
 applies the 100 PP base on top).
 
+**Superseded (PR #1177):** at maintainer request the per-tier start returned — tier *n*'s autobuyer / tickspeed chains start at 10·n / 100·n PP — and every speed chain now advances along the clean 1…64,125,250,500 series via `siCleanSeriesCost` (10/100 bases use the 10×/100× variant, changeover at 1,250 / 12,500) instead of baseCost × ladder. Tiers 3/5/6/7/9 are therefore ×n multiples of the series, not on it.
+
 Later in the same PR the two tier lists (autobuyers, tickspeed autobuyers) merged back into one card per
 tier, mirroring the Factory row's own positions — ⚙ tickspeed on the left, 🤖 buy on the right — so the
 same tier's automations sit where the player already looks for them; capped, a tier is one line.
@@ -9633,3 +9635,16 @@ Bot PRs (e.g. #1123, #1128) sat `blocked` with all checks green for days. Path 2
 ## Feature cards: half-width pairs → full-width rows; Clock Speed → Accelerate (2026-11-20)
 
 The four Factory feature cards (#1137's side-by-side pairs of tall, bottom-pinned-button tiles) became short full-width rows (`SpeedCardsRow` is a column; `featureCard` is a grid) at the maintainer's request: the tall half-width tiles read as misaligned against the single-line tier rows. A first attempt (flex row, fixed `9rem` button, no breakpoints) was rejected in review — its button drifted left of the tier Buy column on phones and an opened disclosure squeezed its text into a ~140px column at 340px. The kept design mirrors `TierLine`'s padding and button track at each breakpoint through `--feature-button-width`, and drops the button below the text when the disclosure is open. The Scale Up/Overclock buttons lost their reduced-size overrides (all four use the default `Button`). Clock Speed was renamed to the verb **Accelerate** to match Restage/Scale Up/Overclock (player-facing only; `globalTickspeed*`, `speedUp`, `clockSpeedPower` unchanged); "Speed Up" was avoided because it was Scale Up's old name. "…'s per-level rate" phrasings became "the per-level speed bonus" since a verb takes no possessive.
+
+## Tier cost spacing growth and the 1.0 level-multiplier base (2026-11-21, #1178)
+
+- **Cost spacing:** `getTierCostExponent` used a constant per-tier spacing (tier N: +N powers of ten per level after the first three). It now grows by 1 after every `TIER_COST_SPACING_GROWTH_LEVELS` (10) increments at the same spacing. Alone this lengthened a fresh first Purge from 1d 4h 34m to 3d 20h 44m (ideal bot, `simulate-run-times`), so something had to give the speed back.
+- **Rejected:** a slower growth interval (15/20/30 levels: 3d 0h / 2d 7h / 1d 16h) and a flat multiplier raise (1.4: 1d 4h 14m; 1.5: 19h 6m) — the maintainer wanted the speed-up to be *earned*. Five-achievement variants on tier01–05 (first Purge 19h 49m), tier02/04/06/08/10 at 5 completed levels (20h 57m) and at level 10 (1d 1h 9m) were tried before settling.
+- **Shipped:** `PURCHASE_MILESTONE_MULTIPLIER_BASE` starts at 1.0; ten Level power achievements (one per tier, `purchaseLevels ≥ 10`, i.e. 9 completed levels) add 0.05 each to 1.5. First Purge 1d 12h 54m; second 20h 23m (~45% faster than the first, and faster than the original 1d 7h 36m); 5th/10th 1d 0h 20m / 20h 50m. Slow first Purge is accepted by design.
+- **Side effects:** daily-challenge runs start with no achievements (base 1.0), so `DAILY_GENERATOR_VERSION` → 6 and the fallback start balance 1e4 → 1e6 B to keep the reference bot inside each format's band.
+
+## Overclock step achievements (2026-11-21)
+
+- **Goal:** make Overclock "challenging at each step" without lengthening cycles. Findings from `simulate-run-times` (ideal bot, first Purge): a smaller Overclock step is always *slower* — more Overclocks per Purge means more resets (+2 step: 1d 19h 36m first Purge vs 1d 12h 54m; +1 via lifetime-count achievements made Purges 5/10 take 1d 22h / 1d 20h vs 1d 0h / 20h 50m) because the greedy bot claims every Overclock the moment it is available. A bot that never Overclocks finishes the first Purge in 1d 4h 14m.
+- **Rejected:** reductions earned by lifetime counts (Overclock claims, Purge count) — achievable but they lengthen later cycles once earned; level targets above 9 completed last-tier levels (the ideal bot never exceeds 9 in a Purge; QB reaches 9 at 24.6h of a 28.2h no-Overclock cycle); "Overclock while skipping Scale Ups" (the last tier only unlocks after all 9 claims in a loop).
+- **Shipped:** the step starts at 4 and each of three skill-based achievements (patience: first Overclock at 6+; restraint: two Overclocks without Accelerate; endurance: 12+ after DeGoogol) removes 1. The ideal bot never earns them, so its cycles are 30–45 minutes longer than at step 3 (first Purge 1d 13h 30m, then 21h 8m / 1d 0h 51m / 21h 20m for Purges 1/5/10); a player who earns Patient Overclock gets today's +3 back.

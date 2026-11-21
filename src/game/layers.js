@@ -174,12 +174,23 @@ export const LIVE_CHALLENGE_IDS = new Set(CHALLENGE_DEFINITIONS.map(def => def.i
 export const ACHIEVEMENTS_FEATURE = { enabled: true }
 // Daily challenges (epic #1062, basic slice): live in every build (maintainer request); mutable so tests can flip it.
 export const DAILY_CHALLENGES_FEATURE = { enabled: true }
+// Level power achievements (one per tier): each raises the per-level production multiplier
+// (PURCHASE_MILESTONE_MULTIPLIER_BASE) by this much; all ten reach 1.5 from the 1.0 base.
+export const LEVEL_POWER_ACHIEVEMENT_BONUS = 0.05
+export const LEVEL_POWER_ACHIEVEMENT_LEVEL = 10
+// Overclock step achievements: first Overclock of a Purge claimed at this many completed last-tier levels (min is 5),
+// and the post-DeGoogol claim depth.
+export const PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL = 6
+export const OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL = 12
+export const LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 // Groups in display order; `boostArea` is unused until the bonus slice (#1052).
 export const ACHIEVEMENT_GROUPS = [
   { id: 'firstSession', name: 'First session', boostArea: 'foundry' },
   { id: 'foundry', name: 'Foundry', boostArea: 'foundry' },
   { id: 'tierLadder', name: 'Tier ladder', boostArea: 'factory' },
   { id: 'earlyFactory', name: 'Early Factory', boostArea: 'factory' },
+  { id: 'levelPower', name: 'Level power', boostArea: 'factory' },
+  { id: 'overclockStep', name: 'Overclock step', boostArea: 'factory' },
 ]
 // `condition` is evaluated by engine.js `isAchievementConditionMet` against CURRENT state ("at least"
 // thresholds, so a save past a trigger earns it on load). `bonus` is a placeholder (#1052).
@@ -208,6 +219,17 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Accelerate level', condition: { kind: 'clockSpeedLevel', min: 1 } },
   { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Accelerate level 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
   { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', condition: { kind: 'overclocked' } },
+  ...LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((tierNumber, i) => ({
+    id: `levelPower${i + 1}`,
+    name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${LEVEL_POWER_ACHIEVEMENT_LEVEL}`,
+    group: 'levelPower',
+    trigger: `Reach level ${LEVEL_POWER_ACHIEVEMENT_LEVEL} on ${TIER_DEFINITIONS[tierNumber - 1].name} (${LEVEL_POWER_ACHIEVEMENT_LEVEL - 1} levels completed)`,
+    bonus: `The per-level production multiplier rises by ${LEVEL_POWER_ACHIEVEMENT_BONUS} (×1.0 → ×1.5 with all ten)`,
+    condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: LEVEL_POWER_ACHIEVEMENT_LEVEL },
+  })),
+  { id: 'overclockStep1', name: 'Patient Overclock', group: 'overclockStep', trigger: `Claim the first Overclock of a Purge at ${PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level than the one before (+4 → +3)', condition: { kind: 'counter', key: 'maxFirstOverclock', min: PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL } },
+  { id: 'overclockStep2', name: 'Overclock fast', group: 'overclockStep', trigger: 'After Patient Overclock, claim two Overclocks in one Purge without buying any Accelerate', bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+3 → +2)', condition: { kind: 'counter', key: 'acceleratelessOverclocks', min: 1 } },
+  { id: 'overclockStep3', name: 'Beyond Googol', group: 'overclockStep', trigger: `After Overclock fast and DeGoogol, claim an Overclock at ${OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+2 → +1)', condition: { kind: 'counter', key: 'overflowDeepOverclock', min: 1 } },
 ].map(def => ({ secret: false, platformDependent: false, bonus: null, ...def }))
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.map(def => [def.id, def]))
 // Base PP earning rate beyond Googol: 1 PP per this many additional money-exponent "powers"
@@ -718,6 +740,9 @@ export const DEFAULT_PURCHASE_BLOCK_SIZE = 8
 // growth to the same "flagship" progress marker getScaleUpRequirement/isLastTierTickspeedXpUnlocked/
 // purgeCardEverRevealed already key off, rather than any other tier or a global total.
 export const PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100
+// Factory tier cost spacing (powers of ten between consecutive levels, after the first three) starts at
+// the tier number and grows by 1 after every this-many levels at the same spacing (getTierCostExponent).
+export const TIER_COST_SPACING_GROWTH_LEVELS = 10
 // The amount the block size grows by every PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS.
 export const PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1
 
@@ -727,13 +752,13 @@ export const PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1
 // A power of two so the autobuyer bulk doubling (below) lands exactly on it.
 export const BUY_MAX_ITERATION_CAP = 1024
 
-// A tier's production is multiplied by 1.25 at every completed level (see engine.js's
-// getPurchaseMilestoneMultiplier), compounding per completed level — the per-level multiplier
-// normally applied. Raised from 1.1 to 1.25 to shorten a fresh-save run to first Prestige (roughly
+// A tier's production is multiplied by this at every completed level (see engine.js's
+// getPurchaseMilestoneMultiplier/getLevelMultiplierBase), compounding per completed level. It now starts at 1.0
+// and Level power achievements add 0.05 each up to 1.5. Earlier: raised from 1.1 to 1.25 to shorten a fresh-save run to first Prestige (roughly
 // 2.2x faster per the simulate-run-times skill — 2d7h → ~1d1h38m at PP 0) without materially
 // changing Overclock's own claim shape, which stays gated on the last tier's completed levels
 // (getOverclockRequirement), not this multiplier — see docs/DESIGN_HISTORY.md.
-export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.25
+export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.0
 // Every 10th level uses this larger multiplier instead of PURCHASE_MILESTONE_MULTIPLIER_BASE for
 // that one level — a bigger milestone every 10 levels on top of the regular one every level (see
 // engine.js's getPurchaseMilestoneMultiplier). This "every 10th level" cadence is independent of
@@ -784,16 +809,16 @@ export const AUTOBUYER_BULK_MAX_EXTRA_LEVELS = Math.floor(Math.log2(BUY_MAX_ITER
 // autobuyer's purchase-attempt interval by AUTOBUYER_INTERVAL_MULTIPLIER, from the tier's base (tier N =
 // N × AUTOBUYER_BASE_INTERVAL_SECONDS, i.e. 1 s … 10 s) down to
 // the AUTOBUYER_MIN_INTERVAL_SECONDS floor (see engine.js's getAutobuyerIntervalSeconds /
-// getAutobuyerIntervalMaxLevel). Cost: AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10 PP, same for every
-// tier), doubling per level on the SI-clean 1,2,4,…,64,125,250,500 ladder (×1000 every ten levels) —
+// getAutobuyerIntervalMaxLevel). Cost: AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10 PP × tier number: 10, 20, 30 …),
+// doubling per level on the SI-clean 1,2,4,…,64,125,250,500 ladder (×1000 every ten levels) —
 // see engine.js's getAutobuyerIntervalUpgradeCost.
 export const AUTOBUYER_INTERVAL_UPGRADE_BASE_COST = 10
 export const AUTOBUYER_BASE_INTERVAL_SECONDS = 1
 export const AUTOBUYER_INTERVAL_MULTIPLIER = 0.9
 export const AUTOBUYER_MIN_INTERVAL_SECONDS = 0.01
 // Interval upgrade chains for the global/per-tier automations (engine.js's
-// buyAutomationIntervalUpgrade / buyTierTickspeedIntervalUpgrade): cost = baseCost × the same
-// 1,2,4,…,64,125,… ladder as the tier autobuyer chain; interval = baseSeconds × 0.9^level, 10 ms floor.
+// buyAutomationIntervalUpgrade / buyTierTickspeedIntervalUpgrade): cost = baseCost's rung of the same
+// 1,2,4,…,64,125,… series, advanced per level (siCleanSeriesCost; per-tier chains × tier number); interval = baseSeconds × 0.9^level, 10 ms floor.
 // baseCost is the first interval-upgrade level's cost; every automation itself unlocks by Purge
 // count (GLOBAL_AUTOMATION_UNLOCK_PURGES, tier milestones) with no unlock cost — only the upgrades.
 // Purge count at which each global automation unlocks automatically (no PP cost; see engine.js's
@@ -852,7 +877,7 @@ export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // is available at 5 completed final-tier levels; each later claim requires the completed-level
 // count the previous claim was taken at, plus this step (see getOverclockRequirement/
 // overclockGame in engine.js).
-export const OVERCLOCK_REQUIREMENT_STEP = 3
+export const OVERCLOCK_REQUIREMENT_STEP = 4
 // The last tier (QB) is credited exactly 1 unit every interval of LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS / (1 + log10(levels))
 // seconds at `levels` COMPLETED purchase levels (purchaseLevels - 1): every 10 s at 1, 5 s at 10, 3.33 s at 100, never faster
 // than LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS; independent of its balance/owned count (engine.js's tickGame).

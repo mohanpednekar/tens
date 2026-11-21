@@ -729,9 +729,10 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
   expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 })
 
-test('reaching 8 lifetime purchases of a tier multiplies its displayed production by ×1.25', async () => {
+test('reaching 8 lifetime purchases of a tier multiplies its displayed production by the level multiplier (×1.25 with five Level power achievements)', async () => {
   const user = userEvent.setup()
   seedMainGameState({
+    achievements: { earned: Object.fromEntries([1, 2, 3, 4, 5].map(n => [`levelPower${n}`, true])), counters: { pings: 0 } },
     resources: { base: 10 },
     owned: { tier01: 10 },
     purchased: { tier01: 8 },
@@ -1458,15 +1459,15 @@ test('the Overclock panel appears once the last tier unlocks, with the button di
     resources: { base: 10 },
     owned: { tier09: 10 },
     everUnlockedTierIds: { tier01: true, tier10: true },
-    // Last claim was taken at 3 completed levels -> this one's requirement is 6 (3 + 3).
+    // Last claim was taken at 3 completed levels -> this one's requirement is 7 (3 + 4).
     purchaseLevels: { tier09: 3, tier10: 3 }, // 2 completed — short
     overclockLastClaimCompletedLevels: 3,
   })
   render(<App />)
 
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /overclock \(requires 6 completed quettabytes levels/i })).toBeDisabled()
-  expect(screen.getByRole('progressbar', { name: /overclock progress/i })).toHaveAttribute('aria-valuenow', '33')
+  expect(screen.getByRole('button', { name: /overclock \(requires 7 completed quettabytes levels/i })).toBeDisabled()
+  expect(screen.getByRole('progressbar', { name: /overclock progress/i })).toHaveAttribute('aria-valuenow', '29')
 })
 
 test('the Overclock button is enabled once the last tier reaches the required completed-level count', () => {
@@ -1474,12 +1475,12 @@ test('the Overclock button is enabled once the last tier reaches the required co
     resources: { base: 10 },
     owned: { tier09: 10 },
     everUnlockedTierIds: { tier01: true, tier10: true },
-    purchaseLevels: { tier09: 3, tier10: 7 }, // 6 completed — meets lastClaim(3) + 3
+    purchaseLevels: { tier09: 3, tier10: 8 }, // 7 completed — meets lastClaim(3) + 4
     overclockLastClaimCompletedLevels: 3,
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /overclock \(requires 6 completed quettabytes levels/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires 7 completed quettabytes levels/i })).toBeEnabled()
 })
 
 test('the first Overclock claim of a cycle is never free — a completely untouched last tier (0 completed levels) is not enough', () => {
@@ -1494,18 +1495,18 @@ test('the first Overclock claim of a cycle is never free — a completely untouc
   expect(screen.getByRole('button', { name: /overclock \(requires 5 completed quettabytes levels/i })).toBeDisabled()
 })
 
-test('the next Overclock requires three more completed levels than the count the previous claim was taken at', () => {
+test('the next Overclock requires four more completed levels than the count the previous claim was taken at', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
     everUnlockedTierIds: { tier01: true, tier10: true },
-    // Claimed at 7 completed before -> next requirement is 10: at 9 completed it's still off.
+    // Claimed at 7 completed before -> next requirement is 11: at 9 completed it's still off.
     purchaseLevels: { tier09: 3, tier10: 10 },
     overclockLastClaimCompletedLevels: 7,
   })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /overclock \(requires 10 completed quettabytes levels/i })
+  const button = screen.getByRole('button', { name: /overclock \(requires 11 completed quettabytes levels/i })
   expect(button).toBeDisabled()
 })
 
@@ -1514,8 +1515,8 @@ test('the Overclock button shows the per-level Overclock effect and completed-le
     resources: { base: 10 },
     owned: { tier09: 10 },
     everUnlockedTierIds: { tier01: true, tier10: true },
-    // Previous claim at 4 completed -> requirement 7; the last tier is already at exactly 7.
-    purchaseLevels: { tier09: 3, tier10: 8 },
+    // Previous claim at 4 completed -> requirement 8; the last tier is already at exactly 8.
+    purchaseLevels: { tier09: 3, tier10: 9 },
     overclockLastClaimCompletedLevels: 4,
   })
   render(<App />)
@@ -1523,10 +1524,10 @@ test('the Overclock button shows the per-level Overclock effect and completed-le
   // The button shows the fixed per-level effect (×1.1) and completed/required last-tier levels — no
   // computed total rate.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires 7 completed quettabytes levels\) — resets scale up's bonus; each completed quettabytes level \(7 now\) multiplies the per-level speed bonus by ×1\.1/i,
+    name: /overclock \(requires 8 completed quettabytes levels\) — resets scale up's bonus; each completed quettabytes level \(8 now\) multiplies the per-level speed bonus by ×1\.1/i,
   })).toBeInTheDocument()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('🌐 +10%/lvl')
-  expect(screen.getByRole('button', { name: /^overclock \(requires/i })).toHaveTextContent('⚡ QB 7/7')
+  expect(screen.getByRole('button', { name: /^overclock \(requires/i })).toHaveTextContent('⚡ QB 8/8')
 })
 
 test('Accelerate shows the actual live per-level effect beside the name (Overclock-scaled), and the plain 1% before any Overclock', () => {

@@ -6194,34 +6194,34 @@ describe('getAutoPurgeAttemptRate', () => {
 // purchased count.
 describe('getPurchaseMilestoneMultiplier', () => {
   it('returns 1 at level 1', () => {
-    expect(getPurchaseMilestoneMultiplier(1)).toBe(1)
+    expect(getPurchaseMilestoneMultiplier(1, 1.25)).toBe(1)
   })
 
   it('compounds x1.25 per completed level', () => {
-    expect(getPurchaseMilestoneMultiplier(2)).toBeCloseTo(1.25)
-    expect(getPurchaseMilestoneMultiplier(3)).toBeCloseTo(1.5625)
-    expect(getPurchaseMilestoneMultiplier(4)).toBeCloseTo(1.953125)
+    expect(getPurchaseMilestoneMultiplier(2, 1.25)).toBeCloseTo(1.25)
+    expect(getPurchaseMilestoneMultiplier(3, 1.25)).toBeCloseTo(1.5625)
+    expect(getPurchaseMilestoneMultiplier(4, 1.25)).toBeCloseTo(1.953125)
   })
 
   it('treats level 0 and negative levels as level 1', () => {
-    expect(getPurchaseMilestoneMultiplier(0)).toBe(1)
-    expect(getPurchaseMilestoneMultiplier(-1)).toBe(1)
+    expect(getPurchaseMilestoneMultiplier(0, 1.25)).toBe(1)
+    expect(getPurchaseMilestoneMultiplier(-1, 1.25)).toBe(1)
   })
 
   it('uses a 10x jump instead of x1.25 for the 10th completed level (level 11)', () => {
     // 9 regular completed levels (1.25^9) × 1 mega level (10x) — not the 1.25^10 a plain
     // compounding ladder would give. This "every 10th level" mega cadence stays fixed at 10 levels,
     // independent of the (now variable) purchase block size.
-    expect(getPurchaseMilestoneMultiplier(10)).toBeCloseTo(1.25 ** 9)
-    expect(getPurchaseMilestoneMultiplier(11)).toBeCloseTo(1.25 ** 9 * 10)
+    expect(getPurchaseMilestoneMultiplier(10, 1.25)).toBeCloseTo(1.25 ** 9)
+    expect(getPurchaseMilestoneMultiplier(11, 1.25)).toBeCloseTo(1.25 ** 9 * 10)
   })
 
   it('resumes regular x1.25 levels after a mega level, on top of its 10x', () => {
-    expect(getPurchaseMilestoneMultiplier(12)).toBeCloseTo(1.25 ** 10 * 10)
+    expect(getPurchaseMilestoneMultiplier(12, 1.25)).toBeCloseTo(1.25 ** 10 * 10)
   })
 
   it('applies a second 10x mega level at level 21', () => {
-    expect(getPurchaseMilestoneMultiplier(21)).toBeCloseTo(1.25 ** 18 * 10 ** 2)
+    expect(getPurchaseMilestoneMultiplier(21, 1.25)).toBeCloseTo(1.25 ** 18 * 10 ** 2)
   })
 })
 
@@ -6295,18 +6295,18 @@ describe('getOverclockRequirement', () => {
     expect(getOverclockRequirement({})).toBe(5)
   })
 
-  it('requires three more completed levels than the count the previous claim was actually taken at', () => {
-    // available at 5, claimed at 7 -> next at 10; claimed at 11 -> next at 14.
-    expect(getOverclockRequirement({ overclockLastClaimCompletedLevels: 7 })).toBe(10)
-    expect(getOverclockRequirement({ overclockLastClaimCompletedLevels: 11 })).toBe(14)
+  it('requires four more completed levels than the count the previous claim was actually taken at', () => {
+    // available at 5, claimed at 7 -> next at 11; claimed at 11 -> next at 15.
+    expect(getOverclockRequirement({ overclockLastClaimCompletedLevels: 7 })).toBe(11)
+    expect(getOverclockRequirement({ overclockLastClaimCompletedLevels: 11 })).toBe(15)
   })
 
   it('falls back to the legacy banked overclockCount for saves written before overclockLastClaimCompletedLevels existed', () => {
-    expect(getOverclockRequirement({ overclockCount: 8 })).toBe(11)
+    expect(getOverclockRequirement({ overclockCount: 8 })).toBe(12)
   })
 
-  it('treats a negative recorded claim as 0 (+3)', () => {
-    expect(getOverclockRequirement({ overclockLastClaimCompletedLevels: -1 })).toBe(3)
+  it('treats a negative recorded claim as 0 (+4)', () => {
+    expect(getOverclockRequirement({ overclockLastClaimCompletedLevels: -1 })).toBe(4)
   })
 })
 
@@ -9132,7 +9132,7 @@ describe('scaleUpGame', () => {
     const state = { ...eligibleState(), overclockCount: 8 }
     const after = scaleUpGame(state)
     expect(getOverclockLevel(after)).toBe(8)
-    expect(getOverclockRequirement(after)).toBe(11)
+    expect(getOverclockRequirement(after)).toBe(12)
   })
 
   it('keeps the Overclock level across an ordinary Scale Up', () => {
@@ -9187,46 +9187,47 @@ describe('overclockGame', () => {
     expect(after.overclockLastClaimCompletedLevels).toBe(5)
   })
 
-  it('requires three more completed levels than the count the last claim was taken at', () => {
-    // Claimed at 7 completed levels -> next requirement is 10 completed: raw purchaseLevels 10
-    // (9 completed) is too early, raw 11 (10 completed) is eligible.
+  it('requires four more completed levels than the count the last claim was taken at', () => {
+    // Claimed at 7 completed levels -> next requirement is 11 completed: raw purchaseLevels 11
+    // (10 completed) is too early, raw 12 (11 completed) is eligible.
     const stillEarly = {
-      ...withPurchaseLevel(createInitialGameState(), lastTier.id, 10),
+      ...withPurchaseLevel(createInitialGameState(), lastTier.id, 11),
       overclockLastClaimCompletedLevels: 7,
     }
     expect(overclockGame(stillEarly)).toBe(stillEarly)
 
     const eligible = {
-      ...withPurchaseLevel(createInitialGameState(), lastTier.id, 11),
+      ...withPurchaseLevel(createInitialGameState(), lastTier.id, 12),
       overclockLastClaimCompletedLevels: 7,
     }
     const after = overclockGame(eligible)
-    expect(after.overclockLastClaimCompletedLevels).toBe(10)
+    expect(after.overclockLastClaimCompletedLevels).toBe(11)
   })
 
   it('sets the Overclock level to the whole current completed-level count in one claim — Overclocking at a count ABOVE the minimum is allowed and next-requirement grows from the actual claim', () => {
-    // Last claimed at 5 completed (requirement 8); the player keeps climbing to 11 completed —
-    // a single claim replaces the level with 11 and pushes the next requirement to 14, not to a
-    // predetermined 8-then-11 slot.
+    // Last claimed at 5 completed (requirement 9); the player keeps climbing to 11 completed —
+    // a single claim replaces the level with 11 and pushes the next requirement to 15, not to a
+    // predetermined 9-then-13 slot.
     const state = {
       ...withPurchaseLevel(createInitialGameState(), lastTier.id, 12),
       overclockLastClaimCompletedLevels: 5,
+      accelerateBoughtThisCycle: true, // keeps the 'without Accelerate' step achievement out of this test
     }
     const after = overclockGame(state)
     expect(after.overclockLastClaimCompletedLevels).toBe(11)
-    expect(getOverclockRequirement(after)).toBe(14)
+    expect(getOverclockRequirement(after)).toBe(15)
   })
 
   it('does not accumulate across claims — the multiplier follows only the level reached at the latest claim', () => {
     const prior = {
-      ...withPurchaseLevel(createInitialGameState(), lastTier.id, 7), // 6 completed
+      ...withPurchaseLevel(createInitialGameState(), lastTier.id, 8), // 7 completed
       overclockLastClaimCompletedLevels: 3,
     }
     const after = overclockGame(prior)
-    expect(after.overclockLastClaimCompletedLevels).toBe(6)
+    expect(after.overclockLastClaimCompletedLevels).toBe(7)
     expect(after.overclockCount).toBeUndefined()
     expect(getGlobalTickspeedProductionMultiplier(9, getOverclockLevel(after)))
-      .toBeCloseTo(getGlobalTickspeedProductionMultiplier(9, 6))
+      .toBeCloseTo(getGlobalTickspeedProductionMultiplier(9, 7))
   })
 
   it('resets the aggregate Scale Up count and per-tier production bonuses to 0', () => {
@@ -12352,7 +12353,14 @@ const withPpForInterval = (points, autobuyer = 1) => {
 
 describe('autobuyer interval upgrade', () => {
   it('costs 10 PP doubling on the 125-based ladder', () => {
-    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(getAutobuyerIntervalUpgradeCost)).toEqual([10, 20, 40, 640, 1250, 2500, 5000, 10000, 20000])
+    expect([0, 1, 2, 6, 7, 8, 9, 10, 11].map(l => getAutobuyerIntervalUpgradeCost(l))).toEqual([10, 20, 40, 640, 1250, 2500, 5000, 10000, 20000])
+  })
+
+  it('scales the first cost by tier number (10, 20, 30 … PP) on both tier chains', () => {
+    const ids = TIER_DEFINITIONS.map(t => t.id)
+    expect(ids.map(id => getAutobuyerIntervalUpgradeCost(0, id))).toEqual([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+    expect(ids.map(id => getTierTickspeedIntervalUpgradeCost(0, id))).toEqual([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])
+    expect(getAutobuyerIntervalUpgradeCost(7, 'tier03')).toBe(3750)
   })
 
   it('multiplies the interval by 0.9 per level and caps at 10ms', () => {
@@ -12431,7 +12439,7 @@ describe('automation interval chains', () => {
   })
 
   it('double on the 125-based ladder and cap at 10ms', () => {
-    expect([6, 7, 8, 10].map(l => getAutomationIntervalUpgradeCost('speedUp', l))).toEqual([512, 1000, 2000, 8000])
+    expect([6, 7, 8, 10].map(l => getAutomationIntervalUpgradeCost('speedUp', l))).toEqual([500, 1000, 2000, 8000])
     for (const k of ['speedUp', 'scaleUp', 'overclock', 'purge']) {
       const s = { ...base(), automationIntervalLevels: { ...base().automationIntervalLevels, [k]: getAutomationIntervalMaxLevel(k) } }
       expect(getAutomationIntervalSeconds(s, k)).toBe(0.01)
@@ -13013,5 +13021,16 @@ describe('getChargerUnlockProgress / Charger progress carry (#1141 follow-up)', 
     const rebooted = eraGame({ ...seeded, purge: { ...seeded.purge, points: ERA_ELIGIBILITY_PP } })
     expect(getChargerUnlockProgress(rebooted, 'autoMergeCoresIntoNode')).toBe(7)
     expect(getChargerUnlockProgress(resetByteFoundry(seeded), 'autoMergeCoresIntoNode')).toBe(0)
+  })
+})
+
+describe('getTierCostExponent spacing growth', () => {
+  test('spacing grows by 1 after every 10 increments at the same spacing', () => {
+    const tier = { id: 'tier01' }
+    const gaps = []
+    for (let e = 3; e <= 24; e++) gaps.push(getTierCostExponent(tier, e) - getTierCostExponent(tier, e - 1))
+    expect(gaps.slice(0, 10)).toEqual(Array(10).fill(1))
+    expect(gaps.slice(10, 20)).toEqual(Array(10).fill(2))
+    expect(gaps.slice(20)).toEqual([3, 3])
   })
 })

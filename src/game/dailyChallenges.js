@@ -46,7 +46,7 @@ import { BITS_PER_BYTE, DAILY_CHALLENGES_FEATURE, MONEY_ID, TIER_DEFINITIONS } f
 
 // Bump whenever generator data, the reference bot, or the engine behavior the generator simulates (e.g. the order
 // automations run in within a tick) changes; a run on another version is dropped.
-export const DAILY_GENERATOR_VERSION = 5
+export const DAILY_GENERATOR_VERSION = 7
 export const DAILY_MAX_CREDITS = 4
 // Candidates per (date, format) before the fixed known-good fallback (no modifiers, no head start) is used.
 export const DAILY_MAX_GENERATION_ATTEMPTS = 8
@@ -384,8 +384,8 @@ export const buildDailyCandidate = (dateId, formatId, attempt) => {
   const seed = hashString(`${dateId}|${formatId}|v${DAILY_GENERATOR_VERSION}|${attempt}`)
   const rng = createRng(seed)
 
-  // Seeded starting balance: 1, 2 or 5 × a seeded power of ten (the fallback uses a plain 10,000 B).
-  const startBytes = fallback ? 1e4 : DAILY_START_MANTISSAS[Math.floor(rng() * DAILY_START_MANTISSAS.length)] * 10 ** pickInt(rng, format.startExponent)
+  // Seeded starting balance: 1, 2 or 5 × a seeded power of ten (the fallback uses a plain 1,000,000 B).
+  const startBytes = fallback ? 1e6 : DAILY_START_MANTISSAS[Math.floor(rng() * DAILY_START_MANTISSAS.length)] * 10 ** pickInt(rng, format.startExponent)
   const modifiers = []
   if (!fallback) {
     const pool = [...DAILY_MODIFIER_POOL]
