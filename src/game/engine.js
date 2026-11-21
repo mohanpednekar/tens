@@ -8273,9 +8273,8 @@ const scaleUpGameCore = state => {
 // without ever buying Accelerate this cycle, and a claim at OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL+ completed
 // last-tier levels after DeGoogol.
 const recordOverclockAchievementCounters = (before, after) => {
-  // Challenge runs change what 'last tier' and Accelerate mean (F6 caps the tier ladder, F21 disables Accelerate),
-  // so they never count toward these permanent achievements.
-  if (getActiveChallenge(before)) return after
+  // Deliberately NO challenge exclusion: using a challenge's modified rules (F6 caps the tier ladder, F21 disables
+  // Accelerate, ...) to earn these is a valid strategy — and nothing player-facing may mention or hint at it.
   const completed = Math.max(0, (before.purchaseLevels?.[getEffectiveLastTier(before).id] ?? 1) - 1)
   const counters = { pings: 0, ...after.achievements?.counters }
   const firstOfCycle = getOverclockLevel(before) === null

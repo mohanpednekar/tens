@@ -245,18 +245,16 @@ describe('Overclock step achievements', () => {
     expect(eraGame(rebootable).accelerateBoughtThisCycle).toBe(false)
   })
 
-  it('claims inside a challenge never record the counters (F6 shrinks the tier ladder)', () => {
+  it('claims inside a challenge count like any other (F6 caps the ladder, so its last tier is Exabytes)', () => {
     const base = fresh()
     const inF6 = {
       ...base,
       challenges: { ...base.challenges, active: 'F6', run: {} },
-      purge: { ...base.purge, unboundedUnlocked: true },
-      purchaseLevels: { ...base.purchaseLevels, tier06: 13 },
+      purchaseLevels: { ...base.purchaseLevels, tier06: 7 },
     }
     const after = overclockGame(inF6)
-    expect(after.overclockLastClaimCompletedLevels).toBe(12) // the claim itself still works
-    expect(isAchievementEarned(after, 'overclockStep1')).toBe(false)
-    expect(isAchievementEarned(after, 'overclockStep3')).toBe(false)
+    expect(after.overclockLastClaimCompletedLevels).toBe(6)
+    expect(isAchievementEarned(after, 'overclockStep1')).toBe(true)
   })
 
   it('a legacy save (no accelerateBoughtThisCycle key) that is mid-cycle never gets Overclock fast for free', () => {
