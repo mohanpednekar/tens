@@ -177,7 +177,7 @@ export const DAILY_CHALLENGES_FEATURE = { enabled: true }
 // Level power achievements (one per tier in LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS: every other tier, 2, 4, … 10): each raises the per-level production multiplier
 // (PURCHASE_MILESTONE_MULTIPLIER_BASE) by this much; all five reach 1.5.
 export const LEVEL_POWER_ACHIEVEMENT_BONUS = 0.05
-export const LEVEL_POWER_ACHIEVEMENT_LEVELS = 5
+export const LEVEL_POWER_ACHIEVEMENT_LEVEL = 10
 export const LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS = [2, 4, 6, 8, 10]
 // Groups in display order; `boostArea` is unused until the bonus slice (#1052).
 export const ACHIEVEMENT_GROUPS = [
@@ -218,9 +218,9 @@ export const ACHIEVEMENT_DEFINITIONS = [
     id: `levelPower${i + 1}`,
     name: ['Level up', 'Leveled', 'Level headed', 'Level best', 'Level playing field'][i],
     group: 'levelPower',
-    trigger: `Complete ${LEVEL_POWER_ACHIEVEMENT_LEVELS} levels on ${TIER_DEFINITIONS[tierNumber - 1].name}`,
+    trigger: `Reach level ${LEVEL_POWER_ACHIEVEMENT_LEVEL} on ${TIER_DEFINITIONS[tierNumber - 1].name}`,
     bonus: `The per-level production multiplier rises by ${LEVEL_POWER_ACHIEVEMENT_BONUS} (×1.25 → ×1.5 with all five)`,
-    condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: LEVEL_POWER_ACHIEVEMENT_LEVELS + 1 },
+    condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: LEVEL_POWER_ACHIEVEMENT_LEVEL },
   })),
 ].map(def => ({ secret: false, platformDependent: false, bonus: null, ...def }))
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.map(def => [def.id, def]))
