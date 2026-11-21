@@ -1564,9 +1564,9 @@ export const buyPrestigeDoublePp = state => {
 // completes another level — the same boundary where getTierCost's cost-epoch exponent steps up, so
 // completing a fresh level always pays off with production alongside the steeper price. But every
 // 10th level is a bigger milestone: that one level contributes PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE
-// (10x) instead of the regular 1.25x, compounding into every other level's factor —
+// (10x) instead of the regular `base`x, compounding into every other level's factor —
 // levelsCompleted = level - 1; megaBlocks = floor(levelsCompleted/10); multiplier =
-// PURCHASE_MILESTONE_MULTIPLIER_BASE^(levelsCompleted-megaBlocks) *
+// base^(levelsCompleted-megaBlocks) *
 // PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE^megaBlocks. This "every 10th level" mega cadence is
 // independent of the (now variable) block size — it stays a fixed 10, regardless of how many
 // purchases make up one level. Applies to every tier uniformly, regardless of whether the
@@ -2376,8 +2376,8 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     if (ticksElapsed <= 0) return
 
     // Floored so owned/resources stay integer-valued: owned, ticksElapsed, scaleUpMultiplier
-    // (always a power of 2), tierMultiplier (always a product of powers of 2 and 10 — see
-    // getPurchaseMilestoneMultiplier), and computeBoostMultiplier (always one of
+    // (always a power of 2), tierMultiplier (fractional when Level power achievements raise the
+    // base — floored below along with the rest; see getPurchaseMilestoneMultiplier), and computeBoostMultiplier (always one of
     // COMPUTE_BOOST_PRESETS' own integer multipliers, or 1) are already integers, so only the
     // fractional Purge-count production multiplier (getPrestigeProductionMultiplier, e.g. 316
     // Purges → ×3.5) can introduce a fraction here — always >= 1, so flooring never zeroes
