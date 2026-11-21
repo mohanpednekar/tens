@@ -1516,9 +1516,9 @@ const MainPage = ({ game }) => {
           // average — matching exactly what tickGame credits (see "Tier production tickspeed" in
           // CLAUDE.md); neither tickspeed multiplier appears here since both now speed up
           // *delivery frequency* instead of inflating the per-delivery amount. Floored to match
-          // tickGame's own floored production credit — prestigeBonus is the only fractional factor
-          // left here (getPurchaseMilestoneMultiplier can be fractional with Level power bonuses; getTierScaleUpMultiplier is a power of 2
-          // outside a Scale Up-weakening challenge), so without flooring this preview could show a fraction that never actually lands.
+          // tickGame's own floored production credit — several factors here can be fractional
+          // (prestigeBonus, getPurchaseMilestoneMultiplier with Level power bonuses, challenge production), so without flooring this
+          // preview could show a fraction that never actually lands.
           const milestoneMultiplier = getPurchaseMilestoneMultiplier(tierLevel, getLevelMultiplierBase(state))
           const tierScaleUpMultiplier = getTierScaleUpMultiplier(state, tier.id)
           const production = Math.floor(owned * prestigeBonus * tierScaleUpMultiplier * milestoneMultiplier * getChallengeProductionMultiplier(state, tier.id))
