@@ -1403,10 +1403,8 @@ the autobuyer and Auto Purge attempt-budget threshold checks.
 be an integer. Of the factors in a tier's production credit (`owned × ticksElapsed × multiplier ×
 scaleUpMultiplier × getPurchaseMilestoneMultiplier(purchased)`, where `multiplier` is
 `getPrestigeProductionMultiplier(purge.count, unlocked)` — flat `1` until the speed bonus is bought, else the log curve below),
-`owned`/`ticksElapsed` are already integers, `getTierScaleUpMultiplier` is always a power of 2, and
-`getPurchaseMilestoneMultiplier` can be fractional once Level power achievements raise its base (see its own row above); the credit is floored —
-the fractional factors are `getPurchaseMilestoneMultiplier` (above) and `getPrestigeProductionMultiplier` (`1 + log10(purge.count)` once
-bought, else `1`). **Neither tickspeed multiplier appears in this formula** — `getTickspeedProductionMultiplier`
+`owned`/`ticksElapsed` are already integers, but the other factors can be fractional — `getPurchaseMilestoneMultiplier` once Level power achievements raise its base (see its own row above), `getPrestigeProductionMultiplier` (`1 + log10(purge.count)` once
+bought, else `1`), the Flops boost, and challenge production (which can be below 1, so a small credit can floor to 0); `getTierScaleUpMultiplier` is a power of 2 outside a `scaleUpPower` lever. The whole credit is floored. **Neither tickspeed multiplier appears in this formula** — `getTickspeedProductionMultiplier`
 (`1.1^(level - 1)`) and `getGlobalTickspeedProductionMultiplier` (compounding, with a milestone level
 using a bigger step — see its own row above) are instead divided into
 the *period* `ticksElapsed` counts against (see `getEffectiveTierTickSpeedSeconds`/"Tier production
