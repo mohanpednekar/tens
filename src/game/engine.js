@@ -7368,12 +7368,17 @@ export const getAutobuyerSpeedUpgradeMaxLevel = tierId => getAutobuyerIntervalMa
 export const getSiCleanDoublingFactor = level =>
   SI_CLEAN_LOCAL_SEQUENCE[level % 10] * (1000 ** Math.floor(level / 10))
 
-// Cost on the clean 1,2,4,8,16,32,64,125,250,500 (×1000 per ten) series: `base` must be a series value
-// (1…500); the cost is that rung advanced `level` rungs, so every displayed cost stays clean
-// (never 5.12e17 / 1.6e13 from multiplying a base into the ladder).
+// Cost on the clean 1,2,4,8,16,32,64,125,250,500 series (×1000 per ten). `base` is a series rung times a
+// power of ten (8, 16 … 64; 10 → 10,20,…,640,1250; 100 → 100,200,…,6400,12500), so the changeover to
+// 125 happens at 1250 / 12500 for the 10× / 100× variants and every cost stays clean.
 const siCleanSeriesCost = (base, level) => {
-  const start = Math.max(0, SI_CLEAN_LOCAL_SEQUENCE.indexOf(base))
-  return getSiCleanDoublingFactor(start + level)
+  let scale = 1
+  let start = SI_CLEAN_LOCAL_SEQUENCE.indexOf(base)
+  while (start === -1 && scale < base) {
+    scale *= 10
+    start = SI_CLEAN_LOCAL_SEQUENCE.indexOf(base / scale)
+  }
+  return scale * getSiCleanDoublingFactor(Math.max(0, start) + level)
 }
 
 // Tier autobuyer speed: AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10 PP) × the doubling ladder, every tier alike.
