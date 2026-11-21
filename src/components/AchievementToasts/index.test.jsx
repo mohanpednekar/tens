@@ -67,6 +67,8 @@ describe('AchievementToasts', () => {
     rerender(ui(mk([]), { epoch: 1, earned: {} }))
     act(() => { vi.advanceTimersByTime(1000) })
     expect(toasts()).toHaveLength(1)
+    act(() => { vi.advanceTimersByTime(5000) })
+    expect(toasts()).toHaveLength(0)
     unmount()
   })
 

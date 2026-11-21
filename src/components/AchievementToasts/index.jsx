@@ -63,13 +63,16 @@ function AchievementToasts({ state, baseline }) {
     const current = new Set(earnedIds)
     if (seen.current === null || seenEpoch.current !== baseline.epoch) {
       seenEpoch.current = baseline.epoch
+      nextSlotAt.current = 0
       seen.current = new Set(Object.keys(baseline.earned ?? {}).filter(id => baseline.earned[id]))
     }
     const fresh = earnedIds.filter(id => !seen.current.has(id) && ACHIEVEMENT_BY_ID[id])
     seen.current = current
     const epoch = baseline.epoch
-    // Queued toasts from an older save are dropped when the epoch moves on.
-    const schedule = (fn, ms) => setTimeout(() => { if (mounted.current && seenEpoch.current === epoch) fn() }, ms)
+    // Only SHOWING is epoch-guarded (queued toasts from an older save are dropped); hiding a visible toast always runs.
+    const schedule = (fn, ms, guardEpoch) => setTimeout(() => {
+      if (mounted.current && (!guardEpoch || seenEpoch.current === epoch)) fn()
+    }, ms)
     for (const id of fresh) {
       const now = Date.now()
       const startAt = Math.max(now, nextSlotAt.current)
@@ -77,8 +80,8 @@ function AchievementToasts({ state, baseline }) {
       const key = `${id}-${startAt}`
       schedule(() => {
         setVisible(list => [...list, { key, id }])
-        schedule(() => setVisible(list => list.filter(t => t.key !== key)), ACHIEVEMENT_TOAST_VISIBLE_MS)
-      }, startAt - now)
+        schedule(() => setVisible(list => list.filter(t => t.key !== key)), ACHIEVEMENT_TOAST_VISIBLE_MS, false)
+      }, startAt - now, true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [earnedKey, baseline.epoch])
