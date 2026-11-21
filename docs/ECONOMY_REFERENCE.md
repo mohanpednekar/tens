@@ -1401,16 +1401,16 @@ the autobuyer and Auto Purge attempt-budget threshold checks.
 
 `owned` and `resources` are integer-valued by construction, so a production credit must itself always
 be an integer. Of the factors in a tier's production credit (`owned × ticksElapsed × multiplier ×
-scaleUpMultiplier × getPurchaseMilestoneMultiplier(purchased)`, where `multiplier` is
-`getPrestigeProductionMultiplier(purge.count, unlocked)` — flat `1` until the speed bonus is bought, else the log curve below),
-`owned`/`ticksElapsed` are already integers, but the other factors can be fractional — `getPurchaseMilestoneMultiplier` once Level power achievements raise its base (see its own row above), `getPrestigeProductionMultiplier` (`1 + log10(purge.count)` once
-bought, else `1`), the Flops boost, and challenge production (which can be below 1, so a small credit can floor to 0); `getTierScaleUpMultiplier` is a power of 2 outside a `scaleUpPower` lever. The whole credit is floored. **Neither tickspeed multiplier appears in this formula** — `getTickspeedProductionMultiplier`
+scaleUpMultiplier × getPurchaseMilestoneMultiplier(purchased) × …` — the real product also carries the challenge-production, Compute Boost and Flops factors, and `multiplier` is
+`getPrestigeProductionMultiplier(purge.count, unlocked)` (flat `1` until the speed bonus is bought, else ×1.1 at the 1st Purge, then the log curve below) times the playtime bonus),
+`owned`/`ticksElapsed` are already integers, but the other factors can be fractional — `getPurchaseMilestoneMultiplier` once Level power achievements raise its base (see its own row above), `getPrestigeProductionMultiplier` (×1.1 at the 1st Purge, then `1 + log10(purge.count)`, once
+bought; else `1`), the Flops boost, and challenge production (which can be below 1, so a small credit can floor to 0); `getTierScaleUpMultiplier` is a power of 2 outside a `scaleUpPower` lever. The whole credit is floored. **Neither tickspeed multiplier appears in this formula** — `getTickspeedProductionMultiplier`
 (`1.1^(level - 1)`) and `getGlobalTickspeedProductionMultiplier` (compounding, with a milestone level
 using a bigger step — see its own row above) are instead divided into
 the *period* `ticksElapsed` counts against (see `getEffectiveTierTickSpeedSeconds`/"Tier production
 tickspeed" above), so their effect on the eventual total is unchanged but arrives via more completed
 periods rather than a bigger per-period credit. `tickGame` wraps the whole product in `Math.floor(...)`
-before crediting it — never zeroes out production for `owned > 0` since `getPrestigeProductionMultiplier`
+before crediting it — it can zero a small credit only when a factor is below 1 (challenge production, e.g. Half Duplex 0.5 with a single owned unit); `getPrestigeProductionMultiplier`
 is always ≥ 1. `MainPage`'s displayed `+X` production preview mirrors this same `Math.floor(...)`.
 Rate-accumulator constants (`getAutoPurgeAttemptRate`, and cost-scaling values like
 `getAutobuyerUnlockCost`/`getGlobalTickspeedMultiplierCost`/
