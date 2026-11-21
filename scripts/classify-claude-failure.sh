@@ -39,13 +39,9 @@
 #
 # A run that did real work and then hit a real error fails red as before.
 #
-# Both workflows invoke this from a copy staged into $RUNNER_TEMP BEFORE the
-# Claude step runs — never straight out of the workspace. In
-# autonomous-pr-followup.yml the staged copy comes from the sparse `main`
-# checkout (the pinned-SHA checkout would otherwise substitute the PR's own
-# version of this script, or delete it); in autonomous-maintenance.yml the
-# staging just stops a run that can Edit/Write scripts/ from weakening the
-# classification of its own failure.
+# autonomous-maintenance.yml invokes this from a copy staged into $RUNNER_TEMP
+# BEFORE the Claude step runs — never straight out of the workspace — so a run
+# that can Edit/Write scripts/ can't weaken the classification of its own failure.
 
 set -euo pipefail
 

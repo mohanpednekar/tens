@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared low-risk eligibility for approval-free auto-merge.
 #
-# Same bar as docs/AUTOMATION.md / pr-auto-merge.yml:
+# Same bar as docs/AUTOMATION.md's "Auto-merge":
 #   - bot-authored branch prefixes only (claude/*, dependabot/*)
 #   - never a fork (isCrossRepository)
 #   - never touches .github/workflows/

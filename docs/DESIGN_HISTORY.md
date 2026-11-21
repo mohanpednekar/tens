@@ -1,5 +1,21 @@
 # Design history & rationale
 
+### PR follow-up/merge workflows replaced by a scheduled routine — 2026-11-21
+
+Removed `pr-auto-merge.yml`, `pr-conflict-sweep.yml`, `autonomous-pr-followup.yml`,
+`dependabot-pr-followup.yml`, the `#60` stalled-PR sweep step (`scripts/sweep-stalled-auto-prs.sh`,
+which only existed to re-trigger the follow-up workflow) and `scripts/pr-head-guard.sh` (used only by
+the follow-ups). Maintainer decision: PR babysitting should not be a workflow at all. A daily Claude
+Code Remote scheduled routine now does the whole job in one session — refresh with `main`, fix CI,
+adversarial review, resolve threads, and merge directly in ascending PR-number order — so there is one
+place that owns PR state instead of four event-driven workflows racing each other on the same PR.
+Trade-offs accepted: feedback and conflicts now wait for the next daily run instead of being handled
+within minutes, and a human GitHub approval no longer auto-enables auto-merge (the old Path 1).
+Workflow-file PRs stay human-gated for workflow-driven agents, but the routine may merge them:
+the gate existed only to stop workflows drifting by editing themselves in a loop, and a non-workflow
+routine can't form that loop. Current behavior: `docs/AUTOMATION.md` "PR babysitter" /
+"Auto-merge".
+
 ### Game rules split into `src/CLAUDE.md` — 2026-11-18
 
 Root `CLAUDE.md` had regrown to ~83 KB (~20k tokens) and loads into every session, including the many

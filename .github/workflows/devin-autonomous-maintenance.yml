@@ -413,7 +413,7 @@ jobs:
           checks. Address each actionable item, resolve the threads you fixed,
           and iterate until the PR is mergeable (green required checks, no
           unresolved actionable feedback). Feedback arriving after the run ends
-          is handled by autonomous-pr-followup.yml.
+          is handled by the daily PR babysitter routine.
 
           Report at the end: what you picked, the PR URL if any, or why you did
           nothing.

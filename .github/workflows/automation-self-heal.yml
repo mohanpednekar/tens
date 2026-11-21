@@ -10,9 +10,6 @@ on:
     workflows:
       - Autonomous maintenance
       - Devin autonomous maintenance
-      - Autonomous PR follow-up
-      - Auto-merge on approval
-      - Dependabot PR follow-up
     types:
       - completed
 
@@ -54,9 +51,6 @@ jobs:
           case "$RUN_NAME" in
             "Autonomous maintenance") slug="autonomous-maintenance"; file=".github/workflows/autonomous-maintenance.yml" ;;
             "Devin autonomous maintenance") slug="devin-autonomous-maintenance"; file=".github/workflows/devin-autonomous-maintenance.yml" ;;
-            "Autonomous PR follow-up") slug="autonomous-pr-followup"; file=".github/workflows/autonomous-pr-followup.yml" ;;
-            "Auto-merge on approval") slug="pr-auto-merge"; file=".github/workflows/pr-auto-merge.yml" ;;
-            "Dependabot PR follow-up") slug="dependabot-pr-followup"; file=".github/workflows/dependabot-pr-followup.yml" ;;
             *)
               echo "Unrecognized workflow name '$RUN_NAME'; skipping."
               echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -188,8 +182,7 @@ jobs:
                  Use `gh pr create --draft`. Never push to main, never self-merge, never approve.
                - Do NOT re-introduce a fixed `--max-turns` cap on
                  `autonomous-maintenance.yml` (it uses dynamic budget targeting). Raising
-                 `--max-turns` is only valid for workflows that still have a fixed cap (e.g.
-                 autonomous-pr-followup).
+                 `--max-turns` is only valid for workflows that still have a fixed cap.
 
             2. **Transient/infra failure** (GitHub API 5xx, runner/network blip, something the
                logs show already succeeded on an automatic retry). Claude-side 429 / 5xx
