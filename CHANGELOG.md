@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Factory tier level costs now widen: the gap between consecutive levels' costs (in powers of ten) starts at the tier number and grows by 1 after every 10 levels at the same gap.
+
 - Clock Speed is renamed **Accelerate** (a verb, like Restage, Scale Up and Overclock), and the four cards are now short full-width rows aligned with the tier rows instead of tall half-width tiles.
 - Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
 - Nav attention dots no longer light for Factory cues (affordable levels, Accelerate, Scale Up, Overclock, Purge) whose automation is unlocked, enabled and faster than 1 s; a paused automation still lights its dot.

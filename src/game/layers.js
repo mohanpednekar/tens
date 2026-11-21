@@ -718,6 +718,9 @@ export const DEFAULT_PURCHASE_BLOCK_SIZE = 8
 // growth to the same "flagship" progress marker getScaleUpRequirement/isLastTierTickspeedXpUnlocked/
 // purgeCardEverRevealed already key off, rather than any other tier or a global total.
 export const PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100
+// Factory tier cost spacing (powers of ten between consecutive levels, after the first three) starts at
+// the tier number and grows by 1 after every this-many levels at the same spacing (getTierCostExponent).
+export const TIER_COST_SPACING_GROWTH_LEVELS = 10
 // The amount the block size grows by every PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS.
 export const PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1
 

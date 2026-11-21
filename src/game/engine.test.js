@@ -13015,3 +13015,14 @@ describe('getChargerUnlockProgress / Charger progress carry (#1141 follow-up)', 
     expect(getChargerUnlockProgress(resetByteFoundry(seeded), 'autoMergeCoresIntoNode')).toBe(0)
   })
 })
+
+describe('getTierCostExponent spacing growth', () => {
+  test('spacing grows by 1 after every 10 increments at the same spacing', () => {
+    const tier = { id: 'tier01' }
+    const gaps = []
+    for (let e = 3; e <= 24; e++) gaps.push(getTierCostExponent(tier, e) - getTierCostExponent(tier, e - 1))
+    expect(gaps.slice(0, 10)).toEqual(Array(10).fill(1))
+    expect(gaps.slice(10, 20)).toEqual(Array(10).fill(2))
+    expect(gaps.slice(20)).toEqual([3, 3])
+  })
+})

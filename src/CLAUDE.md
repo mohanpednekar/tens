@@ -119,7 +119,7 @@ display names `Kilobytes` through `Quettabytes`. Every tier is bought directly w
 (`MONEY_ID = 'base'`, display name "Bits") and, once owned, produces the tier immediately below it,
 cascading down the ladder; `tier01` (Kilobytes) is the special case where cost is still Bits but
 production is a whole-Byte amount (`BYTES_ID = 'bytes'`, displayed as `B`) credited to Bits at
-`BITS_PER_BYTE` (8) per Byte. A tier's per-level cost is `getTierCost` = `baseCost × 10^(getTierCostExponent − 1)`: exponent 1, 2, 3 for the first three levels on every tier, then +tierNumber per level (tier01 +1 … tier10 +10). **Bytes and Bits are ONE pool** (`resources.base`) — there is no separate
+`BITS_PER_BYTE` (8) per Byte. A tier's per-level cost is `getTierCost` = `baseCost × 10^(getTierCostExponent − 1)`: exponent 1, 2, 3 for the first three levels on every tier, then +spacing per level, where spacing starts at tierNumber (tier01 1 … tier10 10) and grows by 1 after every `TIER_COST_SPACING_GROWTH_LEVELS` (10) levels at the same spacing. **Bytes and Bits are ONE pool** (`resources.base`) — there is no separate
 Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Accelerate** (the global
 tickspeed multiplier on MainPage, formerly "Clock Speed"/"Latency"/"Tickspeed"; code: `globalTickspeed*`, automation key `speedUp`) is paid from that Bits balance —
 initial activation costs **10 Bytes (80 Bits)**. It unlocks once level 1 of tier01 is purchased; there
