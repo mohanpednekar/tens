@@ -94,6 +94,12 @@ const computeInitialGame = () => {
     const [devModeActive, setDevModeActiveState] = useState(() => isDevModeActive())
     // In-session Ops dashboard samples — not persisted; meta QoL sparkline only.
     const [opsSamples, setOpsSamples] = useState([])
+    // AchievementToasts baseline: `earned` before any catch-up for the loaded save; `epoch` bumps on every
+    // wholesale state replacement (slot switch, import, reset, Dev Mode) so the toasts rebaseline explicitly.
+    const [achievementBaseline, setAchievementBaseline] = useState(() => ({ epoch: 0, earned: initial.baselineEarned }))
+    const rebaseAchievements = useCallback(loadedState => {
+      setAchievementBaseline(b => ({ epoch: b.epoch + 1, earned: loadedState?.achievements?.earned ?? {} }))
+    }, [])
 
     // Mirrors `state` for the tick-loop effect below to read without depending on `state` itself —
     // depending on it would tear down and recreate the interval/listener (and, worse, reset the
@@ -331,6 +337,7 @@ const computeInitialGame = () => {
 
   const resetGame = useCallback(() => {
     clearGameState()
+    rebaseAchievements(null)
     setState(createInitialGameState())
     setOfflineProgress(null)
     setIncompatibleSaveReason(null)
@@ -348,6 +355,7 @@ const computeInitialGame = () => {
     const result = clearSaveSlot(slotId)
     if (!result.ok) return result
     if (result.clearedActive) {
+      rebaseAchievements(null)
       setState(createInitialGameState())
       setOfflineProgress(null)
       setIncompatibleSaveReason(null)
@@ -363,6 +371,7 @@ const computeInitialGame = () => {
     // this must bail out here too rather than resetting the (dev) state/UI as if it had succeeded.
     const result = clearAllSaveProgress()
     if (!result.ok) return result
+    rebaseAchievements(null)
     setState(createInitialGameState())
     setOfflineProgress(null)
     setIncompatibleSaveReason(null)
@@ -404,6 +413,7 @@ const computeInitialGame = () => {
     const lastSaveTimestamp = loadLastSaveTimestamp()
     const elapsedRealSeconds = lastSaveTimestamp ? (Date.now() - lastSaveTimestamp) / 1000 : 0
     const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, nextState, autobuyerBatchFor(buyUnitModeRef.current))
+    rebaseAchievements(nextState)
     setState(caughtUp?.state ?? nextState)
     setOfflineProgress(caughtUp?.offlineProgress ?? null)
     setIncompatibleSaveReason(incompatibleReason)
@@ -424,6 +434,7 @@ const computeInitialGame = () => {
     setDevModeActiveState(next)
     const incompatibleReason = discardIncompatibleActiveSaveIfNeeded()
     const loaded = loadGameState()
+    rebaseAchievements(loaded)
     setState(loaded ?? createInitialGameState())
     setOfflineProgress(null)
     setIncompatibleSaveReason(incompatibleReason)
@@ -435,6 +446,7 @@ const computeInitialGame = () => {
   const resetDevState = useCallback(() => {
     if (!isDevModeActive()) return
     clearDevGameState()
+    rebaseAchievements(null)
     setState(createInitialGameState())
     setOfflineProgress(null)
     setIncompatibleSaveReason(null)
@@ -446,6 +458,7 @@ const computeInitialGame = () => {
   const applyDevStateJson = useCallback(jsonText => {
     const result = applyDevGameStateJson(jsonText, stateRef.current)
     if (result.ok) {
+      rebaseAchievements(result.state)
       setState(result.state)
       setOfflineProgress(null)
       setIncompatibleSaveReason(null)
@@ -477,6 +490,7 @@ const computeInitialGame = () => {
       // Update the ref now, not on the next passive effect: a tick firing before React commits
       // would otherwise catch up (and re-persist) the pre-import state over the imported save.
       stateRef.current = result.state
+      rebaseAchievements(result.state)
       setState(result.state)
       setOfflineProgress(null)
       setIncompatibleSaveReason(null)
@@ -517,7 +531,7 @@ const computeInitialGame = () => {
     exportSaveJson,
     incompatibleSaveReason,
     offlineProgress,
-    initialEarnedAchievements: initial.baselineEarned,
+    achievementBaseline,
     opsSamples,
     purchaseSupporterDummy,
     redeemUnlockCode,

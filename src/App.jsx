@@ -180,7 +180,7 @@ function App() {
         onNavigate={navigate}
         open={menuOpen}
       />
-      <AchievementToasts baselineEarned={game.initialEarnedAchievements} state={game.state} />
+      <AchievementToasts baseline={game.achievementBaseline} state={game.state} />
       {game.incompatibleSaveReason ? (
         <IncompatibleSaveNotice onDismiss={game.dismissIncompatibleSaveNotice} />
       ) : null}

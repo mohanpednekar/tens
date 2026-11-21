@@ -40,18 +40,20 @@ const ToastTitle = styled.div`
 
 const getEarnedIds = state => Object.keys(state.achievements?.earned ?? {}).filter(id => state.achievements.earned[id])
 
-// Toasts every newly earned achievement. `baselineEarned` is the earned map from the save BEFORE
-// mount-time offline catch-up, so achievements earned while away are announced too. If the earned set
-// shrinks (slot switch / cloud load / reset) it silently rebaselines instead of toasting.
-function AchievementToasts({ state, baselineEarned }) {
+// Toasts every newly earned achievement. `baseline` = { epoch, earned }: the earned map of the loaded save
+// BEFORE its offline catch-up, so away-time unlocks are announced; a new `epoch` (slot switch, import,
+// reset, Dev Mode) rebaselines explicitly. Timers outlive StrictMode's simulated unmount (a `mounted`
+// ref gates them) so the dev double-effect can't drop queued toasts.
+function AchievementToasts({ state, baseline }) {
   const [visible, setVisible] = useState([])
   const seen = useRef(null)
+  const seenEpoch = useRef(null)
   const nextSlotAt = useRef(0)
-  const timers = useRef(new Set())
+  const mounted = useRef(false)
 
-  useEffect(() => () => {
-    timers.current.forEach(clearTimeout)
-    timers.current.clear()
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
   }, [])
 
   const earnedIds = ACHIEVEMENTS_FEATURE.enabled ? getEarnedIds(state) : []
@@ -59,24 +61,13 @@ function AchievementToasts({ state, baselineEarned }) {
 
   useEffect(() => {
     const current = new Set(earnedIds)
-    if (seen.current === null) {
-      seen.current = new Set(Object.keys(baselineEarned ?? {}).filter(id => baselineEarned[id]))
-    }
-    for (const id of seen.current) {
-      if (!current.has(id)) {
-        seen.current = current
-        return
-      }
+    if (seen.current === null || seenEpoch.current !== baseline.epoch) {
+      seenEpoch.current = baseline.epoch
+      seen.current = new Set(Object.keys(baseline.earned ?? {}).filter(id => baseline.earned[id]))
     }
     const fresh = earnedIds.filter(id => !seen.current.has(id) && ACHIEVEMENT_BY_ID[id])
     seen.current = current
-    const schedule = (fn, ms) => {
-      const t = setTimeout(() => {
-        timers.current.delete(t)
-        fn()
-      }, ms)
-      timers.current.add(t)
-    }
+    const schedule = (fn, ms) => setTimeout(() => { if (mounted.current) fn() }, ms)
     for (const id of fresh) {
       const now = Date.now()
       const startAt = Math.max(now, nextSlotAt.current)
@@ -88,13 +79,13 @@ function AchievementToasts({ state, baselineEarned }) {
       }, startAt - now)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [earnedKey])
+  }, [earnedKey, baseline.epoch])
 
-  if (visible.length === 0) return null
+  // One persistent live region (announces reliably); toasts are appended inside it.
   return (
-    <Stack aria-label="achievement notifications">
+    <Stack aria-label="achievement notifications" aria-live="polite" role="status">
       {visible.map(({ key, id }) => (
-        <Toast aria-live="polite" key={key} role="status">
+        <Toast key={key}>
           <ToastTitle>Achievement unlocked</ToastTitle>
           {ACHIEVEMENT_BY_ID[id].name}
         </Toast>

@@ -276,6 +276,10 @@ on the card) with a "Dismiss" button (`aria-label="Dismiss offline progress noti
 and `ByteFoundryPage` (right after the page title), each supplying its own slice of the `game` prop
 they already receive.
 
+## `AchievementToasts/index.jsx`
+
+Props `{ state, baseline }` (`baseline` = hook's `achievementBaseline`: `{ epoch, earned }`). Fixed top stack, one persistent `role="status"` live region. Each newly earned achievement (diff of `state.achievements.earned` vs. the baseline) shows a toast for 5 s (`ACHIEVEMENT_TOAST_VISIBLE_MS`); toasts start ≥ 0.25 s apart (`ACHIEVEMENT_TOAST_STAGGER_MS`). `earned` is the save's map before offline catch-up; a new `epoch` (slot switch, import, reset, Dev Mode) rebaselines. Timers survive StrictMode's simulated unmount.
+
 ## `IncompatibleSaveNotice/index.jsx`
 
 Blocking overlay (`.jsx`) shown when the active save slot was cleared on load because its on-disk
