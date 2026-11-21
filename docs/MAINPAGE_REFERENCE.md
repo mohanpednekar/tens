@@ -863,7 +863,7 @@ Player-facing purchase levels on both reset cards are zero-indexed **completed-l
 UI subtracts one from the engine's one-based current-level cursor, and both requirements are
 expressed in completed levels — Scale Up requires 3 levels for each tier's first claim, then 6, 9,
 12, … on repeated final-tier claims; Overclock requires the final tier's completed levels to reach the dynamic
-`getOverclockRequirement` (5 first, then last-claimed + 3).
+`getOverclockRequirement` (5 first, then last-claimed + `getOverclockRequirementStep`, 4 → 1).
 
 `OverclockCard` — same orange-accented `StatCard` shape as `ScaleUpCard`'s cyan — is gated on
 `lastTierUnlocked` (the last tier having ever been unlocked), via its own `overclockEverRevealed`

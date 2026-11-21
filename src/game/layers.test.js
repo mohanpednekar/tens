@@ -263,8 +263,8 @@ describe('constants', () => {
     expect(OVERCLOCK_MULTIPLIER_STEP).toBe(0.1)
   })
 
-  it('OVERCLOCK_REQUIREMENT_STEP is 3 (each later claim requires three more levels)', () => {
-    expect(OVERCLOCK_REQUIREMENT_STEP).toBe(3)
+  it("OVERCLOCK_REQUIREMENT_STEP is 4 (the starting step; Overclock step achievements reduce it to 1)", () => {
+    expect(OVERCLOCK_REQUIREMENT_STEP).toBe(4)
   })
 
   it('POOL_CAPACITY_SI_STEP is 1000 (pool Capacity end bounds land on clean SI powers of 1000 Bytes)', () => {
