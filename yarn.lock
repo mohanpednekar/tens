@@ -1168,10 +1168,10 @@
     "@rdlabo/capacitor-docgen" "^0.4.1"
     "@webview-native-ui/engine" "1.0.0"
 
-"@capacitor/android@^8.5.3":
-  version "8.6.0"
-  resolved "https://registry.yarnpkg.com/@capacitor/android/-/android-8.6.0.tgz#d8c9642c5929ee783f32156a02d13c9b2d166290"
-  integrity sha512-6IJS0TCfV/F/8+324CCwYd3xL6r+TH0W7zzaxYzPz9IV3YWCNvsZDuCCPHUIBC5iASb9od827ddSJ6rz+9Pu1Q==
+"@capacitor/android@^8.6.2":
+  version "8.6.2"
+  resolved "https://registry.yarnpkg.com/@capacitor/android/-/android-8.6.2.tgz#f2869feec5de6b2e1eba9538dee4a051639eaa89"
+  integrity sha512-dWXnXmOVTtxU91n5h11MzoQ7PAMjyzU1qguw0mBJZiwSuhGvLKTG/IlsQ75H8qeE0a1acV2f573x15wYvyzuVA==
 
 "@capacitor/cli@^8.5.3":
   version "8.6.0"
