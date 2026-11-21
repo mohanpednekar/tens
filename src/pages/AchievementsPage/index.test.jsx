@@ -30,9 +30,9 @@ describe('AchievementsPage', () => {
     const first = ACHIEVEMENT_DEFINITIONS.filter(def => def.group === 'firstSession')
     const earned = Object.fromEntries(first.map(def => [def.id, true]))
     renderWithTheme(<AchievementsPage game={gameWith({ ...earned, levelPower1: true })} />)
-    // 4 first-session stars + 4 completion bonus + 1 level power star
-    expect(screen.getByLabelText(/^total stars 9 of /)).toBeTruthy()
-    expect(screen.getByText(/⭐ 8\/8/)).toBeTruthy()
+    // 4 first-session stars + 1 completion bonus (10%, rounded up) + 1 level power star
+    expect(screen.getByLabelText(/^total stars 6 of /)).toBeTruthy()
+    expect(screen.getByText(/⭐ 5\/5/)).toBeTruthy()
   })
 
   it('collapses the tier purchases into one leveled row', () => {
