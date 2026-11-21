@@ -320,7 +320,7 @@ const CellHead = styled.div`
   display: flex;
   /* $wrap (inline-action cells): when a long cost won't fit, the button drops to its own line
      instead of the name collapsing to an ellipsis — one line whenever it fits. */
-  flex-wrap: ${props => (props.$wrap && !props.$narrow ? 'wrap' : 'nowrap')};
+  flex-wrap: ${props => (props.$wrap ? 'wrap' : 'nowrap')};
   gap: 0.15rem;
   row-gap: 0.3rem;
   justify-content: space-between;
@@ -385,19 +385,15 @@ const InlineAction = styled.span`
   }
 
   ${props => props.$narrow && `
-    flex-shrink: 1;
-    min-width: 0;
-    overflow: hidden;
+    flex-shrink: 0;
+    margin-left: auto;
 
     && > button {
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
       white-space: nowrap;
       font-size: 0.78rem;
       min-height: 1.6rem;
       min-width: 0;
-      padding: 0.15em 0.4em;
+      padding: 0.15em 0.45em;
     }
   `}
 `

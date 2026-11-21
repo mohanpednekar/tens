@@ -7368,9 +7368,17 @@ export const getAutobuyerSpeedUpgradeMaxLevel = tierId => getAutobuyerIntervalMa
 export const getSiCleanDoublingFactor = level =>
   SI_CLEAN_LOCAL_SEQUENCE[level % 10] * (1000 ** Math.floor(level / 10))
 
+// Cost on the clean 1,2,4,8,16,32,64,125,250,500 (×1000 per ten) series: `base` must be a series value
+// (1…500); the cost is that rung advanced `level` rungs, so every displayed cost stays clean
+// (never 5.12e17 / 1.6e13 from multiplying a base into the ladder).
+const siCleanSeriesCost = (base, level) => {
+  const start = Math.max(0, SI_CLEAN_LOCAL_SEQUENCE.indexOf(base))
+  return getSiCleanDoublingFactor(start + level)
+}
+
 // Tier autobuyer speed: AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (10 PP) × the doubling ladder, every tier alike.
 export const getAutobuyerIntervalUpgradeCost = level =>
-  AUTOBUYER_INTERVAL_UPGRADE_BASE_COST * getSiCleanDoublingFactor(level)
+  siCleanSeriesCost(AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, level)
 
 export const buyAutobuyerIntervalUpgrade = tierId => state => {
   if (isProductionFrozen(state)) return state
@@ -7401,7 +7409,7 @@ export const getAutomationIntervalSeconds = (state, key) =>
     AUTOMATION_INTERVAL_CONFIG[key].baseSeconds * AUTOBUYER_INTERVAL_MULTIPLIER ** (state.automationIntervalLevels?.[key] ?? 0),
   )
 export const getAutomationIntervalUpgradeCost = (key, level) =>
-  AUTOMATION_INTERVAL_CONFIG[key].baseCost * getSiCleanDoublingFactor(level)
+  siCleanSeriesCost(AUTOMATION_INTERVAL_CONFIG[key].baseCost, level)
 
 // The automation each chain speeds up must already be unlocked.
 const isAutomationIntervalChainAvailable = (state, key) => {
@@ -7440,7 +7448,7 @@ export const getTierTickspeedIntervalSeconds = (state, tierId) =>
     TIER_TICKSPEED_INTERVAL_CONFIG.baseSeconds * AUTOBUYER_INTERVAL_MULTIPLIER ** (state.tierTickspeedIntervalLevels?.[tierId] ?? 0),
   )
 export const getTierTickspeedIntervalUpgradeCost = level =>
-  TIER_TICKSPEED_INTERVAL_CONFIG.baseCost * getSiCleanDoublingFactor(level)
+  siCleanSeriesCost(TIER_TICKSPEED_INTERVAL_CONFIG.baseCost, level)
 
 export const buyTierTickspeedIntervalUpgrade = tierId => state => {
   if (isProductionFrozen(state)) return state

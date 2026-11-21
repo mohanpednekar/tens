@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Firmware speed-upgrade costs now sit on the clean 1‑2‑4‑8…64‑125‑250‑500 series (×1000 per ten) throughout — no more 5.12e17 / 1.6e13; first-level costs are 8 PP (tier autobuyer) and 125 PP (tier tickspeed). Tier-row cost pills no longer truncate (they wrap instead).
 - Clock Speed is renamed **Accelerate** (a verb, like Restage, Scale Up and Overclock), and the four cards are now short full-width rows aligned with the tier rows instead of tall half-width tiles.
 - Auto Scale Up now unlocks at Purge 16 and Auto Restage at Purge 32 (swapped); their challenges unlock at 5× those Purges. Auto Restage upgrades cost 32 PP first level and start at a 128 s interval.
 - Nav attention dots no longer light for Factory cues (affordable levels, Accelerate, Scale Up, Overclock, Purge) whose automation is unlocked, enabled and faster than 1 s; a paused automation still lights its dot.

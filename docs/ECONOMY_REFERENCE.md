@@ -1714,7 +1714,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   PP (`10^(level+1)` — 10, 100, 1_000, …) to increment `prestigeDoublePpLevel`. Not blocked
   by production freeze. Halves powers-per-PP through level 6, then doubles PP-per-power.
 - **Active — Autobuyer interval:** `buyAutobuyerIntervalUpgrade(tierId)` permanently spends PP
-  (`getAutobuyerIntervalUpgradeCost(level)` = `AUTOBUYER_INTERVAL_UPGRADE_BASE_COST` (10) × `getSiCleanDoublingFactor(level)`, the SI-clean ladder 1,2,4,…,64,125,250,500 × 1000^floor(level/10) — 10 PP first level, every tier)
+  (`getAutobuyerIntervalUpgradeCost(level)` = `siCleanSeriesCost(AUTOBUYER_INTERVAL_UPGRADE_BASE_COST (8), level)` — the base is a rung of the SI-clean ladder 1,2,4,…,64,125,250,500 × 1000^floor(rung/10) and the cost advances `level` rungs, so every cost is clean — 8 PP first level, every tier)
   to multiply that tier's autobuyer interval (base `getAutobuyerBaseIntervalSeconds` = tier N → N s, autobuyer only, independent of tickspeed/manual buys) by `AUTOBUYER_INTERVAL_MULTIPLIER` (0.9) per level in
   `autobuyerIntervalLevels[tierId]`, floored at `AUTOBUYER_MIN_INTERVAL_SECONDS` (10 ms; max level
   `getAutobuyerIntervalMaxLevel(tierId)`, e.g. 44 for tier01, 66 for tier10). `tickGame` accrues attempt budget at
@@ -1746,7 +1746,7 @@ any more — they unlock automatically at a prestige-count milestone instead (se
   `autoOverclock`/`autoPurge` (→ 1) when `purge.count` reaches each, spending no PP and never revoking. The
   PP-funded part is only each chain's interval upgrades (`AUTOMATION_INTERVAL_CONFIG[key].baseCost` first level:
   Accelerate 8, Scale Up 16, Restage 32, Overclock 32, Purge 64) (Restage costs 32 PP and starts at 128 s); tier autobuyer / tier tickspeed
-  chains start at 10 PP / 100 PP (`AUTOBUYER_INTERVAL_UPGRADE_BASE_COST` / `TIER_TICKSPEED_INTERVAL_CONFIG.baseCost`).
+  chains start at 8 PP / 125 PP (series rungs) (`AUTOBUYER_INTERVAL_UPGRADE_BASE_COST` / `TIER_TICKSPEED_INTERVAL_CONFIG.baseCost`).
   The old `buyAutoScaleUp`/`buyAutoOverclock`/`buyAutoPurge`/`buyTickspeedAutobuyer`/`buyXpTickspeedAutobuyer`,
   `getAutomationUnlockCost` and `XP_TICKSPEED_AUTOBUYER_UNLOCK_COST` were removed.
 - **Active — Auto Scale Up:** `autoScaleUp = true` at Purge 16. Once unlocked, `tickGame` calls `scaleUpGame` on its interval timer
