@@ -2375,13 +2375,11 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     newAccumulators[tier.id] = accumulated - ticksElapsed * tickSpeed
     if (ticksElapsed <= 0) return
 
-    // Floored so owned/resources stay integer-valued: owned, ticksElapsed, scaleUpMultiplier
-    // (always a power of 2), tierMultiplier (fractional when Level power achievements raise the
-    // base — floored below along with the rest; see getPurchaseMilestoneMultiplier), and computeBoostMultiplier (always one of
-    // COMPUTE_BOOST_PRESETS' own integer multipliers, or 1) are already integers, so only the
-    // fractional Purge-count production multiplier (getPrestigeProductionMultiplier, e.g. 316
-    // Purges → ×3.5) can introduce a fraction here — always >= 1, so flooring never zeroes
-    // out production for a tier with owned > 0. Neither tickspeed multiplier appears in this
+    // Floored so owned/resources stay integer-valued: owned and ticksElapsed are integers, but the
+    // other factors can be fractional (tierMultiplier once Level power achievements raise the base,
+    // the Purge-count production multiplier e.g. 316 Purges → ×3.5, the Flops boost, a challenge's
+    // production lever / Half Duplex, a scaleUpPower lever), so the whole product is floored — and a
+    // factor below 1 (challenge production) can floor a small credit to 0. Neither tickspeed multiplier appears in this
     // formula at all anymore — they've already done their work by shrinking tickSpeed above, which
     // is what grew ticksElapsed.
     // F10 Flat Rate: no per-level multiplier for the challenged tier; F1 Half Duplex halves its production.
