@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { ThemeProvider } from 'theme'
 import AchievementToasts from 'components/AchievementToasts'
@@ -7,7 +7,7 @@ const mk = ids => ({ achievements: { earned: Object.fromEntries(ids.map(id => [i
 const ui = (state, baseline = { epoch: 0, earned: {} }) => (
   <ThemeProvider mode="dark"><AchievementToasts baseline={baseline} state={state} /></ThemeProvider>
 )
-const toasts = () => screen.queryAllByText('Achievement unlocked')
+const toasts = () => within(screen.getByRole('status', { name: 'achievement notifications' })).queryAllByText('Achievement unlocked')
 
 describe('AchievementToasts', () => {
   beforeEach(() => vi.useFakeTimers())
@@ -16,14 +16,14 @@ describe('AchievementToasts', () => {
   it('staggers simultaneous toasts 250 ms apart and shows each for 5 s', () => {
     const { rerender, unmount } = render(ui(mk([])))
     rerender(ui(mk(['helloWorld', 'itCompiles'])))
-    expect(toasts()).toHaveLength(0)
+    expect(toasts()).toHaveLength(1)
+    act(() => { vi.advanceTimersByTime(249) })
+    expect(toasts()).toHaveLength(1)
     act(() => { vi.advanceTimersByTime(1) })
+    expect(toasts()).toHaveLength(2)
+    act(() => { vi.advanceTimersByTime(4750) })
     expect(toasts()).toHaveLength(1)
     act(() => { vi.advanceTimersByTime(250) })
-    expect(toasts()).toHaveLength(2)
-    act(() => { vi.advanceTimersByTime(4800) })
-    expect(toasts()).toHaveLength(1)
-    act(() => { vi.advanceTimersByTime(300) })
     expect(toasts()).toHaveLength(0)
     unmount()
   })
@@ -63,7 +63,6 @@ describe('AchievementToasts', () => {
   it('drops queued toasts when the epoch moves on', () => {
     const { rerender, unmount } = render(ui(mk([]), { epoch: 0, earned: {} }))
     rerender(ui(mk(['helloWorld', 'itCompiles']), { epoch: 0, earned: {} }))
-    act(() => { vi.advanceTimersByTime(1) })
     rerender(ui(mk([]), { epoch: 1, earned: {} }))
     act(() => { vi.advanceTimersByTime(1000) })
     expect(toasts()).toHaveLength(1)
@@ -77,5 +76,38 @@ describe('AchievementToasts', () => {
     act(() => { vi.advanceTimersByTime(1) })
     expect(toasts()).toHaveLength(1)
     unmount()
+  })
+
+  it('caps simultaneous toasts and starts each lifetime only once it is shown', () => {
+    const ids = ['helloWorld', 'itCompiles', 'pingOfDeath', 'kibiNotKilo', 'tier01Bought', 'tier02Bought', 'tier03Bought']
+    const { rerender, unmount } = render(ui(mk([])))
+    rerender(ui(mk(ids)))
+    act(() => { vi.advanceTimersByTime(2000) })
+    expect(toasts()).toHaveLength(5)
+    act(() => { vi.advanceTimersByTime(3000) })
+    expect(toasts().length).toBeGreaterThan(0)
+    act(() => { vi.advanceTimersByTime(10000) })
+    expect(toasts()).toHaveLength(0)
+    unmount()
+  })
+
+  it('holds toasts while the tab is hidden and shows them on return', () => {
+    const spy = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    const { rerender, unmount } = render(ui(mk([])))
+    rerender(ui(mk(['helloWorld'])))
+    act(() => { vi.advanceTimersByTime(20000) })
+    expect(toasts()).toHaveLength(0)
+    spy.mockReturnValue('visible')
+    act(() => { document.dispatchEvent(new Event('visibilitychange')) })
+    expect(toasts()).toHaveLength(1)
+    spy.mockRestore()
+    unmount()
+  })
+
+  it('cancels every timer on unmount', () => {
+    const { rerender, unmount } = render(ui(mk([])))
+    rerender(ui(mk(['helloWorld', 'itCompiles'])))
+    unmount()
+    expect(vi.getTimerCount()).toBe(0)
   })
 })

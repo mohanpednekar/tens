@@ -278,7 +278,7 @@ they already receive.
 
 ## `AchievementToasts/index.jsx`
 
-Props `{ state, baseline }` (`baseline` = hook's `achievementBaseline`: `{ epoch, earned }`). Fixed top stack, one persistent `role="status"` live region. Each newly earned achievement (diff of `state.achievements.earned` vs. the baseline) shows a toast for 5 s (`ACHIEVEMENT_TOAST_VISIBLE_MS`); toasts start ≥ 0.25 s apart (`ACHIEVEMENT_TOAST_STAGGER_MS`). `earned` is the save's map before offline catch-up; a new `epoch` (slot switch, import, reset, Dev Mode) rebaselines. Timers survive StrictMode's simulated unmount.
+Props `{ state, baseline }` (`baseline` = hook's `achievementBaseline`: `{ epoch, earned }`). Fixed top stack (z-index 1010, above the first-Purge takeover), one persistent `role="status"` live region (`aria-atomic="false"`). Newly earned achievements (diff of `state.achievements.earned` vs. the baseline) queue; a toast starts when the tab is visible, fewer than `ACHIEVEMENT_TOAST_MAX_VISIBLE` (5) show, and ≥ 0.25 s (`ACHIEVEMENT_TOAST_STAGGER_MS`) passed since the previous start; it stays 5 s (`ACHIEVEMENT_TOAST_VISIBLE_MS`), counted from when it starts. `earned` is the save's map before offline catch-up; a new `epoch` (slot switch, import, reset, Dev Mode) rebaselines and drops queued toasts. Timers are cancelled on unmount and re-armed on StrictMode's remount.
 
 ## `IncompatibleSaveNotice/index.jsx`
 

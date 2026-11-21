@@ -1,8 +1,8 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createInitialGameState } from './engine'
-import { saveGameState, serializeSaveForExport, setActiveSaveSlot } from './storage'
-import { useIncrementalGame } from './useIncrementalGame'
+import { createInitialGameState } from 'game/engine'
+import { saveGameState, serializeSaveForExport, setActiveSaveSlot } from 'game/storage'
+import { useIncrementalGame } from 'game/useIncrementalGame'
 
 const withEarned = earned => ({ ...createInitialGameState(), achievements: { earned, counters: { pings: 0 } } })
 
