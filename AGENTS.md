@@ -271,7 +271,7 @@ branches, four times daily at 4am/10am/4pm/10pm IST (slot → task kind → mode
 engine (`devin-autonomous-maintenance.yml`; `workflow_dispatch` only since 2026-10-20, as is
 `devin-workflow-health.yml`) consumes the same `claude-task` backlog on `devin/auto-*` branches (auth:
 `DEVIN_CLI_CREDENTIALS`; git/`gh` via `GH_AUTOMATION_PAT`). Both engines share one 5-open-PR ceiling
-(`claude/auto-*` + `devin/auto-*` together) and the same low-risk auto-merge bar. No workflow follows up on, refreshes or merges
+(`claude/auto-*` + `devin/auto-*` together) and the same merge path. No workflow follows up on, refreshes or merges
 PRs: a daily Claude Code scheduled routine (the "PR babysitter", `docs/AUTOMATION.md`) does that, merging
 in ascending PR-number order.
 The Devin prompt has no file-scope restriction (it may edit `.github/workflows/`, its own file
@@ -305,24 +305,18 @@ instead of orphaning its branch.
   the normal PR rules, never merging itself.
 
 Verification effort scales with how public a PR is — minimal testing before one exists, one full
-check at draft creation, multiple adversarial-review rounds once ready, then a 10-minute
-no-new-activity quiet period before merging a PR not already covered by an automatic auto-merge
-path (see below). Full detail: `docs/AUTOMATION.md`'s "PR review & testing cadence".
+check at draft creation, multiple adversarial-review rounds once ready. Full detail: `docs/AUTOMATION.md`'s "PR review & testing cadence".
 
 **Aesthetic review on every UI change:** before marking a PR ready, render the real screen (Playwright, ~430px wide, both themes, seeded `localStorage`; throwaway script), inspect the screenshot, and fix misalignment, cramped spacing, inconsistency with neighbouring components, or unintended size changes; share the screenshots.
 
 **After the final commit** on a finished PR: run the adversarial `code-reviewer`, post its
-`<!-- adversarial-review sha=… verdict=… -->` marker as a PR comment, mark the PR ready, and —
-on `APPROVE` — **always** enable auto-merge: low-risk diffs via
-`scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve`; any other diff via `gh pr merge --auto --merge`, **except** diffs
-touching `.github/workflows/**`, which stay marked-ready for human review (the ruleset requires no
-approval, so nothing else gates them) — this automatic path is not subject to
-the quiet period above. That enables GitHub auto-merge only; never force-merge, never push to
-`main`, never GitHub-approve your own PR. Full detail: `CLAUDE.md` Pull requests +
+`<!-- adversarial-review sha=… verdict=… -->` marker as a PR comment, and mark the PR ready on
+`APPROVE`. Never enable GitHub auto-merge (it would merge out of PR-number order); never force-merge,
+never push to `main`, never GitHub-approve your own PR. Full detail: `CLAUDE.md` Pull requests +
 `docs/AUTOMATION.md` Auto-merge.
 
-**Direct merge (maintainer standing rule; the one exception to "enable only" above):** in
-maintainer-driven interactive sessions, for every PR in this repo: once auto-merge is enabled and the PR is
+**Direct merge (maintainer standing rule):** in maintainer-driven interactive sessions and the PR
+babysitter routine (which merges in ascending PR-number order), for every PR in this repo: once the PR is
 green — mergeable (no conflicts; update a "behind" branch first, then re-run the reviewer for the new head), every required check complete and
 passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for the
 current head SHA — merge it directly (`gh pr merge --merge` / `merge_pull_request`). The quiet period
@@ -379,7 +373,7 @@ publicly visible but isn't legally reusable without written permission. No `CODE
 - Save/load wraps `localStorage` in try/catch (quota/private-browsing) and strips
   `__proto__`/`constructor` from parsed JSON before merge.
 - `.github/workflows/**` changes require the repo owner's review (the PR babysitter routine may merge one no
-  workflow authored — no workflow may update workflows, directly or indirectly, without human approval), enforced by `scripts/pr-low-risk-eligible.sh`'s exclusion and (once branch protection enables "Require review from Code Owners")
+  workflow authored — no workflow may update workflows, directly or indirectly, without human approval), enforced by (once branch protection enables "Require review from Code Owners")
   `.github/CODEOWNERS`.
 
 Data Lakes (#1087): permanent 1-unit buffer (`fillBits`) + ×1/×10/×100/×1000 disks (`depositedUnits`); timed `lakeTransfer`s (`tickDataLakeTransfers`) move the buffer into ×1 disks and consolidate 9 smaller disks of every size + a full buffer into the next; ordinary pool disks fill directly (no write-cache flush). See `docs/ECONOMY_REFERENCE.md` "Hierarchical lake disks".

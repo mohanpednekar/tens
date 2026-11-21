@@ -94,7 +94,7 @@ one first. This applies to every change made in this repo.
 
 PRs are opened as drafts by default, but stay draft only while real, known work is pending (a queued
 commit, a fix in progress, unrun tests). Always mark ready the moment it reflects genuinely finished work
-(local checks pass, nothing further planned — maintainer standing rule) — a draft isn't reviewed or auto-merge-eligible, so
+(local checks pass, nothing further planned — maintainer standing rule) — a draft isn't reviewed or merged, so
 leaving a finished one draft just stalls it. Applies to every PR, autonomous or interactive.
 
 **Verification effort scales with how public the PR is**: minimal testing (one `yarn test` after a
@@ -112,24 +112,13 @@ SHA before considering the session done. Post its machine-readable marker as a P
 <!-- adversarial-review sha=<headOid> verdict=APPROVE|NEEDS_CHANGES|BLOCK -->
 ```
 
-Then:
+Then: **`APPROVE`** → mark ready; **`NEEDS CHANGES` / `BLOCK`** → fix (or stop) and re-run the reviewer
+after the next final commit so the marker matches the new HEAD. **Never enable GitHub auto-merge** (it
+would merge out of PR-number order): merging is done only by the PR babysitter routine, in ascending
+PR-number order, or by a maintainer-driven interactive session (below). Never force-merge, push to
+`main`, or GitHub-approve your own PR.
 
-- **`APPROVE` + meets the low-risk bar** (`scripts/pr-low-risk-eligible.sh` / `docs/AUTOMATION.md`):
-  **always** enable GitHub auto-merge — run
-  `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (marks ready if
-  still draft, then `gh pr merge --auto --merge`). This is a standing authorization to *enable*
-  auto-merge on `APPROVE`d PRs (this bullet and the next) only; it is not permission to force-merge, push to `main`, approve
-  the PR as a GitHub review, or bypass CODEOWNERS on `.github/workflows/**`.
-- **`APPROVE` but not low-risk, diff touches no `.github/workflows/**` file**: mark ready and enable
-  GitHub auto-merge (`gh pr ready <pr>` then `gh pr merge <pr> --auto --merge`) — maintainer standing
-  rule. The `main` ruleset currently requires no human approval, so this merges on green required
-  checks with no human review; the adversarial `APPROVE` is the gate.
-- **`APPROVE` but diff touches `.github/workflows/**`**: mark ready for the maintainer's review; never
-  enable auto-merge (CODEOWNERS isn't enforced by the ruleset yet, so this exclusion is the only gate).
-- **`NEEDS CHANGES` / `BLOCK`**: fix (or stop); do not enable auto-merge; re-run the reviewer after
-  the next final commit so the marker matches the new HEAD.
-
-**Direct merge (maintainer standing rule; the one exception to "enable only" above):** in
+**Direct merge (maintainer standing rule):** in
 maintainer-driven interactive sessions and the PR babysitter routine, for every PR in this repo: once the PR is
 green — mergeable (no conflicts; bring a "behind" branch up to date first, then re-run the reviewer for the new head), every required check complete
 and passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for
@@ -158,8 +147,7 @@ Keep PRs green through genuine fixes only — never `--no-verify`, never disable
 test to make it pass, never weaken a check just to get past it. If a check itself is wrong, flaky, or
 needs updating, fix the workflow/check definition instead of routing around it.
 
-Auto-merge silently sits inert once a PR (any auto-merge source) falls out of sync with its base — GitHub
-won't merge a conflicted PR however green its checks. Check `mergeable_state` whenever there's reason to
+GitHub won't merge a PR that has fallen out of sync with its base, however green its checks. Check `mergeable_state` whenever there's reason to
 look (a "merge conflict" notice, a push to base, a routine check-in) and, if conflicted, resolve
 immediately: merge (or rebase, matching repo convention) the base into the PR branch, resolve for real
 (never blindly take one side wholesale on a file with actual logic), rerun `yarn test`, push. Prefer merge
@@ -235,9 +223,7 @@ milestone is `v0.7.0`, targeting Era ascension / Reboot (`#407` / `#411–#414`,
 
 The Claude-side and GitHub automation workflows under `.github/workflows/` run unattended — opening
 PRs — but no workflow follows up on, refreshes or merges PRs (the PR babysitter routine does; "Pull
-requests"). Sessions (interactive and autonomous) enable GitHub auto-merge on any adversarially-`APPROVE`d PR
-not touching `.github/workflows/**` (low-risk bar: `scripts/pr-low-risk-eligible.sh`); workflow-file PRs
-wait for human approval. Their git/GitHub write operations authenticate via the
+requests"). Nothing enables GitHub auto-merge (it would break PR-number merge order). Their git/GitHub write operations authenticate via the
 `GH_AUTOMATION_PAT` secret, not `GITHUB_TOKEN` (whose pushes/merges can't trigger other workflows;
 read-only guard steps, `autonomous-maintenance.yml`'s "Surface a broken deploy.yml run" alert comment/issue, and
 some workflows, e.g. `devin-workflow-health.yml`/`deploy.yml`, use `GITHUB_TOKEN`). The PAT includes `Workflows: write`, so autonomous runs
@@ -290,7 +276,7 @@ after buffering, land the largest coherent, test-covered slice first (`Part of #
 "Budget discipline" / Cost implications (~15-20% held back for test/commit/push/PR-open).
 
 For full phase-by-phase logic (guard-step details, `blocked`-label mechanics, the 5-PR ceiling,
-auto-merge's exact low-risk bar, manual prerequisites), see `docs/AUTOMATION.md` — read it before
+manual prerequisites), see `docs/AUTOMATION.md` — read it before
 touching any `.github/workflows/*.yml` file or reasoning in detail about the unattended pipeline.
 
 ## Documentation
@@ -459,7 +445,7 @@ firestore.rules           ← owner-only `saves/{uid}` rules; stryker.config.jso
 playwright.config.js, e2e/ ← real-browser suite, specs in docs/TESTING_REFERENCE.md
 scripts/                  ← automation, release, lint and simulation helpers (`ls scripts/`; most have a sibling `*.test.js`;
                             roles in docs/AUTOMATION.md or each script's header). Named elsewhere here: bump-version.mjs,
-                            adversarialReviewMarker.js, pr-low-risk-eligible.sh, enable-auto-merge-if-eligible.sh,
+                            adversarialReviewMarker.js,
                             lint-workflow-shell.mjs, lint-conflict-markers.mjs, simulate-challenges.mjs,
                             simulate-daily-challenges.mjs, verify-maintainer-checklist.mjs, sync-release-milestones.sh.
                             resolve-pr-threads.sh: `list` read-only; `resolve` takes explicit IDs, never bulk.

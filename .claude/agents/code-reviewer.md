@@ -159,5 +159,5 @@ reviewed head SHA (see `docs/AUTOMATION.md` "After final commit" and
 Use the PR's current `headRefOid` (40-char hex). Map this agent's verdict vocabulary as
 `APPROVE` → `APPROVE`, `NEEDS CHANGES` → `NEEDS_CHANGES`, `BLOCK` → `BLOCK`. The author (not
 you — you never edit or comment on the PR yourself) copies that marker into a PR issue comment
-after the final commit; an `APPROVE` for the current head is what lets the author (or the daily PR
-babysitter routine) enable auto-merge or merge.
+after the final commit; an `APPROVE` for the current head is what lets the PR babysitter routine (or a
+maintainer-driven interactive session) merge it.

@@ -7,9 +7,8 @@ pointer so the full phase-by-phase logic below isn't loaded into every session's
 default.
 
 Five Claude-side workflows under `.github/workflows/` run Claude Code and GitHub automation
-unattended, working together to open, fix up, and merge PRs with no human in the loop until an
-approval is needed — except for a narrow, conservative class of low-risk bot-authored PRs that
-merge on green checks alone (see Auto-merge below). All five authenticate git/GitHub operations
+unattended to open and fix up PRs. None of them merges anything: the PR babysitter routine (below)
+does, in ascending PR-number order (see "Auto-merge"). All five authenticate git/GitHub operations
 with a `GH_AUTOMATION_PAT` repo secret instead of the default `GITHUB_TOKEN`, because
 commits/pushes/merges authored by the default token can't trigger other workflows (see
 `docs/DESIGN_HISTORY.md` for why this matters concretely).
@@ -223,8 +222,8 @@ being closed manually — instead of self-locking after the second occurrence th
 environment/permission blocker already did from the first.
 
 **Automation-retro reporting (#57)** is the third filing channel, for when the automation *itself*
-misfires — a budget/turn overrun despite the self-estimated 50% target, an auto-merge that shouldn't
-have fired, the duplicate-PR guard failing to prevent overlap, a tag/Project/release step erroring —
+misfires — a budget/turn overrun despite the self-estimated 50% target, a merge that shouldn't
+have happened, the duplicate-PR guard failing to prevent overlap, a tag/Project/release step erroring —
 as opposed to a bug in the game (the `bug` pipeline, #55) or a missing repo capability
 (`gap-analysis`, Phase B item 6). The prompt instructs any run, in any phase, that observes such a
 misfire to file a `claude-task` + `automation-retro` issue describing what happened, what should have
@@ -310,7 +309,7 @@ guard step checks whether the latest completed `ci.yml` run on `main` failed, an
 any open PR (excluding `claude/auto-*` and fork PRs) with a failing check. Either condition outranks
 Phase A/B and is the one case allowed to bypass the 5-PR ceiling below (an issue-only slot that runs at a full ceiling is told to open no PR at all, Phase 0(c) included; only a red-main heal PR is exempt). If `main` is broken, Claude
 reads the failing run's logs, fixes the regression on a branch named `claude/heal-main-<short-slug>`,
-confirms `yarn test`/`yarn build` are green, and opens a PR (this branch prefix meets the low-risk bar's branch rule — see "Auto-merge"). Otherwise, for a stale Dependabot PR confirmed behind `main`
+confirms `yarn test`/`yarn build` are green, and opens a PR (merged by the PR babysitter routine). Otherwise, for a stale Dependabot PR confirmed behind `main`
 (failing only because its branch predates a source change, not the dependency bump), Claude comments
 `@dependabot rebase` — checking existing comments first, and never pushing its own commits to a
 `dependabot/*` branch. Any other failure without an obviously safe fix is left for a human.
@@ -499,8 +498,10 @@ are review-only; a finished automation-branch draft with an `APPROVE` marker for
 ready. Dependabot PRs: a behind branch gets one `@dependabot rebase`
 comment (never a pushed refresh); a CI failure is fixed at call sites/config while keeping the bumped
 version — never a downgrade, no hand-edited `yarn.lock` beyond the fix. Blocker comments carry
-`<!-- pr-babysitter -->` and aren't repeated; after three on the same problem it files an
-`automation-retro` issue instead (the old `#60` stalled-sweep escalation). Feedback that lands
+`<!-- pr-babysitter -->` and aren't duplicated: one comment per problem, carrying a
+`<!-- pr-babysitter blocked-runs=N -->` counter the routine edits upward each run the problem persists;
+at N=3 it files (or updates) an `automation-retro` issue instead (the old `#60` stalled-sweep
+escalation). Feedback that lands
 between runs waits for the next run.
 
 ### Automation self-heal (`automation-self-heal.yml`)
@@ -556,41 +557,30 @@ TIER_DEFINITIONS/economy-change ban applies. `deploy.yml` is still not gated on 
 
 ### Auto-merge
 
-No workflow enables or performs merges. Merges happen in two ways only: an agent session merging
-directly once everything is green (the PR babysitter routine above, or a maintainer-driven
-interactive session — `CLAUDE.md` "Direct merge"), or GitHub's native auto-merge enabled by an
-agent with `gh pr merge --auto --merge`. Merge commits only: the Main ruleset's
-`allowed_merge_methods` is `merge` + `rebase`; `--squash` is rejected (issue #343).
-
-**Low-risk bar** (`scripts/pr-low-risk-eligible.sh` / `scripts/enable-auto-merge-if-eligible.sh`):
-a same-repo PR on our own automation's branches (`claude/auto-*`, `claude/self-heal-*`,
-`claude/heal-main-*`, `dependabot/*`) whose whole diff touches only `CLAUDE.md`/`*/CLAUDE.md`/
-`*.test.js`/`*.test.jsx`, OR changes ≤50 lines total, OR is a Dependabot patch/minor bump. A PR
-touching anything under `.github/workflows/` is **always** excluded. The enable script checks
-eligibility **before** marking a draft ready, so an ineligible PR is never promoted.
+**Nothing enables GitHub auto-merge** — not workflows, not agents — because an armed auto-merge
+fires whenever its checks go green, out of PR-number order. Merges happen only by direct merge
+from the PR babysitter routine (ascending PR-number order, see above) or a maintainer-driven
+interactive session (`CLAUDE.md` "Direct merge"). Merge commits only: the Main ruleset's
+`allowed_merge_methods` is `merge` + `rebase`; squash is rejected (issue #343). The former low-risk
+bar and its helpers (`scripts/pr-low-risk-eligible.sh`, `scripts/enable-auto-merge-if-eligible.sh`)
+were removed with it.
 
 **After final commit (agent duty).** For every finished autonomous or interactive PR: run the
 adversarial reviewer on the final head → post the
 `<!-- adversarial-review sha=<headOid> verdict=… -->` marker (via
-`scripts/adversarialReviewMarker.js`'s formatter) → on any APPROVE always mark ready; enable
-auto-merge via `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` for
-low-risk diffs, or plain `gh pr merge --auto --merge` for any other diff that touches no
-`.github/workflows/**` file (maintainer standing rule — the `main` ruleset requires no human
-approval today, so the adversarial APPROVE is the gate). `NEEDS_CHANGES`/`BLOCK` never enable
-auto-merge. Workflow-file diffs: mark ready only, never enable auto-merge. Enabling auto-merge here
-is an explicit standing exception to "never self-merge"; force-merging, pushing to `main`, and
-GitHub-approving your own PR remain forbidden. Workflow-file PRs stay human-gated for every agent except the
-PR babysitter routine's no-loop exception (CODEOWNERS review is not yet enforced by the ruleset — #62).
+`scripts/adversarialReviewMarker.js`'s formatter) → on APPROVE mark ready. `NEEDS_CHANGES`/`BLOCK`:
+fix and re-review. Never merge, enable auto-merge, force-merge, push to `main`, or GitHub-approve
+your own PR (autonomous workflow runs, Devin, dev-team roles).
 
-**Three one-time manual prerequisites** (not settable through tools available to a Claude Code
+**One-time manual prerequisites** (not settable through tools available to a Claude Code
 session):
 - The `GH_AUTOMATION_PAT` repo secret (fine-grained PAT scoped to this repo, Contents: read/write,
   Pull requests: read/write, Issues: read/write, Workflows: write, Actions: write — required by
   `main-ci-heal.yml`'s `gh run rerun` / `gh run watch`; workflow-level `permissions: actions: write`
   only covers `GITHUB_TOKEN`), alongside
   `CLAUDE_CODE_OAUTH_TOKEN`.
-- "Allow auto-merge" enabled in repo Settings → General, and branch protection on `main` requiring
-  the `test` check from `ci.yml`.
+- Branch protection on `main` requiring the `test` check from `ci.yml`. ("Allow auto-merge" in
+  Settings → General is no longer used; #62 still lists it.)
 - "Require review from Code Owners" in that same branch-protection rule, so the `.github/CODEOWNERS`
   entry mapping `.github/workflows/**` to the repo owner actually takes effect (tracked in issue #62's
   checklist until confirmed done).
@@ -727,7 +717,7 @@ where available:
 - **Scheduled routine.** A recurring Claude Code Remote trigger (Routine) fires a fresh session
   monthly to run the skill end-to-end: clone the repo, follow the skill's process, and open a PR
   through the normal PR workflow above (draft while pending, adversarial review before merge,
-  same auto-merge policy as any other PR — this pass gets no special exemption from review). The
+  same merge policy as any other PR — this pass gets no special exemption from review). The
   routine's cadence and prompt are managed via `update_trigger`/`list_triggers`, not by editing a
   file in this repo.
 

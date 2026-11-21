@@ -11,6 +11,10 @@ adversarial review, resolve threads, and merge directly in ascending PR-number o
 place that owns PR state instead of four event-driven workflows racing each other on the same PR.
 Trade-offs accepted: feedback and conflicts now wait for the next daily run instead of being handled
 within minutes, and a human GitHub approval no longer auto-enables auto-merge (the old Path 1).
+GitHub auto-merge is no longer enabled by anyone (and `scripts/pr-low-risk-eligible.sh` /
+`scripts/enable-auto-merge-if-eligible.sh` were removed): an armed auto-merge fires on green checks,
+out of the PR-number merge order the maintainer wants; only the routine (or a maintainer-driven
+interactive session) merges.
 Workflow-file PRs follow the maintainer's no-loop tenet: no workflow may update workflows, directly or
 indirectly, without human approval; an upstream actor that workflows never update can't form a loop.
 So the routine (whose prompt no workflow can edit) may merge workflow-file PRs that no workflow
