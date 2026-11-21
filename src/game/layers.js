@@ -218,7 +218,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
     id: `levelPower${i + 1}`,
     name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${LEVEL_POWER_ACHIEVEMENT_LEVEL}`,
     group: 'levelPower',
-    trigger: `Reach level ${LEVEL_POWER_ACHIEVEMENT_LEVEL} on ${TIER_DEFINITIONS[tierNumber - 1].name}`,
+    trigger: `Reach level ${LEVEL_POWER_ACHIEVEMENT_LEVEL} on ${TIER_DEFINITIONS[tierNumber - 1].name} (${LEVEL_POWER_ACHIEVEMENT_LEVEL - 1} levels completed)`,
     bonus: `The per-level production multiplier rises by ${LEVEL_POWER_ACHIEVEMENT_BONUS} (×1.0 → ×1.5 with all ten)`,
     condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: LEVEL_POWER_ACHIEVEMENT_LEVEL },
   })),
@@ -744,9 +744,9 @@ export const PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1
 // A power of two so the autobuyer bulk doubling (below) lands exactly on it.
 export const BUY_MAX_ITERATION_CAP = 1024
 
-// A tier's production is multiplied by 1.25 at every completed level (see engine.js's
-// getPurchaseMilestoneMultiplier), compounding per completed level — the per-level multiplier
-// normally applied. Raised from 1.1 to 1.25 to shorten a fresh-save run to first Prestige (roughly
+// A tier's production is multiplied by this at every completed level (see engine.js's
+// getPurchaseMilestoneMultiplier/getLevelMultiplierBase), compounding per completed level. It now starts at 1.0
+// and Level power achievements add 0.05 each up to 1.5. Earlier: raised from 1.1 to 1.25 to shorten a fresh-save run to first Prestige (roughly
 // 2.2x faster per the simulate-run-times skill — 2d7h → ~1d1h38m at PP 0) without materially
 // changing Overclock's own claim shape, which stays gated on the last tier's completed levels
 // (getOverclockRequirement), not this multiplier — see docs/DESIGN_HISTORY.md.

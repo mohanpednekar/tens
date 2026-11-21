@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   buyTickspeedMultiplier, createInitialGameState, detectAchievements, eraGame, getCompletedAchievementGroups,
-  getLevelMultiplierBase, getPurchaseMilestoneMultiplier, isAchievementEarned, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
+  getLevelMultiplierBase, getPurchaseMilestoneMultiplier, getTierCostExponent, isAchievementEarned, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
 } from './engine'
 import { ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
 
@@ -142,5 +142,34 @@ describe('Level power achievements', () => {
 
   it('getPurchaseMilestoneMultiplier uses the supplied base', () => {
     expect(getPurchaseMilestoneMultiplier(3, 1.5)).toBeCloseTo(2.25)
+  })
+
+  it('tickGame credits production at the achievement-boosted base (all ten earned vs none)', () => {
+    const run = earnedAll => {
+      const base = createInitialGameState()
+      const state = {
+        ...base,
+        resources: { ...base.resources, [MONEY_ID]: 0 },
+        owned: { ...base.owned, tier01: 100 },
+        purchaseLevels: { ...base.purchaseLevels, tier01: 5 },
+        achievements: { counters: { pings: 0 }, earned: earnedAll ? Object.fromEntries(TIER_DEFINITIONS.map((_, i) => [`levelPower${i + 1}`, true])) : {} },
+      }
+      let next = state
+      for (let i = 0; i < 100; i++) next = tickGame(0.1)(next)
+      return next.resources[MONEY_ID]
+    }
+    const plain = run(false)
+    const boosted = run(true)
+    expect(plain).toBeGreaterThan(0)
+    // tier01 at level 5 has 4 completed levels: (1.5 / 1.0) ** 4 = 5.0625x
+    expect(boosted / plain).toBeGreaterThan(4.5)
+  })
+
+  it('cost spacing grows for a higher tier too: tier03 gaps 3 for 10 increments, then 4', () => {
+    const tier = { id: 'tier03' }
+    const gaps = []
+    for (let e = 3; e <= 14; e++) gaps.push(getTierCostExponent(tier, e) - getTierCostExponent(tier, e - 1))
+    expect(gaps.slice(0, 10)).toEqual(Array(10).fill(3))
+    expect(gaps.slice(10)).toEqual([4, 4])
   })
 })

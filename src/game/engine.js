@@ -796,8 +796,8 @@ export const getPurchaseBlockSize = state => {
 }
 
 // Cost-epoch exponent for a FACTORY tier (TIER_DEFINITIONS): the first two increments are +1, +1 for
-// every tier (epochs 0, 1, 2 → exponent 1, 2, 3); from the third increment on it grows by a constant
-// per tier — tier01 +1, tier02 +2, … tier10 +10 per level (exponent = 3 + tierNumber × (epoch − 2)).
+// every tier (epochs 0, 1, 2 → exponent 1, 2, 3); from the third increment on the spacing starts at
+// tierNumber (tier01 1 … tier10 10) and grows by 1 after every TIER_COST_SPACING_GROWTH_LEVELS increments.
 // Anything that is not a Factory tier (e.g. the Flops tiers' `{ baseCost }` objects, which carry no
 // tier id) keeps the shared linear-increment series of getCostEpochExponent.
 export const getTierCostExponent = (tier, epoch) => {
@@ -1560,7 +1560,7 @@ export const buyPrestigeDoublePp = state => {
 }
 
 
-// Production is multiplied by PURCHASE_MILESTONE_MULTIPLIER_BASE (1.25x) every time a tier
+// Production is multiplied by the level multiplier base (getLevelMultiplierBase: 1.0 + 0.05 per Level power achievement) every time a tier
 // completes another level — the same boundary where getTierCost's cost-epoch exponent steps up, so
 // completing a fresh level always pays off with production alongside the steeper price. But every
 // 10th level is a bigger milestone: that one level contributes PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE
