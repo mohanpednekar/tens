@@ -5820,7 +5820,6 @@ export const getDataLakeDiskCounts = (state, tierIndex) => {
 // The lake's permanent 1-unit buffer, in bits (0..getDataLakeUnitBits).
 export const getDataLakeFillBits = (state, tierIndex) =>
   getDataLakeTier(state, tierIndex)?.fillBits ?? 0
-export const getDataLakeBufferBits = getDataLakeFillBits
 
 export const isDataLakeBufferFull = (state, tierIndex) => {
   const unitBits = getDataLakeUnitBits(tierIndex)
