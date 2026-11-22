@@ -32,7 +32,9 @@ describe('AchievementsPage', () => {
     renderWithTheme(<AchievementsPage game={gameWith({ ...earned, levelPower1: true })} />)
     // 4 first-session stars + 1 completion bonus (10%, rounded up) + 1 level power star
     expect(screen.getByLabelText(/^total stars 6 of /)).toBeTruthy()
-    expect(screen.getByText(/⭐ 5\/5/)).toBeTruthy()
+    // Section shows only its completion bonus once complete (no per-section star counts)
+    expect(screen.getByText(/4\/4 · ⭐ \+1/)).toBeTruthy()
+    expect(screen.queryByText(/⭐ \d+\/\d+/, { selector: 'span' })).toBeNull()
   })
 
   it('collapses the tier purchases into one leveled row', () => {
@@ -101,23 +103,32 @@ describe('AppMenu achievements entry', () => {
     expect(screen.getByLabelText('It compiles, ship it achievement not yet earned').textContent).toContain('🔒')
   })
 
-  it('shows the real bonus reward before and after earning', () => {
+  it('shows the real bonus reward before and after earning (full text for short series)', () => {
     const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({})} />)
-    openGroup('Foundry')
-    fireEvent.click(screen.getByLabelText('Reclamation details'))
-    expect(screen.getByLabelText('Reclamation level 1 reward pending').textContent).toMatch(/^Reward: The first disk-size exponent step/)
+    openGroup('Overclock step')
+    fireEvent.click(screen.getByLabelText('Overclock step details'))
+    expect(screen.getByLabelText('Overclock step level 1 reward pending').textContent).toMatch(/^Reward: Each later Overclock needs 1 fewer/)
     unmount()
+    renderWithTheme(<AchievementsPage game={gameWith({ overclockStep1: true })} />)
+    openGroup('Overclock step')
+    fireEvent.click(screen.getByLabelText('Overclock step details'))
+    expect(screen.getByLabelText('Overclock step level 1 reward earned').textContent).toMatch(/^Reward earned: Each later Overclock needs 1 fewer/)
+  })
+
+  it('long series list one short line per level, with its reward inline', () => {
     renderWithTheme(<AchievementsPage game={gameWith({ pool01ResetI: true })} />)
     openGroup('Foundry')
     fireEvent.click(screen.getByLabelText('Reclamation details'))
-    expect(screen.getByLabelText('Reclamation level 1 reward earned').textContent).toMatch(/^Reward earned: The first disk-size exponent step/)
+    expect(screen.getByLabelText('Reclamation level 1 earned').textContent).toBe('✅ 1. Compact KB pool · Disk step 1 ↑')
+    expect(screen.getByLabelText('Reclamation level 2 not yet earned').textContent).toBe('🔒 2. Compact KB pool ×2 (0/2) · Disk step 2 ↑')
+    expect(screen.queryByLabelText(/Reclamation level \d+ reward/)).toBeNull()
   })
 
   it('collapsed series show the next requirement and its reward until every level is done', () => {
     const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({ pool01ResetI: true })} />)
     openGroup('Foundry')
     expect(screen.getByText('Next: Compact KB pool ×2 (0/2)')).toBeTruthy()
-    expect(screen.getByLabelText('Reclamation next reward').textContent).toBe('Reward: Faster disk step 2')
+    expect(screen.getByLabelText('Reclamation next reward').textContent).toBe('Reward: Disk step 2 ↑')
     unmount()
     const all = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.filter(def => def.group === 'foundry').map(def => [def.id, true]))
     renderWithTheme(<AchievementsPage game={gameWith(all)} />)

@@ -182,7 +182,7 @@ const AchievementsPage = ({ game }) => {
                   $color={isComplete ? theme.color.good : theme.color.textMuted}
                   aria-label={`${group.name} ${earnedCount} of ${group.members.length} earned${isComplete ? ', group complete' : ''}`}
                 >
-                  {isComplete ? '✅ ' : ''}{earnedCount}/{group.members.length} · ⭐ {stars.earned + stars.bonus}/{stars.total}{stars.bonus > 0 ? ` (+${stars.bonus} bonus)` : ''}
+                  {isComplete ? '✅ ' : ''}{earnedCount}/{group.members.length}{isComplete && stars.bonus > 0 ? ` · ⭐ +${stars.bonus}` : ''}
                 </Badge>
               </GroupHeading>
               {openGroups[group.id] && buildEntries(group.members).map(entry => {
@@ -193,6 +193,8 @@ const AchievementsPage = ({ game }) => {
                   const next = entry.levels.find(def => !isAchievementEarned(state, def.id))
                   // One identical bonus on every level (e.g. Level power) is stated once, not per level.
                   const sharedBonus = entry.levels.every(def => def.bonus === entry.levels[0].bonus) ? entry.levels[0].bonus : null
+                  // Long series (Reclamation, 20 levels) list one short line per level instead of repeating full text.
+                  const compact = entry.levels.length > 4
                   return (
                     <Row aria-label={`${entry.name} achievement level ${reached} of ${total}`} key={entry.key} style={{ alignItems: 'flex-start' }}>
                       <Text $earned={reached > 0}>
@@ -210,6 +212,14 @@ const AchievementsPage = ({ game }) => {
                         {openRows[entry.key] && entry.levels.map((def, i) => {
                           const lvlEarned = isAchievementEarned(state, def.id)
                           const lvlProgress = formatProgress(state, def, lvlEarned)
+                          if (compact) {
+                            const shortReward = sharedBonus ? null : getAchievementShortReward(def)
+                            return (
+                              <Detail aria-label={`${entry.name} level ${i + 1} ${lvlEarned ? 'earned' : 'not yet earned'}`} key={def.id}>
+                                {lvlEarned ? '✅' : '🔒'} {i + 1}. {getAchievementShortRequirement(def)}{lvlProgress && !lvlEarned ? ` (${lvlProgress})` : ''}{shortReward ? ` · ${shortReward}` : ''}
+                              </Detail>
+                            )
+                          }
                           return (
                             <Level key={def.id}>
                               <Detail aria-label={`${entry.name} level ${i + 1} ${lvlEarned ? 'earned' : 'not yet earned'}`}>

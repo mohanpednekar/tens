@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Achievement sections no longer show star counts — only the completion bonus (⭐ +N) once a section is complete; long series (Reclamation) list one short line per level instead of repeating text.
 - **Reclamation is one 20-level achievement row** (each pool's I then II, in pool order) instead of ten two-level rows; earned achievements, stars and bonuses are unchanged.
 - Achievements page shows each requirement's current progress (e.g. 100/256, 4/10, Capacity doublings) and its actual reward (the bonus it grants, when it has one) both before and after earning; collapsed series rows show a very short next requirement and reward; the unlock toast shows the reward too.
 - **Achievement stars**: each achievement (every level of a leveled row) awards 1 ⭐, and fully completing a section awards bonus stars equal to 10% of its stars (rounded up). The total shows atop the Achievements page and each section shows its own.
