@@ -149,4 +149,12 @@ describe('AppMenu achievements entry', () => {
     expect(screen.getByText(/Next: KB level 10/)).toBeTruthy()
     expect(screen.getByLabelText('Level power next reward').textContent).toBe('Reward: +0.05 per-level multiplier')
   })
+
+  it('shows no (0/1) on level-1 one-shot steps', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    openGroup('Foundry')
+    expect(screen.getByText('Next: Compact KB pool')).toBeTruthy()
+    openGroup('Early Factory')
+    expect(screen.getByText('Next: Accelerate 1')).toBeTruthy()
+  })
 })

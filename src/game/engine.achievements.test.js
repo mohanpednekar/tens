@@ -292,6 +292,8 @@ describe('getAchievementProgress / getAchievementReward', () => {
     expect(getAchievementProgress({ ...state, intro: { ...state.intro, capacity: 8 } }, { kind: 'storageUnlocked' })).toEqual({ current: 0, target: 10 })
     expect(getAchievementProgress({ ...state, intro: { ...state.intro, capacity: 512 } }, { kind: 'storageUnlocked' })).toEqual({ current: 6, target: 10 })
     expect(getAchievementProgress(state, { kind: 'counter', key: 'overflowDeepOverclock', min: 1 })).toBeNull()
+    expect(getAchievementProgress(state, { kind: 'clockSpeedLevel', min: 1 })).toBeNull()
+    expect(getAchievementProgress(state, { kind: 'poolExponentBonus', poolIndex: 1, min: 1 })).toBeNull()
     expect(getAchievementProgress(state, { kind: 'overclocked' })).toBeNull()
     expect(getAchievementProgress(state, { kind: 'byteCreated' })).toBeNull()
   })

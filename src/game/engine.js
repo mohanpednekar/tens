@@ -1454,12 +1454,13 @@ export const isAchievementConditionMet = (state, condition) => {
 }
 
 // Current requirement progress for an achievement condition, or null when it is a one-shot event with no
-// meaningful partial state (including counters with min 1). `current` may exceed `target` once met; callers clamp
+// meaningful partial state (including any threshold of 1). `current` may exceed `target` once met; callers clamp
 // for display. Capacity only ever doubles, so its progress counts doublings from the starting Capacity.
 export const getAchievementProgress = (state, condition) => {
+  // A threshold of 1 is a one-shot event, whatever the condition kind: no partial state to show.
+  if (condition.min <= 1) return null
   switch (condition.kind) {
     case 'counter':
-      if (condition.min <= 1) return null
       return { current: state.achievements?.counters?.[condition.key] ?? 0, target: condition.min }
     case 'clockSpeedLevel': return { current: state.globalTickspeedMultiplier ?? 0, target: condition.min }
     case 'tierLevel': return { current: state.purchaseLevels?.[condition.tierId] ?? 1, target: condition.min }
