@@ -682,8 +682,21 @@ boots the release APK on an API 34 emulator (`reactivecircus/android-emulator-ru
 `scripts/android-boot-smoke.sh` — fails on a crash or if the game UI never renders) and uploads the
 CI-signed AAB + R8 mapping (not uploadable to Play: wrong key). `ios` (macos) syncs, runs `yarn
 ios:configure`, then `xcodebuild` builds the `App` scheme for the iOS Simulator with
-`CODE_SIGNING_ALLOWED=NO` and uploads the zipped `App.app`. Store uploads are signed locally with the
-maintainer's upload key (docs/RELEASE_ANDROID.md, docs/RELEASE_IOS.md); no store credentials live in CI.
+`CODE_SIGNING_ALLOWED=NO` and uploads the zipped `App.app`. Its artifacts are never store-uploadable;
+store builds come from `store-release.yml` (below) or a local build with the real upload key.
+
+### Store release (`store-release.yml`)
+
+Builds the store-signed AAB/IPA and uploads them plus the listing via fastlane (`fastlane/Fastfile`;
+`Gemfile` pins fastlane). Manual dispatch (platforms, Play track/status/rollout, iOS
+`testflight`/`submit`/`none`, listing on/off), or a `v*` tag push from `release.yml` when variable
+`STORE_AUTO_RELEASE` is `true` (Play internal + TestFlight only — production/App Review stay manual).
+Each job first fails with the list of missing secrets. Signing material lives only in repository
+secrets (`ANDROID_UPLOAD_KEYSTORE_BASE64`, `TENS_UPLOAD_*`, `PLAY_SERVICE_ACCOUNT_JSON`, `ASC_KEY_ID`/
+`ASC_ISSUER_ID`/`ASC_KEY_P8`; variable `APPLE_TEAM_ID`); iOS signs via cloud-managed automatic signing
+(`-allowProvisioningUpdates` + the API key — no certificates or match repo). Images
+(`yarn store:assets`) and release notes (`yarn store:notes`) are regenerated per run. Full runbook and
+the maintainer's one-time console steps: `docs/STORE_RELEASE.md`.
 
 ### CodeQL (`codeql.yml`)
 

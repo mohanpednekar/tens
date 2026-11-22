@@ -121,3 +121,17 @@ android/keystore.properties
 reports/
 
 graphify-out/.graphify_build_state.json
+
+# Store-release outputs (docs/STORE_RELEASE.md): images come from `yarn store:assets`, release
+# notes from `yarn store:notes`, both regenerated at every release; fastlane writes the rest.
+fastlane/metadata/android/*/images/
+fastlane/metadata/android/*/changelogs/
+fastlane/metadata/ios/*/release_notes.txt
+fastlane/screenshots/
+fastlane/release-notes.txt
+fastlane/report.xml
+fastlane/README.md
+fastlane/test_output/
+build/ios/
+vendor/bundle/
+.bundle/

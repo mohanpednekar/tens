@@ -1,0 +1,147 @@
+# Store uploads for Tens (docs/STORE_RELEASE.md). Run from the repo root with `bundle exec fastlane
+# <platform> <lane>`; CI runs these from .github/workflows/store-release.yml. Credentials come only
+# from environment variables (never files in the repo):
+#   Play:      PLAY_SERVICE_ACCOUNT_JSON (service-account key JSON text)
+#   App Store: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (App Store Connect API key, .p8 text), APPLE_TEAM_ID
+# Binaries are built before fastlane runs (`yarn android:aab`; `yarn build:capacitor && cap sync ios
+# && yarn ios:configure`), so the exact same build steps serve local and CI releases.
+require 'json'
+require 'tmpdir'
+
+ROOT = File.expand_path('..', __dir__)
+BUNDLE_ID = 'com.mohanpednekar.tens'
+ANDROID_METADATA = File.join(ROOT, 'fastlane/metadata/android')
+IOS_METADATA = File.join(ROOT, 'fastlane/metadata/ios')
+IOS_SCREENSHOTS = File.join(ROOT, 'fastlane/screenshots')
+
+def package_version
+  JSON.parse(File.read(File.join(ROOT, 'package.json'))).fetch('version')
+end
+
+def flag?(value)
+  value.to_s == 'true'
+end
+
+default_platform(:android)
+
+platform :android do
+  def play_upload(**options)
+    upload_to_play_store(
+      package_name: BUNDLE_ID,
+      json_key_data: ENV.fetch('PLAY_SERVICE_ACCOUNT_JSON'),
+      metadata_path: ANDROID_METADATA,
+      **options
+    )
+  end
+
+  desc 'Upload the signed AAB to a Play track (internal|alpha|beta|production).'
+  desc 'Options: track, status (completed|draft — draft is required until the app is first published),'
+  desc 'rollout (0–1, production staged rollout), metadata:true to also push listing text + images.'
+  lane :deploy do |options|
+    track = (options[:track] || 'internal').to_s
+    rollout = options[:rollout].to_s.empty? ? nil : options[:rollout].to_s
+    staged = rollout && rollout.to_f < 1
+    with_metadata = flag?(options[:metadata])
+    play_upload(
+      track: track,
+      aab: File.join(ROOT, 'android/app/build/outputs/bundle/release/app-release.aab'),
+      mapping: File.join(ROOT, 'android/app/build/outputs/mapping/release/mapping.txt'),
+      release_status: staged ? 'inProgress' : (options[:status] || 'completed').to_s,
+      rollout: staged ? rollout : nil,
+      skip_upload_metadata: !with_metadata,
+      skip_upload_images: !with_metadata,
+      skip_upload_screenshots: !with_metadata
+    )
+  end
+
+  desc 'Push only the listing (text, icon, feature graphic, screenshots) — no binary.'
+  lane :metadata do
+    play_upload(skip_upload_aab: true, skip_upload_apk: true, skip_upload_changelogs: true)
+  end
+
+  desc 'Promote the latest release on one track to another (e.g. from:beta to:production rollout:0.2).'
+  lane :promote do |options|
+    rollout = options[:rollout].to_s.empty? ? nil : options[:rollout].to_s
+    staged = rollout && rollout.to_f < 1
+    play_upload(
+      track: options.fetch(:from).to_s,
+      track_promote_to: options.fetch(:to).to_s,
+      release_status: staged ? 'inProgress' : 'completed',
+      rollout: staged ? rollout : nil,
+      skip_upload_aab: true, skip_upload_apk: true, skip_upload_metadata: true,
+      skip_upload_images: true, skip_upload_screenshots: true, skip_upload_changelogs: true
+    )
+  end
+end
+
+platform :ios do
+  def asc_key
+    app_store_connect_api_key(
+      key_id: ENV.fetch('ASC_KEY_ID'),
+      issuer_id: ENV.fetch('ASC_ISSUER_ID'),
+      key_content: ENV.fetch('ASC_KEY_P8')
+    )
+  end
+
+  def deliver_listing(**options)
+    deliver(
+      api_key: asc_key,
+      app_identifier: BUNDLE_ID,
+      app_version: package_version,
+      metadata_path: IOS_METADATA,
+      screenshots_path: IOS_SCREENSHOTS,
+      # Without generated images (listing upload off) leave the store's screenshots untouched —
+      # overwrite_screenshots on an empty folder would delete them.
+      skip_screenshots: Dir.glob(File.join(IOS_SCREENSHOTS, '**', '*.png')).empty?,
+      overwrite_screenshots: true,
+      force: true, # no interactive HTML preview in CI
+      run_precheck_before_submit: false,
+      **options
+    )
+  end
+
+  desc 'Archive with cloud-managed automatic signing and upload to TestFlight.'
+  lane :beta do
+    key = asc_key
+    team = ENV.fetch('APPLE_TEAM_ID')
+    build = latest_testflight_build_number(api_key: key, app_identifier: BUNDLE_ID, initial_build_number: 0) + 1
+    Dir.mktmpdir do |dir|
+      # xcodebuild needs the key as a file to fetch/create signing assets itself (no match repo, no
+      # certificates stored in CI) — requires an Admin-role API key.
+      key_path = File.join(dir, 'AuthKey.p8')
+      File.write(key_path, ENV.fetch('ASC_KEY_P8'))
+      auth = "-allowProvisioningUpdates -authenticationKeyPath #{key_path} " \
+             "-authenticationKeyID #{ENV.fetch('ASC_KEY_ID')} -authenticationKeyIssuerID #{ENV.fetch('ASC_ISSUER_ID')}"
+      build_app(
+        project: File.join(ROOT, 'ios/App/App.xcodeproj'),
+        scheme: 'App',
+        configuration: 'Release',
+        output_directory: File.join(ROOT, 'build/ios'),
+        output_name: 'Tens.ipa',
+        clean: true,
+        xcargs: "#{auth} DEVELOPMENT_TEAM=#{team} CODE_SIGN_STYLE=Automatic " \
+                "MARKETING_VERSION=#{package_version} CURRENT_PROJECT_VERSION=#{build}",
+        export_xcargs: auth,
+        export_options: { method: 'app-store-connect', signingStyle: 'automatic', teamID: team }
+      )
+    end
+    upload_to_testflight(api_key: key, skip_waiting_for_build_processing: true)
+  end
+
+  desc 'Push only the App Store listing (text, screenshots, release notes) for the current version.'
+  lane :metadata do
+    deliver_listing(skip_binary_upload: true, submit_for_review: false)
+  end
+
+  desc 'Attach the latest processed build to the current version, push the listing and submit for review.'
+  desc 'Option automatic_release:true releases as soon as Apple approves (default: manual release).'
+  lane :submit do |options|
+    deliver_listing(
+      skip_binary_upload: true,
+      build_number: latest_testflight_build_number(api_key: asc_key, app_identifier: BUNDLE_ID, version: package_version).to_s,
+      submit_for_review: true,
+      automatic_release: flag?(options[:automatic_release]),
+      submission_information: { add_id_info_uses_idfa: ENV['VITE_TENS_ADS_ENABLED'] == 'true' }
+    )
+  end
+end

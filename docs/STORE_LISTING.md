@@ -1,47 +1,18 @@
 # Store listing drafts
 
 Drafts for Google Play and the App Store, based on what the app actually collects (see
-`public/privacy.html`). Answers are given for the **default build** (cloud save on, ads and IAP
-off) and the changes needed when `VITE_TENS_ADS_ENABLED` / `VITE_TENS_IAP_ENABLED` are turned on.
+`public/privacy.html`). Answers are given per feature set (no optional features; cloud save on) and the changes needed when `VITE_TENS_ADS_ENABLED` / `VITE_TENS_IAP_ENABLED` are turned on.
 Re-check every answer whenever a flag or SDK changes.
 
 ## Listing text
 
-**App name:** Tens
-
-**Short description (Play, ≤ 80 chars):**
-> An incremental idle game where every upgrade is a power of ten.
-
-**Subtitle (App Store, ≤ 30 chars):** Idle game in powers of ten
-
-**Promotional text (App Store, ≤ 170 chars):**
-> Tap bits into bytes, build disk arrays, and climb from Kilobytes to Quettabytes. Prestige, ascend Eras and watch the numbers explode — no paywalls.
-
-**Full description (≤ 4000 chars):**
-> Tens is an incremental game built around one idea: every cost, every upgrade and every reward is a power of ten.
->
-> Start in the Byte Foundry, tapping a stream of bits into your very first Kilobyte. Combine, upgrade capacity and speed, and provision disk arrays that automatically feed your growing Byte Factory. Buy tiers from Kilobytes all the way up to Quettabytes, each one producing the tier below it, and watch your production cascade down the ladder.
->
-> • Ten storage tiers, from Kilobytes to Quettabytes
-> • A hands-on Byte Foundry with disks, data lakes and boosters
-> • Merge Cores into Nodes, Clusters and beyond for powerful boosts
-> • Latency, Scale Up and Overclock to speed up every run
-> • Prestige at one Googol Bytes for permanent upgrades and automation
-> • Ascend Eras for Eons and an even deeper meta game
-> • Offline progress — your factory keeps working while you're away
-> • Optional cloud save to continue on another device
-> • Light and dark themes, multiple save slots
-> • Plays fully offline, no account required
->
-> Every part of the game is free to play. Nothing is locked behind a purchase.
-
-**Category:** Games → Simulation (Play: Simulation; App Store primary: Games, secondary: Simulation / Strategy)
-**Tags (Play):** Idle, Incremental, Casual, Offline
-**Keywords (App Store, ≤ 100 chars):** `idle,incremental,clicker,tap,bytes,prestige,offline,numbers,factory,tycoon`
-**Support URL:** https://github.com/mohanpednekar/tens/issues
-**Marketing URL:** https://mohanpednekar.github.io/tens/
-**Privacy policy:** https://mohanpednekar.github.io/tens/privacy.html
-**Account deletion URL (Play):** https://mohanpednekar.github.io/tens/privacy.html#delete-account
+The listing copy lives in `fastlane/metadata/` (Play: `android/en-US/*.txt`; App Store:
+`ios/en-US/*.txt`, categories and review notes under `ios/`) and is uploaded by fastlane — see
+`docs/STORE_RELEASE.md`. Edit it there; for a manual console entry, copy the same files.
+Support URL https://github.com/mohanpednekar/tens/issues · Marketing URL
+https://mohanpednekar.github.io/tens/ · Privacy policy https://mohanpednekar.github.io/tens/privacy.html ·
+Account deletion URL (Play) https://mohanpednekar.github.io/tens/privacy.html#delete-account ·
+Play category Games → Simulation, tags Idle, Incremental, Casual, Offline.
 
 ## Content rating (Play IARC questionnaire / App Store age rating)
 
@@ -68,7 +39,13 @@ assets stay neutral; otherwise reconsider before enabling ads.
 
 ## Google Play — Data safety
 
-### Default build (cloud save on, ads and IAP off)
+### No optional features (no Firebase config, ads and IAP off)
+
+The binary makes no network requests that carry user data: **"Does your app collect or share any of
+the required user data types?" → No.** Apple App Privacy: **Data Not Collected**. Everything below
+applies only once the matching feature is configured.
+
+### Cloud save on (Firebase config set; ads and IAP off)
 
 - **Does your app collect or share any of the required user data types?** Yes
 - **Is all of the user data collected by your app encrypted in transit?** Yes (HTTPS only)
@@ -114,7 +91,7 @@ Payment details are handled by Google Play and never reach the app.
 
 ## Apple — App Privacy ("nutrition label")
 
-### Default build
+### Cloud save on
 
 **Data Linked to You** (purpose: App Functionality; not used for tracking):
 - Contact Info → **Email Address**
@@ -137,10 +114,10 @@ Add, per Google's AdMob App Store guidance:
 Add: Purchases → **Purchase History** (Linked to You, App Functionality). RevenueCat's app user id
 is covered by Identifiers → User ID.
 
-## Store assets still needed
+## Store assets
 
-- Play: 512×512 icon (from `public/pwa-512x512.png`), 1024×500 feature graphic, 2–8 phone
-  screenshots (16:9 or 9:16, ≥ 1080 px), optional 7"/10" tablet screenshots.
-- App Store: 1024×1024 icon (no alpha; `ios/App/App/Assets.xcassets/AppIcon.appiconset`),
-  6.9" (1320×2868) and 6.5" (1284×2778) iPhone screenshots, 13" iPad screenshots if iPad stays
-  enabled, optional app preview video.
+All images are generated by `yarn store:assets` into fastlane's layout (`docs/STORE_RELEASE.md`):
+Play icon 512×512, feature graphic 1024×500, 6 phone + 6 seven-inch + 6 ten-inch screenshots;
+App Store 6 screenshots each for iPhone 6.9" (1320×2868), 6.5" (1284×2778) and iPad 13"
+(2064×2752). The App Store icon ships inside the build (`ios/App/App/Assets.xcassets/AppIcon.appiconset`,
+1024×1024, no alpha). Not generated: an optional app preview video / promo video.

@@ -48,6 +48,7 @@ yarn cap:sync     # cap sync (copies dist/ into the android/ + ios/ native proje
 yarn cap:android  # build:capacitor + cap sync android + open Android Studio (`yarn cap:ios` → Xcode)
 yarn android:aab  # signed + R8-minified release AAB (bundleRelease; `android:apk:release` → APK) — docs/RELEASE_ANDROID.md
 yarn ios:configure # write Info.plist ad keys from the ads flag (scripts/configure-ios-plist.mjs; run by cap:ios)
+yarn store:assets # store screenshots/feature graphic → fastlane/ (gitignored); store:notes → release notes from CHANGELOG
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
@@ -372,7 +373,8 @@ docs/                        ← DESIGN_HISTORY.md (the "why": superseded formul
                                Storage/Disks/Data Lakes/Power; read before touching ByteFoundryPage/ComputePage/disk+
                                lake engine code), MAINPAGE_REFERENCE.md (incl. ComputePage), COMPONENTS_REFERENCE.md
                                (component props/styling), TESTING_REFERENCE.md, THEMING_REFERENCE.md, PWA_REFERENCE.md,
-                               NATIVE_APPS_REFERENCE.md, DEVMODE_REFERENCE.md, RELEASE_ANDROID/IOS.md, STORE_LISTING.md
+                               NATIVE_APPS_REFERENCE.md, DEVMODE_REFERENCE.md, RELEASE_ANDROID/IOS.md, STORE_LISTING.md,
+                               STORE_RELEASE.md (automated store pipeline)
 src/
   game/
     layers.js             ← TIER_DEFINITIONS + all game constants (single source of truth)
@@ -432,6 +434,7 @@ src/
                             only on a save's very first cycle. Detail: MAINPAGE_REFERENCE "App.jsx routing and the Foundry gate"
   index.jsx, reportWebVitals.js ← ReactDOM entry; optional web-vitals reporter (no-op, no callback)
 capacitor.config.js, android/, ios/ ← Capacitor wrap ("Native apps")
+fastlane/, Gemfile        ← store upload lanes + committed listing text (docs/STORE_RELEASE.md)
 vite.config.js            ← thin wrapper over `viteConfigFactory.js` (aliases, dev/test server, VitePWA — skipped when
                             `CAPACITOR=1`, along with the `/tens/` base; split out so `capacitorConfig.test.js` can pin that path —
                             `import.meta.url` isn't a `file:` URL under Vitest)
@@ -447,7 +450,8 @@ scripts/                  ← automation, release, lint and simulation helpers (
                             generate-pwa-icons.mjs is not in the build — re-run only if the icon design changes.
                             large-screen-mockups/ (`yarn mockups:large-screens`): regenerates epic #1152's design mockups into
                             docs/design/large-screens/ from real app captures (`PW_CHROMIUM_PATH` as for e2e) — the one committed
-                            exception to throwaway aesthetic-review scripts.
+                            exception to throwaway aesthetic-review scripts. store-assets/ (`yarn store:assets`): store
+                            screenshots + feature graphic; lib/capture.mjs: dev-server/navigation helpers both share.
 public/                   ← generated PWA icons, favicon.ico, robots.txt (old CRA `index.html`/`manifest.json`/`logo*.png`
                             removed — DESIGN_HISTORY.md)
 ```
@@ -548,7 +552,9 @@ off by default and never bundled in web builds (`virtual:tens-features`). Saves 
 `localStorage`, separate from the browser/PWA. **Read `docs/NATIVE_APPS_REFERENCE.md`** (release signing,
 SDK targets, feature flags, mobile-build.yml, rewarded-ad placement) before touching `capacitor.config.js`,
 `android/`, `ios/`, `services/*` or `viteConfigFactory.js`'s feature flags; release steps:
-`docs/RELEASE_ANDROID.md`, `docs/RELEASE_IOS.md`, `docs/STORE_LISTING.md`.
+`docs/RELEASE_ANDROID.md`, `docs/RELEASE_IOS.md`, `docs/STORE_LISTING.md`. Store uploads are automated
+with fastlane (`fastlane/` listing text is the source of truth; `Gemfile`) via `store-release.yml` —
+**read `docs/STORE_RELEASE.md`** before touching either.
 
 ## Funding
 

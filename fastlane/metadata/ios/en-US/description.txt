@@ -1,0 +1,17 @@
+Tens is an incremental game built around one idea: every cost, every upgrade and every reward is a power of ten.
+
+Start in the Byte Foundry, pinging a stream of bits into your very first Kilobyte. Compile, upgrade Capacity and Bitrate, and provision disk arrays that feed your growing Byte Factory. Buy tiers from Kilobytes all the way up to Quettabytes, each one producing the tier below it, and watch production cascade down the ladder.
+
+• Ten storage tiers, from Kilobytes to Quettabytes
+• A hands-on Byte Foundry with disks, data lakes and pool flushes
+• Charge Cells into Batteries, Packs and beyond for powerful Boosts
+• Accelerate, Scale Up and Overclock to speed up every run
+• Purge at one Googol Bytes for Purge Points, Firmware upgrades and automation
+• Reboot for Kernels and an even deeper meta game
+• Factory challenges and fresh Daily challenges
+• Dozens of achievements, some with permanent bonuses
+• Sleep mode — your factory keeps working while you're away
+• Light and dark themes, multiple save slots, backup and restore
+• Plays fully offline, no account required
+
+Every part of the game is free to play. Nothing is locked behind a purchase.
