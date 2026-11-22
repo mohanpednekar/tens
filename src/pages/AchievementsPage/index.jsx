@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import StatCard from 'components/StatCard'
-import { getAchievementGroupStars, getAchievementProgress, getAchievementReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
+import { getAchievementGroupStars, getAchievementProgress, getAchievementReward, getAchievementShortRequirement, getAchievementShortReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
 import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
 
@@ -204,8 +204,8 @@ const AchievementsPage = ({ game }) => {
                         >
                           <strong>{entry.name}</strong>
                         </NameButton>
-                        {!openRows[entry.key] && next && <Detail>Next: {next.trigger}{formatProgress(state, next, false) ? ` (${formatProgress(state, next, false)})` : ''}</Detail>}
-                        {!openRows[entry.key] && next && getAchievementReward(next) && <Detail aria-label={`${entry.name} next reward`}>Reward: {getAchievementReward(next)}</Detail>}
+                        {!openRows[entry.key] && next && <Detail>Next: {getAchievementShortRequirement(next)}{formatProgress(state, next, false) ? ` (${formatProgress(state, next, false)})` : ''}</Detail>}
+                        {!openRows[entry.key] && next && getAchievementShortReward(next) && <Detail aria-label={`${entry.name} next reward`}>Reward: {getAchievementShortReward(next)}</Detail>}
                         {openRows[entry.key] && sharedBonus && <Detail>Reward each level: {sharedBonus}</Detail>}
                         {openRows[entry.key] && entry.levels.map((def, i) => {
                           const lvlEarned = isAchievementEarned(state, def.id)
@@ -213,7 +213,7 @@ const AchievementsPage = ({ game }) => {
                           return (
                             <Level key={def.id}>
                               <Detail aria-label={`${entry.name} level ${i + 1} ${lvlEarned ? 'earned' : 'not yet earned'}`}>
-                                {lvlEarned ? '✅ ' : ''}{i + 1}. {def.trigger}{lvlProgress && !lvlEarned ? ` (${lvlProgress})` : ''}
+                                {lvlEarned ? '✅' : '🔒'} {i + 1}. {def.trigger}{lvlProgress && !lvlEarned ? ` (${lvlProgress})` : ''}
                               </Detail>
                               {!sharedBonus && getAchievementReward(def) && (
                                 <Detail aria-label={`${entry.name} level ${i + 1} reward ${lvlEarned ? 'earned' : 'pending'}`}>
@@ -224,7 +224,7 @@ const AchievementsPage = ({ game }) => {
                           )
                         })}
                       </Text>
-                      <Badge $color={done ? theme.color.good : theme.color.textMuted}>{done ? '✅ ' : ''}Lv {reached}/{total}</Badge>
+                      <Badge $color={done ? theme.color.good : theme.color.textMuted}>{done ? '✅ ' : reached === 0 ? '🔒 ' : ''}Lv {reached}/{total}</Badge>
                     </Row>
                   )
                 }
@@ -255,7 +255,7 @@ const AchievementsPage = ({ game }) => {
                         </Detail>
                       )}
                     </Text>
-                    {(earned || progressText) && <Badge $color={earned ? theme.color.good : theme.color.disabled}>{earned ? '✅' : progressText}</Badge>}
+                    <Badge $color={earned ? theme.color.good : theme.color.disabled}>{progressText && !earned ? `${progressText} ` : ''}{earned ? '✅' : '🔒'}</Badge>
                   </Row>
                 )
               })}

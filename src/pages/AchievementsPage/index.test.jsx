@@ -91,14 +91,14 @@ describe('AppMenu achievements entry', () => {
     const state = { ...createInitialGameState(), achievements: { earned: { helloWorld: true }, counters: { pings: 100 } } }
     renderWithTheme(<AchievementsPage game={{ state }} />)
     openGroup('First session')
-    expect(screen.getByText(/Next: Ping 256 times \(100\/256\)/)).toBeTruthy()
+    expect(screen.getByText(/Next: Ping ×256 \(100\/256\)/)).toBeTruthy()
     fireEvent.click(screen.getByLabelText('Ping details'))
     // No bonus => no reward line (stars are score, not a reward)
     expect(screen.queryByLabelText(/Ping level \d reward/)).toBeNull()
     expect(screen.queryByText(/⭐ 1 star/)).toBeNull()
-    // Binary achievement: no lock/status badge until earned
+    // Binary achievement: lock until earned
     expect(screen.getByLabelText('Kibi, not Kilo achievement not yet earned').textContent).toContain('0/10')
-    expect(screen.getByLabelText('It compiles, ship it achievement not yet earned').textContent).not.toMatch(/🔒|✅/)
+    expect(screen.getByLabelText('It compiles, ship it achievement not yet earned').textContent).toContain('🔒')
   })
 
   it('shows the real bonus reward before and after earning', () => {
@@ -116,12 +116,12 @@ describe('AppMenu achievements entry', () => {
   it('collapsed series show the next requirement and its reward until every level is done', () => {
     const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({ pool01ResetI: true })} />)
     openGroup('Foundry')
-    expect(screen.getByText('Next: Compact the KB pool twice (0/2)')).toBeTruthy()
-    expect(screen.getByLabelText('KB Reclamation next reward').textContent).toMatch(/^Reward: The second disk-size exponent step/)
+    expect(screen.getByText('Next: Compact KB pool ×2 (0/2)')).toBeTruthy()
+    expect(screen.getByLabelText('KB Reclamation next reward').textContent).toBe('Reward: Faster disk step 2')
     unmount()
     renderWithTheme(<AchievementsPage game={gameWith({ pool01ResetI: true, pool01ResetII: true })} />)
     openGroup('Foundry')
-    expect(screen.queryByText(/^Next: Compact the KB pool/)).toBeNull()
+    expect(screen.queryByText(/^Next: Compact KB pool/)).toBeNull()
     expect(screen.queryByLabelText('KB Reclamation next reward')).toBeNull()
   })
 
@@ -137,6 +137,14 @@ describe('AppMenu achievements entry', () => {
     const state = { ...createInitialGameState(), achievements: { earned: { helloWorld: true }, counters: { pings: 300 } } }
     renderWithTheme(<AchievementsPage game={{ state }} />)
     openGroup('First session')
-    expect(screen.getByText(/Next: Ping 256 times \(256\/256\)/)).toBeTruthy()
+    expect(screen.getByText(/Next: Ping ×256 \(256\/256\)/)).toBeTruthy()
+  })
+
+  it('shows a lock on series with no level reached and on unearned levels', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    openGroup('Level power')
+    expect(screen.getByLabelText('Level power achievement level 0 of 10').textContent).toContain('🔒')
+    expect(screen.getByText(/Next: KB level 10/)).toBeTruthy()
+    expect(screen.getByLabelText('Level power next reward').textContent).toBe('Reward: +0.05 per-level multiplier')
   })
 })

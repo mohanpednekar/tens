@@ -76,7 +76,7 @@ describe('AchievementToasts', () => {
     rerender(ui(mk(['helloWorld', 'levelPower1'])))
     act(() => { vi.advanceTimersByTime(300) })
     const text = screen.getByRole('status', { name: 'achievement notifications' }).textContent
-    expect(text).toContain('The per-level production multiplier rises by 0.05')
+    expect(text).toContain('+0.05 per-level multiplier')
     expect(text).not.toContain('⭐')
     unmount()
   })

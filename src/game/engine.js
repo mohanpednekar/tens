@@ -1474,6 +1474,9 @@ export const getAchievementProgress = (state, condition) => {
 
 // The achievement's actual reward (its bonus text), or null when it has none. Stars are score, not a reward.
 export const getAchievementReward = def => def.bonus ?? null
+// Very short forms for collapsed rows and toasts (fall back to the long text).
+export const getAchievementShortRequirement = def => def.short ?? def.trigger
+export const getAchievementShortReward = def => def.shortBonus ?? def.bonus ?? null
 
 // Seconds between last-tier credits at `completedLevels`: base period / (1 + log10(levels)), floored at
 // LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS (10 ms); Infinity with no completed level. Each credit is exactly 1 unit.

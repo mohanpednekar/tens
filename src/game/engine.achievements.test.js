@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   getAchievementProgress,
   getAchievementReward,
+  getAchievementShortRequirement,
+  getAchievementShortReward,
   buyTickspeedMultiplier, createInitialGameState, detectAchievements, eraGame, getCompletedAchievementGroups,
   getLevelMultiplierBase, getOverclockRequirement, getOverclockRequirementStep, getPurchaseMilestoneMultiplier, getTierCostExponent, buyGlobalTickspeedMultiplier, isAchievementEarned, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
 } from './engine'
@@ -292,6 +294,14 @@ describe('getAchievementProgress / getAchievementReward', () => {
     expect(getAchievementProgress(state, { kind: 'counter', key: 'overflowDeepOverclock', min: 1 })).toBeNull()
     expect(getAchievementProgress(state, { kind: 'overclocked' })).toBeNull()
     expect(getAchievementProgress(state, { kind: 'byteCreated' })).toBeNull()
+  })
+
+  it('short forms fall back to the long text', () => {
+    expect(getAchievementShortRequirement({ short: 'S', trigger: 'Long' })).toBe('S')
+    expect(getAchievementShortRequirement({ short: null, trigger: 'Long' })).toBe('Long')
+    expect(getAchievementShortReward({ shortBonus: 'sb', bonus: 'b' })).toBe('sb')
+    expect(getAchievementShortReward({ shortBonus: null, bonus: 'b' })).toBe('b')
+    expect(getAchievementShortReward({ shortBonus: null, bonus: null })).toBeNull()
   })
 
   it('rewards are the bonus text, or none (stars are score, not a reward)', () => {
