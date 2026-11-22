@@ -27,7 +27,8 @@ Android and iOS apps wrap the same web build via Capacitor 8 (not yet store-sign
   `TENS_UPLOAD_*` Gradle props/env/`android/keystore.properties` (gitignored; release tasks fail if
   unset), runs R8 (`minifyEnabled` + `shrinkResources`), derives versionName/versionCode from
   `package.json`, and fails if Play Billing < 8 resolves. Manifest declares only `INTERNET`.
-  Full steps: `docs/RELEASE_ANDROID.md`, `docs/RELEASE_IOS.md`, `docs/STORE_LISTING.md`.
+  Full steps: `docs/RELEASE_ANDROID.md`, `docs/RELEASE_IOS.md`, `docs/STORE_LISTING.md`; automated
+  pipeline (fastlane + `store-release.yml`, generated store images/notes): `docs/STORE_RELEASE.md`.
 - **Optional features (all off by default):** `viteConfigFactory.js`'s `resolveFeatureFlags` +
   `virtual:tens-features` module export the flags and one loader per feature — `null` when off, so
   ad/IAP/Firebase code is never bundled (web builds can never enable ads/IAP). Cloud save turns on

@@ -1,0 +1,1 @@
+An incremental idle game where every upgrade is a power of ten.

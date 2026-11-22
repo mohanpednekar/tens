@@ -1,0 +1,250 @@
+# Store uploads for Tens (docs/STORE_RELEASE.md). Run from the repo root with `bundle exec fastlane
+# <platform> <lane>`; CI runs these from .github/workflows/store-release.yml. Credentials come only
+# from environment variables (never files in the repo):
+#   Play:      PLAY_SERVICE_ACCOUNT_JSON (service-account key JSON text)
+#   App Store: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (App Store Connect API key, .p8 text), APPLE_TEAM_ID
+# Binaries are built before fastlane runs (`yarn android:aab`; `yarn build:capacitor && cap sync ios
+# && yarn ios:configure`), so the exact same build steps serve local and CI releases.
+require 'json'
+require 'tmpdir'
+
+ROOT = File.expand_path('..', __dir__)
+BUNDLE_ID = 'com.mohanpednekar.tens'
+ANDROID_METADATA = File.join(ROOT, 'fastlane/metadata/android')
+IOS_METADATA = File.join(ROOT, 'fastlane/metadata/ios')
+IOS_SCREENSHOTS = File.join(ROOT, 'fastlane/screenshots')
+
+def package_version
+  JSON.parse(File.read(File.join(ROOT, 'package.json'))).fetch('version')
+end
+
+def flag?(value)
+  value.to_s == 'true'
+end
+
+default_platform(:android)
+
+platform :android do
+  def play_upload(**options)
+    upload_to_play_store(
+      package_name: BUNDLE_ID,
+      json_key_data: ENV.fetch('PLAY_SERVICE_ACCOUNT_JSON'),
+      metadata_path: ANDROID_METADATA,
+      **options
+    )
+  end
+
+  # Validated release intent shared by deploy and promote. A rollout is a fraction in (0, 1];
+  # anything else (e.g. "20") is rejected instead of silently becoming a full release, and an
+  # explicit draft is never turned into a live staged rollout.
+  def release_plan(options)
+    status = (options[:status] || 'completed').to_s
+    UI.user_error!("Unknown status '#{status}' (completed|draft)") unless %w[completed draft].include?(status)
+    rollout = options[:rollout].to_s.strip
+    return { status: status, rollout: nil } if rollout.empty?
+    fraction = Float(rollout, exception: false)
+    UI.user_error!("Rollout must be a fraction in (0, 1], got '#{rollout}'") unless fraction && fraction > 0 && fraction <= 1
+    UI.user_error!('A draft release cannot have a rollout fraction — choose one') if status == 'draft'
+    fraction < 1 ? { status: 'inProgress', rollout: rollout } : { status: status, rollout: nil }
+  end
+
+  # The checkout's own version code (mirrors android/app/build.gradle and scripts/store-release-notes.mjs),
+  # so a dispatch promotes the same release the iOS job of that run ships.
+  def checkout_version_code
+    return ENV['TENS_VERSION_CODE'].to_i unless ENV['TENS_VERSION_CODE'].to_s.empty?
+    major, minor, patch = package_version.split('.').map(&:to_i)
+    major * 10_000 + minor * 100 + patch
+  end
+
+  # Version codes testers actually receive on a track: releases that are completed or rolling out.
+  # Drafts and halted releases are excluded (google_play_track_version_codes ignores status).
+  def tested_version_codes(track)
+    require 'supply'
+    require 'supply/options'
+    Supply.config = FastlaneCore::Configuration.create(
+      Supply::Options.available_options,
+      { package_name: BUNDLE_ID, json_key_data: ENV.fetch('PLAY_SERVICE_ACCOUNT_JSON'), track: track }
+    )
+    client = Supply::Client.make_from_config
+    client.begin_edit(package_name: BUNDLE_ID)
+    releases = client.tracks(track).first&.releases || []
+    client.abort_current_edit
+    releases.select { |release| %w[completed inProgress].include?(release.status) }
+            .flat_map { |release| release.version_codes || [] }.map(&:to_i)
+  end
+
+  desc 'Upload the signed AAB to a Play track (internal|alpha|beta|production).'
+  desc 'Options: track, status (completed|draft — draft is required until the app is first published),'
+  desc 'rollout (fraction in (0, 1]), metadata:true to also push listing text + images.'
+  lane :deploy do |options|
+    plan = release_plan(options)
+    with_metadata = flag?(options[:metadata])
+    play_upload(
+      track: (options[:track] || 'internal').to_s,
+      aab: File.join(ROOT, 'android/app/build/outputs/bundle/release/app-release.aab'),
+      mapping: File.join(ROOT, 'android/app/build/outputs/mapping/release/mapping.txt'),
+      release_status: plan[:status],
+      rollout: plan[:rollout],
+      skip_upload_metadata: !with_metadata,
+      skip_upload_images: !with_metadata,
+      skip_upload_screenshots: !with_metadata
+    )
+  end
+
+  desc 'Push only the listing (text, icon, feature graphic, screenshots) — no binary. Play attaches'
+  desc 'listing edits to an existing release, so this needs one on `track` (default internal):'
+  desc 'it cannot run before the first AAB is uploaded.'
+  lane :metadata do |options|
+    track = (options[:track] || 'internal').to_s
+    codes = google_play_track_version_codes(
+      package_name: BUNDLE_ID, track: track, json_key_data: ENV.fetch('PLAY_SERVICE_ACCOUNT_JSON')
+    )
+    UI.user_error!("No release on the Play '#{track}' track yet — upload the first AAB first") if codes.empty?
+    play_upload(
+      track: track, version_code: codes.max,
+      skip_upload_aab: true, skip_upload_apk: true, skip_upload_changelogs: true
+    )
+  end
+
+  desc 'Promote a tested release from one track to another without re-uploading the binary'
+  desc '(e.g. from:internal to:production status:completed rollout:0.2). Promotes the checkout\'s'
+  desc 'version code (or version_code:), which must be completed or rolling out on the source track.'
+  desc 'metadata:true also uploads the listing in the same Play edit (Play validates them together).'
+  lane :promote do |options|
+    from = options.fetch(:from).to_s
+    UI.user_error!("Promote needs two different tracks (got '#{from}' twice)") if from == options.fetch(:to).to_s
+    plan = release_plan(options)
+    version_code = (options[:version_code] || checkout_version_code).to_i
+    tested = tested_version_codes(from)
+    unless tested.include?(version_code)
+      UI.user_error!("Version code #{version_code} is not a tested release on '#{from}' (tested: #{tested.join(', ').then { |list| list.empty? ? 'none' : list }})")
+    end
+    play_upload(
+      track: from,
+      version_code: version_code,
+      track_promote_to: options.fetch(:to).to_s,
+      # release_status would filter the SOURCE track's releases; the promoted release's status is
+      # track_promote_release_status (+ rollout for a staged production rollout).
+      track_promote_release_status: plan[:status],
+      rollout: plan[:rollout],
+      # Listing rides in the same edit as the promotion (supply uploads it before committing), so a
+      # first external release that needs a listing is validated with it. Release notes stay as tested.
+      skip_upload_aab: true, skip_upload_apk: true, skip_upload_changelogs: true,
+      skip_upload_metadata: !flag?(options[:metadata]),
+      skip_upload_images: !flag?(options[:metadata]),
+      skip_upload_screenshots: !flag?(options[:metadata])
+    )
+  end
+end
+
+platform :ios do
+  def asc_key
+    app_store_connect_api_key(
+      key_id: ENV.fetch('ASC_KEY_ID'),
+      issuer_id: ENV.fetch('ASC_ISSUER_ID'),
+      key_content: ENV.fetch('ASC_KEY_P8')
+    )
+  end
+
+  # Review notes follow the build's flags so the reviewer is never sent to a feature this build
+  # doesn't have (cloud save exists only when the VITE_FIREBASE_* config is set).
+  def review_notes
+    notes = 'Tens is a single-player incremental game. No login is required; every feature is ' \
+            'reachable without an account. Tap the Data Stream tile on the Byte Foundry screen to start.'
+    # Same gate as viteConfigFactory.js's CLOUD_SAVE_ENABLED. These are repository variables, so a
+    # later `submit` run sees the same values the TestFlight build used unless they were changed in between.
+    if %w[VITE_FIREBASE_API_KEY VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_APP_ID].all? { |key| !ENV[key].to_s.empty? }
+      notes += ' Optional cloud save (Settings → Cloud save) uses email/password and offers in-app ' \
+               'account deletion (Settings → Cloud save → Delete account and data).'
+    end
+    notes
+  end
+
+  def deliver_listing(**options)
+    deliver(
+      api_key: asc_key,
+      app_identifier: BUNDLE_ID,
+      app_version: package_version,
+      metadata_path: IOS_METADATA,
+      screenshots_path: IOS_SCREENSHOTS,
+      # Without generated images (listing upload off) leave the store's screenshots untouched —
+      # overwrite_screenshots on an empty folder would delete them.
+      overwrite_screenshots: true,
+      force: true, # no interactive HTML preview in CI
+      run_precheck_before_submit: false,
+      app_review_information: { notes: review_notes },
+      **{ skip_screenshots: Dir.glob(File.join(IOS_SCREENSHOTS, '**', '*.png')).empty? }.merge(options)
+    )
+  end
+
+  desc 'Archive with cloud-managed automatic signing and upload to TestFlight.'
+  lane :beta do
+    key = asc_key
+    team = ENV.fetch('APPLE_TEAM_ID')
+    build = latest_testflight_build_number(api_key: key, app_identifier: BUNDLE_ID, initial_build_number: 0) + 1
+    Dir.mktmpdir do |dir|
+      # xcodebuild needs the key as a file to fetch/create signing assets itself (no match repo, no
+      # certificates stored in CI) — requires an Admin-role API key.
+      key_path = File.join(dir, 'AuthKey.p8')
+      File.write(key_path, ENV.fetch('ASC_KEY_P8'))
+      auth = "-allowProvisioningUpdates -authenticationKeyPath #{key_path} " \
+             "-authenticationKeyID #{ENV.fetch('ASC_KEY_ID')} -authenticationKeyIssuerID #{ENV.fetch('ASC_ISSUER_ID')}"
+      build_app(
+        project: File.join(ROOT, 'ios/App/App.xcodeproj'),
+        scheme: 'App',
+        configuration: 'Release',
+        output_directory: File.join(ROOT, 'build/ios'),
+        output_name: 'Tens.ipa',
+        clean: true,
+        xcargs: "#{auth} DEVELOPMENT_TEAM=#{team} CODE_SIGN_STYLE=Automatic " \
+                "MARKETING_VERSION=#{package_version} CURRENT_PROJECT_VERSION=#{build}",
+        export_xcargs: auth,
+        # gym 2.242 only accepts the legacy name 'app-store' (Xcode maps it to app-store-connect).
+        export_options: { method: 'app-store', signingStyle: 'automatic', teamID: team }
+      )
+    end
+    upload_to_testflight(api_key: key, skip_waiting_for_build_processing: true)
+  end
+
+  desc 'Push only the App Store listing (text, screenshots, release notes) for the current version.'
+  lane :metadata do
+    deliver_listing(skip_binary_upload: true, submit_for_review: false)
+  end
+
+  desc 'Attach the latest build (deliver waits for it to finish processing) to the current version,'
+  desc 'push the listing and submit for review.'
+  desc 'Option automatic_release:true releases as soon as Apple approves (default: manual release).'
+  lane :submit do |options|
+    automatic = flag?(options[:automatic_release])
+    if options[:metadata].to_s == 'false'
+      # skip_metadata also skips deliver's releaseType update, so set it directly — otherwise a
+      # version left on "release automatically" could go live on approval.
+      asc_key
+      app = Spaceship::ConnectAPI::App.find(BUNDLE_ID) || UI.user_error!("App #{BUNDLE_ID} not found")
+      # Metadata-off means "submit the version already prepared in App Store Connect": read-only
+      # lookup first, never create or renumber a draft (that would reuse another release's listing
+      # or leave a new version without release notes).
+      version = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
+      unless version
+        UI.user_error!("No editable App Store version #{package_version} — run with listing upload on to create and fill it")
+      end
+      unless version.version_string == package_version
+        UI.user_error!("Editable App Store version is #{version.version_string.inspect}, not #{package_version} — left untouched")
+      end
+      release_type = automatic ? Spaceship::ConnectAPI::AppStoreVersion::ReleaseType::AFTER_APPROVAL : Spaceship::ConnectAPI::AppStoreVersion::ReleaseType::MANUAL
+      version.update(attributes: { release_type: release_type })
+    end
+    deliver_listing(
+      skip_binary_upload: true,
+      submit_for_review: true,
+      # metadata:false (the workflow's upload_listing off) leaves App Store Connect's listing as edited,
+      # and stops deliver from renumbering the (already verified) editable version.
+      skip_metadata: options[:metadata].to_s == 'false',
+      skip_app_version_update: options[:metadata].to_s == 'false',
+      skip_screenshots: options[:metadata].to_s == 'false' || Dir.glob(File.join(IOS_SCREENSHOTS, '**', '*.png')).empty?,
+      automatic_release: automatic,
+      # ITSAppUsesNonExemptEncryption=false in Info.plist already answers this for every build.
+      submission_information: { export_compliance_uses_encryption: false }
+    )
+  end
+end

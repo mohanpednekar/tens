@@ -85,6 +85,8 @@ The JS SDK works inside the WebView, so no `google-services.json` is needed.
 
 ## Upload to a testing track
 
+> Automated path: `.github/workflows/store-release.yml` / `bundle exec fastlane` (`docs/STORE_RELEASE.md`). The manual steps below remain the fallback and cover the one-time first upload.
+
 1. Play Console → **Test and release → Testing → Internal testing** → Create new release → upload
    `app-release.aab` → release notes → Save → Review → **Start rollout**. Add testers (email list or
    Google Group) under the Testers tab and share the opt-in link. Internal builds are available
