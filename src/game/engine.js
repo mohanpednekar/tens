@@ -895,7 +895,7 @@ export const getTickspeedMultiplierSpend = (tierId, targetLevel) => {
 
 // Owned count buyTickspeedMultiplier requires before buying `targetLevel`: the requirement itself,
 // and at least spend + 1 so a purchase never drains the tier to 0 generators — except the last tier (QB), which may
-// spend down to exactly 0 (it is bought with Bits and top of the ladder; emptying it earns the 'quettaSpent' achievement).
+// spend down to exactly 0 (it is bought with Bits and top of the ladder; a manual Restage at 0 QB then earns 'quettaSpent' — see restageManually).
 export const getTickspeedMultiplierRequirement = (tierId, targetLevel) =>
   Math.max(getTickspeedMultiplierCost(tierId, targetLevel), getTickspeedMultiplierSpend(tierId, targetLevel) + (tierId === getLastTierId() ? 0 : 1))
 
