@@ -11999,7 +11999,9 @@ describe('Foundry-reset disk-size unlocks (rising Data Stream Speed exponent)', 
     expect(getIntroProductionRate({ ...base, speedCapacity: 8 * 1_000_000 })).toBeLessThan(
       getIntroProductionRate({ ...both, speedCapacity: 8 * 1_000_000 })
     )
-    expect(getDataStreamSpeedExponent({ ...base, poolExponentBonuses: { 2: 2 } })).toBeCloseTo(getDataStreamSpeedExponent(base), 12)
+    // A pool whose steps aren't unlocked upgrades none of the unlocked steps; it only counts toward Reclamation I (plain step 1% → 2%).
+    expect(getDataStreamSpeedExponent({ ...base, poolExponentBonuses: { 2: 2 } })).toBeCloseTo(1 - 0.5 * 0.9 * 0.98 ** 2, 12)
+    expect(getDataStreamSpeedExponent({ ...base, poolExponentBonuses: { 2: 2 } })).toBeCloseTo(getDataStreamSpeedExponent({ ...base, poolExponentBonuses: { 2: 1 } }), 12)
   })
 
   it('is monotone and stays below 1 across every disk size and achievement state', () => {
