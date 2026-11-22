@@ -87,26 +87,37 @@ describe('AppMenu achievements entry', () => {
     expect(screen.queryByLabelText('open achievements')).toBeNull()
   })
 
-  it('shows requirement progress and the reward before and after earning', () => {
+  it('shows requirement progress, and only real rewards, before and after earning', () => {
     const state = { ...createInitialGameState(), achievements: { earned: { helloWorld: true }, counters: { pings: 100 } } }
     renderWithTheme(<AchievementsPage game={{ state }} />)
     openGroup('First session')
-    // Series row: the next step's progress, then both levels' rewards when expanded
     expect(screen.getByText(/Next: Ping 256 times \(100\/256\)/)).toBeTruthy()
     fireEvent.click(screen.getByLabelText('Ping details'))
-    expect(screen.getByLabelText('Ping level 1 reward earned').textContent).toContain('Reward earned: ⭐ 1 star')
-    expect(screen.getByLabelText('Ping level 2 reward pending').textContent).toContain('Reward: ⭐ 1 star')
-    // Single row: progress in the badge, reward text in the detail
+    // No bonus => no reward line (stars are score, not a reward)
+    expect(screen.queryByLabelText(/Ping level \d reward/)).toBeNull()
+    expect(screen.queryByText(/⭐ 1 star/)).toBeNull()
+    // Binary achievement: no lock/status badge until earned
     expect(screen.getByLabelText('Kibi, not Kilo achievement not yet earned').textContent).toContain('0%')
-    fireEvent.click(screen.getByLabelText('Kibi, not Kilo details'))
-    expect(screen.getByLabelText('Kibi, not Kilo reward pending')).toBeTruthy()
+    expect(screen.getByLabelText('It compiles, ship it achievement not yet earned').textContent).not.toMatch(/🔒|✅/)
   })
 
-  it('shows a bonus reward text for bonus achievements', () => {
+  it('shows the real bonus reward before and after earning', () => {
+    const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    openGroup('Foundry')
+    fireEvent.click(screen.getByLabelText('KB Reclamation details'))
+    expect(screen.getByLabelText('KB Reclamation level 1 reward pending').textContent).toMatch(/^Reward: The first disk-size exponent step/)
+    unmount()
+    renderWithTheme(<AchievementsPage game={gameWith({ pool01ResetI: true })} />)
+    openGroup('Foundry')
+    fireEvent.click(screen.getByLabelText('KB Reclamation details'))
+    expect(screen.getByLabelText('KB Reclamation level 1 reward earned').textContent).toMatch(/^Reward earned: The first disk-size exponent step/)
+  })
+
+  it('states a bonus shared by every level once', () => {
     renderWithTheme(<AchievementsPage game={gameWith({})} />)
     openGroup('Level power')
     fireEvent.click(screen.getByLabelText('Level power details'))
-    expect(screen.getByText(/Each level: The per-level production multiplier/)).toBeTruthy()
-    expect(screen.getByLabelText('Level power level 1 reward pending').textContent).toBe('Reward: ⭐ 1 star')
+    expect(screen.getByText(/Reward each level: The per-level production multiplier/)).toBeTruthy()
+    expect(screen.queryByLabelText(/Level power level 1 reward/)).toBeNull()
   })
 })

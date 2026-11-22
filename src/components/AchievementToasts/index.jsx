@@ -1,4 +1,4 @@
-import { getAchievementRewardText } from 'game/engine'
+import { getAchievementReward } from 'game/engine'
 import { ACHIEVEMENT_BY_ID, ACHIEVEMENTS_FEATURE } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
@@ -160,7 +160,7 @@ function AchievementToasts({ state, baseline }) {
         <Toast key={key}>
           <ToastTitle>Achievement unlocked</ToastTitle>
           {ACHIEVEMENT_BY_ID[id].name}
-          <ToastReward>{getAchievementRewardText(ACHIEVEMENT_BY_ID[id])}</ToastReward>
+          {getAchievementReward(ACHIEVEMENT_BY_ID[id]) && <ToastReward>{getAchievementReward(ACHIEVEMENT_BY_ID[id])}</ToastReward>}
         </Toast>
       ))}
     </Stack>

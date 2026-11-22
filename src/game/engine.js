@@ -1467,8 +1467,8 @@ export const getAchievementProgress = (state, condition) => {
   }
 }
 
-// Reward text shown before and after earning: every achievement is worth 1 star, plus its bonus when it has one.
-export const getAchievementRewardText = def => `⭐ 1 star${def.bonus ? ` · ${def.bonus}` : ''}`
+// The achievement's actual reward (its bonus text), or null when it has none. Stars are score, not a reward.
+export const getAchievementReward = def => def.bonus ?? null
 
 // Seconds between last-tier credits at `completedLevels`: base period / (1 + log10(levels)), floored at
 // LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS (10 ms); Infinity with no completed level. Each credit is exactly 1 unit.

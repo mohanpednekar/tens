@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import StatCard from 'components/StatCard'
-import { getAchievementGroupStars, getAchievementProgress, getAchievementRewardText, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
+import { getAchievementGroupStars, getAchievementProgress, getAchievementReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
 import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
 
@@ -201,18 +201,20 @@ const AchievementsPage = ({ game }) => {
                           <strong>{entry.name}</strong>
                         </NameButton>
                         {!openRows[entry.key] && next && <Detail>Next: {next.trigger}{formatProgress(state, next, false) ? ` (${formatProgress(state, next, false)})` : ''}</Detail>}
-                        {openRows[entry.key] && sharedBonus && <Detail>Each level: {sharedBonus}</Detail>}
+                        {openRows[entry.key] && sharedBonus && <Detail>Reward each level: {sharedBonus}</Detail>}
                         {openRows[entry.key] && entry.levels.map((def, i) => {
                           const lvlEarned = isAchievementEarned(state, def.id)
                           const lvlProgress = formatProgress(state, def, lvlEarned)
                           return (
                             <Text $earned={lvlEarned} key={def.id}>
                               <Detail aria-label={`${entry.name} level ${i + 1} ${lvlEarned ? 'earned' : 'not yet earned'}`}>
-                                {lvlEarned ? '✅' : '🔒'} {i + 1}. {def.trigger}{lvlProgress && !lvlEarned ? ` (${lvlProgress})` : ''}
+                                {lvlEarned ? '✅ ' : ''}{i + 1}. {def.trigger}{lvlProgress && !lvlEarned ? ` (${lvlProgress})` : ''}
                               </Detail>
-                              <Detail aria-label={`${entry.name} level ${i + 1} reward ${lvlEarned ? 'earned' : 'pending'}`}>
-                                {lvlEarned ? 'Reward earned' : 'Reward'}: {getAchievementRewardText(sharedBonus ? { ...def, bonus: null } : def)}
-                              </Detail>
+                              {!sharedBonus && getAchievementReward(def) && (
+                                <Detail aria-label={`${entry.name} level ${i + 1} reward ${lvlEarned ? 'earned' : 'pending'}`}>
+                                  {lvlEarned ? 'Reward earned' : 'Reward'}: {getAchievementReward(def)}
+                                </Detail>
+                              )}
                             </Text>
                           )
                         })}
@@ -242,13 +244,13 @@ const AchievementsPage = ({ game }) => {
                         </NameButton>
                       )}
                       {!masked && openRows[def.id] && <Detail>{def.trigger}</Detail>}
-                      {!masked && openRows[def.id] && (
+                      {!masked && openRows[def.id] && getAchievementReward(def) && (
                         <Detail aria-label={`${def.name} reward ${earned ? 'earned' : 'pending'}`}>
-                          {earned ? 'Reward earned' : 'Reward'}: {getAchievementRewardText(def)}
+                          {earned ? 'Reward earned' : 'Reward'}: {getAchievementReward(def)}
                         </Detail>
                       )}
                     </Text>
-                    <Badge $color={earned ? theme.color.good : theme.color.disabled}>{progressText && !earned ? `${progressText} ` : ''}{earned ? '✅' : '🔒'}</Badge>
+                    {(earned || progressText) && <Badge $color={earned ? theme.color.good : theme.color.disabled}>{earned ? '✅' : progressText}</Badge>}
                   </Row>
                 )
               })}
