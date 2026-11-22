@@ -319,7 +319,7 @@ import {
   getDataLakeFillBits,
   getDataLakeCurrentDiskFillFraction,
   getDataLakeOverflowRatePercent,
-  getReclamationLakeSpeedBonus,
+  getReclamationLevel,
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityDoublingTurnAvailable,
   isDataLakeCapacityMaxed,
@@ -11577,7 +11577,7 @@ describe('Data Lakes', () => {
       expect(isAchievementEarned(first, 'reclaim1')).toBe(true)
       expect(isAchievementEarned(first, 'reclaim2')).toBe(false)
       expect(getDataStreamSpeedExponent(first.intro)).toBeGreaterThan(baseline)
-      expect(getDataStreamSpeedExponent(first.intro)).toBeCloseTo(0.5545, 12)
+      expect(getDataStreamSpeedExponent(first.intro)).toBeCloseTo(0.559, 12) // 1 earned step (0.9) × 1 unearned step at Reclamation I's 2% (0.98)
       // Reformat wipes the lake's local resetCount but must not make the next eligible
       // Compact Pool repeat reward I instead of unlocking reward II.
       const reformatted = resetByteFoundry(first)
@@ -11599,18 +11599,22 @@ describe('Data Lakes', () => {
       expect(getDataStreamSpeedExponent(third.intro)).toBeCloseTo(getDataStreamSpeedExponent(second.intro), 12)
     })
 
-    it('each earned Reclamation level adds 2.5% to every Data Lake speed, on top of flushes', () => {
-      const base = createInitialGameState()
-      expect(getReclamationLakeSpeedBonus(base)).toBe(0)
-      expect(getDataLakeOverflowRatePercent(base, 1)).toBe(10)
-      const earned = { ...base, achievements: { ...base.achievements, earned: { reclaim1: true, reclaim2: true } } }
-      expect(getReclamationLakeSpeedBonus(earned)).toBeCloseTo(0.05, 12)
-      expect(getDataLakeOverflowRatePercent(earned, 1)).toBe(15)
-      expect(getDataLakeOverflowRatePercent(earned, 7)).toBe(15) // global: every lake
-      const flushed = updateLake(earned, 1, { resetCount: 2 })
-      expect(getDataLakeOverflowRatePercent(flushed, 1)).toBe(35)
-      const all = { ...base, achievements: { ...base.achievements, earned: { reclaim1: true, reclaim2: true, reclaim3: true, reclaim4: true } } }
-      expect(getDataLakeOverflowRatePercent(all, 1)).toBe(20)
+    it('Reclamation levels I/II raise the plain disk-size step to 2%/3%; III/IV add 5% lake speed each', () => {
+      const poolsCompacted = count => ({
+        ...createInitialGameState(),
+        intro: { ...createInitialGameState().intro, unlockedDiskSteps: 3, poolExponentBonuses: Object.fromEntries(Array.from({ length: count }, (_, i) => [i + 1, 1])) },
+      })
+      // 3 unlocked steps = 2 plain within-pool steps (pool 1's two), none earned by the (level-1) bonus map besides pool 1's first.
+      const exponentAt = state => getDataStreamSpeedExponent(state.intro)
+      expect([0, 1, 2, 3, 6, 10].map(count => getReclamationLevel(poolsCompacted(count).intro))).toEqual([0, 1, 1, 2, 3, 4])
+      expect(exponentAt(poolsCompacted(0))).toBeCloseTo(1 - 0.5 * 0.99 ** 2, 12)
+      expect(exponentAt(poolsCompacted(1))).toBeCloseTo(1 - 0.5 * 0.9 * 0.98, 12) // first step earned, second plain at 2%
+      expect(exponentAt(poolsCompacted(3))).toBeCloseTo(1 - 0.5 * 0.9 * 0.97, 12) // level II: plain step at 3%
+      expect(exponentAt(poolsCompacted(6))).toBeCloseTo(exponentAt(poolsCompacted(3)), 12) // III/IV add no further disk step
+      const lake = count => getDataLakeOverflowRatePercent(poolsCompacted(count), 1)
+      expect([0, 1, 3, 6, 10].map(lake)).toEqual([10, 10, 10, 15, 20])
+      expect(getDataLakeOverflowRatePercent(poolsCompacted(6), 7)).toBe(15) // global: every lake
+      expect(getDataLakeOverflowRatePercent(updateLake(poolsCompacted(10), 1, { resetCount: 2 }), 1)).toBe(40)
     })
 
     it('requires 9/9/9, a full lake, and an unreachable next Booster', () => {
@@ -11647,7 +11651,7 @@ describe('Data Lakes', () => {
       expect(tickPoolResetReprovision(first)).toBe(first) // first disk must fill before the next appears
       const filled = withIntro(first, { disks: { ...first.intro.disks, [kb1]: 1 } })
       expect(tickPoolResetReprovision(filled).intro.disksBuiltTotal[kb1]).toBe(2)
-      expect(getDataLakeOverflowRatePercent(reset, 1)).toBe(22.5) // 10 base + 10 per flush + 2.5 Reclamation I
+      expect(getDataLakeOverflowRatePercent(reset, 1)).toBe(20) // 10 base + 10 per flush
 
       const purged = purgeGame(withMoney(reset, PURGE_THRESHOLD))
       expect(purged.intro.poolResetRebuildingCount).toBe(1)
@@ -11706,7 +11710,7 @@ describe('Data Lakes', () => {
       const second = flushStoragePool(1)(wall)
       expect(second.intro.dataLakes[1].resetCount).toBe(2)
       expect(second.intro.poolExponentBonuses[1]).toBe(2)
-      expect(getDataLakeOverflowRatePercent(second, 1)).toBe(32.5) // 10 base + 20 (2 flushes) + 2.5 Reclamation I
+      expect(getDataLakeOverflowRatePercent(second, 1)).toBe(30)
       expect(second.intro.dataLakes[1].bandwidthSteps).toBe(0)
 
       const capacityVisible = withIntro(createInitialGameState(), { capacity: 8 * 1000 ** 4 })
@@ -11988,9 +11992,9 @@ describe('Foundry-reset disk-size unlocks (rising Data Stream Speed exponent)', 
     const first = { ...base, poolExponentBonuses: { 1: 1 } }
     const both = { ...base, poolExponentBonuses: { 1: 2 } }
     expect(getDataStreamSpeedExponent({ ...first, unlockedDiskSteps: 2 })).toBeCloseTo(0.55, 12)
-    expect(getDataStreamSpeedExponent({ ...first, unlockedDiskSteps: 3 })).toBeCloseTo(0.5545, 12)
+    expect(getDataStreamSpeedExponent({ ...first, unlockedDiskSteps: 3 })).toBeCloseTo(0.559, 12) // 1 earned step (0.9) × 1 unearned step at Reclamation I's 2% (0.98)
     expect(getDataStreamSpeedExponent({ ...both, unlockedDiskSteps: 3 })).toBeCloseTo(0.595, 12)
-    expect(getDataStreamSpeedExponent(first)).toBeCloseTo(0.59905, 12)
+    expect(getDataStreamSpeedExponent(first)).toBeCloseTo(0.6031, 12) // 0.9 pool × 0.9 earned × 0.98 plain (Reclamation I)
     expect(getDataStreamSpeedExponent(both)).toBeCloseTo(0.6355, 12)
     expect(getIntroProductionRate({ ...base, speedCapacity: 8 * 1_000_000 })).toBeLessThan(
       getIntroProductionRate({ ...both, speedCapacity: 8 * 1_000_000 })
