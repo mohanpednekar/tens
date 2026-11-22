@@ -231,6 +231,23 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'overclockStep2', name: 'Overclock fast', group: 'overclockStep', trigger: 'After Patient Overclock, claim two Overclocks in one Purge without buying any Accelerate', bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+3 → +2)', condition: { kind: 'counter', key: 'acceleratelessOverclocks', min: 1 } },
   { id: 'overclockStep3', name: 'Beyond Googol', group: 'overclockStep', trigger: `After Overclock fast and DeGoogol, claim an Overclock at ${OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+2 → +1)', condition: { kind: 'counter', key: 'overflowDeepOverclock', min: 1 } },
 ].map(def => ({ secret: false, platformDependent: false, bonus: null, ...def }))
+// Achievements that are ordered steps of one entity render as ONE row with levels on the page. Display-only:
+// each step keeps its own id (earned state, toasts, bonuses and saves are unchanged). Steps list in level order.
+export const ACHIEVEMENT_SERIES = [
+  { id: 'ping', name: 'Ping', members: ['helloWorld', 'pingOfDeath'] },
+  ...TIER_DEFINITIONS.map((tier, index) => ({
+    id: `pool${String(index + 1).padStart(2, '0')}Reset`,
+    name: `${tier.symbol} Reclamation`,
+    members: [`pool${String(index + 1).padStart(2, '0')}ResetI`, `pool${String(index + 1).padStart(2, '0')}ResetII`],
+  })),
+  { id: 'tierBought', name: 'First purchase', members: TIER_DEFINITIONS.map((_, i) => `tier${String(i + 1).padStart(2, '0')}Bought`) },
+  { id: 'accelerate', name: 'Accelerate', members: ['tickTock', 'megahertzMyth'] },
+  { id: 'levelPower', name: 'Level power', members: LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((_, i) => `levelPower${i + 1}`) },
+  { id: 'overclockStep', name: 'Overclock step', members: ['overclockStep1', 'overclockStep2', 'overclockStep3'] },
+]
+export const ACHIEVEMENT_SERIES_BY_MEMBER = Object.fromEntries(
+  ACHIEVEMENT_SERIES.flatMap(series => series.members.map((id, i) => [id, { ...series, level: i + 1 }])),
+)
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.map(def => [def.id, def]))
 // Base PP earning rate beyond Googol: 1 PP per this many additional money-exponent "powers"
 // (orders of magnitude above GOOGOL's own 10^100 exponent). Each Compression upgrade halves this
