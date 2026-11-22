@@ -14,9 +14,7 @@ import {
   getChargerUnlockProgress,
   getSleepModeCapLevel,
   getSleepModeCapUpgradeCost,
-  getSpeedUpgradeCostBits,
   isDiskSizeUnlockAvailable,
-  isSpeedUpgradeArmable,
   getComputeFieldEffectiveCap,
   getAutomationIntervalMaxLevel,
   getAutomationIntervalSeconds,
@@ -95,7 +93,7 @@ const hasChargeAvailable = state =>
   COMPUTE_INSTANT_MERGE_BOUNDARIES.some((_, index) => isComputeChargeAvailable(state, index))
 // Not "full" for attention purposes while an Upgrade Data Stream runs — nothing is waiting on the player.
 const isMemoryFull = state =>
-  (state.intro?.bits ?? 0) >= (state.intro?.capacity ?? 0) && !state.intro?.capacityUpgradeQueued && !state.intro?.speedUpgradeQueued
+  (state.intro?.bits ?? 0) >= (state.intro?.capacity ?? 0) && !state.intro?.capacityUpgradeQueued
 
 const isCombineAvailable = state =>
   !(state.intro?.byteCreated ?? false) && (state.intro?.bits ?? 0) >= INTRO_BYTE_COMBINE_COST
@@ -235,8 +233,7 @@ export const getTiersAttentionLevel = state =>
 export const hasFoundryAttention = state =>
   isMemoryFull(state) ||
   isCombineAvailable(state) ||
-  (isMemoryCapacityUpgradeAvailable(state) && !state.intro?.capacityUpgradeQueued && !state.intro?.speedUpgradeQueued) ||
-  (isSpeedUpgradeArmable(state) && (state.intro?.bits ?? 0) >= getSpeedUpgradeCostBits(state.intro)) ||
+  (isMemoryCapacityUpgradeAvailable(state) && !state.intro?.capacityUpgradeQueued) ||
   (isProvisionDiskTurnAvailable(state) && !state.intro?.diskBuildQueued) || // startable and not already armed
   isDiskSizeUnlockAvailable(state) ||
   isTransferBlockAffordable(state)

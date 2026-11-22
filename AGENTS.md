@@ -156,11 +156,11 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 `ByteFoundryPage` is a pre-game tap-to-earn screen every fresh save passes through once — a
 one-time-ever gate (`latchMainGameUnlocked` — see above) before `MainPage`. Pinging fills the **Data
 Stream** (Buffer-capped, binary units — Disks/Data Lakes/caches stay SI); Compile turns it into a
-permanent Byte generator grown via **Upgrade Capacity** / **Upgrade Bitrate** (one at a time, entirely
+permanent Byte generator grown via one **Upgrade** that doubles Capacity and raises the derived Bitrate with it (entirely
 OUTSIDE the forced priority order Disk Fill > Provision Disk > Compute Boost). Displayed Speed is
 *derived* (`getDataStreamSpeedBytesPerSecond`, exponent `getDataStreamSpeedExponent`), not purchased.
 A fill-based multiplier scales real delivery only, never the displayed Speed/Bandwidth; taps never
-speed a fill — a Data Stream ping speeds Upgrade Capacity/Bitrate, a pool ping speeds that pool's
+speed a fill — a Data Stream ping speeds the Upgrade, a pool ping speeds that pool's
 consumers (disks, merges, provisioning, lake). Disks fill from their pool buffer and pull into Factory
 automatically (no redeem step; clicking an empty disk expedites it, drawing on smaller disks too), and
 each pool's overflow feeds its own Data Lake. Lake units buy Boosters/Cells for Power (`ComputePage`)

@@ -702,7 +702,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
             </Button>
             <p>
               Restart the Byte Foundry on the active save — Data Stream Capacity, Disks, Data Lakes and
-              Compute entities. Compile, Upgrade Capacity, Upgrade Bitrate, Provision Disk and Data Lake
+              Compute entities. Compile, Upgrade, Provision Disk and Data Lake
               upgrades/Cells then replay automatically up to your pre-reset highs.
               Byte Factory and Purge progress stay.
             </p>

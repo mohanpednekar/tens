@@ -38,7 +38,6 @@ import {
   TICK_RATE_MS,
   TIER_DEFINITIONS,
   DISK_LADDER_BASE_SIZE_BITS,
-  DATA_STREAM_SPEED_EXPONENT_BASE as DATA_STREAM_SPEED_EXPONENT,
 } from 'game/layers'
 import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
@@ -206,21 +205,20 @@ describe('Data Stream and upgrade speed details popovers', () => {
     const ui = g => <ThemeProvider><ByteFoundryPage game={g} /></ThemeProvider>
     const { rerender } = render(ui(game({ capacityUpgradeQueued: true, capacityUpgradeProgress: 0 })))
     fireEvent.click(screen.getByRole('button', { name: /^upgrade draw bitrate/ }))
-    expect(screen.getByRole('dialog', { name: 'Upgrade Capacity draw' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Upgrade draw' })).toBeInTheDocument()
     rerender(ui(game({ capacityUpgradeQueued: false })))
-    rerender(ui(game({ speedUpgradeQueued: true, speedUpgradeProgress: 0 })))
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('opens the running upgrade\'s draw details from its speed', () => {
     seedStream({ bits: 100, capacityUpgradeQueued: true, capacityUpgradeProgress: 0 })
     fireEvent.click(screen.getByRole('button', { name: /^upgrade draw bitrate .*show bitrate details$/ }))
-    const dialog = screen.getByRole('dialog', { name: 'Upgrade Capacity draw' })
+    const dialog = screen.getByRole('dialog', { name: 'Upgrade draw' })
     for (const label of ['Draw now', 'Base Bitrate', 'Data Stream delivers', 'Progress', 'Time left', 'Capacity after']) {
       expect(within(dialog).getByText(label)).toBeInTheDocument()
     }
     fireEvent.click(screen.getByRole('button', { name: /^data stream bitrate .*show bitrate details$/ }))
-    expect(screen.queryByRole('dialog', { name: 'Upgrade Capacity draw' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Upgrade draw' })).not.toBeInTheDocument()
     expect(screen.getByRole('dialog', { name: 'Data Stream bitrate' })).toBeInTheDocument()
   })
 })
@@ -277,9 +275,9 @@ describe('pool speed details popover', () => {
     expect(screen.queryByRole('dialog', { name: dialogName })).not.toBeInTheDocument()
   })
 
-  it('explains a Data Stream limit, the share earlier pools take, and the consumer tap bonus', () => {
+  it('explains the share earlier pools take and the consumer tap bonus', () => {
     seedMainGameState({ intro: {
-      mainGameUnlocked: true, bits: 0, capacity: 32_000_000, speedCapacity: 1024, byteCreated: true,
+      mainGameUnlocked: true, bits: 0, capacity: 32_000_000, byteCreated: true,
       dataLakes: { 1: { bandwidthSteps: 4 } },
       poolTapBonusPercents: { 2: FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT },
     } })
@@ -288,14 +286,14 @@ describe('pool speed details popover', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^pool 1 bandwidth .*show bandwidth details$/ }))
     const pool1Dialog = screen.getByRole('dialog', { name: 'KB Pool bandwidth' })
-    expect(within(pool1Dialog).getByText('Limited by the Data Stream\'s own bitrate.')).toBeInTheDocument()
+    // Bitrate derives from Capacity, so pool 1's Bandwidth (bounded by its own Capacity) is always fully supplied.
+    expect(within(pool1Dialog).queryByText(/^Limited by the Data Stream/)).not.toBeInTheDocument()
     expect(within(pool1Dialog).queryByText('Taken by earlier pools')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /^pool 2 bandwidth .*show bandwidth details$/ }))
     expect(screen.queryByRole('dialog', { name: 'KB Pool bandwidth' })).not.toBeInTheDocument()
     const pool2Dialog = screen.getByRole('dialog', { name: 'MB Pool bandwidth' })
     expect(within(pool2Dialog).getByText('Taken by earlier pools')).toBeInTheDocument()
-    expect(within(pool2Dialog).getByText(/earlier pools take their Bandwidth first/)).toBeInTheDocument()
     expect(within(pool2Dialog).getByText(`+${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}%`)).toBeInTheDocument()
   })
 
@@ -1182,9 +1180,7 @@ describe('Byte Foundry Storage', () => {
         disksBuiltTotal: { [currentBankSize]: 1 },
         // Production is continuous now (no tickSpeedSeconds/productionMultiplier knobs) — the huge
         // capacity keeps the derived rate far above the pool bandwidth cap, so the pool buffer
-        // stays topped up and can't perturb the cache-fill timing being measured. The Speed basis is
-        // pinned to 256 B/s raw (1024 B basis) so pool 1 Bandwidth stays a clean 250 B/s (2,000 bits/sec) as this timing was tuned.
-        speedCapacity: Math.ceil(256 ** (1 / DATA_STREAM_SPEED_EXPONENT) * 8),
+        // stays topped up and can't perturb the cache-fill timing being measured.
       },
       { purchaseLevels: { [tier01.id]: 2 } }
     )
@@ -2248,7 +2244,7 @@ test('AppNav\'s Foundry item navigates to the always-interactive screen; Factory
   // goes read-only.
   expect(screen.getByRole('button', { name: /ping to generate a bit/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /sacrifice all bits for 2x capacity/i })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /upgrade data stream capacity/i })).toHaveTextContent('Upgrade Capacity')
+  expect(screen.getByRole('button', { name: /^upgrade data stream$/i })).toHaveTextContent('Upgrade')
   expect(screen.getByRole('button', { name: /provision disk/i })).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open byte factory/i }))
@@ -2855,9 +2851,9 @@ test('a running Capacity upgrade shows percent on the first line, from → to ca
   seedIntroState({ capacity: 1000, bits: 400, byteCreated: true, mainGameUnlocked: true })
   const { unmount } = render(<App />)
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
-  fireEvent.click(screen.getByRole('button', { name: /upgrade data stream capacity/i }))
+  fireEvent.click(screen.getByRole('button', { name: /^upgrade data stream$/i }))
 
-  const running = screen.getByRole('region', { name: /^upgrade capacity$/i })
+  const running = screen.getByRole('region', { name: /^upgrade data stream$/i })
   expect(running).toHaveTextContent(/⏫Upgrading…/)
   expect(running).toHaveTextContent(/→/)
   expect(running).toHaveTextContent(/⏳ \d+[smhd]/)

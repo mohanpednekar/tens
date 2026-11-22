@@ -9185,7 +9185,7 @@ mechanism only; the exponent math is unchanged. The engine already stored the up
 achievements from that map, so the maintainer asked to stop presenting a stat upgrade as an achievement.
 Compact Pool now just upgrades the step; the achievements became five `reclaim1`–`5`
 (`poolsCompacted` 1/3/6/8/all 10 distinct pools, `RECLAMATION_POOL_THRESHOLDS`), with `RECLAMATION_LEVEL_REWARDS`: I/II replace the
-1% plain within-pool exponent step with 2%/3%, III/IV add +0.05 each to every Data Lake's speed multiplier, V (every pool; the maintainer's "grand reward", first drafted as plain step 5% + lake +0.10, replaced at the maintainer's request by one of their examples: Bitrate upgrades free with Capacity upgrades) (maintainer's
+1% plain within-pool exponent step with 2%/3%, III/IV add +0.05 each to every Data Lake's speed multiplier, V (every pool; the maintainer's "grand reward": first drafted as plain step 5% + lake +0.10, briefly replaced by "free Bitrate upgrades with Capacity upgrades", which then became the base game for everyone — see "Bitrate follows Capacity" — so level V is back to the 5% + 0.10 placeholder pending a new pick) (maintainer's
 spec; values not simulated through `simulate-run-times`). Levels derive from `poolExponentBonuses` (`getReclamationLevel`),
 not from the earned achievement flags, because the exponent helpers only receive `intro`. Old saves: the legacy
 `poolNNResetI/II` earned flags stay in `achievements.earned` and the load-time backfill in
@@ -9193,6 +9193,20 @@ not from the earned achievement flags, because the exponent helpers only receive
 persistence rule changed. The page's compact per-level reward rendering (`compact` in
 `AchievementsPage`) is currently unused by data but kept generic. Rejected: a purchasable upgrade (needs
 a currency/price and would double-charge the already costly flush; see the 2026-11 discussion).
+
+### Bitrate follows Capacity: one Upgrade (2026-11)
+
+Supersedes the split Upgrade Capacity / Upgrade Speed (separate `speedCapacity` basis, `speedUpgradeQueued/Progress`,
+`queueIntroSpeedUpgrade`, `tickSpeedUpgradeDrain`, `isSpeedUpgradeArmable`, `getSpeedUpgradeCostBits`, `upgradePoolSpeed`).
+At the maintainer's request Speed is now `(Capacity in Bytes)^e` with no basis of its own, and the one remaining
+Upgrade (cost = current Capacity) raises both. Consequences: Bitrate always sits at the old Capacity cap, so existing
+saves' Bitrate jumps; a pool's Bandwidth is always fully supplied by the Data Stream for pool 1 (it is bounded by that
+pool's own Capacity cap, itself ≤ the stream rate), so the "Limited by the Data Stream's own bitrate" note can no
+longer show for pool 1 (kept as a defensive branch). Old saves drop the retired fields in `normalizePoolMemoryCapacity`,
+refunding an in-flight Bitrate bar to the Buffer. Test fixtures that pinned a low Bitrate with a large Capacity
+(`speedCapacity`) can no longer do so; those fixtures now use Capacity only. Not run through `simulate-run-times`
+(the pacing of the Foundry bootstrap changes: each Capacity doubling is now also a Bitrate doubling, and there is no
+second purchase), so a pacing pass is advisable.
 
 ## Store release prep: flags-off monetization and config-time feature loaders (2026-10)
 

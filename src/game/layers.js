@@ -201,11 +201,10 @@ export const RECLAMATION_POOL_THRESHOLDS = [1, 3, 6, 8, TIER_DEFINITIONS.length]
 // the moment a pool is compacted. `arrayStepGain`: the share of the remaining gap to 1.0 that each within-pool disk-size
 // step closes when that step has no Compact Pool upgrade (base 1%; the level's value replaces it, not stacks).
 // `lakeSpeed`: added to every Data Lake's speed multiplier (a fraction of its pool's Bandwidth, like the +0.1 per flush).
-// `freeSpeedUpgrade`: every Capacity upgrade also grants one Bitrate (Speed) upgrade for free (the grand reward).
-export const RECLAMATION_LEVEL_REWARDS = [{ arrayStepGain: 0.02 }, { arrayStepGain: 0.03 }, { lakeSpeed: 0.05 }, { lakeSpeed: 0.05 }, { freeSpeedUpgrade: true }]
+export const RECLAMATION_LEVEL_REWARDS = [{ arrayStepGain: 0.02 }, { arrayStepGain: 0.03 }, { lakeSpeed: 0.05 }, { lakeSpeed: 0.05 }, { arrayStepGain: 0.05, lakeSpeed: 0.1 }]
 const formatReclamationPercent = fraction => `${Math.round(fraction * 1000) / 10}%`
 // Short + full player text for one level's reward (a level may carry several rewards).
-const describeReclamationReward = ({ arrayStepGain, lakeSpeed, freeSpeedUpgrade }) => {
+const describeReclamationReward = ({ arrayStepGain, lakeSpeed }) => {
   const shorts = []
   const fulls = []
   if (arrayStepGain) {
@@ -216,10 +215,6 @@ const describeReclamationReward = ({ arrayStepGain, lakeSpeed, freeSpeedUpgrade 
     shorts.push(`Lake speed +${formatReclamationPercent(lakeSpeed)}`)
     fulls.push(`Every Data Lake fills at +${formatReclamationPercent(lakeSpeed)} more of its pool's Bandwidth`)
   }
-  if (freeSpeedUpgrade) {
-    shorts.push('Free Bitrate upgrades')
-    fulls.push('Every Capacity upgrade also upgrades Bitrate for free (when Bitrate can still double within Capacity)')
-  }
   return { shortBonus: shorts.join(', '), bonus: fulls.join('. ') }
 }
 export const ACHIEVEMENT_DEFINITIONS = [
@@ -228,7 +223,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', short: 'Ping ×256', condition: { kind: 'counter', key: 'pings', min: 256 } },
   { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', short: '1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
   // Reclamation: a short series by how many different Storage pools have been compacted at least once.
-  // Levels 1-2 raise the within-pool disk-size step, levels 3-4 speed every Data Lake; level 5 (the grand reward) makes Bitrate upgrades free with Capacity upgrades. The per-pool Bitrate exponent upgrades are separate: they come
+  // Levels 1-2 raise the within-pool disk-size step, levels 3-4 speed every Data Lake; level 5 (the grand reward, placeholder pending the maintainer's pick) takes the disk step to 5% and adds +10% lake speed. The per-pool Bitrate exponent upgrades are separate: they come
   // directly from Compact Pool (`intro.poolExponentBonuses`), not from these achievements.
   ...RECLAMATION_POOL_THRESHOLDS.map((pools, i) => ({
     id: `reclaim${i + 1}`,
@@ -359,9 +354,8 @@ export const getStoragePoolMemoryBounds = (poolIndex = 1) => {
     endBits: (BITS_PER_BYTE / DISK_BUILD_COST_MULTIPLIER) * (POOL_CAPACITY_SI_STEP ** (index + 1)),
   }
 }
-// Data Stream Speed is DERIVED from the Speed basis (see getIntroProductionRate in engine.js), not
-// independently priced: Speed = (basis in Bytes) ^ exponent B/s, and the basis can never exceed
-// Capacity, so base Speed <= Capacity ^ exponent. The exponent (getDataStreamSpeedExponent in engine.js)
+// Data Stream Speed is DERIVED from Capacity (see getIntroProductionRate in engine.js), not
+// independently priced: Speed = (Capacity in Bytes) ^ exponent B/s, so one Upgrade raises both. The exponent (getDataStreamSpeedExponent in engine.js)
 // starts at DATA_STREAM_SPEED_EXPONENT_BASE. Every new Storage pool closes 10% of the remaining
 // gap to 1.0. Within each pool, disk sizes initially close 10% of the gap to the *next pool's*
 // exponent (equivalent to retaining 99% of the gap to 1.0 per array step). The first two
@@ -405,7 +399,7 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // tapIntroBit) or a pool's own Memory tile (tapPoolBuffer) adds FILL_MULTIPLIER_TAP_BONUS_PERCENT to a
 // decaying tap bonus that NEVER scales the fill itself (the fill curve already reaches
 // FILL_MULTIPLIER_MAX_PERCENT): it speeds that buffer's CONSUMERS ×(1 + bonus%) — the Data Stream's
-// Upgrade Capacity / Speed drains (getDataStreamTapMultiplier); a pool's provisioning draw, read-cache
+// Upgrade drain (getDataStreamTapMultiplier); a pool's provisioning draw, read-cache
 // flush, write-cache merges, lower-size rebuild and lake drain (getPoolTapMultiplier). Decays at
 // FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND per second (tickFillMultiplierDecay). Before
 // Storage pools are revealed, tapping the Data Stream keeps its original flat "one second's worth
