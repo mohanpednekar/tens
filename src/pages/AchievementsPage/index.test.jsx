@@ -86,4 +86,27 @@ describe('AppMenu achievements entry', () => {
     renderWithTheme(<AppMenu onClose={() => {}} onNavigate={() => {}} open />)
     expect(screen.queryByLabelText('open achievements')).toBeNull()
   })
+
+  it('shows requirement progress and the reward before and after earning', () => {
+    const state = { ...createInitialGameState(), achievements: { earned: { helloWorld: true }, counters: { pings: 100 } } }
+    renderWithTheme(<AchievementsPage game={{ state }} />)
+    openGroup('First session')
+    // Series row: the next step's progress, then both levels' rewards when expanded
+    expect(screen.getByText(/Next: Ping 256 times \(100\/256\)/)).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('Ping details'))
+    expect(screen.getByLabelText('Ping level 1 reward earned').textContent).toContain('Reward earned: ⭐ 1 star')
+    expect(screen.getByLabelText('Ping level 2 reward pending').textContent).toContain('Reward: ⭐ 1 star')
+    // Single row: progress in the badge, reward text in the detail
+    expect(screen.getByLabelText('Kibi, not Kilo achievement not yet earned').textContent).toContain('0%')
+    fireEvent.click(screen.getByLabelText('Kibi, not Kilo details'))
+    expect(screen.getByLabelText('Kibi, not Kilo reward pending')).toBeTruthy()
+  })
+
+  it('shows a bonus reward text for bonus achievements', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    openGroup('Level power')
+    fireEvent.click(screen.getByLabelText('Level power details'))
+    expect(screen.getByText(/Each level: The per-level production multiplier/)).toBeTruthy()
+    expect(screen.getByLabelText('Level power level 1 reward pending').textContent).toBe('Reward: ⭐ 1 star')
+  })
 })

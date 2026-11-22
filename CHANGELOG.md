@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Achievements page shows each requirement's current progress (e.g. 100/256, 4/10, a Capacity percentage) and its reward (⭐ 1 star plus any bonus) both before and after earning; the unlock toast shows the reward too.
 
 - **Achievement stars**: each achievement (every level of a leveled row) awards 1 ⭐, and fully completing a section awards bonus stars equal to 10% of its stars (rounded up). The total shows atop the Achievements page and each section shows its own.
 

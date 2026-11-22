@@ -1453,6 +1453,23 @@ export const isAchievementConditionMet = (state, condition) => {
   }
 }
 
+// Current requirement progress for an achievement condition, or null when it is a one-shot event with no
+// meaningful partial state. `current` may exceed `target` once met; callers clamp for display. `format: 'percent'`
+// means show current/target as a percentage (Capacity is in bits, so raw numbers would mislead).
+export const getAchievementProgress = (state, condition) => {
+  switch (condition.kind) {
+    case 'counter': return { current: state.achievements?.counters?.[condition.key] ?? 0, target: condition.min }
+    case 'clockSpeedLevel': return { current: state.globalTickspeedMultiplier ?? 0, target: condition.min }
+    case 'tierLevel': return { current: state.purchaseLevels?.[condition.tierId] ?? 1, target: condition.min }
+    case 'poolExponentBonus': return { current: state.intro?.poolExponentBonuses?.[condition.poolIndex] ?? 0, target: condition.min }
+    case 'storageUnlocked': return { current: state.intro?.capacity ?? 0, target: INTRO_DISK_UNLOCK_CAPACITY, format: 'percent' }
+    default: return null
+  }
+}
+
+// Reward text shown before and after earning: every achievement is worth 1 star, plus its bonus when it has one.
+export const getAchievementRewardText = def => `⭐ 1 star${def.bonus ? ` · ${def.bonus}` : ''}`
+
 // Seconds between last-tier credits at `completedLevels`: base period / (1 + log10(levels)), floored at
 // LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS (10 ms); Infinity with no completed level. Each credit is exactly 1 unit.
 export const getLastTierLevelCreditIntervalSeconds = completedLevels =>

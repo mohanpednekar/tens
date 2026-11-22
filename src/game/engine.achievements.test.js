@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  getAchievementProgress,
+  getAchievementRewardText,
   buyTickspeedMultiplier, createInitialGameState, detectAchievements, eraGame, getCompletedAchievementGroups,
   getLevelMultiplierBase, getOverclockRequirement, getOverclockRequirementStep, getPurchaseMilestoneMultiplier, getTierCostExponent, buyGlobalTickspeedMultiplier, isAchievementEarned, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
 } from './engine'
@@ -278,3 +280,19 @@ describe('Overclock step achievements', () => {
   })
 })
 
+describe('getAchievementProgress / getAchievementRewardText', () => {
+  it('reports current/target for numeric conditions and null for one-shot events', () => {
+    const state = { ...createInitialGameState(), globalTickspeedMultiplier: 4, purchaseLevels: { tier01: 6 }, achievements: { earned: {}, counters: { pings: 10 } } }
+    expect(getAchievementProgress(state, { kind: 'counter', key: 'pings', min: 256 })).toEqual({ current: 10, target: 256 })
+    expect(getAchievementProgress(state, { kind: 'clockSpeedLevel', min: 10 })).toEqual({ current: 4, target: 10 })
+    expect(getAchievementProgress(state, { kind: 'tierLevel', tierId: 'tier01', min: 10 })).toEqual({ current: 6, target: 10 })
+    expect(getAchievementProgress(state, { kind: 'storageUnlocked' })).toMatchObject({ format: 'percent' })
+    expect(getAchievementProgress(state, { kind: 'overclocked' })).toBeNull()
+    expect(getAchievementProgress(state, { kind: 'byteCreated' })).toBeNull()
+  })
+
+  it('rewards 1 star plus the bonus text when present', () => {
+    expect(getAchievementRewardText({ bonus: null })).toBe('⭐ 1 star')
+    expect(getAchievementRewardText({ bonus: 'does X' })).toBe('⭐ 1 star · does X')
+  })
+})
