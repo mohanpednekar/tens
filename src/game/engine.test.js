@@ -319,6 +319,7 @@ import {
   getDataLakeFillBits,
   getDataLakeCurrentDiskFillFraction,
   getDataLakeOverflowRatePercent,
+  getReclamationLakeSpeedBonus,
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityDoublingTurnAvailable,
   isDataLakeCapacityMaxed,
@@ -11598,6 +11599,20 @@ describe('Data Lakes', () => {
       expect(getDataStreamSpeedExponent(third.intro)).toBeCloseTo(getDataStreamSpeedExponent(second.intro), 12)
     })
 
+    it('each earned Reclamation level adds 2.5% to every Data Lake speed, on top of flushes', () => {
+      const base = createInitialGameState()
+      expect(getReclamationLakeSpeedBonus(base)).toBe(0)
+      expect(getDataLakeOverflowRatePercent(base, 1)).toBe(10)
+      const earned = { ...base, achievements: { ...base.achievements, earned: { reclaim1: true, reclaim2: true } } }
+      expect(getReclamationLakeSpeedBonus(earned)).toBeCloseTo(0.05, 12)
+      expect(getDataLakeOverflowRatePercent(earned, 1)).toBe(15)
+      expect(getDataLakeOverflowRatePercent(earned, 7)).toBe(15) // global: every lake
+      const flushed = updateLake(earned, 1, { resetCount: 2 })
+      expect(getDataLakeOverflowRatePercent(flushed, 1)).toBe(35)
+      const all = { ...base, achievements: { ...base.achievements, earned: { reclaim1: true, reclaim2: true, reclaim3: true, reclaim4: true } } }
+      expect(getDataLakeOverflowRatePercent(all, 1)).toBe(20)
+    })
+
     it('requires 9/9/9, a full lake, and an unreachable next Booster', () => {
       let state = completePool(createInitialGameState())
       state = updateLake(state, 1, { capacityLevel: 3, depositedUnits: 1000, purchased: 999 })
@@ -11632,7 +11647,7 @@ describe('Data Lakes', () => {
       expect(tickPoolResetReprovision(first)).toBe(first) // first disk must fill before the next appears
       const filled = withIntro(first, { disks: { ...first.intro.disks, [kb1]: 1 } })
       expect(tickPoolResetReprovision(filled).intro.disksBuiltTotal[kb1]).toBe(2)
-      expect(getDataLakeOverflowRatePercent(reset, 1)).toBe(20)
+      expect(getDataLakeOverflowRatePercent(reset, 1)).toBe(22.5) // 10 base + 10 per flush + 2.5 Reclamation I
 
       const purged = purgeGame(withMoney(reset, PURGE_THRESHOLD))
       expect(purged.intro.poolResetRebuildingCount).toBe(1)
@@ -11691,7 +11706,7 @@ describe('Data Lakes', () => {
       const second = flushStoragePool(1)(wall)
       expect(second.intro.dataLakes[1].resetCount).toBe(2)
       expect(second.intro.poolExponentBonuses[1]).toBe(2)
-      expect(getDataLakeOverflowRatePercent(second, 1)).toBe(30)
+      expect(getDataLakeOverflowRatePercent(second, 1)).toBe(32.5) // 10 base + 20 (2 flushes) + 2.5 Reclamation I
       expect(second.intro.dataLakes[1].bandwidthSteps).toBe(0)
 
       const capacityVisible = withIntro(createInitialGameState(), { capacity: 8 * 1000 ** 4 })

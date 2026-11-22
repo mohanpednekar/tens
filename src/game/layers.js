@@ -197,20 +197,24 @@ export const ACHIEVEMENT_GROUPS = [
 const TIER_ACHIEVEMENT_NAMES = ['Kilo-what?', 'Mega bite', 'Giga-what now', 'Tera-fying', 'Peta-fied', 'Exa-ggerated', 'Zetta slow', 'Yotta be kidding me', 'Ronna-way process', 'Quetta while']
 // Distinct pools that must have been compacted for each Reclamation level (the last is every pool).
 export const RECLAMATION_POOL_THRESHOLDS = [1, 3, 6, 10]
+// Each earned Reclamation level adds this to every Data Lake's speed multiplier (a fraction of its pool's Bandwidth, like the +0.1 per flush).
+export const RECLAMATION_LAKE_SPEED_BONUS = 0.025
 export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'helloWorld', name: 'Hello, World', group: 'firstSession', trigger: 'Ping for the first time', short: 'Ping', condition: { kind: 'counter', key: 'pings', min: 1 } },
   { id: 'itCompiles', name: 'It compiles, ship it', group: 'firstSession', trigger: 'Compile for the first time', short: 'Compile', condition: { kind: 'byteCreated' } },
   { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', short: 'Ping ×256', condition: { kind: 'counter', key: 'pings', min: 256 } },
   { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', short: '1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
   // Reclamation: a short series by how many different Storage pools have been compacted at least once.
-  // Score only (no bonus) — the per-pool Bitrate exponent upgrades come directly from Compact Pool
-  // (`intro.poolExponentBonuses`), not from these achievements.
+  // Each level speeds every Data Lake. The per-pool Bitrate exponent upgrades are separate: they come
+  // directly from Compact Pool (`intro.poolExponentBonuses`), not from these achievements.
   ...RECLAMATION_POOL_THRESHOLDS.map((pools, i) => ({
     id: `reclaim${i + 1}`,
     name: `Reclamation ${['I', 'II', 'III', 'IV'][i]}`,
     group: 'foundry',
     trigger: pools === 1 ? 'Compact a Storage pool for the first time' : `Compact ${pools} different Storage pools`,
     short: pools === 1 ? 'Compact a pool' : `Compact ${pools} pools`,
+    shortBonus: `Lake speed +${RECLAMATION_LAKE_SPEED_BONUS * 100}%`,
+    bonus: `Every Data Lake fills at +${RECLAMATION_LAKE_SPEED_BONUS * 100}% more of its pool's Bandwidth`,
     condition: { kind: 'poolsCompacted', min: pools },
   })),
   ...TIER_DEFINITIONS.map((tier, index) => ({

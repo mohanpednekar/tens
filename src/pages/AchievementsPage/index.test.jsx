@@ -123,27 +123,29 @@ describe('AppMenu achievements entry', () => {
     expect(screen.getByLabelText('First purchase level 2 not yet earned').textContent).toMatch(/^🔒 2\. Buy /)
   })
 
-  it('Reclamation is a four-level series by pools compacted, with no reward lines', () => {
+  it('Reclamation is a four-level series by pools compacted, with its shared lake-speed reward stated once', () => {
     renderWithTheme(<AchievementsPage game={gameWith({ reclaim1: true })} />)
     openGroup('Foundry')
     fireEvent.click(screen.getByLabelText('Reclamation details'))
     expect(screen.getByLabelText('Reclamation level 1 earned').textContent).toBe('✅ 1. Compact a Storage pool for the first time')
     expect(screen.getByLabelText('Reclamation level 2 not yet earned').textContent).toBe('🔒 2. Compact 3 different Storage pools (0/3)')
     expect(screen.getByLabelText('Reclamation achievement level 1 of 4')).toBeTruthy()
+    expect(screen.getByText(/^Reward each level: Every Data Lake fills at \+2\.5% more/)).toBeTruthy()
     expect(screen.queryByLabelText(/Reclamation level \d+ reward/)).toBeNull()
   })
 
-  it('collapsed series show the next requirement until every level is done', () => {
+  it('collapsed series show the next requirement and reward until every level is done', () => {
     const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({ reclaim1: true })} />)
     openGroup('Foundry')
     expect(screen.getByText('Next: Compact 3 pools (0/3)')).toBeTruthy()
-    expect(screen.queryByLabelText('Reclamation next reward')).toBeNull()
+    expect(screen.getByLabelText('Reclamation next reward').textContent).toBe('Reward: Lake speed +2.5%')
     unmount()
     const all = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.filter(def => def.group === 'foundry').map(def => [def.id, true]))
     renderWithTheme(<AchievementsPage game={gameWith(all)} />)
     openGroup('Foundry')
     expect(screen.getByLabelText('Reclamation achievement level 4 of 4')).toBeTruthy()
     expect(screen.queryByText(/^Next:/)).toBeNull()
+    expect(screen.queryByLabelText('Reclamation next reward')).toBeNull()
   })
 
   it('states a bonus shared by every level once', () => {

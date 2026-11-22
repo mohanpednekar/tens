@@ -9183,8 +9183,10 @@ Supersedes "Pool-reset achievements tune Bitrate's within-pool exponent steps" f
 mechanism only; the exponent math is unchanged. The engine already stored the upgrades in
 `intro.poolExponentBonuses` (set by `flushStoragePool`) and merely derived the 20 `poolNNResetI/II`
 achievements from that map, so the maintainer asked to stop presenting a stat upgrade as an achievement.
-Compact Pool now just upgrades the step; the achievements became four score-only `reclaim1`–`4`
-(`poolsCompacted` 1/3/6/10 distinct pools, `RECLAMATION_POOL_THRESHOLDS`). Old saves: the legacy
+Compact Pool now just upgrades the step; the achievements became four `reclaim1`–`4`
+(`poolsCompacted` 1/3/6/10 distinct pools, `RECLAMATION_POOL_THRESHOLDS`), each adding `RECLAMATION_LAKE_SPEED_BONUS`
+(0.025) to every Data Lake's speed multiplier (maintainer asked for a Foundry/reclamation-themed reward; values not
+simulated through `simulate-run-times`). Old saves: the legacy
 `poolNNResetI/II` earned flags stay in `achievements.earned` and the load-time backfill in
 `normalizePoolMemoryCapacity` still reads them, so no upgrade is lost. No exponent value, cost or
 persistence rule changed. The page's compact per-level reward rendering (`compact` in
