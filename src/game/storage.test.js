@@ -1339,3 +1339,62 @@ describe('adaptSaveForLoad (dev build: no backward compatibility)', () => {
     expect(adaptSaveForLoad(legacy, true).ok).toBe(true)
   })
 })
+
+describe('challenge state persistence (#1044)', () => {
+  it('round-trips an active challenge with its run-scoped state', () => {
+    const base = createInitialGameState()
+    const state = {
+      ...base,
+      challenges: {
+        ...base.challenges,
+        active: 'F21',
+        activeSeconds: 123.5,
+        enteredCount: 4,
+        exitedCount: 2,
+        completed: { F1: true },
+        bestSeconds: { F1: 90 },
+        run: { ...base.challenges.run, cycleSeconds: 17 },
+      },
+    }
+    saveGameState(state)
+    const loaded = loadGameState().challenges
+    expect(loaded.active).toBe('F21')
+    expect(loaded.activeSeconds).toBe(123.5)
+    expect(loaded.enteredCount).toBe(4)
+    expect(loaded.exitedCount).toBe(2)
+    expect(loaded.completed.F1).toBe(true)
+    expect(loaded.bestSeconds.F1).toBe(90)
+    expect(loaded.run.cycleSeconds).toBe(17)
+  })
+
+  it('loads a pre-feature save (no challenges field) with empty challenge state', () => {
+    const { challenges: _omitted, ...legacy } = createInitialGameState()
+    saveGameState(legacy)
+    const loaded = loadGameState().challenges
+    expect(loaded.active).toBeNull()
+    expect(loaded.completed).toEqual({})
+    expect(loaded.bestSeconds).toEqual({})
+    expect(loaded.enteredCount).toBe(0)
+  })
+
+  it('auto-completes a challenge whose automation already holds a speed level, without a best time, and is stable on reload', () => {
+    const base = createInitialGameState()
+    saveGameState({ ...base, automationIntervalLevels: { ...base.automationIntervalLevels, speedUp: 1 } })
+    const first = loadGameState()
+    expect(first.challenges.completed.F21).toBe(true)
+    expect(first.challenges.bestSeconds.F21).toBeUndefined()
+    expect(first.challenges.completed.F22).toBeUndefined()
+    saveGameState(first)
+    expect(loadGameState().challenges).toEqual(first.challenges)
+  })
+
+  it.each([
+    ['tierAutobuyer', { autobuyerIntervalLevels: { tier01: 1 } }, 'F1'],
+    ['tierTickspeed', { tierTickspeedIntervalLevels: { tier01: 1 } }, 'F11'],
+  ])('auto-completes for the %s chain and leaves automations with no level gated', (_kind, patch, expectedId) => {
+    saveGameState({ ...createInitialGameState(), ...patch })
+    const completed = loadGameState().challenges.completed
+    expect(completed[expectedId]).toBe(true)
+    expect(completed.F21).toBeUndefined()
+  })
+})
