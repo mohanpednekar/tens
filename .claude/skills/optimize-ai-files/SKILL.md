@@ -90,7 +90,8 @@ time this runs — don't maintain a hardcoded file list anywhere else.
    last pass — it must be present exactly like this for that check to find it.
 9. **PR as normal.** This is an ordinary PR — follow `CLAUDE.md`'s "Pull requests" section in
    full: open it (draft while anything's still pending), run the adversarial `code-reviewer`
-   subagent before considering it done, post its marker, and follow the repo's auto-merge policy.
+   subagent before considering it done, post its marker, and mark it ready on APPROVE (never enable auto-merge; the PR babysitter
+   routine merges it).
    Nothing about this being a docs-cost pass exempts it from review.
 
 ## What not to do

@@ -60,6 +60,7 @@ import {
   getStoragePoolMemoryBounds,
   DATA_STREAM_SPEED_EXPONENT_BASE,
   DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED,
+  OVERCLOCK_REQUIREMENT_STEP,
 } from 'game/layers'
 import { version } from '../../../package.json'
 import styled from 'styled-components'
@@ -591,8 +592,8 @@ const InfoPage = () => {
           </li>
           <li>
             The first claim needs {overclockFirstRequirement} completed levels — a minimum; you can
-            keep climbing first. Each later claim needs three more completed levels than the previous
-            claim was taken at.
+            keep climbing first. Each later claim needs {OVERCLOCK_REQUIREMENT_STEP} more completed levels
+            than the previous claim was taken at (fewer with the Overclock step achievements).
           </li>
           <li>
             Nothing is banked — each claim replaces the previous one, so only the completed level

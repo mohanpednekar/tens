@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, BUY_MAX_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, SLEEP_MODE_BASE_CAP_SECONDS, SLEEP_MODE_CAP_STEP_SECONDS, SLEEP_MODE_CAP_UPGRADE_COSTS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, TIER_COST_SPACING_GROWTH_LEVELS, LEVEL_POWER_ACHIEVEMENT_BONUS, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS } from './layers.js'
+import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, BUY_MAX_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, SLEEP_MODE_BASE_CAP_SECONDS, SLEEP_MODE_CAP_STEP_SECONDS, SLEEP_MODE_CAP_UPGRADE_COSTS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, TIER_COST_SPACING_GROWTH_LEVELS, OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL, LEVEL_POWER_ACHIEVEMENT_BONUS, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -218,6 +218,9 @@ export const createInitialGameState = () => ({
   lastTierLevelCreditTimer: 0,
   // Run-scoped (resets with the Factory cycle): the last tier (QB) has held a non-zero balance this run — see 'lastTierSpent'.
   lastTierEarnedThisRun: false,
+  // Cycle-scoped (reset by Purge/Reboot, carried through Scale Up and Overclock): true once any Accelerate level
+  // was bought this Purge cycle. Gates the 'Overclock twice without Accelerate' achievement.
+  accelerateBoughtThisCycle: false,
   // Permanent global level (not per-tier — there's only one to buy), null = not yet bought: how
   // many times Prestige Points have been spent to make Prestige itself automatic and faster (see
   // applyAutobuyerMilestones/getAutoPurgeAttemptRate) — never reset by prestige.
@@ -299,7 +302,7 @@ export const createInitialGameState = () => ({
   // Overclock (overclockGame — a second, steeper Scale-Up-style soft reset) was claimed, or null
   // before the first claim. Nothing accumulates: each claim REPLACES it. It does two things —
   // (1) drives the next claim's requirement (getOverclockRequirement: 5 while null, otherwise this
-  // + OVERCLOCK_REQUIREMENT_STEP), so the requirement follows where the player actually claimed;
+  // + the Overclock step), so the requirement follows where the player actually claimed;
   // (2) multiplies the (Money-funded) global tickspeed multiplier's per-level step by
   // getOverclockMultiplier(level) = ×1.1 per level (see getGlobalTickspeedProductionMultiplier).
   // Carried through an ordinary Scale Up untouched; reset by a real Prestige. Legacy saves
@@ -1477,6 +1480,23 @@ export const getCompletedAchievementGroups = state =>
     return members.length > 0 && members.every(def => isAchievementEarned(state, def.id))
   }).map(group => group.id)
 
+// Stars: 1 per earned achievement (each level of a leveled row counts), plus a completion bonus per fully
+// earned group of 10% of the group's stars (rounded up, `ACHIEVEMENT_GROUP_BONUS_RATE`). Derived, never stored.
+const ACHIEVEMENT_GROUP_BONUS_RATE = 0.1
+export const getAchievementGroupStars = (state, groupId) => {
+  const members = ACHIEVEMENT_DEFINITIONS.filter(def => def.group === groupId && !def.platformDependent)
+  const earned = members.filter(def => isAchievementEarned(state, def.id)).length
+  const complete = members.length > 0 && earned === members.length
+  const bonusTotal = Math.ceil(members.length * ACHIEVEMENT_GROUP_BONUS_RATE)
+  return { earned, bonus: complete ? bonusTotal : 0, total: members.length + bonusTotal, complete }
+}
+
+export const getAchievementStars = state =>
+  ACHIEVEMENT_GROUPS.reduce((sum, group) => {
+    const { earned, bonus } = getAchievementGroupStars(state, group.id)
+    return sum + earned + bonus
+  }, 0)
+
 export const eraGame = state => {
   if (!isEraEligible(state)) return state
 
@@ -1620,17 +1640,23 @@ export const getScaleUpRequirement = state =>
   )
 
 // The first Overclock requires 5 completed last-tier levels — a minimum only, the player may keep
-// climbing before claiming. Later claims require three completed levels more than the
+// climbing before claiming. Later claims require four completed levels more (fewer with Overclock step achievements) than the
 // completed-level count the previous claim was actually taken at
-// (state.overclockLastClaimCompletedLevels + OVERCLOCK_REQUIREMENT_STEP) — e.g. available at 5,
-// claimed at 7 → next available at 10; claimed at 11 → next at 14. Never a predetermined 5, 8, 11,
-// 14 sequence. Legacy saves written before overclockLastClaimCompletedLevels existed fall back to
+// (state.overclockLastClaimCompletedLevels + getOverclockRequirementStep) — e.g. available at 5,
+// claimed at 7 → next available at 11 at step 4; claimed at 11 → next at 15. Never a predetermined
+// ladder. Legacy saves written before overclockLastClaimCompletedLevels existed fall back to
 // overclockCount itself (the level recorded by the previous claim under the old semantics).
 export const getOverclockRequirement = state => {
   const lastClaim = getOverclockLevel(state)
-  return lastClaim === null
-    ? 5
-    : lastClaim + OVERCLOCK_REQUIREMENT_STEP
+  if (lastClaim === null) return 5
+  return lastClaim + getOverclockRequirementStep(state)
+}
+
+// The step added to the previous claim's level: OVERCLOCK_REQUIREMENT_STEP (4), minus 1 per earned Overclock
+// step achievement (see layers.js), never below 1.
+export const getOverclockRequirementStep = state => {
+  const reduced = ACHIEVEMENT_DEFINITIONS.filter(def => def.group === 'overclockStep' && isAchievementEarned(state, def.id)).length
+  return Math.max(1, OVERCLOCK_REQUIREMENT_STEP - reduced)
 }
 
 // The Overclock level: the last tier's completed-level count at the most recent claim (this run),
@@ -7535,6 +7561,7 @@ export const buyGlobalTickspeedMultiplier = state => {
     ...state,
     resources: { ...state.resources, [MONEY_ID]: available - cost },
     globalTickspeedMultiplier: (currentLevel ?? 0) + 1,
+    accelerateBoughtThisCycle: true,
   }
 }
 
@@ -8152,7 +8179,12 @@ const restartBitRotGrace = (before, after) =>
 // so a refused Scale Up/Overclock still returns the same state reference).
 const withCacheWarm = (state, next) => (next === state ? next : applyCacheWarm(next))
 export const scaleUpGame = state => restartBitRotGrace(state, withCacheWarm(state, scaleUpGameCore(state)))
-export const overclockGame = state => restartBitRotGrace(state, withCacheWarm(state, overclockGameCore(state)))
+export const overclockGame = state => {
+  const core = overclockGameCore(state)
+  if (core === state) return restartBitRotGrace(state, withCacheWarm(state, core))
+  const next = restartBitRotGrace(state, withCacheWarm(state, core))
+  return detectAchievements(recordOverclockAchievementCounters(state, next))
+}
 
 const scaleUpGameCore = state => {
   if (isProductionFrozen(state)) return state
@@ -8236,6 +8268,7 @@ const scaleUpGameCore = state => {
     },
     challenges: state.challenges ?? initial.challenges,
     achievements: state.achievements ?? initial.achievements,
+    accelerateBoughtThisCycle: Boolean(state.accelerateBoughtThisCycle),
     daily: state.daily ?? initial.daily,
     purge: { ...state.purge, xp: initial.purge.xp, highestMilestone: initial.purge.highestMilestone },
     scaleUpCount: (state.scaleUpCount ?? 0) + 1,
@@ -8252,16 +8285,34 @@ const scaleUpGameCore = state => {
   }
 }
 
+// Counters behind the three Overclock step achievements, recorded on each successful claim (`before` is the
+// state the claim was made from): the deepest FIRST claim of a Purge cycle, a second-or-later claim made
+// without ever buying Accelerate this cycle, and a claim at OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL+ completed
+// last-tier levels after DeGoogol.
+const recordOverclockAchievementCounters = (before, after) => {
+  // Deliberately NO challenge exclusion: using a challenge's modified rules (F6 caps the tier ladder, F21 disables
+  // Accelerate, ...) to earn these is a valid strategy — and nothing player-facing may mention or hint at it.
+  const completed = Math.max(0, (before.purchaseLevels?.[getEffectiveLastTier(before).id] ?? 1) - 1)
+  const counters = { pings: 0, ...after.achievements?.counters }
+  const firstOfCycle = getOverclockLevel(before) === null
+  const next = { ...counters }
+  // Each achievement only counts once the previous one is earned, so a later one is never held without the earlier.
+  if (firstOfCycle) next.maxFirstOverclock = Math.max(counters.maxFirstOverclock ?? 0, completed)
+  else if (!before.accelerateBoughtThisCycle && isAchievementEarned(before, 'overclockStep1')) next.acceleratelessOverclocks = 1
+  if (isOverflowModeUnlocked(before) && completed >= OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL && isAchievementEarned(before, 'overclockStep2')) next.overflowDeepOverclock = 1
+  return { ...after, achievements: { earned: {}, ...after.achievements, counters: next } }
+}
+
 // A second, steeper soft-reset than Scale Up (see scaleUpGame above), gated behind the last tier's
-// LEVEL reaching getOverclockRequirement(state) — level 5 initially, then three more
-// than the last claimed level.
+// LEVEL reaching getOverclockRequirement(state) — level 5 initially, then getOverclockRequirementStep
+// (4, fewer with Overclock step achievements) more than the last claimed level.
 // Resets everything scaleUpGame does (every per-run field back to a fresh game, permanent
 // automation toggles/flags carried over unchanged) — but where scaleUpGame increments scaleUpCount
 // and eligible scaleUpTierCounts entries, overclockGame resets both through the fresh initial state,
 // wiping Scale Up's per-tier production multipliers. The Overclock level is set directly to the
 // last tier's *current* completed-level count (not accumulated — nothing is banked), so a
 // player who claims late (last claimed at 5, last tier now at 8) simply gets level 8. This is
-// always at least +3 over the previous level, since the eligibility check above guarantees it.
+// always at least the current Overclock step (1–4) over the previous level, since the eligibility check above guarantees it.
 // Overclock's reward (getOverclockMultiplier — folded into getGlobalTickspeedProductionMultiplier's
 // single uniform per-level step, see getEffectiveTierTickSpeedSeconds) is keyed off getOverclockLevel.
 // `autoScaleUp` (the automation toggle deciding whether Scale Up
@@ -8333,6 +8384,7 @@ const overclockGameCore = state => {
     },
     challenges: state.challenges ?? initial.challenges,
     achievements: state.achievements ?? initial.achievements,
+    accelerateBoughtThisCycle: Boolean(state.accelerateBoughtThisCycle),
     daily: state.daily ?? initial.daily,
     purge: { ...state.purge, xp: initial.purge.xp, highestMilestone: initial.purge.highestMilestone },
     // scaleUpCount/scaleUpTierCounts are deliberately NOT carried over (unlike scaleUpGame's own
@@ -8342,7 +8394,7 @@ const overclockGameCore = state => {
     scaleUpCount: initial.scaleUpCount,
     // The Overclock level is simply the last tier's completed-level count at this claim — it
     // REPLACES any earlier value (nothing accumulates). It is also the base the next requirement
-    // grows from (+ OVERCLOCK_REQUIREMENT_STEP — see getOverclockRequirement).
+    // grows from (+ the Overclock step — see getOverclockRequirement).
     overclockLastClaimCompletedLevels: lastTierCompletedLevels,
   }
 }

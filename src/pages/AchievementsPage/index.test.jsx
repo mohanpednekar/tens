@@ -20,11 +20,35 @@ describe('AchievementsPage', () => {
     expect(screen.getByLabelText('First session 1 of 4 earned')).toBeTruthy()
     expect(screen.queryByLabelText('Hello, World achievement earned')).toBeNull()
     openGroup('First session')
-    expect(screen.getByLabelText('Hello, World achievement earned')).toBeTruthy()
-    expect(screen.getByLabelText('Ping of Death achievement not yet earned')).toBeTruthy()
-    expect(screen.queryByText('Ping 256 times')).toBeNull()
-    fireEvent.click(screen.getByLabelText('Ping of Death details'))
-    expect(screen.getByText('Ping 256 times')).toBeTruthy()
+    expect(screen.getByLabelText('Ping achievement level 1 of 2')).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('Ping details'))
+    expect(screen.getByLabelText('Ping level 1 earned')).toBeTruthy()
+    expect(screen.getByLabelText('Ping level 2 not yet earned')).toBeTruthy()
+  })
+
+  it('shows total stars with a bonus for fully completed groups', () => {
+    const first = ACHIEVEMENT_DEFINITIONS.filter(def => def.group === 'firstSession')
+    const earned = Object.fromEntries(first.map(def => [def.id, true]))
+    renderWithTheme(<AchievementsPage game={gameWith({ ...earned, levelPower1: true })} />)
+    // 4 first-session stars + 1 completion bonus (10%, rounded up) + 1 level power star
+    expect(screen.getByLabelText(/^total stars 6 of /)).toBeTruthy()
+    expect(screen.getByText(/⭐ 5\/5/)).toBeTruthy()
+  })
+
+  it('collapses the tier purchases into one leveled row', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({ tier01Bought: true, tier02Bought: true, tier03Bought: true })} />)
+    openGroup('Tier ladder')
+    expect(screen.getByLabelText('First purchase achievement level 3 of 10')).toBeTruthy()
+    expect(screen.getByLabelText('Spent QB achievement not yet earned')).toBeTruthy()
+  })
+
+  it('collapses ordered steps into one leveled row', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({ levelPower1: true, levelPower2: true, overclockStep1: true })} />)
+    openGroup('Level power')
+    expect(screen.getAllByLabelText(/achievement level/)).toHaveLength(1)
+    expect(screen.getByLabelText('Level power achievement level 2 of 10')).toBeTruthy()
+    openGroup('Overclock step')
+    expect(screen.getByLabelText('Overclock step achievement level 1 of 3')).toBeTruthy()
   })
 
   it('masks secret achievements until earned and hides platform-dependent ones', () => {
