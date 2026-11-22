@@ -11635,6 +11635,8 @@ describe('Data Lakes', () => {
       // 3 unlocked steps = 2 plain within-pool steps (pool 1's two), none earned by the (level-1) bonus map besides pool 1's first.
       const exponentAt = state => getDataStreamSpeedExponent(state.intro)
       expect([0, 1, 2, 3, 6, 8, 10].map(count => getReclamationLevel(poolsCompacted(count).intro))).toEqual([0, 1, 1, 2, 3, 4, 5])
+      // Only real pools (1..10) count; junk keys from a hand-edited save do not.
+      expect(getReclamationLevel({ poolExponentBonuses: { 1: 2, foo: 1, 0: 1, 11: 1 } })).toBe(1)
       expect(exponentAt(poolsCompacted(0))).toBeCloseTo(1 - 0.5 * 0.99 ** 2, 12)
       expect(exponentAt(poolsCompacted(1))).toBeCloseTo(1 - 0.5 * 0.9 * 0.98, 12) // first step earned, second plain at 2%
       expect(exponentAt(poolsCompacted(3))).toBeCloseTo(1 - 0.5 * 0.9 * 0.97, 12) // level II: plain step at 3%

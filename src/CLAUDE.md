@@ -86,7 +86,7 @@ Continues the root `CLAUDE.md`'s "Architecture" (layers 1–2: `engine.js`, `use
 Each Storage pool has an independent end-of-progression **flush** (`flushStoragePool`; formerly "reset"), offered only at 9/9/9 disks, with a
 completely full Data Lake, when the next Booster costs more than the lake can hold. It empties only that
 pool's disks, buffer, and lake (Booster state and prior reset rewards remain) and permanently adds 1,000
-units of lake-only capacity. Lake speed is 10% of its pool's base Bandwidth, +10% additive per flush (`getDataLakeSpeedMultiplier`; 70% after 6); flushes no longer change pool Bandwidth. After a flush the pool provisions its disks automatically and for
+units of lake-only capacity. Lake speed is 10% of its pool's base Bandwidth, +10% additive per flush (`getDataLakeSpeedMultiplier`; 70% after 6; Reclamation III/IV add 5% each to every lake); flushes no longer change pool Bandwidth. After a flush the pool provisions its disks automatically and for
 free, one at a time smallest-first, waiting for each disk to fill; while it rebuilds, later pools cannot
 start new provisioning (already-active work may finish). Whenever all 9/9/9 disks are provisioned
 (including before the first reset) — a status latched per lake (`boosterAuto`) for the whole Reboot cycle, surviving pool resets, Reformat Byte Foundry and Prestige — the lake's Booster control becomes a non-clickable cost label and
@@ -164,7 +164,7 @@ a permanent Byte generator; **Upgrade Capacity** / **Upgrade Bitrate** grow it o
 (`queueIntroSpeedUpgrade`, `tickCapacityUpgradeDrain`; sit OUTSIDE the forced priority order). Displayed
 Speed is derived (`getDataStreamSpeedBytesPerSecond`, exponent `getDataStreamSpeedExponent`);
 the exponent starts at 0.5, climbs by 10% toward 1.0 at each pool boundary and by 10% toward
-its next pool within an array; the first two Compact Pool achievements upgrade that pool's two
+its next pool within an array; the first two Compact Pool flushes upgrade that pool's two
 array steps to 10% toward 1.0 (`getDataStreamSpeedExponent`; details in `docs/ECONOMY_REFERENCE.md`). Reboot keeps the generator and
 gate latch but resets Capacity (`buildEraIntroReset`). Recurring actions follow a **forced priority
 order** Disk Fill > Provision Disk (Compute Boosts are exempt — a held token always activates; a lower one is disabled, in UI and engine, while a

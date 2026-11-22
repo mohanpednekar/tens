@@ -9180,7 +9180,7 @@ by larger resets cannot be reconstructed. Only a full save Reset clears the earn
 ### Reclamation decoupled from the exponent upgrades; 20 achievements cut to 5 (2026-11)
 
 Supersedes "Pool-reset achievements tune Bitrate's within-pool exponent steps" for the delivery
-mechanism only; the exponent math is unchanged. The engine already stored the upgrades in
+mechanism only; the base exponent math is unchanged (Compact-Pool-upgraded steps still close 10%), but Reclamation I/II now change the plain step, so exponent values do change once a pool is compacted (e.g. a first-flush fixture moves 0.5545 → 0.559). The engine already stored the upgrades in
 `intro.poolExponentBonuses` (set by `flushStoragePool`) and merely derived the 20 `poolNNResetI/II`
 achievements from that map, so the maintainer asked to stop presenting a stat upgrade as an achievement.
 Compact Pool now just upgrades the step; the achievements became five `reclaim1`–`5`
@@ -9189,9 +9189,9 @@ Compact Pool now just upgrades the step; the achievements became five `reclaim1`
 spec; values not simulated through `simulate-run-times`). Levels derive from `poolExponentBonuses` (`getReclamationLevel`),
 not from the earned achievement flags, because the exponent helpers only receive `intro`. Old saves: the legacy
 `poolNNResetI/II` earned flags stay in `achievements.earned` and the load-time backfill in
-`normalizePoolMemoryCapacity` still reads them, so no upgrade is lost. No exponent value, cost or
-persistence rule changed. The page's compact per-level reward rendering (`compact` in
-`AchievementsPage`) is currently unused by data but kept generic. Rejected: a purchasable upgrade (needs
+`normalizePoolMemoryCapacity` still reads them, so no upgrade is lost. No cost or
+persistence rule changed. The 5-level Reclamation series uses the page's compact per-level rendering (`compact` in
+`AchievementsPage`, more than 4 levels) with its distinct short rewards explained once when expanded. Rejected: a purchasable upgrade (needs
 a currency/price and would double-charge the already costly flush; see the 2026-11 discussion).
 
 ## Store release prep: flags-off monetization and config-time feature loaders (2026-10)

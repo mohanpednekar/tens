@@ -1438,8 +1438,14 @@ const buildEraIntroReset = (state, initial) => {
 // --- Achievements (epic #1046) ---------------------------------------------------------------------
 // Distinct Storage pools compacted at least once (permanent `poolExponentBonuses` award map).
 const getCompactedPoolCount = state => getCompactedPoolCountFromIntro(state.intro)
-const getCompactedPoolCountFromIntro = intro =>
-  Object.values(intro?.poolExponentBonuses ?? {}).filter(level => Number(level) >= 1).length
+const getCompactedPoolCountFromIntro = intro => {
+  // Only real pools count (1..DATA_LAKE_TIER_COUNT) — the award map is persisted JSON a hand edit could pollute.
+  let count = 0
+  for (let pool = 1; pool <= DATA_LAKE_TIER_COUNT; pool += 1) {
+    if (Number(intro?.poolExponentBonuses?.[pool]) >= 1) count += 1
+  }
+  return count
+}
 // Reclamation level (0-4) from the same award map the Reclamation achievements read, so its rewards apply immediately
 // and work from `intro` alone (the exponent helpers below never see `achievements`).
 export const getReclamationLevel = intro => {
