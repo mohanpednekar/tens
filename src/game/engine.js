@@ -1009,16 +1009,6 @@ export const getGlobalTickspeedProductionMultiplier = (level, overclockLevel = 0
 // lastTierXpConsumed baseline a Prestige/Overclock left behind.
 export const isLastTierTickspeedXpUnlocked = state => (state.scaleUpTierCounts?.[getEffectiveLastTier(state).id] ?? 0) >= 1
 
-// The real QB stall (Spent QB achievement, 'restageStalled'): Restage is unlocked, allowed and affordable (XP at least
-// the minimum consumption) — the only thing blocking it is the last tier's empty owned count. A 0 QB balance alone is
-// not a stall: before Restage unlocks there is nothing waiting on QB.
-export const isRestageStalledByEmptyLastTier = state =>
-  !isProductionFrozen(state)
-  && !hasChallengeEffect(state, 'restageDisabled')
-  && isLastTierTickspeedXpUnlocked(state)
-  && clampNonNegative(state.owned?.[getEffectiveLastTier(state).id]) <= 0
-  && clampNonNegative(state.purge?.xp) >= getLastTierXpTickspeedMinConsumption(state.lastTierXpConsumed ?? 0)
-
 // The last tier's own tickspeed multiplier once XP-funded (see isLastTierTickspeedXpUnlocked) —
 // compounds LAST_TIER_XP_TICKSPEED_STEP (1%) per cumulative XP ever consumed via
 // consumeXpForLastTierTickspeed, matching the same multiplicative form every other tier's own
@@ -1454,7 +1444,6 @@ export const isAchievementConditionMet = (state, condition) => {
     case 'tierPurchased': return (state.purchased?.[condition.tierId] ?? 0) > 0 || (state.purchaseLevels?.[condition.tierId] ?? 1) > 1
     case 'clockSpeedLevel': return (state.globalTickspeedMultiplier ?? 0) >= condition.min
     case 'overclocked': return state.overclockLastClaimCompletedLevels != null
-    case 'restageStalled': return isRestageStalledByEmptyLastTier(state)
     case 'tierLevel': return (state.purchaseLevels?.[condition.tierId] ?? 1) >= condition.min
     case 'poolExponentBonus': return (state.intro?.poolExponentBonuses?.[condition.poolIndex] ?? 0) >= condition.min
     default: return false
@@ -7347,7 +7336,7 @@ export const setAutobuyerEnabled = (tierId, enabled) => state => {
 // owned[tier.id] move together, so requiring only `available >= cost` could drain a non-last tier to
 // exactly 0 generators — production for that tier (and everything cascading from it) would stop
 // even though the purchase "succeeded". Require at least 1 generator left over instead, except the
-// last tier (QB), which may spend to 0 (which can stall Restage — Spent QB).
+// last tier (QB), which may spend to 0 (a manual Restage at 0 QB then earns Spent QB — see restageManually).
 // Challenge-aware tickspeed charge for reaching `targetLevel`: F16 Egress Fees charges the next level's cost; F20 Burn Rate
 // spends the full requirement (now the baseline spend for every tier, so F20 is a no-op on spend).
 const getTickspeedChargeLevel = (state, tierId, targetLevel) =>
@@ -7385,9 +7374,6 @@ export const buyTickspeedMultiplier = tierId => state => {
   const available = state.resources[tier.id] ?? 0
   if (available < getTierTickspeedRequirement(state, tierId, currentLevel + 1)) return state
 
-  // Spending the last tier to 0 is how a Restage stall usually starts, so Spent QB ('restageStalled') is detected right
-  // here, at the moment of the stall (not on a later tick, which a same-tick Auto Scale Up / Overclock / Purge could
-  // pre-empt by wiping the run).
   return detectAchievements({
     ...state,
     resources: {
@@ -8475,7 +8461,23 @@ export const setAutoGlobalTickspeedEnabled = enabled => state => {
 // not yet unlocked, if the last tier's own owned count is 0, if amount isn't a positive integer,
 // if amount is below that minimum, if there isn't enough unspent XP, or while production is
 // frozen.
-export const consumeXpForLastTierTickspeed = amount => state => {
+export const consumeXpForLastTierTickspeed = amount => state => consumeXpForLastTierTickspeedCore(amount, false)(state)
+
+// A player-clicked Restage (MainPage button, Daily-run action). Unlike Auto Restage, it is allowed while the last tier
+// owns 0 — the real stall: every tier and Bits end at 0 with nothing left to rebuild them. Doing so counts the lifetime
+// `emptyRestages` achievement counter, which earns Spent QB (whose regardless-of-balance credit is the way out).
+export const restageManually = amount => state => {
+  const emptyLastTier = clampNonNegative(state.owned?.[getEffectiveLastTier(state).id]) <= 0
+  const next = consumeXpForLastTierTickspeedCore(amount, true)(state)
+  if (!emptyLastTier || next === state || !ACHIEVEMENTS_FEATURE.enabled) return next
+  const achievements = next.achievements ?? createInitialGameState().achievements
+  return detectAchievements({
+    ...next,
+    achievements: { ...achievements, counters: { ...achievements.counters, emptyRestages: (achievements.counters?.emptyRestages ?? 0) + 1 } },
+  })
+}
+
+const consumeXpForLastTierTickspeedCore = (amount, allowEmptyLastTier) => state => {
   if (isProductionFrozen(state)) return state
   if (hasChallengeEffect(state, 'restageDisabled')) return state
   if (!isLastTierTickspeedXpUnlocked(state)) return state
@@ -8488,7 +8490,8 @@ export const consumeXpForLastTierTickspeed = amount => state => {
   // guard, consuming XP while the last tier owns nothing would still wipe every other tier's
   // owned/resources and the Bits balance for a tickspeed bonus with nothing left to apply it
   // to — a pure, irreversible-feeling loss with no offsetting benefit. See docs/DESIGN_HISTORY.md.
-  if (clampNonNegative(state.owned?.[lastTierId]) <= 0) return state
+  // (restageManually opts out: a deliberate click at 0 QB is the Spent QB stall.)
+  if (!allowEmptyLastTier && clampNonNegative(state.owned?.[lastTierId]) <= 0) return state
 
   const safeAmount = Math.floor(clampNonNegative(amount))
   if (safeAmount <= 0) return state

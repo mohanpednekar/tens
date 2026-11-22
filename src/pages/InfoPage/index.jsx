@@ -538,7 +538,7 @@ const InfoPage = () => {
           </li>
           <li>
             {lastTierName}’ tickspeed upgrade may spend your last unit (other tiers always keep one).
-            Have enough XP to Restage while holding 0 {lastTierName} to earn Spent QB — then 1 is
+            Restage while holding 0 {lastTierName} (nothing is left producing) to earn Spent QB — then 1 is
             credited regardless of balance, more often with more completed levels.
           </li>
           <li>

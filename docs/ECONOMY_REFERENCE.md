@@ -1886,11 +1886,8 @@ moment the tier itself unlocks — no autobuyer unlock or PP prerequisite of any
   which may spend to exactly 0. Called both manually and
   — for every tier whose tier tickspeed autobuyer is bought (`tierTickspeedAutobuyer[tier.id]`) —
   automatically by `tickGame`, once per tick, whenever affordable. Emptying QB without the achievement is a genuine stall (no QB production);
-  With Restage ready (unlocked, allowed, XP ≥ `getLastTierXpTickspeedMinConsumption`) that is the Spent QB condition
-  (`'restageStalled'`, `isRestageStalledByEmptyLastTier`; a 0 balance before Restage unlocks is not a stall):
-  `buyTickspeedMultiplier` runs `detectAchievements`, so a spend into the stall unlocks it at once (even if a reset
-  follows in the same tick).
-- Every tier (including the last) spends the full `getTickspeedMultiplierCost`; `getTickspeedMultiplierRequirement` is `cost + 1` (keeps one generator) — except the last tier, whose requirement is `cost` (it may spend to exactly 0, which can stall Restage — the Spent QB achievement).
+  a 0 balance alone does not earn Spent QB — only a manual Restage clicked at 0 owned QB does (`restageManually`, below).
+- Every tier (including the last) spends the full `getTickspeedMultiplierCost`; `getTickspeedMultiplierRequirement` is `cost + 1` (keeps one generator) — except the last tier, whose requirement is `cost` (it may spend to exactly 0; Restaging manually there earns the Spent QB achievement).
 
 #### The global tickspeed multiplier
 
@@ -1954,6 +1951,12 @@ its one purpose.
   (`purchased`/levels untouched; the last tier's own counts untouched). No-op if not unlocked, if the
   last tier's own `owned` is 0 (nothing to speed up — see `docs/DESIGN_HISTORY.md`), if `amount` isn't a
   positive integer, is below the minimum, exceeds unspent XP, or production is frozen.
+- `restageManually(amount)` — the player's Restage (MainPage button via the hook's `consumeXpForLastTierTickspeed`
+  action, and the Daily-run `restage` action): the same consumption with the 0-owned guard lifted. Restaging at 0
+  owned QB wipes every tier and Bits with nothing left producing — the real stall — and increments the lifetime
+  `achievements.counters.emptyRestages` (only while `ACHIEVEMENTS_FEATURE.enabled`), earning **Spent QB**
+  (`quettaSpent`, `condition: { kind: 'counter', key: 'emptyRestages', min: 1 }`), whose regardless-of-balance credit
+  is the way out.
 - **Automation: the Auto Restage** (`autoXpTickspeed`, unlocked at Purge 32 (no PP); permanent across
   Prestige/Scale Up/Overclock/Era like the other global automations). While bought and
   `autoXpTickspeedEnabled` (pause via `setAutoXpTickspeedEnabled`, same Firmware row), `tickGame` calls
@@ -1964,8 +1967,9 @@ its one purpose.
   and always drives the ordinary `buyTickspeedMultiplier`.
 - **MainPage**: the Restage card (`aria-label="restage panel"`) shows the current XP multiplier,
   XP consumed and the next minimum, plus a `🧬 {XP} XP` button (`variant="smart"`, behind a
-  `window.confirm`) that spends the entire unspent XP balance. Disabled while the last tier owns 0,
-  XP is below the minimum, or production is frozen; its `title` explains the owned-0 case.
+  `window.confirm`) that spends the entire unspent XP balance via `restageManually`. Disabled while XP is below
+  the minimum, Restage is challenge-disabled, or production is frozen; at 0 owned last-tier units it stays enabled and
+  its `title` and confirm text warn that nothing will be left producing.
 
 #### Multiplier overflow safety
 

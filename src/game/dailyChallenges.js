@@ -27,7 +27,7 @@ import {
   buyGlobalTickspeedMultiplier,
   buyTickspeedMultiplier,
   buyTierQuantity,
-  consumeXpForLastTierTickspeed,
+  restageManually,
   createInitialGameState,
   formatAmount,
   getOverclockLevel,
@@ -172,7 +172,7 @@ const RUN_ACTIONS = {
   clockSpeed: { make: () => buyGlobalTickspeedMultiplier },
   scaleUp: { make: () => scaleUpGame },
   overclock: { make: () => overclockGame },
-  restage: { make: amount => consumeXpForLastTierTickspeed(amount) },
+  restage: { make: amount => restageManually(amount) },
   // arg: { key, enabled } — pause or resume one of the run's automations.
   automation: { make: arg => (Object.hasOwn(AUTOMATION_BY_KEY, arg?.key ?? '') ? AUTOMATION_BY_KEY[arg.key].set(Boolean(arg.enabled)) : game => game) },
 }

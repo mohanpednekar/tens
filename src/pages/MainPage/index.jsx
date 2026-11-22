@@ -1087,8 +1087,8 @@ const MainPage = ({ game }) => {
   // The last tier's XP-funded tickspeed — a separate upgrade shown below Accelerate once the last tier
   // has been a Scale Up target this cycle (isLastTierTickspeedXpUnlocked). Always spends the entire
   // XP balance in one action, since every consumption resets every other tier's owned quantity and
-  // Bits; disabled while the last tier owns nothing (nothing to speed up — see
-  // consumeXpForLastTierTickspeed's matching guard). The compounding bonus of spending N XP is
+  // Bits; still clickable while the last tier owns nothing (restageManually — the Spent QB stall; Auto
+  // Restage keeps consumeXpForLastTierTickspeed's 0-owned guard). The compounding bonus of spending N XP is
   // getLastTierXpTickspeedMultiplier(N) regardless of XP already consumed.
   const isLastTierXpUnlocked = isLastTierTickspeedXpUnlocked(state)
   const lastTierOwned = state.owned[lastTier.id] ?? 0
@@ -1096,11 +1096,11 @@ const MainPage = ({ game }) => {
   const lastTierXpBalance = Math.floor(state.purge.xp ?? 0)
   const lastTierXpMinConsumption = getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)
   const lastTierXpProgressPercent = progressPercent(lastTierXpBalance, lastTierXpMinConsumption)
-  const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && !challengeDisabled('restageDisabled') && lastTierOwned > 0 && lastTierXpBalance >= lastTierXpMinConsumption
+  const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && !challengeDisabled('restageDisabled') && lastTierXpBalance >= lastTierXpMinConsumption
   const lastTierXpConsumeBonusLabel = formatBonusOrMultiplier(getLastTierXpTickspeedMultiplier(lastTierXpBalance))
   const handleConsumeLastTierXp = () => {
     if (!canConsumeLastTierXp) return
-    if (window.confirm(`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} faster ${lastTier.name} ticks? This resets every other tier's owned quantity (not their level) and your Bits balance back to 0.`)) {
+    if (window.confirm(`Restage: consume ${formatAmount(lastTierXpBalance)} XP for ${lastTierXpConsumeBonusLabel} faster ${lastTier.name} ticks? This resets every other tier's owned quantity (not their level) and your Bits balance back to 0.${lastTierOwned > 0 ? '' : ` You own no ${lastTier.name}, so nothing will be left producing.`}`)) {
       actions.consumeXpForLastTierTickspeed(lastTierXpBalance)
     }
   }
@@ -1450,7 +1450,7 @@ const MainPage = ({ game }) => {
               onClick={handleConsumeLastTierXp}
               title={lastTierOwned > 0
                 ? `Consume XP for a compounding +1% ${lastTier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`
-                : `No ${lastTier.name} owned right now — nothing to speed up, so this stays disabled until you own at least one again`}
+                : `No ${lastTier.name} owned right now — Restaging now resets everything with nothing left producing`}
               type="button"
               $progress={lastTierXpProgressPercent}
               $pulse={canConsumeLastTierXp}

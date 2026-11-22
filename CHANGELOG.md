@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Spent QB achievement** — have enough XP to Restage while holding 0 Quettabytes (the real stall: Restage needs Quettabytes; a 0 balance before Restage unlocks doesn't count); the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, Quettabytes are credited regardless of the current balance, 1 at a time, more often with more completed levels (logarithmically): every 10 s at 1 level, every 5 s at 10, every 3.33 s at 100.
+- **Spent QB achievement** — click Restage while holding 0 Quettabytes (the real stall: everything resets with nothing left producing — the Restage button now allows it, with a warning; Auto Restage still waits for Quettabytes). Merely reaching a 0 balance doesn't count; the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, Quettabytes are credited regardless of the current balance, 1 at a time, more often with more completed levels (logarithmically): every 10 s at 1 level, every 5 s at 10, every 3.33 s at 100.
 
 ### Added
 
