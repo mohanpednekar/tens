@@ -266,7 +266,7 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
-        run: bundle exec fastlane ios submit
+        run: bundle exec fastlane ios submit metadata:"$UPLOAD_LISTING"
 
       - uses: actions/upload-artifact@v7
         if: always()

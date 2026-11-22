@@ -130,12 +130,11 @@ platform :ios do
       screenshots_path: IOS_SCREENSHOTS,
       # Without generated images (listing upload off) leave the store's screenshots untouched —
       # overwrite_screenshots on an empty folder would delete them.
-      skip_screenshots: Dir.glob(File.join(IOS_SCREENSHOTS, '**', '*.png')).empty?,
       overwrite_screenshots: true,
       force: true, # no interactive HTML preview in CI
       run_precheck_before_submit: false,
       app_review_information: { notes: review_notes },
-      **options
+      **{ skip_screenshots: Dir.glob(File.join(IOS_SCREENSHOTS, '**', '*.png')).empty? }.merge(options)
     )
   end
 
@@ -180,6 +179,9 @@ platform :ios do
     deliver_listing(
       skip_binary_upload: true,
       submit_for_review: true,
+      # metadata:false (the workflow's upload_listing off) leaves App Store Connect's listing as edited.
+      skip_metadata: options[:metadata].to_s == 'false',
+      skip_screenshots: options[:metadata].to_s == 'false' || Dir.glob(File.join(IOS_SCREENSHOTS, '**', '*.png')).empty?,
       automatic_release: flag?(options[:automatic_release]),
       # ITSAppUsesNonExemptEncryption=false in Info.plist already answers this for every build.
       submission_information: { export_compliance_uses_encryption: false }
