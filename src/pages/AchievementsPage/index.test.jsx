@@ -176,4 +176,11 @@ describe('AppMenu achievements entry', () => {
     expect(screen.getByText(/^Disk step 1 ↑: The first disk-size exponent step now closes 10%/)).toBeTruthy()
     expect(screen.getByText(/^Disk step 2 ↑: The second disk-size exponent step now closes 10%/)).toBeTruthy()
   })
+
+  it('a compact series with no rewards shows no reward explanations', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    openGroup('Tier ladder')
+    fireEvent.click(screen.getByLabelText('First purchase details'))
+    expect(screen.queryByText(/↑:/)).toBeNull()
+  })
 })
