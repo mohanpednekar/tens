@@ -9177,15 +9177,15 @@ The reward map is kept across Reformat, Purge, and Reboot, unlike the pool-local
 Existing save counters are backfilled on load where still present; counters previously erased
 by larger resets cannot be reconstructed. Only a full save Reset clears the earned rewards.
 
-### Reclamation decoupled from the exponent upgrades; 20 achievements cut to 4 (2026-11)
+### Reclamation decoupled from the exponent upgrades; 20 achievements cut to 5 (2026-11)
 
 Supersedes "Pool-reset achievements tune Bitrate's within-pool exponent steps" for the delivery
 mechanism only; the exponent math is unchanged. The engine already stored the upgrades in
 `intro.poolExponentBonuses` (set by `flushStoragePool`) and merely derived the 20 `poolNNResetI/II`
 achievements from that map, so the maintainer asked to stop presenting a stat upgrade as an achievement.
-Compact Pool now just upgrades the step; the achievements became four `reclaim1`–`4`
-(`poolsCompacted` 1/3/6/10 distinct pools, `RECLAMATION_POOL_THRESHOLDS`), with `RECLAMATION_LEVEL_REWARDS`: I/II replace the
-1% plain within-pool exponent step with 2%/3%, III/IV add +0.05 each to every Data Lake's speed multiplier (maintainer's
+Compact Pool now just upgrades the step; the achievements became five `reclaim1`–`5`
+(`poolsCompacted` 1/3/6/8/all 10 distinct pools, `RECLAMATION_POOL_THRESHOLDS`), with `RECLAMATION_LEVEL_REWARDS`: I/II replace the
+1% plain within-pool exponent step with 2%/3%, III–V add +0.05 each to every Data Lake's speed multiplier (maintainer's
 spec; values not simulated through `simulate-run-times`). Levels derive from `poolExponentBonuses` (`getReclamationLevel`),
 not from the earned achievement flags, because the exponent helpers only receive `intro`. Old saves: the legacy
 `poolNNResetI/II` earned flags stay in `achievements.earned` and the load-time backfill in

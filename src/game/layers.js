@@ -196,12 +196,12 @@ export const ACHIEVEMENT_GROUPS = [
 // thresholds, so a save past a trigger earns it on load). `bonus` is a placeholder (#1052).
 const TIER_ACHIEVEMENT_NAMES = ['Kilo-what?', 'Mega bite', 'Giga-what now', 'Tera-fying', 'Peta-fied', 'Exa-ggerated', 'Zetta slow', 'Yotta be kidding me', 'Ronna-way process', 'Quetta while']
 // Distinct pools that must have been compacted for each Reclamation level (the last is every pool).
-export const RECLAMATION_POOL_THRESHOLDS = [1, 3, 6, 10]
+export const RECLAMATION_POOL_THRESHOLDS = [1, 3, 6, 8, TIER_DEFINITIONS.length] // last = every pool (one Data Lake / Storage pool per tier)
 // Per-level rewards, derived from the number of distinct pools compacted (engine.js getReclamationLevel), so they apply
 // the moment a pool is compacted. `arrayStepGain`: the share of the remaining gap to 1.0 that each within-pool disk-size
 // step closes when that step has no Compact Pool upgrade (base 1%; the level's value replaces it, not stacks).
 // `lakeSpeed`: added to every Data Lake's speed multiplier (a fraction of its pool's Bandwidth, like the +0.1 per flush).
-export const RECLAMATION_LEVEL_REWARDS = [{ arrayStepGain: 0.02 }, { arrayStepGain: 0.03 }, { lakeSpeed: 0.05 }, { lakeSpeed: 0.05 }]
+export const RECLAMATION_LEVEL_REWARDS = [{ arrayStepGain: 0.02 }, { arrayStepGain: 0.03 }, { lakeSpeed: 0.05 }, { lakeSpeed: 0.05 }, { lakeSpeed: 0.05 }]
 const formatReclamationPercent = fraction => `${Math.round(fraction * 1000) / 10}%`
 export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'helloWorld', name: 'Hello, World', group: 'firstSession', trigger: 'Ping for the first time', short: 'Ping', condition: { kind: 'counter', key: 'pings', min: 1 } },
@@ -209,14 +209,14 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', short: 'Ping ×256', condition: { kind: 'counter', key: 'pings', min: 256 } },
   { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', short: '1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
   // Reclamation: a short series by how many different Storage pools have been compacted at least once.
-  // Levels 1-2 raise the within-pool disk-size step, levels 3-4 speed every Data Lake. The per-pool Bitrate exponent upgrades are separate: they come
+  // Levels 1-2 raise the within-pool disk-size step, levels 3-5 speed every Data Lake. The per-pool Bitrate exponent upgrades are separate: they come
   // directly from Compact Pool (`intro.poolExponentBonuses`), not from these achievements.
   ...RECLAMATION_POOL_THRESHOLDS.map((pools, i) => ({
     id: `reclaim${i + 1}`,
-    name: `Reclamation ${['I', 'II', 'III', 'IV'][i]}`,
+    name: `Reclamation ${['I', 'II', 'III', 'IV', 'V'][i]}`,
     group: 'foundry',
-    trigger: pools === 1 ? 'Compact a Storage pool for the first time' : `Compact ${pools} different Storage pools`,
-    short: pools === 1 ? 'Compact a pool' : `Compact ${pools} pools`,
+    trigger: pools === 1 ? 'Compact a Storage pool for the first time' : i === RECLAMATION_POOL_THRESHOLDS.length - 1 ? 'Compact every Storage pool at least once' : `Compact ${pools} different Storage pools`,
+    short: pools === 1 ? 'Compact a pool' : i === RECLAMATION_POOL_THRESHOLDS.length - 1 ? 'Compact every pool' : `Compact ${pools} pools`,
     ...(RECLAMATION_LEVEL_REWARDS[i].arrayStepGain
       ? {
           shortBonus: `Disk step ${formatReclamationPercent(RECLAMATION_LEVEL_REWARDS[i].arrayStepGain)}`,

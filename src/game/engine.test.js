@@ -11561,9 +11561,9 @@ describe('Data Lakes', () => {
       expect(isAchievementEarned(state, 'reclaim1')).toBe(false)
     })
 
-    it('has four Reclamation achievements and only upgrades each pool twice', () => {
+    it('has five Reclamation achievements and only upgrades each pool twice', () => {
       const group = ACHIEVEMENT_DEFINITIONS.filter(def => def.group === 'foundry')
-      expect(group.map(def => def.id)).toEqual(['reclaim1', 'reclaim2', 'reclaim3', 'reclaim4'])
+      expect(group.map(def => def.id)).toEqual(['reclaim1', 'reclaim2', 'reclaim3', 'reclaim4', 'reclaim5'])
       expect(group.at(-1).condition.min).toBe(DATA_LAKE_TIER_COUNT)
 
       let state = completePool(createInitialGameState(), 1)
@@ -11599,22 +11599,22 @@ describe('Data Lakes', () => {
       expect(getDataStreamSpeedExponent(third.intro)).toBeCloseTo(getDataStreamSpeedExponent(second.intro), 12)
     })
 
-    it('Reclamation levels I/II raise the plain disk-size step to 2%/3%; III/IV add 5% lake speed each', () => {
+    it('Reclamation levels I/II raise the plain disk-size step to 2%/3%; III–V add 5% lake speed each', () => {
       const poolsCompacted = count => ({
         ...createInitialGameState(),
         intro: { ...createInitialGameState().intro, unlockedDiskSteps: 3, poolExponentBonuses: Object.fromEntries(Array.from({ length: count }, (_, i) => [i + 1, 1])) },
       })
       // 3 unlocked steps = 2 plain within-pool steps (pool 1's two), none earned by the (level-1) bonus map besides pool 1's first.
       const exponentAt = state => getDataStreamSpeedExponent(state.intro)
-      expect([0, 1, 2, 3, 6, 10].map(count => getReclamationLevel(poolsCompacted(count).intro))).toEqual([0, 1, 1, 2, 3, 4])
+      expect([0, 1, 2, 3, 6, 8, 10].map(count => getReclamationLevel(poolsCompacted(count).intro))).toEqual([0, 1, 1, 2, 3, 4, 5])
       expect(exponentAt(poolsCompacted(0))).toBeCloseTo(1 - 0.5 * 0.99 ** 2, 12)
       expect(exponentAt(poolsCompacted(1))).toBeCloseTo(1 - 0.5 * 0.9 * 0.98, 12) // first step earned, second plain at 2%
       expect(exponentAt(poolsCompacted(3))).toBeCloseTo(1 - 0.5 * 0.9 * 0.97, 12) // level II: plain step at 3%
-      expect(exponentAt(poolsCompacted(6))).toBeCloseTo(exponentAt(poolsCompacted(3)), 12) // III/IV add no further disk step
+      expect(exponentAt(poolsCompacted(6))).toBeCloseTo(exponentAt(poolsCompacted(3)), 12) // III–V add no further disk step
       const lake = count => getDataLakeOverflowRatePercent(poolsCompacted(count), 1)
-      expect([0, 1, 3, 6, 10].map(lake)).toEqual([10, 10, 10, 15, 20])
+      expect([0, 1, 3, 6, 8, 10].map(lake)).toEqual([10, 10, 10, 15, 20, 25])
       expect(getDataLakeOverflowRatePercent(poolsCompacted(6), 7)).toBe(15) // global: every lake
-      expect(getDataLakeOverflowRatePercent(updateLake(poolsCompacted(10), 1, { resetCount: 2 }), 1)).toBe(40)
+      expect(getDataLakeOverflowRatePercent(updateLake(poolsCompacted(10), 1, { resetCount: 2 }), 1)).toBe(45)
     })
 
     it('requires 9/9/9, a full lake, and an unreachable next Booster', () => {

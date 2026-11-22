@@ -123,15 +123,16 @@ describe('AppMenu achievements entry', () => {
     expect(screen.getByLabelText('First purchase level 2 not yet earned').textContent).toMatch(/^🔒 2\. Buy /)
   })
 
-  it('Reclamation is a four-level series by pools compacted, each level with its own reward', () => {
+  it('Reclamation is a five-level series by pools compacted, each level listing its own short reward', () => {
     renderWithTheme(<AchievementsPage game={gameWith({ reclaim1: true })} />)
     openGroup('Foundry')
     fireEvent.click(screen.getByLabelText('Reclamation details'))
-    expect(screen.getByLabelText('Reclamation level 1 earned').textContent).toBe('✅ 1. Compact a Storage pool for the first time')
-    expect(screen.getByLabelText('Reclamation level 2 not yet earned').textContent).toBe('🔒 2. Compact 3 different Storage pools (0/3)')
-    expect(screen.getByLabelText('Reclamation achievement level 1 of 4')).toBeTruthy()
-    expect(screen.getByLabelText('Reclamation level 1 reward earned').textContent).toMatch(/^Reward earned: Disk-size steps without a Compact Pool upgrade close 2% of the gap/)
-    expect(screen.getByLabelText('Reclamation level 3 reward pending').textContent).toBe("Reward: Every Data Lake fills at +5% more of its pool's Bandwidth")
+    expect(screen.getByLabelText('Reclamation level 1 earned').textContent).toBe('✅ 1. Compact a pool · Disk step 2%')
+    expect(screen.getByLabelText('Reclamation level 2 not yet earned').textContent).toBe('🔒 2. Compact 3 pools (0/3) · Disk step 3%')
+    expect(screen.getByLabelText('Reclamation level 5 not yet earned').textContent).toBe('🔒 5. Compact every pool (0/10) · Lake speed +5%')
+    expect(screen.getByLabelText('Reclamation achievement level 1 of 5')).toBeTruthy()
+    expect(screen.getByText(/^Disk step 2%: Disk-size steps without a Compact Pool upgrade close 2% of the gap/)).toBeTruthy()
+    expect(screen.getByText("Lake speed +5%: Every Data Lake fills at +5% more of its pool's Bandwidth")).toBeTruthy()
   })
 
   it('collapsed series show the next requirement and reward until every level is done', () => {
@@ -143,7 +144,7 @@ describe('AppMenu achievements entry', () => {
     const all = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.filter(def => def.group === 'foundry').map(def => [def.id, true]))
     renderWithTheme(<AchievementsPage game={gameWith(all)} />)
     openGroup('Foundry')
-    expect(screen.getByLabelText('Reclamation achievement level 4 of 4')).toBeTruthy()
+    expect(screen.getByLabelText('Reclamation achievement level 5 of 5')).toBeTruthy()
     expect(screen.queryByText(/^Next:/)).toBeNull()
     expect(screen.queryByLabelText('Reclamation next reward')).toBeNull()
   })
