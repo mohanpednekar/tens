@@ -74,7 +74,9 @@ Claude to run it (`store-release` skill).
   from a local `fastlane android promote ... version_code:<code>` (the dispatch uses the checkout's code). The Play side of "ship it" is always a
   promotion, never a production upload of the same version.
 
-Production promotion and App Review submission are deliberately manual dispatches. Both jobs run in
+Production promotion and App Review submission are deliberately manual dispatches. `ios_action: submit` with
+`upload_listing` off submits the version already prepared in App Store Connect: it must exist and
+match the checkout's version (it is never created or renumbered in that mode). Both jobs run in
 the `store-release` GitHub environment: add required reviewers there (Settings → Environments) so
 every store run, tag-triggered or dispatched, waits for your approval, and optionally move the
 store secrets into that environment.

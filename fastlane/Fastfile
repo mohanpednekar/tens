@@ -221,11 +221,15 @@ platform :ios do
       # version left on "release automatically" could go live on approval.
       asc_key
       app = Spaceship::ConnectAPI::App.find(BUNDLE_ID) || UI.user_error!("App #{BUNDLE_ID} not found")
-      # Same version setup deliver does before uploading: creates the editable version if the last one is live.
-      app.ensure_version!(package_version, platform: Spaceship::ConnectAPI::Platform::IOS)
+      # Metadata-off means "submit the version already prepared in App Store Connect": read-only
+      # lookup first, never create or renumber a draft (that would reuse another release's listing
+      # or leave a new version without release notes).
       version = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
-      unless version&.version_string == package_version
-        UI.user_error!("Editable App Store version is #{version&.version_string.inspect}, expected #{package_version}")
+      unless version
+        UI.user_error!("No editable App Store version #{package_version} — run with listing upload on to create and fill it")
+      end
+      unless version.version_string == package_version
+        UI.user_error!("Editable App Store version is #{version.version_string.inspect}, not #{package_version} — left untouched")
       end
       release_type = automatic ? Spaceship::ConnectAPI::AppStoreVersion::ReleaseType::AFTER_APPROVAL : Spaceship::ConnectAPI::AppStoreVersion::ReleaseType::MANUAL
       version.update(attributes: { release_type: release_type })
@@ -233,8 +237,10 @@ platform :ios do
     deliver_listing(
       skip_binary_upload: true,
       submit_for_review: true,
-      # metadata:false (the workflow's upload_listing off) leaves App Store Connect's listing as edited.
+      # metadata:false (the workflow's upload_listing off) leaves App Store Connect's listing as edited,
+      # and stops deliver from renumbering the (already verified) editable version.
       skip_metadata: options[:metadata].to_s == 'false',
+      skip_app_version_update: options[:metadata].to_s == 'false',
       skip_screenshots: options[:metadata].to_s == 'false' || Dir.glob(File.join(IOS_SCREENSHOTS, '**', '*.png')).empty?,
       automatic_release: automatic,
       # ITSAppUsesNonExemptEncryption=false in Info.plist already answers this for every build.
