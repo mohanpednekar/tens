@@ -320,7 +320,8 @@ import {
   getDataLakeCurrentDiskFillFraction,
   getDataLakeOverflowRatePercent,
   getReclamationLevel,
-  isReclamationFreeSpeedUnlocked,
+  isBitrateSyncedToCapacity,
+  getSpeedBasisBits,
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityDoublingTurnAvailable,
   isDataLakeCapacityMaxed,
@@ -1597,22 +1598,30 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     expect(after.intro.capacity).toBe(capacity)
   })
 
-  it('Reclamation V (every pool compacted) also doubles the Bitrate basis for free, once per Capacity upgrade', () => {
+  it('Reclamation V (every pool compacted) syncs Bitrate to Capacity: no separate Bitrate upgrade, one Upgrade does both', () => {
     const everyPool = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [i + 1, 1]))
-    const fire = intro => tickCapacityUpgradeDrain(1)(withIntro(pickIntroCapacityMilestone(armState(capacity)), { capacityUpgradeProgress: capacity - 1, bits: capacity, speedCapacity: capacity / 4, ...intro }))
-    const queued = pickIntroCapacityMilestone(armState(capacity))
-    expect(isReclamationFreeSpeedUnlocked(withIntro(queued, { poolExponentBonuses: everyPool }).intro)).toBe(true)
-    expect(isReclamationFreeSpeedUnlocked(withIntro(queued, { poolExponentBonuses: { 1: 1, 2: 1 } }).intro)).toBe(false)
-    const paid = fire({})
-    expect(paid.intro.capacity).toBe(capacity * INTRO_CAPACITY_DOUBLING_STEP)
-    expect(paid.intro.speedCapacity).toBe(capacity / 4) // no reward: Bitrate basis untouched
-    const free = fire({ poolExponentBonuses: everyPool })
-    expect(free.intro.speedCapacity).toBe(capacity / 2) // one free doubling, not a full catch-up
-    // Never past the paid-upgrade fit rule: the doubled basis must fit within the new Capacity.
-    const aligned = fire({ poolExponentBonuses: everyPool, speedCapacity: capacity })
-    expect(aligned.intro.speedCapacity).toBe(capacity * INTRO_CAPACITY_DOUBLING_STEP)
-    const fitted = fire({ poolExponentBonuses: everyPool, speedCapacity: capacity * INTRO_CAPACITY_DOUBLING_STEP })
-    expect(fitted.intro.speedCapacity).toBe(capacity * INTRO_CAPACITY_DOUBLING_STEP) // would exceed Capacity: skipped
+    const lagging = intro => withIntro(createInitialGameState(), { byteCreated: true, capacity, bits: capacity, speedCapacity: capacity / 4, ...intro })
+    expect(isBitrateSyncedToCapacity(lagging({ poolExponentBonuses: everyPool }).intro)).toBe(true)
+    expect(isBitrateSyncedToCapacity(lagging({ poolExponentBonuses: { 1: 1, 2: 1 } }).intro)).toBe(false)
+    // Without V Bitrate trails Capacity and has its own upgrade; with V it derives from Capacity and that upgrade is gone.
+    const plain = lagging({})
+    expect(isSpeedUpgradeArmable(plain)).toBe(true)
+    const synced = lagging({ poolExponentBonuses: everyPool })
+    expect(isSpeedUpgradeArmable(synced)).toBe(false)
+    expect(queueIntroSpeedUpgrade(synced)).toBe(synced)
+    expect(getIntroProductionRate(synced.intro)).toBeGreaterThan(getIntroProductionRate(plain.intro))
+    expect(getSpeedBasisBits(synced.intro)).toBe(capacity)
+    // One Capacity upgrade doubles both.
+    const before = getIntroProductionRate(synced.intro)
+    const after = upgradePoolCapacity(synced)
+    expect(after.intro.capacity).toBe(capacity * INTRO_CAPACITY_DOUBLING_STEP)
+    expect(getSpeedBasisBits(after.intro)).toBe(capacity * INTRO_CAPACITY_DOUBLING_STEP)
+    expect(getIntroProductionRate(after.intro) / before).toBeCloseTo(2 ** getDataStreamSpeedExponent(synced.intro), 12)
+    // A Bitrate upgrade already running when V arrives is refunded to the Buffer.
+    const running = withIntro(queueIntroSpeedUpgrade(plain), { bits: 10, speedUpgradeProgress: 30, poolExponentBonuses: everyPool })
+    const settled = tickSpeedUpgradeDrain(0.1)(running)
+    expect(settled.intro.speedUpgradeQueued).toBe(false)
+    expect(settled.intro.bits).toBe(40)
   })
 
   it('tickGame fills the bar and fires the upgrade, doubling Capacity', () => {

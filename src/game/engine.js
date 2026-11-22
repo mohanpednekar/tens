@@ -2969,8 +2969,16 @@ export const getDataStreamSpeedBytesPerSecond = (basisBits, exponent = DATA_STRE
 // The Data Stream's production rate in bits/sec — its derived Speed above expressed in bits
 // (× BITS_PER_BYTE). Replaces the old independently-upgraded tickSpeedSeconds/productionMultiplier
 // pair: capacity itself is the only purchased progression variable now.
+// Reclamation V (the grand reward): Bitrate always matches Capacity — no separate Upgrade Bitrate, one Upgrade does both.
+export const isBitrateSyncedToCapacity = intro =>
+  RECLAMATION_LEVEL_REWARDS.slice(0, getReclamationLevel(intro)).some(reward => reward.syncedBitrate)
+
+// The basis Bitrate derives from: Capacity itself when synced, otherwise the separately upgraded Speed basis.
+export const getSpeedBasisBits = intro =>
+  isBitrateSyncedToCapacity(intro) ? intro.capacity ?? 0 : intro.speedCapacity ?? intro.capacity ?? 0
+
 export const getIntroProductionRate = intro =>
-  getDataStreamSpeedBytesPerSecond(intro.speedCapacity ?? intro.capacity ?? 0, getDataStreamSpeedExponent(intro)) * BITS_PER_BYTE
+  getDataStreamSpeedBytesPerSecond(getSpeedBasisBits(intro), getDataStreamSpeedExponent(intro)) * BITS_PER_BYTE
 
 // --- Fill-based Speed/Bandwidth multiplier (see FILL_MULTIPLIER_* in layers.js) --- Displayed
 // rates (getIntroProductionRate above, getStoragePoolBandwidth below) never change; this
@@ -4104,27 +4112,22 @@ export const upgradePoolCapacity = state => {
 
 // Shared capacity doubling (plus its compute wipe and main-game latch) for both the instant
 // full-Buffer upgrade above and the progress-bar upgrade fired from tickCapacityUpgradeDrain.
-// Reclamation V (the grand reward): every Capacity upgrade also grants one Bitrate upgrade for free.
-export const isReclamationFreeSpeedUnlocked = intro =>
-  RECLAMATION_LEVEL_REWARDS.slice(0, getReclamationLevel(intro)).some(reward => reward.freeSpeedUpgrade)
-
 const doubleIntroCapacity = state => {
   const afterWipe = isComputeCoreConversionUnlocked(state)
     ? eraseAllComputeTokens(state)
     : state
-  const speedBasis = afterWipe.intro.speedCapacity ?? afterWipe.intro.capacity
   const newCapacity = afterWipe.intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
-  // Same fit rule as a paid Bitrate upgrade (isSpeedUpgradeArmable): the doubled basis must fit within Capacity.
-  const freeSpeedBasis = isReclamationFreeSpeedUnlocked(afterWipe.intro) && speedBasis * INTRO_CAPACITY_DOUBLING_STEP <= newCapacity
-    ? speedBasis * INTRO_CAPACITY_DOUBLING_STEP
-    : speedBasis
+  // Reclamation V: Bitrate is synced to Capacity, so the stored basis simply follows it; otherwise it stays where it was.
+  const speedBasis = isBitrateSyncedToCapacity(afterWipe.intro)
+    ? newCapacity
+    : afterWipe.intro.speedCapacity ?? afterWipe.intro.capacity
   // latchMainGameUnlocked here (not just tickGame's own unconditional call) makes the reveal
   // synchronous with the capacity change that triggers it — no need to wait for the next tick.
   return latchMainGameUnlocked({
     ...afterWipe,
     intro: {
       ...afterWipe.intro,
-      speedCapacity: freeSpeedBasis,
+      speedCapacity: speedBasis,
       capacity: newCapacity,
       capacityUpgradeQueued: false,
       capacityUpgradeProgress: 0,
@@ -4144,14 +4147,14 @@ export const isMemoryCapacityUpgradeArmable = state => {
 // Upgrade Speed costs the current Speed basis (bits): exactly the Capacity at which this Speed would
 // be the cap (Speed = Capacity^exponent), so it matches the Capacity upgrade's cost
 // when Speed is at its cap.
-export const getSpeedUpgradeCostBits = intro => intro.speedCapacity ?? intro.capacity ?? 0
+export const getSpeedUpgradeCostBits = intro => getSpeedBasisBits(intro)
 
 // Base Speed can never exceed Capacity^exponent, i.e. the doubled basis must still
 // fit within Capacity.
 export const isSpeedUpgradeArmable = state => {
   const intro = state.intro ?? {}
   if (intro.capacityUpgradeQueued || intro.speedUpgradeQueued) return false
-  if (!intro.byteCreated) return false
+  if (!intro.byteCreated || isBitrateSyncedToCapacity(intro)) return false
   return getSpeedUpgradeCostBits(intro) * INTRO_CAPACITY_DOUBLING_STEP <= intro.capacity
 }
 
@@ -4169,6 +4172,11 @@ export const upgradePoolSpeed = state => {
 
 export const tickSpeedUpgradeDrain = elapsedSeconds => state => {
   if (!state.intro?.speedUpgradeQueued) return state
+  if (isBitrateSyncedToCapacity(state.intro)) {
+    // Reclamation V arrived while a Bitrate upgrade was running: it is moot, so return the bar's bits to the Buffer.
+    const refund = Math.max(0, Number(state.intro.speedUpgradeProgress) || 0)
+    return { ...state, intro: { ...state.intro, bits: Math.min(state.intro.capacity, state.intro.bits + refund), speedUpgradeQueued: false, speedUpgradeProgress: 0 } }
+  }
   const stored = state.intro.speedUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
   const cost = getSpeedUpgradeCostBits(state.intro)
@@ -7810,7 +7818,8 @@ export const tickFoundryResetConvenience = state => {
   // also makes it the cheaper of the two, its cost being the basis) it goes first; Capacity is only chosen once
   // Speed has reached the "needs Capacity" state (or has nothing pending), so increasing-cost order holds.
   if (!next.intro?.capacityUpgradeQueued && !next.intro?.speedUpgradeQueued) {
-    const speedPending = (caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0)
+    const speedPending = !isBitrateSyncedToCapacity(next.intro) &&
+      (caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0)
     const capacityPending = (caps.capacity ?? 0) > (next.intro?.capacity ?? 0)
     let queued = next
     if (speedPending) queued = queueIntroSpeedUpgrade(next)
