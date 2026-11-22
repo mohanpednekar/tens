@@ -129,11 +129,11 @@ describe('AppMenu achievements entry', () => {
     fireEvent.click(screen.getByLabelText('Reclamation details'))
     expect(screen.getByLabelText('Reclamation level 1 earned').textContent).toBe('✅ 1. Compact a pool · Disk step 2%')
     expect(screen.getByLabelText('Reclamation level 2 not yet earned').textContent).toBe('🔒 2. Compact 3 pools (0/3) · Disk step 3%')
-    expect(screen.getByLabelText('Reclamation level 5 not yet earned').textContent).toBe('🔒 5. Compact every pool (0/10) · Disk step 5%, Lake speed +10%')
+    expect(screen.getByLabelText('Reclamation level 5 not yet earned').textContent).toBe('🔒 5. Compact every pool (0/10) · Free Bitrate upgrades')
     expect(screen.getByLabelText('Reclamation achievement level 1 of 5')).toBeTruthy()
     expect(screen.getByText(/^Disk step 2%: Disk-size steps without a Compact Pool upgrade close 2% of the gap/)).toBeTruthy()
     expect(screen.getByText("Lake speed +5%: Every Data Lake fills at +5% more of its pool's Bandwidth")).toBeTruthy()
-    expect(screen.getByText(/^Disk step 5%, Lake speed \+10%: Disk-size steps .* \(was 1%\)\. Every Data Lake fills at \+10% more/)).toBeTruthy()
+    expect(screen.getByText(/^Free Bitrate upgrades: Every Capacity upgrade also upgrades Bitrate for free/)).toBeTruthy()
   })
 
   it('collapsed series show the next requirement and reward until every level is done', () => {

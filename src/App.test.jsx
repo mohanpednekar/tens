@@ -1817,7 +1817,13 @@ test('Upgrade Capacity and the selected Auto Boost preset render with the presti
   const warn = themes.dark.color.warn
   seedIntroState({ bits: 5, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   const { unmount } = render(<App />)
-  expect(screen.getByRole('button', { name: /^upgrade data stream$/i })).toHaveStyle({ color: warn })
+  expect(screen.getByRole('button', { name: /upgrade data stream capacity/i })).toHaveStyle({ color: warn })
+  unmount()
+  cleanup()
+  localStorage.clear()
+  seedIntroState({ capacity: 512, speedCapacity: 256, bits: 0, byteCreated: true })
+  render(<App />)
+  expect(screen.getByRole('button', { name: /upgrade data stream bitrate/i })).toHaveStyle({ color: warn })
   cleanup()
   localStorage.clear()
 
@@ -2921,9 +2927,9 @@ test("the Upgrade Data Stream button stays clickable (to arm) while the Buffer i
   seedIntroState({ bits: 5, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /^upgrade data stream$/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
   expect(upgradeButton).toBeEnabled()
-  expect(upgradeButton).toHaveTextContent('Upgrade')
+  expect(upgradeButton).toHaveTextContent('Upgrade Capacity')
   expect(upgradeButton).toHaveTextContent('97.65 KiB') // its cost = current capacity
 })
 
@@ -2936,7 +2942,7 @@ test('Upgrade Data Stream fills its bar from the stream and doubles Capacity', (
   seedIntroState({ bits: 8, byteCreated: true })
   const { unmount } = render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /^upgrade data stream$/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
   expect(upgradeButton).toBeEnabled()
 
   fireEvent.click(upgradeButton)
@@ -2958,7 +2964,7 @@ test('Upgrade Data Stream remains visible after Combine and is uncapped by any p
   seedIntroState({ bits: INTRO_CAPACITY_CAP_BITS, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /^upgrade data stream$/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /upgrade data stream capacity/i })).toBeInTheDocument()
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_CAPACITY_CAP_BITS))
 })
@@ -3080,8 +3086,8 @@ test('Upgrade Data Stream shows its cost on its own line below the label, with n
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, byteCreated: true })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /^upgrade data stream$/i })
-  expect(upgradeButton).toHaveTextContent('Upgrade')
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
+  expect(upgradeButton).toHaveTextContent('Upgrade Capacity')
   expect(upgradeButton).toHaveTextContent('1 B') // cost = current capacity (8 bits)
   expect(upgradeButton.textContent).not.toContain(',')
 })
@@ -3092,26 +3098,33 @@ test('Upgrade Data Stream shows its cost in the nearest fitting binary unit', ()
   seedIntroState({ capacity: 512, bits: 0, byteCreated: true })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /^upgrade data stream$/i })
-  expect(upgradeButton).toHaveTextContent('Upgrade')
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
+  expect(upgradeButton).toHaveTextContent('Upgrade Capacity')
   expect(upgradeButton).toHaveTextContent('64 B')
 })
 
-test('Upgrade Data Stream previews the Capacity and Bitrate after upgrading', () => {
+test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () => {
   // 512 bits (64 B) doubles to 128 B.
   seedIntroState({ capacity: 512, bits: 0, byteCreated: true })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /^upgrade data stream$/i })
-  expect(upgradeButton).toHaveTextContent(`${COST_ICON} 64 B · 📦 ×2 · ⚡ ×1.41`)
-  expect(upgradeButton).toHaveAccessibleDescription('Costs 64 B; capacity 128 B and bitrate 11.31 B/s after upgrading')
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
+  expect(upgradeButton).toHaveTextContent(`${COST_ICON} 64 B · 📦 ×2`)
+  expect(upgradeButton).toHaveAccessibleDescription('Costs 64 B; capacity 128 B after upgrading')
+  // Speed trails Capacity (basis 32 B -> 5.66 B/s, cost 32 B): 5.66 B/s -> 64^0.5 = 8 B/s on its own button.
+  cleanup()
+  seedIntroState({ capacity: 512, speedCapacity: 256, bits: 0, byteCreated: true })
+  render(<App />)
+  const speedButton = screen.getByRole('button', { name: /upgrade data stream bitrate/i })
+  expect(speedButton).toHaveTextContent(`${COST_ICON} 32 B · ⚡ ×1.41`)
+  expect(speedButton).toHaveAccessibleDescription('Costs 32 B; bitrate 8 B/s after upgrading')
 })
 
 test('Upgrade Data Stream at maximum Capacity is disabled and reads "Max capacity" without a preview', () => {
   seedIntroState({ capacity: 1.298074214633707e33, bits: 0, byteCreated: true })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /^upgrade data stream$/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
   expect(upgradeButton).toBeDisabled()
   expect(upgradeButton).toHaveTextContent('Max capacity')
   expect(upgradeButton).not.toHaveTextContent('→')
@@ -3127,17 +3140,17 @@ test('each Upgrade Data Stream press doubles Capacity, and the next cost always 
   seedIntroState({ bits: 8, byteCreated: true })
   const { unmount } = render(<App />)
 
-  let upgradeButton = screen.getByRole('button', { name: /^upgrade data stream$/i })
+  let upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
   expect(upgradeButton).toBeEnabled()
   fireEvent.click(upgradeButton)
   act(() => { vi.advanceTimersByTime(2_500) })
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', '16')
-  upgradeButton = screen.getByRole('button', { name: /^upgrade data stream$/i })
+  upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
   expect(upgradeButton).toHaveTextContent('2 B') // cost = the new capacity
   expect(upgradeButton).toBeEnabled()
-  expect(upgradeButton).toHaveTextContent('Upgrade')
+  expect(upgradeButton).toHaveTextContent('Upgrade Capacity')
 
   unmount()
   vi.useRealTimers()
@@ -3150,7 +3163,7 @@ test("Upgrade Data Stream shows fill progress toward a full Buffer, matching the
   // 4 of 8 bits banked — the button's own fill reflects the same bits/capacity progress the tile
   // shows (the cost is the whole capacity, payable only when the Buffer is full; a click before
   // then arms it).
-  const upgradeButton = screen.getByRole('button', { name: /^upgrade data stream$/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
   expect(upgradeButton).toBeEnabled()
 })
 
@@ -3160,13 +3173,13 @@ test('starting Upgrade Data Stream turns the same button into an inert progress 
   const { unmount } = render(<App />)
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
-  const upgradeButton = screen.getByRole('button', { name: /^upgrade data stream$/i })
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
   expect(upgradeButton).toBeEnabled()
   fireEvent.click(upgradeButton)
 
   // Both buttons are replaced by an inert status bar; no Cancel control and no tile status line.
-  expect(screen.queryByRole('button', { name: /^upgrade data stream$/i })).not.toBeInTheDocument()
-  const running = screen.getByRole('region', { name: /^upgrade data stream$/i })
+  expect(screen.queryByRole('button', { name: /upgrade data stream (capacity|speed)/i })).not.toBeInTheDocument()
+  const running = screen.getByRole('region', { name: /^upgrade capacity$/i })
   expect(running).toHaveTextContent(/Upgrading/)
   expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument()
   expect(screen.getByRole('progressbar', { name: /data stream upgrade progress/i })).toHaveAttribute('aria-valuenow', '0')
@@ -3445,16 +3458,16 @@ test('Data Stream and pool speeds show the fill-multiplied value, with no multip
   expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
 })
 
-test('a pool\'s speed shows the fill speed actually available', () => {
+test('a pool\'s speed shows the fill speed actually available, not its higher theoretical Bandwidth', () => {
   seedIntroState({
-    bits: 0, capacity: 32_000_000, byteCreated: true,
+    bits: 0, capacity: 32_000_000, speedCapacity: 1024, byteCreated: true,
     dataLakes: { 1: { bandwidthSteps: 4 } },
   })
   render(<App />)
 
   const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
   const available = getPoolAvailableFillRate(savedState, 1)
-  expect(available).toBeLessThanOrEqual(getStoragePoolBandwidth(savedState, 1))
+  expect(available).toBeLessThan(getStoragePoolBandwidth(savedState, 1))
   const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByTitle(/^Available fill bandwidth at/)
   const expected = formatDiskSize(available * FILL_MULTIPLIER_MAX_PERCENT / 100)
   expect(speed.textContent.replace(/^⚡ /, '').replace(/\/s$/, '').split(' ')[1]).toBe(expected.split(' ')[1])

@@ -245,14 +245,16 @@ const InfoPage = () => {
             which fades by {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}% per second and shows as a
             thin bar and “+x% 👆”. A ping never speeds the fill itself (it already reaches{' '}
             {FILL_MULTIPLIER_MAX_PERCENT / 100}×); it speeds what that buffer feeds — on the Data Stream,
-            Upgrade; on a pool, disk provisioning, disk fills and merges, rebuilds and
+            Upgrade Capacity / Bitrate; on a pool, disk provisioning, disk fills and merges, rebuilds and
             the Data Lake.
           </li>
           <li>
-            <strong>Upgrade</strong> costs your current Capacity and doubles it, raising Bitrate with it.
-            It becomes a progress bar that draws the Data Stream’s base Bitrate from the Buffer, ahead of
-            everything else, and applies when full. Base Bitrate is (Capacity in Bytes)
-            <sup>exponent</sup> per second. The exponent starts at {DATA_STREAM_SPEED_EXPONENT_BASE} (a
+            <strong>Upgrade Capacity</strong> costs your current Capacity and doubles it.{' '}
+            <strong>Upgrade Bitrate</strong> costs your current Bitrate level. Only one runs at a time: it
+            becomes a progress bar that draws the Data Stream’s base Bitrate from the Buffer, ahead of
+            everything else, and applies when full. Base Bitrate is (Bitrate level in Bytes)
+            <sup>exponent</sup> per second and can never exceed Capacity<sup>exponent</sup>, so raise
+            Capacity to unlock more Bitrate. The exponent starts at {DATA_STREAM_SPEED_EXPONENT_BASE} (a
             square root); pool Bandwidth is capped by the same exponent.
           </li>
           <li>
@@ -265,7 +267,7 @@ const InfoPage = () => {
           <li>
             <strong>Auto-convert</strong> turns Data Stream bits into free {firstTierName} at their
             current per-unit cost, automatically, every cycle. The main game itself unlocks
-            (permanently) once Upgrade raises Capacity to Storage’s{' '}
+            (permanently) once Upgrade Capacity raises Capacity to Storage’s{' '}
             {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)} threshold.
           </li>
         </ul>
@@ -289,7 +291,7 @@ const InfoPage = () => {
         <ul>
           <li>Disk Fill → Provision Disk → Compute Boost</li>
           <li>
-            Upgrade, Data Lake Cell purchases and Data Lake capacity
+            Upgrade Capacity / Upgrade Bitrate, Data Lake Cell purchases and Data Lake capacity
             upgrades are outside this order — they are never blocked by it.
           </li>
         </ul>

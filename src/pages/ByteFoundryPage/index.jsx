@@ -7,7 +7,7 @@ import DataLakePanel, { ThinProgressBar } from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import SpeedDetailsPopover from 'components/SpeedDetailsPopover'
 import StatCard from 'components/StatCard'
-import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatSpeedText, formatThreeSignificant, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getLowerRebuildSummary, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolTapMultiplier, getPoolAvailableFillRate, getStoragePoolBandwidth, getProjectedPoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isProvisionDiskAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isLaterPoolProvisioningLocked } from 'game/engine'
+import { getDataStreamSpeedExponent, getDiskLadderSizeBits, getUnlockedDiskSteps, isDiskSizeUnlockAvailable, formatBitsInNearestUnit, formatOfflineDuration, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatSpeedText, formatThreeSignificant, formatPoolBalanceStable, getDataStreamBaseMultiplierPercent, getDataStreamDeliveredRate, getDataStreamMultiplierPercent, getComputeBoostMultiplier, getComputeBoostPoolMultiplier, getFillCurveSeconds, getRunningUpgradeDraw, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getLowerRebuildSummary, getPresentedDiskSize, isLowerDiskSizePending, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolBaseMultiplierPercent, getPoolTapBonusPercent, getPoolTapMultiplier, getPoolAvailableFillRate, getStoragePoolBandwidth, getProjectedPoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isSpeedUpgradeArmable, getSpeedUpgradeCostBits, isProvisionDiskAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isLaterPoolProvisioningLocked } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
@@ -830,19 +830,24 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         : clampPercent((diskPassesExact / diskPassesRequired) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
   const capacityUpgradeArmable = isMemoryCapacityUpgradeArmable(state)
-  const upgradeRunning = Boolean(intro.capacityUpgradeQueued)
+  const speedUpgradeArmable = isSpeedUpgradeArmable(state)
+  const capacityUpgradeQueued = Boolean(intro.capacityUpgradeQueued)
+  const speedUpgradeQueued = Boolean(intro.speedUpgradeQueued)
+  const upgradeRunning = capacityUpgradeQueued || speedUpgradeQueued
   const capacityUpgradeCost = intro.capacity
-  // One upgrade doubles Capacity and, since Bitrate derives from Capacity, raises Bitrate by ×2^exponent too
-  // (see getDataStreamSpeedBytesPerSecond / getDataStreamSpeedExponent).
+  const speedUpgradeCost = getSpeedUpgradeCostBits(intro)
+  // Capacity doubles on its own button; Speed (derived from its own basis, which trails Capacity)
+  // grows ×2^exponent per upgrade (see getDataStreamSpeedBytesPerSecond / getDataStreamSpeedExponent).
   const nextCapacity = intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
   const nextCapacityText = formatMemoryCapacityValue(nextCapacity, true)
-  const nextRate = getIntroProductionRate({ ...intro, capacity: nextCapacity })
+  const nextRate = getIntroProductionRate({ ...intro, speedCapacity: speedUpgradeCost * INTRO_CAPACITY_DOUBLING_STEP })
   const nextRateText = `${formatBitsInNearestUnit(nextRate)}/s`
   const speedGainText = productionRate > 0 ? `×${Number((nextRate / productionRate).toFixed(2))}` : ''
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const capacityUpgradeProgress = clampPercent(((intro.capacityUpgradeProgress ?? 0) / capacityUpgradeCost) * 100)
-  const runningProgress = capacityUpgradeProgress
+  const speedUpgradeProgress = clampPercent(((intro.speedUpgradeProgress ?? 0) / speedUpgradeCost) * 100)
+  const runningProgress = speedUpgradeQueued ? speedUpgradeProgress : capacityUpgradeProgress
   // The bar draws at base Speed × the Data Stream tap bonus (getRunningUpgradeDraw), so the time left is linear.
   const runningDraw = getRunningUpgradeDraw(intro)
   const runningCost = runningDraw?.cost ?? 0
@@ -1037,7 +1042,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       ...(runningDraw ? [{ label: 'Upgrade bar drawing', value: runningRateText }] : []),
       { label: 'Buffer', value: `${Math.floor(fullProgress * 10) / 10}% full` },
       { label: 'Time to full', value: dataStreamTimeLeftText ?? (isFull ? 'Full' : '—') },
-      ...(capacityUpgradeArmable && !upgradeRunning ? [{ label: 'After Upgrade', value: `${nextRateText} (${speedGainText})` }] : []),
+      ...(speedUpgradeArmable && !upgradeRunning ? [{ label: 'After Upgrade Bitrate', value: `${nextRateText} (${speedGainText})` }] : []),
     ]
   }
   const upgradeSpeedDetailsOpen = speedDetailsKey === 'upgrade' && Boolean(runningDraw)
@@ -1048,8 +1053,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         { label: 'Data Stream delivers', value: dataStreamRateText },
         { label: 'Progress', value: `${formatBitsInNearestUnit(runningDone)} / ${formatBitsInNearestUnit(runningCost)}` },
         { label: 'Time left', value: runningTimeLeftText },
-        { label: 'Capacity after', value: formatBitsTransition(intro.capacity, nextCapacity) },
-        { label: 'Bitrate after', value: formatBitsTransition(productionRate, nextRate, '/s') },
+        runningDraw.kind === 'speed'
+          ? { label: 'Bitrate after', value: formatBitsTransition(productionRate, nextRate, '/s') }
+          : { label: 'Capacity after', value: formatBitsTransition(intro.capacity, nextCapacity) },
       ]
     : null
 
@@ -1126,15 +1132,19 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
         {intro.byteCreated && upgradeRunning && (
           <UpgradeStatusTile
-            aria-label="upgrade data stream"
+            aria-label={speedUpgradeQueued ? 'upgrade bitrate' : 'upgrade capacity'}
             as="section"
-            title={`Upgrading to ${nextCapacityText} — pulling the Data Stream's base Bitrate into the bar`}
+            title={speedUpgradeQueued
+              ? 'Upgrading Bitrate — pulling the Data Stream\'s Bitrate into the bar'
+              : `Upgrading to ${nextCapacityText} — pulling the Data Stream's base Bitrate into the bar`}
           >
             <RunningUpgradeContent>
               <RunningTitle><LeadIcon>⏫</LeadIcon>Upgrading<UpgradingDots>…</UpgradingDots></RunningTitle>
               <RunningChange>
-                <LeadIcon>📦</LeadIcon>
-                {formatBitsTransition(intro.capacity, nextCapacity)}
+                <LeadIcon>{speedUpgradeQueued ? '⚡' : '📦'}</LeadIcon>
+                {speedUpgradeQueued
+                  ? formatBitsTransition(productionRate, nextRate, '/s')
+                  : formatBitsTransition(intro.capacity, nextCapacity)}
               </RunningChange>
               <RunningPercent>{Math.floor(runningProgress)}%</RunningPercent>
               <SpeedButton
@@ -1155,7 +1165,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   anchorRef={speedDetailsAnchorRef}
                   id="upgrade-speed-details"
                   onClose={closeSpeedDetails}
-                  title="Upgrade draw"
+                  title={runningDraw.kind === 'speed' ? 'Upgrade Bitrate draw' : 'Upgrade Capacity draw'}
                   rows={upgradeSpeedDetailRows}
                 />
               )}
@@ -1193,31 +1203,55 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             </Button>
           )}
 
-          {/* One upgrade button (Capacity and Bitrate together); while it runs it is replaced by one inert status bar
-              (aria-disabled, not `disabled`, so it keeps its colors and pulse) filled by the upgrade's progress.
-              No cancel — the button returns when the upgrade completes. */}
+          {/* Two upgrade buttons; while either runs they are replaced by one inert status bar (aria-disabled,
+              not `disabled`, so it keeps its colors and pulse) filled by the running upgrade's progress.
+              No cancel — the buttons return when the upgrade completes. */}
           {intro.byteCreated && !upgradeRunning && (
             <MilestonesRow>
-              <Button
-                aria-label="upgrade data stream"
-                disabled={!capacityUpgradeArmable}
-                onClick={actions.pickIntroCapacityMilestone}
-                title={capacityUpgradeArmable
-                  ? 'Pull the Data Stream\'s base Bitrate into the upgrade; its bar filling doubles Capacity and raises Bitrate'
-                  : 'Capacity is already at its maximum'}
-                aria-description={capacityUpgradeArmable ? `Costs ${formatBitsInNearestUnit(capacityUpgradeCost)}; capacity ${nextCapacityText} and bitrate ${nextRateText} after upgrading` : undefined}
-                type="button"
-                variant={capacityUpgradeArmable ? 'prestige' : 'neutral'}
-              >
-                <MilestoneButtonContent>
-                  <span>Upgrade</span>
-                  <MilestoneCostLine>
-                    {capacityUpgradeArmable
-                      ? `${COST_ICON} ${formatBitsInNearestUnit(capacityUpgradeCost)} · 📦 ×${INTRO_CAPACITY_DOUBLING_STEP} · ⚡ ${speedGainText}`
-                      : '📦 Max capacity'}
-                  </MilestoneCostLine>
-                </MilestoneButtonContent>
-              </Button>
+              {!upgradeRunning && (
+                <>
+                  <Button
+                    aria-label="upgrade data stream capacity"
+                    disabled={!capacityUpgradeArmable}
+                    onClick={actions.pickIntroCapacityMilestone}
+                    title={capacityUpgradeArmable
+                      ? 'Pull the Data Stream\'s base Bitrate into the upgrade; its bar filling doubles Capacity'
+                      : 'Capacity is already at its maximum'}
+                    aria-description={capacityUpgradeArmable ? `Costs ${formatBitsInNearestUnit(capacityUpgradeCost)}; capacity ${nextCapacityText} after upgrading` : undefined}
+                    type="button"
+                    variant={capacityUpgradeArmable ? 'prestige' : 'neutral'}
+                  >
+                    <MilestoneButtonContent>
+                      <span>Upgrade Capacity</span>
+                      <MilestoneCostLine>
+                        {capacityUpgradeArmable
+                          ? `${COST_ICON} ${formatBitsInNearestUnit(capacityUpgradeCost)} · 📦 ×${INTRO_CAPACITY_DOUBLING_STEP}`
+                          : '📦 Max capacity'}
+                      </MilestoneCostLine>
+                    </MilestoneButtonContent>
+                  </Button>
+                  <Button
+                    aria-label="upgrade data stream bitrate"
+                    disabled={!speedUpgradeArmable}
+                    onClick={actions.queueIntroSpeedUpgrade}
+                    title={speedUpgradeArmable
+                      ? 'Pull the Data Stream\'s base Bitrate into the upgrade; its bar filling raises Bitrate'
+                      : `Base Bitrate cannot exceed Capacity^${speedExponentText} — upgrade Capacity first`}
+                    aria-description={speedUpgradeArmable ? `Costs ${formatBitsInNearestUnit(speedUpgradeCost)}; bitrate ${nextRateText} after upgrading` : undefined}
+                    type="button"
+                    variant={speedUpgradeArmable ? 'prestige' : 'neutral'}
+                  >
+                    <MilestoneButtonContent>
+                      <span>Upgrade Bitrate</span>
+                      <MilestoneCostLine>
+                        {speedUpgradeArmable
+                          ? `${COST_ICON} ${formatBitsInNearestUnit(speedUpgradeCost)} · ⚡ ${speedGainText}`
+                          : '⚡ Needs Capacity'}
+                      </MilestoneCostLine>
+                    </MilestoneButtonContent>
+                  </Button>
+                </>
+              )}
             </MilestonesRow>
           )}
 
