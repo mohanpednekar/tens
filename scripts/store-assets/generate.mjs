@@ -2,6 +2,7 @@
 // Generates every Play / App Store image into fastlane's layout (see manifest.mjs):
 //
 //   node scripts/store-assets/generate.mjs [--base-url URL] [--port N] [--only scene,scene] [--devices id,id]
+//   (with --only/--devices the output is a preview under fastlane/preview/, never uploaded)
 //
 // Screenshots are real captures of the app (chromium via Playwright) loaded with saves the
 // simulation bot actually played (seeds.mjs, ~30 s to play), saved as opaque RGB PNGs (both stores
@@ -20,6 +21,13 @@ import { buildSeeds } from './seeds.mjs'
 const args = parseArgs(process.argv.slice(2))
 const only = args.only ? new Set(args.only.split(',')) : null
 const onlyDevices = args.devices ? new Set(args.devices.split(',')) : null
+// A filtered run is a preview: it goes to fastlane/preview/ so it can never be uploaded as a
+// partial set (deliver's overwrite_screenshots / supply replace every set of the locale/device).
+const filtered = Boolean(only || onlyDevices)
+const out = path => resolve(filtered ? path.replace(/^fastlane\//, 'fastlane/preview/') : path)
+// A full run rebuilds the upload folders from scratch, so stale images from removed scenes or
+// devices can't ship either.
+const UPLOAD_IMAGE_DIRS = ['fastlane/screenshots', 'fastlane/play-foldable', 'fastlane/metadata/android/en-US/images']
 const PORT = Number(args.port ?? 5198)
 
 const writeOpaquePng = async (buffer, path) => {
@@ -52,7 +60,7 @@ const captureScene = async (browser, baseUrl, seeds, device, scene, index) => {
   const buffer = await page.screenshot()
   const meta = await sharp(buffer).metadata()
   if (meta.width !== width || meta.height !== height) throw new Error(`${device.id}/${scene.id}: got ${meta.width}×${meta.height}, want ${width}×${height}`)
-  await writeOpaquePng(buffer, resolve(screenshotPath(device, scene, index)))
+  await writeOpaquePng(buffer, out(screenshotPath(device, scene, index)))
   await page.close()
 }
 
@@ -68,13 +76,15 @@ const renderFeatureGraphic = async browser => {
   await page.goto(pathToFileURL(htmlPath).href)
   rmSync(dir, { recursive: true, force: true })
   await page.waitForFunction(() => document.fonts.status === 'loaded')
-  await writeOpaquePng(await page.screenshot(), resolve(FEATURE_GRAPHIC.path))
+  await writeOpaquePng(await page.screenshot(), out(FEATURE_GRAPHIC.path))
   await page.close()
 }
 
 const main = async () => {
   const scenes = SCENES.filter(scene => !only || only.has(scene.id))
-  for (const { from, to } of ICONS) { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to) }
+  if (filtered) rmSync(resolve('fastlane/preview'), { recursive: true, force: true })
+  else for (const dir of UPLOAD_IMAGE_DIRS) rmSync(resolve(dir), { recursive: true, force: true })
+  for (const { from, to } of ICONS) { mkdirSync(dirname(out(to)), { recursive: true }); copyFileSync(from, out(to)) }
   const server = args['base-url'] ? { url: args['base-url'], stop: () => {} } : await startDevServer(PORT)
   console.log('playing seed saves…')
   const seeds = buildSeeds()
@@ -82,10 +92,10 @@ const main = async () => {
   try {
     browser = await chromium.launch(launchOptions())
     await renderFeatureGraphic(browser)
-    console.log(`✓ ${FEATURE_GRAPHIC.path}`)
+    console.log(`✓ feature graphic${filtered ? ' (preview → fastlane/preview/)' : ''}`)
     for (const device of DEVICES.filter(entry => !onlyDevices || onlyDevices.has(entry.id))) {
       for (const scene of scenes.filter(entry => scenesFor(device).includes(entry))) await captureScene(browser, server.url, seeds, device, scene, SCENES.indexOf(scene))
-      console.log(`✓ ${device.id} (${scenes.length})`)
+      console.log(`✓ ${device.id} (${scenes.filter(entry => scenesFor(device).includes(entry)).length})`)
     }
   } finally {
     await browser?.close()

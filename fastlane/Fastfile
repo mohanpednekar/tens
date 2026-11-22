@@ -41,12 +41,15 @@ platform :android do
     track = (options[:track] || 'internal').to_s
     rollout = options[:rollout].to_s.empty? ? nil : options[:rollout].to_s
     staged = rollout && rollout.to_f < 1
+    status = (options[:status] || 'completed').to_s
+    # Never turn an explicit draft into a live staged rollout.
+    UI.user_error!('A draft release cannot have a rollout fraction — choose one') if status == 'draft' && rollout
     with_metadata = flag?(options[:metadata])
     play_upload(
       track: track,
       aab: File.join(ROOT, 'android/app/build/outputs/bundle/release/app-release.aab'),
       mapping: File.join(ROOT, 'android/app/build/outputs/mapping/release/mapping.txt'),
-      release_status: staged ? 'inProgress' : (options[:status] || 'completed').to_s,
+      release_status: staged ? 'inProgress' : status,
       rollout: staged ? rollout : nil,
       skip_upload_metadata: !with_metadata,
       skip_upload_images: !with_metadata,
@@ -69,12 +72,22 @@ platform :android do
     )
   end
 
-  desc 'Promote the latest release on one track to another (e.g. from:beta to:production rollout:0.2).'
+  desc 'Promote a tested release from one track to another without re-uploading the binary'
+  desc '(e.g. from:internal to:production rollout:0.2). Promotes version_code, default: the highest'
+  desc 'version code on the source track — so a newer staged release wins over an older completed one.'
   lane :promote do |options|
+    from = options.fetch(:from).to_s
     rollout = options[:rollout].to_s.empty? ? nil : options[:rollout].to_s
     staged = rollout && rollout.to_f < 1
+    codes = google_play_track_version_codes(
+      package_name: BUNDLE_ID, track: from, json_key_data: ENV.fetch('PLAY_SERVICE_ACCOUNT_JSON')
+    ).map(&:to_i)
+    UI.user_error!("No release on the Play '#{from}' track to promote") if codes.empty?
+    version_code = (options[:version_code] || codes.max).to_i
+    UI.user_error!("Version code #{version_code} is not on the '#{from}' track (#{codes.join(', ')})") unless codes.include?(version_code)
     play_upload(
-      track: options.fetch(:from).to_s,
+      track: from,
+      version_code: version_code,
       track_promote_to: options.fetch(:to).to_s,
       # release_status would filter the SOURCE track's releases; the promoted release's status is
       # track_promote_release_status (+ rollout for a staged production rollout).
@@ -100,7 +113,8 @@ platform :ios do
   def review_notes
     notes = 'Tens is a single-player incremental game. No login is required; every feature is ' \
             'reachable without an account. Tap the Data Stream tile on the Byte Foundry screen to start.'
-    unless ENV['VITE_FIREBASE_API_KEY'].to_s.empty?
+    # Same gate as viteConfigFactory.js's CLOUD_SAVE_ENABLED; the lane runs in the job that built the binary.
+    if %w[VITE_FIREBASE_API_KEY VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_APP_ID].all? { |key| !ENV[key].to_s.empty? }
       notes += ' Optional cloud save (Settings → Cloud save) uses email/password and offers in-app ' \
                'account deletion (Settings → Cloud save → Delete account and data).'
     end

@@ -129,6 +129,7 @@ fastlane/metadata/android/*/changelogs/
 fastlane/metadata/ios/*/release_notes.txt
 fastlane/screenshots/
 fastlane/play-foldable/
+fastlane/preview/
 fastlane/release-notes.txt
 fastlane/report.xml
 fastlane/README.md

@@ -3,7 +3,6 @@
   "4": "layers.js",
   "5": "Key engine functions (`src/game/engine.js`)",
   "7": "Automation workflows",
-  "8": "dailyChallenges.js",
   "12": "run-simulation.mjs",
   "13": "App.foundry.test.jsx",
   "16": "getTierCost",

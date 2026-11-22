@@ -64,9 +64,16 @@ Claude to run it (`store-release` skill).
   variable `STORE_AUTO_RELEASE` is `true`: Play **internal** track + **TestFlight**, listing included.
 - **Manual dispatch** — platforms, Play track (`internal`/`alpha` = closed/`beta` = open/`production`/
   `none`), status (`draft` until first publish), staged rollout fraction, iOS action (`testflight`/
-  `submit`/`none`), listing on/off. Always uploads the signed AAB as an artifact.
+  `submit`/`none`), listing on/off. Uploads the signed AAB as an artifact.
+- **Promote** a tested Play build: `play_promote_from` (`internal`/`alpha`/`beta`) + `play_track`
+  (e.g. `production`) + optional `play_rollout` moves the highest version code on the source track
+  — no rebuild (Play rejects re-uploading a version code). The Play side of "ship it" is always a
+  promotion, never a production upload of the same version.
 
-Production promotion and App Review submission are deliberately manual dispatches.
+Production promotion and App Review submission are deliberately manual dispatches. Both jobs run in
+the `store-release` GitHub environment: add required reviewers there (Settings → Environments) so
+every store run, tag-triggered or dispatched, waits for your approval, and optionally move the
+store secrets into that environment.
 
 ## What can never be automated (store policy / no API)
 
@@ -88,7 +95,7 @@ One-time, in the consoles — answers to copy are in `docs/STORE_LISTING.md`:
 - The App Review / Play review decisions themselves.
 
 After those, each later release is: merge the version-bump PR → (auto) internal + TestFlight →
-dispatch `production` / `submit` when happy.
+dispatch `play_promote_from: internal` + `play_track: production` and `ios_action: submit` when happy.
 
 ## Known release blocker
 
@@ -131,6 +138,9 @@ dispatch `production` / `submit` when happy.
 | `ASC_KEY_ID`, `ASC_ISSUER_ID` | App Store Connect API key ids |
 | `ASC_KEY_P8` | full `.p8` file text, including the BEGIN/END lines |
 
+Recommended: Settings → Environments → `store-release` (created on the first run) → Required
+reviewers = you, and keep these secrets as environment secrets there.
+
 ### GitHub variables (same page → Variables)
 
 | Variable | Value |
@@ -148,7 +158,7 @@ yarn store:notes                        # release notes for package.json's versi
 yarn android:aab && bundle exec fastlane android deploy track:internal metadata:true
 bundle exec fastlane ios beta           # macOS + Xcode 16+
 bundle exec fastlane ios submit automatic_release:false
-bundle exec fastlane android promote from:internal to:production rollout:0.2
+bundle exec fastlane android promote from:internal to:production rollout:0.2   # optional version_code:
 bundle exec fastlane android metadata track:internal   # listing only; needs a release on that track
 ```
 
@@ -171,5 +181,7 @@ the Mobile Native Foundation, the de-facto standard for store uploads) is pinned
   description 80, full 4000; App Store name/subtitle 30, keywords 100, promotional text 170).
 - Screenshot scenes/devices: `SCENES`/`DEVICES` in `scripts/store-assets/manifest.mjs`;
   `manifest.test.js` pins every size against the stores' rules. Seeds: `seeds.mjs` (bot play —
-  never hand-set state). Iterate with `yarn store:assets --devices phone --only factory`.
+  never hand-set state). Iterate with `yarn store:assets --devices phone --only factory` — any
+  filter writes a preview to `fastlane/preview/` (never uploaded); only a full run refreshes the
+  upload folders, which it rebuilds from scratch.
 - Feature graphic: `featureGraphicHtml` in the same file.

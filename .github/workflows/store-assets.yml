@@ -13,7 +13,7 @@ on:
         type: string
         default: ''
       scenes:
-        description: Comma-separated scene ids (SCENES); empty = all
+        description: Comma-separated scene ids (SCENES); empty = all. Any filter makes it a preview (fastlane/preview/)
         type: string
         default: ''
 
@@ -57,4 +57,5 @@ jobs:
             fastlane/metadata/
             fastlane/screenshots/
             fastlane/play-foldable/
+            fastlane/preview/
           if-no-files-found: error

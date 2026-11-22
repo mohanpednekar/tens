@@ -22,6 +22,11 @@ on:
         type: choice
         options: [internal, alpha, beta, production, none]
         default: internal
+      play_promote_from:
+        description: "Promote the tested release from this track to play_track instead of uploading a new AAB (same version code can't be re-uploaded)"
+        type: choice
+        options: [none, internal, alpha, beta]
+        default: none
       play_status:
         description: Play release status ('draft' is required until the app's first publish)
         type: choice
@@ -68,8 +73,11 @@ jobs:
       (github.event_name == 'push' && vars.STORE_AUTO_RELEASE == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Protected environment: add required reviewers in Settings → Environments → store-release.
+    environment: store-release
     env:
       PLAY_TRACK: ${{ inputs.play_track || 'internal' }}
+      PLAY_PROMOTE_FROM: ${{ inputs.play_promote_from || 'none' }}
       PLAY_STATUS: ${{ inputs.play_status || 'completed' }}
       PLAY_ROLLOUT: ${{ inputs.play_rollout }}
       TENS_ADMOB_APP_ID_ANDROID: ${{ vars.TENS_ADMOB_APP_ID_ANDROID }}
@@ -87,10 +95,16 @@ jobs:
           PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           missing=()
-          [ -n "$KEYSTORE" ] || missing+=(ANDROID_UPLOAD_KEYSTORE_BASE64)
-          [ -n "$STORE_PASSWORD" ] || missing+=(TENS_UPLOAD_STORE_PASSWORD)
-          [ -n "$KEY_ALIAS" ] || missing+=(TENS_UPLOAD_KEY_ALIAS)
-          [ -n "$KEY_PASSWORD" ] || missing+=(TENS_UPLOAD_KEY_PASSWORD)
+          if [ "$PLAY_PROMOTE_FROM" != none ] && [ "$PLAY_TRACK" = none ]; then
+            echo "::error::play_promote_from needs a target play_track"
+            exit 1
+          fi
+          if [ "$PLAY_PROMOTE_FROM" = none ]; then
+            [ -n "$KEYSTORE" ] || missing+=(ANDROID_UPLOAD_KEYSTORE_BASE64)
+            [ -n "$STORE_PASSWORD" ] || missing+=(TENS_UPLOAD_STORE_PASSWORD)
+            [ -n "$KEY_ALIAS" ] || missing+=(TENS_UPLOAD_KEY_ALIAS)
+            [ -n "$KEY_PASSWORD" ] || missing+=(TENS_UPLOAD_KEY_PASSWORD)
+          fi
           if [ "$PLAY_TRACK" != none ]; then
             [ -n "$PLAY_JSON" ] || missing+=(PLAY_SERVICE_ACCOUNT_JSON)
           fi
@@ -102,6 +116,7 @@ jobs:
       - uses: ./.github/actions/setup-node-yarn
 
       - name: Set up JDK 21
+        if: env.PLAY_PROMOTE_FROM == 'none'
         uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -115,6 +130,7 @@ jobs:
           bundler-cache: true
 
       - name: Restore the upload key
+        if: env.PLAY_PROMOTE_FROM == 'none'
         env:
           KEYSTORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.TENS_UPLOAD_STORE_PASSWORD }}
@@ -130,18 +146,21 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Build the signed release AAB
+        if: env.PLAY_PROMOTE_FROM == 'none'
         run: yarn android:aab
 
       - name: Release notes from CHANGELOG.md
+        if: env.PLAY_PROMOTE_FROM == 'none'
         run: yarn store:notes
 
       - name: Generate store images
-        if: env.UPLOAD_LISTING == 'true'
+        if: env.UPLOAD_LISTING == 'true' && env.PLAY_PROMOTE_FROM == 'none'
         run: |
           npx playwright install --with-deps chromium
           yarn store:assets
 
       - uses: actions/upload-artifact@v7
+        if: env.PLAY_PROMOTE_FROM == 'none'
         with:
           name: tens-android-store-release
           path: |
@@ -152,12 +171,19 @@ jobs:
           if-no-files-found: error
 
       - name: Upload to Google Play
-        if: env.PLAY_TRACK != 'none'
+        if: env.PLAY_TRACK != 'none' && env.PLAY_PROMOTE_FROM == 'none'
         env:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           bundle exec fastlane android deploy \
             track:"$PLAY_TRACK" status:"$PLAY_STATUS" rollout:"$PLAY_ROLLOUT" metadata:"$UPLOAD_LISTING"
+
+      - name: Promote the tested release on Google Play
+        if: env.PLAY_PROMOTE_FROM != 'none'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          bundle exec fastlane android promote from:"$PLAY_PROMOTE_FROM" to:"$PLAY_TRACK" rollout:"$PLAY_ROLLOUT"
 
 
   ios:
@@ -165,6 +191,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.platforms != 'android' && inputs.ios_action != 'none') ||
       (github.event_name == 'push' && vars.STORE_AUTO_RELEASE == 'true')
     runs-on: macos-latest
+    environment: store-release
     # `ios submit` waits for the version's build to finish processing; cap it instead of the 6 h
     # default when no build exists (deliver's build watcher has no timeout of its own).
     timeout-minutes: 90

@@ -85,7 +85,8 @@ export const PATHS = {
   override: 'fastlane/release-notes.txt',
 }
 
-const write = (path, text) => { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, `${text}\n`) }
+// No trailing newline: supply sends the file verbatim, and Play's 500-character limit counts it.
+const write = (path, text) => { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, text) }
 
 const main = () => {
   const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
