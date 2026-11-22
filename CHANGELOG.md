@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Achievement stars**: each achievement (every level of a leveled row) awards 1 ⭐, and fully completing a section awards bonus stars equal to 10% of its stars (rounded up). The total shows atop the Achievements page and each section shows its own.
+
 - Three **Overclock step** achievements, each making later Overclocks need 1 fewer extra completed last-tier level (the step now starts at +4 and drops to +1): claim the first Overclock of a Purge at 6+ completed levels; claim two Overclocks in one Purge without buying any Accelerate; and, after DeGoogol, claim an Overclock at 12+ completed levels. They are earned in order (each counts only after the previous one), from new claims only (not retroactive).
 - Achievement toasts: each earned achievement (including those earned while away) shows a stacked toast for 5 s, started 0.25 s apart.
 
@@ -17,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
+
+- **Achievements page** shows ordered steps of the same thing as one leveled row (Ping, each pool's Reclamation, First purchase of each tier, Accelerate, Level power, Overclock step) with a `Lv n/N` badge and the next goal. Earned achievements and bonuses are unchanged.
 
 - Each Overclock after the first now needs 4 more completed last-tier levels than the previous claim (was 3) until the Overclock step achievements are earned.
 
