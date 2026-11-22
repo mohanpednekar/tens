@@ -201,15 +201,29 @@ export const RECLAMATION_POOL_THRESHOLDS = [1, 3, 6, 8, TIER_DEFINITIONS.length]
 // the moment a pool is compacted. `arrayStepGain`: the share of the remaining gap to 1.0 that each within-pool disk-size
 // step closes when that step has no Compact Pool upgrade (base 1%; the level's value replaces it, not stacks).
 // `lakeSpeed`: added to every Data Lake's speed multiplier (a fraction of its pool's Bandwidth, like the +0.1 per flush).
-export const RECLAMATION_LEVEL_REWARDS = [{ arrayStepGain: 0.02 }, { arrayStepGain: 0.03 }, { lakeSpeed: 0.05 }, { lakeSpeed: 0.05 }, { lakeSpeed: 0.05 }]
+export const RECLAMATION_LEVEL_REWARDS = [{ arrayStepGain: 0.02 }, { arrayStepGain: 0.03 }, { lakeSpeed: 0.05 }, { lakeSpeed: 0.05 }, { arrayStepGain: 0.05, lakeSpeed: 0.1 }]
 const formatReclamationPercent = fraction => `${Math.round(fraction * 1000) / 10}%`
+// Short + full player text for one level's reward (a level may carry both a disk-step and a lake-speed reward).
+const describeReclamationReward = ({ arrayStepGain, lakeSpeed }) => {
+  const shorts = []
+  const fulls = []
+  if (arrayStepGain) {
+    shorts.push(`Disk step ${formatReclamationPercent(arrayStepGain)}`)
+    fulls.push(`Disk-size steps without a Compact Pool upgrade close ${formatReclamationPercent(arrayStepGain)} of the gap to 1.0 (was 1%)`)
+  }
+  if (lakeSpeed) {
+    shorts.push(`Lake speed +${formatReclamationPercent(lakeSpeed)}`)
+    fulls.push(`Every Data Lake fills at +${formatReclamationPercent(lakeSpeed)} more of its pool's Bandwidth`)
+  }
+  return { shortBonus: shorts.join(', '), bonus: fulls.join('. ') }
+}
 export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'helloWorld', name: 'Hello, World', group: 'firstSession', trigger: 'Ping for the first time', short: 'Ping', condition: { kind: 'counter', key: 'pings', min: 1 } },
   { id: 'itCompiles', name: 'It compiles, ship it', group: 'firstSession', trigger: 'Compile for the first time', short: 'Compile', condition: { kind: 'byteCreated' } },
   { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', short: 'Ping ×256', condition: { kind: 'counter', key: 'pings', min: 256 } },
   { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', short: '1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
   // Reclamation: a short series by how many different Storage pools have been compacted at least once.
-  // Levels 1-2 raise the within-pool disk-size step, levels 3-5 speed every Data Lake. The per-pool Bitrate exponent upgrades are separate: they come
+  // Levels 1-2 raise the within-pool disk-size step, level 3-5 speed every Data Lake (level 5, the grand reward, also takes the disk step to 5%). The per-pool Bitrate exponent upgrades are separate: they come
   // directly from Compact Pool (`intro.poolExponentBonuses`), not from these achievements.
   ...RECLAMATION_POOL_THRESHOLDS.map((pools, i) => ({
     id: `reclaim${i + 1}`,
@@ -217,15 +231,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
     group: 'foundry',
     trigger: pools === 1 ? 'Compact a Storage pool for the first time' : i === RECLAMATION_POOL_THRESHOLDS.length - 1 ? 'Compact every Storage pool at least once' : `Compact ${pools} different Storage pools`,
     short: pools === 1 ? 'Compact a pool' : i === RECLAMATION_POOL_THRESHOLDS.length - 1 ? 'Compact every pool' : `Compact ${pools} pools`,
-    ...(RECLAMATION_LEVEL_REWARDS[i].arrayStepGain
-      ? {
-          shortBonus: `Disk step ${formatReclamationPercent(RECLAMATION_LEVEL_REWARDS[i].arrayStepGain)}`,
-          bonus: `Disk-size steps without a Compact Pool upgrade close ${formatReclamationPercent(RECLAMATION_LEVEL_REWARDS[i].arrayStepGain)} of the gap to 1.0 (was 1%)`,
-        }
-      : {
-          shortBonus: `Lake speed +${formatReclamationPercent(RECLAMATION_LEVEL_REWARDS[i].lakeSpeed)}`,
-          bonus: `Every Data Lake fills at +${formatReclamationPercent(RECLAMATION_LEVEL_REWARDS[i].lakeSpeed)} more of its pool's Bandwidth`,
-        }),
+    ...describeReclamationReward(RECLAMATION_LEVEL_REWARDS[i]),
     condition: { kind: 'poolsCompacted', min: pools },
   })),
   ...TIER_DEFINITIONS.map((tier, index) => ({

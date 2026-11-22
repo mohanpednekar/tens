@@ -11599,7 +11599,7 @@ describe('Data Lakes', () => {
       expect(getDataStreamSpeedExponent(third.intro)).toBeCloseTo(getDataStreamSpeedExponent(second.intro), 12)
     })
 
-    it('Reclamation levels I/II raise the plain disk-size step to 2%/3%; III–V add 5% lake speed each', () => {
+    it('Reclamation levels I/II raise the plain disk-size step to 2%/3%; III/IV add 5% lake speed each, V (grand) takes the step to 5% and adds 10% lake speed', () => {
       const poolsCompacted = count => ({
         ...createInitialGameState(),
         intro: { ...createInitialGameState().intro, unlockedDiskSteps: 3, poolExponentBonuses: Object.fromEntries(Array.from({ length: count }, (_, i) => [i + 1, 1])) },
@@ -11610,11 +11610,13 @@ describe('Data Lakes', () => {
       expect(exponentAt(poolsCompacted(0))).toBeCloseTo(1 - 0.5 * 0.99 ** 2, 12)
       expect(exponentAt(poolsCompacted(1))).toBeCloseTo(1 - 0.5 * 0.9 * 0.98, 12) // first step earned, second plain at 2%
       expect(exponentAt(poolsCompacted(3))).toBeCloseTo(1 - 0.5 * 0.9 * 0.97, 12) // level II: plain step at 3%
-      expect(exponentAt(poolsCompacted(6))).toBeCloseTo(exponentAt(poolsCompacted(3)), 12) // III–V add no further disk step
+      expect(exponentAt(poolsCompacted(6))).toBeCloseTo(exponentAt(poolsCompacted(3)), 12) // III/IV add no further disk step
+      expect(exponentAt(poolsCompacted(8))).toBeCloseTo(exponentAt(poolsCompacted(3)), 12)
+      expect(exponentAt(poolsCompacted(10))).toBeCloseTo(1 - 0.5 * 0.9 * 0.95, 12) // level V (grand): plain step 5%
       const lake = count => getDataLakeOverflowRatePercent(poolsCompacted(count), 1)
-      expect([0, 1, 3, 6, 8, 10].map(lake)).toEqual([10, 10, 10, 15, 20, 25])
+      expect([0, 1, 3, 6, 8, 10].map(lake)).toEqual([10, 10, 10, 15, 20, 30])
       expect(getDataLakeOverflowRatePercent(poolsCompacted(6), 7)).toBe(15) // global: every lake
-      expect(getDataLakeOverflowRatePercent(updateLake(poolsCompacted(10), 1, { resetCount: 2 }), 1)).toBe(45)
+      expect(getDataLakeOverflowRatePercent(updateLake(poolsCompacted(10), 1, { resetCount: 2 }), 1)).toBe(50)
     })
 
     it('requires 9/9/9, a full lake, and an unreachable next Booster', () => {
