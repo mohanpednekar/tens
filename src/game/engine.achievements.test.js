@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  getAchievementProgress,
+  getAchievementReward,
+  getAchievementShortRequirement,
+  getAchievementShortReward,
   buyTickspeedMultiplier, createInitialGameState, detectAchievements, eraGame, getCompletedAchievementGroups,
   getLevelMultiplierBase, getOverclockRequirement, getOverclockRequirementStep, getPurchaseMilestoneMultiplier, getTierCostExponent, buyGlobalTickspeedMultiplier, isAchievementEarned, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
 } from './engine'
@@ -278,3 +282,33 @@ describe('Overclock step achievements', () => {
   })
 })
 
+describe('getAchievementProgress / getAchievementReward', () => {
+  it('reports current/target for numeric conditions and null for one-shot events', () => {
+    const state = { ...createInitialGameState(), globalTickspeedMultiplier: 4, purchaseLevels: { tier01: 6 }, achievements: { earned: {}, counters: { pings: 10 } } }
+    expect(getAchievementProgress(state, { kind: 'counter', key: 'pings', min: 256 })).toEqual({ current: 10, target: 256 })
+    expect(getAchievementProgress(state, { kind: 'clockSpeedLevel', min: 10 })).toEqual({ current: 4, target: 10 })
+    expect(getAchievementProgress(state, { kind: 'tierLevel', tierId: 'tier01', min: 10 })).toEqual({ current: 6, target: 10 })
+    expect(getAchievementProgress(state, { kind: 'poolExponentBonus', poolIndex: 1, min: 2 })).toEqual({ current: 0, target: 2 })
+    expect(getAchievementProgress({ ...state, intro: { ...state.intro, capacity: 8 } }, { kind: 'storageUnlocked' })).toEqual({ current: 0, target: 10 })
+    expect(getAchievementProgress({ ...state, intro: { ...state.intro, capacity: 512 } }, { kind: 'storageUnlocked' })).toEqual({ current: 6, target: 10 })
+    expect(getAchievementProgress(state, { kind: 'counter', key: 'overflowDeepOverclock', min: 1 })).toBeNull()
+    expect(getAchievementProgress(state, { kind: 'counter', key: 'maxFirstOverclock', min: 6 })).toBeNull()
+    expect(getAchievementProgress(state, { kind: 'clockSpeedLevel', min: 1 })).toBeNull()
+    expect(getAchievementProgress(state, { kind: 'poolExponentBonus', poolIndex: 1, min: 1 })).toBeNull()
+    expect(getAchievementProgress(state, { kind: 'overclocked' })).toBeNull()
+    expect(getAchievementProgress(state, { kind: 'byteCreated' })).toBeNull()
+  })
+
+  it('short forms fall back to the long text', () => {
+    expect(getAchievementShortRequirement({ short: 'S', trigger: 'Long' })).toBe('S')
+    expect(getAchievementShortRequirement({ short: null, trigger: 'Long' })).toBe('Long')
+    expect(getAchievementShortReward({ shortBonus: 'sb', bonus: 'b' })).toBe('sb')
+    expect(getAchievementShortReward({ shortBonus: null, bonus: 'b' })).toBe('b')
+    expect(getAchievementShortReward({ shortBonus: null, bonus: null })).toBeNull()
+  })
+
+  it('rewards are the bonus text, or none (stars are score, not a reward)', () => {
+    expect(getAchievementReward({ bonus: null })).toBeNull()
+    expect(getAchievementReward({ bonus: 'does X' })).toBe('does X')
+  })
+})

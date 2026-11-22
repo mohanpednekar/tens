@@ -1,3 +1,4 @@
+import { getAchievementShortReward } from 'game/engine'
 import { ACHIEVEMENT_BY_ID, ACHIEVEMENTS_FEATURE } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
@@ -39,6 +40,12 @@ const ToastTitle = styled.div`
   font-size: 0.75rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+`
+
+const ToastReward = styled.div`
+  color: ${props => props.theme.color.textMuted};
+  font-size: 0.8rem;
+  margin-top: ${props => props.theme.space.xs};
 `
 
 const getEarnedIds = state => Object.keys(state.achievements?.earned ?? {}).filter(id => state.achievements.earned[id])
@@ -153,6 +160,7 @@ function AchievementToasts({ state, baseline }) {
         <Toast key={key}>
           <ToastTitle>Achievement unlocked</ToastTitle>
           {ACHIEVEMENT_BY_ID[id].name}
+          {getAchievementShortReward(ACHIEVEMENT_BY_ID[id]) && <ToastReward>{getAchievementShortReward(ACHIEVEMENT_BY_ID[id])}</ToastReward>}
         </Toast>
       ))}
     </Stack>

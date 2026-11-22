@@ -1453,6 +1453,34 @@ export const isAchievementConditionMet = (state, condition) => {
   }
 }
 
+// Current requirement progress for an achievement condition, or null when it is a one-shot event with no
+// meaningful partial state (including any threshold of 1). `current` may exceed `target` once met; callers clamp
+// for display. Capacity only ever doubles, so its progress counts doublings from the starting Capacity.
+export const getAchievementProgress = (state, condition) => {
+  // A threshold of 1 is a one-shot event, whatever the condition kind: no partial state to show.
+  if (condition.min <= 1) return null
+  switch (condition.kind) {
+    case 'counter':
+      // maxFirstOverclock is a record of past claims, not live progress (the live level count decides the next claim).
+      if (condition.key === 'maxFirstOverclock') return null
+      return { current: state.achievements?.counters?.[condition.key] ?? 0, target: condition.min }
+    case 'clockSpeedLevel': return { current: state.globalTickspeedMultiplier ?? 0, target: condition.min }
+    case 'tierLevel': return { current: state.purchaseLevels?.[condition.tierId] ?? 1, target: condition.min }
+    case 'poolExponentBonus': return { current: state.intro?.poolExponentBonuses?.[condition.poolIndex] ?? 0, target: condition.min }
+    case 'storageUnlocked': {
+      const doublings = capacity => Math.log2(Math.max(capacity, INTRO_STARTING_CAPACITY) / INTRO_STARTING_CAPACITY)
+      return { current: Math.floor(doublings(state.intro?.capacity ?? 0)), target: doublings(INTRO_DISK_UNLOCK_CAPACITY) }
+    }
+    default: return null
+  }
+}
+
+// The achievement's actual reward (its bonus text), or null when it has none. Stars are score, not a reward.
+export const getAchievementReward = def => def.bonus ?? null
+// Very short forms for collapsed rows and toasts (fall back to the long text).
+export const getAchievementShortRequirement = def => def.short ?? def.trigger
+export const getAchievementShortReward = def => def.shortBonus ?? def.bonus ?? null
+
 // Seconds between last-tier credits at `completedLevels`: base period / (1 + log10(levels)), floored at
 // LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS (10 ms); Infinity with no completed level. Each credit is exactly 1 unit.
 export const getLastTierLevelCreditIntervalSeconds = completedLevels =>

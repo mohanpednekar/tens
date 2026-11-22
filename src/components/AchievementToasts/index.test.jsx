@@ -71,6 +71,24 @@ describe('AchievementToasts', () => {
     unmount()
   })
 
+  it('shows the reward only for achievements that have one', () => {
+    const { rerender, unmount } = render(ui(mk([])))
+    rerender(ui(mk(['helloWorld', 'levelPower1'])))
+    act(() => { vi.advanceTimersByTime(300) })
+    const text = screen.getByRole('status', { name: 'achievement notifications' }).textContent
+    expect(text).toContain('+0.05 per-level multiplier')
+    expect(text).not.toContain('⭐')
+    unmount()
+  })
+
+  it('shows no reward line for an achievement without a bonus', () => {
+    const { rerender, unmount } = render(ui(mk([])))
+    rerender(ui(mk(['helloWorld'])))
+    act(() => { vi.advanceTimersByTime(300) })
+    expect(screen.getByRole('status', { name: 'achievement notifications' }).textContent).toBe('Achievement unlockedHello, World')
+    unmount()
+  })
+
   it('still shows offline toasts under StrictMode', () => {
     const { unmount } = render(<StrictMode>{ui(mk(['helloWorld']))}</StrictMode>)
     act(() => { vi.advanceTimersByTime(1) })
