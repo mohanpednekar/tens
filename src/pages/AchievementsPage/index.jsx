@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import StatCard from 'components/StatCard'
-import { getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
-import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS } from 'game/layers'
+import { getAchievementGroupStars, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
+import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
 
 // Achievements screen (page id 'achievements') — a pure renderer of the registry in `game/layers`
@@ -29,6 +29,12 @@ const Header = styled.header`
     font-family: ${props => props.theme.font.display};
     font-size: 1.5rem;
   }
+`
+
+const TotalStars = styled.div`
+  color: ${props => props.theme.color.text};
+  font-size: 1.1rem;
+  margin-top: 0.25rem;
 `
 
 const List = styled.div`
@@ -101,6 +107,22 @@ const Badge = styled.span`
   white-space: nowrap;
 `
 
+// Collapses ordered steps of one series into a single entry (at the position of its first step).
+const buildEntries = members => {
+  const entries = []
+  const bySeries = {}
+  members.forEach(def => {
+    const series = ACHIEVEMENT_SERIES_BY_MEMBER[def.id]
+    if (!series) { entries.push({ key: def.id, def }); return }
+    if (!bySeries[series.id]) {
+      bySeries[series.id] = { key: series.id, name: series.name, levels: [] }
+      entries.push(bySeries[series.id])
+    }
+    bySeries[series.id].levels.push(def)
+  })
+  return entries
+}
+
 const AchievementsPage = ({ game }) => {
   const { state } = game
   // Groups start collapsed; each row's description is its own disclosure.
@@ -115,16 +137,22 @@ const AchievementsPage = ({ game }) => {
     members: ACHIEVEMENT_DEFINITIONS.filter(def => def.group === group.id && !def.platformDependent),
   })).filter(group => group.members.length > 0)
 
+  const totalStars = getAchievementStars(state)
+  const bonusStars = groups.reduce((sum, group) => sum + getAchievementGroupStars(state, group.id).bonus, 0)
+  const maxStars = groups.reduce((sum, group) => sum + getAchievementGroupStars(state, group.id).total, 0)
+
   return (
     <RootDiv>
       <Header>
         <h1>Achievements</h1>
+        <TotalStars aria-label={`total stars ${totalStars} of ${maxStars}`}>⭐ {totalStars}/{maxStars}{bonusStars > 0 ? ` (incl. ${bonusStars} bonus)` : ''}</TotalStars>
       </Header>
 
       <List aria-label="achievements page">
         {groups.map(group => {
           const earnedCount = group.members.filter(def => isAchievementEarned(state, def.id)).length
           const isComplete = completed.has(group.id)
+          const stars = getAchievementGroupStars(state, group.id)
           return (
             <Group aria-label={`${group.name} achievement group`} key={group.id}>
               <GroupHeading>
@@ -140,10 +168,41 @@ const AchievementsPage = ({ game }) => {
                   $color={isComplete ? theme.color.good : theme.color.textMuted}
                   aria-label={`${group.name} ${earnedCount} of ${group.members.length} earned${isComplete ? ', group complete' : ''}`}
                 >
-                  {isComplete ? '✅ ' : ''}{earnedCount}/{group.members.length}
+                  {isComplete ? '✅ ' : ''}{earnedCount}/{group.members.length} · ⭐ {stars.earned + stars.bonus}/{stars.total}{stars.bonus > 0 ? ` (+${stars.bonus} bonus)` : ''}
                 </Badge>
               </GroupHeading>
-              {openGroups[group.id] && group.members.map(def => {
+              {openGroups[group.id] && buildEntries(group.members).map(entry => {
+                if (entry.levels) {
+                  const reached = entry.levels.filter(def => isAchievementEarned(state, def.id)).length
+                  const total = entry.levels.length
+                  const done = reached === total
+                  const next = entry.levels.find(def => !isAchievementEarned(state, def.id))
+                  return (
+                    <Row aria-label={`${entry.name} achievement level ${reached} of ${total}`} key={entry.key} style={{ alignItems: 'flex-start' }}>
+                      <Text $earned={reached > 0}>
+                        <NameButton
+                          aria-expanded={!!openRows[entry.key]}
+                          aria-label={`${entry.name} details`}
+                          onClick={() => toggle(setOpenRows, entry.key)}
+                          type="button"
+                        >
+                          <strong>{entry.name}</strong>
+                        </NameButton>
+                        {!openRows[entry.key] && next && <Detail>Next: {next.trigger}</Detail>}
+                        {openRows[entry.key] && entry.levels.map((def, i) => {
+                          const lvlEarned = isAchievementEarned(state, def.id)
+                          return (
+                            <Detail aria-label={`${entry.name} level ${i + 1} ${lvlEarned ? 'earned' : 'not yet earned'}`} key={def.id}>
+                              {lvlEarned ? '✅' : '🔒'} {i + 1}. {def.trigger}{def.bonus ? ` — ${def.bonus}` : ''}
+                            </Detail>
+                          )
+                        })}
+                      </Text>
+                      <Badge $color={done ? theme.color.good : theme.color.textMuted}>{done ? '✅ ' : ''}Lv {reached}/{total}</Badge>
+                    </Row>
+                  )
+                }
+                const { def } = entry
                 const earned = isAchievementEarned(state, def.id)
                 const masked = def.secret && !earned
                 const label = masked ? '???' : def.name
