@@ -1204,10 +1204,10 @@
   dependencies:
     tslib "^2.1.0"
 
-"@capacitor/ios@^8.5.3":
-  version "8.6.0"
-  resolved "https://registry.yarnpkg.com/@capacitor/ios/-/ios-8.6.0.tgz#9eb3bc1e946bd58b89c9f44529a48ec57721ea90"
-  integrity sha512-Y2PE4zoBqMrSTWoVMJmX2byBznjn6egmATzoEUJiGVbVubkNpAvkF/tl0SBKDyP67ngyedTx1tQq5IGYIhby1A==
+"@capacitor/ios@^8.6.2":
+  version "8.6.2"
+  resolved "https://registry.yarnpkg.com/@capacitor/ios/-/ios-8.6.2.tgz#4a4d874b46a994a61734141250fb42b2e5737f0f"
+  integrity sha512-YnVm0lRA1mQWK0SKd2bdJIOG+PXRRDDdndZ1+nGqeiob+QmHZmb4wWo5gVpWhoHO37pGi2qzH5w5WGvfKrs+Gg==
 
 "@capacitor/splash-screen@^8.0.2":
   version "8.0.2"
