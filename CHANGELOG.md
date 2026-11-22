@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- 28 more **achievements** in four new sections, effect-free for now (bonuses come later): **Power** (Power user, Batteries included, Turbo button, Stack Overflow, Cold fusion), **First Purge and after** (Just Googol it, Remind me later, Wait do I start all over?, There are 10 types of people, Script kiddie, 0x10, Cron job, Look ma no hands, Oh it's still a clicker game!), **Late Purge layer** (Lossless, Middle-out, Zip bomb, while (true), It's not a bug it's a feature, 64-bit upgrade, The cloud is just someone else's computer) and **Reboot** (Have you tried turning it off and on again?, rm -rf, Kernel panic, Popcorn). Purge counts are lifetime (they survive Reboot); saves that already did these things earn them on load.
 - Long achievement series (Reclamation) list one short line per level instead of repeating text.
 - Achievements page shows each requirement's current progress (e.g. 100/256, 4/10, Capacity doublings) while unearned, and its actual reward (the bonus it grants, when it has one) both before and after earning; collapsed series rows show a very short next requirement and reward; the unlock toast shows the reward too.
 - **Achievement stars**: each achievement (every level of a leveled row) awards 1 ⭐, and fully completing a section awards bonus stars equal to 10% of its stars (rounded up). The total shows atop the Achievements page; a section shows only its completion bonus (⭐ +N) once complete.

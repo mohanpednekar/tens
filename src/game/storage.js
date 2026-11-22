@@ -570,6 +570,11 @@ const mergeState = rawSaved => {
     accelerateBoughtThisCycle: typeof saved.accelerateBoughtThisCycle === 'boolean'
       ? saved.accelerateBoughtThisCycle
       : saved.globalTickspeedMultiplier != null || saved.overclockLastClaimCompletedLevels != null || (saved.overclockCount ?? 0) > 0 || (saved.scaleUpCount ?? 0) > 0,
+    // Saves from before manualPurchaseThisCycle existed: any tier purchase already made can't be attributed, so a save
+    // with purchases is conservatively treated as having bought manually — never hand out 'Look ma, no hands' for free.
+    manualPurchaseThisCycle: typeof saved.manualPurchaseThisCycle === 'boolean'
+      ? saved.manualPurchaseThisCycle
+      : Object.values(saved.purchased ?? {}).some(count => count > 0),
     scaleUpCount: saved.scaleUpCount ?? legacySpeedUpCount ?? fresh.scaleUpCount,
     scaleUpTierCounts: mergeTierMap(
       fresh.scaleUpTierCounts,
