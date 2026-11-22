@@ -14,7 +14,7 @@ import { pathToFileURL } from 'node:url'
 import sharp from 'sharp'
 import { chromium } from 'playwright'
 import { NAVIGATION, launchOptions, parseArgs, startDevServer } from '../lib/capture.mjs'
-import { DEVICES, FEATURE_GRAPHIC, ICONS, SCENES, TOAST_SELECTOR, featureGraphicHtml, pixelSize, screenshotPath } from './manifest.mjs'
+import { DEVICES, FEATURE_GRAPHIC, ICONS, SCENES, TOAST_SELECTOR, scenesFor, featureGraphicHtml, pixelSize, screenshotPath } from './manifest.mjs'
 import { buildSeeds } from './seeds.mjs'
 
 const args = parseArgs(process.argv.slice(2))
@@ -84,7 +84,7 @@ const main = async () => {
     await renderFeatureGraphic(browser)
     console.log(`✓ ${FEATURE_GRAPHIC.path}`)
     for (const device of DEVICES.filter(entry => !onlyDevices || onlyDevices.has(entry.id))) {
-      for (const scene of scenes) await captureScene(browser, server.url, seeds, device, scene, SCENES.indexOf(scene))
+      for (const scene of scenes.filter(entry => scenesFor(device).includes(entry))) await captureScene(browser, server.url, seeds, device, scene, SCENES.indexOf(scene))
       console.log(`✓ ${device.id} (${scenes.length})`)
     }
   } finally {

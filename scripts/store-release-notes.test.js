@@ -15,6 +15,10 @@ const CHANGELOG = `# Changelog
 - New [thing](https://x) with Space Grotesk 1.5x speed: more words.
 - Second feature.
 - Low-risk auto-merge for the autonomous maintenance workflow.
+- Achievements page shows each requirement's progress (e.g. 100/256) while
+  unearned. Second sentence.
+- A Power tier's bottom row is now called the **Charger** (labels, Manual and docs).
+- Hidden refactor. <!-- internal -->
 
 ## [1.2.2] - 2026-10-01
 
@@ -33,6 +37,9 @@ describe('store-release-notes', () => {
     expect(isPlayerFacing('Low-risk auto-merge for the autonomous maintenance workflow.')).toBe(false)
     expect(isPlayerFacing('Granted the issues permission to the CI job.')).toBe(false)
     expect(isPlayerFacing('Achievement stars: each achievement awards 1 star.')).toBe(true)
+    expect(isPlayerFacing('Light theme contrast fix (tests and docs updated).')).toBe(true)
+    expect(isPlayerFacing('Capacitor foundation — @capacitor/core + @capacitor/cli')).toBe(false)
+    expect(isPlayerFacing('Dev Mode — a local, dev-build-only sandbox')).toBe(false)
   })
 
   test('changelogSection returns only the requested version', () => {
@@ -46,6 +53,8 @@ describe('store-release-notes', () => {
     expect(releaseBullets(changelogSection(CHANGELOG, '1.2.3'))).toEqual([
       'New thing with Space Grotesk 1.5x speed: more words.',
       'Second feature.',
+      "Achievements page shows each requirement's progress (e.g. 100/256) while unearned.",
+      "A Power tier's bottom row is now called the Charger (labels, Manual and docs).",
       'A bold fix in code.',
     ])
   })

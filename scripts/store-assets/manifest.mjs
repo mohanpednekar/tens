@@ -23,8 +23,9 @@ export const DEVICES = [
   { id: 'iphone63', store: 'appstore', width: 402, height: 874, scale: 3 },
   { id: 'iphone69', store: 'appstore', width: 440, height: 956, scale: 3 },
   { id: 'iphone65', store: 'appstore', width: 428, height: 926, scale: 3 },
-  { id: 'duo-outer', store: 'appstore', width: 466, height: 678, scale: 3 },
-  { id: 'duo-inner', store: 'appstore', width: 669, height: 951, scale: 3 },
+  // Both Duo sizes share ONE App Store slot (max 10 images), so each gets 5 scenes.
+  { id: 'duo-outer', store: 'appstore', slot: 'duo', width: 466, height: 678, scale: 3, maxScenes: 5 },
+  { id: 'duo-inner', store: 'appstore', slot: 'duo', width: 669, height: 951, scale: 3, maxScenes: 5 },
   { id: 'ipad13', store: 'appstore', width: 1032, height: 1376, scale: 2 },
 ]
 
@@ -38,6 +39,9 @@ export const SCENES = [
   { id: 'achievements', page: 'achievements', seed: 'achievementUnlock', theme: 'dark', showToasts: true },
   { id: 'factory-light', page: 'game', seed: 'career', theme: 'light' },
 ]
+
+export const APP_STORE_SLOT_LIMIT = 10
+export const scenesFor = device => SCENES.slice(0, device.maxScenes ?? SCENES.length)
 
 export const pixelSize = device => ({ width: Math.round(device.width * device.scale), height: Math.round(device.height * device.scale) })
 

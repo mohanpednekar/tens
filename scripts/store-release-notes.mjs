@@ -21,8 +21,10 @@ export const versionCode = (version, override = process.env.TENS_VERSION_CODE) =
   return major * 10000 + minor * 100 + patch
 }
 
-// CHANGELOG.md also records tooling/automation changes; players never see those.
-const INTERNAL_ENTRY = /\b(workflows?|CI|autonomous|maintenance|Dependabot|GitHub|pull requests?|PRs?|CLAUDE\.md|AGENTS\.md|agents?|lint(ing)?|Vitest|Playwright|e2e|graphify|fastlane|changelog|docs?|tests?|mutation|CodeQL|deploy(ment)?)\b/i
+// CHANGELOG.md also records tooling/automation changes; players never see those. Names of tools
+// and repo machinery only — ordinary words like "docs" or "tests" also appear in player entries.
+// An entry can also opt out explicitly with `<!-- internal -->`.
+const INTERNAL_ENTRY = /<!--\s*internal\s*-->|\b(workflows?|CI|autonomous|maintenance workflow|Dependabot|GitHub|pull requests?|CLAUDE\.md|AGENTS\.md|Vitest|Playwright|e2e|graphify|fastlane|CodeQL|Stryker|mutation testing|Capacitor|Dev Mode|deploy(ment)?|lockfile|yarn)\b/i
 export const isPlayerFacing = bullet => !INTERNAL_ENTRY.test(bullet)
 
 export const changelogSection = (changelog, version) => {
@@ -41,15 +43,19 @@ const plain = text => text
   .replace(/\s+/g, ' ')
   .trim()
 
+// First sentence; abbreviations like "e.g." / "i.e." / "vs." don't end one.
 const firstSentence = text => {
-  const match = text.match(/^.+?[.!?](?=\s|$)/)
+  const match = text.match(/^(?:\b(?:e\.g|i\.e|etc|vs)\.|[^.!?]|\.(?=\S))+?[.!?](?=\s|$)/)
   return (match ? match[0] : text).replace(/[:;,]$/, '')
 }
+
+// Joins a bullet's wrapped continuation lines (indented) onto it.
+const unwrapBullets = section => section.replace(/\n[ \t]+(?=\S)/g, ' ')
 
 export const releaseBullets = section => {
   const groups = {}
   let current = null
-  for (const line of section.split('\n')) {
+  for (const line of unwrapBullets(section).split('\n')) {
     const heading = line.match(/^### (\w+)/)
     if (heading) { current = heading[1]; continue }
     const bullet = line.match(/^- (.+)/)

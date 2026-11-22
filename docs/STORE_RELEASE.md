@@ -26,7 +26,7 @@ privacy/rating answers in `docs/STORE_LISTING.md`.
 | Play | Foldable inner 3:4, inner 1:1, outer 10:16 (required from April 2027) | 1725×2300, 1800×1800, 1200×1920 | **manual** — supply has no foldable image type yet; files in `fastlane/play-foldable/` |
 | App Store | iPhone 6.3" (the required iPhone slot) | 1206×2622 | deliver |
 | App Store | iPhone 6.9" / 6.5" | 1320×2868 / 1284×2778 | deliver |
-| App Store | iPhone Duo outer + inner (one "iPhone Duo" slot; reported required from April 2027 — re-check Apple's spec page) | 1398×2034 + 2007×2853 | deliver (fastlane ≥ 2.242 knows both sizes) |
+| App Store | iPhone Duo outer + inner (one "iPhone Duo" slot, max 10 → 5 scenes each; reported required from April 2027 — re-check Apple's spec page) | 1398×2034 + 2007×2853 | deliver (fastlane ≥ 2.242 knows both sizes) |
 | App Store | iPad 13" (required: the app runs on iPad) | 2064×2752 | deliver |
 
 Every capture uses the device's real viewport, so it shows exactly how the app lays out there

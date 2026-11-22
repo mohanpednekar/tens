@@ -67,6 +67,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.platforms != 'ios') ||
       (github.event_name == 'push' && vars.STORE_AUTO_RELEASE == 'true')
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     env:
       PLAY_TRACK: ${{ inputs.play_track || 'internal' }}
       PLAY_STATUS: ${{ inputs.play_status || 'completed' }}
@@ -164,6 +165,9 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.platforms != 'android' && inputs.ios_action != 'none') ||
       (github.event_name == 'push' && vars.STORE_AUTO_RELEASE == 'true')
     runs-on: macos-latest
+    # `ios submit` waits for the version's build to finish processing; cap it instead of the 6 h
+    # default when no build exists (deliver's build watcher has no timeout of its own).
+    timeout-minutes: 90
     env:
       IOS_ACTION: ${{ inputs.ios_action || 'testflight' }}
       APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}

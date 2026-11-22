@@ -1,4 +1,4 @@
-import { DEVICES, FEATURE_GRAPHIC, SCENES, pixelSize, screenshotPath } from './manifest.mjs'
+import { APP_STORE_SLOT_LIMIT, DEVICES, FEATURE_GRAPHIC, SCENES, pixelSize, scenesFor, screenshotPath } from './manifest.mjs'
 import { playFreshSave, withPendingAchievement } from './seeds.mjs'
 import { NAVIGATION } from '../lib/capture.mjs'
 import { isAchievementConditionMet } from '../../src/game/engine.js'
@@ -30,6 +30,16 @@ describe('store-assets manifest', () => {
 
   test.each(DEVICES.filter(device => device.store === 'appstore'))('App Store $id screenshots are an accepted size', device => {
     expect(Object.values(pixelSize(device))).toEqual(APP_STORE_SIZES[device.id])
+  })
+
+  test('no App Store display slot gets more than 10 screenshots (both iPhone Duo sizes share one)', () => {
+    const perSlot = {}
+    for (const device of DEVICES.filter(entry => entry.store === 'appstore')) {
+      const slot = device.slot ?? device.id
+      perSlot[slot] = (perSlot[slot] ?? 0) + scenesFor(device).length
+    }
+    for (const count of Object.values(perSlot)) expect(count).toBeLessThanOrEqual(APP_STORE_SLOT_LIMIT)
+    expect(perSlot.duo).toBe(10)
   })
 
   test('every device renders at whole pixels from its real viewport', () => {
