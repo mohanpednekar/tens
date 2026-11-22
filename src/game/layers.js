@@ -240,11 +240,12 @@ export const ACHIEVEMENT_DEFINITIONS = [
 // each step keeps its own id (earned state, toasts, bonuses and saves are unchanged). Steps list in level order.
 export const ACHIEVEMENT_SERIES = [
   { id: 'ping', name: 'Ping', members: ['helloWorld', 'pingOfDeath'] },
-  ...TIER_DEFINITIONS.map((tier, index) => ({
-    id: `pool${String(index + 1).padStart(2, '0')}Reset`,
-    name: `${tier.symbol} Reclamation`,
-    members: [`pool${String(index + 1).padStart(2, '0')}ResetI`, `pool${String(index + 1).padStart(2, '0')}ResetII`],
-  })),
+  // One 20-level row: each pool's I then II, in pool order.
+  {
+    id: 'poolReset',
+    name: 'Reclamation',
+    members: TIER_DEFINITIONS.flatMap((_, index) => [`pool${String(index + 1).padStart(2, '0')}ResetI`, `pool${String(index + 1).padStart(2, '0')}ResetII`]),
+  },
   { id: 'tierBought', name: 'First purchase', members: TIER_DEFINITIONS.map((_, i) => `tier${String(i + 1).padStart(2, '0')}Bought`) },
   { id: 'accelerate', name: 'Accelerate', members: ['tickTock', 'megahertzMyth'] },
   { id: 'levelPower', name: 'Level power', members: LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((_, i) => `levelPower${i + 1}`) },
