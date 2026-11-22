@@ -8,9 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Achievement sections no longer show star counts — only the completion bonus (⭐ +N) once a section is complete; long series (Reclamation) list one short line per level instead of repeating text.
+- Long achievement series (Reclamation) list one short line per level instead of repeating text.
 - Achievements page shows each requirement's current progress (e.g. 100/256, 4/10, Capacity doublings) and its actual reward (the bonus it grants, when it has one) both before and after earning; collapsed series rows show a very short next requirement and reward; the unlock toast shows the reward too.
-- **Achievement stars**: each achievement (every level of a leveled row) awards 1 ⭐, and fully completing a section awards bonus stars equal to 10% of its stars (rounded up). The total shows atop the Achievements page and each section shows its own.
+- **Achievement stars**: each achievement (every level of a leveled row) awards 1 ⭐, and fully completing a section awards bonus stars equal to 10% of its stars (rounded up). The total shows atop the Achievements page; a section shows only its completion bonus (⭐ +N) once complete.
 
 - Three **Overclock step** achievements, each making later Overclocks need 1 fewer extra completed last-tier level (the step now starts at +4 and drops to +1): claim the first Overclock of a Purge at 6+ completed levels; claim two Overclocks in one Purge without buying any Accelerate; and, after DeGoogol, claim an Overclock at 12+ completed levels. They are earned in order (each counts only after the previous one), from new claims only (not retroactive).
 - Achievement toasts: each earned achievement (including those earned while away) shows a stacked toast for 5 s, started 0.25 s apart.
