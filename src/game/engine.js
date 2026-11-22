@@ -1461,6 +1461,8 @@ export const getAchievementProgress = (state, condition) => {
   if (condition.min <= 1) return null
   switch (condition.kind) {
     case 'counter':
+      // maxFirstOverclock is a record of past claims, not live progress (the live level count decides the next claim).
+      if (condition.key === 'maxFirstOverclock') return null
       return { current: state.achievements?.counters?.[condition.key] ?? 0, target: condition.min }
     case 'clockSpeedLevel': return { current: state.globalTickspeedMultiplier ?? 0, target: condition.min }
     case 'tierLevel': return { current: state.purchaseLevels?.[condition.tierId] ?? 1, target: condition.min }

@@ -168,4 +168,12 @@ describe('AppMenu achievements entry', () => {
     openGroup('Early Factory')
     expect(screen.getByText('Next: Accelerate 1')).toBeTruthy()
   })
+
+  it('long series explain each distinct short reward once when expanded', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    openGroup('Foundry')
+    fireEvent.click(screen.getByLabelText('Reclamation details'))
+    expect(screen.getByText(/^Disk step 1 ↑: The first disk-size exponent step now closes 10%/)).toBeTruthy()
+    expect(screen.getByText(/^Disk step 2 ↑: The second disk-size exponent step now closes 10%/)).toBeTruthy()
+  })
 })

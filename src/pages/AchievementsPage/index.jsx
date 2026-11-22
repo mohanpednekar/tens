@@ -195,6 +195,8 @@ const AchievementsPage = ({ game }) => {
                   const sharedBonus = entry.levels.every(def => def.bonus === entry.levels[0].bonus) ? entry.levels[0].bonus : null
                   // Long series (Reclamation, 20 levels) list one short line per level instead of repeating full text.
                   const compact = entry.levels.length > 4
+                  // Compact lines carry only the short reward, so each distinct short → full explanation is stated once.
+                  const distinctRewards = [...new Map(entry.levels.filter(def => def.shortBonus && def.bonus).map(def => [def.shortBonus, def.bonus]))]
                   return (
                     <Row aria-label={`${entry.name} achievement level ${reached} of ${total}`} key={entry.key} style={{ alignItems: 'flex-start' }}>
                       <Text $earned={reached > 0}>
@@ -209,6 +211,7 @@ const AchievementsPage = ({ game }) => {
                         {!openRows[entry.key] && next && <Detail>Next: {getAchievementShortRequirement(next)}{formatProgress(state, next, false) ? ` (${formatProgress(state, next, false)})` : ''}</Detail>}
                         {!openRows[entry.key] && next && getAchievementShortReward(next) && <Detail aria-label={`${entry.name} next reward`}>Reward: {getAchievementShortReward(next)}</Detail>}
                         {openRows[entry.key] && sharedBonus && <Detail>Reward each level: {sharedBonus}</Detail>}
+                        {openRows[entry.key] && compact && !sharedBonus && distinctRewards.map(([short, full]) => <Detail key={short}>{short}: {full}</Detail>)}
                         {openRows[entry.key] && entry.levels.map((def, i) => {
                           const lvlEarned = isAchievementEarned(state, def.id)
                           const lvlProgress = formatProgress(state, def, lvlEarned)
