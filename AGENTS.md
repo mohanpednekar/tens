@@ -43,6 +43,7 @@ yarn build:capacitor # CAPACITOR=1 build for native wrap (relative base, no PWA 
 yarn cap:sync     # cap sync (copy dist/ into android/ + ios/)
 yarn cap:android  # build:capacitor + sync + open Android Studio (cap:ios → Xcode)
 yarn android:aab  # signed, R8-minified release AAB (docs/RELEASE_ANDROID.md); ios:configure → Info.plist ad keys
+yarn store:assets # store screenshots + feature graphic → fastlane/ (store:notes → release notes); docs/STORE_RELEASE.md
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode
 yarn test:e2e     # Playwright end-to-end suite (real chromium, against yarn dev)
@@ -72,6 +73,7 @@ docs/
   PWA_REFERENCE.md        ← full installable-PWA (manifest/icons/service-worker) reference
   TESTING_REFERENCE.md    ← full Vitest + Playwright e2e conventions (query contracts, timers, spec list)
   NATIVE_APPS_REFERENCE.md ← Capacitor Android/iOS wrap: SDK targets, release signing, feature flags, mobile-build.yml
+  STORE_RELEASE.md        ← automated Play/App Store pipeline (fastlane/, store-release.yml) + maintainer prerequisites
 src/
   game/
     layers.js             ← TIER_DEFINITIONS array + all constants (single source of truth)
