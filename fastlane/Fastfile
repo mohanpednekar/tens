@@ -109,6 +109,7 @@ platform :android do
   desc 'Promote a tested release from one track to another without re-uploading the binary'
   desc '(e.g. from:internal to:production status:completed rollout:0.2). Promotes the checkout\'s'
   desc 'version code (or version_code:), which must be completed or rolling out on the source track.'
+  desc 'metadata:true also uploads the listing in the same Play edit (Play validates them together).'
   lane :promote do |options|
     from = options.fetch(:from).to_s
     UI.user_error!("Promote needs two different tracks (got '#{from}' twice)") if from == options.fetch(:to).to_s
@@ -126,8 +127,12 @@ platform :android do
       # track_promote_release_status (+ rollout for a staged production rollout).
       track_promote_release_status: plan[:status],
       rollout: plan[:rollout],
-      skip_upload_aab: true, skip_upload_apk: true, skip_upload_metadata: true,
-      skip_upload_images: true, skip_upload_screenshots: true, skip_upload_changelogs: true
+      # Listing rides in the same edit as the promotion (supply uploads it before committing), so a
+      # first external release that needs a listing is validated with it. Release notes stay as tested.
+      skip_upload_aab: true, skip_upload_apk: true, skip_upload_changelogs: true,
+      skip_upload_metadata: !flag?(options[:metadata]),
+      skip_upload_images: !flag?(options[:metadata]),
+      skip_upload_screenshots: !flag?(options[:metadata])
     )
   end
 end
@@ -216,8 +221,12 @@ platform :ios do
       # version left on "release automatically" could go live on approval.
       asc_key
       app = Spaceship::ConnectAPI::App.find(BUNDLE_ID) || UI.user_error!("App #{BUNDLE_ID} not found")
-      version = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS) ||
-                UI.user_error!('No editable App Store version to submit')
+      # Same version setup deliver does before uploading: creates the editable version if the last one is live.
+      app.ensure_version!(package_version, platform: Spaceship::ConnectAPI::Platform::IOS)
+      version = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
+      unless version&.version_string == package_version
+        UI.user_error!("Editable App Store version is #{version&.version_string.inspect}, expected #{package_version}")
+      end
       release_type = automatic ? Spaceship::ConnectAPI::AppStoreVersion::ReleaseType::AFTER_APPROVAL : Spaceship::ConnectAPI::AppStoreVersion::ReleaseType::MANUAL
       version.update(attributes: { release_type: release_type })
     end

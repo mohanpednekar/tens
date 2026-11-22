@@ -131,6 +131,8 @@ fastlane/screenshots/
 fastlane/play-foldable/
 fastlane/preview/
 fastlane/.staging/
+fastlane/**/*.previous/
+fastlane/*.previous/
 fastlane/release-notes.txt
 fastlane/report.xml
 fastlane/README.md

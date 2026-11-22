@@ -1,7 +1,7 @@
 # Graph Report - tens  (2026-11-22)
 
 ## Corpus Check
-- 249 files · ~619,111 words
+- 249 files · ~619,201 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 33 file(s) not represented in the graph (top: (none) 11, .xml 9, .properties 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `33fbc6b8`
+- Built from commit: `09c12330`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -219,16 +219,16 @@
 10. `Economy model — Byte Foundry (full text)` - 85 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Scheduled maintenance (`autonomous-maintenance.yml`)` --references--> `gh()`  [INFERRED]
-  docs/AUTOMATION.md → scripts/verify-maintainer-checklist.mjs
-- `Release (`release.yml`)` --references--> `extractVersionSection()`  [INFERRED]
-  docs/AUTOMATION.md → scripts/bump-version.mjs
 - `Compute Boost tier scaling: 4× effect only, no duration enhancement (#363)` --references--> `getComputeBoostTierDurationSeconds()`  [INFERRED]
   docs/DESIGN_HISTORY.md → src/game/engine.js
 - `When editing the simulation` --references--> `getScaleUpRequirement()`  [INFERRED]
   .claude/skills/simulate-run-times/SKILL.md → src/game/engine.js
 - `Why `getTierCost` uses a multiplier form, not a literal power` --references--> `getTierCost()`  [INFERRED]
   docs/DESIGN_HISTORY.md → src/game/engine.js
+- `Theming` --references--> `clearGameState()`  [INFERRED]
+  CLAUDE.md → src/game/storage.js
+- `Fixed` --references--> `formatCurrency()`  [INFERRED]
+  CHANGELOG.md → src/game/engine.js
 
 ## Import Cycles
 - None detected.
@@ -880,7 +880,7 @@ Nodes (3): getComputeBoostTierMultiplier(), getLegacyComputeBoostLane(), isValid
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Design history & rationale` connect `Shared components reference` to `MainPage/index.jsx`, `MainPage reference`, `isComputeChargeAvailable`, `One-shot auto-convert`, `getTierCost`, `[Unreleased]`, `navAttention.js`, `scaleUpGame`, `adaptSaveForCurrentSchema`, `Hierarchical lake disks`, `Economy model`, `formatCurrency`, `tickGame`, `Foundry multiplier bar: one diverging bar tried and dropped (2026-10)`, `Economy model — Byte Foundry (full text)`, `Distribution`, `Documentation`, `capacitor.settings.gradle`, `buyPrestigeSpeedBonus`, `featureCard`, `buySleepModeCapUpgrade`, `jsconfig.json`, `normalizePoolMemoryCapacity`, `Compute Boost: Reclaim and Forfeit made mutually exclusive — 2026-09-04`, `Data Lake unlock/capacity tied to real Storage progress; giant-circle CSS bug; Compute Boost reclaim floor — 2026-09-03`, `getComputeBoostLanes`, `Daily challenges (epic #1062)`?**
-  _High betweenness centrality (0.035) - this node is a cross-community bridge._
+  _High betweenness centrality (0.042) - this node is a cross-community bridge._
 - **Are the 268 inferred relationships involving `Key engine functions (`src/game/engine.js`)` (e.g. with `activateComputeBoost()` and `applyAutobuyerMilestones()`) actually correct?**
   _`Key engine functions (`src/game/engine.js`)` has 268 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `file:scripts/lint-conflict-markers.mjs`, `file:scripts/lint-conflict-markers.test.js`, `file:src/game/storagePrefix.js` to the rest of the system?**
@@ -888,7 +888,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `DataLakePanel/index.jsx` be split into smaller, more focused modules?**
   _Cohesion score 0.12688172043010754 - nodes in this community are weakly interconnected._
 - **Why does `vitest` connect `engine.challenges.test.js` to `OfflineProgressNotice/index.jsx`, `layers.js`, `admobAdapter.js`, `engine.challengesTier.test.js`, `engine.test.js`, `App.foundry.test.jsx`, `ButtonContent`, `storage.js`, `navAttention.js`, `gradlew`, `adaptSaveForCurrentSchema`, `file-task-issue/SKILL.md`, `orphan-branch-scan.sh`, `capacitor.build.gradle`, `config.js`, `adversarialReviewMarker.js`, `AchievementsPage/index.jsx`, `dailyChallenges.test.js`, `ChallengesPage/index.jsx`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+  _High betweenness centrality (0.022) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `MainPage()` (e.g. with `Byte Foundry` and `Overclock, again: the standalone multiplier comes back, deliberately, plus a full requirement rework`) actually correct?**
   _`MainPage()` has 3 INFERRED edges - model-reasoned connections that need verification._
 - **Should `MainPage/index.jsx` be split into smaller, more focused modules?**

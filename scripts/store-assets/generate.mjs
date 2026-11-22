@@ -99,11 +99,25 @@ const main = async () => {
       console.log(`✓ ${device.id} (${scenes.filter(entry => scenesFor(device).includes(entry)).length})`)
     }
     if (!filtered) {
-      for (const dir of UPLOAD_IMAGE_DIRS) {
-        rmSync(resolve(dir), { recursive: true, force: true })
-        const staged = resolve(dir.replace(/^fastlane\//, STAGING))
-        if (existsSync(staged)) { mkdirSync(dirname(resolve(dir)), { recursive: true }); renameSync(staged, resolve(dir)) }
+      // Swap with rollback: move every old folder aside, move the new ones in, and only then drop
+      // the old ones. A failed rename restores whatever was moved aside.
+      const moves = UPLOAD_IMAGE_DIRS.map(dir => ({ dest: resolve(dir), staged: resolve(dir.replace(/^fastlane\//, STAGING)), backup: resolve(`${dir}.previous`) }))
+      const done = []
+      try {
+        for (const move of moves) {
+          rmSync(move.backup, { recursive: true, force: true })
+          if (existsSync(move.dest)) renameSync(move.dest, move.backup)
+          done.push(move)
+          if (existsSync(move.staged)) { mkdirSync(dirname(move.dest), { recursive: true }); renameSync(move.staged, move.dest) }
+        }
+      } catch (error) {
+        for (const move of done.reverse()) {
+          rmSync(move.dest, { recursive: true, force: true })
+          if (existsSync(move.backup)) renameSync(move.backup, move.dest)
+        }
+        throw error
       }
+      for (const move of moves) rmSync(move.backup, { recursive: true, force: true })
       rmSync(resolve(STAGING), { recursive: true, force: true })
     }
   } finally {

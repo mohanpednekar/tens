@@ -69,7 +69,9 @@ Claude to run it (`store-release` skill).
   (e.g. `production`) + `play_status` + optional `play_rollout` (a fraction in (0, 1], e.g. `0.2`)
   moves the dispatched checkout's version code — the same version the iOS job ships — and only if
   it is completed or rolling out on the source track (never a draft or halted build). No rebuild
-  (Play rejects re-uploading a version code); with `upload_listing` on, the listing is pushed for it. The Play side of "ship it" is always a
+  (Play rejects re-uploading a version code); with `upload_listing` on, the listing goes in the same
+  Play edit as the promotion. A build shipped with a `TENS_VERSION_CODE` override can only be promoted
+  from a local `fastlane android promote ... version_code:<code>` (the dispatch uses the checkout's code). The Play side of "ship it" is always a
   promotion, never a production upload of the same version.
 
 Production promotion and App Review submission are deliberately manual dispatches. Both jobs run in
