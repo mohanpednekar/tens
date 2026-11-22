@@ -201,10 +201,11 @@ export const RECLAMATION_POOL_THRESHOLDS = [1, 3, 6, 8, TIER_DEFINITIONS.length]
 // the moment a pool is compacted. `arrayStepGain`: the share of the remaining gap to 1.0 that each within-pool disk-size
 // step closes when that step has no Compact Pool upgrade (base 1%; the level's value replaces it, not stacks).
 // `lakeSpeed`: added to every Data Lake's speed multiplier (a fraction of its pool's Bandwidth, like the +0.1 per flush).
-export const RECLAMATION_LEVEL_REWARDS = [{ arrayStepGain: 0.02 }, { arrayStepGain: 0.03 }, { lakeSpeed: 0.05 }, { lakeSpeed: 0.05 }, { arrayStepGain: 0.05, lakeSpeed: 0.1 }]
+// `freeSpeedUpgrade`: every Capacity upgrade also grants one Bitrate (Speed) upgrade for free (the grand reward).
+export const RECLAMATION_LEVEL_REWARDS = [{ arrayStepGain: 0.02 }, { arrayStepGain: 0.03 }, { lakeSpeed: 0.05 }, { lakeSpeed: 0.05 }, { freeSpeedUpgrade: true }]
 const formatReclamationPercent = fraction => `${Math.round(fraction * 1000) / 10}%`
-// Short + full player text for one level's reward (a level may carry both a disk-step and a lake-speed reward).
-const describeReclamationReward = ({ arrayStepGain, lakeSpeed }) => {
+// Short + full player text for one level's reward (a level may carry several rewards).
+const describeReclamationReward = ({ arrayStepGain, lakeSpeed, freeSpeedUpgrade }) => {
   const shorts = []
   const fulls = []
   if (arrayStepGain) {
@@ -215,6 +216,10 @@ const describeReclamationReward = ({ arrayStepGain, lakeSpeed }) => {
     shorts.push(`Lake speed +${formatReclamationPercent(lakeSpeed)}`)
     fulls.push(`Every Data Lake fills at +${formatReclamationPercent(lakeSpeed)} more of its pool's Bandwidth`)
   }
+  if (freeSpeedUpgrade) {
+    shorts.push('Free Bitrate upgrades')
+    fulls.push('Every Capacity upgrade also upgrades Bitrate for free (when Bitrate can still double within Capacity)')
+  }
   return { shortBonus: shorts.join(', '), bonus: fulls.join('. ') }
 }
 export const ACHIEVEMENT_DEFINITIONS = [
@@ -223,7 +228,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', short: 'Ping ×256', condition: { kind: 'counter', key: 'pings', min: 256 } },
   { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', short: '1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
   // Reclamation: a short series by how many different Storage pools have been compacted at least once.
-  // Levels 1-2 raise the within-pool disk-size step, level 3-5 speed every Data Lake (level 5, the grand reward, also takes the disk step to 5%). The per-pool Bitrate exponent upgrades are separate: they come
+  // Levels 1-2 raise the within-pool disk-size step, levels 3-4 speed every Data Lake; level 5 (the grand reward) makes Bitrate upgrades free with Capacity upgrades. The per-pool Bitrate exponent upgrades are separate: they come
   // directly from Compact Pool (`intro.poolExponentBonuses`), not from these achievements.
   ...RECLAMATION_POOL_THRESHOLDS.map((pools, i) => ({
     id: `reclaim${i + 1}`,

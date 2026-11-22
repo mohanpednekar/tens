@@ -9185,7 +9185,7 @@ mechanism only; the exponent math is unchanged. The engine already stored the up
 achievements from that map, so the maintainer asked to stop presenting a stat upgrade as an achievement.
 Compact Pool now just upgrades the step; the achievements became five `reclaim1`–`5`
 (`poolsCompacted` 1/3/6/8/all 10 distinct pools, `RECLAMATION_POOL_THRESHOLDS`), with `RECLAMATION_LEVEL_REWARDS`: I/II replace the
-1% plain within-pool exponent step with 2%/3%, III/IV add +0.05 each to every Data Lake's speed multiplier, V (every pool; the maintainer's "grand reward") sets the plain step to 5% and adds +0.10 (maintainer's
+1% plain within-pool exponent step with 2%/3%, III/IV add +0.05 each to every Data Lake's speed multiplier, V (every pool; the maintainer's "grand reward", first drafted as plain step 5% + lake +0.10, replaced at the maintainer's request by one of their examples: Bitrate upgrades free with Capacity upgrades) (maintainer's
 spec; values not simulated through `simulate-run-times`). Levels derive from `poolExponentBonuses` (`getReclamationLevel`),
 not from the earned achievement flags, because the exponent helpers only receive `intro`. Old saves: the legacy
 `poolNNResetI/II` earned flags stay in `achievements.earned` and the load-time backfill in

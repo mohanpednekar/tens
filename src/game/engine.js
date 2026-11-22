@@ -4104,18 +4104,28 @@ export const upgradePoolCapacity = state => {
 
 // Shared capacity doubling (plus its compute wipe and main-game latch) for both the instant
 // full-Buffer upgrade above and the progress-bar upgrade fired from tickCapacityUpgradeDrain.
+// Reclamation V (the grand reward): every Capacity upgrade also grants one Bitrate upgrade for free.
+export const isReclamationFreeSpeedUnlocked = intro =>
+  RECLAMATION_LEVEL_REWARDS.slice(0, getReclamationLevel(intro)).some(reward => reward.freeSpeedUpgrade)
+
 const doubleIntroCapacity = state => {
   const afterWipe = isComputeCoreConversionUnlocked(state)
     ? eraseAllComputeTokens(state)
     : state
+  const speedBasis = afterWipe.intro.speedCapacity ?? afterWipe.intro.capacity
+  const newCapacity = afterWipe.intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
+  // Same fit rule as a paid Bitrate upgrade (isSpeedUpgradeArmable): the doubled basis must fit within Capacity.
+  const freeSpeedBasis = isReclamationFreeSpeedUnlocked(afterWipe.intro) && speedBasis * INTRO_CAPACITY_DOUBLING_STEP <= newCapacity
+    ? speedBasis * INTRO_CAPACITY_DOUBLING_STEP
+    : speedBasis
   // latchMainGameUnlocked here (not just tickGame's own unconditional call) makes the reveal
   // synchronous with the capacity change that triggers it — no need to wait for the next tick.
   return latchMainGameUnlocked({
     ...afterWipe,
     intro: {
       ...afterWipe.intro,
-      speedCapacity: afterWipe.intro.speedCapacity ?? afterWipe.intro.capacity,
-      capacity: afterWipe.intro.capacity * INTRO_CAPACITY_DOUBLING_STEP,
+      speedCapacity: freeSpeedBasis,
+      capacity: newCapacity,
       capacityUpgradeQueued: false,
       capacityUpgradeProgress: 0,
     },
