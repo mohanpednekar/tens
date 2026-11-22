@@ -1197,10 +1197,10 @@
     xcode "^4.0.0"
     xml2js "^0.6.2"
 
-"@capacitor/core@^8.0.0", "@capacitor/core@^8.5.3":
-  version "8.6.0"
-  resolved "https://registry.yarnpkg.com/@capacitor/core/-/core-8.6.0.tgz#df2f0601c368587261d35afb390dbfb2638dd779"
-  integrity sha512-9F2zzuGYTJu+wqmQSEmqnFBfGrhC/njjMCfmxbvg9mq8xJT4wNh5pxbMFZxvW/yDhYJWPEBFQxeqzfo1gKrvxg==
+"@capacitor/core@^8.0.0", "@capacitor/core@^8.6.2":
+  version "8.6.2"
+  resolved "https://registry.yarnpkg.com/@capacitor/core/-/core-8.6.2.tgz#43562e44527cf395d9cc3d11d09016b3b51956a5"
+  integrity sha512-UEb9crRuqEAe2Iu2eGOEuQ8rLQxpwg7ZZIpl17UJoytEpnV1e4oXXW0K7yYS2NsCOGmJjyLeKjNlgG7tkAoX8g==
   dependencies:
     tslib "^2.1.0"
 
