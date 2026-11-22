@@ -1,0 +1,2 @@
+package_name('com.mohanpednekar.tens')
+app_identifier('com.mohanpednekar.tens')

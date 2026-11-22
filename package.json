@@ -59,6 +59,8 @@
     "android:apk:release": "yarn build:capacitor && cap sync android && cd android && ./gradlew assembleRelease",
     "cap:ios": "yarn build:capacitor && cap sync ios && node scripts/configure-ios-plist.mjs && cap open ios",
     "ios:configure": "node scripts/configure-ios-plist.mjs",
+    "store:assets": "node scripts/store-assets/generate.mjs",
+    "store:notes": "node scripts/store-release-notes.mjs",
     "test": "vitest run",
     "test:watch": "vitest --host 127.0.0.1",
     "test:e2e": "playwright test",

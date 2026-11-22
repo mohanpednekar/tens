@@ -18,7 +18,8 @@ authoritative.
    (non-exhaustive) edits to `src/game/engine.js` / `src/game/layers.js` economy formulas or
    constants, Byte Foundry / Disk / Compute / Capacity / tickspeed / autobuyer / prestige rules,
    `BUY_QUANTITY` / purchase-block behavior, or this skill's own bot strategy in
-   `run-simulation.mjs`.
+   `bot.mjs` (the side-effect-free bot, also replayed by `scripts/store-assets/seeds.mjs` for
+   store screenshots; `run-simulation.mjs` is the CLI around it).
 
 Skip only for clearly unrelated work (pure UI chrome, docs that don't change rules, CI-only, etc.).
 If unsure whether a change is significant, re-run and publish.
