@@ -685,6 +685,12 @@ ios:configure`, then `xcodebuild` builds the `App` scheme for the iOS Simulator 
 `CODE_SIGNING_ALLOWED=NO` and uploads the zipped `App.app`. Its artifacts are never store-uploadable;
 store builds come from `store-release.yml` (below) or a local build with the real upload key.
 
+### Store assets (`store-assets.yml`)
+
+Manual dispatch only: `yarn store:assets` (optional `devices`/`scenes` inputs) + `yarn store:notes`,
+uploaded as the `tens-store-assets-<run>` artifact. No secrets, no store upload — the on-demand way to
+get a fresh screenshot/feature-graphic bundle (`docs/STORE_RELEASE.md`).
+
 ### Store release (`store-release.yml`)
 
 Builds the store-signed AAB/IPA and uploads them plus the listing via fastlane (`fastlane/Fastfile`;

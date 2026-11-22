@@ -21,6 +21,10 @@ Prefer first-party sources; when only secondary sources exist, say so in the PR.
 
 ## 2. Assets
 
+When the user just wants the assets (no release), dispatch `store-assets.yml` (GitHub MCP
+`actions_run_trigger`, inputs `devices`/`scenes`) and hand them the run's artifact link — don't
+build or zip them locally. Generate locally only when iterating on the generator itself.
+
 1. `yarn store:assets` (~3 min; `PW_CHROMIUM_PATH` as for e2e; `--devices id,id` / `--only scene`
    to iterate). Seeds are real bot playthroughs (`scripts/store-assets/seeds.mjs`, built on
    `.claude/skills/simulate-run-times/bot.mjs`) — never hand-edit game state for a screenshot.

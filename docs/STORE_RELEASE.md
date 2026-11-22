@@ -53,6 +53,11 @@ where the seed leaves one qualifying achievement un-earned so the game raises it
 Generated images and release notes are gitignored and rebuilt on every release, so they never go
 stale against the UI or changelog.
 
+**On demand, without releasing:** Actions → **Store assets** → Run workflow (`store-assets.yml`,
+optional `devices` / `scenes` filters) builds the full image set + release notes and attaches it as
+the `tens-store-assets-<run>` artifact. No secrets, nothing uploaded to a store. You can also ask
+Claude to run it (`store-release` skill).
+
 `.github/workflows/store-release.yml` runs all of it:
 
 - **Tag push** `v*` (pushed by `release.yml` after a `yarn bump-version` PR merges) — when repository

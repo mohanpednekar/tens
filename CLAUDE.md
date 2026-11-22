@@ -48,7 +48,8 @@ yarn cap:sync     # cap sync (copies dist/ into the android/ + ios/ native proje
 yarn cap:android  # build:capacitor + cap sync android + open Android Studio (`yarn cap:ios` → Xcode)
 yarn android:aab  # signed + R8-minified release AAB (bundleRelease; `android:apk:release` → APK) — docs/RELEASE_ANDROID.md
 yarn ios:configure # write Info.plist ad keys from the ads flag (scripts/configure-ios-plist.mjs; run by cap:ios)
-yarn store:assets # store screenshots/feature graphic → fastlane/ (gitignored); store:notes → release notes from CHANGELOG
+yarn store:assets # store screenshots/feature graphic → fastlane/ (gitignored); store:notes → release notes from CHANGELOG;
+                  # on demand in CI: dispatch store-assets.yml (artifact, no secrets)
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
