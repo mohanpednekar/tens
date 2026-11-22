@@ -800,8 +800,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // the speed exponent via that pool/disk-size step's current achievement-adjusted rule).
   const diskUnlockAvailable = isDiskSizeUnlockAvailable(state)
   const speedExponent = getDataStreamSpeedExponent(intro)
-  const speedExponentText = speedExponent.toFixed(2)
-  const nextSpeedExponentText = getDataStreamSpeedExponent({ ...intro, unlockedDiskSteps: getUnlockedDiskSteps(intro) + 1 }).toFixed(2)
+  const speedExponentText = speedExponent.toFixed(3)
+  const nextSpeedExponentText = getDataStreamSpeedExponent({ ...intro, unlockedDiskSteps: getUnlockedDiskSteps(intro) + 1 }).toFixed(3)
   const nextUnlockDiskSizeText = formatDiskSize(getDiskLadderSizeBits(getUnlockedDiskSteps(intro) + 1))
   const handleUnlockDiskSizeClick = () => {
     const confirmed = typeof window === 'undefined' || typeof window.confirm !== 'function' || window.confirm(
