@@ -1454,15 +1454,20 @@ export const isAchievementConditionMet = (state, condition) => {
 }
 
 // Current requirement progress for an achievement condition, or null when it is a one-shot event with no
-// meaningful partial state. `current` may exceed `target` once met; callers clamp for display. `format: 'percent'`
-// means show current/target as a percentage (Capacity is in bits, so raw numbers would mislead).
+// meaningful partial state (including counters with min 1). `current` may exceed `target` once met; callers clamp
+// for display. Capacity only ever doubles, so its progress counts doublings from the starting Capacity.
 export const getAchievementProgress = (state, condition) => {
   switch (condition.kind) {
-    case 'counter': return { current: state.achievements?.counters?.[condition.key] ?? 0, target: condition.min }
+    case 'counter':
+      if (condition.min <= 1) return null
+      return { current: state.achievements?.counters?.[condition.key] ?? 0, target: condition.min }
     case 'clockSpeedLevel': return { current: state.globalTickspeedMultiplier ?? 0, target: condition.min }
     case 'tierLevel': return { current: state.purchaseLevels?.[condition.tierId] ?? 1, target: condition.min }
     case 'poolExponentBonus': return { current: state.intro?.poolExponentBonuses?.[condition.poolIndex] ?? 0, target: condition.min }
-    case 'storageUnlocked': return { current: state.intro?.capacity ?? 0, target: INTRO_DISK_UNLOCK_CAPACITY, format: 'percent' }
+    case 'storageUnlocked': {
+      const doublings = capacity => Math.log2(Math.max(capacity, INTRO_STARTING_CAPACITY) / INTRO_STARTING_CAPACITY)
+      return { current: Math.floor(doublings(state.intro?.capacity ?? 0)), target: doublings(INTRO_DISK_UNLOCK_CAPACITY) }
+    }
     default: return null
   }
 }

@@ -71,6 +71,16 @@ describe('AchievementToasts', () => {
     unmount()
   })
 
+  it('shows the reward only for achievements that have one', () => {
+    const { rerender, unmount } = render(ui(mk([])))
+    rerender(ui(mk(['helloWorld', 'levelPower1'])))
+    act(() => { vi.advanceTimersByTime(300) })
+    const text = screen.getByRole('status', { name: 'achievement notifications' }).textContent
+    expect(text).toContain('The per-level production multiplier rises by 0.05')
+    expect(text).not.toContain('⭐')
+    unmount()
+  })
+
   it('still shows offline toasts under StrictMode', () => {
     const { unmount } = render(<StrictMode>{ui(mk(['helloWorld']))}</StrictMode>)
     act(() => { vi.advanceTimersByTime(1) })

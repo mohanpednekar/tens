@@ -101,20 +101,24 @@ const Detail = styled.span`
   font-size: 0.82em;
 `
 
+const Level = styled.span`
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+`
+
 const Badge = styled.span`
   color: ${props => props.$color};
   font-size: 0.82em;
   white-space: nowrap;
 `
 
-// "x/y" (or a percentage) for an unearned achievement's requirement; full once earned; null for one-shot events.
+// "x/y" for an unearned achievement's requirement; full once earned; null for one-shot events.
 const formatProgress = (state, def, earned) => {
   const progress = getAchievementProgress(state, def.condition)
   if (!progress) return null
   const current = earned ? progress.target : Math.min(Math.floor(progress.current), progress.target)
-  return progress.format === 'percent'
-    ? `${Math.floor((current / progress.target) * 100)}%`
-    : `${current}/${progress.target}`
+  return `${current}/${progress.target}`
 }
 
 // Collapses ordered steps of one series into a single entry (at the position of its first step).
@@ -201,12 +205,13 @@ const AchievementsPage = ({ game }) => {
                           <strong>{entry.name}</strong>
                         </NameButton>
                         {!openRows[entry.key] && next && <Detail>Next: {next.trigger}{formatProgress(state, next, false) ? ` (${formatProgress(state, next, false)})` : ''}</Detail>}
+                        {!openRows[entry.key] && next && getAchievementReward(next) && <Detail aria-label={`${entry.name} next reward`}>Reward: {getAchievementReward(next)}</Detail>}
                         {openRows[entry.key] && sharedBonus && <Detail>Reward each level: {sharedBonus}</Detail>}
                         {openRows[entry.key] && entry.levels.map((def, i) => {
                           const lvlEarned = isAchievementEarned(state, def.id)
                           const lvlProgress = formatProgress(state, def, lvlEarned)
                           return (
-                            <Text $earned={lvlEarned} key={def.id}>
+                            <Level key={def.id}>
                               <Detail aria-label={`${entry.name} level ${i + 1} ${lvlEarned ? 'earned' : 'not yet earned'}`}>
                                 {lvlEarned ? '✅ ' : ''}{i + 1}. {def.trigger}{lvlProgress && !lvlEarned ? ` (${lvlProgress})` : ''}
                               </Detail>
@@ -215,7 +220,7 @@ const AchievementsPage = ({ game }) => {
                                   {lvlEarned ? 'Reward earned' : 'Reward'}: {getAchievementReward(def)}
                                 </Detail>
                               )}
-                            </Text>
+                            </Level>
                           )
                         })}
                       </Text>

@@ -97,7 +97,7 @@ describe('AppMenu achievements entry', () => {
     expect(screen.queryByLabelText(/Ping level \d reward/)).toBeNull()
     expect(screen.queryByText(/⭐ 1 star/)).toBeNull()
     // Binary achievement: no lock/status badge until earned
-    expect(screen.getByLabelText('Kibi, not Kilo achievement not yet earned').textContent).toContain('0%')
+    expect(screen.getByLabelText('Kibi, not Kilo achievement not yet earned').textContent).toContain('0/10')
     expect(screen.getByLabelText('It compiles, ship it achievement not yet earned').textContent).not.toMatch(/🔒|✅/)
   })
 
@@ -113,11 +113,30 @@ describe('AppMenu achievements entry', () => {
     expect(screen.getByLabelText('KB Reclamation level 1 reward earned').textContent).toMatch(/^Reward earned: The first disk-size exponent step/)
   })
 
+  it('collapsed series show the next requirement and its reward until every level is done', () => {
+    const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({ pool01ResetI: true })} />)
+    openGroup('Foundry')
+    expect(screen.getByText('Next: Compact the KB pool twice (0/2)')).toBeTruthy()
+    expect(screen.getByLabelText('KB Reclamation next reward').textContent).toMatch(/^Reward: The second disk-size exponent step/)
+    unmount()
+    renderWithTheme(<AchievementsPage game={gameWith({ pool01ResetI: true, pool01ResetII: true })} />)
+    openGroup('Foundry')
+    expect(screen.queryByText(/^Next: Compact the KB pool/)).toBeNull()
+    expect(screen.queryByLabelText('KB Reclamation next reward')).toBeNull()
+  })
+
   it('states a bonus shared by every level once', () => {
     renderWithTheme(<AchievementsPage game={gameWith({})} />)
     openGroup('Level power')
     fireEvent.click(screen.getByLabelText('Level power details'))
     expect(screen.getByText(/Reward each level: The per-level production multiplier/)).toBeTruthy()
     expect(screen.queryByLabelText(/Level power level 1 reward/)).toBeNull()
+  })
+
+  it('clamps progress to the target while the achievement is still unearned', () => {
+    const state = { ...createInitialGameState(), achievements: { earned: { helloWorld: true }, counters: { pings: 300 } } }
+    renderWithTheme(<AchievementsPage game={{ state }} />)
+    openGroup('First session')
+    expect(screen.getByText(/Next: Ping 256 times \(256\/256\)/)).toBeTruthy()
   })
 })
