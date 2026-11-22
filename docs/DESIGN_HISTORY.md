@@ -9177,6 +9177,20 @@ The reward map is kept across Reformat, Purge, and Reboot, unlike the pool-local
 Existing save counters are backfilled on load where still present; counters previously erased
 by larger resets cannot be reconstructed. Only a full save Reset clears the earned rewards.
 
+### Reclamation decoupled from the exponent upgrades; 20 achievements cut to 4 (2026-11)
+
+Supersedes "Pool-reset achievements tune Bitrate's within-pool exponent steps" for the delivery
+mechanism only; the exponent math is unchanged. The engine already stored the upgrades in
+`intro.poolExponentBonuses` (set by `flushStoragePool`) and merely derived the 20 `poolNNResetI/II`
+achievements from that map, so the maintainer asked to stop presenting a stat upgrade as an achievement.
+Compact Pool now just upgrades the step; the achievements became four score-only `reclaim1`–`4`
+(`poolsCompacted` 1/3/6/10 distinct pools, `RECLAMATION_POOL_THRESHOLDS`). Old saves: the legacy
+`poolNNResetI/II` earned flags stay in `achievements.earned` and the load-time backfill in
+`normalizePoolMemoryCapacity` still reads them, so no upgrade is lost. No exponent value, cost or
+persistence rule changed. The page's compact per-level reward rendering (`compact` in
+`AchievementsPage`) is currently unused by data but kept generic. Rejected: a purchasable upgrade (needs
+a currency/price and would double-charge the already costly flush; see the 2026-11 discussion).
+
 ## Store release prep: flags-off monetization and config-time feature loaders (2026-10)
 
 - **Why a `virtual:tens-features` module instead of `if (FLAG) import()`.** The first cut gated each

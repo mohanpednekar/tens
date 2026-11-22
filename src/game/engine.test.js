@@ -11557,17 +11557,13 @@ describe('Data Lakes', () => {
       const state = withIntro(createInitialGameState(), { unlockedDiskSteps: 3 })
       expect(flushStoragePool(1)(state)).toBe(state)
       expect(state.intro.poolExponentBonuses).toEqual({})
-      expect(isAchievementEarned(state, 'pool01ResetI')).toBe(false)
+      expect(isAchievementEarned(state, 'reclaim1')).toBe(false)
     })
 
-    it('awards 20 Foundry achievements at two per pool and only rewards each pool twice', () => {
+    it('has four Reclamation achievements and only upgrades each pool twice', () => {
       const group = ACHIEVEMENT_DEFINITIONS.filter(def => def.group === 'foundry')
-      expect(group).toHaveLength(2 * DATA_LAKE_TIER_COUNT)
-      for (let pool = 1; pool <= DATA_LAKE_TIER_COUNT; pool += 1) {
-        const resetId = String(pool).padStart(2, '0')
-        expect(group.map(def => def.id)).toContain(`pool${resetId}ResetI`)
-        expect(group.map(def => def.id)).toContain(`pool${resetId}ResetII`)
-      }
+      expect(group.map(def => def.id)).toEqual(['reclaim1', 'reclaim2', 'reclaim3', 'reclaim4'])
+      expect(group.at(-1).condition.min).toBe(DATA_LAKE_TIER_COUNT)
 
       let state = completePool(createInitialGameState(), 1)
       state = withIntro(updateLake(state, 1, { capacityLevel: 3, depositedUnits: 1000, purchased: 1000 }), {
@@ -11577,8 +11573,8 @@ describe('Data Lakes', () => {
       const baseline = getDataStreamSpeedExponent(state.intro)
       const first = flushStoragePool(1)(state)
       expect(first.intro.poolExponentBonuses[1]).toBe(1)
-      expect(isAchievementEarned(first, 'pool01ResetI')).toBe(true)
-      expect(isAchievementEarned(first, 'pool01ResetII')).toBe(false)
+      expect(isAchievementEarned(first, 'reclaim1')).toBe(true)
+      expect(isAchievementEarned(first, 'reclaim2')).toBe(false)
       expect(getDataStreamSpeedExponent(first.intro)).toBeGreaterThan(baseline)
       expect(getDataStreamSpeedExponent(first.intro)).toBeCloseTo(0.5545, 12)
       // Reformat wipes the lake's local resetCount but must not make the next eligible
@@ -11592,7 +11588,6 @@ describe('Data Lakes', () => {
       const second = flushStoragePool(1)(readyAgain)
       expect(second.intro.dataLakes[1].resetCount).toBe(1)
       expect(second.intro.poolExponentBonuses[1]).toBe(2)
-      expect(isAchievementEarned(second, 'pool01ResetII')).toBe(true)
       expect(getDataStreamSpeedExponent(second.intro)).toBeCloseTo(0.595, 12)
       const thirdReady = withIntro(completePool(second), {
         dataLakes: { ...second.intro.dataLakes, 1: { ...second.intro.dataLakes[1], rebuilding: false, depositedUnits: 3000, purchased: 3000 } },
@@ -11621,8 +11616,7 @@ describe('Data Lakes', () => {
       })
       const reset = flushStoragePool(1)(state)
       expect(reset.intro.poolExponentBonuses[1]).toBe(1)
-      expect(isAchievementEarned(reset, 'pool01ResetI')).toBe(true)
-      expect(isAchievementEarned(reset, 'pool01ResetII')).toBe(false)
+      expect(isAchievementEarned(reset, 'reclaim1')).toBe(true)
       expect(getDataLakeCapacity(reset, 1)).toBe(2000)
       expect(reset.intro.dataLakes[1].resetCount).toBe(1)
       expect(reset.intro.dataLakes[1].purchased).toBe(1000)
@@ -11645,7 +11639,7 @@ describe('Data Lakes', () => {
       expect(tickPoolResetReprovision(purged).intro.disksBuiltTotal[kb1]).toBe(1)
     })
 
-    it('keeps achievements and their exponent rewards through Purge, Reformat and Reboot', () => {
+    it('keeps legacy Reclamation flags and the exponent upgrades through Purge, Reformat and Reboot', () => {
       const initial = createInitialGameState()
       const awarded = {
         ...initial,
@@ -11666,7 +11660,7 @@ describe('Data Lakes', () => {
       )
     })
 
-    it('grandfathers recorded earlier pool resets and achievement flags on old save load', () => {
+    it('grandfathers recorded earlier pool resets on old save load', () => {
       const initial = createInitialGameState()
       const old = withIntro(initial, {
         unlockedDiskSteps: 9,
@@ -11680,9 +11674,8 @@ describe('Data Lakes', () => {
       const migrated = normalizePoolMemoryCapacity(old)
       expect(migrated.intro.poolExponentBonuses).toMatchObject({ 1: 2, 3: 1 })
       const withBadges = tickGame(0)(migrated)
-      expect(isAchievementEarned(withBadges, 'pool01ResetI')).toBe(true)
-      expect(isAchievementEarned(withBadges, 'pool01ResetII')).toBe(true)
-      expect(isAchievementEarned(withBadges, 'pool03ResetI')).toBe(true)
+      expect(isAchievementEarned(withBadges, 'reclaim1')).toBe(true) // 2 distinct pools compacted
+      expect(isAchievementEarned(withBadges, 'reclaim2')).toBe(false) // needs 3
     })
 
     it('auto-buys reachable Boosters only after rebuild and grants bandwidth from reset two onward', () => {
@@ -11698,7 +11691,6 @@ describe('Data Lakes', () => {
       const second = flushStoragePool(1)(wall)
       expect(second.intro.dataLakes[1].resetCount).toBe(2)
       expect(second.intro.poolExponentBonuses[1]).toBe(2)
-      expect(isAchievementEarned(second, 'pool01ResetII')).toBe(true)
       expect(getDataLakeOverflowRatePercent(second, 1)).toBe(30)
       expect(second.intro.dataLakes[1].bandwidthSteps).toBe(0)
 

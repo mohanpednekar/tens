@@ -1436,6 +1436,10 @@ const buildEraIntroReset = (state, initial) => {
 }
 
 // --- Achievements (epic #1046) ---------------------------------------------------------------------
+// Distinct Storage pools compacted at least once (permanent `poolExponentBonuses` award map).
+const getCompactedPoolCount = state =>
+  Object.values(state.intro?.poolExponentBonuses ?? {}).filter(level => Number(level) >= 1).length
+
 export const isAchievementConditionMet = (state, condition) => {
   switch (condition.kind) {
     case 'counter': return (state.achievements?.counters?.[condition.key] ?? 0) >= condition.min
@@ -1445,7 +1449,7 @@ export const isAchievementConditionMet = (state, condition) => {
     case 'clockSpeedLevel': return (state.globalTickspeedMultiplier ?? 0) >= condition.min
     case 'overclocked': return state.overclockLastClaimCompletedLevels != null
     case 'tierLevel': return (state.purchaseLevels?.[condition.tierId] ?? 1) >= condition.min
-    case 'poolExponentBonus': return (state.intro?.poolExponentBonuses?.[condition.poolIndex] ?? 0) >= condition.min
+    case 'poolsCompacted': return getCompactedPoolCount(state) >= condition.min
     default: return false
   }
 }
@@ -1463,7 +1467,7 @@ export const getAchievementProgress = (state, condition) => {
       return { current: state.achievements?.counters?.[condition.key] ?? 0, target: condition.min }
     case 'clockSpeedLevel': return { current: state.globalTickspeedMultiplier ?? 0, target: condition.min }
     case 'tierLevel': return { current: state.purchaseLevels?.[condition.tierId] ?? 1, target: condition.min }
-    case 'poolExponentBonus': return { current: state.intro?.poolExponentBonuses?.[condition.poolIndex] ?? 0, target: condition.min }
+    case 'poolsCompacted': return { current: getCompactedPoolCount(state), target: condition.min }
     case 'storageUnlocked': {
       const doublings = capacity => Math.log2(Math.max(capacity, INTRO_STARTING_CAPACITY) / INTRO_STARTING_CAPACITY)
       return { current: Math.floor(doublings(state.intro?.capacity ?? 0)), target: doublings(INTRO_DISK_UNLOCK_CAPACITY) }
@@ -3703,6 +3707,7 @@ export const normalizePoolMemoryCapacity = state => {
     const savedCount = Number(nextIntro.dataLakes?.[pool]?.resetCount)
     const earned = state.achievements?.earned ?? {}
     const prefix = `pool${String(pool).padStart(2, '0')}Reset`
+    // Legacy per-pool Reclamation I/II flags (removed achievements) still count: old saves keep them.
     const badgeCount = earned[`${prefix}II`] ? 2 : earned[`${prefix}I`] ? 1 : 0
     const prior = Number(poolExponentBonuses[pool])
     const current = Number.isFinite(prior) ? Math.min(2, Math.max(0, Math.floor(prior))) : 0

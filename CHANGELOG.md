@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
+- **Reclamation achievements reduced from 20 to 4.** They now track how many different Storage pools you have compacted (1, 3, 6, 10) and are score only. The per-pool Bitrate exponent upgrades no longer come from achievements: a pool's first two Compact Pool flushes upgrade its disk-size steps directly, exactly as before (retained across Reformat, Purge, and Reboot). Existing saves keep every upgrade; Reclamation achievements are re-evaluated from the pools already compacted.
 - The Bitrate exponent readout on the Byte Foundry page shows three decimals (e.g. 0.505 instead of 0.51), so small disk-size steps are visible.
 
 - **Achievements page** shows ordered steps of the same thing as one leveled row (Ping, Reclamation (one 20-level row: each pool I then II), First purchase of each tier, Accelerate, Level power, Overclock step) with a `Lv n/N` badge and the next goal. Earned achievements and bonuses are unchanged.

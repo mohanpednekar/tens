@@ -115,27 +115,35 @@ describe('AppMenu achievements entry', () => {
     expect(screen.getByLabelText('Overclock step level 1 reward earned').textContent).toMatch(/^Reward earned: Each later Overclock needs 1 fewer/)
   })
 
-  it('long series list one short line per level, with its reward inline', () => {
-    renderWithTheme(<AchievementsPage game={gameWith({ pool01ResetI: true })} />)
+  it('long series list one short line per level', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({ tier01Bought: true })} />)
+    openGroup('Tier ladder')
+    fireEvent.click(screen.getByLabelText('First purchase details'))
+    expect(screen.getByLabelText('First purchase level 1 earned').textContent).toMatch(/^✅ 1\. Buy /)
+    expect(screen.getByLabelText('First purchase level 2 not yet earned').textContent).toMatch(/^🔒 2\. Buy /)
+  })
+
+  it('Reclamation is a four-level series by pools compacted, with no reward lines', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({ reclaim1: true })} />)
     openGroup('Foundry')
     fireEvent.click(screen.getByLabelText('Reclamation details'))
-    expect(screen.getByLabelText('Reclamation level 1 earned').textContent).toBe('✅ 1. Compact KB pool · Disk step 1 ↑')
-    expect(screen.getByLabelText('Reclamation level 2 not yet earned').textContent).toBe('🔒 2. Compact KB pool ×2 (0/2) · Disk step 2 ↑')
+    expect(screen.getByLabelText('Reclamation level 1 earned').textContent).toBe('✅ 1. Compact a Storage pool for the first time')
+    expect(screen.getByLabelText('Reclamation level 2 not yet earned').textContent).toBe('🔒 2. Compact 3 different Storage pools (0/3)')
+    expect(screen.getByLabelText('Reclamation achievement level 1 of 4')).toBeTruthy()
     expect(screen.queryByLabelText(/Reclamation level \d+ reward/)).toBeNull()
   })
 
-  it('collapsed series show the next requirement and its reward until every level is done', () => {
-    const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({ pool01ResetI: true })} />)
+  it('collapsed series show the next requirement until every level is done', () => {
+    const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({ reclaim1: true })} />)
     openGroup('Foundry')
-    expect(screen.getByText('Next: Compact KB pool ×2 (0/2)')).toBeTruthy()
-    expect(screen.getByLabelText('Reclamation next reward').textContent).toBe('Reward: Disk step 2 ↑')
+    expect(screen.getByText('Next: Compact 3 pools (0/3)')).toBeTruthy()
+    expect(screen.queryByLabelText('Reclamation next reward')).toBeNull()
     unmount()
     const all = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.filter(def => def.group === 'foundry').map(def => [def.id, true]))
     renderWithTheme(<AchievementsPage game={gameWith(all)} />)
     openGroup('Foundry')
-    expect(screen.getByLabelText('Reclamation achievement level 20 of 20')).toBeTruthy()
+    expect(screen.getByLabelText('Reclamation achievement level 4 of 4')).toBeTruthy()
     expect(screen.queryByText(/^Next:/)).toBeNull()
-    expect(screen.queryByLabelText('Reclamation next reward')).toBeNull()
   })
 
   it('states a bonus shared by every level once', () => {
@@ -164,17 +172,9 @@ describe('AppMenu achievements entry', () => {
   it('shows no (0/1) on level-1 one-shot steps', () => {
     renderWithTheme(<AchievementsPage game={gameWith({})} />)
     openGroup('Foundry')
-    expect(screen.getByText('Next: Compact KB pool')).toBeTruthy()
+    expect(screen.getByText('Next: Compact a pool')).toBeTruthy()
     openGroup('Early Factory')
     expect(screen.getByText('Next: Accelerate 1')).toBeTruthy()
-  })
-
-  it('long series explain each distinct short reward once when expanded', () => {
-    renderWithTheme(<AchievementsPage game={gameWith({})} />)
-    openGroup('Foundry')
-    fireEvent.click(screen.getByLabelText('Reclamation details'))
-    expect(screen.getByText(/^Disk step 1 ↑: The first disk-size exponent step now closes 10%/)).toBeTruthy()
-    expect(screen.getByText(/^Disk step 2 ↑: The second disk-size exponent step now closes 10%/)).toBeTruthy()
   })
 
   it('a compact series with no rewards shows no reward explanations', () => {

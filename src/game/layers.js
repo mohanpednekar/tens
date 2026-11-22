@@ -195,21 +195,24 @@ export const ACHIEVEMENT_GROUPS = [
 // `condition` is evaluated by engine.js `isAchievementConditionMet` against CURRENT state ("at least"
 // thresholds, so a save past a trigger earns it on load). `bonus` is a placeholder (#1052).
 const TIER_ACHIEVEMENT_NAMES = ['Kilo-what?', 'Mega bite', 'Giga-what now', 'Tera-fying', 'Peta-fied', 'Exa-ggerated', 'Zetta slow', 'Yotta be kidding me', 'Ronna-way process', 'Quetta while']
+// Distinct pools that must have been compacted for each Reclamation level (the last is every pool).
+export const RECLAMATION_POOL_THRESHOLDS = [1, 3, 6, 10]
 export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'helloWorld', name: 'Hello, World', group: 'firstSession', trigger: 'Ping for the first time', short: 'Ping', condition: { kind: 'counter', key: 'pings', min: 1 } },
   { id: 'itCompiles', name: 'It compiles, ship it', group: 'firstSession', trigger: 'Compile for the first time', short: 'Compile', condition: { kind: 'byteCreated' } },
   { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', short: 'Ping ×256', condition: { kind: 'counter', key: 'pings', min: 256 } },
   { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', short: '1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
-  ...TIER_DEFINITIONS.flatMap((tier, index) => [1, 2].map(reset => ({
-    id: `pool${String(index + 1).padStart(2, '0')}Reset${reset === 1 ? 'I' : 'II'}`,
-    name: `${tier.symbol} Reclamation ${reset === 1 ? 'I' : 'II'}`,
+  // Reclamation: a short series by how many different Storage pools have been compacted at least once.
+  // Score only (no bonus) — the per-pool Bitrate exponent upgrades come directly from Compact Pool
+  // (`intro.poolExponentBonuses`), not from these achievements.
+  ...RECLAMATION_POOL_THRESHOLDS.map((pools, i) => ({
+    id: `reclaim${i + 1}`,
+    name: `Reclamation ${['I', 'II', 'III', 'IV'][i]}`,
     group: 'foundry',
-    trigger: `Compact the ${tier.symbol} pool ${reset === 1 ? 'once' : 'twice'}`,
-    short: `Compact ${tier.symbol} pool${reset === 1 ? '' : ' ×2'}`,
-    shortBonus: `Disk step ${reset} ↑`,
-    bonus: `The ${reset === 1 ? 'first' : 'second'} disk-size exponent step now closes 10% of the gap to 1.0`,
-    condition: { kind: 'poolExponentBonus', poolIndex: index + 1, min: reset },
-  }))),
+    trigger: pools === 1 ? 'Compact a Storage pool for the first time' : `Compact ${pools} different Storage pools`,
+    short: pools === 1 ? 'Compact a pool' : `Compact ${pools} pools`,
+    condition: { kind: 'poolsCompacted', min: pools },
+  })),
   ...TIER_DEFINITIONS.map((tier, index) => ({
     id: `tier${String(index + 1).padStart(2, '0')}Bought`,
     name: TIER_ACHIEVEMENT_NAMES[index],
@@ -240,12 +243,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
 // each step keeps its own id (earned state, toasts, bonuses and saves are unchanged). Steps list in level order.
 export const ACHIEVEMENT_SERIES = [
   { id: 'ping', name: 'Ping', members: ['helloWorld', 'pingOfDeath'] },
-  // One 20-level row: each pool's I then II, in pool order.
-  {
-    id: 'poolReset',
-    name: 'Reclamation',
-    members: TIER_DEFINITIONS.flatMap((_, index) => [`pool${String(index + 1).padStart(2, '0')}ResetI`, `pool${String(index + 1).padStart(2, '0')}ResetII`]),
-  },
+  { id: 'poolReset', name: 'Reclamation', members: RECLAMATION_POOL_THRESHOLDS.map((_, i) => `reclaim${i + 1}`) },
   { id: 'tierBought', name: 'First purchase', members: TIER_DEFINITIONS.map((_, i) => `tier${String(i + 1).padStart(2, '0')}Bought`) },
   { id: 'accelerate', name: 'Accelerate', members: ['tickTock', 'megahertzMyth'] },
   { id: 'levelPower', name: 'Level power', members: LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((_, i) => `levelPower${i + 1}`) },
