@@ -696,7 +696,9 @@ get a fresh screenshot/feature-graphic bundle (`docs/STORE_RELEASE.md`).
 Builds the store-signed AAB/IPA and uploads them plus the listing via fastlane (`fastlane/Fastfile`;
 `Gemfile` pins fastlane). Manual dispatch (platforms, Play track/status/rollout, iOS
 `testflight`/`submit`/`none`, listing on/off), or a `v*` tag push from `release.yml` when variable
-`STORE_AUTO_RELEASE` is `true` (Play internal + TestFlight only — production/App Review stay manual).
+`STORE_AUTO_RELEASE` is `true` (Play internal + TestFlight only — production/App Review stay manual;
+Play production is a `play_promote_from` promotion of the tested version code). Both jobs use the
+`store-release` environment (maintainer adds required reviewers there).
 Each job first fails with the list of missing secrets. Signing material lives only in repository
 secrets (`ANDROID_UPLOAD_KEYSTORE_BASE64`, `TENS_UPLOAD_*`, `PLAY_SERVICE_ACCOUNT_JSON`, `ASC_KEY_ID`/
 `ASC_ISSUER_ID`/`ASC_KEY_P8`; variable `APPLE_TEAM_ID`); iOS signs via cloud-managed automatic signing

@@ -8,14 +8,14 @@
 // simulation bot actually played (seeds.mjs, ~30 s to play), saved as opaque RGB PNGs (both stores
 // reject alpha). Without --base-url it starts `yarn dev`
 // (--port, default 5198). PW_CHROMIUM_PATH overrides the browser, as for the e2e suite.
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import sharp from 'sharp'
 import { chromium } from 'playwright'
 import { NAVIGATION, launchOptions, parseArgs, startDevServer } from '../lib/capture.mjs'
-import { DEVICES, FEATURE_GRAPHIC, ICONS, SCENES, TOAST_SELECTOR, scenesFor, featureGraphicHtml, pixelSize, screenshotPath } from './manifest.mjs'
+import { DEVICES, FEATURE_GRAPHIC, ICONS, LOCALE, SCENES, TOAST_SELECTOR, scenesFor, featureGraphicHtml, pixelSize, screenshotPath } from './manifest.mjs'
 import { buildSeeds } from './seeds.mjs'
 
 const args = parseArgs(process.argv.slice(2))
@@ -24,10 +24,12 @@ const onlyDevices = args.devices ? new Set(args.devices.split(',')) : null
 // A filtered run is a preview: it goes to fastlane/preview/ so it can never be uploaded as a
 // partial set (deliver's overwrite_screenshots / supply replace every set of the locale/device).
 const filtered = Boolean(only || onlyDevices)
-const out = path => resolve(filtered ? path.replace(/^fastlane\//, 'fastlane/preview/') : path)
-// A full run rebuilds the upload folders from scratch, so stale images from removed scenes or
-// devices can't ship either.
-const UPLOAD_IMAGE_DIRS = ['fastlane/screenshots', 'fastlane/play-foldable', 'fastlane/metadata/android/en-US/images']
+// A full run renders into fastlane/.staging/ and swaps it into the upload folders only once every
+// image succeeded: stale images from removed scenes/devices can't ship, and a failed run leaves
+// the previous complete set in place.
+const STAGING = 'fastlane/.staging/'
+const out = path => resolve(path.replace(/^fastlane\//, filtered ? 'fastlane/preview/' : STAGING))
+const UPLOAD_IMAGE_DIRS = ['fastlane/screenshots', 'fastlane/play-foldable', `fastlane/metadata/android/${LOCALE}/images`]
 const PORT = Number(args.port ?? 5198)
 
 const writeOpaquePng = async (buffer, path) => {
@@ -82,8 +84,7 @@ const renderFeatureGraphic = async browser => {
 
 const main = async () => {
   const scenes = SCENES.filter(scene => !only || only.has(scene.id))
-  if (filtered) rmSync(resolve('fastlane/preview'), { recursive: true, force: true })
-  else for (const dir of UPLOAD_IMAGE_DIRS) rmSync(resolve(dir), { recursive: true, force: true })
+  rmSync(resolve(filtered ? 'fastlane/preview' : STAGING), { recursive: true, force: true })
   for (const { from, to } of ICONS) { mkdirSync(dirname(out(to)), { recursive: true }); copyFileSync(from, out(to)) }
   const server = args['base-url'] ? { url: args['base-url'], stop: () => {} } : await startDevServer(PORT)
   console.log('playing seed saves…')
@@ -96,6 +97,14 @@ const main = async () => {
     for (const device of DEVICES.filter(entry => !onlyDevices || onlyDevices.has(entry.id))) {
       for (const scene of scenes.filter(entry => scenesFor(device).includes(entry))) await captureScene(browser, server.url, seeds, device, scene, SCENES.indexOf(scene))
       console.log(`✓ ${device.id} (${scenes.filter(entry => scenesFor(device).includes(entry)).length})`)
+    }
+    if (!filtered) {
+      for (const dir of UPLOAD_IMAGE_DIRS) {
+        rmSync(resolve(dir), { recursive: true, force: true })
+        const staged = resolve(dir.replace(/^fastlane\//, STAGING))
+        if (existsSync(staged)) { mkdirSync(dirname(resolve(dir)), { recursive: true }); renameSync(staged, resolve(dir)) }
+      }
+      rmSync(resolve(STAGING), { recursive: true, force: true })
     }
   } finally {
     await browser?.close()

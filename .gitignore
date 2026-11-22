@@ -130,6 +130,7 @@ fastlane/metadata/ios/*/release_notes.txt
 fastlane/screenshots/
 fastlane/play-foldable/
 fastlane/preview/
+fastlane/.staging/
 fastlane/release-notes.txt
 fastlane/report.xml
 fastlane/README.md

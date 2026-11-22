@@ -64,10 +64,12 @@ Claude to run it (`store-release` skill).
   variable `STORE_AUTO_RELEASE` is `true`: Play **internal** track + **TestFlight**, listing included.
 - **Manual dispatch** — platforms, Play track (`internal`/`alpha` = closed/`beta` = open/`production`/
   `none`), status (`draft` until first publish), staged rollout fraction, iOS action (`testflight`/
-  `submit`/`none`), listing on/off. Uploads the signed AAB as an artifact.
+  `submit`/`none`), listing on/off. Uploads the signed AAB as an artifact (not in promote mode).
 - **Promote** a tested Play build: `play_promote_from` (`internal`/`alpha`/`beta`) + `play_track`
-  (e.g. `production`) + optional `play_rollout` moves the highest version code on the source track
-  — no rebuild (Play rejects re-uploading a version code). The Play side of "ship it" is always a
+  (e.g. `production`) + `play_status` + optional `play_rollout` (a fraction in (0, 1], e.g. `0.2`)
+  moves the dispatched checkout's version code — the same version the iOS job ships — and only if
+  it is completed or rolling out on the source track (never a draft or halted build). No rebuild
+  (Play rejects re-uploading a version code); with `upload_listing` on, the listing is pushed for it. The Play side of "ship it" is always a
   promotion, never a production upload of the same version.
 
 Production promotion and App Review submission are deliberately manual dispatches. Both jobs run in
@@ -158,7 +160,7 @@ yarn store:notes                        # release notes for package.json's versi
 yarn android:aab && bundle exec fastlane android deploy track:internal metadata:true
 bundle exec fastlane ios beta           # macOS + Xcode 16+
 bundle exec fastlane ios submit automatic_release:false
-bundle exec fastlane android promote from:internal to:production rollout:0.2   # optional version_code:
+bundle exec fastlane android promote from:internal to:production rollout:0.2   # this checkout's version; or version_code:
 bundle exec fastlane android metadata track:internal   # listing only; needs a release on that track
 ```
 

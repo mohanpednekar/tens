@@ -23,7 +23,7 @@ on:
         options: [internal, alpha, beta, production, none]
         default: internal
       play_promote_from:
-        description: "Promote the tested release from this track to play_track instead of uploading a new AAB (same version code can't be re-uploaded)"
+        description: "Promote this checkout's version (tested on this track) to play_track instead of uploading a new AAB — same version as the iOS job"
         type: choice
         options: [none, internal, alpha, beta]
         default: none
@@ -154,7 +154,7 @@ jobs:
         run: yarn store:notes
 
       - name: Generate store images
-        if: env.UPLOAD_LISTING == 'true' && env.PLAY_PROMOTE_FROM == 'none'
+        if: env.UPLOAD_LISTING == 'true'
         run: |
           npx playwright install --with-deps chromium
           yarn store:assets
@@ -183,7 +183,14 @@ jobs:
         env:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
-          bundle exec fastlane android promote from:"$PLAY_PROMOTE_FROM" to:"$PLAY_TRACK" rollout:"$PLAY_ROLLOUT"
+          bundle exec fastlane android promote \
+            from:"$PLAY_PROMOTE_FROM" to:"$PLAY_TRACK" status:"$PLAY_STATUS" rollout:"$PLAY_ROLLOUT"
+
+      - name: Upload the listing for the promoted release
+        if: env.PLAY_PROMOTE_FROM != 'none' && env.UPLOAD_LISTING == 'true'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: bundle exec fastlane android metadata track:"$PLAY_TRACK"
 
 
   ios:
