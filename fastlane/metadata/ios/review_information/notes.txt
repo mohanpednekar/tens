@@ -1,1 +1,0 @@
-Tens is a single-player offline incremental game. No login is required to play; every feature is reachable without an account. Tap the Data Stream tile on the Byte Foundry screen to start earning bits. Optional cloud save (Settings → Cloud save) uses email/password and offers in-app account deletion (Settings → Cloud save → Delete account and data).

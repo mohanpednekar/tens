@@ -9,13 +9,46 @@ privacy/rating answers in `docs/STORE_LISTING.md`.
 | Piece | Source of truth | Tool |
 |---|---|---|
 | Listing text (name, descriptions, keywords, URLs, categories, review notes) | `fastlane/metadata/{android,ios}/` (committed) | fastlane `supply` / `deliver` |
-| Screenshots — Play phone, 7" and 10" tablet; iPhone 6.9"/6.5", iPad 13" (6 scenes each) | real app captures, `scripts/store-assets/manifest.mjs` | `yarn store:assets` (Playwright) |
+| Screenshots, 6 scenes per device (table below) | real app captures of bot-played saves, `scripts/store-assets/{manifest,seeds}.mjs` | `yarn store:assets` (Playwright) |
 | Feature graphic 1024×500, Play icon 512×512 | `scripts/store-assets/manifest.mjs`, `public/pwa-512x512.png` | `yarn store:assets` |
 | "What's new" release notes (Play ≤ 500, App Store ≤ 4000 chars) | `CHANGELOG.md` section of the `package.json` version; `fastlane/release-notes.txt` overrides | `yarn store:notes` |
 | Signed, R8-minified AAB → Play track | `android/` + `TENS_UPLOAD_*` | `yarn android:aab` → `fastlane android deploy` |
 | Signed IPA → TestFlight (cloud-managed signing, build number = latest + 1) | `ios/` + App Store Connect API key | `fastlane ios beta` |
 | Submit for App Review | — | `fastlane ios submit` |
 | Play track promotion / staged rollout | — | `fastlane android promote` / `deploy rollout:` |
+
+### Devices covered
+
+| Store | Device class | Pixels | Upload |
+|---|---|---|---|
+| Play | Phone 9:16 | 1080×1920 | supply `phoneScreenshots` |
+| Play | 7" / 10" tablet 9:16 | 1206×2144 / 1440×2560 | supply `seven/tenInchScreenshots` |
+| Play | Foldable inner 3:4, inner 1:1, outer 10:16 (required from April 2027) | 1725×2300, 1800×1800, 1200×1920 | **manual** — supply has no foldable image type yet; files in `fastlane/play-foldable/` |
+| App Store | iPhone 6.3" (the required iPhone slot) | 1206×2622 | deliver |
+| App Store | iPhone 6.9" / 6.5" | 1320×2868 / 1284×2778 | deliver |
+| App Store | iPhone Duo outer + inner (one "iPhone Duo" slot; reported required from April 2027 — re-check Apple's spec page) | 1398×2034 + 2007×2853 | deliver (fastlane ≥ 2.242 knows both sizes) |
+| App Store | iPad 13" (required: the app runs on iPad) | 2064×2752 | deliver |
+
+Every capture uses the device's real viewport, so it shows exactly how the app lays out there
+(Apple 2.3.3). On tablets, the iPhone Duo inner display and unfolded foldables that is still today's
+single phone-width column until the large-screen epic #1152 ships its rail / split / hinge-aware
+layouts; regenerate after each of those lands.
+
+Seeds are real playthroughs by the `simulate-run-times` bot (`seeds.mjs`): a fresh save ~50 min in
+(Foundry scene) and a save five Purges in, captured mid-cycle with the most Factory tiers on screen
+(every other scene). Achievement unlock toasts are hidden everywhere except the achievements scene,
+where the seed leaves one qualifying achievement un-earned so the game raises its own toast.
+
+### Large-screen and foldable readiness (app side)
+
+- Android: targetSdk 36 makes the app resizable / multi-window on ≥ 600 dp screens regardless of
+  manifest locks; the manifest sets no orientation lock and handles configuration changes in the
+  WebView, so folding/unfolding keeps game state. Play's adaptive Tier 3 ("fill the display without
+  letterboxing") becomes mandatory in April 2027 (apps) / August 2027 (games) — epic #1152.
+- iOS/iPadOS: `TARGETED_DEVICE_FAMILY = 1,2`, all four iPad orientations and no
+  `UIRequiresFullScreen`, so iPad multitasking / Stage Manager work; the iPhone Duo inner display
+  ignores orientation locks and gets a regular-width size class — the web layout already reflows to
+  any width, and #1152 adds the regular-width layouts.
 
 Generated images and release notes are gitignored and rebuilt on every release, so they never go
 stale against the UI or changelog.
@@ -37,8 +70,11 @@ One-time, in the consoles — answers to copy are in `docs/STORE_LISTING.md`:
 - Creating the developer accounts, identity/tax/banking verification, accepting agreements.
 - Creating the app record (Play Console; App Store Connect → New App).
 - **Play: the very first AAB must be uploaded by hand** (the API cannot create the first release).
-  Run the workflow with `play_track: none`, download the `tens-android-store-release` artifact, drag
-  `app-release.aab` into Internal testing.
+  Run the workflow with `play_track: none` (uploads nothing, so it needs no Play credentials),
+  download the `tens-android-store-release` artifact, drag `app-release.aab` into Internal testing.
+  Play attaches listing edits to a release, so listing uploads also start working only after this.
+- Play **foldable screenshots** (until fastlane supply supports them): upload
+  `fastlane/play-foldable/` from the same artifact in Play Console → Store listing.
 - Play **App content** forms: Data safety, Content rating (IARC), Target audience, Ads, Privacy
   policy, Account deletion URL, Government apps / Financial features / Health declarations.
 - Apple **App Privacy** labels and **Age rating** questionnaire; App Review contact (name, phone, email).
@@ -48,6 +84,13 @@ One-time, in the consoles — answers to copy are in `docs/STORE_LISTING.md`:
 
 After those, each later release is: merge the version-bump PR → (auto) internal + TestFlight →
 dispatch `production` / `submit` when happy.
+
+## Known release blocker
+
+- **Supporter pack in store builds**: Settings offers an unlock code and a "Dummy checkout (free)"
+  that unlock extra save slots / System log / Task Manager. Apple 3.1.1 forbids unlocking features
+  outside In-App Purchase, and the dummy checkout reads as unfinished to reviewers. Hide it in native
+  builds unless IAP is on, or wire it to IAP, before the first App Store submission (#1192).
 
 ## Maintainer prerequisites (in order)
 
@@ -101,15 +144,27 @@ yarn android:aab && bundle exec fastlane android deploy track:internal metadata:
 bundle exec fastlane ios beta           # macOS + Xcode 16+
 bundle exec fastlane ios submit automatic_release:false
 bundle exec fastlane android promote from:internal to:production rollout:0.2
+bundle exec fastlane android metadata track:internal   # listing only; needs a release on that track
 ```
 
 Credentials are read only from the environment (`PLAY_SERVICE_ACCOUNT_JSON`, `ASC_KEY_ID`,
 `ASC_ISSUER_ID`, `ASC_KEY_P8`, `APPLE_TEAM_ID`, `TENS_UPLOAD_*`).
+
+## Tooling choice
+
+The Anthropic plugin directory (checked 2026-11) has store-screenshot and mobile-QA plugins, all
+community-tier with no ratings or install counts: an Expo/React Native + Maestro pipeline (wrong
+stack), a remote screenshot service (would send unreleased app captures to a third party), and
+"privileged" emulator/inspection plugins (broad local access, v0.x). None beat the in-repo
+Playwright pipeline on fit, security or reliability, so none is installed; the project instead
+carries its own `store-release` skill and `store-compliance` agent. fastlane (MIT, maintained under
+the Mobile Native Foundation, the de-facto standard for store uploads) is pinned via `Gemfile.lock`.
 
 ## Changing the assets
 
 - Listing copy: edit the `.txt` files under `fastlane/metadata/` (limits: Play title 30, short
   description 80, full 4000; App Store name/subtitle 30, keywords 100, promotional text 170).
 - Screenshot scenes/devices: `SCENES`/`DEVICES` in `scripts/store-assets/manifest.mjs`;
-  `manifest.test.js` pins every size against the stores' rules.
+  `manifest.test.js` pins every size against the stores' rules. Seeds: `seeds.mjs` (bot play —
+  never hand-set state). Iterate with `yarn store:assets --devices phone --only factory`.
 - Feature graphic: `featureGraphicHtml` in the same file.

@@ -54,9 +54,19 @@ platform :android do
     )
   end
 
-  desc 'Push only the listing (text, icon, feature graphic, screenshots) — no binary.'
-  lane :metadata do
-    play_upload(skip_upload_aab: true, skip_upload_apk: true, skip_upload_changelogs: true)
+  desc 'Push only the listing (text, icon, feature graphic, screenshots) — no binary. Play attaches'
+  desc 'listing edits to an existing release, so this needs one on `track` (default internal):'
+  desc 'it cannot run before the first AAB is uploaded.'
+  lane :metadata do |options|
+    track = (options[:track] || 'internal').to_s
+    codes = google_play_track_version_codes(
+      package_name: BUNDLE_ID, track: track, json_key_data: ENV.fetch('PLAY_SERVICE_ACCOUNT_JSON')
+    )
+    UI.user_error!("No release on the Play '#{track}' track yet — upload the first AAB first") if codes.empty?
+    play_upload(
+      track: track, version_code: codes.max,
+      skip_upload_aab: true, skip_upload_apk: true, skip_upload_changelogs: true
+    )
   end
 
   desc 'Promote the latest release on one track to another (e.g. from:beta to:production rollout:0.2).'
@@ -66,7 +76,9 @@ platform :android do
     play_upload(
       track: options.fetch(:from).to_s,
       track_promote_to: options.fetch(:to).to_s,
-      release_status: staged ? 'inProgress' : 'completed',
+      # release_status would filter the SOURCE track's releases; the promoted release's status is
+      # track_promote_release_status (+ rollout for a staged production rollout).
+      track_promote_release_status: staged ? 'inProgress' : 'completed',
       rollout: staged ? rollout : nil,
       skip_upload_aab: true, skip_upload_apk: true, skip_upload_metadata: true,
       skip_upload_images: true, skip_upload_screenshots: true, skip_upload_changelogs: true
@@ -83,6 +95,18 @@ platform :ios do
     )
   end
 
+  # Review notes follow the build's flags so the reviewer is never sent to a feature this build
+  # doesn't have (cloud save exists only when the VITE_FIREBASE_* config is set).
+  def review_notes
+    notes = 'Tens is a single-player incremental game. No login is required; every feature is ' \
+            'reachable without an account. Tap the Data Stream tile on the Byte Foundry screen to start.'
+    unless ENV['VITE_FIREBASE_API_KEY'].to_s.empty?
+      notes += ' Optional cloud save (Settings → Cloud save) uses email/password and offers in-app ' \
+               'account deletion (Settings → Cloud save → Delete account and data).'
+    end
+    notes
+  end
+
   def deliver_listing(**options)
     deliver(
       api_key: asc_key,
@@ -96,6 +120,7 @@ platform :ios do
       overwrite_screenshots: true,
       force: true, # no interactive HTML preview in CI
       run_precheck_before_submit: false,
+      app_review_information: { notes: review_notes },
       **options
     )
   end
@@ -122,7 +147,8 @@ platform :ios do
         xcargs: "#{auth} DEVELOPMENT_TEAM=#{team} CODE_SIGN_STYLE=Automatic " \
                 "MARKETING_VERSION=#{package_version} CURRENT_PROJECT_VERSION=#{build}",
         export_xcargs: auth,
-        export_options: { method: 'app-store-connect', signingStyle: 'automatic', teamID: team }
+        # gym 2.242 only accepts the legacy name 'app-store' (Xcode maps it to app-store-connect).
+        export_options: { method: 'app-store', signingStyle: 'automatic', teamID: team }
       )
     end
     upload_to_testflight(api_key: key, skip_waiting_for_build_processing: true)
@@ -133,15 +159,16 @@ platform :ios do
     deliver_listing(skip_binary_upload: true, submit_for_review: false)
   end
 
-  desc 'Attach the latest processed build to the current version, push the listing and submit for review.'
+  desc 'Attach the latest build (deliver waits for it to finish processing) to the current version,'
+  desc 'push the listing and submit for review.'
   desc 'Option automatic_release:true releases as soon as Apple approves (default: manual release).'
   lane :submit do |options|
     deliver_listing(
       skip_binary_upload: true,
-      build_number: latest_testflight_build_number(api_key: asc_key, app_identifier: BUNDLE_ID, version: package_version).to_s,
       submit_for_review: true,
       automatic_release: flag?(options[:automatic_release]),
-      submission_information: { add_id_info_uses_idfa: ENV['VITE_TENS_ADS_ENABLED'] == 'true' }
+      # ITSAppUsesNonExemptEncryption=false in Info.plist already answers this for every build.
+      submission_information: { export_compliance_uses_encryption: false }
     )
   end
 end

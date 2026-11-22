@@ -363,9 +363,11 @@ cadence".
                                PreToolUse hooks (the autonomous workflow reads neither; it has its own inline settings)
   hooks/session-start.sh     ← yarn install --frozen-lockfile + yarn test at session start; always exits 0
   agents/                    ← code-reviewer (read-only review, "Pull requests"); dev-team roles: designer (opus,
-                               spec), programmer (sonnet, implement), qa (haiku, verify)
+                               spec), programmer (sonnet, implement), qa (haiku, verify); store-compliance (sonnet,
+                               read-only listing/privacy/policy check before store uploads)
   skills/                    ← dev-team (designer → programmer → qa → code-reviewer), economy-change-review,
-                               file-task-issue, simulate-run-times, optimize-ai-files, graphify (third-party,
+                               file-task-issue, simulate-run-times (bot.mjs = reusable bot), store-release,
+                               optimize-ai-files, graphify (third-party,
                                tool-generated — not hand-edited)
 docs/                        ← DESIGN_HISTORY.md (the "why": superseded formulas, incidents, rejected alternatives
                                — check before changing a formula/workflow/mechanic a past iteration may have tried),
@@ -554,7 +556,7 @@ SDK targets, feature flags, mobile-build.yml, rewarded-ad placement) before touc
 `android/`, `ios/`, `services/*` or `viteConfigFactory.js`'s feature flags; release steps:
 `docs/RELEASE_ANDROID.md`, `docs/RELEASE_IOS.md`, `docs/STORE_LISTING.md`. Store uploads are automated
 with fastlane (`fastlane/` listing text is the source of truth; `Gemfile`) via `store-release.yml` —
-**read `docs/STORE_RELEASE.md`** before touching either.
+**read `docs/STORE_RELEASE.md`** before touching either; agents follow the `store-release` skill.
 
 ## Funding
 

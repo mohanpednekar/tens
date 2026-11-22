@@ -1,67 +1,62 @@
 // Store-asset manifest (Play + App Store). Pure data + builders, no I/O, so manifest.test.js can
-// pin every output size against the stores' rules. generate.mjs captures the real app for each
-// device × scene and writes into fastlane's layout (fastlane/metadata/android/…/images for supply,
-// fastlane/screenshots/<locale> for deliver, which detects the device class from the pixel size).
-import { detectAchievements } from '../../src/game/engine.js'
-import { SEEDS } from '../large-screen-mockups/manifest.mjs'
-
+// pin every output size against the stores' rules. generate.mjs plays the seeds (seeds.mjs),
+// captures the real app for each device × scene and writes fastlane's layout:
+// fastlane/metadata/android/<locale>/images (supply) and fastlane/screenshots/<locale> (deliver,
+// which picks the display slot from the pixel size). Play foldable screenshots have no supply
+// image type yet, so they land in fastlane/play-foldable/<locale> for a Play Console upload.
 export const LOCALE = 'en-US'
 
-// width/height are CSS px; output = × scale. Tablets use a narrow CSS viewport at a high scale:
-// the app is a single phone-width column, so a true tablet viewport leaves it small and centered.
-// Sizes are the stores' current required/accepted ones:
-// Play: 320–3840 px, long side ≤ 2× short side; App Store: 6.9" 1320×2868 (required for iPhone),
-// 6.5" 1284×2778, 13" iPad 2064×2752 (required because TARGETED_DEVICE_FAMILY includes iPad).
+// width/height are CSS px (the device's real viewport); output = × scale. Captures are honest: each
+// device renders the app exactly as it lays out there.
+//   Play: 9:16 phone and tablet screenshots, 320–3840 px. Foldables (required from April 2027):
+//         inner display 3:4 (4:3-class) and 1:1 (square-class), outer 10:16.
+//   App Store (screenshot specifications): 6.3" 1206×2622 (required iPhone slot), 6.9" 1320×2868,
+//         6.5" 1284×2778, iPhone Duo outer 1398×2034 + inner 2007×2853 (one "iPhone Duo" slot),
+//         iPad 13" 2064×2752 (required: TARGETED_DEVICE_FAMILY includes iPad).
 export const DEVICES = [
   { id: 'phone', store: 'play', dir: 'phoneScreenshots', width: 360, height: 640, scale: 3 },
-  { id: 'tablet7', store: 'play', dir: 'sevenInchScreenshots', width: 400, height: 640, scale: 3 },
-  { id: 'tablet10', store: 'play', dir: 'tenInchScreenshots', width: 480, height: 768, scale: 3 },
+  { id: 'tablet7', store: 'play', dir: 'sevenInchScreenshots', width: 603, height: 1072, scale: 2 },
+  { id: 'tablet10', store: 'play', dir: 'tenInchScreenshots', width: 720, height: 1280, scale: 2 },
+  { id: 'fold-inner-3x4', store: 'play-foldable', width: 690, height: 920, scale: 2.5 },
+  { id: 'fold-inner-1x1', store: 'play-foldable', width: 720, height: 720, scale: 2.5 },
+  { id: 'fold-outer-10x16', store: 'play-foldable', width: 400, height: 640, scale: 3 },
+  { id: 'iphone63', store: 'appstore', width: 402, height: 874, scale: 3 },
   { id: 'iphone69', store: 'appstore', width: 440, height: 956, scale: 3 },
   { id: 'iphone65', store: 'appstore', width: 428, height: 926, scale: 3 },
-  { id: 'ipad13', store: 'appstore', width: 516, height: 688, scale: 4 },
+  { id: 'duo-outer', store: 'appstore', width: 466, height: 678, scale: 3 },
+  { id: 'duo-inner', store: 'appstore', width: 669, height: 951, scale: 3 },
+  { id: 'ipad13', store: 'appstore', width: 1032, height: 1376, scale: 2 },
 ]
 
-// `store` = the large-screen `mid` save plus a populated Power ladder, so that screen shows a game in progress rather than empty rows. Plain values a real save can hold.
-const STORE_SEEDS = {
-  ...SEEDS,
-  store: () => {
-    const state = SEEDS.mid()
-    return {
-      ...state,
-      intro: { ...state.intro, computeCores: 7, computeCoresEverEarned: 60, computeNodes: 5, computeClusters: 3, computeNetworks: 1 },
-    }
-  },
-}
-
-// Order = store display order. `page` is a capture.mjs NAVIGATION id; `seed` a STORE_SEEDS id.
+// Order = store display order. `page` is a capture.mjs NAVIGATION id; `seed` a seeds.mjs key.
+// Achievement unlock toasts are hidden in every scene except the one that shows achievements.
 export const SCENES = [
-  { id: 'factory', page: 'game', seed: 'store', theme: 'dark' },
-  { id: 'foundry', page: 'foundry', seed: 's2', theme: 'dark' },
-  { id: 'power', page: 'boosters', seed: 'store', theme: 'dark' },
-  { id: 'compute', page: 'compute', seed: 'store', theme: 'dark' },
-  { id: 'achievements', page: 'achievements', seed: 'store', theme: 'dark' },
-  { id: 'factory-light', page: 'game', seed: 'store', theme: 'light' },
+  { id: 'factory', page: 'game', seed: 'career', theme: 'dark' },
+  { id: 'foundry', page: 'foundry', seed: 'foundry', theme: 'dark' },
+  { id: 'challenges', page: 'challenges', seed: 'career', theme: 'dark' },
+  { id: 'firmware', page: 'perks', seed: 'career', theme: 'dark' },
+  { id: 'achievements', page: 'achievements', seed: 'achievementUnlock', theme: 'dark', showToasts: true },
+  { id: 'factory-light', page: 'game', seed: 'career', theme: 'light' },
 ]
 
-// Pre-earn whatever the seed already qualifies for, so no unlock toasts cover the capture.
-export const seedFor = scene => detectAchievements(STORE_SEEDS[scene.seed]())
-
-export const pixelSize = device => ({ width: device.width * device.scale, height: device.height * device.scale })
+export const pixelSize = device => ({ width: Math.round(device.width * device.scale), height: Math.round(device.height * device.scale) })
 
 export const screenshotPath = (device, scene, index) => {
   const name = `${index + 1}_${scene.id}.png`
-  return device.store === 'play'
-    ? `fastlane/metadata/android/${LOCALE}/images/${device.dir}/${name}`
-    : `fastlane/screenshots/${LOCALE}/${device.id}_${name}`
+  if (device.store === 'play') return `fastlane/metadata/android/${LOCALE}/images/${device.dir}/${name}`
+  if (device.store === 'play-foldable') return `fastlane/play-foldable/${LOCALE}/${device.id}_${name}`
+  return `fastlane/screenshots/${LOCALE}/${device.id}_${name}`
 }
 
 export const FEATURE_GRAPHIC = { width: 1024, height: 500, path: `fastlane/metadata/android/${LOCALE}/images/featureGraphic.png` }
 
 // Icons are copied, not drawn: both come from `yarn gen-pwa-icons`. App Store Connect takes the
-// icon from the build itself; the copy is only for reference/marketing.
+// icon from the build itself.
 export const ICONS = [
   { from: 'public/pwa-512x512.png', to: `fastlane/metadata/android/${LOCALE}/images/icon.png` },
 ]
+
+export const TOAST_SELECTOR = '[aria-label="achievement notifications"]'
 
 export const featureGraphicHtml = ({ fontDir, iconUrl }) => `<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face{font-family:'Space Grotesk';font-weight:700;src:url('${fontDir}/space-grotesk/files/space-grotesk-latin-700-normal.woff2')}

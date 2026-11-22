@@ -18,7 +18,7 @@ on:
         options: [both, android, ios]
         default: both
       play_track:
-        description: Play track ('none' builds the signed AAB as an artifact only — use for the first, manual upload)
+        description: "Play track ('none' = signed AAB + listing images as an artifact only, nothing uploaded: use for the first, manual upload)"
         type: choice
         options: [internal, alpha, beta, production, none]
         default: internal
@@ -90,7 +90,7 @@ jobs:
           [ -n "$STORE_PASSWORD" ] || missing+=(TENS_UPLOAD_STORE_PASSWORD)
           [ -n "$KEY_ALIAS" ] || missing+=(TENS_UPLOAD_KEY_ALIAS)
           [ -n "$KEY_PASSWORD" ] || missing+=(TENS_UPLOAD_KEY_PASSWORD)
-          if [ "$PLAY_TRACK" != none ] || [ "$UPLOAD_LISTING" = true ]; then
+          if [ "$PLAY_TRACK" != none ]; then
             [ -n "$PLAY_JSON" ] || missing+=(PLAY_SERVICE_ACCOUNT_JSON)
           fi
           if [ "${#missing[@]}" -gt 0 ]; then
@@ -147,6 +147,7 @@ jobs:
             android/app/build/outputs/bundle/release/app-release.aab
             android/app/build/outputs/mapping/release/mapping.txt
             fastlane/metadata/android/
+            fastlane/play-foldable/
           if-no-files-found: error
 
       - name: Upload to Google Play
@@ -157,11 +158,6 @@ jobs:
           bundle exec fastlane android deploy \
             track:"$PLAY_TRACK" status:"$PLAY_STATUS" rollout:"$PLAY_ROLLOUT" metadata:"$UPLOAD_LISTING"
 
-      - name: Upload the listing only
-        if: env.PLAY_TRACK == 'none' && env.UPLOAD_LISTING == 'true'
-        env:
-          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-        run: bundle exec fastlane android metadata
 
   ios:
     if: >-

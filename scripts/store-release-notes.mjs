@@ -13,11 +13,17 @@ export const PLAY_LIMIT = 500
 export const APP_STORE_LIMIT = 4000
 const SECTION_ORDER = ['Added', 'Changed', 'Fixed']
 
-// Mirrors android/app/build.gradle's appVersionCode.
-export const versionCode = version => {
+// Mirrors android/app/build.gradle's appVersionCode, including its TENS_VERSION_CODE override
+// (env here; the Gradle-property / keystore.properties forms of the override are local-only).
+export const versionCode = (version, override = process.env.TENS_VERSION_CODE) => {
+  if (override) return Number(override)
   const [major, minor, patch] = version.split('.').map(Number)
   return major * 10000 + minor * 100 + patch
 }
+
+// CHANGELOG.md also records tooling/automation changes; players never see those.
+const INTERNAL_ENTRY = /\b(workflows?|CI|autonomous|maintenance|Dependabot|GitHub|pull requests?|PRs?|CLAUDE\.md|AGENTS\.md|agents?|lint(ing)?|Vitest|Playwright|e2e|graphify|fastlane|changelog|docs?|tests?|mutation|CodeQL|deploy(ment)?)\b/i
+export const isPlayerFacing = bullet => !INTERNAL_ENTRY.test(bullet)
 
 export const changelogSection = (changelog, version) => {
   const lines = changelog.split('\n')
@@ -47,7 +53,7 @@ export const releaseBullets = section => {
     const heading = line.match(/^### (\w+)/)
     if (heading) { current = heading[1]; continue }
     const bullet = line.match(/^- (.+)/)
-    if (bullet && current) (groups[current] ??= []).push(firstSentence(plain(bullet[1])))
+    if (bullet && current && isPlayerFacing(bullet[1])) (groups[current] ??= []).push(firstSentence(plain(bullet[1])))
   }
   return SECTION_ORDER.flatMap(name => groups[name] ?? [])
 }
@@ -58,7 +64,7 @@ export const formatNotes = (bullets, limit) => {
   for (const bullet of bullets) {
     const next = [...lines, `• ${bullet}`].join('\n')
     if (next.length + more.length + 1 > limit) {
-      if (lines.length === 0) return `${bullet.slice(0, limit - 1)}…`
+      if (lines.length === 0) return `• ${bullet.slice(0, limit - 3)}…`
       lines.push(more)
       break
     }

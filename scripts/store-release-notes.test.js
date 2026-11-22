@@ -1,4 +1,4 @@
-import { APP_STORE_LIMIT, PLAY_LIMIT, changelogSection, formatNotes, releaseBullets, versionCode } from './store-release-notes.mjs'
+import { APP_STORE_LIMIT, PLAY_LIMIT, changelogSection, formatNotes, isPlayerFacing, releaseBullets, versionCode } from './store-release-notes.mjs'
 
 const CHANGELOG = `# Changelog
 
@@ -14,6 +14,7 @@ const CHANGELOG = `# Changelog
 ### Added
 - New [thing](https://x) with Space Grotesk 1.5x speed: more words.
 - Second feature.
+- Low-risk auto-merge for the autonomous maintenance workflow.
 
 ## [1.2.2] - 2026-10-01
 
@@ -23,8 +24,15 @@ const CHANGELOG = `# Changelog
 
 describe('store-release-notes', () => {
   test('versionCode matches the Gradle formula', () => {
-    expect(versionCode('0.5.0')).toBe(500)
-    expect(versionCode('1.2.3')).toBe(10203)
+    expect(versionCode('0.5.0', '')).toBe(500)
+    expect(versionCode('1.2.3', '')).toBe(10203)
+    expect(versionCode('1.2.3', '10299')).toBe(10299)
+  })
+
+  test('isPlayerFacing drops tooling entries', () => {
+    expect(isPlayerFacing('Low-risk auto-merge for the autonomous maintenance workflow.')).toBe(false)
+    expect(isPlayerFacing('Granted the issues permission to the CI job.')).toBe(false)
+    expect(isPlayerFacing('Achievement stars: each achievement awards 1 star.')).toBe(true)
   })
 
   test('changelogSection returns only the requested version', () => {
@@ -51,6 +59,8 @@ describe('store-release-notes', () => {
     }
     expect(formatNotes(['Short.'], PLAY_LIMIT)).toBe('• Short.')
     expect(formatNotes([], PLAY_LIMIT)).toBe('Bug fixes and improvements.')
-    expect(formatNotes(['x'.repeat(600)], PLAY_LIMIT)).toHaveLength(PLAY_LIMIT)
+    const single = formatNotes(['x'.repeat(600)], PLAY_LIMIT)
+    expect(single).toHaveLength(PLAY_LIMIT)
+    expect(single.startsWith('• ')).toBe(true)
   })
 })
