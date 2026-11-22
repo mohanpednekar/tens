@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-
-- **Achievement stars**: each achievement (every level of a leveled row) awards 1 ⭐, and fully completing a section awards bonus stars equal to 10% of its stars (rounded up). The total shows atop the Achievements page and each section shows its own.
+- Long achievement series (Reclamation) list one short line per level instead of repeating text.
+- Achievements page shows each requirement's current progress (e.g. 100/256, 4/10, Capacity doublings) while unearned, and its actual reward (the bonus it grants, when it has one) both before and after earning; collapsed series rows show a very short next requirement and reward; the unlock toast shows the reward too.
+- **Achievement stars**: each achievement (every level of a leveled row) awards 1 ⭐, and fully completing a section awards bonus stars equal to 10% of its stars (rounded up). The total shows atop the Achievements page; a section shows only its completion bonus (⭐ +N) once complete.
 
 - Three **Overclock step** achievements, each making later Overclocks need 1 fewer extra completed last-tier level (the step now starts at +4 and drops to +1): claim the first Overclock of a Purge at 6+ completed levels; claim two Overclocks in one Purge without buying any Accelerate; and, after DeGoogol, claim an Overclock at 12+ completed levels. They are earned in order (each counts only after the previous one), from new claims only (not retroactive).
 - Achievement toasts: each earned achievement (including those earned while away) shows a stacked toast for 5 s, started 0.25 s apart.
@@ -20,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- **Achievements page** shows ordered steps of the same thing as one leveled row (Ping, each pool's Reclamation, First purchase of each tier, Accelerate, Level power, Overclock step) with a `Lv n/N` badge and the next goal. Earned achievements and bonuses are unchanged.
+- **Achievements page** shows ordered steps of the same thing as one leveled row (Ping, Reclamation (one 20-level row: each pool I then II), First purchase of each tier, Accelerate, Level power, Overclock step) with a `Lv n/N` badge and the next goal. Earned achievements and bonuses are unchanged.
 
 - Each Overclock after the first now needs 4 more completed last-tier levels than the previous claim (was 3) until the Overclock step achievements are earned.
 
@@ -40,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Spent QB achievement** — spend all your Quettabytes after earning some in the same run to unlock it; the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, Quettabytes are credited regardless of the current balance, 1 at a time, more often with more completed levels (logarithmically): every 10 s at 1 level, every 5 s at 10, every 3.33 s at 100.
+- **Spent QB achievement** — click Restage while holding 0 Quettabytes (the real stall: everything resets with nothing left producing — the Restage button now allows it, with a warning; Auto Restage still waits for Quettabytes). Merely reaching a 0 balance doesn't count; the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, Quettabytes are credited regardless of the current balance, 1 at a time, more often with more completed levels (logarithmically): every 10 s at 1 level, every 5 s at 10, every 3.33 s at 100.
 
 ### Added
 

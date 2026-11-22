@@ -196,15 +196,17 @@ export const ACHIEVEMENT_GROUPS = [
 // thresholds, so a save past a trigger earns it on load). `bonus` is a placeholder (#1052).
 const TIER_ACHIEVEMENT_NAMES = ['Kilo-what?', 'Mega bite', 'Giga-what now', 'Tera-fying', 'Peta-fied', 'Exa-ggerated', 'Zetta slow', 'Yotta be kidding me', 'Ronna-way process', 'Quetta while']
 export const ACHIEVEMENT_DEFINITIONS = [
-  { id: 'helloWorld', name: 'Hello, World', group: 'firstSession', trigger: 'Ping for the first time', condition: { kind: 'counter', key: 'pings', min: 1 } },
-  { id: 'itCompiles', name: 'It compiles, ship it', group: 'firstSession', trigger: 'Compile for the first time', condition: { kind: 'byteCreated' } },
-  { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', condition: { kind: 'counter', key: 'pings', min: 256 } },
-  { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
+  { id: 'helloWorld', name: 'Hello, World', group: 'firstSession', trigger: 'Ping for the first time', short: 'Ping', condition: { kind: 'counter', key: 'pings', min: 1 } },
+  { id: 'itCompiles', name: 'It compiles, ship it', group: 'firstSession', trigger: 'Compile for the first time', short: 'Compile', condition: { kind: 'byteCreated' } },
+  { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', short: 'Ping ×256', condition: { kind: 'counter', key: 'pings', min: 256 } },
+  { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', short: '1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
   ...TIER_DEFINITIONS.flatMap((tier, index) => [1, 2].map(reset => ({
     id: `pool${String(index + 1).padStart(2, '0')}Reset${reset === 1 ? 'I' : 'II'}`,
     name: `${tier.symbol} Reclamation ${reset === 1 ? 'I' : 'II'}`,
     group: 'foundry',
     trigger: `Compact the ${tier.symbol} pool ${reset === 1 ? 'once' : 'twice'}`,
+    short: `Compact ${tier.symbol} pool${reset === 1 ? '' : ' ×2'}`,
+    shortBonus: `Disk step ${reset} ↑`,
     bonus: `The ${reset === 1 ? 'first' : 'second'} disk-size exponent step now closes 10% of the gap to 1.0`,
     condition: { kind: 'poolExponentBonus', poolIndex: index + 1, min: reset },
   }))),
@@ -213,33 +215,37 @@ export const ACHIEVEMENT_DEFINITIONS = [
     name: TIER_ACHIEVEMENT_NAMES[index],
     group: 'tierLadder',
     trigger: `Buy your first ${tier.name}`,
+    short: `Buy ${tier.symbol}`,
     condition: { kind: 'tierPurchased', tierId: tier.id },
   })),
-  { id: 'quettaSpent', name: 'Spent QB', group: 'tierLadder', trigger: 'Spend all your Quettabytes after earning some in the same run', bonus: 'Quettabytes are credited regardless of balance: 1 every 10 s at 1 completed level, every 5 s at 10, every 3.33 s at 100', condition: { kind: 'lastTierSpent' } },
-  { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Accelerate level', condition: { kind: 'clockSpeedLevel', min: 1 } },
-  { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Accelerate level 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
-  { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', condition: { kind: 'overclocked' } },
+  { id: 'quettaSpent', name: 'Spent QB', group: 'tierLadder', trigger: 'Restage while holding 0 Quettabytes', short: 'Restage at 0 QB', shortBonus: 'QB credited without balance', bonus: 'Quettabytes are credited regardless of balance: 1 every 10 s at 1 completed level, every 5 s at 10, every 3.33 s at 100', condition: { kind: 'counter', key: 'emptyRestages', min: 1 } },
+  { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Accelerate level', short: 'Accelerate 1', condition: { kind: 'clockSpeedLevel', min: 1 } },
+  { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Accelerate level 10', short: 'Accelerate 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
+  { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', short: 'Overclock', condition: { kind: 'overclocked' } },
   ...LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((tierNumber, i) => ({
     id: `levelPower${i + 1}`,
     name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${LEVEL_POWER_ACHIEVEMENT_LEVEL}`,
     group: 'levelPower',
     trigger: `Reach level ${LEVEL_POWER_ACHIEVEMENT_LEVEL} on ${TIER_DEFINITIONS[tierNumber - 1].name} (${LEVEL_POWER_ACHIEVEMENT_LEVEL - 1} levels completed)`,
+    short: `${TIER_DEFINITIONS[tierNumber - 1].symbol} level ${LEVEL_POWER_ACHIEVEMENT_LEVEL}`,
+    shortBonus: `+${LEVEL_POWER_ACHIEVEMENT_BONUS} per-level multiplier`,
     bonus: `The per-level production multiplier rises by ${LEVEL_POWER_ACHIEVEMENT_BONUS} (×1.0 → ×1.5 with all ten)`,
     condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: LEVEL_POWER_ACHIEVEMENT_LEVEL },
   })),
-  { id: 'overclockStep1', name: 'Patient Overclock', group: 'overclockStep', trigger: `Claim the first Overclock of a Purge at ${PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level than the one before (+4 → +3)', condition: { kind: 'counter', key: 'maxFirstOverclock', min: PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL } },
-  { id: 'overclockStep2', name: 'Overclock fast', group: 'overclockStep', trigger: 'After Patient Overclock, claim two Overclocks in one Purge without buying any Accelerate', bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+3 → +2)', condition: { kind: 'counter', key: 'acceleratelessOverclocks', min: 1 } },
-  { id: 'overclockStep3', name: 'Beyond Googol', group: 'overclockStep', trigger: `After Overclock fast and DeGoogol, claim an Overclock at ${OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+2 → +1)', condition: { kind: 'counter', key: 'overflowDeepOverclock', min: 1 } },
-].map(def => ({ secret: false, platformDependent: false, bonus: null, ...def }))
+  { id: 'overclockStep1', name: 'Patient Overclock', group: 'overclockStep', short: `First Overclock at ${PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL}+`, shortBonus: 'Overclock step −1', trigger: `Claim the first Overclock of a Purge at ${PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level than the one before (+4 → +3)', condition: { kind: 'counter', key: 'maxFirstOverclock', min: PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL } },
+  { id: 'overclockStep2', name: 'Overclock fast', group: 'overclockStep', short: '2 Overclocks/Purge, no Accelerate', shortBonus: 'Overclock step −1', trigger: 'After Patient Overclock, claim two Overclocks in one Purge without buying any Accelerate', bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+3 → +2)', condition: { kind: 'counter', key: 'acceleratelessOverclocks', min: 1 } },
+  { id: 'overclockStep3', name: 'Beyond Googol', group: 'overclockStep', short: `DeGoogol, Overclock at ${OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL}+`, shortBonus: 'Overclock step −1', trigger: `After Overclock fast and DeGoogol, claim an Overclock at ${OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+2 → +1)', condition: { kind: 'counter', key: 'overflowDeepOverclock', min: 1 } },
+].map(def => ({ secret: false, platformDependent: false, bonus: null, short: null, shortBonus: null, ...def }))
 // Achievements that are ordered steps of one entity render as ONE row with levels on the page. Display-only:
 // each step keeps its own id (earned state, toasts, bonuses and saves are unchanged). Steps list in level order.
 export const ACHIEVEMENT_SERIES = [
   { id: 'ping', name: 'Ping', members: ['helloWorld', 'pingOfDeath'] },
-  ...TIER_DEFINITIONS.map((tier, index) => ({
-    id: `pool${String(index + 1).padStart(2, '0')}Reset`,
-    name: `${tier.symbol} Reclamation`,
-    members: [`pool${String(index + 1).padStart(2, '0')}ResetI`, `pool${String(index + 1).padStart(2, '0')}ResetII`],
-  })),
+  // One 20-level row: each pool's I then II, in pool order.
+  {
+    id: 'poolReset',
+    name: 'Reclamation',
+    members: TIER_DEFINITIONS.flatMap((_, index) => [`pool${String(index + 1).padStart(2, '0')}ResetI`, `pool${String(index + 1).padStart(2, '0')}ResetII`]),
+  },
   { id: 'tierBought', name: 'First purchase', members: TIER_DEFINITIONS.map((_, i) => `tier${String(i + 1).padStart(2, '0')}Bought`) },
   { id: 'accelerate', name: 'Accelerate', members: ['tickTock', 'megahertzMyth'] },
   { id: 'levelPower', name: 'Level power', members: LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((_, i) => `levelPower${i + 1}`) },

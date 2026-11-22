@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import StatCard from 'components/StatCard'
-import { getAchievementGroupStars, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
+import { getAchievementGroupStars, getAchievementProgress, getAchievementReward, getAchievementShortRequirement, getAchievementShortReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
 import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
 
@@ -101,11 +101,25 @@ const Detail = styled.span`
   font-size: 0.82em;
 `
 
+const Level = styled.span`
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+`
+
 const Badge = styled.span`
   color: ${props => props.$color};
   font-size: 0.82em;
   white-space: nowrap;
 `
+
+// "x/y" for an unearned achievement's requirement; full once earned; null for one-shot events.
+const formatProgress = (state, def, earned) => {
+  const progress = getAchievementProgress(state, def.condition)
+  if (!progress) return null
+  const current = earned ? progress.target : Math.min(Math.floor(progress.current), progress.target)
+  return `${current}/${progress.target}`
+}
 
 // Collapses ordered steps of one series into a single entry (at the position of its first step).
 const buildEntries = members => {
@@ -168,7 +182,7 @@ const AchievementsPage = ({ game }) => {
                   $color={isComplete ? theme.color.good : theme.color.textMuted}
                   aria-label={`${group.name} ${earnedCount} of ${group.members.length} earned${isComplete ? ', group complete' : ''}`}
                 >
-                  {isComplete ? '✅ ' : ''}{earnedCount}/{group.members.length} · ⭐ {stars.earned + stars.bonus}/{stars.total}{stars.bonus > 0 ? ` (+${stars.bonus} bonus)` : ''}
+                  {isComplete ? '✅ ' : ''}{earnedCount}/{group.members.length}{isComplete && stars.bonus > 0 ? ` · ⭐ +${stars.bonus}` : ''}
                 </Badge>
               </GroupHeading>
               {openGroups[group.id] && buildEntries(group.members).map(entry => {
@@ -177,6 +191,12 @@ const AchievementsPage = ({ game }) => {
                   const total = entry.levels.length
                   const done = reached === total
                   const next = entry.levels.find(def => !isAchievementEarned(state, def.id))
+                  // One identical bonus on every level (e.g. Level power) is stated once, not per level.
+                  const sharedBonus = entry.levels.every(def => def.bonus === entry.levels[0].bonus) ? entry.levels[0].bonus : null
+                  // Long series (Reclamation, 20 levels) list one short line per level instead of repeating full text.
+                  const compact = entry.levels.length > 4
+                  // Compact lines carry only the short reward, so each distinct short → full explanation is stated once.
+                  const distinctRewards = [...new Map(entry.levels.filter(def => def.shortBonus && def.bonus).map(def => [def.shortBonus, def.bonus]))]
                   return (
                     <Row aria-label={`${entry.name} achievement level ${reached} of ${total}`} key={entry.key} style={{ alignItems: 'flex-start' }}>
                       <Text $earned={reached > 0}>
@@ -188,23 +208,43 @@ const AchievementsPage = ({ game }) => {
                         >
                           <strong>{entry.name}</strong>
                         </NameButton>
-                        {!openRows[entry.key] && next && <Detail>Next: {next.trigger}</Detail>}
+                        {!openRows[entry.key] && next && <Detail>Next: {getAchievementShortRequirement(next)}{formatProgress(state, next, false) ? ` (${formatProgress(state, next, false)})` : ''}</Detail>}
+                        {!openRows[entry.key] && next && getAchievementShortReward(next) && <Detail aria-label={`${entry.name} next reward`}>Reward: {getAchievementShortReward(next)}</Detail>}
+                        {openRows[entry.key] && sharedBonus && <Detail>Reward each level: {sharedBonus}</Detail>}
+                        {openRows[entry.key] && compact && !sharedBonus && distinctRewards.map(([short, full]) => <Detail key={short}>{short}: {full}</Detail>)}
                         {openRows[entry.key] && entry.levels.map((def, i) => {
                           const lvlEarned = isAchievementEarned(state, def.id)
+                          const lvlProgress = formatProgress(state, def, lvlEarned)
+                          if (compact) {
+                            const shortReward = sharedBonus ? null : getAchievementShortReward(def)
+                            return (
+                              <Detail aria-label={`${entry.name} level ${i + 1} ${lvlEarned ? 'earned' : 'not yet earned'}`} key={def.id}>
+                                {lvlEarned ? '✅' : '🔒'} {i + 1}. {getAchievementShortRequirement(def)}{lvlProgress && !lvlEarned ? ` (${lvlProgress})` : ''}{shortReward ? ` · ${shortReward}` : ''}
+                              </Detail>
+                            )
+                          }
                           return (
-                            <Detail aria-label={`${entry.name} level ${i + 1} ${lvlEarned ? 'earned' : 'not yet earned'}`} key={def.id}>
-                              {lvlEarned ? '✅' : '🔒'} {i + 1}. {def.trigger}{def.bonus ? ` — ${def.bonus}` : ''}
-                            </Detail>
+                            <Level key={def.id}>
+                              <Detail aria-label={`${entry.name} level ${i + 1} ${lvlEarned ? 'earned' : 'not yet earned'}`}>
+                                {lvlEarned ? '✅' : '🔒'} {i + 1}. {def.trigger}{lvlProgress && !lvlEarned ? ` (${lvlProgress})` : ''}
+                              </Detail>
+                              {!sharedBonus && getAchievementReward(def) && (
+                                <Detail aria-label={`${entry.name} level ${i + 1} reward ${lvlEarned ? 'earned' : 'pending'}`}>
+                                  {lvlEarned ? 'Reward earned' : 'Reward'}: {getAchievementReward(def)}
+                                </Detail>
+                              )}
+                            </Level>
                           )
                         })}
                       </Text>
-                      <Badge $color={done ? theme.color.good : theme.color.textMuted}>{done ? '✅ ' : ''}Lv {reached}/{total}</Badge>
+                      <Badge $color={done ? theme.color.good : theme.color.textMuted}>{done ? '✅ ' : reached === 0 ? '🔒 ' : ''}Lv {reached}/{total}</Badge>
                     </Row>
                   )
                 }
                 const { def } = entry
                 const earned = isAchievementEarned(state, def.id)
                 const masked = def.secret && !earned
+                const progressText = masked ? null : formatProgress(state, def, earned)
                 const label = masked ? '???' : def.name
                 return (
                   <Row aria-label={`${label} achievement ${earned ? 'earned' : 'not yet earned'}`} key={def.id}>
@@ -221,9 +261,14 @@ const AchievementsPage = ({ game }) => {
                           <strong>{label}</strong>
                         </NameButton>
                       )}
-                      {!masked && openRows[def.id] && <Detail>{def.trigger}{def.bonus ? ` — ${def.bonus}` : ''}</Detail>}
+                      {!masked && openRows[def.id] && <Detail>{def.trigger}</Detail>}
+                      {!masked && openRows[def.id] && getAchievementReward(def) && (
+                        <Detail aria-label={`${def.name} reward ${earned ? 'earned' : 'pending'}`}>
+                          {earned ? 'Reward earned' : 'Reward'}: {getAchievementReward(def)}
+                        </Detail>
+                      )}
                     </Text>
-                    <Badge $color={earned ? theme.color.good : theme.color.disabled}>{earned ? '✅' : '🔒'}</Badge>
+                    <Badge $color={earned ? theme.color.good : theme.color.textMuted}>{progressText && !earned ? `${progressText} ` : ''}{earned ? '✅' : '🔒'}</Badge>
                   </Row>
                 )
               })}

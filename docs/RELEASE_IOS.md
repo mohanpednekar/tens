@@ -44,6 +44,8 @@ iOS keys: `VITE_ADMOB_REWARDED_ID_IOS`, `TENS_ADMOB_APP_ID_IOS`, `VITE_REVENUECA
 
 ## TestFlight
 
+> Automated path: `.github/workflows/store-release.yml` / `bundle exec fastlane` (`docs/STORE_RELEASE.md`). The manual steps below remain the fallback and cover the one-time first upload.
+
 1. Xcode → select **Any iOS Device (arm64)** → **Product → Archive**.
 2. Organizer → **Distribute App → App Store Connect → Upload** (automatic signing).
    CLI alternative on a Mac/CI:

@@ -43,6 +43,7 @@ yarn build:capacitor # CAPACITOR=1 build for native wrap (relative base, no PWA 
 yarn cap:sync     # cap sync (copy dist/ into android/ + ios/)
 yarn cap:android  # build:capacitor + sync + open Android Studio (cap:ios → Xcode)
 yarn android:aab  # signed, R8-minified release AAB (docs/RELEASE_ANDROID.md); ios:configure → Info.plist ad keys
+yarn store:assets # store screenshots + feature graphic → fastlane/ (store:notes → release notes); docs/STORE_RELEASE.md
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode
 yarn test:e2e     # Playwright end-to-end suite (real chromium, against yarn dev)
@@ -72,6 +73,7 @@ docs/
   PWA_REFERENCE.md        ← full installable-PWA (manifest/icons/service-worker) reference
   TESTING_REFERENCE.md    ← full Vitest + Playwright e2e conventions (query contracts, timers, spec list)
   NATIVE_APPS_REFERENCE.md ← Capacitor Android/iOS wrap: SDK targets, release signing, feature flags, mobile-build.yml
+  STORE_RELEASE.md        ← automated Play/App Store pipeline (fastlane/, store-release.yml) + maintainer prerequisites
 src/
   game/
     layers.js             ← TIER_DEFINITIONS array + all constants (single source of truth)
@@ -383,4 +385,4 @@ Challenge mode (epic #1037): state `challenges`, registry `CHALLENGE_DEFINITIONS
 
 Daily challenges (epic #1062, switch `DAILY_CHALLENGES_FEATURE` + first Purge): `src/game/dailyChallenges.js` (time-dependent functions take `nowMs`; none reads the clock itself), state `daily`; three seeded Factory-only runs per UTC date (10 min / 1 h / 10 h) with modified conditions (`DAILY_MODIFIER_POOL` levers via `runLevers`), a seeded head start and starting balance, and a seeded objective (reach a balance / own tier units / complete tier levels / Accelerate level / Overclock level) whose target is calculated from a reference-bot simulation (bot wins after half the limit, by 9 min / 50 min / 8 h). Runs carry engine automations by format (10 min a seeded mix, 1 h buying only, 10 h everything, with switches). UI: Challenges page 📅 Daily tab; a run is played on the `MainPage` component itself, fed the run's own state. Bump `DAILY_GENERATOR_VERSION` whenever the generator, reference bot or simulated engine behavior changes. See `src/CLAUDE.md` and `docs/ECONOMY_REFERENCE.md` "Daily challenges".
 
-Achievements (epic #1046, switch `ACHIEVEMENTS_FEATURE`, on): `achievements` state, `ACHIEVEMENT_*` registry in `layers.js`, `detectAchievements`/`getCompletedAchievementGroups` in `engine.js`, `AchievementsPage` under More; `components/AchievementToasts` toasts each earned id (5 s, 0.25 s stagger). Foundry Reclamation I/II achievements permanently upgrade the two per-pool Bitrate steps across Reformat and Reboot. See `docs/ECONOMY_REFERENCE.md` "Achievements".
+Achievements (epic #1046, switch `ACHIEVEMENTS_FEATURE`, on): `achievements` state, `ACHIEVEMENT_*` registry in `layers.js`, `detectAchievements`/`getCompletedAchievementGroups` in `engine.js`, `AchievementsPage` under More; rows show requirement progress and reward (before/after earning); `components/AchievementToasts` toasts each earned id (5 s, 0.25 s stagger, max 5 visible; queued toasts wait while the tab is hidden, visible ones keep their timers). Foundry Reclamation I/II achievements permanently upgrade the two per-pool Bitrate steps across Reformat and Reboot. Level power achievements (`levelPower1`–`10`) each add 0.05 to the per-level multiplier base (1.0 → 1.5 with all ten; `getLevelMultiplierBase`). See `docs/ECONOMY_REFERENCE.md` "Achievements".

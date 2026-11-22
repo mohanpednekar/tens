@@ -32,7 +32,9 @@ describe('AchievementsPage', () => {
     renderWithTheme(<AchievementsPage game={gameWith({ ...earned, levelPower1: true })} />)
     // 4 first-session stars + 1 completion bonus (10%, rounded up) + 1 level power star
     expect(screen.getByLabelText(/^total stars 6 of /)).toBeTruthy()
-    expect(screen.getByText(/⭐ 5\/5/)).toBeTruthy()
+    // Section shows only its completion bonus once complete (no per-section star counts)
+    expect(screen.getByText(/4\/4 · ⭐ \+1/)).toBeTruthy()
+    expect(screen.queryByText(/⭐ \d+\/\d+/, { selector: 'span' })).toBeNull()
   })
 
   it('collapses the tier purchases into one leveled row', () => {
@@ -85,5 +87,100 @@ describe('AppMenu achievements entry', () => {
     ACHIEVEMENTS_FEATURE.enabled = false
     renderWithTheme(<AppMenu onClose={() => {}} onNavigate={() => {}} open />)
     expect(screen.queryByLabelText('open achievements')).toBeNull()
+  })
+
+  it('shows requirement progress, and only real rewards, before and after earning', () => {
+    const state = { ...createInitialGameState(), achievements: { earned: { helloWorld: true }, counters: { pings: 100 } } }
+    renderWithTheme(<AchievementsPage game={{ state }} />)
+    openGroup('First session')
+    expect(screen.getByText(/Next: Ping ×256 \(100\/256\)/)).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('Ping details'))
+    // No bonus => no reward line (stars are score, not a reward)
+    expect(screen.queryByLabelText(/Ping level \d reward/)).toBeNull()
+    expect(screen.queryByText(/⭐ 1 star/)).toBeNull()
+    // Binary achievement: lock until earned
+    expect(screen.getByLabelText('Kibi, not Kilo achievement not yet earned').textContent).toContain('0/10')
+    expect(screen.getByLabelText('It compiles, ship it achievement not yet earned').textContent).toContain('🔒')
+  })
+
+  it('shows the real bonus reward before and after earning (full text for short series)', () => {
+    const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    openGroup('Overclock step')
+    fireEvent.click(screen.getByLabelText('Overclock step details'))
+    expect(screen.getByLabelText('Overclock step level 1 reward pending').textContent).toMatch(/^Reward: Each later Overclock needs 1 fewer/)
+    unmount()
+    renderWithTheme(<AchievementsPage game={gameWith({ overclockStep1: true })} />)
+    openGroup('Overclock step')
+    fireEvent.click(screen.getByLabelText('Overclock step details'))
+    expect(screen.getByLabelText('Overclock step level 1 reward earned').textContent).toMatch(/^Reward earned: Each later Overclock needs 1 fewer/)
+  })
+
+  it('long series list one short line per level, with its reward inline', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({ pool01ResetI: true })} />)
+    openGroup('Foundry')
+    fireEvent.click(screen.getByLabelText('Reclamation details'))
+    expect(screen.getByLabelText('Reclamation level 1 earned').textContent).toBe('✅ 1. Compact KB pool · Disk step 1 ↑')
+    expect(screen.getByLabelText('Reclamation level 2 not yet earned').textContent).toBe('🔒 2. Compact KB pool ×2 (0/2) · Disk step 2 ↑')
+    expect(screen.queryByLabelText(/Reclamation level \d+ reward/)).toBeNull()
+  })
+
+  it('collapsed series show the next requirement and its reward until every level is done', () => {
+    const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({ pool01ResetI: true })} />)
+    openGroup('Foundry')
+    expect(screen.getByText('Next: Compact KB pool ×2 (0/2)')).toBeTruthy()
+    expect(screen.getByLabelText('Reclamation next reward').textContent).toBe('Reward: Disk step 2 ↑')
+    unmount()
+    const all = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.filter(def => def.group === 'foundry').map(def => [def.id, true]))
+    renderWithTheme(<AchievementsPage game={gameWith(all)} />)
+    openGroup('Foundry')
+    expect(screen.getByLabelText('Reclamation achievement level 20 of 20')).toBeTruthy()
+    expect(screen.queryByText(/^Next:/)).toBeNull()
+    expect(screen.queryByLabelText('Reclamation next reward')).toBeNull()
+  })
+
+  it('states a bonus shared by every level once', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    openGroup('Level power')
+    fireEvent.click(screen.getByLabelText('Level power details'))
+    expect(screen.getByText(/Reward each level: The per-level production multiplier/)).toBeTruthy()
+    expect(screen.queryByLabelText(/Level power level 1 reward/)).toBeNull()
+  })
+
+  it('clamps progress to the target while the achievement is still unearned', () => {
+    const state = { ...createInitialGameState(), achievements: { earned: { helloWorld: true }, counters: { pings: 300 } } }
+    renderWithTheme(<AchievementsPage game={{ state }} />)
+    openGroup('First session')
+    expect(screen.getByText(/Next: Ping ×256 \(256\/256\)/)).toBeTruthy()
+  })
+
+  it('shows a lock on series with no level reached and on unearned levels', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    openGroup('Level power')
+    expect(screen.getByLabelText('Level power achievement level 0 of 10').textContent).toContain('🔒')
+    expect(screen.getByText(/Next: KB level 10/)).toBeTruthy()
+    expect(screen.getByLabelText('Level power next reward').textContent).toBe('Reward: +0.05 per-level multiplier')
+  })
+
+  it('shows no (0/1) on level-1 one-shot steps', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    openGroup('Foundry')
+    expect(screen.getByText('Next: Compact KB pool')).toBeTruthy()
+    openGroup('Early Factory')
+    expect(screen.getByText('Next: Accelerate 1')).toBeTruthy()
+  })
+
+  it('long series explain each distinct short reward once when expanded', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    openGroup('Foundry')
+    fireEvent.click(screen.getByLabelText('Reclamation details'))
+    expect(screen.getByText(/^Disk step 1 ↑: The first disk-size exponent step now closes 10%/)).toBeTruthy()
+    expect(screen.getByText(/^Disk step 2 ↑: The second disk-size exponent step now closes 10%/)).toBeTruthy()
+  })
+
+  it('a compact series with no rewards shows no reward explanations', () => {
+    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    openGroup('Tier ladder')
+    fireEvent.click(screen.getByLabelText('First purchase details'))
+    expect(screen.queryByText(/↑:/)).toBeNull()
   })
 })

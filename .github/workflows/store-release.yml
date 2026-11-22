@@ -1,0 +1,280 @@
+name: Store release
+
+# Builds the store-signed Android AAB / iOS IPA and uploads them (plus the listing: text from
+# fastlane/metadata, images from `yarn store:assets`, release notes from CHANGELOG.md) to Google
+# Play / App Store Connect via fastlane (fastlane/Fastfile). Full runbook and the one-time console
+# setup this depends on: docs/STORE_RELEASE.md.
+#
+# - Manual dispatch: pick platforms, Play track/status/rollout, and the iOS action.
+# - Tag push (v*, pushed by release.yml after a version-bump PR merges): only when the repo variable
+#   STORE_AUTO_RELEASE is 'true' — ships to the Play internal track and TestFlight with the listing.
+#   Production promotion and App Review submission stay manual dispatches (a human decision).
+on:
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: Platforms to release
+        type: choice
+        options: [both, android, ios]
+        default: both
+      play_track:
+        description: "Play track ('none' = signed AAB + listing images as an artifact only, nothing uploaded: use for the first, manual upload)"
+        type: choice
+        options: [internal, alpha, beta, production, none]
+        default: internal
+      play_promote_from:
+        description: "Promote this checkout's version (tested on this track) to play_track instead of uploading a new AAB — same version as the iOS job"
+        type: choice
+        options: [none, internal, alpha, beta]
+        default: none
+      play_status:
+        description: Play release status ('draft' is required until the app's first publish)
+        type: choice
+        options: [completed, draft]
+        default: completed
+      play_rollout:
+        description: Production staged-rollout fraction (e.g. 0.2); empty = full rollout
+        type: string
+        default: ''
+      ios_action:
+        description: "testflight = build + upload; submit = submit the latest processed build for App Review; none"
+        type: choice
+        options: [testflight, submit, none]
+        default: testflight
+      upload_listing:
+        description: Also upload listing text, screenshots and graphics
+        type: boolean
+        default: true
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: store-release
+  cancel-in-progress: false
+
+# Feature flags and public client config (docs/RELEASE_ANDROID.md "Optional features") come from
+# repository variables, so the store build matches what the listing's Data safety answers declare.
+env:
+  VITE_TENS_ADS_ENABLED: ${{ vars.VITE_TENS_ADS_ENABLED }}
+  VITE_TENS_IAP_ENABLED: ${{ vars.VITE_TENS_IAP_ENABLED }}
+  VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+  VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+  VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+  VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+  UPLOAD_LISTING: ${{ github.event_name == 'push' || inputs.upload_listing }}
+
+jobs:
+  android:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.platforms != 'ios') ||
+      (github.event_name == 'push' && vars.STORE_AUTO_RELEASE == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Protected environment: add required reviewers in Settings → Environments → store-release.
+    environment: store-release
+    env:
+      PLAY_TRACK: ${{ inputs.play_track || 'internal' }}
+      PLAY_PROMOTE_FROM: ${{ inputs.play_promote_from || 'none' }}
+      PLAY_STATUS: ${{ inputs.play_status || 'completed' }}
+      PLAY_ROLLOUT: ${{ inputs.play_rollout }}
+      TENS_ADMOB_APP_ID_ANDROID: ${{ vars.TENS_ADMOB_APP_ID_ANDROID }}
+      VITE_ADMOB_REWARDED_ID_ANDROID: ${{ vars.VITE_ADMOB_REWARDED_ID_ANDROID }}
+      VITE_REVENUECAT_API_KEY_ANDROID: ${{ vars.VITE_REVENUECAT_API_KEY_ANDROID }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check required secrets
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.TENS_UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.TENS_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.TENS_UPLOAD_KEY_PASSWORD }}
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          missing=()
+          if [ "$PLAY_PROMOTE_FROM" != none ] && [ "$PLAY_TRACK" = none ]; then
+            echo "::error::play_promote_from needs a target play_track"
+            exit 1
+          fi
+          if [ "$PLAY_PROMOTE_FROM" = none ]; then
+            [ -n "$KEYSTORE" ] || missing+=(ANDROID_UPLOAD_KEYSTORE_BASE64)
+            [ -n "$STORE_PASSWORD" ] || missing+=(TENS_UPLOAD_STORE_PASSWORD)
+            [ -n "$KEY_ALIAS" ] || missing+=(TENS_UPLOAD_KEY_ALIAS)
+            [ -n "$KEY_PASSWORD" ] || missing+=(TENS_UPLOAD_KEY_PASSWORD)
+          fi
+          if [ "$PLAY_TRACK" != none ]; then
+            [ -n "$PLAY_JSON" ] || missing+=(PLAY_SERVICE_ACCOUNT_JSON)
+          fi
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Missing repository secrets: ${missing[*]} (docs/STORE_RELEASE.md)"
+            exit 1
+          fi
+
+      - uses: ./.github/actions/setup-node-yarn
+
+      - name: Set up JDK 21
+        if: env.PLAY_PROMOTE_FROM == 'none'
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Set up Ruby + fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Restore the upload key
+        if: env.PLAY_PROMOTE_FROM == 'none'
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.TENS_UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.TENS_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.TENS_UPLOAD_KEY_PASSWORD }}
+        run: |
+          printf '%s' "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+          {
+            echo "TENS_UPLOAD_STORE_FILE=$RUNNER_TEMP/upload.jks"
+            echo "TENS_UPLOAD_STORE_PASSWORD=$STORE_PASSWORD"
+            echo "TENS_UPLOAD_KEY_ALIAS=$KEY_ALIAS"
+            echo "TENS_UPLOAD_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Build the signed release AAB
+        if: env.PLAY_PROMOTE_FROM == 'none'
+        run: yarn android:aab
+
+      - name: Release notes from CHANGELOG.md
+        if: env.PLAY_PROMOTE_FROM == 'none'
+        run: yarn store:notes
+
+      - name: Generate store images
+        if: env.UPLOAD_LISTING == 'true'
+        run: |
+          npx playwright install --with-deps chromium
+          yarn store:assets
+
+      - uses: actions/upload-artifact@v7
+        if: env.PLAY_PROMOTE_FROM == 'none'
+        with:
+          name: tens-android-store-release
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/mapping/release/mapping.txt
+            fastlane/metadata/android/
+            fastlane/play-foldable/
+          if-no-files-found: error
+
+      - name: Upload to Google Play
+        if: env.PLAY_TRACK != 'none' && env.PLAY_PROMOTE_FROM == 'none'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          bundle exec fastlane android deploy \
+            track:"$PLAY_TRACK" status:"$PLAY_STATUS" rollout:"$PLAY_ROLLOUT" metadata:"$UPLOAD_LISTING"
+
+      - name: Promote the tested release on Google Play
+        if: env.PLAY_PROMOTE_FROM != 'none'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          bundle exec fastlane android promote \
+            from:"$PLAY_PROMOTE_FROM" to:"$PLAY_TRACK" status:"$PLAY_STATUS" rollout:"$PLAY_ROLLOUT" \
+            metadata:"$UPLOAD_LISTING"
+
+
+  ios:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.platforms != 'android' && inputs.ios_action != 'none') ||
+      (github.event_name == 'push' && vars.STORE_AUTO_RELEASE == 'true')
+    runs-on: macos-latest
+    environment: store-release
+    # `ios submit` waits for the version's build to finish processing; cap it instead of the 6 h
+    # default when no build exists (deliver's build watcher has no timeout of its own).
+    timeout-minutes: 90
+    env:
+      IOS_ACTION: ${{ inputs.ios_action || 'testflight' }}
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      TENS_ADMOB_APP_ID_IOS: ${{ vars.TENS_ADMOB_APP_ID_IOS }}
+      VITE_ADMOB_REWARDED_ID_IOS: ${{ vars.VITE_ADMOB_REWARDED_ID_IOS }}
+      VITE_REVENUECAT_API_KEY_IOS: ${{ vars.VITE_REVENUECAT_API_KEY_IOS }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check required secrets
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          missing=()
+          [ -n "$ASC_KEY_ID" ] || missing+=(ASC_KEY_ID)
+          [ -n "$ASC_ISSUER_ID" ] || missing+=(ASC_ISSUER_ID)
+          [ -n "$ASC_KEY_P8" ] || missing+=(ASC_KEY_P8)
+          [ -n "$APPLE_TEAM_ID" ] || missing+=("APPLE_TEAM_ID (variable)")
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Missing repository secrets/variables: ${missing[*]} (docs/STORE_RELEASE.md)"
+            exit 1
+          fi
+
+      - uses: ./.github/actions/setup-node-yarn
+
+      - name: Set up Ruby + fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Build web assets and sync the iOS project
+        if: env.IOS_ACTION == 'testflight'
+        run: |
+          yarn build:capacitor
+          npx cap sync ios
+          yarn ios:configure
+
+      - name: Release notes from CHANGELOG.md
+        run: yarn store:notes
+
+      - name: Generate store images
+        if: env.UPLOAD_LISTING == 'true'
+        run: |
+          npx playwright install chromium
+          yarn store:assets
+
+      - name: Archive and upload to TestFlight
+        if: env.IOS_ACTION == 'testflight'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: bundle exec fastlane ios beta
+
+      - name: Upload the App Store listing
+        if: env.UPLOAD_LISTING == 'true' && env.IOS_ACTION != 'submit'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: bundle exec fastlane ios metadata
+
+      - name: Submit for App Review
+        if: env.IOS_ACTION == 'submit'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: bundle exec fastlane ios submit metadata:"$UPLOAD_LISTING"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: tens-ios-store-release
+          path: |
+            build/ios/
+            fastlane/screenshots/
+          if-no-files-found: ignore

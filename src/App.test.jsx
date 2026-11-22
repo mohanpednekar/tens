@@ -1358,7 +1358,9 @@ test('the Restage panel is hidden before the last tier has been a Scale Up targe
   expect(screen.queryByLabelText(/^restage panel$/i)).toBeNull()
 })
 
-test('the Restage button disables once the last tier\'s own owned count is 0', () => {
+test('the Restage button stays clickable at 0 owned last-tier units and warns before Restaging', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
   seedMainGameState({
     resources: { base: 12345 },
     owned: { tier09: 10, tier10: 0 },
@@ -1369,7 +1371,11 @@ test('the Restage button disables once the last tier\'s own owned count is 0', (
   render(<App />)
 
   const xpPanel = screen.getByLabelText(/^restage panel$/i)
-  expect(within(xpPanel).getByRole('button', { name: /consume 37 xp for .* quettabytes tickspeed/i })).toBeDisabled()
+  const restage = within(xpPanel).getByRole('button', { name: /consume 37 xp for .* quettabytes tickspeed/i })
+  expect(restage).toBeEnabled()
+  await user.click(restage)
+  expect(window.confirm).toHaveBeenCalledWith(expect.stringMatching(/you own no quettabytes, so nothing will be left producing/i))
+  expect(within(xpPanel).getByRole('button', { name: /consume 0 xp/i })).toBeDisabled()
 })
 
 test('clicking Scale Up once eligible resets resources but advances the target to the next tier', async () => {

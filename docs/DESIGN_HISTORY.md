@@ -9512,6 +9512,10 @@ The last tier's resource-funded tickspeed upgrade spent only 10% of its cost (`L
 
 The unconditional per-level credit was too generous (it started as soon as QB had a completed level) and the `cost + 1` tickspeed reserve made "spend all your Quettabytes" unreachable. Credit is now gated on the Spent QB achievement (`quettaSpent` / `lastTierSpent`: run-scoped `lastTierEarnedThisRun` plus a 0 QB balance). Last-tier tickspeed requirement is `cost` so that spend is possible. The credit itself is exactly 1 unit per `10 / (1 + log10 completed levels)` s (floor 10 ms), not 1 per level per 10 s, with an elapsed-seconds timer (`lastTierLevelCreditTimer`) instead of a fractional-unit accumulator. Reaching the stall IS the condition, so `buyTickspeedMultiplier` unlocks it at the spend (marks the run + `detectAchievements`), independent of any later tick or same-tick reset. A broader latch (flagging QB on every buy) was tried and reverted as unnecessary: only a tickspeed spend can empty QB, and that spend proves QB was held.
 
+## Spent QB keys off a Restage clicked at 0 QB, not a 0 QB balance (2026-11)
+
+`lastTierSpent` (QB held this run + 0 balance, run-scoped `lastTierEarnedThisRun`) rewarded a state that is never a stall on its own: QB rebuilds through normal play. The real stall is a Restage at 0 owned QB, which wipes every tier and Bits with nothing left producing. Manual Restage (`restageManually`) now allows that and counts `achievements.counters.emptyRestages`, earning Spent QB; Auto Restage keeps the 0-owned guard so automation never self-stalls. Rejected: a state predicate "Restage ready but 0 QB" (`isRestageStalledByEmptyLastTier`) — it fired for free about a second after the 10th Scale Up (which empties QB and unlocks Restage, and 1 XP returns at once), with no player choice; the maintainer asked for the click. `lastTierEarnedThisRun` was removed (stale copies in old saves are inert).
+
 ## Single-line tier rows; exponential notation from 10,000 (2026-11)
 
 Factory tier rows went from two lines (symbol · owned · +production, then two half-width buttons) to one
