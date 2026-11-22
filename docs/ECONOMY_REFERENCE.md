@@ -1885,10 +1885,9 @@ moment the tier itself unlocks — no autobuyer unlock or PP prerequisite of any
   since paying the exact cost would zero out the tier's own generator count), except the last tier,
   which may spend to exactly 0. Called both manually and
   — for every tier whose tier tickspeed autobuyer is bought (`tierTickspeedAutobuyer[tier.id]`) —
-  automatically by `tickGame`, once per tick, whenever affordable. Emptying QB without the achievement is a genuine stall (no QB production);
-  Reaching it is the Spent QB condition: `buyTickspeedMultiplier` marks the run and runs `detectAchievements` on a
-  successful last-tier spend, so it unlocks at that moment (even if a reset follows in the same tick).
-- Every tier (including the last) spends the full `getTickspeedMultiplierCost`; `getTickspeedMultiplierRequirement` is `cost + 1` (keeps one generator) — except the last tier, whose requirement is `cost` (it may spend to exactly 0, earning the Spent QB achievement).
+  automatically by `tickGame`, once per tick, whenever affordable. Emptying QB is not a stall by itself (lower tiers rebuild it);
+  a 0 balance alone does not earn Spent QB — only a manual Restage clicked at 0 owned QB does (`restageManually`, below).
+- Every tier (including the last) spends the full `getTickspeedMultiplierCost`; `getTickspeedMultiplierRequirement` is `cost + 1` (keeps one generator) — except the last tier, whose requirement is `cost` (it may spend to exactly 0; Restaging manually there earns the Spent QB achievement).
 
 #### The global tickspeed multiplier
 
@@ -1952,6 +1951,12 @@ its one purpose.
   (`purchased`/levels untouched; the last tier's own counts untouched). No-op if not unlocked, if the
   last tier's own `owned` is 0 (nothing to speed up — see `docs/DESIGN_HISTORY.md`), if `amount` isn't a
   positive integer, is below the minimum, exceeds unspent XP, or production is frozen.
+- `restageManually(amount)` — the player's Restage (MainPage button via the hook's `consumeXpForLastTierTickspeed`
+  action, and the Daily-run `restage` action): the same consumption with the 0-owned guard lifted. Restaging at 0
+  owned QB wipes every tier and Bits with nothing left producing — the real stall — and increments the lifetime
+  `achievements.counters.emptyRestages` (only while `ACHIEVEMENTS_FEATURE.enabled`), earning **Spent QB**
+  (`quettaSpent`, `condition: { kind: 'counter', key: 'emptyRestages', min: 1 }`), whose regardless-of-balance credit
+  is the way out.
 - **Automation: the Auto Restage** (`autoXpTickspeed`, unlocked at Purge 32 (no PP); permanent across
   Prestige/Scale Up/Overclock/Era like the other global automations). While bought and
   `autoXpTickspeedEnabled` (pause via `setAutoXpTickspeedEnabled`, same Firmware row), `tickGame` calls
@@ -1962,8 +1967,9 @@ its one purpose.
   and always drives the ordinary `buyTickspeedMultiplier`.
 - **MainPage**: the Restage card (`aria-label="restage panel"`) shows the current XP multiplier,
   XP consumed and the next minimum, plus a `🧬 {XP} XP` button (`variant="smart"`, behind a
-  `window.confirm`) that spends the entire unspent XP balance. Disabled while the last tier owns 0,
-  XP is below the minimum, or production is frozen; its `title` explains the owned-0 case.
+  `window.confirm`) that spends the entire unspent XP balance via `restageManually`. Disabled while XP is below
+  the minimum, Restage is challenge-disabled, or production is frozen; at 0 owned last-tier units it stays enabled and
+  its `title` and confirm text warn that nothing will be left producing.
 
 #### Multiplier overflow safety
 
@@ -2397,10 +2403,6 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
   accelerateBoughtThisCycle: false,                       // CYCLE-SCOPED: an Accelerate level was bought this Purge cycle
                                                           // (carried through Scale Up/Overclock, reset by Purge/Reboot);
                                                           // gates the 'Overclock fast' achievement.
-  lastTierEarnedThisRun: false,                          // RUN-SCOPED: the last tier (QB) has held a non-zero
-                                                          // balance this Factory cycle. Combined with a 0
-                                                          // balance, earns Spent QB (`quettaSpent`). Reset by
-                                                          // Purge / Scale Up / Overclock / Reboot.
   everUnlockedTierIds: { tier01: true, tier02: false, … }, // RUN-SCOPED per-tier record. A successful Scale Up
                                                           // preserves earlier records and adds its target and
                                                           // successor. Recorded successors re-reveal at predecessor
@@ -2825,7 +2827,7 @@ purchases were manual or automatic.
 | `buyTier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`; otherwise validates unlock + affordability, deducts cost, increments `owned`/`purchased` by 1; single-unit purchase, not called by the UI or `buyTierQuantity` |
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Returns the same state if `isProductionFrozen`; otherwise buys up to `quantity` units (capped at the cost-block boundary via `getTierBulkQuantity`), stopping early if a unit becomes unaffordable; used both by the manual "Buy" button (always `quantity` `Number.MAX_SAFE_INTEGER`, see `useIncrementalGame`'s `BUY_QUANTITY`) and by `tickGame`'s autobuyer loop — the two purchase paths are identical, a tier's tickspeed multiplier level has no effect on how much a purchase costs or how many units it grants |
 | `applyAutobuyerMilestones` | `state → state` | Also unlocks the five global automations at `GLOBAL_AUTOMATION_UNLOCK_PURGES` (8/16/32/64/128; run on load too). For every tier whose `getAutobuyerUnlockMilestone(tierId)`/`getTierTickspeedAutobuyerMilestone(tierId)` is met by `state.purge.count` and isn't already unlocked, sets `autobuyers[tierId] = 1` and/or `tierTickspeedAutobuyer[tierId] = true` — no PP spent, no cost check at all. Never revokes anything already unlocked; returns the same state reference if nothing newly qualifies. Called from `purgeGame` (right after incrementing `count`) |
-| `buyTickspeedMultiplier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen` or if the tier itself isn't unlocked yet (`isTierUnlocked`) — no autobuyer-unlock prerequisite at all; otherwise upgrades `tickspeedLevels[tierId]` from N to N+1 — always by spending the tier's own resource via `getTickspeedMultiplierCost(tierId, N + 1)`. Each level speeds up that tier's own delivery frequency by another 10% (via `getTickspeedProductionMultiplier`, divided into `getEffectiveTierTickSpeedSeconds` — see "Tier production tickspeed" in CLAUDE.md), without changing the amount delivered per batch, how often the autobuyer attempts a purchase, how each individual purchase is paid for/batched, or manual Buy. Since `resources[tierId]` and `owned[tierId]` move together, a call (non-last tiers) requires `available >= cost + 1`, not just `available >= cost` — paying the exact cost would zero out the tier's own generator count (and its production), so the last unit is reserved and the call is a no-op until at least 1 would remain afterward; the MainPage tickspeed button's `disabled` state mirrors this same `+ 1` threshold. Also called automatically by `tickGame` for every tier whose tier tickspeed autobuyer is unlocked (`tierTickspeedAutobuyer[tier.id]`, via `applyAutobuyerMilestones`), including the last tier regardless of its XP unlock. **Last tier:** requirement is `cost` (may spend to 0; reaching that stall unlocks Spent QB immediately — a last-tier spend runs `detectAchievements`) |
+| `buyTickspeedMultiplier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen` or if the tier itself isn't unlocked yet (`isTierUnlocked`) — no autobuyer-unlock prerequisite at all; otherwise upgrades `tickspeedLevels[tierId]` from N to N+1 — always by spending the tier's own resource via `getTickspeedMultiplierCost(tierId, N + 1)`. Each level speeds up that tier's own delivery frequency by another 10% (via `getTickspeedProductionMultiplier`, divided into `getEffectiveTierTickSpeedSeconds` — see "Tier production tickspeed" in CLAUDE.md), without changing the amount delivered per batch, how often the autobuyer attempts a purchase, how each individual purchase is paid for/batched, or manual Buy. Since `resources[tierId]` and `owned[tierId]` move together, a call (non-last tiers) requires `available >= cost + 1`, not just `available >= cost` — paying the exact cost would zero out the tier's own generator count (and its production), so the last unit is reserved and the call is a no-op until at least 1 would remain afterward; the MainPage tickspeed button's `disabled` state mirrors this same `+ 1` threshold. Also called automatically by `tickGame` for every tier whose tier tickspeed autobuyer is unlocked (`tierTickspeedAutobuyer[tier.id]`, via `applyAutobuyerMilestones`), including the last tier regardless of its XP unlock. **Last tier:** requirement is `cost` (may spend to 0; a spend to 0 never earns Spent QB by itself — only a manual Restage at 0 QB does, see `restageManually`) |
 | `isGlobalTickspeedMultiplierUnlocked` | `state → bool` | `owned[TIER_DEFINITIONS[1].id] >= 1 \|\| globalTickspeedMultiplier != null` — gates the global tickspeed multiplier's *initial* activation on owning at least 1 of the second tier; once active it stays true regardless of tier02's current owned count |
 | `buyGlobalTickspeedMultiplier` | `state → state` | Returns the same state if `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if `resources[MONEY_ID]` is below `getGlobalTickspeedMultiplierCostBits(currentLevel)`; otherwise activates (`null` → 1) or upgrades (level N → N+1), spending those Bits (no PP involved) — a single global upgrade track, not per-tier, compounding every tier's production by another 1% per level |
 | `setAutoScaleUpEnabled` | `enabled → state → state` | Unconditional (not gated by `isProductionFrozen`) and a no-op if `autoScaleUp` is still falsy; otherwise sets `autoScaleUpEnabled` to `!!enabled`, pausing/resuming `tickGame`'s automatic `scaleUpGame` call without touching `autoScaleUp` itself — see "Pause/resume for the global automations" above |

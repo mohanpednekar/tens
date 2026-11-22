@@ -5,7 +5,7 @@ import {
   getAchievementShortRequirement,
   getAchievementShortReward,
   buyTickspeedMultiplier, createInitialGameState, detectAchievements, eraGame, getCompletedAchievementGroups,
-  getLevelMultiplierBase, getOverclockRequirement, getOverclockRequirementStep, getPurchaseMilestoneMultiplier, getTierCostExponent, buyGlobalTickspeedMultiplier, isAchievementEarned, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
+  getLevelMultiplierBase, getOverclockRequirement, getOverclockRequirementStep, getPurchaseMilestoneMultiplier, getTierCostExponent, buyGlobalTickspeedMultiplier, isAchievementEarned, consumeXpForLastTierTickspeed, restageManually, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
 } from './engine'
 import { loadGameState } from './storage'
 import { ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
@@ -18,13 +18,12 @@ const lateGame = () => {
   const initial = createInitialGameState()
   return {
     ...initial,
-    achievements: { earned: {}, counters: { pings: 10000, maxFirstOverclock: 6, acceleratelessOverclocks: 1, overflowDeepOverclock: 1 } },
+    achievements: { earned: {}, counters: { pings: 10000, emptyRestages: 1, maxFirstOverclock: 6, acceleratelessOverclocks: 1, overflowDeepOverclock: 1 } },
     intro: { ...initial.intro, byteCreated: true, mainGameUnlocked: true },
     purchased: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 5])),
     purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 10])),
     globalTickspeedMultiplier: 40,
     overclockLastClaimCompletedLevels: 5,
-    lastTierEarnedThisRun: true, // QB held earlier this run, balance now 0
   }
 }
 
@@ -38,35 +37,62 @@ describe('achievements registry', () => {
 
 describe('Spent QB', () => {
   const lastId = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
-  it('needs QB earned this run AND a zero balance', () => {
+  const restageReady = (qb = 0) => {
     const base = createInitialGameState()
-    expect(isAchievementEarned(detectAchievements(base), 'quettaSpent')).toBe(false)
-    expect(isAchievementEarned(detectAchievements({ ...base, lastTierEarnedThisRun: true }), 'quettaSpent')).toBe(true)
-    const holding = { ...base, lastTierEarnedThisRun: true, resources: { ...base.resources, [lastId]: 3 } }
-    expect(isAchievementEarned(detectAchievements(holding), 'quettaSpent')).toBe(false)
+    return {
+      ...base,
+      scaleUpTierCounts: { ...base.scaleUpTierCounts, [lastId]: 1 },
+      purge: { ...base.purge, xp: 5 },
+      resources: { ...base.resources, [MONEY_ID]: 100, [lastId]: qb },
+      owned: { ...base.owned, [TIER_DEFINITIONS[0].id]: 7, [lastId]: qb },
+    }
+  }
+
+  it('a 0 QB balance alone never earns it, even with Restage ready (e.g. right after the last-tier Scale Up)', () => {
+    const ready = restageReady()
+    expect(isAchievementEarned(detectAchievements(ready), 'quettaSpent')).toBe(false)
+    expect(isAchievementEarned(tickGame(1)(ready), 'quettaSpent')).toBe(false)
   })
 
-  it('a tick that sees a QB balance marks the run; purge clears the mark', () => {
-    const base = createInitialGameState()
-    const held = tickGame(1)({ ...base, resources: { ...base.resources, [lastId]: 2 }, owned: { ...base.owned, [lastId]: 2 } })
-    expect(held.lastTierEarnedThisRun).toBe(true)
-    expect(purgeGame({ ...held, resources: { ...held.resources, [MONEY_ID]: PURGE_THRESHOLD } }).lastTierEarnedThisRun).toBe(false)
+  it('a manual Restage clicked at 0 QB runs (wiping every tier and Bits) and earns it', () => {
+    const after = restageManually(5)(restageReady())
+    expect(after.purge.xp).toBe(0)
+    expect(after.owned[TIER_DEFINITIONS[0].id]).toBe(0)
+    expect(after.resources[MONEY_ID]).toBe(0)
+    expect(after.achievements.counters.emptyRestages).toBe(1)
+    expect(isAchievementEarned(after, 'quettaSpent')).toBe(true)
   })
 
-  it('unlocks at the moment the spend empties QB, with no tick, and a later Scale Up keeps it', () => {
-    const base = createInitialGameState()
-    const ready = { ...base, resources: { ...base.resources, [lastId]: 10 }, owned: { ...base.owned, [lastId]: 10 } }
-    const spent = buyTickspeedMultiplier(lastId)(ready)
+  it('a manual Restage while holding QB does not earn it', () => {
+    const after = restageManually(5)(restageReady(3))
+    expect(after.purge.xp).toBe(0)
+    expect(isAchievementEarned(after, 'quettaSpent')).toBe(false)
+  })
+
+  it('Auto Restage (consumeXpForLastTierTickspeed) keeps the 0 QB guard', () => {
+    const ready = restageReady()
+    expect(consumeXpForLastTierTickspeed(5)(ready)).toBe(ready)
+  })
+
+  it.each([
+    ['Restage not unlocked', s => ({ ...s, scaleUpTierCounts: { ...s.scaleUpTierCounts, [lastId]: 0 } })],
+    ['XP below the Restage minimum', s => ({ ...s, purge: { ...s.purge, xp: 0 } })],
+  ])('a manual Restage at 0 QB is still a no-op with %s', (_, tweak) => {
+    const state = tweak(restageReady())
+    expect(restageManually(5)(state)).toBe(state)
+  })
+
+  it('spending QB to 0 with the tickspeed upgrade does not earn it', () => {
+    const spent = buyTickspeedMultiplier(lastId)(restageReady(10))
     expect(spent.resources[lastId]).toBe(0)
-    expect(isAchievementEarned(spent, 'quettaSpent')).toBe(true)
-    const scaled = { ...spent, purchaseLevels: { ...spent.purchaseLevels, [TIER_DEFINITIONS[0].id]: 4 } }
-    expect(isAchievementEarned(scaleUpGame(scaled), 'quettaSpent')).toBe(true)
+    expect(isAchievementEarned(spent, 'quettaSpent')).toBe(false)
   })
 
-  it('a spend that leaves QB does not unlock it, and other tiers never do', () => {
-    const base = createInitialGameState()
-    const more = { ...base, resources: { ...base.resources, [lastId]: 25 }, owned: { ...base.owned, [lastId]: 25 } }
-    expect(isAchievementEarned(buyTickspeedMultiplier(lastId)(more), 'quettaSpent')).toBe(false)
+  it('is counted only with the feature on', () => {
+    ACHIEVEMENTS_FEATURE.enabled = false
+    const after = restageManually(5)(restageReady())
+    expect(after.purge.xp).toBe(0)
+    expect(after.achievements.counters.emptyRestages).toBeUndefined()
   })
 })
 
