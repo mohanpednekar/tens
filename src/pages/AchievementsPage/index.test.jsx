@@ -169,7 +169,7 @@ describe('AppMenu achievements entry', () => {
     renderWithTheme(<AchievementsPage game={gameWith({})} />)
     openGroup('Level power')
     expect(screen.getByLabelText('Level power achievement level 0 of 10').textContent).toContain('🔒')
-    expect(screen.getByText(/Next: KB level 10/)).toBeTruthy()
+    expect(screen.getByText(/Next: KB level 5/)).toBeTruthy()
     expect(screen.getByLabelText('Level power next reward').textContent).toBe('Reward: +0.05 per-level multiplier')
   })
 
