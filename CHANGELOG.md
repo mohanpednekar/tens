@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Automation: global automation rows and tier autobuyer rows now keep the pause Switch flush right with the challenge or upgrade button beside it, in fixed columns, and list Scale Up before Restage.
 
 ### Fixed
-- Bottom nav no longer truncates labels on ~360px screens: with all 7 destinations shown below 400px wide, inactive items are icon-only (active keeps its label; aria-label/title unchanged). The Foundry Data Stream balance drops onto its own line below 400px so it no longer overlaps the title (#1163).
+- Bottom nav no longer truncates labels on ~360px screens: with all 7 destinations shown below 400px wide, inactive items are icon-only (active keeps its label; aria-label/title unchanged). The Foundry Data Stream and pool balances drop onto their own line below 400px so it no longer overlaps the title (#1163).
 
 - Power: Boost presets are no longer disabled by a pending Disk Fill or an armed Provision Disk (blockers invisible on the Power screen) — holding a token is enough.
 

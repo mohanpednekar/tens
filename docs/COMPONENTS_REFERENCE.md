@@ -7,7 +7,7 @@ state each is currently in.
 
 ## `AppNav/index.jsx`
 
-**Narrow width (#1163):** below `NARROW_NAV_MAX_WIDTH` (400px, `window.innerWidth`, resize-aware) with all 7 items shown, inactive items render icon only (active keeps its label; `aria-label`/`title` unchanged). Fewer items or wider screens are unchanged.
+**Narrow width (#1163):** below `NARROW_NAV_MAX_WIDTH` (400px, `window.innerWidth`, resize-aware) with all 7 items shown, inactive items render icon only (active keeps its label; `aria-label`/`title` unchanged). Fewer items or wider screens are unchanged. The active item grows to fit its label (`$grow`). Foundry `BalanceText` (Data Stream + pool tiles) drops to its own centred line below 400px.
 
 Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open byte foundry`) →
 **Power** (`open power`, page id `'boosters'`, once `isComputeCoreConversionUnlocked`) →

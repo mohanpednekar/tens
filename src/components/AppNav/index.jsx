@@ -51,7 +51,7 @@ const NavItem = styled.button`
   color: ${props => (props.$active ? props.theme.color.accent : props.theme.color.textMuted)};
   cursor: pointer;
   display: flex;
-  flex: 1 1 0;
+  flex: ${props => (props.$grow ? '0 0 auto' : '1 1 0')};
   flex-direction: column;
   font-family: ${props => props.theme.font.body};
   font-size: 0.65rem;
@@ -59,7 +59,7 @@ const NavItem = styled.button`
   gap: 0.15rem;
   justify-content: center;
   letter-spacing: 0.01em;
-  max-width: 5.5rem;
+  max-width: ${props => (props.$grow ? 'none' : '5.5rem')};
   min-width: 0;
   padding: 0.35rem 0.25rem;
   position: relative;
@@ -138,7 +138,7 @@ const AppNav = ({
 
   const iconOnlyInactive = useNarrowViewport() && items.length + 1 >= FULL_NAV_ITEM_COUNT
 
-  const utilityActive = currentPage === 'info' || currentPage === 'milestones' || currentPage === 'settings' || currentPage === 'dev' || moreOpen
+  const utilityActive = currentPage === 'info' || currentPage === 'achievements' || currentPage === 'milestones' || currentPage === 'settings' || currentPage === 'dev' || moreOpen
 
   return (
     <Bar aria-label="main navigation">
@@ -151,6 +151,7 @@ const AppNav = ({
             aria-current={active ? 'page' : undefined}
             aria-label={item.ariaLabel}
             $active={active}
+            $grow={active && iconOnlyInactive}
             onClick={() => onNavigate(item.id)}
             title={item.title}
             type="button"
@@ -171,6 +172,7 @@ const AppNav = ({
         aria-haspopup="dialog"
         aria-label="open more menu"
         $active={utilityActive}
+        $grow={utilityActive && iconOnlyInactive}
         onClick={onOpenMore}
         title="Manual, Milestones, Settings"
         type="button"
