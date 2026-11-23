@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
+- PWA manifest declares `orientation: 'any'` so installed tablets can rotate (groundwork for large-screen layouts; no visible layout change).
+- **Reclamation achievements reduced from 20 to 5.** They now track how many different Storage pools you have flushed (1, 3, 6, 8, and every pool), and they reward you: levels I and II raise the Bitrate exponent step of every disk size without a Flush Pool upgrade from 1% to 2% and 3% of the remaining gap to 1.0 (a replacement, not a stack), levels III and IV each make every Data Lake fill +5% faster (a share of its pool's Bandwidth, added to the +10% per flush), and level V (flush every pool) is the grand reward: Bitrate is synced to Capacity, so Upgrade Bitrate disappears and one Upgrade does both. The per-pool Bitrate exponent upgrades no longer come from achievements: a pool's first two Flush Pool flushes upgrade its disk-size steps directly, exactly as before (retained across Reformat, Purge, and Reboot). Existing saves keep every upgrade; Reclamation achievements are re-evaluated from the pools already flushed.
+- The Bitrate exponent readout on the Byte Foundry page shows three decimals (e.g. 0.505 instead of 0.51), so small disk-size steps are visible.
 
 - **Achievements page** shows ordered steps of the same thing as one leveled row (Ping, Reclamation (one 20-level row: each pool I then II), First purchase of each tier, Accelerate, Level power, Overclock step) with a `Lv n/N` badge and the next goal. Earned achievements and bonuses are unchanged.
 

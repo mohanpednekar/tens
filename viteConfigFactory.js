@@ -90,6 +90,7 @@ export function createViteConfig({
                 short_name: 'Tens',
                 description: 'Tens incremental game — every mechanic themed around powers of ten.',
                 display: 'standalone',
+                orientation: 'any', // tablets/foldables must rotate (epic #1152); phones can't be locked on the web
                 theme_color: '#0c0d11',
                 background_color: '#0c0d11',
                 icons: [
