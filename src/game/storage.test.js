@@ -1398,3 +1398,14 @@ describe('challenge state persistence (#1044)', () => {
     expect(completed.F21).toBeUndefined()
   })
 })
+
+describe('manualPurchaseThisCycle legacy migration', () => {
+  beforeEach(() => localStorage.clear())
+  it('treats a legacy save after a Scale Up (purchased all zero) as having bought manually', () => {
+    const base = createInitialGameState()
+    const legacy = { ...base, scaleUpCount: 1, purchased: Object.fromEntries(Object.keys(base.purchased ?? {}).map(id => [id, 0])) }
+    delete legacy.manualPurchaseThisCycle
+    localStorage.setItem('tens_game_state', JSON.stringify(legacy))
+    expect(loadGameState().manualPurchaseThisCycle).toBe(true)
+  })
+})
