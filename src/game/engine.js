@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, BUY_MAX_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, SLEEP_MODE_BASE_CAP_SECONDS, SLEEP_MODE_CAP_STEP_SECONDS, SLEEP_MODE_CAP_UPGRADE_COSTS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, TIER_COST_SPACING_GROWTH_LEVELS, OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL, LEVEL_POWER_ACHIEVEMENT_BONUS, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, RECLAMATION_POOL_THRESHOLDS, RECLAMATION_LEVEL_REWARDS } from './layers.js'
+import { KERNEL_PANIC_WINDOW_SECONDS, REMIND_ME_LATER_SECONDS, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, BUY_MAX_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, SLEEP_MODE_BASE_CAP_SECONDS, SLEEP_MODE_CAP_STEP_SECONDS, SLEEP_MODE_CAP_UPGRADE_COSTS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, TIER_COST_SPACING_GROWTH_LEVELS, OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL, LEVEL_POWER_ACHIEVEMENT_BONUS, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, RECLAMATION_POOL_THRESHOLDS, RECLAMATION_LEVEL_REWARDS } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -219,6 +219,9 @@ export const createInitialGameState = () => ({
   // Cycle-scoped (reset by Purge/Reboot, carried through Scale Up and Overclock): true once any Accelerate level
   // was bought this Purge cycle. Gates the 'Overclock twice without Accelerate' achievement.
   accelerateBoughtThisCycle: false,
+  // Cycle-scoped (reset by Purge/Reboot, carried through Scale Up and Overclock): true once the player made any manual tier
+  // purchase this Purge cycle. Gates 'Look ma, no hands' (a Purge with no manual purchase).
+  manualPurchaseThisCycle: false,
   // Permanent global level (not per-tier — there's only one to buy), null = not yet bought: how
   // many times Prestige Points have been spent to make Prestige itself automatic and faster (see
   // applyAutobuyerMilestones/getAutoPurgeAttemptRate) — never reset by prestige.
@@ -1436,6 +1439,22 @@ const buildEraIntroReset = (state, initial) => {
 }
 
 // --- Achievements (epic #1046) ---------------------------------------------------------------------
+// Compute ladder state fields in order (Cell → Fusion).
+const COMPUTE_LADDER_FIELDS = ['computeCores', 'computeNodes', 'computeClusters', 'computeNetworks', 'computeGrids', 'computeFabrics', 'computeClouds', 'computeDatacenters', 'computeSupercomputers', 'computeMegacomputers']
+// Lifetime Purges: the counter survives Reboot; `purge.count` is per-Reboot, so the larger of the two also seeds saves
+// that predate the counter.
+const getLifetimePurges = state => Math.max(state.achievements?.counters?.purges ?? 0, state.purge?.count ?? 0)
+// Adds `amount` to a lifetime counter (mode 'add'), raises it to at least `amount` ('max') or sets it ('set'), then re-detects. Same state
+// reference with the feature off.
+const bumpAchievementCounter = (state, key, amount = 1, mode = 'add') => {
+  if (!ACHIEVEMENTS_FEATURE.enabled) return state
+  const achievements = state.achievements ?? createInitialGameState().achievements
+  const current = achievements.counters?.[key] ?? 0
+  const value = mode === 'max' ? Math.max(current, amount) : mode === 'set' ? amount : current + amount
+  if (value === current && achievements.counters?.[key] !== undefined) return state
+  return detectAchievements({ ...state, achievements: { ...achievements, counters: { ...achievements.counters, [key]: value } } })
+}
+const areAllTierAutobuyersUnlocked = state => TIER_DEFINITIONS.every(tier => (state.autobuyers?.[tier.id] ?? null) !== null)
 // Distinct Storage pools compacted at least once (permanent `poolExponentBonuses` award map).
 const getCompactedPoolCount = state => getCompactedPoolCountFromIntro(state.intro)
 const getCompactedPoolCountFromIntro = intro => {
@@ -1468,6 +1487,22 @@ export const isAchievementConditionMet = (state, condition) => {
     case 'overclocked': return state.overclockLastClaimCompletedLevels != null
     case 'tierLevel': return (state.purchaseLevels?.[condition.tierId] ?? 1) >= condition.min
     case 'poolsCompacted': return getCompactedPoolCount(state) >= condition.min
+    case 'lifetimePurges': return getLifetimePurges(state) >= condition.min
+    case 'kernelsEarned': return Math.max(state.achievements?.counters?.kernelsEarned ?? 0, state.eons?.balance ?? 0) >= condition.min
+    case 'eraCount': return (state.era?.count ?? 0) >= condition.min
+    case 'doublePpLevel': return (state.prestigeDoublePpLevel ?? 0) >= condition.min
+    case 'onePowerPerPp': return getPrestigePowersPerPp(state.prestigeDoublePpLevel ?? 0) <= 1
+    case 'googolReached': return (state.resources?.[MONEY_ID] ?? 0) >= PURGE_THRESHOLD || getLifetimePurges(state) > 0 || (state.era?.count ?? 0) > 0
+    case 'fastAutoPurge': return (state.autoPurge ?? null) !== null && getAutomationIntervalSeconds(state, 'purge') <= OVERFLOW_MODE_MAX_INTERVAL_SECONDS
+    case 'overflowPastGoogol': return (state.achievements?.counters?.overflowPurges ?? 0) >= 1 || (isOverflowModeUnlocked(state) && (state.resources?.[MONEY_ID] ?? 0) >= PURGE_THRESHOLD)
+    case 'superCloudOwned': return (state.computeFlops?.owned?.flop10 ?? 0) >= 1
+    case 'powerPageUnlocked': return isComputeCoreConversionUnlocked(state) || Boolean(state.intro?.computeMergePageUnlocked) || (state.intro?.computeCoresEverEarned ?? 0) > 0 || COMPUTE_LADDER_FIELDS.some(field => (state.intro?.[field] ?? 0) > 0)
+    // Entity at ladder index >= fromIndex exists (merges consume the lower entity, so a higher one implies it was built).
+    case 'computeEntityBuilt': return COMPUTE_LADDER_FIELDS.slice(condition.fromIndex).some(field => (state.intro?.[field] ?? 0) > 0)
+    case 'autobuyers': {
+      const unlocked = TIER_DEFINITIONS.map(tier => (state.autobuyers?.[tier.id] ?? null) !== null)
+      return condition.mode === 'all' ? unlocked.every(Boolean) : unlocked.some(Boolean)
+    }
     default: return false
   }
 }
@@ -1483,6 +1518,8 @@ export const getAchievementProgress = (state, condition) => {
       // maxFirstOverclock is a record of past claims, not live progress (the live level count decides the next claim).
       if (condition.key === 'maxFirstOverclock') return null
       return { current: state.achievements?.counters?.[condition.key] ?? 0, target: condition.min }
+    case 'kernelsEarned': return { current: Math.max(state.achievements?.counters?.kernelsEarned ?? 0, state.eons?.balance ?? 0), target: condition.min }
+    case 'lifetimePurges': return { current: getLifetimePurges(state), target: condition.min }
     case 'clockSpeedLevel': return { current: state.globalTickspeedMultiplier ?? 0, target: condition.min }
     case 'tierLevel': return { current: state.purchaseLevels?.[condition.tierId] ?? 1, target: condition.min }
     case 'poolsCompacted': return { current: getCompactedPoolCount(state), target: condition.min }
@@ -1544,7 +1581,7 @@ export const getAchievementStars = state =>
     return sum + earned + bonus
   }, 0)
 
-export const eraGame = state => {
+const eraGameCore = state => {
   if (!isEraEligible(state)) return state
 
   const initial = createInitialGameState()
@@ -2523,7 +2560,10 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
   // same tick. The main save never has the field.
   // Resets rebuild the state from scratch and drop the field, so it is re-attached once the resets are done.
   const sampledPeaks = producedState.runPeaks ? mergeRunPeaks(producedState.runPeaks, producedState) : null
-  let tickState = producedState
+  // Overflow achievement: record a past-Googol balance before any automated soft reset (Purge/Overclock/Scale Up) can discard it.
+  let tickState = isOverflowModeUnlocked(producedState) && clampNonNegative(producedState.resources[MONEY_ID]) >= PURGE_THRESHOLD
+    ? bumpAchievementCounter(producedState, 'overflowPurges', 1, 'max')
+    : producedState
 
   // RESET PRIORITY: every reset automation runs BEFORE any spend, and bigger resets before smaller ones —
   // Purge (DeGoogol) > Overclock > Scale Up > Restage — so two automations never conflict in one tick: the bigger
@@ -2604,10 +2644,20 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
 }
 
 // Ordinary tick, or — inside a live challenge — the challenge-aware stepper (clock, boundaries, rule effects).
+// 'Remind me later': continuous seconds a Purge has been available and unclaimed (outside challenge runs). Resets to 0
+// the moment it is not available (claimed, or Auto-Purge fired); stops tracking once earned.
+const trackPurgeWait = (elapsedSeconds, state) => {
+  if (!ACHIEVEMENTS_FEATURE.enabled || elapsedSeconds <= 0 || isAchievementEarned(state, 'remindMeLater')) return state
+  const available = !getActiveChallenge(state) && clampNonNegative(state.resources?.[MONEY_ID]) >= PURGE_THRESHOLD
+  const waited = state.achievements?.counters?.purgeWaitSeconds ?? 0
+  if (!available) return waited === 0 ? state : bumpAchievementCounter(state, 'purgeWaitSeconds', 0, 'set')
+  return bumpAchievementCounter(state, 'purgeWaitSeconds', Math.min(REMIND_ME_LATER_SECONDS, waited + elapsedSeconds), 'set')
+}
+
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state =>
-  detectAchievements(getActiveChallenge(state) && elapsedSeconds > 0
+  detectAchievements(trackPurgeWait(elapsedSeconds, getActiveChallenge(state) && elapsedSeconds > 0
     ? tickChallengeRun(elapsedSeconds, autobuyerBatchSize, state)
-    : tickGameCore(elapsedSeconds, autobuyerBatchSize, 0)(state))
+    : tickGameCore(elapsedSeconds, autobuyerBatchSize, 0)(state)))
 
 // Real elapsed seconds away, capped at capSeconds (the save's getMaxOfflineSeconds; MAX_OFFLINE_SECONDS,
 // the 24h hard ceiling, when omitted). At or below
@@ -3122,10 +3172,12 @@ export const tapIntroBit = state => {
   // A no-op tap (already full / bonus at cap) is not counted and keeps the engine's same-reference signal.
   if (!ACHIEVEMENTS_FEATURE.enabled || next === state) return next
   const achievements = next.achievements ?? createInitialGameState().achievements
-  return detectAchievements({
+  const pinged = detectAchievements({
     ...next,
     achievements: { ...achievements, counters: { ...achievements.counters, pings: (achievements.counters?.pings ?? 0) + 1 } },
   })
+  // 'Oh, it's still a clicker game!': a Ping while every tier autobuyer is unlocked.
+  return areAllTierAutobuyersUnlocked(pinged) ? bumpAchievementCounter(pinged, 'automatedPings', 1, 'max') : pinged
 }
 
 // One-time "combine into a Byte": consumes INTRO_BYTE_COMBINE_COST (8) bits, creates the single
@@ -7287,7 +7339,7 @@ export const forfeitComputeBoost = boostType => state => {
 // Starts a `boostType` boost funded by `tierIndex` — or queues it behind that lane's running one, in
 // descending strength order after the head. A running head is never preempted. Same-reference no-op
 // without its turn.
-export const activateComputeBoost = (boostType, tierIndex) => state => {
+const activateComputeBoostCore = (boostType, tierIndex) => state => {
   if (!isComputeBoostTurnAvailable(state, boostType, tierIndex)) return state
 
   const field = getComputeBoostTierField(tierIndex)
@@ -7877,7 +7929,7 @@ export const tickFoundryResetConvenience = state => {
 // intro.foundryResetCaps so tickFoundryResetConvenience can auto-press Combine / Provision Disk /
 // Upgrade Data Stream again up to the prior highs. Preserves mainGameUnlocked when already true.
 // Leaves every non-intro field untouched.
-export const resetByteFoundry = state => {
+const resetByteFoundryCore = state => {
   const initialIntro = createInitialGameState().intro
   const prev = state.intro ?? {}
   const keepMainUnlocked = prev.mainGameUnlocked === true
@@ -7905,7 +7957,7 @@ export const resetByteFoundry = state => {
 // Purge goal reached: an ordinary Purge, except that a challenge run (epic #1037) records its completion
 // and best time and clears the active challenge — and a REPEAT completion resets the Factory cycle
 // without awarding PP or counting as a Purge.
-export const purgeGame = state => {
+const purgeGameCore = state => {
   if (clampNonNegative(state.resources[MONEY_ID]) < getPurgeGoalBits(state)) return state
 
   const challenge = getActiveChallenge(state)
@@ -8339,6 +8391,7 @@ const scaleUpGameCore = state => {
     challenges: state.challenges ?? initial.challenges,
     achievements: state.achievements ?? initial.achievements,
     accelerateBoughtThisCycle: Boolean(state.accelerateBoughtThisCycle),
+    manualPurchaseThisCycle: Boolean(state.manualPurchaseThisCycle),
     daily: state.daily ?? initial.daily,
     purge: { ...state.purge, xp: initial.purge.xp, highestMilestone: initial.purge.highestMilestone },
     scaleUpCount: (state.scaleUpCount ?? 0) + 1,
@@ -8455,6 +8508,7 @@ const overclockGameCore = state => {
     challenges: state.challenges ?? initial.challenges,
     achievements: state.achievements ?? initial.achievements,
     accelerateBoughtThisCycle: Boolean(state.accelerateBoughtThisCycle),
+    manualPurchaseThisCycle: Boolean(state.manualPurchaseThisCycle),
     daily: state.daily ?? initial.daily,
     purge: { ...state.purge, xp: initial.purge.xp, highestMilestone: initial.purge.highestMilestone },
     // scaleUpCount/scaleUpTierCounts are deliberately NOT carried over (unlike scaleUpGame's own
@@ -8571,4 +8625,61 @@ const consumeXpForLastTierTickspeedCore = (amount, allowEmptyLastTier) => state 
       ...resetTierIds.reduce((acc, tierId) => ({ ...acc, [tierId]: 0 }), {}),
     },
   }
+}
+
+// --- Achievement event wrappers (epic #1046, #1051) -------------------------------------------------
+// Each wraps the pure action above and records the lifetime counters its achievements read. They return the
+// SAME state when the action was a no-op, and add nothing observable with the feature off.
+
+// A Purge that awarded a Purge (not a repeat challenge completion) bumps the lifetime Purge count, which survives
+// Reboot; a Purge in a cycle with no manual tier purchase earns 'Look ma, no hands'.
+export const purgeGame = state => {
+  const next = purgeGameCore(state)
+  if (next === state || !ACHIEVEMENTS_FEATURE.enabled) return next
+  // Record Overflow past a Googol from the pre-Purge balance (the Purge resets it, e.g. Auto-Purge firing mid-tick),
+  // including repeat challenge completions, which reset the balance without awarding a Purge.
+  const overflowed = isOverflowModeUnlocked(state) && clampNonNegative(state.resources?.[MONEY_ID]) >= PURGE_THRESHOLD
+    ? bumpAchievementCounter(next, 'overflowPurges', 1, 'max')
+    : next
+  if (next.purge.count <= state.purge.count) return overflowed
+  const counted = bumpAchievementCounter(overflowed, 'purges', getLifetimePurges(state) + 1, 'max')
+  return state.manualPurchaseThisCycle ? counted : bumpAchievementCounter(counted, 'handsFreePurges', 1, 'max')
+}
+
+// A Reboot adds the Kernels it awarded to the lifetime total, and records when (in active play seconds, which
+// survive Reboot) it happened so two Reboots within KERNEL_PANIC_WINDOW_SECONDS earn 'Kernel panic'.
+export const eraGame = state => {
+  const next = eraGameCore(state)
+  if (next === state || !ACHIEVEMENTS_FEATURE.enabled) return next
+  const kernels = getEonsAwarded(state)
+  const now = clampNonNegative(next.activePlaySeconds ?? 0)
+  const last = next.achievements?.counters?.lastRebootPlaySeconds
+  // Seed lifetime counters from pre-Reboot state first: Reboot resets `purge.count`, and saves from before the counters
+  // existed only have the Kernel balance (a lower bound) to go on.
+  let result = bumpAchievementCounter(next, 'purges', getLifetimePurges(state), 'max')
+  result = bumpAchievementCounter(result, 'kernelsEarned', Math.max(result.achievements.counters.kernelsEarned ?? 0, clampNonNegative(state.eons?.balance ?? 0)) + kernels, 'max')
+  if (last != null && now - last <= KERNEL_PANIC_WINDOW_SECONDS) result = bumpAchievementCounter(result, 'quickReboots', 1, 'max')
+  return bumpAchievementCounter(result, 'lastRebootPlaySeconds', now, 'set')
+}
+
+export const resetByteFoundry = state => {
+  const next = resetByteFoundryCore(state)
+  return next === state ? next : bumpAchievementCounter(next, 'reformats', 1)
+}
+
+// Turbo (preset 'burst') activations, and a lane reaching COMPUTE_BOOST_MAX_STACKS queued boosts.
+export const activateComputeBoost = (boostType, tierIndex) => state => {
+  const next = activateComputeBoostCore(boostType, tierIndex)(state)
+  if (next === state || !ACHIEVEMENTS_FEATURE.enabled) return next
+  const withTurbo = boostType === 'burst' ? bumpAchievementCounter(next, 'turboBoosts', 1, 'max') : next
+  return (getComputeBoostLane(withTurbo.intro, boostType)?.queue.length ?? 0) >= COMPUTE_BOOST_MAX_STACKS
+    ? bumpAchievementCounter(withTurbo, 'maxBoostStack', 1, 'max')
+    : withTurbo
+}
+
+// Marks a successful MANUAL tier purchase for the cycle (the hook wraps its Buy actions with this; autobuyers
+// call buyTierQuantity directly and do not).
+export const withManualPurchaseMark = action => state => {
+  const next = action(state)
+  return next === state || next.manualPurchaseThisCycle ? next : { ...next, manualPurchaseThisCycle: true }
 }
