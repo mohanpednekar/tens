@@ -177,7 +177,6 @@ export const DAILY_CHALLENGES_FEATURE = { enabled: true }
 // Level power achievements (one per tier): each raises the per-level production multiplier
 // (PURCHASE_MILESTONE_MULTIPLIER_BASE) by this much; all ten reach 1.5 from the 1.0 base.
 export const LEVEL_POWER_ACHIEVEMENT_BONUS = 0.05
-export const LEVEL_POWER_ACHIEVEMENT_LEVEL = 10
 // 'Remind me later': Purge available and left unclaimed for this many continuous seconds of play.
 export const REMIND_ME_LATER_SECONDS = 60
 // 'Kernel panic': two Reboots within this many seconds of ACTIVE play (activePlaySeconds survives Reboot).
@@ -186,6 +185,9 @@ export const KERNEL_PANIC_WINDOW_SECONDS = 3600
 // Compression and Kernel thresholds.
 export const MIDDLE_OUT_COMPRESSION_LEVEL = 5
 export const POPCORN_KERNELS = 100
+// Level each tier must reach for its Level power achievement: tiers 1–5 need level 5, then the tier number (6, 7, 8, 9, 10).
+export const LEVEL_POWER_ACHIEVEMENT_MIN_LEVEL = 5
+export const getLevelPowerAchievementLevel = tierNumber => Math.max(LEVEL_POWER_ACHIEVEMENT_MIN_LEVEL, tierNumber)
 // Overclock step achievements: first Overclock of a Purge claimed at this many completed last-tier levels (min is 5),
 // and the post-DeGoogol claim depth.
 export const PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL = 6
@@ -265,13 +267,13 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', short: 'Overclock', condition: { kind: 'overclocked' } },
   ...LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((tierNumber, i) => ({
     id: `levelPower${i + 1}`,
-    name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${LEVEL_POWER_ACHIEVEMENT_LEVEL}`,
+    name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${getLevelPowerAchievementLevel(tierNumber)}`,
     group: 'levelPower',
-    trigger: `Reach level ${LEVEL_POWER_ACHIEVEMENT_LEVEL} on ${TIER_DEFINITIONS[tierNumber - 1].name} (${LEVEL_POWER_ACHIEVEMENT_LEVEL - 1} levels completed)`,
-    short: `${TIER_DEFINITIONS[tierNumber - 1].symbol} level ${LEVEL_POWER_ACHIEVEMENT_LEVEL}`,
+    trigger: `Reach level ${getLevelPowerAchievementLevel(tierNumber)} on ${TIER_DEFINITIONS[tierNumber - 1].name} (${getLevelPowerAchievementLevel(tierNumber) - 1} levels completed)`,
+    short: `${TIER_DEFINITIONS[tierNumber - 1].symbol} level ${getLevelPowerAchievementLevel(tierNumber)}`,
     shortBonus: `+${LEVEL_POWER_ACHIEVEMENT_BONUS} per-level multiplier`,
     bonus: `The per-level production multiplier rises by ${LEVEL_POWER_ACHIEVEMENT_BONUS} (×1.0 → ×1.5 with all ten)`,
-    condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: LEVEL_POWER_ACHIEVEMENT_LEVEL },
+    condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: getLevelPowerAchievementLevel(tierNumber) },
   })),
   { id: 'overclockStep1', name: 'Patient Overclock', group: 'overclockStep', short: `First Overclock at ${PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL}+`, shortBonus: 'Overclock step −1', trigger: `Claim the first Overclock of a Purge at ${PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level than the one before (+4 → +3)', condition: { kind: 'counter', key: 'maxFirstOverclock', min: PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL } },
   { id: 'overclockStep2', name: 'Overclock fast', group: 'overclockStep', short: '2 Overclocks/Purge, no Accelerate', shortBonus: 'Overclock step −1', trigger: 'After Patient Overclock, claim two Overclocks in one Purge without buying any Accelerate', bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+3 → +2)', condition: { kind: 'counter', key: 'acceleratelessOverclocks', min: 1 } },

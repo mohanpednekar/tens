@@ -9,7 +9,7 @@ import {
   activateComputeBoost, buyTierQuantity, getPurgeGoalBits, stackComputeBoost, withManualPurchaseMark,
 } from './engine'
 import { loadGameState } from './storage'
-import { ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, CHALLENGE_DEFINITIONS, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_TIER_FIELDS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
+import { getLevelPowerAchievementLevel, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, CHALLENGE_DEFINITIONS, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_TIER_FIELDS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
 
 beforeEach(() => { ACHIEVEMENTS_FEATURE.enabled = true; localStorage.clear() })
 afterEach(() => { ACHIEVEMENTS_FEATURE.enabled = false })
@@ -178,13 +178,25 @@ describe('persistence across resets', () => {
 })
 
 describe('Level power achievements', () => {
-  it('start at 1.0; each tier at level 10 adds 0.05, reaching 1.5 with all ten', () => {
+  it('start at 1.0; each tier at its required level adds 0.05, reaching 1.5 with all ten', () => {
     const base = createInitialGameState()
     expect(getLevelMultiplierBase(base)).toBe(1)
-    const levels = n => ({ ...base, purchaseLevels: { ...base.purchaseLevels, ...Object.fromEntries(TIER_DEFINITIONS.slice(0, n).map(t => [t.id, 10])) } })
+    const levels = n => ({ ...base, purchaseLevels: { ...base.purchaseLevels, ...Object.fromEntries(TIER_DEFINITIONS.slice(0, n).map((t, i) => [t.id, getLevelPowerAchievementLevel(i + 1)])) } })
     expect(getLevelMultiplierBase(detectAchievements(levels(1)))).toBe(1.05)
     expect(getLevelMultiplierBase(detectAchievements(levels(4)))).toBe(1.2)
     expect(getLevelMultiplierBase(detectAchievements(levels(10)))).toBe(1.5)
+  })
+
+  it('the required level is 5 for tiers 1–5, then the tier number (6, 7, 8, 9, 10)', () => {
+    expect([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(getLevelPowerAchievementLevel)).toEqual([5, 5, 5, 5, 5, 6, 7, 8, 9, 10])
+    const base = createInitialGameState()
+    // One level short of every requirement earns nothing; exactly the requirement earns that tier only.
+    const short = { ...base, purchaseLevels: { ...base.purchaseLevels, ...Object.fromEntries(TIER_DEFINITIONS.map((t, i) => [t.id, getLevelPowerAchievementLevel(i + 1) - 1])) } }
+    expect(getLevelMultiplierBase(detectAchievements(short))).toBe(1)
+    const tier7 = { ...base, purchaseLevels: { ...base.purchaseLevels, tier07: 7 } }
+    expect(isAchievementEarned(detectAchievements(tier7), 'levelPower7')).toBe(true)
+    expect(isAchievementEarned(detectAchievements({ ...base, purchaseLevels: { ...base.purchaseLevels, tier07: 6 } }), 'levelPower7')).toBe(false)
+    expect(isAchievementEarned(detectAchievements({ ...base, purchaseLevels: { ...base.purchaseLevels, tier02: 5 } }), 'levelPower2')).toBe(true)
   })
 
   it('getPurchaseMilestoneMultiplier uses the supplied base', () => {
@@ -198,7 +210,7 @@ describe('Level power achievements', () => {
         ...base,
         resources: { ...base.resources, [MONEY_ID]: 0 },
         owned: { ...base.owned, tier01: 100 },
-        purchaseLevels: { ...base.purchaseLevels, tier01: 5 },
+        purchaseLevels: { ...base.purchaseLevels, tier01: 4 }, // below tier01's Level power requirement (5), so 'none' stays at 1.0
         achievements: { counters: { pings: 0 }, earned: earnedAll ? Object.fromEntries(TIER_DEFINITIONS.map((_, i) => [`levelPower${i + 1}`, true])) : {} },
       }
       let next = state
@@ -208,8 +220,8 @@ describe('Level power achievements', () => {
     const plain = run(false)
     const boosted = run(true)
     expect(plain).toBeGreaterThan(0)
-    // tier01 at level 5 has 4 completed levels: (1.5 / 1.0) ** 4 = 5.0625x
-    expect(boosted / plain).toBeGreaterThan(4.5)
+    // tier01 at level 4 has 3 completed levels: (1.5 / 1.0) ** 3 = 3.375x
+    expect(boosted / plain).toBeGreaterThan(3)
   })
 
   it('cost spacing grows for a higher tier too: tier03 gaps 3 for 10 increments, then 4', () => {
