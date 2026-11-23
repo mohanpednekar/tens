@@ -492,4 +492,17 @@ describe('review follow-ups (#1199, round 2)', () => {
     expect(next.achievements.counters.overflowPurges).toBe(1)
     expect(isAchievementEarned(next, 'notABug')).toBe(true)
   })
+
+  it('records Overflow on a tick that exceeds a Googol, before automated soft resets can discard the balance', () => {
+    const s = createInitialGameState()
+    const ready = {
+      ...s,
+      purge: { ...s.purge, unboundedUnlocked: true },
+      resources: { ...s.resources, [MONEY_ID]: PURGE_THRESHOLD },
+      autoPurge: null,
+    }
+    const next = tickGame(0.1)(ready)
+    expect(next.achievements.counters.overflowPurges).toBe(1)
+    expect(isAchievementEarned(next, 'notABug')).toBe(true)
+  })
 })

@@ -2560,7 +2560,10 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
   // same tick. The main save never has the field.
   // Resets rebuild the state from scratch and drop the field, so it is re-attached once the resets are done.
   const sampledPeaks = producedState.runPeaks ? mergeRunPeaks(producedState.runPeaks, producedState) : null
-  let tickState = producedState
+  // Overflow achievement: record a past-Googol balance before any automated soft reset (Purge/Overclock/Scale Up) can discard it.
+  let tickState = isOverflowModeUnlocked(producedState) && clampNonNegative(producedState.resources[MONEY_ID]) >= PURGE_THRESHOLD
+    ? bumpAchievementCounter(producedState, 'overflowPurges', 1, 'max')
+    : producedState
 
   // RESET PRIORITY: every reset automation runs BEFORE any spend, and bigger resets before smaller ones —
   // Purge (DeGoogol) > Overclock > Scale Up > Restage — so two automations never conflict in one tick: the bigger
