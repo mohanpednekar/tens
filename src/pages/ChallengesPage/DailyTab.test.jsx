@@ -14,8 +14,17 @@ const base = () => ({
 const wrap = ui => render(<ThemeProvider mode="dark">{ui}</ThemeProvider>)
 const makeGame = state => ({ state, actions: new Proxy({}, { get: (target, key) => target[key] ?? (target[key] = vi.fn()) }) })
 
-beforeEach(() => { DAILY_CHALLENGES_FEATURE.enabled = true })
-afterEach(() => { DAILY_CHALLENGES_FEATURE.enabled = false })
+// Pin the clock: the run definitions are generated per UTC date, and a date whose 10h definition falls back to the
+// fixed (automation-free) definition would otherwise break these tests on that day.
+beforeEach(() => {
+  DAILY_CHALLENGES_FEATURE.enabled = true
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-11-14T12:00:00Z'))
+})
+afterEach(() => {
+  DAILY_CHALLENGES_FEATURE.enabled = false
+  vi.useRealTimers()
+})
 
 describe('Firmware Daily tab', () => {
   it('is hidden before the first Purge and when the switch is off', () => {
@@ -70,7 +79,10 @@ describe('Firmware Daily tab', () => {
   })
 
   it('shows a running row with Resume, Restart / Forfeit behind its label, and confirm-guards Forfeit', () => {
-    const state = startDailyRun('10m', Date.now())(base())
+    const started = startDailyRun('10m', Date.now())(base())
+    // Fund the run's game (below the Purge threshold) so the first Buy button is enabled whatever the day's seeded head start is.
+    const run = started.daily.runs['10m']
+    const state = { ...started, daily: { ...started.daily, runs: { ...started.daily.runs, '10m': { ...run, game: { ...run.game, resources: { ...run.game.resources, base: 1e80 } } } } } }
     const game = makeGame(state)
     wrap(<ChallengesPage game={game} />)
     fireEvent.click(screen.getByRole('tab', { name: 'open daily challenges' }))
