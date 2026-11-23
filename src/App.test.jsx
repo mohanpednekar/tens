@@ -3120,6 +3120,21 @@ test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () =
   expect(speedButton).toHaveAccessibleDescription('Costs 32 B; bitrate 8 B/s after upgrading')
 })
 
+test('Reclamation V merges Upgrade Capacity and Upgrade Bitrate into one Upgrade button', () => {
+  seedIntroState({
+    capacity: 512, bits: 0, byteCreated: true,
+    poolExponentBonuses: Object.fromEntries(Array.from({ length: 10 }, (_, i) => [i + 1, 1])),
+  })
+  render(<App />)
+
+  expect(screen.queryByRole('button', { name: /upgrade data stream bitrate/i })).not.toBeInTheDocument()
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
+  expect(upgradeButton).toHaveTextContent('Upgrade')
+  expect(upgradeButton).not.toHaveTextContent('Upgrade Capacity')
+  expect(upgradeButton).toHaveTextContent(`${COST_ICON} 64 B · 📦 ×2 · ⚡ ×1.41`)
+  expect(upgradeButton).toHaveAccessibleDescription('Costs 64 B; capacity 128 B and bitrate 11.31 B/s after upgrading')
+})
+
 test('Upgrade Data Stream at maximum Capacity is disabled and reads "Max capacity" without a preview', () => {
   seedIntroState({ capacity: 1.298074214633707e33, bits: 0, byteCreated: true })
   render(<App />)

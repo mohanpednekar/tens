@@ -193,7 +193,7 @@ const AchievementsPage = ({ game }) => {
                   const next = entry.levels.find(def => !isAchievementEarned(state, def.id))
                   // One identical bonus on every level (e.g. Level power) is stated once, not per level.
                   const sharedBonus = entry.levels.every(def => def.bonus === entry.levels[0].bonus) ? entry.levels[0].bonus : null
-                  // Long series (Reclamation, 20 levels) list one short line per level instead of repeating full text.
+                  // Long series (> 4 levels, e.g. First purchase) list one short line per level instead of repeating full text.
                   const compact = entry.levels.length > 4
                   // Compact lines carry only the short reward, so each distinct short → full explanation is stated once.
                   const distinctRewards = [...new Map(entry.levels.filter(def => def.shortBonus && def.bonus).map(def => [def.shortBonus, def.bonus]))]
