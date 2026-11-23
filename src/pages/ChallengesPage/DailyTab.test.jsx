@@ -70,7 +70,10 @@ describe('Firmware Daily tab', () => {
   })
 
   it('shows a running row with Resume, Restart / Forfeit behind its label, and confirm-guards Forfeit', () => {
-    const state = startDailyRun('10m', Date.now())(base())
+    const started = startDailyRun('10m', Date.now())(base())
+    // Fund the run's game (below the Purge threshold) so the first Buy button is enabled whatever the day's seeded head start is.
+    const run = started.daily.runs['10m']
+    const state = { ...started, daily: { ...started.daily, runs: { ...started.daily.runs, '10m': { ...run, game: { ...run.game, resources: { ...run.game.resources, base: 1e80 } } } } } }
     const game = makeGame(state)
     wrap(<ChallengesPage game={game} />)
     fireEvent.click(screen.getByRole('tab', { name: 'open daily challenges' }))
