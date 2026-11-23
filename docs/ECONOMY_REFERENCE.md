@@ -1694,8 +1694,7 @@ cap 10; Kernel Amplifier 10·10^L, cap 9; Auto Hyperscaler (`AUTO_HYPERSCALER_EO
 `autoHyperscalerUnlocked` + pause `autoHyperscalerEnabled`) — `tickAutoHyperscaler` in `tickGame` buys every
 affordable hyperscaler. `buyEonUpgrade(id)`/`canBuyEonUpgrade`/`getEonUpgradeCost`/`getEonUpgradeLevel`/
 `isEonUpgradeMaxed`, `buyAutoHyperscaler`, `setAutoHyperscalerEnabled`; invalid buys return the same state.
-`mergeState` clamps saved levels to `[0, maxLevel]`. Reboot is currently unreachable in practice (1e100
-unspent PP; see DESIGN_HISTORY "Kernel shop"), so pacing is unmeasured.
+`mergeState` clamps saved levels to `[0, maxLevel]`. Shop pacing is unmeasured: `simulate-run-times` has no Reboot loop (see DESIGN_HISTORY "Kernel shop").
 
 **Hook:** `actions.eraAscend()` / `actions.buyHyperscaler()` / `setComputeFlopsAutobuyerEnabled`
 in `useIncrementalGame.js`. UI trigger deferred to #411. `mergeState` also calls
