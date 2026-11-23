@@ -4177,8 +4177,8 @@ export const upgradePoolSpeed = state => {
 }
 
 // Reclamation V arrived while a Bitrate upgrade was running: the upgrade is moot, so return the bar's bits to the Buffer
-// (what fits within Capacity — like any other overflow, the rest is lost). Runs from tickSpeedUpgradeDrain; running it before
-// production would not change the outcome (a Buffer that ends full is full either way, and a fuller Buffer slows the fill curve).
+// (what fits within Capacity — like any other overflow, the rest is lost). Runs from tickSpeedUpgradeDrain, after production: that
+// is never worse for the player than refunding first (a fuller Buffer slows the fill curve, and a Buffer that ends full is full either way).
 export const settleObsoleteSpeedUpgrade = state => {
   if (!state.intro?.speedUpgradeQueued || !isBitrateSyncedToCapacity(state.intro)) return state
   const refund = Math.max(0, Number(state.intro.speedUpgradeProgress) || 0)

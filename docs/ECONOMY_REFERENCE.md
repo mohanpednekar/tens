@@ -310,7 +310,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      decade-power one above, though both share the same `N = round(log2(...))` doubling-step
      calculation) — it matches the raw rate up
      to 64 B/s, then diverges (125 instead of 128, repeating every decade — e.g. a raw
-     256 B/s rate reads as a clean 250 B/s). `(that pool's own Capacity in Bytes) ** getDataStreamSpeedExponent(intro)` (starts at 0.5, moves 10% toward 1.0 at pool boundaries and 10% toward the next pool exponent inside each pool, with the two within-pool steps upgradeable by Compact Pool achievements; the same exponent caps the Data Stream's own Speed against its Capacity) is only a
+     256 B/s rate reads as a clean 250 B/s). `(that pool's own Capacity in Bytes) ** getDataStreamSpeedExponent(intro)` (starts at 0.5, moves 10% toward 1.0 at pool boundaries and 10% toward the next pool exponent inside each pool, with the two within-pool steps upgraded by that pool's first two flushes (Flush Pool); the same exponent caps the Data Stream's own Speed against its Capacity) is only a
      GUIDELINE for the bandwidth's lower/upper bounds, not the formula itself — a small early pool's
      Bandwidth (and every rate derived from it: disk/cache fill and build speeds, Data Lake overflow
      pacing) could otherwise run far ahead of what its own tiny Memory window could plausibly move
