@@ -1,6 +1,6 @@
 import { render, screen, act } from '@testing-library/react'
 import { ThemeProvider } from 'theme'
-import AppNav from './index'
+import AppNav from 'components/AppNav'
 
 const props = { currentPage: 'game', onNavigate: () => {}, onOpenMore: () => {}, showBoosters: true, showComputeFlops: true, showPerks: true, showChallenges: true }
 const setWidth = w => { window.innerWidth = w }

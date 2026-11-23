@@ -61,7 +61,7 @@ const BalanceText = styled.p`
 
   /* Narrow phones (360px cover screens): the absolute centre collides with the title, so drop the
      value onto its own centred line below title/speed instead (TitleRow wraps). */
-  @media (max-width: 399px) {
+  @media (max-width: 399.98px) {
     flex-basis: 100%;
     left: auto;
     order: 3;
@@ -484,6 +484,11 @@ const SpeedText = styled.span`
   color: ${props => props.$color ?? props.theme.color.textMuted};
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+
+  /* Narrow phones: BalanceText drops onto its own line (see there), so a $centered readout rejoins the title row. */
+  @media (max-width: 399.98px) {
+    ${props => props.$centered ? 'position: static; transform: none;' : ''}
+  }
 `
 
 // A pool's speed figure as its own button (above the tile's stretched PoolTapButton), opening
