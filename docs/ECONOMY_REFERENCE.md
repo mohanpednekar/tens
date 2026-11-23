@@ -2403,9 +2403,9 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // (QB) level credit (see getLastTierLevelCreditIntervalSeconds).
                                                           // Reset by Purge / Scale Up / Overclock / Reboot.
   accelerateBoughtThisCycle: false,                       // CYCLE-SCOPED: an Accelerate level was bought this Purge cycle
-  manualPurchaseThisCycle: false,                         // CYCLE-SCOPED: a manual Buy this Purge cycle (hook's `withManualPurchaseMark`); reset by Purge/Reboot, carried through Scale Up/Overclock; legacy saves infer it from purchase/Scale Up/Overclock/Accelerate history
                                                           // (carried through Scale Up/Overclock, reset by Purge/Reboot);
                                                           // gates the 'Overclock fast' achievement.
+  manualPurchaseThisCycle: false,                         // CYCLE-SCOPED: a manual Buy this Purge cycle (hook's `withManualPurchaseMark`); reset by Purge/Reboot, carried through Scale Up/Overclock; legacy saves infer it from purchase/Scale Up/Overclock/Accelerate history
   everUnlockedTierIds: { tier01: true, tier02: false, … }, // RUN-SCOPED per-tier record. A successful Scale Up
                                                           // preserves earlier records and adds its target and
                                                           // successor. Recorded successors re-reveal at predecessor
