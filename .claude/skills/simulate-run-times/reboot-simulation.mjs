@@ -50,21 +50,38 @@ const buyWhilePossible = (state, buy, limit = 500) => {
   return s
 }
 
+// Buys while possible, but discards any single purchase costing more than `cap` PP (null = no cap).
+const buyCapped = (state, buy, cap, limit = 500) => {
+  let s = state
+  for (let i = 0; i < limit; i += 1) {
+    const next = buy(s)
+    if (next === s) break
+    if (cap != null && s.purge.points - next.purge.points > cap) break
+    s = next
+  }
+  return s
+}
+
+// Compression is the compounding lever (PP per Purge doubles per level once powers-per-PP is 1), so it gets
+// priority AND a savings rule: anything else may only spend up to a tenth of Compression's next price, otherwise
+// cheap automation/Flops buys keep draining PP and Compression is never reached.
 const actSpendPP = state => {
   let s = state
   s = buyWhilePossible(s, engine.buyPrestigeSpeedBonus, 1)
   s = buyWhilePossible(s, buyBuyMaxUnlock, 1)
   s = buyWhilePossible(s, buyCacheWarm, 1)
   s = buyWhilePossible(s, buyPlaytimeBonus, 1)
-  if ((s.prestigeDoublePpLevel ?? 0) < MAX_COMPRESSION_LEVEL) {
-    s = buyWhilePossible(s, buyPrestigeDoublePp, 200)
-  }
+  const level = s.prestigeDoublePpLevel ?? 0
+  if (level < MAX_COMPRESSION_LEVEL) s = buyWhilePossible(s, buyPrestigeDoublePp, 200)
   if (s.purge.points > MAX_SPEND_PP) return s
+  const cap = (s.prestigeDoublePpLevel ?? 0) < MAX_COMPRESSION_LEVEL
+    ? engine.getPrestigeDoublePpUpgradeCost(s.prestigeDoublePpLevel ?? 0) / 10
+    : null
   for (const key of Object.keys(AUTOMATION_INTERVAL_CONFIG)) {
-    s = buyWhilePossible(s, buyAutomationIntervalUpgrade(key), 50)
+    s = buyCapped(s, buyAutomationIntervalUpgrade(key), cap, 50)
   }
   for (const flop of COMPUTE_FLOPS_TIER_DEFINITIONS) {
-    s = buyWhilePossible(s, buyComputeFlopsTier(flop.id), 50)
+    s = buyCapped(s, buyComputeFlopsTier(flop.id), cap, 50)
   }
   return s
 }
