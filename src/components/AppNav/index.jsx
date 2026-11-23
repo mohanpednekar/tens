@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 import { ATTENTION_HIGH } from 'game/navAttention'
 
@@ -8,6 +9,20 @@ import { ATTENTION_HIGH } from 'game/navAttention'
 // Attention: 'high' = larger pulsing dot; 'normal' = smaller cue (game/navAttention.js).
 
 const NAV_HEIGHT = '3.25rem'
+// Below this width, with all 7 destinations shown, labels no longer fit: inactive items go icon-only.
+export const NARROW_NAV_MAX_WIDTH = 400
+const FULL_NAV_ITEM_COUNT = 7
+
+const useNarrowViewport = () => {
+  const read = () => typeof window !== 'undefined' && window.innerWidth < NARROW_NAV_MAX_WIDTH
+  const [narrow, setNarrow] = useState(read)
+  useEffect(() => {
+    const onResize = () => setNarrow(read())
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  return narrow
+}
 
 const pulseHigh = keyframes`
   0%, 100% { transform: scale(1); opacity: 1; }
@@ -121,6 +136,8 @@ const AppNav = ({
     showChallenges && { id: 'challenges', ariaLabel: 'open challenges', icon: '🏁', label: 'Challenges', title: 'Challenges — Factory and Daily challenges' },
   ].filter(Boolean)
 
+  const iconOnlyInactive = useNarrowViewport() && items.length + 1 >= FULL_NAV_ITEM_COUNT
+
   const utilityActive = currentPage === 'info' || currentPage === 'milestones' || currentPage === 'settings' || currentPage === 'dev' || moreOpen
 
   return (
@@ -145,7 +162,7 @@ const AppNav = ({
               />
             )}
             <Icon aria-hidden="true">{item.icon}</Icon>
-            <Label>{item.label}</Label>
+            {(active || !iconOnlyInactive) && <Label>{item.label}</Label>}
           </NavItem>
         )
       })}
@@ -159,7 +176,7 @@ const AppNav = ({
         type="button"
       >
         <Icon aria-hidden="true">⋯</Icon>
-        <Label>More</Label>
+        {(utilityActive || !iconOnlyInactive) && <Label>More</Label>}
       </NavItem>
     </Bar>
   )

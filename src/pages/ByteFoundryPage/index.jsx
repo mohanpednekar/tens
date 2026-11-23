@@ -58,6 +58,18 @@ const BalanceText = styled.p`
   text-align: center;
   white-space: nowrap;
   text-shadow: 0 0 2px ${props => props.theme.color.surface};
+
+  /* Narrow phones (360px cover screens): the absolute centre collides with the title, so drop the
+     value onto its own centred line below title/speed instead (TitleRow wraps). */
+  @media (max-width: 399px) {
+    flex-basis: 100%;
+    left: auto;
+    order: 3;
+    position: static;
+    top: auto;
+    transform: none;
+    width: 100%;
+  }
 `
 
 // Tapping stays a fully live action forever (never freezes, never goes read-only — see
