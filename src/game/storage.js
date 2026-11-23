@@ -627,7 +627,13 @@ const mergeState = rawSaved => {
     },
     achievements: {
       earned: { ...(saved.achievements?.earned ?? {}) },
-      counters: { ...fresh.achievements.counters, ...(saved.achievements?.counters ?? {}) },
+      // Legacy saves lack `kernelsEarned`: seed it from the Kernel balance at load, before any spend can lower the bound.
+      counters: {
+        ...fresh.achievements.counters,
+        ...(saved.achievements?.counters ?? {}),
+        ...(saved.eons?.balance > (saved.achievements?.counters?.kernelsEarned ?? 0)
+          ? { kernelsEarned: saved.eons.balance } : {}),
+      },
     },
     daily: {
       runs: { ...(saved.daily?.runs ?? {}) },

@@ -1411,3 +1411,17 @@ describe('manualPurchaseThisCycle legacy migration', () => {
     expect(loadGameState().manualPurchaseThisCycle).toBe(true)
   })
 })
+
+describe('kernelsEarned legacy seeding', () => {
+  beforeEach(() => localStorage.clear())
+  it('seeds the lifetime Kernel counter from the balance on load, never lowering an existing counter', () => {
+    const base = createInitialGameState()
+    const legacy = { ...base, eons: { ...base.eons, balance: 99 } }
+    delete legacy.achievements.counters.kernelsEarned
+    localStorage.setItem('tens_game_state', JSON.stringify(legacy))
+    expect(loadGameState().achievements.counters.kernelsEarned).toBe(99)
+    const ahead = { ...legacy, achievements: { ...legacy.achievements, counters: { ...legacy.achievements.counters, kernelsEarned: 500 } } }
+    localStorage.setItem('tens_game_state', JSON.stringify(ahead))
+    expect(loadGameState().achievements.counters.kernelsEarned).toBe(500)
+  })
+})
