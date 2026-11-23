@@ -577,7 +577,7 @@ const mergeState = rawSaved => {
       : Object.values(saved.purchased ?? {}).some(count => count > 0)
         // Scale Up / Overclock zero `purchased`, so evidence of an earlier soft reset also counts as manual history.
         || saved.globalTickspeedMultiplier != null || saved.overclockLastClaimCompletedLevels != null
-        || (saved.overclockCount ?? 0) > 0 || (saved.scaleUpCount ?? 0) > 0,
+        || (saved.overclockCount ?? 0) > 0 || (saved.scaleUpCount ?? legacySpeedUpCount ?? 0) > 0,
     scaleUpCount: saved.scaleUpCount ?? legacySpeedUpCount ?? fresh.scaleUpCount,
     scaleUpTierCounts: mergeTierMap(
       fresh.scaleUpTierCounts,
