@@ -3,15 +3,17 @@
 // money can't reach Googol. Uses the real engine via bot.mjs. Reports a table of sampled Purges:
 // cycle length, PP awarded, Compression level, PP balance, and total simulated time.
 //
-//   node reboot-simulation.mjs [--max-purges N] [--max-seconds S] [--sample K] [--hold]
-//     --max-purges   stop after N Purges (default 200)
+//   node reboot-simulation.mjs [--max-purges N] [--max-seconds S] [--no-hold]
+//     --max-purges   stop after N Purges (default 1e9)
 //     --max-seconds  wall-clock budget (default 240)
-//     --sample       print every Kth Purge (default 10)
-//     --hold         Purge only after the Googol freeze/threshold (default: Purge the tick it is reached)
+//     --no-hold      Purge the tick Googol is reached (baseline; default holds for excess powers)
 //
-// PP policy (greedy, fixed order): one-off unlocks (speed bonus, Buy max, Cache Warm, Playtime bonus),
-// automation interval upgrades, Compression (Double PP), then Compute (Flops) tiers cheapest-first.
-// NOT optimal — it exists to measure how cycle time compounds, not to prescribe play.
+// PP policy (greedy, fixed order): one-offs (speed bonus, Buy max, Cache Warm, Playtime bonus),
+// Compression (Double PP, up to level 97 = cost 1e98 so 1e100 stays reachable), automation interval
+// upgrades, then Compute (Flops) tiers cheapest-first; nothing priced above 1e90 except Compression.
+// Purge timing (once Overflow mode lets production continue past Googol): optimal-stopping rule —
+// Purge when the marginal PP gain per second over the last 30 s drops below this cycle's average PP rate.
+// Auto Purge is paused so the bot controls timing. NOT an optimal player; it measures compounding.
 import { register } from 'node:module'
 import { pathToFileURL } from 'node:url'
 register('./ext-loader.mjs', pathToFileURL('./'))
@@ -32,10 +34,11 @@ const arg = (name, fallback) => {
   const i = argv.indexOf(name)
   return i >= 0 ? Number(argv[i + 1]) : fallback
 }
-const maxPurges = arg('--max-purges', 200)
+const maxPurges = arg('--max-purges', 1e9)
 const maxSeconds = arg('--max-seconds', 240)
-const sampleEvery = arg('--sample', 10)
-const hold = argv.includes('--hold')
+const hold = !argv.includes('--no-hold')
+const MAX_COMPRESSION_LEVEL = 97
+const MAX_SPEND_PP = 1e90
 
 const buyWhilePossible = (state, buy, limit = 500) => {
   let s = state
@@ -53,10 +56,13 @@ const actSpendPP = state => {
   s = buyWhilePossible(s, buyBuyMaxUnlock, 1)
   s = buyWhilePossible(s, buyCacheWarm, 1)
   s = buyWhilePossible(s, buyPlaytimeBonus, 1)
+  if ((s.prestigeDoublePpLevel ?? 0) < MAX_COMPRESSION_LEVEL) {
+    s = buyWhilePossible(s, buyPrestigeDoublePp, 200)
+  }
+  if (s.purge.points > MAX_SPEND_PP) return s
   for (const key of Object.keys(AUTOMATION_INTERVAL_CONFIG)) {
     s = buyWhilePossible(s, buyAutomationIntervalUpgrade(key), 50)
   }
-  s = buyWhilePossible(s, buyPrestigeDoublePp, 200)
   for (const flop of COMPUTE_FLOPS_TIER_DEFINITIONS) {
     s = buyWhilePossible(s, buyComputeFlopsTier(flop.id), 50)
   }
@@ -78,6 +84,8 @@ let cycleTicks = 0
 let purges = 0
 const rows = []
 let stopReason = 'max purges'
+let lastAwarded = 0
+const recent = []
 
 while (purges < maxPurges) {
   if (isEraEligible(state)) { stopReason = 'Reboot eligible'; break }
@@ -91,16 +99,31 @@ while (purges < maxPurges) {
   cycleTicks += 1
 
   let purged = state.purge.count > countBefore // Auto Purge fired inside the tick
-  if (!purged && state.resources[MONEY_ID] >= PURGE_THRESHOLD && (!hold || engine.isProductionFrozen(state))) {
-    const awarded = getPrestigePointsAwarded(state.resources[MONEY_ID], state.prestigeDoublePpLevel ?? 0)
-    state = purgeGame(state)
-    purged = state.purge.count > countBefore
-    if (purged && (state.purge.count % sampleEvery === 0 || state.purge.count === 1)) {
-      rows.push({ n: state.purge.count, cycleTicks, awarded, level: state.prestigeDoublePpLevel ?? 0, pp: state.purge.points, totalTicks })
+  if (!purged && state.resources[MONEY_ID] >= PURGE_THRESHOLD) {
+    const money = state.resources[MONEY_ID]
+    const pp = getPrestigePointsAwarded(money, state.prestigeDoublePpLevel ?? 0)
+    recent.push(pp)
+    if (recent.length > 31) recent.shift()
+    const marginal = recent.length > 1 ? (pp - recent[0]) / (recent.length - 1) : Infinity
+    const average = pp / Math.max(1, cycleTicks)
+    const overflow = engine.isOverflowModeUnlocked(state)
+    if (!hold || !overflow || engine.isProductionFrozen(state) || marginal < average) {
+      state = purgeGame(state)
+      purged = state.purge.count > countBefore
+      if (purged) {
+        if (hold) state = engine.setAutoPurgeEnabled(false)(state)
+        lastAwarded = pp
+        recent.length = 0
+      }
     }
   }
   if (purged) {
     purges += 1
+    const n = purges
+    const mantissa = n / 10 ** Math.floor(Math.log10(n))
+    if (mantissa === 1 || mantissa === 2 || mantissa === 5) {
+      rows.push({ n, cycleTicks, awarded: lastAwarded, level: state.prestigeDoublePpLevel ?? 0, pp: state.purge.points, totalTicks })
+    }
     cycleTicks = 0
   }
 }
