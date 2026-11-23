@@ -465,7 +465,7 @@ describe('review follow-ups (#1199)', () => {
     expect(isAchievementEarned(purgeGame(ready), 'notABug')).toBe(true)
   })
 
-  it('Power user follows the Power tab predicate (Capacity), not token ownership', () => {
+  it('Power user follows the Power tab predicate (Capacity unlocks it)', () => {
     const s = createInitialGameState()
     expect(isAchievementEarned(detectAchievements({ ...s, intro: { ...s.intro, capacity: 1e12 } }), 'powerUser')).toBe(true)
   })
