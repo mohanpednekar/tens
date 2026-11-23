@@ -1472,9 +1472,9 @@ export const isAchievementConditionMet = (state, condition) => {
     case 'onePowerPerPp': return getPrestigePowersPerPp(state.prestigeDoublePpLevel ?? 0) <= 1
     case 'googolReached': return (state.resources?.[MONEY_ID] ?? 0) >= PURGE_THRESHOLD || getLifetimePurges(state) > 0 || (state.era?.count ?? 0) > 0
     case 'fastAutoPurge': return (state.autoPurge ?? null) !== null && getAutomationIntervalSeconds(state, 'purge') <= OVERFLOW_MODE_MAX_INTERVAL_SECONDS
-    case 'overflowPastGoogol': return isOverflowModeUnlocked(state) && (state.resources?.[MONEY_ID] ?? 0) >= PURGE_THRESHOLD
+    case 'overflowPastGoogol': return (state.achievements?.counters?.overflowPurges ?? 0) >= 1 || (isOverflowModeUnlocked(state) && (state.resources?.[MONEY_ID] ?? 0) >= PURGE_THRESHOLD)
     case 'superCloudOwned': return (state.computeFlops?.owned?.flop10 ?? 0) >= 1
-    case 'powerPageUnlocked': return Boolean(state.intro?.computeMergePageUnlocked) || (state.intro?.computeCoresEverEarned ?? 0) > 0 || COMPUTE_LADDER_FIELDS.some(field => (state.intro?.[field] ?? 0) > 0)
+    case 'powerPageUnlocked': return isComputeCoreConversionUnlocked(state) || Boolean(state.intro?.computeMergePageUnlocked) || (state.intro?.computeCoresEverEarned ?? 0) > 0 || COMPUTE_LADDER_FIELDS.some(field => (state.intro?.[field] ?? 0) > 0)
     // Entity at ladder index >= fromIndex exists (merges consume the lower entity, so a higher one implies it was built).
     case 'computeEntityBuilt': return COMPUTE_LADDER_FIELDS.slice(condition.fromIndex).some(field => (state.intro?.[field] ?? 0) > 0)
     case 'autobuyers': {
@@ -8580,7 +8580,11 @@ const consumeXpForLastTierTickspeedCore = (amount, allowEmptyLastTier) => state 
 export const purgeGame = state => {
   const next = purgeGameCore(state)
   if (next === state || !ACHIEVEMENTS_FEATURE.enabled || next.purge.count <= state.purge.count) return next
-  const counted = bumpAchievementCounter(next, 'purges', getLifetimePurges(state) + 1, 'max')
+  // Record Overflow past a Googol from the pre-Purge balance (the Purge resets it, e.g. Auto-Purge firing mid-tick).
+  const overflowed = isOverflowModeUnlocked(state) && clampNonNegative(state.resources?.[MONEY_ID]) >= PURGE_THRESHOLD
+    ? bumpAchievementCounter(next, 'overflowPurges', 1, 'max')
+    : next
+  const counted = bumpAchievementCounter(overflowed, 'purges', getLifetimePurges(state) + 1, 'max')
   return state.manualPurchaseThisCycle ? counted : bumpAchievementCounter(counted, 'handsFreePurges', 1, 'max')
 }
 
@@ -8592,7 +8596,10 @@ export const eraGame = state => {
   const kernels = getEonsAwarded(state)
   const now = clampNonNegative(next.activePlaySeconds ?? 0)
   const last = next.achievements?.counters?.lastRebootPlaySeconds
-  let result = kernels > 0 ? bumpAchievementCounter(next, 'kernelsEarned', kernels) : next
+  // Seed lifetime counters from pre-Reboot state first: Reboot resets `purge.count`, and saves from before the counters
+  // existed only have the Kernel balance (a lower bound) to go on.
+  let result = bumpAchievementCounter(next, 'purges', getLifetimePurges(state), 'max')
+  result = bumpAchievementCounter(result, 'kernelsEarned', Math.max(result.achievements.counters.kernelsEarned ?? 0, clampNonNegative(state.eons?.balance ?? 0)) + kernels, 'max')
   if (last != null && now - last <= KERNEL_PANIC_WINDOW_SECONDS) result = bumpAchievementCounter(result, 'quickReboots', 1, 'max')
   return bumpAchievementCounter(result, 'lastRebootPlaySeconds', now, 'set')
 }

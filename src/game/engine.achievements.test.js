@@ -448,3 +448,25 @@ describe('Power, Purge and Reboot achievements (#1051)', () => {
     expect(isAchievementEarned(stacked, 'stackOverflow')).toBe(true)
   })
 })
+
+describe('review follow-ups (#1199)', () => {
+  it('Reboot seeds lifetime Purges and Kernels from legacy state', () => {
+    const s = createInitialGameState()
+    const legacy = { ...s, purge: { ...s.purge, count: 63, points: 1e100 }, eons: { balance: 99 } }
+    const after = eraGame(legacy)
+    expect(after.achievements.counters.purges).toBe(63)
+    expect(after.achievements.counters.kernelsEarned).toBeGreaterThanOrEqual(100)
+    expect(isAchievementEarned(after, 'popcorn')).toBe(true)
+  })
+
+  it('a Purge in Overflow past a Googol earns the achievement even though it resets the balance', () => {
+    const s = createInitialGameState()
+    const ready = { ...s, purge: { ...s.purge, unboundedUnlocked: true }, resources: { ...s.resources, [MONEY_ID]: PURGE_THRESHOLD } }
+    expect(isAchievementEarned(purgeGame(ready), 'notABug')).toBe(true)
+  })
+
+  it('Power user follows the Power tab predicate (Capacity), not token ownership', () => {
+    const s = createInitialGameState()
+    expect(isAchievementEarned(detectAchievements({ ...s, intro: { ...s.intro, capacity: 1e12 } }), 'powerUser')).toBe(true)
+  })
+})
