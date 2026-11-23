@@ -12,6 +12,7 @@ const seed = () => {
     intro: { ...fresh.intro, mainGameUnlocked: true },
     resources: { ...fresh.resources, [MONEY_ID]: 1e12 },
     manualPurchaseThisCycle: false,
+    buyMaxUnlocked: true,
   })
 }
 
@@ -21,6 +22,7 @@ describe('useIncrementalGame manual purchase marking', () => {
   it.each([
     ['batched Buy', () => {}],
     ['unit-mode Buy', result => result.current.setBuyUnitMode(true)],
+    ['Buy-max Buy', result => result.current.setBuyMaxMode(true)],
   ])('a manual %s sets manualPurchaseThisCycle', (_name, setup) => {
     const { result, unmount } = renderHook(() => useIncrementalGame())
     expect(result.current.state.manualPurchaseThisCycle).toBe(false)
