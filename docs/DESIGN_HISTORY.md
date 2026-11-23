@@ -9672,5 +9672,5 @@ The four Factory feature cards (#1137's side-by-side pairs of tall, bottom-pinne
 
 ## Level power per-tier level requirements (2026-11-23)
 
-- The ten Level power achievements first all required level 10 (QB level 10 was only reached near the end of the first Purge, so the full ×1.5 arrived very late). They now require level 5 on tiers 1–5 and level 6, 7, 8, 9, 10 on tiers 6–10 (`getLevelPowerAchievementLevel`). Ideal-bot first Purge: 1d 16h 11m → 1d 8h 54m (Purges 1/5/10 unchanged: 22h 10m / 1d 1h 21m / 21h 43m).
+- The ten Level power achievements first all required level 10 (QB level 10 was only reached near the end of the first Purge, so the full ×1.5 arrived very late). They now require level 5 on tiers 1–5 and level 6, 7, 8, 9, 10 on tiers 6–10 (`getLevelPowerAchievementLevel`). Ideal-bot first Purge: 1d 16h 11m → 1d 8h 54m (Purges 1/5/10 essentially unchanged: 22h 4m→22h 10m / 1d 1h 20m→1d 1h 21m / 21h 43m). Existing saves earn newly satisfied achievements on their next tick (at-least checks). Side effect: daily runs earn Level power achievements while they play, so generated definitions change — `DAILY_GENERATOR_VERSION` 8.
 - Rejected (misread of the request): widening the cost-spacing growth interval per tier (5 for tiers 1–5, then 6–10) — it lengthened every cycle by 50–90% (first Purge 3d 1h 47m).
