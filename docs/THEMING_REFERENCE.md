@@ -66,3 +66,14 @@ component consumes these tokens.
   AA — it's now `#0a6b30` (6.65:1 against `surface`, 5.87:1 against `surfaceSunken`). Light `warn`
   was darkened to `#875600` so prestige (`variant="prestige"`) button text clears 4.5:1 on light
   `surfaceSunken` (`#dfe4ec`).
+
+## Layout classes (#1153, epic #1152)
+
+Size-only layout classes (never platform/UA/touch): `src/theme/layout.js` exports `getLayoutClass({ width, height })`
+(height < 500 → `compact`; width < 600 `compact`, < 900 `medium`, < 1360 `expanded`, else `wide`),
+`isSplitEligible` (expanded/wide, or width ≥ 784 with width/height ≥ 0.8), `LAYOUT_CLASSES`, and
+`media.atLeast(cls)` / `media.below(cls)` styled-components helpers. Thresholds live once in
+`tokens.js` `breakpoints` (also `theme.breakpoints`). `theme/LayoutContext.jsx`: `useViewportLayout()` (resize,
+`orientationchange`, `visualViewport` resize; rAF-throttled) feeds `LayoutProvider` (mounted in `App.jsx`);
+read with `useLayoutClass()` → `{ layoutClass, width, height }` (`compact` fallback with no provider).
+MainPage's 40rem/24.5rem/21rem phone-density `@media` literals don't match 600/900/1360 and are left as-is.

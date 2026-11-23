@@ -18,7 +18,7 @@ import { isComputeCoreConversionUnlocked, isComputeFlopsPageRevealed, isPerksPag
 import { getNavAttention } from 'game/navAttention'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, loadThemePreference, saveThemePreference } from 'game/storage'
-import { GlobalStyle, ThemeProvider, resolveThemeMode } from 'theme'
+import { GlobalStyle, LayoutProvider, ThemeProvider, resolveThemeMode } from 'theme'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -160,6 +160,7 @@ function App() {
   return (
     <ThemeProvider mode={themeMode}>
       <GlobalStyle />
+      <LayoutProvider>
       <PageShell>
         {content}
       </PageShell>
@@ -184,6 +185,7 @@ function App() {
       {game.incompatibleSaveReason ? (
         <IncompatibleSaveNotice onDismiss={game.dismissIncompatibleSaveNotice} />
       ) : null}
+      </LayoutProvider>
     </ThemeProvider>
   )
 }

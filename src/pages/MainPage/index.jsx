@@ -113,6 +113,8 @@ const TierLine = styled(StatCard)`
     animation: none;
   }
 
+  /* Layout-class breakpoints (theme/layout.js, #1152) are 600/900/1360px; these 40rem/24.5rem/21rem
+     phone-density literals don't map to them, so they stay as-is (no visual change). */
   @media (max-width: 40rem) {
     /* Same areas as desktop; narrower fixed button tracks for phone widths. */
     grid-template-columns: minmax(0, 1fr) 5.7rem 7.9rem;

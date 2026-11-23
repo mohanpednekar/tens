@@ -535,6 +535,8 @@ locally bundled via `theme/fonts.js` — no runtime CDN fetch. Settings → Appe
 follows `prefers-color-scheme`. Reset / `clearGameState` do not clear the theme preference. Full
 per-file breakdown: `docs/THEMING_REFERENCE.md` — read it before touching `src/theme/*`.
 
+**Layout classes (#1153, epic #1152):** `theme/layout.js` — pure `getLayoutClass({width,height})` (`compact`/`medium`/`expanded`/`wide`; height < 500 → compact) and `isSplitEligible`, thresholds in `tokens.js` `breakpoints` (also on `theme.breakpoints`), `media.atLeast/below` helpers; `LayoutContext.jsx` — `LayoutProvider` (mounted in `App.jsx`) + `useLayoutClass()` (defaults to `compact` outside a provider). Size-only, never platform-based.
+
 ## PWA support
 
 The app is installable as a PWA on Android Chrome and iOS Safari — home-screen icon, standalone display,
