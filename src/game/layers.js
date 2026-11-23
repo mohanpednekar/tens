@@ -275,7 +275,7 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'offAndOn', name: 'Have you tried turning it off and on again?', group: 'reboot', trigger: 'Reboot for the first time', short: 'Reboot', condition: { kind: 'eraCount', min: 1 } },
   { id: 'rmRf', name: 'rm -rf', group: 'reboot', trigger: 'Reformat the Byte Foundry', short: 'Reformat Foundry', condition: { kind: 'counter', key: 'reformats', min: 1 } },
   { id: 'kernelPanic', name: 'Kernel panic', group: 'reboot', trigger: 'Reboot twice within an hour of play', short: 'Reboot ×2 in 1 h', condition: { kind: 'counter', key: 'quickReboots', min: 1 } },
-  { id: 'popcorn', name: 'Popcorn', group: 'reboot', trigger: `Earn ${POPCORN_KERNELS} Kernels in total`, short: `${POPCORN_KERNELS} Kernels`, condition: { kind: 'counter', key: 'kernelsEarned', min: POPCORN_KERNELS } },
+  { id: 'popcorn', name: 'Popcorn', group: 'reboot', trigger: `Earn ${POPCORN_KERNELS} Kernels in total`, short: `${POPCORN_KERNELS} Kernels`, condition: { kind: 'kernelsEarned', min: POPCORN_KERNELS } },
 ].map(def => ({ secret: false, platformDependent: false, bonus: null, short: null, shortBonus: null, ...def }))
 // Achievements that are ordered steps of one entity render as ONE row with levels on the page. Display-only:
 // each step keeps its own id (earned state, toasts, bonuses and saves are unchanged). Steps list in level order.

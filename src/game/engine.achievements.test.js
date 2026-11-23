@@ -470,3 +470,17 @@ describe('review follow-ups (#1199)', () => {
     expect(isAchievementEarned(detectAchievements({ ...s, intro: { ...s.intro, capacity: 1e12 } }), 'powerUser')).toBe(true)
   })
 })
+
+describe('review follow-ups (#1199, round 2)', () => {
+  it('Popcorn counts an unspent Kernel balance on load', () => {
+    const s = createInitialGameState()
+    expect(isAchievementEarned(detectAchievements({ ...s, eons: { balance: 100 } }), 'popcorn')).toBe(true)
+  })
+
+  it('records Overflow on a Purge that awards no Purge count (repeat challenge completion)', () => {
+    const s = createInitialGameState()
+    const ready = { ...s, purge: { ...s.purge, unboundedUnlocked: true }, resources: { ...s.resources, [MONEY_ID]: PURGE_THRESHOLD } }
+    const next = purgeGame(ready)
+    expect(next.achievements.counters.overflowPurges).toBe(1)
+  })
+})

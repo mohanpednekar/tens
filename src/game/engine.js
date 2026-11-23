@@ -1467,6 +1467,7 @@ export const isAchievementConditionMet = (state, condition) => {
     case 'tierLevel': return (state.purchaseLevels?.[condition.tierId] ?? 1) >= condition.min
     case 'poolExponentBonus': return (state.intro?.poolExponentBonuses?.[condition.poolIndex] ?? 0) >= condition.min
     case 'lifetimePurges': return getLifetimePurges(state) >= condition.min
+    case 'kernelsEarned': return Math.max(state.achievements?.counters?.kernelsEarned ?? 0, state.eons?.balance ?? 0) >= condition.min
     case 'eraCount': return (state.era?.count ?? 0) >= condition.min
     case 'doublePpLevel': return (state.prestigeDoublePpLevel ?? 0) >= condition.min
     case 'onePowerPerPp': return getPrestigePowersPerPp(state.prestigeDoublePpLevel ?? 0) <= 1
@@ -1496,6 +1497,8 @@ export const getAchievementProgress = (state, condition) => {
       // maxFirstOverclock is a record of past claims, not live progress (the live level count decides the next claim).
       if (condition.key === 'maxFirstOverclock') return null
       return { current: state.achievements?.counters?.[condition.key] ?? 0, target: condition.min }
+    case 'kernelsEarned': return { current: Math.max(state.achievements?.counters?.kernelsEarned ?? 0, state.eons?.balance ?? 0), target: condition.min }
+    case 'lifetimePurges': return { current: getLifetimePurges(state), target: condition.min }
     case 'clockSpeedLevel': return { current: state.globalTickspeedMultiplier ?? 0, target: condition.min }
     case 'tierLevel': return { current: state.purchaseLevels?.[condition.tierId] ?? 1, target: condition.min }
     case 'poolExponentBonus': return { current: state.intro?.poolExponentBonuses?.[condition.poolIndex] ?? 0, target: condition.min }
@@ -8579,11 +8582,13 @@ const consumeXpForLastTierTickspeedCore = (amount, allowEmptyLastTier) => state 
 // Reboot; a Purge in a cycle with no manual tier purchase earns 'Look ma, no hands'.
 export const purgeGame = state => {
   const next = purgeGameCore(state)
-  if (next === state || !ACHIEVEMENTS_FEATURE.enabled || next.purge.count <= state.purge.count) return next
-  // Record Overflow past a Googol from the pre-Purge balance (the Purge resets it, e.g. Auto-Purge firing mid-tick).
+  if (next === state || !ACHIEVEMENTS_FEATURE.enabled) return next
+  // Record Overflow past a Googol from the pre-Purge balance (the Purge resets it, e.g. Auto-Purge firing mid-tick),
+  // including repeat challenge completions, which reset the balance without awarding a Purge.
   const overflowed = isOverflowModeUnlocked(state) && clampNonNegative(state.resources?.[MONEY_ID]) >= PURGE_THRESHOLD
     ? bumpAchievementCounter(next, 'overflowPurges', 1, 'max')
     : next
+  if (next.purge.count <= state.purge.count) return overflowed
   const counted = bumpAchievementCounter(overflowed, 'purges', getLifetimePurges(state) + 1, 'max')
   return state.manualPurchaseThisCycle ? counted : bumpAchievementCounter(counted, 'handsFreePurges', 1, 'max')
 }
