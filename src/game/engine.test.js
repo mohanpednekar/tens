@@ -6128,33 +6128,32 @@ describe('getPrestigeProductionMultiplier', () => {
 // ─── getPrestigePointsAwarded ─────────────────────────────────────────────────
 
 describe('getPrestigePointsAwarded', () => {
-  it('awards exactly 1 point at exactly PURGE_THRESHOLD', () => {
+  it('awards floor(100 / 64) = 1 point at exactly PURGE_THRESHOLD', () => {
     expect(getPrestigePointsAwarded(PURGE_THRESHOLD)).toBe(1)
   })
 
-  it('stays at 1 point until a full 64 excess money-exponent powers are reached', () => {
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 10)).toBe(1)
+  it('holds the numerator at 100 powers until Overflow mode (unbounded) is unlocked', () => {
     expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e9)).toBe(1)
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e63)).toBe(1)
-  })
-
-  it('awards 2 points once 64 excess powers beyond Googol are reached', () => {
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64)).toBe(2)
-  })
-
-  it('awards 4 points at 192 excess powers (three full 64-power blocks beyond base)', () => {
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e192)).toBe(4)
-  })
-
-  it('halves powers-per-PP with each Double PP upgrade through level 6', () => {
     expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 1)).toBe(3)
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e32, 1)).toBe(2)
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 6)).toBe(65)
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 6)).toBe(100)
+  })
+
+  it('uses the actual powers once unbounded: floor(exponent / powers-per-PP)', () => {
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD, 0, true)).toBe(1)
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 0, true)).toBe(2) // 164 / 64
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e192, 0, true)).toBe(4) // 292 / 64
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 1, true)).toBe(5) // 164 / 32
+  })
+
+  it('halves powers-per-PP with each Compression level through level 6 (100/32 = 3, 100/16 = 6, …)', () => {
+    expect([0, 1, 2, 3, 4, 5, 6].map(level => getPrestigePointsAwarded(PURGE_THRESHOLD, level)))
+      .toEqual([1, 3, 6, 12, 25, 50, 100])
   })
 
   it('doubles PP-per-power after level 6 instead of halving further', () => {
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD, 7)).toBe(2)
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 7)).toBe(130)
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD, 7)).toBe(200)
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD, 8)).toBe(400)
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 7, true)).toBe(328) // 164 × 2
   })
 
   it('returns 0 below PURGE_THRESHOLD, including at GOOGOL alone', () => {
@@ -8504,10 +8503,16 @@ describe('purgeGame', () => {
     expect(after.purge.points).toBe(1)
   })
 
-  it('awards more Prestige Points once 64 excess money-exponent powers beyond Googol are reached', () => {
+  it('holds the PP numerator at 100 powers until Overflow mode, then follows the actual powers', () => {
     const state = withMoney(createInitialGameState(), PURGE_THRESHOLD * 1e64)
-    const after = purgeGame(state)
-    expect(after.purge.points).toBe(2)
+    expect(purgeGame(state).purge.points).toBe(1)
+    const overflow = { ...state, purge: { ...state.purge, unboundedUnlocked: true } }
+    expect(purgeGame(overflow).purge.points).toBe(2) // floor(164 / 64)
+  })
+
+  it('awards 3 PP at Googol after one Compression (100 / 32)', () => {
+    const state = { ...withMoney(createInitialGameState(), PURGE_THRESHOLD), prestigeDoublePpLevel: 1 }
+    expect(purgeGame(state).purge.points).toBe(3)
   })
 
   it('adds newly-awarded points on top of any already-unspent points', () => {
@@ -13189,7 +13194,7 @@ describe('Auto Purge conditions', () => {
 
   it('Purge-at-PP and best-multiple conditions wait for a big enough pending award (Overflow mode only)', () => {
     const state = overflowState()
-    const pending = getPrestigePointsAwarded(state.resources[MONEY_ID], state.prestigeDoublePpLevel)
+    const pending = getPrestigePointsAwarded(state.resources[MONEY_ID], state.prestigeDoublePpLevel, true)
     expect(pending).toBeGreaterThan(1)
     const high = setAutoPurgeSetting('targetPpExponent', Math.ceil(Math.log10(pending)) + 5)(state)
     expect(isAutoPurgeReady(high)).toBe(false)

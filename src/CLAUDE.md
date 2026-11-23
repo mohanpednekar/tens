@@ -138,8 +138,8 @@ System log, hyperscalers, Kernel upgrade levels, Flops autobuyer unlock flags, a
 free-unlocks the *N*th Flops tier's autobuyer (Cores (KFlops) at Reboot 1, …). Hyperscalers (bought with Kernels on Firmware → ⏻ Kernels, #414, with Hyperscaler efficiency, Kernel amplifier and Auto Hyperscaler) accrue
 +0.01%/s each into every Factory tier's per-cycle Flops `cumulativeBoost` (`tickComputeFlops`). Full detail:
 `docs/ECONOMY_REFERENCE.md`'s "Reboot and Kernels". Prestige (Purge) Points are awarded by
-`getPrestigePointsAwarded`: 1 base PP at 1 Googol Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64)
-additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Compression
+`getPrestigePointsAwarded`: `floor(powers / powersPerPp) × ppPerPower` over the money's ACTUAL powers of ten (100 at Googol, unbounded only in
+Overflow mode; `PRESTIGE_POWERS_PER_PP_BASE` 64 → 100/64 = 1 PP, 100/32 = 3 after one Compression), scaled by permanent Compression
 upgrades (`prestigeDoublePpLevel` — each halves powers-per-PP until 1, then doubles PP-per-power; cost
 `10^(level+1)` PP). Production speed bonus (`getPrestigeProductionMultiplier`) is a one-time 1 PP purchase
 (`buyPrestigeSpeedBonus`/`prestigeSpeedBonusUnlocked`; Firmware → Prestige opens with a PP tutorial callout) giving

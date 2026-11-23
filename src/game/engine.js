@@ -1811,7 +1811,7 @@ export const isAutoPurgeReady = state => {
   const settings = getAutoPurgeSettings(state)
   if (settings.minSeconds > 0 && clampNonNegative(state.purge?.cycleSeconds ?? 0) < settings.minSeconds) return false
   if (!isOverflowModeUnlocked(state)) return true
-  const pending = getPrestigePointsAwarded(state.resources[MONEY_ID], state.prestigeDoublePpLevel ?? 0)
+  const pending = getPrestigePointsAwarded(state.resources[MONEY_ID], state.prestigeDoublePpLevel ?? 0, true)
   if (settings.targetPpExponent > 0 && pending < 10 ** settings.targetPpExponent) return false
   const best = clampNonNegative(state.purge?.highestAward ?? 0)
   if (settings.bestMultiplier > 0 && best > 0 && pending < settings.bestMultiplier * best) return false
@@ -2239,16 +2239,18 @@ export const getPrestigePpPerPower = (doublePpLevel = 0) => {
 export const getPrestigeDoublePpUpgradeCost = (currentLevel = 0) =>
   PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE ** (clampNonNegative(currentLevel) + 1)
 
-export const getPrestigePointsAwarded = (money, doublePpLevel = 0) => {
+// PP follow the money's ACTUAL powers of ten (Bytes exponent), not the excess over Googol: floor(powers /
+// powers-per-PP) × PP-per-power — 100/64 = 1 PP at Googol, 100/32 = 3 after one Compression. `unbounded` (Overflow
+// mode / DeGoogol) lets the exponent keep growing; otherwise it is held at Googol's own 100.
+export const getPrestigePointsAwarded = (money, doublePpLevel = 0, unbounded = false) => {
   const safeMoney = clampNonNegative(money)
   if (safeMoney < PURGE_THRESHOLD) return 0
 
   const googolExponent = Math.floor(Math.log10(GOOGOL))
-  const excessPowers = Math.max(0, getMoneyExponent(safeMoney) - googolExponent)
+  const powers = unbounded ? Math.max(googolExponent, getMoneyExponent(safeMoney)) : googolExponent
   const powersPerPp = getPrestigePowersPerPp(doublePpLevel)
   const ppPerPower = getPrestigePpPerPower(doublePpLevel)
-  const units = 1 + Math.floor(excessPowers / powersPerPp)
-  return units * ppPerPower
+  return Math.floor(powers / powersPerPp) * ppPerPower
 }
 
 const checkMilestones = (resources, purge) => {
@@ -8061,10 +8063,10 @@ export const exitChallenge = state => {
 // false = no PP, no Purge count, no System-log entry.
 const resetFactoryCycle = (state, awardPurge) => {
   const doublePpLevel = state.prestigeDoublePpLevel ?? 0
-  const pointsAwarded = awardPurge ? getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel) : 0
+  const unboundedUnlocked = isOverflowModeUnlocked(state)
+  const pointsAwarded = awardPurge ? getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel, unboundedUnlocked) : 0
   const initial = createInitialGameState()
   const nextPurgeNumber = state.purge.count + (awardPurge ? 1 : 0)
-  const unboundedUnlocked = isOverflowModeUnlocked(state)
   const museumEntry = {
     id: `p${nextPurgeNumber}-${Date.now()}`,
     at: Date.now(),

@@ -118,7 +118,7 @@ while (purges < maxPurges) {
   let purged = state.purge.count > countBefore // Auto Purge fired inside the tick
   if (!purged && state.resources[MONEY_ID] >= PURGE_THRESHOLD) {
     const money = state.resources[MONEY_ID]
-    const pp = getPrestigePointsAwarded(money, state.prestigeDoublePpLevel ?? 0)
+    const pp = getPrestigePointsAwarded(money, state.prestigeDoublePpLevel ?? 0, engine.isOverflowModeUnlocked(state))
     recent.push(pp)
     if (recent.length > 31) recent.shift()
     const marginal = recent.length > 1 ? (pp - recent[0]) / (recent.length - 1) : Infinity
