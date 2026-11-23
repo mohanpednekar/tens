@@ -420,7 +420,8 @@ src/
                             Page ids: `'foundry'` (also holds Storage), `'boosters'` (Power), `'compute'` (Flops),
                             `'game'` (Factory), `'perks'` (Firmware), `'milestones'`, `'info'`, `'settings'`, `'dev'`
   theme/                  ← tokens.js (design-token source of truth: per-mode color/shadow/tier-accent +
-                            mode-independent space/radius/motion/font/type; `buildTheme(mode)`, `themes.{dark,light}`),
+                            mode-independent space/radius/motion/breakpoints/font/type; `buildTheme(mode)`, `themes.{dark,light}`),
+                            layout.js (pure layout classes + `media`), LayoutContext.jsx (`LayoutProvider`/`useLayoutClass`),
                             fonts.js (locally bundled Space Grotesk/Inter), contrast.js (WCAG utility), GlobalStyle.js,
                             index.jsx (`<ThemeProvider mode>`) — THEMING_REFERENCE
   services/               ← config.js (feature flags, AdMob/RevenueCat ids, `IAP_PRODUCTS`, policy URLs),
@@ -534,6 +535,8 @@ locally bundled via `theme/fonts.js` — no runtime CDN fetch. Settings → Appe
 `<ThemeProvider mode>` from `tens_theme_preference` (`system` default, or `light`/`dark`); System
 follows `prefers-color-scheme`. Reset / `clearGameState` do not clear the theme preference. Full
 per-file breakdown: `docs/THEMING_REFERENCE.md` — read it before touching `src/theme/*`.
+
+**Layout classes (#1153, epic #1152):** `theme/layout.js` — pure `getLayoutClass({width,height})` (`compact`/`medium`/`expanded`/`wide`; height < 500 → compact) and `isSplitEligible`, thresholds in `tokens.js` `breakpoints` (also on `theme.breakpoints`), `media.atLeast/below` helpers; `LayoutContext.jsx` — `LayoutProvider` (mounted in `App.jsx`) + `useLayoutClass()` (defaults to `compact` outside a provider). Size-only, never platform-based.
 
 ## PWA support
 
