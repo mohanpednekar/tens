@@ -210,7 +210,7 @@ const describeReclamationReward = ({ arrayStepGain, lakeSpeed, syncedBitrate }) 
   const fulls = []
   if (arrayStepGain) {
     shorts.push(`Disk step ${formatReclamationPercent(arrayStepGain)}`)
-    fulls.push(`Disk-size steps without a Compact Pool upgrade close ${formatReclamationPercent(arrayStepGain)} of the gap to 1.0 (was 1%)`)
+    fulls.push(`Disk-size steps without a Flush Pool upgrade close ${formatReclamationPercent(arrayStepGain)} of the gap to 1.0 (was 1%)`)
   }
   if (lakeSpeed) {
     shorts.push(`Lake speed +${formatReclamationPercent(lakeSpeed)}`)
@@ -234,8 +234,8 @@ export const ACHIEVEMENT_DEFINITIONS = [
     id: `reclaim${i + 1}`,
     name: `Reclamation ${['I', 'II', 'III', 'IV', 'V'][i]}`,
     group: 'foundry',
-    trigger: pools === 1 ? 'Compact a Storage pool for the first time' : i === RECLAMATION_POOL_THRESHOLDS.length - 1 ? 'Compact every Storage pool at least once' : `Compact ${pools} different Storage pools`,
-    short: pools === 1 ? 'Compact a pool' : i === RECLAMATION_POOL_THRESHOLDS.length - 1 ? 'Compact every pool' : `Compact ${pools} pools`,
+    trigger: pools === 1 ? 'Flush a Storage pool for the first time' : i === RECLAMATION_POOL_THRESHOLDS.length - 1 ? 'Flush every Storage pool at least once' : `Flush ${pools} different Storage pools`,
+    short: pools === 1 ? 'Flush a pool' : i === RECLAMATION_POOL_THRESHOLDS.length - 1 ? 'Flush every pool' : `Flush ${pools} pools`,
     ...describeReclamationReward(RECLAMATION_LEVEL_REWARDS[i]),
     condition: { kind: 'poolsCompacted', min: pools },
   })),

@@ -2237,7 +2237,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
   // itself, so tickIntroProduction/tickPoolBufferFill below both read this tick's already-decayed
   // multiplier rather than lagging a tick behind.
   const stateAfterFillMultiplierDecay = tickFillMultiplierDecay(elapsedSeconds)(stateAfterMainGameLatch)
-  const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickSpeedUpgradeDrain(elapsedSeconds)(tickCapacityUpgradeDrain(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay)))))
+  const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickSpeedUpgradeDrain(elapsedSeconds)(tickCapacityUpgradeDrain(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(settleObsoleteSpeedUpgrade(stateAfterFillMultiplierDecay))))))
   // First pass advances in-flight read-cache flushes and refills the read cache, so write caches
   // (which draw the pool buffer after the read cache's claim) run second. The last pass uses 0
   // elapsed so flush countdowns are not applied twice per tickGame — it only starts new flushes
@@ -4176,13 +4176,18 @@ export const upgradePoolSpeed = state => {
   return { ...state, intro: { ...state.intro, bits: state.intro.bits - cost, speedCapacity: (state.intro.speedCapacity ?? state.intro.capacity) * INTRO_CAPACITY_DOUBLING_STEP } }
 }
 
+// Reclamation V arrived while a Bitrate upgrade was running: the upgrade is moot, so return the bar's bits to the Buffer
+// (what fits within Capacity — like any other overflow, the rest is lost). tickGame runs this BEFORE production so passive
+// production cannot fill the Buffer ahead of the refund.
+export const settleObsoleteSpeedUpgrade = state => {
+  if (!state.intro?.speedUpgradeQueued || !isBitrateSyncedToCapacity(state.intro)) return state
+  const refund = Math.max(0, Number(state.intro.speedUpgradeProgress) || 0)
+  return { ...state, intro: { ...state.intro, bits: Math.min(state.intro.capacity, state.intro.bits + refund), speedUpgradeQueued: false, speedUpgradeProgress: 0 } }
+}
+
 export const tickSpeedUpgradeDrain = elapsedSeconds => state => {
   if (!state.intro?.speedUpgradeQueued) return state
-  if (isBitrateSyncedToCapacity(state.intro)) {
-    // Reclamation V arrived while a Bitrate upgrade was running: it is moot, so return the bar's bits to the Buffer.
-    const refund = Math.max(0, Number(state.intro.speedUpgradeProgress) || 0)
-    return { ...state, intro: { ...state.intro, bits: Math.min(state.intro.capacity, state.intro.bits + refund), speedUpgradeQueued: false, speedUpgradeProgress: 0 } }
-  }
+  if (isBitrateSyncedToCapacity(state.intro)) return settleObsoleteSpeedUpgrade(state)
   const stored = state.intro.speedUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
   const cost = getSpeedUpgradeCostBits(state.intro)

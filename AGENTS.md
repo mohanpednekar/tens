@@ -175,8 +175,8 @@ boundary has auto-merge. PP **Compute (Flops)** (`ComputeFlopsPage`, nav **Compu
 At a pool's 9/9/9, full-lake, unreachable-next-Booster wall, its pool-local **Flush** adds 1,000
 permanent lake-only capacity, empties that pool's Storage/lake, and free-rebuilds its disks one at a
 time (blocking only new provisioning starts in later pools); lake speed is 10% of its pool's base
-Bandwidth, +10% additive per flush, and a pool's first two flushes raise the Bitrate exponent via
-permanent achievements. The generator, Disks, Data Lakes, Compute entities and the Data Stream balance
+Bandwidth, +10% additive per flush (+5% per Reclamation III/IV), and a pool's first two flushes directly
+upgrade its within-pool Bitrate-exponent steps (permanent; no achievement involved). The generator, Disks, Data Lakes, Compute entities and the Data Stream balance
 persist across every Purge; Reboot (`buildEraIntroReset`) wipes Disks/Data Lakes/Compute entity
 balances while keeping `byteCreated`, the `mainGameUnlocked` latch, and select automation-unlock flags.
 

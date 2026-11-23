@@ -321,6 +321,7 @@ import {
   getDataLakeOverflowRatePercent,
   getReclamationLevel,
   isBitrateSyncedToCapacity,
+  settleObsoleteSpeedUpgrade,
   getSpeedBasisBits,
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityDoublingTurnAvailable,
@@ -1622,6 +1623,12 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     const settled = tickSpeedUpgradeDrain(0.1)(running)
     expect(settled.intro.speedUpgradeQueued).toBe(false)
     expect(settled.intro.bits).toBe(40)
+    // tickGame settles it BEFORE production, so a Buffer that production would otherwise fill still gets the refund.
+    const nearlyFull = withIntro(queueIntroSpeedUpgrade(plain), { bits: capacity - 100, speedUpgradeProgress: 90, poolExponentBonuses: everyPool })
+    const afterTick = tickGame(0.1)(nearlyFull)
+    expect(afterTick.intro.speedUpgradeQueued).toBe(false)
+    expect(afterTick.intro.speedUpgradeProgress).toBe(0)
+    expect(settleObsoleteSpeedUpgrade(nearlyFull).intro.bits).toBe(capacity - 10) // the refund itself, applied before production
   })
 
   it('tickGame fills the bar and fires the upgrade, doubling Capacity', () => {
