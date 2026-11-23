@@ -320,6 +320,10 @@ import {
   getDataLakeFillBits,
   getDataLakeCurrentDiskFillFraction,
   getDataLakeOverflowRatePercent,
+  getReclamationLevel,
+  isBitrateSyncedToCapacity,
+  settleObsoleteSpeedUpgrade,
+  getSpeedBasisBits,
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityDoublingTurnAvailable,
   isDataLakeCapacityMaxed,
@@ -1594,6 +1598,40 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     const after = purgeGame(withMoney(armed, PURGE_THRESHOLD))
     expect(after.intro.capacityUpgradeQueued).toBe(true)
     expect(after.intro.capacity).toBe(capacity)
+  })
+
+  it('Reclamation V (every pool compacted) syncs Bitrate to Capacity: no separate Bitrate upgrade, one Upgrade does both', () => {
+    const everyPool = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [i + 1, 1]))
+    const lagging = intro => withIntro(createInitialGameState(), { byteCreated: true, capacity, bits: capacity, speedCapacity: capacity / 4, ...intro })
+    expect(isBitrateSyncedToCapacity(lagging({ poolExponentBonuses: everyPool }).intro)).toBe(true)
+    expect(isBitrateSyncedToCapacity(lagging({ poolExponentBonuses: { 1: 1, 2: 1 } }).intro)).toBe(false)
+    // Without V Bitrate trails Capacity and has its own upgrade; with V it derives from Capacity and that upgrade is gone.
+    const plain = lagging({})
+    expect(isSpeedUpgradeArmable(plain)).toBe(true)
+    const synced = lagging({ poolExponentBonuses: everyPool })
+    expect(isSpeedUpgradeArmable(synced)).toBe(false)
+    expect(queueIntroSpeedUpgrade(synced)).toBe(synced)
+    expect(getIntroProductionRate(synced.intro)).toBeGreaterThan(getIntroProductionRate(plain.intro))
+    expect(getSpeedBasisBits(synced.intro)).toBe(capacity)
+    // One Capacity upgrade doubles both.
+    const before = getIntroProductionRate(synced.intro)
+    const after = upgradePoolCapacity(synced)
+    expect(after.intro.capacity).toBe(capacity * INTRO_CAPACITY_DOUBLING_STEP)
+    expect(getSpeedBasisBits(after.intro)).toBe(capacity * INTRO_CAPACITY_DOUBLING_STEP)
+    expect(getIntroProductionRate(after.intro) / before).toBeCloseTo(2 ** getDataStreamSpeedExponent(synced.intro), 12)
+    // A Bitrate upgrade already running when V arrives is refunded to the Buffer.
+    const running = withIntro(queueIntroSpeedUpgrade(plain), { bits: 10, speedUpgradeProgress: 30, poolExponentBonuses: everyPool })
+    const settled = tickSpeedUpgradeDrain(0.1)(running)
+    expect(settled.intro.speedUpgradeQueued).toBe(false)
+    expect(settled.intro.bits).toBe(40)
+    // An ordinary tick clears the obsolete bar; the refund itself is asserted on the helper.
+    const nearlyFull = withIntro(queueIntroSpeedUpgrade(plain), { bits: capacity - 100, speedUpgradeProgress: 90, poolExponentBonuses: everyPool })
+    const afterTick = tickGame(0.1)(nearlyFull)
+    expect(afterTick.intro.speedUpgradeQueued).toBe(false)
+    expect(afterTick.intro.speedUpgradeProgress).toBe(0)
+    expect(settleObsoleteSpeedUpgrade(nearlyFull).intro.bits).toBe(capacity - 10) // the refund itself
+    // A refund larger than the free space is clamped to Capacity.
+    expect(settleObsoleteSpeedUpgrade(withIntro(queueIntroSpeedUpgrade(plain), { bits: capacity - 5, speedUpgradeProgress: 90, poolExponentBonuses: everyPool })).intro.bits).toBe(capacity)
   })
 
   it('tickGame fills the bar and fires the upgrade, doubling Capacity', () => {
@@ -11562,17 +11600,13 @@ describe('Data Lakes', () => {
       const state = withIntro(createInitialGameState(), { unlockedDiskSteps: 3 })
       expect(flushStoragePool(1)(state)).toBe(state)
       expect(state.intro.poolExponentBonuses).toEqual({})
-      expect(isAchievementEarned(state, 'pool01ResetI')).toBe(false)
+      expect(isAchievementEarned(state, 'reclaim1')).toBe(false)
     })
 
-    it('awards 20 Foundry achievements at two per pool and only rewards each pool twice', () => {
+    it('has five Reclamation achievements and only upgrades each pool twice', () => {
       const group = ACHIEVEMENT_DEFINITIONS.filter(def => def.group === 'foundry')
-      expect(group).toHaveLength(2 * DATA_LAKE_TIER_COUNT)
-      for (let pool = 1; pool <= DATA_LAKE_TIER_COUNT; pool += 1) {
-        const resetId = String(pool).padStart(2, '0')
-        expect(group.map(def => def.id)).toContain(`pool${resetId}ResetI`)
-        expect(group.map(def => def.id)).toContain(`pool${resetId}ResetII`)
-      }
+      expect(group.map(def => def.id)).toEqual(['reclaim1', 'reclaim2', 'reclaim3', 'reclaim4', 'reclaim5'])
+      expect(group.at(-1).condition.min).toBe(DATA_LAKE_TIER_COUNT)
 
       let state = completePool(createInitialGameState(), 1)
       state = withIntro(updateLake(state, 1, { capacityLevel: 3, depositedUnits: 1000, purchased: 1000 }), {
@@ -11582,10 +11616,10 @@ describe('Data Lakes', () => {
       const baseline = getDataStreamSpeedExponent(state.intro)
       const first = flushStoragePool(1)(state)
       expect(first.intro.poolExponentBonuses[1]).toBe(1)
-      expect(isAchievementEarned(first, 'pool01ResetI')).toBe(true)
-      expect(isAchievementEarned(first, 'pool01ResetII')).toBe(false)
+      expect(isAchievementEarned(first, 'reclaim1')).toBe(true)
+      expect(isAchievementEarned(first, 'reclaim2')).toBe(false)
       expect(getDataStreamSpeedExponent(first.intro)).toBeGreaterThan(baseline)
-      expect(getDataStreamSpeedExponent(first.intro)).toBeCloseTo(0.5545, 12)
+      expect(getDataStreamSpeedExponent(first.intro)).toBeCloseTo(0.559, 12) // 1 earned step (0.9) × 1 unearned step at Reclamation I's 2% (0.98)
       // Reformat wipes the lake's local resetCount but must not make the next eligible
       // Compact Pool repeat reward I instead of unlocking reward II.
       const reformatted = resetByteFoundry(first)
@@ -11597,7 +11631,6 @@ describe('Data Lakes', () => {
       const second = flushStoragePool(1)(readyAgain)
       expect(second.intro.dataLakes[1].resetCount).toBe(1)
       expect(second.intro.poolExponentBonuses[1]).toBe(2)
-      expect(isAchievementEarned(second, 'pool01ResetII')).toBe(true)
       expect(getDataStreamSpeedExponent(second.intro)).toBeCloseTo(0.595, 12)
       const thirdReady = withIntro(completePool(second), {
         dataLakes: { ...second.intro.dataLakes, 1: { ...second.intro.dataLakes[1], rebuilding: false, depositedUnits: 3000, purchased: 3000 } },
@@ -11606,6 +11639,28 @@ describe('Data Lakes', () => {
       expect(third.intro.dataLakes[1].resetCount).toBe(2) // resetCount restarted at 0 on Reformat
       expect(third.intro.poolExponentBonuses[1]).toBe(2)
       expect(getDataStreamSpeedExponent(third.intro)).toBeCloseTo(getDataStreamSpeedExponent(second.intro), 12)
+    })
+
+    it('Reclamation levels I/II raise the plain disk-size step to 2%/3%; III/IV add 5% lake speed each', () => {
+      const poolsCompacted = count => ({
+        ...createInitialGameState(),
+        intro: { ...createInitialGameState().intro, unlockedDiskSteps: 3, poolExponentBonuses: Object.fromEntries(Array.from({ length: count }, (_, i) => [i + 1, 1])) },
+      })
+      // 3 unlocked steps = 2 plain within-pool steps (pool 1's two), none earned by the (level-1) bonus map besides pool 1's first.
+      const exponentAt = state => getDataStreamSpeedExponent(state.intro)
+      expect([0, 1, 2, 3, 6, 8, 10].map(count => getReclamationLevel(poolsCompacted(count).intro))).toEqual([0, 1, 1, 2, 3, 4, 5])
+      // Only real pools (1..10) count; junk keys from a hand-edited save do not.
+      expect(getReclamationLevel({ poolExponentBonuses: { 1: 2, foo: 1, 0: 1, 11: 1 } })).toBe(1)
+      expect(exponentAt(poolsCompacted(0))).toBeCloseTo(1 - 0.5 * 0.99 ** 2, 12)
+      expect(exponentAt(poolsCompacted(1))).toBeCloseTo(1 - 0.5 * 0.9 * 0.98, 12) // first step earned, second plain at 2%
+      expect(exponentAt(poolsCompacted(3))).toBeCloseTo(1 - 0.5 * 0.9 * 0.97, 12) // level II: plain step at 3%
+      expect(exponentAt(poolsCompacted(6))).toBeCloseTo(exponentAt(poolsCompacted(3)), 12) // III/IV add no further disk step
+      expect(exponentAt(poolsCompacted(8))).toBeCloseTo(exponentAt(poolsCompacted(3)), 12)
+      expect(exponentAt(poolsCompacted(10))).toBeCloseTo(exponentAt(poolsCompacted(3)), 12) // V (grand) is the free Bitrate upgrade, not an exponent step
+      const lake = count => getDataLakeOverflowRatePercent(poolsCompacted(count), 1)
+      expect([0, 1, 3, 6, 8, 10].map(lake)).toEqual([10, 10, 10, 15, 20, 20])
+      expect(getDataLakeOverflowRatePercent(poolsCompacted(6), 7)).toBe(15) // global: every lake
+      expect(getDataLakeOverflowRatePercent(updateLake(poolsCompacted(10), 1, { resetCount: 2 }), 1)).toBe(40)
     })
 
     it('requires 9/9/9, a full lake, and an unreachable next Booster', () => {
@@ -11626,8 +11681,7 @@ describe('Data Lakes', () => {
       })
       const reset = flushStoragePool(1)(state)
       expect(reset.intro.poolExponentBonuses[1]).toBe(1)
-      expect(isAchievementEarned(reset, 'pool01ResetI')).toBe(true)
-      expect(isAchievementEarned(reset, 'pool01ResetII')).toBe(false)
+      expect(isAchievementEarned(reset, 'reclaim1')).toBe(true)
       expect(getDataLakeCapacity(reset, 1)).toBe(2000)
       expect(reset.intro.dataLakes[1].resetCount).toBe(1)
       expect(reset.intro.dataLakes[1].purchased).toBe(1000)
@@ -11643,14 +11697,14 @@ describe('Data Lakes', () => {
       expect(tickPoolResetReprovision(first)).toBe(first) // first disk must fill before the next appears
       const filled = withIntro(first, { disks: { ...first.intro.disks, [kb1]: 1 } })
       expect(tickPoolResetReprovision(filled).intro.disksBuiltTotal[kb1]).toBe(2)
-      expect(getDataLakeOverflowRatePercent(reset, 1)).toBe(20)
+      expect(getDataLakeOverflowRatePercent(reset, 1)).toBe(20) // 10 base + 10 per flush
 
       const purged = purgeGame(withMoney(reset, PURGE_THRESHOLD))
       expect(purged.intro.poolResetRebuildingCount).toBe(1)
       expect(tickPoolResetReprovision(purged).intro.disksBuiltTotal[kb1]).toBe(1)
     })
 
-    it('keeps achievements and their exponent rewards through Purge, Reformat and Reboot', () => {
+    it('keeps legacy Reclamation flags and the exponent upgrades through Purge, Reformat and Reboot', () => {
       const initial = createInitialGameState()
       const awarded = {
         ...initial,
@@ -11671,7 +11725,7 @@ describe('Data Lakes', () => {
       )
     })
 
-    it('grandfathers recorded earlier pool resets and achievement flags on old save load', () => {
+    it('grandfathers recorded earlier pool resets on old save load', () => {
       const initial = createInitialGameState()
       const old = withIntro(initial, {
         unlockedDiskSteps: 9,
@@ -11685,9 +11739,8 @@ describe('Data Lakes', () => {
       const migrated = normalizePoolMemoryCapacity(old)
       expect(migrated.intro.poolExponentBonuses).toMatchObject({ 1: 2, 3: 1 })
       const withBadges = tickGame(0)(migrated)
-      expect(isAchievementEarned(withBadges, 'pool01ResetI')).toBe(true)
-      expect(isAchievementEarned(withBadges, 'pool01ResetII')).toBe(true)
-      expect(isAchievementEarned(withBadges, 'pool03ResetI')).toBe(true)
+      expect(isAchievementEarned(withBadges, 'reclaim1')).toBe(true) // 2 distinct pools compacted
+      expect(isAchievementEarned(withBadges, 'reclaim2')).toBe(false) // needs 3
     })
 
     it('auto-buys reachable Boosters only after rebuild and grants bandwidth from reset two onward', () => {
@@ -11703,7 +11756,6 @@ describe('Data Lakes', () => {
       const second = flushStoragePool(1)(wall)
       expect(second.intro.dataLakes[1].resetCount).toBe(2)
       expect(second.intro.poolExponentBonuses[1]).toBe(2)
-      expect(isAchievementEarned(second, 'pool01ResetII')).toBe(true)
       expect(getDataLakeOverflowRatePercent(second, 1)).toBe(30)
       expect(second.intro.dataLakes[1].bandwidthSteps).toBe(0)
 
@@ -11986,14 +12038,16 @@ describe('Foundry-reset disk-size unlocks (rising Data Stream Speed exponent)', 
     const first = { ...base, poolExponentBonuses: { 1: 1 } }
     const both = { ...base, poolExponentBonuses: { 1: 2 } }
     expect(getDataStreamSpeedExponent({ ...first, unlockedDiskSteps: 2 })).toBeCloseTo(0.55, 12)
-    expect(getDataStreamSpeedExponent({ ...first, unlockedDiskSteps: 3 })).toBeCloseTo(0.5545, 12)
+    expect(getDataStreamSpeedExponent({ ...first, unlockedDiskSteps: 3 })).toBeCloseTo(0.559, 12) // 1 earned step (0.9) × 1 unearned step at Reclamation I's 2% (0.98)
     expect(getDataStreamSpeedExponent({ ...both, unlockedDiskSteps: 3 })).toBeCloseTo(0.595, 12)
-    expect(getDataStreamSpeedExponent(first)).toBeCloseTo(0.59905, 12)
+    expect(getDataStreamSpeedExponent(first)).toBeCloseTo(0.6031, 12) // 0.9 pool × 0.9 earned × 0.98 plain (Reclamation I)
     expect(getDataStreamSpeedExponent(both)).toBeCloseTo(0.6355, 12)
     expect(getIntroProductionRate({ ...base, speedCapacity: 8 * 1_000_000 })).toBeLessThan(
       getIntroProductionRate({ ...both, speedCapacity: 8 * 1_000_000 })
     )
-    expect(getDataStreamSpeedExponent({ ...base, poolExponentBonuses: { 2: 2 } })).toBeCloseTo(getDataStreamSpeedExponent(base), 12)
+    // A pool whose steps aren't unlocked upgrades none of the unlocked steps; it only counts toward Reclamation I (plain step 1% → 2%).
+    expect(getDataStreamSpeedExponent({ ...base, poolExponentBonuses: { 2: 2 } })).toBeCloseTo(1 - 0.5 * 0.9 * 0.98 ** 2, 12)
+    expect(getDataStreamSpeedExponent({ ...base, poolExponentBonuses: { 2: 2 } })).toBeCloseTo(getDataStreamSpeedExponent({ ...base, poolExponentBonuses: { 2: 1 } }), 12)
   })
 
   it('is monotone and stays below 1 across every disk size and achievement state', () => {

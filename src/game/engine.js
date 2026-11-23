@@ -1,4 +1,4 @@
-import { DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, BUY_MAX_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, SLEEP_MODE_BASE_CAP_SECONDS, SLEEP_MODE_CAP_STEP_SECONDS, SLEEP_MODE_CAP_UPGRADE_COSTS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, TIER_COST_SPACING_GROWTH_LEVELS, OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL, LEVEL_POWER_ACHIEVEMENT_BONUS, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, KERNEL_PANIC_WINDOW_SECONDS, REMIND_ME_LATER_SECONDS } from './layers.js'
+import { KERNEL_PANIC_WINDOW_SECONDS, REMIND_ME_LATER_SECONDS, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, BUY_MAX_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, SLEEP_MODE_BASE_CAP_SECONDS, SLEEP_MODE_CAP_STEP_SECONDS, SLEEP_MODE_CAP_UPGRADE_COSTS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, TIER_COST_SPACING_GROWTH_LEVELS, OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL, LEVEL_POWER_ACHIEVEMENT_BONUS, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, RECLAMATION_POOL_THRESHOLDS, RECLAMATION_LEVEL_REWARDS } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -1455,6 +1455,27 @@ const bumpAchievementCounter = (state, key, amount = 1, mode = 'add') => {
   return detectAchievements({ ...state, achievements: { ...achievements, counters: { ...achievements.counters, [key]: value } } })
 }
 const areAllTierAutobuyersUnlocked = state => TIER_DEFINITIONS.every(tier => (state.autobuyers?.[tier.id] ?? null) !== null)
+// Distinct Storage pools compacted at least once (permanent `poolExponentBonuses` award map).
+const getCompactedPoolCount = state => getCompactedPoolCountFromIntro(state.intro)
+const getCompactedPoolCountFromIntro = intro => {
+  // Only real pools count (1..DATA_LAKE_TIER_COUNT) — the award map is persisted JSON a hand edit could pollute.
+  let count = 0
+  for (let pool = 1; pool <= DATA_LAKE_TIER_COUNT; pool += 1) {
+    if (Number(intro?.poolExponentBonuses?.[pool]) >= 1) count += 1
+  }
+  return count
+}
+// Reclamation level (0-4) from the same award map the Reclamation achievements read, so its rewards apply immediately
+// and work from `intro` alone (the exponent helpers below never see `achievements`).
+export const getReclamationLevel = intro => {
+  const compacted = getCompactedPoolCountFromIntro(intro)
+  return RECLAMATION_POOL_THRESHOLDS.filter(threshold => compacted >= threshold).length
+}
+// Share of the remaining gap closed by a within-pool step with no Compact Pool upgrade: base 1%, raised by Reclamation I/II.
+const getReclamationArrayStepGain = (intro, baseGain) => {
+  const earned = RECLAMATION_LEVEL_REWARDS.slice(0, getReclamationLevel(intro)).filter(reward => reward.arrayStepGain)
+  return earned.length ? earned.at(-1).arrayStepGain : baseGain
+}
 
 export const isAchievementConditionMet = (state, condition) => {
   switch (condition.kind) {
@@ -1465,7 +1486,7 @@ export const isAchievementConditionMet = (state, condition) => {
     case 'clockSpeedLevel': return (state.globalTickspeedMultiplier ?? 0) >= condition.min
     case 'overclocked': return state.overclockLastClaimCompletedLevels != null
     case 'tierLevel': return (state.purchaseLevels?.[condition.tierId] ?? 1) >= condition.min
-    case 'poolExponentBonus': return (state.intro?.poolExponentBonuses?.[condition.poolIndex] ?? 0) >= condition.min
+    case 'poolsCompacted': return getCompactedPoolCount(state) >= condition.min
     case 'lifetimePurges': return getLifetimePurges(state) >= condition.min
     case 'kernelsEarned': return Math.max(state.achievements?.counters?.kernelsEarned ?? 0, state.eons?.balance ?? 0) >= condition.min
     case 'eraCount': return (state.era?.count ?? 0) >= condition.min
@@ -1501,7 +1522,7 @@ export const getAchievementProgress = (state, condition) => {
     case 'lifetimePurges': return { current: getLifetimePurges(state), target: condition.min }
     case 'clockSpeedLevel': return { current: state.globalTickspeedMultiplier ?? 0, target: condition.min }
     case 'tierLevel': return { current: state.purchaseLevels?.[condition.tierId] ?? 1, target: condition.min }
-    case 'poolExponentBonus': return { current: state.intro?.poolExponentBonuses?.[condition.poolIndex] ?? 0, target: condition.min }
+    case 'poolsCompacted': return { current: getCompactedPoolCount(state), target: condition.min }
     case 'storageUnlocked': {
       const doublings = capacity => Math.log2(Math.max(capacity, INTRO_STARTING_CAPACITY) / INTRO_STARTING_CAPACITY)
       return { current: Math.floor(doublings(state.intro?.capacity ?? 0)), target: doublings(INTRO_DISK_UNLOCK_CAPACITY) }
@@ -2984,7 +3005,7 @@ export const getDataStreamSpeedExponent = intro => {
     earnedArrayTransitions += Math.min(unlockedInPool, bonuses)
   }
   const poolGap = DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED
-  const arrayGap = 1 - (1 - poolGap) ** 2
+  const arrayGap = 1 - getReclamationArrayStepGain(intro, (1 - poolGap) ** 2)
   return 1 - (1 - DATA_STREAM_SPEED_EXPONENT_BASE) *
     poolGap ** (poolTransitions + earnedArrayTransitions) *
     arrayGap ** (arrayTransitions - earnedArrayTransitions)
@@ -3001,8 +3022,16 @@ export const getDataStreamSpeedBytesPerSecond = (basisBits, exponent = DATA_STRE
 // The Data Stream's production rate in bits/sec — its derived Speed above expressed in bits
 // (× BITS_PER_BYTE). Replaces the old independently-upgraded tickSpeedSeconds/productionMultiplier
 // pair: capacity itself is the only purchased progression variable now.
+// Reclamation V (the grand reward): Bitrate always matches Capacity — no separate Upgrade Bitrate, one Upgrade does both.
+export const isBitrateSyncedToCapacity = intro =>
+  RECLAMATION_LEVEL_REWARDS.slice(0, getReclamationLevel(intro)).some(reward => reward.syncedBitrate)
+
+// The basis Bitrate derives from: Capacity itself when synced, otherwise the separately upgraded Speed basis.
+export const getSpeedBasisBits = intro =>
+  isBitrateSyncedToCapacity(intro) ? intro.capacity ?? 0 : intro.speedCapacity ?? intro.capacity ?? 0
+
 export const getIntroProductionRate = intro =>
-  getDataStreamSpeedBytesPerSecond(intro.speedCapacity ?? intro.capacity ?? 0, getDataStreamSpeedExponent(intro)) * BITS_PER_BYTE
+  getDataStreamSpeedBytesPerSecond(getSpeedBasisBits(intro), getDataStreamSpeedExponent(intro)) * BITS_PER_BYTE
 
 // --- Fill-based Speed/Bandwidth multiplier (see FILL_MULTIPLIER_* in layers.js) --- Displayed
 // rates (getIntroProductionRate above, getStoragePoolBandwidth below) never change; this
@@ -3753,6 +3782,7 @@ export const normalizePoolMemoryCapacity = state => {
     const savedCount = Number(nextIntro.dataLakes?.[pool]?.resetCount)
     const earned = state.achievements?.earned ?? {}
     const prefix = `pool${String(pool).padStart(2, '0')}Reset`
+    // Legacy per-pool Reclamation I/II flags (removed achievements) still count: old saves keep them.
     const badgeCount = earned[`${prefix}II`] ? 2 : earned[`${prefix}I`] ? 1 : 0
     const prior = Number(poolExponentBonuses[pool])
     const current = Number.isFinite(prior) ? Math.min(2, Math.max(0, Math.floor(prior))) : 0
@@ -4141,14 +4171,19 @@ const doubleIntroCapacity = state => {
   const afterWipe = isComputeCoreConversionUnlocked(state)
     ? eraseAllComputeTokens(state)
     : state
+  const newCapacity = afterWipe.intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
+  // Reclamation V: Bitrate is synced to Capacity, so the stored basis simply follows it; otherwise it stays where it was.
+  const speedBasis = isBitrateSyncedToCapacity(afterWipe.intro)
+    ? newCapacity
+    : afterWipe.intro.speedCapacity ?? afterWipe.intro.capacity
   // latchMainGameUnlocked here (not just tickGame's own unconditional call) makes the reveal
   // synchronous with the capacity change that triggers it — no need to wait for the next tick.
   return latchMainGameUnlocked({
     ...afterWipe,
     intro: {
       ...afterWipe.intro,
-      speedCapacity: afterWipe.intro.speedCapacity ?? afterWipe.intro.capacity,
-      capacity: afterWipe.intro.capacity * INTRO_CAPACITY_DOUBLING_STEP,
+      speedCapacity: speedBasis,
+      capacity: newCapacity,
       capacityUpgradeQueued: false,
       capacityUpgradeProgress: 0,
     },
@@ -4167,14 +4202,14 @@ export const isMemoryCapacityUpgradeArmable = state => {
 // Upgrade Speed costs the current Speed basis (bits): exactly the Capacity at which this Speed would
 // be the cap (Speed = Capacity^exponent), so it matches the Capacity upgrade's cost
 // when Speed is at its cap.
-export const getSpeedUpgradeCostBits = intro => intro.speedCapacity ?? intro.capacity ?? 0
+export const getSpeedUpgradeCostBits = intro => getSpeedBasisBits(intro)
 
 // Base Speed can never exceed Capacity^exponent, i.e. the doubled basis must still
 // fit within Capacity.
 export const isSpeedUpgradeArmable = state => {
   const intro = state.intro ?? {}
   if (intro.capacityUpgradeQueued || intro.speedUpgradeQueued) return false
-  if (!intro.byteCreated) return false
+  if (!intro.byteCreated || isBitrateSyncedToCapacity(intro)) return false
   return getSpeedUpgradeCostBits(intro) * INTRO_CAPACITY_DOUBLING_STEP <= intro.capacity
 }
 
@@ -4190,8 +4225,18 @@ export const upgradePoolSpeed = state => {
   return { ...state, intro: { ...state.intro, bits: state.intro.bits - cost, speedCapacity: (state.intro.speedCapacity ?? state.intro.capacity) * INTRO_CAPACITY_DOUBLING_STEP } }
 }
 
+// Reclamation V arrived while a Bitrate upgrade was running: the upgrade is moot, so return the bar's bits to the Buffer
+// (what fits within Capacity — like any other overflow, the rest is lost). Runs from tickSpeedUpgradeDrain, after production: that
+// is never worse for the player than refunding first (a fuller Buffer slows the fill curve, and a Buffer that ends full is full either way).
+export const settleObsoleteSpeedUpgrade = state => {
+  if (!state.intro?.speedUpgradeQueued || !isBitrateSyncedToCapacity(state.intro)) return state
+  const refund = Math.max(0, Number(state.intro.speedUpgradeProgress) || 0)
+  return { ...state, intro: { ...state.intro, bits: Math.min(state.intro.capacity, state.intro.bits + refund), speedUpgradeQueued: false, speedUpgradeProgress: 0 } }
+}
+
 export const tickSpeedUpgradeDrain = elapsedSeconds => state => {
   if (!state.intro?.speedUpgradeQueued) return state
+  if (isBitrateSyncedToCapacity(state.intro)) return settleObsoleteSpeedUpgrade(state)
   const stored = state.intro.speedUpgradeProgress
   const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
   const cost = getSpeedUpgradeCostBits(state.intro)
@@ -6010,8 +6055,12 @@ export const isDataLakeDiskFillStartAllowed = (state, tierIndex) => {
 // docs/DESIGN_HISTORY.md) now that overflow fills at the plain available rate, same as Storage's
 // own disk provisioning.
 // Lake speed = 10% of its pool's base Bandwidth, +10% (additive) per pool flush (70% after 6).
+// Reclamation levels III/IV (permanent, global) add a flat bonus to every lake on top of the lake's own flush count.
+export const getReclamationLakeSpeedBonus = state =>
+  RECLAMATION_LEVEL_REWARDS.slice(0, getReclamationLevel(state.intro)).reduce((sum, reward) => sum + (reward.lakeSpeed ?? 0), 0)
+
 export const getDataLakeSpeedMultiplier = (state, tierIndex) =>
-  0.1 + 0.1 * Math.max(0, getDataLakeTier(state, tierIndex)?.resetCount ?? 0)
+  Math.round((0.1 + 0.1 * Math.max(0, getDataLakeTier(state, tierIndex)?.resetCount ?? 0) + getReclamationLakeSpeedBonus(state)) * 1e6) / 1e6
 
 export const getDataLakeOverflowRatePercent = (state, tierIndex) =>
   Math.round(getDataLakeSpeedMultiplier(state, tierIndex) * 1000) / 10
@@ -7829,7 +7878,8 @@ export const tickFoundryResetConvenience = state => {
   // also makes it the cheaper of the two, its cost being the basis) it goes first; Capacity is only chosen once
   // Speed has reached the "needs Capacity" state (or has nothing pending), so increasing-cost order holds.
   if (!next.intro?.capacityUpgradeQueued && !next.intro?.speedUpgradeQueued) {
-    const speedPending = (caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0)
+    const speedPending = !isBitrateSyncedToCapacity(next.intro) &&
+      (caps.speedCapacity ?? caps.capacity ?? 0) > (next.intro?.speedCapacity ?? next.intro?.capacity ?? 0)
     const capacityPending = (caps.capacity ?? 0) > (next.intro?.capacity ?? 0)
     let queued = next
     if (speedPending) queued = queueIntroSpeedUpgrade(next)

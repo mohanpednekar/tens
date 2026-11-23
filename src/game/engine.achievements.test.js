@@ -129,7 +129,7 @@ describe('detectAchievements', () => {
     expect(detectAchievements(next)).toBe(next)
   })
 
-  it('earns Foundry Reclamation achievements retroactively from recorded pool bonuses', () => {
+  it('earns Reclamation achievements retroactively from recorded pool compactions', () => {
     const previous = lateGame()
     const poolExponentBonuses = Object.fromEntries(Array.from({ length: 10 }, (_, index) => [index + 1, 2]))
     const awarded = detectAchievements({ ...previous, intro: { ...previous.intro, poolExponentBonuses } })
@@ -330,13 +330,14 @@ describe('getAchievementProgress / getAchievementReward', () => {
     expect(getAchievementProgress(state, { kind: 'counter', key: 'pings', min: 256 })).toEqual({ current: 10, target: 256 })
     expect(getAchievementProgress(state, { kind: 'clockSpeedLevel', min: 10 })).toEqual({ current: 4, target: 10 })
     expect(getAchievementProgress(state, { kind: 'tierLevel', tierId: 'tier01', min: 10 })).toEqual({ current: 6, target: 10 })
-    expect(getAchievementProgress(state, { kind: 'poolExponentBonus', poolIndex: 1, min: 2 })).toEqual({ current: 0, target: 2 })
+    expect(getAchievementProgress(state, { kind: 'poolsCompacted', min: 3 })).toEqual({ current: 0, target: 3 })
+    expect(getAchievementProgress({ ...state, intro: { ...state.intro, poolExponentBonuses: { 1: 2, 4: 1, 5: 0 } } }, { kind: 'poolsCompacted', min: 3 })).toEqual({ current: 2, target: 3 })
     expect(getAchievementProgress({ ...state, intro: { ...state.intro, capacity: 8 } }, { kind: 'storageUnlocked' })).toEqual({ current: 0, target: 10 })
     expect(getAchievementProgress({ ...state, intro: { ...state.intro, capacity: 512 } }, { kind: 'storageUnlocked' })).toEqual({ current: 6, target: 10 })
     expect(getAchievementProgress(state, { kind: 'counter', key: 'overflowDeepOverclock', min: 1 })).toBeNull()
     expect(getAchievementProgress(state, { kind: 'counter', key: 'maxFirstOverclock', min: 6 })).toBeNull()
     expect(getAchievementProgress(state, { kind: 'clockSpeedLevel', min: 1 })).toBeNull()
-    expect(getAchievementProgress(state, { kind: 'poolExponentBonus', poolIndex: 1, min: 1 })).toBeNull()
+    expect(getAchievementProgress(state, { kind: 'poolsCompacted', min: 1 })).toBeNull()
     expect(getAchievementProgress(state, { kind: 'overclocked' })).toBeNull()
     expect(getAchievementProgress(state, { kind: 'byteCreated' })).toBeNull()
   })
