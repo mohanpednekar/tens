@@ -6,10 +6,10 @@ import {
   getAchievementShortReward,
   buyTickspeedMultiplier, createInitialGameState, detectAchievements, eraGame, getCompletedAchievementGroups,
   getLevelMultiplierBase, getOverclockRequirement, getOverclockRequirementStep, getPurchaseMilestoneMultiplier, getTierCostExponent, buyGlobalTickspeedMultiplier, isAchievementEarned, consumeXpForLastTierTickspeed, restageManually, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
-  activateComputeBoost, buyTierQuantity, stackComputeBoost, withManualPurchaseMark,
+  activateComputeBoost, buyTierQuantity, getPurgeGoalBits, stackComputeBoost, withManualPurchaseMark,
 } from './engine'
 import { loadGameState } from './storage'
-import { ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_TIER_FIELDS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
+import { ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, CHALLENGE_DEFINITIONS, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_TIER_FIELDS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
 
 beforeEach(() => { ACHIEVEMENTS_FEATURE.enabled = true; localStorage.clear() })
 afterEach(() => { ACHIEVEMENTS_FEATURE.enabled = false })
@@ -477,10 +477,18 @@ describe('review follow-ups (#1199, round 2)', () => {
     expect(isAchievementEarned(detectAchievements({ ...s, eons: { balance: 100 } }), 'popcorn')).toBe(true)
   })
 
-  it('records Overflow on a Purge that awards no Purge count (repeat challenge completion)', () => {
+  it('records Overflow on a repeat challenge completion, which awards no Purge count', () => {
     const s = createInitialGameState()
-    const ready = { ...s, purge: { ...s.purge, unboundedUnlocked: true }, resources: { ...s.resources, [MONEY_ID]: PURGE_THRESHOLD } }
+    const id = CHALLENGE_DEFINITIONS[0].id
+    const inChallenge = {
+      ...s,
+      purge: { ...s.purge, unboundedUnlocked: true },
+      challenges: { ...s.challenges, active: id, completed: { [id]: true } },
+    }
+    const ready = { ...inChallenge, resources: { ...inChallenge.resources, [MONEY_ID]: Math.max(PURGE_THRESHOLD, getPurgeGoalBits(inChallenge)) } }
     const next = purgeGame(ready)
+    expect(next.purge.count).toBe(ready.purge.count) // a replay awards no Purge
     expect(next.achievements.counters.overflowPurges).toBe(1)
+    expect(isAchievementEarned(next, 'notABug')).toBe(true)
   })
 })
