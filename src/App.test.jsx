@@ -338,6 +338,20 @@ test('Firmware → Kernels tab is hidden before a Reboot and lets you buy a hype
   expect(screen.getByRole('button', { name: /unlock auto hyperscaler/i })).toBeDisabled()
 })
 
+test('Firmware → Automation shows Auto Purge conditions once Auto Purge is owned and steps them', async () => {
+  seedMainGameState({ purge: { xp: 0, points: 10, count: 1, highestMilestone: 1 }, autoPurge: 0 })
+  render(<App />)
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: /^open firmware$/i }))
+  expect(screen.getByLabelText('Minimum time value')).toHaveTextContent('Off')
+  await user.click(screen.getByRole('button', { name: /increase minimum time/i }))
+  expect(screen.getByLabelText('Minimum time value')).toHaveTextContent('10 s')
+  await user.click(screen.getByRole('button', { name: /increase purge at pp/i }))
+  expect(screen.getByLabelText('Purge at PP value')).toHaveTextContent('10^1 PP')
+  await user.click(screen.getByRole('button', { name: /increase best pp multiple/i }))
+  expect(screen.getByLabelText('Best PP multiple value')).toHaveTextContent('×1.5')
+})
+
 test('after a Reboot (prestige count 0, era 1) Firmware stays reachable with every owned automation\'s toggle', async () => {
   const user = userEvent.setup()
   seedMainGameState({

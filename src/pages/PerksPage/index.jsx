@@ -48,9 +48,13 @@ import {
   getEonsAwarded,
   getHyperscalerEonCost,
   isEonUpgradeMaxed,
+  getAutoPurgeSettings,
 } from 'game/engine'
 import {
   AUTO_HYPERSCALER_EON_COST,
+  AUTO_PURGE_BEST_MULTIPLIER_OPTIONS,
+  AUTO_PURGE_MAX_PP_EXPONENT,
+  AUTO_PURGE_MIN_SECONDS_OPTIONS,
   COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC,
   EON_UPGRADE_BY_ID,
   HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL,
@@ -650,6 +654,24 @@ export const PERKS_TABS = [
   { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Speed bonus, Sleep mode, Compression, playtime bonus, Overflow mode and Buy max' },
 ]
 
+const StepperGroup = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+  color: ${props => props.theme.color.text};
+`
+const StepperValue = styled.span`
+  min-width: 4.5em;
+  text-align: center;
+  font-size: 0.9rem;
+`
+const StepperButton = styled(Button)`
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+`
+
 export const KERNELS_TAB = { id: 'kernels', icon: '⏻', ariaLabel: 'open kernels', title: 'Kernels — spend Kernels earned by Rebooting' }
 
 const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Math.round(ms * 10) / 10} ms`)
@@ -805,6 +827,40 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
       && !gateChallengeFor('tierAutobuyer', tier.id)
   })
 
+  // Auto Purge conditions (optional; every one narrows WHEN it fires after Money reaches the Purge goal).
+  const renderAutoPurgeConditions = () => {
+    const settings = getAutoPurgeSettings(state)
+    const step = (options, current, dir) => {
+      const index = Math.max(0, options.indexOf(current))
+      return options[Math.min(options.length - 1, Math.max(0, index + dir))]
+    }
+    const formatSeconds = seconds => (seconds === 0 ? 'Off' : seconds >= 3600 ? `${seconds / 3600} h` : seconds >= 60 ? `${seconds / 60} min` : `${seconds} s`)
+    const ppOptions = Array.from({ length: AUTO_PURGE_MAX_PP_EXPONENT + 1 }, (_, i) => i)
+    const rows = [
+      { key: 'targetPpExponent', icon: '✦', name: 'Purge at PP', options: ppOptions, label: v => (v === 0 ? 'Off' : `10^${v} PP`), details: 'Auto Purge waits until a Purge would award at least this many PP. Needs Overflow mode (production must keep running past 1 Googol Bytes); the manual Purge always works.' },
+      { key: 'minSeconds', icon: '⏳', name: 'Minimum time', options: AUTO_PURGE_MIN_SECONDS_OPTIONS, label: formatSeconds, details: 'Auto Purge waits until this much time has passed since the last Purge, or Googol Bytes is reached, whichever is later.' },
+      { key: 'bestMultiplier', icon: '📈', name: 'Best PP multiple', options: AUTO_PURGE_BEST_MULTIPLIER_OPTIONS, label: v => (v === 0 ? 'Off' : `×${v}`), details: 'Auto Purge waits until a Purge would award at least this multiple of your best Purge award since the last Reboot. Needs Overflow mode.' },
+    ]
+    return (
+      <>
+        {rows.map(row => {
+          const current = settings[row.key]
+          const prev = step(row.options, current, -1)
+          const next = step(row.options, current, 1)
+          return (
+            <UpgradeRow ariaLabel={`auto purge ${row.name.toLowerCase()} setting`} details={row.details} icon={row.icon} key={row.key} name={row.name}>
+              <StepperGroup role="group" aria-label={`${row.name} stepper`}>
+                <StepperButton aria-label={`Decrease ${row.name}`} disabled={prev === current} onClick={() => actions.setAutoPurgeSetting(row.key, prev)} type="button">−</StepperButton>
+                <StepperValue aria-label={`${row.name} value`}>{row.label(current)}</StepperValue>
+                <StepperButton aria-label={`Increase ${row.name}`} disabled={next === current} onClick={() => actions.setAutoPurgeSetting(row.key, next)} type="button">+</StepperButton>
+              </StepperGroup>
+            </UpgradeRow>
+          )
+        })}
+      </>
+    )
+  }
+
   const renderAutomation = () => (
     <List aria-label="automation firmware page">
       <Category aria-label="global automation category">
@@ -858,6 +914,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           )
         })}
         </CellGrid>
+        {state.autoPurge != null && renderAutoPurgeConditions()}
       </Category>
 
       <Category aria-label="tier autobuyers category">

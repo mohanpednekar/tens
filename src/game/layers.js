@@ -989,6 +989,12 @@ export const ERA_ELIGIBILITY_PP = GOOGOL
 // Flops autobuyer milestone: Era N unlocks the Nth Flops tier's autobuyer (KFlops at Era 1, …).
 export const FLOPS_AUTOBUYER_ERA_START = 1
 export const FLOPS_AUTOBUYER_ERA_STEP = 1
+// Auto Purge conditions (all optional; Off = 0). They narrow WHEN Auto Purge fires once Money has reached
+// the Purge goal: the time floor always applies, the two PP conditions only in Overflow mode (while frozen
+// the pending award can't grow).
+export const AUTO_PURGE_MAX_PP_EXPONENT = 100
+export const AUTO_PURGE_MIN_SECONDS_OPTIONS = [0, 10, 60, 600, 3600, 21600, 86400]
+export const AUTO_PURGE_BEST_MULTIPLIER_OPTIONS = [0, 1.5, 2, 5, 10, 100]
 // Hyperscaler generator costs in Eons: 1, 10, 100, … (×10 per purchase).
 export const HYPERSCALER_EON_COST_BASE = 1
 export const HYPERSCALER_EON_COST_MULTIPLIER = 10

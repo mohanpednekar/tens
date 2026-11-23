@@ -1696,6 +1696,14 @@ affordable hyperscaler. `buyEonUpgrade(id)`/`canBuyEonUpgrade`/`getEonUpgradeCos
 `isEonUpgradeMaxed`, `buyAutoHyperscaler`, `setAutoHyperscalerEnabled`; invalid buys return the same state.
 `mergeState` clamps saved levels to `[0, maxLevel]`. Shop pacing is unmeasured: `simulate-run-times` has no Reboot loop (see DESIGN_HISTORY "Kernel shop").
 
+**Auto Purge conditions:** `autoPurgeSettings` `{ targetPpExponent (0–`AUTO_PURGE_MAX_PP_EXPONENT`), minSeconds
+(`AUTO_PURGE_MIN_SECONDS_OPTIONS`), bestMultiplier (`AUTO_PURGE_BEST_MULTIPLIER_OPTIONS`) }`, 0 = off, permanent. `isAutoPurgeReady`
+gates both Auto Purge firing sites in `tickGame` (after Money ≥ Purge goal and the attempt budget): `minSeconds` ≤
+`purge.cycleSeconds` (advanced by the exported `tickGame` wrapper; reset by every Purge/Reboot; a frozen no-Auto-Purge tick stays a
+same-reference no-op), and — Overflow mode only — pending award ≥ 10^`targetPpExponent` and ≥ `bestMultiplier` ×
+`purge.highestAward` (largest award since the last Reboot, kept by `resetFactoryCycle`). `setAutoPurgeSetting(key, value)`;
+invalid/unchanged = same state. UI: Firmware → Automation, under the Global Automation rows (steppers).
+
 **Hook:** `actions.eraAscend()` / `actions.buyHyperscaler()` / `setComputeFlopsAutobuyerEnabled`
 in `useIncrementalGame.js`. UI trigger deferred to #411. `mergeState` also calls
 `applyFlopsAutobuyerMilestones` on load so `era.count` backfills Flops autobuyer unlocks.

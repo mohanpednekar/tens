@@ -165,6 +165,9 @@ import {
   getFlopsAutobuyerUnlockEra,
   getHyperscalerFlopsBoostRate,
   buyEonUpgrade,
+  isAutoPurgeReady,
+  setAutoPurgeSetting,
+  getAutoPurgeSettings,
   canBuyEonUpgrade,
   getEonUpgradeCost,
   getEonUpgradeLevel,
@@ -13153,5 +13156,60 @@ describe('Kernel shop (#414)', () => {
       expect(getEonUpgradeLevel(state, 'eonAmplifier')).toBeLessThanOrEqual(9)
       expect(getEonUpgradeLevel(state, 'hyperscalerEfficiency')).toBeLessThanOrEqual(10)
     }), { numRuns: 200 })
+  })
+})
+
+describe('Auto Purge conditions', () => {
+  const overflowState = (extra = {}) => ({
+    ...createInitialGameState(),
+    resources: { ...createInitialGameState().resources, [MONEY_ID]: PURGE_THRESHOLD * 1e40 },
+    purge: { ...createInitialGameState().purge, unboundedUnlocked: true, ...(extra.purge ?? {}) },
+    prestigeDoublePpLevel: 6,
+    ...extra,
+  })
+
+  it('setAutoPurgeSetting validates, applies and no-ops on same/invalid values', () => {
+    const state = createInitialGameState()
+    expect(setAutoPurgeSetting('targetPpExponent', 12)(state).autoPurgeSettings.targetPpExponent).toBe(12)
+    expect(setAutoPurgeSetting('minSeconds', 600)(state).autoPurgeSettings.minSeconds).toBe(600)
+    expect(setAutoPurgeSetting('minSeconds', 7)(state)).toBe(state)
+    expect(setAutoPurgeSetting('bestMultiplier', 3)(state)).toBe(state)
+    expect(setAutoPurgeSetting('targetPpExponent', 0)(state)).toBe(state)
+    expect(setAutoPurgeSetting('nope', 1)(state)).toBe(state)
+    expect(getAutoPurgeSettings(state)).toEqual({ targetPpExponent: 0, minSeconds: 0, bestMultiplier: 0 })
+  })
+
+  it('is ready by default and the minimum time waits for the cycle clock', () => {
+    const state = overflowState()
+    expect(isAutoPurgeReady(state)).toBe(true)
+    const timed = setAutoPurgeSetting('minSeconds', 600)(state)
+    expect(isAutoPurgeReady(timed)).toBe(false)
+    expect(isAutoPurgeReady({ ...timed, purge: { ...timed.purge, cycleSeconds: 600 } })).toBe(true)
+  })
+
+  it('Purge-at-PP and best-multiple conditions wait for a big enough pending award (Overflow mode only)', () => {
+    const state = overflowState()
+    const pending = getPrestigePointsAwarded(state.resources[MONEY_ID], state.prestigeDoublePpLevel)
+    expect(pending).toBeGreaterThan(1)
+    const high = setAutoPurgeSetting('targetPpExponent', Math.ceil(Math.log10(pending)) + 5)(state)
+    expect(isAutoPurgeReady(high)).toBe(false)
+    const low = setAutoPurgeSetting('targetPpExponent', 1)(state)
+    expect(isAutoPurgeReady(low)).toBe(true)
+    const best = { ...state, purge: { ...state.purge, highestAward: pending } }
+    expect(isAutoPurgeReady(setAutoPurgeSetting('bestMultiplier', 2)(best))).toBe(false)
+    expect(isAutoPurgeReady(setAutoPurgeSetting('bestMultiplier', 2)({ ...best, purge: { ...best.purge, highestAward: pending / 2 } }))).toBe(true)
+    const frozen = { ...high, purge: { ...high.purge, unboundedUnlocked: false } }
+    expect(isAutoPurgeReady(frozen)).toBe(true) // PP conditions are ignored while frozen
+  })
+
+  it('tickGame advances purge.cycleSeconds, and a Purge restarts it and records the highest award', () => {
+    let state = createInitialGameState()
+    state = tickGame(1)(state)
+    state = tickGame(1)(state)
+    expect(state.purge.cycleSeconds).toBe(2)
+    const rich = { ...state, resources: { ...state.resources, [MONEY_ID]: PURGE_THRESHOLD } }
+    const purged = purgeGame(rich)
+    expect(purged.purge.cycleSeconds).toBe(0)
+    expect(purged.purge.highestAward).toBe(1)
   })
 })

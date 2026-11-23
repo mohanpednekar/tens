@@ -640,6 +640,7 @@ const mergeState = rawSaved => {
     eons: { ...fresh.eons, ...(saved.eons ?? {}) },
     hyperscalerCount: saved.hyperscalerCount ?? fresh.hyperscalerCount,
     eonsUpgrades: mergeEonsUpgrades(fresh.eonsUpgrades, saved.eonsUpgrades),
+    autoPurgeSettings: { ...fresh.autoPurgeSettings, ...(saved.autoPurgeSettings ?? {}) },
     computeFlopsAutobuyers: mergeTierMap(fresh.computeFlopsAutobuyers, saved.computeFlopsAutobuyers),
     computeFlopsAutobuyersEnabled: mergeTierMap(fresh.computeFlopsAutobuyersEnabled, saved.computeFlopsAutobuyersEnabled),
     computeFlopsAutobuyerAttemptBudgets: mergeTierMap(
