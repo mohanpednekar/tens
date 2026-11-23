@@ -129,16 +129,14 @@ since a Byte is 8 Bits) freezes the economy except for Prestige — unless `isOv
 is true (permanent `purge.unboundedUnlocked` latch; unlocked once Auto-Prestige's interval is upgraded to
 `OVERFLOW_MODE_MAX_INTERVAL_SECONDS` (1 s) or less, carried through Reboot), in which case production
 continues and Prestige is optional (see `isProductionFrozen`). **Reboot** (`eraGame`) is a separate voluntary meta-prestige at **1 Googol unspent PP**
-(`ERA_ELIGIBILITY_PP`): it awards **Kernels** (+1 base, +1 per Kernel Amplifier level — shop deferred to #414),
+(`ERA_ELIGIBILITY_PP`): it awards **Kernels** (`10^eonAmplifierLevel`, 1 base),
 increments `era.count`, resets the full Foundry (generator upgrades, Disks, Data Lakes, compute ladder
 entities, Memory/gate) plus the ordinary Factory cycle (`purge.points`/`count`/`prestigeDoublePpLevel`
 → 0, `computeFlops.owned` → 0, `cumulativeBoost` fresh), while keeping automation unlocks/pause flags
 (except Compression level), tier/tickspeed autobuyer milestone objects, `purge.unboundedUnlocked`,
 System log, hyperscalers, Kernel upgrade levels, Flops autobuyer unlock flags, and page latches. Reboot *N*
-free-unlocks the *N*th Flops tier's autobuyer (Cores (KFlops) at Reboot 1, …). Hyperscalers (bought with Kernels in
-#414) add permanent +0.01%/s each to every Factory tier's Flops multiplier via
-`getHyperscalerFlopsBoostRate` — the engine/hook action (`buyHyperscaler`) is wired, but no page renders
-a purchase control yet (deferred to #414, blocked pending maintainer-approved spend design). Full detail:
+free-unlocks the *N*th Flops tier's autobuyer (Cores (KFlops) at Reboot 1, …). Hyperscalers (bought with Kernels on Firmware → ⏻ Kernels, #414, with Hyperscaler efficiency, Kernel amplifier and Auto Hyperscaler) accrue
++0.01%/s each into every Factory tier's per-cycle Flops `cumulativeBoost` (`tickComputeFlops`). Full detail:
 `docs/ECONOMY_REFERENCE.md`'s "Reboot and Kernels". Prestige (Purge) Points are awarded by
 `getPrestigePointsAwarded`: 1 base PP at 1 Googol Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64)
 additional money-exponent powers beyond Googol's own 10^100 exponent, scaled by permanent Compression

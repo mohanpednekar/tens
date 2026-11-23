@@ -164,6 +164,15 @@ import {
   getEonsAwarded,
   getFlopsAutobuyerUnlockEra,
   getHyperscalerFlopsBoostRate,
+  buyEonUpgrade,
+  canBuyEonUpgrade,
+  getEonUpgradeCost,
+  getEonUpgradeLevel,
+  buyAutoHyperscaler,
+  setAutoHyperscalerEnabled,
+  tickAutoHyperscaler,
+  tickComputeFlops as tickComputeFlopsForKernels,
+  getComputeFlopsTierProductionMultiplier,
   getGlobalTickspeedMultiplierCost,
   getGlobalTickspeedProductionMultiplier,
   getIntroKilobyteConversionCost,
@@ -9927,13 +9936,12 @@ describe('isEraEligible', () => {
 })
 
 describe('getEonsAwarded / buyHyperscaler / getHyperscalerFlopsBoostRate', () => {
-  it('awards 1 + eonAmplifierLevel Eons per Era', () => {
+  it('awards 10 ** eonAmplifierLevel Kernels per Reboot', () => {
     const state = withPrestigePoints(createInitialGameState(), ERA_ELIGIBILITY_PP)
     expect(getEonsAwarded(state)).toBe(1)
-    expect(getEonsAwarded({
-      ...state,
-      eonsUpgrades: { ...state.eonsUpgrades, eonAmplifierLevel: 2 },
-    })).toBe(3)
+    const at = level => getEonsAwarded({ ...state, eonsUpgrades: { ...state.eonsUpgrades, eonAmplifierLevel: level } })
+    expect(at(1)).toBe(10)
+    expect(at(9)).toBe(1e9)
   })
 
   it('buyHyperscaler spends escalating Eons and increases hyperscaler boost rate', () => {
@@ -13086,5 +13094,64 @@ describe('getTierCostExponent spacing growth', () => {
     expect(gaps.slice(0, 10)).toEqual(Array(10).fill(1))
     expect(gaps.slice(10, 20)).toEqual(Array(10).fill(2))
     expect(gaps.slice(20)).toEqual([3, 3])
+  })
+})
+
+describe('Kernel shop (#414)', () => {
+  const withKernels = (balance, extra = {}) => {
+    const base = createInitialGameState()
+    return { ...base, eons: { balance }, ...extra, eonsUpgrades: { ...base.eonsUpgrades, ...(extra.eonsUpgrades ?? {}) } }
+  }
+
+  it('buyEonUpgrade is a same-reference no-op when unaffordable, maxed, unknown or legacy', () => {
+    const poor = withKernels(0)
+    expect(buyEonUpgrade('eonAmplifier')(poor)).toBe(poor)
+    const maxed = withKernels(1e12, { eonsUpgrades: { eonAmplifierLevel: 9 } })
+    expect(buyEonUpgrade('eonAmplifier')(maxed)).toBe(maxed)
+    const rich = withKernels(1e12)
+    expect(buyEonUpgrade('nope')(rich)).toBe(rich)
+    const legacy = { ...rich, eonsUpgrades: undefined }
+    expect(canBuyEonUpgrade(legacy, 'hyperscalerEfficiency')).toBe(true)
+  })
+
+  it('buyEonUpgrade deducts the exact cost and raises the level', () => {
+    const state = withKernels(1000)
+    const after = buyEonUpgrade('eonAmplifier')(state)
+    expect(after.eons.balance).toBe(1000 - getEonUpgradeCost('eonAmplifier', 0))
+    expect(getEonUpgradeLevel(after, 'eonAmplifier')).toBe(1)
+    expect(getEonUpgradeCost('eonAmplifier', 1)).toBe(100)
+    expect(getEonUpgradeCost('hyperscalerEfficiency', 3)).toBe(1000)
+  })
+
+  it('Auto Hyperscaler unlock costs 100 and buys hyperscalers only when unlocked and enabled', () => {
+    const locked = withKernels(99)
+    expect(buyAutoHyperscaler(locked)).toBe(locked)
+    const unlocked = buyAutoHyperscaler(withKernels(111))
+    expect(unlocked.eons.balance).toBe(11)
+    expect(unlocked.eonsUpgrades.autoHyperscalerUnlocked).toBe(true)
+    const bought = tickAutoHyperscaler(unlocked)
+    expect(bought.hyperscalerCount).toBe(2) // 1 + 10 Kernels
+    expect(bought.eons.balance).toBe(0)
+    const paused = setAutoHyperscalerEnabled(false)(unlocked)
+    expect(tickAutoHyperscaler(paused)).toBe(paused)
+    expect(tickAutoHyperscaler(withKernels(1000))).toEqual(withKernels(1000))
+  })
+
+  it('hyperscalers build up every tier\'s Flops boost over time (no fixed term)', () => {
+    const state = { ...createInitialGameState(), hyperscalerCount: 1 }
+    const after = tickComputeFlopsForKernels(100)(state)
+    expect(after.computeFlops.cumulativeBoost.tier01).toBeCloseTo(getHyperscalerFlopsBoostRate(state) * 100, 10)
+    expect(after.computeFlops.cumulativeBoost.tier10).toBeCloseTo(getHyperscalerFlopsBoostRate(state) * 100, 10)
+    expect(getComputeFlopsTierProductionMultiplier(state, 'tier01')).toBe(1)
+  })
+
+  it('survives Reboot and property: balance never negative, level within cap', () => {
+    fc.assert(fc.property(fc.array(fc.constantFrom('hyperscalerEfficiency', 'eonAmplifier'), { maxLength: 40 }), ids => {
+      let state = withKernels(1e11)
+      ids.forEach(id => { state = buyEonUpgrade(id)(state) })
+      expect(state.eons.balance).toBeGreaterThanOrEqual(0)
+      expect(getEonUpgradeLevel(state, 'eonAmplifier')).toBeLessThanOrEqual(9)
+      expect(getEonUpgradeLevel(state, 'hyperscalerEfficiency')).toBeLessThanOrEqual(10)
+    }), { numRuns: 200 })
   })
 })

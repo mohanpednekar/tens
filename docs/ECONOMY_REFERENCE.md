@@ -1546,7 +1546,7 @@ ticks, before autobuyers). For each Flops tier with owned &gt; 0, adds
 `computeFlops.cumulativeBoost[boostsTierId]`. Also latches page unlock when PP threshold is met.
 
 **Production:** `getComputeFlopsTierProductionMultiplier(state, tierId)` returns
-`1 + cumulativeBoost[tierId] + getHyperscalerFlopsBoostRate(state)`, multiplied into each tier's
+`1 + cumulativeBoost[tierId]` (hyperscalers accrue into `cumulativeBoost` in `tickComputeFlops`, below), multiplied into each tier's
 production batch in `tickGame`.
 
 **Display:** `getComputeFlopsTotal(state)` computes the weighted hero total
@@ -1654,8 +1654,7 @@ Engine: `getActiveChallenge`, `isChallengeCompleted`, `isChallengeUnlocked` (tar
 **Eligibility:** `isEraEligible(state)` when unspent `purge.points >= ERA_ELIGIBILITY_PP`
 (`GOOGOL` — 1 Googol PP balance, not lifetime earned).
 
-**Award:** `getEonsAwarded(state)` returns `1 + eonAmplifierLevel * EON_AMPLIFIER_AWARD_PER_LEVEL`
-(Kernel Amplifier shop upgrade deferred to #414).
+**Award:** `getEonsAwarded(state)` returns `EON_AMPLIFIER_AWARD_BASE ** eonAmplifierLevel` (10^L: 1, 10, … 1e9).
 
 **On `eraGame` — resets:** full Foundry (generator upgrades, Data Stream balance, Disks, Data Lakes,
 compute ladder entities, `intro.foundryResetCaps`), ordinary Factory cycle (same fields as `purgeGame`),
@@ -1684,9 +1683,19 @@ banked in the budget for a later tick, same end result as buying one at a time.
 
 **Hyperscalers:** `buyHyperscaler` spends escalating Kernels (`HYPERSCALER_EON_COST_BASE` ×
 `HYPERSCALER_EON_COST_MULTIPLIER^owned`). Each adds permanent rate via
-`getHyperscalerFlopsBoostRate`, folded into `getComputeFlopsTierProductionMultiplier` alongside
-per-cycle `cumulativeBoost`. Hyperscaler Efficiency levels add
-`HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL` per hyperscaler (shop deferred to #414).
+`getHyperscalerFlopsBoostRate` (per second); `tickComputeFlops` adds `rate × elapsedSeconds` to EVERY
+tier's per-cycle `cumulativeBoost` (even with no Flops owned), so the boost builds up over a cycle
+(~+36%/h each) and resets with it; there is no fixed production term. Hyperscaler Efficiency levels add
+`HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL` per hyperscaler.
+
+**Kernel shop (#414, Firmware → ⏻ Kernels tab, shown once `era.count ≥ 1` or Kernels > 0):**
+`EON_UPGRADE_DEFINITIONS` (cost = `costBase × costGrowth^level`): Hyperscaler Efficiency 1·10^L Kernels,
+cap 10; Kernel Amplifier 10·10^L, cap 9; Auto Hyperscaler (`AUTO_HYPERSCALER_EON_COST` 100, one-time,
+`autoHyperscalerUnlocked` + pause `autoHyperscalerEnabled`) — `tickAutoHyperscaler` in `tickGame` buys every
+affordable hyperscaler. `buyEonUpgrade(id)`/`canBuyEonUpgrade`/`getEonUpgradeCost`/`getEonUpgradeLevel`/
+`isEonUpgradeMaxed`, `buyAutoHyperscaler`, `setAutoHyperscalerEnabled`; invalid buys return the same state.
+`mergeState` clamps saved levels to `[0, maxLevel]`. Reboot is currently unreachable in practice (1e100
+unspent PP; see DESIGN_HISTORY "Kernel shop"), so pacing is unmeasured.
 
 **Hook:** `actions.eraAscend()` / `actions.buyHyperscaler()` / `setComputeFlopsAutobuyerEnabled`
 in `useIncrementalGame.js`. UI trigger deferred to #411. `mergeState` also calls
@@ -2866,10 +2875,11 @@ purchases were manual or automatic.
 | `buyPrestigeDoublePp` | `state → state` | Spends `getPrestigeDoublePpUpgradeCost(prestigeDoublePpLevel)` PP and increments `prestigeDoublePpLevel`; not blocked by production freeze |
 | `isOverflowModeUnlocked` | `state → boolean` | `purge.unboundedUnlocked` OR (Auto Purge bought AND its interval ≤ `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`, 1 s) |
 | `isEraEligible` | `state → boolean` | `purge.points >= ERA_ELIGIBILITY_PP` (1 Googol PP balance) |
-| `getEonsAwarded` | `state → number` | `1 + eonAmplifierLevel * EON_AMPLIFIER_AWARD_PER_LEVEL` Kernels awarded on Reboot |
+| `getEonsAwarded` | `state → number` | `EON_AMPLIFIER_AWARD_BASE ** eonAmplifierLevel` Kernels awarded on Reboot |
 | `eraGame` | `state → state` | Requires `isEraEligible`; meta-prestige reset/carry per "Reboot and Kernels" above; same-reference no-op when ineligible |
 | `getHyperscalerFlopsBoostRate` | `state → number` | Permanent hyperscaler Flops rate (0.01%/s each at base, +efficiency levels) |
 | `buyHyperscaler` | `state → state` | Spends escalating Kernels; increments `hyperscalerCount`; no-op if unaffordable |
+| `buyEonUpgrade` / `buyAutoHyperscaler` / `tickAutoHyperscaler` | `id → state → state` / `state → state` | Kernel shop buys + auto-buy tick (see "Kernel shop" above) |
 | `applyFlopsAutobuyerMilestones` | `state → state` | Unlocks Flops autobuyers free at Era milestones; called from `eraGame` |
 | `setComputeFlopsAutobuyerEnabled` | `(flopId, enabled) → state → state` | Pause/resume a unlocked Flops autobuyer |
 | `getPrestigeProductionMultiplier` | `(purgeCount, unlocked = true) → number` | `0` Purges → `1`; 1 Purge → `PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER` (1.1); n ≥ 2 → `1 + log10(n)`, when `unlocked`, else `1`. Companion `isPrestigeSpeedBonusUnlocked(state)` (the stored flag); `buyPrestigeSpeedBonus` is the 1 PP purchase. |

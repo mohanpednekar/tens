@@ -23,7 +23,7 @@ import {
   CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER,
   DATA_LAKE_CAPACITY_BY_LEVEL,
   DATA_LAKE_SUB_SIZE_DISK_CAPS,
-  EON_AMPLIFIER_AWARD_PER_LEVEL,
+  EON_AMPLIFIER_AWARD_BASE,
   ERA_ELIGIBILITY_PP,
   FILL_MULTIPLIER_MAX_PERCENT,
   FILL_MULTIPLIER_MIN_PERCENT,
@@ -714,8 +714,10 @@ const InfoPage = () => {
             freezes at that point.
           </li>
           <li>
-            Each Reboot awards 1 Kernel plus {EON_AMPLIFIER_AWARD_PER_LEVEL} per Kernel Amplifier level.
-            Ways to spend Kernels are coming in a later update.
+            Each Reboot awards 1 Kernel, ×{EON_AMPLIFIER_AWARD_BASE} per Kernel Amplifier level.
+            Spend Kernels on Firmware → ⏻ Kernels: hyperscalers (a Flops boost that builds up every
+            second of a cycle, on every tier), Hyperscaler efficiency, Kernel amplifier and Auto
+            Hyperscaler.
           </li>
           <li>
             Reboot from More → Settings → Reboot (asks for confirmation). More → Milestones

@@ -1,5 +1,9 @@
 # Design history & rationale
 
+### Kernel shop (#414) — 2026-11-23
+
+Designer-drafted spend tree implemented on the maintainer's "implement the best ideas, change later" go-ahead (Bootloader, the optional PP ×10 lever, deliberately dropped: its compounding effect can't be simulated). Two changes beyond the shop itself: (A1) hyperscalers used to add a flat `+0.01%` production term, which made the only Kernel spend nearly worthless, so they now accrue into every tier's per-cycle `cumulativeBoost` each tick (~+36%/h each); (A2) `getEonsAwarded` became `10^L` because the old `1 + L` with power-of-ten costs stalls the tree after ~3 levels. **Open issue:** Reboot needs 1e100 *unspent* PP, but a Purge awards ~1 PP (freeze at ~8e100 money leaves ~0 excess powers) and Compression level L costs `10^(L+1)` PP while awarding `2^(L−6)`; the best analytic path (Compression ~97, then save) is ~4e72 Purges, so Reboot is effectively unreachable unless another PP source exists. Shop pacing is therefore unmeasured (`simulate-run-times` has no Reboot loop). Revisit the threshold/PP sources before tuning shop costs.
+
 ### Game rules split into `src/CLAUDE.md` — 2026-11-18
 
 Root `CLAUDE.md` had regrown to ~83 KB (~20k tokens) and loads into every session, including the many

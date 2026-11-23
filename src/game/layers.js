@@ -994,5 +994,16 @@ export const HYPERSCALER_EON_COST_BASE = 1
 export const HYPERSCALER_EON_COST_MULTIPLIER = 10
 // Each Hyperscaler Efficiency level adds this much extra rate per hyperscaler (+0.001%/s at 0.00001).
 export const HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL = 0.00001
-// Each Kernel Amplifier level adds this many extra Kernels awarded per Reboot.
-export const EON_AMPLIFIER_AWARD_PER_LEVEL = 1
+// Kernels awarded per Reboot = EON_AMPLIFIER_AWARD_BASE ** eonAmplifierLevel (1, 10, 100, …).
+export const EON_AMPLIFIER_AWARD_BASE = 10
+// Kernel shop (#414). Cost of the next level = costBase × costGrowth ** currentLevel Kernels; maxLevel null = uncapped.
+// `hyperscaler` keeps its own HYPERSCALER_EON_* constants above.
+export const EON_UPGRADE_DEFINITIONS = [
+  { id: 'hyperscalerEfficiency', levelField: 'hyperscalerEfficiencyLevel', costBase: 1, costGrowth: 10, maxLevel: 10 },
+  { id: 'eonAmplifier', levelField: 'eonAmplifierLevel', costBase: 10, costGrowth: 10, maxLevel: 9 },
+]
+export const EON_UPGRADE_BY_ID = Object.assign(Object.create(null), Object.fromEntries(
+  EON_UPGRADE_DEFINITIONS.map(def => [def.id, def])
+))
+// One-time Kernel price of the Auto Hyperscaler unlock.
+export const AUTO_HYPERSCALER_EON_COST = 100
