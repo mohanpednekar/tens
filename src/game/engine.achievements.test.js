@@ -493,15 +493,21 @@ describe('review follow-ups (#1199, round 2)', () => {
     expect(isAchievementEarned(next, 'notABug')).toBe(true)
   })
 
-  it('records Overflow on a tick that exceeds a Googol, before automated soft resets can discard the balance', () => {
+  it('records Overflow on a tick that exceeds a Googol even when Auto Overclock resets the balance in that tick', () => {
     const s = createInitialGameState()
     const ready = {
       ...s,
       purge: { ...s.purge, unboundedUnlocked: true },
       resources: { ...s.resources, [MONEY_ID]: PURGE_THRESHOLD },
       autoPurge: null,
+      autoOverclock: true,
+      purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 6])),
+      owned: { ...s.owned, ...Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 1])) },
+      automationAttemptBudgets: { speedUp: 1, scaleUp: 1, overclock: 1 },
     }
-    const next = tickGame(0.1)(ready)
+    const next = tickGame(120)(ready)
+    expect(next.overclockLastClaimCompletedLevels).not.toBeNull() // the Overclock reset ran this tick
+    expect(next.resources[MONEY_ID]).toBeLessThan(PURGE_THRESHOLD) // ...and discarded the past-Googol balance
     expect(next.achievements.counters.overflowPurges).toBe(1)
     expect(isAchievementEarned(next, 'notABug')).toBe(true)
   })
