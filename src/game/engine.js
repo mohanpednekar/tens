@@ -2237,7 +2237,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
   // itself, so tickIntroProduction/tickPoolBufferFill below both read this tick's already-decayed
   // multiplier rather than lagging a tick behind.
   const stateAfterFillMultiplierDecay = tickFillMultiplierDecay(elapsedSeconds)(stateAfterMainGameLatch)
-  const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickSpeedUpgradeDrain(elapsedSeconds)(tickCapacityUpgradeDrain(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(settleObsoleteSpeedUpgrade(stateAfterFillMultiplierDecay))))))
+  const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickSpeedUpgradeDrain(elapsedSeconds)(tickCapacityUpgradeDrain(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay)))))
   // First pass advances in-flight read-cache flushes and refills the read cache, so write caches
   // (which draw the pool buffer after the read cache's claim) run second. The last pass uses 0
   // elapsed so flush countdowns are not applied twice per tickGame — it only starts new flushes
@@ -4177,8 +4177,8 @@ export const upgradePoolSpeed = state => {
 }
 
 // Reclamation V arrived while a Bitrate upgrade was running: the upgrade is moot, so return the bar's bits to the Buffer
-// (what fits within Capacity — like any other overflow, the rest is lost). tickGame runs this BEFORE production so passive
-// production cannot fill the Buffer ahead of the refund.
+// (what fits within Capacity — like any other overflow, the rest is lost). Runs from tickSpeedUpgradeDrain; running it before
+// production would not change the outcome (a Buffer that ends full is full either way, and a fuller Buffer slows the fill curve).
 export const settleObsoleteSpeedUpgrade = state => {
   if (!state.intro?.speedUpgradeQueued || !isBitrateSyncedToCapacity(state.intro)) return state
   const refund = Math.max(0, Number(state.intro.speedUpgradeProgress) || 0)

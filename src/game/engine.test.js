@@ -1623,13 +1623,12 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     const settled = tickSpeedUpgradeDrain(0.1)(running)
     expect(settled.intro.speedUpgradeQueued).toBe(false)
     expect(settled.intro.bits).toBe(40)
-    // tickGame settles it (before production). The final Buffer balance is the same in either order — a Buffer that ends full is full
-    // regardless — so this only pins that the obsolete bar is cleared by an ordinary tick; the refund itself is asserted on the helper below.
+    // An ordinary tick clears the obsolete bar; the refund itself (clamped to Capacity) is asserted on the helper.
     const nearlyFull = withIntro(queueIntroSpeedUpgrade(plain), { bits: capacity - 100, speedUpgradeProgress: 90, poolExponentBonuses: everyPool })
     const afterTick = tickGame(0.1)(nearlyFull)
     expect(afterTick.intro.speedUpgradeQueued).toBe(false)
     expect(afterTick.intro.speedUpgradeProgress).toBe(0)
-    expect(settleObsoleteSpeedUpgrade(nearlyFull).intro.bits).toBe(capacity - 10) // the refund itself, applied before production
+    expect(settleObsoleteSpeedUpgrade(nearlyFull).intro.bits).toBe(capacity - 10) // the refund itself, clamped to Capacity
   })
 
   it('tickGame fills the bar and fires the upgrade, doubling Capacity', () => {
