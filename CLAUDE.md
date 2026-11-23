@@ -420,7 +420,8 @@ src/
                             Page ids: `'foundry'` (also holds Storage), `'boosters'` (Power), `'compute'` (Flops),
                             `'game'` (Factory), `'perks'` (Firmware), `'milestones'`, `'info'`, `'settings'`, `'dev'`
   theme/                  ← tokens.js (design-token source of truth: per-mode color/shadow/tier-accent +
-                            mode-independent space/radius/motion/font/type; `buildTheme(mode)`, `themes.{dark,light}`),
+                            mode-independent space/radius/motion/breakpoints/font/type; `buildTheme(mode)`, `themes.{dark,light}`),
+                            layout.js (pure layout classes + `media`), LayoutContext.jsx (`LayoutProvider`/`useLayoutClass`),
                             fonts.js (locally bundled Space Grotesk/Inter), contrast.js (WCAG utility), GlobalStyle.js,
                             index.jsx (`<ThemeProvider mode>`) — THEMING_REFERENCE
   services/               ← config.js (feature flags, AdMob/RevenueCat ids, `IAP_PRODUCTS`, policy URLs),

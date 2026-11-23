@@ -161,30 +161,30 @@ function App() {
     <ThemeProvider mode={themeMode}>
       <GlobalStyle />
       <LayoutProvider>
-      <PageShell>
-        {content}
-      </PageShell>
-      <AppNav
-        attention={navAttention}
-        currentPage={currentNavPage}
-        moreOpen={menuOpen}
-        onNavigate={navigate}
-        onOpenMore={() => setMenuOpen(open => !open)}
-        showBoosters={showBoosters}
-        showComputeFlops={showComputeFlops}
-        showPerks={showPerks}
-        showChallenges={showChallenges}
-        showTiers={showTiers}
-      />
-      <AppMenu
-        onClose={() => setMenuOpen(false)}
-        onNavigate={navigate}
-        open={menuOpen}
-      />
-      <AchievementToasts baseline={game.achievementBaseline} state={game.state} />
-      {game.incompatibleSaveReason ? (
-        <IncompatibleSaveNotice onDismiss={game.dismissIncompatibleSaveNotice} />
-      ) : null}
+        <PageShell>
+          {content}
+        </PageShell>
+        <AppNav
+          attention={navAttention}
+          currentPage={currentNavPage}
+          moreOpen={menuOpen}
+          onNavigate={navigate}
+          onOpenMore={() => setMenuOpen(open => !open)}
+          showBoosters={showBoosters}
+          showComputeFlops={showComputeFlops}
+          showPerks={showPerks}
+          showChallenges={showChallenges}
+          showTiers={showTiers}
+        />
+        <AppMenu
+          onClose={() => setMenuOpen(false)}
+          onNavigate={navigate}
+          open={menuOpen}
+        />
+        <AchievementToasts baseline={game.achievementBaseline} state={game.state} />
+        {game.incompatibleSaveReason ? (
+          <IncompatibleSaveNotice onDismiss={game.dismissIncompatibleSaveNotice} />
+        ) : null}
       </LayoutProvider>
     </ThemeProvider>
   )

@@ -50,7 +50,34 @@ describe('isSplitEligible', () => {
   })
 })
 
-test('media helpers', () => {
-  expect(media.atLeast('medium')).toBe('@media (min-width: 600px) and (min-height: 500px)')
-  expect(media.below('medium')).toBe('@media (max-width: 599.98px)')
+describe('media helpers', () => {
+  test('strings', () => {
+    expect(media.atLeast('medium')).toBe('@media (min-width: 600px) and (min-height: 500px)')
+    expect(media.atLeast('compact')).toBe('@media all')
+    expect(media.below('medium')).toBe('@media (max-width: 599.98px), (max-height: 499.98px)')
+    expect(() => media.below('compact')).toThrow()
+    expect(() => media.atLeast('nope')).toThrow()
+  })
+
+  test('agree with getLayoutClass: exactly one of atLeast/below matches (property-based)', () => {
+    const matches = (q, w, h) => {
+      const min = /min-width: ([\d.]+)px/.exec(q)
+      const minH = /min-height: ([\d.]+)px/.exec(q)
+      const max = /max-width: ([\d.]+)px/.exec(q)
+      const maxH = /max-height: ([\d.]+)px/.exec(q)
+      if (min) return w >= +min[1] && h >= +minH[1]
+      return w <= +max[1] || h <= +maxH[1]
+    }
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 3000 }), fc.integer({ min: 0, max: 3000 }), (w, h) => {
+        const idx = LAYOUT_CLASSES.indexOf(getLayoutClass({ width: w, height: h }))
+        for (const c of ['medium', 'expanded', 'wide']) {
+          const atLeast = matches(media.atLeast(c), w, h)
+          expect(atLeast).toBe(idx >= LAYOUT_CLASSES.indexOf(c))
+          expect(matches(media.below(c), w, h)).toBe(!atLeast)
+        }
+      }),
+      { numRuns: 200 }
+    )
+  })
 })

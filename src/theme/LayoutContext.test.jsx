@@ -15,7 +15,7 @@ test('defaults to compact without a provider', () => {
   expect(screen.getByText('compact')).toBeTruthy()
 })
 
-test('updates live on resize and cleans up', async () => {
+test('updates live on resize and orientationchange, and removes listeners on unmount', async () => {
   setSize(1000, 700)
   const { unmount } = render(<LayoutProvider><Probe /></LayoutProvider>)
   expect(screen.getByText('expanded')).toBeTruthy()
@@ -25,5 +25,15 @@ test('updates live on resize and cleans up', async () => {
     await new Promise(r => setTimeout(r, 50))
   })
   expect(screen.getByText('compact')).toBeTruthy()
+  setSize(1400, 900)
+  await act(async () => {
+    window.dispatchEvent(new Event('orientationchange'))
+    await new Promise(r => setTimeout(r, 50))
+  })
+  expect(screen.getByText('wide')).toBeTruthy()
+  const remove = vi.spyOn(window, 'removeEventListener')
   unmount()
+  const removed = remove.mock.calls.map(c => c[0])
+  expect(removed).toEqual(expect.arrayContaining(['resize', 'orientationchange']))
+  remove.mockRestore()
 })
