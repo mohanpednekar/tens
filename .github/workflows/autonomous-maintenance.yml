@@ -1527,6 +1527,16 @@ jobs:
                 | .result // empty
               ' "$out" 2>/dev/null) || text=""
           section=$(printf '%s\n' "$text" | awk '/^##+ *RUN SUMMARY/{f=1} f')
+          # Measured counterpart to the self-estimated budget line above: turns, wall-clock
+          # and reported cost from the same `result` entry, so the weekly retro can compare
+          # estimate vs. actual. Missing fields print "n/a"; a parse failure prints nothing.
+          metrics=$(jq -r '
+                (if type == "array" then . else [.] end)
+                | map(select(.type == "result")) | last
+                | select(. != null)
+                | "turns=\(.num_turns // "n/a") duration_min=\(if .duration_ms then ((.duration_ms / 60000 * 10 | floor) / 10) else "n/a" end) cost_usd=\(.total_cost_usd // "n/a")"
+              ' "$out" 2>/dev/null) || metrics=""
+          [ -n "$metrics" ] && echo "Measured run metrics: $metrics"
           {
             echo "### Autonomous maintenance run summary"
             echo
@@ -1534,6 +1544,10 @@ jobs:
               printf '%s\n' "$section"
             else
               echo "The run did not emit a RUN SUMMARY section."
+            fi
+            if [ -n "$metrics" ]; then
+              echo
+              echo "Measured: \`$metrics\`"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
           exit 0

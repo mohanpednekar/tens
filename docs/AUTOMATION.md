@@ -416,7 +416,10 @@ tools, even during the self-improvement task — only `autonomous-maintenance.ym
 **Run summary (#74).** The prompt requires the agent's last message to end with a `## RUN SUMMARY`
 section (phase and task, why picked, self-estimated budget use, PR/issue links). The final
 `Write run summary` step extracts it from the Claude execution file's last `result` entry and appends it
-to `$GITHUB_STEP_SUMMARY` (a fallback line if absent; never fails the job). Complements the "no pull
+to `$GITHUB_STEP_SUMMARY` (a fallback line if absent; never fails the job), followed by a measured
+`turns=… duration_min=… cost_usd=…` line from the same entry (also echoed to the step log) so a reader can compare the
+self-estimated budget against actuals. These are proxies for quota use (cost/turns/time compare runs, not the
+rolling window), and the weekly retro prompt does not yet request them. Complements the "no pull
 request" summary written by `Surface a run that opens no pull request`.
 
 ### PR conflict sweep (`pr-conflict-sweep.yml`)
