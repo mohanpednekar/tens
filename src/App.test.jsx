@@ -315,6 +315,43 @@ test('the Byte Factory screen has no second-level tabs; Firmware is its own AppN
   }
   expect(within(tablist).getByRole('tab', { name: /open automation/i })).toHaveAttribute('aria-selected', 'true')
 })
+test('Firmware → Kernels tab is hidden before a Reboot and lets you buy a hyperscaler after one', async () => {
+  seedMainGameState({ purge: { xp: 0, points: 10, count: 1, highestMilestone: 1 } })
+  const { unmount } = render(<App />)
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: /^open firmware$/i }))
+  expect(screen.queryByRole('tab', { name: /open kernels/i })).not.toBeInTheDocument()
+  unmount()
+  localStorage.clear()
+
+  seedMainGameState({
+    purge: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
+    era: { count: 1 },
+    eons: { balance: 11 },
+  })
+  render(<App />)
+  await user.click(screen.getByRole('button', { name: /^open firmware$/i }))
+  await user.click(screen.getByRole('tab', { name: /open kernels/i }))
+  await user.click(screen.getByRole('button', { name: /buy hyperscaler for 1 kernels/i }))
+  expect(screen.getByLabelText('Hyperscaler value')).toHaveTextContent('1 owned')
+  expect(screen.getByRole('button', { name: /buy hyperscaler for 10 kernels/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /unlock auto hyperscaler/i })).toBeDisabled()
+})
+
+test('Firmware → Automation shows Auto Purge conditions once Auto Purge is owned and steps them', async () => {
+  seedMainGameState({ purge: { xp: 0, points: 10, count: 1, highestMilestone: 1 }, autoPurge: 0 })
+  render(<App />)
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: /^open firmware$/i }))
+  expect(screen.getByLabelText('Minimum time value')).toHaveTextContent('Off')
+  await user.click(screen.getByRole('button', { name: /increase minimum time/i }))
+  expect(screen.getByLabelText('Minimum time value')).toHaveTextContent('10 s')
+  await user.click(screen.getByRole('button', { name: /increase purge at pp/i }))
+  expect(screen.getByLabelText('Purge at PP value')).toHaveTextContent('10^1 PP')
+  await user.click(screen.getByRole('button', { name: /increase best pp multiple/i }))
+  expect(screen.getByLabelText('Best PP multiple value')).toHaveTextContent('×1.5')
+})
+
 test('after a Reboot (prestige count 0, era 1) Firmware stays reachable with every owned automation\'s toggle', async () => {
   const user = userEvent.setup()
   seedMainGameState({
@@ -3118,6 +3155,21 @@ test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () =
   const speedButton = screen.getByRole('button', { name: /upgrade data stream bitrate/i })
   expect(speedButton).toHaveTextContent(`${COST_ICON} 32 B · ⚡ ×1.41`)
   expect(speedButton).toHaveAccessibleDescription('Costs 32 B; bitrate 8 B/s after upgrading')
+})
+
+test('Reclamation V merges Upgrade Capacity and Upgrade Bitrate into one Upgrade button', () => {
+  seedIntroState({
+    capacity: 512, bits: 0, byteCreated: true,
+    poolExponentBonuses: Object.fromEntries(Array.from({ length: 10 }, (_, i) => [i + 1, 1])),
+  })
+  render(<App />)
+
+  expect(screen.queryByRole('button', { name: /upgrade data stream bitrate/i })).not.toBeInTheDocument()
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream capacity/i })
+  expect(upgradeButton).toHaveTextContent('Upgrade')
+  expect(upgradeButton).not.toHaveTextContent('Upgrade Capacity')
+  expect(upgradeButton).toHaveTextContent(`${COST_ICON} 64 B · 📦 ×2 · ⚡ ×1.41`)
+  expect(upgradeButton).toHaveAccessibleDescription('Costs 64 B; capacity 128 B and bitrate 11.31 B/s after upgrading')
 })
 
 test('Upgrade Data Stream at maximum Capacity is disabled and reads "Max capacity" without a preview', () => {

@@ -23,7 +23,7 @@ import {
   CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER,
   DATA_LAKE_CAPACITY_BY_LEVEL,
   DATA_LAKE_SUB_SIZE_DISK_CAPS,
-  EON_AMPLIFIER_AWARD_PER_LEVEL,
+  EON_AMPLIFIER_AWARD_BASE,
   ERA_ELIGIBILITY_PP,
   FILL_MULTIPLIER_MAX_PERCENT,
   FILL_MULTIPLIER_MIN_PERCENT,
@@ -401,9 +401,9 @@ const InfoPage = () => {
           </li>
           <li>
             A flush empties that pool’s disks, Staging and lake (Cells bought and earlier flush
-            rewards stay) and permanently adds 1,000 units of lake capacity. The first two
-            flushes also earn Reclamation I and II achievements: each upgrades one of that pool’s
-            two disk-size exponent steps to close 10% of the gap to 1.0. These rewards survive
+            rewards stay) and permanently adds 1,000 units of lake capacity. A pool’s first two
+            flushes also each upgrade one of its two disk-size exponent steps to close 10% of the
+            gap to 1.0. These upgrades survive
             Reformat, Purge, and Reboot. Lakes fill at 10% of their pool’s Bandwidth, plus 10%
             (additive) per flush.
           </li>
@@ -656,9 +656,10 @@ const InfoPage = () => {
             and Purge becomes optional.
           </li>
           <li>
-            Awards 1 Purge Point (PP) at 1 Googol Bytes, plus 1 PP for every{' '}
-            {PRESTIGE_POWERS_PER_PP_BASE} further powers of ten in your balance. Each Compression
-            upgrade halves the powers needed per PP, and once that reaches 1, doubles the PP per power.
+            Awards 1 Purge Point (PP) for every {PRESTIGE_POWERS_PER_PP_BASE} powers of ten in your balance:
+            100 powers at 1 Googol Bytes is 1 PP. Each Compression upgrade halves the powers needed per PP
+            (100 ÷ 32 = 3 PP, then 6, 12, …), and once that reaches 1, doubles the PP per power. Past
+            1 Googol Bytes the count only keeps growing in Overflow mode.
           </li>
           <li>
             Compression costs {PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE}^(level+1) PP (10, 100, 1,000, …) on Firmware → ✦ Prestige and
@@ -714,8 +715,10 @@ const InfoPage = () => {
             freezes at that point.
           </li>
           <li>
-            Each Reboot awards 1 Kernel plus {EON_AMPLIFIER_AWARD_PER_LEVEL} per Kernel Amplifier level.
-            Ways to spend Kernels are coming in a later update.
+            Each Reboot awards 1 Kernel, ×{EON_AMPLIFIER_AWARD_BASE} per Kernel Amplifier level.
+            Spend Kernels on Firmware → ⏻ Kernels: hyperscalers (a Flops boost that builds up every
+            second on every tier, until the next Purge, Scale Up or Overclock), Hyperscaler efficiency, Kernel amplifier and Auto
+            Hyperscaler.
           </li>
           <li>
             Reboot from More → Settings → Reboot (asks for confirmation). More → Milestones

@@ -1,5 +1,13 @@
 # Design history & rationale
 
+### PP over actual powers, not excess (2026-11-23)
+
+`getPrestigePointsAwarded` used `1 + floor(excessPowers / powersPerPp)` (excess over Googol's 100), so Compression did nothing at a frozen Googol Purge (always 1 PP). The maintainer's rule: PP follow the ACTUAL powers — `floor(powers / powersPerPp)` — so one Compression takes the first Purge from 100/64 = 1 to 100/32 = 3 PP. The numerator is held at 100 until Overflow mode (`unbounded`), then grows without bound. The Reboot sim's earlier "PP stuck at 1 per Purge" finding was an artifact of the old formula.
+
+### Kernel shop (#414) — 2026-11-23
+
+Designer-drafted spend tree implemented on the maintainer's "implement the best ideas, change later" go-ahead (Bootloader, the optional PP ×10 lever, deliberately dropped: its compounding effect can't be simulated). Two changes beyond the shop itself: (A1) hyperscalers used to add a flat `+0.01%` production term, which made the only Kernel spend nearly worthless, so they now accrue into every tier's per-cycle `cumulativeBoost` each tick (~+36%/h each); (A2) `getEonsAwarded` became `10^L` because the old `1 + L` with power-of-ten costs stalls the tree after ~3 levels. **Pacing is only partly measured:** the new `reboot-simulation.mjs` (greedy PP policy) reaches ~600 PP in ~63 simulated days and cannot reach Overflow mode, so time per Reboot is unknown. A first back-of-envelope estimate that Reboot (1e100 unspent PP) was unreachable (~4e72 Purges) was WRONG: it assumed money freezes at Googol (~1 PP per Purge) and constant cycle times, but Overflow mode lets money run past Googol (more excess powers per Purge) and compounding upgrades/achievements shrink cycles enormously. Do not cite that estimate; add a Reboot loop to the bot before tuning shop costs.
+
 ### Game rules split into `src/CLAUDE.md` — 2026-11-18
 
 Root `CLAUDE.md` had regrown to ~83 KB (~20k tokens) and loads into every session, including the many
@@ -9177,6 +9185,23 @@ The reward map is kept across Reformat, Purge, and Reboot, unlike the pool-local
 Existing save counters are backfilled on load where still present; counters previously erased
 by larger resets cannot be reconstructed. Only a full save Reset clears the earned rewards.
 
+### Reclamation decoupled from the exponent upgrades; 20 achievements cut to 5 (2026-11)
+
+Supersedes "Pool-reset achievements tune Bitrate's within-pool exponent steps" for the delivery
+mechanism only; the base exponent math is unchanged (Compact-Pool-upgraded steps still close 10%), but Reclamation I/II now change the plain step, so exponent values do change once a pool is compacted (e.g. a first-flush fixture moves 0.5545 → 0.559). The engine already stored the upgrades in
+`intro.poolExponentBonuses` (set by `flushStoragePool`) and merely derived the 20 `poolNNResetI/II`
+achievements from that map, so the maintainer asked to stop presenting a stat upgrade as an achievement.
+Compact Pool now just upgrades the step; the achievements became five `reclaim1`–`5`
+(`poolsCompacted` 1/3/6/8/all 10 distinct pools, `RECLAMATION_POOL_THRESHOLDS`), with `RECLAMATION_LEVEL_REWARDS`: I/II replace the
+1% plain within-pool exponent step with 2%/3%, III/IV add +0.05 each to every Data Lake's speed multiplier, V (every pool; the maintainer's "grand reward", first drafted as plain step 5% + lake +0.10, then replaced by the maintainer's example "one upgrade does both": Bitrate synced to Capacity, no Upgrade Bitrate button — an intermediate "one free Bitrate doubling per Capacity upgrade" draft and a brief change making the unified Upgrade the default mechanic for everyone were both rejected; the split stays the default) (maintainer's
+spec; values not simulated through `simulate-run-times`). Levels derive from `poolExponentBonuses` (`getReclamationLevel`),
+not from the earned achievement flags, because the exponent helpers only receive `intro`. Old saves: the legacy
+`poolNNResetI/II` earned flags stay in `achievements.earned` and the load-time backfill in
+`normalizePoolMemoryCapacity` still reads them, so no upgrade is lost. No cost or
+persistence rule changed. The 5-level Reclamation series uses the page's compact per-level rendering (`compact` in
+`AchievementsPage`, more than 4 levels) with its distinct short rewards explained once when expanded. Rejected: a purchasable upgrade (needs
+a currency/price and would double-charge the already costly flush; see the 2026-11 discussion).
+
 ## Store release prep: flags-off monetization and config-time feature loaders (2026-10)
 
 - **Why a `virtual:tens-features` module instead of `if (FLAG) import()`.** The first cut gated each
@@ -9652,3 +9677,8 @@ The four Factory feature cards (#1137's side-by-side pairs of tall, bottom-pinne
 - **Goal:** make Overclock "challenging at each step" without lengthening cycles. Findings from `simulate-run-times` (ideal bot, first Purge): a smaller Overclock step is always *slower* — more Overclocks per Purge means more resets (+2 step: 1d 19h 36m first Purge vs 1d 12h 54m; +1 via lifetime-count achievements made Purges 5/10 take 1d 22h / 1d 20h vs 1d 0h / 20h 50m) because the greedy bot claims every Overclock the moment it is available. A bot that never Overclocks finishes the first Purge in 1d 4h 14m.
 - **Rejected:** reductions earned by lifetime counts (Overclock claims, Purge count) — achievable but they lengthen later cycles once earned; level targets above 9 completed last-tier levels (the ideal bot never exceeds 9 in a Purge; QB reaches 9 at 24.6h of a 28.2h no-Overclock cycle); "Overclock while skipping Scale Ups" (the last tier only unlocks after all 9 claims in a loop).
 - **Shipped:** the step starts at 4 and each of three skill-based achievements (patience: first Overclock at 6+; restraint: two Overclocks without Accelerate; endurance: 12+ after DeGoogol) removes 1. The ideal bot never earns them, so its cycles are 30–45 minutes longer than at step 3 (first Purge 1d 13h 30m, then 21h 8m / 1d 0h 51m / 21h 20m for Purges 1/5/10); a player who earns Patient Overclock gets today's +3 back.
+
+## Level power per-tier level requirements (2026-11-23)
+
+- The ten Level power achievements first all required level 10 (QB level 10 was only reached near the end of the first Purge, so the full ×1.5 arrived very late). They now require level 5 on tiers 1–5 and level 6, 7, 8, 9, 10 on tiers 6–10 (`getLevelPowerAchievementLevel`). Ideal-bot first Purge: 1d 16h 11m → 1d 8h 54m (Purges 1/5/10 essentially unchanged: 22h 4m→22h 10m / 1d 1h 20m→1d 1h 21m / 21h 43m). Existing saves earn newly satisfied achievements on their next tick (at-least checks). Side effect: daily runs earn Level power achievements while they play, so generated definitions change — `DAILY_GENERATOR_VERSION` 8.
+- Rejected (misread of the request): widening the cost-spacing growth interval per tier (5 for tiers 1–5, then 6–10) — it lengthened every cycle by 50–90% (first Purge 3d 1h 47m).

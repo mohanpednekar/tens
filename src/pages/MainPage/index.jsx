@@ -113,6 +113,8 @@ const TierLine = styled(StatCard)`
     animation: none;
   }
 
+  /* Layout-class breakpoints (theme/layout.js, #1152) are 600/900/1360px; these 40rem/24.5rem/21rem
+     phone-density literals don't map to them, so they stay as-is (no visual change). */
   @media (max-width: 40rem) {
     /* Same areas as desktop; narrower fixed button tracks for phone widths. */
     grid-template-columns: minmax(0, 1fr) 5.7rem 7.9rem;
@@ -875,7 +877,7 @@ const MainPage = ({ game }) => {
   // Passive Purge-count production-speed bonus: flat ×1 until bought with 1 PP (see engine.js).
   const prestigeBonusUnlocked = isPrestigeSpeedBonusUnlocked(state)
   const prestigeBonus = getPrestigeProductionMultiplier(purge.count, prestigeBonusUnlocked)
-  const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel)
+  const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel, isOverflowModeUnlocked(state))
   const purgeProgressPercent = getPurgePercent(state.resources[MONEY_ID], getPurgeGoalBits(state))
   const bytePowerProgressFraction = getNextBytePowerProgressFraction(state.resources[MONEY_ID])
   const bytePowerProgressPercent = Math.round(bytePowerProgressFraction * 100)

@@ -91,6 +91,18 @@ const radius = {
   pill: '999px',
 }
 
+// Layout breakpoints (CSS px) — single source of truth for layout classes (`theme/layout.js`, epic #1152 §1).
+// First match wins: height < minHeight → compact; width < medium → compact; < expanded → medium;
+// < wide → expanded; else wide. `splitMinWidth`/`splitMinAspect`: two-page eligibility floor.
+export const breakpoints = {
+  minHeight: 500,
+  medium: 600,
+  expanded: 900,
+  wide: 1360,
+  splitMinWidth: 784,
+  splitMinAspect: 0.8,
+}
+
 const motion = {
   duration: {
     fast: '0.05s',
@@ -147,6 +159,7 @@ export const buildTheme = mode => {
     space,
     radius,
     motion,
+    breakpoints,
     font,
     type,
   }

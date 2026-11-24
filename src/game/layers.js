@@ -177,7 +177,17 @@ export const DAILY_CHALLENGES_FEATURE = { enabled: true }
 // Level power achievements (one per tier): each raises the per-level production multiplier
 // (PURCHASE_MILESTONE_MULTIPLIER_BASE) by this much; all ten reach 1.5 from the 1.0 base.
 export const LEVEL_POWER_ACHIEVEMENT_BONUS = 0.05
-export const LEVEL_POWER_ACHIEVEMENT_LEVEL = 10
+// 'Remind me later': Purge available and left unclaimed for this many continuous seconds of play.
+export const REMIND_ME_LATER_SECONDS = 60
+// 'Kernel panic': two Reboots within this many seconds of ACTIVE play (activePlaySeconds survives Reboot).
+// Feasibility is settled by the balance sub-issue (#1055); the window is a named constant until then.
+export const KERNEL_PANIC_WINDOW_SECONDS = 3600
+// Compression and Kernel thresholds.
+export const MIDDLE_OUT_COMPRESSION_LEVEL = 5
+export const POPCORN_KERNELS = 100
+// Level each tier must reach for its Level power achievement: tiers 1–5 need level 5, then the tier number (6, 7, 8, 9, 10).
+export const LEVEL_POWER_ACHIEVEMENT_MIN_LEVEL = 5
+export const getLevelPowerAchievementLevel = tierNumber => Math.max(LEVEL_POWER_ACHIEVEMENT_MIN_LEVEL, tierNumber)
 // Overclock step achievements: first Overclock of a Purge claimed at this many completed last-tier levels (min is 5),
 // and the post-DeGoogol claim depth.
 export const PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL = 6
@@ -187,29 +197,62 @@ export const LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 
 export const ACHIEVEMENT_GROUPS = [
   { id: 'firstSession', name: 'First session', boostArea: 'foundry' },
   { id: 'foundry', name: 'Foundry', boostArea: 'foundry' },
+  { id: 'power', name: 'Power', boostArea: 'power' },
   { id: 'tierLadder', name: 'Tier ladder', boostArea: 'factory' },
   { id: 'earlyFactory', name: 'Early Factory', boostArea: 'factory' },
   { id: 'levelPower', name: 'Level power', boostArea: 'factory' },
   { id: 'overclockStep', name: 'Overclock step', boostArea: 'factory' },
+  { id: 'firstPurge', name: 'First Purge and after', boostArea: 'purgePoints' },
+  { id: 'latePurge', name: 'Late Purge layer', boostArea: 'purgePoints' },
+  { id: 'reboot', name: 'Reboot', boostArea: 'kernels' },
 ]
 // `condition` is evaluated by engine.js `isAchievementConditionMet` against CURRENT state ("at least"
 // thresholds, so a save past a trigger earns it on load). `bonus` is a placeholder (#1052).
 const TIER_ACHIEVEMENT_NAMES = ['Kilo-what?', 'Mega bite', 'Giga-what now', 'Tera-fying', 'Peta-fied', 'Exa-ggerated', 'Zetta slow', 'Yotta be kidding me', 'Ronna-way process', 'Quetta while']
+// Distinct pools that must have been compacted for each Reclamation level (the last is every pool).
+export const RECLAMATION_POOL_THRESHOLDS = [1, 3, 6, 8, TIER_DEFINITIONS.length] // last = every pool (one Data Lake / Storage pool per tier)
+// Per-level rewards, derived from the number of distinct pools compacted (engine.js getReclamationLevel), so they apply
+// the moment a pool is compacted. `arrayStepGain`: the share of the remaining gap to 1.0 that each within-pool disk-size
+// step closes when that step has no Compact Pool upgrade (base 1%; the level's value replaces it, not stacks).
+// `lakeSpeed`: added to every Data Lake's speed multiplier (a fraction of its pool's Bandwidth, like the +0.1 per flush).
+// `syncedBitrate` (the grand reward): Bitrate always matches Capacity — the separate Upgrade Bitrate disappears and one Upgrade does both.
+export const RECLAMATION_LEVEL_REWARDS = [{ arrayStepGain: 0.02 }, { arrayStepGain: 0.03 }, { lakeSpeed: 0.05 }, { lakeSpeed: 0.05 }, { syncedBitrate: true }]
+const formatReclamationPercent = fraction => `${Math.round(fraction * 1000) / 10}%`
+// Short + full player text for one level's reward (a level may carry several rewards).
+const describeReclamationReward = ({ arrayStepGain, lakeSpeed, syncedBitrate }) => {
+  const shorts = []
+  const fulls = []
+  if (arrayStepGain) {
+    shorts.push(`Disk step ${formatReclamationPercent(arrayStepGain)}`)
+    fulls.push(`Disk-size steps without a Flush Pool upgrade close ${formatReclamationPercent(arrayStepGain)} of the gap to 1.0 (was 1%)`)
+  }
+  if (lakeSpeed) {
+    shorts.push(`Lake speed +${formatReclamationPercent(lakeSpeed)}`)
+    fulls.push(`Every Data Lake fills at +${formatReclamationPercent(lakeSpeed)} more of its pool's Bandwidth`)
+  }
+  if (syncedBitrate) {
+    shorts.push('One Upgrade does both')
+    fulls.push('Bitrate always matches Capacity: there is no separate Upgrade Bitrate, and every Upgrade raises both')
+  }
+  return { shortBonus: shorts.join(', '), bonus: fulls.join('. ') }
+}
 export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'helloWorld', name: 'Hello, World', group: 'firstSession', trigger: 'Ping for the first time', short: 'Ping', condition: { kind: 'counter', key: 'pings', min: 1 } },
   { id: 'itCompiles', name: 'It compiles, ship it', group: 'firstSession', trigger: 'Compile for the first time', short: 'Compile', condition: { kind: 'byteCreated' } },
   { id: 'pingOfDeath', name: 'Ping of Death', group: 'firstSession', trigger: 'Ping 256 times', short: 'Ping ×256', condition: { kind: 'counter', key: 'pings', min: 256 } },
   { id: 'kibiNotKilo', name: 'Kibi, not Kilo', group: 'firstSession', trigger: 'Reach 1 KiB Capacity', short: '1 KiB Capacity', condition: { kind: 'storageUnlocked' } },
-  ...TIER_DEFINITIONS.flatMap((tier, index) => [1, 2].map(reset => ({
-    id: `pool${String(index + 1).padStart(2, '0')}Reset${reset === 1 ? 'I' : 'II'}`,
-    name: `${tier.symbol} Reclamation ${reset === 1 ? 'I' : 'II'}`,
+  // Reclamation: a short series by how many different Storage pools have been compacted at least once.
+  // Levels 1-2 raise the within-pool disk-size step, levels 3-4 speed every Data Lake; level 5 (the grand reward) syncs Bitrate to Capacity (one Upgrade does both). The per-pool Bitrate exponent upgrades are separate: they come
+  // directly from Compact Pool (`intro.poolExponentBonuses`), not from these achievements.
+  ...RECLAMATION_POOL_THRESHOLDS.map((pools, i) => ({
+    id: `reclaim${i + 1}`,
+    name: `Reclamation ${['I', 'II', 'III', 'IV', 'V'][i]}`,
     group: 'foundry',
-    trigger: `Compact the ${tier.symbol} pool ${reset === 1 ? 'once' : 'twice'}`,
-    short: `Compact ${tier.symbol} pool${reset === 1 ? '' : ' ×2'}`,
-    shortBonus: `Disk step ${reset} ↑`,
-    bonus: `The ${reset === 1 ? 'first' : 'second'} disk-size exponent step now closes 10% of the gap to 1.0`,
-    condition: { kind: 'poolExponentBonus', poolIndex: index + 1, min: reset },
-  }))),
+    trigger: pools === 1 ? 'Flush a Storage pool for the first time' : i === RECLAMATION_POOL_THRESHOLDS.length - 1 ? 'Flush every Storage pool at least once' : `Flush ${pools} different Storage pools`,
+    short: pools === 1 ? 'Flush a pool' : i === RECLAMATION_POOL_THRESHOLDS.length - 1 ? 'Flush every pool' : `Flush ${pools} pools`,
+    ...describeReclamationReward(RECLAMATION_LEVEL_REWARDS[i]),
+    condition: { kind: 'poolsCompacted', min: pools },
+  })),
   ...TIER_DEFINITIONS.map((tier, index) => ({
     id: `tier${String(index + 1).padStart(2, '0')}Bought`,
     name: TIER_ACHIEVEMENT_NAMES[index],
@@ -224,28 +267,52 @@ export const ACHIEVEMENT_DEFINITIONS = [
   { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', short: 'Overclock', condition: { kind: 'overclocked' } },
   ...LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((tierNumber, i) => ({
     id: `levelPower${i + 1}`,
-    name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${LEVEL_POWER_ACHIEVEMENT_LEVEL}`,
+    name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${getLevelPowerAchievementLevel(tierNumber)}`,
     group: 'levelPower',
-    trigger: `Reach level ${LEVEL_POWER_ACHIEVEMENT_LEVEL} on ${TIER_DEFINITIONS[tierNumber - 1].name} (${LEVEL_POWER_ACHIEVEMENT_LEVEL - 1} levels completed)`,
-    short: `${TIER_DEFINITIONS[tierNumber - 1].symbol} level ${LEVEL_POWER_ACHIEVEMENT_LEVEL}`,
+    trigger: `Reach level ${getLevelPowerAchievementLevel(tierNumber)} on ${TIER_DEFINITIONS[tierNumber - 1].name} (${getLevelPowerAchievementLevel(tierNumber) - 1} levels completed)`,
+    short: `${TIER_DEFINITIONS[tierNumber - 1].symbol} level ${getLevelPowerAchievementLevel(tierNumber)}`,
     shortBonus: `+${LEVEL_POWER_ACHIEVEMENT_BONUS} per-level multiplier`,
     bonus: `The per-level production multiplier rises by ${LEVEL_POWER_ACHIEVEMENT_BONUS} (×1.0 → ×1.5 with all ten)`,
-    condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: LEVEL_POWER_ACHIEVEMENT_LEVEL },
+    condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: getLevelPowerAchievementLevel(tierNumber) },
   })),
   { id: 'overclockStep1', name: 'Patient Overclock', group: 'overclockStep', short: `First Overclock at ${PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL}+`, shortBonus: 'Overclock step −1', trigger: `Claim the first Overclock of a Purge at ${PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level than the one before (+4 → +3)', condition: { kind: 'counter', key: 'maxFirstOverclock', min: PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL } },
   { id: 'overclockStep2', name: 'Overclock fast', group: 'overclockStep', short: '2 Overclocks/Purge, no Accelerate', shortBonus: 'Overclock step −1', trigger: 'After Patient Overclock, claim two Overclocks in one Purge without buying any Accelerate', bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+3 → +2)', condition: { kind: 'counter', key: 'acceleratelessOverclocks', min: 1 } },
   { id: 'overclockStep3', name: 'Beyond Googol', group: 'overclockStep', short: `DeGoogol, Overclock at ${OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL}+`, shortBonus: 'Overclock step −1', trigger: `After Overclock fast and DeGoogol, claim an Overclock at ${OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+2 → +1)', condition: { kind: 'counter', key: 'overflowDeepOverclock', min: 1 } },
+  // Power group (#1051). Stack Overflow / Turbo button are recorded by activateComputeBoost.
+  { id: 'powerUser', name: 'Power user', group: 'power', trigger: 'Unlock the Power page', short: 'Unlock Power', condition: { kind: 'powerPageUnlocked' } },
+  { id: 'batteriesIncluded', name: 'Batteries included', group: 'power', trigger: 'Build your first Battery', short: 'First Battery', condition: { kind: 'computeEntityBuilt', fromIndex: 1 } },
+  { id: 'turboButton', name: 'Turbo button', group: 'power', trigger: 'Activate your first Turbo Boost', short: 'First Turbo', condition: { kind: 'counter', key: 'turboBoosts', min: 1 } },
+  { id: 'stackOverflow', name: 'Stack Overflow', group: 'power', trigger: 'Stack a Boost to its maximum', short: 'Max Boost stack', condition: { kind: 'counter', key: 'maxBoostStack', min: 1 } },
+  { id: 'coldFusion', name: 'Cold fusion', group: 'power', trigger: 'Build your first Fusion', short: 'First Fusion', condition: { kind: 'computeEntityBuilt', fromIndex: 9 } },
+  // First Purge and after (#1051). Lifetime Purge counts survive Reboot (`purge.count` does not).
+  { id: 'justGoogolIt', name: 'Just Googol it', group: 'firstPurge', trigger: 'Reach 1 Googol Bytes', short: '1 Googol Bytes', condition: { kind: 'googolReached' } },
+  { id: 'remindMeLater', name: 'Remind me later', group: 'firstPurge', trigger: `Leave a Purge available but unclaimed for ${REMIND_ME_LATER_SECONDS} seconds (pause Auto-Purge if you own it)`, short: 'Purge pending 1 min', condition: { kind: 'counter', key: 'purgeWaitSeconds', min: REMIND_ME_LATER_SECONDS } },
+  { id: 'startAllOver', name: 'Wait, do I start all over?', group: 'firstPurge', trigger: 'Purge for the first time', short: 'Purge', condition: { kind: 'lifetimePurges', min: 1 } },
+  { id: 'tenTypes', name: 'There are 10 types of people', group: 'firstPurge', trigger: 'Purge at least 2 times', short: 'Purge ×2', condition: { kind: 'lifetimePurges', min: 2 } },
+  { id: 'scriptKiddie', name: 'Script kiddie', group: 'firstPurge', trigger: 'Unlock your first autobuyer', short: 'First autobuyer', condition: { kind: 'autobuyers', mode: 'any' } },
+  { id: 'hex10', name: '0x10', group: 'firstPurge', trigger: 'Purge at least 16 times', short: 'Purge ×16', condition: { kind: 'lifetimePurges', min: 16 } },
+  { id: 'cronJob', name: 'Cron job', group: 'firstPurge', trigger: 'Unlock every tier autobuyer', short: 'All autobuyers', condition: { kind: 'autobuyers', mode: 'all' } },
+  { id: 'noHands', name: 'Look ma, no hands', group: 'firstPurge', trigger: 'Purge in a cycle with no manual tier purchase', short: 'Hands-free Purge', condition: { kind: 'counter', key: 'handsFreePurges', min: 1 } },
+  { id: 'stillClicker', name: "Oh, it's still a clicker game!", group: 'firstPurge', trigger: 'Ping while every tier autobuyer is unlocked', short: 'Ping, all automated', condition: { kind: 'counter', key: 'automatedPings', min: 1 } },
+  // Late Purge layer (#1051).
+  { id: 'lossless', name: 'Lossless', group: 'latePurge', trigger: 'Buy your first Compression level', short: 'Compression 1', condition: { kind: 'doublePpLevel', min: 1 } },
+  { id: 'middleOut', name: 'Middle-out', group: 'latePurge', trigger: `Reach Compression level ${MIDDLE_OUT_COMPRESSION_LEVEL}`, short: `Compression ${MIDDLE_OUT_COMPRESSION_LEVEL}`, condition: { kind: 'doublePpLevel', min: MIDDLE_OUT_COMPRESSION_LEVEL } },
+  { id: 'zipBomb', name: 'Zip bomb', group: 'latePurge', trigger: 'Compress until 1 power earns 1 PP', short: '1 power per PP', condition: { kind: 'onePowerPerPp' } },
+  { id: 'whileTrue', name: 'while (true)', group: 'latePurge', trigger: 'Run Auto-Purge at a 1 second interval', short: 'Auto-Purge 1 s', condition: { kind: 'fastAutoPurge' } },
+  { id: 'notABug', name: "It's not a bug, it's a feature", group: 'latePurge', trigger: 'Pass 1 Googol Bytes in Overflow mode', short: 'Googol in Overflow', condition: { kind: 'overflowPastGoogol' } },
+  { id: 'bit64', name: '64-bit upgrade', group: 'latePurge', trigger: 'Purge at least 64 times', short: 'Purge ×64', condition: { kind: 'lifetimePurges', min: 64 } },
+  { id: 'someoneElsesComputer', name: "The cloud is just someone else's computer", group: 'latePurge', trigger: 'Buy your first Supercloud', short: 'First Supercloud', condition: { kind: 'superCloudOwned' } },
+  // Reboot (#1051).
+  { id: 'offAndOn', name: 'Have you tried turning it off and on again?', group: 'reboot', trigger: 'Reboot for the first time', short: 'Reboot', condition: { kind: 'eraCount', min: 1 } },
+  { id: 'rmRf', name: 'rm -rf', group: 'reboot', trigger: 'Reformat the Byte Foundry', short: 'Reformat Foundry', condition: { kind: 'counter', key: 'reformats', min: 1 } },
+  { id: 'kernelPanic', name: 'Kernel panic', group: 'reboot', trigger: 'Reboot twice within an hour of play', short: 'Reboot ×2 in 1 h', condition: { kind: 'counter', key: 'quickReboots', min: 1 } },
+  { id: 'popcorn', name: 'Popcorn', group: 'reboot', trigger: `Earn ${POPCORN_KERNELS} Kernels in total`, short: `${POPCORN_KERNELS} Kernels`, condition: { kind: 'kernelsEarned', min: POPCORN_KERNELS } },
 ].map(def => ({ secret: false, platformDependent: false, bonus: null, short: null, shortBonus: null, ...def }))
 // Achievements that are ordered steps of one entity render as ONE row with levels on the page. Display-only:
 // each step keeps its own id (earned state, toasts, bonuses and saves are unchanged). Steps list in level order.
 export const ACHIEVEMENT_SERIES = [
   { id: 'ping', name: 'Ping', members: ['helloWorld', 'pingOfDeath'] },
-  // One 20-level row: each pool's I then II, in pool order.
-  {
-    id: 'poolReset',
-    name: 'Reclamation',
-    members: TIER_DEFINITIONS.flatMap((_, index) => [`pool${String(index + 1).padStart(2, '0')}ResetI`, `pool${String(index + 1).padStart(2, '0')}ResetII`]),
-  },
+  { id: 'poolReset', name: 'Reclamation', members: RECLAMATION_POOL_THRESHOLDS.map((_, i) => `reclaim${i + 1}`) },
   { id: 'tierBought', name: 'First purchase', members: TIER_DEFINITIONS.map((_, i) => `tier${String(i + 1).padStart(2, '0')}Bought`) },
   { id: 'accelerate', name: 'Accelerate', members: ['tickTock', 'megahertzMyth'] },
   { id: 'levelPower', name: 'Level power', members: LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((_, i) => `levelPower${i + 1}`) },
@@ -965,10 +1032,27 @@ export const ERA_ELIGIBILITY_PP = GOOGOL
 // Flops autobuyer milestone: Era N unlocks the Nth Flops tier's autobuyer (KFlops at Era 1, …).
 export const FLOPS_AUTOBUYER_ERA_START = 1
 export const FLOPS_AUTOBUYER_ERA_STEP = 1
+// Auto Purge conditions (all optional; Off = 0). They narrow WHEN Auto Purge fires once Money has reached
+// the Purge goal: the time floor always applies, the two PP conditions only in Overflow mode (while frozen
+// the pending award can't grow).
+export const AUTO_PURGE_MAX_PP_EXPONENT = 100
+export const AUTO_PURGE_MIN_SECONDS_OPTIONS = [0, 10, 60, 600, 3600, 21600, 86400]
+export const AUTO_PURGE_BEST_MULTIPLIER_OPTIONS = [0, 1.5, 2, 5, 10, 100]
 // Hyperscaler generator costs in Eons: 1, 10, 100, … (×10 per purchase).
 export const HYPERSCALER_EON_COST_BASE = 1
 export const HYPERSCALER_EON_COST_MULTIPLIER = 10
 // Each Hyperscaler Efficiency level adds this much extra rate per hyperscaler (+0.001%/s at 0.00001).
 export const HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL = 0.00001
-// Each Kernel Amplifier level adds this many extra Kernels awarded per Reboot.
-export const EON_AMPLIFIER_AWARD_PER_LEVEL = 1
+// Kernels awarded per Reboot = EON_AMPLIFIER_AWARD_BASE ** eonAmplifierLevel (1, 10, 100, …).
+export const EON_AMPLIFIER_AWARD_BASE = 10
+// Kernel shop (#414). Cost of the next level = costBase × costGrowth ** currentLevel Kernels; maxLevel null = uncapped.
+// `hyperscaler` keeps its own HYPERSCALER_EON_* constants above.
+export const EON_UPGRADE_DEFINITIONS = [
+  { id: 'hyperscalerEfficiency', levelField: 'hyperscalerEfficiencyLevel', costBase: 1, costGrowth: 10, maxLevel: 10 },
+  { id: 'eonAmplifier', levelField: 'eonAmplifierLevel', costBase: 10, costGrowth: 10, maxLevel: 9 },
+]
+export const EON_UPGRADE_BY_ID = Object.assign(Object.create(null), Object.fromEntries(
+  EON_UPGRADE_DEFINITIONS.map(def => [def.id, def])
+))
+// One-time Kernel price of the Auto Hyperscaler unlock.
+export const AUTO_HYPERSCALER_EON_COST = 100

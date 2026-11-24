@@ -24,7 +24,7 @@ icon, standalone display with no browser chrome, offline-capable after a first v
   from the top-level `base: '/tens/'` config automatically, confirmed by inspecting
   `dist/manifest.webmanifest` after `yarn build` (both resolve to `/tens/`, matching the GitHub Pages
   project-page subpath).
-- **Manifest fields:** `name`/`short_name: 'Tens'`, `display: 'standalone'`, and `theme_color`/
+- **Manifest fields:** `name`/`short_name: 'Tens'`, `display: 'standalone'`, `orientation: 'any'` (tablets/foldables must rotate, epic #1152; phones can't be locked on the web — native phone locking is #1164), and `theme_color`/
   `background_color` both set to `#0c0d11` — the dark theme's `color.page` token value (see
   `docs/THEMING_REFERENCE.md`) — so the OS install/splash chrome matches the app's own dark ground
   rather than introducing an unrelated color.

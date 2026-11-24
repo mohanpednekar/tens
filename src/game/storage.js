@@ -1,5 +1,5 @@
 import { applyAutobuyerMilestones, applyFlopsAutobuyerMilestones, autoCompleteChallenges, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
-import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES } from './layers'
+import { EON_UPGRADE_DEFINITIONS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES } from './layers'
 import { adaptSaveForCurrentSchema, migrateToV3, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 
@@ -522,6 +522,17 @@ const applyPendingComputeGrants = (intro, pendingComputeGrants) => {
 
 // Merge a saved state with fresh defaults so newly added fields are present on load.
 // Schema transforms run in save-migration/ on every load before this runs.
+// Saved Kernel-shop levels are clamped to [0, maxLevel] so a hand-edited or corrupt save can't exceed a cap.
+const mergeEonsUpgrades = (fresh, saved) => {
+  const merged = { ...fresh, ...(saved ?? {}) }
+  EON_UPGRADE_DEFINITIONS.forEach(def => {
+    const raw = Number(merged[def.levelField])
+    const level = Number.isFinite(raw) ? Math.max(0, Math.floor(raw)) : 0
+    merged[def.levelField] = def.maxLevel != null ? Math.min(level, def.maxLevel) : level
+  })
+  return merged
+}
+
 const mergeState = rawSaved => {
   const saved = rawSaved
   const fresh = createInitialGameState()
@@ -570,6 +581,14 @@ const mergeState = rawSaved => {
     accelerateBoughtThisCycle: typeof saved.accelerateBoughtThisCycle === 'boolean'
       ? saved.accelerateBoughtThisCycle
       : saved.globalTickspeedMultiplier != null || saved.overclockLastClaimCompletedLevels != null || (saved.overclockCount ?? 0) > 0 || (saved.scaleUpCount ?? 0) > 0,
+    // Saves from before manualPurchaseThisCycle existed: any tier purchase already made can't be attributed, so a save
+    // with purchases is conservatively treated as having bought manually — never hand out 'Look ma, no hands' for free.
+    manualPurchaseThisCycle: typeof saved.manualPurchaseThisCycle === 'boolean'
+      ? saved.manualPurchaseThisCycle
+      : Object.values(saved.purchased ?? {}).some(count => count > 0)
+        // Scale Up / Overclock zero `purchased`, so evidence of an earlier soft reset also counts as manual history.
+        || saved.globalTickspeedMultiplier != null || saved.overclockLastClaimCompletedLevels != null
+        || (saved.overclockCount ?? 0) > 0 || (saved.scaleUpCount ?? legacySpeedUpCount ?? 0) > 0,
     scaleUpCount: saved.scaleUpCount ?? legacySpeedUpCount ?? fresh.scaleUpCount,
     scaleUpTierCounts: mergeTierMap(
       fresh.scaleUpTierCounts,
@@ -619,7 +638,13 @@ const mergeState = rawSaved => {
     },
     achievements: {
       earned: { ...(saved.achievements?.earned ?? {}) },
-      counters: { ...fresh.achievements.counters, ...(saved.achievements?.counters ?? {}) },
+      // Legacy saves lack `kernelsEarned`: seed it from the Kernel balance at load, before any spend can lower the bound.
+      counters: {
+        ...fresh.achievements.counters,
+        ...(saved.achievements?.counters ?? {}),
+        ...(saved.eons?.balance > (saved.achievements?.counters?.kernelsEarned ?? 0)
+          ? { kernelsEarned: saved.eons.balance } : {}),
+      },
     },
     daily: {
       runs: { ...(saved.daily?.runs ?? {}) },
@@ -628,7 +653,8 @@ const mergeState = rawSaved => {
     era: { ...fresh.era, ...(saved.era ?? {}) },
     eons: { ...fresh.eons, ...(saved.eons ?? {}) },
     hyperscalerCount: saved.hyperscalerCount ?? fresh.hyperscalerCount,
-    eonsUpgrades: { ...fresh.eonsUpgrades, ...(saved.eonsUpgrades ?? {}) },
+    eonsUpgrades: mergeEonsUpgrades(fresh.eonsUpgrades, saved.eonsUpgrades),
+    autoPurgeSettings: { ...fresh.autoPurgeSettings, ...(saved.autoPurgeSettings ?? {}) },
     computeFlopsAutobuyers: mergeTierMap(fresh.computeFlopsAutobuyers, saved.computeFlopsAutobuyers),
     computeFlopsAutobuyersEnabled: mergeTierMap(fresh.computeFlopsAutobuyersEnabled, saved.computeFlopsAutobuyersEnabled),
     computeFlopsAutobuyerAttemptBudgets: mergeTierMap(

@@ -1,6 +1,6 @@
 import './fonts' // side-effect import: registers the bundled @font-face rules (see fonts.js)
 import GlobalStyle from './GlobalStyle'
-import { buildTheme, DEFAULT_MODE, MODES, themes } from './tokens'
+import { breakpoints, buildTheme, DEFAULT_MODE, MODES, themes } from './tokens'
 import { ThemeProvider as StyledThemeProvider } from 'styled-components'
 
 export const getSystemThemeMode = () => {
@@ -21,4 +21,6 @@ export const ThemeProvider = ({ mode = DEFAULT_MODE, children }) => (
   </StyledThemeProvider>
 )
 
-export { GlobalStyle, buildTheme, themes, MODES, DEFAULT_MODE }
+export { LayoutProvider, useLayoutClass, useViewportLayout } from './LayoutContext'
+export { getLayoutClass, isSplitEligible, media, LAYOUT_CLASSES } from './layout'
+export { breakpoints, GlobalStyle, buildTheme, themes, MODES, DEFAULT_MODE }
