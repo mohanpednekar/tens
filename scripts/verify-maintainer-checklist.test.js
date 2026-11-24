@@ -1,4 +1,4 @@
-import { applyChecks, allVerifiableChecked } from './verify-maintainer-checklist.mjs';
+import { applyChecks, allVerifiableChecked, formatReport, CHECKS } from './verify-maintainer-checklist.mjs';
 
 const BODY = [
   '## Outstanding',
@@ -42,5 +42,17 @@ describe('allVerifiableChecked', () => {
     expect(allVerifiableChecked(BODY)).toBe(false);
     const done = applyChecks(BODY, { discussions: true, codeOwners: true, autoMerge: true }).body;
     expect(allVerifiableChecked(done)).toBe(true);
+  });
+});
+
+describe('formatReport', () => {
+  it('prints PASS/FAIL/UNKNOWN for every check', () => {
+    const out = formatReport({ secret: true, autoMerge: false, discussions: null });
+    const lines = out.split('\n');
+    expect(lines).toHaveLength(CHECKS.length + 1);
+    expect(out).toMatch(/PASS\s+secret/);
+    expect(out).toMatch(/FAIL\s+autoMerge/);
+    expect(out).toMatch(/UNKNOWN\s+discussions/);
+    expect(out).toMatch(/UNKNOWN\s+codeOwners/);
   });
 });
