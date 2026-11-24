@@ -1589,7 +1589,7 @@ export const getAchievementProgress = (state, condition) => {
     case 'kernelsEarned': return { current: Math.max(state.achievements?.counters?.kernelsEarned ?? 0, state.eons?.balance ?? 0), target: condition.min }
     case 'lifetimePurges': return { current: getLifetimePurges(state), target: condition.min }
     case 'clockSpeedLevel': return { current: state.globalTickspeedMultiplier ?? 0, target: condition.min }
-    case 'tierLevel': return { current: state.purchaseLevels?.[condition.tierId] ?? 1, target: condition.min }
+    case 'tierLevel': return { current: Math.max(0, (state.purchaseLevels?.[condition.tierId] ?? 1) - 1), target: condition.min - 1 }
     case 'poolsCompacted': return { current: getCompactedPoolCount(state), target: condition.min }
     case 'storageUnlocked': {
       const doublings = capacity => Math.log2(Math.max(capacity, INTRO_STARTING_CAPACITY) / INTRO_STARTING_CAPACITY)
