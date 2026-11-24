@@ -40,8 +40,13 @@ for (const theme of ['dark', 'light']) {
 
   test(`Byte Factory page — ${theme} theme`, async ({ page }) => {
     // mainGameUnlocked is the permanent one-time latch past the Foundry gate (see CLAUDE.md);
-    // seeding it lands directly on MainPage, same as every other seeded e2e spec.
-    await loadSeededPage(page, { theme, state: { intro: { mainGameUnlocked: true } } })
+    // seeding it lands directly on MainPage, same as every other seeded e2e spec. `kibiNotKilo` is
+    // seeded as already earned: otherwise it unlocks on the first tick, and its 5 s toast (and the
+    // bonus it grants) race the capture — flaky under parallel workers.
+    await loadSeededPage(page, {
+      theme,
+      state: { intro: { mainGameUnlocked: true }, achievements: { earned: { kibiNotKilo: true }, counters: { pings: 0 } } },
+    })
     await expect(page.getByRole('heading', { level: 1, name: /byte factory/i })).toBeVisible()
     await expect(page).toHaveScreenshot(`byte-factory-${theme}.png`, { fullPage: true })
   })
