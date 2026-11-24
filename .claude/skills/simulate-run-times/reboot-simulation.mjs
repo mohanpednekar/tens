@@ -16,7 +16,7 @@
 // Auto Purge is paused so the bot controls timing. NOT an optimal player; it measures compounding.
 import { register } from 'node:module'
 import { pathToFileURL } from 'node:url'
-register('./ext-loader.mjs', pathToFileURL('./'))
+register(pathToFileURL(new URL('./ext-loader.mjs', import.meta.url).pathname), import.meta.url)
 
 const engine = await import('../../../src/game/engine.js')
 const layers = await import('../../../src/game/layers.js')
@@ -111,11 +111,13 @@ while (purges < maxPurges) {
 
   state = actSpendPP(actPlayer(state))
   const countBefore = state.purge.count
+  const pendingBefore = getPrestigePointsAwarded(state.resources[MONEY_ID], state.prestigeDoublePpLevel ?? 0, engine.isOverflowModeUnlocked(state))
   state = tickGame(1, BUY_QUANTITY)(state)
   totalTicks += 1
   cycleTicks += 1
 
   let purged = state.purge.count > countBefore // Auto Purge fired inside the tick
+  if (purged) { lastAwarded = pendingBefore; recent.length = 0 }
   if (!purged && state.resources[MONEY_ID] >= PURGE_THRESHOLD) {
     const money = state.resources[MONEY_ID]
     const pp = getPrestigePointsAwarded(money, state.prestigeDoublePpLevel ?? 0, engine.isOverflowModeUnlocked(state))

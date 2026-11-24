@@ -717,7 +717,7 @@ const InfoPage = () => {
           <li>
             Each Reboot awards 1 Kernel, ×{EON_AMPLIFIER_AWARD_BASE} per Kernel Amplifier level.
             Spend Kernels on Firmware → ⏻ Kernels: hyperscalers (a Flops boost that builds up every
-            second of a cycle, on every tier), Hyperscaler efficiency, Kernel amplifier and Auto
+            second on every tier, until the next Purge, Scale Up or Overclock), Hyperscaler efficiency, Kernel amplifier and Auto
             Hyperscaler.
           </li>
           <li>

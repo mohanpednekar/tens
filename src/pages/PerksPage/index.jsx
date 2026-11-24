@@ -1338,7 +1338,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           <CategoryHeading>Kernels</CategoryHeading>
           <UpgradeRow
             ariaLabel="hyperscaler upgrade"
-            details={`Each hyperscaler adds ${pctPerSecond(rateAt(efficiencyLevel))} per second to every Factory tier's Flops boost for the rest of the Purge cycle. Hyperscalers are permanent and survive Purge and Reboot; the boost they have built resets with the cycle.`}
+            details={`Each hyperscaler adds ${pctPerSecond(rateAt(efficiencyLevel))} per second to every Factory tier's Flops boost until the next Purge, Scale Up or Overclock. Hyperscalers are permanent and survive Purge and Reboot; the boost they have built resets with it.`}
             icon="☁"
             name="Hyperscaler"
             value={`${hyperscalers} owned · +${pctPerSecond(rateAt(efficiencyLevel))} each`}
