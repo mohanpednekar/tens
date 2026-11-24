@@ -429,7 +429,7 @@ than a settings deny-list, and its prompt places **no file-scope restriction**: 
 anything in the repo — including `.github/workflows/` (its own file included) and
 deploy/release config — when a task calls for it. The hard rails that remain are never push to
 `main`, never merge its own PR, and always land changes via PR + human review
-(`.github/workflows/**` PRs are never auto-merged by any path, so workflow edits stay
+(workflow-control PRs — see "PR babysitter" — are never auto-merged, so workflow edits stay
 human-gated).
 
 **Health check (`devin-workflow-health.yml`).** A watchdog with no agent (`workflow_dispatch` only
@@ -487,7 +487,7 @@ instead, in one session:
    (`scripts/claude-deny-settings.sh`), or the routine's own review inputs
    (`.claude/agents/code-reviewer.md`) — follow the **no-loop tenet** (maintainer rule): no
    workflow may update workflows, directly or indirectly, without human approval; an upstream actor
-   that workflows never update can't form a loop. So the routine merges a workflow-file PR only if no
+   that workflows never update can't form a loop. So the routine merges a workflow-control PR only if no
    workflow authored it (not on a workflow-created branch — `claude/auto-*`, `claude/self-heal-*`,
    `claude/heal-main-*`, `devin/auto-*` — and no commit on it came from an Actions run); a
    workflow-authored one needs the maintainer's GitHub approval on its current head. Dependabot is not
@@ -720,7 +720,7 @@ cheap while work is still private to the session, heavier once other reviewers c
    with `main`, then re-reviewed for the new head), every required check is complete and passing,
    nothing is still running, no review threads are unresolved, and an adversarial `APPROVE` marker
    exists for the **current head SHA**. Autonomous workflow runs, Devin and
-   dev-team roles never self-merge. A PR touching `.github/workflows/**` stays human-gated for every
+   dev-team roles never self-merge. A workflow-control PR (see "PR babysitter") stays human-gated for every
    path except the PR babysitter routine's no-loop exception (see "PR babysitter").
 
 ### AI-instruction file cost hygiene
