@@ -95,7 +95,7 @@ function runChecks(repo) {
     gh(['project', 'list', '--owner', repo.split('/')[0], '--limit', '1']);
     projectsScope = true;
   } catch (e) {
-    // Only a missing-scope error is a definite FAIL; network/other errors stay UNKNOWN.
+    // Auth/scope/permission denials are a definite FAIL (see classifyProjectsError); network/other errors stay UNKNOWN.
     projectsScope = classifyProjectsError(`${e?.stderr ?? ''}${e?.message ?? ''}`);
   }
   const contexts = protection?.required_status_checks

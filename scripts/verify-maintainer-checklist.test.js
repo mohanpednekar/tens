@@ -1,3 +1,7 @@
+import { execFileSync } from 'node:child_process';
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { applyChecks, allVerifiableChecked, formatReport, classifyProjectsError, CHECKS } from './verify-maintainer-checklist.mjs';
 
 const BODY = [
@@ -66,5 +70,27 @@ describe('classifyProjectsError', () => {
     ['dial tcp: lookup api.github.com: no such host', null],
   ])('%s', (text, expected) => {
     expect(classifyProjectsError(text)).toBe(expected);
+  });
+});
+
+describe('--dry-run write boundary', () => {
+  it('never reads or edits issue #62, only performs read-only lookups', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fake-gh-'));
+    const log = join(dir, 'calls.log');
+    writeFileSync(join(dir, 'gh'), `#!/bin/sh\necho "$@" >> "${log}"\nexit 1\n`);
+    chmodSync(join(dir, 'gh'), 0o755);
+    try {
+      const out = execFileSync(
+        process.execPath,
+        [join(process.cwd(), 'scripts/verify-maintainer-checklist.mjs'), '--dry-run'],
+        { encoding: 'utf8', env: { ...process.env, PATH: `${dir}:${process.env.PATH}` } },
+      );
+      expect(out).toMatch(/UNKNOWN\s+secret/);
+      const calls = readFileSync(log, 'utf8').split('\n').filter(Boolean);
+      expect(calls.length).toBeGreaterThan(0);
+      expect(calls.some((c) => /^issue\b/.test(c))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
