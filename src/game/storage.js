@@ -581,6 +581,14 @@ const mergeState = rawSaved => {
     accelerateBoughtThisCycle: typeof saved.accelerateBoughtThisCycle === 'boolean'
       ? saved.accelerateBoughtThisCycle
       : saved.globalTickspeedMultiplier != null || saved.overclockLastClaimCompletedLevels != null || (saved.overclockCount ?? 0) > 0 || (saved.scaleUpCount ?? 0) > 0,
+    // Saves from before manualPurchaseThisCycle existed: any tier purchase already made can't be attributed, so a save
+    // with purchases is conservatively treated as having bought manually — never hand out 'Look ma, no hands' for free.
+    manualPurchaseThisCycle: typeof saved.manualPurchaseThisCycle === 'boolean'
+      ? saved.manualPurchaseThisCycle
+      : Object.values(saved.purchased ?? {}).some(count => count > 0)
+        // Scale Up / Overclock zero `purchased`, so evidence of an earlier soft reset also counts as manual history.
+        || saved.globalTickspeedMultiplier != null || saved.overclockLastClaimCompletedLevels != null
+        || (saved.overclockCount ?? 0) > 0 || (saved.scaleUpCount ?? legacySpeedUpCount ?? 0) > 0,
     scaleUpCount: saved.scaleUpCount ?? legacySpeedUpCount ?? fresh.scaleUpCount,
     scaleUpTierCounts: mergeTierMap(
       fresh.scaleUpTierCounts,
@@ -630,7 +638,13 @@ const mergeState = rawSaved => {
     },
     achievements: {
       earned: { ...(saved.achievements?.earned ?? {}) },
-      counters: { ...fresh.achievements.counters, ...(saved.achievements?.counters ?? {}) },
+      // Legacy saves lack `kernelsEarned`: seed it from the Kernel balance at load, before any spend can lower the bound.
+      counters: {
+        ...fresh.achievements.counters,
+        ...(saved.achievements?.counters ?? {}),
+        ...(saved.eons?.balance > (saved.achievements?.counters?.kernelsEarned ?? 0)
+          ? { kernelsEarned: saved.eons.balance } : {}),
+      },
     },
     daily: {
       runs: { ...(saved.daily?.runs ?? {}) },

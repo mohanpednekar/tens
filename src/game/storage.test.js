@@ -1412,3 +1412,30 @@ describe('mergeState Kernel shop clamping (#414)', () => {
     expect(loaded.eonsUpgrades.autoHyperscalerUnlocked).toBe(false)
   })
 })
+
+describe('manualPurchaseThisCycle legacy migration', () => {
+  beforeEach(() => localStorage.clear())
+  it.each([['scaleUpCount'], ['speedUpCount']])('treats a legacy save after a Scale Up (%s, purchased all zero) as having bought manually', key => {
+    const base = createInitialGameState()
+    const legacy = { ...base, [key]: 1, purchased: Object.fromEntries(Object.keys(base.purchased ?? {}).map(id => [id, 0])) }
+    delete legacy.scaleUpCount
+    legacy[key] = 1
+    delete legacy.manualPurchaseThisCycle
+    localStorage.setItem('tens_game_state', JSON.stringify(legacy))
+    expect(loadGameState().manualPurchaseThisCycle).toBe(true)
+  })
+})
+
+describe('kernelsEarned legacy seeding', () => {
+  beforeEach(() => localStorage.clear())
+  it('seeds the lifetime Kernel counter from the balance on load, never lowering an existing counter', () => {
+    const base = createInitialGameState()
+    const legacy = { ...base, eons: { ...base.eons, balance: 99 } }
+    delete legacy.achievements.counters.kernelsEarned
+    localStorage.setItem('tens_game_state', JSON.stringify(legacy))
+    expect(loadGameState().achievements.counters.kernelsEarned).toBe(99)
+    const ahead = { ...legacy, achievements: { ...legacy.achievements, counters: { ...legacy.achievements.counters, kernelsEarned: 500 } } }
+    localStorage.setItem('tens_game_state', JSON.stringify(ahead))
+    expect(loadGameState().achievements.counters.kernelsEarned).toBe(500)
+  })
+})

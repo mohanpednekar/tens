@@ -3,6 +3,7 @@ import fc from 'fast-check'
 import * as boostEngine from 'game/engine'
 import {
   activateComputeBoost,
+  detectAchievements,
   getChargerUnlockProgress,
   buyAutobuyerIntervalUpgrade,
   buyAutomationIntervalUpgrade,
@@ -7092,7 +7093,9 @@ describe('tickGame', () => {
   })
 
   it('freezes entirely (returns the same state object) once Money reaches PURGE_THRESHOLD', () => {
-    const state = withOwned(withMoney(createInitialGameState(), PURGE_THRESHOLD), tensTier.id, 5)
+    // 'Remind me later' still counts the unclaimed wait until earned, so seed it as earned: nothing left to track.
+    const base = withOwned(withMoney(createInitialGameState(), PURGE_THRESHOLD), tensTier.id, 5)
+    const state = detectAchievements({ ...base, achievements: { ...base.achievements, earned: { ...base.achievements.earned, remindMeLater: true } } })
     expect(tickGame(1)(state)).toBe(state)
   })
 
@@ -7136,13 +7139,15 @@ describe('tickGame', () => {
   })
 
   it('does not accumulate or fire the Auto-Prestige attempt budget while paused (autoPurgeEnabled false), even at PURGE_THRESHOLD', () => {
-    const state = withAutoPurgeEnabled(
+    const paused = withAutoPurgeEnabled(
       withAutoPurgeBudget(
         withAutoPurge(withOwned(withMoney(createInitialGameState(), PURGE_THRESHOLD), tensTier.id, 5)),
         0.9995
       ),
       false
     )
+    // 'Remind me later' is earned, so the unclaimed-Purge wait is no longer tracked (which would change the state).
+    const state = detectAchievements({ ...paused, achievements: { ...paused.achievements, earned: { ...paused.achievements.earned, remindMeLater: true } } })
     const after = tickGame(1)(state)
     expect(after).toBe(state) // frozen + paused Auto-Prestige short-circuits to a same-reference no-op
     expect(after.purge.count).toBe(0)
@@ -11730,7 +11735,7 @@ describe('Data Lakes', () => {
       const rebooted = eraGame({ ...awarded, purge: { ...awarded.purge, points: ERA_ELIGIBILITY_PP } })
       expect(rebooted.intro.poolExponentBonuses).toEqual(expected)
       expect(rebooted.intro.unlockedDiskSteps).toBe(1)
-      expect(rebooted.achievements.earned).toEqual(awarded.achievements.earned)
+      expect(rebooted.achievements.earned).toMatchObject(awarded.achievements.earned)
       expect(getDataStreamSpeedExponent({ ...rebooted.intro, unlockedDiskSteps: 14 })).toBeCloseTo(
         getDataStreamSpeedExponent(awarded.intro), 12
       )

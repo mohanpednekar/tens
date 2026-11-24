@@ -6,9 +6,10 @@ import {
   getAchievementShortReward,
   buyTickspeedMultiplier, createInitialGameState, detectAchievements, eraGame, getCompletedAchievementGroups,
   getLevelMultiplierBase, getOverclockRequirement, getOverclockRequirementStep, getPurchaseMilestoneMultiplier, getTierCostExponent, buyGlobalTickspeedMultiplier, isAchievementEarned, consumeXpForLastTierTickspeed, restageManually, overclockGame, purgeGame, resetByteFoundry, scaleUpGame, tapIntroBit, tickGame,
+  activateComputeBoost, buyTierQuantity, getPurgeGoalBits, stackComputeBoost, withManualPurchaseMark,
 } from './engine'
 import { loadGameState } from './storage'
-import { ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
+import { getLevelPowerAchievementLevel, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, CHALLENGE_DEFINITIONS, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_TIER_FIELDS, MONEY_ID, PURGE_THRESHOLD, TIER_DEFINITIONS } from './layers'
 
 beforeEach(() => { ACHIEVEMENTS_FEATURE.enabled = true; localStorage.clear() })
 afterEach(() => { ACHIEVEMENTS_FEATURE.enabled = false })
@@ -18,8 +19,23 @@ const lateGame = () => {
   const initial = createInitialGameState()
   return {
     ...initial,
-    achievements: { earned: {}, counters: { pings: 10000, emptyRestages: 1, maxFirstOverclock: 6, acceleratelessOverclocks: 1, overflowDeepOverclock: 1 } },
-    intro: { ...initial.intro, byteCreated: true, mainGameUnlocked: true },
+    achievements: {
+      earned: {},
+      counters: {
+        pings: 10000, emptyRestages: 1, maxFirstOverclock: 6, acceleratelessOverclocks: 1, overflowDeepOverclock: 1,
+        reformats: 1, kernelsEarned: 100, quickReboots: 1, turboBoosts: 1, maxBoostStack: 1, purgeWaitSeconds: 60,
+        handsFreePurges: 1, automatedPings: 1, purges: 64,
+      },
+    },
+    resources: { ...initial.resources, [MONEY_ID]: PURGE_THRESHOLD },
+    purge: { ...initial.purge, count: 64, unboundedUnlocked: true },
+    era: { count: 1 },
+    prestigeDoublePpLevel: 10,
+    autoPurge: 5,
+    automationIntervalLevels: { ...initial.automationIntervalLevels, purge: 100 },
+    autobuyers: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 1])),
+    computeFlops: { ...initial.computeFlops, owned: { ...initial.computeFlops.owned, flop10: 1 } },
+    intro: { ...initial.intro, byteCreated: true, mainGameUnlocked: true, computeNodes: 1, computeMegacomputers: 1 },
     purchased: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 5])),
     purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 10])),
     globalTickspeedMultiplier: 40,
@@ -122,7 +138,7 @@ describe('detectAchievements', () => {
   })
 
   it('earns retroactively on a tick', () => {
-    const next = tickGame(0.1)(lateGame())
+    const next = tickGame(0.1)({ ...lateGame(), autoPurgeEnabled: false })
     expect(isAchievementEarned(next, 'megahertzMyth')).toBe(true)
   })
 
@@ -152,23 +168,35 @@ describe('persistence across resets', () => {
   it('survives Purge, Scale Up, Overclock, Reformat and Reboot', () => {
     const ids = earnedIds(earned())
     const purgeable = { ...earned(), resources: { ...earned().resources, [MONEY_ID]: PURGE_THRESHOLD } }
-    expect(earnedIds(purgeGame(purgeable))).toEqual(ids)
-    expect(earnedIds(resetByteFoundry(earned()))).toEqual(ids)
+    expect(earnedIds(purgeGame(purgeable))).toEqual(expect.arrayContaining(ids))
+    expect(earnedIds(resetByteFoundry(earned()))).toEqual(expect.arrayContaining(ids))
     expect(earnedIds(scaleUpGame(earned()))).toEqual(ids)
     expect(earnedIds(overclockGame(earned()))).toEqual(ids)
     const rebootable = { ...earned(), purge: { ...earned().purge, points: 1e100 } }
-    expect(earnedIds(eraGame(rebootable))).toEqual(ids)
+    expect(earnedIds(eraGame(rebootable))).toEqual(expect.arrayContaining(ids))
   })
 })
 
 describe('Level power achievements', () => {
-  it('start at 1.0; each tier at level 10 adds 0.05, reaching 1.5 with all ten', () => {
+  it('start at 1.0; each tier at its required level adds 0.05, reaching 1.5 with all ten', () => {
     const base = createInitialGameState()
     expect(getLevelMultiplierBase(base)).toBe(1)
-    const levels = n => ({ ...base, purchaseLevels: { ...base.purchaseLevels, ...Object.fromEntries(TIER_DEFINITIONS.slice(0, n).map(t => [t.id, 10])) } })
+    const levels = n => ({ ...base, purchaseLevels: { ...base.purchaseLevels, ...Object.fromEntries(TIER_DEFINITIONS.slice(0, n).map((t, i) => [t.id, getLevelPowerAchievementLevel(i + 1)])) } })
     expect(getLevelMultiplierBase(detectAchievements(levels(1)))).toBe(1.05)
     expect(getLevelMultiplierBase(detectAchievements(levels(4)))).toBe(1.2)
     expect(getLevelMultiplierBase(detectAchievements(levels(10)))).toBe(1.5)
+  })
+
+  it('the required level is 5 for tiers 1–5, then the tier number (6, 7, 8, 9, 10)', () => {
+    expect([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(getLevelPowerAchievementLevel)).toEqual([5, 5, 5, 5, 5, 6, 7, 8, 9, 10])
+    const base = createInitialGameState()
+    // One level short of every requirement earns nothing; exactly the requirement earns that tier only.
+    const short = { ...base, purchaseLevels: { ...base.purchaseLevels, ...Object.fromEntries(TIER_DEFINITIONS.map((t, i) => [t.id, getLevelPowerAchievementLevel(i + 1) - 1])) } }
+    expect(getLevelMultiplierBase(detectAchievements(short))).toBe(1)
+    const tier7 = { ...base, purchaseLevels: { ...base.purchaseLevels, tier07: 7 } }
+    expect(isAchievementEarned(detectAchievements(tier7), 'levelPower7')).toBe(true)
+    expect(isAchievementEarned(detectAchievements({ ...base, purchaseLevels: { ...base.purchaseLevels, tier07: 6 } }), 'levelPower7')).toBe(false)
+    expect(isAchievementEarned(detectAchievements({ ...base, purchaseLevels: { ...base.purchaseLevels, tier02: 5 } }), 'levelPower2')).toBe(true)
   })
 
   it('getPurchaseMilestoneMultiplier uses the supplied base', () => {
@@ -182,7 +210,7 @@ describe('Level power achievements', () => {
         ...base,
         resources: { ...base.resources, [MONEY_ID]: 0 },
         owned: { ...base.owned, tier01: 100 },
-        purchaseLevels: { ...base.purchaseLevels, tier01: 5 },
+        purchaseLevels: { ...base.purchaseLevels, tier01: 4 }, // below tier01's Level power requirement (5), so 'none' stays at 1.0
         achievements: { counters: { pings: 0 }, earned: earnedAll ? Object.fromEntries(TIER_DEFINITIONS.map((_, i) => [`levelPower${i + 1}`, true])) : {} },
       }
       let next = state
@@ -192,8 +220,8 @@ describe('Level power achievements', () => {
     const plain = run(false)
     const boosted = run(true)
     expect(plain).toBeGreaterThan(0)
-    // tier01 at level 5 has 4 completed levels: (1.5 / 1.0) ** 4 = 5.0625x
-    expect(boosted / plain).toBeGreaterThan(4.5)
+    // tier01 at level 4 has 3 completed levels: (1.5 / 1.0) ** 3 = 3.375x
+    expect(boosted / plain).toBeGreaterThan(3)
   })
 
   it('cost spacing grows for a higher tier too: tier03 gaps 3 for 10 increments, then 4', () => {
@@ -337,5 +365,162 @@ describe('getAchievementProgress / getAchievementReward', () => {
   it('rewards are the bonus text, or none (stars are score, not a reward)', () => {
     expect(getAchievementReward({ bonus: null })).toBeNull()
     expect(getAchievementReward({ bonus: 'does X' })).toBe('does X')
+  })
+})
+
+describe('Power, Purge and Reboot achievements (#1051)', () => {
+  const base = () => createInitialGameState()
+  const withCounters = (state, counters) => ({ ...state, achievements: { ...state.achievements, counters: { ...state.achievements.counters, ...counters } } })
+
+  it('lifetime Purges survive Reboot and earn the Purge count achievements from far past their point', () => {
+    const s = { ...base(), purge: { ...base().purge, count: 0 }, achievements: { earned: {}, counters: { pings: 0, purges: 70 } } }
+    const next = detectAchievements(s)
+    for (const id of ['startAllOver', 'tenTypes', 'hex10', 'bit64']) expect(isAchievementEarned(next, id)).toBe(true)
+  })
+
+  it('a Purge bumps the lifetime count, and earns Look ma, no hands only without a manual purchase', () => {
+    const ready = { ...base(), resources: { ...base().resources, [MONEY_ID]: PURGE_THRESHOLD } }
+    const hands = purgeGame(ready)
+    expect(hands.achievements.counters.purges).toBe(1)
+    expect(isAchievementEarned(hands, 'noHands')).toBe(true)
+    const manual = purgeGame({ ...ready, manualPurchaseThisCycle: true })
+    expect(isAchievementEarned(manual, 'noHands')).toBe(false)
+    expect(manual.manualPurchaseThisCycle).toBe(false)
+  })
+
+  it('manual purchase mark is set by a successful manual buy and carried through Scale Up', () => {
+    const state = { ...base(), resources: { ...base().resources, [MONEY_ID]: 1e6 } }
+    const tier = TIER_DEFINITIONS[0].id
+    const bought = withManualPurchaseMark(buyTierQuantity(tier, 1))(state)
+    expect(bought.manualPurchaseThisCycle).toBe(true)
+    const nothing = withManualPurchaseMark(buyTierQuantity(tier, 1))(base())
+    expect(nothing.manualPurchaseThisCycle).toBe(false)
+    expect(buyTierQuantity(tier, 1)(state).manualPurchaseThisCycle).toBe(false)
+  })
+
+  it('a Reboot records Kernels, Kernel panic (two within an hour of play) and Reformat is counted', () => {
+    const ready = () => ({ ...base(), purge: { ...base().purge, points: 1e100 } })
+    const first = eraGame(ready())
+    expect(isAchievementEarned(first, 'offAndOn')).toBe(true)
+    expect(first.achievements.counters.kernelsEarned).toBeGreaterThan(0)
+    expect(isAchievementEarned(first, 'kernelPanic')).toBe(false)
+    const second = eraGame({ ...first, purge: { ...first.purge, points: 1e100 }, activePlaySeconds: first.activePlaySeconds + 600 })
+    expect(isAchievementEarned(second, 'kernelPanic')).toBe(true)
+    const late = eraGame({ ...first, purge: { ...first.purge, points: 1e100 }, activePlaySeconds: first.activePlaySeconds + 7200 })
+    expect(isAchievementEarned(late, 'kernelPanic')).toBe(false)
+    expect(isAchievementEarned(resetByteFoundry(base()), 'rmRf')).toBe(true)
+  })
+
+  it('Popcorn needs 100 lifetime Kernels', () => {
+    expect(isAchievementEarned(detectAchievements(withCounters(base(), { kernelsEarned: 99 })), 'popcorn')).toBe(false)
+    expect(isAchievementEarned(detectAchievements(withCounters(base(), { kernelsEarned: 100 })), 'popcorn')).toBe(true)
+  })
+
+  it('Remind me later counts continuous unclaimed-Purge seconds and resets when claimed', () => {
+    const frozen = { ...base(), resources: { ...base().resources, [MONEY_ID]: PURGE_THRESHOLD } }
+    const half = tickGame(30)(frozen)
+    expect(half.achievements.counters.purgeWaitSeconds).toBe(30)
+    expect(isAchievementEarned(half, 'remindMeLater')).toBe(false)
+    expect(isAchievementEarned(tickGame(30)(half), 'remindMeLater')).toBe(true)
+    const claimed = tickGame(1)({ ...half, resources: { ...half.resources, [MONEY_ID]: 0 } })
+    expect(claimed.achievements.counters.purgeWaitSeconds).toBe(0)
+  })
+
+  it('Compression, Zip bomb, Auto-Purge and Overflow achievements read current state', () => {
+    const s = detectAchievements({ ...base(), prestigeDoublePpLevel: 6 })
+    for (const id of ['lossless', 'middleOut', 'zipBomb']) expect(isAchievementEarned(s, id)).toBe(true)
+    expect(isAchievementEarned(detectAchievements({ ...base(), prestigeDoublePpLevel: 4 }), 'zipBomb')).toBe(false)
+    const fast = detectAchievements({ ...base(), autoPurge: 1, automationIntervalLevels: { ...base().automationIntervalLevels, purge: 100 } })
+    expect(isAchievementEarned(fast, 'whileTrue')).toBe(true)
+    const overflow = detectAchievements({ ...base(), purge: { ...base().purge, unboundedUnlocked: true }, resources: { ...base().resources, [MONEY_ID]: PURGE_THRESHOLD } })
+    expect(isAchievementEarned(overflow, 'notABug')).toBe(true)
+    expect(isAchievementEarned(detectAchievements({ ...base(), resources: { ...base().resources, [MONEY_ID]: PURGE_THRESHOLD } }), 'notABug')).toBe(false)
+  })
+
+  it('autobuyer achievements and Ping while fully automated', () => {
+    const some = { ...base(), autobuyers: { ...base().autobuyers, [TIER_DEFINITIONS[0].id]: 1 } }
+    expect(isAchievementEarned(detectAchievements(some), 'scriptKiddie')).toBe(true)
+    expect(isAchievementEarned(detectAchievements(some), 'cronJob')).toBe(false)
+    const all = { ...base(), autobuyers: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 1])) }
+    expect(isAchievementEarned(detectAchievements(all), 'cronJob')).toBe(true)
+    expect(isAchievementEarned(tapIntroBit(all), 'stillClicker')).toBe(true)
+    expect(isAchievementEarned(tapIntroBit(some), 'stillClicker')).toBe(false)
+  })
+
+  it('Power achievements: page, Battery, Fusion, Turbo and Stack Overflow', () => {
+    const intro = patch => ({ ...base(), intro: { ...base().intro, ...patch } })
+    expect(isAchievementEarned(detectAchievements(intro({ computeCoresEverEarned: 1 })), 'powerUser')).toBe(true)
+    const battery = detectAchievements(intro({ computeClusters: 1 }))
+    expect(isAchievementEarned(battery, 'batteriesIncluded')).toBe(true)
+    expect(isAchievementEarned(battery, 'coldFusion')).toBe(false)
+    expect(isAchievementEarned(detectAchievements(intro({ computeMegacomputers: 1 })), 'coldFusion')).toBe(true)
+    const boosted = activateComputeBoost('burst', 1)({ ...base(), intro: { ...base().intro, computeBoosts: {}, ...Object.fromEntries(COMPUTE_BOOST_TIER_FIELDS.map(f => [f, COMPUTE_BOOST_MAX_STACKS + 1])) } })
+    expect(boosted.achievements.counters.turboBoosts).toBe(1)
+    let stacked = boosted
+    for (let i = 0; i < COMPUTE_BOOST_MAX_STACKS; i += 1) stacked = stackComputeBoost('burst')(stacked)
+    expect(isAchievementEarned(stacked, 'stackOverflow')).toBe(true)
+  })
+})
+
+describe('review follow-ups (#1199)', () => {
+  it('Reboot seeds lifetime Purges and Kernels from legacy state', () => {
+    const s = createInitialGameState()
+    const legacy = { ...s, purge: { ...s.purge, count: 63, points: 1e100 }, eons: { balance: 99 } }
+    const after = eraGame(legacy)
+    expect(after.achievements.counters.purges).toBe(63)
+    expect(after.achievements.counters.kernelsEarned).toBeGreaterThanOrEqual(100)
+    expect(isAchievementEarned(after, 'popcorn')).toBe(true)
+  })
+
+  it('a Purge in Overflow past a Googol earns the achievement even though it resets the balance', () => {
+    const s = createInitialGameState()
+    const ready = { ...s, purge: { ...s.purge, unboundedUnlocked: true }, resources: { ...s.resources, [MONEY_ID]: PURGE_THRESHOLD } }
+    expect(isAchievementEarned(purgeGame(ready), 'notABug')).toBe(true)
+  })
+
+  it('Power user follows the Power tab predicate (Capacity unlocks it)', () => {
+    const s = createInitialGameState()
+    expect(isAchievementEarned(detectAchievements({ ...s, intro: { ...s.intro, capacity: 1e12 } }), 'powerUser')).toBe(true)
+  })
+})
+
+describe('review follow-ups (#1199, round 2)', () => {
+  it('Popcorn counts an unspent Kernel balance on load', () => {
+    const s = createInitialGameState()
+    expect(isAchievementEarned(detectAchievements({ ...s, eons: { balance: 100 } }), 'popcorn')).toBe(true)
+  })
+
+  it('records Overflow on a repeat challenge completion, which awards no Purge count', () => {
+    const s = createInitialGameState()
+    const id = CHALLENGE_DEFINITIONS[0].id
+    const inChallenge = {
+      ...s,
+      purge: { ...s.purge, unboundedUnlocked: true },
+      challenges: { ...s.challenges, active: id, completed: { [id]: true } },
+    }
+    const ready = { ...inChallenge, resources: { ...inChallenge.resources, [MONEY_ID]: Math.max(PURGE_THRESHOLD, getPurgeGoalBits(inChallenge)) } }
+    const next = purgeGame(ready)
+    expect(next.purge.count).toBe(ready.purge.count) // a replay awards no Purge
+    expect(next.achievements.counters.overflowPurges).toBe(1)
+    expect(isAchievementEarned(next, 'notABug')).toBe(true)
+  })
+
+  it('records Overflow on a tick that exceeds a Googol even when Auto Overclock resets the balance in that tick', () => {
+    const s = createInitialGameState()
+    const ready = {
+      ...s,
+      purge: { ...s.purge, unboundedUnlocked: true },
+      resources: { ...s.resources, [MONEY_ID]: PURGE_THRESHOLD },
+      autoPurge: null,
+      autoOverclock: true,
+      purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 6])),
+      owned: { ...s.owned, ...Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 1])) },
+      automationAttemptBudgets: { speedUp: 1, scaleUp: 1, overclock: 1 },
+    }
+    const next = tickGame(120)(ready)
+    expect(next.overclockLastClaimCompletedLevels).not.toBeNull() // the Overclock reset ran this tick
+    expect(next.resources[MONEY_ID]).toBeLessThan(PURGE_THRESHOLD) // ...and discarded the past-Googol balance
+    expect(next.achievements.counters.overflowPurges).toBe(1)
+    expect(isAchievementEarned(next, 'notABug')).toBe(true)
   })
 })
