@@ -18,11 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Three **Overclock step** achievements, each making later Overclocks need 1 fewer extra completed last-tier level (the step now starts at +4 and drops to +1): claim the first Overclock of a Purge at 6+ completed levels; claim two Overclocks in one Purge without buying any Accelerate; and, after DeGoogol, claim an Overclock at 12+ completed levels. They are earned in order (each counts only after the previous one), from new claims only (not retroactive).
 - Achievement toasts: each earned achievement (including those earned while away) shows a stacked toast for 5 s, started 0.25 s apart.
 
-- Ten **Level power** achievements (reach level 5 on each of the first five tiers, then level 6, 7, 8, 9 and 10 on the next five; earned on the next tick if a save already meets them) each add 0.05 to the per-level production multiplier. It now starts at ×1.0 (was ×1.25) and reaches ×1.5 once all ten are earned, so the first Purge is slower and later ones faster. Daily challenges' fallback start balance rose to 1,000,000 B (generator version 6).
+- Ten **Level power** achievements (complete 5 levels on each of the first five tiers, then 6, 7, 8, 9 and 10 on the next five; earned on the next tick if a save already meets them) each add 0.05 to the per-level production multiplier. It now starts at ×1.0 (was ×1.25) and reaches ×1.5 once all ten are earned, so the first Purge is slower and later ones faster. Daily challenges' fallback start balance rose to 1,000,000 B (generator version 6).
 
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
+- **Challenge balance (#1043):** retuned run-wide levers to the difficulty bands — F3 cost ×6→×3, F7 ×5→×3, F16 ×30→×20, F6 Scale Up ^3→^2 / Accelerate ^2→^1.5 (was faster than a normal run), F21 now also costs ×30 (it was inert), F24 adds costs ×40, F25 adds costs ×30.
 - **Purge Points now follow the actual powers of ten in your balance** instead of the excess over 1 Googol: 100 powers ÷ 64 = 1 PP at Googol, and each Compression halves the divisor (100 ÷ 32 = 3 PP after one Compression, then 6, 12, 25, 50, 100). The power count stays at 100 until Overflow mode, then keeps growing.
 - Hyperscalers now build their Flops boost up every second of a cycle on every tier (about +36% per hour each, until the next Purge, Scale Up or Overclock) instead of a flat +0.01%. Kernels per Reboot are now ×10 per Kernel amplifier level (was +1).
 - PWA manifest declares `orientation: 'any'` so installed tablets can rotate (groundwork for large-screen layouts; no visible layout change).
@@ -43,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Level power achievements** now unlock after *completing* the stated number of levels (previously one level early); progress bars count completed levels. Daily challenge definitions regenerate (generator v9).
 - Power: Boost presets are no longer disabled by a pending Disk Fill or an armed Provision Disk (blockers invisible on the Power screen) — holding a token is enough.
 
 - A cost within float error of a clean multiple of 8 Bits (e.g. `8e92 b`) now reads `1e92 B` instead of `9.999e91 B`.
