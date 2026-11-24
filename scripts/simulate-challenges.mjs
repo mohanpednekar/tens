@@ -13,7 +13,7 @@
 // Starting saves (assumptions): the Foundry (Disks/Lakes/Capacity) is carried from a bot career of
 // CAREER_CYCLES cycles; purge.count is then set to the representative Purge (~1.5 × the challenge's unlock
 // Purge), PP is left as banked by the career, and automation milestones are re-applied.
-// No PP automations are bought and no achievement bonuses apply.
+// No PP automations are bought; achievement bonuses are NOT disabled (the career earns them, e.g. Level power).
 import { register } from 'node:module'
 import { writeFileSync } from 'node:fs'
 
@@ -352,7 +352,7 @@ for (const def of defs) {
 const out = [
   '## Challenge runs (#1043)',
   '',
-  `Step ${DT}s; Foundry carried from a ${CAREER_CYCLES}-cycle bot career; no PP automations or achievement bonuses; bands: F1–F10 1–2×, F11–F20 2–10×, F21–F25 10–100×.`,
+  `Step ${DT}s; Foundry carried from a ${CAREER_CYCLES}-cycle bot career; no PP automations; achievement bonuses the bot earns in its career are NOT disabled; bands: F1–F10 1–2×, F11–F20 2–10×, F21–F25 10–100×.`,
   '',
   '| Challenge | Purge | Normal run | Challenge run | Ratio | Notes |',
   '|---|---|---|---|---|---|',
