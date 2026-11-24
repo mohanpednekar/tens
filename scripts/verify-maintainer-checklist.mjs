@@ -89,8 +89,9 @@ function runChecks(repo) {
   try {
     gh(['project', 'list', '--owner', repo.split('/')[0], '--limit', '1']);
     projectsScope = true;
-  } catch {
-    projectsScope = false;
+  } catch (e) {
+    // Only a missing-scope error is a definite FAIL; network/other errors stay UNKNOWN.
+    projectsScope = /scope|permission|forbidden|403/i.test(`${e?.stderr ?? ''}${e?.message ?? ''}`) ? false : null;
   }
   const contexts = protection?.required_status_checks
     ? [
