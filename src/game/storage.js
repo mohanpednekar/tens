@@ -1,5 +1,5 @@
 import { applyAutobuyerMilestones, applyFlopsAutobuyerMilestones, autoCompleteChallenges, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
-import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES } from './layers'
+import { EON_UPGRADE_DEFINITIONS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES } from './layers'
 import { adaptSaveForCurrentSchema, migrateToV3, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 
@@ -522,6 +522,17 @@ const applyPendingComputeGrants = (intro, pendingComputeGrants) => {
 
 // Merge a saved state with fresh defaults so newly added fields are present on load.
 // Schema transforms run in save-migration/ on every load before this runs.
+// Saved Kernel-shop levels are clamped to [0, maxLevel] so a hand-edited or corrupt save can't exceed a cap.
+const mergeEonsUpgrades = (fresh, saved) => {
+  const merged = { ...fresh, ...(saved ?? {}) }
+  EON_UPGRADE_DEFINITIONS.forEach(def => {
+    const raw = Number(merged[def.levelField])
+    const level = Number.isFinite(raw) ? Math.max(0, Math.floor(raw)) : 0
+    merged[def.levelField] = def.maxLevel != null ? Math.min(level, def.maxLevel) : level
+  })
+  return merged
+}
+
 const mergeState = rawSaved => {
   const saved = rawSaved
   const fresh = createInitialGameState()
@@ -642,7 +653,8 @@ const mergeState = rawSaved => {
     era: { ...fresh.era, ...(saved.era ?? {}) },
     eons: { ...fresh.eons, ...(saved.eons ?? {}) },
     hyperscalerCount: saved.hyperscalerCount ?? fresh.hyperscalerCount,
-    eonsUpgrades: { ...fresh.eonsUpgrades, ...(saved.eonsUpgrades ?? {}) },
+    eonsUpgrades: mergeEonsUpgrades(fresh.eonsUpgrades, saved.eonsUpgrades),
+    autoPurgeSettings: { ...fresh.autoPurgeSettings, ...(saved.autoPurgeSettings ?? {}) },
     computeFlopsAutobuyers: mergeTierMap(fresh.computeFlopsAutobuyers, saved.computeFlopsAutobuyers),
     computeFlopsAutobuyersEnabled: mergeTierMap(fresh.computeFlopsAutobuyersEnabled, saved.computeFlopsAutobuyersEnabled),
     computeFlopsAutobuyerAttemptBudgets: mergeTierMap(

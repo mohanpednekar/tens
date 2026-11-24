@@ -877,7 +877,7 @@ const MainPage = ({ game }) => {
   // Passive Purge-count production-speed bonus: flat ×1 until bought with 1 PP (see engine.js).
   const prestigeBonusUnlocked = isPrestigeSpeedBonusUnlocked(state)
   const prestigeBonus = getPrestigeProductionMultiplier(purge.count, prestigeBonusUnlocked)
-  const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel)
+  const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel, isOverflowModeUnlocked(state))
   const purgeProgressPercent = getPurgePercent(state.resources[MONEY_ID], getPurgeGoalBits(state))
   const bytePowerProgressFraction = getNextBytePowerProgressFraction(state.resources[MONEY_ID])
   const bytePowerProgressPercent = Math.round(bytePowerProgressFraction * 100)

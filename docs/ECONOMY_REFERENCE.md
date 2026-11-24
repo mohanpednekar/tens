@@ -1546,7 +1546,7 @@ ticks, before autobuyers). For each Flops tier with owned &gt; 0, adds
 `computeFlops.cumulativeBoost[boostsTierId]`. Also latches page unlock when PP threshold is met.
 
 **Production:** `getComputeFlopsTierProductionMultiplier(state, tierId)` returns
-`1 + cumulativeBoost[tierId] + getHyperscalerFlopsBoostRate(state)`, multiplied into each tier's
+`1 + cumulativeBoost[tierId]` (hyperscalers accrue into `cumulativeBoost` in `tickComputeFlops`, below), multiplied into each tier's
 production batch in `tickGame`.
 
 **Display:** `getComputeFlopsTotal(state)` computes the weighted hero total
@@ -1564,12 +1564,13 @@ Gate-exempt alongside Boosters/Manual/More (`GATE_EXEMPT_PAGES` includes `'compu
 
 Prestiging awards **Prestige Points (PP)**, a permanent, cumulative currency (`purge.points`) that
 never resets and stacks across every future prestige (see `docs/DESIGN_HISTORY.md` for why this
-replaced direct production doubling). `getPrestigePointsAwarded(money, doublePpLevel)` requires Money ≥
-`PURGE_THRESHOLD` (1 Googol Bytes in Bits); below that it returns 0. At threshold it awards at
-least 1 PP, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64) additional money-exponent powers beyond
-Googol's own 10^100 exponent — scaled by permanent Compression upgrades (`prestigeDoublePpLevel`: each
-level halves powers-per-PP until 1, then doubles PP-per-power; cost `10^(level+1)` PP via
-`buyPrestigeDoublePp`). `purgeGame` adds newly-awarded points on top of any already-unspent balance.
+replaced direct production doubling). `getPrestigePointsAwarded(money, doublePpLevel, unbounded)` requires Money ≥
+`PURGE_THRESHOLD` (1 Googol Bytes in Bits); below that it returns 0. Otherwise it awards
+`floor(powers / powersPerPp) × ppPerPower`, where `powers` is the money's ACTUAL Bytes exponent (not the excess over
+Googol) held at 100 until Overflow mode (`unbounded` = `isOverflowModeUnlocked`, after which it grows without bound) and
+`powersPerPp` starts at `PRESTIGE_POWERS_PER_PP_BASE` (64): 100/64 = 1 PP at Googol, then 100/32 = 3, 6, 12, 25, 50, 100 after
+Compression levels 1–6 (`prestigeDoublePpLevel`; cost `10^(level+1)` PP via `buyPrestigeDoublePp`), then PP-per-power doubles
+per level (level 7 = 200). `purgeGame` adds newly-awarded points on top of any already-unspent balance.
 
 Until Overflow mode is unlocked, reaching `PURGE_THRESHOLD` freezes production until Prestige
 (`isProductionFrozen`). `isOverflowModeUnlocked` becomes true once Auto Purge is bought and its
@@ -1656,8 +1657,7 @@ Engine: `getActiveChallenge`, `isChallengeCompleted`, `isChallengeUnlocked` (tar
 **Eligibility:** `isEraEligible(state)` when unspent `purge.points >= ERA_ELIGIBILITY_PP`
 (`GOOGOL` — 1 Googol PP balance, not lifetime earned).
 
-**Award:** `getEonsAwarded(state)` returns `1 + eonAmplifierLevel * EON_AMPLIFIER_AWARD_PER_LEVEL`
-(Kernel Amplifier shop upgrade deferred to #414).
+**Award:** `getEonsAwarded(state)` returns `EON_AMPLIFIER_AWARD_BASE ** eonAmplifierLevel` (10^L: 1, 10, … 1e9).
 
 **On `eraGame` — resets:** full Foundry (generator upgrades, Data Stream balance, Disks, Data Lakes,
 compute ladder entities, `intro.foundryResetCaps`), ordinary Factory cycle (same fields as `purgeGame`),
@@ -1686,9 +1686,26 @@ banked in the budget for a later tick, same end result as buying one at a time.
 
 **Hyperscalers:** `buyHyperscaler` spends escalating Kernels (`HYPERSCALER_EON_COST_BASE` ×
 `HYPERSCALER_EON_COST_MULTIPLIER^owned`). Each adds permanent rate via
-`getHyperscalerFlopsBoostRate`, folded into `getComputeFlopsTierProductionMultiplier` alongside
-per-cycle `cumulativeBoost`. Hyperscaler Efficiency levels add
-`HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL` per hyperscaler (shop deferred to #414).
+`getHyperscalerFlopsBoostRate` (per second); `tickComputeFlops` adds `rate × elapsedSeconds` to EVERY
+tier's per-cycle `cumulativeBoost` (even with no Flops owned), so the boost builds up over a cycle
+(~+36%/h each) until the next Purge, Scale Up or Overclock (all three reset `cumulativeBoost`); there is no fixed production term. Hyperscaler Efficiency levels add
+`HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL` per hyperscaler.
+
+**Kernel shop (#414, Firmware → ⏻ Kernels tab, shown once `era.count ≥ 1` or Kernels > 0):**
+`EON_UPGRADE_DEFINITIONS` (cost = `costBase × costGrowth^level`): Hyperscaler Efficiency 1·10^L Kernels,
+cap 10; Kernel Amplifier 10·10^L, cap 9; Auto Hyperscaler (`AUTO_HYPERSCALER_EON_COST` 100, one-time,
+`autoHyperscalerUnlocked` + pause `autoHyperscalerEnabled`) — `tickAutoHyperscaler` in `tickGame` buys every
+affordable hyperscaler. `buyEonUpgrade(id)`/`canBuyEonUpgrade`/`getEonUpgradeCost`/`getEonUpgradeLevel`/
+`isEonUpgradeMaxed`, `buyAutoHyperscaler`, `setAutoHyperscalerEnabled`; invalid buys return the same state.
+`mergeState` clamps saved levels to `[0, maxLevel]`. Shop pacing is unmeasured: `simulate-run-times`' `reboot-simulation.mjs` (greedy PP policy, no Overflow-mode lever) measured it only partially (see DESIGN_HISTORY "Kernel shop").
+
+**Auto Purge conditions:** `autoPurgeSettings` `{ targetPpExponent (0–`AUTO_PURGE_MAX_PP_EXPONENT`), minSeconds
+(`AUTO_PURGE_MIN_SECONDS_OPTIONS`), bestMultiplier (`AUTO_PURGE_BEST_MULTIPLIER_OPTIONS`) }`, 0 = off, permanent. `isAutoPurgeReady`
+gates both Auto Purge firing sites in `tickGame` (after Money ≥ Purge goal and the attempt budget): `minSeconds` ≤
+`purge.cycleSeconds` (advanced by the exported `tickGame` wrapper; reset by every Purge/Reboot; a frozen no-Auto-Purge tick stays a
+same-reference no-op), and — Overflow mode only — pending award ≥ 10^`targetPpExponent` and ≥ `bestMultiplier` ×
+`purge.highestAward` (largest award since the last Reboot, kept by `resetFactoryCycle`). `setAutoPurgeSetting(key, value)`;
+invalid/unchanged = same state. UI: Firmware → Automation, under the Global Automation rows (steppers).
 
 **Hook:** `actions.eraAscend()` / `actions.buyHyperscaler()` / `setComputeFlopsAutobuyerEnabled`
 in `useIncrementalGame.js`. UI trigger deferred to #411. `mergeState` also calls
@@ -2310,6 +2327,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // buy/upgrade), null = not yet bought: how many times
                                                           // PP have been spent to make Prestige automatic and
                                                           // faster (see applyAutobuyerMilestones/tickGame) — never reset
+  autoPurgeSettings: { targetPpExponent: 0, minSeconds: 0, bestMultiplier: 0 }, // permanent; Auto Purge conditions (0 = off), carried through Purge/Scale Up/Overclock/Reboot
   autoPurgeEnabled: true,                             // permanent GLOBAL flag, default true: whether
                                                           // Auto Purge (once bought — see autoPurge above)
                                                           // currently acts — split "unlocked" from "enabled" so
@@ -2411,7 +2429,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // successor. Recorded successors re-reveal at predecessor
                                                           // raw level 2; first-time recording requires the claim.
                                                           // Prestige and Overclock reset this to tier01 only.
-  purge:   { xp: 0, points: 0, count: 0, highestMilestone: 1 }, // xp is earned via money milestones (see
+  purge:   { xp: 0, points: 0, count: 0, highestMilestone: 1, cycleSeconds: 0, highestAward: 0 }, // cycleSeconds: seconds since last Purge (resets on Purge/Reboot); highestAward: max PP award since last Reboot (Purge keeps the max, Reboot resets) // xp is earned via money milestones (see
                                                           // checkMilestones); its one use is funding
                                                           // consumeXpForLastTierTickspeed (see "The last
                                                           // tier's XP-funded tickspeed" above) — otherwise
@@ -2862,17 +2880,18 @@ purchases were manual or automatic.
 | `getAutoPurgeAttemptRate` | `state → number` | `1 / getAutomationIntervalSeconds(state, 'purge')` — attempts per second (base interval 1024 s, ×0.9 per speed level) |
 | `getGlobalTickspeedMultiplierCost` | `currentLevel → number` | `10 ** (currentLevel + 1)` — the Money cost to activate (level 0→1, costing 10 Money) or upgrade (level N→N+1) the global tickspeed multiplier; doubles the exponent each level (100, 1000, …) |
 | `getGlobalTickspeedProductionMultiplier` | `(level, overclockLevel = 0) → number` | `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockLevel)) ** level`; every level uses the same step and milestones add no bonus |
-| `getPrestigePointsAwarded` | `(money, doublePpLevel = 0) → number` | 0 below `PURGE_THRESHOLD`; otherwise `(1 + floor(excessPowers / getPrestigePowersPerPp(doublePpLevel))) * getPrestigePpPerPower(doublePpLevel)` where `excessPowers = max(0, getMoneyExponent(money) - floor(log10(GOOGOL)))` — 1 base PP at 1 Googol Bytes, +1 PP unit per 64 excess powers (halved by each Compression upgrade through level 6, then PP-per-power doubles) |
+| `getPrestigePointsAwarded` | `(money, doublePpLevel = 0, unbounded = false) → number` | 0 below `PURGE_THRESHOLD`; otherwise `floor(powers / getPrestigePowersPerPp(doublePpLevel)) * getPrestigePpPerPower(doublePpLevel)` where `powers` = the Bytes exponent (`getMoneyExponent(money / BITS_PER_BYTE)`), held at 100 unless `unbounded` — 100/64 = 1 PP at Googol, 100/32 = 3 after one Compression (powers-per-PP halves through level 6, then PP-per-power doubles) |
 | `getPrestigePowersPerPp` | `doublePpLevel → number` | `PRESTIGE_POWERS_PER_PP_BASE / 2^min(level, log2(64))` — 64 down to 1 |
 | `getPrestigePpPerPower` | `doublePpLevel → number` | `2^max(0, level - log2(64))` — 1 until level 7, then 2, 4, … |
 | `getPrestigeDoublePpUpgradeCost` | `currentLevel → number` | `10^(currentLevel + 1)` PP |
 | `buyPrestigeDoublePp` | `state → state` | Spends `getPrestigeDoublePpUpgradeCost(prestigeDoublePpLevel)` PP and increments `prestigeDoublePpLevel`; not blocked by production freeze |
 | `isOverflowModeUnlocked` | `state → boolean` | `purge.unboundedUnlocked` OR (Auto Purge bought AND its interval ≤ `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`, 1 s) |
 | `isEraEligible` | `state → boolean` | `purge.points >= ERA_ELIGIBILITY_PP` (1 Googol PP balance) |
-| `getEonsAwarded` | `state → number` | `1 + eonAmplifierLevel * EON_AMPLIFIER_AWARD_PER_LEVEL` Kernels awarded on Reboot |
+| `getEonsAwarded` | `state → number` | `EON_AMPLIFIER_AWARD_BASE ** eonAmplifierLevel` Kernels awarded on Reboot |
 | `eraGame` | `state → state` | Requires `isEraEligible`; meta-prestige reset/carry per "Reboot and Kernels" above; same-reference no-op when ineligible |
 | `getHyperscalerFlopsBoostRate` | `state → number` | Permanent hyperscaler Flops rate (0.01%/s each at base, +efficiency levels) |
 | `buyHyperscaler` | `state → state` | Spends escalating Kernels; increments `hyperscalerCount`; no-op if unaffordable |
+| `buyEonUpgrade` / `buyAutoHyperscaler` / `tickAutoHyperscaler` | `id → state → state` / `state → state` | Kernel shop buys + auto-buy tick (see "Kernel shop" above) |
 | `applyFlopsAutobuyerMilestones` | `state → state` | Unlocks Flops autobuyers free at Era milestones; called from `eraGame` |
 | `setComputeFlopsAutobuyerEnabled` | `(flopId, enabled) → state → state` | Pause/resume a unlocked Flops autobuyer |
 | `getPrestigeProductionMultiplier` | `(purgeCount, unlocked = true) → number` | `0` Purges → `1`; 1 Purge → `PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER` (1.1); n ≥ 2 → `1 + log10(n)`, when `unlocked`, else `1`. Companion `isPrestigeSpeedBonusUnlocked(state)` (the stored flag); `buyPrestigeSpeedBonus` is the 1 PP purchase. |
