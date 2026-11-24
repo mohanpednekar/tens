@@ -1399,6 +1399,20 @@ describe('challenge state persistence (#1044)', () => {
   })
 })
 
+describe('mergeState Kernel shop clamping (#414)', () => {
+  it('clamps saved Kernel upgrade levels to [0, maxLevel] and fills new fields', () => {
+    localStorage.clear()
+    localStorage.setItem('tens_game_state', JSON.stringify({
+      saveSchemaVersion: 3,
+      eonsUpgrades: { eonAmplifierLevel: 99, hyperscalerEfficiencyLevel: -4 },
+    }))
+    const loaded = loadGameState()
+    expect(loaded.eonsUpgrades.eonAmplifierLevel).toBe(9)
+    expect(loaded.eonsUpgrades.hyperscalerEfficiencyLevel).toBe(0)
+    expect(loaded.eonsUpgrades.autoHyperscalerUnlocked).toBe(false)
+  })
+})
+
 describe('manualPurchaseThisCycle legacy migration', () => {
   beforeEach(() => localStorage.clear())
   it.each([['scaleUpCount'], ['speedUpCount']])('treats a legacy save after a Scale Up (%s, purchased all zero) as having bought manually', key => {

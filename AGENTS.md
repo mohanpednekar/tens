@@ -191,7 +191,7 @@ already have tried and rejected.
 
 Once **Overflow mode** is unlocked (`isOverflowModeUnlocked`: Auto-Purge's interval upgraded to 1 s
 or less; permanent latch `purge.unboundedUnlocked`), production no longer freezes at 1 Googol Bytes
-and Purge is optional. PP earns 1 per 64 money-exponent powers beyond Googol, improvable via
+and Purge is optional. PP earn floor(money powers of ten / 64) (100 at Googol, unbounded only in Overflow mode), improvable via
 Compression on Firmware → Prestige. The production speed bonus is a one-time 1 PP purchase there (×1.1
 at 1 Purge, then ×(1 + log10 Purges): ×2 at 10, ×3 at 100, ×4 at 1,000), the PP tutorial — see `docs/ECONOMY_REFERENCE.md`.
 
