@@ -105,7 +105,8 @@ describe('--dry-run write boundary', () => {
       expect(calls.length).toBeGreaterThan(0);
       expect(calls.some((c) => /^issue\b/.test(c))).toBe(false);
       // Only read-only lookups: no explicit method, request fields/body, or write subcommands.
-      expect(calls.some((c) => /(^|\s)(-X|--method|-f|-F|--field|--raw-field|--input)(\s|=|$)/.test(c))).toBe(false);
+      // Short flags may carry an attached value (`-XPOST`, `-fname=x`), so match them by prefix.
+      expect(calls.some((c) => /(^|\s)(-[XfF]\S*|(--method|--field|--raw-field|--input)(=\S*)?)(\s|$)/.test(c))).toBe(false);
       expect(calls.every((c) => /^(api |project list )/.test(c))).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
