@@ -69,6 +69,11 @@ export function formatReport(results) {
   return ['STATUS  CHECK                   ITEM', ...rows].join('\n');
 }
 
+/** Pure: classify a failed `gh project list` — auth/scope/permission denials are a definite FAIL, anything else UNKNOWN. */
+export function classifyProjectsError(text) {
+  return /scope|permission|forbidden|unauthori[sz]ed|not accessible|\b40[13]\b/i.test(text) ? false : null;
+}
+
 function gh(args) {
   return execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 }
@@ -91,7 +96,7 @@ function runChecks(repo) {
     projectsScope = true;
   } catch (e) {
     // Only a missing-scope error is a definite FAIL; network/other errors stay UNKNOWN.
-    projectsScope = /scope|permission|forbidden|403/i.test(`${e?.stderr ?? ''}${e?.message ?? ''}`) ? false : null;
+    projectsScope = classifyProjectsError(`${e?.stderr ?? ''}${e?.message ?? ''}`);
   }
   const contexts = protection?.required_status_checks
     ? [

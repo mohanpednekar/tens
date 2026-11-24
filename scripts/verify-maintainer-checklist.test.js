@@ -1,4 +1,4 @@
-import { applyChecks, allVerifiableChecked, formatReport, CHECKS } from './verify-maintainer-checklist.mjs';
+import { applyChecks, allVerifiableChecked, formatReport, classifyProjectsError, CHECKS } from './verify-maintainer-checklist.mjs';
 
 const BODY = [
   '## Outstanding',
@@ -54,5 +54,17 @@ describe('formatReport', () => {
     expect(out).toMatch(/FAIL\s+autoMerge/);
     expect(out).toMatch(/UNKNOWN\s+discussions/);
     expect(out).toMatch(/UNKNOWN\s+codeOwners/);
+  });
+});
+
+describe('classifyProjectsError', () => {
+  it.each([
+    ['error: your authentication token is missing required scopes [read:project]', false],
+    ['Resource not accessible by integration', false],
+    ['HTTP 401: Unauthorized', false],
+    ['HTTP 403: Forbidden', false],
+    ['dial tcp: lookup api.github.com: no such host', null],
+  ])('%s', (text, expected) => {
+    expect(classifyProjectsError(text)).toBe(expected);
   });
 });
