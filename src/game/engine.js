@@ -1,4 +1,4 @@
-import { KERNEL_PANIC_WINDOW_SECONDS, REMIND_ME_LATER_SECONDS, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, BUY_MAX_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, SLEEP_MODE_BASE_CAP_SECONDS, SLEEP_MODE_CAP_STEP_SECONDS, SLEEP_MODE_CAP_UPGRADE_COSTS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, TIER_COST_SPACING_GROWTH_LEVELS, OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL, LEVEL_POWER_ACHIEVEMENT_BONUS, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, RECLAMATION_POOL_THRESHOLDS, RECLAMATION_LEVEL_REWARDS } from './layers.js'
+import { KERNEL_PANIC_WINDOW_SECONDS, REMIND_ME_LATER_SECONDS, DATA_STREAM_SPEED_EXPONENT_BASE, DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED, BUY_MAX_ITERATION_CAP, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_CHARGE_TRANSFER_SECONDS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_CONSOLIDATION_SIZES, DATA_LAKE_THOUSAND_SIZE, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, LAST_TIER_LEVEL_CREDIT_BASE_PERIOD_SECONDS, LAST_TIER_LEVEL_CREDIT_MIN_PERIOD_SECONDS, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PLAYTIME_BONUS_PER_HOUR, PLAYTIME_BONUS_UNLOCK_COST, BUY_MAX_UNLOCK_COST, CACHE_WARM_UNLOCK_COST, SLEEP_MODE_BASE_CAP_SECONDS, SLEEP_MODE_CAP_STEP_SECONDS, SLEEP_MODE_CAP_UPGRADE_COSTS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_FIRST_PURGE_MULTIPLIER, PURGE_THRESHOLD, OVERFLOW_MODE_MAX_INTERVAL_SECONDS, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, TIER_COST_SPACING_GROWTH_LEVELS, OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL, LEVEL_POWER_ACHIEVEMENT_BONUS, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID, AUTOBUYER_BASE_INTERVAL_SECONDS, AUTOMATION_INTERVAL_CONFIG, GLOBAL_AUTOMATION_UNLOCK_PURGES, TIER_TICKSPEED_INTERVAL_CONFIG, AUTOBUYER_INTERVAL_MULTIPLIER, AUTOBUYER_MIN_INTERVAL_SECONDS, AUTOBUYER_BULK_MAX_EXTRA_LEVELS, AUTOBUYER_INTERVAL_UPGRADE_BASE_COST, CHALLENGE_BY_ID, CHALLENGE_DEFINITIONS, CHALLENGE_UNLOCK_PURGE_MULTIPLIER, LIVE_CHALLENGE_IDS, HALF_DUPLEX_PRODUCTION_MULTIPLIER, WRITE_LOCK_HALT_SECONDS, PREMIUM_TIER_COST_MULTIPLIER, HARD_REFRESH_INTERVAL_SECONDS, ADDRESS_SPACE_TIER_COUNT, MEMORY_LEAK_RATE_PER_SECOND, BIT_ROT_GRACE_SECONDS, BIT_ROT_BASE_CORRUPTION, BIT_ROT_DOUBLING_SECONDS, BIT_ROT_CORRUPTION_CAP, BIT_ROT_DISK_RELIEF, HALF_STEP_PRODUCTION_STEP, CLOCK_SKEW_PERIOD_MULTIPLIER, RATE_LIMIT_MAX_LEVELS_ABOVE_BASELINE, CLOCK_DRIFT_INTERVAL_SECONDS, NOISY_NEIGHBOUR_PERIOD_STEP, DUTY_CYCLE_WINDOW_SECONDS, ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, RECLAMATION_POOL_THRESHOLDS, RECLAMATION_LEVEL_REWARDS, AUTO_PURGE_MAX_PP_EXPONENT, AUTO_PURGE_MIN_SECONDS_OPTIONS, AUTO_PURGE_BEST_MULTIPLIER_OPTIONS, EON_AMPLIFIER_AWARD_BASE, EON_UPGRADE_BY_ID, AUTO_HYPERSCALER_EON_COST } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -234,6 +234,10 @@ export const createInitialGameState = () => ({
   // setAutoPurgeEnabled/tickGame. Meaningless while autoPurge is null; toggling it then is a
   // no-op (see setAutoPurgeEnabled).
   autoPurgeEnabled: true,
+  // Optional extra conditions for when Auto Purge fires (see isAutoPurgeReady): purge only once the pending PP
+  // award reaches 10^targetPpExponent, once this cycle has lasted minSeconds, and/or once the award reaches
+  // bestMultiplier × purge.highestAward. 0 = off. Permanent, like the other Auto Purge flags.
+  autoPurgeSettings: { targetPpExponent: 0, minSeconds: 0, bestMultiplier: 0 },
   // Run-scoped global level (not per-tier — there's only one to buy, mirroring autoPurge
   // above), null = not yet bought: how many times Money has been spent on the global tickspeed
   // multiplier (unlocked once at least 1 of the second tier is owned — see
@@ -364,6 +368,10 @@ export const createInitialGameState = () => ({
     // grants points instead of directly doubling production.
     count: 0,
     highestMilestone: getXpMilestoneExponent(MONEY_STARTING_AMOUNT),
+    // Seconds since the last Purge (reset by every Purge/Reboot; only advanced while Auto Purge is acting or production runs).
+    cycleSeconds: 0,
+    // Largest PP award of any Purge since the last Reboot (Auto Purge's "× best" condition).
+    highestAward: 0,
     // Permanent latch: once true (first prestige/Era while Auto-Prestige interval ≤ OVERFLOW_MODE_MAX_INTERVAL_SECONDS, or carried
     // through Era ascension), production never freezes at PURGE_THRESHOLD again — see
     // isOverflowModeUnlocked. Full save Reset only.
@@ -1280,8 +1288,9 @@ export const getComputeFlopsTotal = state =>
     return sum + boost * getComputeFlopsTierWeight(tierIndex)
   }, 0)
 
-// Permanent hyperscaler Flops boost rate (0.01%/s each at base; +efficiency levels) — never resets
-// on ordinary Prestige; persists across Era ascension. Added to every Factory tier's Flops multiplier.
+// Permanent hyperscaler Flops boost RATE per second (0.01%/s each at base; +efficiency levels) — the
+// hyperscalers persist across Purge and Reboot; tickComputeFlops accrues this rate into every Factory
+// tier's per-cycle cumulativeBoost (so the boost builds up over a cycle and resets with it).
 export const getHyperscalerFlopsBoostRate = state => {
   const count = clampNonNegative(state.hyperscalerCount ?? 0)
   if (count <= 0) return 0
@@ -1292,7 +1301,7 @@ export const getHyperscalerFlopsBoostRate = state => {
 }
 
 export const getComputeFlopsTierProductionMultiplier = (state, tierId) =>
-  1 + clampNonNegative(state.computeFlops?.cumulativeBoost?.[tierId] ?? 0) + getHyperscalerFlopsBoostRate(state)
+  1 + clampNonNegative(state.computeFlops?.cumulativeBoost?.[tierId] ?? 0)
 
 export const formatComputeFlopsTotal = value => {
   const safe = clampNonNegative(value)
@@ -1306,10 +1315,10 @@ export const tickComputeFlops = elapsedSeconds => state => {
   const owned = latched.computeFlops?.owned ?? {}
   let changed = false
   const cumulativeBoost = { ...latched.computeFlops.cumulativeBoost }
+  const hyperscalerDelta = getHyperscalerFlopsBoostRate(latched) * elapsedSeconds
   COMPUTE_FLOPS_TIER_DEFINITIONS.forEach(flopTier => {
     const count = clampNonNegative(owned[flopTier.id] ?? 0)
-    if (count <= 0) return
-    const delta = count * COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * elapsedSeconds
+    const delta = count * COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * elapsedSeconds + hyperscalerDelta
     if (delta <= 0) return
     const tierId = flopTier.boostsTierId
     cumulativeBoost[tierId] = clampNonNegative((cumulativeBoost[tierId] ?? 0) + delta)
@@ -1329,7 +1338,7 @@ export const isEraEligible = state =>
 
 export const getEonsAwarded = state => {
   const amplifierLevel = clampNonNegative(state.eonsUpgrades?.eonAmplifierLevel ?? 0)
-  return 1 + amplifierLevel * EON_AMPLIFIER_AWARD_PER_LEVEL
+  return EON_AMPLIFIER_AWARD_BASE ** amplifierLevel
 }
 
 export const getHyperscalerEonCost = ownedCount =>
@@ -1346,6 +1355,65 @@ export const buyHyperscaler = state => {
     eons: { ...state.eons, balance: clampNonNegative(state.eons.balance) - cost },
     hyperscalerCount: clampNonNegative(state.hyperscalerCount ?? 0) + 1,
   }
+}
+
+// --- Kernel shop (#414) — Hyperscaler Efficiency / Kernel Amplifier levels + Auto Hyperscaler unlock ---
+
+export const getEonUpgradeLevel = (state, upgradeId) => {
+  const def = EON_UPGRADE_BY_ID[upgradeId]
+  return def ? clampNonNegative(state.eonsUpgrades?.[def.levelField] ?? 0) : 0
+}
+
+export const getEonUpgradeCost = (upgradeId, level) => {
+  const def = EON_UPGRADE_BY_ID[upgradeId]
+  return def ? def.costBase * (def.costGrowth ** clampNonNegative(level)) : Infinity
+}
+
+export const isEonUpgradeMaxed = (state, upgradeId) => {
+  const def = EON_UPGRADE_BY_ID[upgradeId]
+  return !def || (def.maxLevel != null && getEonUpgradeLevel(state, upgradeId) >= def.maxLevel)
+}
+
+export const canBuyEonUpgrade = (state, upgradeId) =>
+  !isEonUpgradeMaxed(state, upgradeId)
+  && clampNonNegative(state.eons?.balance ?? 0) >= getEonUpgradeCost(upgradeId, getEonUpgradeLevel(state, upgradeId))
+
+export const buyEonUpgrade = upgradeId => state => {
+  if (!canBuyEonUpgrade(state, upgradeId)) return state
+  const def = EON_UPGRADE_BY_ID[upgradeId]
+  const level = getEonUpgradeLevel(state, upgradeId)
+  return {
+    ...state,
+    eons: { ...state.eons, balance: clampNonNegative(state.eons.balance) - getEonUpgradeCost(upgradeId, level) },
+    eonsUpgrades: { ...state.eonsUpgrades, [def.levelField]: level + 1 },
+  }
+}
+
+export const canBuyAutoHyperscaler = state =>
+  !state.eonsUpgrades?.autoHyperscalerUnlocked
+  && clampNonNegative(state.eons?.balance ?? 0) >= AUTO_HYPERSCALER_EON_COST
+
+export const buyAutoHyperscaler = state => {
+  if (!canBuyAutoHyperscaler(state)) return state
+  return {
+    ...state,
+    eons: { ...state.eons, balance: clampNonNegative(state.eons.balance) - AUTO_HYPERSCALER_EON_COST },
+    eonsUpgrades: { ...state.eonsUpgrades, autoHyperscalerUnlocked: true },
+  }
+}
+
+export const setAutoHyperscalerEnabled = enabled => state => {
+  const next = Boolean(enabled)
+  if ((state.eonsUpgrades?.autoHyperscalerEnabled ?? true) === next) return state
+  return { ...state, eonsUpgrades: { ...state.eonsUpgrades, autoHyperscalerEnabled: next } }
+}
+
+// Buys every affordable hyperscaler (one state update, so offline catch-up never loops per tick).
+export const tickAutoHyperscaler = state => {
+  if (!state.eonsUpgrades?.autoHyperscalerUnlocked || !(state.eonsUpgrades.autoHyperscalerEnabled ?? true)) return state
+  let next = state
+  while (canBuyHyperscaler(next)) next = buyHyperscaler(next)
+  return next
 }
 
 export const getFlopsAutobuyerUnlockEra = flopId => {
@@ -1602,6 +1670,7 @@ const eraGameCore = state => {
     tierTickspeedAutobuyerEnabled: state.tierTickspeedAutobuyerEnabled ?? initial.tierTickspeedAutobuyerEnabled,
     autoPurge: state.autoPurge ?? initial.autoPurge,
     autoPurgeEnabled: state.autoPurgeEnabled ?? initial.autoPurgeEnabled,
+    autoPurgeSettings: state.autoPurgeSettings ?? initial.autoPurgeSettings,
     autoScaleUp: state.autoScaleUp ?? initial.autoScaleUp,
     autoScaleUpEnabled: state.autoScaleUpEnabled ?? initial.autoScaleUpEnabled,
     autoXpTickspeed: state.autoXpTickspeed ?? initial.autoXpTickspeed,
@@ -1768,6 +1837,38 @@ export const getGlobalAutomationUnlockMilestone = key => GLOBAL_AUTOMATION_UNLOC
 // Auto-Prestige attempts per second: 1 / its interval (1024 s base, ×0.9 per speed level — see
 // AUTOMATION_INTERVAL_CONFIG), as a per-tick budget increment (tickGame's autoPurgeAttemptBudget)
 // so the same "accumulate until it crosses 1" mechanism as tier autobuyers applies.
+export const getAutoPurgeSettings = state => ({
+  ...createInitialGameState().autoPurgeSettings,
+  ...(state.autoPurgeSettings ?? {}),
+})
+
+// Whether Auto Purge's optional conditions allow a Purge right now (the caller has already checked that Money
+// reached the Purge goal, so "Googol Bytes or the minimum time, whichever is later" is the AND below).
+export const isAutoPurgeReady = state => {
+  const settings = getAutoPurgeSettings(state)
+  if (settings.minSeconds > 0 && clampNonNegative(state.purge?.cycleSeconds ?? 0) < settings.minSeconds - TICK_ACCUMULATION_EPSILON) return false
+  if (!isOverflowModeUnlocked(state)) return true
+  const pending = getPrestigePointsAwarded(state.resources[MONEY_ID], state.prestigeDoublePpLevel ?? 0, true)
+  if (settings.targetPpExponent > 0 && pending < 10 ** settings.targetPpExponent) return false
+  const best = clampNonNegative(state.purge?.highestAward ?? 0)
+  if (settings.bestMultiplier > 0 && best > 0 && pending < settings.bestMultiplier * best) return false
+  return true
+}
+
+// key: 'targetPpExponent' (integer 0..AUTO_PURGE_MAX_PP_EXPONENT), 'minSeconds' / 'bestMultiplier' (one of the
+// preset option lists). Invalid key/value or no change → same state reference.
+export const setAutoPurgeSetting = (key, value) => state => {
+  const valid = key === 'targetPpExponent'
+    ? Number.isInteger(value) && value >= 0 && value <= AUTO_PURGE_MAX_PP_EXPONENT
+    : key === 'minSeconds'
+      ? AUTO_PURGE_MIN_SECONDS_OPTIONS.includes(value)
+      : key === 'bestMultiplier' && AUTO_PURGE_BEST_MULTIPLIER_OPTIONS.includes(value)
+  if (!valid) return state
+  const current = getAutoPurgeSettings(state)
+  if (current[key] === value) return state
+  return { ...state, autoPurgeSettings: { ...current, [key]: value } }
+}
+
 export const getAutoPurgeAttemptRate = state => 1 / getAutomationIntervalSeconds(state, 'purge')
 
 // Once Money reaches PURGE_THRESHOLD ("1 Googol Bytes," expressed in Bits — see layers.js), all
@@ -2175,16 +2276,18 @@ export const getPrestigePpPerPower = (doublePpLevel = 0) => {
 export const getPrestigeDoublePpUpgradeCost = (currentLevel = 0) =>
   PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE ** (clampNonNegative(currentLevel) + 1)
 
-export const getPrestigePointsAwarded = (money, doublePpLevel = 0) => {
+// PP follow the money's ACTUAL powers of ten (Bytes exponent: Bits ÷ 8), not the excess over Googol: floor(powers /
+// powers-per-PP) × PP-per-power — 100/64 = 1 PP at Googol, 100/32 = 3 after one Compression. `unbounded` (Overflow
+// mode / DeGoogol) lets the exponent keep growing; otherwise it is held at Googol's own 100.
+export const getPrestigePointsAwarded = (money, doublePpLevel = 0, unbounded = false) => {
   const safeMoney = clampNonNegative(money)
   if (safeMoney < PURGE_THRESHOLD) return 0
 
   const googolExponent = Math.floor(Math.log10(GOOGOL))
-  const excessPowers = Math.max(0, getMoneyExponent(safeMoney) - googolExponent)
+  const powers = unbounded ? Math.max(googolExponent, getMoneyExponent(safeMoney / BITS_PER_BYTE)) : googolExponent
   const powersPerPp = getPrestigePowersPerPp(doublePpLevel)
   const ppPerPower = getPrestigePpPerPower(doublePpLevel)
-  const units = 1 + Math.floor(excessPowers / powersPerPp)
-  return units * ppPerPower
+  return Math.floor(powers / powersPerPp) * ppPerPower
 }
 
 const checkMilestones = (resources, purge) => {
@@ -2313,9 +2416,9 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
   // Then every lake's timed buffer → disk / consolidation transfers (#1087): after the buy step, so a
   // full buffer pays for a Booster before it is committed to a transfer.
   const stateAfterDataLakeAutoConvert = tickDataLakeTransfers(elapsedSeconds)(stateAfterDataLakeBuy)
-  const stateAfterFlops = tickComputeFlopsAutobuyers(elapsedSeconds)(
+  const stateAfterFlops = tickAutoHyperscaler(tickComputeFlopsAutobuyers(elapsedSeconds)(
     tickComputeFlops(elapsedSeconds)(stateAfterDataLakeAutoConvert),
-  )
+  ))
 
   const autoPurgeLevel = stateAfterFlops.autoPurge ?? null
   // Paused (see setAutoPurgeEnabled/CLAUDE.md's "pause/resume" bullet) is treated exactly like
@@ -2374,7 +2477,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     // here, by definition of this branch — so it always fires as soon as the budget crosses 1.
     // purgeGame's own reset zeroes the budget back out; no need to pass the incremented value
     // in, it would just be discarded.
-    if (nextBudget >= 1 - TICK_ACCUMULATION_EPSILON) return tickStorage(purgeGame(stateAfterFlops))
+    if (nextBudget >= 1 - TICK_ACCUMULATION_EPSILON && isAutoPurgeReady(stateAfterFlops)) return tickStorage(purgeGame(stateAfterFlops))
     return tickStorage({ ...stateAfterFlops, autoPurgeAttemptBudget: nextBudget })
   }
 
@@ -2576,7 +2679,7 @@ const tickGameCore = (elapsedSeconds, autobuyerBatchSize = 1, haltSeconds = 0) =
     && clampNonNegative(tickState.resources[MONEY_ID]) >= getPurgeGoalBits(tickState)
   ) {
     const budget = tickState.autoPurgeAttemptBudget ?? 0
-    if (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
+    if (budget >= 1 - TICK_ACCUMULATION_EPSILON && isAutoPurgeReady(tickState)) {
       tickState = purgeGame(tickState)
     }
   }
@@ -2654,10 +2757,15 @@ const trackPurgeWait = (elapsedSeconds, state) => {
   return bumpAchievementCounter(state, 'purgeWaitSeconds', Math.min(REMIND_ME_LATER_SECONDS, waited + elapsedSeconds), 'set')
 }
 
-export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state =>
-  detectAchievements(trackPurgeWait(elapsedSeconds, getActiveChallenge(state) && elapsedSeconds > 0
+export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
+  const next = detectAchievements(trackPurgeWait(elapsedSeconds, getActiveChallenge(state) && elapsedSeconds > 0
     ? tickChallengeRun(elapsedSeconds, autobuyerBatchSize, state)
     : tickGameCore(elapsedSeconds, autobuyerBatchSize, 0)(state)))
+  // Cycle clock for Auto Purge's minimum-time condition; a same-reference no-op tick (frozen, no Auto Purge) stays a no-op,
+  // and a Purge that just happened restarts the clock at 0.
+  if (next === state || elapsedSeconds <= 0 || next.purge?.count !== state.purge?.count) return next
+  return { ...next, purge: { ...next.purge, cycleSeconds: clampNonNegative(next.purge.cycleSeconds ?? 0) + elapsedSeconds } }
+}
 
 // Real elapsed seconds away, capped at capSeconds (the save's getMaxOfflineSeconds; MAX_OFFLINE_SECONDS,
 // the 24h hard ceiling, when omitted). At or below
@@ -8007,10 +8115,10 @@ export const exitChallenge = state => {
 // false = no PP, no Purge count, no System-log entry.
 const resetFactoryCycle = (state, awardPurge) => {
   const doublePpLevel = state.prestigeDoublePpLevel ?? 0
-  const pointsAwarded = awardPurge ? getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel) : 0
+  const unboundedUnlocked = isOverflowModeUnlocked(state)
+  const pointsAwarded = awardPurge ? getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel, unboundedUnlocked) : 0
   const initial = createInitialGameState()
   const nextPurgeNumber = state.purge.count + (awardPurge ? 1 : 0)
-  const unboundedUnlocked = isOverflowModeUnlocked(state)
   const museumEntry = {
     id: `p${nextPurgeNumber}-${Date.now()}`,
     at: Date.now(),
@@ -8172,6 +8280,7 @@ const resetFactoryCycle = (state, awardPurge) => {
     // purchase itself does (see setAutoPurgeEnabled/setAutoScaleUpEnabled/
     // setAutoGlobalTickspeedEnabled).
     autoPurgeEnabled: state.autoPurgeEnabled ?? initial.autoPurgeEnabled,
+    autoPurgeSettings: state.autoPurgeSettings ?? initial.autoPurgeSettings,
     prestigeDoublePpLevel: state.prestigeDoublePpLevel ?? initial.prestigeDoublePpLevel,
     autoScaleUp: state.autoScaleUp ?? initial.autoScaleUp,
     autoScaleUpEnabled: state.autoScaleUpEnabled ?? initial.autoScaleUpEnabled,
@@ -8228,6 +8337,7 @@ const resetFactoryCycle = (state, awardPurge) => {
       points: clampNonNegative(state.purge.points) + pointsAwarded,
       count: nextPurgeNumber,
       unboundedUnlocked,
+      highestAward: Math.max(clampNonNegative(state.purge.highestAward ?? 0), pointsAwarded),
     },
   })
 }
@@ -8345,6 +8455,7 @@ const scaleUpGameCore = state => {
     autoPurge: state.autoPurge ?? initial.autoPurge,
     // Same permanence as purgeGame gives these four "enabled" flags above — see there.
     autoPurgeEnabled: state.autoPurgeEnabled ?? initial.autoPurgeEnabled,
+    autoPurgeSettings: state.autoPurgeSettings ?? initial.autoPurgeSettings,
     prestigeDoublePpLevel: state.prestigeDoublePpLevel ?? initial.prestigeDoublePpLevel,
     autoScaleUp: state.autoScaleUp ?? initial.autoScaleUp,
     autoScaleUpEnabled: state.autoScaleUpEnabled ?? initial.autoScaleUpEnabled,
@@ -8469,6 +8580,7 @@ const overclockGameCore = state => {
     autoPurge: state.autoPurge ?? initial.autoPurge,
     // Same permanence as scaleUpGame/purgeGame give these four "enabled" flags above — see there.
     autoPurgeEnabled: state.autoPurgeEnabled ?? initial.autoPurgeEnabled,
+    autoPurgeSettings: state.autoPurgeSettings ?? initial.autoPurgeSettings,
     prestigeDoublePpLevel: state.prestigeDoublePpLevel ?? initial.prestigeDoublePpLevel,
     autoScaleUp: state.autoScaleUp ?? initial.autoScaleUp,
     autoScaleUpEnabled: state.autoScaleUpEnabled ?? initial.autoScaleUpEnabled,

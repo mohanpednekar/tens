@@ -1,5 +1,6 @@
 # Design history & rationale
 
+<<<<<<< HEAD
 ### PR follow-up/merge workflows replaced by a scheduled routine — 2026-11-21
 
 Removed `pr-auto-merge.yml`, `pr-conflict-sweep.yml`, `autonomous-pr-followup.yml`,
@@ -21,6 +22,15 @@ So the routine (whose prompt no workflow can edit) may merge workflow-file PRs t
 authored, but a workflow-authored one (e.g. `autonomous-maintenance.yml` editing a workflow) would be
 workflows updating themselves through the routine, so it still needs the maintainer's approval. Current behavior: `docs/AUTOMATION.md` "PR babysitter" /
 "Auto-merge".
+=======
+### PP over actual powers, not excess (2026-11-23)
+
+`getPrestigePointsAwarded` used `1 + floor(excessPowers / powersPerPp)` (excess over Googol's 100), so Compression did nothing at a frozen Googol Purge (always 1 PP). The maintainer's rule: PP follow the ACTUAL powers — `floor(powers / powersPerPp)` — so one Compression takes the first Purge from 100/64 = 1 to 100/32 = 3 PP. The numerator is held at 100 until Overflow mode (`unbounded`), then grows without bound. The Reboot sim's earlier "PP stuck at 1 per Purge" finding was an artifact of the old formula.
+
+### Kernel shop (#414) — 2026-11-23
+
+Designer-drafted spend tree implemented on the maintainer's "implement the best ideas, change later" go-ahead (Bootloader, the optional PP ×10 lever, deliberately dropped: its compounding effect can't be simulated). Two changes beyond the shop itself: (A1) hyperscalers used to add a flat `+0.01%` production term, which made the only Kernel spend nearly worthless, so they now accrue into every tier's per-cycle `cumulativeBoost` each tick (~+36%/h each); (A2) `getEonsAwarded` became `10^L` because the old `1 + L` with power-of-ten costs stalls the tree after ~3 levels. **Pacing is only partly measured:** the new `reboot-simulation.mjs` (greedy PP policy) reaches ~600 PP in ~63 simulated days and cannot reach Overflow mode, so time per Reboot is unknown. A first back-of-envelope estimate that Reboot (1e100 unspent PP) was unreachable (~4e72 Purges) was WRONG: it assumed money freezes at Googol (~1 PP per Purge) and constant cycle times, but Overflow mode lets money run past Googol (more excess powers per Purge) and compounding upgrades/achievements shrink cycles enormously. Do not cite that estimate; add a Reboot loop to the bot before tuning shop costs.
+>>>>>>> origin/main
 
 ### Game rules split into `src/CLAUDE.md` — 2026-11-18
 

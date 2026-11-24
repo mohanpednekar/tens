@@ -40,8 +40,24 @@ import {
   getPlaytimeProductionMultiplier,
   getCacheWarmTier,
   isChallengeUnlocked,
+  canBuyAutoHyperscaler,
+  canBuyEonUpgrade,
+  canBuyHyperscaler,
+  getEonUpgradeCost,
+  getEonUpgradeLevel,
+  getEonsAwarded,
+  getHyperscalerEonCost,
+  isEonUpgradeMaxed,
+  getAutoPurgeSettings,
 } from 'game/engine'
 import {
+  AUTO_HYPERSCALER_EON_COST,
+  AUTO_PURGE_BEST_MULTIPLIER_OPTIONS,
+  AUTO_PURGE_MAX_PP_EXPONENT,
+  AUTO_PURGE_MIN_SECONDS_OPTIONS,
+  COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC,
+  EON_UPGRADE_BY_ID,
+  HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL,
   CHALLENGE_DEFINITIONS,
   COMPUTE_MERGE_BOUNDARIES,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
@@ -638,6 +654,26 @@ export const PERKS_TABS = [
   { id: 'prestige', icon: '✦', ariaLabel: 'open prestige', title: 'Prestige — Speed bonus, Sleep mode, Compression, playtime bonus, Overflow mode and Buy max' },
 ]
 
+const StepperGroup = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+  color: ${props => props.theme.color.text};
+`
+const StepperValue = styled.span`
+  min-width: 4.5em;
+  text-align: center;
+  font-size: 0.9rem;
+`
+const StepperButton = styled(Button)`
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+`
+
+export const KERNELS_TAB = { id: 'kernels', icon: '⏻', ariaLabel: 'open kernels', title: 'Kernels — spend Kernels earned by Rebooting' }
+
 const formatInterval = ms => (ms >= 1000 ? `${Math.round(ms) / 1000} s` : `${Math.round(ms * 10) / 10} ms`)
 // Terse inline form for cell heads: `64s`, `2.9s`, `212ms`.
 const formatIntervalShort = ms => (ms >= 1000 ? `${Number((ms / 1000).toFixed(ms >= 10000 ? 0 : 1))}s` : `${Math.round(ms)}ms`)
@@ -721,7 +757,13 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const autoChargeEnabled = state.computeAutoChargeEnabled ?? true
   const autoBoostEnabled = state.intro?.computeAutoBoostEnabled ?? true
 
+  const kernelBalance = state.eons?.balance ?? 0
+  const showKernels = eraCount >= 1 || kernelBalance > 0
+  const tabs = showKernels ? [...PERKS_TABS, KERNELS_TAB] : PERKS_TABS
+  const kernelsAffordable = canBuyHyperscaler(state) || canBuyAutoHyperscaler(state)
+    || Object.keys(EON_UPGRADE_BY_ID).some(id => canBuyEonUpgrade(state, id))
   const tabDots = {
+    kernels: showKernels && kernelsAffordable && 'kernel upgrade available',
     automation: hasAffordableAutomationPerk(state) && 'automation perk available',
     prestige: hasAffordablePrestigePerk(state) && 'prestige perk available',
   }
@@ -785,6 +827,40 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
       && !gateChallengeFor('tierAutobuyer', tier.id)
   })
 
+  // Auto Purge conditions (optional; every one narrows WHEN it fires after Money reaches the Purge goal).
+  const renderAutoPurgeConditions = () => {
+    const settings = getAutoPurgeSettings(state)
+    const step = (options, current, dir) => {
+      const index = Math.max(0, options.indexOf(current))
+      return options[Math.min(options.length - 1, Math.max(0, index + dir))]
+    }
+    const formatSeconds = seconds => (seconds === 0 ? 'Off' : seconds >= 3600 ? `${seconds / 3600} h` : seconds >= 60 ? `${seconds / 60} min` : `${seconds} s`)
+    const ppOptions = Array.from({ length: AUTO_PURGE_MAX_PP_EXPONENT + 1 }, (_, i) => i)
+    const rows = [
+      { key: 'targetPpExponent', icon: '✦', name: 'Purge at PP', options: ppOptions, label: v => (v === 0 ? 'Off' : `10^${v} PP`), details: 'Auto Purge waits until a Purge would award at least this many PP. Needs Overflow mode (production must keep running past 1 Googol Bytes); the manual Purge always works.' },
+      { key: 'minSeconds', icon: '⏳', name: 'Minimum time', options: AUTO_PURGE_MIN_SECONDS_OPTIONS, label: formatSeconds, details: 'Auto Purge waits until this much time has passed since the last Purge, or Googol Bytes is reached, whichever is later.' },
+      { key: 'bestMultiplier', icon: '📈', name: 'Best PP multiple', options: AUTO_PURGE_BEST_MULTIPLIER_OPTIONS, label: v => (v === 0 ? 'Off' : `×${v}`), details: 'Auto Purge waits until a Purge would award at least this multiple of your best Purge award since the last Reboot. Needs Overflow mode.' },
+    ]
+    return (
+      <>
+        {rows.map(row => {
+          const current = settings[row.key]
+          const prev = step(row.options, current, -1)
+          const next = step(row.options, current, 1)
+          return (
+            <UpgradeRow ariaLabel={`auto purge ${row.name.toLowerCase()} setting`} details={row.details} icon={row.icon} key={row.key} name={row.name}>
+              <StepperGroup role="group" aria-label={`${row.name} stepper`}>
+                <StepperButton aria-label={`Decrease ${row.name}`} disabled={prev === current} onClick={() => actions.setAutoPurgeSetting(row.key, prev)} type="button">−</StepperButton>
+                <StepperValue aria-label={`${row.name} value`}>{row.label(current)}</StepperValue>
+                <StepperButton aria-label={`Increase ${row.name}`} disabled={next === current} onClick={() => actions.setAutoPurgeSetting(row.key, next)} type="button">+</StepperButton>
+              </StepperGroup>
+            </UpgradeRow>
+          )
+        })}
+      </>
+    )
+  }
+
   const renderAutomation = () => (
     <List aria-label="automation firmware page">
       <Category aria-label="global automation category">
@@ -838,6 +914,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           )
         })}
         </CellGrid>
+        {state.autoPurge != null && renderAutoPurgeConditions()}
       </Category>
 
       <Category aria-label="tier autobuyers category">
@@ -1227,14 +1304,97 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     </List>
   )
 
+  const kernelCostButton = ({ ariaLabel, cost, disabled, onClick, progressLabel }) => (
+    <PpPurchaseButton
+      ariaLabel={ariaLabel}
+      color="#a78bfa"
+      cost={cost}
+      disabled={disabled}
+      icon="🏷️"
+      label={`${formatAmount(cost)} ${cost === 1 ? 'Kernel' : 'Kernels'}`}
+      onClick={onClick}
+      points={kernelBalance}
+      progressLabel={progressLabel}
+    />
+  )
+
+  const pctPerSecond = rate => `${formatAmount(rate * 100)}%/s`
+  const renderKernels = () => {
+    const hyperscalers = state.hyperscalerCount ?? 0
+    const efficiencyLevel = getEonUpgradeLevel(state, 'hyperscalerEfficiency')
+    const efficiencyMaxed = isEonUpgradeMaxed(state, 'hyperscalerEfficiency')
+    const baseRate = COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC
+    const rateAt = level => baseRate + level * HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL
+    const efficiencyCost = getEonUpgradeCost('hyperscalerEfficiency', efficiencyLevel)
+    const amplifierLevel = getEonUpgradeLevel(state, 'eonAmplifier')
+    const amplifierMaxed = isEonUpgradeMaxed(state, 'eonAmplifier')
+    const amplifierCost = getEonUpgradeCost('eonAmplifier', amplifierLevel)
+    const autoUnlocked = Boolean(state.eonsUpgrades?.autoHyperscalerUnlocked)
+    const autoEnabled = state.eonsUpgrades?.autoHyperscalerEnabled ?? true
+    const hyperscalerCost = getHyperscalerEonCost(hyperscalers)
+    return (
+      <List>
+        <Category aria-label="kernels category">
+          <CategoryHeading>Kernels</CategoryHeading>
+          <UpgradeRow
+            ariaLabel="hyperscaler upgrade"
+            details={`Each hyperscaler adds ${pctPerSecond(rateAt(efficiencyLevel))} per second to every Factory tier's Flops boost until the next Purge, Scale Up or Overclock. Hyperscalers are permanent and survive Purge and Reboot; the boost they have built resets with it.`}
+            icon="☁"
+            name="Hyperscaler"
+            value={`${hyperscalers} owned · +${pctPerSecond(rateAt(efficiencyLevel))} each`}
+          >
+            {kernelCostButton({ ariaLabel: `Buy hyperscaler for ${formatAmount(hyperscalerCost)} Kernels`, cost: hyperscalerCost, disabled: !canBuyHyperscaler(state), onClick: actions.buyHyperscaler, progressLabel: 'Hyperscaler Kernel progress' })}
+          </UpgradeRow>
+          <UpgradeRow
+            ariaLabel="hyperscaler efficiency upgrade"
+            details={`Each level adds ${pctPerSecond(HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL)} per second to every hyperscaler. Level ${efficiencyLevel} of ${EON_UPGRADE_BY_ID.hyperscalerEfficiency.maxLevel}.`}
+            icon="⚙"
+            name="Hyperscaler efficiency"
+            value={efficiencyMaxed ? `Level ${efficiencyLevel} (max)` : `+${pctPerSecond(rateAt(efficiencyLevel))} → +${pctPerSecond(rateAt(efficiencyLevel + 1))} each`}
+          >
+            {efficiencyMaxed ? <UnlockedBadge icon="⚙" name="Hyperscaler efficiency" /> : kernelCostButton({ ariaLabel: `Buy hyperscaler efficiency for ${formatAmount(efficiencyCost)} Kernels`, cost: efficiencyCost, disabled: !canBuyEonUpgrade(state, 'hyperscalerEfficiency'), onClick: () => actions.buyEonUpgrade('hyperscalerEfficiency'), progressLabel: 'Hyperscaler efficiency Kernel progress' })}
+          </UpgradeRow>
+          <UpgradeRow
+            ariaLabel="kernel amplifier upgrade"
+            details={`Each level multiplies the Kernels a Reboot awards by 10. Level ${amplifierLevel} of ${EON_UPGRADE_BY_ID.eonAmplifier.maxLevel}.`}
+            icon="🔆"
+            name="Kernel amplifier"
+            value={amplifierMaxed ? `${formatAmount(getEonsAwarded(state))} Kernels per Reboot (max)` : `${formatAmount(getEonsAwarded(state))} → ${formatAmount(getEonsAwarded({ ...state, eonsUpgrades: { ...state.eonsUpgrades, eonAmplifierLevel: amplifierLevel + 1 } }))} Kernels per Reboot`}
+          >
+            {amplifierMaxed ? <UnlockedBadge icon="🔆" name="Kernel amplifier" /> : kernelCostButton({ ariaLabel: `Buy kernel amplifier for ${formatAmount(amplifierCost)} Kernels`, cost: amplifierCost, disabled: !canBuyEonUpgrade(state, 'eonAmplifier'), onClick: () => actions.buyEonUpgrade('eonAmplifier'), progressLabel: 'Kernel amplifier Kernel progress' })}
+          </UpgradeRow>
+          <UpgradeRow
+            ariaLabel="auto hyperscaler upgrade"
+            details="Buys a hyperscaler automatically whenever you can afford one. Pause it to save Kernels for other upgrades. One-time purchase, permanent."
+            icon="🤖"
+            name="Auto Hyperscaler"
+            value={autoUnlocked ? null : 'Buys hyperscalers for you'}
+          >
+            {autoUnlocked ? (
+              <Switch
+                $on={autoEnabled}
+                aria-label="Auto Hyperscaler"
+                aria-pressed={autoEnabled}
+                onClick={() => actions.setAutoHyperscalerEnabled(!autoEnabled)}
+                title={`${autoEnabled ? 'Pause' : 'Resume'} Auto Hyperscaler`}
+              />
+            ) : kernelCostButton({ ariaLabel: `Unlock Auto Hyperscaler for ${AUTO_HYPERSCALER_EON_COST} Kernels`, cost: AUTO_HYPERSCALER_EON_COST, disabled: !canBuyAutoHyperscaler(state), onClick: actions.buyAutoHyperscaler, progressLabel: 'Auto Hyperscaler Kernel progress' })}
+          </UpgradeRow>
+        </Category>
+      </List>
+    )
+  }
+
   return (
     <RootDiv>
       <Header>
         <h1>Firmware</h1>
-        <PpBalance aria-label="purge points display">✦ {formatAmount(points)} PP</PpBalance>
+        {tab === 'kernels' && showKernels
+          ? <PpBalance aria-label="kernels display">⏻ {formatAmount(kernelBalance)} {kernelBalance === 1 ? 'Kernel' : 'Kernels'}</PpBalance>
+          : <PpBalance aria-label="purge points display">✦ {formatAmount(points)} PP</PpBalance>}
       </Header>
       <TabBar role="tablist" aria-label="firmware view">
-        {PERKS_TABS.map(item => (
+        {tabs.map(item => (
           <TabButton
             key={item.id}
             aria-label={item.ariaLabel}
@@ -1252,6 +1412,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
       </TabBar>
       {tab === 'automation' && renderAutomation()}
       {tab === 'prestige' && renderPrestige()}
+      {tab === 'kernels' && showKernels && renderKernels()}
       <ChallengeStartDialog
         def={pendingChallengeId ? CHALLENGE_DEFINITIONS.find(def => def.id === pendingChallengeId) : null}
         onCancel={() => setPendingChallengeId(null)}
