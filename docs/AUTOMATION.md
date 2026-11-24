@@ -274,6 +274,7 @@ commenting once when all verifiable items are done. API errors leave a line unto
 the "Tracked separately" section and deliberately does **not** check `Workflows: write` — only a real
 push outcome proves it. **Convention:** any new `claude-task` issue introducing a manual-only
 prerequisite must add a line to #62; extend `CHECKS` in the script if it is API-checkable.
+On demand, `node scripts/verify-maintainer-checklist.mjs --dry-run` prints a PASS/FAIL/UNKNOWN table and never touches #62.
 
 **Backlog/milestone hygiene is also deterministic and unconditional.** Two more plain-bash steps —
 `Backlog issue hygiene` (`scripts/backlog-issue-hygiene.sh`, which also runs
