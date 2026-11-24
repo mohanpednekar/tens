@@ -6,9 +6,10 @@ PR-opening/fix-up/auto-merge pipeline behaves. `CLAUDE.md` keeps only a short su
 pointer so the full phase-by-phase logic below isn't loaded into every session's context by
 default.
 
-Five Claude-side workflows under `.github/workflows/` run Claude Code and GitHub automation
+Three Claude-side workflows under (`autonomous-maintenance.yml`, `main-ci-heal.yml`,
+`automation-self-heal.yml`) `.github/workflows/` run Claude Code and GitHub automation
 unattended to open and fix up PRs. None of them merges anything: the PR babysitter routine (below)
-does, in ascending PR-number order (see "Auto-merge"). All five authenticate git/GitHub operations
+does, in ascending PR-number order (see "Auto-merge"). All three authenticate git/GitHub operations
 with a `GH_AUTOMATION_PAT` repo secret instead of the default `GITHUB_TOKEN`, because
 commits/pushes/merges authored by the default token can't trigger other workflows (see
 `docs/DESIGN_HISTORY.md` for why this matters concretely).
@@ -481,12 +482,18 @@ instead, in one session:
    Claude Code Remote sessions have no GraphQL, so `gh pr …` commands and `scripts/resolve-pr-threads.sh`
    are replaced by REST/`ccr` routes) only when every check is green on the
    current head, it's conflict-free, has an `APPROVE` marker for that head, and has no unresolved
-   threads. PRs touching `.github/workflows/**` follow the **no-loop tenet** (maintainer rule): no
+   threads. **Workflow-control PRs** — any PR touching `.github/workflows/**`, `.github/actions/**`,
+   `.github/CODEOWNERS`, a script a workflow uses to decide what agents may do
+   (`scripts/claude-deny-settings.sh`), or the routine's own review inputs
+   (`.claude/agents/code-reviewer.md`) — follow the **no-loop tenet** (maintainer rule): no
    workflow may update workflows, directly or indirectly, without human approval; an upstream actor
    that workflows never update can't form a loop. So the routine merges a workflow-file PR only if no
    workflow authored it (not on a workflow-created branch — `claude/auto-*`, `claude/self-heal-*`,
    `claude/heal-main-*`, `devin/auto-*` — and no commit on it came from an Actions run); a
-   workflow-authored one needs the maintainer's GitHub approval on its current head. The routine's
+   workflow-authored one needs the maintainer's GitHub approval on its current head. Dependabot is not
+   a repo workflow, so its `github-actions` bumps are not workflow-authored. The branch prefix is
+   the reliable signal; a PAT-holding autonomous run could forge commit metadata, so a workflow-control
+   PR on an unexpected branch gets extra review scrutiny rather than the benefit of the doubt. The routine's
    merge authority lives in its own scheduled-task prompt, which no workflow can edit, and repo docs
    can't widen it (they're workflow-editable). A PR it can't finish is commented on and skipped; it doesn't hold up
    higher-numbered PRs.
@@ -712,7 +719,7 @@ cheap while work is still private to the session, heavier once other reviewers c
    session or the PR babysitter routine merges directly once the PR is mergeable (brought up to date
    with `main`, then re-reviewed for the new head), every required check is complete and passing,
    nothing is still running, no review threads are unresolved, and an adversarial `APPROVE` marker
-   exists for the **current head SHA** — no quiet period. Autonomous workflow runs, Devin and
+   exists for the **current head SHA**. Autonomous workflow runs, Devin and
    dev-team roles never self-merge. A PR touching `.github/workflows/**` stays human-gated for every
    path except the PR babysitter routine's no-loop exception (see "PR babysitter").
 

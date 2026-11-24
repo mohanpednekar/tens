@@ -321,9 +321,9 @@ never push to `main`, never GitHub-approve your own PR. Full detail: `CLAUDE.md`
 babysitter routine (which merges in ascending PR-number order), for every PR in this repo: once the PR is
 green — mergeable (no conflicts; update a "behind" branch first, then re-run the reviewer for the new head), every required check complete and
 passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for the
-current head SHA — merge it directly (`gh pr merge --merge` / `merge_pull_request`). The quiet period
-does not apply. Never for `.github/workflows/**` diffs (exception: the babysitter may merge one no
-workflow authored — no workflow may update workflows, directly or indirectly, without human approval), never over a failing/pending check. Autonomous
+current head SHA — merge it directly (`gh pr merge --merge` / `merge_pull_request`). Never for workflow-control diffs (`.github/workflows/**`, `.github/actions/**`,
+`.github/CODEOWNERS`, `scripts/claude-deny-settings.sh`, `.claude/agents/code-reviewer.md`) (exception: the
+babysitter may merge one no workflow authored — no workflow may update workflows, directly or indirectly, without human approval), never over a failing/pending check. Autonomous
 runs, Devin and dev-team roles keep their never-self-merge rule.
 
 **Merge-when-met rule (maintainer standing rule):** once the requested behavior is delivered and the green-and-`APPROVE` conditions above hold, proceed to merge rather than holding for polish; leftovers become a follow-up PR.

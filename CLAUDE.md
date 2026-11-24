@@ -125,7 +125,8 @@ maintainer-driven interactive sessions and the PR babysitter routine, for every 
 green — mergeable (no conflicts; bring a "behind" branch up to date first, then re-run the reviewer for the new head), every required check complete
 and passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for
 the **current head SHA** — merge it directly (`gh pr merge --merge` / `merge_pull_request`) instead of
-waiting for GitHub. The 10-minute quiet period does not apply. Never for `.github/workflows/**` diffs (exception: the babysitter routine may merge one that no workflow authored — tenet: no workflow may update workflows, directly or indirectly, without human approval; a workflow-authored workflow change always needs the maintainer's approval; `docs/AUTOMATION.md` "PR babysitter"),
+waiting for GitHub. Never for workflow-control diffs (`.github/workflows/**`, `.github/actions/**`, `.github/CODEOWNERS`,
+`scripts/claude-deny-settings.sh`, `.claude/agents/code-reviewer.md`) (exception: the babysitter routine may merge one that no workflow authored — tenet: no workflow may update workflows, directly or indirectly, without human approval; a workflow-authored workflow change always needs the maintainer's approval; `docs/AUTOMATION.md` "PR babysitter"),
 never over a failing/pending check. Autonomous workflow runs (`autonomous-maintenance.yml`, Devin, dev-team
 roles) keep their never-self-merge rule. The babysitter merges in ascending PR-number order.
 
