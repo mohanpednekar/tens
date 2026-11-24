@@ -68,16 +68,31 @@ describe('classifyProjectsError', () => {
     ['HTTP 401: Unauthorized', false],
     ['HTTP 403: Forbidden', false],
     ['dial tcp: lookup api.github.com: no such host', null],
+    ['spawnSync gh ENOENT', null],
   ])('%s', (text, expected) => {
     expect(classifyProjectsError(text)).toBe(expected);
   });
 });
 
 describe('--dry-run write boundary', () => {
-  it('never reads or edits issue #62, only performs read-only lookups', () => {
+  // `failAll`: every gh call exits 1 (UNKNOWN path); otherwise lookups succeed with canned JSON so a
+  // successful dry run still exercises the write-boundary assertion.
+  it.each([
+    ['all lookups fail', true, /UNKNOWN\s+secret/],
+    ['all lookups succeed', false, /PASS\s+secret/],
+  ])('never reads/edits #62 or issues a write call (%s)', (_name, failAll, expected) => {
     const dir = mkdtempSync(join(tmpdir(), 'fake-gh-'));
     const log = join(dir, 'calls.log');
-    writeFileSync(join(dir, 'gh'), `#!/bin/sh\necho "$@" >> "${log}"\nexit 1\n`);
+    const ok = [
+      'case "$*" in',
+      '  *actions/secrets*) echo \'{"secrets":[{"name":"GH_AUTOMATION_PAT"}]}\' ;;',
+      '  *protection*) echo \'{"required_status_checks":{"contexts":["test"]}}\' ;;',
+      '  "project "*) echo "" ;;',
+      '  *) echo \'{"allow_auto_merge":true,"has_discussions":true}\' ;;',
+      'esac',
+      'exit 0',
+    ].join('\n');
+    writeFileSync(join(dir, 'gh'), `#!/bin/sh\necho "$@" >> "${log}"\n${failAll ? 'exit 1' : ok}\n`);
     chmodSync(join(dir, 'gh'), 0o755);
     try {
       const out = execFileSync(
@@ -85,10 +100,13 @@ describe('--dry-run write boundary', () => {
         [join(process.cwd(), 'scripts/verify-maintainer-checklist.mjs'), '--dry-run'],
         { encoding: 'utf8', env: { ...process.env, PATH: `${dir}:${process.env.PATH}` } },
       );
-      expect(out).toMatch(/UNKNOWN\s+secret/);
+      expect(out).toMatch(expected);
       const calls = readFileSync(log, 'utf8').split('\n').filter(Boolean);
       expect(calls.length).toBeGreaterThan(0);
       expect(calls.some((c) => /^issue\b/.test(c))).toBe(false);
+      // Only read-only lookups: no explicit method, request fields/body, or write subcommands.
+      expect(calls.some((c) => /(^|\s)(-X|--method|-f|-F|--field|--raw-field|--input)(\s|=|$)/.test(c))).toBe(false);
+      expect(calls.every((c) => /^(api |project list )/.test(c))).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
