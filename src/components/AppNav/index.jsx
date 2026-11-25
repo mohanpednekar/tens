@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import styled, { css, keyframes } from 'styled-components'
 import { ATTENTION_HIGH } from 'game/navAttention'
 
@@ -8,6 +9,20 @@ import { ATTENTION_HIGH } from 'game/navAttention'
 // Attention: 'high' = larger pulsing dot; 'normal' = smaller cue (game/navAttention.js).
 
 const NAV_HEIGHT = '3.25rem'
+// Below this width, with all 7 destinations shown, labels no longer fit: inactive items go icon-only.
+export const NARROW_NAV_MAX_WIDTH = 400
+const FULL_NAV_ITEM_COUNT = 7
+
+const useNarrowViewport = () => {
+  const read = () => typeof window !== 'undefined' && window.innerWidth < NARROW_NAV_MAX_WIDTH
+  const [narrow, setNarrow] = useState(read)
+  useEffect(() => {
+    const onResize = () => setNarrow(read())
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  return narrow
+}
 
 const pulseHigh = keyframes`
   0%, 100% { transform: scale(1); opacity: 1; }
@@ -36,7 +51,7 @@ const NavItem = styled.button`
   color: ${props => (props.$active ? props.theme.color.accent : props.theme.color.textMuted)};
   cursor: pointer;
   display: flex;
-  flex: 1 1 0;
+  flex: ${props => (props.$grow ? '0 0 auto' : '1 1 0')};
   flex-direction: column;
   font-family: ${props => props.theme.font.body};
   font-size: 0.65rem;
@@ -44,7 +59,7 @@ const NavItem = styled.button`
   gap: 0.15rem;
   justify-content: center;
   letter-spacing: 0.01em;
-  max-width: 5.5rem;
+  max-width: ${props => (props.$grow ? 'none' : '5.5rem')};
   min-width: 0;
   padding: 0.35rem 0.25rem;
   position: relative;
@@ -121,7 +136,9 @@ const AppNav = ({
     showChallenges && { id: 'challenges', ariaLabel: 'open challenges', icon: '🏁', label: 'Challenges', title: 'Challenges — Factory and Daily challenges' },
   ].filter(Boolean)
 
-  const utilityActive = currentPage === 'info' || currentPage === 'milestones' || currentPage === 'settings' || currentPage === 'dev' || moreOpen
+  const iconOnlyInactive = useNarrowViewport() && items.length + 1 >= FULL_NAV_ITEM_COUNT
+
+  const utilityActive = currentPage === 'info' || currentPage === 'achievements' || currentPage === 'milestones' || currentPage === 'settings' || currentPage === 'dev' || moreOpen
 
   return (
     <Bar aria-label="main navigation">
@@ -134,6 +151,7 @@ const AppNav = ({
             aria-current={active ? 'page' : undefined}
             aria-label={item.ariaLabel}
             $active={active}
+            $grow={active && iconOnlyInactive}
             onClick={() => onNavigate(item.id)}
             title={item.title}
             type="button"
@@ -145,7 +163,7 @@ const AppNav = ({
               />
             )}
             <Icon aria-hidden="true">{item.icon}</Icon>
-            <Label>{item.label}</Label>
+            {(active || !iconOnlyInactive) && <Label>{item.label}</Label>}
           </NavItem>
         )
       })}
@@ -154,12 +172,13 @@ const AppNav = ({
         aria-haspopup="dialog"
         aria-label="open more menu"
         $active={utilityActive}
+        $grow={utilityActive && iconOnlyInactive}
         onClick={onOpenMore}
         title="Manual, Milestones, Settings"
         type="button"
       >
         <Icon aria-hidden="true">⋯</Icon>
-        <Label>More</Label>
+        {(utilityActive || !iconOnlyInactive) && <Label>More</Label>}
       </NavItem>
     </Bar>
   )

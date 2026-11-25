@@ -53,7 +53,7 @@ inside it — merged together per player feedback that the two read as disconnec
 applies `components/Button`'s own
 `progressFill` gradient directly via its `$progress` prop (`= bits / capacity`), so the tile fills
 toward Capacity the same visual way every button on this page already does, and shows balance and
-capacity together in the middle, centered `BalanceText` (`balance / capacity-unit`, using
+capacity together in the middle, centered `BalanceText` (below 400px: its own centred line under the title row) (`balance / capacity-unit`, using
 `formatMemoryBalanceValue`; see "Numbers are formatted"
 below — `useTrimBalanceWhenSettled` switches it to the ordinary trimmed form once its padded text is an
 integer and has been unchanged for `SETTLED_BALANCE_TRIM_DELAY_MS`, 5 real seconds) — scaled into the same binary unit `capacity` picks (raw bits before the Byte generator
