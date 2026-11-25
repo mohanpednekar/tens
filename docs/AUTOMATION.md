@@ -490,7 +490,8 @@ instead, in one session:
    `.github/CODEOWNERS`, any script a workflow runs with the automation token (e.g.
    `scripts/claude-deny-settings.sh`, `scripts/backlog-issue-hygiene.sh`,
    `scripts/sync-release-milestones.sh`, `scripts/verify-maintainer-checklist.mjs`,
-   `scripts/bump-version.mjs` (imported by `release.yml`) — check the
+   `scripts/bump-version.mjs` (imported by `release.yml`), `scripts/orphan-branch-scan.sh`,
+   `scripts/classify-claude-failure.sh` — check the
    workflows' `run:` steps), or the routine's own review inputs (`.claude/agents/code-reviewer.md`)
    — follow the **no-loop tenet** (maintainer rule): no
    workflow may update workflows, directly or indirectly, without human approval; an upstream actor
@@ -602,8 +603,9 @@ session):
   Settings → General is no longer used and is best turned off, so nothing can arm it; the #62
   checklist verifier no longer checks it.)
 - "Require review from Code Owners" in that same branch-protection rule, so the `.github/CODEOWNERS`
-  entry mapping `.github/workflows/**` to the repo owner actually takes effect (tracked in issue #62's
-  checklist until confirmed done).
+  workflow-control entries (workflows, actions, CODEOWNERS, automation-token scripts, the reviewer agent)
+  actually take effect (tracked in issue #62's checklist until confirmed done). The owner can't approve
+  their own PR, so with a sole owner the maintainer's own workflow-control PRs need a ruleset bypass.
 
 ### Mobile build (`mobile-build.yml`)
 
