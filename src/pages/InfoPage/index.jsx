@@ -710,7 +710,7 @@ const InfoPage = () => {
       <Section aria-label="achievements section">
         <h2>Achievements</h2>
         <ul>
-          <li>More → Achievements lists goals grouped by theme; each one shows its requirement and progress.</li>
+          <li>More → Achievements lists goals grouped by theme; each one shows its requirement, and a progress count when the goal builds up over time.</li>
           <li>
             Every earned achievement is a star, and stars are your score. Each star adds{' '}
             {Math.round(ACHIEVEMENT_STAR_PRODUCTION_BONUS * 1000) / 10}% production, and finishing a whole group earns bonus stars.
