@@ -37,6 +37,12 @@ const TotalStars = styled.div`
   margin-top: 0.25rem;
 `
 
+const StarBonus = styled.div`
+  color: ${props => props.theme.color.textMuted ?? props.theme.color.text};
+  font-size: 0.9rem;
+  margin-top: 0.15rem;
+`
+
 const List = styled.div`
   display: flex;
   flex-direction: column;
@@ -160,7 +166,7 @@ const AchievementsPage = ({ game }) => {
       <Header>
         <h1>Achievements</h1>
         <TotalStars aria-label={`total stars ${totalStars} of ${maxStars}`}>⭐ {totalStars}/{maxStars}{bonusStars > 0 ? ` (incl. ${bonusStars} bonus)` : ''}</TotalStars>
-        <div aria-label="star production bonus">+{Math.round((getAchievementProductionMultiplier(state) - 1) * 100)}% production</div>
+        <StarBonus aria-label="star production bonus">+{Math.round((getAchievementProductionMultiplier(state) - 1) * 100)}% production</StarBonus>
       </Header>
 
       <List aria-label="achievements page">

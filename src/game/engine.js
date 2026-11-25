@@ -1652,7 +1652,7 @@ export const getAchievementStars = state =>
 // Production multiplier from Achievement stars: +ACHIEVEMENT_STAR_PRODUCTION_BONUS (1%) per star, additive (1 + 0.01 × stars).
 // ×1 with the feature off.
 export const getAchievementProductionMultiplier = state =>
-  ACHIEVEMENTS_FEATURE.enabled ? 1 + ACHIEVEMENT_STAR_PRODUCTION_BONUS * getAchievementStars(state) : 1
+  ACHIEVEMENTS_FEATURE.enabled ? Math.round((1 + ACHIEVEMENT_STAR_PRODUCTION_BONUS * getAchievementStars(state)) * 1e6) / 1e6 : 1
 
 const eraGameCore = state => {
   if (!isEraEligible(state)) return state

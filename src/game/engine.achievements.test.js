@@ -536,3 +536,17 @@ describe('getAchievementProductionMultiplier', () => {
     expect(getAchievementStars(state)).toBeGreaterThanOrEqual(3)
   })
 })
+
+describe('star production bonus in tickGame', () => {
+  it('credits production ×(1 + 0.01 × stars) per tick', () => {
+    const base = { ...createInitialGameState(), owned: { tier01: 100 }, intro: { ...createInitialGameState().intro, mainGameUnlocked: true } }
+    const earned = Object.fromEntries(ACHIEVEMENT_DEFINITIONS.slice(0, 10).map(def => [def.id, true]))
+    const boosted = { ...base, achievements: { ...base.achievements, earned } }
+    const stars = getAchievementStars(boosted)
+    expect(stars).toBeGreaterThanOrEqual(10)
+    const gain = state => (tickGame(1, 1)(state).resources[MONEY_ID] ?? 0) - (state.resources[MONEY_ID] ?? 0)
+    // Compare after the earned set is stable (tick may detect more achievements); the ratio must be at least the bonus.
+    expect(gain(boosted)).toBeGreaterThanOrEqual(Math.floor(gain(base) * (1 + 0.01 * stars)) - 1)
+    expect(gain(boosted)).toBeGreaterThan(gain(base))
+  })
+})
