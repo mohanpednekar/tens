@@ -10,6 +10,7 @@
 .github/CODEOWNERS @mohanpednekar
 scripts/claude-deny-settings.sh @mohanpednekar
 scripts/backlog-issue-hygiene.sh @mohanpednekar
+scripts/epic-407-issue-hygiene.sh @mohanpednekar
 scripts/sync-release-milestones.sh @mohanpednekar
 scripts/verify-maintainer-checklist.mjs @mohanpednekar
 scripts/bump-version.mjs @mohanpednekar

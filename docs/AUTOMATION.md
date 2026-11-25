@@ -491,8 +491,9 @@ instead, in one session:
    `scripts/claude-deny-settings.sh`, `scripts/backlog-issue-hygiene.sh`,
    `scripts/sync-release-milestones.sh`, `scripts/verify-maintainer-checklist.mjs`,
    `scripts/bump-version.mjs` (imported by `release.yml`), `scripts/orphan-branch-scan.sh`,
-   `scripts/classify-claude-failure.sh` — check the
-   workflows' `run:` steps), or the routine's own review inputs (`.claude/agents/code-reviewer.md`)
+   `scripts/classify-claude-failure.sh`, `scripts/epic-407-issue-hygiene.sh` (called by the backlog
+   hygiene script) — check the workflows' `run:` steps and anything the scripts they run call in turn),
+   or the routine's own review inputs (`.claude/agents/code-reviewer.md`)
    — follow the **no-loop tenet** (maintainer rule): no
    workflow may update workflows, directly or indirectly, without human approval; an upstream actor
    that workflows never update can't form a loop. The check **fails closed**: the routine merges a
