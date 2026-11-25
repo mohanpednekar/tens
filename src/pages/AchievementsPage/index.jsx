@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import StatCard from 'components/StatCard'
-import { getAchievementGroupStars, getAchievementProgress, getAchievementReward, getAchievementShortRequirement, getAchievementShortReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
+import { getAchievementGroupStars, getAchievementProductionMultiplier, getAchievementProgress, getAchievementReward, getAchievementShortRequirement, getAchievementShortReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
 import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
 
@@ -35,6 +35,12 @@ const TotalStars = styled.div`
   color: ${props => props.theme.color.text};
   font-size: 1.1rem;
   margin-top: 0.25rem;
+`
+
+const StarBonus = styled.div`
+  color: ${props => props.theme.color.textMuted ?? props.theme.color.text};
+  font-size: 0.9rem;
+  margin-top: 0.15rem;
 `
 
 const List = styled.div`
@@ -160,6 +166,7 @@ const AchievementsPage = ({ game }) => {
       <Header>
         <h1>Achievements</h1>
         <TotalStars aria-label={`total stars ${totalStars} of ${maxStars}`}>⭐ {totalStars}/{maxStars}{bonusStars > 0 ? ` (incl. ${bonusStars} bonus)` : ''}</TotalStars>
+        <StarBonus aria-label="star production bonus">+{Math.round((getAchievementProductionMultiplier(state) - 1) * 100)}% production</StarBonus>
       </Header>
 
       <List aria-label="achievements page">

@@ -7,7 +7,7 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getComputeBoostLanes, getChallengeTier, getChallengeProductionMultiplier, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getScaleUpStepMultiplier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getLevelMultiplierBase, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
+import { getAchievementProductionMultiplier, formatAmount, formatBytes, formatCurrency, formatMoneyBalance, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockLevel, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPurgeGoalBits, getActiveChallenge, getComputeBoostLanes, getChallengeTier, getChallengeProductionMultiplier, getChallengeClockSpeedMultiplier, getChallengeClockSpeedStep, getScaleUpStepMultiplier, isTierTickspeedBlockedByChallenge, getEffectiveLastTier, isChallengeCompleted, getPlaytimeProductionMultiplier, getPrestigeProductionMultiplier, isPrestigeSpeedBonusUnlocked, getPurgePercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getLevelMultiplierBase, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTierTickspeedRequirement, getTierTickspeedSpend, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isOverflowModeUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, BYTES_ID, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, OVERCLOCK_MULTIPLIER_STEP, PLAYTIME_BONUS_UNLOCK_COST, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PURGE_THRESHOLD, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -877,6 +877,7 @@ const MainPage = ({ game }) => {
   // Passive Purge-count production-speed bonus: flat ×1 until bought with 1 PP (see engine.js).
   const prestigeBonusUnlocked = isPrestigeSpeedBonusUnlocked(state)
   const prestigeBonus = getPrestigeProductionMultiplier(purge.count, prestigeBonusUnlocked)
+  const achievementBonus = getAchievementProductionMultiplier(state)
   const prestigePointsPreview = getPrestigePointsAwarded(state.resources[MONEY_ID], doublePpLevel, isOverflowModeUnlocked(state))
   const purgeProgressPercent = getPurgePercent(state.resources[MONEY_ID], getPurgeGoalBits(state))
   const bytePowerProgressFraction = getNextBytePowerProgressFraction(state.resources[MONEY_ID])
@@ -1325,6 +1326,9 @@ const MainPage = ({ game }) => {
                     : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on Firmware → Prestige)`}
                 </li>
               )}
+              {achievementBonus > 1 && (
+                <li>Achievement stars: {formatBonusOrMultiplier(achievementBonus)} production speed</li>
+              )}
               <li>
                 Scale Up: {scaleUpCount > 0
                   ? `${scaleUpCount} activation${scaleUpCount === 1 ? '' : 's'}; multiplier varies by tier`
@@ -1523,7 +1527,7 @@ const MainPage = ({ game }) => {
           // preview could show a fraction that never actually lands.
           const milestoneMultiplier = getPurchaseMilestoneMultiplier(tierLevel, getLevelMultiplierBase(state))
           const tierScaleUpMultiplier = getTierScaleUpMultiplier(state, tier.id)
-          const production = Math.floor(owned * prestigeBonus * tierScaleUpMultiplier * milestoneMultiplier * getChallengeProductionMultiplier(state, tier.id))
+          const production = Math.floor(owned * prestigeBonus * achievementBonus * tierScaleUpMultiplier * milestoneMultiplier * getChallengeProductionMultiplier(state, tier.id))
           const productionText = tier.producesResourceId === MONEY_ID
             ? formatCurrency(production)
             : tier.producesResourceId === BYTES_ID

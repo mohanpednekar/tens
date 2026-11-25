@@ -96,6 +96,26 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
 - Career mode calls `purgeGame` between cycles so permanent Foundry upgrades and
   prestige-count autobuyer milestones carry forward for real.
 
+## Achievement pursuit (`--achievements`)
+
+Off by default (baseline numbers stay comparable). `achievements.mjs` lets the bot pay for the achievements that can
+only be earned by playing a cycle differently — the policy fields live in `bot.mjs` (`NO_POLICY`, `isOverclockHeld`):
+
+| Goal | Policy | Cost it pays |
+|---|---|---|
+| Patient Overclock | hold the first Overclock of a Purge to 6+ completed levels | usually small, sometimes negative |
+| Overclock fast | no Accelerate until the second Overclock of the cycle | the biggest one |
+| Beyond Googol | hold an Overclock to 12+ (needs Overflow mode) | — |
+| Remind me later | leave the finished Purge unclaimed 60 s | 60 s flat |
+| Look ma, no hands | never click a tier Buy (needs every autobuyer) | stalls on cost-block edges |
+
+Timing is **measured, not guessed**: before each cycle `simulateCycleWithAchievements` replays it from the same
+(pure) state with each attempt added, bounded by a tick cap, and keeps the attempt only if the achievement was
+actually earned and its marginal cost fits the budget (25% of the baseline cycle for goals with a permanent
+production reward — the Overclock steps — 5% for cosmetic ones). Anything over budget is deferred and re-measured
+next cycle. Greedy per cycle (no multi-cycle lookahead). Not covered: Reclamation, Spent QB, the Reboot set and
+PP-purchase achievements. The bot's own manual buys now go through `withManualPurchaseMark`, as a real click does.
+
 ## Usage
 
 ```
@@ -107,6 +127,7 @@ node .claude/skills/simulate-run-times/simulate.mjs 0 100 10000      # bare numb
 node .claude/skills/simulate-run-times/simulate.mjs --capacity-cap   # early-stop floor/hard cap/unlimited
 node .claude/skills/simulate-run-times/simulate.mjs --capacity-cap 4194304 8388608 unlimited
 node .claude/skills/simulate-run-times/simulate.mjs --strategy-out /tmp/run.md
+node .claude/skills/simulate-run-times/simulate.mjs --career 0 1 2 --achievements   # + achievement pursuit table
 ```
 
 Prints markdown tables to stdout. A run capped by the script's `MAX_TICKS` safety net (5,000,000
