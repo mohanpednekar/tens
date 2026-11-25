@@ -713,7 +713,7 @@ const InfoPage = () => {
           <li>More → Achievements lists goals grouped by theme; each one shows its requirement and progress.</li>
           <li>
             Every earned achievement is a star, and stars are your score. Each star adds{' '}
-            {ACHIEVEMENT_STAR_PRODUCTION_BONUS * 100}% production, and finishing a whole group earns bonus stars.
+            {Math.round(ACHIEVEMENT_STAR_PRODUCTION_BONUS * 1000) / 10}% production, and finishing a whole group earns bonus stars.
           </li>
           <li>Some achievements and completed groups give bonuses.</li>
           <li>Secret achievements show as ??? until you earn them.</li>

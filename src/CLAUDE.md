@@ -52,7 +52,7 @@ Continues the root `CLAUDE.md`'s "Architecture" (layers 1–2: `engine.js`, `use
 5. **`InfoPage/index.jsx`** — a static Manual page holding every mechanic's evergreen explanation in
    short bullets/sub-headings (what used to be MainPage's click-to-expand `InfoDetails` disclosures —
    Overview, Prestige ladder, Byte Foundry, Storage, Power, Compute, Accelerate, Scale Up, Overclock,
-   Tier Autobuyers, Milestones, Purge, Sleep mode, Reboot). Numbers come from the same `engine.js`/`layers.js`
+   Tier Autobuyers, Milestones, Purge, Sleep mode, Achievements, Reboot). Numbers come from the same `engine.js`/`layers.js`
    constants the game uses, so they can't drift. Reads no `useIncrementalGame` state — only pure
    constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
    import) — the **only** in-app version surface. Reached via AppNav → More → Manual.

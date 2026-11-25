@@ -194,7 +194,7 @@ describe('Manual achievements section', () => {
   it('explains stars, bonuses, secrets and resets with constant-derived numbers', () => {
     renderWithTheme(<InfoPage />)
     const section = screen.getByLabelText('achievements section')
-    expect(section.textContent).toContain(`${ACHIEVEMENT_STAR_PRODUCTION_BONUS * 100}% production`)
+    expect(section.textContent).toContain(`${Math.round(ACHIEVEMENT_STAR_PRODUCTION_BONUS * 1000) / 10}% production`)
     expect(section.textContent).toContain('Some achievements and completed groups give bonuses')
     expect(section.textContent).toContain('???')
     expect(section.textContent).toContain('full Reset')
