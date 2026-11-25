@@ -274,6 +274,7 @@ commenting once when all verifiable items are done. API errors leave a line unto
 the "Tracked separately" section and deliberately does **not** check `Workflows: write` — only a real
 push outcome proves it. **Convention:** any new `claude-task` issue introducing a manual-only
 prerequisite must add a line to #62; extend `CHECKS` in the script if it is API-checkable.
+On demand, `node scripts/verify-maintainer-checklist.mjs --dry-run` prints a PASS/FAIL/UNKNOWN table and never touches #62.
 
 **Backlog/milestone hygiene is also deterministic and unconditional.** Two more plain-bash steps —
 `Backlog issue hygiene` (`scripts/backlog-issue-hygiene.sh`, which also runs
@@ -416,7 +417,10 @@ tools, even during the self-improvement task — only `autonomous-maintenance.ym
 **Run summary (#74).** The prompt requires the agent's last message to end with a `## RUN SUMMARY`
 section (phase and task, why picked, self-estimated budget use, PR/issue links). The final
 `Write run summary` step extracts it from the Claude execution file's last `result` entry and appends it
-to `$GITHUB_STEP_SUMMARY` (a fallback line if absent; never fails the job). Complements the "no pull
+to `$GITHUB_STEP_SUMMARY` (a fallback line if absent; never fails the job), followed by a measured
+`turns=… duration_min=… cost_usd=…` line from the same entry (also echoed to the step log) so a reader can compare the
+self-estimated budget against actuals. These are proxies for quota use (cost/turns/time compare runs, not the
+rolling window), and the weekly retro prompt does not yet request them. Complements the "no pull
 request" summary written by `Surface a run that opens no pull request`.
 
 ### PR conflict sweep (`pr-conflict-sweep.yml`)

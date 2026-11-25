@@ -113,11 +113,11 @@ const tierChallenge = (index, code, kind, codename, effect, rule, levers = {}) =
 const RAW_CHALLENGE_DEFINITIONS = [
   tierChallenge(0, 'F1', 'tierAutobuyer', 'Half Duplex', 'halfDuplex', 'Kilobytes produce at half speed.', { clockSpeedPower: 0.85 }),
   tierChallenge(1, 'F2', 'tierAutobuyer', 'Write Lock', 'writeLock', 'Buying Megabytes pauses production briefly.', { scaleUpPower: 0.9 }),
-  tierChallenge(2, 'F3', 'tierAutobuyer', 'Cascade Delete', 'cascadeDelete', 'Buying Gigabytes resets lower tiers\' owned counts.', { costMultiplier: 6 }),
+  tierChallenge(2, 'F3', 'tierAutobuyer', 'Cascade Delete', 'cascadeDelete', 'Buying Gigabytes resets lower tiers\' owned counts.', { costMultiplier: 3 }),
   tierChallenge(3, 'F4', 'tierAutobuyer', 'Premium Tier', 'premiumTier', 'Terabytes cost ×1000.', { clockSpeedPower: 0.85 }),
   tierChallenge(4, 'F5', 'tierAutobuyer', 'Hard Refresh', 'hardRefresh', 'Petabytes owned resets every 5 min.'),
-  tierChallenge(5, 'F6', 'tierAutobuyer', 'Address Space', 'addressSpace', 'Exabytes is the top tier.', { scaleUpPower: 3, clockSpeedPower: 2 }),
-  tierChallenge(6, 'F7', 'tierAutobuyer', 'Single Instance', 'singleInstance', 'Scale Up never doubles Zettabytes.', { costMultiplier: 5 }),
+  tierChallenge(5, 'F6', 'tierAutobuyer', 'Address Space', 'addressSpace', 'Exabytes is the top tier.', { scaleUpPower: 2, clockSpeedPower: 1.5 }),
+  tierChallenge(6, 'F7', 'tierAutobuyer', 'Single Instance', 'singleInstance', 'Scale Up never doubles Zettabytes.', { costMultiplier: 3 }),
   tierChallenge(7, 'F8', 'tierAutobuyer', 'Memory Leak', 'memoryLeak', 'Yottabytes lose 1% owned per second.'),
   tierChallenge(8, 'F9', 'tierAutobuyer', 'Bit Rot', 'bitRot', 'Corruption grows exponentially; if it passes your Bits, the cycle restarts.', { scaleUpPower: 0.85 }),
   tierChallenge(9, 'F10', 'tierAutobuyer', 'Flat Rate', 'flatRate', 'Quettabytes get no level multiplier.'),
@@ -126,17 +126,17 @@ const RAW_CHALLENGE_DEFINITIONS = [
   tierChallenge(2, 'F13', 'tierTickspeed', 'Clock Skew', 'clockSkew', 'Gigabytes delivery period ×2.', { costMultiplier: 10 }),
   tierChallenge(3, 'F14', 'tierTickspeed', 'Rate Limit', 'rateLimit', 'Terabytes tickspeed capped at +3 levels.', { scaleUpPower: 0.65, costMultiplier: 3 }),
   tierChallenge(4, 'F15', 'tierTickspeed', 'Clock Drift', 'clockDrift', 'Petabytes tickspeed loses a level every 10 min.', { clockSpeedPower: 0.75, costMultiplier: 10 }),
-  tierChallenge(5, 'F16', 'tierTickspeed', 'Egress Fees', 'egressFees', 'Exabytes tickspeed levels cost one level more.', { costMultiplier: 30 }),
+  tierChallenge(5, 'F16', 'tierTickspeed', 'Egress Fees', 'egressFees', 'Exabytes tickspeed levels cost one level more.', { costMultiplier: 20 }),
   tierChallenge(6, 'F17', 'tierTickspeed', 'Noisy Neighbour', 'noisyNeighbour', 'Each Zettabytes tickspeed level slows other tiers 2%.', { production: 0.5, clockSpeedPower: 0.75 }),
   tierChallenge(7, 'F18', 'tierTickspeed', 'Daisy Chain', 'daisyChain', 'Yottabytes tickspeed capped at Zettabytes\' level.', { scaleUpPower: 0.6 }),
   tierChallenge(8, 'F19', 'tierTickspeed', 'Duty Cycle', 'dutyCycle', 'Ronnabytes tickspeed alternates 30 s on, 30 s off.', { clockSpeedPower: 0.25 }),
   tierChallenge(9, 'F20', 'tierTickspeed', 'Burn Rate', 'burnRate', 'Quettabytes tickspeed spends its full requirement.', { production: 0.5, scaleUpPower: 0.75, costMultiplier: 3 }),
 
-  { id: 'F21', layer: CHALLENGE_LAYER_FACTORY, target: 'Accelerate', codename: 'Base Clock', automation: { kind: 'global', key: 'speedUp' }, effect: 'clockSpeedDisabled', rule: 'Accelerate is disabled.', goal: PURGE_THRESHOLD },
+  { id: 'F21', layer: CHALLENGE_LAYER_FACTORY, target: 'Accelerate', codename: 'Base Clock', automation: { kind: 'global', key: 'speedUp' }, effect: 'clockSpeedDisabled', rule: 'Accelerate is disabled.', goal: PURGE_THRESHOLD, levers: { costMultiplier: 30 } },
   { id: 'F22', layer: CHALLENGE_LAYER_FACTORY, target: 'Scale Up', codename: 'Scale Out', automation: { kind: 'global', key: 'scaleUp' }, effect: 'scaleUpNoDoubling', rule: 'Scale Up doubles nothing.', goal: PURGE_THRESHOLD },
   { id: 'F23', layer: CHALLENGE_LAYER_FACTORY, target: 'Restage', codename: 'Code Freeze', automation: { kind: 'global', key: 'restage' }, effect: 'restageDisabled', rule: 'Restage disabled.', goal: PURGE_THRESHOLD, levers: { costMultiplier: 250 } },
-  { id: 'F24', layer: CHALLENGE_LAYER_FACTORY, target: 'Overclock', codename: 'Stock Cooling', automation: { kind: 'global', key: 'overclock' }, effect: 'overclockDisabled', rule: 'Overclock is disabled.', goal: PURGE_THRESHOLD, levers: { scaleUpPower: 0.5, clockSpeedPower: 0.5 } },
-  { id: 'F25', layer: CHALLENGE_LAYER_FACTORY, target: 'Purge', codename: 'Scope Creep', automation: { kind: 'global', key: 'purge' }, effect: 'raisedGoal', rule: 'Higher Purge goal; no freeze at 1 Googol.', goal: SCOPE_CREEP_PURGE_GOAL, levers: { clockSpeedPower: 0.5 } },
+  { id: 'F24', layer: CHALLENGE_LAYER_FACTORY, target: 'Overclock', codename: 'Stock Cooling', automation: { kind: 'global', key: 'overclock' }, effect: 'overclockDisabled', rule: 'Overclock is disabled.', goal: PURGE_THRESHOLD, levers: { scaleUpPower: 0.5, clockSpeedPower: 0.5, costMultiplier: 40 } },
+  { id: 'F25', layer: CHALLENGE_LAYER_FACTORY, target: 'Purge', codename: 'Scope Creep', automation: { kind: 'global', key: 'purge' }, effect: 'raisedGoal', rule: 'Higher Purge goal; no freeze at 1 Googol.', goal: SCOPE_CREEP_PURGE_GOAL, levers: { clockSpeedPower: 0.5, costMultiplier: 30 } },
 ]
 // Player-facing text for a challenge's run-wide levers, appended to its rule.
 const describeLevers = ({ production, clockSpeedPower, scaleUpPower, costMultiplier } = {}) => [
@@ -269,11 +269,11 @@ export const ACHIEVEMENT_DEFINITIONS = [
     id: `levelPower${i + 1}`,
     name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${getLevelPowerAchievementLevel(tierNumber)}`,
     group: 'levelPower',
-    trigger: `Reach level ${getLevelPowerAchievementLevel(tierNumber)} on ${TIER_DEFINITIONS[tierNumber - 1].name} (${getLevelPowerAchievementLevel(tierNumber) - 1} levels completed)`,
+    trigger: `Complete ${getLevelPowerAchievementLevel(tierNumber)} levels on ${TIER_DEFINITIONS[tierNumber - 1].name}`,
     short: `${TIER_DEFINITIONS[tierNumber - 1].symbol} level ${getLevelPowerAchievementLevel(tierNumber)}`,
     shortBonus: `+${LEVEL_POWER_ACHIEVEMENT_BONUS} per-level multiplier`,
     bonus: `The per-level production multiplier rises by ${LEVEL_POWER_ACHIEVEMENT_BONUS} (×1.0 → ×1.5 with all ten)`,
-    condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: getLevelPowerAchievementLevel(tierNumber) },
+    condition: { kind: 'tierLevel', tierId: TIER_DEFINITIONS[tierNumber - 1].id, min: getLevelPowerAchievementLevel(tierNumber) + 1 },
   })),
   { id: 'overclockStep1', name: 'Patient Overclock', group: 'overclockStep', short: `First Overclock at ${PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL}+`, shortBonus: 'Overclock step −1', trigger: `Claim the first Overclock of a Purge at ${PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL}+ completed last-tier levels`, bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level than the one before (+4 → +3)', condition: { kind: 'counter', key: 'maxFirstOverclock', min: PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL } },
   { id: 'overclockStep2', name: 'Overclock fast', group: 'overclockStep', short: '2 Overclocks/Purge, no Accelerate', shortBonus: 'Overclock step −1', trigger: 'After Patient Overclock, claim two Overclocks in one Purge without buying any Accelerate', bonus: 'Each later Overclock needs 1 fewer extra completed last-tier level (+3 → +2)', condition: { kind: 'counter', key: 'acceleratelessOverclocks', min: 1 } },
@@ -1032,10 +1032,27 @@ export const ERA_ELIGIBILITY_PP = GOOGOL
 // Flops autobuyer milestone: Era N unlocks the Nth Flops tier's autobuyer (KFlops at Era 1, …).
 export const FLOPS_AUTOBUYER_ERA_START = 1
 export const FLOPS_AUTOBUYER_ERA_STEP = 1
+// Auto Purge conditions (all optional; Off = 0). They narrow WHEN Auto Purge fires once Money has reached
+// the Purge goal: the time floor always applies, the two PP conditions only in Overflow mode (while frozen
+// the pending award can't grow).
+export const AUTO_PURGE_MAX_PP_EXPONENT = 100
+export const AUTO_PURGE_MIN_SECONDS_OPTIONS = [0, 10, 60, 600, 3600, 21600, 86400]
+export const AUTO_PURGE_BEST_MULTIPLIER_OPTIONS = [0, 1.5, 2, 5, 10, 100]
 // Hyperscaler generator costs in Eons: 1, 10, 100, … (×10 per purchase).
 export const HYPERSCALER_EON_COST_BASE = 1
 export const HYPERSCALER_EON_COST_MULTIPLIER = 10
 // Each Hyperscaler Efficiency level adds this much extra rate per hyperscaler (+0.001%/s at 0.00001).
 export const HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL = 0.00001
-// Each Kernel Amplifier level adds this many extra Kernels awarded per Reboot.
-export const EON_AMPLIFIER_AWARD_PER_LEVEL = 1
+// Kernels awarded per Reboot = EON_AMPLIFIER_AWARD_BASE ** eonAmplifierLevel (1, 10, 100, …).
+export const EON_AMPLIFIER_AWARD_BASE = 10
+// Kernel shop (#414). Cost of the next level = costBase × costGrowth ** currentLevel Kernels; maxLevel null = uncapped.
+// `hyperscaler` keeps its own HYPERSCALER_EON_* constants above.
+export const EON_UPGRADE_DEFINITIONS = [
+  { id: 'hyperscalerEfficiency', levelField: 'hyperscalerEfficiencyLevel', costBase: 1, costGrowth: 10, maxLevel: 10 },
+  { id: 'eonAmplifier', levelField: 'eonAmplifierLevel', costBase: 10, costGrowth: 10, maxLevel: 9 },
+]
+export const EON_UPGRADE_BY_ID = Object.assign(Object.create(null), Object.fromEntries(
+  EON_UPGRADE_DEFINITIONS.map(def => [def.id, def])
+))
+// One-time Kernel price of the Auto Hyperscaler unlock.
+export const AUTO_HYPERSCALER_EON_COST = 100

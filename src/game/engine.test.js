@@ -165,6 +165,18 @@ import {
   getEonsAwarded,
   getFlopsAutobuyerUnlockEra,
   getHyperscalerFlopsBoostRate,
+  buyEonUpgrade,
+  isAutoPurgeReady,
+  setAutoPurgeSetting,
+  getAutoPurgeSettings,
+  canBuyEonUpgrade,
+  getEonUpgradeCost,
+  getEonUpgradeLevel,
+  buyAutoHyperscaler,
+  setAutoHyperscalerEnabled,
+  tickAutoHyperscaler,
+  tickComputeFlops as tickComputeFlopsForKernels,
+  getComputeFlopsTierProductionMultiplier,
   getGlobalTickspeedMultiplierCost,
   getGlobalTickspeedProductionMultiplier,
   getIntroKilobyteConversionCost,
@@ -6117,33 +6129,38 @@ describe('getPrestigeProductionMultiplier', () => {
 // ─── getPrestigePointsAwarded ─────────────────────────────────────────────────
 
 describe('getPrestigePointsAwarded', () => {
-  it('awards exactly 1 point at exactly PURGE_THRESHOLD', () => {
+  it('awards floor(100 / 64) = 1 point at exactly PURGE_THRESHOLD', () => {
     expect(getPrestigePointsAwarded(PURGE_THRESHOLD)).toBe(1)
   })
 
-  it('stays at 1 point until a full 64 excess money-exponent powers are reached', () => {
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 10)).toBe(1)
+  it('holds the numerator at 100 powers until Overflow mode (unbounded) is unlocked', () => {
     expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e9)).toBe(1)
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e63)).toBe(1)
-  })
-
-  it('awards 2 points once 64 excess powers beyond Googol are reached', () => {
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64)).toBe(2)
-  })
-
-  it('awards 4 points at 192 excess powers (three full 64-power blocks beyond base)', () => {
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e192)).toBe(4)
-  })
-
-  it('halves powers-per-PP with each Double PP upgrade through level 6', () => {
     expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 1)).toBe(3)
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e32, 1)).toBe(2)
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 6)).toBe(65)
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 6)).toBe(100)
+  })
+
+  it('uses the BYTES exponent (Bits ÷ 8), not the Bits exponent, once unbounded', () => {
+    // 1e101 Bits = 1.25e100 Bytes (exponent 100), 7.9e164 Bits ≈ 9.9e163 Bytes (exponent 163).
+    expect(getPrestigePointsAwarded(1e101, 6, true)).toBe(100)
+    expect(getPrestigePointsAwarded(7.9e164, 6, true)).toBe(163)
+  })
+
+  it('uses the actual powers once unbounded: floor(exponent / powers-per-PP)', () => {
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD, 0, true)).toBe(1)
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 0, true)).toBe(2) // 164 / 64
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e192, 0, true)).toBe(4) // 292 / 64
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 1, true)).toBe(5) // 164 / 32
+  })
+
+  it('halves powers-per-PP with each Compression level through level 6 (100/32 = 3, 100/16 = 6, …)', () => {
+    expect([0, 1, 2, 3, 4, 5, 6].map(level => getPrestigePointsAwarded(PURGE_THRESHOLD, level)))
+      .toEqual([1, 3, 6, 12, 25, 50, 100])
   })
 
   it('doubles PP-per-power after level 6 instead of halving further', () => {
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD, 7)).toBe(2)
-    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 7)).toBe(130)
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD, 7)).toBe(200)
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD, 8)).toBe(400)
+    expect(getPrestigePointsAwarded(PURGE_THRESHOLD * 1e64, 7, true)).toBe(328) // 164 × 2
   })
 
   it('returns 0 below PURGE_THRESHOLD, including at GOOGOL alone', () => {
@@ -8497,10 +8514,16 @@ describe('purgeGame', () => {
     expect(after.purge.points).toBe(1)
   })
 
-  it('awards more Prestige Points once 64 excess money-exponent powers beyond Googol are reached', () => {
+  it('holds the PP numerator at 100 powers until Overflow mode, then follows the actual powers', () => {
     const state = withMoney(createInitialGameState(), PURGE_THRESHOLD * 1e64)
-    const after = purgeGame(state)
-    expect(after.purge.points).toBe(2)
+    expect(purgeGame(state).purge.points).toBe(1)
+    const overflow = { ...state, purge: { ...state.purge, unboundedUnlocked: true } }
+    expect(purgeGame(overflow).purge.points).toBe(2) // floor(164 / 64)
+  })
+
+  it('awards 3 PP at Googol after one Compression (100 / 32)', () => {
+    const state = { ...withMoney(createInitialGameState(), PURGE_THRESHOLD), prestigeDoublePpLevel: 1 }
+    expect(purgeGame(state).purge.points).toBe(3)
   })
 
   it('adds newly-awarded points on top of any already-unspent points', () => {
@@ -9932,13 +9955,12 @@ describe('isEraEligible', () => {
 })
 
 describe('getEonsAwarded / buyHyperscaler / getHyperscalerFlopsBoostRate', () => {
-  it('awards 1 + eonAmplifierLevel Eons per Era', () => {
+  it('awards 10 ** eonAmplifierLevel Kernels per Reboot', () => {
     const state = withPrestigePoints(createInitialGameState(), ERA_ELIGIBILITY_PP)
     expect(getEonsAwarded(state)).toBe(1)
-    expect(getEonsAwarded({
-      ...state,
-      eonsUpgrades: { ...state.eonsUpgrades, eonAmplifierLevel: 2 },
-    })).toBe(3)
+    const at = level => getEonsAwarded({ ...state, eonsUpgrades: { ...state.eonsUpgrades, eonAmplifierLevel: level } })
+    expect(at(1)).toBe(10)
+    expect(at(9)).toBe(1e9)
   })
 
   it('buyHyperscaler spends escalating Eons and increases hyperscaler boost rate', () => {
@@ -13091,5 +13113,186 @@ describe('getTierCostExponent spacing growth', () => {
     expect(gaps.slice(0, 10)).toEqual(Array(10).fill(1))
     expect(gaps.slice(10, 20)).toEqual(Array(10).fill(2))
     expect(gaps.slice(20)).toEqual([3, 3])
+  })
+})
+
+describe('Kernel shop (#414)', () => {
+  const withKernels = (balance, extra = {}) => {
+    const base = createInitialGameState()
+    return { ...base, eons: { balance }, ...extra, eonsUpgrades: { ...base.eonsUpgrades, ...(extra.eonsUpgrades ?? {}) } }
+  }
+
+  it('buyEonUpgrade is a same-reference no-op when unaffordable, maxed, unknown or legacy', () => {
+    const poor = withKernels(0)
+    expect(buyEonUpgrade('eonAmplifier')(poor)).toBe(poor)
+    const maxed = withKernels(1e12, { eonsUpgrades: { eonAmplifierLevel: 9 } })
+    expect(buyEonUpgrade('eonAmplifier')(maxed)).toBe(maxed)
+    const rich = withKernels(1e12)
+    expect(buyEonUpgrade('nope')(rich)).toBe(rich)
+    const legacy = { ...rich, eonsUpgrades: undefined }
+    expect(canBuyEonUpgrade(legacy, 'hyperscalerEfficiency')).toBe(true)
+  })
+
+  it('buyEonUpgrade deducts the exact cost and raises the level', () => {
+    const state = withKernels(1000)
+    const after = buyEonUpgrade('eonAmplifier')(state)
+    expect(after.eons.balance).toBe(1000 - getEonUpgradeCost('eonAmplifier', 0))
+    expect(getEonUpgradeLevel(after, 'eonAmplifier')).toBe(1)
+    expect(getEonUpgradeCost('eonAmplifier', 1)).toBe(100)
+    expect(getEonUpgradeCost('hyperscalerEfficiency', 3)).toBe(1000)
+  })
+
+  it('Auto Hyperscaler unlock costs 100 and buys hyperscalers only when unlocked and enabled', () => {
+    const locked = withKernels(99)
+    expect(buyAutoHyperscaler(locked)).toBe(locked)
+    const unlocked = buyAutoHyperscaler(withKernels(111))
+    expect(unlocked.eons.balance).toBe(11)
+    expect(unlocked.eonsUpgrades.autoHyperscalerUnlocked).toBe(true)
+    const bought = tickAutoHyperscaler(unlocked)
+    expect(bought.hyperscalerCount).toBe(2) // 1 + 10 Kernels
+    expect(bought.eons.balance).toBe(0)
+    const paused = setAutoHyperscalerEnabled(false)(unlocked)
+    expect(tickAutoHyperscaler(paused)).toBe(paused)
+    expect(tickAutoHyperscaler(withKernels(1000))).toEqual(withKernels(1000))
+  })
+
+  it('hyperscalers build up every tier\'s Flops boost over time (no fixed term)', () => {
+    const state = { ...createInitialGameState(), hyperscalerCount: 1 }
+    const after = tickComputeFlopsForKernels(100)(state)
+    expect(after.computeFlops.cumulativeBoost.tier01).toBeCloseTo(getHyperscalerFlopsBoostRate(state) * 100, 10)
+    expect(after.computeFlops.cumulativeBoost.tier10).toBeCloseTo(getHyperscalerFlopsBoostRate(state) * 100, 10)
+    expect(getComputeFlopsTierProductionMultiplier(state, 'tier01')).toBe(1)
+  })
+
+  it('survives Reboot and property: balance never negative, level within cap', () => {
+    fc.assert(fc.property(fc.array(fc.constantFrom('hyperscalerEfficiency', 'eonAmplifier'), { maxLength: 40 }), ids => {
+      let state = withKernels(1e11)
+      ids.forEach(id => { state = buyEonUpgrade(id)(state) })
+      expect(state.eons.balance).toBeGreaterThanOrEqual(0)
+      expect(getEonUpgradeLevel(state, 'eonAmplifier')).toBeLessThanOrEqual(9)
+      expect(getEonUpgradeLevel(state, 'hyperscalerEfficiency')).toBeLessThanOrEqual(10)
+    }), { numRuns: 200 })
+  })
+})
+
+describe('Auto Purge conditions', () => {
+  const overflowState = (extra = {}) => ({
+    ...createInitialGameState(),
+    resources: { ...createInitialGameState().resources, [MONEY_ID]: PURGE_THRESHOLD * 1e40 },
+    purge: { ...createInitialGameState().purge, unboundedUnlocked: true, ...(extra.purge ?? {}) },
+    prestigeDoublePpLevel: 6,
+    ...extra,
+  })
+
+  it('setAutoPurgeSetting validates, applies and no-ops on same/invalid values', () => {
+    const state = createInitialGameState()
+    expect(setAutoPurgeSetting('targetPpExponent', 12)(state).autoPurgeSettings.targetPpExponent).toBe(12)
+    expect(setAutoPurgeSetting('minSeconds', 600)(state).autoPurgeSettings.minSeconds).toBe(600)
+    expect(setAutoPurgeSetting('minSeconds', 7)(state)).toBe(state)
+    expect(setAutoPurgeSetting('bestMultiplier', 3)(state)).toBe(state)
+    expect(setAutoPurgeSetting('targetPpExponent', 0)(state)).toBe(state)
+    expect(setAutoPurgeSetting('nope', 1)(state)).toBe(state)
+    expect(getAutoPurgeSettings(state)).toEqual({ targetPpExponent: 0, minSeconds: 0, bestMultiplier: 0 })
+  })
+
+  it('is ready by default and the minimum time waits for the cycle clock', () => {
+    const state = overflowState()
+    expect(isAutoPurgeReady(state)).toBe(true)
+    const timed = setAutoPurgeSetting('minSeconds', 600)(state)
+    expect(isAutoPurgeReady(timed)).toBe(false)
+    expect(isAutoPurgeReady({ ...timed, purge: { ...timed.purge, cycleSeconds: 600 } })).toBe(true)
+  })
+
+  it('Purge-at-PP and best-multiple conditions wait for a big enough pending award (Overflow mode only)', () => {
+    const state = overflowState()
+    const pending = getPrestigePointsAwarded(state.resources[MONEY_ID], state.prestigeDoublePpLevel, true)
+    expect(pending).toBeGreaterThan(1)
+    const high = setAutoPurgeSetting('targetPpExponent', Math.ceil(Math.log10(pending)) + 5)(state)
+    expect(isAutoPurgeReady(high)).toBe(false)
+    const low = setAutoPurgeSetting('targetPpExponent', 1)(state)
+    expect(isAutoPurgeReady(low)).toBe(true)
+    const best = { ...state, purge: { ...state.purge, highestAward: pending } }
+    expect(isAutoPurgeReady(setAutoPurgeSetting('bestMultiplier', 2)(best))).toBe(false)
+    expect(isAutoPurgeReady(setAutoPurgeSetting('bestMultiplier', 2)({ ...best, purge: { ...best.purge, highestAward: pending / 2 } }))).toBe(true)
+    const frozen = { ...high, purge: { ...high.purge, unboundedUnlocked: false } }
+    expect(isAutoPurgeReady(frozen)).toBe(true) // PP conditions are ignored while frozen
+  })
+
+  it('tickGame advances purge.cycleSeconds, and a Purge restarts it and records the highest award', () => {
+    let state = createInitialGameState()
+    state = tickGame(1)(state)
+    state = tickGame(1)(state)
+    expect(state.purge.cycleSeconds).toBe(2)
+    const rich = { ...state, resources: { ...state.resources, [MONEY_ID]: PURGE_THRESHOLD } }
+    const purged = purgeGame(rich)
+    expect(purged.purge.cycleSeconds).toBe(0)
+    expect(purged.purge.highestAward).toBe(1)
+  })
+})
+
+describe('tickGame wiring: Auto Purge conditions, Auto Hyperscaler, Reboot round-trip (#414)', () => {
+  // Auto Purge bought with a full attempt budget and Money at the goal, so the only thing holding it back is the condition.
+  const readyToAutoPurge = (extra = {}) => {
+    const base = createInitialGameState()
+    return {
+      ...base,
+      autoPurge: 0,
+      autoPurgeAttemptBudget: 5,
+      resources: { ...base.resources, [MONEY_ID]: PURGE_THRESHOLD },
+      ...extra,
+    }
+  }
+  const overflowReady = (extra = {}) => readyToAutoPurge({
+    purge: { ...createInitialGameState().purge, unboundedUnlocked: true, ...(extra.purge ?? {}) },
+    prestigeDoublePpLevel: 6,
+    resources: { ...createInitialGameState().resources, [MONEY_ID]: PURGE_THRESHOLD * 1e40 },
+    ...extra,
+  })
+
+  it('fires with default settings in both the frozen and Overflow branches', () => {
+    expect(tickGame(1)(readyToAutoPurge()).purge.count).toBe(1)
+    expect(tickGame(1)(overflowReady()).purge.count).toBe(1)
+  })
+
+  it.each([
+    ['frozen: minimum time', () => setAutoPurgeSetting('minSeconds', 600)(readyToAutoPurge()), () => ({ purge: { cycleSeconds: 600 } })],
+    ['Overflow: minimum time', () => setAutoPurgeSetting('minSeconds', 600)(overflowReady()), () => ({ purge: { cycleSeconds: 600, unboundedUnlocked: true } })],
+    ['Overflow: Purge at PP', () => setAutoPurgeSetting('targetPpExponent', 100)(overflowReady()), null],
+    ['Overflow: best multiple', () => setAutoPurgeSetting('bestMultiplier', 100)({ ...overflowReady(), purge: { ...overflowReady().purge, highestAward: 1e6 } }), null],
+  ])('%s holds Auto Purge back until satisfied', (_name, makeHeld, makeReleased) => {
+    const held = makeHeld()
+    expect(tickGame(1)(held).purge.count).toBe(0)
+    if (makeReleased) {
+      const patch = makeReleased()
+      const released = { ...held, purge: { ...held.purge, ...patch.purge } }
+      expect(tickGame(1)(released).purge.count).toBe(1)
+    }
+  })
+
+  it('Auto Hyperscaler buys inside tickGame only when unlocked and enabled', () => {
+    const base = { ...createInitialGameState(), eons: { balance: 11 } }
+    expect(tickGame(1)(base).hyperscalerCount).toBe(0)
+    const unlocked = { ...base, eonsUpgrades: { ...base.eonsUpgrades, autoHyperscalerUnlocked: true } }
+    expect(tickGame(1)(unlocked).hyperscalerCount).toBe(2)
+    const paused = { ...unlocked, eonsUpgrades: { ...unlocked.eonsUpgrades, autoHyperscalerEnabled: false } }
+    expect(tickGame(1)(paused).hyperscalerCount).toBe(0)
+  })
+
+  it('Reboot keeps Kernel shop levels, hyperscalers and Auto Purge settings, and resets highestAward', () => {
+    const base = withPrestigePoints(createInitialGameState(), ERA_ELIGIBILITY_PP)
+    const state = {
+      ...base,
+      hyperscalerCount: 3,
+      eonsUpgrades: { ...base.eonsUpgrades, eonAmplifierLevel: 2, hyperscalerEfficiencyLevel: 4, autoHyperscalerUnlocked: true },
+      autoPurgeSettings: { targetPpExponent: 7, minSeconds: 60, bestMultiplier: 2 },
+      purge: { ...base.purge, highestAward: 50, cycleSeconds: 99 },
+    }
+    const after = eraGame(state)
+    expect(after.hyperscalerCount).toBe(3)
+    expect(after.eonsUpgrades).toMatchObject({ eonAmplifierLevel: 2, hyperscalerEfficiencyLevel: 4, autoHyperscalerUnlocked: true })
+    expect(after.autoPurgeSettings).toEqual(state.autoPurgeSettings)
+    expect(after.purge.highestAward).toBe(0)
+    expect(after.purge.cycleSeconds).toBe(0)
+    expect(after.eons.balance).toBe(100)
   })
 })

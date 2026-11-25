@@ -1,5 +1,13 @@
 # Design history & rationale
 
+### PP over actual powers, not excess (2026-11-23)
+
+`getPrestigePointsAwarded` used `1 + floor(excessPowers / powersPerPp)` (excess over Googol's 100), so Compression did nothing at a frozen Googol Purge (always 1 PP). The maintainer's rule: PP follow the ACTUAL powers — `floor(powers / powersPerPp)` — so one Compression takes the first Purge from 100/64 = 1 to 100/32 = 3 PP. The numerator is held at 100 until Overflow mode (`unbounded`), then grows without bound. The Reboot sim's earlier "PP stuck at 1 per Purge" finding was an artifact of the old formula.
+
+### Kernel shop (#414) — 2026-11-23
+
+Designer-drafted spend tree implemented on the maintainer's "implement the best ideas, change later" go-ahead (Bootloader, the optional PP ×10 lever, deliberately dropped: its compounding effect can't be simulated). Two changes beyond the shop itself: (A1) hyperscalers used to add a flat `+0.01%` production term, which made the only Kernel spend nearly worthless, so they now accrue into every tier's per-cycle `cumulativeBoost` each tick (~+36%/h each); (A2) `getEonsAwarded` became `10^L` because the old `1 + L` with power-of-ten costs stalls the tree after ~3 levels. **Pacing is only partly measured:** the new `reboot-simulation.mjs` (greedy PP policy) reaches ~600 PP in ~63 simulated days and cannot reach Overflow mode, so time per Reboot is unknown. A first back-of-envelope estimate that Reboot (1e100 unspent PP) was unreachable (~4e72 Purges) was WRONG: it assumed money freezes at Googol (~1 PP per Purge) and constant cycle times, but Overflow mode lets money run past Googol (more excess powers per Purge) and compounding upgrades/achievements shrink cycles enormously. Do not cite that estimate; add a Reboot loop to the bot before tuning shop costs.
+
 ### Game rules split into `src/CLAUDE.md` — 2026-11-18
 
 Root `CLAUDE.md` had regrown to ~83 KB (~20k tokens) and loads into every session, including the many
@@ -9674,3 +9682,7 @@ The four Factory feature cards (#1137's side-by-side pairs of tall, bottom-pinne
 
 - The ten Level power achievements first all required level 10 (QB level 10 was only reached near the end of the first Purge, so the full ×1.5 arrived very late). They now require level 5 on tiers 1–5 and level 6, 7, 8, 9, 10 on tiers 6–10 (`getLevelPowerAchievementLevel`). Ideal-bot first Purge: 1d 16h 11m → 1d 8h 54m (Purges 1/5/10 essentially unchanged: 22h 4m→22h 10m / 1d 1h 20m→1d 1h 21m / 21h 43m). Existing saves earn newly satisfied achievements on their next tick (at-least checks). Side effect: daily runs earn Level power achievements while they play, so generated definitions change — `DAILY_GENERATOR_VERSION` 8.
 - Rejected (misread of the request): widening the cost-spacing growth interval per tier (5 for tiers 1–5, then 6–10) — it lengthened every cycle by 50–90% (first Purge 3d 1h 47m).
+
+## Level power off-by-one fix (2026-11-24)
+
+- The achievements fired at `purchaseLevels ≥ N` (N−1 completed levels) while the UI shows completed levels, so "level 5" unlocked at 4. The condition is now `purchaseLevels ≥ N+1` and progress counts completed levels. The bot's isolated daily games earn these achievements, so `DAILY_GENERATOR_VERSION` was bumped 8 → 9 (sampled definitions changed). Not re-simulated for first-Purge pacing.

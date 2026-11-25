@@ -140,6 +140,10 @@ note that the orphan branch still needs publishing.
 Retired name: `cursor/ideal-run-strategy-4551` (single living `IDEAL_STRATEGY.md`) — superseded by
 `ideal-run-strategy` + per-run files under `runs/`.
 
+## Reboot loop
+
+`reboot-simulation.mjs` (run from anywhere: `node .claude/skills/simulate-run-times/reboot-simulation.mjs [--max-seconds S] [--max-purges N] [--no-hold]`) chains Purges with a greedy PP-spend policy (Compression first, with a savings rule) and an optimal-stopping Purge timer once Overflow mode is available, printing log-spaced Purge rows (cycle length, PP awarded, Compression level, PP balance) until the Reboot gate (1e100 unspent PP) or a cap. It does not buy Overflow-mode levers smartly yet, so treat it as a compounding probe, not a Reboot-time estimate.
+
 ## When editing the simulation
 
 If the user asks to change the bot strategy, the PP / career / capacity-cap range, or add a new

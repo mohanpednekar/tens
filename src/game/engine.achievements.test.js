@@ -37,7 +37,7 @@ const lateGame = () => {
     computeFlops: { ...initial.computeFlops, owned: { ...initial.computeFlops.owned, flop10: 1 } },
     intro: { ...initial.intro, byteCreated: true, mainGameUnlocked: true, computeNodes: 1, computeMegacomputers: 1 },
     purchased: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 5])),
-    purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 10])),
+    purchaseLevels: Object.fromEntries(TIER_DEFINITIONS.map(t => [t.id, 11])),
     globalTickspeedMultiplier: 40,
     overclockLastClaimCompletedLevels: 5,
   }
@@ -181,7 +181,7 @@ describe('Level power achievements', () => {
   it('start at 1.0; each tier at its required level adds 0.05, reaching 1.5 with all ten', () => {
     const base = createInitialGameState()
     expect(getLevelMultiplierBase(base)).toBe(1)
-    const levels = n => ({ ...base, purchaseLevels: { ...base.purchaseLevels, ...Object.fromEntries(TIER_DEFINITIONS.slice(0, n).map((t, i) => [t.id, getLevelPowerAchievementLevel(i + 1)])) } })
+    const levels = n => ({ ...base, purchaseLevels: { ...base.purchaseLevels, ...Object.fromEntries(TIER_DEFINITIONS.slice(0, n).map((t, i) => [t.id, getLevelPowerAchievementLevel(i + 1) + 1])) } })
     expect(getLevelMultiplierBase(detectAchievements(levels(1)))).toBe(1.05)
     expect(getLevelMultiplierBase(detectAchievements(levels(4)))).toBe(1.2)
     expect(getLevelMultiplierBase(detectAchievements(levels(10)))).toBe(1.5)
@@ -191,12 +191,12 @@ describe('Level power achievements', () => {
     expect([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(getLevelPowerAchievementLevel)).toEqual([5, 5, 5, 5, 5, 6, 7, 8, 9, 10])
     const base = createInitialGameState()
     // One level short of every requirement earns nothing; exactly the requirement earns that tier only.
-    const short = { ...base, purchaseLevels: { ...base.purchaseLevels, ...Object.fromEntries(TIER_DEFINITIONS.map((t, i) => [t.id, getLevelPowerAchievementLevel(i + 1) - 1])) } }
+    const short = { ...base, purchaseLevels: { ...base.purchaseLevels, ...Object.fromEntries(TIER_DEFINITIONS.map((t, i) => [t.id, getLevelPowerAchievementLevel(i + 1)])) } }
     expect(getLevelMultiplierBase(detectAchievements(short))).toBe(1)
-    const tier7 = { ...base, purchaseLevels: { ...base.purchaseLevels, tier07: 7 } }
+    const tier7 = { ...base, purchaseLevels: { ...base.purchaseLevels, tier07: 8 } }
     expect(isAchievementEarned(detectAchievements(tier7), 'levelPower7')).toBe(true)
-    expect(isAchievementEarned(detectAchievements({ ...base, purchaseLevels: { ...base.purchaseLevels, tier07: 6 } }), 'levelPower7')).toBe(false)
-    expect(isAchievementEarned(detectAchievements({ ...base, purchaseLevels: { ...base.purchaseLevels, tier02: 5 } }), 'levelPower2')).toBe(true)
+    expect(isAchievementEarned(detectAchievements({ ...base, purchaseLevels: { ...base.purchaseLevels, tier07: 7 } }), 'levelPower7')).toBe(false)
+    expect(isAchievementEarned(detectAchievements({ ...base, purchaseLevels: { ...base.purchaseLevels, tier02: 6 } }), 'levelPower2')).toBe(true)
   })
 
   it('getPurchaseMilestoneMultiplier uses the supplied base', () => {
@@ -341,7 +341,7 @@ describe('getAchievementProgress / getAchievementReward', () => {
     const state = { ...createInitialGameState(), globalTickspeedMultiplier: 4, purchaseLevels: { tier01: 6 }, achievements: { earned: {}, counters: { pings: 10 } } }
     expect(getAchievementProgress(state, { kind: 'counter', key: 'pings', min: 256 })).toEqual({ current: 10, target: 256 })
     expect(getAchievementProgress(state, { kind: 'clockSpeedLevel', min: 10 })).toEqual({ current: 4, target: 10 })
-    expect(getAchievementProgress(state, { kind: 'tierLevel', tierId: 'tier01', min: 10 })).toEqual({ current: 6, target: 10 })
+    expect(getAchievementProgress(state, { kind: 'tierLevel', tierId: 'tier01', min: 10 })).toEqual({ current: 5, target: 9 })
     expect(getAchievementProgress(state, { kind: 'poolsCompacted', min: 3 })).toEqual({ current: 0, target: 3 })
     expect(getAchievementProgress({ ...state, intro: { ...state.intro, poolExponentBonuses: { 1: 2, 4: 1, 5: 0 } } }, { kind: 'poolsCompacted', min: 3 })).toEqual({ current: 2, target: 3 })
     expect(getAchievementProgress({ ...state, intro: { ...state.intro, capacity: 8 } }, { kind: 'storageUnlocked' })).toEqual({ current: 0, target: 10 })
