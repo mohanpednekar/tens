@@ -489,7 +489,8 @@ instead, in one session:
    threads. **Workflow-control PRs** — any PR touching `.github/workflows/**`, `.github/actions/**`,
    `.github/CODEOWNERS`, any script a workflow runs with the automation token (e.g.
    `scripts/claude-deny-settings.sh`, `scripts/backlog-issue-hygiene.sh`,
-   `scripts/sync-release-milestones.sh`, `scripts/verify-maintainer-checklist.mjs` — check the
+   `scripts/sync-release-milestones.sh`, `scripts/verify-maintainer-checklist.mjs`,
+   `scripts/bump-version.mjs` (imported by `release.yml`) — check the
    workflows' `run:` steps), or the routine's own review inputs (`.claude/agents/code-reviewer.md`)
    — follow the **no-loop tenet** (maintainer rule): no
    workflow may update workflows, directly or indirectly, without human approval; an upstream actor
