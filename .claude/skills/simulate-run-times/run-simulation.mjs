@@ -47,12 +47,14 @@
 //   node run-simulation.mjs --career 0 5 10          # career cycles at those prestige counts
 //   node run-simulation.mjs --capacity-cap           # default early-stop floor/hard cap/unlimited sweep
 //   node run-simulation.mjs --capacity-cap 4194304 8388608 unlimited
+//   node run-simulation.mjs --career 0 5 --achievements   # also pursue timing-dependent achievements (achievements.mjs)
 //   node run-simulation.mjs --strategy-out /tmp/run.md
 //   node run-simulation.mjs --pp 0 --strategy-out ./runs/2026-03-21T120000Z-abc1234.md
 
 import { execSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
-import { formatCurrency, purgeGame } from '../../../src/game/engine.js'
+import { formatCurrency, getAchievementStars, purgeGame } from '../../../src/game/engine.js'
+import { simulateCycleWithAchievements } from './achievements.mjs'
 import {
   DEFAULT_CAPACITY_CAPS_BITS,
   MAX_TICKS,
@@ -62,6 +64,7 @@ import {
 } from './bot.mjs'
 
 function formatDuration(totalSeconds) {
+  if (totalSeconds < 0) return `-${formatDuration(-totalSeconds)}`
   const days = Math.floor(totalSeconds / 86400)
   const hours = Math.floor((totalSeconds % 86400) / 3600)
   const minutes = Math.floor((totalSeconds % 3600) / 60)
@@ -79,6 +82,7 @@ function parseArgs(argv) {
   const career = []
   const capacityCaps = []
   let strategyOut = null
+  let achievements = false
   let mode = null
   let runCapacitySweep = false
   for (let i = 0; i < argv.length; i += 1) {
@@ -89,6 +93,11 @@ function parseArgs(argv) {
     }
     if (arg === '--career') {
       mode = 'career'
+      continue
+    }
+    if (arg === '--achievements') {
+      achievements = true
+      mode = null
       continue
     }
     if (arg === '--capacity-cap' || arg === '--capacity-caps') {
@@ -117,7 +126,7 @@ function parseArgs(argv) {
     else if (mode === 'pp') pp.push(n)
     else pp.push(n)
   }
-  return { pp, career, capacityCaps, runCapacitySweep, strategyOut }
+  return { pp, career, capacityCaps, runCapacitySweep, strategyOut, achievements }
 }
 
 const defaultPPValues = [0, 10, 25, 50, 100, 250, 500, 1000, 2000, 5000, 10000, 25000, 50000]
@@ -129,6 +138,7 @@ const {
   capacityCaps: cliCapacityCaps,
   runCapacitySweep,
   strategyOut,
+  achievements: pursueAchievements,
 } = parseArgs(process.argv.slice(2))
 
 // Capacity-cap mode is exclusive of the default career+PP tables unless those flags are also set.
@@ -210,12 +220,24 @@ if (runCareer) {
 
   let state = seedState({ purgeCount: 0, startingPP: 0 })
   let nextTargetIndex = 0
+  const achievementRows = []
   const targets = [...new Set(careerTargets)].sort((a, b) => a - b)
 
   while (nextTargetIndex < targets.length) {
     const countAtStart = state.purge.count
     const ppAtStart = state.purge.points
-    const result = simulateCycle(state)
+    const result = pursueAchievements ? simulateCycleWithAchievements(state) : simulateCycle(state)
+    if (pursueAchievements) {
+      achievementRows.push({
+        purges: countAtStart,
+        extra: result.extraTicks,
+        baseline: result.baselineTicks,
+        pursued: result.pursued.map(p => `${p.id} (+${formatDuration(p.cost)})`),
+        deferred: result.deferred,
+        earned: result.newlyEarned,
+        stars: getAchievementStars(result.state),
+      })
+    }
 
     if (countAtStart === 0) {
       freshTotal = result.reached ? formatDuration(result.ticks) : `${formatDuration(result.ticks)} (capped)`
@@ -243,6 +265,19 @@ if (runCareer) {
     }
   }
   emit('')
+
+  if (pursueAchievements) {
+    emit('## Achievement pursuit (cost measured by replaying each cycle with and without the attempt)')
+    emit('')
+    emit('| Purge cycle | Baseline | Extra time paid | Pursued (marginal cost) | Deferred | Earned this cycle | Stars after |')
+    emit('|---|---|---|---|---|---|---|')
+    for (const row of achievementRows) {
+      emit(
+        `| ${row.purges} | ${formatDuration(row.baseline)} | ${formatDuration(row.extra)} | ${row.pursued.join(', ') || '—'} | ${row.deferred.join(', ') || '—'} | ${row.earned.join(', ') || '—'} | ${row.stars} |`,
+      )
+    }
+    emit('')
+  }
 }
 
 if (runPP) {

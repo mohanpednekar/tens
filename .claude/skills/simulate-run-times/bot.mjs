@@ -16,8 +16,13 @@ import {
   createInitialGameState,
   fillDataLakeManually,
   formatCurrency,
+  getEffectiveLastTier,
   getLastTierXpTickspeedMinConsumption,
+  getOverclockLevel,
   getPurchaseBlockSize,
+  isAchievementEarned,
+  isOverflowModeUnlocked,
+  withManualPurchaseMark,
   getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierSpendableAmount,
@@ -222,20 +227,30 @@ function wouldAutobuyerStall(state, tier) {
   return affordable > 0 && affordable < blockMax
 }
 
-export function actMainBuys(state) {
+// `policy` (achievements.mjs, default none) lets a cycle deliberately deviate from the speed-optimal play to earn
+// an achievement; see ACHIEVEMENT_GOALS there. Every field defaults to "play normally".
+export const NO_POLICY = Object.freeze({})
+
+export function actMainBuys(state, policy = NO_POLICY) {
+  // 'Look ma, no hands': a hands-free cycle never clicks a tier Buy; the autobuyers must carry it alone.
+  if (policy.handsFree) return state
   let s = state
   for (const tier of [...TIER_DEFINITIONS].reverse()) {
     const hasAutobuyer = (s.autobuyers?.[tier.id] ?? null) !== null && (s.autobuyersEnabled?.[tier.id] ?? true)
     if (!hasAutobuyer || wouldAutobuyerStall(s, tier)) {
-      s = buyTierQuantity(tier.id, BUY_QUANTITY)(s)
+      // A real click goes through the hook's withManualPurchaseMark; mirror it so the bot's own cycles are
+      // not credited as hands-free when they were not.
+      s = withManualPurchaseMark(buyTierQuantity(tier.id, BUY_QUANTITY))(s)
     }
   }
   return s
 }
 
-export function actTickspeed(state) {
+export function actTickspeed(state, policy = NO_POLICY) {
   let s = state
-  for (let i = 0; i < 200; i += 1) {
+  // 'Overclock fast' needs two Overclocks in one Purge without a single Accelerate bought.
+  const holdAccelerate = policy.noAccelerate && !isAchievementEarned(s, 'overclockStep2')
+  for (let i = 0; i < 200 && !holdAccelerate; i += 1) {
     const next = buyGlobalTickspeedMultiplier(s)
     if (next === s) break
     s = next
@@ -255,15 +270,32 @@ export function actTickspeed(state) {
   return s
 }
 
-export function actSoftResets(state) {
+// True while the bot should sit on an available Overclock to claim it deeper (Patient Overclock: the first claim
+// of a Purge at policy.overclockFirstMin+ completed levels; Beyond Googol: a claim at policy.overclockDeepMin+).
+export function isOverclockHeld(state, policy = NO_POLICY) {
+  const completed = Math.max(0, (state.purchaseLevels?.[getEffectiveLastTier(state).id] ?? 1) - 1)
+  let min = 0
+  if (policy.overclockFirstMin && getOverclockLevel(state) === null && !isAchievementEarned(state, 'overclockStep1')) {
+    min = policy.overclockFirstMin
+  }
+  if (
+    policy.overclockDeepMin &&
+    isOverflowModeUnlocked(state) &&
+    isAchievementEarned(state, 'overclockStep2') &&
+    !isAchievementEarned(state, 'overclockStep3')
+  ) {
+    min = Math.max(min, policy.overclockDeepMin)
+  }
+  return completed < min
+}
+
+export function actSoftResets(state, policy = NO_POLICY) {
   // Scale-Up-first preserves ladder progress before the final target. Once the target reaches the
   // last tier, a further Scale Up claim would reset that tier before Overclock's completed-level
   // requirement can be reached. Mirror Auto Scale Up's final-tier pause by deferring Scale Up
   // there and letting the simulation continue climbing until Overclock fires.
-  if ((state.scaleUpTargetTierIndex ?? 0) >= TIER_DEFINITIONS.length - 1) {
-    return overclockGame(state)
-  }
-  return overclockGame(scaleUpGame(state))
+  const scaled = (state.scaleUpTargetTierIndex ?? 0) >= TIER_DEFINITIONS.length - 1 ? state : scaleUpGame(state)
+  return isOverclockHeld(scaled, policy) ? scaled : overclockGame(scaled)
 }
 
 // The Purge speed bonus is a one-time 1 PP purchase (×1.1 at 1 Purge, then 1 + log10(n)); buy it as soon as affordable.
@@ -272,19 +304,20 @@ export function actSpeedBonus(state) {
 }
 
 export function actPlayer(state, options = {}) {
-  return actSoftResets(actSpeedBonus(actTickspeed(actMainBuys(actFoundry(state, options)))))
+  const policy = options.policy ?? NO_POLICY
+  return actSoftResets(actSpeedBonus(actTickspeed(actMainBuys(actFoundry(state, options), policy), policy)), policy)
 }
 
 export function countUnlockedAutobuyers(state) {
   return TIER_DEFINITIONS.filter(t => (state.autobuyers?.[t.id] ?? null) !== null).length
 }
 
-export function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = null } = {}) {
+export function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = null, policy = NO_POLICY } = {}) {
   let state = startingState
   let ticks = 0
   let foundryTicks = null
   let scaleUpsAtStart = state.scaleUpCount ?? 0
-  const options = { capacityCapBits }
+  const options = { capacityCapBits, policy }
 
   const startedUnlocked = Boolean(state.intro?.mainGameUnlocked)
 
@@ -318,6 +351,12 @@ export function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCap
     if (!startedUnlocked && foundryTicks == null && state.intro?.mainGameUnlocked) {
       foundryTicks = ticks
     }
+  }
+
+  // 'Remind me later': leave the finished Purge unclaimed (idle ticks, nothing else to do) for the wait.
+  for (let held = 0; held < (policy.holdPurgeSeconds ?? 0); held += 1) {
+    state = tickGame(1, BUY_QUANTITY)(state)
+    ticks += 1
   }
 
   const foundry = foundryTicks ?? (startedUnlocked ? 0 : ticks)
