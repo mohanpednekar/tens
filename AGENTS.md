@@ -322,8 +322,8 @@ babysitter routine (which merges in ascending PR-number order), for every PR in 
 green — mergeable (no conflicts; update a "behind" branch first, then re-run the reviewer for the new head), every required check complete and
 passing, nothing still running, no unresolved review threads, and an adversarial `APPROVE` marker for the
 current head SHA — merge it directly (`gh pr merge --merge` / `merge_pull_request`). Never for workflow-control diffs (`.github/workflows/**`, `.github/actions/**`,
-`.github/CODEOWNERS`, `scripts/claude-deny-settings.sh`, `.claude/agents/code-reviewer.md`) (exception: the
-babysitter may merge one no workflow authored — no workflow may update workflows, directly or indirectly, without human approval), never over a failing/pending check. Autonomous
+`.github/CODEOWNERS`, scripts workflows run with the automation token, `.claude/agents/code-reviewer.md`) unless
+positively attributable to a human or interactive session (babysitter only; fails closed), never for `revert-deploy/*`, never over a failing/pending check. Autonomous
 runs, Devin and dev-team roles keep their never-self-merge rule.
 
 **Merge-when-met rule (maintainer standing rule):** once the requested behavior is delivered and the green-and-`APPROVE` conditions above hold, proceed to merge rather than holding for polish; leftovers become a follow-up PR.
@@ -375,9 +375,11 @@ publicly visible but isn't legally reusable without written permission. No `CODE
 - Timer effects are cleaned up on unmount.
 - Save/load wraps `localStorage` in try/catch (quota/private-browsing) and strips
   `__proto__`/`constructor` from parsed JSON before merge.
-- `.github/workflows/**` changes require the repo owner's review (the PR babysitter routine may merge one no
-  workflow authored — no workflow may update workflows, directly or indirectly, without human approval), enforced by (once branch protection enables "Require review from Code Owners")
-  `.github/CODEOWNERS`.
+- Workflow-control changes (`.github/workflows/**`, `.github/actions/**`, `.github/CODEOWNERS`, scripts workflows
+  run with the automation token, `.claude/agents/code-reviewer.md`) require the repo owner's review — no workflow may
+  update workflows, directly or indirectly, without human approval. The PR babysitter routine may merge one only when
+  it is positively attributable to a human or interactive session (`docs/AUTOMATION.md` "PR babysitter").
+  `.github/CODEOWNERS` enforces this once branch protection enables "Require review from Code Owners".
 
 Data Lakes (#1087): permanent 1-unit buffer (`fillBits`) + ×1/×10/×100/×1000 disks (`depositedUnits`); timed `lakeTransfer`s (`tickDataLakeTransfers`) move the buffer into ×1 disks and consolidate 9 smaller disks of every size + a full buffer into the next; ordinary pool disks fill directly (no write-cache flush). See `docs/ECONOMY_REFERENCE.md` "Hierarchical lake disks".
 

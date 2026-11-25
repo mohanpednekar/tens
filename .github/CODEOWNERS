@@ -1,5 +1,13 @@
-# Workflow files are the CI/CD trust boundary — require the repo owner's review
-# on any change under this directory, structurally enforced via branch protection
+# Workflow-control files (workflows, actions, CODEOWNERS, scripts workflows run with the
+# automation token, the reviewer agent) are the CI/CD trust boundary — require the repo owner's review
+# on any change to them, structurally enforced via branch protection
 # ("Require review from Code Owners", a manual repo-settings prerequisite tracked
 # in issue #62), in addition to the PR babysitter routine's no-loop rule (docs/AUTOMATION.md).
 .github/workflows/** @mohanpednekar
+.github/actions/** @mohanpednekar
+.github/CODEOWNERS @mohanpednekar
+scripts/claude-deny-settings.sh @mohanpednekar
+scripts/backlog-issue-hygiene.sh @mohanpednekar
+scripts/sync-release-milestones.sh @mohanpednekar
+scripts/verify-maintainer-checklist.mjs @mohanpednekar
+.claude/agents/code-reviewer.md @mohanpednekar

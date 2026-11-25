@@ -6,8 +6,8 @@ PR-opening/fix-up/auto-merge pipeline behaves. `CLAUDE.md` keeps only a short su
 pointer so the full phase-by-phase logic below isn't loaded into every session's context by
 default.
 
-Three Claude-side workflows under (`autonomous-maintenance.yml`, `main-ci-heal.yml`,
-`automation-self-heal.yml`) `.github/workflows/` run Claude Code and GitHub automation
+Three Claude-side workflows under `.github/workflows/` (`autonomous-maintenance.yml`,
+`main-ci-heal.yml`, `automation-self-heal.yml`) run Claude Code and GitHub automation
 unattended to open and fix up PRs. None of them merges anything: the PR babysitter routine (below)
 does, in ascending PR-number order (see "Auto-merge"). All three authenticate git/GitHub operations
 with a `GH_AUTOMATION_PAT` repo secret instead of the default `GITHUB_TOKEN`, because
@@ -21,7 +21,7 @@ those pushes with `refusing to allow a GitHub App to create or update workflow �
 workflows permission`. The PAT's `Workflows: write` (issue #62) is what allows a task that
 edits `.github/workflows/**` to push. Read-only guard steps and the deploy-failure comment
 still use `GITHUB_TOKEN`; they do not push workflow files.
-`autonomous-maintenance.yml`/`automation-self-heal.yml` additionally need `id-token: write` (OIDC token for
+`autonomous-maintenance.yml`/`main-ci-heal.yml`/`automation-self-heal.yml` additionally need `id-token: write` (OIDC token for
 `claude_code_oauth_token` auth) and `autonomous-maintenance.yml` needs `issues: write` (so its
 guard step's `gh issue list --label claude-task` doesn't silently return empty) and
 `security-events: read` (so its guard step's default-`GITHUB_TOKEN` call to the Dependabot alerts
@@ -432,9 +432,9 @@ Unlike the Claude counterpart, the Devin agent runs under `--permission-mode dan
 than a settings deny-list, and its prompt places **no file-scope restriction**: it may modify
 anything in the repo — including `.github/workflows/` (its own file included) and
 deploy/release config — when a task calls for it. The hard rails that remain are never push to
-`main`, never merge its own PR, and always land changes via PR + human review
-(workflow-control PRs — see "PR babysitter" — are never auto-merged, so workflow edits stay
-human-gated).
+`main`, never merge its own PR, and always land changes via PR (the PR babysitter routine merges
+non-workflow-control `devin/auto-*` PRs after an adversarial APPROVE; workflow-control PRs — see
+"PR babysitter" — always need the maintainer's approval).
 
 **Health check (`devin-workflow-health.yml`).** A watchdog with no agent (`workflow_dispatch` only
 since its daily midnight-UTC schedule was removed alongside the Devin schedule on 2026-10-20):
@@ -448,7 +448,7 @@ open a `claude/self-heal-devin-autonomous-maintenance-*` fix PR.
 
 ### Shared workflow helpers
 
-To keep the workflows DRY and single-responsibility, four pieces are extracted instead of
+To keep the workflows DRY and single-responsibility, three pieces are extracted instead of
 copied per-workflow:
 
 - `.github/actions/setup-node-yarn` — composite action: `corepack enable` →
@@ -487,17 +487,23 @@ instead, in one session:
    are replaced by REST/`ccr` routes) only when every check is green on the
    current head, it's conflict-free, has an `APPROVE` marker for that head, and has no unresolved
    threads. **Workflow-control PRs** — any PR touching `.github/workflows/**`, `.github/actions/**`,
-   `.github/CODEOWNERS`, a script a workflow uses to decide what agents may do
-   (`scripts/claude-deny-settings.sh`), or the routine's own review inputs
-   (`.claude/agents/code-reviewer.md`) — follow the **no-loop tenet** (maintainer rule): no
+   `.github/CODEOWNERS`, any script a workflow runs with the automation token (e.g.
+   `scripts/claude-deny-settings.sh`, `scripts/backlog-issue-hygiene.sh`,
+   `scripts/sync-release-milestones.sh`, `scripts/verify-maintainer-checklist.mjs` — check the
+   workflows' `run:` steps), or the routine's own review inputs (`.claude/agents/code-reviewer.md`)
+   — follow the **no-loop tenet** (maintainer rule): no
    workflow may update workflows, directly or indirectly, without human approval; an upstream actor
-   that workflows never update can't form a loop. So the routine merges a workflow-control PR only if no
-   workflow authored it (not on a workflow-created branch — `claude/auto-*`, `claude/self-heal-*`,
-   `claude/heal-main-*`, `devin/auto-*` — and no commit on it came from an Actions run); a
-   workflow-authored one needs the maintainer's GitHub approval on its current head. Dependabot is not
-   a repo workflow, so its `github-actions` bumps are not workflow-authored. The branch prefix is
-   the reliable signal; a PAT-holding autonomous run could forge commit metadata, so a workflow-control
-   PR on an unexpected branch gets extra review scrutiny rather than the benefit of the doubt. The routine's
+   that workflows never update can't form a loop. The check **fails closed**: the routine merges a
+   workflow-control PR without the maintainer only if it is positively attributable to a human, an
+   interactive Claude session, or the routine itself (its own `claude/babysitter-heal-*` branch) —
+   and never if it is on a workflow-created branch (`claude/auto-*`, `claude/self-heal-*`,
+   `claude/heal-main-*`, `devin/auto-*`, `revert-deploy/*`) or any commit on it came from an Actions
+   run. Anything else, including an unexpected or ambiguous branch, needs the maintainer's GitHub
+   approval on its current head. Neither branch names nor commit metadata are tamper-proof (agents
+   holding the automation token can set both), which is why the default is to wait. Dependabot is not
+   a repo workflow, so its `github-actions` bumps are not workflow-authored (they swap third-party
+   code that runs with the automation token, so they get careful review). `revert-deploy/*` PRs are
+   never merged by the routine at all — they replace the whole tree, so the maintainer merges them. The routine's
    merge authority lives in its own scheduled-task prompt, which no workflow can edit, and repo docs
    can't widen it (they're workflow-editable). A PR it can't finish is commented on and skipped; it doesn't hold up
    higher-numbered PRs.
@@ -696,7 +702,8 @@ the Actions tab via **Run workflow**, passing `target_sha` — the last known-go
 It is `workflow_dispatch`-only (never auto-triggered) and **never pushes to `main`**: it validates
 the SHA is a real ancestor of `main`'s HEAD, creates a `revert-deploy/to-<sha>-<timestamp>` branch
 whose single commit replaces the whole tree with the target's (deletions included — plain
-`git revert` breaks on merge commits), and opens a PR. A human reviews and merges it; as a normal
+`git revert` breaks on merge commits), and opens a PR. A human reviews and merges it (the PR
+babysitter routine skips `revert-deploy/*`); as a normal
 commit on `main`, it makes `deploy.yml` redeploy with no changes there. Use it when a forward fix
 would be slower than restoring the previous state; the PR still waits for the usual required
 checks. Writes use `GH_AUTOMATION_PAT`. Automatic rollback detection is out of scope.
