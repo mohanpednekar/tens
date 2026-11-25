@@ -42,6 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Nav attention dots no longer light for Factory cues (affordable levels, Accelerate, Scale Up, Overclock, Purge) whose automation is unlocked, enabled and faster than 1 s; a paused automation still lights its dot.
 - Firmware → Automation: global automation rows and tier autobuyer rows now keep the pause Switch flush right with the challenge or upgrade button beside it, in fixed columns, and list Scale Up before Restage.
 
+### Security
+- Content-Security-Policy no longer allows fonts and stylesheets from any `https:` origin (fonts are bundled locally), and drops `frame-ancestors`, which browsers ignore in a `<meta>` policy.
+
 ### Fixed
 
 - **Level power achievements** now unlock after *completing* the stated number of levels (previously one level early); progress bars count completed levels. Daily challenge definitions regenerate (generator v9).
