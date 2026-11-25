@@ -25,6 +25,7 @@ import {
   DATA_LAKE_SUB_SIZE_DISK_CAPS,
   EON_AMPLIFIER_AWARD_BASE,
   ERA_ELIGIBILITY_PP,
+  ACHIEVEMENT_STAR_PRODUCTION_BONUS,
   FILL_MULTIPLIER_MAX_PERCENT,
   FILL_MULTIPLIER_MIN_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
@@ -703,6 +704,20 @@ const InfoPage = () => {
             or less run at full speed; longer ones run at{' '}
             {OFFLINE_PROGRESS_SPEED_MULTIPLIER * 100}% speed and show a “Resumed from sleep” summary.
           </li>
+        </ul>
+      </Section>
+
+      <Section aria-label="achievements section">
+        <h2>Achievements</h2>
+        <ul>
+          <li>More → Achievements lists goals grouped by theme; each one shows its requirement and progress.</li>
+          <li>
+            Every earned achievement is a star, and stars are your score. Each star adds{' '}
+            {ACHIEVEMENT_STAR_PRODUCTION_BONUS * 100}% production, and finishing a whole group earns bonus stars.
+          </li>
+          <li>Some achievements and completed groups give bonuses.</li>
+          <li>Secret achievements show as ??? until you earn them.</li>
+          <li>Achievements survive every reset except a full Reset.</li>
         </ul>
       </Section>
 
