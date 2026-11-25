@@ -1,5 +1,27 @@
 # Design history & rationale
 
+### PR follow-up/merge workflows replaced by a scheduled routine — 2026-11-21
+
+Removed `pr-auto-merge.yml`, `pr-conflict-sweep.yml`, `autonomous-pr-followup.yml`,
+`dependabot-pr-followup.yml`, the `#60` stalled-PR sweep step (`scripts/sweep-stalled-auto-prs.sh`,
+which only existed to re-trigger the follow-up workflow) and `scripts/pr-head-guard.sh` (used only by
+the follow-ups). Maintainer decision: PR babysitting should not be a workflow at all. A daily Claude
+Code Remote scheduled routine now does the whole job in one session — refresh with `main`, fix CI,
+adversarial review, resolve threads, and merge directly in ascending PR-number order — so there is one
+place that owns PR state instead of four event-driven workflows racing each other on the same PR.
+Trade-offs accepted: feedback and conflicts now wait for the next daily run instead of being handled
+within minutes, and a human GitHub approval no longer auto-enables auto-merge (the old Path 1).
+GitHub auto-merge is no longer enabled by anyone (and `scripts/pr-low-risk-eligible.sh` /
+`scripts/enable-auto-merge-if-eligible.sh` were removed): an armed auto-merge fires on green checks,
+out of the PR-number merge order the maintainer wants; only the routine (or a maintainer-driven
+interactive session) merges.
+Workflow-file PRs follow the maintainer's no-loop tenet: no workflow may update workflows, directly or
+indirectly, without human approval; an upstream actor that workflows never update can't form a loop.
+So the routine (whose prompt no workflow can edit) may merge workflow-file PRs that no workflow
+authored, but a workflow-authored one (e.g. `autonomous-maintenance.yml` editing a workflow) would be
+workflows updating themselves through the routine, so it still needs the maintainer's approval. Current behavior: `docs/AUTOMATION.md` "PR babysitter" /
+"Auto-merge".
+
 ### PP over actual powers, not excess (2026-11-23)
 
 `getPrestigePointsAwarded` used `1 + floor(excessPowers / powersPerPp)` (excess over Googol's 100), so Compression did nothing at a frozen Googol Purge (always 1 PP). The maintainer's rule: PP follow the ACTUAL powers — `floor(powers / powersPerPp)` — so one Compression takes the first Purge from 100/64 = 1 to 100/32 = 3 PP. The numerator is held at 100 until Overflow mode (`unbounded`), then grows without bound. The Reboot sim's earlier "PP stuck at 1 per Purge" finding was an artifact of the old formula.

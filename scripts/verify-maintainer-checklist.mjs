@@ -12,7 +12,6 @@ const MANUAL_SECTION_HEADING = '## Tracked separately';
 // check couldn't run (API error) — null leaves the line untouched.
 export const CHECKS = [
   { key: 'secret', match: '`GH_AUTOMATION_PAT` repo secret exists' },
-  { key: 'autoMerge', match: '"Allow auto-merge" is enabled' },
   { key: 'branchProtectionTest', match: 'Branch protection on `main` requires the `test` check' },
   { key: 'codeOwners', match: 'Enable **"Require review from Code Owners"**' },
   { key: 'discussions', match: 'Enable **Discussions**' },
@@ -106,7 +105,6 @@ function runChecks(repo) {
     : null;
   return {
     secret: secrets ? secrets.secrets.some((s) => s.name === 'GH_AUTOMATION_PAT') : null,
-    autoMerge: repoInfo ? repoInfo.allow_auto_merge === true : null,
     branchProtectionTest: protection ? (contexts ?? []).includes('test') : null,
     codeOwners: protection
       ? protection.required_pull_request_reviews?.require_code_owner_reviews === true

@@ -350,9 +350,15 @@ jobs:
           .github/workflows/ (including this workflow file itself) or
           deploy/release config when a task calls for it. Treat workflow and
           deploy/release changes as high-risk: keep the diff minimal and explain
-          in the PR why the change is safe. Never push to main and never merge
-          your own PR — all changes still land via PR and human review. If
-          nothing is actionable, do nothing — a no-op run is a fine outcome.
+          in the PR why the change is safe. Never push to main, never merge
+          your own PR and never enable auto-merge — all changes land via PR.
+          The daily PR babysitter routine (docs/AUTOMATION.md) may merge an
+          ordinary PR once it is green with an adversarial APPROVE; any PR
+          touching workflow-control files (.github/workflows/**,
+          .github/actions/**, CODEOWNERS, scripts workflows run with the
+          automation token, .claude/agents/code-reviewer.md) waits for the
+          maintainer. If nothing is
+          actionable, do nothing — a no-op run is a fine outcome.
 
           ## Filing bugs — alongside your real task, never instead of it
           If you notice a genuine bug unrelated to (or beyond the scope of) the
@@ -413,7 +419,7 @@ jobs:
           checks. Address each actionable item, resolve the threads you fixed,
           and iterate until the PR is mergeable (green required checks, no
           unresolved actionable feedback). Feedback arriving after the run ends
-          is handled by autonomous-pr-followup.yml.
+          is handled by the daily PR babysitter routine.
 
           Report at the end: what you picked, the PR URL if any, or why you did
           nothing.

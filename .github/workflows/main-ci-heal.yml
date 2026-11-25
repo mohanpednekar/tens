@@ -106,7 +106,7 @@ jobs:
         id: deny
         if: steps.guard.outputs.skip != 'true'
         run: |
-          echo "settings=$(scripts/claude-deny-settings.sh .github/workflows/main-ci-heal.yml .github/workflows/autonomous-pr-followup.yml .github/workflows/pr-auto-merge.yml .github/workflows/autonomous-maintenance.yml)" >> "$GITHUB_OUTPUT"
+          echo "settings=$(scripts/claude-deny-settings.sh .github/workflows/main-ci-heal.yml .github/workflows/autonomous-maintenance.yml)" >> "$GITHUB_OUTPUT"
 
       - name: Diagnose and open fix PR
         if: steps.guard.outputs.skip != 'true'

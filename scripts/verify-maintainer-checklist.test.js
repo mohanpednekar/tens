@@ -51,11 +51,11 @@ describe('allVerifiableChecked', () => {
 
 describe('formatReport', () => {
   it('prints PASS/FAIL/UNKNOWN for every check', () => {
-    const out = formatReport({ secret: true, autoMerge: false, discussions: null });
+    const out = formatReport({ secret: true, branchProtectionTest: false, discussions: null });
     const lines = out.split('\n');
     expect(lines).toHaveLength(CHECKS.length + 1);
     expect(out).toMatch(/PASS\s+secret/);
-    expect(out).toMatch(/FAIL\s+autoMerge/);
+    expect(out).toMatch(/FAIL\s+branchProtectionTest/);
     expect(out).toMatch(/UNKNOWN\s+discussions/);
     expect(out).toMatch(/UNKNOWN\s+codeOwners/);
   });

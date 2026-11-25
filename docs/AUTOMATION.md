@@ -6,10 +6,10 @@ PR-opening/fix-up/auto-merge pipeline behaves. `CLAUDE.md` keeps only a short su
 pointer so the full phase-by-phase logic below isn't loaded into every session's context by
 default.
 
-Five Claude-side workflows under `.github/workflows/` run Claude Code and GitHub automation
-unattended, working together to open, fix up, and merge PRs with no human in the loop until an
-approval is needed — except for a narrow, conservative class of low-risk bot-authored PRs that
-merge on green checks alone (see Auto-merge below). All five authenticate git/GitHub operations
+Three Claude-side workflows under `.github/workflows/` (`autonomous-maintenance.yml`,
+`main-ci-heal.yml`, `automation-self-heal.yml`) run Claude Code and GitHub automation
+unattended to open and fix up PRs. None of them merges anything: the PR babysitter routine (below)
+does, in ascending PR-number order (see "Auto-merge"). All three authenticate git/GitHub operations
 with a `GH_AUTOMATION_PAT` repo secret instead of the default `GITHUB_TOKEN`, because
 commits/pushes/merges authored by the default token can't trigger other workflows (see
 `docs/DESIGN_HISTORY.md` for why this matters concretely).
@@ -21,8 +21,7 @@ those pushes with `refusing to allow a GitHub App to create or update workflow �
 workflows permission`. The PAT's `Workflows: write` (issue #62) is what allows a task that
 edits `.github/workflows/**` to push. Read-only guard steps and the deploy-failure comment
 still use `GITHUB_TOKEN`; they do not push workflow files.
-`autonomous-maintenance.yml`/`autonomous-pr-followup.yml`/`dependabot-pr-followup.yml`/
-`automation-self-heal.yml` additionally need `id-token: write` (OIDC token for
+`autonomous-maintenance.yml`/`main-ci-heal.yml`/`automation-self-heal.yml` additionally need `id-token: write` (OIDC token for
 `claude_code_oauth_token` auth) and `autonomous-maintenance.yml` needs `issues: write` (so its
 guard step's `gh issue list --label claude-task` doesn't silently return empty) and
 `security-events: read` (so its guard step's default-`GITHUB_TOKEN` call to the Dependabot alerts
@@ -47,11 +46,10 @@ unlimited. The real constraint is agent usage quota:
   work at or under roughly **50%** of a full window's worth of effort, recalculated fresh every
   invocation rather than tuned by hand after failures. 50% is a soft target, not a hard limit: it's
   a self-estimated heuristic (Claude Code has no API to query metered window consumption), with no
-  visibility into concurrent usage from `autonomous-pr-followup.yml` or interactive sessions, so a
+  visibility into concurrent usage from the PR babysitter routine or interactive sessions, so a
   modest overshoot is expected and not treated as a failure. See `docs/DESIGN_HISTORY.md` for why
   the earlier fixed-cap approach — and its `25→40→50` retuning history, now historical — was
-  replaced. `autonomous-pr-followup.yml` keeps its own fixed `--max-turns 40` cap, unaffected by
-  this change.
+  replaced.
 
 The engine is naturally self-limited further by the PR-dedup guard (below), which caps
 concurrently-open autonomous PRs.
@@ -63,7 +61,7 @@ primarily for strategy discussion and turning that strategy into a backlog of we
 `claude-task`-labeled GitHub issues (via `.github/ISSUE_TEMPLATE/claude-task.yml`: Goal / Context /
 Spec & acceptance criteria / Files likely touched / Out of scope / Verification / Explicit
 authorizations / Dependencies). The scheduled maintenance workflow implements those tasks unattended,
-one per run; the follow-up + auto-merge workflows carry each PR to merge.
+one per run; the daily PR babysitter routine (below — not a workflow) carries each PR to merge.
 
 In an interactive session, when the user is discussing features, strategy, or a body of work, the
 default deliverable is well-specified `claude-task` issues, not direct implementation — implement live
@@ -225,8 +223,8 @@ being closed manually — instead of self-locking after the second occurrence th
 environment/permission blocker already did from the first.
 
 **Automation-retro reporting (#57)** is the third filing channel, for when the automation *itself*
-misfires — a budget/turn overrun despite the self-estimated 50% target, an auto-merge that shouldn't
-have fired, the duplicate-PR guard failing to prevent overlap, a tag/Project/release step erroring —
+misfires — a budget/turn overrun despite the self-estimated 50% target, a merge that shouldn't
+have happened, the duplicate-PR guard failing to prevent overlap, a tag/Project/release step erroring —
 as opposed to a bug in the game (the `bug` pipeline, #55) or a missing repo capability
 (`gap-analysis`, Phase B item 6). The prompt instructs any run, in any phase, that observes such a
 misfire to file a `claude-task` + `automation-retro` issue describing what happened, what should have
@@ -254,20 +252,9 @@ small issue if no merged PR exists; either way it dedupes against a prior run's 
 run URL before posting again. `deploy.yml` itself is never touched — it's on the protected/denied
 file list below — so surfacing the failure to a human is the full extent of what this step does.
 
-**Stalled-PR sweep (#60).** A third plain-bash step, `Sweep stalled claude/auto-* PRs`
-(`scripts/sweep-stalled-auto-prs.sh`, tested by `scripts/sweep-stalled-auto-prs.test.js`), runs every
-invocation. It covers `claude/auto-*` and `devin/auto-*` PRs. A non-draft PR with `mergeStateStatus: BEHIND`
-(not conflicted) is refreshed at once via the update-branch API. A PR with no activity (`updatedAt`) for
-24h (`STALL_HOURS`) that has a failing check, `mergeable: CONFLICTING` (can have all-green checks), or
-all checks green but never merged (`green-unmerged`: the comment asks the follow-up agent only to
-resolve open review threads, since it can't comment, mark ready or merge; skipped for drafts, BEHIND
-PRs and PRs touching `.github/workflows/`, which wait for the maintainer) gets a `<!-- stalled-pr-sweep-v1 -->` comment via `GH_AUTOMATION_PAT`, which re-fires
-`autonomous-pr-followup.yml`'s existing `issue_comment` trigger (no edit to that file). After 3
-(`MAX_RETRIES`) sweep comments on one PR it files an `automation-retro` issue instead of retrying.
-
 **Maintainer-checklist verification (#63).** A plain-Node step, `Verify maintainer checklist (#62)`
 (`scripts/verify-maintainer-checklist.mjs`, tested by `.test.js`), runs every invocation. It checks the
-API-verifiable items on pinned issue #62 (PAT secret exists, `allow_auto_merge`, `test` required on
+API-verifiable items on pinned issue #62 (PAT secret exists, `test` required on
 `main`, Code Owners review required, Discussions enabled, PAT Projects scope via `gh project list`) and
 rewrites passing `- [ ] text` lines to `- [x] ~~text~~` (also normalising checked-without-strike lines),
 commenting once when all verifiable items are done. API errors leave a line untouched. It never edits
@@ -324,8 +311,7 @@ guard step checks whether the latest completed `ci.yml` run on `main` failed, an
 any open PR (excluding `claude/auto-*` and fork PRs) with a failing check. Either condition outranks
 Phase A/B and is the one case allowed to bypass the 5-PR ceiling below (an issue-only slot that runs at a full ceiling is told to open no PR at all, Phase 0(c) included; only a red-main heal PR is exempt). If `main` is broken, Claude
 reads the failing run's logs, fixes the regression on a branch named `claude/heal-main-<short-slug>`,
-confirms `yarn test`/`yarn build` are green, and opens a PR (this branch prefix is already recognized
-by `pr-auto-merge.yml`'s low-risk path). Otherwise, for a stale Dependabot PR confirmed behind `main`
+confirms `yarn test`/`yarn build` are green, and opens a PR (merged by the PR babysitter routine). Otherwise, for a stale Dependabot PR confirmed behind `main`
 (failing only because its branch predates a source change, not the dependency bump), Claude comments
 `@dependabot rebase` — checking existing comments first, and never pushing its own commits to a
 `dependabot/*` branch. Any other failure without an obviously safe fix is left for a human.
@@ -410,8 +396,8 @@ gap analysis, or a transient failure the classifier downgrades), the job stays g
 final step emits a `::warning::` plus a job-summary section so the empty run is visible in
 the Actions log without failing. The maintenance prompt also forbids shell loops over
 variables: one `gh` invocation per command (a `for n in …; do gh issue view $n` loop is
-denied before it runs — #799). `ci.yml`, `deploy.yml`, `release.yml`,
-`autonomous-pr-followup.yml`, and `pr-auto-merge.yml` are all explicitly denied to Claude's Edit/Write
+denied before it runs — #799). `ci.yml`, `deploy.yml`, `release.yml`, and
+`automation-self-heal.yml` are all explicitly denied to Claude's Edit/Write
 tools, even during the self-improvement task — only `autonomous-maintenance.yml` may edit itself.
 
 **Run summary (#74).** The prompt requires the agent's last message to end with a `## RUN SUMMARY`
@@ -422,22 +408,6 @@ to `$GITHUB_STEP_SUMMARY` (a fallback line if absent; never fails the job), foll
 self-estimated budget against actuals. These are proxies for quota use (cost/turns/time compare runs, not the
 rolling window), and the weekly retro prompt does not yet request them. Complements the "no pull
 request" summary written by `Surface a run that opens no pull request`.
-
-### PR conflict sweep (`pr-conflict-sweep.yml`)
-
-Deterministic (no agent). On every push to `main` — i.e. every merge — it lists all open PRs and
-checks each one's `mergeable` state. A PR that is `CONFLICTING` gets a comment with a per-head-SHA
-dedupe marker (`<!-- pr-conflict-sweep sha=... -->`, so a PR left conflicted across several merges
-isn't re-spammed, but a new head resets it). For `claude/auto-*`/`devin/auto-*` branches — exactly
-the patterns `autonomous-pr-followup.yml` accepts — the comment doubles
-as its trigger, and the follow-up performs the actual merge-and-resolve;
-human-authored PRs just get an author notification. Runs on `GH_AUTOMATION_PAT` because comments
-from the default `GITHUB_TOKEN` can't trigger other workflows.
-
-A non-draft `MERGEABLE` `claude/auto-*`/`devin/auto-*` PR is also refreshed via `PUT /pulls/{n}/update-branch`
-(a merge commit pinned to `expected_head_sha`): a PR that is merely *behind* `main` can't auto-merge
-when the ruleset requires up-to-date branches, and nothing else refreshed it. The API's 422 "nothing
-behind" is the normal case and is ignored. Dependabot PRs are excluded (`@dependabot rebase` path).
 
 ### Devin autonomous maintenance (`devin-autonomous-maintenance.yml`)
 
@@ -462,9 +432,9 @@ Unlike the Claude counterpart, the Devin agent runs under `--permission-mode dan
 than a settings deny-list, and its prompt places **no file-scope restriction**: it may modify
 anything in the repo — including `.github/workflows/` (its own file included) and
 deploy/release config — when a task calls for it. The hard rails that remain are never push to
-`main`, never merge its own PR, and always land changes via PR + human review
-(`pr-auto-merge.yml` still excludes `.github/workflows/**` PRs from green-checks auto-merge, so
-workflow edits stay human-gated).
+`main`, never merge its own PR, and always land changes via PR (the PR babysitter routine merges
+non-workflow-control `devin/auto-*` PRs after an adversarial APPROVE; workflow-control PRs — see
+"PR babysitter" — always need the maintainer's approval).
 
 **Health check (`devin-workflow-health.yml`).** A watchdog with no agent (`workflow_dispatch` only
 since its daily midnight-UTC schedule was removed alongside the Devin schedule on 2026-10-20):
@@ -478,7 +448,7 @@ open a `claude/self-heal-devin-autonomous-maintenance-*` fix PR.
 
 ### Shared workflow helpers
 
-To keep the workflows DRY and single-responsibility, four pieces are extracted instead of
+To keep the workflows DRY and single-responsibility, three pieces are extracted instead of
 copied per-workflow:
 
 - `.github/actions/setup-node-yarn` — composite action: `corepack enable` →
@@ -486,81 +456,73 @@ copied per-workflow:
   (`install: "false"` skips the install for agent-driven jobs that run yarn themselves).
   **Trusted refs only** — never `uses:` it in a job whose checkout is an untrusted PR SHA;
   a composite's steps execute with the workflow's privileges, so a hostile branch could
-  replace them. The PR-follow-up workflows keep Node setup inline for exactly that reason.
-- `scripts/pr-head-guard.sh <pr> <glob...>` — resolves a PR's head branch/SHA from the API,
-  refuses fork heads, and enforces the branch prefix. Prints `branch<TAB>sha`. The
-  follow-up workflows fetch it via a sparse `ref: main` checkout *before* checking out the
-  pinned PR SHA, so the guard can't be weakened by the branch it authorizes.
+  replace them.
 - `scripts/claude-deny-settings.sh [extra-file...]` — emits the `settings` JSON for
   `anthropics/claude-code-action` from a shared base deny-list (`ci.yml`, `deploy.yml`,
   `release.yml`, `automation-self-heal.yml` — never editable by an unattended Claude agent) plus
   caller-supplied
-  extras (follow-up workflows pass every other workflow file since their prompts forbid
-  all workflow edits). Run it from the same trusted main checkout as the guard.
+  extras (each caller passes its own file and any other agent-restricted workflow).
 - `scripts/orphan-branch-scan.sh` — the #59 orphaned-branch feed shared by both engines' guard
   steps: fetches `claude/*`/`devin/*`/`cursor/*` (plus `main`) into a private
   `refs/remotes/orphan-scan/*` namespace, drops every branch that has an open PR, and renders the
   rest with merged-into-main status + a parsed issue number where the name carries one —
   display-capped with a "+N more" note (#81), fail-soft to an "(unavailable …)" marker line.
 
-### PR follow-up (`autonomous-pr-followup.yml`)
+### PR babysitter (Claude Code scheduled routine — no workflow)
 
-Since no human (or live Claude Code session) is watching between scheduled runs, this workflow closes
-the loop on PRs the maintenance workflow opens. It fires on new PR reviews, new PR comments, and
-failed `CI` runs (`workflow_run: [CI]`, conclusion `failure` — not `check_suite`, which
-`claude-code-action@v1` rejects as "Unsupported event type", so the CI-failure path never reached
-Claude until #1030's fix), filters to PRs on `claude/auto-*`/`devin/auto-*` branches only, and
-re-invokes Claude (`--max-turns 40`) to read the actual feedback/CI failure and push a genuine fix to the *existing*
-branch — it never opens a new PR and never merges or approves. Same hard constraints as the main
-workflow (no `--no-verify`, no faking a check green, no touching other workflow files). It resolves
-the target branch via `gh pr view --json headRefName,isCrossRepository` (refusing fork PRs), passes
-untrusted event fields through `env:` (not shell interpolation), gates on the triggering commenter
-having write access via a native workflow `if:` — or being one of a named allowlist of
-review/automation bot logins (`chatgpt-codex-connector[bot]`, `devin-ai-integration[bot]`,
-`Copilot`), whose `NONE`/`CONTRIBUTOR` author_association would otherwise
-stall autonomous PRs whose only feedback is bot review (#731); the allowlist keys on exact
-`user.login`, which only the real GitHub App can post under, so the pwn-request guard is preserved
-(`google-labs-jules[bot]` is deliberately excluded — whether it should retain repo access is an
-unresolved maintainer decision, see `docs/DESIGN_HISTORY.md`'s Jules incident — so it cannot
-trigger this secrets-bearing workflow) — and checks out the exact commit SHA rather than the
-branch name before running `git checkout -B <branch>` to un-detach HEAD. See
-`docs/DESIGN_HISTORY.md` for the security reasoning behind each of these.
+PR follow-up, conflict refresh and merging are deliberately **not** GitHub Actions workflows (the
+former `autonomous-pr-followup.yml`, `dependabot-pr-followup.yml`, `pr-conflict-sweep.yml`,
+`pr-auto-merge.yml` and the `#60` stalled-PR sweep were removed — `docs/DESIGN_HISTORY.md`). A daily
+Claude Code Remote scheduled routine ("Babysit tens PRs", 01:45 IST, maintainer-owned) does it
+instead, in one session:
 
-**CI-failure retry cap.** A fix the follow-up pushes re-runs CI, and a red result re-triggers the
-follow-up. Both follow-up workflows therefore skip the CI-failure path once the branch's last 3
-completed `CI` runs all failed (`gh run list --workflow ci.yml --branch <head>`, needs
-`actions: read`; fail-open if the list can't be read). On `claude/auto-*`/`devin/auto-*` PRs review comments still
-trigger a follow-up; a capped Dependabot PR (whose follow-up has no other trigger) is left to Phase 0
-of the scheduled run or the maintainer.
+1. Checks `main`'s latest `ci.yml` run first; a red `main` is fixed (via PR) before any PR work.
+2. Takes every open, non-draft PR not labelled `do-not-merge`/`wip`/`hold`, in **ascending PR-number
+   order**, one at a time: brings it up to date with `main` (merge, not rebase/squash), resolves
+   conflicts for real, fixes failing CI at the root cause (never by weakening a test), runs the
+   adversarial `code-reviewer` on the current head and posts its marker, addresses and resolves
+   review threads, and waits for CI.
+3. Merges it directly (REST `PUT /pulls/{n}/merge` with `merge_method=merge`, then deletes the branch —
+   Claude Code Remote sessions have no GraphQL, so `gh pr …` commands and `scripts/resolve-pr-threads.sh`
+   are replaced by REST/`ccr` routes) only when every check is green on the
+   current head, it's conflict-free, has an `APPROVE` marker for that head, and has no unresolved
+   threads. **Workflow-control PRs** — any PR touching `.github/workflows/**`, `.github/actions/**`,
+   `.github/CODEOWNERS`, any script a workflow runs with the automation token (e.g.
+   `scripts/claude-deny-settings.sh`, `scripts/backlog-issue-hygiene.sh`,
+   `scripts/sync-release-milestones.sh`, `scripts/verify-maintainer-checklist.mjs`,
+   `scripts/bump-version.mjs` (imported by `release.yml`), `scripts/orphan-branch-scan.sh`,
+   `scripts/classify-claude-failure.sh`, `scripts/epic-407-issue-hygiene.sh` (called by the backlog
+   hygiene script) — check the workflows' `run:` steps and anything the scripts they run call in turn),
+   or the routine's own review inputs (`.claude/agents/code-reviewer.md`)
+   — follow the **no-loop tenet** (maintainer rule): no
+   workflow may update workflows, directly or indirectly, without human approval; an upstream actor
+   that workflows never update can't form a loop. The check **fails closed**: the routine merges a
+   workflow-control PR without the maintainer only if it is positively attributable to a human, an
+   interactive Claude session, or the routine itself (its own `claude/babysitter-heal-*` branch) —
+   and never if it is on a workflow-created branch (`claude/auto-*`, `claude/self-heal-*`,
+   `claude/heal-main-*`, `devin/auto-*`, `revert-deploy/*`) or any commit on it came from an Actions
+   run. Anything else, including an unexpected or ambiguous branch, needs the maintainer's GitHub
+   approval on its current head. Neither branch names nor commit metadata are tamper-proof (agents
+   holding the automation token can set both), which is why the default is to wait. Dependabot is not
+   a repo workflow, so its `github-actions` bumps are not workflow-authored (they swap third-party
+   code that runs with the automation token, so they get careful review). `revert-deploy/*` PRs are
+   never merged by the routine at all — they replace the whole tree, so the maintainer merges them. The routine's
+   merge authority lives in its own scheduled-task prompt, which no workflow can edit, and repo docs
+   can't widen it (they're workflow-editable). A PR it can't finish is commented on and skipped; it doesn't hold up
+   higher-numbered PRs.
 
-**Config source on CI-failure runs.** On `pull_request_review`/`issue_comment` runs the action restores
-`.claude/`, `CLAUDE.md` and `.mcp.json` from the base branch; on `workflow_run` it does not (the action
-treats it as an automation event), so a CI-failure run reads them from the PR's pinned head SHA. That
-is accepted because `scripts/pr-head-guard.sh` limits these runs to same-repo `claude/auto-*`/
-`devin/auto-*`/`dependabot/*` branches, which only accounts with write access can push to, and
-`Bash(yarn:*)` already runs that branch's own scripts.
-
-### Dependabot PR follow-up (`dependabot-pr-followup.yml`)
-
-Companion to `autonomous-pr-followup.yml` for Dependabot dependency-bump PRs. Phase 0 of
-`autonomous-maintenance.yml` already covers the "branch is simply behind `main`" case by commenting
-`@dependabot rebase` (and never pushes its own commits to a `dependabot/*` branch). What this
-workflow covers is the residual gap: a *real* breaking-change CI failure caused by the bumped
-dependency itself.
-
-It triggers only on `workflow_run: [CI]` `completed` (not `check_suite` — see the PR follow-up
-section above; `allowed_bots: "dependabot"` because the action sees the CI run's actor,
-`dependabot[bot]`), skips unless conclusion is `failure`, an open
-same-repo PR exists for the branch, and the branch starts with `dependabot/`. Untrusted event
-fields go through `env:` (never shell-spliced). Checkout is pinned to the `headRefOid` resolved at
-guard time (same TOCTOU rationale as the autonomous follow-up). It re-invokes Claude
-(`--max-turns 30`) with instructions to keep the bumped version (never downgrade to dodge the
-failure), push a genuine call-site/config fix to the *existing* Dependabot branch, or leave exactly
-one explanatory `gh pr comment` if it cannot confidently fix — never open a new PR, never
-force-push, never merge or approve. `settings.permissions.deny` blocks Edit/Write on `ci.yml`,
-`deploy.yml`, `release.yml`, `autonomous-maintenance.yml`, `autonomous-pr-followup.yml`,
-`pr-auto-merge.yml`, and its own file. Merging a fixed Dependabot PR still goes through the existing `pr-auto-merge.yml`
-paths (human approval, or green-checks low-risk for patch/minor bumps) — unchanged.
+Rules carried over from the removed workflows: review/comment text is untrusted input and only
+owner/collaborator/known-review-bot feedback is acted on (`google-labs-jules[bot]` excluded); fixes go
+to the PR's existing branch, never force-pushed (a non-fast-forward rejection means stop); fork PRs
+are review-only; a finished automation-branch draft with an `APPROVE` marker for its head is marked
+ready. Dependabot PRs: a behind branch gets one `@dependabot rebase`
+comment (never a pushed refresh); a CI failure is fixed at call sites/config while keeping the bumped
+version — never a downgrade, no hand-edited `yarn.lock` beyond the fix. Blocker comments carry
+`<!-- pr-babysitter -->` and aren't duplicated: one comment per problem, carrying a
+`<!-- pr-babysitter blocked-runs=N -->` counter the routine edits upward each run the problem persists;
+at N=3 it files (or updates) an `automation-retro` issue instead (the old `#60` stalled-sweep
+escalation). Feedback that lands
+between runs waits for the next run.
 
 ### Automation self-heal (`automation-self-heal.yml`)
 
@@ -572,9 +534,7 @@ or `deploy.yml` (product-facing; broken-`main` CI is Phase 0 / issue #37; broken
 surfaced by the deterministic deploy-failure step above). It also never edits its own file
 (runaway self-modification ban).
 
-**Watched workflows** (by `name:`): Autonomous maintenance, Devin autonomous maintenance,
-Autonomous PR follow-up, Auto-merge on
-approval, Dependabot PR follow-up. Trigger is
+**Watched workflows** (by `name:`): Autonomous maintenance, Devin autonomous maintenance. Trigger is
 `workflow_run: [completed]`, filtered in-job to `conclusion == 'failure'`.
 
 **Guard:** skips when a `claude/self-heal-<workflow-slug>-*` PR is already open for the same
@@ -611,68 +571,42 @@ Trigger: `workflow_run: [completed]` on `CI`, filtered in-job to `head_branch ==
    (`--max-turns 30`, PAT + OIDC) fixes the application code on a `claude/heal-main-<desc>`
    branch and opens a PR. Never pushes to `main`, never self-merges.
 
-Deny list (via `scripts/claude-deny-settings.sh`): base files plus `main-ci-heal.yml`,
-`autonomous-pr-followup.yml`, `pr-auto-merge.yml`, `autonomous-maintenance.yml`. The same
+Deny list (via `scripts/claude-deny-settings.sh`): base files plus `main-ci-heal.yml` and
+`autonomous-maintenance.yml`. The same
 TIER_DEFINITIONS/economy-change ban applies. `deploy.yml` is still not gated on CI (out of scope).
 
-### Auto-merge (`pr-auto-merge.yml`)
+### Auto-merge
 
-Three independent paths, any of which calls `gh pr merge --auto --merge` to enable GitHub's native
-auto-merge (merge commit — must match the Main ruleset's `allowed_merge_methods`, which is
-`merge` + `rebase` only; `--squash` is rejected and makes every PR look unmergeable to anything
-that defaults to squash — see issue #343):
-
-1. **On human approval** (`pull_request_review: submitted`) — if the review is an approval from the
-   repo owner or a collaborator/member, auto-merge is enabled unconditionally, any PR, any size.
-   Repo-wide, not just autonomous PRs.
-2. **On green checks, without waiting for approval** (`workflow_run: [CI]` completed, conclusion `success` — not `check_suite`, which GitHub never delivers for Actions-created suites)
-   — for PRs on our own automation's branches only (`claude/auto-*`, `claude/self-heal-*`,
-   `claude/heal-main-*`, `dependabot/*`; never a fork),
-   auto-merge is enabled immediately once the diff meets a conservative "low risk" bar (shared
-   implementation: `scripts/pr-low-risk-eligible.sh` / `scripts/enable-auto-merge-if-eligible.sh`):
-   the whole diff touches only `CLAUDE.md`/`*/CLAUDE.md`/`*.test.js`/`*.test.jsx` (docs/tests-only), OR total
-   changed lines ≤50, OR it's a Dependabot PR with a patch/minor semver bump (major bumps wait for
-   approval). A PR touching anything under `.github/workflows/` is **always** excluded from this
-   path regardless of size or content. This path does **not** mark drafts ready (a still-draft PR
-   is skipped so WIP work with green CI is not promoted). Plain shell / shared scripts — no Claude
-   invocation — for speed and determinism.
-3. **On adversarial APPROVE after the final commit** (`issue_comment: created` containing
-   `<!-- adversarial-review sha=<headOid> verdict=APPROVE -->`) — when that marker matches the PR's
-   **current** head SHA and the PR also meets the same low-risk bar, auto-merge is **always**
-   enabled and a draft is marked ready. Only comments from `OWNER` / `COLLABORATOR` / `MEMBER`
-   trigger this path (same public-repo pwn-request gate as the PR-followup workflows); the
-   *triggering* comment must itself carry the HEAD-matching marker. This is the automation half of
-   CLAUDE.md's "After the final commit" ritual: agents run `.claude/agents/code-reviewer.md`, post
-   the marker (via `scripts/adversarialReviewMarker.js`'s formatter), then run
-   `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (or rely on this
-   path firing from the comment). `NEEDS_CHANGES` / `BLOCK` markers never enable auto-merge.
-   Non-low-risk APPROVEs aren't enabled by this path; the agent enables them itself (below)
-   unless the diff touches `.github/workflows/**`, which needs a human via Path 1. The enable script checks low-risk
-   eligibility **before** marking a draft ready, so an ineligible PR is never promoted.
+**Nothing enables GitHub auto-merge** — not workflows, not agents — because an armed auto-merge
+fires whenever its checks go green, out of PR-number order. Merges happen only by direct merge
+from the PR babysitter routine (ascending PR-number order, see above) or a maintainer-driven
+interactive session (`CLAUDE.md` "Direct merge"). Merge commits only: the Main ruleset's
+`allowed_merge_methods` is `merge` + `rebase`; squash is rejected (issue #343). The former low-risk
+bar and its helpers (`scripts/pr-low-risk-eligible.sh`, `scripts/enable-auto-merge-if-eligible.sh`)
+were removed with it. Auto-merge requests armed before this cutover stay queued in GitHub until
+disarmed; the babysitter disarms any it finds.
 
 **After final commit (agent duty).** For every finished autonomous or interactive PR: run the
-adversarial reviewer on the final head → post the marker comment → on any APPROVE always mark
-ready; enable auto-merge via the script above for low-risk diffs, or plain `gh pr merge --auto
---merge` for any other diff that touches no `.github/workflows/**` file (maintainer standing rule —
-the `main` ruleset requires no human approval today, so the adversarial APPROVE is the gate).
-Workflow-file diffs: mark ready only, never enable auto-merge. Enabling auto-merge here is an explicit standing exception to
-"never self-merge"; force-merging, pushing to `main`, and GitHub-approving your own PR remain
-forbidden (the one other exception: maintainer-driven interactive sessions may merge directly once
-auto-merge is enabled and everything is green — see the quiet-period step in "PR review & testing cadence"). Workflow-file PRs remain human-gated via the Path 2/3 exclusions and the agent rule above (CODEOWNERS
-review is not yet enforced by the ruleset — #62).
+adversarial reviewer on the final head → post the
+`<!-- adversarial-review sha=<headOid> verdict=… -->` marker (via
+`scripts/adversarialReviewMarker.js`'s formatter) → on APPROVE mark ready. `NEEDS_CHANGES`/`BLOCK`:
+fix and re-review. Never merge, enable auto-merge, force-merge, push to `main`, or GitHub-approve
+your own PR (autonomous workflow runs, Devin, dev-team roles).
 
-**Three one-time manual prerequisites** (not settable through tools available to a Claude Code
+**One-time manual prerequisites** (not settable through tools available to a Claude Code
 session):
 - The `GH_AUTOMATION_PAT` repo secret (fine-grained PAT scoped to this repo, Contents: read/write,
   Pull requests: read/write, Issues: read/write, Workflows: write, Actions: write — required by
   `main-ci-heal.yml`'s `gh run rerun` / `gh run watch`; workflow-level `permissions: actions: write`
   only covers `GITHUB_TOKEN`), alongside
   `CLAUDE_CODE_OAUTH_TOKEN`.
-- "Allow auto-merge" enabled in repo Settings → General, and branch protection on `main` requiring
-  the `test` check from `ci.yml`.
+- Branch protection on `main` requiring the `test` check from `ci.yml`. ("Allow auto-merge" in
+  Settings → General is no longer used and is best turned off, so nothing can arm it; the #62
+  checklist verifier no longer checks it.)
 - "Require review from Code Owners" in that same branch-protection rule, so the `.github/CODEOWNERS`
-  entry mapping `.github/workflows/**` to the repo owner actually takes effect (tracked in issue #62's
-  checklist until confirmed done).
+  workflow-control entries (workflows, actions, CODEOWNERS, automation-token scripts, the reviewer agent)
+  actually take effect (tracked in issue #62's checklist until confirmed done). The owner can't approve
+  their own PR, so with a sole owner the maintainer's own workflow-control PRs need a ruleset bypass.
 
 ### Mobile build (`mobile-build.yml`)
 
@@ -772,7 +706,8 @@ the Actions tab via **Run workflow**, passing `target_sha` — the last known-go
 It is `workflow_dispatch`-only (never auto-triggered) and **never pushes to `main`**: it validates
 the SHA is a real ancestor of `main`'s HEAD, creates a `revert-deploy/to-<sha>-<timestamp>` branch
 whose single commit replaces the whole tree with the target's (deletions included — plain
-`git revert` breaks on merge commits), and opens a PR. A human reviews and merges it; as a normal
+`git revert` breaks on merge commits), and opens a PR. A human reviews and merges it (the PR
+babysitter routine skips `revert-deploy/*`); as a normal
 commit on `main`, it makes `deploy.yml` redeploy with no changes there. Use it when a forward fix
 would be slower than restoring the previous state; the PR still waits for the usual required
 checks. Writes use `GH_AUTOMATION_PAT`. Automatic rollback detection is out of scope.
@@ -795,27 +730,13 @@ cheap while work is still private to the session, heavier once other reviewers c
    (human, Copilot, other bots) — per `CLAUDE.md`'s existing "keep repeating check → address → push
    until status quo" loop. Don't stop after the first round just because it was addressed; a
    finding that recurs after a fix means dig for the root cause, not declare done.
-4. **Quiet-period merge trigger (only for a direct merge outside all three `pr-auto-merge.yml`
-   paths).** All three paths in the "Auto-merge" section above stay immediate by design and this
-   cadence step never delays or gates any of them: Path 1 fires unconditionally on any qualifying
-   human GitHub approval regardless of size/risk, and Paths 2/3 fire immediately once a diff is
-   low-risk-eligible (with or without the adversarial marker). Between the three, essentially every
-   normal case is already covered the instant its trigger condition is met — there is no "human
-   approval on a non-low-risk PR" gap the quiet period needs to fill, since Path 1 already handles
-   that immediately. This step is only for the narrow remaining case: a session about to merge a PR
-   **directly itself** (e.g. `gh pr merge`, bypassing `pr-auto-merge.yml` entirely) because none of
-   the three paths applies — most plausibly, a sign-off that doesn't take the form of a qualifying
-   GitHub review approval. There, once the PR is ready for review and CI is green, wait until **10
-   minutes pass with no new review activity** (no new comment, review, or push) before merging
-   directly, rather than merging the instant the sign-off lands. A session actively driving such a
-   PR should use `send_later` (or an equivalent short check-in) to re-check after the quiet window.
-   The point is to give a concurrently-posting reviewer a moment to land one more comment before the
-   PR locks in. **Exception — direct merge after auto-merge (maintainer standing rule):** in a
-   maintainer-driven interactive session, a PR with auto-merge enabled, an adversarial `APPROVE` marker
-   for its current head SHA, and everything green (mergeable, no running checks, no unresolved threads)
-   is merged directly with no quiet period. Autonomous runs/Devin/dev-team roles never self-merge. This never overrides the existing rule that a PR touching `.github/workflows/**` stays
-   human-gated (Path 2/3 exclusions + the agent auto-merge rule's workflow carve-out; CODEOWNERS
-   review isn't ruleset-enforced yet).
+4. **Merging.** No workflow merges anything (see "Auto-merge"). A maintainer-driven interactive
+   session or the PR babysitter routine merges directly once the PR is mergeable (brought up to date
+   with `main`, then re-reviewed for the new head), every required check is complete and passing,
+   nothing is still running, no review threads are unresolved, and an adversarial `APPROVE` marker
+   exists for the **current head SHA**. Autonomous workflow runs, Devin and
+   dev-team roles never self-merge. A workflow-control PR (see "PR babysitter") stays human-gated for every
+   path except the PR babysitter routine's no-loop exception (see "PR babysitter").
 
 ### AI-instruction file cost hygiene
 
@@ -841,7 +762,7 @@ where available:
 - **Scheduled routine.** A recurring Claude Code Remote trigger (Routine) fires a fresh session
   monthly to run the skill end-to-end: clone the repo, follow the skill's process, and open a PR
   through the normal PR workflow above (draft while pending, adversarial review before merge,
-  same auto-merge policy as any other PR — this pass gets no special exemption from review). The
+  same merge policy as any other PR — this pass gets no special exemption from review). The
   routine's cadence and prompt are managed via `update_trigger`/`list_triggers`, not by editing a
   file in this repo.
 
