@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  getAchievementProductionMultiplier, getAchievementStars,
   getAchievementProgress,
   getAchievementReward,
   getAchievementShortRequirement,
@@ -522,5 +523,16 @@ describe('review follow-ups (#1199, round 2)', () => {
     expect(next.resources[MONEY_ID]).toBeLessThan(PURGE_THRESHOLD) // ...and discarded the past-Googol balance
     expect(next.achievements.counters.overflowPurges).toBe(1)
     expect(isAchievementEarned(next, 'notABug')).toBe(true)
+  })
+})
+
+describe('getAchievementProductionMultiplier', () => {
+  it('is 1 with no stars and adds 1% per star additively', () => {
+    const base = createInitialGameState()
+    expect(getAchievementProductionMultiplier(base)).toBe(1)
+    const earned = { helloWorld: true, itCompiles: true, pingOfDeath: true }
+    const state = { ...base, achievements: { ...base.achievements, earned } }
+    expect(getAchievementProductionMultiplier(state)).toBeCloseTo(1 + 0.01 * getAchievementStars(state), 10)
+    expect(getAchievementStars(state)).toBeGreaterThanOrEqual(3)
   })
 })

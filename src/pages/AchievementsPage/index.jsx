@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import StatCard from 'components/StatCard'
-import { getAchievementGroupStars, getAchievementProgress, getAchievementReward, getAchievementShortRequirement, getAchievementShortReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
+import { getAchievementGroupStars, getAchievementProductionMultiplier, getAchievementProgress, getAchievementReward, getAchievementShortRequirement, getAchievementShortReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
 import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
 
@@ -160,6 +160,7 @@ const AchievementsPage = ({ game }) => {
       <Header>
         <h1>Achievements</h1>
         <TotalStars aria-label={`total stars ${totalStars} of ${maxStars}`}>⭐ {totalStars}/{maxStars}{bonusStars > 0 ? ` (incl. ${bonusStars} bonus)` : ''}</TotalStars>
+        <div aria-label="star production bonus">+{Math.round((getAchievementProductionMultiplier(state) - 1) * 100)}% production</div>
       </Header>
 
       <List aria-label="achievements page">

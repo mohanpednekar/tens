@@ -778,8 +778,8 @@ test('reaching 8 lifetime purchases of a tier multiplies its displayed productio
   render(<App />)
 
   // Crossing the 8-purchase milestone completes level 1: owned(10) × 1 B/tick × 1.25 = 12.5 B/tick
-  // (the displayed amount floors to match tickGame's own floored credit).
-  expect(await expandTierDetails(user, 'kilobytes')).toHaveTextContent('Production: +12 B')
+  // × 1.05 for the five earned achievements' stars (+1% each) = 13.1 B/tick (the displayed amount floors to match tickGame's own floored credit).
+  expect(await expandTierDetails(user, 'kilobytes')).toHaveTextContent('Production: +13 B')
 })
 
 test('a tier shows its full per-tick production amount, not a reduced rate', async () => {

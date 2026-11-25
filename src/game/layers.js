@@ -177,6 +177,8 @@ export const DAILY_CHALLENGES_FEATURE = { enabled: true }
 // Level power achievements (one per tier): each raises the per-level production multiplier
 // (PURCHASE_MILESTONE_MULTIPLIER_BASE) by this much; all ten reach 1.5 from the 1.0 base.
 export const LEVEL_POWER_ACHIEVEMENT_BONUS = 0.05
+// Each Achievement star adds this much to the production multiplier, additively (1 + stars × 0.01, not compounding).
+export const ACHIEVEMENT_STAR_PRODUCTION_BONUS = 0.01
 // 'Remind me later': Purge available and left unclaimed for this many continuous seconds of play.
 export const REMIND_ME_LATER_SECONDS = 60
 // 'Kernel panic': two Reboots within this many seconds of ACTIVE play (activePlaySeconds survives Reboot).
