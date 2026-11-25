@@ -48,7 +48,7 @@ version — read it before writing or restructuring tests, or touching `e2e/` / 
   discarded and surfaced via `IncompatibleSaveNotice`. Current saves stamp `saveSchemaVersion: 3` on
   every write (v1/v2 saves run `migrateToV3` then forward-fill via `mergeState`). `src/theme/contrast.js` (standalone WCAG utility) has `contrast.test.js`, and `tokens.contrast.test.js` audits the
   design tokens' plain text/UI color pairs for AA in both themes (`docs/THEMING_REFERENCE.md`). All other tests sit beside
-  their source (`engine.computeFlops.test.js` = PP Compute screen; `capacitorConfig.test.js` = Capacitor Vite path;
+  their source (`engine.computeFlops.test.js` = PP Compute screen; `capacitorConfig.test.js` = Capacitor Vite path; `indexHtmlCsp.test.js` = `index.html` CSP meta tag (no scheme-wide sources);
   `pages/DevModePage/stateFields.test.js` = Dev Mode helpers; components, services, `save-migration/`, `scripts/*.test.js`)
   and are all picked up by Vitest's default glob (`vite.config.js`'s `test` block sets no custom `include`).
 
