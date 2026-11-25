@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ThemeProvider } from 'styled-components'
 import AppMenu from 'components/AppMenu'
 import { createInitialGameState } from 'game/engine'
-import { ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS } from 'game/layers'
+import { ACHIEVEMENTS_FEATURE, ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_STAR_PRODUCTION_BONUS } from 'game/layers'
+import InfoPage from 'pages/InfoPage'
 import { buildTheme } from 'theme/tokens'
 import AchievementsPage from '.'
 
@@ -186,5 +187,16 @@ describe('AppMenu achievements entry', () => {
     openGroup('Tier ladder')
     fireEvent.click(screen.getByLabelText('First purchase details'))
     expect(screen.queryByText(/↑:/)).toBeNull()
+  })
+})
+
+describe('Manual achievements section', () => {
+  it('explains stars, bonuses, secrets and resets with constant-derived numbers', () => {
+    renderWithTheme(<InfoPage />)
+    const section = screen.getByLabelText('achievements section')
+    expect(section.textContent).toContain(`${Math.round(ACHIEVEMENT_STAR_PRODUCTION_BONUS * 1000) / 10}% production`)
+    expect(section.textContent).toContain('Some achievements and completed groups give bonuses')
+    expect(section.textContent).toContain('???')
+    expect(section.textContent).toContain('full Reset')
   })
 })
