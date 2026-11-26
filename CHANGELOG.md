@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Automation: global automation rows and tier autobuyer rows now keep the pause Switch flush right with the challenge or upgrade button beside it, in fixed columns, and list Scale Up before Restage.
 
 ### Fixed
+- Achievement toasts no longer cover the page title; they now sit just below it.
 
 - **Level power achievements** now unlock after *completing* the stated number of levels (previously one level early); progress bars count completed levels. Daily challenge definitions regenerate (generator v9).
 - Power: Boost presets are no longer disabled by a pending Disk Fill or an armed Provision Disk (blockers invisible on the Power screen) — holding a token is enough.
