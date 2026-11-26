@@ -413,7 +413,7 @@ src/
                             `getMonetizationService()`), cloudSave/ (Firebase Auth email/password + Firestore `saves/{uid}`,
                             `deleteAccountAndData`: reauth → data → user), nativeShell.js (hide splash, init monetization)
   App.jsx                 ← root; owns the single `useIncrementalGame()` call, wraps <ThemeProvider><GlobalStyle/>,
-                            switches pages via local `page` useState (Manual/Settings/Milestones/Stats/Achievements/Dev are `React.lazy` chunks under one `Suspense`; default `'game'`; legacy `'storage'` →
+                            switches pages via local `page` useState (Manual/Settings/Milestones/Stats/Achievements are `React.lazy` chunks under one `Suspense`; default `'game'`; legacy `'storage'` →
                             `'foundry'`) — not a router — plus shared `AppNav` and `AppMenu`.
                             `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked ||
                             page === 'foundry')`; `intro.mainGameUnlocked` is a permanent latch, so the gate exists

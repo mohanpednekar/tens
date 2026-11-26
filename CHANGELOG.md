@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
-- **Faster first load**: the Manual, Settings, Milestones, Stats, Achievements and Dev Mode screens now load on demand, shrinking the main bundle from 687 kB to 442 kB (gzip 206 → 133 kB).
+- **Faster first load**: the Manual, Settings, Milestones, Stats and Achievements screens now load on demand, trimming first-load JavaScript by about 11% (entry chunk 687 kB → 609 kB).
 - Achievements you can see now show a one-line summary without expanding: the requirement until earned, then the reward. Expanding shows both; fine print lives only in the Manual. Self-explanatory titles skip the requirement line.
 - Achievements with plain names got fitting ones: the five Reclamation levels (Flush with success … The Great Flushening), the ten Level power levels (High five … Perfect ten, matching each level count) and Spent QB → Quetta broke. Series and other achievement names are unchanged.
 - Buy mode options are now named **Bytes** (default, fills up to the level boundary) and **Bits** (exactly one unit per Buy and per autobuyer attempt).

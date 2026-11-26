@@ -7,6 +7,7 @@ import ChallengesPage from 'pages/ChallengesPage'
 import ByteFoundryPage from 'pages/ByteFoundryPage'
 import ComputeFlopsPage from 'pages/ComputeFlopsPage'
 import ComputePage from 'pages/ComputePage'
+import DevModePage from 'pages/DevModePage'
 import MainPage from 'pages/MainPage'
 import PerksPage from 'pages/PerksPage'
 import { isComputeCoreConversionUnlocked, isChallengesPageRevealed, isComputeFlopsPageRevealed, isPerksPageRevealed, isProductionFrozen } from 'game/engine'
@@ -19,7 +20,6 @@ import styled from 'styled-components'
 
 // Rarely-visited pages load on demand so the entry chunk stays small (perf pass, #1144).
 const AchievementsPage = lazy(() => import('pages/AchievementsPage'))
-const DevModePage = lazy(() => import('pages/DevModePage'))
 const InfoPage = lazy(() => import('pages/InfoPage'))
 const MilestonesPage = lazy(() => import('pages/MilestonesPage'))
 const SettingsPage = lazy(() => import('pages/SettingsPage'))
