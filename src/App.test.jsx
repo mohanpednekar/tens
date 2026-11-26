@@ -122,6 +122,7 @@ const expandSettingsSections = () => {
 const openSettings = async user => {
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i })
   expandSettingsSections()
 }
 
@@ -178,7 +179,7 @@ test('shows the app version only on the Manual page', async () => {
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open manual/i }))
-  expect(screen.getByText(`v${version}`)).toBeInTheDocument()
+  expect(await screen.findByText(`v${version}`)).toBeInTheDocument()
 
   await openSettings(user)
   expect(screen.queryByText(`v${version}`)).not.toBeInTheDocument()
@@ -251,11 +252,12 @@ test('More menu reaches Milestones and Settings from any screen without progress
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open milestones/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /^milestones$/i })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { level: 1, name: /^milestones$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/milestones category/i)).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i })
   expandSettingsSections()
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
@@ -459,6 +461,7 @@ test('Reset appears only in Settings → Danger zone, not on the Byte Factory sc
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /reformat byte foundry/i })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i })
   expandSettingsSections()
 
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()

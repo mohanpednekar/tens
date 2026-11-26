@@ -1,27 +1,29 @@
 import AchievementToasts from 'components/AchievementToasts'
 import AppMenu from 'components/AppMenu'
 import { ACHIEVEMENTS_FEATURE } from 'game/layers'
-import AchievementsPage from 'pages/AchievementsPage'
 import AppNav, { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
 import IncompatibleSaveNotice from 'components/IncompatibleSaveNotice'
 import ChallengesPage from 'pages/ChallengesPage'
 import ByteFoundryPage from 'pages/ByteFoundryPage'
 import ComputeFlopsPage from 'pages/ComputeFlopsPage'
 import ComputePage from 'pages/ComputePage'
-import DevModePage from 'pages/DevModePage'
-import InfoPage from 'pages/InfoPage'
 import MainPage from 'pages/MainPage'
-import MilestonesPage from 'pages/MilestonesPage'
 import PerksPage from 'pages/PerksPage'
-import SettingsPage from 'pages/SettingsPage'
-import StatsPage from 'pages/StatsPage'
 import { isComputeCoreConversionUnlocked, isChallengesPageRevealed, isComputeFlopsPageRevealed, isPerksPageRevealed, isProductionFrozen } from 'game/engine'
 import { getNavAttention } from 'game/navAttention'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, loadThemePreference, saveThemePreference } from 'game/storage'
 import { GlobalStyle, LayoutProvider, ThemeProvider, resolveThemeMode } from 'theme'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import styled from 'styled-components'
+
+// Rarely-visited pages load on demand so the entry chunk stays small (perf pass, #1144).
+const AchievementsPage = lazy(() => import('pages/AchievementsPage'))
+const DevModePage = lazy(() => import('pages/DevModePage'))
+const InfoPage = lazy(() => import('pages/InfoPage'))
+const MilestonesPage = lazy(() => import('pages/MilestonesPage'))
+const SettingsPage = lazy(() => import('pages/SettingsPage'))
+const StatsPage = lazy(() => import('pages/StatsPage'))
 
 const resolveInitialThemeMode = () => resolveThemeMode(loadThemePreference())
 
@@ -165,7 +167,7 @@ function App() {
       <GlobalStyle />
       <LayoutProvider>
         <PageShell>
-          {content}
+          <Suspense fallback={null}>{content}</Suspense>
         </PageShell>
         <AppNav
           attention={navAttention}
