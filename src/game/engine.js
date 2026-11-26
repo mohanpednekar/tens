@@ -1557,6 +1557,8 @@ export const isAchievementConditionMet = (state, condition) => {
     case 'rebootReached': return (state.era?.count ?? 0) > 0 || isEraEligible(state) || isOverflowModeUnlocked(state)
     // Display-reveal helpers: earned achievements survive every reset but a full Reset, so they latch progress.
     case 'achievementEarned': return isAchievementEarned(state, condition.id)
+    // Saves that bought Buy max with PP before it became an achievement are credited with it.
+    case 'legacyBuyMax': return Boolean(state.buyMaxUnlocked)
     case 'anyOf': return (condition.conditions ?? []).some(inner => isAchievementConditionMet(state, inner))
     case 'powerPageUnlocked': return isComputeCoreConversionUnlocked(state) || Boolean(state.intro?.computeMergePageUnlocked) || (state.intro?.computeCoresEverEarned ?? 0) > 0 || COMPUTE_LADDER_FIELDS.some(field => (state.intro?.[field] ?? 0) > 0)
     // Entity at ladder index >= fromIndex exists (merges consume the lower entity, so a higher one implies it was built).
@@ -2953,7 +2955,7 @@ export const buyTierQuantity = (tierId, quantity) => state => applyChallengePurc
 // --- Buy max mode --- a player-facing toggle (persisted as a UI preference, see storage.js's
 // loadBuyMaxPreference) that makes each manual purchase click buy as many levels as are
 // affordable instead of one. Autobuyers are unaffected.
-// Unlocked by the "Buy-max rush" achievement (BUY_MAX_ACHIEVEMENT_ID). The legacy `buyMaxUnlocked` flag (bought with PP
+// Unlocked by the "Click fast, buy max" achievement (BUY_MAX_ACHIEVEMENT_ID). The legacy `buyMaxUnlocked` flag (bought with PP
 // before this became an achievement) still counts, so old saves keep it.
 export const isBuyMaxUnlocked = state => Boolean(state.buyMaxUnlocked) || isAchievementEarned(state, BUY_MAX_ACHIEVEMENT_ID)
 

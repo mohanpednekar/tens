@@ -240,8 +240,8 @@ const computeInitialGame = () => {
     }, [])
 
     // Buy-max rush (achievement): consecutive manual Factory Buy clicks on one button. Called from the manual actions
-    // only (autobuyers call the engine directly). A click that buys nothing still ends a run on another button but
-    // never counts towards one.
+    // only (autobuyers call the engine directly). A click that buys nothing never counts and ends the current run,
+    // whichever button it was on.
     const buyRushRef = useRef(resetManualBuyRush())
     const trackRush = (key, probeAction) => {
       const before = stateRef.current

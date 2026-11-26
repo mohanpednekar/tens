@@ -757,8 +757,8 @@ const InfoPage = ({ game }) => {
           <li>
             Awards 1 Purge Point (PP) for every {PRESTIGE_POWERS_PER_PP_BASE} powers of ten in your balance:
             100 powers at 1 Googol Bytes is 1 PP. Each Compression upgrade halves the powers needed per PP
-            (100 ÷ 32 = 3 PP, then 6, 12, …), and once that reaches 1, doubles the PP per power. Past
-            1 Googol Bytes the count only keeps growing{seeLatePurge ? ' in Overflow mode' : ''}.
+            (100 ÷ 32 = 3 PP, then 6, 12, …), and once that reaches 1, doubles the PP per power.
+            {seeLatePurge && ' Past 1 Googol Bytes the count only keeps growing in Overflow mode.'}
           </li>
           <li>
             Compression costs {PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE}^(level+1) PP (10, 100, 1,000, …) on Firmware → ✦ Prestige and

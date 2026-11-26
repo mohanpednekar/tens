@@ -875,8 +875,8 @@ export const saveBuyMaxPreference = enabled => {
   }
 }
 
-/** Buy unit mode preference — a per-device UI preference: false (default) = "Buy level" (a manual Factory Buy fills up to the
- * level boundary), true = "Buy unit" (one unit per click). Survives reset/clearGameState like Buy max. */
+/** Buy unit mode preference — a per-device UI preference: false (default) = "Bytes" (code `level`; a manual Factory Buy fills up to the
+ * level boundary), true = "Bits" (one unit per click). Survives reset/clearGameState like Buy max. */
 export const BUY_UNIT_PREFERENCE_KEY = 'tens_buy_unit_mode'
 
 export const loadBuyUnitPreference = () => {

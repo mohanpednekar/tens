@@ -114,6 +114,11 @@ describe('Quetta broke', () => {
 })
 
 describe('detectAchievements', () => {
+  it('credits the Buy-max achievement to saves that bought Buy max with PP', () => {
+    const next = detectAchievements({ ...createInitialGameState(), buyMaxUnlocked: true })
+    expect(next.achievements.earned.buyMaxRush).toBe(true)
+  })
+
   it('is inert with the feature off', () => {
     ACHIEVEMENTS_FEATURE.enabled = false
     const state = lateGame()
