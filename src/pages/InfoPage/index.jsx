@@ -3,6 +3,7 @@ import StatCard from 'components/StatCard'
 import {
   formatAmount,
   isAchievementConditionMet,
+  isAchievementRevealed,
   formatBitsInNearestUnit,
   formatOfflineDuration,
   getAutobuyerUnlockMilestone,
@@ -44,7 +45,6 @@ import {
   PRESTIGE_POWERS_PER_PP_BASE,
   PLAYTIME_BONUS_PER_HOUR,
   PLAYTIME_BONUS_UNLOCK_COST,
-  BUY_MAX_UNLOCK_COST,
   CACHE_WARM_UNLOCK_COST,
   SLEEP_MODE_BASE_CAP_SECONDS,
   SLEEP_MODE_CAP_STEP_SECONDS,
@@ -63,6 +63,7 @@ import {
   DATA_STREAM_SPEED_EXPONENT_BASE,
   DATA_STREAM_SPEED_EXPONENT_GAP_RETAINED,
   OVERCLOCK_REQUIREMENT_STEP,
+  ACHIEVEMENT_DEFINITIONS,
 } from 'game/layers'
 import { version } from '../../../package.json'
 import styled from 'styled-components'
@@ -166,6 +167,7 @@ export const MANUAL_SECTION_REVEALS = {
   'tier autobuyers section': { kind: 'lifetimePurges', min: 1 },
   'compute flops section': { kind: 'computeFlopsPageUnlocked' },
   'reboot section': { kind: 'rebootReached' },
+  'achievements section': { kind: 'storageUnlocked' },
 }
 
 export const isManualSectionRevealed = (state, label) => {
@@ -224,6 +226,11 @@ const InfoPage = ({ game }) => {
   const [openSections, setOpenSections] = useState({})
   // Bullets inside an always-visible topic that mention a later mechanic wait for that mechanic too.
   const shown = condition => isAchievementConditionMet(state, condition)
+  // Spoiler gates for bullets that sit in an earlier topic: later layers are never named until reached.
+  const seePower = shown({ kind: 'anyOf', conditions: [{ kind: 'powerPageUnlocked' }, { kind: 'achievementEarned', id: 'powerUser' }] })
+  const seeFlops = shown({ kind: 'computeFlopsPageUnlocked' })
+  const seeReboot = shown({ kind: 'rebootReached' })
+  const seeLatePurge = shown({ kind: 'lifetimePurges', min: 1 })
   const section = (label, title) => ({
     label,
     title,
@@ -260,11 +267,11 @@ const InfoPage = ({ game }) => {
           </li>
           <li>
             Reaching <strong>1 Googol Bytes</strong> (8×10^100 Bits) freezes production until you
-            Purge{shown({ kind: 'googolReached' }) ? ' — unless you have unlocked Overflow mode (see Purge)' : ''}.
+            Purge{seeLatePurge ? ' — unless you have unlocked Overflow mode (see Purge)' : ''}.
           </li>
-          {shown({ kind: 'lifetimePurges', min: 1 }) && (
+          {(seeLatePurge || shown({ kind: 'legacyBuyMax' }) || shown({ kind: 'achievementEarned', id: 'buyMaxRush' })) && (
             <li>
-              Once bought ({BUY_MAX_UNLOCK_COST} PP on Firmware → ✦ Prestige), the <strong>Buy max</strong> toggle makes
+              Once you earn the <strong>Click fast, buy max</strong> achievement (click one Factory Buy button 10 times within a second), the <strong>Buy max</strong> toggle on Firmware → ✦ Prestige makes
               each purchase buy as many levels as you can afford. Tiers buy full levels only — a
               partly bought level takes its own click.
             </li>
@@ -280,28 +287,27 @@ const InfoPage = ({ game }) => {
         <ul>
           <li>
             <strong>Purge</strong> — at 1 Googol Bytes. <em>Resets:</em> Bits and resources, owned
-            Factory tiers, Scale Ups, Overclocks, Accelerate, Restage XP, the per-cycle Compute (Flops) boost.{' '}
-            <em>Keeps:</em> the Data Stream balance, Purge Points, Compression levels, automation unlocks, Overflow mode, the
-            Byte generator, Capacity, Disks, Data Lakes, Compute entities, owned Compute (Flops)
-            units and the System log.
+            Factory tiers, Scale Ups, Overclocks, Accelerate, Restage XP{seeFlops ? ', the per-cycle Compute (Flops) boost' : ''}.{' '}
+            <em>Keeps:</em> the Data Stream balance, Purge Points, Compression levels, automation unlocks, {seeLatePurge ? 'Overflow mode, ' : ''}the
+            Byte generator, Capacity, Disks, Data Lakes{seePower ? ', Compute entities' : ''}{seeFlops ? ', owned Compute (Flops) units' : ''}
+            {' '}and the System log.
           </li>
-          <li>
-            <strong>Reboot</strong> — at 1 Googol unspent PP. <em>Resets:</em> everything Purge
-            resets, plus unspent PP, the Purge count, Compression levels, owned Compute (Flops) units,
-            and the whole Foundry (Capacity, Disks, Data Lakes, Compute entities).{' '}
-            <em>Keeps:</em> automation unlocks, Overflow mode, the main-game unlock, the System log,
-            Flops autobuyer unlocks, Kernels and hyperscalers. Awards Kernels.
-          </li>
-          <li>
-            <strong>Reinstall</strong> — a future layer above Reboot, not yet in the game.
-          </li>
+          {seeReboot && (
+            <li>
+              <strong>Reboot</strong> — at 1 Googol unspent PP. <em>Resets:</em> everything Purge
+              resets, plus unspent PP, the Purge count, Compression levels, owned Compute (Flops) units,
+              and the whole Foundry (Capacity, Disks, Data Lakes, Compute entities).{' '}
+              <em>Keeps:</em> automation unlocks, Overflow mode, the main-game unlock, the System log,
+              Flops autobuyer unlocks, Kernels and hyperscalers. Awards Kernels.
+            </li>
+          )}
         </ul>
       </ManualSection>
 
       <ManualSection {...section('byte foundry section', 'Byte Foundry')}>
         <p>
           Every new save starts here, before any {firstTierName} exist. Unlocking the main game is
-          permanent — no Purge or Reboot sends you back through this gate. Reopen the
+          permanent — no Purge{seeReboot ? ' or Reboot' : ''} sends you back through this gate. Reopen the
           Foundry any time from the bottom nav. The Data Stream’s Capacity uses binary units (KiB,
           MiB, …; 1 KiB = 1,024 Bytes); Storage pools, Disks and Data Lakes use decimal units (KB,
           MB, …; 1 KB = 1,000 Bytes).
@@ -367,8 +373,7 @@ const InfoPage = ({ game }) => {
           </li>
           <li>
             <strong>Kept through Purge:</strong> the Byte generator, Capacity/Bitrate upgrades,
-            Disks, Data Lakes, every Compute entity, and the main-game unlock. Reboot resets
-            most of this (see Reboot).
+            Disks, Data Lakes, {seePower ? 'every Compute entity, ' : ''}and the main-game unlock.{seeReboot ? ' Reboot resets most of this (see Reboot).' : ''}
           </li>
           <li>Later cycles are a quick pit stop, not a full replay.</li>
         </ul>
@@ -378,7 +383,7 @@ const InfoPage = ({ game }) => {
         <ManualSub title="Forced priority">
         <p>When more than one of these is available, only the highest-ranked one can be used:</p>
         <ul>
-          <li>Disk Fill → Provision Disk → Compute Boost</li>
+          <li>Disk Fill → Provision Disk{seePower ? ' → Compute Boost' : ''}</li>
           <li>
             Upgrade Capacity / Upgrade Bitrate, Data Lake Cell purchases and Data Lake capacity
             upgrades are outside this order — they are never blocked by it.
@@ -481,7 +486,7 @@ const InfoPage = ({ game }) => {
           <li>
             The nth Cell bought from a lake costs n units and instantly grants 1 compute entity of
             that lake’s tier (KB → Cell, MB → Battery, …). Once a pool has all of its disks built, its
-            lake buys every affordable Cell automatically for the rest of the Reboot cycle — through pool
+            lake buys every affordable Cell automatically for the rest of the {seeReboot ? 'Reboot cycle' : 'game'} — through pool
             flushes, Reformats and Purges.
           </li>
         </ul>
@@ -500,7 +505,7 @@ const InfoPage = ({ game }) => {
             rewards stay) and permanently adds 1,000 units of lake capacity. A pool’s first two
             flushes also each upgrade one of its two disk-size exponent steps to close 10% of the
             gap to 1.0. These upgrades survive
-            Reformat, Purge, and Reboot. Lakes fill at 10% of their pool’s Bandwidth, plus 10%
+            Reformat, Purge{seeReboot ? ', and Reboot' : ''}. Lakes fill at 10% of their pool’s Bandwidth, plus 10%
             (additive) per flush.
           </li>
           <li>
@@ -637,7 +642,7 @@ const InfoPage = ({ game }) => {
           </li>
           <li>
             {lastTierName}’ tickspeed upgrade may spend your last unit (other tiers always keep one).
-            Restage while holding 0 {lastTierName} (nothing is left producing) to earn Spent QB — then 1 is
+            Restage while holding 0 {lastTierName} (nothing is left producing) to earn Quetta broke — then 1 is
             credited regardless of balance, more often with more completed levels.
           </li>
           <li>
@@ -713,7 +718,7 @@ const InfoPage = ({ game }) => {
             An autobuyer buys <strong>one full level per attempt</strong>, only when that whole level
             (or the rest of a partly bought one) is affordable; Buy max never applies to it. Speed
             upgrades on that same row shorten its interval down to 10 ms; each level after that
-            doubles how many levels one attempt can buy, up to 1024. In Buy mode <strong>Single</strong>{' '}
+            doubles how many levels one attempt can buy, up to 1024. In Buy mode <strong>Bits</strong>{' '}
             (Firmware → Prestige) an attempt buys one unit instead, at the same interval, and those extra levels pause. A tier autobuyer’s speed
             upgrades start at {AUTOBUYER_INTERVAL_UPGRADE_BASE_COST} PP × the tier’s number (10, 20, 30 …); its tickspeed autobuyer’s at {TIER_TICKSPEED_INTERVAL_CONFIG.baseCost} PP × the same.
           </li>
@@ -733,27 +738,27 @@ const InfoPage = ({ game }) => {
             {firstTierTickspeedAutobuyerMilestone}, then every{' '}
             {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP === 1 ? 'Purge' : `${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Purges`} after that.
           </li>
-          <li>More → Milestones tracks your story milestones and Reboot progress.</li>
+          <li>More → Milestones tracks your story milestones{seeReboot ? ' and Reboot progress' : ''}.</li>
         </ul>
       </ManualSection>
 
       <ManualSection {...section('prestige section', 'Purge')}>
         <ul>
           <li>
-            <strong>Prestige</strong> is the umbrella term for every reset-for-rewards: Purge, Reboot,
+            <strong>Prestige</strong> is the umbrella term for every reset-for-rewards: Purge,{seeReboot ? ' Reboot,' : ''}
             Reformat Byte Foundry and a pool’s Flush. Purge is the Factory one.
           </li>
           <li>
             Available at 1 Googol Bytes (8×10^100 Bits), where production freezes until you
-            Purge. Getting Auto Purge’s interval down to {OVERFLOW_MODE_MAX_INTERVAL_SECONDS} s
+            Purge.{seeLatePurge && <> Getting Auto Purge’s interval down to {OVERFLOW_MODE_MAX_INTERVAL_SECONDS} s
             or less unlocks <strong>Overflow mode</strong>: production keeps running past 1 Googol Bytes
-            and Purge becomes optional.
+            and Purge becomes optional.</>}
           </li>
           <li>
             Awards 1 Purge Point (PP) for every {PRESTIGE_POWERS_PER_PP_BASE} powers of ten in your balance:
             100 powers at 1 Googol Bytes is 1 PP. Each Compression upgrade halves the powers needed per PP
-            (100 ÷ 32 = 3 PP, then 6, 12, …), and once that reaches 1, doubles the PP per power. Past
-            1 Googol Bytes the count only keeps growing in Overflow mode.
+            (100 ÷ 32 = 3 PP, then 6, 12, …), and once that reaches 1, doubles the PP per power.
+            {seeLatePurge && ' Past 1 Googol Bytes the count only keeps growing in Overflow mode.'}
           </li>
           <li>
             Compression costs {PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE}^(level+1) PP (10, 100, 1,000, …) on Firmware → ✦ Prestige and
@@ -777,7 +782,7 @@ const InfoPage = ({ game }) => {
           </li>
           <li>
             Resets resources, owned tiers and this run’s progress. Unlocked autobuyers stay, and
-            Foundry, Storage and Power progress carries over.
+            Foundry, Storage{seePower ? ' and Power' : ''} progress carries over.
           </li>
           <li>
             Your first Purge uses a full-screen prompt; after that, use the Purge bar at the top
@@ -829,6 +834,17 @@ const InfoPage = ({ game }) => {
             hyperscalers. Reboot <em>N</em> also unlocks the <em>N</em>th Compute tier’s autobuyer for
             free.
           </li>
+        </ul>
+      </ManualSection>
+
+      <ManualSection {...section('achievements section', 'Achievements')}>
+        <ul>
+          <li>The Achievements screen (More → Achievements) keeps requirements short. Fine print for the ones that have some is listed here, once you can see the achievement.</li>
+          {ACHIEVEMENT_DEFINITIONS.filter(def => def.details && !def.secret && isAchievementRevealed(state, def)).map(def => (
+            <li key={def.id}>
+              <strong>{def.name}:</strong> {def.trigger}. {def.details}
+            </li>
+          ))}
         </ul>
       </ManualSection>
     </RootDiv>

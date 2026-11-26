@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import StatCard from 'components/StatCard'
-import { getAchievementGroupStars, getAchievementProductionMultiplier, getAchievementProgress, getAchievementReward, getAchievementShortRequirement, getAchievementShortReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned, isAchievementRevealed } from 'game/engine'
+import { isAchievementConditionMet, getAchievementGroupStars, getAchievementProductionMultiplier, getAchievementProgress, getAchievementReward, getAchievementShortRequirement, getAchievementShortReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned, isAchievementRevealed } from 'game/engine'
 import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
 
@@ -157,6 +157,9 @@ const AchievementsPage = ({ game }) => {
     // Platform-dependent achievements are hidden — no platform can earn them yet.
     members: ACHIEVEMENT_DEFINITIONS.filter(def => def.group === group.id && !def.platformDependent),
   })).filter(group => group.members.length > 0)
+    // Spoilers: a group whose layer is not reached yet (and none of its achievements is revealed or earned) is not listed at all — not even its name,
+    // its achievement names or its share of the star total.
+    .filter(group => !group.reveal || isAchievementConditionMet(state, group.reveal) || group.members.some(def => isAchievementRevealed(state, def)))
 
   const totalStars = getAchievementStars(state)
   const bonusStars = groups.reduce((sum, group) => sum + getAchievementGroupStars(state, group.id).bonus, 0)
@@ -245,7 +248,7 @@ const AchievementsPage = ({ game }) => {
                           return (
                             <Level key={def.id}>
                               <Detail aria-label={`${entry.name} level ${i + 1} ${lvlEarned ? 'earned' : 'not yet earned'}`}>
-                                {lvlEarned ? '✅' : '🔒'} {i + 1}. {def.trigger}{lvlProgress && !lvlEarned ? ` (${lvlProgress})` : ''}
+                                {lvlEarned ? '✅' : '🔒'} {i + 1}. {getAchievementShortRequirement(def)}{lvlProgress && !lvlEarned ? ` (${lvlProgress})` : ''}
                               </Detail>
                               {!sharedBonus && getAchievementReward(def) && (
                                 <Detail aria-label={`${entry.name} level ${i + 1} reward ${lvlEarned ? 'earned' : 'pending'}`}>
@@ -281,6 +284,13 @@ const AchievementsPage = ({ game }) => {
                         >
                           <strong>{label}</strong>
                         </NameButton>
+                      )}
+                      {/* Revealed rows always say something: the requirement until earned, then the reward (the requirement when there is none). */}
+                      {/* A title that already says it (selfExplanatory) skips the requirement line; a reward line still shows. */}
+                      {!masked && !spoiler && !openRows[def.id] && (earned ? getAchievementShortReward(def) : !def.selfExplanatory) && (
+                        <Detail aria-label={`${def.name} summary`}>
+                          {earned ? `Reward earned: ${getAchievementShortReward(def)}` : getAchievementShortRequirement(def)}
+                        </Detail>
                       )}
                       {!masked && !spoiler && openRows[def.id] && <Detail>{def.trigger}</Detail>}
                       {!masked && !spoiler && openRows[def.id] && getAchievementReward(def) && (

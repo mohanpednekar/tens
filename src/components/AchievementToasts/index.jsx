@@ -15,7 +15,7 @@ const Stack = styled.div`
   flex-direction: column;
   gap: ${props => props.theme.space.sm};
   left: 0;
-  padding: calc(0.75rem + env(safe-area-inset-top)) 1rem 0;
+  padding: calc(3.5rem + env(safe-area-inset-top)) 1rem 0;
   pointer-events: none;
   position: fixed;
   right: 0;

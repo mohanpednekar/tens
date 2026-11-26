@@ -63,7 +63,6 @@ import {
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   OVERFLOW_MODE_MAX_INTERVAL_SECONDS,
   TIER_DEFINITIONS,
-  BUY_MAX_UNLOCK_COST,
   CACHE_WARM_UNLOCK_COST,
   MAX_OFFLINE_SECONDS,
   OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS,
@@ -727,7 +726,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const isFirstRun = purgeCount === 0
   const isFrozen = isProductionFrozen(state)
 
-  const [tab, setTab] = useState('automation')
+  const [tabChoice, setTab] = useState('automation')
   const [pendingChallengeId, setPendingChallengeId] = useState(null)
   const activeChallenge = getActiveChallenge(state)
   useEffect(() => {
@@ -741,7 +740,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const canBuySpeedBonus = !state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST
   const speedBonusMultiplier = getPrestigeProductionMultiplier(purgeCount, true)
   const canBuyPlaytimeBonus = !state.playtimeBonusUnlocked && points >= PLAYTIME_BONUS_UNLOCK_COST
-  const canBuyBuyMax = !isBuyMaxUnlocked(state) && points >= BUY_MAX_UNLOCK_COST
   const sleepCapLevel = getSleepModeCapLevel(state)
   const sleepCapCost = getSleepModeCapUpgradeCost(sleepCapLevel)
   const sleepCapLabel = formatHours(getMaxOfflineSeconds(state))
@@ -771,7 +769,15 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     tier => (state.autobuyers?.[tier.id] ?? null) !== null || Boolean(state.tierTickspeedAutobuyer?.[tier.id]),
   )
   const showKernels = eraCount >= 1 || kernelBalance > 0
-  const tabs = showKernels ? [...PERKS_TABS, KERNELS_TAB] : PERKS_TABS
+  // Each tab shows only once it holds something usable: Automation after the first Purge (or with a Power automation),
+  // Prestige after the first Purge (or with an unlocked Buy max). The chosen tab falls back to the first visible one.
+  const hasPurged = purgeCount >= 1 || eraCount >= 1
+  const buyMaxOwned = isBuyMaxUnlocked(state)
+  const tabs = [
+    ...PERKS_TABS.filter(item => (item.id === 'automation' ? hasPurged || isAnyAutoChargeUnlocked : hasPurged || buyMaxOwned)),
+    ...(showKernels ? [KERNELS_TAB] : []),
+  ]
+  const tab = tabs.some(item => item.id === tabChoice) ? tabChoice : tabs[0]?.id
   const kernelsAffordable = canBuyHyperscaler(state) || canBuyAutoHyperscaler(state)
     || Object.keys(EON_UPGRADE_BY_ID).some(id => canBuyEonUpgrade(state, id))
   const tabDots = {
@@ -875,6 +881,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
 
   const renderAutomation = () => (
     <List aria-label="automation firmware page">
+      {hasPurged && (
       <Category aria-label="global automation category">
         <CategoryHeading>Global Automation</CategoryHeading>
         <CellGrid>
@@ -928,7 +935,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </CellGrid>
         {state.autoPurge != null && renderAutoPurgeConditions()}
       </Category>
+      )}
 
+      {hasPurged && (
       <Category aria-label="tier autobuyers category">
         <CategoryHeading>Tier Autobuyers</CategoryHeading>
         {tierAutomationFullyUpgraded ? (
@@ -1057,6 +1066,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </TierPairList>
         )}
       </Category>
+      )}
 
       {isAnyAutoChargeUnlocked && (
         <Category aria-label="power automation category">
@@ -1145,6 +1155,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
 
   const renderPrestige = () => (
     <List aria-label="prestige firmware page">
+      {hasPurged && (
       <Category aria-label="purge points category">
         <CategoryHeading>Purge Points</CategoryHeading>
         {!state.prestigeSpeedBonusUnlocked && (
@@ -1281,39 +1292,28 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </UpgradeRow>
         )}
       </Category>
+      )}
       <Category aria-label="purchasing category">
         <CategoryHeading>Purchasing</CategoryHeading>
         <UpgradeRow
           ariaLabel="buy mode toggle"
-          details="Level (default): each Factory Buy fills as many units as you can afford, up to the end of the current level. Single: each Buy purchases exactly one unit (it overrides Buy max for the Buy button). Autobuyers follow the mode at the same interval, so in Single they buy one unit per attempt — a level takes several times longer. The choice is per device."
+          details="Bytes (default): each Factory Buy fills as many units as you can afford, up to the end of the current level. Bits: each Buy purchases exactly one unit (it overrides Buy max for the Buy button). Autobuyers follow the mode at the same interval, so in Bits they buy one unit per attempt — a level takes several times longer. The choice is per device."
           icon="🛒"
           name="Buy mode"
         >
           <BuyModeToggle game={game} />
         </UpgradeRow>
+        {(buyMaxOwned || hasPurged) && (
         <UpgradeRow
           ariaLabel="buy max toggle"
-          details="When on, each purchase buys as many levels as you can afford. Factory tiers buy full levels only — a partly bought level takes its own click. One-time purchase; the switch is per device."
+          details="When on, each purchase buys as many levels as you can afford. Factory tiers buy full levels only — a partly bought level takes its own click. Unlocked by the Click fast, buy max achievement; the switch is per device."
           icon="⏭"
           name="Buy max"
-          value={isBuyMaxUnlocked(state) ? null : 'Buy every affordable level in one tap'}
+          value={isBuyMaxUnlocked(state) ? null : 'Locked: earn the Click fast, buy max achievement'}
         >
-          {isBuyMaxUnlocked(state) ? (
-            <BuyMaxToggle game={game} />
-          ) : (
-            <PpPurchaseButton
-              ariaLabel={`Unlock Buy max for ${BUY_MAX_UNLOCK_COST} Purge Points`}
-              color="#38bdf8"
-              cost={BUY_MAX_UNLOCK_COST}
-              disabled={!canBuyBuyMax}
-              icon="🔓"
-              label={`${formatAmount(BUY_MAX_UNLOCK_COST)} PP`}
-              onClick={actions.buyBuyMaxUnlock}
-              points={points}
-              progressLabel="Buy max unlock PP progress"
-            />
-          )}
+          {isBuyMaxUnlocked(state) ? <BuyMaxToggle game={game} /> : null}
         </UpgradeRow>
+        )}
       </Category>
     </List>
   )
@@ -1405,7 +1405,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <h1>Firmware</h1>
         {tab === 'kernels' && showKernels
           ? <PpBalance aria-label="kernels display">⏻ {formatAmount(kernelBalance)} {kernelBalance === 1 ? 'Kernel' : 'Kernels'}</PpBalance>
-          : <PpBalance aria-label="purge points display">✦ {formatAmount(points)} PP</PpBalance>}
+          : hasPurged && <PpBalance aria-label="purge points display">✦ {formatAmount(points)} PP</PpBalance>}
       </Header>
       <TabBar role="tablist" aria-label="firmware view">
         {tabs.map(item => (

@@ -689,9 +689,9 @@ automation pause toggle live on the separate **Firmware** page (below). Mileston
 
 **Firmware page (`pages/PerksPage`).** Its own AppNav destination (page id `'perks'`, item `open firmware`, 🔧,
 between Factory and More), shown once `isPerksPageRevealed` (first Prestige or
-Reboot, or any Auto-charge bought) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
-attention). Header shows the spendable PP (`aria-label="purge points display"`). Two **icon-only**
-tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyph, the full name is in
+Reboot, any Auto-charge bought, or an unlocked Buy max) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
+attention). Header shows the spendable PP (`aria-label="purge points display"`) once the first Purge/Reboot has happened. **Icon-only**
+tabs (Automation after a Purge or with a Power automation, Prestige after a Purge or with Buy max; the first visible one is the fallback; Purge Points / Global Automation / Tier Autobuyers categories wait for the first Purge) (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyph, the full name is in
 `aria-label`/`title`), defaulting to Automation and reset to it by `focusNonce` on each AppNav visit.
 Rows are grouped **by feature, not by purchase kind** — an automation's unlock, pause toggle and speed
 chain are one row (they used to be split across Unlocks / Upgrades / Toggles tabs; see
@@ -731,7 +731,7 @@ chain are one row (they used to be split across Unlocks / Upgrades / Toggles tab
 - ✦ **Prestige** (`open prestige`, `aria-label="prestige perks page"`) — perks that stand alone:
   *Purge Points* (Speed bonus 1 PP, Sleep mode 4 h → 24 h ladder, Compression leveled upgrade, Cache Warm 20 PP,
   Playtime bonus 100 PP, Overflow mode — locked until Auto Purge's interval ≤ `OVERFLOW_MODE_MAX_INTERVAL_SECONDS`)
-  and *Purchasing* (Buy mode: Level default / Single, `components/BuyModeToggle`; Buy max: 2 PP unlock button, then `components/BuyMaxToggle`). Every row is an `UpgradeRow`:
+  and *Purchasing* (Buy mode: Bytes (code `level`, default) / Bits (code `single`), `components/BuyModeToggle`; Buy max: locked until the Click fast, buy max achievement, then `components/BuyMaxToggle`). Every row is an `UpgradeRow`:
   the name is a button (`"<name> details"`, `aria-expanded`) toggling a full-width description
   (`"<name> description"`); under the name one short, plain value line (`"<name> value"`) — usually
   `now → after` while buyable (e.g. "Time away: up to 4h → 8h"), the current effect once owned/maxed, or a plain

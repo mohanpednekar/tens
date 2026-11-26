@@ -2289,7 +2289,7 @@ test('Firmware → Prestige upgrade names expand their description; values show 
 
   expect(screen.getByLabelText(/^sleep mode value$/i)).toHaveTextContent('Time away: up to 4h → 8h')
   expect(screen.getByLabelText(/^cache warm value$/i)).toHaveTextContent('Start runs with KB level 1 done')
-  expect(screen.getByLabelText(/^buy max value$/i)).toHaveTextContent('Buy every affordable level in one tap')
+  expect(screen.getByLabelText(/^buy max value$/i)).toHaveTextContent('Locked: earn the Click fast, buy max achievement')
   expect(screen.queryByLabelText(/^sleep mode description$/i)).not.toBeInTheDocument()
   const toggle = screen.getByRole('button', { name: /^sleep mode details$/i })
   await user.click(toggle)
@@ -2300,7 +2300,6 @@ test('Firmware → Prestige upgrade names expand their description; values show 
 })
 
 test.each([
-  ['Buy max', /unlock buy max for 2 purge points/i, 2, /buy max mode toggle|buy max/i],
   ['Cache Warm', /unlock cache warm for 20 purge points/i, 20, /cache warm unlocked/i],
 ])('%s is bought with PP on Firmware → Prestige', async (_name, button, cost, ownedLabel) => {
   const user = userEvent.setup()
@@ -2311,6 +2310,26 @@ test.each([
   expect(screen.getByLabelText(/^purge points display$/i)).toHaveTextContent('0 PP')
   expect(screen.queryByRole('button', { name: button })).not.toBeInTheDocument()
   expect(screen.getAllByLabelText(ownedLabel).length).toBeGreaterThan(0)
+})
+
+test('Firmware appears with an unlocked Buy max before any Purge, showing only what is unlocked', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 }, achievements: { earned: { buyMaxRush: true }, counters: { pings: 0 } } })
+  render(<App />)
+  await user.click(screen.getByRole('button', { name: /^open firmware$/i }))
+  expect(screen.queryByRole('tab', { name: /open automation/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: /open prestige/i })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByLabelText('buy max toggle')).toBeInTheDocument()
+  expect(screen.queryByLabelText('purge points category')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^purge points display$/i)).not.toBeInTheDocument()
+  // Challenges keeps its own reveal (first Purge).
+  expect(screen.queryByRole('button', { name: /^open challenges$/i })).not.toBeInTheDocument()
+})
+
+test('Firmware stays hidden before any Purge without Buy max', () => {
+  seedMainGameState({ resources: { base: 10 }, purge: { xp: 0, points: 0, count: 0, highestMilestone: 0 } })
+  render(<App />)
+  expect(screen.queryByRole('button', { name: /^open firmware$/i })).not.toBeInTheDocument()
 })
 
 test('Sleep mode levels are bought with PP until the 24h maximum', async () => {

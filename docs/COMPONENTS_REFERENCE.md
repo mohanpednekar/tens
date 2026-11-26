@@ -216,14 +216,14 @@ small icon-only squares — and the selected option is identified by styling alo
 ## `BuyModeToggle/index.jsx`
 
 `{ game }` — segmented two-button choice (`role="group"` `aria-label="buy mode"`; buttons `aria-label="buy level mode"` /
-`"buy single mode"`, `aria-pressed`): **Level** (default, `game.buyUnitMode` false) or **Single** (one unit per manual Factory Buy
+`"buy single mode"`, `aria-pressed`): **Bytes** (code `level`, default, `game.buyUnitMode` false) or **Bits** (code `single`; one unit per manual Factory Buy
 and per tier autobuyer attempt). Calls `game.setBuyUnitMode(bool)`; per-device (`tens_buy_unit_mode`). Used only on Firmware →
 ✦ Prestige → Purchasing; mechanic in `src/CLAUDE.md` "Buy mode".
 
 ## `BuyMaxToggle/index.jsx`
 
-`{ game }` — the Buy max mode toggle. Renders nothing until `isBuyMaxUnlocked(game.state)` (the 2 PP
-Buy max purchase); then a `components/Switch` (`aria-label="Toggle buy max mode"`,
+`{ game }` — the Buy max mode toggle. Renders nothing until `isBuyMaxUnlocked(game.state)` (the Click fast, buy max
+achievement, or the legacy PP-bought flag); then a `components/Switch` (`aria-label="Toggle buy max mode"`,
 `aria-pressed`, `$on`) that calls
 `game.setBuyMaxMode(!game.buyMaxMode)`. Used only on Firmware → ✦ Prestige (`pages/PerksPage`'s Purchasing row); mechanic in
 `docs/ECONOMY_REFERENCE.md`'s "Buy max mode".

@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Manual → Achievements**: fine print and nuances for achievements that have some (e.g. autobuyer clicks do not count), listed only for achievements you can already see. The Achievements screen now shows the short requirement text.
+- **Click fast, buy max** achievement (Early Factory): click the same Factory Buy button 10 times within one second (no other Factory Buy or Accelerate button clicked in between; autobuyers do not count, and a click that buys nothing starts the count over) to unlock Buy max.
 - **Progressive reveal on every screen**: the Manual lists only topics you have reached, each collapsed to its heading (long topics split into collapsible sub-topics); Firmware lists owned automations plus the next one to unlock; Milestones shows reached milestones plus the next; Compute and Power show tiers up to the next one; Settings hides Reboot, System log and Task Manager until reached.
 - **Spoiler-free achievements**: achievements from layers you haven't reached show their name but keep the requirement, reward and progress hidden until that layer — or, in a leveled series, the previous level — is reached.
 - **Stats page** (More → 📊 Stats): headline tiles (play time, Purges, stars, bonus multiplier) and colour-coded cards for Time, Factory, Foundry, Purge, Compute, Reboot, Challenges and Bonuses, with progress bars; each card appears once you reach that layer and collapses from its name.
@@ -27,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
+- Achievements you can see now show a one-line summary without expanding: the requirement until earned, then the reward. Expanding shows both; fine print lives only in the Manual. Self-explanatory titles skip the requirement line.
+- Achievements with plain names got fitting ones: the five Reclamation levels (Flush with success … The Great Flushening), the ten Level power levels (High five … Perfect ten, matching each level count) and Spent QB → Quetta broke. Series and other achievement names are unchanged.
+- Buy mode options are now named **Bytes** (default, fills up to the level boundary) and **Bits** (exactly one unit per Buy and per autobuyer attempt).
+- **Firmware appears as soon as it has something usable** (e.g. an unlocked Buy max, even before the first Purge). Its tabs and sections stay hidden until their own content is reached: Automation and Purge Points after the first Purge, Prestige once Buy max is unlocked or after the first Purge. Challenges still appears with the first Purge.
+- **Stricter spoilers**: the Achievements screen lists a group only once its layer is reached (names and star totals included), and the Manual no longer mentions Reboot, Kernels, Flops, Power, Overflow mode or future layers before you reach them.
+- **Buy max is now unlocked by the Click fast, buy max achievement** instead of the 2 PP Firmware purchase (saves that already bought it keep it).
 - First-time **Disk full** screen is shorter and centered: the Purge Point reward up front, a two-column Resets / Keeps summary, and a full-width Purge button; the backdrop is lighter and blurred.
 - **Challenge balance (#1043):** retuned run-wide levers to the difficulty bands — F3 cost ×6→×3, F7 ×5→×3, F16 ×30→×20, F6 Scale Up ^3→^2 / Accelerate ^2→^1.5 (was faster than a normal run), F21 now also costs ×30 (it was inert), F24 adds costs ×40, F25 adds costs ×30.
 - **Purge Points now follow the actual powers of ten in your balance** instead of the excess over 1 Googol: 100 powers ÷ 64 = 1 PP at Googol, and each Compression halves the divisor (100 ÷ 32 = 3 PP after one Compression, then 6, 12, 25, 50, 100). The power count stays at 100 until Overflow mode, then keeps growing.
@@ -48,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Automation: global automation rows and tier autobuyer rows now keep the pause Switch flush right with the challenge or upgrade button beside it, in fixed columns, and list Scale Up before Restage.
 
 ### Fixed
-
+- Achievement toasts no longer cover the page title; they now sit just below it.
 - **Level power achievements** now unlock after *completing* the stated number of levels (previously one level early); progress bars count completed levels. Daily challenge definitions regenerate (generator v9).
 - Power: Boost presets are no longer disabled by a pending Disk Fill or an armed Provision Disk (blockers invisible on the Power screen) — holding a token is enough.
 
@@ -56,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Spent QB achievement** — click Restage while holding 0 Quettabytes (the real stall: everything resets with nothing left producing — the Restage button now allows it, with a warning; Auto Restage still waits for Quettabytes). Merely reaching a 0 balance doesn't count; the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, Quettabytes are credited regardless of the current balance, 1 at a time, more often with more completed levels (logarithmically): every 10 s at 1 level, every 5 s at 10, every 3.33 s at 100.
+- **Quetta broke achievement** — click Restage while holding 0 Quettabytes (the real stall: everything resets with nothing left producing — the Restage button now allows it, with a warning; Auto Restage still waits for Quettabytes). Merely reaching a 0 balance doesn't count; the Quettabytes tickspeed upgrade can now use your last Quettabyte. Once earned, Quettabytes are credited regardless of the current balance, 1 at a time, more often with more completed levels (logarithmically): every 10 s at 1 level, every 5 s at 10, every 3.33 s at 100.
 
 ### Added
 

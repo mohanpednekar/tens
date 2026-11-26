@@ -47,7 +47,7 @@ describe('AchievementsPage', () => {
     renderWithTheme(<AchievementsPage game={gameWith({ tier01Bought: true, tier02Bought: true, tier03Bought: true })} />)
     openGroup('Tier ladder')
     expect(screen.getByLabelText('First purchase achievement level 3 of 10')).toBeTruthy()
-    expect(screen.getByLabelText('Spent QB achievement not yet earned')).toBeTruthy()
+    expect(screen.getByLabelText('Quetta broke achievement not yet earned')).toBeTruthy()
   })
 
   it('collapses ordered steps into one leveled row', () => {
@@ -137,7 +137,7 @@ describe('AppMenu achievements entry', () => {
     fireEvent.click(screen.getByLabelText('Reclamation details'))
     expect(screen.getByLabelText('Reclamation level 1 earned').textContent).toBe('✅ 1. Flush a pool · Disk step 2%')
     expect(screen.getByLabelText('Reclamation level 2 not yet earned').textContent).toBe('🔒 2. Flush 3 pools (0/3) · Disk step 3%')
-    expect(screen.getByLabelText('Reclamation level 5 not yet revealed').textContent).toBe('🔒 5. Reclamation V')
+    expect(screen.getByLabelText('Reclamation level 5 not yet revealed').textContent).toBe('🔒 5. The Great Flushening')
     expect(screen.getByLabelText('Reclamation achievement level 1 of 5')).toBeTruthy()
     expect(screen.getByText(/^Disk step 2%: Disk-size steps without a Flush Pool upgrade close 2% of the gap/)).toBeTruthy()
     // Rewards of still-hidden levels are not explained yet.
@@ -197,30 +197,35 @@ describe('AppMenu achievements entry', () => {
   })
 
   it('a compact series with no rewards shows no reward explanations', () => {
-    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    renderWithTheme(<AchievementsPage game={gameWith({}, mainGame(createInitialGameState()))} />)
     openGroup('Tier ladder')
     fireEvent.click(screen.getByLabelText('First purchase details'))
     expect(screen.queryByText(/↑:/)).toBeNull()
   })
 
-  it('spoiler achievements show their name but hide requirement, reward and progress until revealed', () => {
-    // (Name only — no "???" placeholder, no requirement text.)
+  it('groups from layers not reached yet are not listed at all, names included', () => {
     const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({})} />)
-    openGroup('Reboot')
-    // The name is shown (unlike a secret achievement) …
-    expect(screen.getByLabelText('rm -rf achievement not yet earned')).toBeTruthy()
-    expect(screen.getByLabelText('rm -rf achievement not yet earned').textContent).toBe('rm -rf🔒')
-    // … but it cannot be expanded and its requirement never renders.
-    expect(screen.queryByLabelText('rm -rf details')).toBeNull()
-    expect(screen.queryByText('Reformat the Byte Foundry')).toBeNull()
-    openGroup('Overclock step')
-    expect(screen.getByText('Next: Patient Overclock')).toBeTruthy()
-    expect(screen.queryByText(/Claim the first Overclock/)).toBeNull()
-    expect(screen.queryByLabelText('Overclock step next reward')).toBeNull()
+    for (const name of ['Reboot', 'Overclock step', 'Power', 'First Purge and after']) {
+      expect(screen.queryByLabelText(`${name} group toggle`)).toBeNull()
+    }
+    expect(screen.queryByText(/Kernel panic|Popcorn/)).toBeNull()
+    expect(screen.getByLabelText(/^total stars \d+ of \d+$/).textContent).not.toMatch(/\/(\d{3})/)
     unmount()
     renderWithTheme(<AchievementsPage game={gameWith({}, { era: { count: 1 } })} />)
     openGroup('Reboot')
+    // Collapsed: the short requirement; expanded: the full one.
+    expect(screen.getByText('Reformat Foundry')).toBeTruthy()
     fireEvent.click(screen.getByLabelText('rm -rf details'))
     expect(screen.getByText('Reformat the Byte Foundry')).toBeTruthy()
+  })
+
+  it('a revealed row shows its requirement, then its reward once earned, without expanding', () => {
+    const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({}, { era: { count: 1 } })} />)
+    openGroup('Reboot')
+    expect(screen.getByLabelText('Kernel panic summary').textContent).toBe('Reboot ×2 in 1 h')
+    unmount()
+    renderWithTheme(<AchievementsPage game={gameWith({ quettaSpent: true, tier10Bought: true }, { purchased: { tier10: 1 } })} />)
+    openGroup('Tier ladder')
+    expect(screen.getByLabelText('Quetta broke summary').textContent).toMatch(/^Reward earned: /)
   })
 })
