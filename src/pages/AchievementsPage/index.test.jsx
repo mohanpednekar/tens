@@ -197,26 +197,19 @@ describe('AppMenu achievements entry', () => {
   })
 
   it('a compact series with no rewards shows no reward explanations', () => {
-    renderWithTheme(<AchievementsPage game={gameWith({})} />)
+    renderWithTheme(<AchievementsPage game={gameWith({}, mainGame(createInitialGameState()))} />)
     openGroup('Tier ladder')
     fireEvent.click(screen.getByLabelText('First purchase details'))
     expect(screen.queryByText(/↑:/)).toBeNull()
   })
 
-  it('spoiler achievements show their name but hide requirement, reward and progress until revealed', () => {
-    // (Name only — no "???" placeholder, no requirement text.)
+  it('groups from layers not reached yet are not listed at all, names included', () => {
     const { unmount } = renderWithTheme(<AchievementsPage game={gameWith({})} />)
-    openGroup('Reboot')
-    // The name is shown (unlike a secret achievement) …
-    expect(screen.getByLabelText('rm -rf achievement not yet earned')).toBeTruthy()
-    expect(screen.getByLabelText('rm -rf achievement not yet earned').textContent).toBe('rm -rf🔒')
-    // … but it cannot be expanded and its requirement never renders.
-    expect(screen.queryByLabelText('rm -rf details')).toBeNull()
-    expect(screen.queryByText('Reformat the Byte Foundry')).toBeNull()
-    openGroup('Overclock step')
-    expect(screen.getByText('Next: Patient Overclock')).toBeTruthy()
-    expect(screen.queryByText(/Claim the first Overclock/)).toBeNull()
-    expect(screen.queryByLabelText('Overclock step next reward')).toBeNull()
+    for (const name of ['Reboot', 'Overclock step', 'Power', 'First Purge and after']) {
+      expect(screen.queryByLabelText(`${name} group toggle`)).toBeNull()
+    }
+    expect(screen.queryByText(/Kernel panic|Popcorn/)).toBeNull()
+    expect(screen.getByLabelText(/^total stars \d+ of \d+$/).textContent).not.toMatch(/\/(\d{3})/)
     unmount()
     renderWithTheme(<AchievementsPage game={gameWith({}, { era: { count: 1 } })} />)
     openGroup('Reboot')

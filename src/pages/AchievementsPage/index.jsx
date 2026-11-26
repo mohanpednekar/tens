@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import StatCard from 'components/StatCard'
-import { getAchievementGroupStars, getAchievementProductionMultiplier, getAchievementProgress, getAchievementReward, getAchievementShortRequirement, getAchievementShortReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned, isAchievementRevealed } from 'game/engine'
+import { isAchievementConditionMet, getAchievementGroupStars, getAchievementProductionMultiplier, getAchievementProgress, getAchievementReward, getAchievementShortRequirement, getAchievementShortReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned, isAchievementRevealed } from 'game/engine'
 import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
 
@@ -157,6 +157,9 @@ const AchievementsPage = ({ game }) => {
     // Platform-dependent achievements are hidden — no platform can earn them yet.
     members: ACHIEVEMENT_DEFINITIONS.filter(def => def.group === group.id && !def.platformDependent),
   })).filter(group => group.members.length > 0)
+    // Spoilers: a group whose layer is not reached yet (and has nothing earned) is not listed at all — not even its name,
+    // its achievement names or its share of the star total.
+    .filter(group => !group.reveal || isAchievementConditionMet(state, group.reveal) || group.members.some(def => isAchievementEarned(state, def.id)))
 
   const totalStars = getAchievementStars(state)
   const bonusStars = groups.reduce((sum, group) => sum + getAchievementGroupStars(state, group.id).bonus, 0)

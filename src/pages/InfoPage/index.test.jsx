@@ -95,3 +95,12 @@ describe('InfoPage (Manual) Achievements topic', () => {
     expect(section).not.toHaveTextContent(/Kernel panic|Remind me later/)
   })
 })
+
+describe('InfoPage (Manual) spoiler gating inside revealed topics', () => {
+  test('Prestige ladder names no later layer (Reboot, Kernels, Flops, Reinstall) before it is reached', () => {
+    const initial = createInitialGameState()
+    renderManual({ ...initial, intro: { ...initial.intro, mainGameUnlocked: true }, resources: { ...initial.resources, base: 1e101 } })
+    fireEvent.click(topic('Prestige ladder'))
+    expect(screen.getByLabelText('prestige ladder section')).not.toHaveTextContent(/Reboot|Kernel|Flops|Reinstall|Overflow/)
+  })
+})

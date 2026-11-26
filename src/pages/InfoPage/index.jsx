@@ -226,6 +226,11 @@ const InfoPage = ({ game }) => {
   const [openSections, setOpenSections] = useState({})
   // Bullets inside an always-visible topic that mention a later mechanic wait for that mechanic too.
   const shown = condition => isAchievementConditionMet(state, condition)
+  // Spoiler gates for bullets that sit in an earlier topic: later layers are never named until reached.
+  const seePower = shown({ kind: 'anyOf', conditions: [{ kind: 'powerPageUnlocked' }, { kind: 'achievementEarned', id: 'powerUser' }] })
+  const seeFlops = shown({ kind: 'computeFlopsPageUnlocked' })
+  const seeReboot = shown({ kind: 'rebootReached' })
+  const seeLatePurge = shown({ kind: 'lifetimePurges', min: 1 })
   const section = (label, title) => ({
     label,
     title,
@@ -262,7 +267,7 @@ const InfoPage = ({ game }) => {
           </li>
           <li>
             Reaching <strong>1 Googol Bytes</strong> (8×10^100 Bits) freezes production until you
-            Purge{shown({ kind: 'googolReached' }) ? ' — unless you have unlocked Overflow mode (see Purge)' : ''}.
+            Purge{seeLatePurge ? ' — unless you have unlocked Overflow mode (see Purge)' : ''}.
           </li>
           {shown({ kind: 'lifetimePurges', min: 1 }) && (
             <li>
@@ -282,28 +287,27 @@ const InfoPage = ({ game }) => {
         <ul>
           <li>
             <strong>Purge</strong> — at 1 Googol Bytes. <em>Resets:</em> Bits and resources, owned
-            Factory tiers, Scale Ups, Overclocks, Accelerate, Restage XP, the per-cycle Compute (Flops) boost.{' '}
-            <em>Keeps:</em> the Data Stream balance, Purge Points, Compression levels, automation unlocks, Overflow mode, the
-            Byte generator, Capacity, Disks, Data Lakes, Compute entities, owned Compute (Flops)
-            units and the System log.
+            Factory tiers, Scale Ups, Overclocks, Accelerate, Restage XP{seeFlops ? ', the per-cycle Compute (Flops) boost' : ''}.{' '}
+            <em>Keeps:</em> the Data Stream balance, Purge Points, Compression levels, automation unlocks, {seeLatePurge ? 'Overflow mode, ' : ''}the
+            Byte generator, Capacity, Disks, Data Lakes{seePower ? ', Compute entities' : ''}{seeFlops ? ', owned Compute (Flops) units' : ''}
+            {' '}and the System log.
           </li>
-          <li>
-            <strong>Reboot</strong> — at 1 Googol unspent PP. <em>Resets:</em> everything Purge
-            resets, plus unspent PP, the Purge count, Compression levels, owned Compute (Flops) units,
-            and the whole Foundry (Capacity, Disks, Data Lakes, Compute entities).{' '}
-            <em>Keeps:</em> automation unlocks, Overflow mode, the main-game unlock, the System log,
-            Flops autobuyer unlocks, Kernels and hyperscalers. Awards Kernels.
-          </li>
-          <li>
-            <strong>Reinstall</strong> — a future layer above Reboot, not yet in the game.
-          </li>
+          {seeReboot && (
+            <li>
+              <strong>Reboot</strong> — at 1 Googol unspent PP. <em>Resets:</em> everything Purge
+              resets, plus unspent PP, the Purge count, Compression levels, owned Compute (Flops) units,
+              and the whole Foundry (Capacity, Disks, Data Lakes, Compute entities).{' '}
+              <em>Keeps:</em> automation unlocks, Overflow mode, the main-game unlock, the System log,
+              Flops autobuyer unlocks, Kernels and hyperscalers. Awards Kernels.
+            </li>
+          )}
         </ul>
       </ManualSection>
 
       <ManualSection {...section('byte foundry section', 'Byte Foundry')}>
         <p>
           Every new save starts here, before any {firstTierName} exist. Unlocking the main game is
-          permanent — no Purge or Reboot sends you back through this gate. Reopen the
+          permanent — no Purge{seeReboot ? ' or Reboot' : ''} sends you back through this gate. Reopen the
           Foundry any time from the bottom nav. The Data Stream’s Capacity uses binary units (KiB,
           MiB, …; 1 KiB = 1,024 Bytes); Storage pools, Disks and Data Lakes use decimal units (KB,
           MB, …; 1 KB = 1,000 Bytes).
@@ -369,8 +373,7 @@ const InfoPage = ({ game }) => {
           </li>
           <li>
             <strong>Kept through Purge:</strong> the Byte generator, Capacity/Bitrate upgrades,
-            Disks, Data Lakes, every Compute entity, and the main-game unlock. Reboot resets
-            most of this (see Reboot).
+            Disks, Data Lakes, {seePower ? 'every Compute entity, ' : ''}and the main-game unlock.{seeReboot ? ' Reboot resets most of this (see Reboot).' : ''}
           </li>
           <li>Later cycles are a quick pit stop, not a full replay.</li>
         </ul>
@@ -380,7 +383,7 @@ const InfoPage = ({ game }) => {
         <ManualSub title="Forced priority">
         <p>When more than one of these is available, only the highest-ranked one can be used:</p>
         <ul>
-          <li>Disk Fill → Provision Disk → Compute Boost</li>
+          <li>Disk Fill → Provision Disk{seePower ? ' → Compute Boost' : ''}</li>
           <li>
             Upgrade Capacity / Upgrade Bitrate, Data Lake Cell purchases and Data Lake capacity
             upgrades are outside this order — they are never blocked by it.
@@ -483,7 +486,7 @@ const InfoPage = ({ game }) => {
           <li>
             The nth Cell bought from a lake costs n units and instantly grants 1 compute entity of
             that lake’s tier (KB → Cell, MB → Battery, …). Once a pool has all of its disks built, its
-            lake buys every affordable Cell automatically for the rest of the Reboot cycle — through pool
+            lake buys every affordable Cell automatically for the rest of the {seeReboot ? 'Reboot cycle' : 'game'} — through pool
             flushes, Reformats and Purges.
           </li>
         </ul>
@@ -502,7 +505,7 @@ const InfoPage = ({ game }) => {
             rewards stay) and permanently adds 1,000 units of lake capacity. A pool’s first two
             flushes also each upgrade one of its two disk-size exponent steps to close 10% of the
             gap to 1.0. These upgrades survive
-            Reformat, Purge, and Reboot. Lakes fill at 10% of their pool’s Bandwidth, plus 10%
+            Reformat, Purge{seeReboot ? ', and Reboot' : ''}. Lakes fill at 10% of their pool’s Bandwidth, plus 10%
             (additive) per flush.
           </li>
           <li>
@@ -735,14 +738,14 @@ const InfoPage = ({ game }) => {
             {firstTierTickspeedAutobuyerMilestone}, then every{' '}
             {TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP === 1 ? 'Purge' : `${TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP} Purges`} after that.
           </li>
-          <li>More → Milestones tracks your story milestones and Reboot progress.</li>
+          <li>More → Milestones tracks your story milestones{seeReboot ? ' and Reboot progress' : ''}.</li>
         </ul>
       </ManualSection>
 
       <ManualSection {...section('prestige section', 'Purge')}>
         <ul>
           <li>
-            <strong>Prestige</strong> is the umbrella term for every reset-for-rewards: Purge, Reboot,
+            <strong>Prestige</strong> is the umbrella term for every reset-for-rewards: Purge,{seeReboot ? ' Reboot,' : ''}
             Reformat Byte Foundry and a pool’s Flush. Purge is the Factory one.
           </li>
           <li>
@@ -779,7 +782,7 @@ const InfoPage = ({ game }) => {
           </li>
           <li>
             Resets resources, owned tiers and this run’s progress. Unlocked autobuyers stay, and
-            Foundry, Storage and Power progress carries over.
+            Foundry, Storage{seePower ? ' and Power' : ''} progress carries over.
           </li>
           <li>
             Your first Purge uses a full-screen prompt; after that, use the Purge bar at the top
