@@ -51,8 +51,8 @@ Continues the root `CLAUDE.md`'s "Architecture" (layers 1–2: `engine.js`, `use
    Lists owned or affordable tiers plus one more. Pure renderer — spec: `docs/ECONOMY_REFERENCE.md` "PP Compute (Flops)".
 5. **`InfoPage/index.jsx`** — the Manual (`{ game }`), holding every mechanic's evergreen explanation in
    short bullets/sub-headings. **Progressive reveal:** a topic appears once its layer is reached
-   (`MANUAL_SECTION_REVEALS`, the achievement condition grammar via `isAchievementConditionMet`)
-  , every topic starts collapsed (heading = toggle) and long topics split into collapsed `ManualSub` sub-topics (what used to be MainPage's click-to-expand `InfoDetails` disclosures —
+   (`MANUAL_SECTION_REVEALS`, the achievement condition grammar via `isAchievementConditionMet`; always-visible topics hold back bullets about later mechanics),
+   every topic starts collapsed (heading = toggle) and long topics split into collapsed `ManualSub` sub-topics (what used to be MainPage's click-to-expand `InfoDetails` disclosures —
    Overview, Prestige ladder, Byte Foundry, Storage, Power, Compute, Accelerate, Scale Up, Overclock,
    Tier Autobuyers, Milestones, Purge, Sleep mode, Reboot). Numbers come from the same `engine.js`/`layers.js`
    constants the game uses, so they can't drift. Reads state only for the reveal gates. Header shows the app version (`v{version}` from `package.json` via build-time
