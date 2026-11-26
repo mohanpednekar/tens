@@ -584,8 +584,7 @@ live inside the selected tier):
   the threshold so it isn't a duplicate of the Bits headline. Visibility is
   `formatMoneyBalance !== formatCurrency`, not a hardcoded 8000, so it stays in lockstep with the
   headline switch. Every other `formatCurrency` call on this page —
-  tier costs/production, the global tickspeed cost, the `FullScreenOverlay`'s "You've reached…"
-  line, the Buy button's cost label — is unaffected and still shows raw Bits, its actual
+  tier costs/production, the global tickspeed cost, the Buy button's cost label — is unaffected and still shows raw Bits, its actual
   priced/spent denomination. Beneath the hero (`BytePowerSegments` `margin-top: 0.5rem`; the Bits
   overlay sits in that gap plus StatCard's uncompressed `0.6rem` gap and does not push the bar
   down; suppressed while `balancesCompressed`, since the compact sticky bar has no room for it),
@@ -623,7 +622,7 @@ live inside the selected tier):
   and `onClick` toggling a local `showGlobalMultipliers` boolean (plain `useState`, not persisted/reset
   by `handleResetClick`, same convention as `openTierDetailIds`) — via `MoneyHeroToggle` (wrapping only the balance figure; carries `aria-label="money display"`, cursor/hover and a
   `theme.color.accent` focus-visible outline) — the rest of the card is not a trigger. Expanding it renders a `GlobalMultipliersList` (`<ul>`, left-aligned to override
-  `CenteredCard`'s own `text-align: center`, same technique `FullScreenCard`'s own `ul` already uses;
+  `CenteredCard`'s own `text-align: center`, overriding the card's centering;
   text color `theme.color.textMuted`) listing every *global*
   (not per-tier) production multiplier and its current effect: the Prestige speed bonus (once
   `!isFirstRun`), Scale Up, Tickspeed, and Overclock — each gated on the same
@@ -1046,9 +1045,11 @@ Self-dismisses via a countdown (`OFFLINE_NOTICE_AUTO_DISMISS_MS`, 10s) driving t
 `dismissOfflineProgress` removes it.
 
 **Prestige surfaces (#139).** The first-run freeze uses `FullScreenOverlay` (`role="dialog"`
-`aria-modal="true"` `aria-label="Purge required"`) with a dark scrim (`rgba(0,0,0,0.92)`) and a
-token-driven `FullScreenCard` (`surfaceRaised` panel, `warn` heading via `font.display`/`type.scale.xl`,
-`PurgeMutedText` body, `textMuted` bullet list). Repeat-run reminders use `TopPurgeBar`
+`aria-modal="true"` `aria-label="Purge required"`) with a blurred scrim (`rgba(0,0,0,0.78)`) and a
+token-driven `FullScreenCard` (`surfaceRaised` panel with a `warn` top border, max 24rem): 💾 icon, "Disk full"
+`warn` heading, "Production stopped" (`PurgeMutedText`), a `DiskFullReward` line ("+N Purge Point(s)" from
+`purgeAwardPreview`, `warn`), a `DiskFullEffects` `<dl>` of two equal centered columns (Resets: Bits, tiers,
+Accelerate / Keeps: Purge Points, Foundry) and a full-width "✦ Purge now" button — everything on one center axis. Repeat-run reminders use `TopPurgeBar`
 (`surfaceRaised` + `warn` bottom border + `shadow.sm`) with the same `PurgeMutedText` + a
 `variant="prestige"` `$pulse` button. Both prestige buttons keep their existing `aria-label`s; the
 full-screen button still auto-focuses on mount. Presentation gates (`showFullScreenPrompt` /

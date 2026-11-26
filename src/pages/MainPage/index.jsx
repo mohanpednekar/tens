@@ -575,7 +575,8 @@ const TierDetailsContent = styled.div`
 // below, the only thing left clickable while frozen).
 const FullScreenOverlay = styled.div`
   align-items: center;
-  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.78);
   bottom: 0;
   display: flex;
   justify-content: center;
@@ -594,10 +595,14 @@ const FullScreenCard = styled.div`
   background: ${props => props.theme.color.surfaceRaised};
   border: 1px solid ${props => props.theme.color.borderStrong};
   border-radius: ${props => props.theme.radius.lg};
+  border-top: 4px solid ${props => props.theme.color.warn};
   box-shadow: ${props => props.theme.shadow.md};
   color: ${props => props.theme.color.text};
-  max-width: 28rem;
-  padding: ${props => props.theme.space.xl} ${props => props.theme.space.lg};
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.space.lg};
+  max-width: 24rem;
+  padding: ${props => props.theme.space.xl} ${props => props.theme.space.lg} ${props => props.theme.space.lg};
   text-align: center;
   width: 100%;
 
@@ -607,20 +612,59 @@ const FullScreenCard = styled.div`
     font-size: ${props => props.theme.type.scale.xl.size};
     font-weight: 700;
     line-height: ${props => props.theme.type.scale.xl.lineHeight};
-    margin: 0 0 ${props => props.theme.space.md};
+    margin: 0;
   }
 
-  ul {
+  > button {
+    justify-content: center;
+    width: 100%;
+  }
+`
+
+const DiskFullIcon = styled.div`
+  font-size: ${props => props.theme.type.scale.hero.size};
+  line-height: 1;
+`
+
+const DiskFullHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.space.xs};
+`
+
+// The one number that matters on this screen: what the Purge awards.
+const DiskFullReward = styled.div`
+  color: ${props => props.theme.color.warn};
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.lg.size};
+  font-variant-numeric: ${props => props.theme.type.numeric};
+  font-weight: 700;
+  line-height: ${props => props.theme.type.scale.lg.lineHeight};
+`
+
+// Two equal, centered columns so every block on the card shares one center axis.
+const DiskFullEffects = styled.dl`
+  border-top: 1px solid ${props => props.theme.color.border};
+  display: grid;
+  font-size: ${props => props.theme.type.scale.sm.size};
+  grid-template-columns: 1fr 1fr;
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  margin: 0;
+  padding-top: ${props => props.theme.space.md};
+
+  > div + div {
+    border-left: 1px solid ${props => props.theme.color.border};
+  }
+
+  dt {
     color: ${props => props.theme.color.textMuted};
-    font-size: ${props => props.theme.type.scale.sm.size};
-    line-height: ${props => props.theme.type.scale.sm.lineHeight};
-    margin: ${props => props.theme.space.lg} 0 ${props => props.theme.space.xl};
-    padding-left: 1.25rem;
-    text-align: left;
+    font-size: ${props => props.theme.type.scale.xs.size};
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
 
-  li {
-    margin: 0.3rem 0;
+  dd {
+    margin: 0;
   }
 `
 
@@ -1173,20 +1217,24 @@ const MainPage = ({ game }) => {
     return (
       <FullScreenOverlay role="dialog" aria-modal="true" aria-label="Purge required">
         <FullScreenCard>
-          <h2>💾 Disk full</h2>
-          <PurgeMutedText>
-            You've reached {formatCurrency(state.resources[MONEY_ID])} — 1 Googol Bytes. All
-            production has stopped.
-          </PurgeMutedText>
-          <ul>
-            <li>Resets your resources, owned tiers, and purchases</li>
-            <li>
-              Awards {formatAmount(prestigePointsPreview)} Purge Point
-              {prestigePointsPreview === 1 ? '' : 's'} — spend them on the Firmware page for
-              automation and production bonuses
-            </li>
-            <li>Keeps your unlocked autobuyers and Purge Points</li>
-          </ul>
+          <DiskFullHeader>
+            <DiskFullIcon aria-hidden="true">💾</DiskFullIcon>
+            <h2>Disk full</h2>
+            <PurgeMutedText>Production stopped</PurgeMutedText>
+          </DiskFullHeader>
+          <DiskFullReward role="group" aria-label="purge reward">
+            +{formatAmount(purgeAwardPreview)} Purge Point{purgeAwardPreview === 1 ? '' : 's'}
+          </DiskFullReward>
+          <DiskFullEffects>
+            <div>
+              <dt>Resets</dt>
+              <dd>Bits, tiers, Accelerate</dd>
+            </div>
+            <div>
+              <dt>Keeps</dt>
+              <dd>Purge Points, Foundry</dd>
+            </div>
+          </DiskFullEffects>
           <Button
             ref={fullScreenPurgeButtonRef}
             aria-label="Purge now"
@@ -1196,7 +1244,7 @@ const MainPage = ({ game }) => {
             type="button"
             $pulse
           >
-            <ButtonContent>✦ Purge Now</ButtonContent>
+            ✦ Purge now
           </Button>
         </FullScreenCard>
       </FullScreenOverlay>
