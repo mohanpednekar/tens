@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
-- First-time **Disk full** screen is cleaner: the Purge Point reward is shown up front, Resets / Keeps fit on two short lines, and the Purge button spans the card; the backdrop is lighter and blurred.
+- First-time **Disk full** screen is shorter and centered: the Purge Point reward up front, a two-column Resets / Keeps summary, and a full-width Purge button; the backdrop is lighter and blurred.
 - **Challenge balance (#1043):** retuned run-wide levers to the difficulty bands — F3 cost ×6→×3, F7 ×5→×3, F16 ×30→×20, F6 Scale Up ^3→^2 / Accelerate ^2→^1.5 (was faster than a normal run), F21 now also costs ×30 (it was inert), F24 adds costs ×40, F25 adds costs ×30.
 - **Purge Points now follow the actual powers of ten in your balance** instead of the excess over 1 Googol: 100 powers ÷ 64 = 1 PP at Googol, and each Compression halves the divisor (100 ÷ 32 = 3 PP after one Compression, then 6, 12, 25, 50, 100). The power count stays at 100 until Overflow mode, then keeps growing.
 - Hyperscalers now build their Flops boost up every second of a cycle on every tier (about +36% per hour each, until the next Purge, Scale Up or Overclock) instead of a flat +0.01%. Kernels per Reboot are now ×10 per Kernel amplifier level (was +1).

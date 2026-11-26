@@ -634,40 +634,33 @@ const DiskFullHeader = styled.div`
 
 // The one number that matters on this screen: what the Purge awards.
 const DiskFullReward = styled.div`
-  background: ${props => props.theme.color.surfaceSunken};
-  border-radius: ${props => props.theme.radius.md};
-  display: flex;
-  flex-direction: column;
-  padding: ${props => props.theme.space.md};
-
-  strong {
-    color: ${props => props.theme.color.warn};
-    font-family: ${props => props.theme.font.display};
-    font-size: ${props => props.theme.type.scale.xl.size};
-    font-variant-numeric: ${props => props.theme.type.numeric};
-    line-height: ${props => props.theme.type.scale.xl.lineHeight};
-  }
-
-  span {
-    color: ${props => props.theme.color.textMuted};
-    font-size: ${props => props.theme.type.scale.sm.size};
-    line-height: ${props => props.theme.type.scale.sm.lineHeight};
-  }
+  color: ${props => props.theme.color.warn};
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.lg.size};
+  font-variant-numeric: ${props => props.theme.type.numeric};
+  font-weight: 700;
+  line-height: ${props => props.theme.type.scale.lg.lineHeight};
 `
 
+// Two equal, centered columns so every block on the card shares one center axis.
 const DiskFullEffects = styled.dl`
-  column-gap: ${props => props.theme.space.md};
+  border-top: 1px solid ${props => props.theme.color.border};
   display: grid;
   font-size: ${props => props.theme.type.scale.sm.size};
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 1fr 1fr;
   line-height: ${props => props.theme.type.scale.sm.lineHeight};
   margin: 0;
-  row-gap: ${props => props.theme.space.xs};
-  text-align: left;
+  padding-top: ${props => props.theme.space.md};
+
+  > div + div {
+    border-left: 1px solid ${props => props.theme.color.border};
+  }
 
   dt {
     color: ${props => props.theme.color.textMuted};
-    font-weight: 600;
+    font-size: ${props => props.theme.type.scale.xs.size};
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
 
   dd {
@@ -1227,17 +1220,20 @@ const MainPage = ({ game }) => {
           <DiskFullHeader>
             <DiskFullIcon aria-hidden="true">💾</DiskFullIcon>
             <h2>Disk full</h2>
-            <PurgeMutedText>1 Googol Bytes reached · production stopped</PurgeMutedText>
+            <PurgeMutedText>Production stopped</PurgeMutedText>
           </DiskFullHeader>
           <DiskFullReward aria-label="purge reward">
-            <strong>+{formatAmount(purgeAwardPreview)}</strong>
-            <span>Purge Point{purgeAwardPreview === 1 ? '' : 's'} · spend in Firmware</span>
+            +{formatAmount(purgeAwardPreview)} Purge Point{purgeAwardPreview === 1 ? '' : 's'}
           </DiskFullReward>
           <DiskFullEffects>
-            <dt>Resets</dt>
-            <dd>Bits, tiers, purchases</dd>
-            <dt>Keeps</dt>
-            <dd>Autobuyers, Purge Points</dd>
+            <div>
+              <dt>Resets</dt>
+              <dd>Bits, tiers, upgrades</dd>
+            </div>
+            <div>
+              <dt>Keeps</dt>
+              <dd>PP, autobuyers</dd>
+            </div>
           </DiskFullEffects>
           <Button
             ref={fullScreenPurgeButtonRef}

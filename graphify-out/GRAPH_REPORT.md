@@ -1,17 +1,17 @@
 # Graph Report - tens  (2026-11-26)
 
 ## Corpus Check
-- 247 files · ~627,201 words
+- 247 files · ~627,190 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 33 file(s) not represented in the graph (top: (none) 11, .xml 9, .properties 2)
 
 ## Summary
-- 3633 nodes · 11239 edges · 184 communities (146 shown, 38 thin omitted)
-- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 2392 edges (avg confidence: 0.95)
+- 3633 nodes · 11226 edges · 184 communities (146 shown, 38 thin omitted)
+- Extraction: 79% EXTRACTED · 21% INFERRED · 0% AMBIGUOUS · INFERRED: 2387 edges (avg confidence: 0.95)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `4231e4bb`
+- Built from commit: `55d3c9c6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -85,7 +85,7 @@
 - palette.md
 - ref_node_url
 - config.js
-- Button/index.jsx
+- SpeedDetailsPopover/index.jsx
 - capacitor.settings.gradle
 - adversarialReviewMarker.js
 - settings.gradle
@@ -192,8 +192,8 @@
 1. `Key engine functions (`src/game/engine.js`)` - 279 edges
 2. `MainPage()` - 126 edges
 3. `useIncrementalGame()` - 120 edges
-4. `ByteFoundryPage()` - 111 edges
-5. `MainPage reference` - 105 edges
+4. `ByteFoundryPage()` - 110 edges
+5. `MainPage reference` - 102 edges
 6. `clampNonNegative()` - 97 edges
 7. `PerksPage()` - 93 edges
 8. `createInitialGameState()` - 91 edges
@@ -201,15 +201,15 @@
 10. `Testing` - 87 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Release (`release.yml`)` --references--> `extractVersionSection()`  [INFERRED]
-  docs/AUTOMATION.md → scripts/bump-version.mjs
-- `Scheduled maintenance (`autonomous-maintenance.yml`)` --references--> `gh()`  [INFERRED]
-  docs/AUTOMATION.md → scripts/verify-maintainer-checklist.mjs
-- `Storage auto-redeem toggle button removed for now, default flipped to always-on` --references--> `createInitialGameState()`  [INFERRED]
-  docs/DESIGN_HISTORY.md → src/game/engine.js
+- `Security` --references--> `safeJsonParse()`  [INFERRED]
+  CHANGELOG.md → src/game/storage.js
+- `Added` --references--> `getVisibleStoragePoolCount()`  [INFERRED]
+  CHANGELOG.md → src/game/engine.js
+- `Added` --references--> `queueIntroCapacityUpgrade()`  [INFERRED]
+  CHANGELOG.md → src/game/engine.js
 - `Fixed` --references--> `formatCurrency()`  [INFERRED]
   CHANGELOG.md → src/game/engine.js
-- `Tier cost spacing growth and the 1.0 level-multiplier base (2026-11-21, #1178)` --references--> `getTierCostExponent()`  [INFERRED]
+- `Compute Boost: tier funds breadth, not strength (reverses the 4× power / 2× duration scaling)` --references--> `getComputeBoostCoveredTierCount()`  [INFERRED]
   docs/DESIGN_HISTORY.md → src/game/engine.js
 
 ## Import Cycles
@@ -251,7 +251,7 @@ Nodes (70): Bits subline under MoneyHero; `+n/8` dropped from tier Buy buttons �
 
 ### Community 8 - "dailyChallenges.js"
 Cohesion: 0.10
-Nodes (38): AUTOMATION_BY_KEY, buildDailyCandidate(), calculateAttemptMark(), calculateTarget(), createRng(), DAILY_CHECK_IN_PLANS, DAILY_MAX_CREDITS, DAILY_MAX_GENERATION_ATTEMPTS (+30 more)
+Nodes (40): AUTOMATION_BY_KEY, buildDailyCandidate(), calculateAttemptMark(), calculateTarget(), createRng(), DAILY_CHECK_IN_PLANS, DAILY_MAX_CREDITS, DAILY_MAX_GENERATION_ATTEMPTS (+32 more)
 
 ### Community 9 - "engine.test.js"
 Cohesion: 0.04
@@ -262,8 +262,8 @@ Cohesion: 0.06
 Nodes (67): Architecture, `OfflineProgressNotice/index.jsx`, Buy max mode, Buy mode (Level / Single), Offline progress, addActivePlaySeconds(), applyOfflineProgress(), applyOfflineRewardBonus() (+59 more)
 
 ### Community 11 - "SettingsPage/index.jsx"
-Cohesion: 0.12
-Nodes (42): Settings + Milestones (#1143), Button, ButtonContent(), buildClearSlotConfirmMessage(), CloudSaveSection(), DELETE_STEP_MESSAGES, errorStatus(), Body (+34 more)
+Cohesion: 0.11
+Nodes (43): styled-components, ButtonContent(), buildClearSlotConfirmMessage(), CloudSaveSection(), DELETE_STEP_MESSAGES, errorStatus(), Body, buildSparklinePath() (+35 more)
 
 ### Community 12 - "run-simulation.mjs"
 Cohesion: 0.06
@@ -450,8 +450,8 @@ Cohesion: 0.10
 Nodes (18): Adding a new tier, AI-instruction file cost hygiene, Architecture, Automation design principles, Automation engine, Budget discipline, Changelog convention, Code review tooling (+10 more)
 
 ### Community 58 - "CapApp-SPM/README.md"
-Cohesion: 0.08
-Nodes (27): dependencies, @capacitor/android@^8.6.2, @capacitor/ios@^8.6.2, @capacitor/splash-screen@^8.0.2, firebase@^13.2.0, @fontsource/inter@^5.3.0, @fontsource/space-grotesk@^5.3.0, react@^19.3.1 (+19 more)
+Cohesion: 0.11
+Nodes (19): dependencies, @capacitor/android@^8.6.2, @capacitor/ios@^8.6.2, @capacitor/splash-screen@^8.0.2, firebase@^13.2.0, @fontsource/inter@^5.3.0, @fontsource/space-grotesk@^5.3.0, react@^19.3.1 (+11 more)
 
 ### Community 59 - "tickGame"
 Cohesion: 0.10
@@ -491,11 +491,11 @@ Nodes (12): yaml, workflow, workflowPath, script, zeroWork, bashSyntaxError(), c
 
 ### Community 68 - "config.js"
 Cohesion: 0.11
-Nodes (20): @capacitor-community/admob@^8.2.1, @capacitor/core@^8.6.2, @capacitor-community/admob, @capacitor/core, LegalSection(), LinkRow, ADMOB_TEST_REWARDED_IDS, getRewardedAdUnit() (+12 more)
+Nodes (18): @capacitor-community/admob@^8.2.1, @capacitor/core@^8.6.2, @capacitor-community/admob, @capacitor/core, ADMOB_TEST_REWARDED_IDS, getRewardedAdUnit(), IAP_PRODUCTS, PRIVACY_POLICY_URL (+10 more)
 
-### Community 69 - "Button/index.jsx"
-Cohesion: 0.18
-Nodes (13): `Button/index.jsx`, clampPercent(), getGlowRgb(), hexToRgb(), NAMED_GLOW_RGB, pulse, resolveColor(), VARIANT_TOKEN (+5 more)
+### Community 69 - "SpeedDetailsPopover/index.jsx"
+Cohesion: 0.39
+Nodes (7): react-dom@^19.3.1, react-dom, Heading, Note, Panel, Rows, SpeedDetailsPopover()
 
 ### Community 70 - "capacitor.settings.gradle"
 Cohesion: 0.12
@@ -702,8 +702,8 @@ Cohesion: 0.14
 Nodes (14): play_rollout, play_track, upload_listing, default, description, type, default, description (+6 more)
 
 ### Community 122 - "Daily challenges (epic #1062)"
-Cohesion: 0.46
-Nodes (8): Daily challenges (epic #1062), getRunProgress(), getRunValue(), isRunWon(), playDailyRun(), setRun(), settleRun(), tickDailyRuns()
+Cohesion: 0.48
+Nodes (7): Daily challenges (epic #1062), getRunProgress(), getRunValue(), isRunWon(), playDailyRun(), settleRun(), tickDailyRuns()
 
 ### Community 123 - "store-release.yml"
 Cohesion: 0.17
@@ -715,15 +715,15 @@ Nodes (10): DEFAULT_MODE, font, MODES, motion, palette, radius, shadow, space (+
 
 ### Community 126 - "dailyChallenges.test.js"
 Cohesion: 0.12
-Nodes (13): DAILY_AUTOMATIONS, DAILY_BOT_ACTION_ORDER, DAILY_FORMAT_BY_ID, DAILY_FORMATS, DAILY_GENERATOR_VERSION, DAILY_MODIFIER_POOL, DAILY_OBJECTIVE_KINDS, forfeitDailyRun() (+5 more)
+Nodes (16): DAILY_AUTOMATIONS, DAILY_BOT_ACTION_ORDER, DAILY_FORMAT_BY_ID, DAILY_FORMATS, DAILY_GENERATOR_VERSION, DAILY_MODIFIER_POOL, DAILY_OBJECTIVE_KINDS, forfeitDailyRun() (+8 more)
 
 ### Community 127 - "DailyTab.test.jsx"
-Cohesion: 0.18
-Nodes (9): Daily challenges (epic #1062), Economy model, generate(), generateDailyChallenge(), getDailyChallengeValidation(), isDailyChallengesAvailable(), startDailyRun(), DAILY_CHALLENGES_FEATURE (+1 more)
+Cohesion: 0.22
+Nodes (5): Daily challenges (epic #1062), Economy model, generateDailyChallenge(), DAILY_CHALLENGES_FEATURE, base()
 
 ### Community 128 - "OfflineProgressNotice/index.jsx"
-Cohesion: 0.15
-Nodes (13): renderDiskArrayRow(), renderButton(), NoticeActions, NoticeText, OfflineNoticeCard, OfflineNoticeOverlay, OfflineProgressNotice(), renderNotice() (+5 more)
+Cohesion: 0.10
+Nodes (27): `Button/index.jsx`, renderDiskArrayRow(), Button, clampPercent(), getGlowRgb(), hexToRgb(), NAMED_GLOW_RGB, pulse (+19 more)
 
 ### Community 129 - "End-to-end specs (Playwright)"
 Cohesion: 0.50
@@ -746,8 +746,8 @@ Cohesion: 0.67
 Nodes (3): Compact layouts per screen — three reversed decisions (2026-11-19, epic #1135), Faster autobuyer unlocks, 5× challenge unlocks, cheaper PP upgrades (2026-11), No grandfathering of unpurchased or unearned unlocks (2026-11-18, #1130)
 
 ### Community 137 - "Compact screen layouts (epic #1135)"
-Cohesion: 0.29
-Nodes (7): Challenges — `ChallengesPage` Factory / Daily tabs (#1139), Compact screen layouts (epic #1135), Compute (Flops) — `ComputeFlopsPage` (#1138), Factory feature cards (#1137), Firmware → Automation (#1140), Foundry open pool (#1142), Power merge chain (#1141)
+Cohesion: 0.25
+Nodes (8): Challenges — `ChallengesPage` Factory / Daily tabs (#1139), Compact screen layouts (epic #1135), Compute (Flops) — `ComputeFlopsPage` (#1138), Factory feature cards (#1137), Firmware → Automation (#1140), Foundry open pool (#1142), Power merge chain (#1141), Settings + Milestones (#1143)
 
 ### Community 151 - "getDataLakeUnitBits"
 Cohesion: 0.19
@@ -802,23 +802,23 @@ Cohesion: 0.40
 Nodes (5): play_promote_from, default, description, options, type
 
 ## Knowledge Gaps
-- **7 isolated node(s):** `PackageDescription`, `file:scripts/lint-conflict-markers.mjs`, `file:scripts/lint-conflict-markers.test.js`, `file:src/game/storagePrefix.js`, `file:src/game/storagePrefix.test.js` (+2 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1105 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **7 isolated node(s):** `file:scripts/lint-conflict-markers.mjs`, `file:scripts/lint-conflict-markers.test.js`, `file:src/game/storagePrefix.js`, `file:src/game/storagePrefix.test.js`, `file:src/pages/SettingsPage/ManualSaveSection.jsx` (+2 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1106 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **38 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `vitest` connect `gradlew` to `OfflineProgressNotice/index.jsx`, `layers.js`, `engine.challengesTier.test.js`, `engine.test.js`, `App.foundry.test.jsx`, `storage.js`, `createInitialGameState`, `adaptSaveForCurrentSchema`, `Dev Mode Reference`, `file-task-issue/SKILL.md`, `orphan-branch-scan.sh`, `run-simulation.mjs`, `capacitor.build.gradle`, `config.js`, `adversarialReviewMarker.js`, `AchievementsPage/index.jsx`, `FactoryTab.test.jsx`, `pr-low-risk-eligible.sh`, `navAttention.test.js`, `AchievementsPage/index.test.jsx`, `dailyChallenges.test.js`, `DailyTab.test.jsx`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+- **Why does `vitest` connect `gradlew` to `OfflineProgressNotice/index.jsx`, `layers.js`, `engine.challengesTier.test.js`, `engine.test.js`, `SettingsPage/index.jsx`, `App.foundry.test.jsx`, `storage.js`, `createInitialGameState`, `adaptSaveForCurrentSchema`, `Dev Mode Reference`, `file-task-issue/SKILL.md`, `orphan-branch-scan.sh`, `run-simulation.mjs`, `capacitor.build.gradle`, `config.js`, `adversarialReviewMarker.js`, `AchievementsPage/index.jsx`, `FactoryTab.test.jsx`, `pr-low-risk-eligible.sh`, `navAttention.test.js`, `AchievementsPage/index.test.jsx`, `dailyChallenges.test.js`, `DailyTab.test.jsx`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
 - **Are the 278 inferred relationships involving `Key engine functions (`src/game/engine.js`)` (e.g. with `activateComputeBoost()` and `applyAutobuyerMilestones()`) actually correct?**
   _`Key engine functions (`src/game/engine.js`)` has 278 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `PackageDescription`, `file:scripts/lint-conflict-markers.mjs`, `file:scripts/lint-conflict-markers.test.js` to the rest of the system?**
+- **What connects `file:scripts/lint-conflict-markers.mjs`, `file:scripts/lint-conflict-markers.test.js`, `file:src/game/storagePrefix.js` to the rest of the system?**
   _7 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `DataLakePanel/index.jsx` be split into smaller, more focused modules?**
   _Cohesion score 0.1066066066066066 - nodes in this community are weakly interconnected._
-- **Why does `Design history & rationale` connect `Shared components reference` to `MainPage reference`, `ComputePage/index.jsx`, `Key engine functions (`src/game/engine.js`)`, `isComputeChargeAvailable`, `Automation workflows`, `engine.challengesTier.test.js`, `engine.test.js`, `buyBooster`, `getTierCost`, `createInitialGameState`, `mergeState`, `getDataLakeUnitBits`, `Key engine functions (`src/game/engine.js`)`, `navAttention.js`, `tickGame`, `Foundry multiplier bar: one diverging bar tried and dropped (2026-10)`, `Distribution`, `Documentation`, `capacitor.settings.gradle`, `featureCard`, `AchievementsPage/index.jsx`, `jsconfig.json`, `normalizePoolMemoryCapacity`, `clampNonNegative`, `hasAffordableAutomationPerk`, `hasTiersGameAttention`, `Testing`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
+- **Why does `MainPage reference` connect `MainPage reference` to `OfflineProgressNotice/index.jsx`, `DataLakePanel/index.jsx`, `MainPage/index.jsx`, `ComputePage/index.jsx`, `Key engine functions (`src/game/engine.js`)`, `engine.challengesTier.test.js`, `Automation workflows`, `Compact screen layouts (epic #1135)`, `useIncrementalGame.js`, `run-simulation.mjs`, `buyBooster`, `getTierCost`, `createInitialGameState`, `getDataLakeUnitBits`, `Key engine functions (`src/game/engine.js`)`, `navAttention.js`, `tickGame`, `InfoPage/index.jsx`, `App.jsx`, `Disk arrays and Data Lakes moved from 10 disks per size to 9 + cache/buffer as the 10th unit`, `run-simulation.mjs`, `tickGame`, `featureCard`, `AchievementsPage/index.jsx`, `normalizePoolMemoryCapacity`, `clampNonNegative`, `hasAffordableAutomationPerk`, `Testing`, `getComputeBoostLanes`?**
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `MainPage()` (e.g. with `Byte Foundry` and `Overclock, again: the standalone multiplier comes back, deliberately, plus a full requirement rework`) actually correct?**
   _`MainPage()` has 3 INFERRED edges - model-reasoned connections that need verification._
 - **Should `MainPage/index.jsx` be split into smaller, more focused modules?**
