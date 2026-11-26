@@ -17,7 +17,7 @@ until Storage's own capacity threshold is reached — never again after that, pe
 tabs — one row per automation spanning unlock → pause → speed; Prestige: Speed bonus, Sleep mode cap, Compression, Cache Warm, Playtime bonus, Overflow mode; Purchasing: Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no
-second-level tabs). More (Manual / Milestones / Achievements / Settings) is always available, including during the
+second-level tabs). More (Manual / Milestones / Stats / Achievements / Settings) is always available, including during the
 Byte Foundry gate; only Factory stays progress-gated. A further More entry, **Dev Mode**
 (`DevModePage`), renders only in a dev build (`import.meta.env.DEV`) — see "Dev Mode".
 
@@ -366,6 +366,7 @@ src/
     navAttention.js       ← pure predicates for AppNav attention dots (high/normal; Factory cues muted while their automation is enabled and <1 s; Storage cues fold into Foundry;
                             Compute Flops affordability → `compute`)
     dailyChallenges.js    ← Daily-challenge logic ("Daily challenges")
+    stats.js              ← Stats page selectors (`getStatsOverview`/`getStatsSections`/`getProductionBonusFactors`), pure
     challengeUi.js        ← pure player-facing helpers for Factory challenge mode (goal/readout formatting), shared
                             by Firmware and the Factory banner
     useIncrementalGame.js ← React hook: engine ↔ useState + localStorage + tick timer
@@ -381,7 +382,7 @@ src/
   components/             ← prop contracts/styling: docs/COMPONENTS_REFERENCE.md (Button, Money, StatCard, ...)
     AppNav                ← fixed bottom bar Foundry → Power → Compute → Factory → Firmware → Challenges → More; Factory omitted
                             during the Foundry gate; attention dots via navAttention.js
-    AppMenu               ← More sheet — Manual / Milestones / Settings (always reachable; Reset / Reformat Byte
+    AppMenu               ← More sheet — Manual / Milestones / Stats / Achievements / Settings (always reachable; Reset / Reformat Byte
                             Foundry only in Settings → Danger zone)
     Button (`.jsx`)       ← semantic `variant` prop → theme tokens; deprecated raw `color` still supported
     DiskArrayRow          ← one Disk array's status `{ actions, size, state }`; only click = empty write-cache-size
@@ -395,11 +396,11 @@ src/
     COMPONENTS_REFERENCE
     IncompatibleSaveNotice ← blocking overlay when a load cleared a pre-schema save; single **Start fresh** action;
                             rendered by `App.jsx` when `incompatibleSaveReason` is set
-  pages/                  ← ChallengesPage (page id `'challenges'`; top tabs 🏁 Factory / 📅 Daily; shown with Firmware), AchievementsPage (`'achievements'`, More entry), ByteFoundryPage, StoragePage, ComputePage, ComputeFlopsPage, MainPage, PerksPage,
+  pages/                  ← StatsPage (`'stats'`, More entry), ChallengesPage (page id `'challenges'`; top tabs 🏁 Factory / 📅 Daily; shown with Firmware), AchievementsPage (`'achievements'`, More entry), ByteFoundryPage, StoragePage, ComputePage, ComputeFlopsPage, MainPage, PerksPage,
                             InfoPage, MilestonesPage, SettingsPage, DevModePage (+ `stateFields.js`: pure
                             Variables-tree helpers) — roles in `src/CLAUDE.md`; layout in MAINPAGE_REFERENCE.
                             Page ids: `'foundry'` (also holds Storage), `'boosters'` (Power), `'compute'` (Flops),
-                            `'game'` (Factory), `'perks'` (Firmware), `'milestones'`, `'info'`, `'settings'`, `'dev'`
+                            `'game'` (Factory), `'perks'` (Firmware), `'milestones'`, `'stats'`, `'info'`, `'settings'`, `'dev'`
   theme/                  ← tokens.js (design-token source of truth: per-mode color/shadow/tier-accent +
                             mode-independent space/radius/motion/breakpoints/font/type; `buildTheme(mode)`, `themes.{dark,light}`),
                             layout.js (pure layout classes + `media`), LayoutContext.jsx (`LayoutProvider`/`useLayoutClass`),

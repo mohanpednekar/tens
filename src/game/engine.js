@@ -1511,7 +1511,7 @@ const buildEraIntroReset = (state, initial) => {
 const COMPUTE_LADDER_FIELDS = ['computeCores', 'computeNodes', 'computeClusters', 'computeNetworks', 'computeGrids', 'computeFabrics', 'computeClouds', 'computeDatacenters', 'computeSupercomputers', 'computeMegacomputers']
 // Lifetime Purges: the counter survives Reboot; `purge.count` is per-Reboot, so the larger of the two also seeds saves
 // that predate the counter.
-const getLifetimePurges = state => Math.max(state.achievements?.counters?.purges ?? 0, state.purge?.count ?? 0)
+export const getLifetimePurges = state => Math.max(state.achievements?.counters?.purges ?? 0, state.purge?.count ?? 0)
 // Adds `amount` to a lifetime counter (mode 'add'), raises it to at least `amount` ('max') or sets it ('set'), then re-detects. Same state
 // reference with the feature off.
 const bumpAchievementCounter = (state, key, amount = 1, mode = 'add') => {
@@ -1524,7 +1524,7 @@ const bumpAchievementCounter = (state, key, amount = 1, mode = 'add') => {
 }
 const areAllTierAutobuyersUnlocked = state => TIER_DEFINITIONS.every(tier => (state.autobuyers?.[tier.id] ?? null) !== null)
 // Distinct Storage pools compacted at least once (permanent `poolExponentBonuses` award map).
-const getCompactedPoolCount = state => getCompactedPoolCountFromIntro(state.intro)
+export const getCompactedPoolCount = state => getCompactedPoolCountFromIntro(state.intro)
 const getCompactedPoolCountFromIntro = intro => {
   // Only real pools count (1..DATA_LAKE_TIER_COUNT) — the award map is persisted JSON a hand edit could pollute.
   let count = 0

@@ -74,6 +74,11 @@ Continues the root `CLAUDE.md`'s "Architecture" (layers 1–2: `engine.js`, `use
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
     aside from local form state.
+7a. **`StatsPage/index.jsx`** — Stats screen (page id `'stats'`, AppNav → More, gate-exempt), `{ game }`. Pure renderer of
+   `game/stats.js`: `getStatsOverview(state)` (4 hero tiles) and `getStatsSections(state)` (ordered cards `{ id, name, icon, tone,
+   stats: [{ id, label, value, progress?, wide? }] }`; `tone` = a `theme.color` key). Factory / Purge / Compute / Reboot /
+   Challenges cards (and Accelerate/Scale Ups/Overclock rows, the Purges hero tile — Pings before then) stay hidden until reached (no spoilers); each card collapses from its name. Layout:
+   `docs/MAINPAGE_REFERENCE.md` "Stats page".
 8. **`DevModePage/index.jsx`** — dev-build-only sandbox, see "Dev Mode". Reached via AppNav → More
    (`page = 'dev'`), gate-exempt like Settings/Milestones. Takes `{ game }`.
 
