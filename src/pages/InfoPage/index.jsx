@@ -269,7 +269,7 @@ const InfoPage = ({ game }) => {
             Reaching <strong>1 Googol Bytes</strong> (8×10^100 Bits) freezes production until you
             Purge{seeLatePurge ? ' — unless you have unlocked Overflow mode (see Purge)' : ''}.
           </li>
-          {shown({ kind: 'lifetimePurges', min: 1 }) && (
+          {(seeLatePurge || shown({ kind: 'legacyBuyMax' }) || shown({ kind: 'achievementEarned', id: 'buyMaxRush' })) && (
             <li>
               Once you earn the <strong>Click fast, buy max</strong> achievement (click one Factory Buy button 10 times within a second), the <strong>Buy max</strong> toggle on Firmware → ✦ Prestige makes
               each purchase buy as many levels as you can afford. Tiers buy full levels only — a

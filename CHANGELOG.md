@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **Manual → Achievements**: fine print and nuances for achievements that have some (e.g. autobuyer clicks do not count), listed only for achievements you can already see. The Achievements screen now shows the short requirement text.
-- **Click fast, buy max** achievement (Early Factory): click the same Factory Buy button 10 times within one second (no other Factory Buy or Accelerate button clicked in between; autobuyers and unaffordable clicks do not count) to unlock Buy max.
+- **Click fast, buy max** achievement (Early Factory): click the same Factory Buy button 10 times within one second (no other Factory Buy or Accelerate button clicked in between; autobuyers do not count, and a click that buys nothing starts the count over) to unlock Buy max.
 - **Progressive reveal on every screen**: the Manual lists only topics you have reached, each collapsed to its heading (long topics split into collapsible sub-topics); Firmware lists owned automations plus the next one to unlock; Milestones shows reached milestones plus the next; Compute and Power show tiers up to the next one; Settings hides Reboot, System log and Task Manager until reached.
 - **Spoiler-free achievements**: achievements from layers you haven't reached show their name but keep the requirement, reward and progress hidden until that layer — or, in a leveled series, the previous level — is reached.
 - **Stats page** (More → 📊 Stats): headline tiles (play time, Purges, stars, bonus multiplier) and colour-coded cards for Time, Factory, Foundry, Purge, Compute, Reboot, Challenges and Bonuses, with progress bars; each card appears once you reach that layer and collapses from its name.
@@ -57,7 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Achievement toasts no longer cover the page title; they now sit just below it.
-
 - **Level power achievements** now unlock after *completing* the stated number of levels (previously one level early); progress bars count completed levels. Daily challenge definitions regenerate (generator v9).
 - Power: Boost presets are no longer disabled by a pending Disk Fill or an armed Provision Disk (blockers invisible on the Power screen) — holding a token is enough.
 

@@ -2,7 +2,7 @@ import Switch from 'components/Switch'
 import { isBuyMaxUnlocked } from 'game/engine'
 
 // Buy max mode toggle (see isBuyMaxUnlocked/buyTierMaxLevels in engine.js and useIncrementalGame's
-// buyMaxMode). Renders nothing until Buy max is bought (2 PP). Lives on Firmware →
+// buyMaxMode). Renders nothing until Buy max is unlocked (achievement). Lives on Firmware →
 // Prestige; one per-device preference covering every page with leveled purchases.
 const BuyMaxToggle = ({ game }) => {
   if (!isBuyMaxUnlocked(game.state)) return null
