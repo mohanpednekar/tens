@@ -196,17 +196,19 @@ export const PATIENT_OVERCLOCK_ACHIEVEMENT_LEVEL = 6
 export const OVERFLOW_OVERCLOCK_ACHIEVEMENT_LEVEL = 12
 export const LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 // Groups in display order; `boostArea` is unused until the bonus slice (#1052).
+// Reveals must LATCH (never flip back after a Purge/Reformat): per-cycle facts are OR-ed with the earned achievement
+// that records them (`anyOf` + `achievementEarned`).
 // `reveal` (a condition in the same grammar as an achievement's `condition`; null = from the start) gates when
 // a group's requirements/rewards stop being spoilers: before it, rows show only the name with "???" details
 // (engine.js `isAchievementRevealed`). A definition's own `reveal` overrides its group's.
 export const ACHIEVEMENT_GROUPS = [
   { id: 'firstSession', name: 'First session', boostArea: 'foundry', reveal: null },
   { id: 'foundry', name: 'Foundry', boostArea: 'foundry', reveal: { kind: 'storageUnlocked' } },
-  { id: 'power', name: 'Power', boostArea: 'power', reveal: { kind: 'powerPageUnlocked' } },
+  { id: 'power', name: 'Power', boostArea: 'power', reveal: { kind: 'anyOf', conditions: [{ kind: 'powerPageUnlocked' }, { kind: 'achievementEarned', id: 'powerUser' }] } },
   { id: 'tierLadder', name: 'Tier ladder', boostArea: 'factory', reveal: { kind: 'storageUnlocked' } },
   { id: 'earlyFactory', name: 'Early Factory', boostArea: 'factory', reveal: { kind: 'storageUnlocked' } },
   { id: 'levelPower', name: 'Level power', boostArea: 'factory', reveal: { kind: 'storageUnlocked' } },
-  { id: 'overclockStep', name: 'Overclock step', boostArea: 'factory', reveal: { kind: 'overclocked' } },
+  { id: 'overclockStep', name: 'Overclock step', boostArea: 'factory', reveal: { kind: 'anyOf', conditions: [{ kind: 'overclocked' }, { kind: 'achievementEarned', id: 'warrantyVoid' }] } },
   { id: 'firstPurge', name: 'First Purge and after', boostArea: 'purgePoints', reveal: { kind: 'googolReached' } },
   { id: 'latePurge', name: 'Late Purge layer', boostArea: 'purgePoints', reveal: { kind: 'lifetimePurges', min: 1 } },
   { id: 'reboot', name: 'Reboot', boostArea: 'kernels', reveal: { kind: 'rebootReached' } },
@@ -266,10 +268,10 @@ export const ACHIEVEMENT_DEFINITIONS = [
     short: `Buy ${tier.symbol}`,
     condition: { kind: 'tierPurchased', tierId: tier.id },
   })),
-  { id: 'quettaSpent', name: 'Spent QB', group: 'tierLadder', trigger: 'Restage while holding 0 Quettabytes', short: 'Restage at 0 QB', reveal: { kind: 'tierPurchased', tierId: 'tier10' }, shortBonus: 'QB credited without balance', bonus: 'Quettabytes are credited regardless of balance: 1 every 10 s at 1 completed level, every 5 s at 10, every 3.33 s at 100', condition: { kind: 'counter', key: 'emptyRestages', min: 1 } },
+  { id: 'quettaSpent', name: 'Spent QB', group: 'tierLadder', trigger: 'Restage while holding 0 Quettabytes', short: 'Restage at 0 QB', reveal: { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier10' }, { kind: 'achievementEarned', id: 'tier10Bought' }] }, shortBonus: 'QB credited without balance', bonus: 'Quettabytes are credited regardless of balance: 1 every 10 s at 1 completed level, every 5 s at 10, every 3.33 s at 100', condition: { kind: 'counter', key: 'emptyRestages', min: 1 } },
   { id: 'tickTock', name: 'Tick tock', group: 'earlyFactory', trigger: 'Buy your first Accelerate level', short: 'Accelerate 1', condition: { kind: 'clockSpeedLevel', min: 1 } },
   { id: 'megahertzMyth', name: 'Megahertz myth', group: 'earlyFactory', trigger: 'Reach Accelerate level 10', short: 'Accelerate 10', condition: { kind: 'clockSpeedLevel', min: 10 } },
-  { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', short: 'Overclock', reveal: { kind: 'tierPurchased', tierId: 'tier10' }, condition: { kind: 'overclocked' } },
+  { id: 'warrantyVoid', name: 'Warranty void', group: 'earlyFactory', trigger: 'Overclock for the first time', short: 'Overclock', reveal: { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier10' }, { kind: 'achievementEarned', id: 'tier10Bought' }] }, condition: { kind: 'overclocked' } },
   ...LEVEL_POWER_ACHIEVEMENT_TIER_NUMBERS.map((tierNumber, i) => ({
     id: `levelPower${i + 1}`,
     name: `${TIER_DEFINITIONS[tierNumber - 1].symbol} Level ${getLevelPowerAchievementLevel(tierNumber)}`,

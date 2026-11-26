@@ -1565,7 +1565,11 @@ export const isAchievementConditionMet = (state, condition) => {
     case 'overflowPastGoogol': return (state.achievements?.counters?.overflowPurges ?? 0) >= 1 || (isOverflowModeUnlocked(state) && (state.resources?.[MONEY_ID] ?? 0) >= PURGE_THRESHOLD)
     case 'superCloudOwned': return (state.computeFlops?.owned?.flop10 ?? 0) >= 1
     case 'computeFlopsPageUnlocked': return isComputeFlopsPageRevealed(state)
-    case 'rebootReached': return (state.era?.count ?? 0) > 0 || isEraEligible(state)
+    // Latches through the permanent Overflow-mode unlock, so spending PP below the Reboot threshold never re-hides it.
+    case 'rebootReached': return (state.era?.count ?? 0) > 0 || isEraEligible(state) || isOverflowModeUnlocked(state)
+    // Display-reveal helpers: earned achievements survive every reset but a full Reset, so they latch progress.
+    case 'achievementEarned': return isAchievementEarned(state, condition.id)
+    case 'anyOf': return (condition.conditions ?? []).some(inner => isAchievementConditionMet(state, inner))
     case 'powerPageUnlocked': return isComputeCoreConversionUnlocked(state) || Boolean(state.intro?.computeMergePageUnlocked) || (state.intro?.computeCoresEverEarned ?? 0) > 0 || COMPUTE_LADDER_FIELDS.some(field => (state.intro?.[field] ?? 0) > 0)
     // Entity at ladder index >= fromIndex exists (merges consume the lower entity, so a higher one implies it was built).
     case 'computeEntityBuilt': return COMPUTE_LADDER_FIELDS.slice(condition.fromIndex).some(field => (state.intro?.[field] ?? 0) > 0)

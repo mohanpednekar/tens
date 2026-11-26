@@ -295,7 +295,7 @@ const BoostRow = styled.div`
 const LockedRowsNote = styled.p`
   color: ${props => props.theme.color.textMuted};
   font-size: 0.8rem;
-  margin: 0;
+  margin: ${props => props.theme.space.sm} 0 0;
   text-align: center;
 `
 

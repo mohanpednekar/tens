@@ -66,4 +66,13 @@ describe('InfoPage (Manual) progressive reveal', () => {
     fireEvent.click(within(screen.getByLabelText('power section')).getByRole('button', { name: /^compute boost subtopic$/i }))
     expect(screen.getByLabelText('power section')).toHaveTextContent(/queue/i)
   })
+
+  test('topics stay revealed after a Purge or Reformat clears the per-cycle facts', () => {
+    const initial = createInitialGameState()
+    renderManual({ ...initial, intro: { ...initial.intro, mainGameUnlocked: true }, purge: { ...initial.purge, count: 1 }, achievements: { earned: { tier01Bought: true, tier10Bought: true, powerUser: true }, counters: {} } })
+    expect(topic('Accelerate')).toBeInTheDocument()
+    expect(topic('Overclock')).toBeInTheDocument()
+    expect(topic('Power')).toBeInTheDocument()
+  })
 })
+

@@ -582,4 +582,17 @@ describe('isAchievementRevealed (spoiler gate)', () => {
     expect(isAchievementRevealed(state, def('rmRf'))).toBe(false)
     expect(detectAchievements(state).achievements.earned.rmRf).toBe(true)
   })
+
+  test('reveals latch: a Purge or Reformat never turns a revealed achievement back into ???', () => {
+    const main = { ...fresh(), intro: { ...fresh().intro, mainGameUnlocked: true } }
+    // Last tier bought this cycle (earned tier10Bought), then the cycle resets those per-cycle facts.
+    const afterPurge = { ...main, achievements: { earned: { tier10Bought: true, warrantyVoid: true }, counters: {} } }
+    expect(isAchievementRevealed(afterPurge, def('quettaSpent'))).toBe(true)
+    expect(isAchievementRevealed(afterPurge, def('overclockStep1'))).toBe(true)
+    // Reformat wipes intro (Power page facts) — the earned Power user achievement keeps the group revealed.
+    const afterReformat = { ...main, achievements: { earned: { powerUser: true }, counters: {} } }
+    expect(isAchievementRevealed(afterReformat, def('coldFusion'))).toBe(true)
+    // Overflow mode (a permanent latch) keeps Reboot revealed after unspent PP drops below the threshold.
+    expect(isAchievementRevealed({ ...main, purge: { ...main.purge, unboundedUnlocked: true } }, def('offAndOn'))).toBe(true)
+  })
 })

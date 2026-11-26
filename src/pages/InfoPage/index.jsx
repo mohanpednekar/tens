@@ -149,7 +149,8 @@ const Section = styled(StatCard)`
 `
 
 // When each Manual section appears (null = from the start). Conditions use engine.js
-// `isAchievementConditionMet`, so they latch on the same progress the game itself latches on.
+// `isAchievementConditionMet`; per-cycle facts are OR-ed with the earned achievement that records them, so a
+// topic never disappears again after a Purge or Reformat.
 export const MANUAL_SECTION_REVEALS = {
   'overview section': null,
   'byte foundry section': null,
@@ -157,9 +158,9 @@ export const MANUAL_SECTION_REVEALS = {
   'milestones section': null,
   'storage section': { kind: 'storageUnlocked' },
   'scale up section': { kind: 'storageUnlocked' },
-  'accelerate section': { kind: 'tierPurchased', tierId: TIER_DEFINITIONS[0].id },
-  'overclock section': { kind: 'tierPurchased', tierId: TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id },
-  'power section': { kind: 'powerPageUnlocked' },
+  'accelerate section': { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier01' }, { kind: 'achievementEarned', id: 'tier01Bought' }, { kind: 'lifetimePurges', min: 1 }] },
+  'overclock section': { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier10' }, { kind: 'achievementEarned', id: 'tier10Bought' }] },
+  'power section': { kind: 'anyOf', conditions: [{ kind: 'powerPageUnlocked' }, { kind: 'achievementEarned', id: 'powerUser' }] },
   'prestige section': { kind: 'googolReached' },
   'prestige ladder section': { kind: 'googolReached' },
   'tier autobuyers section': { kind: 'lifetimePurges', min: 1 },
