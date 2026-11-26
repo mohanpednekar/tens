@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
 
-const read = (p) => readFileSync(p, 'utf8')
+const read = (p) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n')
 
 describe('CLAUDE.md drift', () => {
   test('hook return list matches useIncrementalGame return object', () => {
