@@ -689,9 +689,9 @@ automation pause toggle live on the separate **Firmware** page (below). Mileston
 
 **Firmware page (`pages/PerksPage`).** Its own AppNav destination (page id `'perks'`, item `open firmware`, 🔧,
 between Factory and More), shown once `isPerksPageRevealed` (first Prestige or
-Reboot, or any Auto-charge bought) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
-attention). Header shows the spendable PP (`aria-label="purge points display"`). Two **icon-only**
-tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyph, the full name is in
+Reboot, any Auto-charge bought, or an unlocked Buy max) and lit by `getNavAttention().perks` (`hasAffordablePpUpgrade` — no longer part of Factory's
+attention). Header shows the spendable PP (`aria-label="purge points display"`) once the first Purge/Reboot has happened. **Icon-only**
+tabs (Automation after a Purge or with a Power automation, Prestige after a Purge or with Buy max; the first visible one is the fallback; Purge Points / Global Automation / Tier Autobuyers categories wait for the first Purge) (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyph, the full name is in
 `aria-label`/`title`), defaulting to Automation and reset to it by `focusNonce` on each AppNav visit.
 Rows are grouped **by feature, not by purchase kind** — an automation's unlock, pause toggle and speed
 chain are one row (they used to be split across Unlocks / Upgrades / Toggles tabs; see

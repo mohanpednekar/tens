@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **Manual → Achievements**: fine print and nuances for achievements that have some (e.g. autobuyer clicks do not count), listed only for achievements you can already see. The Achievements screen now shows the short requirement text.
-- **Click fast, buy max** achievement (Early Factory): click the same Factory Buy button 10 times within one second (no other button in between; autobuyers and unaffordable clicks do not count) to unlock Buy max.
+- **Click fast, buy max** achievement (Early Factory): click the same Factory Buy button 10 times within one second (no other Factory Buy or Accelerate button clicked in between; autobuyers and unaffordable clicks do not count) to unlock Buy max.
 - **Progressive reveal on every screen**: the Manual lists only topics you have reached, each collapsed to its heading (long topics split into collapsible sub-topics); Firmware lists owned automations plus the next one to unlock; Milestones shows reached milestones plus the next; Compute and Power show tiers up to the next one; Settings hides Reboot, System log and Task Manager until reached.
 - **Spoiler-free achievements**: achievements from layers you haven't reached show their name but keep the requirement, reward and progress hidden until that layer — or, in a leveled series, the previous level — is reached.
 - **Stats page** (More → 📊 Stats): headline tiles (play time, Purges, stars, bonus multiplier) and colour-coded cards for Time, Factory, Foundry, Purge, Compute, Reboot, Challenges and Bonuses, with progress bars; each card appears once you reach that layer and collapses from its name.
@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Firmware → Prestige → Purchasing: a Buy mode choice beside Buy max — **Level** (default, a Factory Buy fills up to the level boundary) or **Single** (exactly one unit per Buy and per autobuyer attempt, at the same interval — so autobuying is slower, and speed-upgrade bulk levels are suspended).
 
 ### Changed
-- Achievements you can see now show a one-line summary without expanding: the requirement until earned, then the reward. Expanding shows both plus any fine print. Self-explanatory titles skip the requirement line.
+- Achievements you can see now show a one-line summary without expanding: the requirement until earned, then the reward. Expanding shows both; fine print lives only in the Manual. Self-explanatory titles skip the requirement line.
 - Achievements with plain names got fitting ones: the five Reclamation levels (Flush with success … The Great Flushening), the ten Level power levels (High five … Perfect ten, matching each level count) and Spent QB → Quetta broke. Series and other achievement names are unchanged.
 - Buy mode options are now named **Bytes** (default, fills up to the level boundary) and **Bits** (exactly one unit per Buy and per autobuyer attempt).
 - **Firmware appears as soon as it has something usable** (e.g. an unlocked Buy max, even before the first Purge). Its tabs and sections stay hidden until their own content is reached: Automation and Purge Points after the first Purge, Prestige once Buy max is unlocked or after the first Purge. Challenges still appears with the first Purge.\n- **Stricter spoilers**: the Achievements screen lists a group only once its layer is reached (names and star totals included), and the Manual no longer mentions Reboot, Kernels, Flops, Power, Overflow mode or future layers before you reach them.

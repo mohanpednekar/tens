@@ -14,7 +14,7 @@ Terminology: player-facing "Prestige" is the umbrella term for all reset-for-rew
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
 shared bottom `AppNav` in progression order: **Foundry → Power → Compute → Factory → Firmware → Challenges → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
-item, and no second-level Data Stream | Storage tabs). **Firmware** (after the first Prestige) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
+item, and no second-level Data Stream | Storage tabs). **Firmware** (after the first Prestige, or earlier once Buy max is unlocked) has icon tabs 🤖 Automation / ✦ Prestige (one row per automation:
 unlock/milestone → pause Switch → speed upgrade / Speed bonus, Sleep mode cap (4 h + 4 h per PP level), Compression, Cache Warm (20 PP), Playtime bonus (100 PP), Overflow mode, Buy max (achievement-unlocked), Buy mode Bytes/Bits). More (Manual, Milestones, Stats, Achievements, Settings) is always available — even
 during the Byte Foundry gate. A further More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a sandbox for seeding/experimenting with an isolated save, never in the
@@ -98,7 +98,7 @@ src/
     ComputeFlopsPage/index.jsx ← PP Compute (Flops); nav Compute, page id `'compute'`; reveals at 100 PP
     MainPage/index.jsx     ← the game (Byte Factory); data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← Manual; evergreen mechanic explanations as collapsed topics, revealed by progress
-    PerksPage/index.jsx    ← Firmware: Automation / Prestige icon tabs (feature-grouped); AppNav after first Prestige
+    PerksPage/index.jsx    ← Firmware: Automation / Prestige icon tabs (feature-grouped); AppNav after first Prestige or once Buy max is unlocked
     ChallengesPage/        ← page id `'challenges'`; top tabs 🏁 Factory / 📅 Daily
     AchievementsPage/      ← page id `'achievements'`; via AppNav → More
     MilestonesPage/index.jsx ← Milestones timeline / Reboot status; via AppNav → More

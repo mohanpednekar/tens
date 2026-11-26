@@ -269,7 +269,7 @@ export const createInitialGameState = () => ({
   // cumulative ACTIVE play seconds it multiplies by (see addActivePlaySeconds). Both survive
   // Purge, Scale Up, Overclock and Reboot.
   playtimeBonusUnlocked: false,
-  // Permanent: the 2 PP Buy max unlock (buyBuyMaxUnlock) and the Sleep mode cap level (buySleepModeCapUpgrade,
+  // Permanent: the legacy PP-bought Buy max flag (now an achievement unlock; see isBuyMaxUnlocked) and the Sleep mode cap level (buySleepModeCapUpgrade,
   // 0..SLEEP_MODE_CAP_UPGRADE_COSTS.length). Both survive Purge, Scale Up, Overclock and Reboot.
   buyMaxUnlocked: false,
   sleepModeCapLevel: 0,

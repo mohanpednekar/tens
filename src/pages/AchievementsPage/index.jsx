@@ -157,9 +157,9 @@ const AchievementsPage = ({ game }) => {
     // Platform-dependent achievements are hidden — no platform can earn them yet.
     members: ACHIEVEMENT_DEFINITIONS.filter(def => def.group === group.id && !def.platformDependent),
   })).filter(group => group.members.length > 0)
-    // Spoilers: a group whose layer is not reached yet (and has nothing earned) is not listed at all — not even its name,
+    // Spoilers: a group whose layer is not reached yet (and none of its achievements is revealed or earned) is not listed at all — not even its name,
     // its achievement names or its share of the star total.
-    .filter(group => !group.reveal || isAchievementConditionMet(state, group.reveal) || group.members.some(def => isAchievementEarned(state, def.id)))
+    .filter(group => !group.reveal || isAchievementConditionMet(state, group.reveal) || group.members.some(def => isAchievementRevealed(state, def)))
 
   const totalStars = getAchievementStars(state)
   const bonusStars = groups.reduce((sum, group) => sum + getAchievementGroupStars(state, group.id).bonus, 0)
@@ -298,7 +298,6 @@ const AchievementsPage = ({ game }) => {
                           {earned ? 'Reward earned' : 'Reward'}: {getAchievementReward(def)}
                         </Detail>
                       )}
-                      {!masked && !spoiler && openRows[def.id] && def.details && <Detail aria-label={`${def.name} details text`}>{def.details}</Detail>}
                     </Text>
                     <Badge $color={earned ? theme.color.good : theme.color.textMuted}>{progressText && !earned ? `${progressText} ` : ''}{earned ? '✅' : '🔒'}</Badge>
                   </Row>

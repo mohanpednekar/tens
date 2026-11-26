@@ -13,7 +13,7 @@ powers of ten. No routing library, no backend — state lives in React and persi
 (Foundry → Power → Compute → Factory → Firmware → Challenges → More) — not a router (see "Architecture"):
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
-`MainPage` (tier ladder), `PerksPage` (Firmware, after first Prestige: 🤖 Automation / ✦ Prestige icon
+`MainPage` (tier ladder), `PerksPage` (Firmware, after first Prestige or once Buy max is unlocked: 🤖 Automation / ✦ Prestige icon
 tabs — one row per automation spanning unlock → pause → speed; Prestige: Speed bonus, Sleep mode cap, Compression, Cache Warm, Playtime bonus, Overflow mode; Purchasing: Buy max), `InfoPage` (Manual), `ComputePage`/`ComputeFlopsPage` (Power
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Data Stream + Storage sections on the same screen (no

@@ -11847,7 +11847,7 @@ describe('purgeGame unboundedUnlocked latch', () => {
 describe('Buy max mode', () => {
   const blockCost = level => getTierCost(tensTier, level) * DEFAULT_PURCHASE_BLOCK_SIZE
 
-  it('unlocks only through the one-time 2 PP purchase, not by Purge or Era count', () => {
+  it('unlocks only through the Buy-max rush achievement (or the legacy flag), not by Purge or Era count', () => {
     const state = createInitialGameState()
     expect(isBuyMaxUnlocked(state)).toBe(false)
     expect(isBuyMaxUnlocked({ ...state, purge: { ...state.purge, count: 1 } })).toBe(false)

@@ -216,7 +216,7 @@ small icon-only squares — and the selected option is identified by styling alo
 ## `BuyModeToggle/index.jsx`
 
 `{ game }` — segmented two-button choice (`role="group"` `aria-label="buy mode"`; buttons `aria-label="buy level mode"` /
-`"buy single mode"`, `aria-pressed`): **Level** (default, `game.buyUnitMode` false) or **Single** (one unit per manual Factory Buy
+`"buy single mode"`, `aria-pressed`): **Bytes** (code `level`, default, `game.buyUnitMode` false) or **Bits** (code `single`; one unit per manual Factory Buy
 and per tier autobuyer attempt). Calls `game.setBuyUnitMode(bool)`; per-device (`tens_buy_unit_mode`). Used only on Firmware →
 ✦ Prestige → Purchasing; mechanic in `src/CLAUDE.md` "Buy mode".
 
