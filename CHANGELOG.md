@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Progressive reveal on every screen**: the Manual lists only topics you have reached, each collapsed to its heading (long topics split into collapsible sub-topics); Firmware lists owned automations plus the next one to unlock; Milestones shows reached milestones plus the next; Compute and Power show tiers up to the next one; Settings hides Reboot, System log and Task Manager until reached.
+- **Spoiler-free achievements**: achievements from layers you haven't reached show their name but keep the requirement, reward and progress hidden until that layer — or, in a leveled series, the previous level — is reached.
 - **Stats page** (More → 📊 Stats): headline tiles (play time, Purges, stars, bonus multiplier) and colour-coded cards for Time, Factory, Foundry, Purge, Compute, Reboot, Challenges and Bonuses, with progress bars; each card appears once you reach that layer and collapses from its name.
 - **Achievement stars boost production**: every star adds +1% production speed, additively (shown on the Achievements page and the Factory info list).
 - **Auto Purge conditions** (Firmware → Automation, once Auto Purge is owned): *Purge at PP* (wait until a Purge would award 10^N PP), *Minimum time* (wait until a set time has passed since the last Purge — together with reaching Googol Bytes, whichever is later) and *Best PP multiple* (wait until the award is a multiple of your best Purge award since the last Reboot). The two PP conditions apply in Overflow mode; all default to Off.

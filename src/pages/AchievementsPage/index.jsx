@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import StatCard from 'components/StatCard'
-import { getAchievementGroupStars, getAchievementProductionMultiplier, getAchievementProgress, getAchievementReward, getAchievementShortRequirement, getAchievementShortReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned } from 'game/engine'
+import { getAchievementGroupStars, getAchievementProductionMultiplier, getAchievementProgress, getAchievementReward, getAchievementShortRequirement, getAchievementShortReward, getAchievementStars, getCompletedAchievementGroups, isAchievementEarned, isAchievementRevealed } from 'game/engine'
 import { ACHIEVEMENT_DEFINITIONS, ACHIEVEMENT_GROUPS, ACHIEVEMENT_SERIES_BY_MEMBER } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
 
 // Achievements screen (page id 'achievements') — a pure renderer of the registry in `game/layers`
 // plus the earned set in state. Reachable from AppNav → More while ACHIEVEMENTS_FEATURE is on,
-// including during the Foundry gate. Secret achievements read "???" until earned; platform-dependent
+// including during the Foundry gate. Secret achievements read "???" until earned; spoiler ones (not yet
+// `isAchievementRevealed`) show their name only — no requirement, reward or progress; platform-dependent
 // ones this platform cannot earn are hidden (none registered yet — no platform probe exists, so the
 // flag is honoured by hiding them all).
 
@@ -198,12 +199,15 @@ const AchievementsPage = ({ game }) => {
                   const total = entry.levels.length
                   const done = reached === total
                   const next = entry.levels.find(def => !isAchievementEarned(state, def.id))
+                  const nextRevealed = isAchievementRevealed(state, next)
+                  // Levels still behind the spoiler gate are listed by name only — never their requirement or reward.
+                  const revealedLevels = entry.levels.filter(def => isAchievementRevealed(state, def))
                   // One identical bonus on every level (e.g. Level power) is stated once, not per level.
-                  const sharedBonus = entry.levels.every(def => def.bonus === entry.levels[0].bonus) ? entry.levels[0].bonus : null
+                  const sharedBonus = revealedLevels.length > 0 && entry.levels.every(def => def.bonus === entry.levels[0].bonus) ? entry.levels[0].bonus : null
                   // Long series (> 4 levels, e.g. First purchase) list one short line per level instead of repeating full text.
                   const compact = entry.levels.length > 4
                   // Compact lines carry only the short reward, so each distinct short → full explanation is stated once.
-                  const distinctRewards = [...new Map(entry.levels.filter(def => def.shortBonus && def.bonus).map(def => [def.shortBonus, def.bonus]))]
+                  const distinctRewards = [...new Map(revealedLevels.filter(def => def.shortBonus && def.bonus).map(def => [def.shortBonus, def.bonus]))]
                   return (
                     <Row aria-label={`${entry.name} achievement level ${reached} of ${total}`} key={entry.key} style={{ alignItems: 'flex-start' }}>
                       <Text $earned={reached > 0}>
@@ -215,12 +219,20 @@ const AchievementsPage = ({ game }) => {
                         >
                           <strong>{entry.name}</strong>
                         </NameButton>
-                        {!openRows[entry.key] && next && <Detail>Next: {getAchievementShortRequirement(next)}{formatProgress(state, next, false) ? ` (${formatProgress(state, next, false)})` : ''}</Detail>}
-                        {!openRows[entry.key] && next && getAchievementShortReward(next) && <Detail aria-label={`${entry.name} next reward`}>Reward: {getAchievementShortReward(next)}</Detail>}
+                        {!openRows[entry.key] && next && !nextRevealed && <Detail>Next: {next.name}</Detail>}
+                        {!openRows[entry.key] && next && nextRevealed && <Detail>Next: {getAchievementShortRequirement(next)}{formatProgress(state, next, false) ? ` (${formatProgress(state, next, false)})` : ''}</Detail>}
+                        {!openRows[entry.key] && next && nextRevealed && getAchievementShortReward(next) && <Detail aria-label={`${entry.name} next reward`}>Reward: {getAchievementShortReward(next)}</Detail>}
                         {openRows[entry.key] && sharedBonus && <Detail>Reward each level: {sharedBonus}</Detail>}
                         {openRows[entry.key] && compact && !sharedBonus && distinctRewards.map(([short, full]) => <Detail key={short}>{short}: {full}</Detail>)}
                         {openRows[entry.key] && entry.levels.map((def, i) => {
                           const lvlEarned = isAchievementEarned(state, def.id)
+                          if (!isAchievementRevealed(state, def)) {
+                            return (
+                              <Detail aria-label={`${entry.name} level ${i + 1} not yet revealed`} key={def.id}>
+                                🔒 {i + 1}. {def.name}
+                              </Detail>
+                            )
+                          }
                           const lvlProgress = formatProgress(state, def, lvlEarned)
                           if (compact) {
                             const shortReward = sharedBonus ? null : getAchievementShortReward(def)
@@ -251,12 +263,14 @@ const AchievementsPage = ({ game }) => {
                 const { def } = entry
                 const earned = isAchievementEarned(state, def.id)
                 const masked = def.secret && !earned
-                const progressText = masked ? null : formatProgress(state, def, earned)
+                // Spoiler: name shown, requirement/reward/progress hidden until revealed (unlike a secret, which hides the name too).
+                const spoiler = !masked && !isAchievementRevealed(state, def)
+                const progressText = masked || spoiler ? null : formatProgress(state, def, earned)
                 const label = masked ? '???' : def.name
                 return (
                   <Row aria-label={`${label} achievement ${earned ? 'earned' : 'not yet earned'}`} key={def.id}>
                     <Text $earned={earned}>
-                      {masked ? (
+                      {masked || spoiler ? (
                         <strong>{label}</strong>
                       ) : (
                         <NameButton
@@ -268,8 +282,8 @@ const AchievementsPage = ({ game }) => {
                           <strong>{label}</strong>
                         </NameButton>
                       )}
-                      {!masked && openRows[def.id] && <Detail>{def.trigger}</Detail>}
-                      {!masked && openRows[def.id] && getAchievementReward(def) && (
+                      {!masked && !spoiler && openRows[def.id] && <Detail>{def.trigger}</Detail>}
+                      {!masked && !spoiler && openRows[def.id] && getAchievementReward(def) && (
                         <Detail aria-label={`${def.name} reward ${earned ? 'earned' : 'pending'}`}>
                           {earned ? 'Reward earned' : 'Reward'}: {getAchievementReward(def)}
                         </Detail>

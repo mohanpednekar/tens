@@ -758,6 +758,18 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const autoBoostEnabled = state.intro?.computeAutoBoostEnabled ?? true
 
   const kernelBalance = state.eons?.balance ?? 0
+
+  // Progressive reveal: owned automations plus the next one to unlock (lists are in prerequisite order);
+  // later locked rows stay hidden.
+  const revealUpToNext = (items, isOwned) => {
+    const firstLocked = items.findIndex(item => !isOwned(item))
+    return firstLocked === -1 ? items : items.filter((item, index) => index <= firstLocked || isOwned(item))
+  }
+  const visibleGlobalAutomations = revealUpToNext(GLOBAL_AUTOMATIONS, auto => auto.owned(state))
+  const visibleAutobuyerTiers = revealUpToNext(
+    TIER_DEFINITIONS,
+    tier => (state.autobuyers?.[tier.id] ?? null) !== null || Boolean(state.tierTickspeedAutobuyer?.[tier.id]),
+  )
   const showKernels = eraCount >= 1 || kernelBalance > 0
   const tabs = showKernels ? [...PERKS_TABS, KERNELS_TAB] : PERKS_TABS
   const kernelsAffordable = canBuyHyperscaler(state) || canBuyAutoHyperscaler(state)
@@ -866,8 +878,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
       <Category aria-label="global automation category">
         <CategoryHeading>Global Automation</CategoryHeading>
         <CellGrid>
-        {/* Every row always listed, in prerequisite order; the engine re-checks every gate. */}
-        {GLOBAL_AUTOMATIONS.map(auto => {
+        {/* Owned rows + the next one, in prerequisite order; the engine re-checks every gate. */}
+        {visibleGlobalAutomations.map(auto => {
           const owned = auto.owned(state)
           const enabled = auto.enabled(state)
           const chainUnlocked = isAutomationIntervalChainUnlocked(state, auto.key)
@@ -948,8 +960,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           <span>⚙ Tickspeed</span>
           <span>🤖 Buy</span>
         </TierTableHead>
-        {/* All ten tiers stay listed (owned ones included) so unlock history is never lost. */}
-        {TIER_DEFINITIONS.map((tier, tierIndex) => {
+        {/* Owned tiers stay listed (unlock history is never lost) plus the next one to unlock. */}
+        {visibleAutobuyerTiers.map((tier, tierIndex) => {
           const owned = (state.autobuyers[tier.id] ?? null) !== null
           const enabled = state.autobuyersEnabled?.[tier.id] ?? true
           const milestone = getAutobuyerUnlockMilestone(tier.id)
@@ -1251,6 +1263,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             />
           )}
         </UpgradeRow>
+        {(state.autoPurge != null || isOverflowModeUnlocked(state)) && (
         <UpgradeRow
           ariaLabel="overflow mode unlock"
           details={`Keep earning past 1 Googol Bytes without freezing; Purge whenever you choose to claim PP. Unlocks when Auto Purge's interval reaches ${OVERFLOW_MODE_MAX_INTERVAL_SECONDS} s or less.`}
@@ -1266,6 +1279,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             </Badge>
           )}
         </UpgradeRow>
+        )}
       </Category>
       <Category aria-label="purchasing category">
         <CategoryHeading>Purchasing</CategoryHeading>

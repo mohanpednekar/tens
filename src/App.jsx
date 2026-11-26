@@ -135,7 +135,7 @@ function App() {
   if (showingFoundry) {
     content = <ByteFoundryPage focusNonce={foundryFocusNonce} game={game} />
   } else if (page === 'info') {
-    content = <InfoPage />
+    content = <InfoPage game={game} />
   } else if (page === 'boosters') {
     content = <ComputePage game={game} />
   } else if (page === 'compute') {
