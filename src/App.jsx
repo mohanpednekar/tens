@@ -19,11 +19,28 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import styled from 'styled-components'
 
 // Rarely-visited pages load on demand so the entry chunk stays small (perf pass, #1144).
-const AchievementsPage = lazy(() => import('pages/AchievementsPage'))
-const InfoPage = lazy(() => import('pages/InfoPage'))
-const MilestonesPage = lazy(() => import('pages/MilestonesPage'))
-const SettingsPage = lazy(() => import('pages/SettingsPage'))
-const StatsPage = lazy(() => import('pages/StatsPage'))
+// A deploy can delete an old tab's hashed chunks; reload once (guarded per session) to pick up the new build.
+const RELOAD_FLAG = 'tens_chunk_reload'
+const lazyPage = loader =>
+  lazy(() =>
+    loader().catch(error => {
+      try {
+        if (!sessionStorage.getItem(RELOAD_FLAG)) {
+          sessionStorage.setItem(RELOAD_FLAG, '1')
+          window.location.reload()
+          return new Promise(() => {})
+        }
+      } catch {
+        // storage unavailable: fall through and surface the error
+      }
+      throw error
+    }),
+  )
+const AchievementsPage = lazyPage(() => import('pages/AchievementsPage'))
+const InfoPage = lazyPage(() => import('pages/InfoPage'))
+const MilestonesPage = lazyPage(() => import('pages/MilestonesPage'))
+const SettingsPage = lazyPage(() => import('pages/SettingsPage'))
+const StatsPage = lazyPage(() => import('pages/StatsPage'))
 
 const resolveInitialThemeMode = () => resolveThemeMode(loadThemePreference())
 
