@@ -583,6 +583,12 @@ describe('isAchievementRevealed (spoiler gate)', () => {
     expect(detectAchievements(state).achievements.earned.rmRf).toBe(true)
   })
 
+  test('Patient Overclock is revealed once the last tier is bought, before any Overclock claim', () => {
+    const main = { ...fresh(), intro: { ...fresh().intro, mainGameUnlocked: true } }
+    expect(isAchievementRevealed(main, def('overclockStep1'))).toBe(false)
+    expect(isAchievementRevealed({ ...main, purchased: { tier10: 1 } }, def('overclockStep1'))).toBe(true)
+  })
+
   test('reveals latch: a Purge or Reformat never turns a revealed achievement back into ???', () => {
     const main = { ...fresh(), intro: { ...fresh().intro, mainGameUnlocked: true } }
     // Last tier bought this cycle (earned tier10Bought), then the cycle resets those per-cycle facts.

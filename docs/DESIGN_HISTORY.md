@@ -9722,3 +9722,8 @@ already hide the codename and rule.
 Maintainer follow-up: no "🔒 N more" counts anywhere (they were added first and removed), and spoiler
 achievements show their names everywhere — including not-yet-revealed series levels and "Next:" — with
 only the requirement, reward and progress withheld (no "???" placeholder).
+Review follow-up: the Overclock step group reveals when the last tier is bought (the Overclock card is visible
+before any claim), not on the first claim — Patient Overclock counts only the first claim of a Purge, so
+revealing it after that claim would be too late. Always-visible Manual topics (Overview, Sleep mode) hold
+back bullets about later mechanics (Buy max, Overflow mode, PP Sleep upgrades); the Milestones topic is
+Purge-gated.

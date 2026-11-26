@@ -23,13 +23,18 @@ const lateGame = () => {
 describe('InfoPage (Manual) progressive reveal', () => {
   test('a fresh save lists only the start-of-game topics, collapsed, with no count of hidden ones', () => {
     renderManual(createInitialGameState())
-    for (const name of ['Overview', 'Byte Foundry', 'Milestones', 'Sleep mode']) {
+    for (const name of ['Overview', 'Byte Foundry', 'Sleep mode']) {
       expect(topic(name)).toHaveAttribute('aria-expanded', 'false')
     }
-    for (const label of ['storage section', 'power section', 'compute flops section', 'prestige section', 'reboot section']) {
+    for (const label of ['milestones section', 'storage section', 'power section', 'compute flops section', 'prestige section', 'reboot section']) {
       expect(screen.queryByLabelText(label)).not.toBeInTheDocument()
     }
     expect(screen.queryByText(/more topics/i)).not.toBeInTheDocument()
+    // Always-visible topics hold back bullets about later mechanics.
+    fireEvent.click(topic('Overview'))
+    expect(screen.getByLabelText('overview section')).not.toHaveTextContent(/Buy max|Overflow mode/)
+    fireEvent.click(topic('Sleep mode'))
+    expect(screen.getByLabelText('sleep mode section')).not.toHaveTextContent(/PP/)
     // Collapsed: no body text until the heading is clicked.
     expect(screen.getByLabelText('byte foundry section')).not.toHaveTextContent(/forced priority/i)
   })

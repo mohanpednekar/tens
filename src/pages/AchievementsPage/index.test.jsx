@@ -110,12 +110,12 @@ describe('AppMenu achievements entry', () => {
   })
 
   it('shows the real bonus reward before and after earning (full text for short series)', () => {
-    const { unmount } = renderWithTheme(<AchievementsPage game={gameInMain({}, { overclockLastClaimCompletedLevels: 5 })} />)
+    const { unmount } = renderWithTheme(<AchievementsPage game={gameInMain({}, { purchased: { tier10: 1 } })} />)
     openGroup('Overclock step')
     fireEvent.click(screen.getByLabelText('Overclock step details'))
     expect(screen.getByLabelText('Overclock step level 1 reward pending').textContent).toMatch(/^Reward: Each later Overclock needs 1 fewer/)
     unmount()
-    renderWithTheme(<AchievementsPage game={gameInMain({ overclockStep1: true }, { overclockLastClaimCompletedLevels: 5 })} />)
+    renderWithTheme(<AchievementsPage game={gameInMain({ overclockStep1: true }, { purchased: { tier10: 1 } })} />)
     openGroup('Overclock step')
     fireEvent.click(screen.getByLabelText('Overclock step details'))
     expect(screen.getByLabelText('Overclock step level 1 reward earned').textContent).toMatch(/^Reward earned: Each later Overclock needs 1 fewer/)

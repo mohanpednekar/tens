@@ -208,7 +208,7 @@ export const ACHIEVEMENT_GROUPS = [
   { id: 'tierLadder', name: 'Tier ladder', boostArea: 'factory', reveal: { kind: 'storageUnlocked' } },
   { id: 'earlyFactory', name: 'Early Factory', boostArea: 'factory', reveal: { kind: 'storageUnlocked' } },
   { id: 'levelPower', name: 'Level power', boostArea: 'factory', reveal: { kind: 'storageUnlocked' } },
-  { id: 'overclockStep', name: 'Overclock step', boostArea: 'factory', reveal: { kind: 'anyOf', conditions: [{ kind: 'overclocked' }, { kind: 'achievementEarned', id: 'warrantyVoid' }] } },
+  { id: 'overclockStep', name: 'Overclock step', boostArea: 'factory', reveal: { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier10' }, { kind: 'achievementEarned', id: 'tier10Bought' }] } },
   { id: 'firstPurge', name: 'First Purge and after', boostArea: 'purgePoints', reveal: { kind: 'googolReached' } },
   { id: 'latePurge', name: 'Late Purge layer', boostArea: 'purgePoints', reveal: { kind: 'lifetimePurges', min: 1 } },
   { id: 'reboot', name: 'Reboot', boostArea: 'kernels', reveal: { kind: 'rebootReached' } },

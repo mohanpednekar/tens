@@ -155,7 +155,7 @@ export const MANUAL_SECTION_REVEALS = {
   'overview section': null,
   'byte foundry section': null,
   'sleep mode section': null,
-  'milestones section': null,
+  'milestones section': { kind: 'googolReached' },
   'storage section': { kind: 'storageUnlocked' },
   'scale up section': { kind: 'storageUnlocked' },
   'accelerate section': { kind: 'anyOf', conditions: [{ kind: 'tierPurchased', tierId: 'tier01' }, { kind: 'achievementEarned', id: 'tier01Bought' }, { kind: 'lifetimePurges', min: 1 }] },
@@ -222,6 +222,8 @@ const ManualSection = ({ label, title, revealed, open, onToggle, children }) => 
 const InfoPage = ({ game }) => {
   const state = game?.state ?? {}
   const [openSections, setOpenSections] = useState({})
+  // Bullets inside an always-visible topic that mention a later mechanic wait for that mechanic too.
+  const shown = condition => isAchievementConditionMet(state, condition)
   const section = (label, title) => ({
     label,
     title,
@@ -258,13 +260,15 @@ const InfoPage = ({ game }) => {
           </li>
           <li>
             Reaching <strong>1 Googol Bytes</strong> (8×10^100 Bits) freezes production until you
-            Purge — unless you have unlocked Overflow mode (see Purge).
+            Purge{shown({ kind: 'googolReached' }) ? ' — unless you have unlocked Overflow mode (see Purge)' : ''}.
           </li>
-          <li>
-            Once bought ({BUY_MAX_UNLOCK_COST} PP on Firmware → ✦ Prestige), the <strong>Buy max</strong> toggle makes
-            each purchase buy as many levels as you can afford. Tiers buy full levels only — a
-            partly bought level takes its own click.
-          </li>
+          {shown({ kind: 'lifetimePurges', min: 1 }) && (
+            <li>
+              Once bought ({BUY_MAX_UNLOCK_COST} PP on Firmware → ✦ Prestige), the <strong>Buy max</strong> toggle makes
+              each purchase buy as many levels as you can afford. Tiers buy full levels only — a
+              partly bought level takes its own click.
+            </li>
+          )}
         </ul>
       </ManualSection>
 
@@ -786,9 +790,11 @@ const InfoPage = ({ game }) => {
         <ul>
           <li>
             Time away is simulated when you come back, up to{' '}
-            {formatOfflineDuration(SLEEP_MODE_BASE_CAP_SECONDS)} at first. Each Sleep mode upgrade (Firmware →
-            ✦ Prestige; {SLEEP_MODE_CAP_UPGRADE_COSTS.map(cost => formatAmount(cost)).join(' / ')} PP) adds{' '}
-            {formatOfflineDuration(SLEEP_MODE_CAP_STEP_SECONDS)}, up to {formatOfflineDuration(MAX_OFFLINE_SECONDS)}. Absences of {formatOfflineDuration(OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS)}{' '}
+            {formatOfflineDuration(SLEEP_MODE_BASE_CAP_SECONDS)}{shown({ kind: 'lifetimePurges', min: 1 }) ? (
+              <> at first. Each Sleep mode upgrade (Firmware →
+              ✦ Prestige; {SLEEP_MODE_CAP_UPGRADE_COSTS.map(cost => formatAmount(cost)).join(' / ')} PP) adds{' '}
+              {formatOfflineDuration(SLEEP_MODE_CAP_STEP_SECONDS)}, up to {formatOfflineDuration(MAX_OFFLINE_SECONDS)}</>
+            ) : null}. Absences of {formatOfflineDuration(OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS)}{' '}
             or less run at full speed; longer ones run at{' '}
             {OFFLINE_PROGRESS_SPEED_MULTIPLIER * 100}% speed and show a “Resumed from sleep” summary.
           </li>
