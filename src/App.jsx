@@ -14,6 +14,7 @@ import MainPage from 'pages/MainPage'
 import MilestonesPage from 'pages/MilestonesPage'
 import PerksPage from 'pages/PerksPage'
 import SettingsPage from 'pages/SettingsPage'
+import StatsPage from 'pages/StatsPage'
 import { isComputeCoreConversionUnlocked, isComputeFlopsPageRevealed, isPerksPageRevealed, isProductionFrozen } from 'game/engine'
 import { getNavAttention } from 'game/navAttention'
 import { useIncrementalGame } from 'game/useIncrementalGame'
@@ -29,7 +30,7 @@ const resolveInitialThemeMode = () => resolveThemeMode(loadThemePreference())
 // exempt for the same reason Settings/Milestones are — Dev Mode has to be reachable precisely
 // when you want to seed past the gate, and it's a dev-build-only destination regardless (see
 // AppMenu's `import.meta.env.DEV` guard).
-const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'achievements', 'settings', 'dev'])
+const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'achievements', 'stats', 'settings', 'dev'])
 
 const PageShell = styled.div`
   padding-bottom: ${APP_NAV_BOTTOM_PAD};
@@ -145,6 +146,8 @@ function App() {
     content = <ChallengesPage focusNonce={challengesFocusNonce} game={game} />
   } else if (page === 'milestones') {
     content = <MilestonesPage game={game} />
+  } else if (page === 'stats') {
+    content = <StatsPage game={game} />
   } else if (page === 'achievements' && ACHIEVEMENTS_FEATURE.enabled) {
     content = <AchievementsPage game={game} />
   } else if (page === 'dev') {

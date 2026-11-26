@@ -1524,7 +1524,7 @@ const bumpAchievementCounter = (state, key, amount = 1, mode = 'add') => {
 }
 const areAllTierAutobuyersUnlocked = state => TIER_DEFINITIONS.every(tier => (state.autobuyers?.[tier.id] ?? null) !== null)
 // Distinct Storage pools compacted at least once (permanent `poolExponentBonuses` award map).
-const getCompactedPoolCount = state => getCompactedPoolCountFromIntro(state.intro)
+export const getCompactedPoolCount = state => getCompactedPoolCountFromIntro(state.intro)
 const getCompactedPoolCountFromIntro = intro => {
   // Only real pools count (1..DATA_LAKE_TIER_COUNT) — the award map is persisted JSON a hand edit could pollute.
   let count = 0

@@ -1136,6 +1136,18 @@ save / Store rows appear only when their feature is on. Theme is an inline Syste
 vertical timeline (`milestones category`), one dot per milestone (aria-label `"<name> milestone reached|not yet
 reached"`, no version numbers), then one `reboot status` line: `⏻ N Reboots · N Kernels ·` eligibility badge.
 
+### Stats page
+
+`StatsPage` (page id `'stats'`, More → 📊 Stats; gate-exempt). Title, then a 2-column (4 at ≥640px) grid of raised hero
+tiles (icon, big display-font value, muted label: Play time, Purges (lifetime), Stars, Production = Purge × playtime ×
+star factors). Below, one `StatCard` per `getStatsSections` entry with a 3px left border in the section's `tone`
+colour, an uppercase name button (▾/▸ + icon; the only toggle, open by default) and a 2-column (3 at ≥640px) `dl` grid
+of sunken tiles; tiles with `progress` (0–1) add a 4px bar in the tone colour; `wide` tiles span the row as a
+label-left / value-right line (Total production). Visibility: Time, Foundry, Bonuses always; Factory once
+`intro.mainGameUnlocked`; Purge and Challenges after the first Purge; Compute once `computeFlops.pageUnlocked`; Reboot
+after the first Reboot. Optional rows (This Purge, Challenge run, Last award, Hands-free Purges, Purge/Playtime bonus)
+appear only when meaningful.
+
 ### Foundry open pool (#1142)
 
 Only the open pool's disk area and its lake's buffer changed: every `DiskArrayRow` / lake disk row is a

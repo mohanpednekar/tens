@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Stats page** (More → 📊 Stats): headline tiles (play time, Purges, stars, total production) and colour-coded cards for Time, Factory, Foundry, Purge, Compute, Reboot, Challenges and Bonuses, with progress bars; each card appears once you reach that layer and collapses from its name.
 - **Achievement stars boost production**: every star adds +1% production speed, additively (shown on the Achievements page and the Factory info list).
 - **Auto Purge conditions** (Firmware → Automation, once Auto Purge is owned): *Purge at PP* (wait until a Purge would award 10^N PP), *Minimum time* (wait until a set time has passed since the last Purge — together with reaching Googol Bytes, whichever is later) and *Best PP multiple* (wait until the award is a multiple of your best Purge award since the last Reboot). The two PP conditions apply in Overflow mode; all default to Off.
 - **Kernel shop** (Firmware → ⏻ Kernels, after your first Reboot): Hyperscaler (buy), Hyperscaler efficiency (10 levels), Kernel amplifier (each level ×10 Kernels per Reboot, 9 levels) and Auto Hyperscaler (100 Kernels, with a pause switch).
