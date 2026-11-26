@@ -42,7 +42,7 @@ import {
 } from 'game/layers'
 import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
-import App from './App'
+import App, { loadWithReload, RELOAD_FLAG } from './App'
 import DiskArrayRow from 'components/DiskArrayRow'
 import ByteFoundryPage, { formatBitsTransition, getBufferSecondsToFull } from 'pages/ByteFoundryPage'
 
@@ -122,6 +122,7 @@ const expandSettingsSections = () => {
 const openSettings = async user => {
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i })
   expandSettingsSections()
 }
 
@@ -178,7 +179,7 @@ test('shows the app version only on the Manual page', async () => {
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open manual/i }))
-  expect(screen.getByText(`v${version}`)).toBeInTheDocument()
+  expect(await screen.findByText(`v${version}`)).toBeInTheDocument()
 
   await openSettings(user)
   expect(screen.queryByText(`v${version}`)).not.toBeInTheDocument()
@@ -251,11 +252,12 @@ test('More menu reaches Milestones and Settings from any screen without progress
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open milestones/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /^milestones$/i })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { level: 1, name: /^milestones$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/milestones category/i)).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i })
   expandSettingsSections()
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
@@ -459,6 +461,7 @@ test('Reset appears only in Settings → Danger zone, not on the Byte Factory sc
   expect(screen.queryByRole('button', { name: /reset game/i })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /reformat byte foundry/i })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /open settings/i }))
+  await screen.findByRole('heading', { level: 1, name: /^settings$/i })
   expandSettingsSections()
 
   expect(screen.getByLabelText(/danger zone/i)).toBeInTheDocument()
@@ -3549,3 +3552,30 @@ test('a pool\'s speed shows the fill speed actually available, not its higher th
   expect(Math.abs(Number(speed.textContent.match(/[\d.]+/)[0]) - parseFloat(expected))).toBeLessThanOrEqual(1)
 })
 
+describe('loadWithReload', () => {
+  const reload = vi.fn()
+  beforeEach(() => {
+    sessionStorage.clear()
+    reload.mockReset()
+    vi.stubGlobal('location', { ...window.location, reload })
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  test('returns the module and clears the guard on success', async () => {
+    sessionStorage.setItem(RELOAD_FLAG, '1')
+    await expect(loadWithReload(() => Promise.resolve({ default: 1 }))).resolves.toEqual({ default: 1 })
+    expect(sessionStorage.getItem(RELOAD_FLAG)).toBeNull()
+  })
+
+  test('first failure reloads once and stays pending; second rethrows', async () => {
+    const fail = () => Promise.reject(new Error('404'))
+    const pending = loadWithReload(fail)
+    const settled = vi.fn()
+    pending.then(settled, settled)
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve()
+    expect(reload).toHaveBeenCalledTimes(1)
+    expect(settled).not.toHaveBeenCalled()
+    await expect(loadWithReload(fail)).rejects.toThrow('404')
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+})
