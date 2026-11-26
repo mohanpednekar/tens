@@ -726,7 +726,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const isFirstRun = purgeCount === 0
   const isFrozen = isProductionFrozen(state)
 
-  const [tab, setTab] = useState('automation')
+  const [tabChoice, setTab] = useState('automation')
   const [pendingChallengeId, setPendingChallengeId] = useState(null)
   const activeChallenge = getActiveChallenge(state)
   useEffect(() => {
@@ -769,7 +769,15 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     tier => (state.autobuyers?.[tier.id] ?? null) !== null || Boolean(state.tierTickspeedAutobuyer?.[tier.id]),
   )
   const showKernels = eraCount >= 1 || kernelBalance > 0
-  const tabs = showKernels ? [...PERKS_TABS, KERNELS_TAB] : PERKS_TABS
+  // Each tab shows only once it holds something usable: Automation after the first Purge (or with a Power automation),
+  // Prestige after the first Purge (or with an unlocked Buy max). The chosen tab falls back to the first visible one.
+  const hasPurged = purgeCount >= 1 || eraCount >= 1
+  const buyMaxOwned = isBuyMaxUnlocked(state)
+  const tabs = [
+    ...PERKS_TABS.filter(item => (item.id === 'automation' ? hasPurged || isAnyAutoChargeUnlocked : hasPurged || buyMaxOwned)),
+    ...(showKernels ? [KERNELS_TAB] : []),
+  ]
+  const tab = tabs.some(item => item.id === tabChoice) ? tabChoice : tabs[0]?.id
   const kernelsAffordable = canBuyHyperscaler(state) || canBuyAutoHyperscaler(state)
     || Object.keys(EON_UPGRADE_BY_ID).some(id => canBuyEonUpgrade(state, id))
   const tabDots = {
@@ -873,6 +881,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
 
   const renderAutomation = () => (
     <List aria-label="automation firmware page">
+      {hasPurged && (
       <Category aria-label="global automation category">
         <CategoryHeading>Global Automation</CategoryHeading>
         <CellGrid>
@@ -926,7 +935,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </CellGrid>
         {state.autoPurge != null && renderAutoPurgeConditions()}
       </Category>
+      )}
 
+      {hasPurged && (
       <Category aria-label="tier autobuyers category">
         <CategoryHeading>Tier Autobuyers</CategoryHeading>
         {tierAutomationFullyUpgraded ? (
@@ -1055,6 +1066,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </TierPairList>
         )}
       </Category>
+      )}
 
       {isAnyAutoChargeUnlocked && (
         <Category aria-label="power automation category">
@@ -1143,6 +1155,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
 
   const renderPrestige = () => (
     <List aria-label="prestige firmware page">
+      {hasPurged && (
       <Category aria-label="purge points category">
         <CategoryHeading>Purge Points</CategoryHeading>
         {!state.prestigeSpeedBonusUnlocked && (
@@ -1279,6 +1292,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </UpgradeRow>
         )}
       </Category>
+      )}
       <Category aria-label="purchasing category">
         <CategoryHeading>Purchasing</CategoryHeading>
         <UpgradeRow
@@ -1289,6 +1303,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         >
           <BuyModeToggle game={game} />
         </UpgradeRow>
+        {(buyMaxOwned || hasPurged) && (
         <UpgradeRow
           ariaLabel="buy max toggle"
           details="When on, each purchase buys as many levels as you can afford. Factory tiers buy full levels only — a partly bought level takes its own click. Unlocked by the Click fast, buy max achievement; the switch is per device."
@@ -1298,6 +1313,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         >
           {isBuyMaxUnlocked(state) ? <BuyMaxToggle game={game} /> : null}
         </UpgradeRow>
+        )}
       </Category>
     </List>
   )
@@ -1389,7 +1405,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <h1>Firmware</h1>
         {tab === 'kernels' && showKernels
           ? <PpBalance aria-label="kernels display">⏻ {formatAmount(kernelBalance)} {kernelBalance === 1 ? 'Kernel' : 'Kernels'}</PpBalance>
-          : <PpBalance aria-label="purge points display">✦ {formatAmount(points)} PP</PpBalance>}
+          : hasPurged && <PpBalance aria-label="purge points display">✦ {formatAmount(points)} PP</PpBalance>}
       </Header>
       <TabBar role="tablist" aria-label="firmware view">
         {tabs.map(item => (

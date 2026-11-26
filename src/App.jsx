@@ -15,7 +15,7 @@ import MilestonesPage from 'pages/MilestonesPage'
 import PerksPage from 'pages/PerksPage'
 import SettingsPage from 'pages/SettingsPage'
 import StatsPage from 'pages/StatsPage'
-import { isComputeCoreConversionUnlocked, isComputeFlopsPageRevealed, isPerksPageRevealed, isProductionFrozen } from 'game/engine'
+import { isComputeCoreConversionUnlocked, isChallengesPageRevealed, isComputeFlopsPageRevealed, isPerksPageRevealed, isProductionFrozen } from 'game/engine'
 import { getNavAttention } from 'game/navAttention'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, loadThemePreference, saveThemePreference } from 'game/storage'
@@ -68,7 +68,7 @@ function App() {
   // from the first launch, including during the mandatory gate.
   const showTiers = mainGameUnlocked
   const showPerks = mainGameUnlocked && isPerksPageRevealed(game.state)
-  const showChallenges = showPerks
+  const showChallenges = mainGameUnlocked && isChallengesPageRevealed(game.state)
 
   const navigate = nextPage => {
     if (nextPage === 'boosters' && !showBoosters) return

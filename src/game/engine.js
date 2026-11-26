@@ -2957,10 +2957,13 @@ export const buyTierQuantity = (tierId, quantity) => state => applyChallengePurc
 // before this became an achievement) still counts, so old saves keep it.
 export const isBuyMaxUnlocked = state => Boolean(state.buyMaxUnlocked) || isAchievementEarned(state, BUY_MAX_ACHIEVEMENT_ID)
 
-// Firmware (Automation / Prestige) appears on the first Prestige ever — or earlier, as soon as any Power
-// Auto-charge boundary is bought, since that automation's switches (and Auto Boost's) live only on Firmware.
-export const isPerksPageRevealed = state =>
+// Challenges appears on the first Prestige ever — or earlier, as soon as any Power Auto-charge boundary is bought.
+export const isChallengesPageRevealed = state =>
   clampNonNegative(state.purge?.count ?? 0) >= 1 || clampNonNegative(state.era?.count ?? 0) >= 1 || COMPUTE_MERGE_BOUNDARIES.some(boundary => Boolean(state.intro?.[boundary.autoFlagField]))
+// Firmware appears as soon as it holds anything usable: whatever reveals Challenges (first Prestige, or a Power
+// Auto-charge boundary whose switches live only here) or an unlocked Buy max (Prestige → Purchasing). Each tab and
+// category inside stays hidden until its own content is reached (PerksPage).
+export const isPerksPageRevealed = state => isChallengesPageRevealed(state) || isBuyMaxUnlocked(state)
 
 // Chains a single-level purchase action (state => state, same-reference no-op when it can't buy)
 // until it stops buying, capped at BUY_MAX_ITERATION_CAP. Used for every leveled purchase whose
